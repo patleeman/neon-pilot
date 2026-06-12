@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Activity Tree · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="active" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="activity-tree">Activity tree</h1>
+        <p>
+          The activity tree is the shared model for showing conversations, executions, terminals, artifacts, and other work items in one
+          sidebar tree.
+        </p>
+        <p>
+          Neon Pilot's left sidebar is moving toward an activity tree instead of a conversation-only list. The tree consumes the
+          product-facing <strong>Execution</strong> projection for background work. Durable runs remain the daemon/runtime storage record
+          for logs, checkpoints, recovery, and compatibility; product UI should not infer visible background work from raw run records.
+        </p>
+        <h2 id="item-model">Item model</h2>
+        <p>Activity items use stable prefixed IDs so different systems can share the same tree without ID collisions:</p>
+        <ul>
+          <li><code>conversation:&lt;conversationId&gt;</code> for conversations</li>
+          <li><code>execution:&lt;executionId&gt;</code> for background commands, subagents, and other execution records</li>
+        </ul>
+        <p>
+          Each item carries a <code>kind</code>, <code>title</code>, optional <code>parentId</code>, <code>status</code>,
+          <code>route</code>, and small metadata payload. The model intentionally stays data-only; UI components and extensions should
+          decorate rows rather than own routing, selection, or keyboard behavior.
+        </p>
+        <h2 id="current-implementation">Current implementation</h2>
+        <p>The adapter lives at <code>packages/desktop/ui/src/activity/activityTree.ts</code> and currently supports:</p>
+        <ul>
+          <li>working directory group items</li>
+          <li>conversation items</li>
+          <li>
+            conversation lineage metadata remains available to transcript/topology views, but the left sidebar intentionally renders
+            conversations as flat rows under their working directory group
+          </li>
+          <li>execution items projected by <code>packages/desktop/server/executions/executionService.ts</code></li>
+          <li>execution nesting via <code>execution.conversationId</code></li>
+          <li>
+            normalized status values: <code>idle</code>, <code>running</code>, <code>queued</code>, <code>failed</code>, <code>done</code>
+          </li>
+        </ul>
+        <p>
+          <code>packages/desktop/ui/src/activity/activityTreePaths.ts</code> converts activity items into stable tree paths, and
+          <code>ActivityTreeView.tsx</code> is the reusable native React renderer. The left sidebar renders working directory groups, flat
+          conversation rows, and linked execution records through the shared tree, decorates running/failed/done rows, and exposes working
+          directory actions plus conversation actions for open, pin/unpin, close, archive, copy, duplicate, and extension-provided
+          conversation-list context menu items.
+        </p>
+        <p>
+          Do not nest conversation rows in the sidebar. Parent/child branch topology belongs in the transcript itself: explicit branch
+          actions render as timeline landmarks, while tool-created side work (subagents, artifacts, checkpoints, prompts, and visual
+          captures) is pinned inside internal-work shelves instead of becoming loose transcript cards. Sidebar interactions should stay
+          one-row-in/one-row-out: closing, dragging, archiving, and reordering a conversation must not implicitly act on its children or
+          parent.
+        </p>
+        <h2 id="execution-boundary">Execution boundary</h2>
+        <p>Use executions for product UI freshness:</p>
+        <ul>
+          <li>sidebar pending/running indicators</li>
+          <li>activity tree rows</li>
+          <li>conversation background-work rail</li>
+          <li>background-work detail actions (<code>cancel</code>, <code>rerun</code>, <code>follow-up</code>)</li>
+        </ul>
+        <p>
+          The conversation background-work shelf is a backend-truth view. It consumes the conversation activity projection and uses app-wide
+          execution snapshots only as refresh hints. Do not derive shelf rows from the global renderer execution cache; stale cache entries
+          can make completed background commands or subagents look live. The backend endpoint owns active-status filtering and durable-run
+          reconciliation before returning rows as active.
+        </p>
+        <p>
+          Use durable runs only inside low-level detail/log plumbing, daemon recovery, and agent-facing <code>background_bash</code>/<code
+            >subagent</code
+          >
+          APIs. Any durable-run mutation that can affect visible background work must invalidate the <code>executions</code> topic;
+          invalidating <code>runs</code> alone is not enough.
+        </p>
+        <h2 id="conversation-connections">Conversation connections</h2>
+        <p>
+          The canonical thread-level registry is the shared backend <strong>conversation connections</strong> projection at
+          <code>/api/conversations/:id/connections</code>. It answers “what is attached to this conversation?” for work, state, assets,
+          context, integrations, and surfaces that are meaningful enough to expose to a user or agent. Consumers can filter by
+          <code>kind</code>, <code>surface</code>, <code>active</code>, and <code>visibility</code>.
+        </p>
+        <p>
+          Use this projection when a frontend surface, CLI command, or extension needs conversation-attached state. Do not reconstruct shelf
+          state from raw durable runs, task files, live queue internals, conversation metadata, or renderer stores in each consumer. Add new
+          host or extension providers to the backend projection so every consumer gets the same item IDs, statuses, visibility, surfaces,
+          and actions.
+        </p>
+        <p>Built-in connection items use stable prefixed IDs:</p>
+        <ul>
+          <li><code>execution:&lt;executionId&gt;</code> for background commands, subagents, and execution-backed work</li>
+          <li><code>queued-prompt:&lt;queueType&gt;:&lt;promptId&gt;</code> for live queued steer/follow-up prompts</li>
+          <li><code>deferred-resume:&lt;resumeId&gt;</code> for deferred conversation wakeups</li>
+          <li><code>scheduled-task:&lt;taskId&gt;</code> for automations linked to the conversation</li>
+        </ul>
+        <p>
+          Extension providers contribute <code>contributes.conversationConnectionProviders</code> and return connection items from their
+          backend action. The host prefixes extension item IDs as <code>&lt;extensionId&gt;:&lt;itemId&gt;</code> so independent providers
+          cannot collide. Providers should return nothing unless the connection is meaningful: an empty scratchpad, a completed zero-item
+          todo list, or an inactive optional surface should stay absent.
+        </p>
+        <p>
+          <code>/api/conversations/:id/activity</code> remains the compatibility projection for activity-shelf rows. It is derived from
+          conversation connections with <code>kind=activity</code>, <code>surface=activityShelf</code>, and built-in providers only. The CLI
+          exposes the full projection through <code>neon-pilot conversations connections &lt;id&gt; --json</code>.
+        </p>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/activity-tree.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#item-model">Item model</a><a href="#current-implementation">Current implementation</a
+        ><a href="#execution-boundary">Execution boundary</a><a href="#conversation-connections">Conversation connections</a>
+      </aside>
+    </main>
+  </body>
+</html>

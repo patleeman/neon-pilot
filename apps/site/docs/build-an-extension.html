@@ -24,13 +24,16 @@
         <h1>Docs</h1>
         <section>
           <h2>Start here</h2>
-          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -40,12 +43,17 @@
         </section>
         <section>
           <h2>Runtime</h2>
-          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
-          ><a class="" href="./telemetry.html">Telemetry</a>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
         </section>
         <section>
           <h2>Developers</h2>
-          <a class="" href="./development.html">Development</a>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -59,42 +67,69 @@
         <h2 id="copy-paste-prompt">Copy-paste prompt</h2>
         <pre><code>Build a Neon Pilot extension that [does what].
 
+Before implementation, ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass.
+
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
 - tab-local right rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
-Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.</code></pre>
+Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes.</code></pre>
         <p>
           Add concrete product details after the first sentence: what data it should show, what actions it should support, and what “done”
           looks like.
         </p>
         <h2 id="production-agent-loop">Production agent loop</h2>
         <p>Use this as the no-ambiguity loop for an agent building an extension in a repo checkout:</p>
-        <p>
-          1. Read this guide, <a href="./extensions.html"><code>docs/extensions.md</code></a
-          >,
-          <a href="https://github.com/patleeman/neon-pilot/blob/main/../packages/extensions/README.md"
-            ><code>packages/extensions/README.md</code></a
-          >, and the closest existing extension <code>README.md</code>. 2. Inspect existing extension ids, routes, nav labels, action ids,
-          commands, settings components, and tools before choosing names. 3. Pick exactly one primary surface for the first version:
-          <code>main-page</code>, <code>right-rail</code>, <code>workbench-detail</code>, <code>settingsComponent</code>, backend
-          tool/action, or theme. 4. Start from
-          <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/README.md"
-            ><code>docs/extension-templates/</code></a
-          >
-          when the feature matches a template; otherwise copy the closest first-party extension shape. 5. Create editable source files in
-          <code>src/</code>, declare every contribution in <code>extension.json</code>, and keep generated bundles in <code>dist/</code>. 6.
-          Build with <code>pnpm run extension:build -- &lt;extension-dir&gt;</code>. 7. Run
-          <code>neon-pilot-extension doctor &lt;extension-dir&gt;</code> when the CLI is available; for repo extension or boundary work,
-          also run <code>pnpm run check:extensions:static</code>. 8. Reload extensions from Settings -&gt; Extensions, or restart the
-          desktop app when reload is unavailable. 9. Validate through the same surface the user will use: open the route, rail, Settings
-          section, command, composer control, or agent tool. 10. Exercise empty, loading, error, and success states when the surface has UI;
-          for backend tools/actions, run one representative invocation and inspect the transcript or visible result. 11. Update the
-          extension <code>README.md</code> with install/build/use notes and any non-obvious behavior. 12. If the extension is meant for
-          other users, prepare <code>.neon-extension.zip</code> release artifacts and document the GitHub release tag users should install
-          from. 13. Checkpoint only the files touched for this extension and its docs.
-        </p>
+        <ol>
+          <li>
+            Read this guide, <a href="./extensions.html"><code>docs/extensions.md</code></a
+            >,
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/packages/extensions/README.md"
+              ><code>packages/extensions/README.md</code></a
+            >, and the closest existing extension <code>README.md</code>.
+          </li>
+          <li>
+            Inspect existing extension ids, routes, nav labels, action ids, commands, settings components, and tools before choosing names.
+          </li>
+          <li>
+            Pick exactly one primary surface for the first version: <code>main-page</code>, <code>right-rail</code>,
+            <code>workbench-detail</code>, <code>settingsComponent</code>, backend tool/action, or theme.
+          </li>
+          <li>
+            Start from
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extension-templates/README.md"
+              ><code>docs/extension-templates/</code></a
+            >
+            when the feature matches a template; otherwise copy the closest first-party extension shape.
+          </li>
+          <li>
+            Create editable source files in <code>src/</code>, declare every contribution in <code>extension.json</code>, and keep generated
+            bundles in <code>dist/</code>.
+          </li>
+          <li>Build with <code>pnpm run extension:build -- &lt;extension-dir&gt;</code>.</li>
+          <li>
+            Run <code>neon-pilot-extension doctor &lt;extension-dir&gt;</code> when the CLI is available; in a packaged app, run
+            <code>neon-pilot extensions validate --package-root &lt;extension-dir&gt;</code> before install or
+            <code>neon-pilot extensions validate &lt;extension-id&gt;</code> after install. For repo extension or boundary work, also run
+            <code>pnpm run check:extensions:static</code>.
+          </li>
+          <li>Reload extensions from Settings -&gt; Extensions, or restart the desktop app when reload is unavailable.</li>
+          <li>
+            Run <code>neon-pilot extensions smoke &lt;extension-id&gt;</code> when the app is running, then validate through the same
+            surface the user will use: open the route, rail, Settings section, command, composer control, or agent tool.
+          </li>
+          <li>
+            Exercise empty, loading, error, and success states when the surface has UI; for backend tools/actions, run one representative
+            invocation and inspect the transcript or visible result.
+          </li>
+          <li>Update the extension <code>README.md</code> with install/build/use notes and any non-obvious behavior.</li>
+          <li>
+            If the extension is meant for other users, prepare <code>.neon-extension.zip</code> release artifacts and document the GitHub
+            release tag users should install from.
+          </li>
+          <li>Checkpoint only the files touched for this extension and its docs.</li>
+        </ol>
         <p>
           Do not stop after a successful build. A built extension is only ready after its manifest diagnostics are clean and the
           user-visible path has been exercised.
@@ -102,7 +137,7 @@ Implement it with editable source files, build it, reload it, visually test it, 
         <h2 id="templates">Templates</h2>
         <p>
           Before writing from scratch, check
-          <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/README.md"
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extension-templates/README.md"
             ><code>docs/extension-templates/</code></a
           >
           for copy-paste stubs derived from real first-party extensions:
@@ -117,7 +152,7 @@ Implement it with editable source files, build it, reload it, visually test it, 
           <tbody>
             <tr>
               <td>
-                <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/templates/template-data-dashboard/"
+                <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extension-templates/templates/template-data-dashboard/"
                   ><code>data-dashboard</code></a
                 >
               </td>
@@ -125,7 +160,7 @@ Implement it with editable source files, build it, reload it, visually test it, 
             </tr>
             <tr>
               <td>
-                <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/templates/template-crud-page/"
+                <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extension-templates/templates/template-crud-page/"
                   ><code>crud-page</code></a
                 >
               </td>
@@ -133,7 +168,7 @@ Implement it with editable source files, build it, reload it, visually test it, 
             </tr>
             <tr>
               <td>
-                <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/templates/template-settings-section/"
+                <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extension-templates/templates/template-settings-section/"
                   ><code>settings-section</code></a
                 >
               </td>
@@ -189,16 +224,23 @@ Implement it with editable source files, build it, reload it, visually test it, 
         <p>When unsure, tell the agent the user experience you want and let it choose the smallest surface that fits.</p>
         <h2 id="what-your-agent-should-do">What your agent should do</h2>
         <p>For a new extension, the agent should:</p>
-        <p>
-          1. Inspect existing extension IDs, routes, commands, and nearby examples before choosing names. 2. Create the package through
-          Extension Manager when available, or create the same package layout by hand. 3. Keep editable source files in <code>src/</code>;
-          do not create dist-only extensions. 4. Declare surfaces, commands, tools, settings, skills, and permissions in
-          <code>extension.json</code>. 5. Use <code>@neon-pilot/extensions</code> as the SDK seam; do not import app internals. 6. Build
-          outside the desktop app using repo or CLI extension tooling. 7. Validate and fix Extension Manager diagnostics. 8. Reload
-          extensions. 9. Open the contributed page/panel and visually inspect UI changes. 10. Add or update the extension
-          <code>README.md</code> when behavior is non-obvious. 11. If publishing through an extension repo, build release artifacts; source
-          folders plus <code>neon.extensions.json</code> are not enough for normal GitHub install. 12. Checkpoint only the files it touched.
-        </p>
+        <ol>
+          <li>Inspect existing extension IDs, routes, commands, and nearby examples before choosing names.</li>
+          <li>Create the package through Extension Manager when available, or create the same package layout by hand.</li>
+          <li>Keep editable source files in <code>src/</code>; do not create dist-only extensions.</li>
+          <li>Declare surfaces, commands, tools, settings, skills, and permissions in <code>extension.json</code>.</li>
+          <li>Use <code>@neon-pilot/extensions</code> as the SDK seam; do not import app internals.</li>
+          <li>Build outside the desktop app using repo or CLI extension tooling.</li>
+          <li>Validate and fix Extension Manager diagnostics.</li>
+          <li>Reload extensions.</li>
+          <li>Open the contributed page/panel and visually inspect UI changes.</li>
+          <li>Add or update the extension <code>README.md</code> when behavior is non-obvious.</li>
+          <li>
+            If publishing through an extension repo, build release artifacts; source folders plus <code>neon.extensions.json</code> are not
+            enough for normal GitHub install.
+          </li>
+          <li>Checkpoint only the files it touched.</li>
+        </ol>
         <h2 id="where-files-live">Where files live</h2>
         <p>User-created extensions live in runtime state by default:</p>
         <pre><code>~/.local/state/neon-pilot/extensions/{extension-id}/</code></pre>
@@ -272,7 +314,9 @@ neon-pilot-extension build /path/to/my-extension</code></pre>
             <code>@neon-pilot/extensions/backend/*</code> subpaths for host access.
           </li>
           <li>Backend actions validate their inputs enough to return useful errors instead of crashing on malformed agent/tool calls.</li>
-          <li>UI calls backend actions through <code>pa.actions.call(...)</code> and shows loading, empty, error, and success states.</li>
+          <li>
+            UI calls backend actions through <code>pa.extension.invoke(...)</code> and shows loading, empty, error, and success states.
+          </li>
           <li>Dist files are current, diagnostics are clean, and the extension has been reloaded in the app.</li>
           <li>
             The contributed surface or tool was exercised through the app/extension host, not only by unit tests or direct module imports.
@@ -307,15 +351,13 @@ neon-pilot-extension build /path/to/my-extension</code></pre>
         <h2 id="reference">Reference</h2>
         <ul>
           <li><a href="./extensions.html">Extension authoring reference</a></li>
+          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/packages/extensions/README.md">Extension SDK/API reference</a></li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../packages/extensions/README.md">Extension SDK/API reference</a>
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-extension-manager/README.md"
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-extension-manager/README.md"
               >Extension Manager behavior</a
             >
           </li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions">System extension examples</a></li>
+          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions">System extension examples</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot-extensions">First-party optional extension repo</a></li>
         </ul>
         <p class="edit-link">

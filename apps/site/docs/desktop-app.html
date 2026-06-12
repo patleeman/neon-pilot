@@ -24,13 +24,16 @@
         <h1>Docs</h1>
         <section>
           <h2>Start here</h2>
-          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="active" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -39,12 +42,17 @@
         </section>
         <section>
           <h2>Runtime</h2>
-          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
-          ><a class="" href="./telemetry.html">Telemetry</a>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
         </section>
         <section>
           <h2>Developers</h2>
-          <a class="" href="./development.html">Development</a>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -169,7 +177,10 @@ pnpm run desktop:demo</code></pre>
           renderer bundle.
         </p>
         <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
-        <p>All desktop shortcuts are configurable in Settings → Keyboard. Defaults:</p>
+        <p>
+          Desktop menu shortcuts are configurable in Settings → Desktop. Host and extension command keybindings are configurable in Settings
+          → Commands. Defaults:
+        </p>
         <table>
           <thead>
             <tr>
@@ -179,28 +190,100 @@ pnpm run desktop:demo</code></pre>
           </thead>
           <tbody>
             <tr>
+              <td>Show Neon Pilot</td>
+              <td><code>Cmd/Ctrl+Shift+A</code></td>
+            </tr>
+            <tr>
               <td>New conversation</td>
-              <td><code>Cmd+N</code></td>
+              <td><code>Cmd/Ctrl+N</code></td>
             </tr>
             <tr>
-              <td>Hide workbench</td>
-              <td><code>F1</code></td>
+              <td>Close tab</td>
+              <td><code>Cmd/Ctrl+W</code></td>
             </tr>
             <tr>
-              <td>Show workbench</td>
-              <td><code>F2</code></td>
+              <td>Reopen closed tab</td>
+              <td><code>Cmd+Shift+N</code></td>
             </tr>
             <tr>
-              <td>Toggle sidebar</td>
-              <td><code>Cmd+/</code> (or <code>Ctrl+/</code>)</td>
+              <td>Previous conversation</td>
+              <td><code>Cmd/Ctrl+[</code></td>
             </tr>
             <tr>
-              <td>Toggle workbench</td>
-              <td><code>Cmd+\</code> (or <code>Ctrl+\</code>)</td>
+              <td>Next conversation</td>
+              <td><code>Cmd/Ctrl+]</code></td>
+            </tr>
+            <tr>
+              <td>Toggle pinned</td>
+              <td><code>Cmd/Ctrl+Alt+P</code></td>
+            </tr>
+            <tr>
+              <td>Archive / restore</td>
+              <td><code>Cmd/Ctrl+Alt+A</code></td>
+            </tr>
+            <tr>
+              <td>Rename conversation</td>
+              <td><code>Cmd/Ctrl+Alt+R</code></td>
+            </tr>
+            <tr>
+              <td>Focus composer</td>
+              <td><code>Cmd/Ctrl+L</code></td>
+            </tr>
+            <tr>
+              <td>Edit working directory</td>
+              <td><code>Cmd/Ctrl+Shift+L</code></td>
+            </tr>
+            <tr>
+              <td>Find on page</td>
+              <td><code>Cmd/Ctrl+F</code></td>
             </tr>
             <tr>
               <td>Settings</td>
-              <td><code>Cmd+,</code></td>
+              <td><code>Cmd/Ctrl+,</code></td>
+            </tr>
+            <tr>
+              <td>Quit</td>
+              <td><code>Cmd/Ctrl+Q</code></td>
+            </tr>
+            <tr>
+              <td>Conversation mode</td>
+              <td><code>F1</code></td>
+            </tr>
+            <tr>
+              <td>Workbench mode</td>
+              <td><code>F2</code></td>
+            </tr>
+            <tr>
+              <td>New workbench tab</td>
+              <td><code>Cmd/Ctrl+T</code></td>
+            </tr>
+            <tr>
+              <td>Close workbench tab</td>
+              <td><code>Cmd/Ctrl+Shift+W</code></td>
+            </tr>
+            <tr>
+              <td>Close workbench file</td>
+              <td><code>Cmd/Ctrl+Alt+W</code></td>
+            </tr>
+            <tr>
+              <td>Refresh workbench file</td>
+              <td><code>F5</code></td>
+            </tr>
+            <tr>
+              <td>Toggle workbench explorer</td>
+              <td><code>Cmd/Ctrl+B</code></td>
+            </tr>
+            <tr>
+              <td>Toggle workbench diff</td>
+              <td><code>Cmd/Ctrl+Shift+D</code></td>
+            </tr>
+            <tr>
+              <td>Toggle left sidebar</td>
+              <td><code>Cmd/Ctrl+/</code></td>
+            </tr>
+            <tr>
+              <td>Toggle right rail</td>
+              <td><code>Cmd/Ctrl+\</code></td>
             </tr>
           </tbody>
         </table>

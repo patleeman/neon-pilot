@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Projects · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="active" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="projects">Projects</h1>
+        <p>
+          Projects are structured work packages that live in the knowledge base. They have milestones, tasks, and durable status that
+          persists across conversations and agent work.
+        </p>
+        <h2 id="project-structure">Project Structure</h2>
+        <p>Each project lives at <code>&lt;knowledge-root&gt;/projects/&lt;projectId&gt;/</code>:</p>
+        <pre><code>projects/
+└── my-project/
+    ├── state.yaml          # Milestones, tasks, status, metadata
+    └── artifacts/          # Project-owned deliverables
+        ├── spec-v1.md
+        └── diagram.png</code></pre>
+        <h2 id="state-file">State File</h2>
+        <p>The <code>state.yaml</code> file tracks project progress:</p>
+        <pre><code>title: 'Refactor auth module'
+status: 'active'
+description: 'Replace the legacy auth system with OAuth2'
+
+milestones:
+  - title: 'Design'
+    status: 'completed'
+    tasks:
+      - title: 'Write OAuth2 flow document'
+        status: 'done'
+      - title: 'Review with team'
+        status: 'done'
+
+  - title: 'Implementation'
+    status: 'in-progress'
+    tasks:
+      - title: 'Implement token exchange'
+        status: 'in-progress'
+      - title: 'Add refresh token support'
+        status: 'todo'
+      - title: 'Write integration tests'
+        status: 'todo'
+
+  - title: 'Migration'
+    status: 'planned'
+    tasks:
+      - title: 'Migrate existing users'
+        status: 'todo'</code></pre>
+        <h3 id="state-values">State values</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Values</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>status</code></td>
+              <td><code>&quot;active&quot;</code>, <code>&quot;completed&quot;</code>, <code>&quot;archived&quot;</code></td>
+            </tr>
+            <tr>
+              <td>Milestone <code>status</code></td>
+              <td><code>&quot;planned&quot;</code>, <code>&quot;in-progress&quot;</code>, <code>&quot;completed&quot;</code></td>
+            </tr>
+            <tr>
+              <td>Task <code>status</code></td>
+              <td><code>&quot;todo&quot;</code>, <code>&quot;in-progress&quot;</code>, <code>&quot;done&quot;</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <h2 id="project-tasks-vs-daemon-tasks">Project Tasks vs Daemon Tasks</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Storage</th>
+              <th>Scope</th>
+              <th>Managed by</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Project tasks</td>
+              <td><code>state.yaml</code> in knowledge</td>
+              <td>Project-specific</td>
+              <td>Agent in conversations</td>
+            </tr>
+            <tr>
+              <td>Automations</td>
+              <td>Daemon runtime DB</td>
+              <td>Global/cross-project</td>
+              <td>Daemon scheduler</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          These are independent systems. A project task tracks work within a project. An automation is a user-managed scheduled behavior
+          backed by a daemon scheduled task.
+        </p>
+        <h2 id="linking-conversations">Linking Conversations</h2>
+        <p>
+          A conversation can be linked to a project. Linked conversations appear in the project context, so the agent can reference project
+          state across related conversations. Links are stored in the conversation metadata.
+        </p>
+        <h2 id="project-artifacts">Project Artifacts</h2>
+        <p>
+          Project-owned deliverables live in the <code>artifacts/</code> directory. These are durable files that persist independently of
+          any single conversation. Use project artifacts for:
+        </p>
+        <ul>
+          <li>Design documents</li>
+          <li>Specifications</li>
+          <li>Meeting notes</li>
+          <li>Delivered outputs</li>
+        </ul>
+        <p>Unlike conversation artifacts (which are rendered in the transcript), project artifacts are files in the knowledge base.</p>
+        <p class="edit-link"><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/projects.md">Edit this page on GitHub →</a></p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#project-structure">Project Structure</a><a href="#state-file">State File</a
+        ><a href="#project-tasks-vs-daemon-tasks">Project Tasks vs Daemon Tasks</a><a href="#linking-conversations">Linking Conversations</a
+        ><a href="#project-artifacts">Project Artifacts</a>
+      </aside>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Release Cycle · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="active" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="release-cycle">Release Cycle</h1>
+        <p>
+          Desktop releases are built, signed, notarized, and published locally. Pushing a tag to <code>main</code> does not automatically
+          produce a release — release is a manual local process.
+        </p>
+        <h2 id="current-release">Current release</h2>
+        <p><strong>v0.11.17</strong> — patch release.</p>
+        <p>Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.17</p>
+        <p>Highlights in this train:</p>
+        <ul>
+          <li>
+            Makes terminal and extension streaming more resilient by closing cancelled streams cleanly, preserving SSE metadata, replaying
+            exits for late attaches, and recovering terminal sessions after realtime disconnects.
+          </li>
+          <li>
+            Hardens desktop realtime, OAuth, automation, workspace, live-session, sidebar, attachment, and route refresh lifecycles so late
+            callbacks and stale loads do not overwrite current UI state.
+          </li>
+          <li>
+            Improves workspace reliability by guarding stale viewer, directory, autosave, watcher, and forced-load paths across quick route
+            or selection changes.
+          </li>
+          <li>
+            Tightens CLI and internal agent turn behavior with clearer command discovery, aligned CLI docs/skills, completion waiting, and
+            final ask-user text propagation.
+          </li>
+          <li>
+            Adds daily telemetry usage reporting and keeps release-facing extension smoke checks aligned with lazy-rendered settings routes.
+          </li>
+          <li>Keep this section aligned with <code>package.json</code>, <code>CHANGELOG.md</code>, and the tag being prepared.</li>
+        </ul>
+        <h2 id="rc-release-operating-instructions">RC release operating instructions</h2>
+        <p>
+          RC releases are long, stateful, and easy to half-finish. Run them from a conversation with <strong>goal mode enabled</strong> and
+          keep the goal active until artifacts are published, the GitHub release is verified, and the release notes/current-release section
+          are aligned.
+        </p>
+        <p>When publishing an RC, run the publish command in the foreground:</p>
+        <pre><code>pnpm run release:publish</code></pre>
+        <p>
+          Do <strong>not</strong> start the RC publish as a background run. The script can require interactive attention for smoke-test
+          prompts, signing/notarization failures, release-note validation, and GitHub publish errors; foreground output is the source of
+          truth for deciding the next step.
+        </p>
+        <h2 id="release-commands">Release Commands</h2>
+        <pre><code># Build and smoke test the full packaged app without notarizing, pushing, or uploading.
+pnpm run release:verify-local
+
+# Patch release (0.5.35 -&gt; 0.5.36)
+pnpm run release:desktop:patch
+
+# Minor release (0.5.35 -&gt; 0.6.0)
+pnpm run release:desktop:minor
+
+# Major release (0.5.35 -&gt; 1.0.0)
+pnpm run release:desktop:major</code></pre>
+        <h2 id="runtime-channels">Runtime channels</h2>
+        <p>
+          Runtime identity is centralized as <code>stable</code>, <code>rc</code>, <code>dev</code>, or <code>test</code>. The channel owns
+          app presentation, state-root suffixes, ports, and updater support.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Channel</th>
+              <th>App name</th>
+              <th>State root suffix</th>
+              <th>Updates</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>stable</code></td>
+              <td>Neon Pilot</td>
+              <td>none</td>
+              <td>enabled</td>
+            </tr>
+            <tr>
+              <td><code>rc</code></td>
+              <td>Neon Pilot RC</td>
+              <td><code>-rc</code></td>
+              <td>enabled</td>
+            </tr>
+            <tr>
+              <td><code>dev</code></td>
+              <td>Neon Pilot Dev</td>
+              <td><code>-dev</code></td>
+              <td>disabled</td>
+            </tr>
+            <tr>
+              <td><code>test</code></td>
+              <td>Neon Pilot Testing</td>
+              <td><code>-testing</code></td>
+              <td>disabled</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Versions with an <code>-rc</code> prerelease suffix are packaged as <strong>Neon Pilot RC</strong> instead of
+          <strong>Neon Pilot</strong>. The RC app uses a separate macOS bundle identifier (<code>com.neon-pilot.desktop.rc</code>), runtime
+          state root (<code>neon-pilot-rc</code>), and artifact prefix (<code>Neon-Pilot-RC-*</code>), so it can be installed next to the
+          stable app without replacing it. RC update checks are enabled for the RC runtime channel and stay isolated from stable by
+          channel-specific app identity and artifact names. Installed RC apps keep the RC runtime channel by bundle/app identity even after
+          consuming a stable-semver build, so the RC app can continue following the RC update path.
+        </p>
+        <p>
+          Stable versions keep the existing app name, bundle identifier, and <code>Neon-Pilot-*</code> artifact names. Dev/test launches
+          disable update checks so local builds do not consume updater metadata.
+        </p>
+        <p>
+          The CLI surface is shared by name across channels: the command users and agents run is <code>neon-pilot</code>. Channel-local app
+          shells prepend their managed <code>neon-pilot</code> launcher first, and global shell installation remains user-controlled through
+          <code>neon-pilot cli install</code>.
+        </p>
+        <p>
+          Users can choose <strong>Settings → App behavior → Update path</strong> to follow either stable releases only or the test path,
+          which allows release candidates and pre-release builds. Fresh RC runtime profiles default to the test path; stable profiles
+          default to stable releases only.
+        </p>
+        <h2 id="release-flow">Release Flow</h2>
+        <p>Each release command performs these steps in order:</p>
+        <ol>
+          <li>
+            <strong>Supply-chain audit</strong> — runs <code>scfw audit npm</code> through <code>scripts/scfw-pnpm-npm-adapter.mjs</code>,
+            which presents the pnpm lockfile as npm list JSON; blocks the release if any critical/malicious findings are reported. Requires
+            <a href="https://github.com/DataDog/supply-chain-firewall"><code>scfw</code></a> installed via <code>pipx install scfw</code>.
+            Bypassable with <code>NEON_PILOT_RELEASE_SKIP_SCFW_AUDIT=1</code> in emergencies.
+          </li>
+          <li><strong>Version bump</strong> — <code>pnpm version</code> bumps the version following semver</li>
+          <li><strong>Pi update</strong> — refreshes the direct Pi runtime packages to the latest published version</li>
+          <li><strong>Dependency sync</strong> — updates workspace package versions and regenerates <code>pnpm-lock.yaml</code></li>
+          <li>
+            <strong>Changelog scaffold</strong> — adds a dated <code>CHANGELOG.md</code> section with a release-note TODO and commit count
+            since the previous tag
+          </li>
+          <li>
+            <strong>Release note edit</strong> — replace the TODO with 3-6 human-written bullets summarizing user-visible outcomes and
+            important reliability/build changes; do not dump raw commit messages
+          </li>
+          <li>
+            <strong>Pre-release checks</strong> — runs <code>pnpm run check:release</code> from a clean release snapshot, including
+            TypeScript, Settings page render tests, extension smoke tests, packaged extension validation, and the release reliability doctor
+          </li>
+          <li>
+            <strong>Release QA</strong> — run <code>pnpm run qa:release</code> and complete the hands-on checklist in
+            <code>docs/release-qa.md</code> against the app build or packaged release candidate; record commit SHA, build, and pass/fail
+            notes before continuing
+          </li>
+          <li><strong>Build</strong> — builds signed desktop artifacts locally</li>
+          <li>
+            <strong>Extension golden smoke</strong> — launches the packaged app in isolated state, verifies the release-critical extension
+            matrix, opens extension routes, and invokes representative extension backend actions
+          </li>
+          <li><strong>Notarize</strong> — submits the built <code>.app</code> for Apple notarization</li>
+          <li><strong>Smoke test</strong> — launches the built app in an isolated environment and verifies basic functionality</li>
+          <li><strong>Git push</strong> — pushes the version commit and tag to the remote</li>
+          <li>
+            <strong>GitHub release</strong> — creates or updates the matching release in the releases repository, using the matching
+            <code>CHANGELOG.md</code> section as the release notes
+          </li>
+          <li>
+            <strong>First-party extension release</strong> — publish the matching <code>patleeman/neon-pilot-extensions</code> release tag
+            and assets for the same app version. The release must include <code>neon-extension-catalog.json</code> plus every stable
+            <code>.neon-extension.zip</code> package that should appear in Settings → Extensions → Install.
+          </li>
+        </ol>
+        <p>
+          Use <code>pnpm run release:verify-local</code> for release-blocking repro and iteration before rerunning
+          <code>pnpm run release:publish</code>. It builds the full signed desktop app with Electron Builder <code>--publish never</code>,
+          packages installable extensions, validates packaged extensions, then runs the extension golden smoke, automated release smoke,
+          seeded startup idle smoke, and full desktop performance smoke against <code>dist/release/*.app</code>. It intentionally does not
+          notarize, push tags, create releases, or upload assets.
+        </p>
+        <h2 id="automated-smoke-test">Automated Smoke Test</h2>
+        <p>
+          The release script runs automated smoke tests after signing and notarization, before pushing the tag. The extension golden smoke
+          launches the built <code>.app</code> with fresh-machine roots:
+        </p>
+        <ul>
+          <li>An isolated temporary <code>NEON_PILOT_STATE_ROOT</code></li>
+          <li>An isolated temporary <code>NEON_PILOT_CONFIG_ROOT</code></li>
+          <li>An isolated temporary <code>NEON_PILOT_KNOWLEDGE_ROOT</code></li>
+          <li>Isolated HOME and XDG cache/config/data/state roots</li>
+          <li>A dedicated daemon socket</li>
+          <li>No interference from an already-running user daemon</li>
+        </ul>
+        <p>The check verifies:</p>
+        <ol>
+          <li>The app process starts successfully</li>
+          <li>The Electron renderer exposes a page over CDP</li>
+          <li>The initial route renders non-empty UI without startup errors</li>
+          <li>
+            Agent-readable packaged resources exist (<code>docs/README.md</code>, bundled system extension READMEs, extension skills, and
+            manifest-declared extension bundles)
+          </li>
+          <li>Packaged renderer API endpoints return successful responses for extensions, gateways, and models</li>
+          <li>Packaged extension backends import successfully with Electron-style <code>process.resourcesPath</code></li>
+          <li>
+            The extension golden matrix in <code>scripts/release-extension-golden-matrix.json</code> passes against the packaged app:
+            required extensions are enabled, release-critical extension routes render, representative backend actions execute through the
+            real extension host route, expected agent tools appear in <code>/api/tools</code>, and safe action-backed tools invoke
+            successfully
+          </li>
+          <li>A live conversation can be created and its <code>bash</code> tool returns output</li>
+          <li>The Knowledge route renders</li>
+          <li>A conversation route renders</li>
+          <li>
+            A seeded old-profile startup idle smoke passes with 2,500 synthetic historical conversations, no prebuilt conversation context
+            DB, bounded CPU, and no local model process startup
+          </li>
+          <li>
+            The full desktop performance smoke reports usable startup readiness (<code>appUsableMs</code>, including composer and extension
+            registry availability), draft submit click-to-visible latency, route-switch latency, conversation search latency, model fetch
+            latency, long-transcript open latency, basic interaction timing, idle CPU, and renderer heap delta within the packaged-app gates
+          </li>
+        </ol>
+        <h3 id="extension-golden-matrix">Extension golden matrix</h3>
+        <p>Release-critical extension behavior is owned by <code>scripts/release-extension-golden-matrix.json</code> and executed by:</p>
+        <pre><code>pnpm run smoke:release-extensions -- --app=&quot;/Applications/Neon Pilot RC.app&quot;</code></pre>
+        <p>
+          Use this matrix for workflows that have repeatedly caused post-release breakage or are part of the expected packaged app
+          experience. A golden case should use the same path the user relies on: installed extension registry state, real nav route
+          rendering, backend actions invoked through <code>/api/extensions/:id/actions/:actionId</code>, and agent tool visibility through
+          <code>/api/tools</code>. Prefer a small number of high-signal workflows over exhaustive component coverage.
+        </p>
+        <p>Agent tools should be tested in layers:</p>
+        <ul>
+          <li>
+            <strong>Inventory</strong>: add the tool name to <code>agentTools.expectedNames</code> so <code>/api/tools</code> proves the
+            packaged agent runtime can see and inject it.
+          </li>
+          <li>
+            <strong>Safe invocation</strong>: add an <code>agentTools.invocations</code> case when the action can run without live model
+            calls, network dependency, or user interaction.
+          </li>
+          <li>
+            <strong>Context-dependent tools</strong>: keep them in inventory coverage, and add a conversation-backed smoke when correctness
+            depends on <code>toolContext</code> fields such as <code>conversationId</code>, <code>cwd</code>, session state, streaming
+            updates, or transcript rendering. Do not fake those through direct action calls.
+          </li>
+        </ul>
+        <p>
+          For optional first-party extensions distributed from <code>patleeman/neon-pilot-extensions</code>, add their release zips to
+          <code>installablePackages</code> or their catalog ids to <code>catalogInstalls</code> before promoting an RC to stable. The gate
+          then proves the candidate app can install/load those artifacts instead of only proving the source tree builds.
+        </p>
+        <p>
+          Optional first-party extensions are distributed separately from the app bundle from
+          <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a
+          >. Build their release bundles with the extension builder/packer, publish <code>.neon-extension.zip</code> artifacts to GitHub
+          releases, and keep their <code>extension.json</code> compatibility ranges aligned with supported Neon Pilot versions.
+        </p>
+        <h3 id="first-party-extension-release">First-party extension release</h3>
+        <p>
+          Every stable Neon Pilot release must have a matching release in
+          <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a
+          >. Publish <strong>all indexed first-party extension packages every time</strong>, not only extensions that changed. The desktop
+          app looks for <code>neon-extension-catalog.json</code> at the app tag first; if it is missing, the Extension Manager can only fall
+          back to the baked catalog and must mark stale artifacts unavailable.
+        </p>
+        <p>After the app release tag exists, publish the extension repo release with the same tag:</p>
+        <pre><code>cd ../neon-pilot-extensions
+git status --short
+pnpm run release:prepare -- --tag vX.Y.Z
+gh release create vX.Y.Z \
+  release-artifacts/vX.Y.Z/*.neon-extension.zip \
+  release-artifacts/vX.Y.Z/neon-extension-catalog.json \
+  --repo patleeman/neon-pilot-extensions</code></pre>
+        <p>If the GitHub release already exists, upload replacement assets explicitly:</p>
+        <pre><code>gh release upload vX.Y.Z \
+  release-artifacts/vX.Y.Z/*.neon-extension.zip \
+  release-artifacts/vX.Y.Z/neon-extension-catalog.json \
+  --repo patleeman/neon-pilot-extensions \
+  --clobber</code></pre>
+        <p>
+          Before publishing, verify each released package manifest has a <code>compatibility.neonPilot</code> range that includes the app
+          version being released. After publishing, verify the GitHub release has <code>neon-extension-catalog.json</code> plus one
+          <code>.neon-extension.zip</code> asset for every indexed package, and verify these URLs return <code>200</code>:
+        </p>
+        <pre><code>https://github.com/patleeman/neon-pilot-extensions/releases/download/vX.Y.Z/neon-extension-catalog.json
+https://github.com/patleeman/neon-pilot-extensions/releases/download/vX.Y.Z/system-writing-studio.neon-extension.zip</code></pre>
+        <p>
+          <code>pnpm run build</code> also verifies the current daemon output under <code>packages/desktop/dist/server/daemon/</code> and
+          rebuilds system extension backends with the same backend API alias used by the runtime loader. If a tool extension fails with
+          missing <code>@neon-pilot/extensions/backend</code> exports, rerun the full build before cutting the release.
+        </p>
+        <h3 id="manual-smoke-test">Manual smoke test</h3>
+        <p>If the automated check is unavailable, set:</p>
+        <pre><code>NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE=1</code></pre>
+        <p>The script will stop and ask you to manually test the built <code>.app</code> before continuing.</p>
+        <h2 id="retrying-publish">Retrying Publish</h2>
+        <p>If the version bump and build succeeded but the publish step failed:</p>
+        <pre><code>pnpm run release:verify-local
+pnpm run release:publish</code></pre>
+        <p>
+          First reproduce and fix release-blocking issues with the local packaged build. Once <code>release:verify-local</code> passes,
+          rerun <code>release:publish</code> for the clean-snapshot release gate, notarization, push, and GitHub release creation. The
+          publish step reads the matching <code>CHANGELOG.md</code> section and fails if it is missing or still contains the generated
+          release-note TODO, so GitHub release notes stay aligned with a real summary. For non-interactive reruns of an already-tested
+          build, set <code>NEON_PILOT_RELEASE_SMOKE_TESTED=1</code>.
+        </p>
+        <h2 id="release-artifacts">Release artifacts</h2>
+        <p>Release assets must include Electron updater metadata plus signed macOS artifacts:</p>
+        <ul>
+          <li><code>latest-mac.yml</code></li>
+          <li>signed <code>.zip</code> and <code>.zip.blockmap</code></li>
+          <li>optionally <code>.dmg</code> and <code>.dmg.blockmap</code></li>
+        </ul>
+        <p>
+          The publish script loads Apple credentials from <code>NEON_PILOT_RELEASE_ENV</code>, then <code>.env</code>, then
+          <code>~/.config/neon-pilot/release-env</code>. It maps <code>APPLE_PASSWORD</code> to <code>APPLE_APP_SPECIFIC_PASSWORD</code> for
+          notarization and can target another public release repo with <code>NEON_PILOT_RELEASE_REPO</code>.
+        </p>
+        <h2 id="gotchas">Gotchas</h2>
+        <ul>
+          <li>
+            <code>pnpm version prerelease --preid=rc</code> only bumps the version and creates a git tag. It does not build or upload
+            artifacts. Run <code>pnpm run release:publish</code> for the full signed release.
+          </li>
+          <li>
+            <code>desktop:dist</code> runs <code>tsc --build --force</code> through the desktop package build chain. If pre-existing server
+            TypeScript errors block the build, use the direct esbuild/electron-builder path:
+          </li>
+        </ul>
+        <p>
+          ``<code
+            >bash cd packages/desktop pnpm run build:deps node scripts/build-main.mjs npx electron-builder --config
+            electron-builder.config.mjs --publish never </code
+          >``
+        </p>
+        <h2 id="prerequisites">Prerequisites</h2>
+        <ul>
+          <li><strong>Apple Developer account</strong> — for signing and notarization</li>
+          <li><strong>GitHub access</strong> — to push tags and create releases</li>
+          <li><strong>Notarization credentials</strong> — configured in the build environment</li>
+          <li><strong>GitHub release repository</strong> — configured for artifact uploads</li>
+        </ul>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/release-cycle.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#current-release">Current release</a><a href="#rc-release-operating-instructions">RC release operating instructions</a
+        ><a href="#release-commands">Release Commands</a><a href="#runtime-channels">Runtime channels</a
+        ><a href="#release-flow">Release Flow</a><a href="#automated-smoke-test">Automated Smoke Test</a
+        ><a href="#retrying-publish">Retrying Publish</a><a href="#release-artifacts">Release artifacts</a><a href="#gotchas">Gotchas</a
+        ><a href="#prerequisites">Prerequisites</a>
+      </aside>
+    </main>
+  </body>
+</html>

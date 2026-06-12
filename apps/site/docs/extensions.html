@@ -24,13 +24,16 @@
         <h1>Docs</h1>
         <section>
           <h2>Start here</h2>
-          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -40,12 +43,17 @@
         </section>
         <section>
           <h2>Runtime</h2>
-          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
-          ><a class="" href="./telemetry.html">Telemetry</a>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
         </section>
         <section>
           <h2>Developers</h2>
-          <a class="" href="./development.html">Development</a>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -58,6 +66,12 @@
           This reference covers the extension package contract: manifests, frontend/backend entries, tools, skills, agent hooks, event bus,
           permissions, build behavior, and integration testing. Use it when implementing or debugging an extension, not as the first stop
           for a user who just wants a new feature.
+        </p>
+        <p>
+          Terminology: <strong>extensions</strong> are Neon Pilot app packages that can add UI, tools, backend actions, settings, and
+          skills. <strong>Agent plugins</strong> are portable Codex/Claude-style capability packages, often with files such as
+          <code>.codex-plugin/plugin.json</code>; they are imported as managed compatibility packages and may contribute instructions or
+          skills, but they are not native app extensions unless wrapped with <code>extension.json</code> and built extension artifacts.
         </p>
         <h2 id="contents">Contents</h2>
         <ul>
@@ -81,12 +95,14 @@
         <p>Users should usually describe the feature they want and let their agent create the extension:</p>
         <pre><code>Build a Neon Pilot extension that [does what].
 
+Before implementation, ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass.
+
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
 - tab-local right rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
-Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.</code></pre>
+Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes.</code></pre>
         <p>
           The agent should create editable <code>src/</code> files, declare contributions in <code>extension.json</code>, build, validate,
           reload, inspect the UI when present, and checkpoint only touched files. Manual manifest/API details below are reference material.
@@ -99,13 +115,17 @@ Implement it with editable source files, build it, reload it, visually test it, 
             rail/detail, Settings component, backend action/tool, composer/control contribution, or theme.
           </li>
           <li>
+            <strong>Product choices clarified</strong>: ambiguous workflow, data/action, persistence, and visual design decisions were
+            resolved with the user before building.
+          </li>
+          <li>
             <strong>Boundary clean</strong>: extension runtime code imports from <code>@neon-pilot/extensions</code>,
             <code>@neon-pilot/extensions/ui</code>, or narrow <code>@neon-pilot/extensions/backend/*</code> SDK subpaths, not core, desktop,
             or package-internal app modules.
           </li>
           <li>
             <strong>Manifest wired</strong>: every declared component/action/tool/skill/settings entry points to an existing source export
-            or file, and every frontend <code>pa.actions.call(...)</code> action id is declared in <code>backend.actions</code>.
+            or file, and every frontend <code>pa.extension.invoke(...)</code> action id is declared in <code>backend.actions</code>.
           </li>
           <li>
             <strong>Runtime built</strong>: <code>dist/</code> files are current, because packaged desktop runtimes load built bundles and
@@ -124,8 +144,22 @@ Implement it with editable source files, build it, reload it, visually test it, 
             return useful error text/details for malformed input.
           </li>
           <li>
+            <strong>Inputs user-friendly</strong>: UI uses constrained, structured controls where possible: dropdowns over free-form inputs
+            for known choices, toggles for booleans, segmented controls for modes, pickers for resources, and key/value or row editors over
+            raw JSON textareas unless the JSON is highly complex or expert-only.
+          </li>
+          <li>
+            <strong>Actions command-backed</strong>: meaningful user-reachable actions are contributed as commands so they can appear in the
+            command palette, be invoked programmatically, and be hot-keyed with default or user-editable keybindings when appropriate.
+          </li>
+          <li>
             <strong>Docs local</strong>: the extension has or updates a <code>README.md</code> with build, reload, validation, and usage
             notes for the next agent.
+          </li>
+          <li>
+            <strong>Release matrix updated</strong>: if the extension is release-critical or fixes a released regression, add a
+            route/action/install case to <code>scripts/release-extension-golden-matrix.json</code> so packaged-app verification catches
+            future breakage.
           </li>
         </ul>
         <h2 id="core-vs-extensions">Core vs extensions</h2>
@@ -142,6 +176,12 @@ Implement it with editable source files, build it, reload it, visually test it, 
         <p>
           When a feature cannot be built cleanly as an extension, add a general-purpose extension API or SDK primitive to core rather than
           hardcoding a one-off app feature. Core should make features possible; extensions should be where features live.
+        </p>
+        <p>
+          Some bundled extensions are <strong>required system extensions</strong> because they own platform repair or configuration surfaces
+          such as extension management, Settings, Prompt Assembly inspection, Terminal, or background work. They still live behind the
+          extension API, but the core extension host treats their availability as infrastructure: stale disabled config is ignored, user/API
+          disable attempts fail, and circuit-breaker failures are recorded without quarantining the extension.
         </p>
         <h2 id="extension-structure">Extension Structure</h2>
         <p>A minimal extension looks like:</p>
@@ -172,6 +212,7 @@ Implement it with editable source files, build it, reload it, visually test it, 
         <p>From the repo root:</p>
         <pre><code>pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/agent-board
 neon-pilot-extension doctor ~/.local/state/neon-pilot/extensions/agent-board
+neon-pilot extensions smoke agent-board
 neon-pilot-extension pack ~/.local/state/neon-pilot/extensions/agent-board --out /tmp/agent-board.neon-extension.zip</code></pre>
         <p>
           <code>neon-pilot-extension pack</code> is a thin wrapper around <code>scripts/extension-pack.mjs</code>. It zips the package
@@ -214,7 +255,8 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
       {
         &quot;id&quot;: &quot;ping&quot;,
         &quot;handler&quot;: &quot;ping&quot;,
-        &quot;title&quot;: &quot;Ping&quot;
+        &quot;title&quot;: &quot;Ping&quot;,
+        &quot;worker&quot;: { &quot;enabled&quot;: true }
       }
     ],
     &quot;protocolEntrypoints&quot;: [
@@ -272,17 +314,22 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
               <td>Extension actions invokable by command IDs</td>
               <td>
                 See
-                <a href="https://github.com/patleeman/neon-pilot/blob/main/../packages/extensions/README.md#commands-and-keybindings"
+                <a href="https://github.com/patleeman/neon-pilot/blob/main/packages/extensions/README.md#commands-and-keybindings"
                   >Commands and keybindings</a
                 >
               </td>
+            </tr>
+            <tr>
+              <td><code>cliCommands</code></td>
+              <td>Product administration commands contributed to the <code>neon-pilot</code> CLI</td>
+              <td><a href="#cli-commands-clicommands">See below</a></td>
             </tr>
             <tr>
               <td><code>keybindings</code></td>
               <td>Keyboard shortcuts that execute commands</td>
               <td>
                 See
-                <a href="https://github.com/patleeman/neon-pilot/blob/main/../packages/extensions/README.md#commands-and-keybindings"
+                <a href="https://github.com/patleeman/neon-pilot/blob/main/packages/extensions/README.md#commands-and-keybindings"
                   >Commands and keybindings</a
                 >
               </td>
@@ -368,6 +415,11 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
               <td><a href="#prompt-context-providers-promptcontextproviders">See below</a></td>
             </tr>
             <tr>
+              <td><code>conversationConnectionProviders</code></td>
+              <td>Conversation-attached state/work/assets for shelves, right rail, and CLI</td>
+              <td><a href="#conversation-connection-providers-conversationconnectionproviders">See below</a></td>
+            </tr>
+            <tr>
               <td><code>selectionActions</code></td>
               <td>Actions available for selected transcript/composer text</td>
               <td><a href="#selection-actions-selectionactions">See below</a></td>
@@ -390,12 +442,12 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
             <tr>
               <td><code>activityTreeItemElements</code></td>
               <td>Custom content in thread/activity tree rows</td>
-              <td><a href="https://github.com/patleeman/neon-pilot/blob/main/activity-tree.md">Activity tree</a></td>
+              <td><a href="./activity-tree.html">Activity tree</a></td>
             </tr>
             <tr>
               <td><code>activityTreeItemStyles</code></td>
               <td>Custom row styling for thread/activity tree items</td>
-              <td><a href="https://github.com/patleeman/neon-pilot/blob/main/activity-tree.md">Activity tree</a></td>
+              <td><a href="./activity-tree.html">Activity tree</a></td>
             </tr>
             <tr>
               <td><code>quickOpen</code></td>
@@ -411,6 +463,11 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
               <td><code>runtimeProviders</code></td>
               <td>Extension-advertised local/remote runtime targets</td>
               <td><a href="#runtime-providers-runtimeproviders">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>gatewayProviders</code></td>
+              <td>External messaging gateway providers rendered by the Gateways page</td>
+              <td><a href="#gateway-providers-gatewayproviders">See below</a></td>
             </tr>
             <tr>
               <td><code>settings</code></td>
@@ -576,11 +633,12 @@ return { text: 'Updated file.', details: { fileChanges: [change] } };</code></pr
           <li><code>opencode-go/qwen*-coder*</code> matches Qwen Coder-like models from <code>opencode-go</code>.</li>
         </ul>
         <p>Profile resolution is deliberately boring:</p>
-        <p>
-          1. Only enabled extensions contribute model profiles. 2. Matching profiles are sorted by <code>priority</code> descending; missing
-          priority is <code>0</code>. 3. Exactly one highest-priority profile wins. 4. If multiple profiles tie at the highest priority, the
-          match is ambiguous and no profile behavior should be assumed.
-        </p>
+        <ol>
+          <li>Only enabled extensions contribute model profiles.</li>
+          <li>Matching profiles are sorted by <code>priority</code> descending; missing priority is <code>0</code>.</li>
+          <li>Exactly one highest-priority profile wins.</li>
+          <li>If multiple profiles tie at the highest priority, the match is ambiguous and no profile behavior should be assumed.</li>
+        </ol>
         <p>
           The profile contribution itself does not define tools or instructions. For example, the Codex Compatibility extension contributes
           a <code>modelProfiles</code> match for <code>openai-codex/*</code>, contributes the <code>apply_patch</code> tool, and uses its
@@ -678,7 +736,7 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
         </p>
         <pre><code>{
   &quot;backend&quot;: {
-    &quot;actions&quot;: [{ &quot;id&quot;: &quot;searchTickets&quot;, &quot;handler&quot;: &quot;searchTickets&quot; }]
+    &quot;actions&quot;: [{ &quot;id&quot;: &quot;searchTickets&quot;, &quot;handler&quot;: &quot;searchTickets&quot;, &quot;worker&quot;: { &quot;enabled&quot;: true } }]
   },
   &quot;contributes&quot;: {
     &quot;searchProviders&quot;: [
@@ -753,6 +811,39 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           Handlers receive <code>{ prompt, conversationId, currentCwd, relatedConversationIds }</code> and may return legacy
           <code>{ contextMessages }</code> or <code>{ blocks }</code>. Blocks are converted into extension turn-context messages.
         </p>
+        <h3 id="conversation-connection-providers-conversationconnectionproviders">
+          Conversation Connection Providers (<code>conversationConnectionProviders</code>)
+        </h3>
+        <p>
+          Use <code>conversationConnectionProviders</code> when an extension owns conversation-attached work, state, assets, context,
+          integrations, or surfaces that should be discoverable by both UI and CLI. The host calls the provider action for
+          <code>/api/conversations/:id/connections</code>, <code>ctx.conversations.connections(...)</code>, and
+          <code>neon-pilot conversations connections &lt;id&gt;</code>.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;conversationConnectionProviders&quot;: [
+      {
+        &quot;id&quot;: &quot;scratchpad&quot;,
+        &quot;title&quot;: &quot;Scratchpad&quot;,
+        &quot;action&quot;: &quot;listScratchpadConnections&quot;,
+        &quot;kind&quot;: &quot;state&quot;,
+        &quot;surfaces&quot;: [&quot;rightRail&quot;, &quot;cli&quot;],
+        &quot;priority&quot;: 40
+      }
+    ]
+  }
+}</code></pre>
+        <p>
+          Provider actions receive <code>{ conversationId, providerId }</code> and should return either an array of items or
+          <code>{ &quot;items&quot;: [...] }</code>. Required item fields are <code>id</code>, <code>kind</code>, <code>title</code>,
+          <code>active</code>, <code>meaningful</code>, <code>visibility</code>, <code>source</code>, and <code>surfaces</code>. The host
+          prefixes returned IDs with the extension ID and silently skips malformed items.
+        </p>
+        <p>
+          Only return meaningful connections. Empty scratchpads, zero-item todo lists, dormant optional panels, and purely decorative
+          surfaces should return <code>{ &quot;items&quot;: [] }</code>.
+        </p>
         <h3 id="runtime-providers-runtimeproviders">Runtime Providers (<code>runtimeProviders</code>)</h3>
         <p>
           Runtime providers advertise conversation execution targets such as SSH remotes. This is the registry/health boundary only; routing
@@ -768,6 +859,41 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           <code>kind</code>, <code>status</code>, optional <code>version</code>, <code>workspaceRoots</code>, <code>capabilities</code>, and
           <code>metadata</code>. Backend actions can inspect providers through <code>ctx.runtimes.list()</code>,
           <code>ctx.runtimes.get(id)</code>, and <code>ctx.runtimes.healthCheck(id)</code>.
+        </p>
+        <h3 id="gateway-providers-gatewayproviders">Gateway Providers (<code>gatewayProviders</code>)</h3>
+        <p>
+          Gateway providers advertise external messaging channels that can route messages into Neon Pilot conversations. Declaring a
+          provider makes it appear in the system Gateways page and registers its provider ID for shared gateway state. The extension runtime
+          still owns credentials, transport, and provider-specific setup UI.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;gatewayProviders&quot;: [
+      {
+        &quot;id&quot;: &quot;discord&quot;,
+        &quot;label&quot;: &quot;Discord&quot;,
+        &quot;description&quot;: &quot;Route Discord messages into Neon Pilot.&quot;,
+        &quot;configurationLocation&quot;: &quot;extension&quot;,
+        &quot;setupRoute&quot;: &quot;/ext/discord-gateway&quot;,
+        &quot;docsUrl&quot;: &quot;https://discord.com/developers/docs/intro&quot;,
+        &quot;order&quot;: 30
+      }
+    ]
+  }
+}</code></pre>
+        <p>Gateway runtime code should import the focused backend seam:</p>
+        <pre><code>import {
+  attachGatewayConversation,
+  ensureGatewayConnection,
+  recordGatewayEvent,
+  updateGatewayConnectionStatus,
+} from '@neon-pilot/extensions/backend/gateways';</code></pre>
+        <p>
+          Use <code>ensureGatewayConnection({ provider })</code> when the runtime is created,
+          <code>updateGatewayConnectionStatus(...)</code> when credentials or transport state changes,
+          <code>attachGatewayConversation(...)</code> when an external chat is bound to a conversation,
+          <code>detachGatewayConversation(...)</code> when a binding is removed, and <code>recordGatewayEvent(...)</code> for user-visible
+          gateway activity. Extension code must not import <code>packages/desktop/server/gateways/*</code> directly.
         </p>
         <h3 id="composer-attachments">Composer Attachments</h3>
         <p>
@@ -801,7 +927,7 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
         <pre><code>{
   &quot;backend&quot;: {
     &quot;entry&quot;: &quot;dist/backend.mjs&quot;,
-    &quot;actions&quot;: [{ &quot;id&quot;: &quot;createTask&quot;, &quot;handler&quot;: &quot;createTask&quot; }]
+    &quot;actions&quot;: [{ &quot;id&quot;: &quot;createTask&quot;, &quot;handler&quot;: &quot;createTask&quot;, &quot;worker&quot;: { &quot;enabled&quot;: true } }]
   },
   &quot;contributes&quot;: {
     &quot;slashCommands&quot;: [
@@ -831,6 +957,72 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           Use <code>slashCommands</code> for composer-triggered extension code. Use <code>pi.registerCommand(...)</code> inside
           <code>backend.agentExtension</code> only when the command must run inside the live agent session runtime; that does not
           automatically make the command appear in the composer slash menu.
+        </p>
+        <h3 id="cli-commands-clicommands">CLI Commands (<code>cliCommands</code>)</h3>
+        <p>
+          Core owns the <code>neon-pilot</code> CLI shell. Extensions contribute product-specific verbs with
+          <code>contributes.cliCommands</code>; the CLI discovers enabled extensions and routes matching commands to the declared backend
+          action through the extension host boundary.
+        </p>
+        <pre><code>{
+  &quot;backend&quot;: {
+    &quot;actions&quot;: [{ &quot;id&quot;: &quot;manageExample&quot;, &quot;handler&quot;: &quot;manageExample&quot; }]
+  },
+  &quot;contributes&quot;: {
+    &quot;cliCommands&quot;: [
+      {
+        &quot;id&quot;: &quot;example-list&quot;,
+        &quot;command&quot;: &quot;example list&quot;,
+        &quot;description&quot;: &quot;List example records.&quot;,
+        &quot;usage&quot;: &quot;example list [--json]&quot;,
+        &quot;examples&quot;: [&quot;neon-pilot example list&quot;, &quot;neon-pilot example list --json&quot;],
+        &quot;argsSchema&quot;: { &quot;type&quot;: &quot;array&quot;, &quot;items&quot;: { &quot;type&quot;: &quot;string&quot; } },
+        &quot;flagsSchema&quot;: {
+          &quot;type&quot;: &quot;object&quot;,
+          &quot;properties&quot;: { &quot;json&quot;: { &quot;type&quot;: &quot;boolean&quot; } },
+          &quot;additionalProperties&quot;: true
+        },
+        &quot;mode&quot;: &quot;read&quot;,
+        &quot;requiresApp&quot;: false,
+        &quot;idempotent&quot;: true,
+        &quot;outputModes&quot;: [&quot;text&quot;, &quot;json&quot;],
+        &quot;smoke&quot;: {
+          &quot;argv&quot;: [&quot;example&quot;, &quot;list&quot;],
+          &quot;expectJsonFields&quot;: [&quot;records&quot;]
+        },
+        &quot;action&quot;: &quot;manageExample&quot;,
+        &quot;jsonDefault&quot;: true
+      }
+    ]
+  }
+}</code></pre>
+        <p>
+          The action receives <code>{ action, cli: { command, rawArgv, args, flags, json, quiet, verbose, color, cwd } }</code>, where
+          <code>action</code> defaults to the final command token as a convenience hint. Return <code>{ text }</code> for human output and
+          structured fields for <code>--json</code>; the shell is human-first and only sets <code>cli.json</code> when the caller passes
+          <code>--json</code>. Keep CLI commands coarse and administrative; do not expose every UI button as a command. Agents should use
+          human command/help output for task selection, use <code>--json</code> only for scripts or stable machine parsing, and prefer
+          extension-contributed CLI commands over direct runtime file edits. System extensions use this surface for extension-owned
+          administration such as <code>extensions ...</code>, <code>settings ...</code>, and <code>conversations ...</code>. CLI commands
+          route through the same extension host and permission boundary as UI actions; do not expose secret reads or raw host file mutation
+          through CLI handlers.
+        </p>
+        <p>
+          Each command should include a human-readable <code>description</code>; add <code>usage</code> and <code>examples</code> when the
+          command accepts arguments or flags. <code>pnpm run check:cli:surface</code> validates command discovery and help output for all
+          system extension CLI commands.
+        </p>
+        <p>
+          System extension CLI commands must also declare a contract: <code>argsSchema</code>, <code>flagsSchema</code>, <code>mode</code>,
+          <code>requiresApp</code>, <code>idempotent</code>, and <code>outputModes</code>. The core shell validates declared args and flags
+          before dispatch. Mutating commands (<code>write</code>, <code>destructive</code>, or <code>background</code>) must support and
+          document <code>--dry-run</code>; the core CLI shell short-circuits declared dry-runs before invoking the backend action.
+          Destructive commands require interactive confirmation or <code>--yes</code>; the shell adds <code>--yes</code> to destructive
+          command contracts. Long-running commands should declare <code>mode: &quot;streaming&quot;</code>, include <code>jsonl</code> in
+          <code>outputModes</code>, and document flags such as <code>--follow</code>, <code>--format text|json|jsonl</code>, and
+          <code>--cancel-on-interrupt</code> when supported. Use <code>ctx.toolContext?.onUpdate</code> or
+          <code>ctx.conversations.runTurn(..., { onEvent })</code> to emit real stream events for <code>jsonl</code> callers. Use optional
+          <code>smoke</code> metadata for safe read-only contract tests.
         </p>
         <h3 id="quick-open-surfaces-quickopen">Quick-open surfaces (<code>quickOpen</code>)</h3>
         <p>
@@ -1311,9 +1503,11 @@ export function MyPanel({ pa, context }: ExtensionSurfaceProps) {
           <li><code>pa.ui.toast(message, type)</code> — show toast notification</li>
           <li><code>pa.ui.confirm(options)</code> — show confirmation dialog (<code>{ title?, message }</code>)</li>
           <li>
-            <code>pa.ui.openModal(options)</code> — open a custom modal dialog (<code>{ title?, component, props? }</code>). The
+            <code>pa.ui.openModal(options)</code> — open a custom modal dialog (<code>{ title?, component, props?, size? }</code>). The
             <code>component</code> must be a named export from your extension's frontend entry. It receives
-            <code>{ pa, props, close }</code>. Returns a promise that resolves when the modal is closed.
+            <code>{ pa, props, close }</code>. Returns a promise that resolves when the modal is closed. Use <code>size: 'default'</code> or
+            omit it for focused forms and confirmations, <code>size: 'large'</code> for resource pickers or detail editors, and
+            <code>size: 'fullscreen'</code> for canvas/workspace tools such as drawing editors that need nearly the whole viewport.
           </li>
           <li><code>pa.storage.*</code> — read/write extension state</li>
           <li><code>pa.workspace.*</code> — workspace file operations</li>
@@ -1425,8 +1619,14 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
             <code>text-[18px] font-semibold tracking-tight</code>; body copy is usually <code>text-[13px] leading-6 text-secondary</code>.
           </li>
           <li>
-            Prefer <code>ToolbarButton</code>, <code>EmptyState</code>, <code>LoadingState</code>, <code>ErrorState</code>,
-            <code>AppPageEmptyState</code>, and <code>AppPageSection</code> over local button/state implementations.
+            Prefer shared UI from <code>@neon-pilot/extensions/ui</code> over local lookalikes. Common first choices are
+            <code>ToolbarButton</code>/<code>IconButton</code> for actions, <code>EmptyState</code>/<code>LoadingState</code>/<code
+              >ErrorState</code
+            >
+            for feedback, <code>AppPageEmptyState</code>/<code>AppPageSection</code> for page structure, <code>SegmentedControl</code> for
+            mutually exclusive modes, <code>DataTableActionGroup</code> for row actions, <code>RuntimeHeaderControls</code> for runtime
+            refresh/reset headers, <code>RailSubsection</code> for compact rails, <code>ResourcePickerDialog</code> for file/resource
+            selection, and <code>ChatView</code>/<code>ExtensionChatRail</code> for chat surfaces.
           </li>
           <li>
             Right-rail and panel views are compact tools, not full pages. Use tighter padding, smaller type, and avoid page-scale headers
@@ -1514,7 +1714,10 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
           Extension Manager diagnostic. This covers backend load/import failures, health checks, service startup, and similar host-level
           failures; normal action handler errors are returned to the caller and do not quarantine the extension. Startup also has a
           safe-mode marker. If the previous launch did not finish extension backend health checks, startup actions, service startup, and
-          subscription installation, the next launch disables enabled runtime/user extensions before loading them again.
+          subscription installation, the next launch disables the active runtime/user extension when the marker identifies one. If the
+          marker does not identify an active extension, safe mode reports the stale marker without disabling extensions. Re-enabling an
+          extension clears its quarantine entry and any stale startup marker so the recovery action does not immediately retrigger safe
+          mode.
         </p>
         <pre><code>import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
@@ -1680,9 +1883,8 @@ const enabled = settings['myExt.featureEnabled'] === true;</code></pre>
           <li>Use <strong>database</strong> (<code>ctx.database</code>) for extension-owned SQLite tables,</li>
           <p>migrations, indexes, queues, and query-heavy state.</p>
           <li>
-            Use the <a href="https://github.com/patleeman/neon-pilot/blob/main/filesystem-authority.md">Filesystem Authority</a> for
-            extension-owned files/blobs, workspace files, temp workspaces, artifacts, and any path addressed by a user, agent, archive, or
-            external protocol.
+            Use the <a href="./filesystem-authority.html">Filesystem Authority</a> for extension-owned files/blobs, workspace files, temp
+            workspaces, artifacts, and any path addressed by a user, agent, archive, or external protocol.
           </li>
           <li>Settings are discoverable (all extensions contribute to a unified schema);</li>
           <p>storage is private to each extension.</p>
@@ -2325,6 +2527,10 @@ await cacheFiles.writeJson('remote-index.json', index);</code></pre>
           <li>
             <strong><code>system-browser</code></strong> — Experimental browser automation tool + views
             (<code>patleeman/neon-pilot-extensions/system-browser</code>)
+          </li>
+          <li>
+            <strong><code>system-writing-studio</code></strong> — Document-first writing surface with hosted chat, file tree sidebar, and
+            structured annotation tools (<code>patleeman/neon-pilot-extensions/system-writing-studio</code>)
           </li>
           <li>
             <strong><code>system-automations</code></strong> — Scheduled tasks, follow-up queues, and the Automations page

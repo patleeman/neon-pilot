@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Agent Bootstrap · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="active" href="./agent-bootstrap.html">Agent Bootstrap</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="agent-bootstrap">Agent Bootstrap</h1>
+        <p>Neon Pilot must be installable, configurable, and verifiable by an external agent without manual file edits.</p>
+        <h2 id="install">Install</h2>
+        <p>
+          Use the packaged macOS installer script. It installs the signed app from GitHub releases, launches it once, installs the CLI when
+          available, and reports machine-readable status.
+        </p>
+        <pre><code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json</code></pre>
+        <p>Use <code>--channel rc</code> for release-candidate builds.</p>
+        <h2 id="configure">Configure</h2>
+        <p>
+          Run bootstrap commands through the live app CLI. Use JSON output only for automation scripts and health gates that parse results.
+        </p>
+        <pre><code>neon-pilot bootstrap configure \
+  --secrets-provider keychain \
+  --provider openai-codex \
+  --model gpt-5.4 \
+  --cwd &quot;$HOME/workingdir&quot; \
+  --json</code></pre>
+        <p>Provider keys must not be passed in argv. Use stdin:</p>
+        <pre><code>printf '%s' &quot;$OPENAI_API_KEY&quot; | neon-pilot bootstrap provider set-key openai --stdin --json</code></pre>
+        <p>Custom providers and models can be created from the CLI:</p>
+        <pre><code>neon-pilot bootstrap provider save openrouter --base-url https://openrouter.ai/api/v1 --api openai --json
+neon-pilot bootstrap provider model openrouter openai/gpt-5.4 --context-window 272000 --json</code></pre>
+        <h2 id="verify">Verify</h2>
+        <p>An agent should not report setup complete until these checks pass:</p>
+        <pre><code>neon-pilot cli status --json
+neon-pilot commands
+neon-pilot bootstrap doctor --json
+neon-pilot control-plane doctor --json
+neon-pilot protocol neon-pilot-agent capabilities --json
+neon-pilot protocol neon-pilot-agent run --prompt &quot;Reply with ready.&quot; --tools none --json</code></pre>
+        <p>
+          Neon Pilot self-administration is through <code>neon-pilot</code> for external agents and the canonical
+          <code>neon_pilot</code> tool for internal agents. Do not configure Neon Pilot admin through MCP.
+        </p>
+        <h2 id="rules-for-agents">Rules For Agents</h2>
+        <ul>
+          <li>Prefer CLI commands over editing runtime files directly.</li>
+          <li>Use human output for orientation; use <code>--json</code> only for scripted health gates and parsed automation.</li>
+          <li>Never put provider API keys in command arguments, logs, transcripts, or config files.</li>
+          <li>Use <code>--stdin</code>, Keychain, or OAuth/device login for credentials.</li>
+          <li>Use <code>neon-pilot bootstrap doctor --json</code> after every install or settings change.</li>
+          <li>Report exactly which verification commands passed or failed.</li>
+        </ul>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/agent-bootstrap.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#install">Install</a><a href="#configure">Configure</a><a href="#verify">Verify</a
+        ><a href="#rules-for-agents">Rules For Agents</a>
+      </aside>
+    </main>
+  </body>
+</html>

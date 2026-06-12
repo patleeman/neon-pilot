@@ -24,13 +24,16 @@
         <h1>Docs</h1>
         <section>
           <h2>Start here</h2>
-          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -39,12 +42,17 @@
         </section>
         <section>
           <h2>Runtime</h2>
-          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
-          ><a class="" href="./telemetry.html">Telemetry</a>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
         </section>
         <section>
           <h2>Developers</h2>
-          <a class="active" href="./development.html">Development</a>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="active" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -104,6 +112,10 @@ pnpm run check    # types, lint, format, full test suite, extension static check
               <td>Extension static checks plus focused extension smoke tests</td>
             </tr>
             <tr>
+              <td><code>pnpm run test:release-hardening</code></td>
+              <td>Focused tests for release smoke wiring and the extension golden matrix</td>
+            </tr>
+            <tr>
               <td><code>pnpm run check:coverage</code></td>
               <td>Periodic coverage review; advisory, not blocking</td>
             </tr>
@@ -146,6 +158,17 @@ pnpm run check    # types, lint, format, full test suite, extension static check
           not hide inside a broad pass. The smoke refuses stale desktop UI/server/main bundles for the source files it covers; rebuild the
           touched bundle first when it reports a stale output.
         </p>
+        <p>Packaged extension golden smoke:</p>
+        <pre><code>pnpm run smoke:release-extensions -- --app=&quot;/Applications/Neon Pilot RC.app&quot;</code></pre>
+        <p>
+          This launches the packaged app with isolated state, config, knowledge, user-data, HOME, and XDG roots, reads
+          <code>scripts/release-extension-golden-matrix.json</code>, verifies required extensions are enabled in the real registry, opens
+          every golden extension route, checks expected agent tools through <code>/api/tools</code>, and invokes representative backend/tool
+          actions through <code>/api/extensions/:id/actions/:actionId</code>. Add release-critical extension workflows to the matrix when a
+          regression would block a release or when a new extension surface becomes part of the expected app experience. The matrix also
+          supports installable package zips and catalog installs so optional first-party extension artifacts can be promoted through the
+          same gate.
+        </p>
         <p>
           For local iteration on transcript/new-conversation latency, prefer the Testing app instead of RC so release state stays untouched:
         </p>
@@ -185,12 +208,14 @@ pnpm run ab:cleanup -- --session &lt;name&gt;</code></pre>
         <p>When launching the test desktop app for QA, pass a non-interactive quit flag:</p>
         <pre><code>pnpm run desktop:dev -- --remote-debugging-port=9222 --no-quit-confirmation</code></pre>
         <p>
-          Desktop runtime channels are intentionally isolated. Stable uses <code>neon-pilot</code>; RC uses <code>neon-pilot-rc</code>; dev
-          uses <code>neon-pilot-dev</code>; test launches use <code>neon-pilot-testing</code>. Dev/test ports default to random/unset
-          (<code>0</code>) and each dev/test app process gets a unique <code>NEON_PILOT_DAEMON_NAMESPACE</code> unless one is explicitly
-          provided, so multiple dev/test app invocations do not share daemon sockets, pid locks, runtime DBs, or companion ports. Override
-          only for dev/test with <code>NEON_PILOT_RUNTIME_CHANNEL</code>, <code>NEON_PILOT_DAEMON_NAMESPACE</code>, or
-          <code>NEON_PILOT_DAEMON_SOCKET_PATH</code>.
+          Desktop runtime channels are intentionally isolated under the <code>neon-pilot*</code> namespace. Stable uses
+          <code>neon-pilot</code>; RC uses <code>neon-pilot-rc</code>; dev uses <code>neon-pilot-dev</code>; test launches use
+          <code>neon-pilot-testing</code>. The user-facing CLI command remains <code>neon-pilot</code> for every channel; channel-local app
+          shells prepend that channel's managed CLI bin directory, and user shell installation is opt-in with
+          <code>neon-pilot cli install</code>. Dev/test ports default to random/unset (<code>0</code>) and each dev/test app process gets a
+          unique <code>NEON_PILOT_DAEMON_NAMESPACE</code> unless one is explicitly provided, so multiple dev/test app invocations do not
+          share daemon sockets, pid locks, runtime DBs, or companion ports. Override only for dev/test with
+          <code>NEON_PILOT_RUNTIME_CHANNEL</code>, <code>NEON_PILOT_DAEMON_NAMESPACE</code>, or <code>NEON_PILOT_DAEMON_SOCKET_PATH</code>.
         </p>
         <p>
           Before launching or closing <code>Neon Pilot Testing.app</code>, check whether another instance already exists. Do not quit, kill,

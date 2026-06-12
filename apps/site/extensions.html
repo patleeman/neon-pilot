@@ -38,7 +38,8 @@
           <h1 id="ext-hero-title">Make Neon Pilot<br />your own.</h1>
           <p class="section-copy">
             Extensions are self-contained packages that add tools, surfaces, automations, hardware support, or integrations to Neon Pilot.
-            The app already ships with 45+ of them. You can build your own in minutes — just ask your agent.
+            The app ships with 30+ bundled system extensions, and optional first-party extensions can be installed from release artifacts.
+            You can build your own in minutes — just ask your agent.
           </p>
           <div class="cta-row">
             <a class="btn primary" href="./docs/build-an-extension.html">Build an extension</a>
@@ -138,8 +139,8 @@
             <li>Auto-compact long conversations after a threshold</li>
             <li>Background service that indexes your codebase</li>
             <li>Health check monitors that page you when something breaks</li>
-            <li>Inject scoped context before every turn</li>
-            <li>Filter or rewrite prompts before they reach the model</li>
+            <li>Add inspectable prompt context before every turn</li>
+            <li>Contribute instruction layers through prompt assembly providers</li>
           </ul>
         </article>
 
@@ -151,7 +152,7 @@
           <p>MCP servers, custom protocol handlers, and inter-extension calls let extensions bridge into your existing toolchain.</p>
           <ul class="ext-ideas">
             <li>Wire in Jira, Confluence, PagerDuty, or Datadog</li>
-            <li>Run an ACP server for custom agent protocols</li>
+            <li>Register gateways for Discord, Slack, or other external channels</li>
             <li>Export/import conversations between instances</li>
             <li>Orchestrate multiple extensions together</li>
             <li>Add quick-open scopes for your domain objects</li>
@@ -239,23 +240,23 @@
           <details>
             <summary>Can I share an extension with my team?</summary>
             <p>
-              Yes. Extensions package into a single <code>.neon-extension.zip</code> file with everything needed. Import it through Settings
-              → Extensions → Import. The built-in Extension Manager handles packaging, importing, and exporting.
+              Yes. Extensions package into a single <code>.neon-extension.zip</code> file with everything needed. Install or import released
+              packages through Settings → Extensions. The Extension Manager handles package installation, import/export, and diagnostics.
             </p>
           </details>
           <details>
             <summary>Are extensions safe?</summary>
             <p>
-              Extensions are local code with declared permissions shown in the Extension Manager. The runtime blocks process-terminating
-              calls from extension backend code and disables extensions that repeatedly fail infrastructure checks. Review what an extension
-              declares before enabling it.
+              Extensions are local code with declared permissions shown in the Extension Manager. Backend code runs through the extension
+              host boundary, uses host capabilities such as <code>ctx.shell</code> for process execution, and is isolated from direct core
+              or desktop internals. Review what an extension declares before enabling it.
             </p>
           </details>
           <details>
             <summary>What if the extension I want already exists?</summary>
             <p>
-              Check the Available tab in Settings → Extensions. Neon Pilot ships with 45+ built-in extensions covering tools, surfaces,
-              integrations, and more. You can also browse installable extensions from the GitHub repo.
+              Check Settings → Extensions. Neon Pilot ships with 30+ bundled system extensions covering tools, surfaces, integrations, and
+              runtime features. You can also install optional first-party extensions from the GitHub repo.
             </p>
           </details>
         </div>

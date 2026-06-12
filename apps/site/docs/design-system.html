@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Design System · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="active" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="design-system">Design System</h1>
+        <p>Neon Pilot's design system lives in <code>packages/ui</code> and is published as <code>@neon-pilot/ui</code>.</p>
+        <p>Extension authors should normally import through the public SDK surface:</p>
+        <pre><code>import { Field, TextInput, ToolbarButton } from '@neon-pilot/extensions/ui';</code></pre>
+        <p>
+          This applies to sibling first-party extension repositories too, such as <code>../neon-pilot-extensions</code>. Those extensions
+          should not copy local <code>Field</code>, <code>TextInput</code>, <code>Select</code>, <code>Pill</code>, notice, progress, or
+          panel classes when the SDK component exists. Build the extension after replacement with its repo script, for example
+          <code>pnpm build system-video-probe</code> from <code>../neon-pilot-extensions</code>.
+        </p>
+        <p>
+          The desktop app may import from local compatibility paths such as <code>packages/desktop/ui/src/components/ui</code>, but reusable
+          components should be implemented in <code>packages/ui</code> first and re-exported through <code>@neon-pilot/extensions/ui</code>.
+        </p>
+        <h2 id="agent-workflow">Agent Workflow</h2>
+        <ol>
+          <li>Search <code>packages/ui/README.md</code> and Storybook before writing local UI.</li>
+          <li>Use shared primitives for buttons, fields, switches, notices, page shells, empty states, and status indicators.</li>
+          <li>
+            If a needed reusable component is missing, add it to <code>packages/ui</code>, add a story, add tests when behavior is
+            non-trivial, and re-export it through the extension SDK.
+          </li>
+          <li>Replace local copies in app and extension code when the new component is compatible.</li>
+          <li>Keep extension-specific workflow logic inside the extension; keep generic chrome and controls in the design system.</li>
+        </ol>
+        <p>
+          For dynamic or generated settings UIs, avoid local input/select/button class constants. Compose the shared primitives directly.
+          Use <code>Field</code> for simple controls, and use <code>FieldLabel</code> plus <code>FieldHint</code> in a neutral wrapper for
+          composite controls that contain buttons.
+        </p>
+        <p>
+          Always use the most user-friendly input method available. Prefer constrained controls over free-form text whenever the value space
+          is known: <code>Select</code> or <code>InlineSelect</code> instead of a typed string, <code>Switch</code> or
+          <code>SettingToggleRow</code> instead of a boolean text field, <code>SegmentedControl</code> or tabs instead of magic mode names,
+          swatches instead of hex-only color fields, and resource pickers instead of path text boxes. Prefer explicit key/value or
+          structured row editors for individual settings and records over a <code>Textarea</code> containing JSON. Use raw JSON editing only
+          for genuinely large, deeply nested, import/export, or expert-only payloads, and pair it with validation and clear errors.
+        </p>
+        <p>
+          User-reachable UI actions should be command-backed when they may need a shortcut, command-palette entry, hardware trigger, or
+          automation hook. Add or reuse an extension/app command for meaningful page actions, toolbar actions, navigation, and workflow
+          operations instead of leaving behavior trapped inside an anonymous button handler.
+        </p>
+        <p>
+          When auditing an extension or app surface, search first for repeated local recipes such as
+          <code>rounded-md border border-border-subtle</code>, <code>bg-elevated p-</code>, <code>ui-toolbar-button</code>, local
+          <code>BUTTON_CLASS</code> constants, <code>details</code>/<code>summary</code>, and hand-written empty/error/loading text. Most of
+          those should collapse into an existing primitive.
+        </p>
+        <h2 id="commands">Commands</h2>
+        <p>Run the component package build:</p>
+        <pre><code>pnpm --dir packages/ui run build</code></pre>
+        <p>Run component tests:</p>
+        <pre><code>pnpm --dir packages/ui run test</code></pre>
+        <p>Start Storybook:</p>
+        <pre><code>pnpm --dir packages/ui run storybook</code></pre>
+        <p>Build Storybook:</p>
+        <pre><code>CI=true pnpm --dir packages/ui run build:storybook</code></pre>
+        <h2 id="current-foundation">Current Foundation</h2>
+        <p>The shared package includes:</p>
+        <ul>
+          <li>
+            Actions: <code>Button</code>, <code>ButtonLink</code>, <code>ToolbarButton</code>, <code>TextButton</code>,
+            <code>MessageActionButton</code>, <code>IconButton</code>, <code>IconLink</code>, <code>BrowsePathButton</code>,
+            <code>CheckButton</code>, <code>TaskListItem</code>, <code>ChoiceRow</code>, <code>ActionTile</code>
+          </li>
+          <li>Attachment controls: <code>AttachmentChip</code>, <code>AttachmentChipButton</code></li>
+          <li>
+            Status: <code>Pill</code>, <code>StatusDot</code>, <code>RingStatusDot</code>, <code>Spinner</code>, <code>Keycap</code>,
+            <code>Tooltip</code>, <code>Notice</code>
+          </li>
+          <li>
+            Surfaces: <code>SurfacePanel</code>, <code>PanelHeader</code>, <code>PanelMessage</code>, <code>CompactCard</code>,
+            <code>WorkbenchShell</code>, <code>WorkbenchHeader</code>, <code>RailSection</code>, <code>RailSubsection</code>,
+            <code>ShelfSection</code>, <code>ShelfHeader</code>, <code>ShelfBody</code>
+          </li>
+          <li>
+            Overlays: <code>Dialog</code>, <code>DialogHeader</code>, <code>DialogBody</code>, <code>DialogFooter</code>,
+            <code>ConfirmDialog</code>, <code>TextPromptDialog</code>
+          </li>
+          <li>
+            Feedback: <code>CenteredState</code>, <code>CenteredLoadingState</code>, <code>CenteredMessage</code>,
+            <code>LoadingState</code>, <code>ErrorState</code>, <code>EmptyState</code>, <code>AppPageEmptyState</code>
+          </li>
+          <li>
+            Forms: <code>Field</code>, <code>FieldLabel</code>, <code>FieldHint</code>, <code>FieldError</code>, <code>TextInput</code>,
+            <code>SearchInput</code>, <code>Textarea</code>, <code>Select</code>, <code>InlineTextInput</code>, <code>InlineSelect</code>,
+            <code>Checkbox</code>, <code>KeyboardShortcutCaptureInput</code>, <code>Switch</code>, <code>SettingsPanel</code>,
+            <code>SettingsRow</code>, <code>SettingToggleRow</code>, <code>SettingsSection</code>
+          </li>
+          <li>
+            Menus: <code>MenuShell</code>, <code>PositionedMenu</code>, <code>MenuGroupLabel</code>, <code>MenuItem</code>,
+            <code>MenuSeparator</code>
+          </li>
+          <li>
+            Selection and filtering: <code>SegmentedControl</code>, <code>TabList</code>, <code>TabButton</code>, <code>TabPanel</code>,
+            <code>FilterToolbar</code>
+          </li>
+          <li>
+            Data display: <code>SectionLabel</code>, <code>MetaLabel</code>, <code>CardTitle</code>, <code>CardBody</code>,
+            <code>CardMeta</code>, <code>SupportingText</code>, <code>InlineMeta</code>, <code>MessageCard</code>, <code>MessageMeta</code>,
+            <code>ToolResultCard</code>, <code>ResourcePickerDialog</code>, <code>ResourcePickerToolbar</code>,
+            <code>ResourcePickerList</code>, <code>ResourceList</code>, <code>ResourceListRow</code>, <code>ResourceListItem</code>,
+            <code>ResourceListLink</code>, <code>RowButton</code>, <code>InlineCode</code>, <code>InlineCodeButton</code>,
+            <code>CodeBlock</code>, <code>Disclosure</code>, <code>ProgressBar</code>, <code>ProgressRow</code>, <code>Stat</code>,
+            <code>StatGrid</code>, <code>MetricTile</code>, <code>DashboardGrid</code>, <code>DashboardGridCell</code>,
+            <code>KeyValueList</code>, <code>KeyValueItem</code>, <code>KeyValueTable</code>, <code>DataTable</code>,
+            <code>DataTableHead</code>, <code>DataTableBody</code>, <code>DataTableRow</code>, <code>DataTableHeaderCell</code>,
+            <code>DataTableCell</code>, <code>DataTableEmptyRow</code>, <code>DataTableActionGroup</code>, <code>TerminalBlock</code>
+          </li>
+          <li>
+            Pages and sections: <code>PageHeader</code>, <code>AppPageLayout</code>, <code>AppPageIntro</code>, <code>AppPageSection</code>,
+            <code>AppPageToc</code>, <code>AppPageEmptyState</code>, <code>RuntimePage</code>, <code>RuntimeHeader</code>,
+            <code>RuntimeHeaderControls</code>, <code>RuntimeStrip</code>, <code>RuntimeSection</code>, <code>RuntimeFooter</code>
+          </li>
+          <li>Utility: <code>cx</code></li>
+        </ul>
+        <p>Host-backed extension components are also exposed through public SDK subpaths when they need app-owned data or behavior:</p>
+        <ul>
+          <li>
+            <code>@neon-pilot/extensions/ui</code>: app page shells, shared primitives, <code>ActivityTreeView</code>,
+            <code>ChatView</code>, <code>ChatRailComposer</code>, <code>ExtensionChatRail</code>, <code>CheckpointInlineDiff</code>,
+            <code>DiffActionButton</code>, <code>ContextMenuWrapper</code>, and file-tree helpers such as <code>useFileTreeModel</code>
+          </li>
+          <li>
+            <code>@neon-pilot/extensions/settings</code>: settings-oriented exports plus shared form, notice, progress, and subsection
+            primitives such as <code>SettingsSection</code>, <code>Field</code>, <code>SettingToggleRow</code>, and
+            <code>RailSubsection</code>
+          </li>
+          <li>
+            <code>@neon-pilot/extensions/workbench-files</code>: <code>WorkspaceExplorer</code> and <code>WorkspaceFileDocument</code>
+          </li>
+        </ul>
+        <p>
+          Prefer package primitives for generic chrome. Use host-backed components only when the component depends on desktop/app state,
+          workspace files, transcript rendering, activity-tree behavior, or native context menus.
+        </p>
+        <h2 id="extraction-priorities">Extraction Priorities</h2>
+        <p>Extract in small tranches and migrate real usage each time:</p>
+        <ol>
+          <li>Forms and feedback: fields, inputs, switches, notices.</li>
+          <li>Overlays: confirmation dialogs and richer positioned menu behavior.</li>
+          <li>Layout: settings sections, cards, page headers, richer search/filter bars.</li>
+          <li>Data display: sortable columns, richer table states, and nested table actions.</li>
+          <li>Host-owned app patterns: file trees, activity trees, chat/transcript surfaces, diff/artifact views.</li>
+        </ol>
+        <p>
+          Each tranche should include documentation, Storybook coverage, and at least one app or extension replacement so the component is
+          proven against production usage.
+        </p>
+        <h2 id="migration-map">Migration Map</h2>
+        <ul>
+          <li>Raw action buttons -&gt; <code>Button</code>, <code>ToolbarButton</code>, or <code>IconButton</code></li>
+          <li>Raw file/folder picker icon buttons -&gt; <code>BrowsePathButton</code></li>
+          <li>Raw todo/checklist rows -&gt; <code>TaskListItem</code> with <code>CheckButton</code></li>
+          <li>Raw selectable radio/checkbox option rows -&gt; <code>ChoiceRow</code></li>
+          <li>Raw text/search/number inputs -&gt; <code>TextInput</code> or <code>SearchInput</code></li>
+          <li>Raw selects -&gt; <code>Select</code></li>
+          <li>
+            Raw local <code>Field</code>, <code>TextInput</code>, <code>Select</code>, or <code>Pill</code> helpers in external extensions
+            -&gt; SDK imports from <code>@neon-pilot/extensions/ui</code>
+          </li>
+          <li>Raw textareas -&gt; <code>Textarea</code></li>
+          <li>Boolean settings -&gt; <code>Switch</code> or <code>SettingToggleRow</code></li>
+          <li>Local nested settings cards or provider subsections -&gt; <code>SettingsPanel</code></li>
+          <li>Local segmented filters -&gt; <code>SegmentedControl</code></li>
+          <li>Local tab rows -&gt; <code>TabList</code>, <code>TabButton</code>, and <code>TabPanel</code></li>
+          <li>Local search/filter header rows -&gt; <code>FilterToolbar</code></li>
+          <li>Local route section headers with title/description/count/actions -&gt; <code>AppPageSection</code></li>
+          <li>Local fixed/absolute menu shells -&gt; <code>PositionedMenu</code> with <code>MenuItem</code></li>
+          <li>
+            Local loading/error/empty messages -&gt; <code>LoadingState</code>, <code>ErrorState</code>, <code>EmptyState</code>,
+            <code>PanelMessage</code>, <code>CenteredMessage</code>, or <code>Notice</code>
+          </li>
+          <li>Local bordered section cards with title/meta rows -&gt; <code>SurfacePanel</code> with <code>PanelHeader</code></li>
+          <li>Local workbench editor/detail/preview panes -&gt; <code>WorkbenchShell</code> with <code>WorkbenchHeader</code></li>
+          <li>
+            Local left/right rail groups -&gt; <code>RailSection</code> plus <code>ResourceListItem</code>, <code>ResourceListRow</code>, or
+            <code>RowButton</code>
+          </li>
+          <li>
+            Local compact transcript/workbench shelves -&gt; <code>ShelfSection</code> with <code>ShelfHeader</code> and optional
+            <code>ShelfBody</code>
+          </li>
+          <li>
+            Local extension runtime/model-server/setup pages -&gt; <code>RuntimePage</code>, <code>RuntimeHeader</code>,
+            <code>RuntimeStrip</code>, <code>RuntimeSection</code>, <code>RuntimeFooter</code>, and <code>TerminalBlock</code>
+          </li>
+          <li>
+            Local bordered metric tiles or status grids -&gt; <code>DashboardGrid</code>, <code>DashboardGridCell</code>, and
+            <code>MetricTile</code>
+          </li>
+          <li>
+            Local bordered data cards -&gt; <code>SurfacePanel</code>, <code>ResourceList</code>, <code>ResourceListRow</code>,
+            <code>ResourceListItem</code>, <code>KeyValueList</code>, <code>KeyValueTable</code>, <code>DataTable</code>, or
+            <code>Disclosure</code>
+          </li>
+          <li>
+            Local modal resource/file/folder/workspace pickers -&gt; <code>ResourcePickerDialog</code>, <code>ResourcePickerToolbar</code>,
+            <code>ResourcePickerList</code>, and <code>ResourceListItem</code>
+          </li>
+          <li>Local non-collapsible tool result cards -&gt; <code>ToolResultCard</code></li>
+          <li>Local table no-results <code>tr</code>/<code>td</code> placeholders -&gt; <code>DataTableEmptyRow</code></li>
+          <li>Local table row action wrappers -&gt; <code>DataTableActionGroup</code></li>
+          <li>Local compact uppercase labels -&gt; <code>SectionLabel</code> or <code>MetaLabel</code></li>
+          <li>Local code, command, log, or JSON blocks -&gt; <code>CodeBlock</code> or <code>TerminalBlock</code></li>
+          <li>
+            Local file trees or workspace file panels -&gt; <code>useFileTreeModel</code> for app-integrated trees, or
+            <code>WorkspaceExplorer</code>/<code>WorkspaceFileDocument</code> when the extension needs the existing workspace file UX
+          </li>
+          <li>
+            Local transcript/chat surfaces -&gt; <code>ChatView</code>, <code>ChatRailComposer</code>, <code>ExtensionChatRail</code>,
+            <code>MessageCard</code>, <code>MessageMeta</code>, <code>MessageActionButton</code>, and transcript-specific primitives before
+            rebuilding message chrome
+          </li>
+        </ul>
+        <h2 id="recent-production-examples">Recent Production Examples</h2>
+        <p>Use these as reference implementations when migrating similar surfaces:</p>
+        <ul>
+          <li>
+            <code>extensions/system-settings/src/SettingsPage.tsx</code>: settings provider advanced sections use <code>Disclosure</code>.
+          </li>
+          <li>
+            <code>extensions/system-telemetry/src/traces/TracesToolHealth.tsx</code>: telemetry tool cards use <code>SurfacePanel</code>,
+            <code>StatusDot</code>, <code>Pill</code>, <code>MetricTile</code>, and <code>ProgressBar</code>.
+          </li>
+          <li>
+            <code>extensions/system-extension-manager/src/panels.tsx</code>: manifest inspection uses <code>Disclosure</code> and
+            <code>CodeBlock</code>.
+          </li>
+          <li>
+            <code>packages/desktop/ui/src/components/ConversationArtifactWorkbench.tsx</code> and
+            <code>ConversationCheckpointWorkbench.tsx</code>: full-height workbench panes use <code>WorkbenchShell</code>.
+          </li>
+          <li>
+            <code>packages/desktop/ui/src/components/conversation/ConversationActivityShelf.tsx</code> and
+            <code>ConversationQueueShelf.tsx</code>: compact conversation shelves use <code>ShelfSection</code>.
+          </li>
+          <li>
+            <code>packages/desktop/ui/src/components/chat/MessageBlocks.tsx</code>: transcript messages use <code>MessageCard</code>,
+            <code>MessageMeta</code>, and <code>MessageActionButton</code>.
+          </li>
+          <li>
+            <code>../neon-pilot-extensions/system-ds4/src/frontend.tsx</code>: runtime settings use <code>SurfacePanel</code>,
+            <code>Disclosure</code>, <code>ProgressBar</code>, <code>Pill</code>, <code>DashboardGrid</code>, <code>MetricTile</code>, and
+            <code>CodeBlock</code>.
+          </li>
+          <li>
+            <code>../neon-pilot-extensions/system-local-models/src/page.tsx</code> and <code>system-video-probe/src/frontend.tsx</code>:
+            selected-model/runtime summaries use <code>DashboardGrid</code> and <code>MetricTile</code>.
+          </li>
+          <li>
+            <code>../neon-pilot-extensions/system-browser/src/panels.tsx</code>: browser tab rail uses <code>RailSection</code> and
+            <code>ResourceListItem</code>.
+          </li>
+        </ul>
+        <h2 id="agent-checklist">Agent Checklist</h2>
+        <p>Before introducing local UI markup in an app page or extension:</p>
+        <ol>
+          <li>
+            Check <code>packages/ui/README.md</code> for a matching primitive and inspect
+            <code>packages/ui/src/stories/Primitives.stories.tsx</code> for composition examples.
+          </li>
+          <li>
+            Prefer SDK imports from <code>@neon-pilot/extensions/ui</code> for extension code and
+            <code>@neon-pilot/extensions/settings</code> for Settings extension code.
+          </li>
+          <li>
+            Choose the friendliest control before defaulting to text: dropdowns, toggles, segmented controls, pickers, key/value editors,
+            and structured rows should replace raw inputs or JSON textareas whenever practical.
+          </li>
+          <li>Back meaningful user actions with commands so they can be discovered, automated, and hot-keyed.</li>
+          <li>
+            Keep domain behavior local, but move generic chrome, spacing, state color, empty/error/loading presentation, and
+            modal/list/table shells to shared primitives.
+          </li>
+          <li>
+            When adding a new primitive, update <code>packages/ui/src/index.ts</code>,
+            <code>packages/desktop/ui/src/extensions/ui.ts</code> or settings exports if extensions need it,
+            <code>packages/ui/README.md</code>, Storybook, and tests where behavior is non-trivial.
+          </li>
+          <li>
+            Validate the actual touched surface: build the package or extension, run <code>pnpm run check:extensions:static</code> for
+            extension boundary work, and perform browser/app QA when user-visible UI changes.
+          </li>
+        </ol>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/design-system.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#agent-workflow">Agent Workflow</a><a href="#commands">Commands</a><a href="#current-foundation">Current Foundation</a
+        ><a href="#extraction-priorities">Extraction Priorities</a><a href="#migration-map">Migration Map</a
+        ><a href="#recent-production-examples">Recent Production Examples</a><a href="#agent-checklist">Agent Checklist</a>
+      </aside>
+    </main>
+  </body>
+</html>

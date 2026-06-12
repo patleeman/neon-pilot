@@ -24,13 +24,16 @@
         <h1>Docs</h1>
         <section>
           <h2>Start here</h2>
-          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -39,12 +42,17 @@
         </section>
         <section>
           <h2>Runtime</h2>
-          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
-          ><a class="active" href="./telemetry.html">Telemetry</a>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="active" href="./telemetry.html">Telemetry</a>
         </section>
         <section>
           <h2>Developers</h2>
-          <a class="" href="./development.html">Development</a>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -97,12 +105,17 @@
         </p>
         <h2 id="what-gets-recorded">What gets recorded</h2>
         <p>There are two related telemetry streams:</p>
-        <p>
-          1. <strong>Trace metrics</strong> — structured records for model usage, token/cost stats, context pressure, compactions, tool
-          calls, tool latency, and agent-loop health. These are written to <code>observability/observability.db</code> because the Telemetry
-          page mostly reads aggregates. 2. <strong>Application telemetry</strong> — generic runtime events that are useful before they have
-          first-class charts. These are written to JSONL first, then indexed into SQLite best-effort.
-        </p>
+        <ol>
+          <li>
+            <strong>Trace metrics</strong> — structured records for model usage, token/cost stats, context pressure, compactions, tool
+            calls, tool latency, and agent-loop health. These are written to <code>observability/observability.db</code> because the
+            Telemetry page mostly reads aggregates.
+          </li>
+          <li>
+            <strong>Application telemetry</strong> — generic runtime events that are useful before they have first-class charts. These are
+            written to JSONL first, then indexed into SQLite best-effort.
+          </li>
+        </ol>
         <p>
           Current app telemetry producers include server API request timing, <code>Server-Timing</code> headers, server warnings/errors,
           server app events, renderer route views/leaves, visibility changes, renderer crashes/rejections, conversation stream lifecycle
@@ -137,12 +150,12 @@
         <h2 id="write-path">Write path</h2>
         <p>The main app telemetry seam is <code>writeAppTelemetryEvent</code> in <code>packages/core/src/app-telemetry-db.ts</code>.</p>
         <p>Write flow:</p>
-        <p>
-          1. Normalize and bound the event fields. 2. Append the event to
-          <code>&lt;state-root&gt;/logs/telemetry/app-telemetry-YYYY-MM-DD[.N].jsonl</code>. 3. Try to insert the same event into
-          <code>observability/observability.db</code> as a derived index. 4. Log telemetry storage failures to stderr/server logs, but do
-          not break app behavior.
-        </p>
+        <ol>
+          <li>Normalize and bound the event fields.</li>
+          <li>Append the event to <code>&lt;state-root&gt;/logs/telemetry/app-telemetry-YYYY-MM-DD[.N].jsonl</code>.</li>
+          <li>Try to insert the same event into <code>observability/observability.db</code> as a derived index.</li>
+          <li>Log telemetry storage failures to stderr/server logs, but do not break app behavior.</li>
+        </ol>
         <p>
           The desktop server adds an in-process queue in <code>packages/desktop/server/traces/appTelemetry.ts</code> so hot paths can
           fire-and-forget. If that queue overflows, the app records a <code>system/telemetry/queue_drop</code> event before shedding
@@ -161,9 +174,10 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
           depending on the panel.
         </p>
         <p>Generic app telemetry reads use <code>queryAppTelemetryEvents</code>:</p>
-        <p>
-          1. Read matching JSONL log events first. 2. Fall back to SQLite when no JSONL events exist, which keeps old indexed data visible.
-        </p>
+        <ol>
+          <li>Read matching JSONL log events first.</li>
+          <li>Fall back to SQLite when no JSONL events exist, which keeps old indexed data visible.</li>
+        </ol>
         <p>
           Extension action telemetry uses the same app telemetry data. Extension Manager and other renderer-owned UI should read it through
           the native bridge/action surfaces, not direct extension HTTP routes.

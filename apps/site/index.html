@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#05070b" />
     <meta
       name="description"
-      content="Neon Pilot is a self-extensible coding companion that can build commands, tools, workflows, and extensions as you need them."
+      content="Neon Pilot is a durable AI agent runtime with a desktop app, background automation, extensions, and knowledge management."
     />
-    <title>Neon Pilot — self-extensible agent</title>
+    <title>Neon Pilot — durable desktop agent runtime</title>
     <link rel="icon" href="./mark.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -35,9 +35,12 @@
     <main id="main">
       <section class="hero" id="overview" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <h1 id="hero-title">A self-extensible agent that adapts to your needs</h1>
-          <p>Neon Pilot is a self-extensible coding agent. Just tell it what you want it to do, and it can add the feature.</p>
-          <p>Powered by <a href="https://pi.dev/">Pi</a>. Built for developers. Designed to grow with you.</p>
+          <h1 id="hero-title">A durable desktop runtime for personal AI agents</h1>
+          <p>
+            Neon Pilot gives agents persistent conversations, tools, background work, extensions, and knowledge that survive beyond a single
+            chat session.
+          </p>
+          <p>Built for developers who want their agent workspace to grow with the work, not wait for the next product release.</p>
           <div class="cta-row">
             <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">⌄ Download for macOS</a>
             <a class="btn" href="https://github.com/patleeman/neon-pilot">View on GitHub <span>◖</span></a>
@@ -47,22 +50,22 @@
           <article>
             <span>⌘</span>
             <div>
-              <strong>Self-extensible</strong>
-              <p>Ask for a feature. Neon Pilot builds it.</p>
+              <strong>Extension-first</strong>
+              <p>Commands, tools, pages, panels, and workflows live in extensions.</p>
             </div>
           </article>
           <article>
-            <span>π</span>
+            <span>◷</span>
             <div>
-              <strong>Built on Pi</strong>
-              <p>A coding-agent harness and SDK.</p>
+              <strong>Daemon-backed</strong>
+              <p>Automations, persisted runs, follow-ups, and scheduled work keep moving.</p>
             </div>
           </article>
           <article>
-            <span>☁</span>
+            <span>◇</span>
             <div>
-              <strong>Multi-provider</strong>
-              <p>Use the best model for the task. No lock-in.</p>
+              <strong>Knowledge-aware</strong>
+              <p>Use files, instruction layers, skills, projects, and synced knowledge as context.</p>
             </div>
           </article>
         </div>
@@ -71,35 +74,37 @@
       <section class="flow" aria-label="A feature request becoming a reusable capability">
         <div class="flow-step request">
           <small>You ask for a capability</small>
-          <div class="message"><b>PM</b><span>I want to use Qwen 3.6 27B locally</span></div>
+          <div class="message"><b>PM</b><span>Build a workflow that triages failed CI logs</span></div>
           <em>9:41 AM</em>
         </div>
         <div class="arrow">→</div>
         <div class="flow-step">
           <small>Neon Pilot turns it into an extension</small>
           <ul>
-            <li>Design local models interface</li>
-            <li>Add provider routing settings</li>
-            <li>Plan model serving controls</li>
-            <li>Wire status into the workspace</li>
+            <li>Pick the right extension surface</li>
+            <li>Add command palette actions</li>
+            <li>Register a reusable agent tool</li>
+            <li>Wire results into the transcript</li>
           </ul>
         </div>
         <div class="arrow">→</div>
         <div class="flow-step build">
           <small>It builds, tests, and wires it in</small>
           <ul>
-            <li>Created: local-models extension</li>
-            <li>Added: Qwen 3.6 27B profile</li>
-            <li>Built: start / stop server actions</li>
-            <li>Tests: provider routing</li>
-            <li>Docs: local model setup</li>
+            <li>Created: ci-triage extension</li>
+            <li>Added: paste/log attachment flow</li>
+            <li>Built: parser and summary action</li>
+            <li>Tests: tool result rendering</li>
+            <li>Docs: workflow usage</li>
           </ul>
         </div>
         <div class="arrow">→</div>
         <div class="flow-step ready">
           <small>It becomes reusable</small>
-          <p class="integrated">Local model ready</p>
-          <div class="command">Qwen 3.6 27B <kbd>Running</kbd><span>Start, stop, and route tasks locally.</span></div>
+          <p class="integrated">CI triage ready</p>
+          <div class="command">
+            Triage failed CI <kbd>Command</kbd><span>Analyze logs from the palette, composer, or agent toolbelt.</span>
+          </div>
         </div>
       </section>
 
@@ -113,26 +118,27 @@
       <section class="cards primary-cards" aria-label="Primary features">
         <article>
           <span>☷</span>
-          <h2>Self-extensible</h2>
+          <h2>Extension-first</h2>
           <p>
-            Neon Pilot extends itself. Ask for new commands, tools, or workflows and it builds, tests, and integrates them — no manual
-            setup.
+            Neon Pilot keeps core small. Product workflows become system or user extensions with manifests, commands, tools, UI, settings,
+            and docs.
           </p>
           <a href="#self-extension">Learn more →</a>
         </article>
         <article>
-          <span>π</span>
-          <h2>Built on Pi</h2>
+          <span>◷</span>
+          <h2>Background work</h2>
           <p>
-            Pi is a coding-agent harness and SDK. Neon Pilot is built on Pi for tool execution, composability, and long-term flexibility.
+            Daemon-backed automations, persisted runs, subagents, scheduled tasks, deferred resumes, and follow-ups keep work durable across
+            restarts.
           </p>
-          <a href="#pi">Learn more →</a>
+          <a href="#runtime">Learn more →</a>
         </article>
         <article>
-          <span>☁</span>
-          <h2>Multi-provider</h2>
-          <p>Bring your own keys. Switch between providers anytime. Get the right model for every task without lock-in.</p>
-          <a href="#providers">Learn more →</a>
+          <span>◇</span>
+          <h2>Knowledge and context</h2>
+          <p>Attach files, folders, generated context, instruction files, skills, and git-backed knowledge so agents can carry history.</p>
+          <a href="#context">Learn more →</a>
         </article>
       </section>
 
@@ -157,14 +163,14 @@
           <p class="eyebrow">Self-extension lifecycle</p>
           <h2>Ask for a feature. Keep the capability.</h2>
           <p class="section-copy">
-            Neon Pilot is not a bog-standard coding agent bolted into a chat box. Your workflow changes all the time. Your agent harness
-            should change with it.
+            Neon Pilot is more than a coding agent in a chat box. When your workflow changes, the capability can become a real extension:
+            command-backed, documented, testable, and available again next time.
           </p>
         </div>
         <div class="feature-ideas panel">
           <div class="panel-title">Features you can ask it to build</div>
           <ul>
-            <li>“Let me run Qwen 3.6 27B locally.”</li>
+            <li>“Add a settings page for my team’s defaults.”</li>
             <li>“Create a release checklist for this repo.”</li>
             <li>“Build a workflow that triages failed CI logs.”</li>
             <li>“Turn this recurring process into a reusable skill.”</li>
@@ -173,33 +179,33 @@
         </div>
       </section>
 
-      <section id="pi" class="deep split reverse">
+      <section id="runtime" class="deep split reverse">
         <div class="feature-ideas panel pi-capabilities">
-          <div class="panel-title">Made possible by Pi</div>
+          <div class="panel-title">Runtime capabilities</div>
           <ul>
-            <li>Durable knowledge and workspace context</li>
-            <li>Automations, artifacts, and telemetry</li>
-            <li>Composable tools, providers, and extensions</li>
-            <li>SDK seams for safe product surfaces</li>
+            <li>Persisted conversations, branches, and transcripts</li>
+            <li>Daemon-backed automations and scheduled tasks</li>
+            <li>Artifacts, telemetry, and activity surfaces</li>
+            <li>Extension host APIs for tools, commands, and pages</li>
           </ul>
         </div>
         <div>
-          <p class="eyebrow">Built on Pi</p>
-          <h2>Give your agent power tools.</h2>
+          <p class="eyebrow">Durable runtime</p>
+          <h2>Give your agent a real workspace.</h2>
           <p class="section-copy">
-            Neon Pilot builds on Pi's agent harness with a polished desktop UI, native extensions, durable knowledge, automations,
-            artifacts, telemetry, and other built-in workflow features.
+            Conversations, runs, automations, command surfaces, model settings, and extension services all share the same local desktop
+            runtime instead of disappearing when a single response ends.
           </p>
         </div>
       </section>
 
-      <section id="providers" class="deep split">
+      <section id="context" class="deep split">
         <div>
-          <p class="eyebrow">Multi-provider</p>
-          <h2>Use the best model for the job.</h2>
+          <p class="eyebrow">Context and knowledge</p>
+          <h2>Bring the right memory into the turn.</h2>
           <p class="section-copy">
-            Run a frontier model for planning, a cheaper model for routine work, a vision model for screenshots, and local models when you
-            want control.
+            Use the composer, mentions, attached files, generated context, projects, skills, and git-backed knowledge base sync to make each
+            conversation aware of the work around it.
           </p>
         </div>
         <figure class="screen-card"><img src="./screenshots/dark/settings.png" alt="Model provider settings in Neon Pilot." /></figure>

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Sandboxing · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="active" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="sandboxing-and-process-execution">Sandboxing and Process Execution</h1>
+        <p>
+          Neon Pilot routes host-owned process execution through a shared process launcher so sandboxing extensions can wrap commands
+          consistently. Filesystem access should converge on the same authority model through the
+          <a href="./filesystem-authority.html">Filesystem Authority</a>: direct file APIs and command sandboxes should share scoped root
+          grants instead of inventing separate policy vocabularies.
+        </p>
+        <h2 id="execution-boundary">Execution boundary</h2>
+        <p>Extensions and core code should not spawn processes directly. Use the host APIs that route through the shared launcher:</p>
+        <ul>
+          <li>live-session bash tool</li>
+          <li>extension <code>ctx.shell</code> and <code>ctx.git</code></li>
+          <li>daemon/background run launches</li>
+          <li>automation command tasks</li>
+        </ul>
+        <p>
+          When a wrapper is active, tool UI should expose the wrapper metadata, for example a human label or the extension id. This is a
+          visibility contract: users and agents should be able to tell which execution boundary handled a command.
+        </p>
+        <h2 id="registering-a-process-wrapper">Registering a process wrapper</h2>
+        <p>Agent extensions can register a process wrapper from their backend agent extension export:</p>
+        <pre><code>export function mySandboxAgentExtension(pi) {
+  pi.registerBashProcessWrapper(
+    'my-sandbox-extension',
+    (context) =&gt; ({
+      ...context,
+      command: '/path/to/sandbox',
+      args: ['run', '--', context.command, ...context.args],
+      shell: false,
+    }),
+    { label: 'My Sandbox' },
+  );
+}</code></pre>
+        <p>
+          The wrapper receives <code>{ command, args, cwd, env, shell, wrappers }</code> and returns the launch context to execute. Wrappers
+          are applied in registration order. Use stable extension ids for wrapper ids.
+        </p>
+        <h2 id="filesystem-root-grants">Filesystem root grants</h2>
+        <p>
+          Process wrappers should eventually receive the Filesystem Authority grants for the subject they are launching for. That lets a
+          sandbox wrapper mount or expose the same roots that direct file APIs would allow: workspace read/write, extension private storage,
+          artifact output, temp workspaces, knowledge access, or secrets. The process launcher remains the execution boundary; the
+          Filesystem Authority owns root identity, grants, policy decisions, and audit vocabulary.
+        </p>
+        <h2 id="extension-process-api-policy">Extension process API policy</h2>
+        <p>
+          Extension backend code must use <code>ctx.shell</code> for process execution. Direct Node process APIs are blocked during backend
+          builds and bundle loading for normal extension code:
+        </p>
+        <ul>
+          <li><code>child_process</code> / <code>node:child_process</code></li>
+          <li><code>cluster</code> / <code>node:cluster</code></li>
+          <li><code>worker_threads</code> / <code>node:worker_threads</code></li>
+        </ul>
+        <p>
+          This is a guardrail against accidental bypasses, not a hostile-code security boundary. Unknown or hostile extension code still
+          requires out-of-process isolation or a VM/workspace sandbox.
+        </p>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/sandboxing.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#execution-boundary">Execution boundary</a><a href="#registering-a-process-wrapper">Registering a process wrapper</a
+        ><a href="#filesystem-root-grants">Filesystem root grants</a
+        ><a href="#extension-process-api-policy">Extension process API policy</a>
+      </aside>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Neon Pilot CLI · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="active" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="neon-pilot-cli">Neon Pilot CLI</h1>
+        <p>The <code>neon-pilot</code> command is the local control plane for Neon Pilot administration.</p>
+        <p>
+          Core owns the shell and built-in commands. Extensions add product commands with <code>contributes.cliCommands</code>, and enabled
+          extension commands are discoverable at runtime:
+        </p>
+        <pre><code>neon-pilot commands</code></pre>
+        <p>Use <code>neon-pilot help</code> for the core shell and <code>neon-pilot help &lt;command&gt;</code> for a specific command:</p>
+        <pre><code>neon-pilot help
+neon-pilot help settings list
+neon-pilot help conversations run-turn</code></pre>
+        <p>
+          CLI output is human-first. Commands should return <code>{ text }</code> or <code>{ message }</code> when they can explain the
+          result directly, and callers use <code>--json</code> when they need structured output for automation. Global flags are shell-owned
+          and work across core and extension commands:
+        </p>
+        <pre><code>neon-pilot commands --quiet
+neon-pilot doctor --verbose
+neon-pilot paths --json --no-color</code></pre>
+        <p>Errors are human-readable by default and structured under <code>--json</code>:</p>
+        <pre><code>{
+  &quot;ok&quot;: false,
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;unknown_command&quot;,
+    &quot;category&quot;: &quot;not_found&quot;,
+    &quot;message&quot;: &quot;Unknown Neon Pilot command: nope&quot;,
+    &quot;recoverable&quot;: true
+  }
+}</code></pre>
+        <h2 id="audiences-and-command-shape">Audiences and command shape</h2>
+        <p>The CLI has two overlapping audiences:</p>
+        <ul>
+          <li>
+            Humans and external agents use <code>neon-pilot</code> as a public control plane for common product tasks: ask Neon Pilot to do
+            work, continue conversations, inspect background work, manage extensions, configure settings, and verify runtime health.
+          </li>
+          <li>
+            Internal agents, scripts, and extension authors use the same executable as a machine-readable control plane: discover live
+            command contracts, inspect schemas, verify runtime paths, and reach advanced escape hatches when no first-class command exists.
+          </li>
+        </ul>
+        <p>
+          The default human surface should teach the runtime model, not only enumerate commands. <code>neon-pilot commands</code> may show
+          many commands, but it should make command families and intent clear enough that a caller can choose the right entrypoint without
+          guessing from nouns.
+        </p>
+        <p>Use this decision model for command copy, examples, generated docs, and future command metadata:</p>
+        <pre><code>Use `ask` for normal one-off agent work from the CLI.
+Use `conversations run-turn` to send a prompt to an existing conversation.
+Use `background-commands` for detached shell commands with logs/status/cancel/rerun.
+Use subagent commands to inspect or manage delegated background agent work, not for ordinary prompting.
+Use scheduled-task commands, currently `tasks ...`, for scheduled recurring behavior.
+Use `extensions` and `settings` for product administration.
+Use `app-commands`, `protocol`, and `schema` only as advanced/script escape hatches when no first-class CLI command fits; they are hidden from default human discovery and appear under `commands --verbose`.</code></pre>
+        <p>
+          The most important ambiguity to avoid is <code>ask</code> versus subagents. A one-off shell request like &quot;run an agent to
+          review this repo&quot; should become <code>neon-pilot ask ...</code>. Subagent commands are for delegated background agent records
+          created by the runtime/conversation workflow; they are not the default way for an external caller to start normal agent work.
+        </p>
+        <p>
+          For humans and external agents, organize command help around task families. This is the target shape for
+          <code>commands</code>/help output; command names should use the current CLI contract where it differs, such as
+          <code>tasks ...</code> for scheduled automation commands.
+        </p>
+        <pre><code>Start Here
+  ask                           Ask Neon Pilot to do one task in a new conversation
+  doctor                        Check whether the runtime is ready
+  help &lt;command&gt;                Show focused help for one command
+
+Conversation Work
+  ask                           Create a conversation, run one turn, and print the result
+  conversations list            List conversations
+  conversations search          Search conversations
+  conversations run-turn        Send a turn to an existing conversation
+  conversations get             Inspect one conversation
+
+Background Work
+  background-commands start     Run a shell command in the background
+  background-commands list      List background shell commands
+  background-commands logs      Read background command logs
+  background-commands cancel    Cancel a background command
+
+Delegated Agent Work
+  subagents list                List delegated background agents
+  subagents get                 Inspect a delegated background agent
+  subagents cancel              Cancel a delegated background agent
+
+Automations
+  tasks list                    List user-managed scheduled behaviors
+  tasks get                     Inspect a scheduled behavior
+  tasks run                     Run a scheduled behavior now
+  tasks save                    Create or update a scheduled behavior
+  tasks delete                  Delete a scheduled behavior
+
+Runtime Setup
+  bootstrap doctor              Check external-agent setup
+  bootstrap configure           Configure provider/default runtime setup
+  bootstrap defaults set        Set default provider, model, cwd, and preferences
+  cli status                    Show CLI shell link status
+  cli install                   Install the user-shell CLI link
+  cli uninstall                 Remove the user-shell CLI link
+
+Extensions and Settings
+  extensions list               List installed extensions
+  extensions install            Install an extension
+  extensions enable             Enable an extension
+  extensions disable            Disable an extension
+  extensions update             Update an extension
+  settings list                 List settings
+  settings get                  Read one setting
+  settings set                  Update one non-secret setting
+  settings reset                Reset settings</code></pre>
+        <p>
+          For internal agents and automation, keep deeper control-plane details in skills and expose them from the CLI only when requested:
+        </p>
+        <pre><code>Discovery
+  commands                      Browse task-oriented command families
+  commands --brief              Print compact agent-readable text
+  commands --verbose            Include advanced/internal escape hatches
+  commands --json               List live command contracts for scripts
+  schema --json                 Hidden generated-reference contract export
+  help &lt;command&gt;                Show human usage for one command
+  paths                         Show local runtime paths
+  version                       Show CLI and runtime version
+  doctor                        Check CLI/runtime readiness
+
+Preferred Agent Entry Points
+  ask                           Start a new conversation and run one turn
+  conversations run-turn        Send a turn to an existing conversation
+  conversations list            Discover conversation ids
+  conversations get             Inspect one conversation
+  background-commands start     Start detached shell work
+  background-commands list      Inspect detached shell work
+  subagents list                Inspect delegated background agents when that surface is available
+  tasks list                    Inspect scheduled behavior
+
+Runtime Administration
+  bootstrap doctor              Validate external-agent control setup
+  bootstrap configure           Configure external-agent entrypoints
+  bootstrap defaults set        Configure default provider/model/cwd
+  cli status                    Inspect user-shell CLI symlink state
+  paths                         Locate state/config/runtime roots
+
+Extension Administration
+  extensions list               List installed extensions
+  extensions inspect            Inspect one extension
+  extensions install            Install an extension
+  extensions enable             Enable an extension
+  extensions disable            Disable an extension
+  extensions validate           Validate extension manifest/runtime wiring
+  settings schema               Read declared settings contracts
+  settings list                 Read merged settings
+  settings set                  Mutate declared non-secret settings
+
+Advanced Escape Hatches
+  app-commands list             List command-palette/app commands
+  app-commands run              Run a command-palette/app command by id
+  protocol &lt;protocol-id&gt; ...    Invoke raw extension protocol entrypoint</code></pre>
+        <p>
+          When command contracts grow beyond the current schema, prefer first-class metadata over prose-only hints. Useful fields include
+          <code>intent</code>, <code>audience</code>, <code>stability</code>, <code>recommendedFor</code>, <code>notFor</code>, and
+          <code>preferredOver</code>. Agents should rank public commands above advanced/internal commands for user-facing tasks, and should
+          use <code>app-commands</code> or <code>protocol</code> only when the user explicitly asks for those surfaces or no first-class
+          command exists. Use <code>--json</code> for scripts, generated references, and stable machine parsing; do not make it the default
+          agent-reading format.
+        </p>
+        <h2 id="availability">Availability</h2>
+        <p>Neon Pilot creates a channel-local launcher at:</p>
+        <pre><code>&lt;state-root&gt;/bin/neon-pilot</code></pre>
+        <p>
+          App-managed agent shells automatically prepend that directory to <code>PATH</code>. Normal user shells can opt into a global link:
+        </p>
+        <pre><code>neon-pilot cli status --json
+neon-pilot cli install
+neon-pilot cli uninstall</code></pre>
+        <p>
+          All runtime channels stay in the <code>neon-pilot*</code> namespace (<code>neon-pilot</code>, <code>neon-pilot-rc</code>,
+          <code>neon-pilot-dev</code>, <code>neon-pilot-testing</code>), but the command users and agents run is still
+          <code>neon-pilot</code>.
+        </p>
+        <h2 id="running-app-discovery">Running App Discovery</h2>
+        <p>
+          When the desktop app is running, it writes a protected runtime discovery record under the active state root. A normal terminal
+          invocation uses that record to call the live extension host after verifying its health. Environment variables remain supported
+          only for app-managed child processes and compatibility:
+        </p>
+        <pre><code>NEON_PILOT_EXTENSION_HOST_BASE_URL
+NEON_PILOT_EXTENSION_HOST_TOKEN</code></pre>
+        <p>
+          If no running app is discoverable, built-in commands such as <code>neon-pilot cli status</code> still work; extension-contributed
+          commands need the live extension host.
+        </p>
+        <h2 id="core-commands">Core Commands</h2>
+        <p>Core owns the CLI shell and offline runtime inspection commands:</p>
+        <pre><code>neon-pilot help
+neon-pilot commands
+neon-pilot schema --json
+neon-pilot doctor
+neon-pilot paths --json
+neon-pilot version
+neon-pilot cli status</code></pre>
+        <p>
+          Aliases are part of the command contract. Current core aliases include <code>ls</code> for <code>commands</code>,
+          <code>commands schema</code> for <code>schema</code>, <code>runtime doctor</code>, <code>runtime paths</code>, and
+          <code>-v</code>/<code>--version</code> for <code>version</code>.
+        </p>
+        <h2 id="first-party-commands">First-Party Commands</h2>
+        <pre><code>neon-pilot extensions list
+neon-pilot settings list
+neon-pilot settings get conversation.pinnedToolCalls
+neon-pilot settings set conversation.pinnedToolCalls false
+neon-pilot app update --json
+neon-pilot bootstrap doctor
+neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4
+printf '%s' &quot;$OPENAI_API_KEY&quot; | neon-pilot bootstrap provider set-key openai --stdin
+neon-pilot conversations list
+neon-pilot conversations search &quot;query text&quot;</code></pre>
+        <p>
+          Agents should prefer human output or <code>commands --brief</code> for command selection, list or inspect before mutating, and use
+          CLI commands instead of editing runtime files directly when a command exists. Use <code>--json</code> only for scripts, generated
+          references, health gates, and stable machine parsing.
+        </p>
+        <h2 id="ownership">Ownership</h2>
+        <p>
+          The CLI shell is core-owned: parsing, command matching, help, command discovery, result formatting, install/status management, and
+          raw protocol dispatch live in the core/host CLI layer. Product commands stay with the owner of the product capability:
+        </p>
+        <ul>
+          <li>Extension-owned features expose CLI verbs from their owning extension with <code>contributes.cliCommands</code>.</li>
+          <li>Core/runtime administration uses built-in commands.</li>
+          <li>A command should move only when feature ownership moves; do not create a CLI-only extension just to add a command.</li>
+        </ul>
+        <h2 id="command-contracts">Command Contracts</h2>
+        <p><code>neon-pilot commands --json</code> returns command contracts for scripts, generated references, and machine parsing:</p>
+        <ul>
+          <li><code>argsSchema</code> and <code>flagsSchema</code></li>
+          <li>
+            <code>mode</code>: <code>read</code>, <code>write</code>, <code>destructive</code>, <code>background</code>, or
+            <code>streaming</code>
+          </li>
+          <li>
+            <code>requiresApp</code>, <code>idempotent</code>, <code>destructive</code>, <code>startsBackgroundWork</code>, and
+            <code>supportsDryRun</code>
+          </li>
+          <li><code>outputModes</code>: <code>text</code>, <code>json</code>, and where supported <code>jsonl</code></li>
+          <li><code>streaming</code> and <code>smoke</code> metadata when applicable</li>
+        </ul>
+        <p>
+          Mutating extension commands must support <code>--dry-run</code>. The core shell handles declared dry-runs before invoking the
+          backend action, so dry-run checks are no-side-effect by construction. The shell validates declared <code>argsSchema</code> and
+          <code>flagsSchema</code> before dispatch. Unknown flags, missing required positionals, unsupported <code>--format</code> values,
+          and unsupported <code>--dry-run</code> fail before the extension action runs.
+        </p>
+        <p>
+          Destructive commands require confirmation. In interactive terminals the shell prompts the user; in non-interactive use callers
+          must pass <code>--yes</code>. Use <code>--dry-run</code> first when a destructive command supports it.
+        </p>
+        <p>
+          Streaming commands should document <code>--follow</code>, <code>--format text|json|jsonl</code>, and interrupt behavior. The shell
+          accepts <code>--format json</code> and <code>--format jsonl</code> only when the command contract declares those output modes. For
+          <code>jsonl</code>, each line is an event object:
+        </p>
+        <pre><code>{&quot;event&quot;:&quot;update&quot;,&quot;data&quot;:{&quot;content&quot;:[{&quot;type&quot;:&quot;text&quot;,&quot;text&quot;:&quot;partial&quot;}]}}
+{&quot;event&quot;:&quot;result&quot;,&quot;data&quot;:{&quot;accepted&quot;:true}}</code></pre>
+        <h2 id="agent-bootstrap">Agent Bootstrap</h2>
+        <p>
+          External agents can install and configure Neon Pilot through the packaged installer and bootstrap commands. See
+          <a href="./agent-bootstrap.html">Agent bootstrap</a> for the end-to-end flow.
+        </p>
+        <p>
+          Provider credentials must not be passed in command arguments. Use <code>--stdin</code>, Keychain-backed storage, OAuth/device
+          flows, or environment fallback where explicitly configured.
+        </p>
+        <h2 id="security">Security</h2>
+        <p>
+          CLI commands route through the same extension host boundary as UI actions. Extension-contributed commands must obey extension
+          permissions, should avoid raw runtime-file mutation, and must not expose secret reads. Settings mutation is limited to
+          manifest-declared non-secret settings.
+        </p>
+        <h2 id="validation">Validation</h2>
+        <p>Run the CLI surface audit after changing command parsing, command metadata, extension CLI contributions, or docs:</p>
+        <pre><code>pnpm run check:cli:surface
+pnpm run check:cli:surface -- --repeat 3
+pnpm run check:cli:fixtures
+pnpm run docs:cli
+pnpm run check:cli:docs
+pnpm run check:cli</code></pre>
+        <p>
+          The audit invokes the real <code>neon-pilot</code> command, validates human help for every discovered command, checks JSON mode
+          for discovery/status, and confirms system extension CLI contributions are discoverable. The fixture check runs the source CLI with
+          a temporary state/config root and verifies offline built-ins, quiet output, and structured JSON errors without depending on the
+          user's live app state. The generated <a href="./cli-reference.html">CLI reference</a> is derived from
+          <code>neon-pilot commands --json</code>; update it with <code>pnpm run docs:cli</code> whenever command contracts change.
+        </p>
+        <p class="edit-link"><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/cli.md">Edit this page on GitHub →</a></p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#audiences-and-command-shape">Audiences and command shape</a><a href="#availability">Availability</a
+        ><a href="#running-app-discovery">Running App Discovery</a><a href="#core-commands">Core Commands</a
+        ><a href="#first-party-commands">First-Party Commands</a><a href="#ownership">Ownership</a
+        ><a href="#command-contracts">Command Contracts</a><a href="#agent-bootstrap">Agent Bootstrap</a><a href="#security">Security</a
+        ><a href="#validation">Validation</a>
+      </aside>
+    </main>
+  </body>
+</html>

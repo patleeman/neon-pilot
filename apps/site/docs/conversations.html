@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Conversations · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="active" href="./conversations.html">Conversations</a
+          ><a class="" href="./conversation-context.html">Conversation Context</a><a class="" href="./projects.html">Projects</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="conversations">Conversations</h1>
+        <p>
+          Conversations are live or saved agent threads. Each conversation has a transcript, a composer, access to tools, and full message
+          history.
+        </p>
+        <h2 id="starting-a-conversation">Starting a Conversation</h2>
+        <p>
+          Create a new conversation from the sidebar (<code>+</code> button) or navigate to <code>/conversations/new</code>. The composer
+          appears at the bottom of the transcript pane.
+        </p>
+        <p>
+          Type a message and press Enter to send it to the agent. The agent processes the prompt, calls tools as needed, and streams the
+          response.
+        </p>
+        <h2 id="composer">Composer</h2>
+        <p>
+          The composer is the text input area at the bottom of the conversation view. Image attachments are read into the draft as soon as
+          they are added, so temporary screenshots can still be sent after their original files are cleaned up.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>How</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Send message</td>
+              <td>Enter</td>
+            </tr>
+            <tr>
+              <td>New line</td>
+              <td>Shift+Enter</td>
+            </tr>
+            <tr>
+              <td>File / note / task</td>
+              <td>Type <code>@</code> to fuzzy-search files, notes, automations, or skills</td>
+            </tr>
+            <tr>
+              <td>Slash commands</td>
+              <td>Type <code>/</code> to open the command menu</td>
+            </tr>
+            <tr>
+              <td>Run bash command</td>
+              <td>Type <code>!&lt;command&gt;</code> to run a shell command inline</td>
+            </tr>
+            <tr>
+              <td>Image paste</td>
+              <td>Ctrl+V or drag image into composer</td>
+            </tr>
+            <tr>
+              <td>Binary attachment</td>
+              <td>Drag file into composer</td>
+            </tr>
+            <tr>
+              <td>Reply quoting</td>
+              <td>Select text in a message, then click &quot;Reply&quot; to quote it</td>
+            </tr>
+            <tr>
+              <td>Clear composer</td>
+              <td>Ctrl+C when composer is focused</td>
+            </tr>
+            <tr>
+              <td>Recall history</td>
+              <td>↑/↓ cycles through recent prompts</td>
+            </tr>
+          </tbody>
+        </table>
+        <h2 id="conversation-lifecycle">Conversation Lifecycle</h2>
+        <p>
+          Conversations are saved automatically. Every message, tool call, and tool result is persisted. Past conversations appear in the
+          left sidebar. Click any conversation to resume it.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>State</th>
+              <th>Behavior</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Active</td>
+              <td>Agent is processing a prompt</td>
+            </tr>
+            <tr>
+              <td>Compacting</td>
+              <td>Context is being summarized/trimmed</td>
+            </tr>
+            <tr>
+              <td>Idle</td>
+              <td>Waiting for user input</td>
+            </tr>
+            <tr>
+              <td>Saved</td>
+              <td>Persisted to disk, visible in sidebar</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Live conversations emit explicit <code>compaction_start</code> and <code>compaction_end</code> stream events. The desktop reducer
+          uses them to show and clear the compaction state, while successful compactions also surface as compaction summary blocks in the
+          transcript.
+        </p>
+        <p>
+          Long saved conversations open on their latest transcript segment. When earlier history is hidden, the transcript renders an inline
+          cutoff marker with the visible percentage range and a small <strong>Load previous</strong> action; implementation counts such as
+          block totals and windowed chunks stay out of the main UI.
+        </p>
+        <p>
+          Saved-conversation summaries are cache-first. UI and suggested-context reads only return summaries already present in the local
+          conversation context DB; they must not generate missing summaries on the request path. New closed conversations enqueue summary
+          generation immediately. Older missing/stale summaries are discovered by a delayed, metered background queue after startup grace,
+          processed one at a time with a short gap between jobs, and skipped for live/running conversations. This keeps old profiles useful
+          over time without turning app launch or list rendering into a whole-profile summarization burst.
+        </p>
+        <p>
+          Conversation read models live in <code>&lt;state-root&gt;/sync/pi-agent/conversations.db</code>. JSONL transcript files remain the
+          append-only source of truth for recovery/export, but list/search/summary/detail request paths should use the SQLite read models
+          instead of scanning transcript files. Older <code>conversation-context.db</code> files are copied forward into
+          <code>conversations.db</code> on first open.
+        </p>
+        <p>
+          Runtime code should not import <code>conversations/sessions.js</code> directly. Normal callers use
+          <code>conversationService.ts</code> and extension-facing capabilities. The only allowed direct transcript seams are:
+        </p>
+        <ul>
+          <li><code>conversationService.ts</code> — read-model service boundary with targeted transcript fallback and cache writes.</li>
+          <li>
+            <code>conversationTranscriptOps.ts</code> — explicit raw transcript operations for import/export, live topology metadata, and
+            bounded indexer/reconciler scans.
+          </li>
+          <li><code>conversationDisplayBlocks.ts</code> — display-block conversion compatibility seam.</li>
+          <li><code>conversationTypes.ts</code> — type-only compatibility seam.</li>
+        </ul>
+        <p>
+          The storage-boundary guard (<code>scripts/check-conversation-storage-boundary.mjs</code>) enforces that new product/extension code
+          does not add direct <code>sessions.js</code> imports.
+        </p>
+        <h2 id="branching">Branching</h2>
+        <p>Conversations support tree-style branching. Each turn creates a node in the conversation tree.</p>
+        <p>
+          Conversation files also keep file-level lineage. When a saved conversation is branched, forked, rewound, duplicated, or created as
+          a side/subagent conversation, its metadata can point at the parent conversation and source message. The left sidebar renders that
+          file-level lineage inline: parent conversations with child branches get an expander, child conversations appear nested under the
+          parent, and the conversation context menu includes <strong>Go to Parent Conversation</strong> when a parent is available.
+        </p>
+        <p>
+          The transcript treats explicit branch actions (<code>fork</code>, <code>rewind</code>, <code>duplicate</code>) as timeline
+          landmarks anchored after the source message when known. Tool-created side work stays with the tool call that created it:
+          subagents, artifacts, checkpoints, prompts, and visual captures are pinned as compact rows inside the
+          <strong>Internal work</strong> shelf so they remain visible even when low-level tool-call plumbing is collapsed.
+        </p>
+        <h3 id="fork">/fork</h3>
+        <p>
+          Create a new conversation from a previous user message. The new conversation starts fresh but carries the context up to that
+          point. From the transcript action buttons, forking a user prompt opens a child conversation with that prompt restored in the
+          composer; forking an assistant reply keeps the transcript through that reply.
+        </p>
+        <pre><code>Original conversation:
+
+  ┌─ msg1 ─ msg2 ─ msg3 ─ msg4 (current)
+
+Fork from msg2:
+
+  ┌─ msg1 ─ msg2 (forked)
+                └─ msg5 ─ msg6 (new conversation)</code></pre>
+        <h3 id="tree">/tree</h3>
+        <p>
+          Navigate the conversation tree to any previous point and continue from there without creating a new file. Transcript rewind
+          actions create a new conversation file at the selected point. Rewinding from an assistant reply cuts before the reply and restores
+          the preceding user prompt in the composer so it can be resent or edited.
+        </p>
+        <pre><code>  ┌─ msg1 ─ msg2 ─ msg3 ─ msg4 (branch A, current)
+  │
+  └─ msg5 ─ msg6 (branch B)
+
+/tree navigates to msg5, continue from there.</code></pre>
+        <h3 id="clone">/clone</h3>
+        <p>Duplicate the current active branch into a new conversation file. Useful before making experimental changes.</p>
+        <h2 id="send-modifiers">Send Modifiers</h2>
+        <p>
+          The send button changes behavior based on streaming state and modifier keys. You can also hold a modifier when pressing Enter.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Modifier</th>
+              <th>While idle</th>
+              <th>While streaming</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Enter (no modifier)</td>
+              <td>Send message</td>
+              <td>Steer (interrupts current turn)</td>
+            </tr>
+            <tr>
+              <td><strong>Alt+Enter</strong></td>
+              <td>Follow-up (queues after completion)</td>
+              <td>Follow-up (queues after completion)</td>
+            </tr>
+            <tr>
+              <td><strong>Ctrl+Enter / ⌘+Enter</strong></td>
+              <td>Send/steer (same as Enter)</td>
+              <td>Send/steer (same as Enter)</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>The button label reflects the current mode: <strong>Send</strong> → <strong>Steer</strong> → <strong>Follow up</strong>.</p>
+        <h2 id="async-follow-through">Async Follow-Through</h2>
+        <p>While the agent is processing, you can queue additional messages. The composer remains active during streaming.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Mode</th>
+              <th>How to send</th>
+              <th>What happens</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Steer</td>
+              <td>Press Enter while the agent is streaming</td>
+              <td>
+                Queues guidance for the current turn. It is injected after the current assistant turn finishes its tool calls, before the
+                next LLM call.
+              </td>
+            </tr>
+            <tr>
+              <td>Follow-up</td>
+              <td>Hold Option/Alt and press Enter while the agent is streaming</td>
+              <td>
+                Queues a new prompt after the agent completes all current work. Use this when the next instruction should not interrupt the
+                current chain of thought.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p>When the run mode has a pending continuation (Nudge/Mission/Loop), normal submits become follow-ups.</p>
+        <p>
+          Queued steer and follow-up prompts appear in the queue shelf above the composer. Use <code>restore</code> to pull a queued prompt
+          back into the composer. Press Escape to abort the active response, clear local queued steer/follow-up prompts, and restore their
+          text to the composer; agent-created queued text is annotated with <code>[Queued by agent]</code> so it is not mistaken for
+          user-authored draft text. Press Alt+Up to retrieve queued messages back.
+        </p>
+        <p>
+          Deferred resumes (<code>/resume</code>, <code>/defer</code>) also appear in the activity shelf above the composer. They are tied
+          to the saved conversation and can be fired now, cancelled, or auto-resumed when the conversation is reopened.
+        </p>
+        <p>
+          Interrupted prompts are not replayed automatically after an app restart. Durable run state is used for status and explicit
+          recovery surfaces only; startup recovery must not silently resend the last prompt.
+        </p>
+        <h2 id="provider-transport">Provider transport</h2>
+        <p>
+          Desktop conversations force pi's provider transport to SSE at session creation. pi's OpenAI Codex <code>auto</code> mode prefers
+          cached WebSockets, but intermittent mid-turn 1006 closes can happen after tools have already run; at that point replaying through
+          SSE is unsafe because it can duplicate side effects. SSE is slower than cached WebSockets, but it keeps conversation/tool
+          execution reliable.
+        </p>
+        <h2 id="goal-mode-auto-mode">Goal mode / Auto Mode</h2>
+        <p>The composer exposes a run-mode selector with four states:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Mode</th>
+              <th>Behavior</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Manual</td>
+              <td>No automatic continuation.</td>
+            </tr>
+            <tr>
+              <td>Nudge</td>
+              <td>Hidden review turn decides whether useful work remains.</td>
+            </tr>
+            <tr>
+              <td>Mission</td>
+              <td>Goal-driven mode with an AI-managed task list via the <code>run_state</code> tool.</td>
+            </tr>
+            <tr>
+              <td>Loop</td>
+              <td>Fixed-count mode. The same prompt is repeated until the iteration counter reaches N.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          See <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-auto-mode/README.md">Auto Mode</a> for the full
+          nudge, mission, and loop flows.
+        </p>
+        <h3 id="goal-mode-legacy">Goal Mode (legacy)</h3>
+        <p>
+          The <code>goal</code> tool provides the legacy goal-mode path. Continuations are scheduled only after <code>agent_end</code>, Stop
+          pauses an active goal instead of completing it, and repeated <code>goal { status: &quot;complete&quot; }</code> calls are
+          idempotent. This is separate from the run-mode selector; only one loop controller can drive a conversation at a time.
+        </p>
+        <h2 id="slash-commands">Slash Commands</h2>
+        <p>
+          Type <code>/</code> in the composer to open the command menu. Slash commands are intercepted by the UI. Some run local UI actions;
+          others convert into prompts sent to the agent.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Command</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>/compact</code></td>
+              <td>Manually compact conversation context (optionally pass guidance)</td>
+            </tr>
+            <tr>
+              <td><code>/export [path]</code></td>
+              <td>Export conversation to HTML file</td>
+            </tr>
+            <tr>
+              <td><code>/name &lt;title&gt;</code></td>
+              <td>Set conversation display name</td>
+            </tr>
+            <tr>
+              <td><code>/run &lt;cmd&gt;</code></td>
+              <td>Send &quot;Run this shell command: …&quot; to the agent</td>
+            </tr>
+            <tr>
+              <td><code>/search &lt;query&gt;</code></td>
+              <td>Send &quot;Search the web for: …&quot; to the agent</td>
+            </tr>
+            <tr>
+              <td><code>/summarize</code></td>
+              <td>Send &quot;Summarize our conversation so far&quot; to the agent</td>
+            </tr>
+            <tr>
+              <td><code>/think [topic]</code></td>
+              <td>Send &quot;Think step-by-step about: …&quot; to the agent</td>
+            </tr>
+            <tr>
+              <td><code>/copy</code></td>
+              <td>Copy the last agent message to clipboard</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Several of these send a prompt to the agent instead of executing locally: <code>/run</code>, <code>/search</code>,
+          <code>/summarize</code>, <code>/think</code>.
+        </p>
+        <p>
+          Commands accessible through dedicated desktop UI rather than the <code>/</code> menu include: <code>/model</code> (model picker in
+          composer preferences row), <code>/fork</code> (message action menu), <code>/new</code> (sidebar + button),
+          <code>/reload</code> (Extension Manager), <code>/clear</code> (Escape to cancel), <code>/image</code> (attachment button),
+          <code>/draw</code> (composer input tool), <code>/session</code> (info display).
+        </p>
+        <h2 id="bash-commands">Bash Commands</h2>
+        <p>The composer supports inline bash execution. The entire input line must start with <code>!</code> or <code>!!</code>.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Syntax</th>
+              <th>Behavior</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>!&lt;command&gt;</code></td>
+              <td>Runs the shell command. Output streams into the conversation.</td>
+            </tr>
+            <tr>
+              <td><code>!!&lt;command&gt;</code></td>
+              <td>Same, but excludes the command and output from the agent's context (reduces token usage).</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Examples:</p>
+        <pre><code>!git status
+!!npm test</code></pre>
+        <p>Bash commands create or reuse a live session in the conversation's working directory.</p>
+        <p>
+          These direct <code>!</code> / <code>!!</code> commands render as terminal-style transcript output. Regular agent-selected
+          <code>bash</code> tool calls stay grouped with the rest of the agent's internal work, and expanding that cluster shows the normal
+          tool disclosure card for the bash step.
+        </p>
+        <h2 id="mention-menu">Mention Menu</h2>
+        <p>Type <code>@</code> in the composer to search and reference items. The menu surfaces:</p>
+        <ul>
+          <li><strong>Files</strong> — workspace files by path</li>
+          <li><strong>Notes</strong> — memory documents by title</li>
+          <li><strong>Tasks</strong> — named automations by ID</li>
+          <li><strong>Skills</strong> — registered skills</li>
+        </ul>
+        <p>
+          Select an item to insert its reference (<code>@&lt;id&gt;</code>). The referenced content is injected into the agent's context
+          when the message is sent.
+        </p>
+        <h2 id="reply-quoting">Reply Quoting</h2>
+        <p>
+          Select any portion of text in a conversation message. A <strong>Reply</strong> action appears that quotes the selection into the
+          composer as a blockquote, making it easy to reference or respond to specific parts of a response.
+        </p>
+        <h2 id="conversation-inspect">Conversation Inspect</h2>
+        <p>
+          The agent can read other conversation transcripts using the <code>conversation</code> action <code>inspect</code> tool. This
+          provides read-only access to message history, tool calls, and results across conversations. Live and running scopes include other
+          currently active conversations, not just persisted conversation files. See
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-conversation-tools/README.md">Conversation Inspect</a
+          >.
+        </p>
+        <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>Shortcut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>New conversation</td>
+              <td><code>Cmd+N</code></td>
+            </tr>
+            <tr>
+              <td>Hide workbench</td>
+              <td><code>F1</code></td>
+            </tr>
+            <tr>
+              <td>Show workbench</td>
+              <td><code>F2</code></td>
+            </tr>
+            <tr>
+              <td>Toggle sidebar</td>
+              <td><code>Cmd+/</code> (or <code>Ctrl+/</code>)</td>
+            </tr>
+            <tr>
+              <td>Toggle workbench</td>
+              <td><code>Cmd+\</code> (or <code>Ctrl+\</code>)</td>
+            </tr>
+            <tr>
+              <td>Submit message</td>
+              <td>Enter</td>
+            </tr>
+            <tr>
+              <td>New line in composer</td>
+              <td>Shift+Enter</td>
+            </tr>
+            <tr>
+              <td>Cancel agent response</td>
+              <td>Escape</td>
+            </tr>
+            <tr>
+              <td>Retrieve queued messages</td>
+              <td>Alt+Up</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Default desktop shortcuts are configurable in Settings → Desktop. Host and extension command keybindings are configurable in
+          Settings → Commands.
+        </p>
+        <h2 id="routes">Routes</h2>
+        <p>The desktop app and system extensions register these routes:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Route</th>
+              <th>Page</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>/conversations</code></td>
+              <td>Conversation list</td>
+            </tr>
+            <tr>
+              <td><code>/conversations/new</code></td>
+              <td>New conversation</td>
+            </tr>
+            <tr>
+              <td><code>/conversations/:id</code></td>
+              <td>Existing conversation</td>
+            </tr>
+            <tr>
+              <td><code>/settings</code></td>
+              <td>Settings page</td>
+            </tr>
+            <tr>
+              <td><code>/knowledge</code></td>
+              <td>Knowledge browser</td>
+            </tr>
+            <tr>
+              <td><code>/automations</code></td>
+              <td>Automation list</td>
+            </tr>
+            <tr>
+              <td><code>/automations/:id</code></td>
+              <td>Automation detail</td>
+            </tr>
+            <tr>
+              <td><code>/telemetry</code></td>
+              <td>Telemetry traces</td>
+            </tr>
+            <tr>
+              <td><code>/gateways</code></td>
+              <td>Gateway connections</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/conversations.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#starting-a-conversation">Starting a Conversation</a><a href="#composer">Composer</a
+        ><a href="#conversation-lifecycle">Conversation Lifecycle</a><a href="#branching">Branching</a
+        ><a href="#send-modifiers">Send Modifiers</a><a href="#async-follow-through">Async Follow-Through</a
+        ><a href="#provider-transport">Provider transport</a><a href="#goal-mode-auto-mode">Goal mode / Auto Mode</a
+        ><a href="#slash-commands">Slash Commands</a><a href="#bash-commands">Bash Commands</a><a href="#mention-menu">Mention Menu</a
+        ><a href="#reply-quoting">Reply Quoting</a><a href="#conversation-inspect">Conversation Inspect</a
+        ><a href="#keyboard-shortcuts">Keyboard Shortcuts</a><a href="#routes">Routes</a>
+      </aside>
+    </main>
+  </body>
+</html>

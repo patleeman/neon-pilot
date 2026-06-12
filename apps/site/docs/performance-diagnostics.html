@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Performance Diagnostics · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="active" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="performance-diagnostics">Performance diagnostics</h1>
+        <p>Performance diagnostics expose lightweight renderer timing samples for debugging app jank without attaching a profiler first.</p>
+        <p>
+          The renderer stores recent samples on <code>window.__NEON_PILOT_APP_PERF__</code>. Set
+          <code>localStorage.neonPilot.debugPerf = '1'</code> and reload to also print samples to the console.
+        </p>
+        <p>Conversation navigation records <code>conversationOpenSamples</code> with these phases:</p>
+        <ul>
+          <li><code>content</code> — the conversation page rendered usable transcript content, empty state, or error state.</li>
+          <li><code>extensions</code> — the shared extension registry is ready for the conversation route.</li>
+          <li><code>rail</code> — the context rail completed its first paint for the conversation.</li>
+        </ul>
+        <p>
+          <code>chatRenderSamples</code> record ChatView commit timing plus transcript shape: message count, render item count,
+          mounted/windowed counts, trace clusters, tool blocks, standalone tool blocks, and markdown-like user/assistant blocks.
+        </p>
+        <p>
+          <code>clientSamples</code> record synchronous renderer work that crosses the local diagnostic threshold, including conversation
+          transcript merging/pruning and ChatView render-item construction. Each sample includes route, start/end performance timestamps,
+          duration, and small shape metadata.
+        </p>
+        <p>
+          <code>longTaskSamples</code> record Long Task API entries and event-loop lag. Samples include recent
+          <code>clientSamples</code> plus the latest <code>chatRenderSamples</code> entry under <code>meta.attribution</code> when
+          available, so beachball reports can be correlated with the synchronous renderer work that ran around the block.
+        </p>
+        <p>
+          API samples are recorded when responses include <code>Server-Timing</code> or <code>X-PA-Perf</code> headers. Keep new diagnostics
+          cheap and side-effect-free; this is a tripwire, not a replacement for browser profiling.
+        </p>
+        <p>
+          Draft send responsiveness is guarded by <code>scripts/perf-desktop-smoke.mjs</code>. The smoke records both route-level visibility
+          (<code>draftSubmitVisibleMs</code>) and first user-prompt visibility (<code>draftSubmitFirstPromptVisibleMs</code>). First-prompt
+          visibility is computed from renderer <code>chatRenderSamples</code> relative to the synthetic click timestamp, not from CDP text
+          polling, so custom-protocol or debugger response delays do not hide whether the UI actually painted the submitted prompt. The
+          smoke also fails when post-submit renderer long tasks exceed <code>--max-post-submit-longtask-ms</code>.
+        </p>
+        <p>
+          Live prompt submission should keep foreground work tiny. Plain sends without explicit related conversations or context messages
+          skip prompt-context provider invocation; selected related conversations and attached context still opt into provider assembly. The
+          <code>/live-sessions/:id/prompt</code> response includes <code>perf.totalBeforeReturnMs</code>, and normal prompt starts are
+          accepted before agent execution is scheduled so the route/prompt paint path is not blocked by agent startup.
+        </p>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/performance-diagnostics.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <span>Overview</span>
+      </aside>
+    </main>
+  </body>
+</html>

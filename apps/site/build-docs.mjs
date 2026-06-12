@@ -11,17 +11,32 @@ const prettierOptions = { ...(await prettier.resolveConfig(path.join(root, 'apps
 const pages = [
   { file: 'README.md', slug: 'index', title: 'Overview', group: 'Start here' },
   { file: 'getting-started.md', slug: 'getting-started', title: 'Getting Started', group: 'Start here' },
+  { file: 'agent-bootstrap.md', slug: 'agent-bootstrap', title: 'Agent Bootstrap', group: 'Start here' },
   { file: 'desktop-app.md', slug: 'desktop-app', title: 'Desktop App', group: 'Product' },
   { file: 'views.md', slug: 'views', title: 'Views', group: 'Product' },
+  { file: 'conversations.md', slug: 'conversations', title: 'Conversations', group: 'Product' },
   { file: 'conversation-context.md', slug: 'conversation-context', title: 'Conversation Context', group: 'Product' },
+  { file: 'projects.md', slug: 'projects', title: 'Projects', group: 'Product' },
   { file: 'knowledge-base.md', slug: 'knowledge-base', title: 'Knowledge Base', group: 'Product' },
+  { file: 'activity-tree.md', slug: 'activity-tree', title: 'Activity Tree', group: 'Product' },
+  { file: 'design-system.md', slug: 'design-system', title: 'Design System', group: 'Product' },
+  { file: 'host-view-components.md', slug: 'host-view-components', title: 'Host View Components', group: 'Product' },
   { file: 'build-an-extension.md', slug: 'build-an-extension', title: 'Build an Extension', group: 'Extensions' },
   { file: 'extensions.md', slug: 'extensions', title: 'Extension Authoring', group: 'Extensions' },
   { file: 'extension-distribution.md', slug: 'extension-distribution', title: 'Extension Distribution', group: 'Extensions' },
+  { file: 'desktop-api-boundary.md', slug: 'desktop-api-boundary', title: 'Desktop API Boundary', group: 'Runtime' },
   { file: 'configuration.md', slug: 'configuration', title: 'Configuration', group: 'Runtime' },
   { file: 'daemon.md', slug: 'daemon', title: 'Daemon', group: 'Runtime' },
+  { file: 'sandboxing.md', slug: 'sandboxing', title: 'Sandboxing', group: 'Runtime' },
+  { file: 'filesystem-authority.md', slug: 'filesystem-authority', title: 'Filesystem Authority', group: 'Runtime' },
+  { file: 'performance-diagnostics.md', slug: 'performance-diagnostics', title: 'Performance Diagnostics', group: 'Runtime' },
+  { file: 'renderer-isolation.md', slug: 'renderer-isolation', title: 'Renderer Isolation', group: 'Runtime' },
   { file: 'telemetry.md', slug: 'telemetry', title: 'Telemetry', group: 'Runtime' },
+  { file: 'cli.md', slug: 'cli', title: 'Neon Pilot CLI', group: 'Developers' },
+  { file: 'cli-reference.md', slug: 'cli-reference', title: 'CLI Reference', group: 'Developers' },
   { file: 'development.md', slug: 'development', title: 'Development', group: 'Developers' },
+  { file: 'release-cycle.md', slug: 'release-cycle', title: 'Release Cycle', group: 'Developers' },
+  { file: 'release-qa.md', slug: 'release-qa', title: 'Release QA', group: 'Developers' },
 ];
 
 function escapeHtml(value) {
@@ -37,10 +52,12 @@ function inlineMd(text) {
 
 function rewriteHref(href) {
   if (/^(https?:|#)/.test(href)) return href;
-  const clean = href.replace(/^\.\//, '');
+  const [hrefPath, suffix = ''] = href.split(/(?=[#?])/);
+  const clean = path.posix.normalize(path.posix.join('docs', hrefPath.replace(/^\.\//, ''))).replace(/^docs\//, '');
   const page = pages.find((p) => p.file === clean || p.file === clean.replace(/^docs\//, ''));
-  if (page) return page.slug === 'index' ? './' : `./${page.slug}.html`;
-  return `https://github.com/patleeman/neon-pilot/blob/main/${href.replace(/^\.\//, '')}`;
+  if (page) return `${page.slug === 'index' ? './' : `./${page.slug}.html`}${suffix}`;
+  const repoPath = path.posix.normalize(path.posix.join('docs', hrefPath.replace(/^\.\//, '')));
+  return `https://github.com/patleeman/neon-pilot/blob/main/${repoPath}${suffix}`;
 }
 
 function slugify(text) {
@@ -57,7 +74,7 @@ function markdownToHtml(markdown) {
   const toc = [];
   let inCode = false;
   let code = [];
-  let list = false;
+  let list = null;
   let table = null;
   let para = [];
 
@@ -68,8 +85,8 @@ function markdownToHtml(markdown) {
   };
   const closeList = () => {
     if (!list) return;
-    out.push('</ul>');
-    list = false;
+    out.push(`</${list}>`);
+    list = null;
   };
   const flushTable = () => {
     if (!table) return;
@@ -120,15 +137,17 @@ function markdownToHtml(markdown) {
       continue;
     }
 
-    const item = line.match(/^[-*]\s+(.+)$/);
+    const item = line.match(/^([-*]|\d+\.)\s+(.+)$/);
     if (item) {
       flushPara();
       flushTable();
+      const listTag = item[1].endsWith('.') ? 'ol' : 'ul';
+      if (list && list !== listTag) closeList();
       if (!list) {
-        out.push('<ul>');
-        list = true;
+        out.push(`<${listTag}>`);
+        list = listTag;
       }
-      out.push(`<li>${inlineMd(item[1])}</li>`);
+      out.push(`<li>${inlineMd(item[2])}</li>`);
       continue;
     }
 

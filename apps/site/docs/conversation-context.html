@@ -24,13 +24,16 @@
         <h1>Docs</h1>
         <section>
           <h2>Start here</h2>
-          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="active" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+          ><a class="" href="./conversations.html">Conversations</a
+          ><a class="active" href="./conversation-context.html">Conversation Context</a><a class="" href="./projects.html">Projects</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -39,12 +42,17 @@
         </section>
         <section>
           <h2>Runtime</h2>
-          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
-          ><a class="" href="./telemetry.html">Telemetry</a>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
         </section>
         <section>
           <h2>Developers</h2>
-          <a class="" href="./development.html">Development</a>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -107,15 +115,24 @@ Agent sees: contents of auth.ts + auth.test.ts + the prompt</code></pre>
           in Settings. The agent calls <code>probe_image</code> with one or more image IDs and a focused question; multi-image calls handle
           comparisons. Other binary formats are stored as conversation attachments but may not be visible to all models.
         </p>
+        <p>
+          Existing conversations can also reopen saved drawings through the <code>Open Drawing Picker</code> conversation command, then
+          attach the latest revision or a specific saved revision back into the composer.
+        </p>
         <h2 id="context-loading-order">Context Loading Order</h2>
         <p>When the agent builds context for a turn, it merges inputs in this order:</p>
-        <p>
-          1. <strong>Instruction files</strong> — standing behavior and policy from the knowledge base, <code>~/.config/agents</code>,
-          config, or project discovery 2. <strong>Attached context docs</strong> — durable docs pinned to this conversation 3.
-          <strong>Inline <code>@</code> file references</strong> — files referenced in the current message 4.
-          <strong>Binary attachments</strong> — images and files attached to the current message 5. <strong>Conversation history</strong> —
-          previous turns in this thread
-        </p>
+        <ol>
+          <li>
+            <strong>Instruction files</strong> — standing behavior and policy from the knowledge base, <code>~/.config/agents</code>,
+            config, or project discovery
+          </li>
+          <li><strong>Attached context docs</strong> — durable docs pinned to this conversation</li>
+          <li>
+            <strong>Inline <code>@</code> file references</strong> — files referenced in the current message
+          </li>
+          <li><strong>Binary attachments</strong> — images and files attached to the current message</li>
+          <li><strong>Conversation history</strong> — previous turns in this thread</li>
+        </ol>
         <p>Later entries have higher priority for conflicting instructions.</p>
         <h2 id="use-cases">Use Cases</h2>
         <ul>

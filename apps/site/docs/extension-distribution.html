@@ -24,13 +24,16 @@
         <h1>Docs</h1>
         <section>
           <h2>Start here</h2>
-          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -39,12 +42,17 @@
         </section>
         <section>
           <h2>Runtime</h2>
-          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
-          ><a class="" href="./telemetry.html">Telemetry</a>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
         </section>
         <section>
           <h2>Developers</h2>
-          <a class="" href="./development.html">Development</a>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -122,6 +130,11 @@
           <li>Do not require install-time compilation, npm install, or postinstall scripts.</li>
           <li>Use only the public extension SDK imports supplied by the host.</li>
         </ul>
+        <p>
+          Neon Pilot validates required runtime artifacts before import and again before enabling a backend extension. Invalid or partially
+          removed runtime extensions must remain uninstallable; uninstall clears registry, quarantine, and failure state even when the
+          package directory is already gone.
+        </p>
         <h2 id="compatibility">Compatibility</h2>
         <p>Every distributed extension should declare the Neon Pilot and extension API versions it targets:</p>
         <pre><code>{
@@ -135,8 +148,9 @@
   }
 }</code></pre>
         <p>
-          Neon Pilot should refuse incompatible packages before installation. Compatibility belongs in the package manifest so a zip, local
-          folder, catalog item, or GitHub release all carry the same contract.
+          Neon Pilot treats compatibility as an install-time warning, not a hard refusal. Compatibility belongs in the package manifest so a
+          zip, local folder, catalog item, or GitHub release can explain the version range it was tested against, while package validation
+          still enforces concrete runtime requirements such as safe paths, valid manifests, and built artifacts.
         </p>
         <h2 id="release-artifacts">Release artifacts</h2>
         <p>Normal installs should use immutable GitHub release artifacts, not branch source. A release may include:</p>
@@ -171,14 +185,16 @@
           artifact installs.
         </p>
         <h2 id="publishing-your-own-extension-repo">Publishing your own extension repo</h2>
-        <p>
-          1. Create a GitHub repo. 2. Add one extension directory or several extension directories. 3. Add root
-          <code>neon.extensions.json</code>. 4. Build each extension with
-          <code>pnpm run extension:build -- &lt;extension-dir&gt;</code> from a Neon Pilot checkout. 5. Validate with
-          <code>neon-pilot-extension doctor &lt;extension-dir&gt;</code>. 6. Pack with
-          <code>neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;.neon-extension.zip</code>. 7. Publish a GitHub
-          release containing the zip artifacts. 8. Share the GitHub repo URL with users.
-        </p>
+        <ol>
+          <li>Create a GitHub repo.</li>
+          <li>Add one extension directory or several extension directories.</li>
+          <li>Add root <code>neon.extensions.json</code>.</li>
+          <li>Build each extension with <code>pnpm run extension:build -- &lt;extension-dir&gt;</code> from a Neon Pilot checkout.</li>
+          <li>Validate with <code>neon-pilot-extension doctor &lt;extension-dir&gt;</code>.</li>
+          <li>Pack with <code>neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;.neon-extension.zip</code>.</li>
+          <li>Publish a GitHub release containing the zip artifacts.</li>
+          <li>Share the GitHub repo URL with users.</li>
+        </ol>
         <p>
           Users install from the GitHub repo URL, inspect the packages it exposes, select the packages they want, review permissions and
           compatibility, then install the release artifacts.

@@ -24,13 +24,16 @@
         <h1>Docs</h1>
         <section>
           <h2>Start here</h2>
-          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -39,12 +42,17 @@
         </section>
         <section>
           <h2>Runtime</h2>
-          <a class="active" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
-          ><a class="" href="./telemetry.html">Telemetry</a>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a
+          ><a class="active" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
+          ><a class="" href="./sandboxing.html">Sandboxing</a><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
         </section>
         <section>
           <h2>Developers</h2>
-          <a class="" href="./development.html">Development</a>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
+          ><a class="" href="./release-qa.html">Release QA</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -219,15 +227,19 @@
         </p>
         <h2 id="extension-settings">Extension settings</h2>
         <p>Extensions have two settings mechanisms:</p>
-        <p>
-          1. <strong>Scalar settings</strong> declared in <code>extension.json</code> under <code>contributes.settings</code>. These are
-          exposed through <code>/api/settings</code>, merged with manifest defaults, and persisted as overrides in:
-        </p>
+        <ol>
+          <li>
+            <strong>Scalar settings</strong> declared in <code>extension.json</code> under <code>contributes.settings</code>. These are
+            exposed through <code>/api/settings</code>, merged with manifest defaults, and persisted as overrides in:
+          </li>
+        </ol>
         <p>``<code>text &lt;state-root&gt;/settings.json </code>``</p>
-        <p>
-          2. <strong>Component-backed settings UI</strong> declared by an extension as <code>contributes.settingsComponent</code>. The
-          component renders inside the Settings page and should read/write through extension backend actions or stable SDK APIs.
-        </p>
+        <ol>
+          <li>
+            <strong>Component-backed settings UI</strong> declared by an extension as <code>contributes.settingsComponent</code>. The
+            component renders inside the Settings page and should read/write through extension backend actions or stable SDK APIs.
+          </li>
+        </ol>
         <p>
           The Settings page has an <strong>Extension Settings</strong> section for scalar manifest settings. Rich first-party panels, such
           as Dictation or Knowledge, should live in their owning system extension and use stable extension APIs rather than app-shell
@@ -301,11 +313,15 @@
         </p>
         <h2 id="knowledge-base-resolution">Knowledge base resolution</h2>
         <p>The effective knowledge base root resolves in this order:</p>
-        <p>
-          1. <code>NEON_PILOT_KNOWLEDGE_ROOT</code> 2. Managed knowledge-base mirror at
-          <code>&lt;state-root&gt;/knowledge-base/repo</code> when <code>knowledgeBaseRepoUrl</code> is configured 3.
-          <code>knowledgeRoot</code> from machine config 4. <code>~/Documents/neon-pilot</code>
-        </p>
+        <ol>
+          <li><code>NEON_PILOT_KNOWLEDGE_ROOT</code></li>
+          <li>
+            Managed knowledge-base mirror at <code>&lt;state-root&gt;/knowledge-base/repo</code> when <code>knowledgeBaseRepoUrl</code> is
+            configured
+          </li>
+          <li><code>knowledgeRoot</code> from machine config</li>
+          <li><code>~/Documents/neon-pilot</code></li>
+        </ol>
         <p>
           Knowledge UI and sync behavior live in the Knowledge system extension. Machine config only stores the machine-level root/sync
           inputs.
