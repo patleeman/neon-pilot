@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { watch } from 'node:fs';
 
 vi.mock('node:fs', () => ({ watch: vi.fn() }));
 
@@ -227,6 +228,43 @@ describe('registerWorkspaceExplorerRoutes', () => {
       const res = mockRes();
       await h({ query: { cwd: '/repo' } }, res);
       expect(res.json).toHaveBeenCalledWith({ branch: null, changeCount: 0, linesAdded: 0, linesDeleted: 0, files: [] });
+    });
+  });
+
+  describe('GET /api/workspace/events', () => {
+    it('ignores late watcher events after the client disconnects', async () => {
+      vi.mocked(workspace.readWorkspaceRootSnapshot).mockReturnValue({ root: '/repo' } as unknown);
+      const watcherClose = vi.fn();
+      let watcherListener: ((eventType: string, filename: string | null) => void) | undefined;
+      vi.mocked(watch).mockImplementation((_path, _options, listener) => {
+        watcherListener = listener as typeof watcherListener;
+        return { close: watcherClose } as ReturnType<typeof watch>;
+      });
+
+      const router = mockRouter();
+      registerWorkspaceExplorerRoutes(router as unknown, mockContext());
+      const h = getHandler(router, 'get', '/api/workspace/events');
+      const res = mockRes() as {
+        writeHead: ReturnType<typeof vi.fn>;
+        write: ReturnType<typeof vi.fn>;
+      };
+      const closeHandlers: Record<string, () => void> = {};
+
+      await h(
+        {
+          query: { cwd: '/repo' },
+          on: vi.fn((event: string, cb: () => void) => {
+            closeHandlers[event] = cb;
+          }),
+        },
+        res,
+      );
+
+      closeHandlers.close?.();
+      watcherListener?.('change', 'src/index.ts');
+
+      expect(watcherClose).toHaveBeenCalledOnce();
+      expect(res.write).not.toHaveBeenCalledWith('event: workspace\ndata: {"eventType":"change","path":"src/index.ts"}\n\n');
     });
   });
 

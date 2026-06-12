@@ -216,6 +216,17 @@ export function registerWorkspaceExplorerRoutes(
 
   router.get('/api/workspace/events', (req, res) => {
     let watcher: ReturnType<typeof watch> | null = null;
+    let closed = false;
+    const close = () => {
+      if (closed) {
+        return;
+      }
+
+      closed = true;
+      watcher?.close();
+      watcher = null;
+    };
+
     try {
       const cwd = resolveRequestCwd(context, req.query.cwd);
       const snapshot = readWorkspaceRootSnapshot(cwd);
@@ -227,15 +238,15 @@ export function registerWorkspaceExplorerRoutes(
       res.write(`event: ready\ndata: ${JSON.stringify({ root: snapshot.root })}\n\n`);
 
       watcher = watch(snapshot.root, { recursive: true }, (eventType, filename) => {
+        if (closed) {
+          return;
+        }
         res.write(`event: workspace\ndata: ${JSON.stringify({ eventType, path: typeof filename === 'string' ? filename : null })}\n\n`);
       });
 
-      req.on('close', () => {
-        watcher?.close();
-        watcher = null;
-      });
+      req.on('close', close);
     } catch (error) {
-      watcher?.close();
+      close();
       logError('workspace events request failed', { message: error instanceof Error ? error.message : String(error) });
       if (!res.headersSent) {
         writeWorkspaceError(res, error);
