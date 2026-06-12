@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -21,6 +21,10 @@ const apiMock = vi.hoisted(() => ({
   liveSession: vi.fn(),
   conversationAttachments: vi.fn(),
   conversationModelPreferences: vi.fn(),
+  savedWorkspacePaths: vi.fn(),
+  setSavedWorkspacePaths: vi.fn(),
+  pickFolder: vi.fn(),
+  workspaceUncommittedDiff: vi.fn(),
 }));
 
 const sessionTabsMock = vi.hoisted(() => ({
@@ -208,8 +212,35 @@ function renderConversationPage() {
   );
 }
 
+function renderDraftConversationPage() {
+  sessionStore.replaceAll([]);
+  sessionStore.markReady?.();
+
+  return render(
+    <AppDataContext.Provider
+      value={{
+        projects: null,
+        sessions: [],
+        tasks: [],
+        runs: null,
+        executions: null,
+        setProjects: vi.fn(),
+        setSessions: vi.fn(),
+        setTasks: vi.fn(),
+        setRuns: vi.fn(),
+        setExecutions: vi.fn(),
+      }}
+    >
+      <MemoryRouter initialEntries={['/conversations/new']}>
+        <ConversationPage draft />
+      </MemoryRouter>
+    </AppDataContext.Provider>,
+  );
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
+  window.localStorage.clear();
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
   desktopConversationState.mode = 'disabled';
   desktopConversationState.active = false;
@@ -261,6 +292,16 @@ beforeEach(() => {
   apiMock.settings.mockResolvedValue({});
   apiMock.liveSession.mockResolvedValue({ live: false, hasStaleTurnState: false });
   apiMock.conversationAttachments.mockResolvedValue({ conversationId: 'conv-regression', attachments: [] });
+  apiMock.savedWorkspacePaths.mockResolvedValue([]);
+  apiMock.setSavedWorkspacePaths.mockImplementation(async (workspacePaths: string[]) => workspacePaths);
+  apiMock.pickFolder.mockResolvedValue({ cancelled: true, path: null });
+  apiMock.workspaceUncommittedDiff.mockResolvedValue({
+    branch: 'main',
+    changeCount: 0,
+    linesAdded: 0,
+    linesDeleted: 0,
+    files: [],
+  });
   sessionTabsMock.fetchRemoteConversationLayout.mockResolvedValue({
     localConversationIds: [],
     remoteControlledConversationIds: [],
@@ -481,5 +522,55 @@ describe('ConversationPage lazy composer metadata', () => {
       resolveSend();
       await Promise.resolve();
     });
+  });
+
+  it('keeps a locally picked draft workspace after the initial saved-workspace refresh resolves late', async () => {
+    let resolveSavedWorkspacePaths: (workspacePaths: string[]) => void = () => {};
+    apiMock.savedWorkspacePaths.mockReturnValue(
+      new Promise<string[]>((resolve) => {
+        resolveSavedWorkspacePaths = resolve;
+      }),
+    );
+    apiMock.pickFolder.mockResolvedValue({ cancelled: false, path: '/tmp/late-picked-workspace' });
+
+    renderDraftConversationPage();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(apiMock.savedWorkspacePaths).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Choose workspace folder' }));
+      await Promise.resolve();
+    });
+
+    expect(apiMock.setSavedWorkspacePaths).toHaveBeenCalledWith(['/tmp/late-picked-workspace']);
+
+    await act(async () => {
+      resolveSavedWorkspacePaths(['/tmp/stale-workspace']);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Saved workspace' }));
+    });
+
+    let listbox = screen.getByRole('listbox', { name: 'Saved workspaces' });
+    expect(within(listbox).getByText('late-picked-workspace')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.click(within(listbox).getByText('Chat — no workspace'));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Saved workspace' }));
+    });
+
+    listbox = screen.getByRole('listbox', { name: 'Saved workspaces' });
+    expect(within(listbox).getByText('late-picked-workspace')).toBeTruthy();
   });
 });

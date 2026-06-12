@@ -1513,6 +1513,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const appliedInitialModelPreferenceLocationKeyRef = useRef<string | null>(null);
   const skippedInitialDeferredResumeLocationKeyRef = useRef<string | null>(null);
   const attemptedDeferredResumeAutoResumeKeyRef = useRef<string | null>(null);
+  const savedWorkspacePathsLifecycleRef = useRef({
+    disposed: false,
+    latestRequestId: 0,
+    localWriteVersion: 0,
+  });
   const [savedWorkspacePaths, setSavedWorkspacePaths] = useState<string[]>(() => readStoredWorkspacePaths());
   const [savedWorkspacePathsLoading, setSavedWorkspacePathsLoading] = useState(false);
   const [draftCwdValue, setDraftCwdValue] = useState('');
@@ -1563,6 +1568,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
     clearDraftConversationModel();
   }, [draft, models]);
+
+  useEffect(() => {
+    const lifecycle = savedWorkspacePathsLifecycleRef.current;
+    lifecycle.disposed = false;
+    return () => {
+      lifecycle.disposed = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!draft) {
@@ -2875,20 +2888,45 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     return normalized;
   }, []);
 
+  const syncLocalSavedWorkspacePaths = useCallback(
+    (workspacePaths: string[]) => {
+      savedWorkspacePathsLifecycleRef.current.localWriteVersion += 1;
+      return syncSavedWorkspacePaths(workspacePaths);
+    },
+    [syncSavedWorkspacePaths],
+  );
+
   const refetchSavedWorkspacePaths = useCallback(async () => {
     if (!shouldRefetchSavedWorkspacePaths(draft)) {
       return [] as string[];
     }
 
+    const lifecycle = savedWorkspacePathsLifecycleRef.current;
+    const requestId = lifecycle.latestRequestId + 1;
+    lifecycle.latestRequestId = requestId;
+    const localWriteVersionAtStart = lifecycle.localWriteVersion;
+
     setSavedWorkspacePathsLoading(true);
     try {
       const workspacePaths = normalizeWorkspacePaths(await api.savedWorkspacePaths());
+      const currentLifecycle = savedWorkspacePathsLifecycleRef.current;
+      if (
+        currentLifecycle.disposed ||
+        currentLifecycle.latestRequestId !== requestId ||
+        currentLifecycle.localWriteVersion !== localWriteVersionAtStart
+      ) {
+        return workspacePaths;
+      }
+
       syncSavedWorkspacePaths(workspacePaths);
       return workspacePaths;
     } catch {
       return [] as string[];
     } finally {
-      setSavedWorkspacePathsLoading(false);
+      const currentLifecycle = savedWorkspacePathsLifecycleRef.current;
+      if (!currentLifecycle.disposed && currentLifecycle.latestRequestId === requestId) {
+        setSavedWorkspacePathsLoading(false);
+      }
     }
   }, [draft, syncSavedWorkspacePaths]);
 
@@ -3698,8 +3736,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         return;
       }
 
-      const nextSavedWorkspacePaths = [result.path, ...savedWorkspacePaths.filter((path) => path !== result.path)];
-      setSavedWorkspacePaths(nextSavedWorkspacePaths);
+      const nextSavedWorkspacePaths = syncLocalSavedWorkspacePaths([
+        result.path,
+        ...savedWorkspacePaths.filter((path) => path !== result.path),
+      ]);
       void api.setSavedWorkspacePaths(nextSavedWorkspacePaths);
       await submitConversationCwdChange(result.path);
     } catch (error) {
@@ -3715,6 +3755,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     ensureConversationCanControl,
     id,
     savedWorkspacePaths,
+    syncLocalSavedWorkspacePaths,
     submitConversationCwdChange,
   ]);
 
@@ -4650,7 +4691,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         return;
       }
 
-      const nextWorkspacePaths = syncSavedWorkspacePaths([...savedWorkspacePaths, result.path]);
+      const nextWorkspacePaths = syncLocalSavedWorkspacePaths([...savedWorkspacePaths, result.path]);
       void api.setSavedWorkspacePaths(nextWorkspacePaths).catch(() => {
         // Ignore best-effort sync failures.
       });
@@ -4660,7 +4701,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     } finally {
       setDraftCwdPickBusy(false);
     }
-  }, [draft, draftCwdPickBusy, draftCwdValue, savedWorkspacePaths, setDraftConversationCwd, syncSavedWorkspacePaths]);
+  }, [draft, draftCwdPickBusy, draftCwdValue, savedWorkspacePaths, setDraftConversationCwd, syncLocalSavedWorkspacePaths]);
 
   const selectDraftConversationWorkspace = useCallback(
     (workspacePath: string) => {
