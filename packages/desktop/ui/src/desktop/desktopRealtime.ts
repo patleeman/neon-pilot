@@ -18,23 +18,39 @@ function shouldUseDesktopEventStream(): boolean {
 export function subscribeDesktopRealtimeAppEvents(listener: DesktopRealtimeListener): () => void {
   if (shouldUseDesktopEventStream()) {
     const source = createDesktopAwareEventSource('/api/app-events/events?initialSnapshotTopics=sessions,tasks,runs,daemon');
-    source.onopen = () => listener.onopen?.();
+    let closed = false;
+    source.onopen = () => {
+      if (closed) return;
+      listener.onopen?.();
+    };
     source.onmessage = (event) => {
+      if (closed) return;
       try {
         listener.onevent?.(JSON.parse(event.data) as DesktopAppEvent);
       } catch {
         listener.onerror?.();
       }
     };
-    source.onerror = () => listener.onerror?.();
-    return () => source.close();
+    source.onerror = () => {
+      if (closed) return;
+      listener.onerror?.();
+    };
+    return () => {
+      if (closed) return;
+      closed = true;
+      source.close();
+    };
   }
 
   const socket = new WebSocket(buildDesktopWebSocketUrl('/api/realtime'));
   let closed = false;
 
-  socket.addEventListener('open', () => listener.onopen?.());
+  socket.addEventListener('open', () => {
+    if (closed) return;
+    listener.onopen?.();
+  });
   socket.addEventListener('message', (event) => {
+    if (closed) return;
     try {
       const message = JSON.parse(String(event.data)) as DesktopRealtimeMessage;
       if (message.type === 'app_event') listener.onevent?.(message.event);
@@ -43,7 +59,10 @@ export function subscribeDesktopRealtimeAppEvents(listener: DesktopRealtimeListe
       listener.onerror?.();
     }
   });
-  socket.addEventListener('error', () => listener.onerror?.());
+  socket.addEventListener('error', () => {
+    if (closed) return;
+    listener.onerror?.();
+  });
   socket.addEventListener('close', () => {
     if (closed) return;
     closed = true;
