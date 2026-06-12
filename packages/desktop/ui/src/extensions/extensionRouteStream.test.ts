@@ -55,14 +55,15 @@ describe('streamExtensionRouteSse', () => {
     expect(sources[0]?.close).toHaveBeenCalled();
   });
 
-  it('rejects when the SSE payload is not valid JSON', async () => {
+  it('yields raw string payloads without rejecting the stream', async () => {
     const { streamExtensionRouteSse } = await import('./extensionRouteStream');
-    const iter = streamExtensionRouteSse('system-terminal', '/stream?id=terminal-1')[Symbol.asyncIterator]();
+    const iter = streamExtensionRouteSse<string>('system-terminal', '/stream?id=terminal-1')[Symbol.asyncIterator]();
     const next = iter.next();
 
-    sources[0]?.onmessage?.(new MessageEvent('message', { data: 'not-json' }));
+    sources[0]?.onmessage?.(new MessageEvent('message', { data: 'ready' }));
 
-    await expect(next).rejects.toThrow();
+    await expect(next).resolves.toEqual({ value: 'ready', done: false });
+    await iter.return?.();
     expect(sources[0]?.close).toHaveBeenCalled();
   });
 });

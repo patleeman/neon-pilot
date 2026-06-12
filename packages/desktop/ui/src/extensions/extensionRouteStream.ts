@@ -5,6 +5,14 @@ export interface ExtensionRouteSseStreamOptions {
   signal?: AbortSignal;
 }
 
+function parseExtensionRouteSseData<T>(raw: string): T {
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return raw as T;
+  }
+}
+
 export async function* streamExtensionRouteSse<T = unknown>(
   extensionId: string,
   routePath: string,
@@ -48,7 +56,7 @@ export async function* streamExtensionRouteSse<T = unknown>(
 
   source.onmessage = (event) => {
     try {
-      pending.push(JSON.parse(event.data) as T);
+      pending.push(parseExtensionRouteSseData<T>(event.data));
     } catch (err) {
       failure = err;
       closed = true;
