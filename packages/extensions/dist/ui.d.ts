@@ -280,7 +280,11 @@ export declare const KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY: string;
 export declare const KNOWLEDGE_TREE_EXPANDED_FOLDERS_STORAGE_KEY: string;
 export declare function addOpenFileId(...args: never[]): unknown;
 export declare function buildApiPath(...args: never[]): string;
+export declare function buildDesktopWebSocketUrl(...args: never[]): string;
 export declare function createDesktopAwareEventSource(...args: never[]): unknown;
+export declare function streamExtensionRouteSse<T = unknown>(extensionId: string, routePath: string, options?: {
+    signal?: AbortSignal;
+}): AsyncIterable<T>;
 export declare function canDropAllPaths(...args: never[]): unknown;
 export declare function collapseExpandedFolderIds(...args: never[]): unknown;
 export declare function cx(...values: Array<unknown>): string;

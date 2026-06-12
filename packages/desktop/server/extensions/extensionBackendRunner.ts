@@ -5,6 +5,12 @@ import { ExtensionBackendWorkerPool } from './extensionBackendWorkerClient.js';
 import { recordExtensionHostAuditEvent } from './extensionHostAudit.js';
 import { withExtensionProcessGuard } from './extensionProcessGuard.js';
 
+const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
+
+type ExtensionBackendRunnerGlobal = typeof globalThis & {
+  [EXTENSION_HOST_CAPABILITY_BRIDGE]?: (capability: string, operation: string, input?: unknown) => Promise<unknown> | unknown;
+};
+
 export type ExtensionBackendModule = Record<string, unknown>;
 export type ExtensionBackendFunction = (...args: unknown[]) => unknown;
 
@@ -148,6 +154,8 @@ async function auditBackendOperation<T>(extensionId: string, operation: Extensio
 }
 
 export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner {
+  let capabilityDispatcher: ReturnType<typeof createExtensionBackendCapabilityDispatcher> | undefined;
+
   const runner: ExtensionBackendRunner = {
     loadModule(extensionId, compiled) {
       const cacheKey = `${compiled.path}:${compiled.hash}`;
@@ -208,9 +216,18 @@ export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner 
       );
     },
     run(extensionId, operation, handler) {
-      return auditBackendOperation(extensionId, operation, () =>
-        withExtensionProcessGuard(extensionId, operation.label, () => Promise.resolve(handler())),
-      );
+      return auditBackendOperation(extensionId, operation, () => {
+        const target = globalThis as ExtensionBackendRunnerGlobal;
+        const previousBridge = target[EXTENSION_HOST_CAPABILITY_BRIDGE];
+        capabilityDispatcher ??= createExtensionBackendCapabilityDispatcher();
+        const dispatcher = capabilityDispatcher;
+        target[EXTENSION_HOST_CAPABILITY_BRIDGE] = (capability, capabilityOperation, input) =>
+          dispatcher({ id: 0, kind: 'capabilityRequest', extensionId, capability, operation: capabilityOperation, input });
+        return withExtensionProcessGuard(extensionId, operation.label, () => Promise.resolve(handler())).finally(() => {
+          if (previousBridge) target[EXTENSION_HOST_CAPABILITY_BRIDGE] = previousBridge;
+          else delete target[EXTENSION_HOST_CAPABILITY_BRIDGE];
+        });
+      });
     },
   };
   return runner;

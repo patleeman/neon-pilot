@@ -5,12 +5,11 @@
 ## Runtime Model
 
 - `terminalCreate` is a bounded backend action that creates a host-owned terminal session for the active workspace cwd.
-- Interactive I/O uses the desktop realtime WebSocket at `/api/realtime`.
-- The terminal panel sends `terminal_attach`, `terminal_input`, `terminal_resize`, and `terminal_close` messages over realtime.
-- The host replies with `terminal_attached` and `terminal` output/exit messages.
+- Terminal output uses the extension backend SSE route at `/api/extensions/system-terminal/routes/stream?id=<terminal-id>`.
+- Input, resize, and close remain bounded backend actions because they are short control operations.
 - `terminalDrain` remains a backend capability for compatibility and diagnostics, but the UI must not poll it for normal output.
 
-When running inside the packaged Electron app, the panel reads `getEnvironment().realtimeUrl` from the desktop bridge so it connects to the real local backend instead of trying to open `ws://app`.
+The stream route is handled in the extension host process, which is the same process that owns the in-memory terminal sessions. This avoids cross-process session lookups and avoids attempting to open a WebSocket from the `neon-pilot://app` custom protocol.
 
 ## Validation
 

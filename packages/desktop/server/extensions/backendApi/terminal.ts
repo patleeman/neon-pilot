@@ -44,6 +44,12 @@ async function* streamWorkerTerminalEvents(
   }
 }
 
+function readTerminalIdFromRouteRequest(request: TerminalStreamRouteRequest): string | undefined {
+  const idParam = request.query?.id;
+  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+  return typeof id === 'string' && id ? id : undefined;
+}
+
 export async function createTerminalSession(...args: unknown[]) {
   const bridge = workerBridge();
   if (bridge) return bridge('terminal', 'create', args[0]) as Promise<CreateTerminalResult>;
@@ -77,12 +83,14 @@ export async function closeTerminalSession(...args: unknown[]) {
 export async function streamTerminalSession(...args: unknown[]) {
   const bridge = workerBridge();
   if (bridge) {
-    const workerBridgeFn = bridge;
     const request = args[0] as TerminalStreamRouteRequest;
-    const idParam = request.query?.id;
-    const id = Array.isArray(idParam) ? idParam[0] : idParam;
-    if (typeof id !== 'string' || !id) return { status: 404, body: { error: 'Terminal not found or already closed.' } };
-    return { stream: 'sse', events: streamWorkerTerminalEvents(workerBridgeFn, id) } satisfies TerminalStreamRouteResponse;
+    const id = readTerminalIdFromRouteRequest(request);
+    if (!id) return { status: 404, body: { error: 'Terminal not found or already closed.' } };
+    const response = await bridge('terminal', 'stream', { id });
+    if (response && typeof response === 'object' && (response as { stream?: unknown }).stream === 'sse') {
+      return response;
+    }
+    return { stream: 'sse', events: streamWorkerTerminalEvents(bridge, id) } satisfies TerminalStreamRouteResponse;
   }
   return callServerModuleExport(TERMINAL_SESSIONS, 'streamTerminalSession', ...args);
 }

@@ -50,6 +50,7 @@ import {
   createTerminalSession,
   drainTerminalSession,
   resizeTerminalSession,
+  streamTerminalSession,
   writeTerminalSession,
 } from './terminalSessions.js';
 import { getWorkbenchBrowserToolHost } from './workbenchBrowserToolHost.js';
@@ -1346,6 +1347,14 @@ async function dispatchTerminalCapability(request: ExtensionBackendWorkerCapabil
   }
   if (request.operation === 'drain') {
     return drainTerminalSession({ id: requireString(input.id, 'Terminal id') });
+  }
+  if (request.operation === 'stream') {
+    return streamTerminalSession({
+      method: 'GET',
+      path: '/stream',
+      query: { id: requireString(input.id, 'Terminal id') },
+      params: {},
+    });
   }
   if (request.operation === 'resize') {
     return resizeTerminalSession({
