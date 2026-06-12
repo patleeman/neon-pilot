@@ -254,6 +254,37 @@ describe('extension backend capability dispatcher', () => {
     expect(conversations.setTitle).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 'New Title');
   });
 
+  it('returns final run-turn text from agent_end when no text deltas are emitted', async () => {
+    const conversations = {
+      runTurn: vi.fn(async (_extensionId: string, _conversationId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
+        options?.onEvent?.({ type: 'agent_end', text: 'final answer' });
+        return { accepted: true };
+      }),
+      metadata: { get: vi.fn(), set: vi.fn(), query: vi.fn() },
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ conversations });
+
+    await expect(
+      Promise.resolve(
+        dispatch(
+          {
+            id: 1,
+            kind: 'capabilityRequest',
+            extensionId: 'system-conversation-tools',
+            capability: 'conversations',
+            operation: 'runTurn',
+            input: {
+              conversationId: 'conv-1',
+              text: 'Use a tool',
+              runTurnEventHandleId: 'events-1',
+            },
+          },
+          vi.fn(),
+        ),
+      ),
+    ).resolves.toEqual({ accepted: true, text: 'final answer' });
+  });
+
   it('rejects malformed live conversation capability inputs', async () => {
     const conversations = {
       get: vi.fn(),

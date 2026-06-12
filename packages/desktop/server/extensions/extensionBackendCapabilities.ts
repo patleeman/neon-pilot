@@ -657,6 +657,7 @@ function dispatchConversationsCapability(
       throw new Error('Conversation runTurn capability is unavailable.');
     }
     const textDeltas: string[] = [];
+    let finalText = '';
     const eventHandleId = typeof input.runTurnEventHandleId === 'string' ? input.runTurnEventHandleId : '';
     return Promise.resolve(
       conversations.runTurn(
@@ -683,6 +684,10 @@ function dispatchConversationsCapability(
               textDeltas.push(record.delta);
               return;
             }
+            if (record.type === 'agent_end' && typeof record.text === 'string') {
+              finalText = record.text;
+              return;
+            }
             const assistantMessageEvent =
               record.type === 'message_update' && typeof record.assistantMessageEvent === 'object' && record.assistantMessageEvent !== null
                 ? (record.assistantMessageEvent as Record<string, unknown>)
@@ -693,7 +698,10 @@ function dispatchConversationsCapability(
           },
         },
       ),
-    ).then((result) => ({ ...(typeof result === 'object' && result !== null ? result : { accepted: true }), text: textDeltas.join('') }));
+    ).then((result) => ({
+      ...(typeof result === 'object' && result !== null ? result : { accepted: true }),
+      text: textDeltas.join('') || finalText,
+    }));
   }
 
   if (request.operation === 'abort') {
