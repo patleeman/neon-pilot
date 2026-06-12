@@ -575,4 +575,127 @@ describe('formatWorkspaceEntrySize', () => {
 
     vi.useRealTimers();
   });
+
+  it('ignores stale forced file loads from \"Open anyway\" after switching to a different file', async () => {
+    const tree = deferred<{
+      root: string;
+      rootName: string;
+      rootKind: 'git';
+      branch: string;
+      changes: never[];
+      entries: Array<{ path: string; name: string; kind: 'file'; size: number; gitStatus: null; descendantGitStatusCount: null }>;
+    }>();
+    const largeFileLoad = deferred<ReturnType<typeof file>>();
+    const largeFileForcedLoad = deferred<ReturnType<typeof file>>();
+    const normalFileLoad = deferred<ReturnType<typeof file>>();
+
+    apiMocks.workspaceTree.mockReturnValue(tree.promise);
+    apiMocks.workspaceFile.mockImplementation(
+      (_cwd: string, path: string, opts?: { force?: boolean }) => {
+        if (path === 'large.ts' && !opts?.force) return largeFileLoad.promise;
+        if (path === 'large.ts' && opts?.force) return largeFileForcedLoad.promise;
+        if (path === 'normal.ts') return normalFileLoad.promise;
+        throw new Error(`unexpected ${path}`);
+      },
+    );
+    apiMocks.workspaceDiff.mockResolvedValue({ addedLines: [], deletedBlocks: [] });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(React.createElement(WorkspaceExplorer, { cwd: '/repo', onDraftPrompt: () => undefined }));
+    });
+
+    await act(async () => {
+      tree.resolve({
+        root: '/repo',
+        rootName: 'repo',
+        rootKind: 'git',
+        branch: 'main',
+        changes: [],
+        entries: [
+          { path: 'large.ts', name: 'large.ts', kind: 'file', size: 10_000_000, gitStatus: null, descendantGitStatusCount: null },
+          { path: 'normal.ts', name: 'normal.ts', kind: 'file', size: 1, gitStatus: null, descendantGitStatusCount: null },
+        ],
+      });
+      await tree.promise;
+    });
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('large.ts');
+      expect(container.textContent).toContain('normal.ts');
+    });
+
+    // Click large.ts to open the large file
+    const rows = [...container.querySelectorAll('[role="button"]')];
+    const largeRow = rows.find((node) => node.textContent?.includes('large.ts'));
+    expect(largeRow).toBeTruthy();
+    act(() => {
+      largeRow!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    // Resolve the first load as a large file (tooLarge: true, content: null)
+    await act(async () => {
+      largeFileLoad.resolve({
+        path: 'large.ts',
+        name: 'large.ts',
+        content: null,
+        binary: false,
+        tooLarge: true,
+        size: 10_000_000,
+        mime: 'text/plain',
+        gitStatus: null,
+      });
+      await largeFileLoad.promise;
+    });
+
+    // Verify "Large file" and "Open anyway" are shown
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('Large file');
+      expect(container.textContent).toContain('Open anyway');
+    });
+
+    // Click "Open anyway" — triggers forced load
+    const openAnywayBtn = Array.from(container.querySelectorAll('button')).find((btn) =>
+      btn.textContent?.includes('Open anyway'),
+    );
+    expect(openAnywayBtn).toBeTruthy();
+    act(() => {
+      openAnywayBtn!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    // Before forced load resolves, click normal.ts
+    const normalRow = rows.find((node) => node.textContent?.includes('normal.ts'));
+    expect(normalRow).toBeTruthy();
+    act(() => {
+      normalRow!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    // Resolve normal file load
+    await act(async () => {
+      normalFileLoad.resolve(file('normal.ts', 'normal content'));
+      await normalFileLoad.promise;
+    });
+
+    await vi.waitFor(() => {
+      const textarea = container.querySelector('textarea') as HTMLTextAreaElement | null;
+      expect(textarea?.value).toBe('normal content');
+    });
+
+    // Now resolve the stale forced load
+    await act(async () => {
+      largeFileForcedLoad.resolve(file('large.ts', 'stale forced content'));
+      await largeFileForcedLoad.promise;
+    });
+
+    // Content should still be normal.ts — stale forced load was discarded
+    await vi.waitFor(() => {
+      const textarea = container.querySelector('textarea') as HTMLTextAreaElement | null;
+      expect(textarea?.value).toBe('normal content');
+      expect(container.textContent).toContain('normal.ts');
+    });
+  });
 });

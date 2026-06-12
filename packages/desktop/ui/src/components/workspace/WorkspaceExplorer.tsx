@@ -1046,9 +1046,14 @@ export function WorkspaceExplorer({
                           variant="action"
                           onClick={async () => {
                             if (!cwd) return;
+                            const requestId = selectFileRequestIdRef.current + 1;
+                            selectFileRequestIdRef.current = requestId;
+                            const isCurrentRequest = () => selectFileRequestIdRef.current === requestId;
                             setFileState({ status: 'loading', data: selectedFile, error: null });
                             const file = await api.workspaceFile(cwd, selectedFile.path, { force: true });
-                            setFileState({ status: 'idle', data: file, error: null });
+                            if (isCurrentRequest()) {
+                              setFileState({ status: 'idle', data: file, error: null });
+                            }
                           }}
                         >
                           Open anyway
