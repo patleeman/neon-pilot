@@ -308,6 +308,18 @@ export interface ExtensionCliCommandContribution {
   command: string;
   title?: string;
   description?: string;
+  /** Stable machine-readable intent, e.g. "agent.new_conversation_turn". */
+  intent?: string;
+  /** Intended callers for command selection and generated docs. */
+  audience?: Array<'human' | 'external-agent' | 'internal-agent' | 'extension-author'>;
+  /** Whether this is a primary public command or an advanced/internal escape hatch. */
+  stability?: 'public' | 'advanced' | 'internal' | 'deprecated';
+  /** Human and agent guidance for choosing this command. */
+  recommendedFor?: string[];
+  /** Common mistakes where another command should be preferred. */
+  notFor?: string[];
+  /** Commands this command should supersede for normal intents. */
+  preferredOver?: string[];
   /** Human CLI usage after the neon-pilot executable, e.g. "tasks list [--json]". */
   usage?: string;
   /** Copy-pasteable examples including the neon-pilot executable. */
@@ -1434,7 +1446,10 @@ export interface ExtensionBackendContext {
   knowledge: Record<string, (...args: never[]) => Promise<unknown>>;
   conversations: Record<string, (...args: never[]) => Promise<unknown>> & {
     list(...args: never[]): Promise<unknown>;
-    activity(conversationId: string, options?: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' }): Promise<unknown>;
+    activity(
+      conversationId: string,
+      options?: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' },
+    ): Promise<unknown>;
     connections(
       conversationId: string,
       options?: {

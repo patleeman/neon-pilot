@@ -13,6 +13,12 @@ export interface NeonPilotCliCommandDefinition {
   command: string;
   title?: string;
   description?: string;
+  intent?: string;
+  audience?: Array<'human' | 'external-agent' | 'internal-agent' | 'extension-author'>;
+  stability?: 'public' | 'advanced' | 'internal' | 'deprecated';
+  recommendedFor?: string[];
+  notFor?: string[];
+  preferredOver?: string[];
   usage?: string;
   examples?: string[];
   argsSchema?: Record<string, unknown>;
@@ -255,9 +261,15 @@ export function formatCliTable(rows: Array<Record<string, unknown>>, columns: st
       })
       .join('  ')
       .trimEnd();
-  return [`${columns.map((column, index) => column.padEnd(widths[index] ?? column.length)).join('  ').trimEnd()}`, ...rows.map(renderRow)].join(
-    '\n',
-  ) + '\n';
+  return (
+    [
+      `${columns
+        .map((column, index) => column.padEnd(widths[index] ?? column.length))
+        .join('  ')
+        .trimEnd()}`,
+      ...rows.map(renderRow),
+    ].join('\n') + '\n'
+  );
 }
 
 export function formatCliError(
@@ -316,22 +328,96 @@ export function renderCliUsage(options: NeonPilotCliHelpOptions = {}): string {
 export function renderCliCommandList(definitions: NeonPilotCliCommandDefinition[], json: boolean): string {
   const commands = [...definitions].sort((a, b) => a.command.localeCompare(b.command));
   if (json) return `${JSON.stringify({ commands }, null, 2)}\n`;
+  const renderedGroups = renderCliCommandGroups(commands);
+  const commonIntents = renderCliCommonIntents(commands);
   return (
     [
       'Neon Pilot commands:',
-      ...commands.map((command) => {
-        const owner = command.source === 'extension' && command.extensionId ? ` [${command.extensionId}]` : '';
-        const description = command.description ?? command.title;
-        return `  ${command.command}${owner}${description ? `  ${description}` : ''}`;
-      }),
+      '',
+      'Common intents:',
+      ...commonIntents,
+      '',
+      'Decision rules:',
+      '  Use ask for normal one-off agent work from the CLI.',
+      '  Use conversations run-turn when you already have a conversation id.',
+      '  Use background-commands for detached shell commands.',
+      '  Use subagent commands to inspect/manage delegated background agents, not ordinary prompting.',
+      '  Use app-commands and protocol only as advanced escape hatches.',
+      '',
+      ...renderedGroups,
+      '',
+      'Use `neon-pilot help <command>` for details or `neon-pilot commands --json` for machine-readable contracts.',
     ].join('\n') + '\n'
   );
+}
+
+function renderCliCommonIntents(commands: NeonPilotCliCommandDefinition[]): string[] {
+  const has = (commandName: string) => commands.some((command) => command.command === commandName);
+  return [
+    has('ask') ? '  Ask Neon Pilot to do one task       neon-pilot ask "..."' : undefined,
+    has('conversations run-turn') ? '  Continue an existing conversation   neon-pilot conversations run-turn <id> --text "..."' : undefined,
+    has('background-commands start')
+      ? '  Run shell work in the background    neon-pilot background-commands start --command "..."'
+      : undefined,
+    has('subagents list') || has('subagent list') ? '  Inspect delegated agent work        neon-pilot subagents list' : undefined,
+    has('tasks list') ? '  Manage scheduled behavior           neon-pilot tasks list' : undefined,
+  ].filter((line): line is string => Boolean(line));
+}
+
+function renderCliCommandGroups(commands: NeonPilotCliCommandDefinition[]): string[] {
+  const groups = [
+    { title: 'Start Here', prefixes: ['ask', 'doctor', 'help'] },
+    { title: 'Conversation Work', prefixes: ['ask', 'conversations'] },
+    { title: 'Background Work', prefixes: ['background-commands'] },
+    { title: 'Delegated Agent Work', prefixes: ['subagent', 'subagents'] },
+    { title: 'Scheduled Work', prefixes: ['tasks', 'automations'] },
+    { title: 'Runtime Setup', prefixes: ['bootstrap', 'cli', 'paths', 'version'] },
+    { title: 'Extensions and Settings', prefixes: ['extensions', 'settings'] },
+    { title: 'Discovery and Contracts', prefixes: ['commands', 'schema'] },
+    { title: 'Advanced Escape Hatches', prefixes: ['app-commands', 'protocol'] },
+  ] as const;
+  const used = new Set<string>();
+  const lines: string[] = [];
+  for (const group of groups) {
+    const groupCommands = commands.filter((command) =>
+      group.prefixes.some((prefix) => command.command === prefix || command.command.startsWith(`${prefix} `)),
+    );
+    if (groupCommands.length === 0) continue;
+    lines.push(`${group.title}:`);
+    for (const command of groupCommands) {
+      used.add(command.id);
+      lines.push(renderCliCommandListEntry(command));
+    }
+    lines.push('');
+  }
+  const otherCommands = commands.filter((command) => !used.has(command.id));
+  if (otherCommands.length > 0) {
+    lines.push('Other Commands:');
+    lines.push(...otherCommands.map(renderCliCommandListEntry));
+  } else if (lines.at(-1) === '') {
+    lines.pop();
+  }
+  return lines;
+}
+
+function renderCliCommandListEntry(command: NeonPilotCliCommandDefinition): string {
+  const owner = command.source === 'extension' && command.extensionId ? ` [${command.extensionId}]` : '';
+  const description = command.description ?? command.title;
+  return `  ${command.command}${owner}${description ? `  ${description}` : ''}`;
 }
 
 export function renderCliCommandHelp(definition: NeonPilotCliCommandDefinition, commandName = 'neon-pilot'): string {
   const lines = [definition.command];
   const description = definition.description ?? definition.title;
   if (description) lines.push('', description);
+  if (definition.recommendedFor?.length) {
+    lines.push('', 'Use when:');
+    lines.push(...definition.recommendedFor.map((item) => `  ${item}`));
+  }
+  if (definition.notFor?.length) {
+    lines.push('', 'Do not use for:');
+    lines.push(...definition.notFor.map((item) => `  ${item}`));
+  }
   lines.push('', `Usage: ${commandName} ${definition.usage ?? definition.command}`);
   if (definition.aliases?.length) lines.push('', `Aliases: ${definition.aliases.join(', ')}`);
   const details = [
@@ -374,6 +460,12 @@ export function buildCliCommandSchema(definitions: NeonPilotCliCommandDefinition
         source: definition.source ?? 'extension',
         extensionId: definition.extensionId,
         description: definition.description ?? definition.title ?? '',
+        intent: definition.intent,
+        audience: definition.audience ?? ['human', 'external-agent'],
+        stability: definition.stability ?? 'public',
+        recommendedFor: definition.recommendedFor ?? [],
+        notFor: definition.notFor ?? [],
+        preferredOver: definition.preferredOver ?? [],
         usage: definition.usage ?? definition.command,
         mode: definition.mode ?? 'write',
         requiresApp: definition.requiresApp !== false,
@@ -486,6 +578,12 @@ export function withDefaultCliCommandContract<T extends NeonPilotCliCommandDefin
   });
   return {
     ...definition,
+    intent: definition.intent ?? inferCliCommandIntent(definition.command),
+    audience: definition.audience ?? inferCliCommandAudience(definition.command),
+    stability: definition.stability ?? inferCliCommandStability(definition.command),
+    recommendedFor: definition.recommendedFor ?? inferCliCommandRecommendedFor(definition.command),
+    notFor: definition.notFor ?? inferCliCommandNotFor(definition.command),
+    preferredOver: definition.preferredOver ?? inferCliCommandPreferredOver(definition.command),
     usage,
     examples: definition.examples ?? [exampleFromCliUsage(usage), `${exampleFromCliUsage(usage)} --json`],
     argsSchema: definition.argsSchema ?? inferCliArgsSchema(definition.command),
@@ -497,16 +595,104 @@ export function withDefaultCliCommandContract<T extends NeonPilotCliCommandDefin
     startsBackgroundWork: definition.startsBackgroundWork ?? mode === 'background',
     supportsDryRun,
     outputModes,
-    ...(definition.streaming ?? mode === 'streaming'
-      ? { streaming: definition.streaming ?? { supportsFollow: true, supportsJsonl: outputModes.includes('jsonl'), cancelOnInterruptDefault: false } }
+    ...((definition.streaming ?? mode === 'streaming')
+      ? {
+          streaming: definition.streaming ?? {
+            supportsFollow: true,
+            supportsJsonl: outputModes.includes('jsonl'),
+            cancelOnInterruptDefault: false,
+          },
+        }
       : {}),
   };
 }
 
-function withCliShellFlags(
-  schema: Record<string, unknown>,
-  options: { destructive: boolean },
-): Record<string, unknown> {
+function inferCliCommandIntent(command: string): string | undefined {
+  if (command === 'ask') return 'agent.new_conversation_turn';
+  if (command.startsWith('conversations run-turn')) return 'agent.existing_conversation_turn';
+  if (command.startsWith('conversations')) return 'conversation.manage';
+  if (command.startsWith('background-commands start')) return 'execution.start_background_shell_command';
+  if (command.startsWith('background-commands')) return 'execution.manage_background_shell_command';
+  if (command.startsWith('subagent') || command.startsWith('subagents')) return 'execution.manage_delegated_agent_work';
+  if (command.startsWith('tasks')) return 'automation.manage_scheduled_behavior';
+  if (command.startsWith('extensions')) return 'extension.manage';
+  if (command.startsWith('settings')) return 'settings.manage';
+  if (command.startsWith('bootstrap')) return 'runtime.bootstrap';
+  if (command === 'commands' || command === 'schema') return 'cli.discover_contracts';
+  if (command === 'doctor' || command === 'paths' || command === 'version' || command.startsWith('cli')) return 'runtime.inspect';
+  if (command.startsWith('app-commands')) return 'host.app_command_escape_hatch';
+  if (command === 'protocol') return 'host.raw_protocol_escape_hatch';
+  return undefined;
+}
+
+function inferCliCommandAudience(command: string): NonNullable<NeonPilotCliCommandDefinition['audience']> {
+  if (command.startsWith('app-commands') || command === 'protocol' || command === 'schema') {
+    return ['internal-agent', 'extension-author'];
+  }
+  if (command === 'commands' || command === 'doctor' || command === 'paths' || command === 'version') {
+    return ['human', 'external-agent', 'internal-agent', 'extension-author'];
+  }
+  return ['human', 'external-agent', 'internal-agent'];
+}
+
+function inferCliCommandStability(command: string): NonNullable<NeonPilotCliCommandDefinition['stability']> {
+  if (command.startsWith('app-commands') || command === 'protocol') return 'advanced';
+  return 'public';
+}
+
+function inferCliCommandRecommendedFor(command: string): string[] {
+  if (command === 'ask') {
+    return ['asking Neon Pilot to do a one-off task from the CLI', 'starting normal agent work from a shell'];
+  }
+  if (command.startsWith('conversations run-turn')) {
+    return ['sending a prompt to an existing conversation when you already know its id'];
+  }
+  if (command.startsWith('background-commands start')) {
+    return ['starting detached shell work with logs, status, cancel, and rerun behavior'];
+  }
+  if (command.startsWith('background-commands')) {
+    return ['inspecting, cancelling, rerunning, or reading logs for detached shell commands'];
+  }
+  if (command.startsWith('subagent') || command.startsWith('subagents')) {
+    return ['inspecting or managing delegated background agent work created by the runtime or a conversation'];
+  }
+  if (command.startsWith('tasks')) {
+    return ['managing scheduled recurring behavior'];
+  }
+  if (command.startsWith('app-commands')) {
+    return ['advanced automation against command-palette/app commands when no first-class CLI command fits'];
+  }
+  if (command === 'protocol') {
+    return ['advanced raw extension protocol integration when no first-class CLI command fits'];
+  }
+  return [];
+}
+
+function inferCliCommandNotFor(command: string): string[] {
+  if (command.startsWith('subagent') || command.startsWith('subagents')) {
+    return ['ordinary one-off CLI prompting; use `ask` instead', 'detached shell commands; use `background-commands start` instead'];
+  }
+  if (command.startsWith('background-commands')) {
+    return ['agent prompting; use `ask` or `conversations run-turn` instead'];
+  }
+  if (command.startsWith('app-commands') || command === 'protocol') {
+    return ['normal user-facing automation when a first-class CLI command exists'];
+  }
+  if (command === 'ask') {
+    return [
+      'continuing an existing conversation; use `conversations run-turn` instead',
+      'running detached shell commands; use `background-commands start` instead',
+    ];
+  }
+  return [];
+}
+
+function inferCliCommandPreferredOver(command: string): string[] {
+  if (command === 'ask') return ['subagents start', 'app-commands run', 'protocol'];
+  return [];
+}
+
+function withCliShellFlags(schema: Record<string, unknown>, options: { destructive: boolean }): Record<string, unknown> {
   const properties =
     schema.properties && typeof schema.properties === 'object' && !Array.isArray(schema.properties)
       ? { ...(schema.properties as Record<string, unknown>) }
@@ -519,16 +705,26 @@ function withCliShellFlags(
 
 function inferCliCommandMode(command: string): NonNullable<NeonPilotCliCommandDefinition['mode']> {
   if (command === 'conversations run-turn' || command === 'protocol') return 'streaming';
-  if (
-    command.startsWith('background-commands start') ||
-    command.startsWith('tasks run') ||
-    command.startsWith('heartbeats start')
-  ) {
+  if (command.startsWith('background-commands start') || command.startsWith('tasks run') || command.startsWith('heartbeats start')) {
     return 'background';
   }
   if (command.includes(' delete') || command.includes(' uninstall') || command.includes('retention prune')) return 'destructive';
-  const readVerbs = new Set(['list', 'get', 'search', 'inspect', 'schema', 'doctor', 'catalog', 'paths', 'sources', 'logs', 'workspace', 'validate']);
-  if (readVerbs.has(commandTokens(command).at(-1) ?? '') || command.endsWith('open list') || command.endsWith('scratchpad get')) return 'read';
+  const readVerbs = new Set([
+    'list',
+    'get',
+    'search',
+    'inspect',
+    'schema',
+    'doctor',
+    'catalog',
+    'paths',
+    'sources',
+    'logs',
+    'workspace',
+    'validate',
+  ]);
+  if (readVerbs.has(commandTokens(command).at(-1) ?? '') || command.endsWith('open list') || command.endsWith('scratchpad get'))
+    return 'read';
   return 'write';
 }
 
@@ -562,7 +758,13 @@ function inferRequiredCliArgs(command: string): string[] {
     return [];
   }
   if (command === 'settings get' || command === 'settings set' || command === 'settings reset') return ['key'];
-  if (command.includes(' delete') || command.includes(' get') || command.includes(' logs') || command.includes(' rerun') || command.includes(' cancel')) {
+  if (
+    command.includes(' delete') ||
+    command.includes(' get') ||
+    command.includes(' logs') ||
+    command.includes(' rerun') ||
+    command.includes(' cancel')
+  ) {
     return ['id'];
   }
   if (command.startsWith('conversations')) return ['conversationId'];
@@ -600,7 +802,10 @@ function inferCliFlagsSchema(
 }
 
 function exampleFromCliUsage(usage: string): string {
-  let example = usage.replace(/\[--json\]/g, '').replace(/\[[^\]]+\]/g, '').trim();
+  let example = usage
+    .replace(/\[--json\]/g, '')
+    .replace(/\[[^\]]+\]/g, '')
+    .trim();
   example = example
     .replace(/<key>/g, 'conversation.pinnedToolCalls')
     .replace(/<value>/g, 'false')

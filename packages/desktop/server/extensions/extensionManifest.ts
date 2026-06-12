@@ -559,6 +559,12 @@ export interface ExtensionCliCommandContribution {
   command: string;
   title?: string;
   description?: string;
+  intent?: string;
+  audience?: Array<'human' | 'external-agent' | 'internal-agent' | 'extension-author'>;
+  stability?: 'public' | 'advanced' | 'internal' | 'deprecated';
+  recommendedFor?: string[];
+  notFor?: string[];
+  preferredOver?: string[];
   usage?: string;
   examples?: string[];
   argsSchema?: Record<string, unknown>;

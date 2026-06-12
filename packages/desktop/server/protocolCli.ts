@@ -263,7 +263,8 @@ const CORE_CLI_COMMANDS: NeonPilotCliCommandDefinition[] = [
   {
     id: 'protocol',
     command: 'protocol',
-    description: 'Invoke a raw extension protocol entrypoint. Advanced integration surface; prefer first-class CLI commands for normal automation.',
+    description:
+      'Invoke a raw extension protocol entrypoint. Advanced integration surface; prefer first-class CLI commands for normal automation.',
     usage: 'protocol <protocol-id> [args]',
     examples: ['neon-pilot protocol acp', 'neon-pilot protocol ds4-tools tools'],
     argsSchema: {
@@ -588,6 +589,28 @@ function cliCommandRegistrationFromEntry(entry: Record<string, unknown>): CliCom
       ...(typeof entry.inputAction === 'string' ? { inputAction: entry.inputAction } : {}),
       ...(typeof entry.title === 'string' ? { title: entry.title } : {}),
       ...(typeof entry.description === 'string' ? { description: entry.description } : {}),
+      ...(typeof entry.intent === 'string' ? { intent: entry.intent } : {}),
+      ...(Array.isArray(entry.audience)
+        ? {
+            audience: entry.audience.filter(
+              (audience): audience is NonNullable<NeonPilotCliCommandDefinition['audience']>[number] =>
+                audience === 'human' || audience === 'external-agent' || audience === 'internal-agent' || audience === 'extension-author',
+            ),
+          }
+        : {}),
+      ...(entry.stability === 'public' ||
+      entry.stability === 'advanced' ||
+      entry.stability === 'internal' ||
+      entry.stability === 'deprecated'
+        ? { stability: entry.stability }
+        : {}),
+      ...(Array.isArray(entry.recommendedFor)
+        ? { recommendedFor: entry.recommendedFor.filter((item): item is string => typeof item === 'string') }
+        : {}),
+      ...(Array.isArray(entry.notFor) ? { notFor: entry.notFor.filter((item): item is string => typeof item === 'string') } : {}),
+      ...(Array.isArray(entry.preferredOver)
+        ? { preferredOver: entry.preferredOver.filter((item): item is string => typeof item === 'string') }
+        : {}),
       ...(typeof entry.usage === 'string' ? { usage: entry.usage } : {}),
       ...(Array.isArray(entry.examples)
         ? { examples: entry.examples.filter((example): example is string => typeof example === 'string') }
@@ -664,7 +687,7 @@ async function readCliCommandRegistrations(): Promise<CliCommandRegistration[]> 
 }
 
 async function allCliCommandDefinitions(): Promise<NeonPilotCliCommandDefinition[]> {
-  return [...CORE_CLI_COMMANDS, ...(await readCliCommandRegistrations())];
+  return [...CORE_CLI_COMMANDS.map((command) => withDefaultCliCommandContract(command)), ...(await readCliCommandRegistrations())];
 }
 
 async function listCliCommands(args: string[], rawArgs = args): Promise<number> {
