@@ -9,7 +9,7 @@ Download the latest macOS `.dmg` from [GitHub Releases](https://github.com/patle
 For agent-driven setup, use the packaged installer script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json
+curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap
 ```
 
 Use `--channel rc` when you want the release-candidate app.
@@ -21,9 +21,9 @@ Open **Neon Pilot.app**. The desktop app manages the local daemon automatically.
 If you installed the CLI, configure provider defaults and verify the runtime:
 
 ```bash
-neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4 --json
-printf '%s' "$OPENAI_API_KEY" | neon-pilot bootstrap provider set-key openai --stdin --json
-neon-pilot bootstrap doctor --json
+neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4
+printf '%s' "$OPENAI_API_KEY" | neon-pilot bootstrap provider set-key openai --stdin
+neon-pilot bootstrap doctor
 ```
 
 Provider keys must not be passed in command arguments. Use stdin, Keychain, OAuth/device login, or another configured secrets backend.

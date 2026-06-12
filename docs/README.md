@@ -7,13 +7,13 @@ Neon Pilot is a durable AI agent runtime with a desktop app, background automati
 Download the latest macOS app from [GitHub Releases](https://github.com/patleeman/neon-pilot/releases/latest), or let an agent install and bootstrap the packaged app:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json
+curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap
 ```
 
 After install, open **Neon Pilot.app** and create a conversation. If you installed the CLI, verify the runtime with:
 
 ```bash
-neon-pilot bootstrap doctor --json
+neon-pilot bootstrap doctor
 ```
 
 See [Getting Started](getting-started.md) for the user setup flow, or [Development workflow](development.md) for building from source.
@@ -44,8 +44,8 @@ See [Getting Started](getting-started.md) for the user setup flow, or [Developme
 - [Extension templates](extension-templates/README.md) — copy-paste stubs for data-dashboard, crud-page, and settings-section patterns
 - [Extension authoring](extensions.md) — reference for native extension manifests, frontend/backend entries, tools, skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
 - [Extension API types](../packages/extensions/README.md) — SDK package with exported types for frontend and backend code
-- [Neon Pilot CLI](cli.md) — local control plane; extensions add administration commands with `contributes.cliCommands`; use `neon-pilot commands` for human/task discovery and `--json` only for scripts or generated references
-- [CLI reference](cli-reference.md) — generated command contract reference from `neon-pilot commands --json`
+- [Neon Pilot CLI](cli.md) — local control plane; extensions add administration commands with `contributes.cliCommands`
+- [CLI reference](cli-reference.md) — generated command contract reference for automation and scripts
 - [System extensions](../extensions) — feature-owned docs and implementation packages
 - [First-party optional extensions](https://github.com/patleeman/neon-pilot-extensions) — optional packages distributed from GitHub release artifacts
 

@@ -66,11 +66,11 @@
           Download the latest macOS app from <a href="https://github.com/patleeman/neon-pilot/releases/latest">GitHub Releases</a>, or let
           an agent install and bootstrap the packaged app:
         </p>
-        <pre><code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json</code></pre>
+        <pre><code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap</code></pre>
         <p>
           After install, open <strong>Neon Pilot.app</strong> and create a conversation. If you installed the CLI, verify the runtime with:
         </p>
-        <pre><code>neon-pilot bootstrap doctor --json</code></pre>
+        <pre><code>neon-pilot bootstrap doctor</code></pre>
         <p>
           See <a href="./getting-started.html">Getting Started</a> for the user setup flow, or
           <a href="./development.html">Development workflow</a> for building from source.
@@ -143,13 +143,9 @@
           </li>
           <li>
             <a href="./cli.html">Neon Pilot CLI</a> — local control plane; extensions add administration commands with
-            <code>contributes.cliCommands</code>; use <code>neon-pilot commands</code> for human/task discovery and <code>--json</code> only
-            for scripts or generated references
+            <code>contributes.cliCommands</code>
           </li>
-          <li>
-            <a href="./cli-reference.html">CLI reference</a> — generated command contract reference from
-            <code>neon-pilot commands --json</code>
-          </li>
+          <li><a href="./cli-reference.html">CLI reference</a> — generated command contract reference for automation and scripts</li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions">System extensions</a> — feature-owned docs and
             implementation packages

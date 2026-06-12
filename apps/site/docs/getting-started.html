@@ -65,14 +65,14 @@
           <strong>Neon Pilot.app</strong> into Applications.
         </p>
         <p>For agent-driven setup, use the packaged installer script:</p>
-        <pre><code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json</code></pre>
+        <pre><code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap</code></pre>
         <p>Use <code>--channel rc</code> when you want the release-candidate app.</p>
         <h2 id="configure-and-verify">Configure and verify</h2>
         <p>Open <strong>Neon Pilot.app</strong>. The desktop app manages the local daemon automatically.</p>
         <p>If you installed the CLI, configure provider defaults and verify the runtime:</p>
-        <pre><code>neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4 --json
-printf '%s' &quot;$OPENAI_API_KEY&quot; | neon-pilot bootstrap provider set-key openai --stdin --json
-neon-pilot bootstrap doctor --json</code></pre>
+        <pre><code>neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4
+printf '%s' &quot;$OPENAI_API_KEY&quot; | neon-pilot bootstrap provider set-key openai --stdin
+neon-pilot bootstrap doctor</code></pre>
         <p>
           Provider keys must not be passed in command arguments. Use stdin, Keychain, OAuth/device login, or another configured secrets
           backend.
