@@ -41,4 +41,28 @@ describe('subscribeDesktopProviderOAuthLogin', () => {
     unsubscribe();
     expect(close).toHaveBeenCalledTimes(1);
   });
+
+  it('ignores late login state events after unsubscribe', async () => {
+    const close = vi.fn();
+    const source: { onmessage: ((event: MessageEvent<string>) => void) | null; onerror: (() => void) | null; close: () => void } = {
+      onmessage: null,
+      onerror: null,
+      close,
+    };
+    createDesktopAwareEventSourceMock.mockReturnValue(source);
+
+    const { subscribeDesktopProviderOAuthLogin } = await import('./desktopProviderOAuth');
+    const onState = vi.fn();
+    const unsubscribe = await subscribeDesktopProviderOAuthLogin('login-1', onState);
+
+    unsubscribe();
+    source.onmessage?.(
+      new MessageEvent('message', {
+        data: JSON.stringify({ id: 'login-1', provider: 'openrouter', providerName: 'OpenRouter', status: 'complete' }),
+      }),
+    );
+
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(onState).not.toHaveBeenCalled();
+  });
 });
