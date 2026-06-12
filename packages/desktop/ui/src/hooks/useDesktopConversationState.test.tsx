@@ -1323,6 +1323,80 @@ describe('useDesktopConversationState', () => {
     vi.useRealTimers();
   });
 
+  it('ignores late SSE callbacks after the hook unmounts', async () => {
+    vi.useFakeTimers();
+    const frameCallbacks: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+      conversationId: 'conv-1',
+      sessionDetail: null,
+      bootstrap: null,
+      liveSession: { live: true, title: null, isStreaming: true, hasStaleTurnState: false },
+      stream: {
+        blocks: [{ type: 'text', id: 'text-1', text: 'Initial', ts: '2026-05-24T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        hasSnapshot: true,
+        isStreaming: true,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(eventSources).toHaveLength(1);
+
+    act(() => {
+      root.unmount();
+    });
+
+    expect(eventSources[0]?.closed).toBe(true);
+
+    act(() => {
+      eventSources[0]?.send({ type: 'text_delta', delta: 'Ignored after unmount' });
+      eventSources[0]?.onerror?.(new Event('error'));
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+      await flushPromises();
+    });
+
+    expect(eventSources).toHaveLength(1);
+    expect(frameCallbacks).toHaveLength(0);
+
+    vi.useRealTimers();
+  });
+
   it('clears active streaming state when an SSE error refresh shows the live session is gone', async () => {
     vi.useFakeTimers();
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {

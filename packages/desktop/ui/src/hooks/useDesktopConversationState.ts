@@ -732,6 +732,9 @@ export function useDesktopConversationState(conversationId: string | null, optio
       streamEvent.type === 'text_delta' || streamEvent.type === 'thinking_delta' || streamEvent.type === 'tool_update';
 
     source.onmessage = (event) => {
+      if (closed) {
+        return;
+      }
       try {
         const streamEvent = JSON.parse(event.data) as SseEvent;
         pendingStreamEventsRef.current.push(streamEvent);
@@ -782,6 +785,9 @@ export function useDesktopConversationState(conversationId: string | null, optio
     };
 
     source.onerror = () => {
+      if (closed) {
+        return;
+      }
       flushPendingStreamEvents();
       refreshAuthoritativeState();
       scheduleReconnectRetry();
