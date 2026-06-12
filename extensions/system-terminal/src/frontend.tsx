@@ -59,7 +59,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       cursorBlink: true,
       cursorStyle: 'block',
       fontSize: 13,
-      fontFamily: "'Geist Mono', 'JetBrains Mono', 'SF Mono', Menlo, monospace",
+      fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
       theme: {
         background: baseColor,
         foreground: primaryColor,
