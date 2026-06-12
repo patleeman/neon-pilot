@@ -29,6 +29,7 @@ Examples:
 
 - live conversation events: agent start/stop, message deltas, tool calls/results, context usage, queue state, parallel jobs, title updates, presence, stale/hidden turn state, and turn end
 - user controls for active live sessions: submit prompt, queue steer/follow-up, abort, takeover, approvals, and parallel-job actions
+- interactive terminal sessions: attach, input, resize, close, output, and exit events
 - app-wide invalidations and small events: sessions changed, tasks/runs changed, daemon status changed, notifications, extension commands, session running state, and live titles
 - optional background execution realtime events such as log tails or status deltas
 

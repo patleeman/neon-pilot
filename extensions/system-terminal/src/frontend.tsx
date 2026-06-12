@@ -1,6 +1,6 @@
 import '@xterm/xterm/css/xterm.css';
 
-import type { ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
+import { buildDesktopWebSocketUrl, getDesktopBridge, type ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import { useEffect, useRef } from 'react';
@@ -17,19 +17,34 @@ function readRgbVar(element: HTMLElement, name: string): string {
   return value ? `rgb(${value})` : '';
 }
 
-function normalizeDrainResult(value: unknown): { ok: boolean; output: string; exited: boolean; exitCode: number | null } | null {
-  if (!value || typeof value !== 'object') return null;
-  const candidate =
-    'result' in value && value.result && typeof value.result === 'object'
-      ? (value.result as Record<string, unknown>)
-      : (value as Record<string, unknown>);
-  if (typeof candidate.ok !== 'boolean') return null;
-  return {
-    ok: candidate.ok,
-    output: typeof candidate.output === 'string' ? candidate.output : '',
-    exited: candidate.exited === true,
-    exitCode: typeof candidate.exitCode === 'number' ? candidate.exitCode : null,
-  };
+type TerminalRealtimeMessage =
+  | { type: 'terminal_attached'; id?: string; terminalId: string; replay: string; exited: boolean; exitCode: number | null }
+  | { type: 'terminal'; terminalId: string; event: { type: 'output'; data: string } | { type: 'exit'; code: number | null } }
+  | { type: 'error'; id?: string; message: string };
+
+type DesktopBridgeLike = {
+  getEnvironment?: () => Promise<{ realtimeUrl?: string }>;
+};
+
+function readDesktopBridge(): DesktopBridgeLike | null {
+  const direct = getDesktopBridge() as DesktopBridgeLike | null;
+  if (direct?.getEnvironment) return direct;
+  if (typeof window === 'undefined') return null;
+  for (const candidate of [window, window.parent, window.top]) {
+    try {
+      const bridge = (candidate as typeof window & { neonPilotDesktop?: DesktopBridgeLike | null }).neonPilotDesktop;
+      if (bridge?.getEnvironment) return bridge;
+    } catch {
+      // Cross-origin frames can throw when probing parent/top.
+    }
+  }
+  return null;
+}
+
+async function resolveTerminalRealtimeUrl(): Promise<string> {
+  const bridge = readDesktopBridge();
+  const realtimeUrl = (await bridge?.getEnvironment?.().catch(() => null))?.realtimeUrl;
+  return realtimeUrl || buildDesktopWebSocketUrl('/api/realtime');
 }
 
 export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
@@ -105,17 +120,72 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
 
     // Create terminal session via backend action
     let terminalId: string | null = null;
-    let drainTimer: ReturnType<typeof window.setInterval> | null = null;
+    let socket: WebSocket | null = null;
     let closed = false;
     let usingPty = false;
     let degradedInputColumns = 0;
-    let reportedDrainError = false;
     let requestedWorkbenchClose = false;
+    let nextRealtimeRequestId = 0;
 
     const closeWorkbenchTab = () => {
       if (requestedWorkbenchClose) return;
       requestedWorkbenchClose = true;
       pa.workbench.closeTab(context.instanceId);
+    };
+
+    const sendRealtime = (message: Record<string, unknown>) => {
+      if (!socket || socket.readyState !== WebSocket.OPEN) return false;
+      socket.send(JSON.stringify(message));
+      return true;
+    };
+
+    const nextRequestId = (prefix: string) => `${prefix}:${Date.now().toString(36)}:${(nextRealtimeRequestId += 1).toString(36)}`;
+
+    const handleTerminalExit = () => {
+      closeWorkbenchTab();
+    };
+
+    const attachRealtimeTerminal = async (id: string, providedRealtimeUrl?: string) => {
+      const attachRequestId = nextRequestId('terminal-attach');
+      const realtimeUrl = providedRealtimeUrl || (await resolveTerminalRealtimeUrl());
+      if (closed || state.id !== id) return;
+      socket = new WebSocket(realtimeUrl);
+      socket.addEventListener('open', () => {
+        sendRealtime({ type: 'terminal_attach', id: attachRequestId, terminalId: id });
+      });
+      socket.addEventListener('message', (event) => {
+        if (closed || state.id !== id) return;
+        let message: TerminalRealtimeMessage;
+        try {
+          message = JSON.parse(String(event.data)) as TerminalRealtimeMessage;
+        } catch {
+          return;
+        }
+        if (message.type === 'terminal_attached') {
+          if (message.id !== attachRequestId || message.terminalId !== id) return;
+          if (message.replay) xterm.write(message.replay);
+          if (message.exited) handleTerminalExit();
+          return;
+        }
+        if (message.type === 'terminal') {
+          if (message.terminalId !== id) return;
+          if (message.event.type === 'output') {
+            xterm.write(message.event.data);
+            return;
+          }
+          if (message.event.type === 'exit') handleTerminalExit();
+          return;
+        }
+        if (message.type === 'error' && message.id === attachRequestId) {
+          xterm.writeln(`\r\n\x1b[91mTerminal realtime attach failed: ${message.message}\x1b[0m`);
+        }
+      });
+      socket.addEventListener('error', () => {
+        if (!closed) xterm.writeln('\r\n\x1b[91mTerminal realtime connection failed.\x1b[0m');
+      });
+      socket.addEventListener('close', () => {
+        if (!closed && state.id === id) xterm.writeln('\r\n\x1b[91mTerminal realtime connection closed.\x1b[0m');
+      });
     };
 
     const echoInput = (data: string) => {
@@ -146,16 +216,18 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     const writeTerminalData = (data: string) => {
       echoInput(data);
       if (terminalId && !closed) {
-        pa.extension.invoke('terminalWrite', { id: terminalId, data }).catch(() => {
-          // Ignore write errors if terminal was closed.
-        });
+        if (!sendRealtime({ type: 'terminal_input', terminalId, data })) {
+          pa.extension.invoke('terminalWrite', { id: terminalId, data }).catch(() => {
+            // Ignore write errors if terminal was closed.
+          });
+        }
       } else if (!closed) {
         pendingWritesRef.current.push(data);
       }
     };
 
     pa.extension
-      .invoke<{ id: string; pid: number | null; usingPty: boolean; initialOutput?: string }>('terminalCreate', {
+      .invoke<{ id: string; pid: number | null; usingPty: boolean; initialOutput?: string; realtimeUrl?: string }>('terminalCreate', {
         cwd: context.cwd ?? undefined,
       })
       .then((result) => {
@@ -171,29 +243,10 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         const modeLabel = result.usingPty ? 'PTY ready' : 'Terminal ready (degraded mode)';
         xterm.writeln(`\x1b[90m${modeLabel} (pid: ${result.pid ?? '?'}). Type 'exit' to close.\x1b[0m\r\n`);
         if (result.initialOutput) xterm.write(result.initialOutput);
-
-        const drainOutput = () => {
-          if (closed || !terminalId) return;
-          pa.extension
-            .invoke('terminalDrain', { id: terminalId })
-            .then((value) => {
-              const drain = normalizeDrainResult(value);
-              if (closed || !drain) return;
-              if (!drain.ok || drain.exited) {
-                closeWorkbenchTab();
-                return;
-              }
-              if (drain.output) xterm.write(drain.output);
-            })
-            .catch((error) => {
-              if (closed || reportedDrainError) return;
-              reportedDrainError = true;
-              const message = error instanceof Error ? error.message : String(error);
-              xterm.writeln(`\r\n\x1b[91mTerminal output drain failed: ${message}\x1b[0m`);
-            });
-        };
-        drainTimer = window.setInterval(drainOutput, 33);
-        drainOutput();
+        void attachRealtimeTerminal(result.id, result.realtimeUrl).catch((error) => {
+          const message = error instanceof Error ? error.message : String(error);
+          xterm.writeln(`\r\n\x1b[91mTerminal realtime connection failed: ${message}\x1b[0m`);
+        });
       })
       .catch((error) => {
         if (closed) return;
@@ -216,13 +269,9 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         if (terminalId && !closed) {
           const dims = fitAddon.proposeDimensions();
           if (dims) {
-            pa.extension
-              .invoke('terminalResize', {
-                id: terminalId,
-                cols: dims.cols,
-                rows: dims.rows,
-              })
-              .catch(() => {});
+            if (!sendRealtime({ type: 'terminal_resize', terminalId, cols: dims.cols, rows: dims.rows })) {
+              pa.extension.invoke('terminalResize', { id: terminalId, cols: dims.cols, rows: dims.rows }).catch(() => {});
+            }
           }
         }
       } catch {
@@ -254,12 +303,11 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       container.removeEventListener('pointerdown', handleFocusTerminal, true);
 
       if (terminalId) {
-        pa.extension.invoke('terminalClose', { id: terminalId }).catch(() => {});
+        if (!sendRealtime({ type: 'terminal_close', terminalId })) {
+          pa.extension.invoke('terminalClose', { id: terminalId }).catch(() => {});
+        }
       }
-
-      if (drainTimer) {
-        window.clearInterval(drainTimer);
-      }
+      socket?.close();
 
       xterm.dispose();
       state.id = null;

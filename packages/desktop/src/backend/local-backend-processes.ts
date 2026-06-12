@@ -19,6 +19,7 @@ export interface LocalBackendWorkbenchBrowserToolHost {
 
 interface LocalBackendStatus {
   daemonHealthy: boolean;
+  baseUrl?: string;
 }
 
 interface BackendReadyMessage {
@@ -174,12 +175,12 @@ export class LocalBackendProcesses {
     try {
       const response = await this.fetch('/health', { method: 'GET' });
       if (!response.ok) {
-        return { daemonHealthy: false };
+        return { daemonHealthy: false, baseUrl: this.baseUrl };
       }
       const body = (await response.json()) as { daemonHealthy?: unknown };
-      return { daemonHealthy: body.daemonHealthy === true };
+      return { daemonHealthy: body.daemonHealthy === true, baseUrl: this.baseUrl };
     } catch {
-      return { daemonHealthy: false };
+      return { daemonHealthy: false, baseUrl: this.baseUrl };
     }
   }
 

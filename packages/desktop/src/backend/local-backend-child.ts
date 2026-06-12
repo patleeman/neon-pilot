@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import { getStateRoot } from '@neon-pilot/core';
 import { bindInProcessDaemonClient, NeonPilotDaemon } from '@neon-pilot/daemon';
 
+import { setLocalBackendBaseUrl } from '../../server/app/localBackendBaseUrl.js';
 import { setExtensionHostClient } from '../../server/extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from '../../server/extensions/extensionHostRpcClient.js';
 import { loadRawLocalApiModule, type LocalApiModule } from '../local-api-module.js';
@@ -346,6 +347,7 @@ async function main(): Promise<void> {
     throw new Error('Backend child did not bind a TCP port.');
   }
 
+  setLocalBackendBaseUrl(`http://127.0.0.1:${String(address.port)}`);
   sendParentMessage({ type: 'ready', port: address.port, token });
 
   process.on('message', (message) => {

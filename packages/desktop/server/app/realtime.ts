@@ -4,6 +4,13 @@ import type { Socket } from 'node:net';
 import { type WebSocket, WebSocketServer } from 'ws';
 
 import { type AppEvent, subscribeAppEvents } from '../shared/appEvents.js';
+import {
+  closeTerminalSession,
+  resizeTerminalSession,
+  subscribeTerminalSession,
+  writeTerminalSession,
+  type TerminalSessionEvent,
+} from '../extensions/terminalSessions.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 
 export const DESKTOP_REALTIME_PATH = '/api/realtime';
@@ -15,9 +22,20 @@ type RealtimeServerMessage =
   | { type: 'subscribed'; id?: string; subscriptionId: string }
   | { type: 'unsubscribed'; id?: string; subscriptionId: string }
   | { type: 'stream'; subscriptionId: string; event: DesktopLocalApiStreamEvent }
+  | { type: 'terminal_attached'; id?: string; terminalId: string; pid?: number | null; replay: string; exited: boolean; exitCode: number | null }
+  | { type: 'terminal'; terminalId: string; event: TerminalSessionEvent }
   | { type: 'error'; id?: string; message: string };
 
-type RealtimeClientMessage = { type?: string; id?: string; path?: string; subscriptionId?: string };
+type RealtimeClientMessage = {
+  type?: string;
+  id?: string;
+  path?: string;
+  subscriptionId?: string;
+  terminalId?: string;
+  data?: string;
+  cols?: number;
+  rows?: number;
+};
 
 function writeRealtimeMessage(socket: WebSocket, message: RealtimeServerMessage): void {
   if (socket.readyState !== socket.OPEN) return;
@@ -34,10 +52,13 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
 
   server.on('connection', (websocket) => {
     const streamSubscriptions = new Map<string, () => void>();
+    const terminalSubscriptions = new Map<string, () => void>();
     const cleanup = () => {
       appUnsubscribe();
       for (const unsubscribe of streamSubscriptions.values()) unsubscribe();
       streamSubscriptions.clear();
+      for (const unsubscribe of terminalSubscriptions.values()) unsubscribe();
+      terminalSubscriptions.clear();
     };
     const appUnsubscribe = subscribeAppEvents((event) => writeRealtimeMessage(websocket, { type: 'app_event', event }));
 
@@ -58,6 +79,59 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
           streamSubscriptions.get(subscriptionId)?.();
           streamSubscriptions.delete(subscriptionId);
           writeRealtimeMessage(websocket, { type: 'unsubscribed', id: message.id, subscriptionId });
+          return;
+        }
+
+        if (message.type === 'terminal_attach') {
+          const terminalId = typeof message.terminalId === 'string' ? message.terminalId : '';
+          if (!terminalId) {
+            writeRealtimeMessage(websocket, { type: 'error', id: message.id, message: 'Terminal id is required.' });
+            return;
+          }
+          terminalSubscriptions.get(terminalId)?.();
+          const attached = subscribeTerminalSession({ id: terminalId }, (event) => {
+            writeRealtimeMessage(websocket, { type: 'terminal', terminalId, event });
+          });
+          if (!attached.ok) {
+            writeRealtimeMessage(websocket, { type: 'error', id: message.id, message: 'Terminal not found or already closed.' });
+            return;
+          }
+          terminalSubscriptions.set(terminalId, attached.unsubscribe);
+          writeRealtimeMessage(websocket, {
+            type: 'terminal_attached',
+            id: message.id,
+            terminalId,
+            replay: attached.replay,
+            exited: attached.exited,
+            exitCode: attached.exitCode,
+          });
+          return;
+        }
+
+        if (message.type === 'terminal_input') {
+          const terminalId = typeof message.terminalId === 'string' ? message.terminalId : '';
+          const data = typeof message.data === 'string' ? message.data : '';
+          if (!terminalId || !writeTerminalSession({ id: terminalId, data }).ok) {
+            writeRealtimeMessage(websocket, { type: 'error', id: message.id, message: 'Terminal input failed.' });
+          }
+          return;
+        }
+
+        if (message.type === 'terminal_resize') {
+          const terminalId = typeof message.terminalId === 'string' ? message.terminalId : '';
+          const cols = typeof message.cols === 'number' ? message.cols : NaN;
+          const rows = typeof message.rows === 'number' ? message.rows : NaN;
+          if (!terminalId || !Number.isFinite(cols) || !Number.isFinite(rows) || !resizeTerminalSession({ id: terminalId, cols, rows }).ok) {
+            writeRealtimeMessage(websocket, { type: 'error', id: message.id, message: 'Terminal resize failed.' });
+          }
+          return;
+        }
+
+        if (message.type === 'terminal_close') {
+          const terminalId = typeof message.terminalId === 'string' ? message.terminalId : '';
+          terminalSubscriptions.get(terminalId)?.();
+          terminalSubscriptions.delete(terminalId);
+          if (terminalId) closeTerminalSession({ id: terminalId });
           return;
         }
 

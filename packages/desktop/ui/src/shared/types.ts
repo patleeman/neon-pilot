@@ -1022,6 +1022,7 @@ export interface DesktopEnvironmentState {
   activeHostLabel: string;
   activeHostKind: 'local';
   activeHostSummary: string;
+  realtimeUrl?: string;
   launchMode?: 'stable' | 'rc' | 'dev' | 'testing';
   launchLabel?: string;
 }

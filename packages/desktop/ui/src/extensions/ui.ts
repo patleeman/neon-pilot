@@ -1,5 +1,6 @@
 export type { ActivityTreeItem } from '../activity/activityTree';
 export { type ActivityTreeDropPosition, ActivityTreeView } from '../activity/ActivityTreeView';
+export { buildDesktopWebSocketUrl } from '../client/endpoints';
 export { buildApiPath } from '../client/apiBase';
 export { ChatRailComposer, type ChatRailComposerProps } from '../components/chat/ChatRailComposer';
 export { ChatView, type ChatViewProps } from '../components/chat/ChatView';

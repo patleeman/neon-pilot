@@ -36,6 +36,7 @@ import type {
 
 interface LocalBackendStatus {
   daemonHealthy: boolean;
+  baseUrl?: string;
 }
 
 interface LocalBackendController {
@@ -191,6 +192,14 @@ export class LocalHostController implements HostController {
       webUrl: getDesktopAppBaseUrl(),
       daemonHealthy: status.daemonHealthy,
     };
+  }
+
+  async getRealtimeUrl(): Promise<string | undefined> {
+    const status = await this.backend.getStatus();
+    if (!status.baseUrl) return undefined;
+    const url = new URL('/api/realtime', status.baseUrl);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    return url.toString();
   }
 
   async openNewConversation(): Promise<string> {

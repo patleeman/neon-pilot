@@ -11,6 +11,7 @@ export interface CreateTerminalResult {
   pid: number | null;
   usingPty: boolean;
   initialOutput: string;
+  realtimeUrl?: string;
 }
 
 export interface TerminalOkResult {

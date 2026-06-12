@@ -2,9 +2,14 @@ import type { ExtensionRouteRequest } from '@neon-pilot/extensions';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const shellSpawn = vi.hoisted(() => vi.fn());
+const localBackendBaseUrl = vi.hoisted(() => ({ value: undefined as string | undefined }));
 
 vi.mock('./extensionShell.js', () => ({
   createExtensionShellCapability: () => ({ spawn: shellSpawn }),
+}));
+
+vi.mock('../app/localBackendBaseUrl.js', () => ({
+  getLocalBackendBaseUrl: () => localBackendBaseUrl.value,
 }));
 
 function createMockSpawnHandle(overrides?: {
@@ -41,6 +46,7 @@ describe('terminal sessions', () => {
 
   beforeEach(async () => {
     vi.resetModules();
+    localBackendBaseUrl.value = undefined;
     shellSpawn.mockReset();
     shellSpawn.mockResolvedValue(createMockSpawnHandle());
     mod = await import('./terminalSessions.js');
@@ -63,6 +69,14 @@ describe('terminal sessions', () => {
         cwd: '/workspace',
       }),
     );
+  });
+
+  it('includes the realtime WebSocket URL when the local backend base URL is known', async () => {
+    localBackendBaseUrl.value = 'http://127.0.0.1:4321';
+
+    const result = await mod.createTerminalSession({});
+
+    expect(result.realtimeUrl).toBe('ws://127.0.0.1:4321/api/realtime');
   });
 
   it('writes, resizes, drains, and closes an existing terminal', async () => {

@@ -4,6 +4,7 @@ import { basename } from 'node:path';
 
 import type { ExtensionRouteRequest, ExtensionRouteResponse, ExtensionRouteSseEvent } from '@neon-pilot/extensions';
 
+import { getLocalBackendBaseUrl } from '../app/localBackendBaseUrl.js';
 import { createExtensionShellCapability } from './extensionShell.js';
 
 interface TerminalSession {
@@ -29,6 +30,18 @@ const sessions = new Map<string, TerminalSession>();
 const MAX_REPLAY_CHUNKS = 128;
 const STARTUP_OUTPUT_SETTLE_MS = 750;
 const shell = createExtensionShellCapability();
+
+function resolveRealtimeUrl(): string | undefined {
+  const baseUrl = getLocalBackendBaseUrl();
+  if (!baseUrl) return undefined;
+  try {
+    const url = new URL('/api/realtime', baseUrl);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
 
 function generateId(): string {
   return randomUUID();
@@ -93,6 +106,42 @@ function broadcastExit(session: TerminalSession, code: number | null): void {
   session.listeners.clear();
 }
 
+export type TerminalSessionEvent =
+  | { type: 'output'; data: string }
+  | { type: 'exit'; code: number | null };
+
+export function subscribeTerminalSession(
+  input: { id: string },
+  listener: (event: TerminalSessionEvent) => void,
+): { ok: true; unsubscribe: () => void; replay: string; exited: boolean; exitCode: number | null } | { ok: false } {
+  const session = sessions.get(input.id);
+  if (!session || session.closed) return { ok: false };
+
+  const routeListener = (event: ExtensionRouteSseEvent) => {
+    const data = event.data;
+    if (!data || typeof data !== 'object') return;
+    const candidate = data as Partial<TerminalSessionEvent>;
+    if (candidate.type === 'output' && typeof candidate.data === 'string') {
+      listener({ type: 'output', data: candidate.data });
+      return;
+    }
+    if (candidate.type === 'exit') {
+      listener({ type: 'exit', code: typeof candidate.code === 'number' ? candidate.code : null });
+    }
+  };
+
+  session.listeners.add(routeListener);
+  return {
+    ok: true,
+    unsubscribe: () => {
+      session.listeners.delete(routeListener);
+    },
+    replay: session.outputReplay.join(''),
+    exited: session.exited,
+    exitCode: session.exitCode,
+  };
+}
+
 export function clearTerminalSessionsForTests(): void {
   const ids = [...sessions.keys()];
   for (const id of ids) {
@@ -123,7 +172,7 @@ function removeSession(id: string): void {
 
 export async function createTerminalSession(input: {
   cwd?: string;
-}): Promise<{ id: string; pid: number | null; usingPty: boolean; initialOutput: string }> {
+}): Promise<{ id: string; pid: number | null; usingPty: boolean; initialOutput: string; realtimeUrl?: string }> {
   const shellPath = resolveLoginShell();
   const id = generateId();
   const earlyOutputReplay: string[] = [];
@@ -193,7 +242,8 @@ export async function createTerminalSession(input: {
 
   const initialOutput = session.outputBuffer.join('');
   session.outputBuffer.length = 0;
-  return { id, pid: child.pid, usingPty, initialOutput };
+  const realtimeUrl = resolveRealtimeUrl();
+  return { id, pid: child.pid, usingPty, initialOutput, ...(realtimeUrl ? { realtimeUrl } : {}) };
 }
 
 export function writeTerminalSession(input: { id: string; data: string }): { ok: boolean } {

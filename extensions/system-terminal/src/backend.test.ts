@@ -37,7 +37,13 @@ describe('terminal extension backend', () => {
   });
 
   it('creates terminals through the host-owned terminal API', async () => {
-    terminalApi.createTerminalSession.mockResolvedValue({ id: 'terminal-1', pid: 123, usingPty: true, initialOutput: '$ ' });
+    terminalApi.createTerminalSession.mockResolvedValue({
+      id: 'terminal-1',
+      pid: 123,
+      usingPty: true,
+      initialOutput: '$ ',
+      realtimeUrl: 'ws://127.0.0.1:4321/api/realtime',
+    });
     const ctx = createBackendContext();
 
     await expect(mod.createTerminal({ cwd: '/workspace' }, ctx)).resolves.toEqual({
@@ -45,6 +51,7 @@ describe('terminal extension backend', () => {
       pid: 123,
       usingPty: true,
       initialOutput: '$ ',
+      realtimeUrl: 'ws://127.0.0.1:4321/api/realtime',
     });
     expect(terminalApi.createTerminalSession).toHaveBeenCalledWith({ cwd: '/workspace' });
     expect(ctx.log.info).toHaveBeenCalledWith('Terminal created', { id: 'terminal-1', pid: 123, cwd: '/workspace' });

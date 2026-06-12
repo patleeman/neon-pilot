@@ -128,6 +128,14 @@ describe('LocalHostController', () => {
     expect(backend.ensureStarted).not.toHaveBeenCalled();
   });
 
+  it('resolves the realtime WebSocket URL from a running local backend', async () => {
+    const backend = createBackendMock();
+    vi.mocked(backend.getStatus).mockResolvedValue({ daemonHealthy: true, baseUrl: 'http://127.0.0.1:4321' } as never);
+    const controller = new LocalHostController({ id: 'local', label: 'Local', kind: 'local' }, backend);
+
+    await expect(controller.getRealtimeUrl()).resolves.toBe('ws://127.0.0.1:4321/api/realtime');
+  });
+
   it('registers the Workbench Browser native host with the backend without booting the web child', async () => {
     const backend = createBackendMock();
     const controller = new LocalHostController({ id: 'local', label: 'Local', kind: 'local' }, backend);

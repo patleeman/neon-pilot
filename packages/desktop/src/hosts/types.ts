@@ -298,6 +298,7 @@ export interface HostController {
   readonly kind: DesktopHostRecord['kind'];
   ensureRunning(): Promise<void>;
   getBaseUrl(): Promise<string>;
+  getRealtimeUrl?(): Promise<string | undefined>;
   getStatus(): Promise<HostStatus>;
   openNewConversation(): Promise<string>;
   dispatchApiRequest(input: {
@@ -477,6 +478,7 @@ export interface DesktopEnvironmentState {
   activeHostLabel: string;
   activeHostKind: DesktopHostRecord['kind'];
   activeHostSummary: string;
+  realtimeUrl?: string;
   launchMode?: 'stable' | 'rc' | 'dev' | 'testing';
   launchLabel?: string;
 }

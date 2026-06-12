@@ -11,7 +11,7 @@ import {
 export async function createTerminal(
   input: { cwd?: string },
   ctx: ExtensionBackendContext,
-): Promise<{ id: string; pid: number | null; usingPty: boolean; initialOutput: string }> {
+): Promise<{ id: string; pid: number | null; usingPty: boolean; initialOutput: string; realtimeUrl?: string }> {
   const result = await createTerminalSession(input);
   ctx.log.info('Terminal created', { id: result.id, pid: result.pid, cwd: input.cwd });
   return result;

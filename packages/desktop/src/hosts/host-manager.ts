@@ -83,12 +83,14 @@ export class HostManager {
     const controller = this.getActiveHostController();
     const status = await controller.getStatus();
     const launchPresentation = resolveDesktopLaunchPresentation();
+    const realtimeUrl = await controller.getRealtimeUrl?.();
     return {
       isElectron: true,
       activeHostId: 'local',
       activeHostLabel: 'Local',
       activeHostKind: 'local',
       activeHostSummary: status.summary,
+      ...(realtimeUrl ? { realtimeUrl } : {}),
       launchMode: launchPresentation.mode,
       launchLabel: launchPresentation.launchLabel,
     };
