@@ -57,20 +57,26 @@
       </aside>
       <article class="docs-content">
         <h1 id="getting-started">Getting Started</h1>
-        <p>Install Neon Pilot from source and verify the setup.</p>
-        <h2 id="install-from-source">Install from source</h2>
-        <pre><code>git clone &lt;repo-url&gt;
-cd neon-pilot
-pnpm install
-pnpm run setup:hooks   # optional: enable the tracked pre-commit hook
-pnpm run build</code></pre>
+        <p>Install the packaged Neon Pilot app and verify the setup.</p>
+        <h2 id="install-the-app">Install the app</h2>
         <p>
-          The repo intentionally has no first-party <code>postinstall</code>. Third-party build scripts are pinned in
-          <code>pnpm-workspace.yaml</code>; review anything newly blocked with <code>pnpm ignored-builds</code>.
+          Download the latest macOS <code>.dmg</code> from
+          <a href="https://github.com/patleeman/neon-pilot/releases/latest">GitHub Releases</a>, open it, and drag
+          <strong>Neon Pilot.app</strong> into Applications.
         </p>
-        <h2 id="start-the-desktop-app">Start the desktop app</h2>
-        <pre><code>pnpm run desktop:start</code></pre>
-        <p>The desktop app manages the local daemon automatically.</p>
+        <p>For agent-driven setup, use the packaged installer script:</p>
+        <pre><code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json</code></pre>
+        <p>Use <code>--channel rc</code> when you want the release-candidate app.</p>
+        <h2 id="configure-and-verify">Configure and verify</h2>
+        <p>Open <strong>Neon Pilot.app</strong>. The desktop app manages the local daemon automatically.</p>
+        <p>If you installed the CLI, configure provider defaults and verify the runtime:</p>
+        <pre><code>neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4 --json
+printf '%s' &quot;$OPENAI_API_KEY&quot; | neon-pilot bootstrap provider set-key openai --stdin --json
+neon-pilot bootstrap doctor --json</code></pre>
+        <p>
+          Provider keys must not be passed in command arguments. Use stdin, Keychain, OAuth/device login, or another configured secrets
+          backend.
+        </p>
         <h2 id="important-paths">Important paths</h2>
         <ul>
           <li>
@@ -90,6 +96,7 @@ pnpm run build</code></pre>
         <p>
           The desktop app starts and loads the conversation view. Create a new conversation and send a message to verify the agent responds.
         </p>
+        <p>For source builds and repo development, use <a href="./development.html">Development workflow</a>.</p>
         <h2 id="next-steps">Next steps</h2>
         <ul>
           <li><a href="./views.html">Views</a> — understand Conversation and Workbench layout modes</li>
@@ -104,7 +111,7 @@ pnpm run build</code></pre>
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#install-from-source">Install from source</a><a href="#start-the-desktop-app">Start the desktop app</a
+        <a href="#install-the-app">Install the app</a><a href="#configure-and-verify">Configure and verify</a
         ><a href="#important-paths">Important paths</a><a href="#verify-the-install">Verify the install</a
         ><a href="#next-steps">Next steps</a>
       </aside>

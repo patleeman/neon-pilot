@@ -62,18 +62,22 @@
           persistent state, tools, and async workflows.
         </p>
         <h2 id="quick-start">Quick start</h2>
-        <pre><code>pnpm install
-pnpm run setup:hooks   # optional: enable the tracked pre-commit hook
-pnpm run build
-pnpm run desktop:start</code></pre>
         <p>
-          The repo intentionally avoids a root <code>postinstall</code>; third-party build scripts are allowlisted in
-          <code>pnpm-workspace.yaml</code>, and anything new shows up in <code>pnpm ignored-builds</code>.
+          Download the latest macOS app from <a href="https://github.com/patleeman/neon-pilot/releases/latest">GitHub Releases</a>, or let
+          an agent install and bootstrap the packaged app:
         </p>
-        <p>See <a href="./getting-started.html">Getting Started</a> for the full setup.</p>
+        <pre><code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json</code></pre>
+        <p>
+          After install, open <strong>Neon Pilot.app</strong> and create a conversation. If you installed the CLI, verify the runtime with:
+        </p>
+        <pre><code>neon-pilot bootstrap doctor --json</code></pre>
+        <p>
+          See <a href="./getting-started.html">Getting Started</a> for the user setup flow, or
+          <a href="./development.html">Development workflow</a> for building from source.
+        </p>
         <h2 id="start-here">Start here</h2>
         <ul>
-          <li><a href="./getting-started.html">Getting Started</a> — install from source and verify the app</li>
+          <li><a href="./getting-started.html">Getting Started</a> — install the packaged app and verify the runtime</li>
           <li>
             <a href="./agent-bootstrap.html">Agent bootstrap</a> — packaged install, CLI setup, provider configuration, and external-agent
             verification

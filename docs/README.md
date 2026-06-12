@@ -4,20 +4,23 @@ Neon Pilot is a durable AI agent runtime with a desktop app, background automati
 
 ## Quick start
 
+Download the latest macOS app from [GitHub Releases](https://github.com/patleeman/neon-pilot/releases/latest), or let an agent install and bootstrap the packaged app:
+
 ```bash
-pnpm install
-pnpm run setup:hooks   # optional: enable the tracked pre-commit hook
-pnpm run build
-pnpm run desktop:start
+curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json
 ```
 
-The repo intentionally avoids a root `postinstall`; third-party build scripts are allowlisted in `pnpm-workspace.yaml`, and anything new shows up in `pnpm ignored-builds`.
+After install, open **Neon Pilot.app** and create a conversation. If you installed the CLI, verify the runtime with:
 
-See [Getting Started](getting-started.md) for the full setup.
+```bash
+neon-pilot bootstrap doctor --json
+```
+
+See [Getting Started](getting-started.md) for the user setup flow, or [Development workflow](development.md) for building from source.
 
 ## Start here
 
-- [Getting Started](getting-started.md) — install from source and verify the app
+- [Getting Started](getting-started.md) — install the packaged app and verify the runtime
 - [Agent bootstrap](agent-bootstrap.md) — packaged install, CLI setup, provider configuration, and external-agent verification
 - [Views](views.md) — Conversation, Workbench layouts
 - [Conversation context](conversation-context.md) — attach files, folders, and generated context

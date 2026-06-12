@@ -1,26 +1,32 @@
 # Getting Started
 
-Install Neon Pilot from source and verify the setup.
+Install the packaged Neon Pilot app and verify the setup.
 
-## Install from source
+## Install the app
 
-```bash
-git clone <repo-url>
-cd neon-pilot
-pnpm install
-pnpm run setup:hooks   # optional: enable the tracked pre-commit hook
-pnpm run build
-```
+Download the latest macOS `.dmg` from [GitHub Releases](https://github.com/patleeman/neon-pilot/releases/latest), open it, and drag **Neon Pilot.app** into Applications.
 
-The repo intentionally has no first-party `postinstall`. Third-party build scripts are pinned in `pnpm-workspace.yaml`; review anything newly blocked with `pnpm ignored-builds`.
-
-## Start the desktop app
+For agent-driven setup, use the packaged installer script:
 
 ```bash
-pnpm run desktop:start
+curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json
 ```
 
-The desktop app manages the local daemon automatically.
+Use `--channel rc` when you want the release-candidate app.
+
+## Configure and verify
+
+Open **Neon Pilot.app**. The desktop app manages the local daemon automatically.
+
+If you installed the CLI, configure provider defaults and verify the runtime:
+
+```bash
+neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4 --json
+printf '%s' "$OPENAI_API_KEY" | neon-pilot bootstrap provider set-key openai --stdin --json
+neon-pilot bootstrap doctor --json
+```
+
+Provider keys must not be passed in command arguments. Use stdin, Keychain, OAuth/device login, or another configured secrets backend.
 
 ## Important paths
 
@@ -31,6 +37,8 @@ The desktop app manages the local daemon automatically.
 ## Verify the install
 
 The desktop app starts and loads the conversation view. Create a new conversation and send a message to verify the agent responds.
+
+For source builds and repo development, use [Development workflow](development.md).
 
 ## Next steps
 
