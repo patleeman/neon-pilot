@@ -54,6 +54,13 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
     const streamSubscriptions = new Map<string, () => void>();
     const terminalSubscriptions = new Map<string, () => void>();
     let cleanedUp = false;
+    const sendRealtimeMessage = (message: RealtimeServerMessage) => {
+      if (cleanedUp) {
+        return;
+      }
+
+      writeRealtimeMessage(websocket, message);
+    };
     const cleanup = () => {
       if (cleanedUp) return;
       cleanedUp = true;
@@ -63,9 +70,9 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
       for (const unsubscribe of terminalSubscriptions.values()) unsubscribe();
       terminalSubscriptions.clear();
     };
-    const appUnsubscribe = subscribeAppEvents((event) => writeRealtimeMessage(websocket, { type: 'app_event', event }));
+    const appUnsubscribe = subscribeAppEvents((event) => sendRealtimeMessage({ type: 'app_event', event }));
 
-    writeRealtimeMessage(websocket, { type: 'connected' });
+    sendRealtimeMessage({ type: 'connected' });
 
     websocket.on('message', (raw) => {
       void (async () => {
@@ -73,7 +80,7 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
         try {
           message = JSON.parse(String(raw)) as RealtimeClientMessage;
         } catch {
-          writeRealtimeMessage(websocket, { type: 'error', message: 'Invalid realtime message JSON.' });
+          sendRealtimeMessage({ type: 'error', message: 'Invalid realtime message JSON.' });
           return;
         }
 
@@ -81,26 +88,26 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
           const subscriptionId = typeof message.subscriptionId === 'string' ? message.subscriptionId : '';
           streamSubscriptions.get(subscriptionId)?.();
           streamSubscriptions.delete(subscriptionId);
-          writeRealtimeMessage(websocket, { type: 'unsubscribed', id: message.id, subscriptionId });
+          sendRealtimeMessage({ type: 'unsubscribed', id: message.id, subscriptionId });
           return;
         }
 
         if (message.type === 'terminal_attach') {
           const terminalId = typeof message.terminalId === 'string' ? message.terminalId : '';
           if (!terminalId) {
-            writeRealtimeMessage(websocket, { type: 'error', id: message.id, message: 'Terminal id is required.' });
+            sendRealtimeMessage({ type: 'error', id: message.id, message: 'Terminal id is required.' });
             return;
           }
           terminalSubscriptions.get(terminalId)?.();
           const attached = subscribeTerminalSession({ id: terminalId }, (event) => {
-            writeRealtimeMessage(websocket, { type: 'terminal', terminalId, event });
+            sendRealtimeMessage({ type: 'terminal', terminalId, event });
           });
           if (!attached.ok) {
-            writeRealtimeMessage(websocket, { type: 'error', id: message.id, message: 'Terminal not found or already closed.' });
+            sendRealtimeMessage({ type: 'error', id: message.id, message: 'Terminal not found or already closed.' });
             return;
           }
           terminalSubscriptions.set(terminalId, attached.unsubscribe);
-          writeRealtimeMessage(websocket, {
+          sendRealtimeMessage({
             type: 'terminal_attached',
             id: message.id,
             terminalId,
@@ -115,7 +122,7 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
           const terminalId = typeof message.terminalId === 'string' ? message.terminalId : '';
           const data = typeof message.data === 'string' ? message.data : '';
           if (!terminalId || !writeTerminalSession({ id: terminalId, data }).ok) {
-            writeRealtimeMessage(websocket, { type: 'error', id: message.id, message: 'Terminal input failed.' });
+            sendRealtimeMessage({ type: 'error', id: message.id, message: 'Terminal input failed.' });
           }
           return;
         }
@@ -125,7 +132,7 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
           const cols = typeof message.cols === 'number' ? message.cols : NaN;
           const rows = typeof message.rows === 'number' ? message.rows : NaN;
           if (!terminalId || !Number.isFinite(cols) || !Number.isFinite(rows) || !resizeTerminalSession({ id: terminalId, cols, rows }).ok) {
-            writeRealtimeMessage(websocket, { type: 'error', id: message.id, message: 'Terminal resize failed.' });
+            sendRealtimeMessage({ type: 'error', id: message.id, message: 'Terminal resize failed.' });
           }
           return;
         }
@@ -139,13 +146,13 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
         }
 
         if (message.type !== 'subscribe') {
-          writeRealtimeMessage(websocket, { type: 'error', id: message.id, message: 'Unsupported realtime message type.' });
+          sendRealtimeMessage({ type: 'error', id: message.id, message: 'Unsupported realtime message type.' });
           return;
         }
 
         const path = typeof message.path === 'string' ? message.path : '';
         if (!path.startsWith('/api/') || path.startsWith('//') || path.includes('://')) {
-          writeRealtimeMessage(websocket, {
+          sendRealtimeMessage({
             type: 'error',
             id: message.id,
             message: 'Realtime subscription path must be an absolute API path.',
@@ -156,17 +163,17 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
         const subscriptionId = `rt:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
         try {
           const unsubscribe = await subscribeDesktopLocalApiStreamByUrl(new URL(path, 'http://desktop.local'), (event) => {
-            writeRealtimeMessage(websocket, { type: 'stream', subscriptionId, event });
+            sendRealtimeMessage({ type: 'stream', subscriptionId, event });
           });
           if (cleanedUp || websocket.readyState !== websocket.OPEN) {
             unsubscribe();
             return;
           }
           streamSubscriptions.set(subscriptionId, unsubscribe);
-          writeRealtimeMessage(websocket, { type: 'subscribed', id: message.id, subscriptionId });
+          sendRealtimeMessage({ type: 'subscribed', id: message.id, subscriptionId });
         } catch (error) {
           if (cleanedUp) return;
-          writeRealtimeMessage(websocket, {
+          sendRealtimeMessage({
             type: 'error',
             id: message.id,
             message: error instanceof Error ? error.message : String(error),
