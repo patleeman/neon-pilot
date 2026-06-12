@@ -5,7 +5,12 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext, LiveTitlesContext, SseConnectionContext } from '../app/contexts.js';
-import { ARCHIVED_SESSION_IDS_STORAGE_KEY, OPEN_SESSION_IDS_STORAGE_KEY, PINNED_SESSION_IDS_STORAGE_KEY } from '../local/localSettings.js';
+import {
+  ARCHIVED_SESSION_IDS_STORAGE_KEY,
+  OPEN_SESSION_IDS_STORAGE_KEY,
+  PINNED_SESSION_IDS_STORAGE_KEY,
+  SAVED_WORKSPACE_PATHS_STORAGE_KEY,
+} from '../local/localSettings.js';
 import type { SessionMeta } from '../shared/types.js';
 import { sessionStore } from '../store';
 import { Sidebar } from './Sidebar.js';
@@ -245,5 +250,19 @@ describe('Sidebar branch conversation interactions', () => {
 
     expect(readJsonList(PINNED_SESSION_IDS_STORAGE_KEY)).toEqual([]);
     expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
+  });
+
+  it('keeps a workspace group saved after closing its last open conversation', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['solo']));
+    renderSidebar('/conversations/solo', [session({ id: 'solo', title: 'Solo thread', cwd: '/repo/solo', cwdSlug: 'solo' })]);
+    await flush();
+
+    dispatchDesktopShortcutCommand('conversation.close');
+    await flush();
+
+    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual([]);
+    expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['solo']);
+    expect(readJsonList(SAVED_WORKSPACE_PATHS_STORAGE_KEY)).toEqual(['/repo/solo']);
+    expect(apiMocks.setSavedWorkspacePaths).toHaveBeenCalledWith(['/repo/solo']);
   });
 });
