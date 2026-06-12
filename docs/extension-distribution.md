@@ -42,6 +42,33 @@ An extension repository must include a root `neon.extensions.json` file. Repos m
 
 The app can inspect this file, show the packages in the repo, and let the user choose which extensions to install.
 
+Think of the repository as the source and release channel, not the runtime package itself:
+
+- `neon.extensions.json` is the source index. It tells Neon Pilot which packages exist, where their source directories live, which channel they belong to, and which release tag/version should be installed.
+- Each package directory owns normal extension source: `extension.json`, `README.md`, assets, frontend/backend source, and tests.
+- GitHub releases own the installable artifacts. Normal installs fetch `.neon-extension.zip` files from a release tag, optionally verified against `neon-extension-catalog.json`.
+- Runtime-installed extensions are copied under `<state-root>/extensions/{extension-id}` and are treated as user extensions, even when first-party. They can be enabled, disabled, updated, or uninstalled independently of the app bundle.
+
+The first-party optional repository is [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions). It is both the built-in source users see in Settings and the reference implementation for third-party extension repositories.
+
+Current first-party optional packages:
+
+| Extension                   | What it adds                                                          |
+| --------------------------- | --------------------------------------------------------------------- |
+| Agent Browser               | agent-browser CLI integration for browser and Electron app automation |
+| Kitty Litter Mobile Pairing | Alleycat-compatible mobile pairing bridge                             |
+| Auto Router                 | composer auto-router controls and judge-based model routing policy    |
+| Browser                     | Workbench browser views and browser automation tools                  |
+| DS4                         | DeepSeek V4 Flash local model profile and DS4-shaped tools            |
+| DuckDuckGo Search           | DuckDuckGo-backed agent web search                                    |
+| Exa Search                  | Exa-backed agent web search with extension-managed secrets            |
+| Hermes Agent                | Hermes Agent API session interface                                    |
+| Local Models                | local MLX and GGUF model runtime management                           |
+| Self Preservation           | guard that blocks the agent from killing its own process              |
+| Suggested Context           | related conversation suggestions for new prompts                      |
+| Video Probe                 | video analysis through local mlx-vlm or a remote video-capable model  |
+| Writing Studio              | document-first collaborative markdown writing surface                 |
+
 ## Extension package format
 
 The installable artifact is a `.neon-extension.zip`. It contains exactly one top-level extension directory:

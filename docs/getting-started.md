@@ -37,5 +37,5 @@ The desktop app starts and loads the conversation view. Create a new conversatio
 - [Views](views.md) — understand Conversation and Workbench layout modes
 - [Conversations](conversations.md) — how to work with agent conversations
 - [Desktop App](desktop-app.md) — Electron shell and shortcuts
-- [Knowledge](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge) — installable knowledge, skills, instruction files, and sync
+- [Knowledge base sync](knowledge-base.md) — git-backed durable knowledge setup and sync
 - [Configuration](configuration.md) — config files and environment variables

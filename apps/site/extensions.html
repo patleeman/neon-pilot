@@ -197,6 +197,266 @@
         </article>
       </section>
 
+      <section class="extension-catalog" aria-labelledby="bundled-extension-title">
+        <div class="section-heading">
+          <p class="eyebrow">Bundled with the app</p>
+          <h2 id="bundled-extension-title">System extensions cover the product surface.</h2>
+          <p>
+            These extensions ship from the Neon Pilot app repo and represent the current built-in feature set. Core stays small; the
+            extension host, app shell, routing, persistence, and security boundaries make these product surfaces feel native.
+          </p>
+        </div>
+        <div class="catalog-grid">
+          <article>
+            <h3>Artifacts</h3>
+            <p>Review rendered artifacts beside the active conversation.</p>
+          </article>
+          <article>
+            <h3>Automations</h3>
+            <p>Manage scheduled and conversation-bound automations.</p>
+          </article>
+          <article>
+            <h3>Background Work</h3>
+            <p>Inspect background commands and subagents linked to the active conversation.</p>
+          </article>
+          <article>
+            <h3>Caffeinate</h3>
+            <p>Toggle macOS caffeinate from the top bar to keep the computer awake.</p>
+          </article>
+          <article>
+            <h3>Codex Compatibility</h3>
+            <p>Codex-compatible tool profiles and apply_patch support for GPT coding models.</p>
+          </article>
+          <article>
+            <h3>Composer Attachments</h3>
+            <p>Add attachment controls to the composer.</p>
+          </article>
+          <article>
+            <h3>Context Hardening</h3>
+            <p>Bounds oversized tool outputs before they enter agent context.</p>
+          </article>
+          <article>
+            <h3>Context Usage</h3>
+            <p>Show current conversation context-window usage in the composer status bar.</p>
+          </article>
+          <article>
+            <h3>Conversation Tools</h3>
+            <p>Agent tools and CLI commands for conversation inspection, titles, and working directories.</p>
+          </article>
+          <article>
+            <h3>Diffs</h3>
+            <p>Inspect conversation checkpoints and workspace diffs.</p>
+          </article>
+          <article>
+            <h3>Dynamic Workflows</h3>
+            <p>Run model-authored JavaScript workflow coordinators that fan out daemon-backed subagents.</p>
+          </article>
+          <article>
+            <h3>Excalidraw input</h3>
+            <p>Sketch diagrams and visual context directly from the composer.</p>
+          </article>
+          <article>
+            <h3>Extension Manager</h3>
+            <p>Inspect, validate, reload, enable, disable, import, export, and diagnose extensions.</p>
+          </article>
+          <article>
+            <h3>File Explorer</h3>
+            <p>Browse workspace files beside the active conversation.</p>
+          </article>
+          <article>
+            <h3>Gateways</h3>
+            <p>Attach external messaging gateways to Neon Pilot conversations.</p>
+          </article>
+          <article>
+            <h3>Git Status</h3>
+            <p>Show the current workspace branch and diff summary in the composer status bar.</p>
+          </article>
+          <article>
+            <h3>Goal Mode</h3>
+            <p>Persisted goal tracking with automatic continuation across turns.</p>
+          </article>
+          <article>
+            <h3>Image Probe</h3>
+            <p>Inspect image attachments with a host-owned vision agent.</p>
+          </article>
+          <article>
+            <h3>Local Dictation</h3>
+            <p>Local Whisper.cpp dictation with composer controls, model management, and settings.</p>
+          </article>
+          <article>
+            <h3>MCP</h3>
+            <p>Inspect, authenticate, and call configured MCP servers, including skill-local servers.</p>
+          </article>
+          <article>
+            <h3>Model Picker</h3>
+            <p>Composer model, thinking-level, and service-tier controls.</p>
+          </article>
+          <article>
+            <h3>Neon Pilot CLI</h3>
+            <p>Unified CLI control plane for internal agents and external callers.</p>
+          </article>
+          <article>
+            <h3>Onboarding</h3>
+            <p>Create the one-time onboarding conversation for new installs.</p>
+          </article>
+          <article>
+            <h3>Prompt Assembly</h3>
+            <p>Inspect prompt layers, capabilities, tools, skills, diagnostics, and runtime inputs.</p>
+          </article>
+          <article>
+            <h3>Reply Actions</h3>
+            <p>Transcript selection reply actions and emoji draft starters.</p>
+          </article>
+          <article>
+            <h3>Scratchpad</h3>
+            <p>Conversation-scoped markdown scratchpad for agents and users.</p>
+          </article>
+          <article>
+            <h3>Settings panels</h3>
+            <p>Native extension routes for first-party settings and provider configuration.</p>
+          </article>
+          <article>
+            <h3>Skills</h3>
+            <p>Backend compatibility actions for agent skills; management lives in Prompt Assembly.</p>
+          </article>
+          <article>
+            <h3>Telemetry</h3>
+            <p>Inspect app traces, model usage, tool health, and runtime performance.</p>
+          </article>
+          <article>
+            <h3>Terminal</h3>
+            <p>Built-in terminal panel with PTY-backed shell integration.</p>
+          </article>
+          <article>
+            <h3>Todos</h3>
+            <p>Conversation-scoped execution todos for agents and users.</p>
+          </article>
+          <article>
+            <h3>Web fetch</h3>
+            <p>Fetch web content from agent conversations.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="extension-repo" aria-labelledby="extension-repo-title">
+        <div class="section-heading">
+          <p class="eyebrow">Extension repositories</p>
+          <h2 id="extension-repo-title">Install more from GitHub release artifacts.</h2>
+          <p>
+            Extension repositories are GitHub repos with a root <code>neon.extensions.json</code> source manifest. A repo can publish one
+            package or many. Neon Pilot reads the manifest, shows the packages in Settings → Extensions, then installs immutable
+            <code>.neon-extension.zip</code> assets from GitHub releases.
+          </p>
+        </div>
+        <div class="repo-steps">
+          <article>
+            <span>1</span><strong>Source manifest</strong>
+            <p>
+              <code>neon.extensions.json</code> declares the publisher, GitHub repo, package ids, paths, channels, versions, and release
+              tags.
+            </p>
+          </article>
+          <article>
+            <span>2</span><strong>Built package</strong>
+            <p>
+              Each package contains one extension directory with <code>extension.json</code>, docs, assets, and prebuilt
+              <code>dist/</code> files.
+            </p>
+          </article>
+          <article>
+            <span>3</span><strong>Release catalog</strong>
+            <p>
+              Releases can include <code>neon-extension-catalog.json</code> with versions, checksums, compatibility, permissions, and
+              artifact names.
+            </p>
+          </article>
+          <article>
+            <span>4</span><strong>User install</strong>
+            <p>
+              Users add a repo source, review compatibility and permissions, install selected packages, then update from newer release
+              artifacts.
+            </p>
+          </article>
+        </div>
+        <div class="repo-callout">
+          <div>
+            <p class="eyebrow">First-party optional repo</p>
+            <h3>patleeman/neon-pilot-extensions</h3>
+            <p>
+              Neon Pilot ships with the first-party optional extension repo as the built-in source. It is the reference implementation for
+              multi-package extension repos, release catalogs, and user-installed first-party capabilities.
+            </p>
+          </div>
+          <a class="btn" href="https://github.com/patleeman/neon-pilot-extensions">Open extension repo <span>→</span></a>
+        </div>
+      </section>
+
+      <section class="extension-catalog optional" aria-labelledby="optional-extension-title">
+        <div class="section-heading">
+          <p class="eyebrow">Optional first-party extensions</p>
+          <h2 id="optional-extension-title">Additional capabilities from the extension repo.</h2>
+          <p>
+            These packages are distributed from
+            <a href="https://github.com/patleeman/neon-pilot-extensions">patleeman/neon-pilot-extensions</a>
+            and install as user extensions, so they can be enabled, disabled, updated, or removed independently of the app bundle.
+          </p>
+        </div>
+        <div class="catalog-grid optional-grid">
+          <article>
+            <h3>Agent Browser</h3>
+            <p>Control browsers and Electron apps with the agent-browser CLI.</p>
+          </article>
+          <article>
+            <h3>Kitty Litter Mobile Pairing</h3>
+            <p>Pair the Kitty Litter iOS app with Neon Pilot through an Alleycat-compatible bridge.</p>
+          </article>
+          <article>
+            <h3>Auto Router</h3>
+            <p>Composer auto-router controls and policy settings for judge-based model routing.</p>
+          </article>
+          <article>
+            <h3>Browser</h3>
+            <p>Browse web pages beside the active conversation and expose browser automation tools.</p>
+          </article>
+          <article>
+            <h3>DS4</h3>
+            <p>DeepSeek V4 Flash local model profile and DS4-shaped tools for antirez/ds4.</p>
+          </article>
+          <article>
+            <h3>DuckDuckGo Search</h3>
+            <p>Agent web search backed by DuckDuckGo HTML results.</p>
+          </article>
+          <article>
+            <h3>Exa Search</h3>
+            <p>Agent web search through Exa with extension-managed secrets.</p>
+          </article>
+          <article>
+            <h3>Hermes Agent</h3>
+            <p>Connect to Hermes Agent API deployments and use Neon Pilot as the session interface.</p>
+          </article>
+          <article>
+            <h3>Local Models</h3>
+            <p>Manage local MLX and GGUF model runtimes from one workspace.</p>
+          </article>
+          <article>
+            <h3>Self Preservation</h3>
+            <p>Blocks the agent from killing its own process.</p>
+          </article>
+          <article>
+            <h3>Suggested Context</h3>
+            <p>Suggest related conversations as pointer context for new prompts.</p>
+          </article>
+          <article>
+            <h3>Video Probe</h3>
+            <p>Analyze videos with a video-capable model, local mlx-vlm runtime, or OpenRouter.</p>
+          </article>
+          <article>
+            <h3>Writing Studio</h3>
+            <p>Document-first collaborative markdown editor with replay, suggestions, annotations, and chat.</p>
+          </article>
+        </div>
+      </section>
+
       <section class="ext-cta" aria-label="Get started building extensions">
         <div class="ext-cta-card">
           <p class="eyebrow">How it works</p>

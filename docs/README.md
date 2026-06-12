@@ -26,7 +26,6 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Desktop App](desktop-app.md) — Electron shell, shortcuts, and app chrome
 - [Design system](design-system.md) — shared UI package, Storybook, and extension-friendly component guidance
 - [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native-only IPC policy
-- [Knowledge](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge) — installable knowledge, docs, skills, instruction files, and managed sync
 - [Knowledge base sync](knowledge-base.md) — git-backed knowledge base setup, local paths, and sync behavior
 - [Configuration](configuration.md) — file-based config, env vars
 - [Development workflow](development.md) — validation, UI QA, checkpoints, and secret scanning
@@ -53,47 +52,58 @@ Neon Pilot product features live in extensions. The normal way to create one is 
 
 System extensions are bundled under `extensions/system-*`. Optional first-party extensions live in [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions), are not bundled or auto-loaded, and become normal user extensions only after installation into `<state-root>/extensions/{extension-id}`. Users install released optional extensions from **Settings → Extensions → Install**; after installing, check the main extension registry to enable and inspect the extension.
 
-Feature-specific documentation lives beside the owning extension package:
+Feature-specific documentation lives beside the owning extension package.
 
-- [Agent Browser](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-agent-browser)
-- [Artifacts](../extensions/system-artifacts/README.md)
-- [Auto Mode](../extensions/system-auto-mode/README.md)
-- [Automations](../extensions/system-automations/README.md)
-- [Browser](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-browser)
-- [Caffeinate](../extensions/system-caffeinate/README.md)
+Bundled system extensions:
+
+- [Artifacts](../extensions/system-artifacts/README.md) — rendered artifacts beside the active conversation
+- [Automations](../extensions/system-automations/README.md) — scheduled and conversation-bound automations
+- [Background Work](../extensions/system-runs/README.md) — background commands and subagents linked to conversations
+- [Caffeinate](../extensions/system-caffeinate/README.md) — macOS caffeinate top-bar control
 - [Codex Profile](../extensions/system-codex-profile/README.md) — Codex/OpenAI tool profile, including `apply_patch` and image generation
-- [Composer Attachments](../extensions/system-composer-attachments/README.md)
-- [Context Hardening](../extensions/system-context-hardening/README.md)
-- [Context Usage](../extensions/system-context-usage/README.md)
-- [Conversation Tools](../extensions/system-conversation-tools/README.md)
-- [Diffs](../extensions/system-diffs/README.md)
-- [DuckDuckGo Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-duckduckgo-search) — web search using DuckDuckGo's HTML page
-- [DS4](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-ds4) — local DeepSeek V4 Flash provider/profile for antirez/ds4
-- [Exa Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-exa-search)
-- [Excalidraw Input](../extensions/system-excalidraw-input/README.md)
-- [Extension Manager](../extensions/system-extension-manager/README.md)
-- [File Explorer](../extensions/system-files/README.md)
-- [Git Status](../extensions/system-git-status/README.md)
-- [Host view components](host-view-components.md)
-- [Image Probe](../extensions/system-image-probe/README.md)
-- [Kitty Litter Mobile Pairing](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-alleycat)
-- [Knowledge](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge) — installable first-party extension
-- [Local Dictation](../extensions/system-local-dictation/README.md)
-- [Local Models](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-local-models)
-- [MCP](../extensions/system-mcp/README.md)
-- [Model Picker](../extensions/system-model-picker/README.md)
+- [Composer Attachments](../extensions/system-composer-attachments/README.md) — composer attachment controls
+- [Context Hardening](../extensions/system-context-hardening/README.md) — tool-output bounds before agent context
+- [Context Usage](../extensions/system-context-usage/README.md) — composer status for context-window usage
+- [Conversation Tools](../extensions/system-conversation-tools/README.md) — conversation inspection, titles, working directories, and CLI commands
+- [Diffs](../extensions/system-diffs/README.md) — checkpoint and workspace diff inspection
+- Dynamic Workflows — model-authored workflow coordinators that fan out daemon-backed subagents
+- [Excalidraw Input](../extensions/system-excalidraw-input/README.md) — composer drawing input
+- [Extension Manager](../extensions/system-extension-manager/README.md) — extension registry, validation, import/export, and diagnostics
+- [File Explorer](../extensions/system-files/README.md) — workspace file browsing
+- [Gateways](../extensions/system-gateways/README.md) — external messaging gateway connections
+- [Git Status](../extensions/system-git-status/README.md) — branch and diff status in the composer
+- [Goal Mode](../extensions/system-auto-mode/README.md) — persisted goal tracking and automatic continuation
+- [Host view components](host-view-components.md) — host-owned UI components reusable by extensions
+- [Image Probe](../extensions/system-image-probe/README.md) — image attachment inspection with a vision agent
+- [Local Dictation](../extensions/system-local-dictation/README.md) — Whisper.cpp dictation controls and settings
+- [MCP](../extensions/system-mcp/README.md) — configured MCP server inspection, auth, and calls
+- [Model Picker](../extensions/system-model-picker/README.md) — composer model and thinking controls
+- Neon Pilot CLI — unified CLI control plane for internal agents and external callers
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run onboarding bootstrap and conversation flow
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
-- [Reply Actions](../extensions/system-reply-actions/README.md)
-- [Runs](../extensions/system-runs/README.md)
-- [Self Preservation](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-self-preservation)
-- [Settings](../extensions/system-settings/README.md)
-- [Scratchpad](../extensions/system-scratchpad/README.md)
-- [Skills](../extensions/system-skills/README.md)
-- [Suggested Context](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context)
-- [Telemetry extension](../extensions/system-telemetry/README.md)
-- [Video Probe](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-video-probe)
-- [Web Fetch](../extensions/system-web-tools/README.md)
+- [Reply Actions](../extensions/system-reply-actions/README.md) — transcript selection actions and draft starters
+- [Scratchpad](../extensions/system-scratchpad/README.md) — conversation-scoped markdown scratchpad
+- [Settings](../extensions/system-settings/README.md) — native first-party settings routes
+- [Skills](../extensions/system-skills/README.md) — backend compatibility actions for agent skills
+- [Telemetry extension](../extensions/system-telemetry/README.md) — app traces, model usage, tool health, and performance
+- [Terminal](../extensions/system-terminal/README.md) — PTY-backed terminal panel
+- [Todos](../extensions/system-todo/README.md) — conversation-scoped execution todos
+- [Web Fetch](../extensions/system-web-tools/README.md) — web content fetch tool
+
+Optional first-party extensions from [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions):
+
+- [Agent Browser](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-agent-browser) — agent-browser CLI integration
+- [Auto Router](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-auto-router) — judge-based model routing controls
+- [Browser](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-browser) — Workbench browser views and browser automation
+- [DuckDuckGo Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-duckduckgo-search) — web search using DuckDuckGo's HTML page
+- [DS4](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-ds4) — local DeepSeek V4 Flash provider/profile for antirez/ds4
+- [Exa Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-exa-search) — Exa web search
+- [Hermes Agent](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-hermes-agent) — Hermes Agent API session interface
+- [Kitty Litter Mobile Pairing](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-alleycat) — mobile pairing bridge
+- [Local Models](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-local-models) — MLX and GGUF model runtime management
+- [Self Preservation](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-self-preservation) — process self-preservation guard
+- [Suggested Context](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context) — related conversation suggestions
+- [Video Probe](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-video-probe) — video analysis via local or remote video-capable models
 - [Writing Studio](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-writing-studio) — document-first collaborative writing surface
 
 ## Sections

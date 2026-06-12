@@ -90,10 +90,6 @@ pnpm run desktop:start</code></pre>
             <a href="./desktop-api-boundary.html">Desktop API Boundary</a> — HTTP data plane, WebSocket realtime plane, and native-only IPC
             policy
           </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge">Knowledge</a> — installable knowledge,
-            docs, skills, instruction files, and managed sync
-          </li>
           <li><a href="./knowledge-base.html">Knowledge base sync</a> — git-backed knowledge base setup, local paths, and sync behavior</li>
           <li><a href="./configuration.html">Configuration</a> — file-based config, env vars</li>
           <li><a href="./development.html">Development workflow</a> — validation, UI QA, checkpoints, and secret scanning</li>
@@ -176,14 +172,25 @@ pnpm run desktop:start</code></pre>
           <strong>Settings → Extensions → Install</strong>; after installing, check the main extension registry to enable and inspect the
           extension.
         </p>
-        <p>Feature-specific documentation lives beside the owning extension package:</p>
+        <p>Feature-specific documentation lives beside the owning extension package.</p>
+        <p>Bundled system extensions:</p>
         <ul>
-          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-agent-browser">Agent Browser</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-artifacts/README.md">Artifacts</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-auto-mode/README.md">Auto Mode</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-automations/README.md">Automations</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-browser">Browser</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-caffeinate/README.md">Caffeinate</a></li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-artifacts/README.md">Artifacts</a> — rendered
+            artifacts beside the active conversation
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-automations/README.md">Automations</a> — scheduled
+            and conversation-bound automations
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-runs/README.md">Background Work</a> — background
+            commands and subagents linked to conversations
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-caffeinate/README.md">Caffeinate</a> — macOS
+            caffeinate top-bar control
+          </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-codex-profile/README.md">Codex Profile</a> —
             Codex/OpenAI tool profile, including <code>apply_patch</code> and image generation
@@ -192,47 +199,69 @@ pnpm run desktop:start</code></pre>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-composer-attachments/README.md"
               >Composer Attachments</a
             >
+            — composer attachment controls
           </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-context-hardening/README.md">Context Hardening</a>
+            — tool-output bounds before agent context
           </li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-context-usage/README.md">Context Usage</a></li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-context-usage/README.md">Context Usage</a> —
+            composer status for context-window usage
+          </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-conversation-tools/README.md"
               >Conversation Tools</a
             >
-          </li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-diffs/README.md">Diffs</a></li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-duckduckgo-search">DuckDuckGo Search</a> — web
-            search using DuckDuckGo's HTML page
+            — conversation inspection, titles, working directories, and CLI commands
           </li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-ds4">DS4</a> — local DeepSeek V4 Flash
-            provider/profile for antirez/ds4
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-diffs/README.md">Diffs</a> — checkpoint and
+            workspace diff inspection
           </li>
-          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-exa-search">Exa Search</a></li>
+          <li>Dynamic Workflows — model-authored workflow coordinators that fan out daemon-backed subagents</li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-excalidraw-input/README.md">Excalidraw Input</a>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-excalidraw-input/README.md">Excalidraw Input</a> —
+            composer drawing input
           </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-extension-manager/README.md">Extension Manager</a>
-          </li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-files/README.md">File Explorer</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-git-status/README.md">Git Status</a></li>
-          <li><a href="./host-view-components.html">Host view components</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-image-probe/README.md">Image Probe</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-alleycat">Kitty Litter Mobile Pairing</a></li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge">Knowledge</a> — installable first-party
-            extension
+            — extension registry, validation, import/export, and diagnostics
           </li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-local-dictation/README.md">Local Dictation</a>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-files/README.md">File Explorer</a> — workspace file
+            browsing
           </li>
-          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-local-models">Local Models</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-mcp/README.md">MCP</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-model-picker/README.md">Model Picker</a></li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-gateways/README.md">Gateways</a> — external
+            messaging gateway connections
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-git-status/README.md">Git Status</a> — branch and
+            diff status in the composer
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-auto-mode/README.md">Goal Mode</a> — persisted goal
+            tracking and automatic continuation
+          </li>
+          <li><a href="./host-view-components.html">Host view components</a> — host-owned UI components reusable by extensions</li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-image-probe/README.md">Image Probe</a> — image
+            attachment inspection with a vision agent
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-local-dictation/README.md">Local Dictation</a> —
+            Whisper.cpp dictation controls and settings
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-mcp/README.md">MCP</a> — configured MCP server
+            inspection, auth, and calls
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-model-picker/README.md">Model Picker</a> — composer
+            model and thinking controls
+          </li>
+          <li>Neon Pilot CLI — unified CLI control plane for internal agents and external callers</li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-onboarding/README.md">Onboarding</a> — first-run
             onboarding bootstrap and conversation flow
@@ -241,16 +270,90 @@ pnpm run desktop:start</code></pre>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-prompt-assembly/README.md">Prompt Assembly</a> —
             prompt inputs, capabilities, and diagnostics inspection
           </li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-reply-actions/README.md">Reply Actions</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-runs/README.md">Runs</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-self-preservation">Self Preservation</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-settings/README.md">Settings</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-scratchpad/README.md">Scratchpad</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-skills/README.md">Skills</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context">Suggested Context</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-telemetry/README.md">Telemetry extension</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-video-probe">Video Probe</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-web-tools/README.md">Web Fetch</a></li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-reply-actions/README.md">Reply Actions</a> —
+            transcript selection actions and draft starters
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-scratchpad/README.md">Scratchpad</a> —
+            conversation-scoped markdown scratchpad
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-settings/README.md">Settings</a> — native
+            first-party settings routes
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-skills/README.md">Skills</a> — backend
+            compatibility actions for agent skills
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-telemetry/README.md">Telemetry extension</a> — app
+            traces, model usage, tool health, and performance
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-terminal/README.md">Terminal</a> — PTY-backed
+            terminal panel
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-todo/README.md">Todos</a> — conversation-scoped
+            execution todos
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-web-tools/README.md">Web Fetch</a> — web content
+            fetch tool
+          </li>
+        </ul>
+        <p>
+          Optional first-party extensions from
+          <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a
+          >:
+        </p>
+        <ul>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-agent-browser">Agent Browser</a> — agent-browser
+            CLI integration
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-auto-router">Auto Router</a> — judge-based model
+            routing controls
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-browser">Browser</a> — Workbench browser views and
+            browser automation
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-duckduckgo-search">DuckDuckGo Search</a> — web
+            search using DuckDuckGo's HTML page
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-ds4">DS4</a> — local DeepSeek V4 Flash
+            provider/profile for antirez/ds4
+          </li>
+          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-exa-search">Exa Search</a> — Exa web search</li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-hermes-agent">Hermes Agent</a> — Hermes Agent API
+            session interface
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-alleycat">Kitty Litter Mobile Pairing</a> — mobile
+            pairing bridge
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-local-models">Local Models</a> — MLX and GGUF model
+            runtime management
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-self-preservation">Self Preservation</a> — process
+            self-preservation guard
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context">Suggested Context</a> — related
+            conversation suggestions
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-video-probe">Video Probe</a> — video analysis via
+            local or remote video-capable models
+          </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-writing-studio">Writing Studio</a> — document-first
             collaborative writing surface
