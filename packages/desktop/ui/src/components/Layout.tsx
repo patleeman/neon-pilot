@@ -849,7 +849,7 @@ function WorkbenchDocumentPane({
         instanceId={activeTabId}
       />
     );
-  } else if (activeExtensionToolPanel && activeToolSlot === 'terminal') {
+  } else if (activeExtensionToolPanel && isSinglePaneWorkbenchMode(activeTool, activeExtensionToolPanel)) {
     mainContent = (
       <NativeExtensionSurfaceHost
         key={activeTabId ?? `${activeExtensionToolPanel.extensionId}:${activeExtensionToolPanel.id}`}
@@ -1002,6 +1002,7 @@ function WorkbenchPanel({
         activeTool === 'browser' ||
         activeTool === 'chat' ||
         activeTool === 'terminal' ||
+        isSinglePaneWorkbenchMode(activeTool) ||
         isNewWorkbenchTabMode(activeTool) ||
         extensionWorkbenchSurface
           ? 'true'
