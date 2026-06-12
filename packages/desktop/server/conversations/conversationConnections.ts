@@ -127,12 +127,13 @@ function normalizeDeferredResumeStatus(status: DeferredResumeSummary['status']):
 
 function mapDeferredResume(conversationId: string, resume: DeferredResumeSummary): ConversationConnectionItem {
   const status = normalizeDeferredResumeStatus(resume.status);
+  const updatedAt = resume.readyAt ?? resume.dueAt ?? resume.createdAt;
   return {
     id: `deferred-resume:${resume.id}`,
     conversationId,
     kind: 'activity',
     title: resume.kind === 'task-callback' ? 'Task callback' : 'Deferred resume',
-    ...(resume.promptPreview ? { subtitle: resume.promptPreview } : {}),
+    ...(resume.prompt ? { subtitle: resume.prompt } : {}),
     status,
     active: status === 'ready' || status === 'scheduled',
     meaningful: true,
@@ -140,7 +141,7 @@ function mapDeferredResume(conversationId: string, resume: DeferredResumeSummary
     source: { type: 'deferred-resume', id: resume.id },
     surfaces: ['activityShelf', 'composerShelf', 'cli'],
     ...(resume.createdAt ? { createdAt: resume.createdAt } : {}),
-    ...(resume.updatedAt ? { updatedAt: resume.updatedAt } : {}),
+    ...(updatedAt ? { updatedAt } : {}),
     ...(resume.dueAt ? { dueAt: resume.dueAt } : {}),
     actions: [
       ...(status === 'scheduled' ? [{ id: 'fire-now', label: 'Run now', command: 'deferredResume.fireNow' }] : []),
