@@ -59,6 +59,19 @@ describe('streamExtensionRouteSse', () => {
     expect(sources[0]?.close).toHaveBeenCalled();
   });
 
+  it('ignores late EventSource errors after the caller aborts', async () => {
+    const { streamExtensionRouteSse } = await import('./extensionRouteStream');
+    const abort = new AbortController();
+    const iter = streamExtensionRouteSse('system-terminal', '/stream?id=terminal-1', { signal: abort.signal })[Symbol.asyncIterator]();
+
+    const next = iter.next();
+    abort.abort();
+    sources[0]?.onerror?.(new Event('error'));
+
+    await expect(next).resolves.toEqual({ value: undefined, done: true });
+    expect(sources[0]?.close).toHaveBeenCalled();
+  });
+
   it('yields raw string payloads without rejecting the stream', async () => {
     const { streamExtensionRouteSse } = await import('./extensionRouteStream');
     const iter = streamExtensionRouteSse<string>('system-terminal', '/stream?id=terminal-1')[Symbol.asyncIterator]();

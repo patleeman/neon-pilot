@@ -47,11 +47,13 @@ export async function* streamExtensionRouteSse<T = unknown>(
   };
 
   const abort = () => {
+    if (closed) return;
     closed = true;
     source.close();
     flush();
   };
   const handleClose = () => {
+    if (closed) return;
     closed = true;
     source.close();
     flush();
@@ -62,6 +64,9 @@ export async function* streamExtensionRouteSse<T = unknown>(
   source.addEventListener('close', handleClose);
   const eventTypes = new Set(['message', ...(options.eventNames ?? [])]);
   const handleEvent = (event: Event) => {
+    if (closed) {
+      return;
+    }
     const messageEvent = event as MessageEvent<string>;
     try {
       pending.push(parseExtensionRouteSseData<T>(messageEvent.data));
@@ -76,6 +81,9 @@ export async function* streamExtensionRouteSse<T = unknown>(
     source.addEventListener(eventType, handleEvent);
   }
   source.onerror = () => {
+    if (closed) {
+      return;
+    }
     failure = new Error('Extension route stream failed.');
     closed = true;
     source.close();
