@@ -88,9 +88,13 @@ function usage(): string {
       'version [--json]              Show CLI package/runtime version',
       'cli status|install|uninstall  Manage the optional user-shell CLI symlink',
       'help [command]                Show help',
-      'protocol <protocol-id> ...    Invoke an advanced raw extension protocol entrypoint',
     ],
-    examples: ['neon-pilot commands', 'neon-pilot help extensions list', 'neon-pilot extensions list', 'neon-pilot protocol acp'],
+    examples: [
+      'neon-pilot ask "Summarize this repo"',
+      'neon-pilot commands',
+      'neon-pilot help extensions list',
+      'neon-pilot commands --verbose',
+    ],
   });
 }
 
@@ -693,7 +697,8 @@ async function allCliCommandDefinitions(): Promise<NeonPilotCliCommandDefinition
 async function listCliCommands(args: string[], rawArgs = args): Promise<number> {
   try {
     const definitions = await allCliCommandDefinitions();
-    if (!rawArgs.includes('--quiet')) process.stdout.write(renderCliCommandList(definitions, wantsJson(rawArgs)));
+    if (!rawArgs.includes('--quiet'))
+      process.stdout.write(renderCliCommandList(definitions, wantsJson(rawArgs), { verbose: rawArgs.includes('--verbose') }));
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

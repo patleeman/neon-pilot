@@ -57,7 +57,7 @@ Use `background-commands` for detached shell commands with logs/status/cancel/re
 Use subagent commands to inspect or manage delegated background agent work, not for ordinary prompting.
 Use scheduled-task commands, currently `tasks ...`, for scheduled recurring behavior.
 Use `extensions` and `settings` for product administration.
-Use `app-commands` and `protocol` only as advanced escape hatches when no first-class CLI command fits.
+Use `app-commands` and `protocol` only as advanced escape hatches when no first-class CLI command fits; they are hidden from default human discovery and appear under `commands --verbose`.
 ```
 
 The most important ambiguity to avoid is `ask` versus subagents. A one-off shell request like "run an agent to review this repo" should become `neon-pilot ask ...`. Subagent commands are for delegated background agent records created by the runtime/conversation workflow; they are not the default way for an external caller to start normal agent work.
@@ -115,43 +115,45 @@ Extensions and Settings
   settings reset                Reset settings
 ```
 
-For internal agents and automation, expose the contract-oriented map:
+For internal agents and automation, keep deeper control-plane details in skills and expose them from the CLI only when requested:
 
 ```text
 Discovery
-  commands --json               List live command contracts from core and extensions
-  schema --json                 Export full machine-readable command schema
+  commands                      Browse task-oriented command families
+  commands --verbose            Include advanced/internal escape hatches
+  commands --json               List live command contracts for scripts
+  schema --json                 Export full machine-readable command schema for generated references
   help <command>                Show human usage for one command
-  paths --json                  Show local runtime paths
-  version --json                Show CLI and runtime version
-  doctor --json                 Check CLI/runtime readiness
+  paths                         Show local runtime paths
+  version                       Show CLI and runtime version
+  doctor                        Check CLI/runtime readiness
 
 Preferred Agent Entry Points
   ask                           Start a new conversation and run one turn
   conversations run-turn        Send a turn to an existing conversation
-  conversations list --json     Discover conversation ids
-  conversations get --json      Inspect one conversation
+  conversations list            Discover conversation ids
+  conversations get             Inspect one conversation
   background-commands start     Start detached shell work
   background-commands list      Inspect detached shell work
   subagents list                Inspect delegated background agents when that surface is available
   tasks list                    Inspect scheduled behavior
 
 Runtime Administration
-  bootstrap doctor --json       Validate external-agent control setup
-  bootstrap configure --json    Configure external-agent entrypoints
+  bootstrap doctor              Validate external-agent control setup
+  bootstrap configure           Configure external-agent entrypoints
   bootstrap defaults set        Configure default provider/model/cwd
-  cli status --json             Inspect user-shell CLI symlink state
-  paths --json                  Locate state/config/runtime roots
+  cli status                    Inspect user-shell CLI symlink state
+  paths                         Locate state/config/runtime roots
 
 Extension Administration
-  extensions list --json        List installed extensions
-  extensions inspect --json     Inspect one extension
+  extensions list               List installed extensions
+  extensions inspect            Inspect one extension
   extensions install            Install an extension
   extensions enable             Enable an extension
   extensions disable            Disable an extension
   extensions validate           Validate extension manifest/runtime wiring
-  settings schema --json        Read declared settings contracts
-  settings list --json          Read merged settings
+  settings schema               Read declared settings contracts
+  settings list                 Read merged settings
   settings set                  Mutate declared non-secret settings
 
 Advanced Escape Hatches
@@ -160,7 +162,7 @@ Advanced Escape Hatches
   protocol <protocol-id> ...    Invoke raw extension protocol entrypoint
 ```
 
-When command contracts grow beyond the current schema, prefer first-class metadata over prose-only hints. Useful fields include `intent`, `audience`, `stability`, `recommendedFor`, `notFor`, and `preferredOver`. Agents should rank public commands above advanced/internal commands for user-facing tasks, and should use `app-commands` or `protocol` only when the user explicitly asks for those surfaces or no first-class command exists.
+When command contracts grow beyond the current schema, prefer first-class metadata over prose-only hints. Useful fields include `intent`, `audience`, `stability`, `recommendedFor`, `notFor`, and `preferredOver`. Agents should rank public commands above advanced/internal commands for user-facing tasks, and should use `app-commands` or `protocol` only when the user explicitly asks for those surfaces or no first-class command exists. Use `--json` for scripts, generated references, and stable machine parsing; do not make it the default agent-reading format.
 
 ## Availability
 
@@ -234,7 +236,7 @@ The CLI shell is core-owned: parsing, command matching, help, command discovery,
 
 ## Command Contracts
 
-`neon-pilot commands --json` returns command contracts for agents and scripts:
+`neon-pilot commands --json` returns command contracts for scripts, generated references, and machine parsing:
 
 - `argsSchema` and `flagsSchema`
 - `mode`: `read`, `write`, `destructive`, `background`, or `streaming`

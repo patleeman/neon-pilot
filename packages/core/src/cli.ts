@@ -311,6 +311,20 @@ export function renderCliUsage(options: NeonPilotCliHelpOptions = {}): string {
     '',
     options.summary ?? 'Neon Pilot command line administration.',
     '',
+    'Start here:',
+    `  ${commandName} ask "..."                         Ask Neon Pilot to do one task`,
+    `  ${commandName} conversations run-turn <id> --text "..."`,
+    `                                      Continue an existing conversation`,
+    `  ${commandName} background-commands start --command "..."`,
+    `                                      Run shell work in the background`,
+    `  ${commandName} commands                        Browse command families`,
+    '',
+    'Decision rules:',
+    '  Use ask for normal one-off agent work from the CLI.',
+    '  Use conversations run-turn when you already have a conversation id.',
+    '  Use background-commands for detached shell commands.',
+    '  Advanced escape hatches are hidden from the default command list; use commands --verbose when needed.',
+    '',
     'Built-in commands:',
     ...builtInCommands.map((command) => `  ${command}`),
     '',
@@ -318,17 +332,21 @@ export function renderCliUsage(options: NeonPilotCliHelpOptions = {}): string {
     ...examples.map((example) => `  ${example}`),
     '',
     'Global flags:',
-    '  --json       Print structured JSON when supported',
+    '  --json       Print structured JSON for scripts when supported',
     '  --quiet      Suppress non-essential human output',
     '  --verbose    Include diagnostic detail in human output',
     '  --no-color   Disable ANSI color output',
   ].join('\n');
 }
 
-export function renderCliCommandList(definitions: NeonPilotCliCommandDefinition[], json: boolean): string {
+export function renderCliCommandList(
+  definitions: NeonPilotCliCommandDefinition[],
+  json: boolean,
+  options: { verbose?: boolean } = {},
+): string {
   const commands = [...definitions].sort((a, b) => a.command.localeCompare(b.command));
   if (json) return `${JSON.stringify({ commands }, null, 2)}\n`;
-  const renderedGroups = renderCliCommandGroups(commands);
+  const renderedGroups = renderCliCommandGroups(commands, { includeAdvanced: options.verbose === true });
   const commonIntents = renderCliCommonIntents(commands);
   return (
     [
@@ -342,11 +360,11 @@ export function renderCliCommandList(definitions: NeonPilotCliCommandDefinition[
       '  Use conversations run-turn when you already have a conversation id.',
       '  Use background-commands for detached shell commands.',
       '  Use subagent commands to inspect/manage delegated background agents, not ordinary prompting.',
-      '  Use app-commands and protocol only as advanced escape hatches.',
+      '  Advanced escape hatches are hidden by default; use commands --verbose when needed.',
       '',
       ...renderedGroups,
       '',
-      'Use `neon-pilot help <command>` for details or `neon-pilot commands --json` for machine-readable contracts.',
+      'Use `neon-pilot help <command>` for details, `commands --verbose` for advanced surfaces, or `commands --json` for scripts.',
     ].join('\n') + '\n'
   );
 }
@@ -364,7 +382,7 @@ function renderCliCommonIntents(commands: NeonPilotCliCommandDefinition[]): stri
   ].filter((line): line is string => Boolean(line));
 }
 
-function renderCliCommandGroups(commands: NeonPilotCliCommandDefinition[]): string[] {
+function renderCliCommandGroups(commands: NeonPilotCliCommandDefinition[], options: { includeAdvanced: boolean }): string[] {
   const groups = [
     { title: 'Start Here', prefixes: ['ask', 'doctor', 'help'] },
     { title: 'Conversation Work', prefixes: ['ask', 'conversations'] },
@@ -379,8 +397,10 @@ function renderCliCommandGroups(commands: NeonPilotCliCommandDefinition[]): stri
   const used = new Set<string>();
   const lines: string[] = [];
   for (const group of groups) {
-    const groupCommands = commands.filter((command) =>
-      group.prefixes.some((prefix) => command.command === prefix || command.command.startsWith(`${prefix} `)),
+    const groupCommands = commands.filter(
+      (command) =>
+        group.prefixes.some((prefix) => command.command === prefix || command.command.startsWith(`${prefix} `)) &&
+        (options.includeAdvanced || command.stability !== 'advanced'),
     );
     if (groupCommands.length === 0) continue;
     lines.push(`${group.title}:`);
@@ -390,12 +410,18 @@ function renderCliCommandGroups(commands: NeonPilotCliCommandDefinition[]): stri
     }
     lines.push('');
   }
-  const otherCommands = commands.filter((command) => !used.has(command.id));
+  const otherCommands = commands.filter(
+    (command) => !used.has(command.id) && (options.includeAdvanced || command.stability !== 'advanced'),
+  );
   if (otherCommands.length > 0) {
     lines.push('Other Commands:');
     lines.push(...otherCommands.map(renderCliCommandListEntry));
   } else if (lines.at(-1) === '') {
     lines.pop();
+  }
+  if (!options.includeAdvanced && commands.some((command) => command.stability === 'advanced')) {
+    if (lines.at(-1) !== '') lines.push('');
+    lines.push('Advanced Commands: hidden from the default human list. Use `neon-pilot commands --verbose`.');
   }
   return lines;
 }

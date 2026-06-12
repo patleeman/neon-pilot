@@ -5,55 +5,69 @@ description: Use the unified Neon Pilot CLI/control plane for self-administratio
 
 # Neon Pilot CLI
 
-Use the unified Neon Pilot CLI surface instead of direct runtime-file edits, standalone model tools, or MCP. External/other agents use the `neon-pilot` CLI; internal Neon Pilot agents use the `neon_pilot` tool. These are dual interfaces over the same control-plane command semantics.
+Use the unified Neon Pilot command surface instead of direct runtime-file edits, standalone model tools, or MCP. External/other agents use the public `neon-pilot` CLI. Internal Neon Pilot agents use the canonical `neon_pilot` tool when available. These are dual interfaces over the same control-plane command semantics, but the public CLI should stay human/task-oriented.
 
 ## Workflow
 
-1. Discover commands before using an unfamiliar surface. From an external shell, use the CLI:
+1. Choose commands by intent before inspecting contracts:
 
    ```sh
-   neon-pilot commands --json
-   neon-pilot control-plane doctor --json
-   neon-pilot help conversations
+   neon-pilot ask "Summarize this repo"                         # one-off agent work
+   neon-pilot conversations run-turn <id> --text "Continue."    # existing conversation
+   neon-pilot background-commands start --command "pnpm test"   # detached shell work
+   neon-pilot tasks list                                        # scheduled behavior
+   neon-pilot extensions list                                   # extension admin
    ```
 
-   From an internal Neon Pilot conversation, use the canonical tool for the same command surface:
+   Use `neon-pilot commands` and `neon-pilot help <command>` for human-readable discovery. Use `--json` only when you are writing a script, need stable ids/schema fields, or must parse output mechanically.
+
+2. From an internal Neon Pilot conversation, prefer the canonical tool for the same command surface:
 
    ```json
    { "command": "list_admin_commands" }
    ```
 
-2. Prefer JSON for inspection and automation. Pick the conversation surface by intent:
+   Use the shell CLI when the task is explicitly about external-user behavior, install/bootstrap from a terminal, or validating what a human will see.
+
+3. Pick the conversation surface by intent. Use human output for orientation; add `--json` only when parsing:
 
    ```sh
-   neon-pilot extensions list --json
-   neon-pilot settings list --json
-   neon-pilot conversations workspace --json      # open/sidebar state, usually what "active threads" means
-   neon-pilot conversations open list --json      # ergonomic open/sidebar view
-   neon-pilot conversations list --json           # persisted conversation history page, not open/active threads
-   neon-pilot cli status --json
-   neon-pilot control-plane doctor --json
+   neon-pilot extensions list
+   neon-pilot settings list
+   neon-pilot conversations workspace      # open/sidebar state, usually what "active threads" means
+   neon-pilot conversations open list      # ergonomic open/sidebar view
+   neon-pilot conversations list           # persisted conversation history page, not open/active threads
+   neon-pilot cli status
+   neon-pilot control-plane doctor
    ```
 
-3. Inspect before mutating shared state. For conversation/sidebar state, read the workspace first:
+4. Inspect before mutating shared state. For conversation/sidebar state, read the workspace first:
 
    ```sh
-   neon-pilot conversations workspace --json
-   neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b --json
+   neon-pilot conversations workspace
+   neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b
    ```
 
-4. For extension work, use the lifecycle CLI and validate/reload after edits:
+5. For extension work, use the lifecycle CLI and validate/reload after edits:
 
    ```sh
-   neon-pilot extensions list --json
-   neon-pilot extensions catalog --json
-   neon-pilot extensions install system-example --json
+   neon-pilot extensions list
+   neon-pilot extensions catalog
+   neon-pilot extensions install system-example
    neon-pilot extensions validate system-example
    neon-pilot extensions reload system-example
-   neon-pilot extensions delete system-example --json
+   neon-pilot extensions delete system-example
    ```
 
-5. Use normal shell commands for repository work such as `pnpm`, `git`, `rg`, and file validation.
+6. Use normal shell commands for repository work such as `pnpm`, `git`, `rg`, and file validation.
+
+## Output modes
+
+Default CLI output is for humans and agents reading transcripts. Prefer it when deciding what to do next.
+
+Use `--json` for scripts, assertions, stable ids, machine parsing, and generated references. Do not use JSON simply because the caller is an agent; it costs more context and hides the product ontology behind schema noise.
+
+Use `commands --verbose` when you need advanced escape hatches such as app-command or raw protocol surfaces. They are intentionally not emphasized in the default human command list.
 
 ## Conversation administration
 
@@ -66,45 +80,44 @@ Important distinction:
 - `conversations search` = historical transcript/metadata search.
 
 ```sh
-neon-pilot conversations workspace --json
-neon-pilot conversations open list --json
-neon-pilot conversations list --scope all --json
-neon-pilot conversations search "query" --json
-neon-pilot conversations inspect <id> outline --json
+neon-pilot conversations workspace
+neon-pilot conversations open list
+neon-pilot conversations list --scope all
+neon-pilot conversations search "query"
+neon-pilot conversations inspect <id> outline
 neon-pilot ask --model opencode-go/deepseek-v4-flash --cwd /repo "prompt"
-neon-pilot conversations create --title "Thread" --cwd /repo --json
-neon-pilot conversations ensure-live <id> --json
-neon-pilot conversations send <id> --text "message" --json
-neon-pilot conversations run-turn <id> --text "prompt" --timeout-ms 120000 --json
+neon-pilot conversations create --title "Thread" --cwd /repo
+neon-pilot conversations ensure-live <id>
+neon-pilot conversations send <id> --text "message"
+neon-pilot conversations run-turn <id> --text "prompt" --timeout-ms 120000
 neon-pilot conversations abort <id>
 neon-pilot conversations compact <id>
-neon-pilot conversations fork <id> --title "Fork" --json
+neon-pilot conversations fork <id> --title "Fork"
 neon-pilot conversations tools <id> bash read edit
-neon-pilot conversations rollback <id> 1 --json
-neon-pilot conversations archive <id...> --json
-neon-pilot conversations unarchive <id...> --json
-neon-pilot conversations delete <id...> --json
-neon-pilot conversations retention prune --older-than 90d --archived-only --dry-run --json
+neon-pilot conversations rollback <id> 1
+neon-pilot conversations archive <id...>
+neon-pilot conversations unarchive <id...>
+neon-pilot conversations delete <id...>
+neon-pilot conversations retention prune --older-than 90d --archived-only --dry-run
 ```
 
 For sidebar/open-thread state, use workspace/open commands, not `conversations list --scope all` and not `scope=running`:
 
 ```sh
-neon-pilot conversations workspace --json
+neon-pilot conversations workspace
 neon-pilot conversations workspace update \
   --open conv-a,conv-b \
   --pinned conv-a \
   --active conv-b \
-  --workspace-path /repo \
-  --json
-neon-pilot conversations open list --json
-neon-pilot conversations open add conv-a conv-b --json
-neon-pilot conversations open pin conv-a --json
-neon-pilot conversations open active conv-b --json
-neon-pilot conversations archive conv-old --json
-neon-pilot conversations unarchive conv-old --json
-neon-pilot conversations delete conv-old --json
-neon-pilot conversations retention prune --older-than 180d --archived-only --dry-run --json
+  --workspace-path /repo
+neon-pilot conversations open list
+neon-pilot conversations open add conv-a conv-b
+neon-pilot conversations open pin conv-a
+neon-pilot conversations open active conv-b
+neon-pilot conversations archive conv-old
+neon-pilot conversations unarchive conv-old
+neon-pilot conversations delete conv-old
+neon-pilot conversations retention prune --older-than 180d --archived-only --dry-run
 ```
 
 Vocabulary:
@@ -123,32 +136,33 @@ Vocabulary:
 Use extension lifecycle commands before falling back to lower-level tools:
 
 ```sh
-neon-pilot extensions list --json
-neon-pilot extensions catalog --json
-neon-pilot extensions create system-example --name "Example" --json
-neon-pilot extensions install <catalog-id> --json
-neon-pilot extensions update <catalog-id> --json
-neon-pilot extensions install-url <bundle-url> --expected-id <id> --json
-neon-pilot extensions install-marketplace <source> --type skill --json
-neon-pilot extensions enable <id> --json
-neon-pilot extensions disable <id> --json
-neon-pilot extensions snapshot <id> --json
-neon-pilot extensions delete <id> --json
+neon-pilot extensions list
+neon-pilot extensions catalog
+neon-pilot extensions create system-example --name "Example"
+neon-pilot extensions install <catalog-id>
+neon-pilot extensions update <catalog-id>
+neon-pilot extensions install-url <bundle-url> --expected-id <id>
+neon-pilot extensions install-marketplace <source> --type skill
+neon-pilot extensions enable <id>
+neon-pilot extensions disable <id>
+neon-pilot extensions snapshot <id>
+neon-pilot extensions delete <id>
 ```
 
 Settings are schema-backed. Read schema before writes; use JSON values for `set`:
 
 ```sh
-neon-pilot settings schema --json
-neon-pilot settings get <key> --json
-neon-pilot settings set <key> 'true' --json
-neon-pilot settings set <key> '"string value"' --json
-neon-pilot settings reset <key> --json
+neon-pilot settings schema
+neon-pilot settings get <key>
+neon-pilot settings set <key> 'true'
+neon-pilot settings set <key> '"string value"'
+neon-pilot settings reset <key>
 ```
 
 App/command-palette commands are available as an escape hatch. Prefer specific CLI commands when they exist; inspect before running command IDs with side effects:
 
 ```sh
+neon-pilot commands --verbose
 neon-pilot app-commands list --json
 neon-pilot app-commands run <command-id> --args '{"some":"json"}' --json
 ```
@@ -158,19 +172,19 @@ neon-pilot app-commands run <command-id> --args '{"some":"json"}' --json
 Use first-class CLI commands for durable work and scheduled automation:
 
 ```sh
-neon-pilot background-commands list --json
-neon-pilot background-commands start --command "pnpm test" --cwd /repo --json
-neon-pilot background-commands logs <run-id> --tail 200 --json
-neon-pilot background-commands cancel <run-id> --json
+neon-pilot background-commands list
+neon-pilot background-commands start --command "pnpm test" --cwd /repo
+neon-pilot background-commands logs <run-id> --tail 200
+neon-pilot background-commands cancel <run-id>
 
-neon-pilot tasks list --json
-neon-pilot tasks save --title "Daily check" --cron "0 9 * * *" --prompt "Summarize status" --json
-neon-pilot tasks run <task-id> --json
-neon-pilot tasks delete <task-id> --json
+neon-pilot tasks list
+neon-pilot tasks save --title "Daily check" --cron "0 9 * * *" --prompt "Summarize status"
+neon-pilot tasks run <task-id>
+neon-pilot tasks delete <task-id>
 
-neon-pilot heartbeats start <heartbeat-id> --interval-minutes 5 --conversation-id <conversation-id> --prompt "Wake up, check whether work remains, and stop this heartbeat when done." --json
-neon-pilot heartbeats list --json
-neon-pilot heartbeats stop <heartbeat-id> --json
+neon-pilot heartbeats start <heartbeat-id> --interval-minutes 5 --conversation-id <conversation-id> --prompt "Wake up, check whether work remains, and stop this heartbeat when done."
+neon-pilot heartbeats list
+neon-pilot heartbeats stop <heartbeat-id>
 ```
 
 ## Delegated agent control
@@ -178,10 +192,11 @@ neon-pilot heartbeats stop <heartbeat-id> --json
 The same CLI surface also controls Neon Pilot as a delegated agent runtime. For a one-shot external delegation, prefer `neon-pilot ask`; it creates a normal conversation, runs one turn, and returns the answer plus conversation id. Do not direct external users to `subagents`; subagents are an internal model tool for Neon Pilot agents to create durable offshoot work.
 
 ```sh
-neon-pilot bootstrap doctor --json
-neon-pilot bootstrap configure --provider openai-codex --model gpt-5.4 --json
-neon-pilot bootstrap defaults set --provider openai-codex --model gpt-5.4 --cwd "$PWD" --json
+neon-pilot bootstrap doctor
+neon-pilot bootstrap configure --provider openai-codex --model gpt-5.4
+neon-pilot bootstrap defaults set --provider openai-codex --model gpt-5.4 --cwd "$PWD"
 neon-pilot ask --model opencode-go/deepseek-v4-flash --cwd "$PWD" "Reply with ready."
+neon-pilot commands --verbose
 neon-pilot protocol neon-pilot-agent capabilities --json
 neon-pilot protocol neon-pilot-agent run --prompt "Reply with ready." --tools none --json
 neon-pilot protocol neon-pilot-agent start --prompt "Investigate this issue." --cwd "$PWD" --json
@@ -193,8 +208,8 @@ neon-pilot protocol neon-pilot-agent runs list --kind subagent --json
 Transcript mutation commands are advanced recovery/admin tools. Inspect first and prefer safer conversation operations when possible.
 
 ```sh
-neon-pilot conversations transcript append <id> --type text --data '{"text":"note"}' --json
-neon-pilot conversations transcript update <id> <block-id> --type text --data '{"text":"replacement"}' --json
+neon-pilot conversations transcript append <id> --type text --data '{"text":"note"}'
+neon-pilot conversations transcript update <id> <block-id> --type text --data '{"text":"replacement"}'
 ```
 
 ## Boundaries

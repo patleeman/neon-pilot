@@ -14,7 +14,7 @@ Use `--channel rc` for release-candidate builds.
 
 ## Configure
 
-Run bootstrap commands through the live app CLI. Prefer JSON output for automation.
+Run bootstrap commands through the live app CLI. Use JSON output only for automation scripts and health gates that parse results.
 
 ```bash
 neon-pilot bootstrap configure \
@@ -44,7 +44,7 @@ An agent should not report setup complete until these checks pass:
 
 ```bash
 neon-pilot cli status --json
-neon-pilot commands --json
+neon-pilot commands
 neon-pilot bootstrap doctor --json
 neon-pilot control-plane doctor --json
 neon-pilot protocol neon-pilot-agent capabilities --json
