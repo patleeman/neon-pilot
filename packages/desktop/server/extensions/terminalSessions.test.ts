@@ -166,6 +166,33 @@ describe('terminal sessions', () => {
     });
   });
 
+  it('does not drop burst output chunks before the SSE consumer drains them', async () => {
+    const { id } = await mod.createTerminalSession({});
+    const onStdout = shellSpawn.mock.calls[0][0].onStdout;
+
+    const { events } = await mod.streamTerminalSession(routeRequest(id));
+    const iter = (events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
+
+    const first = iter.next();
+    onStdout('one');
+    await expect(first).resolves.toMatchObject({
+      value: { data: { type: 'output', data: 'one' } },
+      done: false,
+    });
+
+    onStdout('two');
+    onStdout('three');
+
+    await expect(iter.next()).resolves.toMatchObject({
+      value: { data: { type: 'output', data: 'two' } },
+      done: false,
+    });
+    await expect(iter.next()).resolves.toMatchObject({
+      value: { data: { type: 'output', data: 'three' } },
+      done: false,
+    });
+  });
+
   it('keeps startup output available for the first stream attach', async () => {
     shellSpawn.mockImplementation(async (input) => {
       input.onStdout('startup-prompt');

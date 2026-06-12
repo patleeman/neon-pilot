@@ -303,7 +303,7 @@ async function* createTerminalOutputStream(id: string): AsyncIterable<ExtensionR
   }
 
   let resolveEvent: ((event: IteratorResult<ExtensionRouteSseEvent>) => void) | null = null;
-  let pendingEvent: ExtensionRouteSseEvent | null = null;
+  const pendingEvents: ExtensionRouteSseEvent[] = [];
 
   const listener = (event: ExtensionRouteSseEvent) => {
     if (resolveEvent) {
@@ -311,7 +311,7 @@ async function* createTerminalOutputStream(id: string): AsyncIterable<ExtensionR
       resolveEvent = null;
       resolve({ value: event, done: false });
     } else {
-      pendingEvent = event;
+      pendingEvents.push(event);
     }
   };
 
@@ -319,9 +319,11 @@ async function* createTerminalOutputStream(id: string): AsyncIterable<ExtensionR
 
   try {
     while (!session.closed && !session.exited) {
-      if (pendingEvent) {
-        const event = pendingEvent;
-        pendingEvent = null;
+      if (pendingEvents.length > 0) {
+        const event = pendingEvents.shift();
+        if (!event) {
+          continue;
+        }
         yield event;
       } else {
         const event = await new Promise<IteratorResult<ExtensionRouteSseEvent>>((resolve) => {
