@@ -20,32 +20,49 @@ See [Getting Started](getting-started.md) for the user setup flow, or [Developme
 
 ## Start here
 
+If you are new to Neon Pilot, read these first:
+
 - [Getting Started](getting-started.md) — install the packaged app and verify the runtime
+- [Desktop App](desktop-app.md) — understand the Electron shell, shortcuts, and app chrome
+- [Views](views.md) — learn Conversation and Workbench layouts
+- [Conversations](conversations.md) — work with live threads, branching, follow-ups, and async follow-through
+- [Conversation context](conversation-context.md) — attach files, folders, images, drawings, and generated context
+- [Knowledge base sync](knowledge-base.md) — set up git-backed durable knowledge
+- [Extension distribution](extension-distribution.md) — install optional extensions and understand extension repositories
+
+## Common Tasks
+
+- **Install and verify Neon Pilot** — use [Getting Started](getting-started.md), then run the first conversation.
+- **Give the agent useful context** — use [Conversation context](conversation-context.md) for files, folders, images, drawings, and generated context.
+- **Keep work organized** — use [Conversations](conversations.md), [Projects](projects.md), and [Knowledge base sync](knowledge-base.md).
+- **Let work continue later** — use [Conversations](conversations.md) for follow-ups/deferred resumes and [Daemon](daemon.md) for background runtime behavior.
+- **Install more capabilities** — use [Extension distribution](extension-distribution.md) and the first-party optional extension repo.
+- **Build a custom capability** — start with [Build an extension with your agent](build-an-extension.md).
+
+## Reference
+
 - [Agent bootstrap](agent-bootstrap.md) — packaged install, CLI setup, provider configuration, and external-agent verification
-- [Views](views.md) — Conversation, Workbench layouts
-- [Conversation context](conversation-context.md) — attach files, folders, and generated context
-- [Conversations](conversations.md) — live threads, branching, async follow-through
 - [Projects](projects.md) — project records and workspace metadata
-- [Desktop App](desktop-app.md) — Electron shell, shortcuts, and app chrome
+- [Configuration](configuration.md) — file-based config and settings stores
+- [Neon Pilot CLI](cli.md) — local control plane; extensions add administration commands with `contributes.cliCommands`
+- [CLI reference](cli-reference.md) — generated command contract reference for automation and scripts
+- [Telemetry](telemetry.md) — local JSONL telemetry logs, SQLite observability indexes, exports, and runtime producers
+- [Activity tree](activity-tree.md) — shared model for conversations, executions, and future sidebar sub-items
+- [Performance diagnostics](performance-diagnostics.md) — renderer timing tripwires for conversation load and API latency
+
+## Builder and Architecture Docs
+
+- [Build an extension with your agent](build-an-extension.md) — agent-first guide for asking Neon Pilot to create, build, reload, validate, and test native extensions
+- [Extension authoring](extensions.md) — native extension manifests, frontend/backend entries, tools, skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
+- [Extension API types](../packages/extensions/README.md) — SDK package with exported types for frontend and backend code
+- [Extension templates](extension-templates/README.md) — copy-paste stubs for data-dashboard, crud-page, and settings-section patterns
 - [Design system](design-system.md) — shared UI package, Storybook, and extension-friendly component guidance
-- [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native-only IPC policy
-- [Knowledge base sync](knowledge-base.md) — git-backed knowledge base setup, local paths, and sync behavior
-- [Configuration](configuration.md) — file-based config, env vars
 - [Development workflow](development.md) — validation, UI QA, checkpoints, and secret scanning
+- [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native-only IPC policy
 - [Daemon](daemon.md) — background process and runtime lifecycle
 - [Sandboxing](sandboxing.md) — shared process execution launcher, wrapper extensions, and direct process API policy
 - [Filesystem Authority](filesystem-authority.md) — shared scoped filesystem boundary, backend seam, policy hooks, and command-sandbox root grants
-- [Activity tree](activity-tree.md) — shared model for conversations, executions, and future sidebar sub-items
-- [Performance diagnostics](performance-diagnostics.md) — renderer timing tripwires for conversation load and API latency
 - [Renderer isolation](renderer-isolation.md) — process ownership, critical lanes, and transcript projection boundaries
-- [Telemetry](telemetry.md) — local JSONL telemetry logs, SQLite observability indexes, exports, and runtime producers
-- [Build an extension with your agent](build-an-extension.md) — agent-first guide for asking Neon Pilot to create, build, reload, validate, and test native extensions
-- [Extension distribution](extension-distribution.md) — GitHub-backed extension repos, package format, compatibility, release artifacts, and publishing your own extension repo
-- [Extension templates](extension-templates/README.md) — copy-paste stubs for data-dashboard, crud-page, and settings-section patterns
-- [Extension authoring](extensions.md) — reference for native extension manifests, frontend/backend entries, tools, skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
-- [Extension API types](../packages/extensions/README.md) — SDK package with exported types for frontend and backend code
-- [Neon Pilot CLI](cli.md) — local control plane; extensions add administration commands with `contributes.cliCommands`
-- [CLI reference](cli-reference.md) — generated command contract reference for automation and scripts
 - [System extensions](../extensions) — feature-owned docs and implementation packages
 - [First-party optional extensions](https://github.com/patleeman/neon-pilot-extensions) — optional packages distributed from GitHub release artifacts
 

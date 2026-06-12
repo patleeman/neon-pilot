@@ -38,6 +38,22 @@ Provider keys must not be passed in command arguments. Use stdin, Keychain, OAut
 
 The desktop app starts and loads the conversation view. Create a new conversation and send a message to verify the agent responds.
 
+## First run checklist
+
+1. Open **Settings** and confirm your model provider and default model.
+2. Start a new conversation.
+3. Attach a file or folder when the task needs project context.
+4. Ask for a small first task, such as summarizing a file, explaining a code path, or drafting a plan.
+5. Use the Workbench to inspect files, artifacts, browser views, extensions, and other surfaces beside the conversation.
+
+## What to try next
+
+- Ask Neon Pilot to inspect a local repo and explain its structure.
+- Attach a folder and ask for a bug fix or documentation update.
+- Queue a follow-up while the agent is working.
+- Install an optional extension from **Settings -> Extensions**.
+- Ask the agent to build a small extension for a repeated workflow.
+
 For source builds and repo development, use [Development workflow](development.md).
 
 ## Next steps

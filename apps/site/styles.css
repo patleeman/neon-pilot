@@ -281,6 +281,65 @@ h1 {
   font-size: 0.82rem;
 }
 
+.user-path {
+  display: grid;
+  grid-template-columns: 0.7fr 1.3fr;
+  gap: 34px;
+  align-items: start;
+  margin-top: 24px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(14, 18, 27, 0.95), rgba(8, 11, 17, 0.86));
+}
+
+.user-path h2 {
+  max-width: 360px;
+  font-size: 1.45rem;
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+}
+
+.user-path-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.user-path-grid article {
+  min-height: 150px;
+  padding: 18px;
+  border: 1px solid #222a3d;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.028);
+}
+
+.user-path-grid span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(78, 121, 255, 0.35);
+  border-radius: 6px;
+  color: var(--cobalt-2);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.user-path-grid h3 {
+  font-size: 0.98rem;
+  letter-spacing: -0.025em;
+}
+
+.user-path-grid p {
+  margin-top: 7px;
+  color: #bbb7ae;
+  font-size: 0.84rem;
+  line-height: 1.62;
+}
+
 .flow {
   display: grid;
   grid-template-columns: 1.18fr 30px 1fr 30px 1.25fr 30px 1fr;
@@ -1296,6 +1355,7 @@ footer a {
   .hero,
   .split,
   .split.reverse,
+  .user-path,
   .support {
     grid-template-columns: 1fr;
   }
@@ -1314,6 +1374,7 @@ footer a {
 
   .primary-cards,
   .support-grid,
+  .user-path-grid,
   .catalog-grid,
   .repo-steps {
     grid-template-columns: 1fr;

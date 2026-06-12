@@ -76,27 +76,101 @@
           <a href="./development.html">Development workflow</a> for building from source.
         </p>
         <h2 id="start-here">Start here</h2>
+        <p>If you are new to Neon Pilot, read these first:</p>
         <ul>
           <li><a href="./getting-started.html">Getting Started</a> — install the packaged app and verify the runtime</li>
+          <li><a href="./desktop-app.html">Desktop App</a> — understand the Electron shell, shortcuts, and app chrome</li>
+          <li><a href="./views.html">Views</a> — learn Conversation and Workbench layouts</li>
+          <li>
+            <a href="./conversations.html">Conversations</a> — work with live threads, branching, follow-ups, and async follow-through
+          </li>
+          <li>
+            <a href="./conversation-context.html">Conversation context</a> — attach files, folders, images, drawings, and generated context
+          </li>
+          <li><a href="./knowledge-base.html">Knowledge base sync</a> — set up git-backed durable knowledge</li>
+          <li>
+            <a href="./extension-distribution.html">Extension distribution</a> — install optional extensions and understand extension
+            repositories
+          </li>
+        </ul>
+        <h2 id="common-tasks">Common Tasks</h2>
+        <ul>
+          <li>
+            <strong>Install and verify Neon Pilot</strong> — use <a href="./getting-started.html">Getting Started</a>, then run the first
+            conversation.
+          </li>
+          <li>
+            <strong>Give the agent useful context</strong> — use <a href="./conversation-context.html">Conversation context</a> for files,
+            folders, images, drawings, and generated context.
+          </li>
+          <li>
+            <strong>Keep work organized</strong> — use <a href="./conversations.html">Conversations</a>,
+            <a href="./projects.html">Projects</a>, and <a href="./knowledge-base.html">Knowledge base sync</a>.
+          </li>
+          <li>
+            <strong>Let work continue later</strong> — use <a href="./conversations.html">Conversations</a> for follow-ups/deferred resumes
+            and <a href="./daemon.html">Daemon</a> for background runtime behavior.
+          </li>
+          <li>
+            <strong>Install more capabilities</strong> — use <a href="./extension-distribution.html">Extension distribution</a> and the
+            first-party optional extension repo.
+          </li>
+          <li>
+            <strong>Build a custom capability</strong> — start with
+            <a href="./build-an-extension.html">Build an extension with your agent</a>.
+          </li>
+        </ul>
+        <h2 id="reference">Reference</h2>
+        <ul>
           <li>
             <a href="./agent-bootstrap.html">Agent bootstrap</a> — packaged install, CLI setup, provider configuration, and external-agent
             verification
           </li>
-          <li><a href="./views.html">Views</a> — Conversation, Workbench layouts</li>
-          <li><a href="./conversation-context.html">Conversation context</a> — attach files, folders, and generated context</li>
-          <li><a href="./conversations.html">Conversations</a> — live threads, branching, async follow-through</li>
           <li><a href="./projects.html">Projects</a> — project records and workspace metadata</li>
-          <li><a href="./desktop-app.html">Desktop App</a> — Electron shell, shortcuts, and app chrome</li>
+          <li><a href="./configuration.html">Configuration</a> — file-based config and settings stores</li>
+          <li>
+            <a href="./cli.html">Neon Pilot CLI</a> — local control plane; extensions add administration commands with
+            <code>contributes.cliCommands</code>
+          </li>
+          <li><a href="./cli-reference.html">CLI reference</a> — generated command contract reference for automation and scripts</li>
+          <li>
+            <a href="./telemetry.html">Telemetry</a> — local JSONL telemetry logs, SQLite observability indexes, exports, and runtime
+            producers
+          </li>
+          <li>
+            <a href="./activity-tree.html">Activity tree</a> — shared model for conversations, executions, and future sidebar sub-items
+          </li>
+          <li>
+            <a href="./performance-diagnostics.html">Performance diagnostics</a> — renderer timing tripwires for conversation load and API
+            latency
+          </li>
+        </ul>
+        <h2 id="builder-and-architecture-docs">Builder and Architecture Docs</h2>
+        <ul>
+          <li>
+            <a href="./build-an-extension.html">Build an extension with your agent</a> — agent-first guide for asking Neon Pilot to create,
+            build, reload, validate, and test native extensions
+          </li>
+          <li>
+            <a href="./extensions.html">Extension authoring</a> — native extension manifests, frontend/backend entries, tools, skills, agent
+            hooks, event bus, notifications, stable SDK imports, and integration testing
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/packages/extensions/README.md">Extension API types</a> — SDK package
+            with exported types for frontend and backend code
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extension-templates/README.md">Extension templates</a> —
+            copy-paste stubs for data-dashboard, crud-page, and settings-section patterns
+          </li>
           <li>
             <a href="./design-system.html">Design system</a> — shared UI package, Storybook, and extension-friendly component guidance
           </li>
+          <li><a href="./development.html">Development workflow</a> — validation, UI QA, checkpoints, and secret scanning</li>
           <li>
             <a href="./desktop-api-boundary.html">Desktop API Boundary</a> — HTTP data plane, WebSocket realtime plane, and native-only IPC
             policy
           </li>
-          <li><a href="./knowledge-base.html">Knowledge base sync</a> — git-backed knowledge base setup, local paths, and sync behavior</li>
-          <li><a href="./configuration.html">Configuration</a> — file-based config, env vars</li>
-          <li><a href="./development.html">Development workflow</a> — validation, UI QA, checkpoints, and secret scanning</li>
           <li><a href="./daemon.html">Daemon</a> — background process and runtime lifecycle</li>
           <li>
             <a href="./sandboxing.html">Sandboxing</a> — shared process execution launcher, wrapper extensions, and direct process API
@@ -107,45 +181,9 @@
             and command-sandbox root grants
           </li>
           <li>
-            <a href="./activity-tree.html">Activity tree</a> — shared model for conversations, executions, and future sidebar sub-items
-          </li>
-          <li>
-            <a href="./performance-diagnostics.html">Performance diagnostics</a> — renderer timing tripwires for conversation load and API
-            latency
-          </li>
-          <li>
             <a href="./renderer-isolation.html">Renderer isolation</a> — process ownership, critical lanes, and transcript projection
             boundaries
           </li>
-          <li>
-            <a href="./telemetry.html">Telemetry</a> — local JSONL telemetry logs, SQLite observability indexes, exports, and runtime
-            producers
-          </li>
-          <li>
-            <a href="./build-an-extension.html">Build an extension with your agent</a> — agent-first guide for asking Neon Pilot to create,
-            build, reload, validate, and test native extensions
-          </li>
-          <li>
-            <a href="./extension-distribution.html">Extension distribution</a> — GitHub-backed extension repos, package format,
-            compatibility, release artifacts, and publishing your own extension repo
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extension-templates/README.md">Extension templates</a> —
-            copy-paste stubs for data-dashboard, crud-page, and settings-section patterns
-          </li>
-          <li>
-            <a href="./extensions.html">Extension authoring</a> — reference for native extension manifests, frontend/backend entries, tools,
-            skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/packages/extensions/README.md">Extension API types</a> — SDK package
-            with exported types for frontend and backend code
-          </li>
-          <li>
-            <a href="./cli.html">Neon Pilot CLI</a> — local control plane; extensions add administration commands with
-            <code>contributes.cliCommands</code>
-          </li>
-          <li><a href="./cli-reference.html">CLI reference</a> — generated command contract reference for automation and scripts</li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions">System extensions</a> — feature-owned docs and
             implementation packages
@@ -373,8 +411,9 @@
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#quick-start">Quick start</a><a href="#start-here">Start here</a><a href="#extension-docs">Extension docs</a
-        ><a href="#sections">Sections</a>
+        <a href="#quick-start">Quick start</a><a href="#start-here">Start here</a><a href="#common-tasks">Common Tasks</a
+        ><a href="#reference">Reference</a><a href="#builder-and-architecture-docs">Builder and Architecture Docs</a
+        ><a href="#extension-docs">Extension docs</a><a href="#sections">Sections</a>
       </aside>
     </main>
   </body>
