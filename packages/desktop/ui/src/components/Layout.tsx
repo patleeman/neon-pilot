@@ -251,6 +251,18 @@ interface WorkbenchTabInstance {
   conversationId?: string | null;
 }
 
+export function removeTerminalWorkbenchTabs(
+  tabs: WorkbenchTabInstance[],
+  activeTabId: string | null,
+): { nextTabs: WorkbenchTabInstance[]; nextActiveTabId: string | null; removed: boolean } {
+  const nextTabs = tabs.filter((tab) => tab.mode !== 'terminal');
+  if (nextTabs.length === tabs.length) {
+    return { nextTabs: tabs, nextActiveTabId: activeTabId, removed: false };
+  }
+  const nextActiveTabId = activeTabId && nextTabs.some((tab) => tab.id === activeTabId) ? activeTabId : null;
+  return { nextTabs, nextActiveTabId, removed: true };
+}
+
 function createWorkbenchTabInstance(
   mode: WorkbenchRailMode,
   options?: { id?: string; artifactId?: string | null; conversationId?: string | null },
@@ -1908,6 +1920,11 @@ export function Layout() {
       writeAppLayoutMode(mode);
 
       if (mode === 'compact') {
+        const { nextTabs, nextActiveTabId, removed } = removeTerminalWorkbenchTabs(openWorkbenchTabsRef.current, activeWorkbenchTabId);
+        if (removed) {
+          setOpenWorkbenchTabs(nextTabs);
+          setActiveWorkbenchTabId(nextActiveTabId);
+        }
         setSearchParams(
           (current) => {
             const next = new URLSearchParams(clearWorkbenchOnlySearchParamsForCompact(current.toString()));
@@ -1945,6 +1962,7 @@ export function Layout() {
     },
     [
       appLayoutMode,
+      activeWorkbenchTabId,
       extensionRegistry.surfaces,
       location.pathname,
       navigate,

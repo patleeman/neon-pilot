@@ -7,6 +7,7 @@ import {
   clearWorkbenchOnlySearchParamsForCompact,
   focusComposerTextarea,
   focusFirstSidebarControl,
+  removeTerminalWorkbenchTabs,
   readStoredPanelWidth,
   readStoredWorkbenchExplorerOpen,
   resolveActiveWorkspaceCwd,
@@ -148,6 +149,32 @@ describe('Layout workbench rail state', () => {
     expect(clearWorkbenchOnlySearchParamsForCompact('checkpoint=abc123&run=run-1&file=notes%2Ftodo.md&artifact=artifact-1')).toBe(
       'file=notes%2Ftodo.md&artifact=artifact-1',
     );
+  });
+
+  it('retires terminal tabs when compact mode unmounts the workbench', () => {
+    expect(
+      removeTerminalWorkbenchTabs(
+        [
+          { id: 'files-1', mode: 'files' },
+          { id: 'terminal-1', mode: 'terminal' },
+          { id: 'chat-1', mode: 'chat', conversationId: 'chat-1' },
+        ],
+        'terminal-1',
+      ),
+    ).toEqual({
+      nextTabs: [
+        { id: 'files-1', mode: 'files' },
+        { id: 'chat-1', mode: 'chat', conversationId: 'chat-1' },
+      ],
+      nextActiveTabId: null,
+      removed: true,
+    });
+
+    expect(removeTerminalWorkbenchTabs([{ id: 'files-1', mode: 'files' }], 'files-1')).toEqual({
+      nextTabs: [{ id: 'files-1', mode: 'files' }],
+      nextActiveTabId: 'files-1',
+      removed: false,
+    });
   });
 });
 

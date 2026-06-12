@@ -370,4 +370,5 @@ describe('Layout workbench toggle', () => {
     expect(newTabButton.closest('.overflow-x-auto')).toBeNull();
     expect(document.querySelector('.ui-workbench-tab')?.parentElement?.className).toContain('overflow-x-auto');
   });
+
 });
