@@ -492,6 +492,7 @@ export function WorkspaceExplorer({
   const [diffState, setDiffState] = useState<LoadState<WorkspaceDiffOverlay>>({ status: 'idle', data: null, error: null });
   const refreshSerial = useRef(0);
   const refreshTimer = useRef<number | null>(null);
+  const selectFileRequestIdRef = useRef(0);
   const useNativeWorkspaceContextMenu = shouldUseNativeAppContextMenus();
   const { model, resetTree, nativeContextMenuOpenRef } = useFileTreeModel({
     useNativeContextMenu: useNativeWorkspaceContextMenu,
@@ -556,6 +557,7 @@ export function WorkspaceExplorer({
   useWorkspaceWatcher(cwd, open || railOnly, scheduleRefresh);
 
   useEffect(() => {
+    selectFileRequestIdRef.current += 1;
     setNodes({});
     setSelectedPath(null);
     setFileState({ status: 'idle', data: null, error: null });
@@ -640,22 +642,37 @@ export function WorkspaceExplorer({
   const selectFile = useCallback(
     async (entry: WorkspaceEntry) => {
       if (!cwd) return;
+      const requestId = selectFileRequestIdRef.current + 1;
+      selectFileRequestIdRef.current = requestId;
+      const isCurrentRequest = () => selectFileRequestIdRef.current === requestId;
       setSelectedPath(entry.path);
       setFileState({ status: 'loading', data: null, error: null });
       setDiffState({ status: 'idle', data: null, error: null });
       try {
         const file = await api.workspaceFile(cwd, entry.path);
+        if (!isCurrentRequest()) {
+          return;
+        }
         setFileState({ status: 'idle', data: file, error: null });
         if (file.gitStatus) {
           setDiffState({ status: 'loading', data: null, error: null });
           try {
             const diff = await api.workspaceDiff(cwd, entry.path);
+            if (!isCurrentRequest()) {
+              return;
+            }
             setDiffState({ status: 'idle', data: diff, error: null });
           } catch {
+            if (!isCurrentRequest()) {
+              return;
+            }
             setDiffState({ status: 'idle', data: null, error: null });
           }
         }
       } catch (error) {
+        if (!isCurrentRequest()) {
+          return;
+        }
         setFileState({ status: 'idle', data: null, error: error instanceof Error ? error.message : String(error) });
       }
     },

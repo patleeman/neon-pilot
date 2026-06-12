@@ -330,6 +330,92 @@ describe('formatWorkspaceEntrySize', () => {
     vi.useRealTimers();
   });
 
+  it('ignores stale workspace explorer file loads after selecting a different file', async () => {
+    const tree = deferred<{
+      root: string;
+      rootName: string;
+      rootKind: 'git';
+      branch: string;
+      changes: never[];
+      entries: Array<{ path: string; name: string; kind: 'file'; size: number; gitStatus: null; descendantGitStatusCount: null }>;
+    }>();
+    const fileA = deferred<ReturnType<typeof file>>();
+    const fileB = deferred<ReturnType<typeof file>>();
+    apiMocks.workspaceTree.mockReturnValue(tree.promise);
+    apiMocks.workspaceFile.mockImplementation((_cwd: string, path: string) => {
+      if (path === 'a.ts') {
+        return fileA.promise;
+      }
+      if (path === 'b.ts') {
+        return fileB.promise;
+      }
+      throw new Error(`unexpected file ${path}`);
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(React.createElement(WorkspaceExplorer, { cwd: '/repo', onDraftPrompt: () => undefined }));
+    });
+
+    await act(async () => {
+      tree.resolve({
+        root: '/repo',
+        rootName: 'repo',
+        rootKind: 'git',
+        branch: 'main',
+        changes: [],
+        entries: [
+          { path: 'a.ts', name: 'a.ts', kind: 'file', size: 1, gitStatus: null, descendantGitStatusCount: null },
+          { path: 'b.ts', name: 'b.ts', kind: 'file', size: 1, gitStatus: null, descendantGitStatusCount: null },
+        ],
+      });
+      await tree.promise;
+    });
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('a.ts');
+      expect(container.textContent).toContain('b.ts');
+    });
+
+    const rows = [...container.querySelectorAll('[role="button"]')];
+    const aRow = rows.find((node) => node.textContent?.includes('a.ts'));
+    const bRow = rows.find((node) => node.textContent?.includes('b.ts'));
+    expect(aRow).toBeTruthy();
+    expect(bRow).toBeTruthy();
+
+    act(() => {
+      aRow?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    act(() => {
+      bRow?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    await act(async () => {
+      fileB.resolve(file('b.ts', 'current b'));
+      await fileB.promise;
+    });
+
+    await vi.waitFor(() => {
+      const textarea = container.querySelector('textarea') as HTMLTextAreaElement | null;
+      expect(textarea?.value).toBe('current b');
+    });
+
+    await act(async () => {
+      fileA.resolve(file('a.ts', 'stale a'));
+      await fileA.promise;
+    });
+
+    await vi.waitFor(() => {
+      const textarea = container.querySelector('textarea') as HTMLTextAreaElement | null;
+      expect(textarea?.value).toBe('current b');
+      expect(container.textContent).toContain('b.ts');
+    });
+  });
+
   it('ignores late workspace watcher callbacks after unmount', async () => {
     vi.useFakeTimers();
     apiMocks.workspaceTree.mockResolvedValue({
