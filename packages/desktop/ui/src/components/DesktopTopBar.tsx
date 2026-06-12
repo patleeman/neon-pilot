@@ -128,6 +128,7 @@ export function DesktopTopBar({
   const { topBarElements } = useExtensionRegistry();
   const searchShellRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const browserNavigationSyncTimerRef = useRef<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [navigation, setNavigation] = useState<DesktopNavigationState>({
@@ -194,12 +195,30 @@ export function DesktopTopBar({
   const desktopShell = isDesktopShell();
   const showDesktopChrome = bridge !== null || environment !== null || desktopShell;
 
+  useEffect(
+    () => () => {
+      if (browserNavigationSyncTimerRef.current !== null) {
+        window.clearTimeout(browserNavigationSyncTimerRef.current);
+        browserNavigationSyncTimerRef.current = null;
+      }
+    },
+    [],
+  );
+
+  function scheduleBrowserNavigationSync() {
+    if (browserNavigationSyncTimerRef.current !== null) {
+      window.clearTimeout(browserNavigationSyncTimerRef.current);
+    }
+    browserNavigationSyncTimerRef.current = window.setTimeout(() => {
+      browserNavigationSyncTimerRef.current = null;
+      setNavigation(readBrowserNavigationState());
+    }, 120);
+  }
+
   async function handleBack() {
     if (!bridge) {
       window.history.back();
-      window.setTimeout(() => {
-        setNavigation(readBrowserNavigationState());
-      }, 120);
+      scheduleBrowserNavigationSync();
       return;
     }
 
@@ -210,9 +229,7 @@ export function DesktopTopBar({
   async function handleForward() {
     if (!bridge) {
       window.history.forward();
-      window.setTimeout(() => {
-        setNavigation(readBrowserNavigationState());
-      }, 120);
+      scheduleBrowserNavigationSync();
       return;
     }
 

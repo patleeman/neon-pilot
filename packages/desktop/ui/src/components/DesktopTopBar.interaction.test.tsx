@@ -64,4 +64,46 @@ describe('DesktopTopBar interactions', () => {
 
     expect(back).toHaveBeenCalledTimes(1);
   });
+
+  it('clears delayed browser navigation sync after unmount', async () => {
+    vi.useFakeTimers();
+    window.history.replaceState({ idx: 1 }, '', '/conversations/one');
+    window.sessionStorage.setItem('__pa_nav_max_idx__', '1');
+    const sessionSetItem = vi.spyOn(window.sessionStorage.__proto__, 'setItem');
+    const back = vi.spyOn(window.history, 'back').mockImplementation(() => undefined);
+    const view = render(
+      <MemoryRouter>
+        <DesktopTopBar
+          environment={{
+            isElectron: true,
+            activeHostId: 'local',
+            activeHostLabel: 'Local',
+            activeHostKind: 'local',
+            activeHostSummary: 'Local runtime is healthy.',
+          }}
+          sidebarOpen
+          onToggleSidebar={() => {}}
+          showRailToggle={false}
+          railOpen={false}
+          onToggleRail={() => {}}
+        />
+      </MemoryRouter>,
+    );
+
+    const backButton = screen.getByRole('button', { name: 'Go back' }) as HTMLButtonElement;
+    expect(backButton.disabled).toBe(false);
+
+    sessionSetItem.mockClear();
+    fireEvent.click(backButton);
+    expect(back).toHaveBeenCalledTimes(1);
+
+    view.unmount();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+
+    expect(sessionSetItem).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
 });
