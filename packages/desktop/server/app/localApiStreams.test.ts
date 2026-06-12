@@ -260,7 +260,7 @@ describe('localApiStreams', () => {
     });
     expect(events).toEqual([
       { type: 'open' },
-      { type: 'message', data: JSON.stringify({ type: 'output', data: 'startup-prompt' }) },
+      { type: 'sse', data: JSON.stringify({ type: 'output', data: 'startup-prompt' }) },
     ]);
 
     unsubscribe();
@@ -294,6 +294,28 @@ describe('localApiStreams', () => {
         signal: expect.any(AbortSignal),
       },
     });
-    expect(events).toEqual([{ type: 'open' }, { type: 'message', data: JSON.stringify({ ok: true }) }, { type: 'close' }]);
+    expect(events).toEqual([{ type: 'open' }, { type: 'sse', data: JSON.stringify({ ok: true }) }, { type: 'close' }]);
+  });
+
+  it('preserves named SSE event metadata through the desktop local API bridge', async () => {
+    const events: unknown[] = [];
+    extensionHostClientMock.invokeRoute.mockResolvedValue({
+      stream: 'sse',
+      events: (async function* () {
+        yield { event: 'update', id: 'evt-1', retry: 1200, data: { ok: true } };
+      })(),
+    });
+
+    await subscribeDesktopLocalApiStreamByUrl(
+      new URL('http://local.test/api/extensions/system-terminal/routes/stream'),
+      (event) => events.push(event),
+    );
+    await Promise.resolve();
+
+    expect(events).toEqual([
+      { type: 'open' },
+      { type: 'sse', event: 'update', id: 'evt-1', retry: 1200, data: JSON.stringify({ ok: true }) },
+      { type: 'close' },
+    ]);
   });
 });

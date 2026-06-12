@@ -18,6 +18,7 @@ const DEFERRED_APP_EVENT_SNAPSHOT_DELAY_MS = 6_000;
 export type DesktopLocalApiStreamEvent =
   | { type: 'open' }
   | { type: 'message'; data: string }
+  | { type: 'sse'; data: string; event?: string; id?: string; retry?: number }
   | { type: 'error'; message: string }
   | { type: 'close' };
 
@@ -182,8 +183,11 @@ async function subscribeDesktopExtensionRouteStream(url: URL, onEvent: (event: D
       for await (const event of events) {
         if (closed) return;
         onEvent({
-          type: 'message',
+          type: 'sse',
           data: typeof event.data === 'string' ? event.data : JSON.stringify(event.data ?? null),
+          ...(typeof event.event === 'string' ? { event: event.event } : {}),
+          ...(typeof event.id === 'string' ? { id: event.id } : {}),
+          ...(typeof event.retry === 'number' ? { retry: event.retry } : {}),
         });
       }
       close();

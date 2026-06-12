@@ -133,4 +133,43 @@ describe('createDesktopAwareEventSource', () => {
     source.close();
     expect(JSON.parse(socket?.sent.at(-1) ?? '{}')).toMatchObject({ type: 'unsubscribe', subscriptionId: 'sub-1' });
   });
+
+  it('dispatches named SSE events and preserves id and retry metadata over realtime streams', async () => {
+    const sockets: FakeWebSocket[] = [];
+    vi.stubGlobal(
+      'WebSocket',
+      class extends FakeWebSocket {
+        constructor(url: string) {
+          super(url);
+          sockets.push(this);
+        }
+      },
+    );
+    vi.stubGlobal('window', { location: { protocol: 'http:', host: '127.0.0.1:3000' } });
+
+    const { createDesktopAwareEventSource } = await import('./desktopEventSource');
+    const source = createDesktopAwareEventSource('/api/extensions/system-terminal/routes/stream');
+    const onupdate = vi.fn();
+    source.addEventListener('update', onupdate);
+
+    const socket = sockets[0];
+    socket?.open();
+    socket?.receive({
+      type: 'stream',
+      subscriptionId: 'sub-2',
+      event: { type: 'open' },
+    });
+    socket?.receive({
+      type: 'stream',
+      subscriptionId: 'sub-2',
+      event: { type: 'sse', event: 'update', id: 'evt-1', retry: 1200, data: 'ready' },
+    });
+
+    expect(onupdate).toHaveBeenCalledTimes(1);
+    const event = onupdate.mock.calls[0]?.[0] as MessageEvent<string> & { retry?: number };
+    expect(event.type).toBe('update');
+    expect(event.data).toBe('ready');
+    expect(event.lastEventId).toBe('evt-1');
+    expect(event.retry).toBe(1200);
+  });
 });
