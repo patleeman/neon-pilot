@@ -211,6 +211,46 @@ h1 {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
+.quick-install {
+  max-width: 720px;
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(8, 11, 17, 0.84);
+}
+
+.quick-install div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.quick-install span {
+  color: #dfe7ff;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.quick-install a {
+  color: #9bb4ff;
+  font-size: 0.78rem;
+}
+
+.quick-install code {
+  display: block;
+  overflow-x: auto;
+  padding: 12px 14px;
+  color: #e7e4db;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
 .hero-points {
   display: grid;
   gap: 31px;
@@ -1324,7 +1364,8 @@ footer a {
   }
 
   .closing,
-  footer {
+  footer,
+  .quick-install div {
     flex-direction: column;
     align-items: flex-start;
   }
