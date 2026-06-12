@@ -139,6 +139,46 @@ describe('live session routes', () => {
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
+  it('ignores late live session events after the client disconnects', () => {
+    const router = { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() };
+    registerLiveSessionRoutes(router as never, {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getDefaultWebCwd: () => '/repo',
+      buildLiveSessionResourceOptions: () => ({ additionalSkillPaths: [] }),
+      buildLiveSessionExtensionFactories: () => [],
+      flushLiveDeferredResumes: vi.fn(),
+      listTasksForRuntimeScope: () => [],
+      listMemoryDocs: () => [],
+    });
+    const handler = router.get.mock.calls.find(([path]) => path === '/api/live-sessions/:id/events')?.[1];
+    expect(handler).toBeTypeOf('function');
+
+    liveSessions.isLive.mockReturnValueOnce(true);
+    const unsubscribe = vi.fn();
+    let listener: ((event: unknown) => void) | undefined;
+    liveSessions.subscribe.mockImplementationOnce((_sessionId, onEvent) => {
+      listener = onEvent as typeof listener;
+      return unsubscribe;
+    });
+    const closeHandlers: Record<string, () => void> = {};
+    const req = {
+      params: { id: 'live-1' },
+      query: {},
+      on: vi.fn((event, cb) => {
+        closeHandlers[event] = cb;
+      }),
+    };
+    const response = { setHeader: vi.fn(), flushHeaders: vi.fn(), write: vi.fn(), status: vi.fn().mockReturnThis(), json: vi.fn() };
+
+    handler(req, response);
+    closeHandlers.close?.();
+    listener?.({ type: 'late-entry' });
+
+    expect(unsubscribe).toHaveBeenCalledOnce();
+    expect(response.write).not.toHaveBeenCalledWith('data: {"type":"late-entry"}\n\n');
+  });
+
   it('returns not-found instead of opening a blank event stream when subscription disappears', () => {
     const router = { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() };
     registerLiveSessionRoutes(router as never, {

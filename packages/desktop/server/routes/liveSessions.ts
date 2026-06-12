@@ -261,9 +261,14 @@ export function registerLiveSessionRoutes(
 
     const bufferedEvents: unknown[] = [];
     let streamReady = false;
+    let closed = false;
     const unsubscribe = subscribeLiveSession(
       id,
       (event) => {
+        if (closed) {
+          return;
+        }
+
         if (streamReady) {
           res.write(`data: ${JSON.stringify(event)}\n\n`);
         } else {
@@ -287,16 +292,30 @@ export function registerLiveSessionRoutes(
     res.flushHeaders();
     streamReady = true;
     for (const event of bufferedEvents) {
+      if (closed) {
+        break;
+      }
       res.write(`data: ${JSON.stringify(event)}\n\n`);
     }
     bufferedEvents.length = 0;
 
-    const heartbeat = setInterval(() => res.write(': heartbeat\n\n'), 15_000);
+    const heartbeat = setInterval(() => {
+      if (!closed) {
+        res.write(': heartbeat\n\n');
+      }
+    }, 15_000);
 
-    req.on('close', () => {
+    const close = () => {
+      if (closed) {
+        return;
+      }
+
+      closed = true;
       clearInterval(heartbeat);
       unsubscribe();
-    });
+    };
+
+    req.on('close', close);
   });
 
   /** Abort a running agent */
