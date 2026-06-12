@@ -151,7 +151,7 @@ describe('Layout workbench rail state', () => {
     );
   });
 
-  it('retires terminal tabs when compact mode unmounts the workbench', () => {
+  it('retires terminal tabs when the workbench is hidden', () => {
     expect(
       removeTerminalWorkbenchTabs(
         [

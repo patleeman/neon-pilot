@@ -1913,6 +1913,14 @@ export function Layout() {
     return () => setExtensionCommandContext('layout.canToggleRightRail', null);
   }, [canToggleRightRail]);
 
+  useEffect(() => {
+    if (routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces)) return;
+    const { nextTabs, nextActiveTabId, removed } = removeTerminalWorkbenchTabs(openWorkbenchTabsRef.current, activeWorkbenchTabId);
+    if (!removed) return;
+    setOpenWorkbenchTabs(nextTabs);
+    setActiveWorkbenchTabId(nextActiveTabId);
+  }, [activeWorkbenchTabId, extensionRegistry.surfaces, location.pathname]);
+
   const handleAppLayoutModeChange = useCallback(
     (mode: AppLayoutMode) => {
       const previousMode = appLayoutMode;
