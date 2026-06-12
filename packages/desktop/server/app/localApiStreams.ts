@@ -6,6 +6,7 @@ import { inlineConversationSessionSnapshotAssetsCapability } from '../conversati
 import type { DisplayBlock } from '../conversations/conversationTypes.js';
 import { subscribe as subscribeLiveSession } from '../conversations/liveSessions.js';
 import { subscribeProviderOAuthLogin } from '../models/providerAuth.js';
+import { shouldCloseProviderOAuthSubscription } from './localApiProviderOAuthSubscription.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { buildSnapshotEventsForTopic, readInitialAppEventTopics } from '../routes/system.js';
 import { subscribeAppEvents } from '../shared/appEvents.js';
@@ -376,7 +377,7 @@ async function subscribeDesktopProviderOAuthStream(url: URL, onEvent: (event: De
   }
 
   let closed = false;
-  let unsubscribe = () => {};
+  let unsubscribe: (() => void) | null = null;
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   const close = () => {
@@ -389,21 +390,28 @@ async function subscribeDesktopProviderOAuthStream(url: URL, onEvent: (event: De
       clearTimeout(timeoutId);
       timeoutId = null;
     }
-    unsubscribe();
+    const teardown = unsubscribe;
+    unsubscribe = null;
+    teardown?.();
     onEvent({ type: 'close' });
   };
 
   onEvent({ type: 'open' });
-  unsubscribe = subscribeProviderOAuthLogin(loginId, (login) => {
+  const teardown = subscribeProviderOAuthLogin(loginId, (login) => {
     if (closed) {
       return;
     }
 
     emitStreamMessage(onEvent, login);
-    if (login.status === 'completed' || login.status === 'failed') {
+    if (shouldCloseProviderOAuthSubscription(login)) {
       close();
     }
   });
+  if (closed) {
+    teardown();
+    return () => {};
+  }
+  unsubscribe = teardown;
 
   timeoutId = setTimeout(
     () => {

@@ -190,6 +190,32 @@ describe('localApiStreams', () => {
     });
   });
 
+  it('closes provider OAuth desktop streams when the login is cancelled', async () => {
+    const events: unknown[] = [];
+    const unsubscribe = vi.fn();
+
+    subscribeProviderOAuthLoginMock.mockImplementation((_loginId, listener) => {
+      listener({ id: 'login-1', status: 'cancelled' });
+      return unsubscribe;
+    });
+
+    const close = await subscribeDesktopLocalApiStreamByUrl(
+      new URL('http://local.test/api/provider-auth/oauth/login-1/events'),
+      (event) => events.push(event),
+    );
+
+    expect(subscribeProviderOAuthLoginMock).toHaveBeenCalledWith('login-1', expect.any(Function));
+    expect(unsubscribe).toHaveBeenCalledOnce();
+    expect(events).toEqual([
+      { type: 'open' },
+      { type: 'message', data: JSON.stringify({ id: 'login-1', status: 'cancelled' }) },
+      { type: 'close' },
+    ]);
+
+    close();
+    expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
   it('streams debounced workspace changes through the desktop local API bridge without recursive repo watches', async () => {
     vi.useFakeTimers();
     try {
