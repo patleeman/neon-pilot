@@ -110,6 +110,36 @@ describe('createDesktopRealtimeUpgradeHandler', () => {
     handleUpgrade.mockRestore();
   });
 
+  it('tears down late local API stream subscriptions when the socket closes before subscribe resolves', async () => {
+    const streamUnsubscribe = vi.fn();
+    let resolveSubscribe: ((unsubscribe: () => void) => void) | null = null;
+    subscribeDesktopLocalApiStreamByUrlMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSubscribe = resolve;
+        }),
+    );
+
+    const fakeSocket = new FakeWebSocket();
+    const { createDesktopRealtimeUpgradeHandler } = await import('./realtime.js');
+    const handler = createDesktopRealtimeUpgradeHandler();
+    const server = (await import('ws')).WebSocketServer;
+    const handleUpgrade = vi.spyOn(server.prototype, 'handleUpgrade').mockImplementation((_request, _socket, _head, cb) => {
+      cb(fakeSocket as never);
+    });
+
+    handler({ url: '/api/realtime' } as never, { destroy: vi.fn() } as never, Buffer.alloc(0));
+    fakeSocket.receive({ type: 'subscribe', id: 'req-late', path: '/api/live-sessions/live-1/events' });
+    fakeSocket.emit('close');
+
+    resolveSubscribe?.(streamUnsubscribe);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(streamUnsubscribe).toHaveBeenCalledTimes(1);
+    expect(fakeSocket.sent.map((entry) => JSON.parse(entry)).find((entry) => entry.type === 'subscribed')).toBeUndefined();
+    handleUpgrade.mockRestore();
+  });
+
   it('attaches terminal sessions and routes input, resize, output, and close over WebSocket', async () => {
     const terminalUnsubscribe = vi.fn();
     let emitTerminal: ((event: { type: 'output'; data: string } | { type: 'exit'; code: number | null }) => void) | undefined;

@@ -53,7 +53,10 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
   server.on('connection', (websocket) => {
     const streamSubscriptions = new Map<string, () => void>();
     const terminalSubscriptions = new Map<string, () => void>();
+    let cleanedUp = false;
     const cleanup = () => {
+      if (cleanedUp) return;
+      cleanedUp = true;
       appUnsubscribe();
       for (const unsubscribe of streamSubscriptions.values()) unsubscribe();
       streamSubscriptions.clear();
@@ -155,9 +158,14 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
           const unsubscribe = await subscribeDesktopLocalApiStreamByUrl(new URL(path, 'http://desktop.local'), (event) => {
             writeRealtimeMessage(websocket, { type: 'stream', subscriptionId, event });
           });
+          if (cleanedUp || websocket.readyState !== websocket.OPEN) {
+            unsubscribe();
+            return;
+          }
           streamSubscriptions.set(subscriptionId, unsubscribe);
           writeRealtimeMessage(websocket, { type: 'subscribed', id: message.id, subscriptionId });
         } catch (error) {
+          if (cleanedUp) return;
           writeRealtimeMessage(websocket, {
             type: 'error',
             id: message.id,
