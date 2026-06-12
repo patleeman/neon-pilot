@@ -4,18 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.16** — patch release.
+**v0.11.17** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.16
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.17
 
 Highlights in this train:
 
-- Makes keyboard-driven work across conversations, workbench, browser, scratchpad, composer, transcript blocks, notifications, and activity details more complete by command-backing the expected controls and shortcut flows.
-- Hardens command palette and shortcut execution so unavailable, parameterized, busy, disabled, or context-missing commands report accurately instead of silently no-oping or firing from the wrong surface.
-- Adds conversation activity, connection, and quick-action plumbing so active runs, linked details, deferred resumes, and workspace context are easier to inspect and control.
-- Moves Knowledge and Scratchpad into extension-first surfaces, including a single-pane Scratchpad tool and installable Knowledge packaging aligned with the extension model.
-- Improves terminal reliability by moving terminal I/O onto realtime websocket/SSE paths, replaying startup output, preserving xterm terminal font rendering, and bridging extension streams in the desktop app.
-- Keeps CLI, shortcut, and command documentation/tests aligned with the expanded command registry and stricter validation behavior.
+- Makes terminal and extension streaming more resilient by closing cancelled streams cleanly, preserving SSE metadata, replaying exits for late attaches, and recovering terminal sessions after realtime disconnects.
+- Hardens desktop realtime, OAuth, automation, workspace, live-session, sidebar, attachment, and route refresh lifecycles so late callbacks and stale loads do not overwrite current UI state.
+- Improves workspace reliability by guarding stale viewer, directory, autosave, watcher, and forced-load paths across quick route or selection changes.
+- Tightens CLI and internal agent turn behavior with clearer command discovery, aligned CLI docs/skills, completion waiting, and final ask-user text propagation.
+- Adds daily telemetry usage reporting and keeps release-facing extension smoke checks aligned with lazy-rendered settings routes.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

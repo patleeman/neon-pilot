@@ -372,14 +372,18 @@ async function installMatrixPackages(cdp, matrix) {
 async function assertRoutes(cdp, child, matrix) {
   for (const route of matrix.appRoutes) {
     await cdp.send('Page.navigate', { url: `neon-pilot://app${route.path}` });
-    const body = await waitForLoadedBody(cdp, child, route.path);
+    const body = route.text?.length
+      ? await waitForBodyText(cdp, child, route.path, route.text)
+      : await waitForLoadedBody(cdp, child, route.path);
     await assertRouteExpectations(cdp, route.path, route, body);
     console.log(`  app route ok: ${route.path}`);
   }
 
   for (const route of matrix.routes) {
     await cdp.send('Page.navigate', { url: `neon-pilot://app${route.path}` });
-    const body = await waitForLoadedBody(cdp, child, `${route.extensionId} ${route.path}`);
+    const body = route.text?.length
+      ? await waitForBodyText(cdp, child, `${route.extensionId} ${route.path}`, route.text)
+      : await waitForLoadedBody(cdp, child, `${route.extensionId} ${route.path}`);
     await assertRouteExpectations(cdp, `${route.extensionId} ${route.path}`, route, body);
     console.log(`  route ok: ${route.extensionId} ${route.path}`);
   }

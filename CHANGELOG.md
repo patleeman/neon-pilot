@@ -4,7 +4,11 @@
 
 ### Highlights
 
-- TODO: Replace this with 3-6 human-written bullets summarizing the release by user-visible outcome, not raw commit messages.
+- Makes terminal and extension streaming more resilient by closing cancelled streams cleanly, preserving SSE metadata, replaying exits for late attaches, and recovering terminal sessions after realtime disconnects.
+- Hardens desktop realtime, OAuth, automation, workspace, live-session, sidebar, attachment, and route refresh lifecycles so late callbacks and stale loads do not overwrite current UI state.
+- Improves workspace reliability by guarding stale viewer, directory, autosave, watcher, and forced-load paths across quick route or selection changes.
+- Tightens CLI and internal agent turn behavior with clearer command discovery, aligned CLI docs/skills, completion waiting, and final ask-user text propagation.
+- Adds daily telemetry usage reporting and keeps release-facing extension smoke checks aligned with lazy-rendered settings routes.
 
 ### Notes
 
