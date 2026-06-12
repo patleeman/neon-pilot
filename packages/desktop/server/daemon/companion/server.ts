@@ -1570,6 +1570,7 @@ export class DaemonCompanionServer {
   private async handleSocketConnection(websocket: WebSocket, device: CompanionPairedDeviceSummary): Promise<void> {
     const subscriptions = new Map<string, () => void>();
     let messageQueue = Promise.resolve();
+    let closed = false;
     const hello = buildHello(this.stateRoot);
     writeSocketMessage(websocket, {
       type: 'ready',
@@ -1578,6 +1579,10 @@ export class DaemonCompanionServer {
     });
 
     const closeAllSubscriptions = () => {
+      if (closed) {
+        return;
+      }
+      closed = true;
       for (const unsubscribe of subscriptions.values()) {
         try {
           unsubscribe();
@@ -1609,6 +1614,10 @@ export class DaemonCompanionServer {
             const unsubscribe = await this.handleSocketSubscribe(message, (event) => {
               writeSocketMessage(websocket, event);
             });
+            if (closed || websocket.readyState !== websocket.OPEN) {
+              unsubscribe();
+              return;
+            }
             subscriptions.set(subscriptionKey, unsubscribe);
             writeSocketMessage(websocket, {
               id: message.id,
@@ -1629,6 +1638,9 @@ export class DaemonCompanionServer {
             result: { unsubscribed: true, topic: message.topic, key: message.key ?? 'app' },
           });
         } catch (error) {
+          if (closed) {
+            return;
+          }
           const parsed = (() => {
             try {
               return JSON.parse(typeof data === 'string' ? data : data.toString('utf-8')) as { id?: unknown };
