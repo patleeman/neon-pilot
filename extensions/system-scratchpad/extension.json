@@ -52,6 +52,14 @@
         "worker": {
           "enabled": true
         }
+      },
+      {
+        "id": "listScratchpadConnections",
+        "handler": "listScratchpadConnections",
+        "title": "Scratchpad conversation connections",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
@@ -136,6 +144,16 @@
         "title": "Scratchpad",
         "priority": 60,
         "scope": ["conversation"]
+      }
+    ],
+    "conversationConnectionProviders": [
+      {
+        "id": "scratchpad",
+        "title": "Scratchpad",
+        "action": "listScratchpadConnections",
+        "kind": "state",
+        "surfaces": ["rightRail", "cli"],
+        "priority": 40
       }
     ],
     "cliCommands": [

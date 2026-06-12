@@ -127,6 +127,7 @@ export interface ExtensionContributions {
   turnContextProviders?: ExtensionTurnContextProviderContribution[];
   runtimeProviders?: ExtensionRuntimeProviderContribution[];
   gatewayProviders?: ExtensionGatewayProviderContribution[];
+  conversationConnectionProviders?: ExtensionConversationConnectionProviderContribution[];
   quickOpen?: ExtensionQuickOpenContribution[];
   searchProviders?: ExtensionSearchProviderContribution[];
   themes?: ExtensionThemeContribution[];
@@ -184,6 +185,15 @@ export interface ExtensionGatewayProviderContribution {
   docsUrl?: string;
   /** Sort order in the Gateways provider list. Lower renders first. Default 0. */
   order?: number;
+}
+
+export interface ExtensionConversationConnectionProviderContribution {
+  id: string;
+  action: string;
+  kind?: 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface';
+  title?: string;
+  surfaces?: Array<'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli'>;
+  priority?: number;
 }
 
 export interface ExtensionTopBarElementContribution {

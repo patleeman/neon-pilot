@@ -188,6 +188,15 @@ interface ExtensionComposerShelfContribution {
   placement?: 'top' | 'bottom';
 }
 
+interface ExtensionConversationConnectionProviderContribution {
+  id: string;
+  action: string;
+  kind?: 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface';
+  title?: string;
+  surfaces?: Array<'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli'>;
+  priority?: number;
+}
+
 interface ExtensionNewConversationPanelContribution {
   id: string;
   component: string;
@@ -393,6 +402,7 @@ interface ExtensionContributions {
   promptAssemblyHooks?: ExtensionPromptAssemblyHookContribution[];
   modelProfiles?: ExtensionModelProfileContribution[];
   gatewayProviders?: ExtensionGatewayProviderContribution[];
+  conversationConnectionProviders?: ExtensionConversationConnectionProviderContribution[];
   transcriptRenderers?: ExtensionTranscriptRendererContribution[];
   promptReferences?: ExtensionPromptReferenceContribution[];
   quickOpen?: ExtensionQuickOpenContribution[];

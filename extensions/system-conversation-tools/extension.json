@@ -345,6 +345,62 @@
         ]
       },
       {
+        "id": "conversations-connections",
+        "command": "conversations connections",
+        "description": "List meaningful things connected to a conversation.",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "connections",
+        "usage": "conversations connections <conversationId> [--kind activity|state|asset|context|integration|surface|all] [--surface activityShelf|composerShelf|rightRail|workbench|sidebar|cli|all] [--active] [--visibility primary|system|hidden|visible|all] [--json]",
+        "examples": [
+          "neon-pilot conversations connections conversation-example --json",
+          "neon-pilot conversations connections conversation-example --kind state --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": ["activity", "state", "asset", "context", "integration", "surface", "all"]
+            },
+            "surface": {
+              "type": "string",
+              "enum": ["activityShelf", "composerShelf", "rightRail", "workbench", "sidebar", "cli", "all"]
+            },
+            "active": {
+              "type": "boolean",
+              "description": "Only include active connection items."
+            },
+            "visibility": {
+              "type": "string",
+              "enum": ["primary", "system", "hidden", "visible", "all"]
+            },
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
+      },
+      {
         "id": "conversations-inspect",
         "command": "conversations inspect",
         "description": "Inspect a conversation by id; optional second arg is outline, query, diff, or read_window.",
@@ -1806,6 +1862,7 @@
           "enabled": true,
           "inputActions": [
             "activity",
+            "connections",
             "inspect",
             "create",
             "create_and_run",

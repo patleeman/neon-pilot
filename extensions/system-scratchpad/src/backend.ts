@@ -103,6 +103,10 @@ function summarize(state: ScratchpadState): string {
   return state.content ? `${state.content.length} characters` : 'empty';
 }
 
+function previewContent(content: string): string {
+  return content.trim().split(/\r?\n/u)[0]?.trim().slice(0, 120) ?? '';
+}
+
 export async function scratchpadTool(input: unknown, ctx: ExtensionBackendContext): Promise<unknown> {
   input = normalizeCliInput(input);
   const action = readAction(input);
@@ -142,6 +146,31 @@ export async function provideTurnContext(
           '',
           state.content.trim(),
         ].join('\n'),
+      },
+    ],
+  };
+}
+
+export async function listScratchpadConnections(input: unknown, ctx: ExtensionBackendContext): Promise<{ items: unknown[] }> {
+  const conversationId = conversationIdFrom(input, ctx);
+  const state = await readState(conversationId, ctx);
+  if (!state.content.trim()) return { items: [] };
+  return {
+    items: [
+      {
+        id: 'scratchpad',
+        conversationId,
+        kind: 'state',
+        title: 'Scratchpad',
+        subtitle: previewContent(state.content) || summarize(state),
+        active: false,
+        meaningful: true,
+        visibility: 'system',
+        source: { type: 'conversation-metadata', id: METADATA_NAMESPACE },
+        surfaces: ['rightRail', 'cli'],
+        ...(state.updatedAt ? { updatedAt: state.updatedAt } : {}),
+        actions: [{ id: 'open', label: 'Open', command: 'scratchpad.open' }],
+        payload: { length: state.content.length, preview: previewContent(state.content) },
       },
     ],
   };

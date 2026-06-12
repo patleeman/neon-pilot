@@ -496,6 +496,50 @@ export interface ConversationActivityResult {
   hidden: ConversationActivityItem[];
 }
 
+export type ConversationConnectionKind = 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface';
+export type ConversationConnectionSurface = 'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli';
+export type ConversationConnectionVisibility = 'primary' | 'system' | 'hidden';
+export type ConversationConnectionStatus =
+  | 'queued'
+  | 'waiting'
+  | 'running'
+  | 'scheduled'
+  | 'ready'
+  | 'failed'
+  | 'done'
+  | 'cancelled'
+  | 'available'
+  | 'unknown';
+
+export interface ConversationConnectionItem {
+  id: string;
+  conversationId: string;
+  kind: ConversationConnectionKind;
+  title: string;
+  subtitle?: string;
+  status?: ConversationConnectionStatus;
+  active: boolean;
+  meaningful: boolean;
+  visibility: ConversationConnectionVisibility;
+  extensionId?: string;
+  source: { type: string; id: string };
+  surfaces: ConversationConnectionSurface[];
+  createdAt?: string;
+  updatedAt?: string;
+  dueAt?: string;
+  actions: Array<{ id: string; label: string; command?: string }>;
+  payload?: unknown;
+}
+
+export interface ConversationConnectionsResult {
+  conversationId: string;
+  items: ConversationConnectionItem[];
+  byKind: Record<ConversationConnectionKind, ConversationConnectionItem[]>;
+  primary: ConversationConnectionItem[];
+  system: ConversationConnectionItem[];
+  hidden: ConversationConnectionItem[];
+}
+
 export interface ExecutionDetailResult {
   execution: ExecutionRecord;
 }

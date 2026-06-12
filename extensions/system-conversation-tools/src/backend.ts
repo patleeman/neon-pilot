@@ -336,6 +336,16 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
       active: flagBoolean(flags, 'active'),
       visibility: flagString(flags, 'visibility'),
     };
+  if (command === 'conversations connections')
+    return {
+      ...body,
+      action: 'connections',
+      conversationId: positionals[0],
+      active: flagBoolean(flags, 'active'),
+      kind: flagString(flags, 'kind'),
+      surface: flagString(flags, 'surface'),
+      visibility: flagString(flags, 'visibility'),
+    };
   if (command === 'conversations inspect') {
     const inspectAction = positionals[1] ?? flagString(flags, 'action') ?? 'outline';
     return {
@@ -582,6 +592,32 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
         action,
         await ctx.conversations.activity(requiredString(payload, 'conversationId'), {
           ...(payload.active !== undefined ? { active: payload.active === true } : {}),
+          ...(optionalString(payload.visibility)
+            ? { visibility: optionalString(payload.visibility) as 'primary' | 'system' | 'hidden' | 'visible' | 'all' }
+            : {}),
+        }),
+      );
+
+    case 'connections':
+      return toolResult(
+        action,
+        await ctx.conversations.connections(requiredString(payload, 'conversationId'), {
+          ...(payload.active !== undefined ? { active: payload.active === true } : {}),
+          ...(optionalString(payload.kind)
+            ? { kind: optionalString(payload.kind) as 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface' | 'all' }
+            : {}),
+          ...(optionalString(payload.surface)
+            ? {
+                surface: optionalString(payload.surface) as
+                  | 'activityShelf'
+                  | 'composerShelf'
+                  | 'rightRail'
+                  | 'workbench'
+                  | 'sidebar'
+                  | 'cli'
+                  | 'all',
+              }
+            : {}),
           ...(optionalString(payload.visibility)
             ? { visibility: optionalString(payload.visibility) as 'primary' | 'system' | 'hidden' | 'visible' | 'all' }
             : {}),

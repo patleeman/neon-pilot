@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { getScratchpad, patchScratchpad, provideTurnContext, scratchpadTool, setScratchpad } from './backend.js';
+import { getScratchpad, listScratchpadConnections, patchScratchpad, provideTurnContext, scratchpadTool, setScratchpad } from './backend.js';
 
 function createContext(initial: Record<string, unknown> = {}) {
   let metadata = { ...initial };
@@ -68,5 +68,27 @@ describe('scratchpad backend', () => {
     const harness = createContext({ content: '   ', updatedAt: '2026-01-01T00:00:00.000Z' });
 
     await expect(provideTurnContext({}, harness.ctx)).resolves.toEqual({ blocks: [] });
+  });
+
+  it('publishes a conversation connection only when scratchpad content exists', async () => {
+    const empty = createContext({ content: '   ', updatedAt: '2026-01-01T00:00:00.000Z' });
+    await expect(listScratchpadConnections({}, empty.ctx)).resolves.toEqual({ items: [] });
+
+    const harness = createContext({ content: 'Decision: use the right rail.\n\nMore notes.', updatedAt: '2026-01-01T00:00:00.000Z' });
+    await expect(listScratchpadConnections({}, harness.ctx)).resolves.toMatchObject({
+      items: [
+        {
+          id: 'scratchpad',
+          conversationId: 'conv-1',
+          kind: 'state',
+          title: 'Scratchpad',
+          subtitle: 'Decision: use the right rail.',
+          active: false,
+          visibility: 'system',
+          source: { type: 'conversation-metadata', id: 'threadScratchpad' },
+          surfaces: ['rightRail', 'cli'],
+        },
+      ],
+    });
   });
 });

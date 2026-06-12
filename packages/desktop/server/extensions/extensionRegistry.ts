@@ -101,6 +101,7 @@ import {
   sortExtensionPromptContextProviderRegistrations,
 } from './extensionPromptContextProviderRegistrations.js';
 import {
+  validateConversationConnectionProviderContributions,
   validateDynamicProviderContributions,
   validateRuntimeProviderContributions,
   validateTurnContextProviderContributions,
@@ -407,6 +408,17 @@ export interface ExtensionSearchProviderRegistration {
   title: string;
   action: string;
   kinds?: string[];
+  priority?: number;
+}
+
+export interface ExtensionConversationConnectionProviderRegistration {
+  extensionId: string;
+  id: string;
+  packageType: ExtensionPackageType;
+  action: string;
+  kind?: 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface';
+  title?: string;
+  surfaces?: Array<'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli'>;
   priority?: number;
 }
 
@@ -942,6 +954,10 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
 
   if (contributes.gatewayProviders !== undefined) {
     validateGatewayProviderContributions(contributes.gatewayProviders);
+  }
+
+  if (contributes.conversationConnectionProviders !== undefined) {
+    validateConversationConnectionProviderContributions(contributes.conversationConnectionProviders);
   }
 
   validateDynamicProviderContributions(contributes, ['skillProviders', 'toolProviders', 'promptTemplateProviders', 'instructionProviders']);
@@ -1578,6 +1594,34 @@ export function listExtensionSearchProviderRegistrations(stateRoot: string = get
           },
         ];
       }),
+    )
+    .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+}
+
+export function listExtensionConversationConnectionProviderRegistrations(
+  stateRoot: string = getStateRoot(),
+): ExtensionConversationConnectionProviderRegistration[] {
+  return listEnabledExtensionEntries(stateRoot)
+    .flatMap((entry) =>
+      (entry.manifest.contributes?.conversationConnectionProviders ?? []).flatMap(
+        (provider): ExtensionConversationConnectionProviderRegistration[] => {
+          const id = provider.id.trim();
+          const action = provider.action.trim();
+          if (!id || !action) return [];
+          return [
+            {
+              extensionId: entry.manifest.id,
+              id,
+              packageType: entry.manifest.packageType ?? 'user',
+              action,
+              ...(provider.kind ? { kind: provider.kind } : {}),
+              ...(provider.title ? { title: provider.title } : {}),
+              ...(provider.surfaces?.length ? { surfaces: provider.surfaces } : {}),
+              ...(Number.isInteger(provider.priority) ? { priority: provider.priority } : {}),
+            },
+          ];
+        },
+      ),
     )
     .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
 }

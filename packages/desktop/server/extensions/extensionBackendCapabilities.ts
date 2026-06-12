@@ -98,6 +98,16 @@ interface ExtensionBackendCapabilityConversations {
     conversationId: string,
     options?: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' },
   ): Promise<unknown> | unknown;
+  connections?(
+    extensionId: string,
+    conversationId: string,
+    options?: {
+      active?: boolean;
+      kind?: 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface' | 'all';
+      surface?: 'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli' | 'all';
+      visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all';
+    },
+  ): Promise<unknown> | unknown;
   get(extensionId: string, conversationId: string): Promise<unknown> | unknown;
   create?(
     extensionId: string,
@@ -451,6 +461,33 @@ function dispatchConversationsCapability(
     }
     return conversations.activity(request.extensionId, requireString(input.conversationId, 'Conversation id'), {
       ...(input.active !== undefined ? { active: optionalBoolean(input.active, 'Conversation activity active') } : {}),
+      ...(visibility !== undefined ? { visibility: visibility as 'primary' | 'system' | 'hidden' | 'visible' | 'all' } : {}),
+    });
+  }
+
+  if (request.operation === 'connections') {
+    if (!conversations.connections) {
+      throw new Error('Conversation connections capability is unavailable.');
+    }
+    const visibility =
+      input.visibility !== undefined ? optionalString(input.visibility, 'Conversation connections visibility') : undefined;
+    if (visibility !== undefined && !['primary', 'system', 'hidden', 'visible', 'all'].includes(visibility)) {
+      throw new Error('Conversation connections visibility must be one of: primary, system, hidden, visible, all.');
+    }
+    const kind = input.kind !== undefined ? optionalString(input.kind, 'Conversation connection kind') : undefined;
+    if (kind !== undefined && !['activity', 'state', 'asset', 'context', 'integration', 'surface', 'all'].includes(kind)) {
+      throw new Error('Conversation connection kind must be one of: activity, state, asset, context, integration, surface, all.');
+    }
+    const surface = input.surface !== undefined ? optionalString(input.surface, 'Conversation connection surface') : undefined;
+    if (surface !== undefined && !['activityShelf', 'composerShelf', 'rightRail', 'workbench', 'sidebar', 'cli', 'all'].includes(surface)) {
+      throw new Error('Conversation connection surface must be one of: activityShelf, composerShelf, rightRail, workbench, sidebar, cli, all.');
+    }
+    return conversations.connections(request.extensionId, requireString(input.conversationId, 'Conversation id'), {
+      ...(input.active !== undefined ? { active: optionalBoolean(input.active, 'Conversation connections active') } : {}),
+      ...(kind !== undefined ? { kind: kind as 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface' | 'all' } : {}),
+      ...(surface !== undefined
+        ? { surface: surface as 'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli' | 'all' }
+        : {}),
       ...(visibility !== undefined ? { visibility: visibility as 'primary' | 'system' | 'hidden' | 'visible' | 'all' } : {}),
     });
   }
@@ -1647,6 +1684,16 @@ export function createExtensionBackendCapabilityDispatcher(
       conversationId: string,
       options?: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' },
     ) => createExtensionConversationsCapability().activity(conversationId, options),
+    connections: (
+      _extensionId: string,
+      conversationId: string,
+      options?: {
+        active?: boolean;
+        kind?: 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface' | 'all';
+        surface?: 'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli' | 'all';
+        visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all';
+      },
+    ) => createExtensionConversationsCapability().connections(conversationId, options),
     get: (_extensionId: string, conversationId: string) => createExtensionConversationsCapability().get(conversationId),
     create: (_extensionId: string, input?: Parameters<ReturnType<typeof createExtensionConversationsCapability>['create']>[0]) =>
       createExtensionConversationsCapability().create(input),

@@ -41,20 +41,30 @@ The conversation background-work shelf is a backend-truth view. It consumes the 
 
 Use durable runs only inside low-level detail/log plumbing, daemon recovery, and agent-facing `background_bash`/`subagent` APIs. Any durable-run mutation that can affect visible background work must invalidate the `executions` topic; invalidating `runs` alone is not enough.
 
-## Conversation activity
+## Conversation connections
 
-The conversation composer shelf is backed by a shared backend **conversation activity** projection at
-`/api/conversations/:id/activity`. It is the thread-level registry for connected work such as active executions, queued
-prompts, deferred resumes, and linked scheduled tasks.
+The canonical thread-level registry is the shared backend **conversation connections** projection at
+`/api/conversations/:id/connections`. It answers “what is attached to this conversation?” for work, state, assets,
+context, integrations, and surfaces that are meaningful enough to expose to a user or agent. Consumers can filter by
+`kind`, `surface`, `active`, and `visibility`.
 
-Use this projection when a frontend surface, CLI command, or extension needs to answer “what is attached to this
-conversation right now?” Do not reconstruct shelf state from raw durable runs, task files, live queue internals, or
-renderer stores in each consumer. Add new providers to the backend projection so every consumer gets the same item IDs,
-statuses, visibility, and actions.
+Use this projection when a frontend surface, CLI command, or extension needs conversation-attached state. Do not
+reconstruct shelf state from raw durable runs, task files, live queue internals, conversation metadata, or renderer
+stores in each consumer. Add new host or extension providers to the backend projection so every consumer gets the same
+item IDs, statuses, visibility, surfaces, and actions.
 
-Conversation activity items use stable prefixed IDs:
+Built-in connection items use stable prefixed IDs:
 
 - `execution:<executionId>` for background commands, subagents, and execution-backed work
 - `queued-prompt:<queueType>:<promptId>` for live queued steer/follow-up prompts
 - `deferred-resume:<resumeId>` for deferred conversation wakeups
 - `scheduled-task:<taskId>` for automations linked to the conversation
+
+Extension providers contribute `contributes.conversationConnectionProviders` and return connection items from their
+backend action. The host prefixes extension item IDs as `<extensionId>:<itemId>` so independent providers cannot collide.
+Providers should return nothing unless the connection is meaningful: an empty scratchpad, a completed zero-item todo
+list, or an inactive optional surface should stay absent.
+
+`/api/conversations/:id/activity` remains the compatibility projection for activity-shelf rows. It is derived from
+conversation connections with `kind=activity`, `surface=activityShelf`, and built-in providers only. The CLI exposes the
+full projection through `neon-pilot conversations connections <id> --json`.

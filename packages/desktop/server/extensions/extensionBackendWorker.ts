@@ -241,6 +241,10 @@ function createWorkerBackendContext(
         }),
       activity: (conversationId: string, options?: { active?: boolean; visibility?: string }) =>
         callHostCapability(extensionId, 'conversations', 'activity', { conversationId, ...(options ?? {}) }),
+      connections: (
+        conversationId: string,
+        options?: { active?: boolean; kind?: string; surface?: string; visibility?: string },
+      ) => callHostCapability(extensionId, 'conversations', 'connections', { conversationId, ...(options ?? {}) }),
       get: (conversationId: string) => callHostCapability(extensionId, 'conversations', 'get', { conversationId }),
       create: (input?: {
         cwd?: string;

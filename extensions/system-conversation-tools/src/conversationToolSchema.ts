@@ -89,6 +89,8 @@ const AdminConversationParams = {
     dryRun: { type: 'boolean' },
     active: { type: 'boolean', description: 'Only include currently active conversation activity items.' },
     visibility: { type: 'string', enum: ['primary', 'system', 'hidden', 'visible', 'all'] },
+    kind: { type: 'string', enum: ['activity', 'state', 'asset', 'context', 'integration', 'surface', 'all'] },
+    surface: { type: 'string', enum: ['activityShelf', 'composerShelf', 'rightRail', 'workbench', 'sidebar', 'cli', 'all'] },
   },
 } as const;
 
@@ -100,6 +102,7 @@ export const ConversationToolParams = {
       enum: [
         'ask',
         'activity',
+        'connections',
         'inspect',
         'set_title',
         'change_working_directory',
@@ -138,6 +141,7 @@ export const ConversationToolParams = {
 export const CONVERSATION_ACTIONS = [
   'ask',
   'activity',
+  'connections',
   'inspect',
   'set_title',
   'change_working_directory',
