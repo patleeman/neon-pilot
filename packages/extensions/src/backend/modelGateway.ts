@@ -33,6 +33,22 @@ export interface ModelGatewayStatus {
   lastError?: string;
 }
 
+export interface ModelGatewayCodexConfigStatus {
+  configPath: string;
+  installed: boolean;
+  managed: boolean;
+  hasNeonPilotProvider: boolean;
+  activeProvider?: string;
+  activeModel?: string;
+  activeCatalogPath?: string;
+  catalogPath?: string;
+}
+
+export interface ModelGatewayCodexConfigResult {
+  status: ModelGatewayCodexConfigStatus;
+  backupPath?: string;
+}
+
 export interface ResponsesRequest {
   model?: unknown;
   input?: unknown;
@@ -63,6 +79,15 @@ export interface ModelGatewayRuntimeContext {
 export const modelGatewaySettingsFrom = (_value: unknown): Promise<ModelGatewaySettings> => hostResolved();
 export const listModelGatewayModels = (_ctx: ModelGatewayRuntimeContext): Promise<ModelGatewayModel[]> => hostResolved();
 export const writeModelGatewayCatalog = (_ctx: ModelGatewayRuntimeContext): Promise<string> => hostResolved();
+export const readModelGatewayCodexConfigStatus = (_ctx: ModelGatewayRuntimeContext, _input?: unknown): Promise<ModelGatewayCodexConfigStatus> =>
+  hostResolved();
+export const installModelGatewayCodexConfig = (
+  _ctx: ModelGatewayRuntimeContext,
+  _settings: ModelGatewaySettings,
+  _input?: unknown,
+): Promise<ModelGatewayCodexConfigResult> => hostResolved();
+export const removeModelGatewayCodexConfig = (_ctx: ModelGatewayRuntimeContext, _input?: unknown): Promise<ModelGatewayCodexConfigResult> =>
+  hostResolved();
 export const createModelGatewayResponse = (
   _ctx: ModelGatewayRuntimeContext,
   _body: ResponsesRequest,

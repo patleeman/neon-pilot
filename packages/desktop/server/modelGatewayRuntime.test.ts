@@ -1,10 +1,18 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { buildContext, requestToolsToPiTools, responsesInputToPiMessages, writeModelGatewayCatalog } from './modelGatewayRuntime.js';
+import {
+  buildContext,
+  installModelGatewayCodexConfig,
+  readModelGatewayCodexConfigStatus,
+  removeModelGatewayCodexConfig,
+  requestToolsToPiTools,
+  responsesInputToPiMessages,
+  writeModelGatewayCatalog,
+} from './modelGatewayRuntime.js';
 
 describe('modelGatewayRuntime', () => {
   it('replays Codex Responses function calls before matching tool outputs', () => {
@@ -208,6 +216,69 @@ describe('modelGatewayRuntime', () => {
           }),
         ]),
       );
+    } finally {
+      rmSync(runtimeDir, { recursive: true, force: true });
+    }
+  });
+
+  it('installs a managed Codex config block and preserves previous top-level model settings', () => {
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'model-gateway-install-'));
+    const configPath = join(runtimeDir, 'codex', 'config.toml');
+    try {
+      mkdirSync(join(runtimeDir, 'codex'), { recursive: true });
+      writeFileSync(
+        configPath,
+        [
+          'model = "gpt-5.5"',
+          'model_provider = "openai"',
+          'approval_policy = "never"',
+          '',
+          '[model_providers.neon-pilot]',
+          'base_url = "http://old"',
+          '',
+          '[profiles.default]',
+          'model = "gpt-5.5"',
+          '',
+        ].join('\n'),
+      );
+
+      const result = installModelGatewayCodexConfig(
+        { runtimeDir },
+        { host: '127.0.0.1', port: 8766, defaultModel: 'auto' },
+        { configPath },
+      );
+      const next = readFileSync(configPath, 'utf8');
+
+      expect(result.status).toMatchObject({ installed: true, activeProvider: 'neon-pilot', activeModel: 'auto' });
+      expect(result.backupPath && existsSync(result.backupPath)).toBe(true);
+      expect(next).toContain('# >>> neon-pilot-model-gateway managed >>>');
+      expect(next).toContain('# neon-pilot previous-top-level = model = "gpt-5.5"');
+      expect(next).toContain('model_catalog_json = "');
+      expect(next).toContain('[model_providers.neon-pilot]');
+      expect(next).toContain('approval_policy = "never"');
+      expect(next).not.toContain('base_url = "http://old"');
+    } finally {
+      rmSync(runtimeDir, { recursive: true, force: true });
+    }
+  });
+
+  it('removes the managed Codex config block and restores previous top-level settings', () => {
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'model-gateway-remove-'));
+    const configPath = join(runtimeDir, 'codex', 'config.toml');
+    try {
+      mkdirSync(join(runtimeDir, 'codex'), { recursive: true });
+      writeFileSync(configPath, 'model = "gpt-5.5"\nmodel_provider = "openai"\napproval_policy = "never"\n');
+      installModelGatewayCodexConfig({ runtimeDir }, { host: '127.0.0.1', port: 8766, defaultModel: 'auto' }, { configPath });
+      const result = removeModelGatewayCodexConfig({ runtimeDir }, { configPath });
+      const next = readFileSync(configPath, 'utf8');
+
+      expect(result.status).toMatchObject({ installed: false, managed: false });
+      expect(result.backupPath && existsSync(result.backupPath)).toBe(true);
+      expect(next).toContain('model = "gpt-5.5"');
+      expect(next).toContain('model_provider = "openai"');
+      expect(next).toContain('approval_policy = "never"');
+      expect(next).not.toContain('neon-pilot-model-gateway managed');
+      expect(readModelGatewayCodexConfigStatus({ runtimeDir }, { configPath })).toMatchObject({ installed: false });
     } finally {
       rmSync(runtimeDir, { recursive: true, force: true });
     }

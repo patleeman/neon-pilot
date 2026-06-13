@@ -2,6 +2,8 @@ import type {
   ModelGatewayModel,
   ModelGatewayRuntimeContext,
   ModelGatewaySettings,
+  ModelGatewayCodexConfigResult,
+  ModelGatewayCodexConfigStatus,
   ResponsesRequest,
   ResponsesResponse,
 } from '@neon-pilot/extensions/backend/modelGateway';
@@ -32,6 +34,22 @@ export function listModelGatewayModels(ctx: ModelGatewayRuntimeContext): Promise
 
 export function writeModelGatewayCatalog(ctx: ModelGatewayRuntimeContext): Promise<string> {
   return callServerModuleExport(RUNTIME_MODULE, 'writeModelGatewayCatalog', ctx);
+}
+
+export function readModelGatewayCodexConfigStatus(ctx: ModelGatewayRuntimeContext, input?: unknown): Promise<ModelGatewayCodexConfigStatus> {
+  return callServerModuleExport(RUNTIME_MODULE, 'readModelGatewayCodexConfigStatus', ctx, input);
+}
+
+export function installModelGatewayCodexConfig(
+  ctx: ModelGatewayRuntimeContext,
+  settings: ModelGatewaySettings,
+  input?: unknown,
+): Promise<ModelGatewayCodexConfigResult> {
+  return callServerModuleExport(RUNTIME_MODULE, 'installModelGatewayCodexConfig', ctx, settings, input);
+}
+
+export function removeModelGatewayCodexConfig(ctx: ModelGatewayRuntimeContext, input?: unknown): Promise<ModelGatewayCodexConfigResult> {
+  return callServerModuleExport(RUNTIME_MODULE, 'removeModelGatewayCodexConfig', ctx, input);
 }
 
 export function createModelGatewayResponse(

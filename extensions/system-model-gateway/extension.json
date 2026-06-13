@@ -16,7 +16,7 @@
         "id": "loopback",
         "handler": "startGatewayService",
         "stopHandler": "stopGatewayService",
-        "healthCheck": "status",
+        "healthCheck": "gatewayServiceHealth",
         "title": "Model Gateway loopback server",
         "restart": "on-failure",
         "worker": { "enabled": true }
@@ -25,6 +25,8 @@
     "actions": [
       { "id": "status", "handler": "status", "title": "Model Gateway status", "worker": { "enabled": true } },
       { "id": "updateSettings", "handler": "updateSettings", "title": "Update Model Gateway settings", "worker": { "enabled": true } },
+      { "id": "installCodexConfig", "handler": "installCodexConfig", "title": "Install Codex Model Gateway config", "worker": { "enabled": true } },
+      { "id": "removeCodexConfig", "handler": "removeCodexConfig", "title": "Remove Codex Model Gateway config", "worker": { "enabled": true } },
       { "id": "clearLogs", "handler": "clearLogs", "title": "Clear Model Gateway logs", "worker": { "enabled": true } }
     ],
     "routes": [

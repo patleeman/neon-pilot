@@ -19,6 +19,40 @@ vi.mock(
     writeModelGatewayCatalog() {
       return '/tmp/model-gateway/codex-model-catalog.json';
     },
+    readModelGatewayCodexConfigStatus() {
+      return {
+        configPath: '/tmp/.codex/config.toml',
+        installed: false,
+        managed: false,
+        hasNeonPilotProvider: false,
+        catalogPath: '/tmp/model-gateway/codex-model-catalog.json',
+      };
+    },
+    installModelGatewayCodexConfig() {
+      return {
+        status: {
+          configPath: '/tmp/.codex/config.toml',
+          installed: true,
+          managed: true,
+          hasNeonPilotProvider: true,
+          activeProvider: 'neon-pilot',
+          activeModel: 'auto',
+          activeCatalogPath: '/tmp/model-gateway/codex-model-catalog.json',
+          catalogPath: '/tmp/model-gateway/codex-model-catalog.json',
+        },
+      };
+    },
+    removeModelGatewayCodexConfig() {
+      return {
+        status: {
+          configPath: '/tmp/.codex/config.toml',
+          installed: false,
+          managed: false,
+          hasNeonPilotProvider: false,
+          catalogPath: '/tmp/model-gateway/codex-model-catalog.json',
+        },
+      };
+    },
     async createModelGatewayResponse(_ctx: unknown, body: { model?: unknown; input?: unknown }) {
       return {
         id: 'resp_test',
@@ -38,7 +72,19 @@ vi.mock(
   { virtual: true },
 );
 
-import { clearLogs, healthRoute, modelsRoute, responsesRoute, startGatewayService, status, stopGatewayService, updateSettings } from './backend';
+import {
+  clearLogs,
+  gatewayServiceHealth,
+  healthRoute,
+  installCodexConfig,
+  modelsRoute,
+  removeCodexConfig,
+  responsesRoute,
+  startGatewayService,
+  status,
+  stopGatewayService,
+  updateSettings,
+} from './backend';
 
 async function getFreePort(): Promise<number> {
   return await new Promise((resolve, reject) => {
@@ -130,7 +176,41 @@ describe('system-model-gateway backend', () => {
     });
   });
 
+  it('keeps the extension healthy when the configured port is unavailable', async () => {
+    const port = await getFreePort();
+    const blocker = createServer();
+    await new Promise<void>((resolve, reject) => {
+      blocker.once('error', reject);
+      blocker.listen(port, '127.0.0.1', () => resolve());
+    });
+    try {
+      const context = ctx(undefined, { settings: { port } });
+      await expect(startGatewayService({}, context)).resolves.toMatchObject({
+        running: false,
+        port,
+        lastError: expect.stringContaining('EADDRINUSE'),
+      });
+      await expect(gatewayServiceHealth({}, context)).resolves.toMatchObject({
+        ok: true,
+        listenerRunning: false,
+        lastError: expect.stringContaining('EADDRINUSE'),
+      });
+    } finally {
+      await new Promise<void>((resolve) => blocker.close(() => resolve()));
+    }
+  });
+
   it('clears recent activity logs', async () => {
     await expect(clearLogs({}, ctx())).resolves.toMatchObject({ logs: [] });
+  });
+
+  it('installs and removes the managed Codex config through backend actions', async () => {
+    const context = ctx();
+    await expect(installCodexConfig({}, context)).resolves.toMatchObject({
+      codexConfig: { installed: false, configPath: '/tmp/.codex/config.toml' },
+    });
+    await expect(removeCodexConfig({}, context)).resolves.toMatchObject({
+      codexConfig: { installed: false, configPath: '/tmp/.codex/config.toml' },
+    });
   });
 });

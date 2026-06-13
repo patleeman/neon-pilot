@@ -8,9 +8,11 @@ dedicated nav page:
 1. Open Settings → Extensions → Model Gateway.
 2. Confirm the endpoint, defaulting to `http://127.0.0.1:8766/v1`.
 3. Change the port if needed; saving the port restarts the listener.
-4. Copy the Codex config snippet for disposable client testing. It includes `model_catalog_json`, which points Codex at the generated local
+4. Use Install to add a managed Neon Pilot block to `~/.codex/config.toml`, or Remove to delete that managed block and restore the previous
+   top-level Codex model settings captured during install.
+5. Copy the Codex config snippet for disposable client testing. It includes `model_catalog_json`, which points Codex at the generated local
    model catalog for picker/model metadata.
-5. Check Recent activity for loopback requests and errors.
+6. Check Recent activity for loopback requests and errors.
 
 The gateway uses Neon Pilot's normal app default model when clients send `model = "auto"`. Clients may also request any concrete model listed
 by `GET /v1/models`. Codex clients do not use `/v1/models` to populate their model picker; they use the local `model_catalog_json` file.
@@ -24,7 +26,9 @@ The first validation target is Codex compatibility without touching the currentl
 2. Use the fake model `neon-pilot-fake` for credential-free smoke tests.
 3. Point disposable clients at the Settings endpoint, normally `http://127.0.0.1:8766/v1`.
 
-Do not update the active `~/.codex/config.toml` from inside a running Codex Desktop session. For Codex compatibility testing, use a separate Codex CLI process with an isolated config/home, then manually test Desktop after lower-level smoke checks pass.
+The Settings install/remove buttons write the user's real `~/.codex/config.toml` and create timestamped `.bak.neon-pilot-*` backups before
+modifying an existing file. For compatibility testing, prefer a separate Codex CLI process with an isolated config/home, then manually test
+Desktop after lower-level smoke checks pass.
 
 ## Validation
 
@@ -69,6 +73,5 @@ The fake model proves the Responses shape and SSE lifecycle without provider cre
 Codex Desktop may still hide custom catalog entries behind its own picker allowlist. The catalog file gives Codex metadata for Neon Pilot models
 and avoids the CLI's unknown-model metadata fallback for listed slugs, but it does not patch Codex Desktop's installed app bundle.
 
-If the loopback endpoint does not bind after restart, check whether the extension was disabled by the circuit breaker after repeated
-`EADDRINUSE` failures. Re-enable it with `neon-pilot extensions enable system-model-gateway`, then restart extension services from the running
-app or restart the dev app.
+If the loopback endpoint does not bind after restart, the extension stays manageable from Settings and reports the listener error there. Change
+the port or stop the other process, then Refresh or save the port again.

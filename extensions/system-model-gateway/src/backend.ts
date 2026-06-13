@@ -4,8 +4,11 @@ import type { ExtensionBackendContext, ExtensionRouteRequest, ExtensionRouteResp
 
 import {
   createModelGatewayResponse,
+  installModelGatewayCodexConfig,
   listModelGatewayModels,
   modelGatewaySettingsFrom,
+  readModelGatewayCodexConfigStatus,
+  removeModelGatewayCodexConfig,
   type ModelGatewaySettings,
   type ModelGatewayStatus,
   type ResponsesRequest,
@@ -69,9 +72,10 @@ function appendLog(entry: Omit<GatewayLogEntry, 'id' | 'at'>): void {
   logs.splice(MAX_LOGS);
 }
 
-async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySettings): Promise<GatewayState> {
+async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySettings, input?: unknown): Promise<GatewayState> {
   const models = (await listModelGatewayModels(ctx)).length;
   const catalogPath = await writeModelGatewayCatalog(ctx);
+  const codexConfig = await readModelGatewayCodexConfigStatus(ctx, input);
   return {
     running: Boolean(server?.listening),
     host: settings.host,
@@ -80,6 +84,7 @@ async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySet
     models,
     defaultModel: settings.defaultModel,
     catalogPath,
+    codexConfig,
     logs: [...logs],
     ...(lastError ? { lastError } : {}),
   };
@@ -87,12 +92,16 @@ async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySet
 
 async function ensureLoopbackServer(ctx: ExtensionBackendContext): Promise<GatewayState> {
   const settings = await readSettings(ctx);
-  await startLoopbackServer(ctx, settings);
+  try {
+    await startLoopbackServer(ctx, settings);
+  } catch {
+    // Keep the extension manageable from Settings when the desired port is already in use.
+  }
   return statusFor(ctx, settings);
 }
 
 export async function status(_input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
-  return statusFor(ctx, await readSettings(ctx));
+  return statusFor(ctx, await readSettings(ctx), _input);
 }
 
 export async function updateSettings(input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
@@ -109,8 +118,27 @@ export async function clearLogs(_input: unknown, ctx: ExtensionBackendContext): 
   return statusFor(ctx, await readSettings(ctx));
 }
 
+export async function installCodexConfig(input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
+  await installModelGatewayCodexConfig(ctx, await readSettings(ctx), input);
+  return statusFor(ctx, await readSettings(ctx), input);
+}
+
+export async function removeCodexConfig(input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
+  await removeModelGatewayCodexConfig(ctx, input);
+  return statusFor(ctx, await readSettings(ctx), input);
+}
+
 export async function startGatewayService(_input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
   return ensureLoopbackServer(ctx);
+}
+
+export async function gatewayServiceHealth(_input: unknown, ctx: ExtensionBackendContext): Promise<Record<string, unknown>> {
+  const state = await statusFor(ctx, await readSettings(ctx));
+  return {
+    ok: true,
+    listenerRunning: state.running,
+    ...(state.lastError ? { lastError: state.lastError } : {}),
+  };
 }
 
 export async function stopGatewayService(_input: unknown, _ctx: ExtensionBackendContext): Promise<{ running: false }> {

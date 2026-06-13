@@ -39,6 +39,16 @@ interface GatewayStatus {
   models: number;
   defaultModel: string;
   catalogPath?: string;
+  codexConfig?: {
+    configPath: string;
+    installed: boolean;
+    managed: boolean;
+    hasNeonPilotProvider: boolean;
+    activeProvider?: string;
+    activeModel?: string;
+    activeCatalogPath?: string;
+    catalogPath?: string;
+  };
   lastError?: string;
   logs: GatewayLogEntry[];
 }
@@ -76,7 +86,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
     () =>
       [
         'model_provider = "neon-pilot"',
-        'model = "auto"',
+        `model = "${status.defaultModel.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`,
         ...(status.catalogPath ? [`model_catalog_json = "${status.catalogPath.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`] : []),
         '',
         '[model_providers.neon-pilot]',
@@ -85,7 +95,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
         'wire_api = "responses"',
         'experimental_bearer_token = "local-neon-pilot"',
       ].join('\n'),
-    [status.baseUrl],
+    [status.baseUrl, status.catalogPath, status.defaultModel],
   );
 
   const load = useCallback(async () => {
@@ -138,6 +148,36 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
       window.setTimeout(() => setCopied(false), 1600);
     } catch (copyError) {
       setError(readError(copyError));
+    }
+  }
+
+  async function installCodexConfig() {
+    setBusy('installCodexConfig');
+    setError(null);
+    setMessage(null);
+    try {
+      const next = (await pa.extension.invoke('installCodexConfig', {})) as GatewayStatus;
+      setStatus({ ...DEFAULT_STATUS, ...next, logs: next.logs ?? [] });
+      setMessage('Neon Pilot installed in Codex config.');
+    } catch (installError) {
+      setError(readError(installError));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function removeCodexConfig() {
+    setBusy('removeCodexConfig');
+    setError(null);
+    setMessage(null);
+    try {
+      const next = (await pa.extension.invoke('removeCodexConfig', {})) as GatewayStatus;
+      setStatus({ ...DEFAULT_STATUS, ...next, logs: next.logs ?? [] });
+      setMessage('Neon Pilot removed from Codex config.');
+    } catch (removeError) {
+      setError(readError(removeError));
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -208,9 +248,21 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-[13px] font-semibold text-primary">Codex config</div>
-                  <SupportingText>Includes a generated catalog so Codex can see Neon Pilot model metadata.</SupportingText>
+                  <SupportingText>
+                    {status.codexConfig?.installed
+                      ? `Installed in ${status.codexConfig.configPath}`
+                      : `Not installed in ${status.codexConfig?.configPath ?? '~/.codex/config.toml'}`}
+                  </SupportingText>
                 </div>
-                <ToolbarButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy config'}</ToolbarButton>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ToolbarButton disabled={busy === 'installCodexConfig'} onClick={() => void installCodexConfig()}>
+                    {status.codexConfig?.installed ? 'Reinstall' : 'Install'}
+                  </ToolbarButton>
+                  <ToolbarButton disabled={busy === 'removeCodexConfig' || !status.codexConfig?.installed} onClick={() => void removeCodexConfig()}>
+                    Remove
+                  </ToolbarButton>
+                  <ToolbarButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy'}</ToolbarButton>
+                </div>
               </div>
               <pre className="model-gateway-code">{codexConfig}</pre>
             </div>
