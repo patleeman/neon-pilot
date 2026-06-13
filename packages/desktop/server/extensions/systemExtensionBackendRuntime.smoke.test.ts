@@ -579,7 +579,7 @@ const smokes = {
     assert(existsSync(join(marketplaceRoot, 'plugins', 'neon-pilot', 'skills', 'neon-pilot', 'SKILL.md')), 'plugin skill missing');
 
     const after = await module.status({ marketplaceRoot, manageCodex: false }, ctx);
-    assert(after.installed === true && after.installedVersion === '0.1.0', 'OpenAI Desktop plugin status failed after install');
+    assert(after.installed === true && after.installedVersion === '0.1.1', 'OpenAI Desktop plugin status failed after install');
 
     const removed = await module.removePlugin({ marketplaceRoot, manageCodex: false }, ctx);
     assert(removed.installed === false, 'OpenAI Desktop plugin remove failed');

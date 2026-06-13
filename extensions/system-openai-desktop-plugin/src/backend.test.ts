@@ -47,6 +47,7 @@ describe('OpenAI Desktop plugin installer', () => {
 
     const after = await status({ marketplaceRoot, codexHome }, ctx);
     expect(after.installed).toBe(true);
+    expect(after.installedVersion).toBe('0.1.1');
     expect(after.codex).toMatchObject({ checked: true, marketplaceRegistered: true, pluginInstalled: true, pluginEnabled: true });
     expect(after.codex).toMatchObject({
       mcp: {

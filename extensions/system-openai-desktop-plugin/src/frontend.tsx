@@ -145,7 +145,7 @@ export function OpenAiDesktopPluginSettingsPanel({ pa }: { pa: NativeExtensionCl
             <div className="openai-desktop-plugin-paths">
               <div>
                 <div className="ui-card-meta">Version</div>
-                <div className="openai-desktop-plugin-path">{status.installedVersion ?? '0.1.0'}</div>
+                <div className="openai-desktop-plugin-path">{status.installedVersion ?? '0.1.1'}</div>
               </div>
               <div>
                 <div className="ui-card-meta">Marketplace</div>

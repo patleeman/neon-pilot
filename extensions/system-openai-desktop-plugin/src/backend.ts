@@ -10,7 +10,7 @@ type JsonRecord = Record<string, unknown>;
 const PLUGIN_NAME = 'neon-pilot';
 const MARKETPLACE_NAME = 'neon-pilot-local';
 const DISPLAY_NAME = 'Neon Pilot';
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 const MCP_SERVER_NAME = 'neon-pilot';
 const MCP_TOOLS = [
   'neon_pilot_delegate',
