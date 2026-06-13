@@ -170,7 +170,8 @@ export function OpenAiDesktopPluginSettingsPanel({ pa }: { pa: NativeExtensionCl
 
             <SupportingText>
               Install writes a local Codex marketplace, registers it with `codex plugin marketplace add`, and installs `neon-pilot@neon-pilot-local`.
-              Reinstall refreshes the generated plugin files before asking Codex to install the plugin again.
+              It also registers a Desktop-visible `neon-pilot` MCP entry with `codex mcp add`. Reinstall refreshes the generated plugin files before
+              asking Codex to install the plugin again.
             </SupportingText>
           </div>
         ) : null}

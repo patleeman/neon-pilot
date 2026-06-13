@@ -122,6 +122,10 @@ function installedVersion(pluginPath: string): string | null {
   return readString(manifest?.version) ?? null;
 }
 
+function mcpScriptPath(pluginPath: string): string {
+  return join(pluginPath, 'mcp', 'neon-pilot-subagent.mjs');
+}
+
 type ShellResult = {
   stdout?: string;
   stderr?: string;
@@ -237,6 +241,12 @@ export async function installPlugin(input: unknown, ctx?: ExtensionBackendContex
     if (!shellOk(addPlugin)) {
       throw new Error(`Failed to install Codex plugin: ${codexError(addPlugin)}`);
     }
+
+    const addMcp = await runCodex(ctx, ['mcp', 'add', MCP_SERVER_NAME, '--', 'node', mcpScriptPath(paths.pluginPath)], input);
+    codexSteps.push({ command: 'mcp add', ok: shellOk(addMcp), stdout: addMcp.stdout, stderr: addMcp.stderr });
+    if (!shellOk(addMcp)) {
+      throw new Error(`Failed to register Codex MCP server: ${codexError(addMcp)}`);
+    }
   }
   return {
     ok: true,
@@ -256,6 +266,14 @@ export async function removePlugin(input: unknown, ctx?: ExtensionBackendContext
   const paths = targetPaths(input);
   const codexSteps: JsonRecord[] = [];
   if (ctx && shouldManageCodex(input)) {
+    const removeMcpResult = await runCodex(ctx, ['mcp', 'remove', MCP_SERVER_NAME], input);
+    codexSteps.push({
+      command: 'mcp remove',
+      ok: shellOk(removeMcpResult),
+      stdout: removeMcpResult.stdout,
+      stderr: removeMcpResult.stderr,
+    });
+
     const removePluginResult = await runCodex(ctx, ['plugin', 'remove', `${PLUGIN_NAME}@${MARKETPLACE_NAME}`, '--json'], input);
     codexSteps.push({
       command: 'plugin remove',

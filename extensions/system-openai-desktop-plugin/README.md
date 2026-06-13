@@ -29,9 +29,12 @@ Install and reinstall run the equivalent of:
 ```sh
 codex plugin marketplace add ~/.local/share/neon-pilot/codex-plugin-marketplace --json
 codex plugin add neon-pilot@neon-pilot-local --json
+codex mcp add neon-pilot -- node ~/.local/share/neon-pilot/codex-plugin-marketplace/plugins/neon-pilot/mcp/neon-pilot-subagent.mjs
 ```
 
-Remove runs the matching `codex plugin remove` and `codex plugin marketplace remove` commands before deleting the generated files. Uninstalling the extension invokes that cleanup hook.
+The plugin manifest also declares `.mcp.json`, but the explicit `codex mcp add` entry is intentional: Codex Desktop surfaces user MCP config entries more reliably than plugin-bundled MCP declarations in its settings/status UI. The MCP entry points at the generated plugin source so reinstall can refresh the server script in place.
+
+Remove runs `codex mcp remove neon-pilot` plus the matching `codex plugin remove` and `codex plugin marketplace remove` commands before deleting the generated files. Uninstalling the extension invokes that cleanup hook.
 
 The MCP tools map onto the existing Neon Pilot CLI protocol:
 

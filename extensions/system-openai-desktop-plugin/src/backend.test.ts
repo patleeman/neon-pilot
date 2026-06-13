@@ -44,6 +44,13 @@ describe('OpenAI Desktop plugin installer', () => {
     expect(installed.installed).toBe(true);
     expect(existsSync(join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json'))).toBe(true);
     expect(existsSync(join(marketplaceRoot, 'plugins', 'neon-pilot', '.codex-plugin', 'plugin.json'))).toBe(true);
+    expect(installed.codexSteps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ command: 'plugin marketplace add', ok: true }),
+        expect.objectContaining({ command: 'plugin add', ok: true }),
+        expect.objectContaining({ command: 'mcp add', ok: true }),
+      ]),
+    );
 
     const after = await status({ marketplaceRoot, codexHome }, ctx);
     expect(after.installed).toBe(true);
@@ -63,13 +70,16 @@ describe('OpenAI Desktop plugin installer', () => {
       maxBuffer: 1024 * 1024,
     });
     expect(mcpList).toContain('neon-pilot');
+    expect(mcpList).toContain(join(marketplaceRoot, 'plugins', 'neon-pilot', 'mcp', 'neon-pilot-subagent.mjs'));
 
     const removed = await removePlugin({ marketplaceRoot, codexHome }, ctx);
     expect(removed.installed).toBe(false);
+    expect(removed.codexSteps).toEqual(expect.arrayContaining([expect.objectContaining({ command: 'mcp remove', ok: true })]));
     expect(existsSync(join(marketplaceRoot, 'plugins', 'neon-pilot', '.codex-plugin', 'plugin.json'))).toBe(false);
 
     const final = await status({ marketplaceRoot, codexHome }, ctx);
     expect(final.installed).toBe(false);
     expect(final.codex).toMatchObject({ checked: true, marketplaceRegistered: false, pluginInstalled: false });
+    expect(final.codex).toMatchObject({ mcp: { registered: false } });
   });
 });
