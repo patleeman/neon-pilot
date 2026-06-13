@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { parse as parseToml } from 'smol-toml';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -221,7 +222,7 @@ describe('modelGatewayRuntime', () => {
     }
   });
 
-  it('installs a managed Codex config block and preserves previous top-level model settings', () => {
+  it('installs a managed Codex config and preserves previous top-level model settings', () => {
     const runtimeDir = mkdtempSync(join(tmpdir(), 'model-gateway-install-'));
     const configPath = join(runtimeDir, 'codex', 'config.toml');
     try {
@@ -248,21 +249,35 @@ describe('modelGatewayRuntime', () => {
         { configPath },
       );
       const next = readFileSync(configPath, 'utf8');
+      const parsed = parseToml(next) as {
+        model?: string;
+        model_provider?: string;
+        model_catalog_json?: string;
+        approval_policy?: string;
+        model_providers?: Record<string, { base_url?: string }>;
+        neon_pilot_model_gateway?: { managed?: boolean; previous_top_level?: Record<string, unknown> };
+      };
 
       expect(result.status).toMatchObject({ installed: true, activeProvider: 'neon-pilot', activeModel: 'auto' });
       expect(result.backupPath && existsSync(result.backupPath)).toBe(true);
-      expect(next).toContain('# >>> neon-pilot-model-gateway managed >>>');
-      expect(next).toContain('# neon-pilot previous-top-level = model = "gpt-5.5"');
-      expect(next).toContain('model_catalog_json = "');
-      expect(next).toContain('[model_providers.neon-pilot]');
-      expect(next).toContain('approval_policy = "never"');
+      expect(parsed).toMatchObject({
+        model: 'auto',
+        model_provider: 'neon-pilot',
+        approval_policy: 'never',
+        model_providers: { 'neon-pilot': { base_url: 'http://127.0.0.1:8766/v1' } },
+        neon_pilot_model_gateway: {
+          managed: true,
+          previous_top_level: { model: 'gpt-5.5', model_provider: 'openai' },
+        },
+      });
+      expect(parsed.model_catalog_json).toBe(join(runtimeDir, 'model-gateway', 'codex-model-catalog.json'));
       expect(next).not.toContain('base_url = "http://old"');
     } finally {
       rmSync(runtimeDir, { recursive: true, force: true });
     }
   });
 
-  it('removes the managed Codex config block and restores previous top-level settings', () => {
+  it('removes the managed Codex config and restores previous top-level settings', () => {
     const runtimeDir = mkdtempSync(join(tmpdir(), 'model-gateway-remove-'));
     const configPath = join(runtimeDir, 'codex', 'config.toml');
     try {
@@ -271,13 +286,19 @@ describe('modelGatewayRuntime', () => {
       installModelGatewayCodexConfig({ runtimeDir }, { host: '127.0.0.1', port: 8766, defaultModel: 'auto' }, { configPath });
       const result = removeModelGatewayCodexConfig({ runtimeDir }, { configPath });
       const next = readFileSync(configPath, 'utf8');
+      const parsed = parseToml(next) as {
+        model?: string;
+        model_provider?: string;
+        approval_policy?: string;
+        model_providers?: Record<string, unknown>;
+        neon_pilot_model_gateway?: unknown;
+      };
 
       expect(result.status).toMatchObject({ installed: false, managed: false });
       expect(result.backupPath && existsSync(result.backupPath)).toBe(true);
-      expect(next).toContain('model = "gpt-5.5"');
-      expect(next).toContain('model_provider = "openai"');
-      expect(next).toContain('approval_policy = "never"');
-      expect(next).not.toContain('neon-pilot-model-gateway managed');
+      expect(parsed).toMatchObject({ model: 'gpt-5.5', model_provider: 'openai', approval_policy: 'never' });
+      expect(parsed.model_providers?.['neon-pilot']).toBeUndefined();
+      expect(parsed.neon_pilot_model_gateway).toBeUndefined();
       expect(readModelGatewayCodexConfigStatus({ runtimeDir }, { configPath })).toMatchObject({ installed: false });
     } finally {
       rmSync(runtimeDir, { recursive: true, force: true });

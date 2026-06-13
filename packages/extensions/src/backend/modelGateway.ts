@@ -42,11 +42,22 @@ export interface ModelGatewayCodexConfigStatus {
   activeModel?: string;
   activeCatalogPath?: string;
   catalogPath?: string;
+  referenceCheck?: ModelGatewayCodexReferenceCheck;
 }
 
 export interface ModelGatewayCodexConfigResult {
   status: ModelGatewayCodexConfigStatus;
   backupPath?: string;
+}
+
+export interface ModelGatewayCodexReferenceCheck {
+  ok: boolean;
+  codexPath?: string;
+  models?: number;
+  hasDefaultModel?: boolean;
+  hasFakeModel?: boolean;
+  sampleModels?: string[];
+  error?: string;
 }
 
 export interface ResponsesRequest {

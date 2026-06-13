@@ -48,6 +48,15 @@ interface GatewayStatus {
     activeModel?: string;
     activeCatalogPath?: string;
     catalogPath?: string;
+    referenceCheck?: {
+      ok: boolean;
+      codexPath?: string;
+      models?: number;
+      hasDefaultModel?: boolean;
+      hasFakeModel?: boolean;
+      sampleModels?: string[];
+      error?: string;
+    };
   };
   lastError?: string;
   logs: GatewayLogEntry[];
@@ -97,6 +106,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
       ].join('\n'),
     [status.baseUrl, status.catalogPath, status.defaultModel],
   );
+  const referenceCheck = status.codexConfig?.referenceCheck;
 
   const load = useCallback(async () => {
     const next = (await pa.extension.invoke('status', {})) as GatewayStatus;
@@ -264,6 +274,15 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
                   <ToolbarButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy'}</ToolbarButton>
                 </div>
               </div>
+              {referenceCheck ? (
+                <Notice tone={referenceCheck.ok ? 'success' : 'warning'}>
+                  {referenceCheck.ok
+                    ? `Codex reference sees ${referenceCheck.models ?? 0} gateway models. Restart Codex Desktop if the picker still shows the old list.`
+                    : `Codex reference check failed: ${referenceCheck.error ?? 'gateway models were not found in Codex debug models.'}`}
+                </Notice>
+              ) : status.codexConfig?.installed ? (
+                <Notice tone="warning">Restart Codex Desktop if the picker still shows the old model list.</Notice>
+              ) : null}
               <pre className="model-gateway-code">{codexConfig}</pre>
             </div>
 
