@@ -30,6 +30,10 @@ export function listModelGatewayModels(ctx: ModelGatewayRuntimeContext): Promise
   return callServerModuleExport(RUNTIME_MODULE, 'listModelGatewayModels', ctx);
 }
 
+export function writeModelGatewayCatalog(ctx: ModelGatewayRuntimeContext): Promise<string> {
+  return callServerModuleExport(RUNTIME_MODULE, 'writeModelGatewayCatalog', ctx);
+}
+
 export function createModelGatewayResponse(
   ctx: ModelGatewayRuntimeContext,
   body: ResponsesRequest,

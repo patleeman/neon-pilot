@@ -1,6 +1,10 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
-import { buildContext, requestToolsToPiTools, responsesInputToPiMessages } from './modelGatewayRuntime.js';
+import { buildContext, requestToolsToPiTools, responsesInputToPiMessages, writeModelGatewayCatalog } from './modelGatewayRuntime.js';
 
 describe('modelGatewayRuntime', () => {
   it('replays Codex Responses function calls before matching tool outputs', () => {
@@ -183,5 +187,29 @@ describe('modelGatewayRuntime', () => {
       { name: 'apply_patch', parameters: { required: ['patch'] } },
       { name: 'list_mcp_resources', parameters: { type: 'object' } },
     ]);
+  });
+
+  it('writes a Codex model catalog for custom provider model metadata', () => {
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'model-gateway-catalog-'));
+    try {
+      const path = writeModelGatewayCatalog({ runtimeDir });
+      const catalog = JSON.parse(readFileSync(path, 'utf8')) as { models: Array<Record<string, unknown>> };
+
+      expect(path).toBe(join(runtimeDir, 'model-gateway', 'codex-model-catalog.json'));
+      expect(catalog.models).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            slug: 'neon-pilot-fake',
+            display_name: 'Neon Pilot Fake',
+            visibility: 'list',
+            apply_patch_tool_type: 'freeform',
+            shell_type: 'shell_command',
+            model_messages: expect.any(Object),
+          }),
+        ]),
+      );
+    } finally {
+      rmSync(runtimeDir, { recursive: true, force: true });
+    }
   });
 });

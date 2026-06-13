@@ -17,6 +17,9 @@ export interface ModelGatewayModel {
   object: 'model';
   created: number;
   owned_by: string;
+  name?: string;
+  context_window?: number;
+  input_modalities?: string[];
 }
 
 export interface ModelGatewayStatus {
@@ -26,6 +29,7 @@ export interface ModelGatewayStatus {
   baseUrl: string;
   models: number;
   defaultModel: string;
+  catalogPath?: string;
   lastError?: string;
 }
 
@@ -58,6 +62,7 @@ export interface ModelGatewayRuntimeContext {
 
 export const modelGatewaySettingsFrom = (_value: unknown): Promise<ModelGatewaySettings> => hostResolved();
 export const listModelGatewayModels = (_ctx: ModelGatewayRuntimeContext): Promise<ModelGatewayModel[]> => hostResolved();
+export const writeModelGatewayCatalog = (_ctx: ModelGatewayRuntimeContext): Promise<string> => hostResolved();
 export const createModelGatewayResponse = (
   _ctx: ModelGatewayRuntimeContext,
   _body: ResponsesRequest,

@@ -1,3 +1,6 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { AuthStorage, ModelRegistry } from '@earendil-works/pi-coding-agent';
 import {
   stream,
@@ -30,6 +33,9 @@ export interface ModelGatewayModel {
   object: 'model';
   created: number;
   owned_by: string;
+  name?: string;
+  context_window?: number;
+  input_modalities?: string[];
 }
 
 export interface ModelGatewayStatus {
@@ -39,6 +45,7 @@ export interface ModelGatewayStatus {
   baseUrl: string;
   models: number;
   defaultModel: string;
+  catalogPath?: string;
   lastError?: string;
 }
 
@@ -68,6 +75,8 @@ export interface ResponsesResponse {
 type RuntimeContext = {
   runtimeDir: string;
 };
+
+const CODEX_PLAN_TIERS = ['free', 'plus', 'pro', 'team', 'business', 'enterprise'];
 
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
@@ -436,16 +445,114 @@ export function listModelGatewayModels(ctx: RuntimeContext): ModelGatewayModel[]
   const models = registry.getAvailable();
   const entries = models.flatMap((model) => {
     const id = `${model.provider}/${model.id}`;
+    const base = {
+      object: 'model' as const,
+      created,
+      owned_by: model.provider,
+      name: model.name,
+      context_window: model.contextWindow,
+      input_modalities: model.input,
+    };
     return [
-      { id, object: 'model' as const, created, owned_by: model.provider },
+      { ...base, id },
       ...(models.filter((candidate) => candidate.id === model.id).length === 1
-        ? [{ id: model.id, object: 'model' as const, created, owned_by: model.provider }]
+        ? [{ ...base, id: model.id }]
         : []),
     ];
   });
-  entries.unshift({ id: FAKE_MODEL_GATEWAY_MODEL_ID, object: 'model' as const, created, owned_by: 'neon-pilot' });
-  if (models.length) entries.unshift({ id: DEFAULT_MODEL_GATEWAY_MODEL_ID, object: 'model' as const, created, owned_by: 'neon-pilot' });
+  entries.unshift({
+    id: FAKE_MODEL_GATEWAY_MODEL_ID,
+    object: 'model' as const,
+    created,
+    owned_by: 'neon-pilot',
+    name: 'Neon Pilot Fake',
+    context_window: 128_000,
+    input_modalities: ['text'],
+  });
+  if (models.length)
+    entries.unshift({
+      id: DEFAULT_MODEL_GATEWAY_MODEL_ID,
+      object: 'model' as const,
+      created,
+      owned_by: 'neon-pilot',
+      name: 'Neon Pilot Auto',
+      context_window: models[0]?.contextWindow,
+      input_modalities: models[0]?.input,
+    });
   return entries;
+}
+
+function displayNameForModel(model: ModelGatewayModel): string {
+  if (model.name?.trim()) return model.name.trim();
+  if (model.id === DEFAULT_MODEL_GATEWAY_MODEL_ID) return 'Neon Pilot Auto';
+  if (model.id === FAKE_MODEL_GATEWAY_MODEL_ID) return 'Neon Pilot Fake';
+  const { id } = model;
+  const label = id.includes('/') ? id.split('/').slice(1).join('/') : id;
+  return label
+    .split(/[-_.:/]+/)
+    .filter(Boolean)
+    .map((part) => (part.length <= 3 ? part.toUpperCase() : part[0]!.toUpperCase() + part.slice(1)))
+    .join(' ');
+}
+
+function catalogEntry(model: ModelGatewayModel, index: number): Record<string, unknown> {
+  const displayName = displayNameForModel(model);
+  const contextWindow = model.context_window ?? (model.id === DEFAULT_MODEL_GATEWAY_MODEL_ID ? 400_000 : 128_000);
+  const inputModalities = model.input_modalities?.length ? model.input_modalities : ['text'];
+  return {
+    slug: model.id,
+    display_name: displayName,
+    description: `${displayName} via Neon Pilot Model Gateway.`,
+    context_window: contextWindow,
+    max_context_window: contextWindow,
+    auto_compact_token_limit: Math.max(8_000, Math.floor(contextWindow * 0.8)),
+    truncation_policy: { mode: 'tokens', limit: Math.min(64_000, Math.max(8_000, Math.floor(contextWindow * 0.32))) },
+    default_reasoning_level: 'medium',
+    supported_reasoning_levels: [
+      { effort: 'low', description: 'Faster, lighter reasoning' },
+      { effort: 'medium', description: 'Balanced speed and reasoning' },
+      { effort: 'high', description: 'Deeper reasoning' },
+      { effort: 'xhigh', description: 'Maximum reasoning where supported' },
+    ],
+    default_reasoning_summary: 'none',
+    reasoning_summary_format: 'none',
+    supports_reasoning_summaries: false,
+    default_verbosity: 'low',
+    support_verbosity: false,
+    apply_patch_tool_type: 'freeform',
+    web_search_tool_type: 'text_and_image',
+    supports_search_tool: false,
+    supports_parallel_tool_calls: true,
+    experimental_supported_tools: [],
+    input_modalities: inputModalities,
+    supports_image_detail_original: inputModalities.includes('image'),
+    shell_type: 'shell_command',
+    visibility: 'list',
+    minimal_client_version: '0.0.1',
+    supported_in_api: true,
+    availability_nux: null,
+    upgrade: null,
+    priority: model.id === DEFAULT_MODEL_GATEWAY_MODEL_ID ? 10_000 : Math.max(1, 1_000 - index),
+    prefer_websockets: false,
+    available_in_plans: CODEX_PLAN_TIERS,
+    base_instructions: 'You are a coding agent running in Codex through Neon Pilot Model Gateway.',
+    model_messages: {
+      instructions_template: 'You are Codex running on {model_name} through Neon Pilot Model Gateway. Be a helpful, direct coding collaborator.',
+      instructions_variables: { model_name: displayName },
+    },
+  };
+}
+
+export function modelGatewayCatalogPath(ctx: RuntimeContext): string {
+  return join(ctx.runtimeDir, 'model-gateway', 'codex-model-catalog.json');
+}
+
+export function writeModelGatewayCatalog(ctx: RuntimeContext): string {
+  const path = modelGatewayCatalogPath(ctx);
+  mkdirSync(join(ctx.runtimeDir, 'model-gateway'), { recursive: true });
+  const models = listModelGatewayModels(ctx);
+  writeFileSync(path, `${JSON.stringify({ models: models.map(catalogEntry) }, null, 2)}\n`);
+  return path;
 }
 
 function resolveDefaultModelRef(ctx: RuntimeContext, models: Array<Model<Api>>): string {

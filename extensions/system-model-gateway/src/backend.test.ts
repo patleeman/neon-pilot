@@ -16,6 +16,9 @@ vi.mock(
     listModelGatewayModels() {
       return [{ id: 'neon-pilot-fake', object: 'model', created: 0, owned_by: 'neon-pilot' }];
     },
+    writeModelGatewayCatalog() {
+      return '/tmp/model-gateway/codex-model-catalog.json';
+    },
     async createModelGatewayResponse(_ctx: unknown, body: { model?: unknown; input?: unknown }) {
       return {
         id: 'resp_test',

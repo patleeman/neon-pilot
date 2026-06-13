@@ -38,6 +38,7 @@ interface GatewayStatus {
   baseUrl: string;
   models: number;
   defaultModel: string;
+  catalogPath?: string;
   lastError?: string;
   logs: GatewayLogEntry[];
 }
@@ -76,6 +77,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
       [
         'model_provider = "neon-pilot"',
         'model = "auto"',
+        ...(status.catalogPath ? [`model_catalog_json = "${status.catalogPath.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`] : []),
         '',
         '[model_providers.neon-pilot]',
         'name = "Neon Pilot Model Gateway"',
@@ -206,7 +208,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-[13px] font-semibold text-primary">Codex config</div>
-                  <SupportingText>Uses Neon Pilot's app default model when the client sends auto.</SupportingText>
+                  <SupportingText>Includes a generated catalog so Codex can see Neon Pilot model metadata.</SupportingText>
                 </div>
                 <ToolbarButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy config'}</ToolbarButton>
               </div>

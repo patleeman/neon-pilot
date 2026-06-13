@@ -8,11 +8,12 @@ dedicated nav page:
 1. Open Settings → Extensions → Model Gateway.
 2. Confirm the endpoint, defaulting to `http://127.0.0.1:8766/v1`.
 3. Change the port if needed; saving the port restarts the listener.
-4. Copy the Codex config snippet for disposable client testing.
+4. Copy the Codex config snippet for disposable client testing. It includes `model_catalog_json`, which points Codex at the generated local
+   model catalog for picker/model metadata.
 5. Check Recent activity for loopback requests and errors.
 
 The gateway uses Neon Pilot's normal app default model when clients send `model = "auto"`. Clients may also request any concrete model listed
-by `GET /v1/models`.
+by `GET /v1/models`. Codex clients do not use `/v1/models` to populate their model picker; they use the local `model_catalog_json` file.
 
 The first validation target is Codex compatibility without touching the currently running Codex Desktop session:
 
@@ -46,6 +47,7 @@ tmp_home=$(mktemp -d)
 cat > "$tmp_home/config.toml" <<'EOF'
 model_provider = "neon-pilot"
 model = "auto"
+model_catalog_json = "/path/to/neon-pilot/model-gateway/codex-model-catalog.json"
 approval_policy = "never"
 sandbox_mode = "read-only"
 
@@ -63,6 +65,9 @@ rm -rf "$tmp_home"
 ```
 
 The fake model proves the Responses shape and SSE lifecycle without provider credentials. Real provider checks require Neon Pilot provider credentials in the runtime's normal Pi-backed model configuration.
+
+Codex Desktop may still hide custom catalog entries behind its own picker allowlist. The catalog file gives Codex metadata for Neon Pilot models
+and avoids the CLI's unknown-model metadata fallback for listed slugs, but it does not patch Codex Desktop's installed app bundle.
 
 If the loopback endpoint does not bind after restart, check whether the extension was disabled by the circuit breaker after repeated
 `EADDRINUSE` failures. Re-enable it with `neon-pilot extensions enable system-model-gateway`, then restart extension services from the running

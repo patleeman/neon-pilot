@@ -10,6 +10,7 @@ import {
   type ModelGatewayStatus,
   type ResponsesRequest,
   streamModelGatewayResponseEvents,
+  writeModelGatewayCatalog,
 } from '@neon-pilot/extensions/backend/modelGateway';
 
 let server: Server | null = null;
@@ -70,6 +71,7 @@ function appendLog(entry: Omit<GatewayLogEntry, 'id' | 'at'>): void {
 
 async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySettings): Promise<GatewayState> {
   const models = (await listModelGatewayModels(ctx)).length;
+  const catalogPath = await writeModelGatewayCatalog(ctx);
   return {
     running: Boolean(server?.listening),
     host: settings.host,
@@ -77,6 +79,7 @@ async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySet
     baseUrl: `http://${settings.host}:${settings.port}/v1`,
     models,
     defaultModel: settings.defaultModel,
+    catalogPath,
     logs: [...logs],
     ...(lastError ? { lastError } : {}),
   };
