@@ -1,5 +1,17 @@
 import { AuthStorage, ModelRegistry } from '@earendil-works/pi-coding-agent';
-import { stream, type Api, type AssistantMessage, type AssistantMessageEvent, type Context, type Message, type Model, Type } from '@earendil-works/pi-ai';
+import {
+  stream,
+  type Api,
+  type AssistantMessage,
+  type AssistantMessageEvent,
+  type Context,
+  type ImageContent,
+  type Message,
+  type Model,
+  type TextContent,
+  Type,
+  type UserMessage,
+} from '@earendil-works/pi-ai';
 
 import { readSavedModelRef } from './models/modelPreferences.js';
 
@@ -70,11 +82,68 @@ function readText(value: unknown): string {
   if (Array.isArray(value)) return value.map(readText).filter(Boolean).join('\n');
   if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>;
+    if (record.type === 'input_image' || record.type === 'image_url') return '[image]';
     if (typeof record.text === 'string') return record.text;
     if (typeof record.content === 'string') return record.content;
     if (record.content !== undefined) return readText(record.content);
+    if (record.output !== undefined) return readText(record.output);
   }
   return '';
+}
+
+function imageContentFromUrl(url: unknown): ImageContent | null {
+  if (typeof url !== 'string') return null;
+  const match = /^data:([^;,]+);base64,(.*)$/s.exec(url);
+  if (!match) return null;
+  return { type: 'image', mimeType: match[1]!, data: match[2]! };
+}
+
+function readContentBlocks(value: unknown): UserMessage['content'] {
+  if (typeof value === 'string') return value;
+  const blocks: UserMessage['content'] extends Array<infer Block> ? Block[] : never = [];
+  const visit = (part: unknown): void => {
+    if (typeof part === 'string') {
+      if (part) blocks.push({ type: 'text', text: part });
+      return;
+    }
+    if (Array.isArray(part)) {
+      for (const item of part) visit(item);
+      return;
+    }
+    if (!part || typeof part !== 'object') return;
+    const record = part as Record<string, unknown>;
+    const type = typeof record.type === 'string' ? record.type : '';
+    if (type === 'input_text' || type === 'output_text' || type === 'text') {
+      const text = typeof record.text === 'string' ? record.text : '';
+      if (text) blocks.push({ type: 'text', text });
+      return;
+    }
+    if (type === 'input_image' || type === 'image_url' || record.image_url !== undefined) {
+      const imageUrl =
+        typeof record.image_url === 'string'
+          ? record.image_url
+          : record.image_url && typeof record.image_url === 'object'
+            ? (record.image_url as Record<string, unknown>).url
+            : record.url;
+      const image = imageContentFromUrl(imageUrl);
+      blocks.push(image ?? { type: 'text', text: '[image]' });
+      return;
+    }
+    if (record.output !== undefined) {
+      visit(record.output);
+      return;
+    }
+    if (record.content !== undefined) visit(record.content);
+  };
+  visit(value);
+  const textBlocks = blocks.filter((block) => block.type === 'text');
+  if (textBlocks.length === blocks.length) return textBlocks.map((block) => block.text).filter(Boolean).join('\n');
+  return blocks;
+}
+
+function readToolResultContent(value: unknown): Array<TextContent | ImageContent> {
+  const content = readContentBlocks(value);
+  return Array.isArray(content) ? content : [{ type: 'text', text: content }];
 }
 
 function normalizeToolParameters(value: unknown): Record<string, unknown> {
@@ -82,12 +151,50 @@ function normalizeToolParameters(value: unknown): Record<string, unknown> {
   return { type: 'object', properties: {} };
 }
 
-function requestToolsToPiTools(tools: unknown): Context['tools'] {
+function nativeToolFallback(toolType: string): { name: string; description: string; parameters: Record<string, unknown> } | null {
+  if (toolType === 'computer_use' || toolType === 'computer_use_preview') {
+    return {
+      name: 'computer_use',
+      description: 'Request a computer action.',
+      parameters: {
+        type: 'object',
+        properties: { action: { type: 'string' }, x: { type: 'number' }, y: { type: 'number' }, text: { type: 'string' } },
+        required: ['action'],
+      },
+    };
+  }
+  if (toolType === 'web_search' || toolType === 'web_search_preview') {
+    return {
+      name: 'web_search',
+      description: 'Search the web.',
+      parameters: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+    };
+  }
+  if (toolType === 'apply_patch') {
+    return {
+      name: 'apply_patch',
+      description: 'Apply a patch.',
+      parameters: { type: 'object', properties: { patch: { type: 'string' } }, required: ['patch'] },
+    };
+  }
+  if (toolType === 'local_shell' || toolType === 'shell') {
+    return {
+      name: toolType,
+      description: 'Run a local shell command.',
+      parameters: { type: 'object', properties: { command: { type: 'string' } }, required: ['command'] },
+    };
+  }
+  return null;
+}
+
+export function requestToolsToPiTools(tools: unknown): Context['tools'] {
   if (!Array.isArray(tools)) return undefined;
   const converted = tools
     .map((tool) => {
       if (!tool || typeof tool !== 'object') return null;
       const record = tool as Record<string, unknown>;
+      const native = typeof record.type === 'string' ? nativeToolFallback(record.type) : null;
+      if (native && !record.function && !record.name) return native;
       const fn = record.function && typeof record.function === 'object' ? (record.function as Record<string, unknown>) : record;
       const name = typeof fn.name === 'string' ? fn.name : '';
       if (!name) return null;
@@ -114,15 +221,28 @@ function parseFunctionCallArguments(value: unknown): Record<string, unknown> {
 
 export function responsesInputToPiMessages(input: unknown): Message[] {
   if (typeof input === 'string') return [{ role: 'user', content: input, timestamp: Date.now() }];
-  if (!Array.isArray(input)) return [{ role: 'user', content: readText(input), timestamp: Date.now() }];
+  if (!Array.isArray(input)) return [{ role: 'user', content: readContentBlocks(input), timestamp: Date.now() }];
 
   const messages: Message[] = [];
-  const pendingToolCalls = new Map<string, { message: Message; bufferedMessages: Message[]; name: string }>();
+  const pendingToolCalls = new Map<string, { id: string; name: string; arguments: Record<string, unknown> }>();
+  const toolNamesByCallId = new Map<string, string>();
+  const bufferedAssistantMessages: Message[] = [];
   const flushPendingToolCalls = (): void => {
-    for (const [callId, pending] of pendingToolCalls) {
-      messages.push(...pending.bufferedMessages, pending.message);
-      pendingToolCalls.delete(callId);
-    }
+    if (!pendingToolCalls.size) return;
+    const calls = [...pendingToolCalls.values()];
+    messages.push(...bufferedAssistantMessages);
+    bufferedAssistantMessages.length = 0;
+    messages.push({
+      role: 'assistant',
+      content: calls.map((call) => ({ type: 'toolCall', id: call.id, name: call.name, arguments: call.arguments })),
+      api: 'openai-responses',
+      provider: 'neon-pilot',
+      model: 'replayed',
+      usage: zeroUsage(),
+      stopReason: 'toolUse',
+      timestamp: Date.now(),
+    });
+    pendingToolCalls.clear();
   };
   for (const item of input) {
     if (typeof item === 'string') {
@@ -137,44 +257,53 @@ export function responsesInputToPiMessages(input: unknown): Message[] {
       const callId = String(record.call_id ?? record.id ?? '');
       const name = typeof record.name === 'string' ? record.name : '';
       if (!callId || !name) continue;
-      pendingToolCalls.set(callId, {
-        name,
-        bufferedMessages: [],
-        message: {
-          role: 'assistant',
-          content: [{ type: 'toolCall', id: callId, name, arguments: parseFunctionCallArguments(record.arguments) }],
-          api: 'openai-responses',
-          provider: 'neon-pilot',
-          model: 'replayed',
-          usage: zeroUsage(),
-          stopReason: 'tool_use',
-          timestamp: Date.now(),
-        },
-      });
+      toolNamesByCallId.set(callId, name);
+      pendingToolCalls.set(callId, { id: callId, name, arguments: parseFunctionCallArguments(record.arguments) });
       continue;
     }
     if (type === 'function_call_output') {
       const callId = String(record.call_id ?? '');
       const pending = pendingToolCalls.get(callId);
-      if (pending) {
-        messages.push(...pending.bufferedMessages, pending.message);
-        pendingToolCalls.delete(callId);
-      } else {
-        flushPendingToolCalls();
-      }
+      flushPendingToolCalls();
       messages.push({
         role: 'toolResult',
         toolCallId: callId,
-        toolName: pending?.name ?? '',
-        content: [{ type: 'text', text: readText(record.output) }],
+        toolName: pending?.name ?? toolNamesByCallId.get(callId) ?? '',
+        content: readToolResultContent(record.output),
         isError: false,
         timestamp: Date.now(),
       });
       continue;
     }
+    if (type === 'computer_call_output') {
+      flushPendingToolCalls();
+      const callId = String(record.call_id ?? record.id ?? '');
+      messages.push({
+        role: 'toolResult',
+        toolCallId: callId,
+        toolName: 'computer_use',
+        content: readToolResultContent(record.output),
+        isError: false,
+        timestamp: Date.now(),
+      });
+      continue;
+    }
+    if (type === 'input_text' || type === 'text' || type === 'input_image') {
+      flushPendingToolCalls();
+      messages.push({ role: 'user', content: readContentBlocks(record), timestamp: Date.now() });
+      continue;
+    }
+    if (type === 'reasoning') {
+      continue;
+    }
     if (type === 'message' || record.role) {
+      if (record.role === 'developer' || record.role === 'system') {
+        flushPendingToolCalls();
+        continue;
+      }
       const role = record.role === 'assistant' ? 'assistant' : 'user';
-      const text = readText(record.content);
+      const content = readContentBlocks(record.content);
+      const text = typeof content === 'string' ? content : content.filter((block) => block.type === 'text').map((block) => block.text).join('\n');
       if (role !== 'assistant') flushPendingToolCalls();
       if (role === 'assistant') {
         const assistantMessage: Message = {
@@ -187,19 +316,31 @@ export function responsesInputToPiMessages(input: unknown): Message[] {
           stopReason: 'stop',
           timestamp: Date.now(),
         };
-        const pendingCalls = [...pendingToolCalls.values()];
-        if (pendingCalls.length > 0) {
-          pendingCalls[pendingCalls.length - 1]!.bufferedMessages.push(assistantMessage);
+        if (pendingToolCalls.size > 0) {
+          bufferedAssistantMessages.push(assistantMessage);
         } else {
           messages.push(assistantMessage);
         }
       } else {
-        messages.push({ role: 'user', content: text, timestamp: Date.now() });
+        messages.push({ role: 'user', content, timestamp: Date.now() });
       }
     }
   }
   flushPendingToolCalls();
   return messages.length ? messages : [{ role: 'user', content: '', timestamp: Date.now() }];
+}
+
+function developerInstructionsFromResponsesInput(input: unknown): string {
+  if (!Array.isArray(input)) return '';
+  return input
+    .map((item) => {
+      if (!item || typeof item !== 'object') return '';
+      const record = item as Record<string, unknown>;
+      const type = typeof record.type === 'string' ? record.type : 'message';
+      return (type === 'message' || record.role) && (record.role === 'developer' || record.role === 'system') ? readText(record.content) : '';
+    })
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 function zeroUsage() {
@@ -346,9 +487,10 @@ async function resolveModel(ctx: RuntimeContext, modelRef: string): Promise<{ mo
   return { model, apiKey: auth.apiKey, headers: auth.headers };
 }
 
-function buildContext(body: ResponsesRequest): Context {
+export function buildContext(body: ResponsesRequest): Context {
+  const systemPrompt = [readText(body.instructions), developerInstructionsFromResponsesInput(body.input)].filter(Boolean).join('\n\n') || undefined;
   return {
-    systemPrompt: readText(body.instructions) || undefined,
+    systemPrompt,
     messages: responsesInputToPiMessages(body.input),
     tools: requestToolsToPiTools(body.tools),
   };
