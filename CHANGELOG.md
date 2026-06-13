@@ -4,7 +4,10 @@
 
 ### Highlights
 
-- TODO: Replace this with 3-6 human-written bullets summarizing the release by user-visible outcome, not raw commit messages.
+- Registers the Neon Pilot MCP server explicitly in the Codex Desktop plugin config so the `mcp__neon_pilot` tools appear after install.
+- Keeps the OpenAI Desktop plugin install path conservative: the plugin remains user-installed from settings, while reinstall/remove refresh the same MCP metadata.
+- Adds coverage around the plugin backend registration payload so future config changes keep the MCP server visible to Codex Desktop.
+- Refreshes Pi runtime packages to `^0.79.3` for the 0.11.19 patch train.
 
 ### Notes
 
