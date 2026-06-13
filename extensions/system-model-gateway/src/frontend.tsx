@@ -1,5 +1,15 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageIntro, AppPageLayout, Button, ErrorState, LoadingState, Pill, TextInput } from '@neon-pilot/extensions/ui';
+import {
+  AppPageIntro,
+  AppPageLayout,
+  AppPageSection,
+  Button,
+  ErrorState,
+  LoadingState,
+  Pill,
+  TextInput,
+  ToolbarButton,
+} from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import './frontend.css';
@@ -119,83 +129,83 @@ export function ModelGatewayPage({ pa }: ExtensionSurfaceProps) {
   }
 
   return (
-    <AppPageLayout>
-      <div className="model-gateway-page">
-        <div className="model-gateway-header">
-          <AppPageIntro
-            title="Model Gateway"
-            eyebrow="External agents"
-            description="OpenAI Responses-compatible loopback endpoint backed by Neon Pilot model providers."
-          />
-          <div className="model-gateway-actions">
-            <Button variant="secondary" disabled={busy !== null} onClick={() => void refresh()}>
-              Refresh
-            </Button>
-            <Button variant="secondary" disabled={busy !== null} onClick={() => void runAction('smoke')}>
-              Smoke
-            </Button>
-            {status.running ? (
-              <Button variant="danger" disabled={busy !== null} onClick={() => void runAction('stop')}>
-                Stop
-              </Button>
-            ) : (
-              <Button variant="primary" disabled={busy !== null} onClick={() => void runAction('start')}>
-                Start
-              </Button>
-            )}
-          </div>
-        </div>
+    <div className="h-full overflow-y-auto">
+      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
+        <AppPageIntro
+          title="Model Gateway"
+          eyebrow="External agents"
+          summary="OpenAI Responses-compatible loopback endpoint backed by Neon Pilot model providers."
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <ToolbarButton disabled={busy !== null} onClick={() => void refresh()}>
+                Refresh
+              </ToolbarButton>
+              <ToolbarButton disabled={busy !== null} onClick={() => void runAction('smoke')}>
+                Smoke
+              </ToolbarButton>
+              {status.running ? (
+                <Button variant="danger" disabled={busy !== null} onClick={() => void runAction('stop')}>
+                  Stop
+                </Button>
+              ) : (
+                <Button variant="action" disabled={busy !== null} onClick={() => void runAction('start')}>
+                  Start
+                </Button>
+              )}
+            </div>
+          }
+        />
 
         {error ? <ErrorState title="Gateway action failed" body={error} /> : null}
 
-        <section className="model-gateway-panel" aria-labelledby="model-gateway-runtime-title">
-          <div className="model-gateway-section-heading">
-            <h2 id="model-gateway-runtime-title">Runtime</h2>
-            <Pill tone={status.running ? 'success' : 'neutral'}>{status.running ? 'Running' : 'Stopped'}</Pill>
+        <AppPageSection
+          title="Runtime"
+          layout="stacked"
+          meta={<Pill tone={status.running ? 'success' : 'neutral'}>{status.running ? 'Running' : 'Stopped'}</Pill>}
+          bodyClassName="space-y-3"
+        >
+          <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(8rem,1fr)_minmax(12rem,1fr)]">
+            <div className="min-w-0">
+              <div className="text-xs text-secondary">Endpoint</div>
+              <div className="mt-1 truncate font-mono text-sm text-primary">{status.baseUrl}</div>
+            </div>
+            <div>
+              <div className="text-xs text-secondary">Models</div>
+              <div className="mt-1 text-sm text-primary">{status.models}</div>
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs text-secondary">Default model</div>
+              <div className="mt-1 truncate font-mono text-sm text-primary">{status.defaultModel}</div>
+            </div>
           </div>
-          <div className="model-gateway-metrics">
-            <div className="model-gateway-metric model-gateway-metric-wide">
-              <span>Endpoint</span>
-              <code>{status.baseUrl}</code>
-            </div>
-            <div className="model-gateway-metric">
-              <span>Models</span>
-              <strong>{status.models}</strong>
-            </div>
-            <div className="model-gateway-metric">
-              <span>Default model</span>
-              <code>{status.defaultModel}</code>
-            </div>
-          </div>
-          {status.lastError ? <p className="model-gateway-error">{status.lastError}</p> : null}
-        </section>
+          {status.lastError ? <p className="text-sm text-danger">{status.lastError}</p> : null}
+        </AppPageSection>
 
-        <section className="model-gateway-panel" aria-labelledby="model-gateway-settings-title">
-          <div className="model-gateway-section-heading">
-            <h2 id="model-gateway-settings-title">Settings</h2>
-          </div>
-          <div className="model-gateway-form-grid">
-            <label className="model-gateway-field">
-              <span>Port</span>
+        <AppPageSection title="Settings" layout="stacked">
+          <div className="grid max-w-3xl gap-4 md:grid-cols-[10rem_minmax(0,1fr)]">
+            <label className="block">
+              <span className="text-xs text-secondary">Port</span>
               <TextInput value={port} onChange={(event) => setPort(event.currentTarget.value)} />
             </label>
-            <label className="model-gateway-field">
-              <span>Default model</span>
+            <label className="block">
+              <span className="text-xs text-secondary">Default model</span>
               <TextInput value={defaultModel} onChange={(event) => setDefaultModel(event.currentTarget.value)} />
             </label>
           </div>
-        </section>
+        </AppPageSection>
 
-        <section className="model-gateway-panel" aria-labelledby="model-gateway-config-title">
-          <div className="model-gateway-section-heading">
-            <h2 id="model-gateway-config-title">Codex CLI Test Config</h2>
-            <Button variant="secondary" onClick={() => void copyConfig()}>
+        <AppPageSection
+          title="Codex CLI Test Config"
+          layout="stacked"
+          actions={
+            <ToolbarButton onClick={() => void copyConfig()}>
               {copied ? 'Copied' : 'Copy'}
-            </Button>
-          </div>
+            </ToolbarButton>
+          }
+        >
           <pre className="model-gateway-code">{codexConfig}</pre>
-        </section>
-      </div>
-    </AppPageLayout>
+        </AppPageSection>
+      </AppPageLayout>
+    </div>
   );
 }
