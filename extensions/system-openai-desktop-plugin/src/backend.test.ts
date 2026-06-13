@@ -48,6 +48,14 @@ describe('OpenAI Desktop plugin installer', () => {
     const after = await status({ marketplaceRoot, codexHome }, ctx);
     expect(after.installed).toBe(true);
     expect(after.codex).toMatchObject({ checked: true, marketplaceRegistered: true, pluginInstalled: true, pluginEnabled: true });
+    expect(after.codex).toMatchObject({
+      mcp: {
+        checked: true,
+        serverName: 'neon-pilot',
+        registered: true,
+        tools: expect.arrayContaining(['neon_pilot_delegate', 'neon_pilot_list_delegates']),
+      },
+    });
 
     const { stdout: mcpList } = await execFileAsync('codex', ['mcp', 'list'], {
       env: { ...process.env, CODEX_HOME: codexHome },

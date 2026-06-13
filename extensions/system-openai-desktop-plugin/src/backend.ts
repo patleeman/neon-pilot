@@ -11,6 +11,15 @@ const PLUGIN_NAME = 'neon-pilot';
 const MARKETPLACE_NAME = 'neon-pilot-local';
 const DISPLAY_NAME = 'Neon Pilot';
 const VERSION = '0.1.0';
+const MCP_SERVER_NAME = 'neon-pilot';
+const MCP_TOOLS = [
+  'neon_pilot_delegate',
+  'neon_pilot_list_delegates',
+  'neon_pilot_get_delegate',
+  'neon_pilot_delegate_logs',
+  'neon_pilot_follow_up',
+  'neon_pilot_cancel_delegate',
+];
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -170,14 +179,23 @@ export async function status(input: unknown, ctx?: ExtensionBackendContext): Pro
   if (ctx && shouldManageCodex(input)) {
     const marketplaces = await runCodex(ctx, ['plugin', 'marketplace', 'list'], input);
     const plugins = await runCodex(ctx, ['plugin', 'list', '--json'], input);
+    const mcpServer = await runCodex(ctx, ['mcp', 'get', MCP_SERVER_NAME], input);
     const parsedPlugins = parseJsonText(plugins.stdout);
     const installedPlugins = isRecord(parsedPlugins) && Array.isArray(parsedPlugins.installed) ? parsedPlugins.installed : [];
     const pluginId = `${PLUGIN_NAME}@${MARKETPLACE_NAME}`;
+    const mcpText = [mcpServer.stdout, mcpServer.stderr].filter((text) => text?.trim()).join('\n');
     codex = {
       checked: true,
       marketplaceRegistered: Boolean(marketplaces.stdout?.includes(MARKETPLACE_NAME)),
       pluginEnabled: installedPlugins.some((entry) => isRecord(entry) && entry.pluginId === pluginId && entry.enabled === true),
       pluginInstalled: installedPlugins.some((entry) => isRecord(entry) && entry.pluginId === pluginId && entry.installed === true),
+      mcp: {
+        checked: true,
+        serverName: MCP_SERVER_NAME,
+        registered: shellOk(mcpServer) && mcpText.includes(MCP_SERVER_NAME) && mcpText.includes('enabled: true'),
+        tools: MCP_TOOLS,
+        detail: mcpText,
+      },
     };
   }
   return {

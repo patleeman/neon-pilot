@@ -18,6 +18,13 @@ interface PluginStatus {
     marketplaceRegistered?: boolean;
     pluginInstalled?: boolean;
     pluginEnabled?: boolean;
+    mcp?: {
+      checked?: boolean;
+      serverName?: string;
+      registered?: boolean;
+      tools?: string[];
+      detail?: string;
+    };
   };
 }
 
@@ -84,6 +91,8 @@ export function OpenAiDesktopPluginSettingsPanel({ pa }: { pa: NativeExtensionCl
 
   const codexInstalled = status.codex?.checked ? status.codex.pluginInstalled === true && status.codex.pluginEnabled === true : status.installed;
   const installed = status.installed && codexInstalled;
+  const mcpRegistered = status.codex?.mcp?.registered === true;
+  const mcpTools = status.codex?.mcp?.tools ?? [];
 
   return (
     <div className="openai-desktop-plugin-settings">
@@ -99,14 +108,16 @@ export function OpenAiDesktopPluginSettingsPanel({ pa }: { pa: NativeExtensionCl
                 </div>
               </div>
               <div>
-                <div className="ui-card-meta">Codex</div>
+                <div className="ui-card-meta">Codex plugin</div>
                 <div className="mt-1">
                   <Pill tone={codexInstalled ? 'success' : 'neutral'}>{codexInstalled ? 'Enabled' : 'Not enabled'}</Pill>
                 </div>
               </div>
               <div>
-                <div className="ui-card-meta">Version</div>
-                <div className="mt-1 text-[13px] text-primary">{status.installedVersion ?? '0.1.0'}</div>
+                <div className="ui-card-meta">MCP server</div>
+                <div className="mt-1">
+                  <Pill tone={mcpRegistered ? 'success' : 'neutral'}>{mcpRegistered ? 'Registered' : 'Not registered'}</Pill>
+                </div>
               </div>
             </div>
 
@@ -133,6 +144,10 @@ export function OpenAiDesktopPluginSettingsPanel({ pa }: { pa: NativeExtensionCl
 
             <div className="openai-desktop-plugin-paths">
               <div>
+                <div className="ui-card-meta">Version</div>
+                <div className="openai-desktop-plugin-path">{status.installedVersion ?? '0.1.0'}</div>
+              </div>
+              <div>
                 <div className="ui-card-meta">Marketplace</div>
                 <div className="openai-desktop-plugin-path">{status.marketplaceRoot || 'Not created yet'}</div>
               </div>
@@ -143,6 +158,13 @@ export function OpenAiDesktopPluginSettingsPanel({ pa }: { pa: NativeExtensionCl
               <div>
                 <div className="ui-card-meta">Marketplace manifest</div>
                 <div className="openai-desktop-plugin-path">{status.marketplacePath || 'Not created yet'}</div>
+              </div>
+            </div>
+
+            <div className="openai-desktop-plugin-tools">
+              <div className="ui-card-meta">MCP tools exposed in Codex</div>
+              <div className="openai-desktop-plugin-tool-list">
+                {mcpTools.length > 0 ? mcpTools.map((tool) => <code key={tool}>{tool}</code>) : <span>No tools reported yet.</span>}
               </div>
             </div>
 
