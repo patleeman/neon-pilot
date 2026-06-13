@@ -2,6 +2,8 @@
 
 Installs and manages the portable `neon-pilot` Codex/OpenAI Desktop plugin from inside Neon Pilot.
 
+This system extension is enabled by default. On Neon Pilot startup, and again when the extension is re-enabled, it idempotently writes the local marketplace, registers that marketplace with `codex plugin marketplace add`, and installs/enables `neon-pilot@neon-pilot-local` with `codex plugin add`. Patrick should not need to copy files or run Codex commands by hand.
+
 The generated plugin intentionally stays small:
 
 - one Agent Skill that explains when and how to use the `neon-pilot` CLI;
@@ -10,17 +12,26 @@ The generated plugin intentionally stays small:
 
 ## Plugin shape
 
-The managed plugin is installed into the default personal Codex marketplace layout:
+The managed plugin is installed into a Neon Pilot-owned local Codex marketplace root, then registered and installed with the Codex CLI:
 
 ```text
-~/.agents/plugins/
-  marketplace.json
+~/.local/share/neon-pilot/codex-plugin-marketplace/
+  .agents/plugins/marketplace.json
   plugins/neon-pilot/
     .codex-plugin/plugin.json
     .mcp.json
     skills/neon-pilot/SKILL.md
     mcp/neon-pilot-subagent.mjs
 ```
+
+Startup install runs the equivalent of:
+
+```sh
+codex plugin marketplace add ~/.local/share/neon-pilot/codex-plugin-marketplace --json
+codex plugin add neon-pilot@neon-pilot-local --json
+```
+
+Remove runs the matching `codex plugin remove` and `codex plugin marketplace remove` commands before deleting the generated files. Uninstalling the extension invokes that cleanup hook.
 
 The MCP tools map onto the existing Neon Pilot CLI protocol:
 
@@ -42,5 +53,5 @@ From the repo root:
 ```sh
 pnpm run extension:build -- extensions/system-openai-desktop-plugin
 python3 /Users/patrick/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py /tmp/generated-neon-pilot-plugin
+pnpm exec vitest run extensions/system-openai-desktop-plugin/src/backend.test.ts
 ```
-

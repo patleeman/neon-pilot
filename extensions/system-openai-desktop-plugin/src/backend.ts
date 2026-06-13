@@ -3,10 +3,12 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+
 type JsonRecord = Record<string, unknown>;
 
 const PLUGIN_NAME = 'neon-pilot';
-const MARKETPLACE_NAME = 'personal';
+const MARKETPLACE_NAME = 'neon-pilot-local';
 const DISPLAY_NAME = 'Neon Pilot';
 const VERSION = '0.1.0';
 
@@ -32,7 +34,7 @@ function templateRoot(): string {
 }
 
 function defaultMarketplaceRoot(): string {
-  return join(homedir(), '.agents', 'plugins');
+  return join(homedir(), '.local', 'share', 'neon-pilot', 'codex-plugin-marketplace');
 }
 
 function targetPaths(input: unknown = {}): { marketplaceRoot: string; marketplacePath: string; pluginPath: string } {
@@ -40,7 +42,7 @@ function targetPaths(input: unknown = {}): { marketplaceRoot: string; marketplac
   const marketplaceRoot = resolve(readString(record.marketplaceRoot) ?? defaultMarketplaceRoot());
   return {
     marketplaceRoot,
-    marketplacePath: join(marketplaceRoot, 'marketplace.json'),
+    marketplacePath: join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json'),
     pluginPath: join(marketplaceRoot, 'plugins', PLUGIN_NAME),
   };
 }
@@ -76,7 +78,7 @@ function ensureMarketplaceEntry(marketplacePath: string): JsonRecord {
   const payload: JsonRecord = existing ?? {
     name: MARKETPLACE_NAME,
     interface: {
-      displayName: 'Personal',
+      displayName: 'Neon Pilot Local',
     },
     plugins: [],
   };
@@ -111,28 +113,91 @@ function installedVersion(pluginPath: string): string | null {
   return readString(manifest?.version) ?? null;
 }
 
-export async function status(input: unknown): Promise<JsonRecord> {
+type ShellResult = {
+  stdout?: string;
+  stderr?: string;
+  exitCode?: number;
+};
+
+async function runCodex(ctx: ExtensionBackendContext, args: string[], input: unknown): Promise<ShellResult> {
+  const record = isRecord(input) ? input : {};
+  const command = readString(record.codexCommand) ?? 'codex';
+  const codexHome = readString(record.codexHome);
+  try {
+    return (await ctx.shell.exec({
+      command,
+      args,
+      ...(codexHome ? { env: { CODEX_HOME: codexHome } } : {}),
+    })) as ShellResult;
+  } catch (error) {
+    return {
+      stdout: '',
+      stderr: error instanceof Error ? error.message : String(error),
+      exitCode: 1,
+    };
+  }
+}
+
+function shellOk(result: ShellResult): boolean {
+  return result.exitCode === undefined || result.exitCode === 0;
+}
+
+function parseJsonText(text: string | undefined): unknown {
+  if (!text?.trim()) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function codexError(result: ShellResult): string {
+  return [result.stderr, result.stdout].filter((text) => text?.trim()).join('\n').trim() || `codex exited ${result.exitCode ?? 'unknown'}`;
+}
+
+function shouldManageCodex(input: unknown): boolean {
+  return !isRecord(input) || input.manageCodex !== false;
+}
+
+export async function status(input: unknown, ctx?: ExtensionBackendContext): Promise<JsonRecord> {
   const paths = targetPaths(input);
   const marketplace = readJsonObject(paths.marketplacePath);
   const entryInstalled = Array.isArray(marketplace?.plugins)
     ? marketplace.plugins.some((entry) => isRecord(entry) && entry.name === PLUGIN_NAME)
     : false;
   const pluginInstalled = existsSync(join(paths.pluginPath, '.codex-plugin', 'plugin.json'));
+  let codex: JsonRecord = { checked: false };
+  if (ctx && shouldManageCodex(input)) {
+    const marketplaces = await runCodex(ctx, ['plugin', 'marketplace', 'list'], input);
+    const plugins = await runCodex(ctx, ['plugin', 'list', '--json'], input);
+    const parsedPlugins = parseJsonText(plugins.stdout);
+    const installedPlugins = isRecord(parsedPlugins) && Array.isArray(parsedPlugins.installed) ? parsedPlugins.installed : [];
+    const pluginId = `${PLUGIN_NAME}@${MARKETPLACE_NAME}`;
+    codex = {
+      checked: true,
+      marketplaceRegistered: Boolean(marketplaces.stdout?.includes(MARKETPLACE_NAME)),
+      pluginEnabled: installedPlugins.some((entry) => isRecord(entry) && entry.pluginId === pluginId && entry.enabled === true),
+      pluginInstalled: installedPlugins.some((entry) => isRecord(entry) && entry.pluginId === pluginId && entry.installed === true),
+    };
+  }
   return {
     ok: true,
     pluginName: PLUGIN_NAME,
     displayName: DISPLAY_NAME,
     version: VERSION,
-    installed: pluginInstalled && entryInstalled,
+    installed: pluginInstalled && entryInstalled && (codex.checked === true ? codex.pluginInstalled === true : true),
     pluginInstalled,
     marketplaceEntryInstalled: entryInstalled,
+    marketplaceName: MARKETPLACE_NAME,
+    marketplaceRoot: paths.marketplaceRoot,
     marketplacePath: paths.marketplacePath,
     pluginPath: paths.pluginPath,
     installedVersion: installedVersion(paths.pluginPath),
+    codex,
   };
 }
 
-export async function installPlugin(input: unknown): Promise<JsonRecord> {
+export async function installPlugin(input: unknown, ctx?: ExtensionBackendContext): Promise<JsonRecord> {
   const paths = targetPaths(input);
   const force = bool(isRecord(input) ? input.force : false);
   if (existsSync(paths.pluginPath) && force) {
@@ -141,28 +206,85 @@ export async function installPlugin(input: unknown): Promise<JsonRecord> {
   mkdirSync(dirname(paths.pluginPath), { recursive: true });
   cpSync(templateRoot(), paths.pluginPath, { recursive: true, force: true });
   const marketplace = ensureMarketplaceEntry(paths.marketplacePath);
+  const codexSteps: JsonRecord[] = [];
+  if (ctx && shouldManageCodex(input)) {
+    const addMarketplace = await runCodex(ctx, ['plugin', 'marketplace', 'add', paths.marketplaceRoot, '--json'], input);
+    codexSteps.push({ command: 'plugin marketplace add', ok: shellOk(addMarketplace), stdout: addMarketplace.stdout, stderr: addMarketplace.stderr });
+    if (!shellOk(addMarketplace) && !codexError(addMarketplace).includes('already')) {
+      throw new Error(`Failed to register Codex marketplace: ${codexError(addMarketplace)}`);
+    }
+
+    const addPlugin = await runCodex(ctx, ['plugin', 'add', `${PLUGIN_NAME}@${MARKETPLACE_NAME}`, '--json'], input);
+    codexSteps.push({ command: 'plugin add', ok: shellOk(addPlugin), stdout: addPlugin.stdout, stderr: addPlugin.stderr });
+    if (!shellOk(addPlugin)) {
+      throw new Error(`Failed to install Codex plugin: ${codexError(addPlugin)}`);
+    }
+  }
   return {
     ok: true,
     installed: true,
     pluginName: PLUGIN_NAME,
     version: VERSION,
+    marketplaceName: MARKETPLACE_NAME,
+    marketplaceRoot: paths.marketplaceRoot,
     marketplacePath: paths.marketplacePath,
     pluginPath: paths.pluginPath,
     marketplace,
+    codexSteps,
   };
 }
 
-export async function removePlugin(input: unknown): Promise<JsonRecord> {
+export async function autoInstallPlugin(input: unknown, ctx?: ExtensionBackendContext): Promise<JsonRecord> {
+  try {
+    const installed = await installPlugin(input, ctx);
+    const current = await status(input, ctx);
+    return {
+      ...current,
+      autoInstalled: true,
+      codexSteps: installed.codexSteps,
+    };
+  } catch (error) {
+    const current = await status({ ...(isRecord(input) ? input : {}), manageCodex: false });
+    return {
+      ...current,
+      ok: false,
+      autoInstalled: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+export async function removePlugin(input: unknown, ctx?: ExtensionBackendContext): Promise<JsonRecord> {
   const paths = targetPaths(input);
+  const codexSteps: JsonRecord[] = [];
+  if (ctx && shouldManageCodex(input)) {
+    const removePluginResult = await runCodex(ctx, ['plugin', 'remove', `${PLUGIN_NAME}@${MARKETPLACE_NAME}`, '--json'], input);
+    codexSteps.push({
+      command: 'plugin remove',
+      ok: shellOk(removePluginResult),
+      stdout: removePluginResult.stdout,
+      stderr: removePluginResult.stderr,
+    });
+
+    const removeMarketplaceResult = await runCodex(ctx, ['plugin', 'marketplace', 'remove', MARKETPLACE_NAME, '--json'], input);
+    codexSteps.push({
+      command: 'plugin marketplace remove',
+      ok: shellOk(removeMarketplaceResult),
+      stdout: removeMarketplaceResult.stdout,
+      stderr: removeMarketplaceResult.stderr,
+    });
+  }
   rmSync(paths.pluginPath, { recursive: true, force: true });
   const marketplace = removeMarketplaceEntry(paths.marketplacePath);
   return {
     ok: true,
     installed: false,
     pluginName: PLUGIN_NAME,
+    marketplaceName: MARKETPLACE_NAME,
+    marketplaceRoot: paths.marketplaceRoot,
     marketplacePath: paths.marketplacePath,
     pluginPath: paths.pluginPath,
     marketplace,
+    codexSteps,
   };
 }
-

@@ -569,19 +569,19 @@ const smokes = {
   },
   async 'system-openai-desktop-plugin'() {
     const marketplaceRoot = join(tempRoot, 'codex-marketplace');
-    const before = await module.status({ marketplaceRoot }, ctx);
+    const before = await module.status({ marketplaceRoot, manageCodex: false }, ctx);
     assert(before.installed === false, 'OpenAI Desktop plugin should start uninstalled');
 
-    const installed = await module.installPlugin({ marketplaceRoot, force: true }, ctx);
+    const installed = await module.installPlugin({ marketplaceRoot, force: true, manageCodex: false }, ctx);
     assert(installed.installed === true, 'OpenAI Desktop plugin install failed');
     assert(existsSync(join(marketplaceRoot, 'plugins', 'neon-pilot', '.codex-plugin', 'plugin.json')), 'plugin manifest missing');
     assert(existsSync(join(marketplaceRoot, 'plugins', 'neon-pilot', '.mcp.json')), 'plugin MCP config missing');
     assert(existsSync(join(marketplaceRoot, 'plugins', 'neon-pilot', 'skills', 'neon-pilot', 'SKILL.md')), 'plugin skill missing');
 
-    const after = await module.status({ marketplaceRoot }, ctx);
+    const after = await module.status({ marketplaceRoot, manageCodex: false }, ctx);
     assert(after.installed === true && after.installedVersion === '0.1.0', 'OpenAI Desktop plugin status failed after install');
 
-    const removed = await module.removePlugin({ marketplaceRoot }, ctx);
+    const removed = await module.removePlugin({ marketplaceRoot, manageCodex: false }, ctx);
     assert(removed.installed === false, 'OpenAI Desktop plugin remove failed');
     assert(!existsSync(join(marketplaceRoot, 'plugins', 'neon-pilot', '.codex-plugin', 'plugin.json')), 'plugin manifest remained after remove');
   },
