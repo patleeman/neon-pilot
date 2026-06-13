@@ -97,7 +97,7 @@ Bundled system extensions:
 - [Image Probe](../extensions/system-image-probe/README.md) — image attachment inspection with a vision agent
 - [Local Dictation](../extensions/system-local-dictation/README.md) — Whisper.cpp dictation controls and settings
 - [MCP](../extensions/system-mcp/README.md) — configured MCP server inspection, auth, and calls
-- [Model Gateway](../extensions/system-model-gateway/README.md) — local Responses API gateway for external coding agents
+- [Model Gateway](../extensions/system-model-gateway/README.md) — opt-in local Responses API gateway for external coding agents; disabled by default while Codex Desktop custom-model picker fixes are pending upstream
 - [Model Picker](../extensions/system-model-picker/README.md) — composer model and thinking controls
 - Neon Pilot CLI — unified CLI control plane for internal agents and external callers
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run onboarding bootstrap and conversation flow
