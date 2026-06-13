@@ -1,0 +1,23 @@
+{
+  "name": "neon-pilot",
+  "version": "0.1.0",
+  "description": "Use Neon Pilot from Codex/OpenAI Desktop as a focused delegated-agent runtime.",
+  "author": {
+    "name": "Neon Pilot"
+  },
+  "homepage": "https://neonpilot.net",
+  "repository": "https://github.com/patleeman/neon-pilot",
+  "license": "MIT",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Neon Pilot",
+    "shortDescription": "Delegate focused work to Neon Pilot from Codex.",
+    "longDescription": "Adds a Neon Pilot skill plus a small MCP bridge for durable delegated agent work. Broader Neon Pilot administration remains in the CLI skill instead of being exposed as MCP.",
+    "developerName": "Neon Pilot",
+    "category": "Productivity",
+    "capabilities": ["skills", "mcp"],
+    "websiteURL": "https://neonpilot.net",
+    "defaultPrompt": "Use Neon Pilot as a delegated subagent for a focused coding or investigation task."
+  }
+}

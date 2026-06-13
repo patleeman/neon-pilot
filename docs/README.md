@@ -100,6 +100,7 @@ Bundled system extensions:
 - [Model Gateway](../extensions/system-model-gateway/README.md) — opt-in local Responses API gateway for external coding agents; disabled by default while Codex Desktop custom-model picker fixes are pending upstream
 - [Model Picker](../extensions/system-model-picker/README.md) — composer model and thinking controls
 - Neon Pilot CLI — unified CLI control plane for internal agents and external callers
+- [OpenAI Desktop Plugin](../extensions/system-openai-desktop-plugin/README.md) — installs the external Codex/OpenAI Desktop `neon-pilot` plugin with a CLI skill and focused delegated-agent MCP bridge
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run onboarding bootstrap and conversation flow
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
 - [Reply Actions](../extensions/system-reply-actions/README.md) — transcript selection actions and draft starters
