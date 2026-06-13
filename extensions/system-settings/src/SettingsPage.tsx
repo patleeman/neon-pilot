@@ -1210,22 +1210,28 @@ function SettingsTableOfContents({
           event.preventDefault();
           onNavigate(item.id);
         }}
-        className={cx('ui-app-page-toc-link', nested && 'py-1.5 pl-3', active && 'ui-app-page-toc-link-active')}
+        className={cx(
+          'ui-app-page-toc-link settings-page-toc-link',
+          nested && 'settings-page-toc-link-nested py-1.5 pl-3',
+          active && 'ui-app-page-toc-link-active',
+        )}
         aria-current={active ? 'location' : undefined}
       >
-        <span className={cx('block font-medium', nested ? 'text-[12px]' : 'text-[13px]')}>{item.label}</span>
+        <span className={cx('settings-page-toc-label block font-medium', nested ? 'text-[12px]' : 'text-[13px]')}>{item.label}</span>
         {item.summary ? (
-          <span className={cx('mt-0.5 block text-[11px] leading-5', active ? 'text-primary/75' : 'text-dim')}>{item.summary}</span>
+          <span className={cx('settings-page-toc-summary mt-0.5 block text-[11px] leading-5', active ? 'text-primary/75' : 'text-dim')}>
+            {item.summary}
+          </span>
         ) : null}
       </a>
     );
   };
 
   return (
-    <aside>
-      <nav aria-label="Settings sections" className="space-y-3">
+    <aside className="settings-page-toc">
+      <nav aria-label="Settings sections" className="settings-page-toc-nav space-y-3">
         <div className="ui-app-page-toc-title">On this page</div>
-        <div className="space-y-2">
+        <div className="settings-page-toc-list space-y-2">
           {items.map((item) => (
             <div key={item.id} className="space-y-1">
               {renderLink(item)}

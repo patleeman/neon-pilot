@@ -571,6 +571,53 @@
     @apply border-accent text-primary;
   }
 
+  .settings-page-toc {
+    max-height: calc(100vh - 7rem);
+    min-height: 0;
+  }
+
+  .settings-page-toc-nav {
+    display: flex;
+    max-height: inherit;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .settings-page-toc-list {
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: 0.25rem;
+    scrollbar-width: thin;
+  }
+
+  .settings-page-toc-label,
+  .settings-page-toc-summary {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .settings-page-toc-label {
+    white-space: nowrap;
+  }
+
+  @media (max-height: 820px) {
+    .settings-page-toc-list {
+      @apply space-y-1;
+    }
+
+    .settings-page-toc-link {
+      @apply py-1.5;
+    }
+
+    .settings-page-toc-link-nested {
+      @apply py-1;
+    }
+
+    .settings-page-toc-summary {
+      display: none;
+    }
+  }
+
   .ui-app-page-empty-shell {
     @apply flex min-h-0 flex-1 justify-center px-4 pb-6 sm:px-6;
   }
