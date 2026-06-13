@@ -1,5 +1,5 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageIntro, AppPageLayout, AppPageSection, Button, ErrorState, LoadingState, Pill, TextInput } from '@neon-pilot/extensions/ui';
+import { AppPageIntro, AppPageLayout, Button, ErrorState, LoadingState, Pill, TextInput } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import './frontend.css';
@@ -34,6 +34,7 @@ export function ModelGatewayPage({ pa }: ExtensionSurfaceProps) {
   const [error, setError] = useState('');
   const [port, setPort] = useState(String(DEFAULT_STATUS.port));
   const [defaultModel, setDefaultModel] = useState(DEFAULT_STATUS.defaultModel);
+  const [copied, setCopied] = useState(false);
   const codexConfig = useMemo(
     () =>
       [
@@ -98,6 +99,17 @@ export function ModelGatewayPage({ pa }: ExtensionSurfaceProps) {
     }
   }
 
+  async function copyConfig() {
+    setCopied(false);
+    try {
+      await navigator.clipboard.writeText(codexConfig);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch (err) {
+      setError(readError(err));
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -108,18 +120,14 @@ export function ModelGatewayPage({ pa }: ExtensionSurfaceProps) {
 
   return (
     <AppPageLayout>
-      <AppPageIntro
-        title="Model Gateway"
-        eyebrow="External agents"
-        description="Run an OpenAI Responses-compatible loopback endpoint backed by Neon Pilot model providers."
-      />
-
-      {error ? <ErrorState title="Gateway action failed" body={error} /> : null}
-
-      <AppPageSection
-        title="Runtime"
-        actions={
-          <div className="flex items-center gap-2">
+      <div className="model-gateway-page">
+        <div className="model-gateway-header">
+          <AppPageIntro
+            title="Model Gateway"
+            eyebrow="External agents"
+            description="OpenAI Responses-compatible loopback endpoint backed by Neon Pilot model providers."
+          />
+          <div className="model-gateway-actions">
             <Button variant="secondary" disabled={busy !== null} onClick={() => void refresh()}>
               Refresh
             </Button>
@@ -136,47 +144,58 @@ export function ModelGatewayPage({ pa }: ExtensionSurfaceProps) {
               </Button>
             )}
           </div>
-        }
-      >
-        <div className="grid gap-3 md:grid-cols-4">
-          <div>
-            <div className="text-xs text-secondary">Status</div>
-            <div className="mt-1">
-              <Pill tone={status.running ? 'success' : 'neutral'}>{status.running ? 'Running' : 'Stopped'}</Pill>
+        </div>
+
+        {error ? <ErrorState title="Gateway action failed" body={error} /> : null}
+
+        <section className="model-gateway-panel" aria-labelledby="model-gateway-runtime-title">
+          <div className="model-gateway-section-heading">
+            <h2 id="model-gateway-runtime-title">Runtime</h2>
+            <Pill tone={status.running ? 'success' : 'neutral'}>{status.running ? 'Running' : 'Stopped'}</Pill>
+          </div>
+          <div className="model-gateway-metrics">
+            <div className="model-gateway-metric model-gateway-metric-wide">
+              <span>Endpoint</span>
+              <code>{status.baseUrl}</code>
+            </div>
+            <div className="model-gateway-metric">
+              <span>Models</span>
+              <strong>{status.models}</strong>
+            </div>
+            <div className="model-gateway-metric">
+              <span>Default model</span>
+              <code>{status.defaultModel}</code>
             </div>
           </div>
-          <div>
-            <div className="text-xs text-secondary">Endpoint</div>
-            <div className="mt-1 font-mono text-sm text-primary">{status.baseUrl}</div>
-          </div>
-          <div>
-            <div className="text-xs text-secondary">Models</div>
-            <div className="mt-1 text-sm text-primary">{status.models}</div>
-          </div>
-          <div>
-            <div className="text-xs text-secondary">Default model</div>
-            <div className="mt-1 font-mono text-sm text-primary">{status.defaultModel}</div>
-          </div>
-        </div>
-        {status.lastError ? <p className="mt-3 text-sm text-danger">{status.lastError}</p> : null}
-      </AppPageSection>
+          {status.lastError ? <p className="model-gateway-error">{status.lastError}</p> : null}
+        </section>
 
-      <AppPageSection title="Settings">
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="block">
-            <span className="text-xs text-secondary">Port</span>
-            <TextInput value={port} onChange={(event) => setPort(event.currentTarget.value)} />
-          </label>
-          <label className="block">
-            <span className="text-xs text-secondary">Default model</span>
-            <TextInput value={defaultModel} onChange={(event) => setDefaultModel(event.currentTarget.value)} />
-          </label>
-        </div>
-      </AppPageSection>
+        <section className="model-gateway-panel" aria-labelledby="model-gateway-settings-title">
+          <div className="model-gateway-section-heading">
+            <h2 id="model-gateway-settings-title">Settings</h2>
+          </div>
+          <div className="model-gateway-form-grid">
+            <label className="model-gateway-field">
+              <span>Port</span>
+              <TextInput value={port} onChange={(event) => setPort(event.currentTarget.value)} />
+            </label>
+            <label className="model-gateway-field">
+              <span>Default model</span>
+              <TextInput value={defaultModel} onChange={(event) => setDefaultModel(event.currentTarget.value)} />
+            </label>
+          </div>
+        </section>
 
-      <AppPageSection title="Codex CLI Test Config">
-        <pre className="overflow-auto rounded border border-subtle bg-panel p-3 text-xs text-primary">{codexConfig}</pre>
-      </AppPageSection>
+        <section className="model-gateway-panel" aria-labelledby="model-gateway-config-title">
+          <div className="model-gateway-section-heading">
+            <h2 id="model-gateway-config-title">Codex CLI Test Config</h2>
+            <Button variant="secondary" onClick={() => void copyConfig()}>
+              {copied ? 'Copied' : 'Copy'}
+            </Button>
+          </div>
+          <pre className="model-gateway-code">{codexConfig}</pre>
+        </section>
+      </div>
     </AppPageLayout>
   );
 }
