@@ -10,7 +10,7 @@ Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.18
 
 Highlights in this train:
 
-- Adds the opt-in Model Gateway for external coding agents, exposing Neon Pilot model providers through a local OpenAI Responses-compatible endpoint.
+- Adds the opt-in AI Gateway for external coding agents, exposing Neon Pilot model providers through a local OpenAI Responses-compatible endpoint.
 - Installs Codex gateway catalog metadata conservatively so existing Codex Desktop threads stay visible instead of switching the global provider lane.
 - Documents current Codex Desktop picker/sidebar blockers, keeps the gateway disabled by default, and adds a weekly upstream watch for the pending fixes.
 - Improves generated docs and website coverage so users can see which gateway paths are stable today and which Desktop integration pieces are waiting on upstream Codex fixes.

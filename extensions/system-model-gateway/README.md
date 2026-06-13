@@ -1,12 +1,12 @@
-# Model Gateway
+# AI Gateway
 
-Model Gateway is a bundled system extension that exposes an OpenAI Responses-compatible API for external coding agents. The extension is
+AI Gateway is a bundled system extension that exposes an OpenAI Responses-compatible proxy for external coding agents. The extension is
 bundled but disabled by default while Codex Desktop's custom-model picker support is incomplete.
 
 When the extension is enabled, Neon Pilot starts a local loopback gateway automatically. Users configure it from Settings rather than from a
 dedicated nav page:
 
-1. Open Settings → Extensions → Model Gateway.
+1. Open Settings → Extensions → AI Gateway.
 2. Confirm the endpoint, defaulting to `http://127.0.0.1:8766/v1`.
 3. Change the port if needed; saving the port restarts the listener.
 4. Use Install to add a managed `model_catalog_json` entry and Neon Pilot provider definition to `~/.codex/config.toml`, or Remove to delete
@@ -67,7 +67,7 @@ approval_policy = "never"
 sandbox_mode = "read-only"
 
 [model_providers.neon-pilot]
-name = "Neon Pilot Model Gateway"
+name = "Neon Pilot AI Gateway"
 base_url = "http://127.0.0.1:8766/v1"
 wire_api = "responses"
 experimental_bearer_token = "local-neon-pilot"

@@ -21,6 +21,6 @@ describe('ModelGatewaySettingsPanel', () => {
       ui: { notify: vi.fn() },
     };
     const html = renderToStaticMarkup(<ModelGatewaySettingsPanel pa={pa as never} />);
-    expect(html).toContain('Loading Model Gateway settings');
+    expect(html).toContain('Loading AI Gateway settings');
   });
 });

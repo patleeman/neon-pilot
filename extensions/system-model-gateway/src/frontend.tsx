@@ -97,7 +97,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
         ...(status.catalogPath ? [`model_catalog_json = "${status.catalogPath.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`] : []),
         '',
         '[model_providers.neon-pilot]',
-        'name = "Neon Pilot Model Gateway"',
+        'name = "Neon Pilot AI Gateway"',
         `base_url = "${status.baseUrl}"`,
         'wire_api = "responses"',
         'experimental_bearer_token = "local-neon-pilot"',
@@ -140,7 +140,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
       const next = (await pa.extension.invoke('updateSettings', { port: nextPort })) as GatewayStatus;
       setStatus({ ...DEFAULT_STATUS, ...next, logs: next.logs ?? [] });
       setPort(String(next.port));
-      setMessage('Model Gateway port saved.');
+      setMessage('AI Gateway port saved.');
     } catch (saveError) {
       setError(readError(saveError));
     } finally {
@@ -204,8 +204,8 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
 
   return (
     <div className="space-y-0">
-      <SettingsSection title="Model Gateway" description="Expose Neon Pilot model providers through a local OpenAI Responses-compatible endpoint.">
-        {loading ? <LoadingState label="Loading Model Gateway settings..." /> : null}
+      <SettingsSection title="AI Gateway" description="Expose Neon Pilot model providers through a local OpenAI Responses-compatible endpoint.">
+        {loading ? <LoadingState label="Loading AI Gateway settings..." /> : null}
 
         {!loading ? (
           <div className="space-y-5">

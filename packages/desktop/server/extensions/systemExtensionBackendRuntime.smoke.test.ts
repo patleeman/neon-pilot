@@ -553,19 +553,19 @@ const smokes = {
   },
   async 'system-model-gateway'() {
     const status = await module.status({}, ctx);
-    assert(status.baseUrl === 'http://127.0.0.1:8766/v1', 'model gateway status returned unexpected baseUrl');
-    assert(status.defaultModel === 'auto', 'model gateway default model should be auto');
-    assert(status.running === false, 'model gateway smoke should not auto-start the loopback listener');
+    assert(status.baseUrl === 'http://127.0.0.1:8766/v1', 'AI Gateway status returned unexpected baseUrl');
+    assert(status.defaultModel === 'auto', 'AI Gateway default model should be auto');
+    assert(status.running === false, 'AI Gateway smoke should not auto-start the loopback listener');
 
     const health = await module.healthRoute({}, ctx);
-    assert(health.status === 200 && health.body?.ok === true, 'model gateway health route failed');
+    assert(health.status === 200 && health.body?.ok === true, 'AI Gateway health route failed');
 
     const models = await module.modelsRoute({}, ctx);
-    assert(models.status === 200 && Array.isArray(models.body?.data), 'model gateway models route failed');
-    assert(models.body.data.some((model) => model.id === 'neon-pilot-fake'), 'model gateway fake model missing');
+    assert(models.status === 200 && Array.isArray(models.body?.data), 'AI Gateway models route failed');
+    assert(models.body.data.some((model) => model.id === 'neon-pilot-fake'), 'AI Gateway fake model missing');
 
     const response = await module.responsesRoute({ body: { model: 'neon-pilot-fake', input: 'smoke' } }, ctx);
-    assert(response.status === 200 && response.body?.status === 'completed', 'model gateway fake response failed');
+    assert(response.status === 200 && response.body?.status === 'completed', 'AI Gateway fake response failed');
   },
   async 'system-openai-desktop-plugin'() {
     const marketplaceRoot = join(tempRoot, 'codex-marketplace');

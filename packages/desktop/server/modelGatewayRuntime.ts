@@ -542,7 +542,7 @@ function catalogEntry(model: ModelGatewayModel, index: number): Record<string, u
   return {
     slug: model.id,
     display_name: displayName,
-    description: `${displayName} via Neon Pilot Model Gateway.`,
+    description: `${displayName} via Neon Pilot AI Gateway.`,
     context_window: contextWindow,
     max_context_window: contextWindow,
     auto_compact_token_limit: Math.max(8_000, Math.floor(contextWindow * 0.8)),
@@ -575,9 +575,9 @@ function catalogEntry(model: ModelGatewayModel, index: number): Record<string, u
     priority,
     prefer_websockets: false,
     available_in_plans: CODEX_PLAN_TIERS,
-    base_instructions: 'You are a coding agent running in Codex through Neon Pilot Model Gateway.',
+    base_instructions: 'You are a coding agent running in Codex through Neon Pilot AI Gateway.',
     model_messages: {
-      instructions_template: 'You are Codex running on {model_name} through Neon Pilot Model Gateway. Be a helpful, direct coding collaborator.',
+      instructions_template: 'You are Codex running on {model_name} through Neon Pilot AI Gateway. Be a helpful, direct coding collaborator.',
       instructions_variables: { model_name: displayName },
     },
   };
@@ -752,7 +752,7 @@ export function installModelGatewayCodexConfig(ctx: RuntimeContext, settings: Mo
   }
   const providers = readRecordProperty(config, 'model_providers') ?? {};
   providers['neon-pilot'] = {
-    name: 'Neon Pilot Model Gateway',
+    name: 'Neon Pilot AI Gateway',
     base_url: `http://${settings.host}:${settings.port}/v1`,
     wire_api: 'responses',
     experimental_bearer_token: 'local-neon-pilot',
@@ -802,7 +802,7 @@ function resolveDefaultModelRef(ctx: RuntimeContext, models: Array<Model<Api>>):
 }
 
 function fakeResponse(body: ResponsesRequest, model: string): ResponsesResponse {
-  const text = readText(body.input) || 'Hello from Neon Pilot Model Gateway.';
+  const text = readText(body.input) || 'Hello from Neon Pilot AI Gateway.';
   return {
     id: responseId(),
     object: 'response',
