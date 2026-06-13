@@ -252,7 +252,7 @@ describe('modelGatewayRuntime', () => {
     }
   });
 
-  it('installs a managed Codex config and preserves previous top-level model settings', () => {
+  it('installs a managed Codex catalog without changing the active provider lane', () => {
     const runtimeDir = mkdtempSync(join(tmpdir(), 'model-gateway-install-'));
     const configPath = join(runtimeDir, 'codex', 'config.toml');
     try {
@@ -288,16 +288,16 @@ describe('modelGatewayRuntime', () => {
         neon_pilot_model_gateway?: { managed?: boolean; previous_top_level?: Record<string, unknown> };
       };
 
-      expect(result.status).toMatchObject({ installed: true, activeProvider: 'neon-pilot', activeModel: 'auto' });
+      expect(result.status).toMatchObject({ installed: true, activeProvider: 'openai', activeModel: 'gpt-5.5' });
       expect(result.backupPath && existsSync(result.backupPath)).toBe(true);
       expect(parsed).toMatchObject({
-        model: 'auto',
-        model_provider: 'neon-pilot',
+        model: 'gpt-5.5',
+        model_provider: 'openai',
         approval_policy: 'never',
         model_providers: { 'neon-pilot': { base_url: 'http://127.0.0.1:8766/v1' } },
         neon_pilot_model_gateway: {
           managed: true,
-          previous_top_level: { model: 'gpt-5.5', model_provider: 'openai' },
+          previous_top_level: {},
         },
       });
       expect(parsed.model_catalog_json).toBe(join(runtimeDir, 'model-gateway', 'codex-model-catalog.json'));

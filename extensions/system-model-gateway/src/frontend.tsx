@@ -94,8 +94,6 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
   const codexConfig = useMemo(
     () =>
       [
-        'model_provider = "neon-pilot"',
-        `model = "${status.defaultModel.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`,
         ...(status.catalogPath ? [`model_catalog_json = "${status.catalogPath.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`] : []),
         '',
         '[model_providers.neon-pilot]',
@@ -104,7 +102,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
         'wire_api = "responses"',
         'experimental_bearer_token = "local-neon-pilot"',
       ].join('\n'),
-    [status.baseUrl, status.catalogPath, status.defaultModel],
+    [status.baseUrl, status.catalogPath],
   );
   const referenceCheck = status.codexConfig?.referenceCheck;
 
@@ -260,7 +258,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
                   <div className="text-[13px] font-semibold text-primary">Codex config</div>
                   <SupportingText>
                     {status.codexConfig?.installed
-                      ? `Installed in ${status.codexConfig.configPath}`
+                      ? `Catalog installed in ${status.codexConfig.configPath}`
                       : `Not installed in ${status.codexConfig?.configPath ?? '~/.codex/config.toml'}`}
                   </SupportingText>
                 </div>
@@ -277,7 +275,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
               {referenceCheck ? (
                 <Notice tone={referenceCheck.ok ? 'success' : 'warning'}>
                   {referenceCheck.ok
-                    ? `Codex reference sees ${referenceCheck.models ?? 0} gateway models. Restart Codex Desktop if the picker still shows the old list.`
+                    ? `Codex reference sees ${referenceCheck.models ?? 0} gateway models without changing the active provider. Restart Codex Desktop if the picker still shows the old list.`
                     : `Codex reference check failed: ${referenceCheck.error ?? 'gateway models were not found in Codex debug models.'}`}
                 </Notice>
               ) : status.codexConfig?.installed ? (

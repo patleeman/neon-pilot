@@ -8,8 +8,8 @@ dedicated nav page:
 1. Open Settings → Extensions → Model Gateway.
 2. Confirm the endpoint, defaulting to `http://127.0.0.1:8766/v1`.
 3. Change the port if needed; saving the port restarts the listener.
-4. Use Install to add a managed Neon Pilot block to `~/.codex/config.toml`, or Remove to delete that managed block and restore the previous
-   top-level Codex model settings captured during install.
+4. Use Install to add a managed `model_catalog_json` entry and Neon Pilot provider definition to `~/.codex/config.toml`, or Remove to delete
+   the managed catalog entry and provider definition.
 5. Copy the Codex config snippet for disposable client testing. It includes `model_catalog_json`, which points Codex at the generated local
    model catalog for picker/model metadata.
 6. Check Recent activity for loopback requests and errors.
@@ -27,8 +27,9 @@ The first validation target is Codex compatibility without touching the currentl
 3. Point disposable clients at the Settings endpoint, normally `http://127.0.0.1:8766/v1`.
 
 The Settings install/remove buttons write the user's real `~/.codex/config.toml` and create timestamped `.bak.neon-pilot-*` backups before
-modifying an existing file. For compatibility testing, prefer a separate Codex CLI process with an isolated config/home, then manually test
-Desktop after lower-level smoke checks pass.
+modifying an existing file. The installer deliberately does not set top-level `model_provider` or `model`: Codex Desktop filters the sidebar
+thread list by the active provider lane, so taking over `model_provider` hides existing OpenAI-backed Desktop threads. For compatibility
+testing, prefer a separate Codex CLI process with an isolated config/home, then manually test Desktop after lower-level smoke checks pass.
 
 ## Validation
 
@@ -49,8 +50,6 @@ For live Codex CLI checks, use an isolated Codex home:
 ```bash
 tmp_home=$(mktemp -d)
 cat > "$tmp_home/config.toml" <<'EOF'
-model_provider = "neon-pilot"
-model = "auto"
 model_catalog_json = "/path/to/neon-pilot/model-gateway/codex-model-catalog.json"
 approval_policy = "never"
 sandbox_mode = "read-only"
@@ -63,6 +62,7 @@ experimental_bearer_token = "local-neon-pilot"
 EOF
 
 CODEX_HOME="$tmp_home" /Applications/Codex.app/Contents/Resources/codex exec \
+  -c 'model_provider="neon-pilot"' -c 'model="auto"' \
   --json --skip-git-repo-check -C /tmp \
   "Run pwd with the shell tool, then reply with exactly DONE." </dev/null
 rm -rf "$tmp_home"
@@ -70,8 +70,9 @@ rm -rf "$tmp_home"
 
 The fake model proves the Responses shape and SSE lifecycle without provider credentials. Real provider checks require Neon Pilot provider credentials in the runtime's normal Pi-backed model configuration.
 
-Codex Desktop may still hide custom catalog entries behind its own picker allowlist. The catalog file gives Codex metadata for Neon Pilot models
-and avoids the CLI's unknown-model metadata fallback for listed slugs, but it does not patch Codex Desktop's installed app bundle.
+Codex Desktop reads `model_catalog_json` when listing picker metadata. Keep the provider inactive in the global config so existing Desktop
+threads stay visible; use explicit CLI overrides or a dedicated profile when a disposable Codex process should route requests through the
+gateway.
 
 If the loopback endpoint does not bind after restart, the extension stays manageable from Settings and reports the listener error there. Change
 the port or stop the other process, then Refresh or save the port again.
