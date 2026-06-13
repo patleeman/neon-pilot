@@ -1,6 +1,7 @@
 # Model Gateway
 
-Model Gateway is a bundled system extension that exposes an OpenAI Responses-compatible API for external coding agents.
+Model Gateway is a bundled system extension that exposes an OpenAI Responses-compatible API for external coding agents. The extension is
+bundled but disabled by default while Codex Desktop's custom-model picker support is incomplete.
 
 When the extension is enabled, Neon Pilot starts a local loopback gateway automatically. Users configure it from Settings rather than from a
 dedicated nav page:
@@ -28,8 +29,19 @@ The first validation target is Codex compatibility without touching the currentl
 
 The Settings install/remove buttons write the user's real `~/.codex/config.toml` and create timestamped `.bak.neon-pilot-*` backups before
 modifying an existing file. The installer deliberately does not set top-level `model_provider` or `model`: Codex Desktop filters the sidebar
-thread list by the active provider lane, so taking over `model_provider` hides existing OpenAI-backed Desktop threads. For compatibility
-testing, prefer a separate Codex CLI process with an isolated config/home, then manually test Desktop after lower-level smoke checks pass.
+thread list by the active provider lane, so taking over `model_provider` hides existing OpenAI-backed Desktop threads.
+
+This is intentionally more conservative than `sybil-solutions/codex-shim`. The shim installs an active custom provider and then patches the
+Codex Desktop Electron bundle so the renderer keeps showing picker models and recent threads. Neon Pilot does not patch
+`/Applications/Codex.app` by default. Track these upstream issues before enabling Desktop picker parity by default:
+
+- https://github.com/openai/codex/issues/19694 — Desktop filters models returned from `model_catalog_json` after app-server has loaded them.
+- https://github.com/openai/codex/issues/15138 — main conversation picker behaves differently from CLI/Automations for custom providers.
+- https://github.com/openai/codex/issues/10867 — Desktop custom-provider model picker support.
+- https://github.com/openai/codex/issues/14370 — Desktop sidebar can hide workspace threads because of recent-window/provider filtering.
+
+For compatibility testing, prefer a separate Codex CLI process with an isolated config/home, then manually test Desktop after lower-level smoke
+checks pass.
 
 ## Validation
 
@@ -70,9 +82,10 @@ rm -rf "$tmp_home"
 
 The fake model proves the Responses shape and SSE lifecycle without provider credentials. Real provider checks require Neon Pilot provider credentials in the runtime's normal Pi-backed model configuration.
 
-Codex Desktop reads `model_catalog_json` when listing picker metadata. Keep the provider inactive in the global config so existing Desktop
-threads stay visible; use explicit CLI overrides or a dedicated profile when a disposable Codex process should route requests through the
-gateway.
+Codex app-server reads `model_catalog_json` when listing picker metadata, but current Desktop builds may still hide custom catalog models in the
+conversation picker because of renderer-side filtering. Keep the provider inactive in the global config so existing Desktop threads stay
+visible; use explicit CLI overrides or a dedicated profile when a disposable Codex process should route requests through the gateway. If
+upstream fixes the picker and sidebar issues above, revisit the installer and decide whether the extension can be enabled by default.
 
 If the loopback endpoint does not bind after restart, the extension stays manageable from Settings and reports the listener error there. Change
 the port or stop the other process, then Refresh or save the port again.

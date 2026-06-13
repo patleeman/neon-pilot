@@ -5,6 +5,7 @@
   "packageType": "system",
   "description": "Local Responses API gateway for external coding agents, backed by Neon Pilot model providers.",
   "version": "0.1.0",
+  "defaultEnabled": false,
   "frontend": {
     "entry": "dist/frontend.js",
     "styles": ["dist/frontend.css"]

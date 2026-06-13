@@ -275,11 +275,13 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
               {referenceCheck ? (
                 <Notice tone={referenceCheck.ok ? 'success' : 'warning'}>
                   {referenceCheck.ok
-                    ? `Codex reference sees ${referenceCheck.models ?? 0} gateway models without changing the active provider. Restart Codex Desktop if the picker still shows the old list.`
+                    ? `Codex app-server sees ${referenceCheck.models ?? 0} gateway models without changing the active provider. Current Desktop builds may still hide them in the picker.`
                     : `Codex reference check failed: ${referenceCheck.error ?? 'gateway models were not found in Codex debug models.'}`}
                 </Notice>
               ) : status.codexConfig?.installed ? (
-                <Notice tone="warning">Restart Codex Desktop if the picker still shows the old model list.</Notice>
+                <Notice tone="warning">
+                  Catalog installed. Current Codex Desktop builds may still hide custom catalog models in the conversation picker.
+                </Notice>
               ) : null}
               <pre className="model-gateway-code">{codexConfig}</pre>
             </div>

@@ -106,6 +106,10 @@ type RuntimeContext = {
 };
 
 const CODEX_PLAN_TIERS = ['free', 'plus', 'pro', 'team', 'business', 'enterprise'];
+// Keep the managed top-level footprint to model_catalog_json until Codex Desktop
+// fixes custom catalog picker filtering and provider-scoped thread listing:
+// https://github.com/openai/codex/issues/19694
+// https://github.com/openai/codex/issues/14370
 const CODEX_CONFIG_MANAGED_TOP_LEVEL_KEYS = new Set(['model_catalog_json']);
 const CODEX_CONFIG_LEGACY_TOP_LEVEL_KEYS = new Set(['model_provider', 'model', 'model_catalog_json']);
 const CODEX_CONFIG_MANAGED_TABLE = 'neon_pilot_model_gateway';
@@ -729,6 +733,9 @@ export function installModelGatewayCodexConfig(ctx: RuntimeContext, settings: Mo
   const config = readTomlConfig(existing);
   const wasManaged = isManagedCodexConfig(config);
   const previousTopLevel = wasManaged ? readPreviousTopLevel(config) : {};
+  // Older Neon Pilot installs set top-level model_provider/model like codex-shim.
+  // Restore those keys first so reinstalling migrates users back to the
+  // catalog-only shape that keeps existing OpenAI-backed Desktop threads visible.
   if (wasManaged) {
     for (const key of CODEX_CONFIG_LEGACY_TOP_LEVEL_KEYS) {
       if (Object.prototype.hasOwnProperty.call(previousTopLevel, key)) {
