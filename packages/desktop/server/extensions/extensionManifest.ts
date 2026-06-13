@@ -170,7 +170,7 @@ export interface ExtensionModelDiscoveryContribution {
 export interface ExtensionGatewayProviderContribution {
   /** Stable provider id used in gateway state, routes, and events. */
   id: string;
-  /** Human-readable provider name rendered in the Gateways UI. */
+  /** Human-readable provider name rendered by gateway setup surfaces. */
   label: string;
   /** Short setup/runtime description rendered under the provider name. */
   description?: string;
@@ -183,7 +183,7 @@ export interface ExtensionGatewayProviderContribution {
   setupRoute?: string;
   /** Optional external setup documentation URL. */
   docsUrl?: string;
-  /** Sort order in the Gateways provider list. Lower renders first. Default 0. */
+  /** Sort order for provider summaries. Lower renders first. Default 0. */
   order?: number;
 }
 

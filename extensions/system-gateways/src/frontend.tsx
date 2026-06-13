@@ -26,7 +26,7 @@ import {
 } from '@neon-pilot/extensions/ui';
 import React, { type ChangeEvent, type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-type GatewayProviderId = string;
+type GatewayProviderId = 'telegram' | string;
 type GatewayStatus = 'needs_config' | 'connected' | 'active' | 'paused' | 'needs_attention';
 
 interface GatewayProviderSummary {
@@ -164,19 +164,6 @@ function providerLabel(provider: GatewayProviderId, providers: GatewayProviderSu
   return providers.find((candidate) => candidate.id === provider)?.label ?? providerFallbackLabel(provider);
 }
 
-function providerInitial(provider: GatewayProviderSummary): string {
-  return (provider.label.trim()[0] ?? provider.id.trim()[0] ?? '?').toUpperCase();
-}
-
-function providerRouteCount(state: GatewayState, provider: GatewayProviderId): number {
-  return state.bindings.filter((binding) => binding.provider === provider).length;
-}
-
-function providerConnectionStatus(provider: GatewayProviderSummary, connection: GatewayConnection | null): GatewayStatus {
-  if (connection) return connection.status;
-  return provider.implemented === false ? 'paused' : 'needs_config';
-}
-
 function formatRouteCount(count: number): string {
   return `${count} active ${count === 1 ? 'route' : 'routes'}`;
 }
@@ -280,11 +267,16 @@ export function GatewaysSidebar({ pa, context }: ExtensionSurfaceProps) {
 
   const providersById = useMemo(() => new Map(state.providers.map((provider) => [provider.id, provider])), [state.providers]);
   const activeConversationId = selectedConversationIdFromPath(context.pathname);
-  const activeBinding = state.bindings.find((binding) => binding.conversationId === activeConversationId);
+  const telegramBindings = state.bindings.filter((binding) => binding.provider === 'telegram');
+  const activeBinding = telegramBindings.find((binding) => binding.conversationId === activeConversationId);
   const activeItemId = activeBinding ? buildGatewayRouteActivityId(activeBinding) : null;
-  const activeConnections = state.connections.filter((connection) => connection.enabled);
-  const overallStatus: GatewayStatus = activeConnections.length > 0 ? 'active' : state.connections.length > 0 ? 'paused' : 'needs_config';
-  const treeItems: ActivityTreeItem[] = state.bindings.map((binding) => ({
+  const telegramConnection = findProviderConnection(state, 'telegram');
+  const overallStatus: GatewayStatus = telegramConnection?.enabled
+    ? telegramConnection.status
+    : telegramConnection
+      ? 'paused'
+      : 'needs_config';
+  const treeItems: ActivityTreeItem[] = telegramBindings.map((binding) => ({
     id: buildGatewayRouteActivityId(binding),
     kind: 'conversation',
     title: binding.conversationTitle || binding.conversationId,
@@ -300,19 +292,13 @@ export function GatewaysSidebar({ pa, context }: ExtensionSurfaceProps) {
       }`,
     },
   }));
-  const activeProviderLabels = [...new Set(state.bindings.map((binding) => providerLabel(binding.provider, state.providers)))];
-  const summary =
-    activeProviderLabels.length > 0
-      ? `${formatRouteCount(state.bindings.length)} · ${activeProviderLabels.slice(0, 2).join(', ')}${
-          activeProviderLabels.length > 2 ? ` +${activeProviderLabels.length - 2}` : ''
-        }`
-      : `${state.providers.length} ${state.providers.length === 1 ? 'provider' : 'providers'}`;
+  const summary = telegramBindings.length > 0 ? `${formatRouteCount(telegramBindings.length)} · Telegram` : 'No Telegram routes';
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-transparent">
       <div className="px-4 pb-1 pt-1">
         <div className="flex items-center gap-1">
-          <SectionLabel className="flex-1">Gateway Routes</SectionLabel>
+          <SectionLabel className="flex-1">Telegram Routes</SectionLabel>
           <IconButton compact title="Refresh routes" aria-label="Refresh routes" disabled={loading} onClick={() => void load()}>
             <SidebarSvgIcon path="M20 6v5h-5M4 18v-5h5M18.4 9A7 7 0 0 0 6.2 6.8L4 9m2 6a7 7 0 0 0 11.8 2.2L20 15" />
           </IconButton>
@@ -328,7 +314,7 @@ export function GatewaysSidebar({ pa, context }: ExtensionSurfaceProps) {
         {error ? <p className="px-4 py-2 text-[12px] leading-5 text-danger">{error}</p> : null}
         {!loading && treeItems.length === 0 && !error ? (
           <PanelMessage className="px-4 py-3">
-            {providersById.size > 0 ? 'No gateway routes yet.' : 'No gateway providers are enabled.'}
+            {providersById.has('telegram') ? 'No Telegram routes yet.' : 'Telegram Gateway is not enabled.'}
           </PanelMessage>
         ) : null}
         {treeItems.length > 0 ? (
@@ -350,7 +336,6 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
   const [state, setState] = useState<GatewayState>(emptyGatewayState);
   const [token, setToken] = useState<TelegramTokenState>({ configured: false });
   const [conversations, setConversations] = useState<SessionSummary[]>([]);
-  const [selectedProviderId, setSelectedProviderId] = useState<GatewayProviderId>('telegram');
   const [tokenDraft, setTokenDraft] = useState('');
   const [form, setForm] = useState<GatewayFormState>(() => ({
     ...emptyForm,
@@ -372,9 +357,6 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
     setState(nextState);
     setToken(nextToken);
     setConversations(nextConversations);
-    setSelectedProviderId((current) =>
-      nextState.providers.length > 0 && !nextState.providers.some((provider) => provider.id === current) ? nextState.providers[0]!.id : current,
-    );
   }, []);
 
   useEffect(() => {
@@ -427,11 +409,8 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
     previousContextConversationIdRef.current = selectedContextConversationId;
   }, [selectedContextConversationId, conversations]);
 
-  const selectedProvider = state.providers.find((provider) => provider.id === selectedProviderId) ?? state.providers[0] ?? null;
   const telegramConnection = useMemo(() => findProviderConnection(state, 'telegram'), [state]);
   const telegramBindings = useMemo(() => state.bindings.filter((binding) => binding.provider === 'telegram'), [state.bindings]);
-  const selectedConnection = selectedProvider ? findProviderConnection(state, selectedProvider.id) : null;
-  const selectedBindings = selectedProvider ? state.bindings.filter((binding) => binding.provider === selectedProvider.id) : [];
   const unassignedTelegramTargets = useMemo(
     () =>
       state.chatTargets.filter(
@@ -530,16 +509,20 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
   async function detachConversation(provider: GatewayProviderId, conversationId: string) {
     await runOperation(`detach-${provider}-${conversationId}`, async () => {
       setState(
-        await fetchJson<GatewayState>(`/api/gateways/bindings/${encodeURIComponent(conversationId)}?provider=${encodeURIComponent(provider)}`, {
-          method: 'DELETE',
-        }),
+        await fetchJson<GatewayState>(
+          `/api/gateways/bindings/${encodeURIComponent(conversationId)}?provider=${encodeURIComponent(provider)}`,
+          {
+            method: 'DELETE',
+          },
+        ),
       );
       setMessage(`${providerLabel(provider, state.providers)} route removed.`);
     });
   }
 
   const telegramStatus = telegramConnection?.status ?? 'needs_config';
-  const telegramReady = token.configured && telegramConnection?.enabled && telegramStatus !== 'paused' && telegramStatus !== 'needs_attention';
+  const telegramReady =
+    token.configured && telegramConnection?.enabled && telegramStatus !== 'paused' && telegramStatus !== 'needs_attention';
   const telegramTone = token.configured ? (telegramReady ? 'success' : statusTone(telegramStatus)) : 'warning';
 
   if (loading) {
@@ -567,63 +550,22 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
     <div className="h-full overflow-y-auto">
       <AppPageLayout shellClassName="max-w-[74rem]" contentClassName="space-y-8">
         <AppPageIntro
-          title="Gateways"
-          summary="Route external messages into Neon Pilot conversations."
+          title="Telegram Gateway"
+          summary="Route Telegram chats into Neon Pilot conversations."
           actions={<ToolbarButton onClick={refresh}>Refresh</ToolbarButton>}
         />
 
         {error ? <Notice tone="danger">{error}</Notice> : null}
         {message ? <Notice tone="success">{message}</Notice> : null}
 
-        <div className="grid min-h-[34rem] border-y border-border-subtle lg:grid-cols-[15rem_minmax(0,1fr)]">
-          <aside className="border-b border-border-subtle py-4 lg:border-b-0 lg:border-r lg:pr-4">
-            <SectionLabel className="px-1">Channels</SectionLabel>
-            <div className="mt-3 space-y-1">
-              {state.providers.length === 0 ? (
-                <PanelMessage>No gateway providers are enabled.</PanelMessage>
-              ) : (
-                state.providers.map((provider) => {
-                  const connection = findProviderConnection(state, provider.id);
-                  const routeCount = providerRouteCount(state, provider.id);
-                  const status = provider.id === 'telegram' && !token.configured ? 'needs_config' : providerConnectionStatus(provider, connection);
-                  const selected = selectedProvider?.id === provider.id;
-                  return (
-                    <button
-                      key={provider.id}
-                      type="button"
-                      aria-pressed={selected}
-                      className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-accent ${
-                        selected ? 'bg-surface-muted text-primary' : 'text-secondary'
-                      }`}
-                      onClick={() => setSelectedProviderId(provider.id)}
-                    >
-                      <span
-                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[11px] font-semibold ${
-                          selected ? 'bg-accent/15 text-accent' : 'bg-surface-subtle text-muted'
-                        }`}
-                      >
-                        {providerInitial(provider)}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{provider.label}</span>
-                        <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted">
-                          <StatusDot tone={statusTone(status)} />
-                          {provider.id === 'telegram' && !token.configured ? 'Needs Bot Token' : formatRouteCount(routeCount)}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </aside>
-
-          {selectedProvider?.id === 'telegram' ? (
-          <section aria-labelledby="telegram-heading" className="min-w-0 py-6 lg:pl-8">
+        <div className="min-h-[34rem] border-y border-border-subtle">
+          <section aria-labelledby="telegram-heading" className="min-w-0 py-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-accent/15 text-[13px] font-semibold text-accent">T</span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-accent/15 text-[13px] font-semibold text-accent">
+                    T
+                  </span>
                   <div className="min-w-0">
                     <h2 id="telegram-heading" className="text-[18px] font-semibold text-primary">
                       Telegram
@@ -644,7 +586,10 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {telegramConnection ? (
-                  <ToolbarButton disabled={!token.configured || busy === 'toggle-telegram'} onClick={() => toggleTelegram(!telegramConnection.enabled)}>
+                  <ToolbarButton
+                    disabled={!token.configured || busy === 'toggle-telegram'}
+                    onClick={() => toggleTelegram(!telegramConnection.enabled)}
+                  >
                     {telegramConnection.enabled ? 'Pause Telegram' : 'Start Telegram'}
                   </ToolbarButton>
                 ) : null}
@@ -658,8 +603,8 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
               <section className="space-y-4">
                 <SectionLabel>Get Your Credentials</SectionLabel>
                 <p className="max-w-3xl text-[13px] leading-6 text-secondary">
-                  In Telegram, talk to @BotFather, create a bot, then paste the token it gives you. Neon Pilot stores the token in
-                  extension secrets.
+                  In Telegram, talk to @BotFather, create a bot, then paste the token it gives you. Neon Pilot stores the token in extension
+                  secrets.
                 </p>
                 <a
                   className="inline-flex items-center rounded-md border border-border-subtle bg-surface-muted px-3 py-1.5 text-[13px] text-primary hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-accent"
@@ -700,7 +645,8 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
                   <div>
                     <SectionLabel>Route Messages</SectionLabel>
                     <p className="mt-2 max-w-3xl text-[13px] leading-6 text-secondary">
-                      Connect one Telegram chat to one Neon Pilot conversation. Routed conversations also appear in the Gateways sidebar.
+                      Connect one Telegram chat to one Neon Pilot conversation. Routed conversations also appear in the Telegram Gateway
+                      sidebar.
                     </p>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
@@ -726,7 +672,9 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
                         </select>
                       </Field>
                       <p className="text-[12px] leading-5 text-muted">
-                        {form.conversationId ? `Routes into ${form.conversationTitle || form.conversationId}.` : 'Pick the conversation that should receive this chat.'}
+                        {form.conversationId
+                          ? `Routes into ${form.conversationTitle || form.conversationId}.`
+                          : 'Pick the conversation that should receive this chat.'}
                       </p>
                     </div>
                     <div className="space-y-3">
@@ -786,7 +734,9 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
                           <DataTableRow key={binding.id}>
                             <DataTableCell>
                               <div className="min-w-0">
-                                <div className="truncate font-medium text-primary">{binding.conversationTitle || binding.conversationId}</div>
+                                <div className="truncate font-medium text-primary">
+                                  {binding.conversationTitle || binding.conversationId}
+                                </div>
                                 <div className="truncate text-[11px] text-muted">{binding.conversationId}</div>
                               </div>
                             </DataTableCell>
@@ -810,111 +760,6 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
               ) : null}
             </div>
           </section>
-          ) : selectedProvider ? (
-            <section aria-labelledby="gateway-provider-heading" className="min-w-0 py-6 lg:pl-8">
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-accent/15 text-[13px] font-semibold text-accent">
-                      {providerInitial(selectedProvider)}
-                    </span>
-                    <div className="min-w-0">
-                      <h2 id="gateway-provider-heading" className="text-[18px] font-semibold text-primary">
-                        {selectedProvider.label}
-                      </h2>
-                      <p className="mt-1 text-[13px] leading-5 text-muted">
-                        {selectedProvider.description || 'External messages routed into Neon Pilot conversations.'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted">
-                    <span className="inline-flex items-center gap-1.5">
-                      <StatusDot tone={statusTone(providerConnectionStatus(selectedProvider, selectedConnection))} />
-                      {selectedConnection ? formatStatus(selectedConnection.status) : 'Not connected'}
-                    </span>
-                    <span>{formatRouteCount(selectedBindings.length)}</span>
-                    {selectedProvider.extensionId ? <span>Provided by {selectedProvider.extensionId}</span> : null}
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {selectedProvider.setupRoute ? (
-                    <ToolbarButton onClick={() => void navigateTo(pa, selectedProvider.setupRoute!)}>
-                      Open Setup
-                    </ToolbarButton>
-                  ) : null}
-                  {selectedProvider.docsUrl ? (
-                    <a
-                      className="inline-flex items-center rounded-md border border-border-subtle bg-surface-muted px-3 py-1.5 text-[13px] text-primary hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-accent"
-                      href={selectedProvider.docsUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open Docs
-                    </a>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="mt-8 space-y-8">
-                <section className="space-y-3 border-t border-border-subtle pt-5">
-                  <SectionLabel>Setup</SectionLabel>
-                  <p className="max-w-3xl text-[13px] leading-6 text-secondary">
-                    {selectedProvider.configurationLocation === 'external'
-                      ? 'This gateway is configured outside Neon Pilot. Use its extension documentation for credentials and runtime setup.'
-                      : selectedProvider.setupRoute
-                        ? 'This gateway exposes setup through its extension. Open setup to configure credentials, connection details, or provider-specific routing.'
-                        : 'This provider is declared by an enabled extension. Use that extension to configure credentials and provider-specific routing.'}
-                  </p>
-                </section>
-
-                <section className="space-y-3 border-t border-border-subtle pt-5">
-                  <SectionLabel>Active Routes</SectionLabel>
-                  {selectedBindings.length === 0 ? (
-                    <EmptyState title={`No ${selectedProvider.label} routes`} />
-                  ) : (
-                    <DataTable>
-                      <DataTableHead>
-                        <DataTableRow>
-                          <DataTableHeaderCell>Conversation</DataTableHeaderCell>
-                          <DataTableHeaderCell>External Chat</DataTableHeaderCell>
-                          <DataTableHeaderCell>Replies</DataTableHeaderCell>
-                          <DataTableHeaderCell>Updated</DataTableHeaderCell>
-                          <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
-                        </DataTableRow>
-                      </DataTableHead>
-                      <DataTableBody>
-                        {selectedBindings.map((binding) => (
-                          <DataTableRow key={binding.id}>
-                            <DataTableCell>
-                              <div className="min-w-0">
-                                <div className="truncate font-medium text-primary">{binding.conversationTitle || binding.conversationId}</div>
-                                <div className="truncate text-[11px] text-muted">{binding.conversationId}</div>
-                              </div>
-                            </DataTableCell>
-                            <DataTableCell>{binding.externalChatLabel || binding.externalChatId || 'Unassigned'}</DataTableCell>
-                            <DataTableCell>{binding.repliesEnabled ? 'On' : 'Off'}</DataTableCell>
-                            <DataTableCell>{formatDate(binding.updatedAt)}</DataTableCell>
-                            <DataTableCell align="right">
-                              <ToolbarButton
-                                disabled={busy === `detach-${binding.provider}-${binding.conversationId}`}
-                                onClick={() => detachConversation(binding.provider, binding.conversationId)}
-                              >
-                                Detach
-                              </ToolbarButton>
-                            </DataTableCell>
-                          </DataTableRow>
-                        ))}
-                      </DataTableBody>
-                    </DataTable>
-                  )}
-                </section>
-              </div>
-            </section>
-          ) : (
-            <section className="min-w-0 py-6 lg:pl-8">
-              <EmptyState title="No Gateway Providers" />
-            </section>
-          )}
         </div>
 
         {unassignedTelegramTargets.length > 0 ? (
@@ -944,13 +789,12 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
 
         <AppPageSection title="Recent Activity" layout="stacked">
           {state.events.length === 0 ? (
-            <EmptyState title="No gateway activity" />
+            <EmptyState title="No Telegram activity" />
           ) : (
             <DataTable>
               <DataTableHead>
                 <DataTableRow>
                   <DataTableHeaderCell>Time</DataTableHeaderCell>
-                  <DataTableHeaderCell>Provider</DataTableHeaderCell>
                   <DataTableHeaderCell>Kind</DataTableHeaderCell>
                   <DataTableHeaderCell>Message</DataTableHeaderCell>
                 </DataTableRow>
@@ -959,7 +803,6 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
                 {state.events.slice(0, 20).map((event) => (
                   <DataTableRow key={event.id}>
                     <DataTableCell>{formatDate(event.createdAt)}</DataTableCell>
-                    <DataTableCell>{providerLabel(event.provider, state.providers)}</DataTableCell>
                     <DataTableCell className="capitalize">{event.kind}</DataTableCell>
                     <DataTableCell>{event.message}</DataTableCell>
                   </DataTableRow>

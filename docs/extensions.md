@@ -201,7 +201,7 @@ The manifest declares what your extension contributes:
 | `quickOpen`                       | Command palette surfaces/tabs backed by extension providers                                   | [See below](#quick-open-surfaces-quickopen)                                               |
 | `searchProviders`                 | Backend-powered global search providers                                                       | [See below](#global-search-providers-searchproviders)                                     |
 | `runtimeProviders`                | Extension-advertised local/remote runtime targets                                             | [See below](#runtime-providers-runtimeproviders)                                          |
-| `gatewayProviders`                | External messaging gateway providers rendered by the Gateways page                            | [See below](#gateway-providers-gatewayproviders)                                          |
+| `gatewayProviders`                | External messaging gateway providers registered for shared gateway state                      | [See below](#gateway-providers-gatewayproviders)                                          |
 | `settings`                        | Settings schema contributions                                                                 | [See below](#settings)                                                                    |
 | `settingsComponent`               | Component panel in Settings                                                                   | [See below](#settings-component-settingscomponent)                                        |
 | `topBarElements`                  | Top bar indicator icons                                                                       | [See below](#top-bar-elements-topbarelements)                                             |
@@ -495,7 +495,7 @@ Handlers return `{ runtimes: [...] }`, where each runtime includes `id`, `title`
 
 ### Gateway Providers (`gatewayProviders`)
 
-Gateway providers advertise external messaging channels that can route messages into Neon Pilot conversations. Declaring a provider makes it appear in the system Gateways page and registers its provider ID for shared gateway state. The extension runtime still owns credentials, transport, and provider-specific setup UI.
+Gateway providers advertise external messaging channels that can route messages into Neon Pilot conversations. Declaring a provider registers its provider ID for shared gateway state. The extension runtime owns credentials, transport, and provider-specific setup UI; do not rely on Telegram Gateway as a generic provider switcher.
 
 ```json
 {

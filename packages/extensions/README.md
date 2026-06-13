@@ -604,7 +604,7 @@ Use `contributes.turnContextProviders` when an extension needs per-turn hidden c
 
 Use `contributes.runtimeProviders` to advertise local or remote runtime targets such as SSH hosts. The first API surface is discovery/health via `ctx.runtimes`; actual non-local conversation execution must go through host-owned runtime routing.
 
-Use `contributes.gatewayProviders` to make an external messaging gateway appear in the system Gateways page. Declaring a provider renders it in the channel list and registers its provider ID for shared gateway state; the extension runtime still owns credentials, transport, and provider-specific setup. Gateway runtimes should use `@neon-pilot/extensions/backend/gateways` to create/update connections, attach conversations, detach conversations, and record events.
+Use `contributes.gatewayProviders` to register an external messaging gateway provider ID for shared gateway state. The extension runtime owns credentials, transport, and provider-specific setup UI; do not rely on Telegram Gateway as a generic provider switcher. Gateway runtimes should use `@neon-pilot/extensions/backend/gateways` to create/update connections, attach conversations, detach conversations, and record events.
 
 ```json
 {

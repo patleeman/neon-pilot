@@ -1,20 +1,20 @@
-# Gateways
+# Telegram Gateway
 
-Gateways owns the user-facing page for connecting external messaging channels to Neon Pilot conversations.
+Telegram Gateway owns the user-facing page for connecting Telegram chats to Neon Pilot conversations. It is a bundled system extension, but it is not a required extension; disabling `system-gateways` removes the Telegram Gateway nav item, page, sidebar, provider contribution, and extension secret contribution.
 
 ## Scope
 
-- The extension contributes the primary **Gateways** route at `/gateways`.
-- The **Gateways** nav item also owns the left sidebar body through `gateways-sidebar`, which lists active gateway routes as conversation rows.
-- The page should lead with an actual setup flow, not host implementation terms: choose a provider, configure credentials, route an external chat to a conversation, then inspect active routes and recent activity.
+- The extension contributes the primary **Telegram Gateway** route at `/gateways`.
+- The **Telegram Gateway** nav item also owns the left sidebar body through `gateways-sidebar`, which lists active Telegram routes as conversation rows.
+- The page should lead with the Telegram setup flow, not host implementation terms: configure credentials, route a Telegram chat to a conversation, then inspect active routes and recent activity.
 - Bound conversations should be treated as the main working object. The sidebar is the quick route picker; the main page is for setup, route editing, and recent activity.
-- Gateway providers render from `contributes.gatewayProviders`. The system Gateways extension declares the built-in `telegram` provider; other extensions can declare additional provider IDs and use the shared gateway backend API for state.
-- The desktop gateway routes under `/api/gateways` own shared host infrastructure, runtime startup, Telegram delivery, and gateway state persistence.
+- The extension declares only the built-in `telegram` provider. Do not add other channel setup UI here; create a separate extension for a separate messaging channel.
+- The desktop gateway routes under `/api/gateways` own shared host infrastructure, runtime startup, Telegram delivery, and gateway state persistence. This infrastructure can remain available even when the Telegram Gateway UI extension is disabled.
 - The Telegram bot token is declared as the extension secret `telegramBotToken` and stored through the shared secrets backend. `TELEGRAM_BOT_TOKEN` can be used as an environment fallback when no stored value exists.
 
 ## Provider extensions
 
-An extension adds a provider by declaring it in `extension.json`:
+The shared gateway backend API can still support other channel extensions, but those extensions should own their own setup pages and should not rely on Telegram Gateway as a generic provider switcher. A separate extension can declare its provider in `extension.json`:
 
 ```json
 {
@@ -37,4 +37,4 @@ Provider runtimes should import `@neon-pilot/extensions/backend/gateways` and ca
 
 ## Validation
 
-When changing the page, validate that `/gateways` loads through the desktop app, the left sidebar renders active routes, provider contributions appear in the channel list, the conversation picker loads sessions, and token read/write actions hit the real `/api/gateways/telegram/token` route.
+When changing the page, validate that `/gateways` loads through the desktop app, the left sidebar renders active Telegram routes, the conversation picker loads sessions, and token read/write actions hit the real `/api/gateways/telegram/token` route.

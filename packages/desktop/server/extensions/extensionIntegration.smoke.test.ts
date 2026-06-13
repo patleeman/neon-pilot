@@ -954,7 +954,7 @@ describe('extension manifests - cross-extension conflict detection', () => {
     ).toEqual([]);
   });
 
-  it('registers the Gateways Telegram token secret', () => {
+  it('registers the Telegram Gateway token secret', () => {
     expect(listExtensionSecretRegistrations()).toContainEqual(
       expect.objectContaining({
         extensionId: 'system-gateways',

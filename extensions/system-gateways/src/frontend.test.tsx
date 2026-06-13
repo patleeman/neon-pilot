@@ -17,12 +17,7 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
   }) => (
     <div role="tree">
       {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          data-active={activeItemId === item.id ? 'true' : undefined}
-          onClick={() => onOpenItem?.(item)}
-        >
+        <button key={item.id} type="button" data-active={activeItemId === item.id ? 'true' : undefined} onClick={() => onOpenItem?.(item)}>
           {item.title}
           {item.subtitle ? <span>{item.subtitle}</span> : null}
         </button>
@@ -58,11 +53,9 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {children}
     </label>
   ),
-  IconButton: ({
-    children,
-    compact: _compact,
-    ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { compact?: boolean }) => <button {...props}>{children}</button>,
+  IconButton: ({ children, compact: _compact, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { compact?: boolean }) => (
+    <button {...props}>{children}</button>
+  ),
   LoadingState: ({ label }: { label: React.ReactNode }) => <p>{label}</p>,
   Notice: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   PanelMessage: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
@@ -188,7 +181,8 @@ describe('GatewaysPage', () => {
       vi.fn((path: string, init?: RequestInit) => {
         const method = init?.method ?? 'GET';
         if (path === '/api/gateways' && method === 'GET') return Promise.resolve(jsonResponse(initialGatewayState));
-        if (path === '/api/gateways/telegram/token' && method === 'GET') return Promise.resolve(jsonResponse({ configured: tokenConfigured }));
+        if (path === '/api/gateways/telegram/token' && method === 'GET')
+          return Promise.resolve(jsonResponse({ configured: tokenConfigured }));
         if (path === '/api/sessions?limit=100' && method === 'GET') return Promise.resolve(jsonResponse(sessions));
         if (path === '/api/gateways/connections/telegram') {
           return Promise.resolve(
@@ -231,13 +225,13 @@ describe('GatewaysPage', () => {
   it('renders backend gateway state and token status', async () => {
     renderPage();
 
-    expect(await screen.findByRole('heading', { name: 'Gateways' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Telegram Gateway' })).toBeTruthy();
     expect(screen.getAllByText('Chief of Threads').length).toBeGreaterThan(0);
     expect(screen.getByText('Telegram attached to Chief of Threads')).toBeTruthy();
     expect(screen.getByText('Credentials saved')).toBeTruthy();
     expect(screen.getAllByText(/1\s*active\s*route/).length).toBeGreaterThan(0);
     expect(screen.getByText('Active Routes')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Discord/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Discord/ })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Connections' })).toBeNull();
   });
 
@@ -343,16 +337,14 @@ describe('GatewaysPage', () => {
     await waitFor(() => expect(select.value).toBe('conv-1'));
   });
 
-  it('renders contributed gateway providers in the channel detail', async () => {
+  it('does not render non-Telegram provider setup in the single-purpose page', async () => {
     renderPage();
     await screen.findAllByText('Chief of Threads');
 
-    fireEvent.click(screen.getByRole('button', { name: /Discord/ }));
-
-    expect(await screen.findByRole('heading', { name: 'Discord' })).toBeTruthy();
-    expect(screen.getByText('Route Discord messages into Neon Pilot.')).toBeTruthy();
-    expect(screen.getByText('Provided by discord-gateway')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Open Setup' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Discord' })).toBeNull();
+    expect(screen.queryByText('Route Discord messages into Neon Pilot.')).toBeNull();
+    expect(screen.queryByText('Provided by discord-gateway')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Open Setup' })).toBeNull();
   });
 });
 
@@ -376,7 +368,7 @@ describe('GatewaysSidebar', () => {
   it('shows Telegram routes in the extension sidebar', async () => {
     renderSidebar('/conversations/conv-1');
 
-    expect(await screen.findByText('Gateway Routes')).toBeTruthy();
+    expect(await screen.findByText('Telegram Routes')).toBeTruthy();
     expect(screen.getByText(/1 active route\s*·\s*Telegram/)).toBeTruthy();
     expect(screen.getByRole('button', { name: /Chief of Threads/ }).getAttribute('data-active')).toBe('true');
     expect(screen.getByText(/Telegram\s*·\s*Patrick/)).toBeTruthy();

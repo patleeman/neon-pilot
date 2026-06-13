@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "id": "system-gateways",
-  "name": "Gateways",
+  "name": "Telegram Gateway",
   "packageType": "system",
-  "description": "Attach external messaging gateways to Neon Pilot threads.",
+  "description": "Route Telegram chats into Neon Pilot conversations.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -16,7 +16,7 @@
         "label": "Telegram",
         "description": "Run Neon Pilot from Telegram DMs, groups, and topics.",
         "icon": "graph",
-        "configurationLocation": "gateways",
+        "configurationLocation": "extension",
         "setupRoute": "/gateways",
         "docsUrl": "https://core.telegram.org/bots#how-do-i-create-a-bot",
         "order": 10
@@ -34,7 +34,7 @@
     "nav": [
       {
         "id": "gateways-nav",
-        "label": "Gateways",
+        "label": "Telegram Gateway",
         "route": "/gateways",
         "icon": "graph",
         "section": "primary",
@@ -44,7 +44,7 @@
     "views": [
       {
         "id": "page",
-        "title": "Gateways",
+        "title": "Telegram Gateway",
         "location": "main",
         "route": "/gateways",
         "component": "GatewaysPage",
@@ -54,7 +54,7 @@
       },
       {
         "id": "gateways-sidebar",
-        "title": "Gateway Routes",
+        "title": "Telegram Routes",
         "location": "sidebar",
         "component": "GatewaysSidebar",
         "icon": "graph",
