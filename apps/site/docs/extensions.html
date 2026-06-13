@@ -466,7 +466,7 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
             </tr>
             <tr>
               <td><code>gatewayProviders</code></td>
-              <td>External messaging gateway providers rendered by the Gateways page</td>
+              <td>External messaging gateway providers registered for shared gateway state</td>
               <td><a href="#gateway-providers-gatewayproviders">See below</a></td>
             </tr>
             <tr>
@@ -863,8 +863,8 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
         <h3 id="gateway-providers-gatewayproviders">Gateway Providers (<code>gatewayProviders</code>)</h3>
         <p>
           Gateway providers advertise external messaging channels that can route messages into Neon Pilot conversations. Declaring a
-          provider makes it appear in the system Gateways page and registers its provider ID for shared gateway state. The extension runtime
-          still owns credentials, transport, and provider-specific setup UI.
+          provider registers its provider ID for shared gateway state. The extension runtime owns credentials, transport, and
+          provider-specific setup UI; do not rely on Telegram Gateway as a generic provider switcher.
         </p>
         <pre><code>{
   &quot;contributes&quot;: {
