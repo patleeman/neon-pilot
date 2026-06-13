@@ -101,11 +101,23 @@ function requestToolsToPiTools(tools: unknown): Context['tools'] {
   return converted.length ? converted : undefined;
 }
 
-function responsesInputToPiMessages(input: unknown): Message[] {
+function parseFunctionCallArguments(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+  if (typeof value !== 'string' || !value.trim()) return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function responsesInputToPiMessages(input: unknown): Message[] {
   if (typeof input === 'string') return [{ role: 'user', content: input, timestamp: Date.now() }];
   if (!Array.isArray(input)) return [{ role: 'user', content: readText(input), timestamp: Date.now() }];
 
   const messages: Message[] = [];
+  const toolNamesByCallId = new Map<string, string>();
   for (const item of input) {
     if (typeof item === 'string') {
       messages.push({ role: 'user', content: item, timestamp: Date.now() });
@@ -114,11 +126,29 @@ function responsesInputToPiMessages(input: unknown): Message[] {
     if (!item || typeof item !== 'object') continue;
     const record = item as Record<string, unknown>;
     const type = typeof record.type === 'string' ? record.type : 'message';
+    if (type === 'function_call') {
+      const callId = String(record.call_id ?? record.id ?? '');
+      const name = typeof record.name === 'string' ? record.name : '';
+      if (!callId || !name) continue;
+      toolNamesByCallId.set(callId, name);
+      messages.push({
+        role: 'assistant',
+        content: [{ type: 'toolCall', id: callId, name, arguments: parseFunctionCallArguments(record.arguments) }],
+        api: 'openai-responses',
+        provider: 'neon-pilot',
+        model: 'replayed',
+        usage: zeroUsage(),
+        stopReason: 'tool_use',
+        timestamp: Date.now(),
+      });
+      continue;
+    }
     if (type === 'function_call_output') {
+      const callId = String(record.call_id ?? '');
       messages.push({
         role: 'toolResult',
-        toolCallId: String(record.call_id ?? ''),
-        toolName: '',
+        toolCallId: callId,
+        toolName: toolNamesByCallId.get(callId) ?? '',
         content: [{ type: 'text', text: readText(record.output) }],
         isError: false,
         timestamp: Date.now(),

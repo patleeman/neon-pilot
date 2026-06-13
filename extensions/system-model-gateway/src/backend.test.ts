@@ -1,3 +1,4 @@
+import { createServer } from 'node:net';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock(
@@ -36,8 +37,22 @@ vi.mock(
 
 import { clearLogs, healthRoute, modelsRoute, responsesRoute, startGatewayService, status, stopGatewayService, updateSettings } from './backend';
 
-function ctx(overrides?: Partial<Record<string, unknown>>) {
-  const storage = new Map<string, unknown>();
+async function getFreePort(): Promise<number> {
+  return await new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      server.close(() => {
+        if (address && typeof address === 'object') resolve(address.port);
+        else reject(new Error('Failed to allocate a loopback port'));
+      });
+    });
+  });
+}
+
+function ctx(overrides?: Partial<Record<string, unknown>>, initialStorage?: Record<string, unknown>) {
+  const storage = new Map<string, unknown>(Object.entries(initialStorage ?? {}));
   return {
     extensionId: 'system-model-gateway',
     runtimeDir: '/tmp/missing-runtime',
@@ -97,16 +112,18 @@ describe('system-model-gateway backend', () => {
   });
 
   it('starts as a service and updates the persisted port', async () => {
-    const context = ctx();
+    const port = await getFreePort();
+    const nextPort = await getFreePort();
+    const context = ctx(undefined, { settings: { port } });
     await expect(startGatewayService({}, context)).resolves.toMatchObject({
       running: true,
-      port: 8766,
-      baseUrl: 'http://127.0.0.1:8766/v1',
+      port,
+      baseUrl: `http://127.0.0.1:${port}/v1`,
     });
-    await expect(updateSettings({ port: 8767 }, context)).resolves.toMatchObject({
+    await expect(updateSettings({ port: nextPort }, context)).resolves.toMatchObject({
       running: true,
-      port: 8767,
-      baseUrl: 'http://127.0.0.1:8767/v1',
+      port: nextPort,
+      baseUrl: `http://127.0.0.1:${nextPort}/v1`,
     });
   });
 
