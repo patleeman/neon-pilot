@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.17** — patch release.
+**v0.11.18** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.17
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.18
 
 Highlights in this train:
 
-- Makes terminal and extension streaming more resilient by closing cancelled streams cleanly, preserving SSE metadata, replaying exits for late attaches, and recovering terminal sessions after realtime disconnects.
-- Hardens desktop realtime, OAuth, automation, workspace, live-session, sidebar, attachment, and route refresh lifecycles so late callbacks and stale loads do not overwrite current UI state.
-- Improves workspace reliability by guarding stale viewer, directory, autosave, watcher, and forced-load paths across quick route or selection changes.
-- Tightens CLI and internal agent turn behavior with clearer command discovery, aligned CLI docs/skills, completion waiting, and final ask-user text propagation.
-- Adds daily telemetry usage reporting and keeps release-facing extension smoke checks aligned with lazy-rendered settings routes.
+- Adds the opt-in Model Gateway for external coding agents, exposing Neon Pilot model providers through a local OpenAI Responses-compatible endpoint.
+- Installs Codex gateway catalog metadata conservatively so existing Codex Desktop threads stay visible instead of switching the global provider lane.
+- Documents current Codex Desktop picker/sidebar blockers, keeps the gateway disabled by default, and adds a weekly upstream watch for the pending fixes.
+- Improves generated docs and website coverage so users can see which gateway paths are stable today and which Desktop integration pieces are waiting on upstream Codex fixes.
+- Refreshes Pi runtime packages to `^0.79.2` for the 0.11.18 patch train.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

@@ -62,29 +62,27 @@
           produce a release — release is a manual local process.
         </p>
         <h2 id="current-release">Current release</h2>
-        <p><strong>v0.11.17</strong> — patch release.</p>
-        <p>Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.17</p>
+        <p><strong>v0.11.18</strong> — patch release.</p>
+        <p>Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.18</p>
         <p>Highlights in this train:</p>
         <ul>
           <li>
-            Makes terminal and extension streaming more resilient by closing cancelled streams cleanly, preserving SSE metadata, replaying
-            exits for late attaches, and recovering terminal sessions after realtime disconnects.
+            Adds the opt-in Model Gateway for external coding agents, exposing Neon Pilot model providers through a local OpenAI
+            Responses-compatible endpoint.
           </li>
           <li>
-            Hardens desktop realtime, OAuth, automation, workspace, live-session, sidebar, attachment, and route refresh lifecycles so late
-            callbacks and stale loads do not overwrite current UI state.
+            Installs Codex gateway catalog metadata conservatively so existing Codex Desktop threads stay visible instead of switching the
+            global provider lane.
           </li>
           <li>
-            Improves workspace reliability by guarding stale viewer, directory, autosave, watcher, and forced-load paths across quick route
-            or selection changes.
+            Documents current Codex Desktop picker/sidebar blockers, keeps the gateway disabled by default, and adds a weekly upstream watch
+            for the pending fixes.
           </li>
           <li>
-            Tightens CLI and internal agent turn behavior with clearer command discovery, aligned CLI docs/skills, completion waiting, and
-            final ask-user text propagation.
+            Improves generated docs and website coverage so users can see which gateway paths are stable today and which Desktop integration
+            pieces are waiting on upstream Codex fixes.
           </li>
-          <li>
-            Adds daily telemetry usage reporting and keeps release-facing extension smoke checks aligned with lazy-rendered settings routes.
-          </li>
+          <li>Refreshes Pi runtime packages to <code>^0.79.2</code> for the 0.11.18 patch train.</li>
           <li>Keep this section aligned with <code>package.json</code>, <code>CHANGELOG.md</code>, and the tag being prepared.</li>
         </ul>
         <h2 id="rc-release-operating-instructions">RC release operating instructions</h2>

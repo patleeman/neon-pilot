@@ -551,6 +551,22 @@ const smokes = {
     const result = await module.inspectMcpSettings({}, ctx);
     assert(Array.isArray(result.servers) && Array.isArray(result.searchedPaths), 'inspectMcpSettings failed');
   },
+  async 'system-model-gateway'() {
+    const status = await module.status({}, ctx);
+    assert(status.baseUrl === 'http://127.0.0.1:8766/v1', 'model gateway status returned unexpected baseUrl');
+    assert(status.defaultModel === 'auto', 'model gateway default model should be auto');
+    assert(status.running === false, 'model gateway smoke should not auto-start the loopback listener');
+
+    const health = await module.healthRoute({}, ctx);
+    assert(health.status === 200 && health.body?.ok === true, 'model gateway health route failed');
+
+    const models = await module.modelsRoute({}, ctx);
+    assert(models.status === 200 && Array.isArray(models.body?.data), 'model gateway models route failed');
+    assert(models.body.data.some((model) => model.id === 'neon-pilot-fake'), 'model gateway fake model missing');
+
+    const response = await module.responsesRoute({ body: { model: 'neon-pilot-fake', input: 'smoke' } }, ctx);
+    assert(response.status === 200 && response.body?.status === 'completed', 'model gateway fake response failed');
+  },
   async 'system-neon-pilot-admin-cli'() {
     const list = await module.manageAppCommands({ action: 'list' }, ctx);
     assert(list.ok === true && list.commands.length === 1, 'app command list failed');

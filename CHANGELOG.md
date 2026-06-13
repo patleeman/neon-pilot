@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.18 — 2026-06-13
+
+### Highlights
+
+- Adds the opt-in Model Gateway for external coding agents, exposing Neon Pilot model providers through a local OpenAI Responses-compatible endpoint.
+- Installs Codex gateway catalog metadata conservatively so existing Codex Desktop threads stay visible instead of switching the global provider lane.
+- Documents current Codex Desktop picker/sidebar blockers, keeps the gateway disabled by default, and adds a weekly upstream watch for the pending fixes.
+- Improves generated docs and website coverage so users can see which gateway paths are stable today and which Desktop integration pieces are waiting on upstream Codex fixes.
+- Refreshes Pi runtime packages to `^0.79.2` for the 0.11.18 patch train.
+
+### Notes
+
+- 22 commits since the previous release.
+
 ## 0.11.17 — 2026-06-12
 
 ### Highlights
