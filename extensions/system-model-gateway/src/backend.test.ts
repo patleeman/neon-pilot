@@ -200,6 +200,47 @@ describe('system-model-gateway backend', () => {
     }
   });
 
+  it('clears stale listener errors after a later successful loopback request', async () => {
+    const port = await getFreePort();
+    const blocker = createServer();
+    await new Promise<void>((resolve, reject) => {
+      blocker.once('error', reject);
+      blocker.listen(port, '127.0.0.1', () => resolve());
+    });
+
+    try {
+      const unavailableContext = ctx(undefined, { settings: { port } });
+      await expect(startGatewayService({}, unavailableContext)).resolves.toMatchObject({
+        running: false,
+        lastError: expect.stringContaining('EADDRINUSE'),
+      });
+    } finally {
+      await new Promise<void>((resolve) => blocker.close(() => resolve()));
+    }
+
+    const context = ctx(undefined, { settings: { port } });
+    await expect(startGatewayService({}, context)).resolves.toMatchObject({ running: true, port });
+
+    const invalidResponse = await fetch(`http://127.0.0.1:${port}/v1/responses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{',
+    });
+    expect(invalidResponse.status).toBe(500);
+    await expect(status({}, context)).resolves.toMatchObject({
+      lastError: expect.stringContaining('Expected property name'),
+    });
+
+    const validResponse = await fetch(`http://127.0.0.1:${port}/v1/responses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'neon-pilot-fake', input: 'hello' }),
+    });
+    expect(validResponse.status).toBe(200);
+    const gatewayStatus = await status({}, context);
+    expect(gatewayStatus.lastError).toBeUndefined();
+  });
+
   it('clears recent activity logs', async () => {
     await expect(clearLogs({}, ctx())).resolves.toMatchObject({ logs: [] });
   });

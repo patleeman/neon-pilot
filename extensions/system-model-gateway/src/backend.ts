@@ -269,11 +269,13 @@ async function handleHttpRequest(
   try {
     if (request.method === 'GET' && url.pathname === '/health') {
       statusCode = 200;
+      lastError = undefined;
       sendJson(response, 200, { ok: true, ...(await statusFor(ctx, settings)) });
       return;
     }
     if (request.method === 'GET' && url.pathname === '/v1/models') {
       statusCode = 200;
+      lastError = undefined;
       sendJson(response, 200, { object: 'list', data: await listModelGatewayModels(ctx) });
       return;
     }
@@ -282,6 +284,7 @@ async function handleHttpRequest(
       requestModel = typeof body.model === 'string' ? body.model : undefined;
       if (body.stream === true || url.pathname === '/v1/responses/stream') {
         statusCode = 200;
+        lastError = undefined;
         sendSse(response);
         for await (const event of await streamModelGatewayResponseEvents(ctx, { ...body, stream: true }, settings)) {
           response.write(`data: ${typeof event === 'string' ? event : JSON.stringify(event)}\n\n`);
@@ -290,6 +293,7 @@ async function handleHttpRequest(
         return;
       }
       statusCode = 200;
+      lastError = undefined;
       sendJson(response, 200, await createModelGatewayResponse(ctx, body, settings));
       return;
     }
