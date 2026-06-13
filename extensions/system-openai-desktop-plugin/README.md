@@ -1,8 +1,8 @@
 # OpenAI Desktop Plugin
 
-Installs and manages the portable `neon-pilot` Codex/OpenAI Desktop plugin from inside Neon Pilot.
+Installs and manages the portable `neon-pilot` Codex/OpenAI Desktop plugin from Neon Pilot Settings.
 
-This system extension is enabled by default. On Neon Pilot startup, and again when the extension is re-enabled, it idempotently writes the local marketplace, registers that marketplace with `codex plugin marketplace add`, and installs/enables `neon-pilot@neon-pilot-local` with `codex plugin add`. Patrick should not need to copy files or run Codex commands by hand.
+This system extension is enabled by default so the Settings section is available, but it does not install anything automatically. Use Settings -> OpenAI Desktop Plugin to install, reinstall, remove, and refresh status.
 
 The generated plugin intentionally stays small:
 
@@ -24,7 +24,7 @@ The managed plugin is installed into a Neon Pilot-owned local Codex marketplace 
     mcp/neon-pilot-subagent.mjs
 ```
 
-Startup install runs the equivalent of:
+Install and reinstall run the equivalent of:
 
 ```sh
 codex plugin marketplace add ~/.local/share/neon-pilot/codex-plugin-marketplace --json

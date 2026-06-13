@@ -1,0 +1,28 @@
+.openai-desktop-plugin-settings {
+  width: 100%;
+}
+
+.openai-desktop-plugin-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.openai-desktop-plugin-paths {
+  display: grid;
+  gap: 12px;
+}
+
+.openai-desktop-plugin-path {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+@media (max-width: 720px) {
+  .openai-desktop-plugin-status-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -6,17 +6,28 @@
   "description": "Installs the portable Codex/OpenAI Desktop Neon Pilot plugin with a focused subagent MCP bridge and CLI skill.",
   "version": "0.1.0",
   "defaultEnabled": true,
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": ["dist/frontend.css"]
+  },
   "backend": {
     "entry": "dist/backend.mjs",
-    "startupAction": "autoInstallPlugin",
-    "onEnableAction": "autoInstallPlugin",
     "onUninstallAction": "removePlugin",
     "actions": [
       { "id": "status", "handler": "status", "title": "OpenAI Desktop plugin status", "worker": { "enabled": true } },
-      { "id": "autoInstallPlugin", "handler": "autoInstallPlugin", "title": "Auto-install OpenAI Desktop plugin", "worker": { "enabled": true } },
       { "id": "installPlugin", "handler": "installPlugin", "title": "Install OpenAI Desktop plugin", "worker": { "enabled": true } },
       { "id": "removePlugin", "handler": "removePlugin", "title": "Remove OpenAI Desktop plugin", "worker": { "enabled": true } }
     ]
+  },
+  "contributes": {
+    "settingsComponent": {
+      "id": "openai-desktop-plugin-settings",
+      "component": "OpenAiDesktopPluginSettingsPanel",
+      "sectionId": "settings-openai-desktop-plugin",
+      "label": "OpenAI Desktop Plugin",
+      "description": "Install the Neon Pilot Codex/OpenAI Desktop plugin.",
+      "order": 46
+    }
   },
   "permissions": ["storage:readwrite"]
 }

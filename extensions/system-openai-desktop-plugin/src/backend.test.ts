@@ -6,7 +6,7 @@ import { promisify } from 'node:util';
 
 import { describe, expect, it } from 'vitest';
 
-import { autoInstallPlugin, installPlugin, removePlugin, status } from './backend';
+import { installPlugin, removePlugin, status } from './backend';
 
 const execFileAsync = promisify(execFile);
 
@@ -31,22 +31,6 @@ function makeCtx() {
 }
 
 describe('OpenAI Desktop plugin installer', () => {
-  it('auto-installs through the startup handler without manual Codex steps', async () => {
-    const marketplaceRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-codex-marketplace-'));
-    const codexHome = mkdtempSync(join(tmpdir(), 'neon-pilot-codex-home-'));
-    const ctx = makeCtx();
-
-    const installed = await autoInstallPlugin({ marketplaceRoot, codexHome, force: true }, ctx);
-    expect(installed).toMatchObject({
-      ok: true,
-      installed: true,
-      autoInstalled: true,
-      codex: { checked: true, marketplaceRegistered: true, pluginInstalled: true, pluginEnabled: true },
-    });
-
-    await removePlugin({ marketplaceRoot, codexHome }, ctx);
-  });
-
   it('installs into a Codex CLI marketplace and removes cleanly', async () => {
     const marketplaceRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-codex-marketplace-'));
     const codexHome = mkdtempSync(join(tmpdir(), 'neon-pilot-codex-home-'));

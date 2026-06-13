@@ -234,26 +234,6 @@ export async function installPlugin(input: unknown, ctx?: ExtensionBackendContex
   };
 }
 
-export async function autoInstallPlugin(input: unknown, ctx?: ExtensionBackendContext): Promise<JsonRecord> {
-  try {
-    const installed = await installPlugin(input, ctx);
-    const current = await status(input, ctx);
-    return {
-      ...current,
-      autoInstalled: true,
-      codexSteps: installed.codexSteps,
-    };
-  } catch (error) {
-    const current = await status({ ...(isRecord(input) ? input : {}), manageCodex: false });
-    return {
-      ...current,
-      ok: false,
-      autoInstalled: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
-
 export async function removePlugin(input: unknown, ctx?: ExtensionBackendContext): Promise<JsonRecord> {
   const paths = targetPaths(input);
   const codexSteps: JsonRecord[] = [];
