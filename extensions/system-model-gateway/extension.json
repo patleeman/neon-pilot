@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 2,
+  "id": "system-model-gateway",
+  "name": "Model Gateway",
+  "packageType": "system",
+  "description": "Local Responses API gateway for external coding agents, backed by Neon Pilot model providers.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": ["dist/frontend.css"]
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      { "id": "status", "handler": "status", "title": "Model Gateway status", "worker": { "enabled": true } },
+      { "id": "start", "handler": "start", "title": "Start Model Gateway", "worker": { "enabled": true } },
+      { "id": "stop", "handler": "stop", "title": "Stop Model Gateway", "worker": { "enabled": true } },
+      { "id": "smoke", "handler": "smoke", "title": "Smoke test Model Gateway", "worker": { "enabled": true } }
+    ],
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/health",
+        "handler": "healthRoute",
+        "title": "Model Gateway health",
+        "worker": { "enabled": true }
+      },
+      {
+        "method": "GET",
+        "path": "/v1/models",
+        "handler": "modelsRoute",
+        "title": "Responses API models",
+        "worker": { "enabled": true }
+      },
+      {
+        "method": "POST",
+        "path": "/v1/responses",
+        "handler": "responsesRoute",
+        "title": "Responses API response",
+        "stream": "sse",
+        "worker": { "enabled": true }
+      },
+      {
+        "method": "POST",
+        "path": "/v1/responses/stream",
+        "handler": "responsesStreamRoute",
+        "title": "Responses API response stream",
+        "stream": "sse",
+        "worker": { "enabled": true }
+      }
+    ]
+  },
+  "contributes": {
+    "views": [
+      {
+        "id": "model-gateway-page",
+        "title": "Model Gateway",
+        "location": "main",
+        "route": "/model-gateway",
+        "component": "ModelGatewayPage"
+      }
+    ],
+    "nav": [
+      {
+        "id": "model-gateway-nav",
+        "label": "Model Gateway",
+        "icon": "radio-tower",
+        "route": "/model-gateway",
+        "order": 86
+      }
+    ],
+    "commands": [
+      {
+        "id": "modelGateway.start",
+        "title": "Start Model Gateway",
+        "action": "start"
+      },
+      {
+        "id": "modelGateway.stop",
+        "title": "Stop Model Gateway",
+        "action": "stop"
+      },
+      {
+        "id": "modelGateway.smoke",
+        "title": "Smoke Test Model Gateway",
+        "action": "smoke"
+      }
+    ]
+  },
+  "permissions": ["storage:readwrite"]
+}

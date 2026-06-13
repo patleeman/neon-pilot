@@ -119,6 +119,10 @@
       "types": "./dist/backend/mcp.d.ts",
       "default": "./dist/backend/mcp.js"
     },
+    "./backend/modelGateway": {
+      "types": "./dist/backend/modelGateway.d.ts",
+      "default": "./dist/backend/modelGateway.js"
+    },
     "./backend/promptAssembly": {
       "types": "./dist/backend/promptAssembly.d.ts",
       "default": "./dist/backend/promptAssembly.js"

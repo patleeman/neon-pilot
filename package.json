@@ -61,6 +61,7 @@
     "test:release-hardening": "vitest run scripts/release-extension-golden-smoke.test.mjs scripts/release-smoke-args.test.mjs scripts/release-reliability-doctor.test.mjs",
     "smoke:release-extensions": "node scripts/release-extension-golden-smoke.mjs",
     "test:smoke": "pnpm run test:extensions && pnpm run smoke:startup-idle",
+    "smoke:model-gateway": "node scripts/model-gateway-smoke.mjs",
     "clean": "pnpm -r run clean --if-present && rm -f tsconfig.tsbuildinfo",
     "ab:run": "node scripts/agent-browser-session.mjs run",
     "ab:cleanup": "node scripts/agent-browser-session.mjs cleanup",

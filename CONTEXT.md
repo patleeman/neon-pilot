@@ -81,6 +81,10 @@ Use **plugin** when referring to Codex-style or third-party plugin packages. Do 
 
 A bundled extension shipped with the app or repo. System extensions can still own product-facing features; they are not automatically core.
 
+### Model Gateway
+
+A bundled system extension that exposes Neon Pilot model providers through an API surface external coding agents can use.
+
 ### Required system extension
 
 A bundled extension that owns a platform repair, configuration, routing, prompt assembly, terminal, or background-work surface that must stay available for the app to manage itself.
