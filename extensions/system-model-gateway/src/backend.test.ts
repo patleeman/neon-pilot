@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock(
   '@neon-pilot/extensions/backend/modelGateway',
@@ -34,7 +34,7 @@ vi.mock(
   { virtual: true },
 );
 
-import { healthRoute, modelsRoute, responsesRoute, smoke } from './backend';
+import { clearLogs, healthRoute, modelsRoute, responsesRoute, startGatewayService, status, stopGatewayService, updateSettings } from './backend';
 
 function ctx(overrides?: Partial<Record<string, unknown>>) {
   const storage = new Map<string, unknown>();
@@ -54,6 +54,10 @@ function ctx(overrides?: Partial<Record<string, unknown>>) {
 }
 
 describe('system-model-gateway backend', () => {
+  afterEach(async () => {
+    await stopGatewayService({}, ctx());
+  });
+
   it('serves health with the default loopback target', async () => {
     await expect(healthRoute({ method: 'GET', path: '/health', query: {}, params: {} }, ctx())).resolves.toMatchObject({
       status: 200,
@@ -74,10 +78,11 @@ describe('system-model-gateway backend', () => {
   });
 
   it('creates a non-streaming fake Responses payload', async () => {
+    const context = ctx();
     await expect(
       responsesRoute(
         { method: 'POST', path: '/v1/responses', query: {}, params: {}, body: { model: 'neon-pilot-fake', input: 'hello' } },
-        ctx(),
+        context,
       ),
     ).resolves.toMatchObject({
       status: 200,
@@ -88,12 +93,24 @@ describe('system-model-gateway backend', () => {
         output: [expect.objectContaining({ type: 'message' })],
       },
     });
+    await expect(status({}, context)).resolves.toMatchObject({ logs: expect.any(Array) });
   });
 
-  it('runs the action smoke without real provider credentials', async () => {
-    await expect(smoke({}, ctx())).resolves.toMatchObject({
-      ok: true,
-      response: { model: 'neon-pilot-fake', status: 'completed' },
+  it('starts as a service and updates the persisted port', async () => {
+    const context = ctx();
+    await expect(startGatewayService({}, context)).resolves.toMatchObject({
+      running: true,
+      port: 8766,
+      baseUrl: 'http://127.0.0.1:8766/v1',
     });
+    await expect(updateSettings({ port: 8767 }, context)).resolves.toMatchObject({
+      running: true,
+      port: 8767,
+      baseUrl: 'http://127.0.0.1:8767/v1',
+    });
+  });
+
+  it('clears recent activity logs', async () => {
+    await expect(clearLogs({}, ctx())).resolves.toMatchObject({ logs: [] });
   });
 });

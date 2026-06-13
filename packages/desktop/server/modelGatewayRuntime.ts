@@ -1,6 +1,8 @@
 import { AuthStorage, ModelRegistry } from '@earendil-works/pi-coding-agent';
 import { stream, type Api, type AssistantMessage, type AssistantMessageEvent, type Context, type Message, type Model, Type } from '@earendil-works/pi-ai';
 
+import { readSavedModelRef } from './models/modelPreferences.js';
+
 export const DEFAULT_MODEL_GATEWAY_PORT = 8766;
 export const FAKE_MODEL_GATEWAY_MODEL_ID = 'neon-pilot-fake';
 export const DEFAULT_MODEL_GATEWAY_MODEL_ID = 'auto';
@@ -250,6 +252,13 @@ export function listModelGatewayModels(ctx: RuntimeContext): ModelGatewayModel[]
   return entries;
 }
 
+function resolveDefaultModelRef(ctx: RuntimeContext, models: Array<Model<Api>>): string {
+  return readSavedModelRef(
+    `${ctx.runtimeDir}/settings.json`,
+    models.map((model) => ({ id: model.id, provider: model.provider })),
+  );
+}
+
 function fakeResponse(body: ResponsesRequest, model: string): ResponsesResponse {
   const text = readText(body.input) || 'Hello from Neon Pilot Model Gateway.';
   return {
@@ -273,7 +282,9 @@ function fakeResponse(body: ResponsesRequest, model: string): ResponsesResponse 
 
 async function resolveModel(ctx: RuntimeContext, modelRef: string): Promise<{ model: Model<Api>; apiKey?: string; headers?: Record<string, string> }> {
   const registry = createModelRegistry(ctx.runtimeDir);
-  const model = parseModelRef(modelRef, registry.getAvailable());
+  const models = registry.getAvailable();
+  const resolvedRef = modelRef === DEFAULT_MODEL_GATEWAY_MODEL_ID ? resolveDefaultModelRef(ctx, models) || DEFAULT_MODEL_GATEWAY_MODEL_ID : modelRef;
+  const model = parseModelRef(resolvedRef, models);
   if (!model) throw new Error(`Unknown or unavailable model: ${modelRef}`);
   const auth = await registry.getApiKeyAndHeaders(model);
   if (!auth.ok) throw new Error(auth.error);

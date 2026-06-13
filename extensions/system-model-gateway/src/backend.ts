@@ -4,8 +4,6 @@ import type { ExtensionBackendContext, ExtensionRouteRequest, ExtensionRouteResp
 
 import {
   createModelGatewayResponse,
-  DEFAULT_MODEL_GATEWAY_PORT,
-  FAKE_MODEL_GATEWAY_MODEL_ID,
   listModelGatewayModels,
   modelGatewaySettingsFrom,
   type ModelGatewaySettings,
@@ -17,6 +15,24 @@ import {
 let server: Server | null = null;
 let serverSettings: ModelGatewaySettings | null = null;
 let lastError: string | undefined;
+
+interface GatewayLogEntry {
+  id: string;
+  at: string;
+  method: string;
+  path: string;
+  status: number;
+  model?: string;
+  durationMs: number;
+  error?: string;
+}
+
+interface GatewayState extends ModelGatewayStatus {
+  logs: GatewayLogEntry[];
+}
+
+const logs: GatewayLogEntry[] = [];
+const MAX_LOGS = 80;
 
 async function readSettings(ctx: ExtensionBackendContext): Promise<ModelGatewaySettings> {
   return modelGatewaySettingsFrom(await ctx.storage.get('settings'));
@@ -43,7 +59,16 @@ function sseEvent(data: unknown) {
   return { data };
 }
 
-async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySettings): Promise<ModelGatewayStatus> {
+function appendLog(entry: Omit<GatewayLogEntry, 'id' | 'at'>): void {
+  logs.unshift({
+    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    at: new Date().toISOString(),
+    ...entry,
+  });
+  logs.splice(MAX_LOGS);
+}
+
+async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySettings): Promise<GatewayState> {
   const models = (await listModelGatewayModels(ctx)).length;
   return {
     running: Boolean(server?.listening),
@@ -52,15 +77,22 @@ async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySet
     baseUrl: `http://${settings.host}:${settings.port}/v1`,
     models,
     defaultModel: settings.defaultModel,
+    logs: [...logs],
     ...(lastError ? { lastError } : {}),
   };
 }
 
-export async function status(_input: unknown, ctx: ExtensionBackendContext): Promise<ModelGatewayStatus> {
+async function ensureLoopbackServer(ctx: ExtensionBackendContext): Promise<GatewayState> {
+  const settings = await readSettings(ctx);
+  await startLoopbackServer(ctx, settings);
+  return statusFor(ctx, settings);
+}
+
+export async function status(_input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
   return statusFor(ctx, await readSettings(ctx));
 }
 
-export async function start(input: unknown, ctx: ExtensionBackendContext): Promise<ModelGatewayStatus> {
+export async function updateSettings(input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
   const requested = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
   const current = await readSettings(ctx);
   const next = await modelGatewaySettingsFrom({ ...current, ...requested });
@@ -69,15 +101,18 @@ export async function start(input: unknown, ctx: ExtensionBackendContext): Promi
   return statusFor(ctx, next);
 }
 
-export async function stop(_input: unknown, ctx: ExtensionBackendContext): Promise<ModelGatewayStatus> {
-  await stopLoopbackServer();
+export async function clearLogs(_input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
+  logs.splice(0);
   return statusFor(ctx, await readSettings(ctx));
 }
 
-export async function smoke(_input: unknown, ctx: ExtensionBackendContext): Promise<{ ok: boolean; response: unknown; status: ModelGatewayStatus }> {
-  const settings = await readSettings(ctx);
-  const response = await createModelGatewayResponse(ctx, { model: FAKE_MODEL_GATEWAY_MODEL_ID, input: 'smoke' }, settings);
-  return { ok: response.status === 'completed', response, status: await statusFor(ctx, settings) };
+export async function startGatewayService(_input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
+  return ensureLoopbackServer(ctx);
+}
+
+export async function stopGatewayService(_input: unknown, _ctx: ExtensionBackendContext): Promise<{ running: false }> {
+  await stopLoopbackServer();
+  return { running: false };
 }
 
 export async function healthRoute(_request: ExtensionRouteRequest, ctx: ExtensionBackendContext): Promise<ExtensionRouteResponse> {
@@ -197,31 +232,41 @@ async function handleHttpRequest(
   settings: ModelGatewaySettings,
 ): Promise<void> {
   const url = new URL(request.url ?? '/', `http://${settings.host}:${settings.port}`);
+  const started = Date.now();
+  let statusCode = 404;
+  let requestModel: string | undefined;
   try {
     if (request.method === 'GET' && url.pathname === '/health') {
+      statusCode = 200;
       sendJson(response, 200, { ok: true, ...(await statusFor(ctx, settings)) });
       return;
     }
     if (request.method === 'GET' && url.pathname === '/v1/models') {
+      statusCode = 200;
       sendJson(response, 200, { object: 'list', data: await listModelGatewayModels(ctx) });
       return;
     }
-    if (request.method === 'POST' && url.pathname === '/v1/responses') {
+    if (request.method === 'POST' && (url.pathname === '/v1/responses' || url.pathname === '/v1/responses/stream')) {
       const body = (await readBody(request)) as ResponsesRequest;
-      if (body.stream === true) {
+      requestModel = typeof body.model === 'string' ? body.model : undefined;
+      if (body.stream === true || url.pathname === '/v1/responses/stream') {
+        statusCode = 200;
         sendSse(response);
-        for await (const event of await streamModelGatewayResponseEvents(ctx, body, settings)) {
+        for await (const event of await streamModelGatewayResponseEvents(ctx, { ...body, stream: true }, settings)) {
           response.write(`data: ${typeof event === 'string' ? event : JSON.stringify(event)}\n\n`);
         }
         response.end();
         return;
       }
+      statusCode = 200;
       sendJson(response, 200, await createModelGatewayResponse(ctx, body, settings));
       return;
     }
+    statusCode = 404;
     sendJson(response, 404, { error: { message: 'Route not found.' } });
   } catch (error) {
     lastError = error instanceof Error ? error.message : String(error);
+    statusCode = 500;
     if (!response.headersSent) {
       sendJson(response, 500, { error: { message: lastError } });
     } else {
@@ -229,5 +274,14 @@ async function handleHttpRequest(
       response.write('data: [DONE]\n\n');
       response.end();
     }
+  } finally {
+    appendLog({
+      method: request.method ?? 'GET',
+      path: url.pathname,
+      status: statusCode,
+      ...(requestModel ? { model: requestModel } : {}),
+      durationMs: Date.now() - started,
+      ...(statusCode >= 500 && lastError ? { error: lastError } : {}),
+    });
   }
 }

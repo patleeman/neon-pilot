@@ -11,11 +11,21 @@
   },
   "backend": {
     "entry": "dist/backend.mjs",
+    "services": [
+      {
+        "id": "loopback",
+        "handler": "startGatewayService",
+        "stopHandler": "stopGatewayService",
+        "healthCheck": "status",
+        "title": "Model Gateway loopback server",
+        "restart": "on-failure",
+        "worker": { "enabled": true }
+      }
+    ],
     "actions": [
       { "id": "status", "handler": "status", "title": "Model Gateway status", "worker": { "enabled": true } },
-      { "id": "start", "handler": "start", "title": "Start Model Gateway", "worker": { "enabled": true } },
-      { "id": "stop", "handler": "stop", "title": "Stop Model Gateway", "worker": { "enabled": true } },
-      { "id": "smoke", "handler": "smoke", "title": "Smoke test Model Gateway", "worker": { "enabled": true } }
+      { "id": "updateSettings", "handler": "updateSettings", "title": "Update Model Gateway settings", "worker": { "enabled": true } },
+      { "id": "clearLogs", "handler": "clearLogs", "title": "Clear Model Gateway logs", "worker": { "enabled": true } }
     ],
     "routes": [
       {
@@ -51,41 +61,14 @@
     ]
   },
   "contributes": {
-    "views": [
-      {
-        "id": "model-gateway-page",
-        "title": "Model Gateway",
-        "location": "main",
-        "route": "/model-gateway",
-        "component": "ModelGatewayPage"
-      }
-    ],
-    "nav": [
-      {
-        "id": "model-gateway-nav",
-        "label": "Model Gateway",
-        "icon": "radio-tower",
-        "route": "/model-gateway",
-        "order": 86
-      }
-    ],
-    "commands": [
-      {
-        "id": "modelGateway.start",
-        "title": "Start Model Gateway",
-        "action": "start"
-      },
-      {
-        "id": "modelGateway.stop",
-        "title": "Stop Model Gateway",
-        "action": "stop"
-      },
-      {
-        "id": "modelGateway.smoke",
-        "title": "Smoke Test Model Gateway",
-        "action": "smoke"
-      }
-    ]
+    "settingsComponent": {
+      "id": "model-gateway-settings",
+      "component": "ModelGatewaySettingsPanel",
+      "sectionId": "settings-model-gateway",
+      "label": "Model Gateway",
+      "description": "Local OpenAI Responses-compatible endpoint for external coding agents.",
+      "order": 45
+    }
   },
   "permissions": ["storage:readwrite"]
 }
