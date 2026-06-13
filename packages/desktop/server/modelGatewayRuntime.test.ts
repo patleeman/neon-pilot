@@ -210,6 +210,7 @@ describe('modelGatewayRuntime', () => {
           expect.objectContaining({
             slug: 'neon-pilot-fake',
             display_name: 'Neon Pilot Fake',
+            priority: 1,
             visibility: 'list',
             apply_patch_tool_type: 'freeform',
             shell_type: 'shell_command',
@@ -217,6 +218,35 @@ describe('modelGatewayRuntime', () => {
           }),
         ]),
       );
+    } finally {
+      rmSync(runtimeDir, { recursive: true, force: true });
+    }
+  });
+
+  it('orders auto first in the Codex model catalog when gateway models exist', () => {
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'model-gateway-catalog-models-'));
+    try {
+      writeFileSync(
+        join(runtimeDir, 'models.json'),
+        JSON.stringify({
+          providers: {
+            test: {
+              baseUrl: 'http://127.0.0.1:1/v1',
+              api: 'openai-completions',
+              apiKey: 'test',
+              models: [{ id: 'alpha', name: 'Alpha', input: ['text'], contextWindow: 128000 }],
+            },
+          },
+        }),
+      );
+      const path = writeModelGatewayCatalog({ runtimeDir });
+      const catalog = JSON.parse(readFileSync(path, 'utf8')) as { models: Array<Record<string, unknown>> };
+
+      expect(catalog.models.slice(0, 3)).toEqual([
+        expect.objectContaining({ slug: 'auto', display_name: 'Neon Pilot Auto', priority: 0 }),
+        expect.objectContaining({ slug: 'neon-pilot-fake', display_name: 'Neon Pilot Fake', priority: 1 }),
+        expect.objectContaining({ slug: 'test/alpha', display_name: 'Alpha', priority: 2 }),
+      ]);
     } finally {
       rmSync(runtimeDir, { recursive: true, force: true });
     }

@@ -533,6 +533,7 @@ function catalogEntry(model: ModelGatewayModel, index: number): Record<string, u
   const displayName = displayNameForModel(model);
   const contextWindow = model.context_window ?? (model.id === DEFAULT_MODEL_GATEWAY_MODEL_ID ? 400_000 : 128_000);
   const inputModalities = model.input_modalities?.length ? model.input_modalities : ['text'];
+  const priority = model.id === DEFAULT_MODEL_GATEWAY_MODEL_ID ? 0 : Math.max(1, index);
   return {
     slug: model.id,
     display_name: displayName,
@@ -566,7 +567,7 @@ function catalogEntry(model: ModelGatewayModel, index: number): Record<string, u
     supported_in_api: true,
     availability_nux: null,
     upgrade: null,
-    priority: model.id === DEFAULT_MODEL_GATEWAY_MODEL_ID ? 10_000 : Math.max(1, 1_000 - index),
+    priority,
     prefer_websockets: false,
     available_in_plans: CODEX_PLAN_TIERS,
     base_instructions: 'You are a coding agent running in Codex through Neon Pilot Model Gateway.',
