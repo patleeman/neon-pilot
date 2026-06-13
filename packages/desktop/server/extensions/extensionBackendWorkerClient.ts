@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
 import type { ExtensionBackendLoadTarget } from './extensionBackendRunner.js';
@@ -42,10 +44,14 @@ export function setDefaultExtensionBackendWorkerUrl(workerUrl: URL | undefined):
 }
 
 function getDefaultExtensionBackendWorkerUrl(): URL {
-  return (
-    (globalThis as ExtensionBackendWorkerUrlGlobal)[EXTENSION_BACKEND_WORKER_URL_GLOBAL] ??
-    new URL('./extensionBackendWorker.js', import.meta.url)
-  );
+  const configured = (globalThis as ExtensionBackendWorkerUrlGlobal)[EXTENSION_BACKEND_WORKER_URL_GLOBAL];
+  if (configured) return configured;
+
+  const candidates = [
+    new URL('./extensionBackendWorker.js', import.meta.url),
+    new URL('../extensions/extensionBackendWorker.js', import.meta.url),
+  ];
+  return candidates.find((candidate) => existsSync(fileURLToPath(candidate))) ?? candidates[0]!;
 }
 
 export class ExtensionBackendWorkerClient {

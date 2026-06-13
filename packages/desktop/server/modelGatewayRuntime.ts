@@ -117,9 +117,16 @@ export function responsesInputToPiMessages(input: unknown): Message[] {
   if (!Array.isArray(input)) return [{ role: 'user', content: readText(input), timestamp: Date.now() }];
 
   const messages: Message[] = [];
-  const toolNamesByCallId = new Map<string, string>();
+  const pendingToolCalls = new Map<string, { message: Message; bufferedMessages: Message[]; name: string }>();
+  const flushPendingToolCalls = (): void => {
+    for (const [callId, pending] of pendingToolCalls) {
+      messages.push(...pending.bufferedMessages, pending.message);
+      pendingToolCalls.delete(callId);
+    }
+  };
   for (const item of input) {
     if (typeof item === 'string') {
+      flushPendingToolCalls();
       messages.push({ role: 'user', content: item, timestamp: Date.now() });
       continue;
     }
@@ -130,25 +137,35 @@ export function responsesInputToPiMessages(input: unknown): Message[] {
       const callId = String(record.call_id ?? record.id ?? '');
       const name = typeof record.name === 'string' ? record.name : '';
       if (!callId || !name) continue;
-      toolNamesByCallId.set(callId, name);
-      messages.push({
-        role: 'assistant',
-        content: [{ type: 'toolCall', id: callId, name, arguments: parseFunctionCallArguments(record.arguments) }],
-        api: 'openai-responses',
-        provider: 'neon-pilot',
-        model: 'replayed',
-        usage: zeroUsage(),
-        stopReason: 'tool_use',
-        timestamp: Date.now(),
+      pendingToolCalls.set(callId, {
+        name,
+        bufferedMessages: [],
+        message: {
+          role: 'assistant',
+          content: [{ type: 'toolCall', id: callId, name, arguments: parseFunctionCallArguments(record.arguments) }],
+          api: 'openai-responses',
+          provider: 'neon-pilot',
+          model: 'replayed',
+          usage: zeroUsage(),
+          stopReason: 'tool_use',
+          timestamp: Date.now(),
+        },
       });
       continue;
     }
     if (type === 'function_call_output') {
       const callId = String(record.call_id ?? '');
+      const pending = pendingToolCalls.get(callId);
+      if (pending) {
+        messages.push(...pending.bufferedMessages, pending.message);
+        pendingToolCalls.delete(callId);
+      } else {
+        flushPendingToolCalls();
+      }
       messages.push({
         role: 'toolResult',
         toolCallId: callId,
-        toolName: toolNamesByCallId.get(callId) ?? '',
+        toolName: pending?.name ?? '',
         content: [{ type: 'text', text: readText(record.output) }],
         isError: false,
         timestamp: Date.now(),
@@ -158,8 +175,9 @@ export function responsesInputToPiMessages(input: unknown): Message[] {
     if (type === 'message' || record.role) {
       const role = record.role === 'assistant' ? 'assistant' : 'user';
       const text = readText(record.content);
+      if (role !== 'assistant') flushPendingToolCalls();
       if (role === 'assistant') {
-        messages.push({
+        const assistantMessage: Message = {
           role: 'assistant',
           content: text ? [{ type: 'text', text }] : [],
           api: 'openai-responses',
@@ -168,12 +186,19 @@ export function responsesInputToPiMessages(input: unknown): Message[] {
           usage: zeroUsage(),
           stopReason: 'stop',
           timestamp: Date.now(),
-        });
+        };
+        const pendingCalls = [...pendingToolCalls.values()];
+        if (pendingCalls.length > 0) {
+          pendingCalls[pendingCalls.length - 1]!.bufferedMessages.push(assistantMessage);
+        } else {
+          messages.push(assistantMessage);
+        }
       } else {
         messages.push({ role: 'user', content: text, timestamp: Date.now() });
       }
     }
   }
+  flushPendingToolCalls();
   return messages.length ? messages : [{ role: 'user', content: '', timestamp: Date.now() }];
 }
 

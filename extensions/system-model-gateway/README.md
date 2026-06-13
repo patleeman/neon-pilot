@@ -30,8 +30,40 @@ Do not update the active `~/.codex/config.toml` from inside a running Codex Desk
 From the repo root:
 
 ```bash
+pnpm --dir packages/desktop run build:server
 pnpm run extension:build -- extensions/system-model-gateway
 vitest run extensions/system-model-gateway/src/backend.test.ts extensions/system-model-gateway/src/frontend.test.tsx
 ```
 
+Run `build:server` whenever gateway host behavior changes. The extension backend imports `@neon-pilot/extensions/backend/modelGateway`, and
+that host API lazy-loads `packages/desktop/server/dist/modelGatewayRuntime.js` in worker-backed service/action paths. `build-main` alone does
+not refresh that server bundle.
+
+For live Codex CLI checks, use an isolated Codex home:
+
+```bash
+tmp_home=$(mktemp -d)
+cat > "$tmp_home/config.toml" <<'EOF'
+model_provider = "neon-pilot"
+model = "auto"
+approval_policy = "never"
+sandbox_mode = "read-only"
+
+[model_providers.neon-pilot]
+name = "Neon Pilot Model Gateway"
+base_url = "http://127.0.0.1:8766/v1"
+wire_api = "responses"
+experimental_bearer_token = "local-neon-pilot"
+EOF
+
+CODEX_HOME="$tmp_home" /Applications/Codex.app/Contents/Resources/codex exec \
+  --json --skip-git-repo-check -C /tmp \
+  "Run pwd with the shell tool, then reply with exactly DONE." </dev/null
+rm -rf "$tmp_home"
+```
+
 The fake model proves the Responses shape and SSE lifecycle without provider credentials. Real provider checks require Neon Pilot provider credentials in the runtime's normal Pi-backed model configuration.
+
+If the loopback endpoint does not bind after restart, check whether the extension was disabled by the circuit breaker after repeated
+`EADDRINUSE` failures. Re-enable it with `neon-pilot extensions enable system-model-gateway`, then restart extension services from the running
+app or restart the dev app.
