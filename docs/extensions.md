@@ -31,14 +31,14 @@ Users should usually describe the feature they want and let their agent create t
 ```text
 Build a Neon Pilot extension that [does what].
 
-Before implementation, ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass.
+Before implementation, produce a short UX brief and ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass. The brief must name the primary user, the job-to-be-done, the primary surface, the default/empty/loading/error/success states, the main actions, and the shared UI primitives you will reuse from `@neon-pilot/extensions/ui`.
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
 - tab-local right rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
-Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes.
+Implement it with editable source files, build it, reload it, visually test the exact user path, fix any layout or interaction problems you see, and checkpoint the changes.
 ```
 
 The agent should create editable `src/` files, declare contributions in `extension.json`, build, validate, reload, inspect the UI when present, and checkpoint only touched files. Manual manifest/API details below are reference material.
@@ -49,6 +49,8 @@ Before calling an extension done, an agent must be able to answer each item with
 
 - **Surface chosen**: the extension has one clear primary surface for the first version: main page, workbench rail/detail, Settings component, backend action/tool, composer/control contribution, or theme.
 - **Product choices clarified**: ambiguous workflow, data/action, persistence, and visual design decisions were resolved with the user before building.
+- **UX brief written first**: primary user, job-to-be-done, information architecture, states, main actions, command-backed entry points, and visual acceptance criteria were stated before implementation.
+- **Shared primitives selected**: page shell, rail/workbench chrome, forms, resource lists/tables, dialogs, status, loading, empty, and error states use `@neon-pilot/extensions/ui` primitives unless a local custom component is clearly justified.
 - **Boundary clean**: extension runtime code imports from `@neon-pilot/extensions`, `@neon-pilot/extensions/ui`, or narrow `@neon-pilot/extensions/backend/*` SDK subpaths, not core, desktop, or package-internal app modules.
 - **Manifest wired**: every declared component/action/tool/skill/settings entry points to an existing source export or file, and every frontend `pa.extension.invoke(...)` action id is declared in `backend.actions`.
 - **Runtime built**: `dist/` files are current, because packaged desktop runtimes load built bundles and do not compile extension source at install time.
@@ -57,6 +59,7 @@ Before calling an extension done, an agent must be able to answer each item with
 - **States covered**: UI surfaces show useful loading, empty, error, and success states; backend-only extensions return useful error text/details for malformed input.
 - **Inputs user-friendly**: UI uses constrained, structured controls where possible: dropdowns over free-form inputs for known choices, toggles for booleans, segmented controls for modes, pickers for resources, and key/value or row editors over raw JSON textareas unless the JSON is highly complex or expert-only.
 - **Actions command-backed**: meaningful user-reachable actions are contributed as commands so they can appear in the command palette, be invoked programmatically, and be hot-keyed with default or user-editable keybindings when appropriate.
+- **Visual pass recorded**: the app route, rail, Settings section, composer control, or transcript renderer was visually inspected for density, wrapping, focus/keyboard behavior, responsive constraints, and obvious overlap or clipping.
 - **Docs local**: the extension has or updates a `README.md` with build, reload, validation, and usage notes for the next agent.
 - **Release matrix updated**: if the extension is release-critical or fixes a released regression, add a route/action/install case to `scripts/release-extension-golden-matrix.json` so packaged-app verification catches future breakage.
 
