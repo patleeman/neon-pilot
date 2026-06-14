@@ -23,6 +23,9 @@ tools/*/.build/
 # Local runtime / temp
 .taskfactory/
 .pi/
+.tmp/extension-quality/
+artifacts/extension-quality/
+.eval-extensions/
 
 # OS/editor
 .DS_Store
