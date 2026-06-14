@@ -24,12 +24,34 @@ const extensionHostRpcClient = vi.hoisted(() => ({
 const cliControlPlane = vi.hoisted(() => ({
   readNeonPilotCliControlPlaneRecord: vi.fn(() => null),
 }));
+const cliEnvironment = vi.hoisted(() => ({
+  installNeonPilotUserCli: vi.fn(() => ({
+    target: '/tmp/state/bin/neon-pilot',
+    binDir: '/tmp/state/bin',
+    linkPath: '/Users/patrick/.local/bin/neon-pilot',
+    globallyInstalled: true,
+  })),
+  readNeonPilotCliInstallStatus: vi.fn(() => ({
+    target: '/tmp/state/bin/neon-pilot',
+    binDir: '/tmp/state/bin',
+    linkPath: '/Users/patrick/.local/bin/neon-pilot',
+    globallyInstalled: false,
+  })),
+  uninstallNeonPilotUserCli: vi.fn(() => ({
+    target: '/tmp/state/bin/neon-pilot',
+    binDir: '/tmp/state/bin',
+    linkPath: '/Users/patrick/.local/bin/neon-pilot',
+    globallyInstalled: false,
+    removed: true,
+  })),
+}));
 
 vi.mock('@neon-pilot/core', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@neon-pilot/core')>()),
   ...core,
 }));
 vi.mock('./app/runtimeState.js', () => runtime);
+vi.mock('./cliEnvironment.js', () => cliEnvironment);
 vi.mock('./extensions/extensionHostClient.js', () => ({
   getExtensionHostClient: () => extensionHostClient,
   setExtensionHostClient: vi.fn(),
@@ -42,6 +64,7 @@ import { main, PROTOCOL_CLI_EXIT_CODES, runProtocolCli } from './protocolCli.js'
 describe('protocol CLI', () => {
   let stderrWrite: ReturnType<typeof vi.spyOn>;
   let stdoutWrite: ReturnType<typeof vi.spyOn>;
+  const originalResourcesPath = process.resourcesPath;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -52,6 +75,7 @@ describe('protocol CLI', () => {
     stdoutWrite = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     process.exitCode = undefined;
     cliControlPlane.readNeonPilotCliControlPlaneRecord.mockReturnValue(null);
+    Object.defineProperty(process, 'resourcesPath', { value: undefined, configurable: true });
   });
 
   it('prints usage and returns usage exit code for invalid invocations', async () => {
@@ -149,6 +173,21 @@ describe('protocol CLI', () => {
     expect(stdoutWrite).not.toHaveBeenCalledWith(expect.stringContaining('protocol <protocol-id>'));
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('doctor [--json]               Check CLI/runtime readiness'));
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('--quiet      Suppress non-essential human output'));
+  });
+
+  it('uses packaged resourcesPath for cli status when repo root env is unavailable', async () => {
+    Object.defineProperty(process, 'resourcesPath', {
+      value: '/Applications/Neon Pilot.app/Contents/Resources',
+      configurable: true,
+    });
+    try {
+      await expect(runProtocolCli(['cli', 'status', '--json'])).resolves.toBe(0);
+      expect(cliEnvironment.readNeonPilotCliInstallStatus).toHaveBeenCalledWith({
+        repoRoot: '/Applications/Neon Pilot.app/Contents/Resources',
+      });
+    } finally {
+      Object.defineProperty(process, 'resourcesPath', { value: originalResourcesPath, configurable: true });
+    }
   });
 
   it('supports built-in aliases and runtime introspection commands', async () => {

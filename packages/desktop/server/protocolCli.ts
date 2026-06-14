@@ -49,8 +49,12 @@ interface CliCommandRegistration extends NeonPilotCliCommandDefinition {
   inputAction?: string;
 }
 
+function resolveCliRepoRoot(): string {
+  return process.env.NEON_PILOT_REPO_ROOT || process.resourcesPath || process.cwd();
+}
+
 function buildServerContextSnapshot(): ExtensionHostServerContextSnapshot {
-  const repoRoot = process.cwd();
+  const repoRoot = resolveCliRepoRoot();
   const stateRoot = getStateRoot();
   const agentDir = getPiAgentRuntimeDir(stateRoot);
   const settingsFile = getRuntimeSettingsFilePath(stateRoot);
@@ -466,7 +470,7 @@ export async function runProtocolCli(argv: string[], options?: { signal?: AbortS
 
 async function manageCliInstall(args: string[], rawArgs = args): Promise<number> {
   const [action = 'status'] = args;
-  const repoRoot = process.cwd();
+  const repoRoot = resolveCliRepoRoot();
   const dryRun = args.includes('--dry-run');
   try {
     if (action === 'status') {
@@ -772,7 +776,7 @@ async function printCliVersion(args: string[], rawArgs = args): Promise<number> 
 async function printCliDoctor(args: string[], rawArgs = args): Promise<number> {
   const validation = validateBuiltinInvocation('doctor', args, rawArgs);
   if (!validation.ok) return validation.code;
-  const repoRoot = process.cwd();
+  const repoRoot = resolveCliRepoRoot();
   const installStatus = readNeonPilotCliInstallStatus({ repoRoot });
   let appConnected = false;
   let appError: string | undefined;
