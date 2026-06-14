@@ -62,6 +62,9 @@ describe('extension quality eval assets', () => {
 
   it('keeps the rubric grounded in frontend and backend quality gates', () => {
     const rubric = readFileSync(new URL('../benchmarks/extension-quality/rubric.md', import.meta.url), 'utf8');
+    const visualRubric = readFileSync(new URL('../benchmarks/extension-quality/visual-rubric.md', import.meta.url), 'utf8');
+    const visualRunner = readFileSync(new URL('./extension-visual-eval.mjs', import.meta.url), 'utf8');
+    const packageJson = readFileSync(new URL('../package.json', import.meta.url), 'utf8');
 
     expect(rubric).toContain('Frontend UX');
     expect(rubric).toContain('Backend Quality');
@@ -69,5 +72,13 @@ describe('extension quality eval assets', () => {
     expect(rubric).toContain('boundary_violation');
     expect(rubric).toContain('no_visual_qa');
     expect(rubric).toContain('screenshot-backed visual review');
+
+    expect(visualRubric).toContain('Host Fit');
+    expect(visualRubric).toContain('Density & Layout');
+    expect(visualRubric).toContain('no_image_access');
+    expect(visualRunner).toContain('Page.captureScreenshot');
+    expect(visualRunner).toContain('baseline-screenshots');
+    expect(visualRunner).toContain('generated-screenshots');
+    expect(packageJson).toContain('eval:extension-visual');
   });
 });

@@ -72,6 +72,7 @@
     "perf:desktop": "node scripts/perf-desktop-smoke.mjs",
     "eval:ds4": "node scripts/ds4-agent-eval.mjs",
     "eval:extension-quality": "node scripts/extension-quality-eval.mjs",
+    "eval:extension-visual": "node scripts/extension-visual-eval.mjs",
     "bench:ds4": "node scripts/ds4-task-benchmark.mjs",
     "bench:agent": "node scripts/neon-pilot-agent-benchmark.mjs"
   },
