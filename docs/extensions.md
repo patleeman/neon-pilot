@@ -1735,6 +1735,8 @@ pnpm run extension:build -- /path/to/my-extension
 
 Frontend builds bundle the authoring SDK UI modules (`@neon-pilot/extensions/ui`, `/host`, `/workbench`, `/data`, and `/settings`) into `dist/frontend.js`. The desktop host serves that built file as an extension bundle resource, so frontend dist output must not leave `@neon-pilot/extensions/*` as bare runtime imports.
 
+The extension builder also copies extension-local `bin/` and `templates/` directories into `dist/` so packaged desktop releases can load static sidecars and templates without source-tree access.
+
 ### Hot Reload
 
 After changing backend code, use Extension Manager's **Reload** button or restart the app. The frontend is re-evaluated on page load.

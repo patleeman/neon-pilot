@@ -48,6 +48,7 @@ process.on('exit', () => {
 const buildOutputs = [];
 buildNativeSidecarIfPresent();
 copyStaticDirectoryIfPresent('bin', buildOutputs);
+copyStaticDirectoryIfPresent('templates', buildOutputs);
 
 const frontendSource = join(packageRoot, 'src', 'frontend.tsx');
 if (manifest.frontend?.entry && existsSync(frontendSource)) {

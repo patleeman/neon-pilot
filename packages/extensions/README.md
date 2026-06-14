@@ -75,6 +75,8 @@ pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/agent-board
 
 The builder compiles frontend React to `dist/frontend.js`, backend Node code to `dist/backend.mjs`, and bundles normal third-party dependencies. Host packages such as `react`, `react-dom`, and `@neon-pilot/extensions` are treated as provided by the app. Backend `dist/` output is the runtime contract for system extensions, and stale, missing, oversized, or non-portable system-extension bundles fail validation. System frontends are loaded from source by the desktop renderer so they share the app's React singleton; their `dist/frontend.js` output is still built and checked for packaged releases.
 
+Static extension-local `bin/` and `templates/` directories are copied into `dist/` during `extension:build` for packaged runtime use.
+
 Packaged desktop releases only load prebuilt `dist/` files. They do not run esbuild for extensions at runtime, so imported/user extensions must already include their built frontend/backend bundles.
 
 After building, reload extensions from the Extension Manager or the app reload path. If you changed UI, open the declared route, workbench tab, or tab-local rail surface and visually inspect it.

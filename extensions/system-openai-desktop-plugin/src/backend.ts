@@ -40,7 +40,10 @@ function packageRoot(): string {
 }
 
 function templateRoot(): string {
-  return join(packageRoot(), 'templates', 'codex-plugin');
+  const root = packageRoot();
+  const sourceTemplate = join(root, 'templates', 'codex-plugin');
+  if (existsSync(sourceTemplate)) return sourceTemplate;
+  return join(root, 'dist', 'templates', 'codex-plugin');
 }
 
 function defaultMarketplaceRoot(): string {
