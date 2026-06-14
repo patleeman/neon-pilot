@@ -54,6 +54,9 @@ describe('extension quality eval assets', () => {
     expect(runner).toContain('wrong_checkout_write');
     expect(runner).toContain('readSourceFiles');
     expect(runner).toContain('/\\.(tsx|ts|jsx|js)$/');
+    expect(runner).toContain('require-visual');
+    expect(runner).toContain('visual_review');
+    expect(runner).toContain('visual-review.md');
     expect(runner).toContain('quality.json');
   });
 
@@ -65,5 +68,6 @@ describe('extension quality eval assets', () => {
     expect(rubric).toContain('Hard Gates');
     expect(rubric).toContain('boundary_violation');
     expect(rubric).toContain('no_visual_qa');
+    expect(rubric).toContain('screenshot-backed visual review');
   });
 });

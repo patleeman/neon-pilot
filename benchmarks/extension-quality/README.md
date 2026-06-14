@@ -36,9 +36,30 @@ Useful options:
 - `--limit=<n>`: run the first `n` selected cases.
 - `--timeout-ms=<ms>`: per-case Neon Pilot timeout.
 - `--validate`: run case validation commands after the agent turn.
+- `--require-visual`: fail the case unless screenshot-backed visual review artifacts are present.
 - `--runner=protocol|ask`: protocol is the default and should be used for coding-agent evals; ask is kept only for debugging.
 - `--dry-run`: print planned commands without creating worktrees or invoking Neon Pilot.
 - `--keep-worktrees`: keep worktrees after each case. By default they are removed.
+
+## Visual Review
+
+Build, doctor, static checks, and source heuristics do **not** prove that the extension looks good. They only prove that it is loadable and follows some structural rules.
+
+For each case, the runner writes `<case-id>/visual-review.md` with the expected screenshot/review contract. A case has screenshot-backed visual evidence only when both exist:
+
+- `<case-id>/screenshots/*.png`
+- `<case-id>/visual-review.json`
+
+Run with `--require-visual` when the eval is meant to answer whether the extension one-shots the user-facing UI. Without that flag, missing visual evidence is recorded as a warning so structural runs can still be used for fast debugging.
+
+The visual review should inspect the extension in the real Neon Pilot host, not a fake isolated React preview. Review the primary surface plus at least one empty/error/loading or secondary state for:
+
+- hierarchy, density, alignment, and readable typography
+- host consistency with shared UI primitives
+- long-content wrapping/truncation without overlap
+- distinct empty/loading/error/success/disabled/long-running states
+- labeled icon controls and visible focus behavior
+- absence of nested cards, decorative chips, bespoke chrome, and one-note color styling
 
 ## Case Contract
 
@@ -65,6 +86,8 @@ Each case writes:
 - `<case-id>/diff.patch`
 - `<case-id>/validation.json` when `--validate` is used
 - `<case-id>/quality.json` with lightweight rubric heuristics such as confirmation, command deep-linking, shared UI imports, backend boundaries, and dist size
+- `<case-id>/visual-review.md` with the required screenshot-backed visual review checklist
+- `<case-id>/screenshots/` and `<case-id>/visual-review.json` when a real visual pass has been completed
 - `summary.json`
 
 Use `rubric.md` to score the diff and artifacts. Hard-gate failures should be recorded before assigning qualitative scores.

@@ -227,7 +227,84 @@ function readSourceFiles(extensionDir, pattern) {
     .join('\n');
 }
 
-function analyzeQuality(testCase, extensionDir, outDir, worktree) {
+function manifestRouteHints(manifest) {
+  const contributes = manifest?.contributes && typeof manifest.contributes === 'object' ? manifest.contributes : {};
+  const routes = [];
+  const views = Array.isArray(contributes.views) ? contributes.views : [];
+  for (const view of views) {
+    if (typeof view?.route === 'string') routes.push(view.route);
+    if (typeof view?.path === 'string') routes.push(view.path);
+  }
+  const nav = Array.isArray(contributes.navigation) ? contributes.navigation : [];
+  for (const item of nav) {
+    if (typeof item?.route === 'string') routes.push(item.route);
+    if (typeof item?.path === 'string') routes.push(item.path);
+  }
+  return [...new Set(routes)].filter(Boolean);
+}
+
+function visualReviewFiles(outDir) {
+  const screenshotDir = resolve(outDir, 'screenshots');
+  const screenshots = existsSync(screenshotDir)
+    ? run('find', [screenshotDir, '-type', 'f'], { cwd: repoRoot }).stdout.split(/\r?\n/).filter(Boolean)
+    : [];
+  return {
+    report: resolve(outDir, 'visual-review.json'),
+    screenshots,
+  };
+}
+
+function writeVisualReviewTemplate(testCase, extensionDir, outDir, manifest) {
+  const routes = manifestRouteHints(manifest);
+  const template = [
+    `# Visual Review: ${testCase.id}`,
+    '',
+    `Extension package: ${extensionDir}`,
+    `Surface: ${testCase.surface}`,
+    routes.length ? `Routes to open: ${routes.join(', ')}` : 'Routes to open: inspect extension.json contributions for this surface.',
+    '',
+    '## Required Evidence',
+    '',
+    '- Add screenshots under `screenshots/` for the primary surface and at least one empty/error/loading or secondary state.',
+    '- Add `visual-review.json` when the screenshots have been reviewed.',
+    '',
+    'Expected `visual-review.json` shape:',
+    '',
+    '```json',
+    JSON.stringify(
+      {
+        status: 'pass',
+        reviewer: 'human-or-vision-model',
+        screenshots: ['screenshots/primary.png'],
+        scores: {
+          visualHierarchy: 1,
+          density: 1,
+          states: 1,
+          accessibilitySignals: 1,
+          hostConsistency: 1,
+        },
+        findings: [],
+      },
+      null,
+      2,
+    ),
+    '```',
+    '',
+    '## Visual Checks',
+    '',
+    '- Is the first screen immediately understandable without explanatory helper text?',
+    '- Does it use host shared primitives instead of bespoke card chrome?',
+    '- Are spacing, density, typography, and alignment appropriate for the requested surface?',
+    '- Do long titles, paths, prompts, logs, or row text truncate/wrap without overlap?',
+    '- Are loading, empty, error, success, disabled, and long-running states visibly distinct?',
+    '- Are destructive actions visually separated and confirmed?',
+    '- Are icon-only controls labeled and focusable?',
+    '- Does the UI avoid nested cards, decorative chips, and one-note color styling?',
+  ].join('\n');
+  write(resolve(outDir, 'visual-review.md'), `${template}\n`);
+}
+
+function analyzeQuality(testCase, extensionDir, outDir, worktree, requireVisual) {
   const manifestText = readIfExists(resolve(extensionDir, 'extension.json'));
   const frontendText = readSourceFiles(extensionDir, /\.(tsx|ts|jsx|js)$/);
   const backendText = readSourceFiles(extensionDir, /backend\.(ts|js)$/);
@@ -246,6 +323,7 @@ function analyzeQuality(testCase, extensionDir, outDir, worktree) {
   } catch {
     manifest = {};
   }
+  writeVisualReviewTemplate(testCase, extensionDir, outDir, manifest);
 
   const commands = Array.isArray(manifest?.contributes?.commands) ? manifest.contributes.commands : [];
   const newCommand = commands.find((command) => /new|create/i.test(`${command.id ?? ''} ${command.title ?? ''}`));
@@ -263,6 +341,9 @@ function analyzeQuality(testCase, extensionDir, outDir, worktree) {
     return path && !path.startsWith(allowedPrefix);
   });
   const wrongCheckoutBase = resolve(repoRoot, '.eval-extensions', testCase.id);
+  const visualFiles = visualReviewFiles(outDir);
+  const hasVisualReport = existsSync(visualFiles.report);
+  const hasScreenshots = visualFiles.screenshots.length > 0;
   const quality = {
     extensionDir,
     dist: {
@@ -310,6 +391,14 @@ function analyzeQuality(testCase, extensionDir, outDir, worktree) {
         detail: 'Frontend should use public shared UI primitives.',
       },
       {
+        id: 'visual_review',
+        status: hasVisualReport && hasScreenshots ? 'pass' : requireVisual ? 'fail' : 'warn',
+        detail:
+          hasVisualReport && hasScreenshots
+            ? `Visual review found with ${visualFiles.screenshots.length} screenshot(s).`
+            : 'No screenshot-backed visual review found; build/doctor checks do not prove the UI looks good.',
+      },
+      {
         id: 'backend_boundary',
         status: /@neon-pilot\/(core|desktop)|packages\/desktop|packages\/core/.test(backendText) ? 'fail' : 'pass',
         detail: 'Backend should not import core/desktop internals.',
@@ -334,6 +423,7 @@ const timeoutMs = numberArg('timeout-ms', 1_800_000);
 const dryRun = boolArg('dry-run');
 const shouldValidate = boolArg('validate');
 const keepWorktrees = boolArg('keep-worktrees');
+const requireVisual = boolArg('require-visual');
 
 const cases = selectCases(readJsonl(casesFile));
 if (cases.length === 0) throw new Error('No cases selected.');
@@ -350,6 +440,7 @@ const summary = {
   head,
   dryRun,
   validate: shouldValidate,
+  requireVisual,
   results: [],
 };
 
@@ -397,7 +488,7 @@ for (const testCase of cases) {
   write(resolve(caseOut, 'diff.patch'), gitText(worktree, ['diff', '--binary']));
 
   const validation = shouldValidate ? runValidation(testCase, worktree, caseOut, extensionDir) : [];
-  const quality = analyzeQuality(testCase, extensionDir, caseOut, worktree);
+  const quality = analyzeQuality(testCase, extensionDir, caseOut, worktree, requireVisual);
   summary.results.push({
     id: testCase.id,
     worktree,

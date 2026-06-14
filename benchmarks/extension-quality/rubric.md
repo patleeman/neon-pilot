@@ -10,6 +10,7 @@ A case fails before qualitative scoring if any gate is violated:
 - `extension.json` declarations do not match source exports/actions.
 - Runtime code imports desktop/core internals instead of public extension SDK surfaces.
 - A UI surface opens blank or the declared route/control is missing.
+- A UI case has no screenshot-backed visual review when the run is evaluating one-shot UI quality.
 - Backend actions crash on ordinary malformed input instead of returning useful errors.
 - The agent skipped user-visible validation entirely when the task had UI.
 
@@ -29,6 +30,8 @@ Use 1-5 for each dimension.
 - 3: Functional but has bespoke chrome, weak states, awkward controls, or minor layout risk.
 - 1: Visibly rough, confusing, inaccessible, clipped, blank, or overbuilt.
 
+Score this dimension from real screenshots or app inspection. If no screenshot-backed visual review exists, do not assign a score above 2.
+
 ### Backend Quality
 
 - 5: Typed actions, validation, persistence, meaningful errors, and clean extension/core boundaries.
@@ -46,6 +49,8 @@ Use 1-5 for each dimension.
 - 5: Runs relevant build/doctor/static checks and validates the user-visible path with useful evidence.
 - 3: Runs partial checks but misses either app-path validation or important states.
 - 1: Claims success without meaningful validation.
+
+Screenshot-backed visual review is required for a 5 on validation quality when the task has a user-facing surface.
 
 ## Notes
 
