@@ -54,6 +54,8 @@ describe('extension quality eval assets', () => {
     expect(runner).toContain('wrong_checkout_write');
     expect(runner).toContain('readSourceFiles');
     expect(runner).toContain('/\\.(tsx|ts|jsx|js)$/');
+    expect(runner).toContain('Choose the most user-friendly input');
+    expect(runner).toContain('Do not use a textarea as a shortcut');
     expect(runner).toContain('require-visual');
     expect(runner).toContain('visual_review');
     expect(runner).toContain('visual-review.md');
@@ -72,11 +74,15 @@ describe('extension quality eval assets', () => {
     expect(rubric).toContain('boundary_violation');
     expect(rubric).toContain('no_visual_qa');
     expect(rubric).toContain('screenshot-backed visual review');
+    expect(rubric).toContain('lazy_textarea');
 
     expect(visualRubric).toContain('Host Fit');
+    expect(visualRubric).toContain('Control Taste');
     expect(visualRubric).toContain('Density & Layout');
     expect(visualRubric).toContain('no_image_access');
+    expect(visualRubric).toContain('wrong_input_control');
     expect(visualRunner).toContain('Page.captureScreenshot');
+    expect(visualRunner).toContain('controlTaste');
     expect(visualRunner).toContain('baseline-screenshots');
     expect(visualRunner).toContain('generated-screenshots');
     expect(packageJson).toContain('eval:extension-visual');

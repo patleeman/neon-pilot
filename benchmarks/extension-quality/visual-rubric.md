@@ -17,6 +17,7 @@ Use 1-5 for each dimension.
 - **Information Hierarchy**: The main job, current state, and primary action are obvious within 3 seconds.
 - **Density & Layout**: Spacing and content density fit the surface: main page, rail, composer, transcript, settings, or detail pane.
 - **State Quality**: Empty, loading, error, success, disabled, and long-running states look intentional and distinct.
+- **Control Taste**: Uses the most user-friendly input for each job: structured editors, key/value rows, segmented controls, toggles, selects, pickers, steppers, and tag/resource choosers when appropriate. Raw text inputs and textareas are reserved for genuinely free-form text, code, or prompt bodies.
 - **Interaction Clarity**: Primary, secondary, navigation, and destructive actions are visually clear and placed predictably.
 - **Text Robustness**: Long titles, paths, prompts, logs, tags, and row content wrap or truncate without overlap.
 - **Accessibility Signals**: Icon-only controls, inputs, focus states, and destructive actions are legible and inspectable.
@@ -41,6 +42,9 @@ Use 1-5 for each dimension.
 - `nested_cards`
 - `decorative_noise`
 - `weak_empty_state`
+- `lazy_textarea`
+- `wrong_input_control`
+- `raw_json_editor`
 - `missing_secondary_state`
 - `poor_text_wrapping`
 - `low_contrast`
@@ -64,6 +68,7 @@ Judges must return strict JSON:
     "hierarchy": 3,
     "density": 3,
     "states": 3,
+    "controlTaste": 3,
     "interactionClarity": 3,
     "textRobustness": 3,
     "accessibilitySignals": 3,

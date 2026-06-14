@@ -26,8 +26,8 @@ Use 1-5 for each dimension.
 
 ### Frontend UX
 
-- 5: Uses canonical shared primitives, clear density, constrained controls, command-backed actions, and polished empty/loading/error/success states.
-- 3: Functional but has bespoke chrome, weak states, awkward controls, or minor layout risk.
+- 5: Uses canonical shared primitives, clear density, task-shaped controls, command-backed actions, and polished empty/loading/error/success states.
+- 3: Functional but has bespoke chrome, weak states, awkward controls, lazy textareas/raw inputs where better structured controls fit, or minor layout risk.
 - 1: Visibly rough, confusing, inaccessible, clipped, blank, or overbuilt.
 
 Score this dimension from real screenshots or app inspection. If no screenshot-backed visual review exists, do not assign a score above 2.
@@ -60,6 +60,9 @@ Record concrete failure tags:
 - `missing_ux_brief`
 - `bespoke_ui`
 - `missing_states`
+- `wrong_input_control`
+- `lazy_textarea`
+- `raw_json_editor`
 - `no_command_contribution`
 - `bad_manifest`
 - `backend_validation_gap`
