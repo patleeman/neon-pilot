@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.18** — patch release.
+**v0.11.20** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.18
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.20
 
 Highlights in this train:
 
-- Adds the opt-in AI Gateway for external coding agents, exposing Neon Pilot model providers through a local OpenAI Responses-compatible endpoint.
-- Installs Codex gateway catalog metadata conservatively so existing Codex Desktop threads stay visible instead of switching the global provider lane.
-- Documents current Codex Desktop picker/sidebar blockers, keeps the gateway disabled by default, and adds a weekly upstream watch for the pending fixes.
-- Improves generated docs and website coverage so users can see which gateway paths are stable today and which Desktop integration pieces are waiting on upstream Codex fixes.
-- Refreshes Pi runtime packages to `^0.79.2` for the 0.11.18 patch train.
+- Fixes packaged OpenAI Desktop Plugin reinstall by bundling the Codex plugin template into extension build output.
+- Repairs Codex plugin registration so the Neon Pilot plugin, MCP server, and delegated-agent tools can be refreshed from Settings.
+- Adds wait-any delegated-run orchestration for parallel Neon Pilot subagent investigations.
+- Renames the local Responses-compatible integration to AI Gateway across Settings, docs, website copy, and Codex provider metadata.
+- Keeps extension packaging docs aligned with static `templates/` build behavior for packaged desktop releases.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

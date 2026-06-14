@@ -62,27 +62,23 @@
           produce a release — release is a manual local process.
         </p>
         <h2 id="current-release">Current release</h2>
-        <p><strong>v0.11.18</strong> — patch release.</p>
-        <p>Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.18</p>
+        <p><strong>v0.11.20</strong> — patch release.</p>
+        <p>Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.20</p>
         <p>Highlights in this train:</p>
         <ul>
           <li>
-            Adds the opt-in AI Gateway for external coding agents, exposing Neon Pilot model providers through a local OpenAI
-            Responses-compatible endpoint.
+            Fixes packaged OpenAI Desktop Plugin reinstall by bundling the Codex plugin template into extension build output.
           </li>
           <li>
-            Installs Codex gateway catalog metadata conservatively so existing Codex Desktop threads stay visible instead of switching the
-            global provider lane.
+            Repairs Codex plugin registration so the Neon Pilot plugin, MCP server, and delegated-agent tools can be refreshed from Settings.
           </li>
           <li>
-            Documents current Codex Desktop picker/sidebar blockers, keeps the gateway disabled by default, and adds a weekly upstream watch
-            for the pending fixes.
+            Adds wait-any delegated-run orchestration for parallel Neon Pilot subagent investigations.
           </li>
           <li>
-            Improves generated docs and website coverage so users can see which gateway paths are stable today and which Desktop integration
-            pieces are waiting on upstream Codex fixes.
+            Renames the local Responses-compatible integration to AI Gateway across Settings, docs, website copy, and Codex provider metadata.
           </li>
-          <li>Refreshes Pi runtime packages to <code>^0.79.2</code> for the 0.11.18 patch train.</li>
+          <li>Keeps extension packaging docs aligned with static <code>templates/</code> build behavior for packaged desktop releases.</li>
           <li>Keep this section aligned with <code>package.json</code>, <code>CHANGELOG.md</code>, and the tag being prepared.</li>
         </ul>
         <h2 id="rc-release-operating-instructions">RC release operating instructions</h2>

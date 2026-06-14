@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.20 — 2026-06-14
+
+### Highlights
+
+- Fixes packaged OpenAI Desktop Plugin reinstall by shipping the Codex plugin template inside the built extension bundle and resolving it correctly from signed app resources.
+- Repairs local Codex plugin installation state so the Neon Pilot plugin, MCP server, and delegated-agent tools register cleanly from Settings.
+- Adds the `neon_pilot_wait_any_delegate` tool for delegated Neon Pilot runs so Codex can wait on whichever subagent finishes first during parallel investigations.
+- Renames the local Responses-compatible integration to AI Gateway across Settings, docs, website copy, and generated Codex catalog/provider labels.
+- Keeps extension packaging docs aligned with the new static `templates/` build behavior for packaged desktop releases.
+
+### Notes
+
+- 8 commits since the previous release.
+
 ## 0.11.19 — 2026-06-13
 
 ### Highlights
