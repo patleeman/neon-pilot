@@ -21,9 +21,20 @@ Use the MCP tools for focused delegated agent work:
 
 Use the `neon-pilot` CLI for everything broader than delegated runs. Do not ask MCP to manage all of Neon Pilot; use shell commands and keep the transcript readable.
 
+MCP is the preferred path for delegated workers. If the MCP path is unavailable or broken, fall back immediately to the equivalent `neon-pilot protocol neon-pilot-agent ...` CLI command instead of abandoning delegation.
+
 ## Delegation guidance
 
 Delegate when the task is bounded, useful in parallel, and can be summarized back into the current Codex thread. Keep the prompt concrete and include the repository path or working directory when relevant.
+
+For orchestrated worker pools:
+
+- Keep at most 3 active delegated Neon Pilot jobs at once unless the user asks for a different cap.
+- Prefer `neon_pilot_wait_any_delegate` when the orchestrator runs out of better local work and needs to wait for any worker to finish.
+- Refill open slots after reviewing completed work.
+- Treat missing MCP availability as a routing failure; switch to CLI control of the same delegated-run workflow.
+- Require delegated workers to implement, add focused regression coverage when appropriate, and rigorously validate before returning.
+- The orchestrator should review the returned diff, run final QA/user-path validation, and only then accept/checkpoint.
 
 Do not use delegated runs for ordinary one-shot CLI prompting. For simple direct questions, use:
 
@@ -46,6 +57,7 @@ Inspect or continue it:
 ```sh
 neon-pilot protocol neon-pilot-agent runs list --kind subagent --json
 neon-pilot protocol neon-pilot-agent runs get <runId> --json
+neon-pilot protocol neon-pilot-agent runs wait-any --run-ids <id1,id2,...> --timeout-ms 60000 --json
 neon-pilot protocol neon-pilot-agent runs logs <runId> --tail 200
 neon-pilot protocol neon-pilot-agent runs follow-up <runId> --prompt "Check the failing test too." --json
 neon-pilot protocol neon-pilot-agent runs cancel <runId> --json
