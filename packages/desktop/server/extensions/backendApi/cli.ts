@@ -10,9 +10,13 @@ export interface NeonPilotCliInstallStatus {
 
 type CliEnvironmentExport = 'readNeonPilotCliInstallStatus' | 'installNeonPilotUserCli' | 'uninstallNeonPilotUserCli';
 
+function resolveCliRepoRoot(): string {
+  return process.env.NEON_PILOT_REPO_ROOT || process.resourcesPath || process.cwd();
+}
+
 async function callCliEnvironment(name: CliEnvironmentExport): Promise<NeonPilotCliInstallStatus> {
   return callServerModuleExport<NeonPilotCliInstallStatus>('../../cliEnvironment.js', name, {
-    repoRoot: process.env.NEON_PILOT_REPO_ROOT || process.cwd(),
+    repoRoot: resolveCliRepoRoot(),
   });
 }
 
