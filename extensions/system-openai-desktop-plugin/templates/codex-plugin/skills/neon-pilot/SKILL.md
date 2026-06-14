@@ -14,6 +14,7 @@ Use the MCP tools for focused delegated agent work:
 - `neon_pilot_delegate` starts a durable Neon Pilot subagent-style run.
 - `neon_pilot_list_delegates` lists delegated Neon Pilot runs.
 - `neon_pilot_get_delegate` inspects one delegated run.
+- `neon_pilot_wait_any_delegate` waits until any watched delegated run finishes or times out.
 - `neon_pilot_delegate_logs` reads recent logs.
 - `neon_pilot_follow_up` sends a follow-up prompt to an existing delegated run.
 - `neon_pilot_cancel_delegate` cancels a delegated run.
@@ -101,4 +102,3 @@ neon-pilot tasks save --title "Daily check" --cron "0 9 * * *" --prompt "Summari
 - Use `--json` only when parsing output mechanically.
 - Never pass secrets in argv; use stdin or Neon Pilot bootstrap flows.
 - Do not edit Neon Pilot runtime files directly when a CLI command exists.
-

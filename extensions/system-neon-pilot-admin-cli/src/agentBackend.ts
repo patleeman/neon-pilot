@@ -21,6 +21,7 @@ import {
   pingDaemon,
   rerunDurableRun,
   startBackgroundRun,
+  waitForAnyDurableRun,
 } from '@neon-pilot/extensions/backend/runs';
 
 type JsonRecord = Record<string, unknown>;
@@ -55,6 +56,7 @@ type RunsApi = {
   pingDaemon: typeof pingDaemon;
   rerunDurableRun: typeof rerunDurableRun;
   startBackgroundRun: typeof startBackgroundRun;
+  waitForAnyDurableRun: typeof waitForAnyDurableRun;
 };
 
 type BootstrapCliEnvelope = {
@@ -98,6 +100,7 @@ function runsApi(): RunsApi {
     pingDaemon,
     rerunDurableRun,
     startBackgroundRun,
+    waitForAnyDurableRun,
     ...runsApiOverride,
   } as RunsApi;
 }
@@ -201,6 +204,12 @@ function readAllowedTools(value: unknown): string[] | undefined {
     .map((item) => item.trim())
     .filter(Boolean);
   return tools.length ? tools : undefined;
+}
+
+function readStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(readString).filter((item): item is string => Boolean(item));
+  const text = readString(value);
+  return text ? text.split(',').map((item) => item.trim()).filter(Boolean) : [];
 }
 
 function normalizeAction(action: string, input: JsonRecord): string {
@@ -554,6 +563,32 @@ export async function neonPilotAgent(input: unknown, ctx: ExtensionBackendContex
       return textResult(JSON.stringify(run, null, 2), { action, run });
     }
 
+    case 'runs_wait_any': {
+      const runIds = readStringArray(params.runIds);
+      if (runIds.length === 0) throw new Error('runIds is required.');
+      const timeoutMs = Math.max(0, Math.floor(readNumber(params.timeoutMs) ?? 60_000));
+      const pollIntervalMs = Math.max(100, Math.floor(readNumber(params.pollIntervalMs) ?? 1_000));
+      const result = await runsApi().waitForAnyDurableRun(runIds, { timeoutMs, pollIntervalMs });
+      if (result.timedOut) {
+        return textResult(`Timed out waiting for any of ${runIds.join(', ')}.`, {
+          action,
+          runIds,
+          timedOut: true,
+          timeoutMs,
+        });
+      }
+      return textResult(`Run ${result.runId ?? 'unknown'} reached terminal status ${result.status ?? 'unknown'}.`, {
+        action,
+        runIds,
+        timedOut: false,
+        timeoutMs,
+        pollIntervalMs,
+        runId: result.runId,
+        status: result.status,
+        run: result.run,
+      });
+    }
+
     case 'runs_logs': {
       const runId = requiredString(params.runId, 'runId');
       const tail = Math.min(Math.max(Math.floor(readNumber(params.tail) ?? 120), 1), 1000);
@@ -648,6 +683,7 @@ export async function neonPilotAgent(input: unknown, ctx: ExtensionBackendContex
               'subagent_follow_up',
               'runs_list',
               'runs_get',
+              'runs_wait_any',
               'runs_logs',
               'runs_cancel',
               'runs_rerun',
@@ -693,6 +729,7 @@ function cliUsage(): string {
   neon-pilot protocol neon-pilot-agent start --prompt <text> [--task-slug <slug>] [--cwd <path>] [--model <ref>] [--allowed-tools a,b] [--json]
   neon-pilot protocol neon-pilot-agent runs list [--kind subagent|background-command] [--json]
   neon-pilot protocol neon-pilot-agent runs get <runId> [--json]
+  neon-pilot protocol neon-pilot-agent runs wait-any --run-ids <id1,id2,...> [--timeout-ms 60000] [--poll-interval-ms 1000] [--json]
   neon-pilot protocol neon-pilot-agent runs logs <runId> [--tail 200]
   neon-pilot protocol neon-pilot-agent runs cancel <runId> [--json]
   neon-pilot protocol neon-pilot-agent runs rerun <runId> [--json]
@@ -723,6 +760,18 @@ function inputFromCli(args: string[]): { input: JsonRecord; json: boolean } {
   if (command === 'runs') {
     if (subcommand === 'list') return { input: { ...common, action: 'runs_list' }, json };
     if (subcommand === 'get') return { input: { ...common, action: 'runs_get', runId: idOrAction }, json };
+    if (subcommand === 'wait-any') {
+      return {
+        input: {
+          ...common,
+          action: 'runs_wait_any',
+          runIds: common['run-ids'],
+          timeoutMs: common['timeout-ms'],
+          pollIntervalMs: common['poll-interval-ms'],
+        },
+        json,
+      };
+    }
     if (subcommand === 'logs') return { input: { ...common, action: 'runs_logs', runId: idOrAction }, json };
     if (subcommand === 'cancel') return { input: { ...common, action: 'runs_cancel', runId: idOrAction }, json };
     if (subcommand === 'rerun') return { input: { ...common, action: 'runs_rerun', runId: idOrAction }, json };

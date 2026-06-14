@@ -49,6 +49,25 @@ const tools = [
     },
   },
   {
+    name: 'neon_pilot_wait_any_delegate',
+    description: 'Wait until any delegated Neon Pilot run in a supplied set reaches a terminal state or a timeout expires.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        runIds: {
+          type: 'array',
+          items: { type: 'string' },
+          minItems: 1,
+          description: 'Delegated run ids to watch.',
+        },
+        timeoutMs: { type: 'number', minimum: 0, description: 'Maximum time to wait before returning a timeout result.' },
+        pollIntervalMs: { type: 'number', minimum: 100, maximum: 10000, description: 'Polling interval while waiting.' },
+      },
+      required: ['runIds'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'neon_pilot_delegate_logs',
     description: 'Read recent logs for one Neon Pilot delegated agent run.',
     inputSchema: {
@@ -121,6 +140,14 @@ function cliArgsForTool(name, rawArgs) {
   }
   if (name === 'neon_pilot_get_delegate') {
     return ['protocol', 'neon-pilot-agent', 'runs', 'get', stringArg(input.runId, 'runId'), '--json'];
+  }
+  if (name === 'neon_pilot_wait_any_delegate') {
+    const runIds = Array.isArray(input.runIds) ? input.runIds.map((runId) => stringArg(runId, 'runIds[]')) : [];
+    if (runIds.length === 0) throw new Error('runIds is required.');
+    const args = ['protocol', 'neon-pilot-agent', 'runs', 'wait-any', '--run-ids', runIds.join(','), '--json'];
+    pushFlag(args, '--timeout-ms', input.timeoutMs);
+    pushFlag(args, '--poll-interval-ms', input.pollIntervalMs);
+    return args;
   }
   if (name === 'neon_pilot_delegate_logs') {
     const args = ['protocol', 'neon-pilot-agent', 'runs', 'logs', stringArg(input.runId, 'runId')];

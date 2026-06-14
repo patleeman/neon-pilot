@@ -16,6 +16,7 @@ const MCP_TOOLS = [
   'neon_pilot_delegate',
   'neon_pilot_list_delegates',
   'neon_pilot_get_delegate',
+  'neon_pilot_wait_any_delegate',
   'neon_pilot_delegate_logs',
   'neon_pilot_follow_up',
   'neon_pilot_cancel_delegate',

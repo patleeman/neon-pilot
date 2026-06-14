@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { callDaemonExport } from './daemonBridge.js';
 
@@ -57,6 +58,47 @@ export async function rerunDurableRun(runId: string) {
 
 export async function followUpDurableRun(runId: string, prompt?: string) {
   return callDaemonExport<Record<string, unknown>>('followUpDurableRun', runId, prompt);
+}
+
+const TERMINAL_RUN_STATUSES = new Set(['completed', 'failed', 'cancelled', 'interrupted']);
+
+function readRunStatus(detail: unknown): string | undefined {
+  if (!detail || typeof detail !== 'object') return undefined;
+  const run = (detail as { run?: { status?: { status?: unknown } } }).run;
+  const status = run?.status?.status;
+  return typeof status === 'string' && status.trim() ? status.trim() : undefined;
+}
+
+export async function waitForAnyDurableRun(
+  runIds: string[],
+  input: { timeoutMs?: number; pollIntervalMs?: number } = {},
+): Promise<{ timedOut: boolean; run?: Record<string, unknown>; runId?: string; status?: string }> {
+  const watchedRunIds = [...new Set(runIds.map((runId) => runId.trim()).filter(Boolean))];
+  if (watchedRunIds.length === 0) {
+    throw new Error('At least one run id is required.');
+  }
+
+  const timeoutMs = Math.max(0, Math.floor(input.timeoutMs ?? 60_000));
+  const pollIntervalMs = Math.min(Math.max(Math.floor(input.pollIntervalMs ?? 1_000), 100), 10_000);
+  const deadline = Date.now() + timeoutMs;
+
+  for (;;) {
+    for (const runId of watchedRunIds) {
+      const detail = await getDurableRun(runId);
+      const status = readRunStatus(detail);
+      if (!detail?.run || !status || !TERMINAL_RUN_STATUSES.has(status)) continue;
+      return {
+        timedOut: false,
+        runId,
+        status,
+        run: detail.run,
+      };
+    }
+
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) return { timedOut: true };
+    await delay(Math.min(pollIntervalMs, remainingMs));
+  }
 }
 
 function readTailText(filePath: string | undefined, maxLines = 120, maxBytes = 64 * 1024): string {

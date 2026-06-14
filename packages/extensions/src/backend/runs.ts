@@ -8,6 +8,7 @@ export const getDurableRun = (..._args: unknown[]): unknown => hostResolved();
 export const getDurableRunLog = (..._args: unknown[]): unknown => hostResolved();
 export const listDurableRuns = (..._args: unknown[]): unknown => hostResolved();
 export const rerunDurableRun = (..._args: unknown[]): unknown => hostResolved();
+export const waitForAnyDurableRun = (..._args: unknown[]): unknown => hostResolved();
 export const applyScheduledTaskThreadBinding = (..._args: unknown[]): unknown => hostResolved();
 export const invalidateAppTopics = (..._args: unknown[]): unknown => hostResolved();
 export const startBackgroundRun = (..._args: unknown[]): unknown => hostResolved();

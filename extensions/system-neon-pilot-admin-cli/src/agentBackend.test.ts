@@ -88,6 +88,43 @@ describe('system-neon-pilot-admin-cli agent backend', () => {
     });
   });
 
+  it('waits for any delegated run to finish and maps the CLI surface', async () => {
+    const waitForAnyDurableRun = vi.fn(async () => ({
+      timedOut: false,
+      runId: 'sub-2',
+      status: 'completed',
+      run: { runId: 'sub-2', status: { status: 'completed' } },
+    }));
+    __setNeonPilotAgentApisForTest({
+      runs: { waitForAnyDurableRun },
+    });
+
+    await expect(
+      neonPilotAgent({ action: 'runs_wait_any', runIds: ['sub-1', 'sub-2'], timeoutMs: 5_000, pollIntervalMs: 250 }, ctx()),
+    ).resolves.toMatchObject({
+      details: { action: 'runs_wait_any', timedOut: false, runId: 'sub-2', status: 'completed' },
+    });
+    expect(waitForAnyDurableRun).toHaveBeenCalledWith(['sub-1', 'sub-2'], { timeoutMs: 5_000, pollIntervalMs: 250 });
+
+    const stdout = new PassThrough();
+    let output = '';
+    stdout.on('data', (chunk) => {
+      output += chunk.toString('utf8');
+    });
+
+    await neonPilotAgentCli(
+      { args: ['runs', 'wait-any', '--run-ids', 'sub-1,sub-2', '--timeout-ms', '5000', '--poll-interval-ms', '250', '--json'] },
+      {
+        ...ctx(),
+        stdio: { stdin: new PassThrough(), stdout, stderr: new PassThrough() },
+        signal: new AbortController().signal,
+        protocolId: 'neon-pilot-agent',
+      } as never,
+    );
+
+    expect(JSON.parse(output)).toMatchObject({ action: 'runs_wait_any', runId: 'sub-2', status: 'completed' });
+  });
+
   it('persists entrypoint settings with default enabled values', async () => {
     const storage = createStorage();
     const context = ctx({ storage });

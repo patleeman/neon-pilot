@@ -43,6 +43,7 @@ The MCP tools map onto the existing Neon Pilot CLI protocol:
 | `neon_pilot_delegate` | `neon-pilot protocol neon-pilot-agent start ... --json` |
 | `neon_pilot_list_delegates` | `neon-pilot protocol neon-pilot-agent runs list --kind subagent --json` |
 | `neon_pilot_get_delegate` | `neon-pilot protocol neon-pilot-agent runs get <runId> --json` |
+| `neon_pilot_wait_any_delegate` | `neon-pilot protocol neon-pilot-agent runs wait-any --run-ids <id1,id2,...> ... --json` |
 | `neon_pilot_delegate_logs` | `neon-pilot protocol neon-pilot-agent runs logs <runId> ...` |
 | `neon_pilot_follow_up` | `neon-pilot protocol neon-pilot-agent runs follow-up <runId> ... --json` |
 | `neon_pilot_cancel_delegate` | `neon-pilot protocol neon-pilot-agent runs cancel <runId> --json` |

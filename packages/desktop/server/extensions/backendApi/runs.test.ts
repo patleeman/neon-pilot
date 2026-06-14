@@ -73,6 +73,36 @@ describe('backendApi/runs', () => {
     }
   });
 
+  it('waits for any watched run to reach a terminal state or times out', async () => {
+    vi.useFakeTimers();
+    try {
+      const { waitForAnyDurableRun } = await import('./runs.js');
+
+      daemon.callDaemonExport
+        .mockResolvedValueOnce({ run: { status: { status: 'running' } } })
+        .mockResolvedValueOnce({ run: { status: { status: 'running' } } })
+        .mockResolvedValueOnce({ run: { status: { status: 'completed' }, result: { ok: true } } });
+
+      const waitPromise = waitForAnyDurableRun(['run-1', 'run-2'], { timeoutMs: 1_000, pollIntervalMs: 100 });
+      await vi.advanceTimersByTimeAsync(100);
+
+      await expect(waitPromise).resolves.toMatchObject({
+        timedOut: false,
+        runId: 'run-1',
+        status: 'completed',
+        run: expect.objectContaining({ status: { status: 'completed' } }),
+      });
+
+      daemon.callDaemonExport.mockReset();
+      daemon.callDaemonExport.mockResolvedValue({ run: { status: { status: 'running' } } });
+      const timeoutPromise = waitForAnyDurableRun(['run-3'], { timeoutMs: 150, pollIntervalMs: 100 });
+      await vi.advanceTimersByTimeAsync(200);
+      await expect(timeoutPromise).resolves.toEqual({ timedOut: true });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('normalizes scheduled task thread binding before ensuring threads', async () => {
     const { applyScheduledTaskThreadBinding } = await import('./runs.js');
     daemon.callDaemonExport.mockResolvedValueOnce({ id: 'task-1', threadMode: 'dedicated' });

@@ -61,7 +61,7 @@ describe('OpenAI Desktop plugin installer', () => {
         checked: true,
         serverName: 'neon-pilot',
         registered: true,
-        tools: expect.arrayContaining(['neon_pilot_delegate', 'neon_pilot_list_delegates']),
+        tools: expect.arrayContaining(['neon_pilot_delegate', 'neon_pilot_list_delegates', 'neon_pilot_wait_any_delegate']),
       },
     });
 
