@@ -48,6 +48,16 @@ function mergeStatus(value: unknown): PluginStatus {
   return { ...EMPTY_STATUS, ...(value && typeof value === 'object' ? (value as Partial<PluginStatus>) : {}) };
 }
 
+export function hasInstallArtifacts(status: PluginStatus): boolean {
+  return (
+    status.pluginInstalled ||
+    status.marketplaceEntryInstalled ||
+    status.codex?.pluginInstalled === true ||
+    status.codex?.marketplaceRegistered === true ||
+    status.codex?.mcp?.registered === true
+  );
+}
+
 export function OpenAiDesktopPluginSettingsPanel({ pa }: { pa: NativeExtensionClient }) {
   const [status, setStatus] = useState<PluginStatus>(EMPTY_STATUS);
   const [loading, setLoading] = useState(true);
@@ -93,6 +103,7 @@ export function OpenAiDesktopPluginSettingsPanel({ pa }: { pa: NativeExtensionCl
   const installed = status.installed && codexInstalled;
   const mcpRegistered = status.codex?.mcp?.registered === true;
   const mcpTools = status.codex?.mcp?.tools ?? [];
+  const hasInstalledArtifacts = hasInstallArtifacts(status);
 
   return (
     <div className="openai-desktop-plugin-settings">
@@ -134,7 +145,10 @@ export function OpenAiDesktopPluginSettingsPanel({ pa }: { pa: NativeExtensionCl
               >
                 Reinstall
               </ToolbarButton>
-              <ToolbarButton disabled={busy !== null || !status.installed} onClick={() => void run('removePlugin', {}, 'Neon Pilot plugin removed from Codex.')}>
+              <ToolbarButton
+                disabled={busy !== null || !hasInstalledArtifacts}
+                onClick={() => void run('removePlugin', {}, 'Neon Pilot plugin removed from Codex.')}
+              >
                 Remove
               </ToolbarButton>
               <ToolbarButton disabled={busy !== null} onClick={() => void load()}>
