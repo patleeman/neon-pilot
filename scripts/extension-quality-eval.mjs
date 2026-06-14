@@ -61,14 +61,16 @@ function currentHead() {
   return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' }).trim();
 }
 
-function casePrompt(testCase) {
-  const extensionBase = `.eval-extensions/${testCase.id}`;
+function casePrompt(testCase, worktree) {
+  const extensionBase = resolve(worktree, '.eval-extensions', testCase.id);
+  const wrongCheckoutBase = resolve(repoRoot, '.eval-extensions', testCase.id);
   return [
     `Build this Neon Pilot extension in this isolated repo worktree.`,
     '',
     `Case id: ${testCase.id}`,
     `Expected primary surface: ${testCase.surface}`,
-    `Create the extension package under: ${extensionBase}/<extension-id>`,
+    `Expected current working directory: ${worktree}`,
+    `Create the extension package under this absolute directory: ${extensionBase}/<extension-id>`,
     '',
     'User request:',
     testCase.prompt,
@@ -77,6 +79,8 @@ function casePrompt(testCase) {
     '- Before editing, write a short UX brief in your answer or notes: primary user/job, primary surface, information architecture, state model, shared UI primitives, and visual acceptance criteria.',
     '- Implement the extension with editable source files and current dist artifacts.',
     `- Put all new extension package files under ${extensionBase}/ so the evaluator can find them.`,
+    `- Do not create or modify ${wrongCheckoutBase} or any path outside ${worktree}.`,
+    '- Run pwd before writing files; if it is not the expected current working directory above, stop and correct your shell cwd.',
     '- Use only public extension SDK imports from @neon-pilot/extensions, @neon-pilot/extensions/ui, or narrow backend SDK subpaths.',
     '- Use shared UI primitives and constrained controls where possible.',
     '- Add command contributions for meaningful user-reachable actions.',
@@ -84,7 +88,7 @@ function casePrompt(testCase) {
     '- Create/new commands should deep-link or otherwise open the create flow; do not make them duplicate the generic open-page command unless you document a host limitation.',
     '- Include loading, empty, error, success, disabled, and long-running states where relevant.',
     '- Run the narrowest meaningful build/doctor/static validation you can from this worktree.',
-    `- Before your final answer, run or report equivalent file evidence: find ${extensionBase} -maxdepth 3 -type f, and confirm an extension.json exists under ${extensionBase}/<extension-id>/.`,
+    `- Before your final answer, run or report equivalent file evidence: pwd, find ${extensionBase} -maxdepth 3 -type f, and confirm an extension.json exists under ${extensionBase}/<extension-id>/.`,
     '- Do not create git commits or push. Leave changes in the worktree for evaluation.',
     '',
     'Acceptance criteria:',
@@ -95,13 +99,13 @@ function casePrompt(testCase) {
 }
 
 function discoverExtensionDir(worktree, testCase) {
-  const base = `.eval-extensions/${testCase.id}`;
+  const base = resolve(worktree, '.eval-extensions', testCase.id);
   const result = run('find', [base, '-maxdepth', '2', '-name', 'extension.json', '-print'], { cwd: worktree });
   const first = (result.stdout ?? '')
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)[0];
-  return first ? dirname(resolve(worktree, first)) : resolve(worktree, base);
+  return first ? dirname(resolve(worktree, first)) : base;
 }
 
 function parseRunId(text) {
@@ -211,10 +215,22 @@ function readIfExists(file) {
   return existsSync(file) ? readFileSync(file, 'utf8') : '';
 }
 
-function analyzeQuality(testCase, extensionDir, outDir) {
+function readSourceFiles(extensionDir, pattern) {
+  const srcDir = resolve(extensionDir, 'src');
+  if (!existsSync(srcDir)) return '';
+  const result = run('find', [srcDir, '-type', 'f'], { cwd: repoRoot });
+  return (result.stdout ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && pattern.test(line))
+    .map((file) => readIfExists(file))
+    .join('\n');
+}
+
+function analyzeQuality(testCase, extensionDir, outDir, worktree) {
   const manifestText = readIfExists(resolve(extensionDir, 'extension.json'));
-  const frontendText = readIfExists(resolve(extensionDir, 'src', 'frontend.tsx'));
-  const backendText = readIfExists(resolve(extensionDir, 'src', 'backend.ts'));
+  const frontendText = readSourceFiles(extensionDir, /\.(tsx|ts|jsx|js)$/);
+  const backendText = readSourceFiles(extensionDir, /backend\.(ts|js)$/);
   const distDir = resolve(extensionDir, 'dist');
   const distFileList = existsSync(distDir)
     ? run('find', [distDir, '-type', 'f'], { cwd: repoRoot })
@@ -237,6 +253,16 @@ function analyzeQuality(testCase, extensionDir, outDir) {
   const newCommandRoute = JSON.stringify(newCommand?.args ?? {});
   const openCommandRoute = JSON.stringify(openCommand?.args ?? {});
   const destructiveRequested = /delete|remove|destructive/i.test(`${testCase.prompt} ${(testCase.expected ?? []).join(' ')}`);
+  const statusLines = gitText(worktree, ['status', '--short'])
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const allowedPrefix = `.eval-extensions/${testCase.id}/`;
+  const outOfScopeChanges = statusLines.filter((line) => {
+    const path = line.replace(/^.. /, '').replace(/^"|"$/g, '');
+    return path && !path.startsWith(allowedPrefix);
+  });
+  const wrongCheckoutBase = resolve(repoRoot, '.eval-extensions', testCase.id);
   const quality = {
     extensionDir,
     dist: {
@@ -248,6 +274,21 @@ function analyzeQuality(testCase, extensionDir, outDir) {
         id: 'extension_manifest',
         status: manifestText ? 'pass' : 'fail',
         detail: 'An extension.json file must exist in the discovered extension package root.',
+      },
+      {
+        id: 'scoped_worktree_changes',
+        status: outOfScopeChanges.length === 0 ? 'pass' : 'fail',
+        detail:
+          outOfScopeChanges.length === 0
+            ? 'All worktree changes are inside the case extension package.'
+            : `Found changes outside ${allowedPrefix}: ${outOfScopeChanges.join(', ')}`,
+      },
+      {
+        id: 'wrong_checkout_write',
+        status: existsSync(wrongCheckoutBase) ? 'fail' : 'pass',
+        detail: existsSync(wrongCheckoutBase)
+          ? `Generated files were written to the main checkout at ${wrongCheckoutBase}.`
+          : 'No case files were written to the main checkout eval directory.',
       },
       {
         id: 'delete_confirmation',
@@ -315,7 +356,7 @@ const summary = {
 for (const testCase of cases) {
   const caseOut = resolve(outRoot, testCase.id);
   const worktree = resolve(worktreeRoot, testCase.id);
-  const prompt = casePrompt(testCase);
+  const prompt = casePrompt(testCase, worktree);
   write(resolve(caseOut, 'prompt.txt'), prompt);
 
   if (dryRun) {
@@ -356,7 +397,7 @@ for (const testCase of cases) {
   write(resolve(caseOut, 'diff.patch'), gitText(worktree, ['diff', '--binary']));
 
   const validation = shouldValidate ? runValidation(testCase, worktree, caseOut, extensionDir) : [];
-  const quality = analyzeQuality(testCase, extensionDir, caseOut);
+  const quality = analyzeQuality(testCase, extensionDir, caseOut, worktree);
   summary.results.push({
     id: testCase.id,
     worktree,

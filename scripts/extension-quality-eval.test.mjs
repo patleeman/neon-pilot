@@ -48,6 +48,12 @@ describe('extension quality eval assets', () => {
     expect(runner).toContain("arg('model', 'opencode-go/deepseek-v4-flash')");
     expect(runner).toContain('neon-pilot');
     expect(runner).toContain('.eval-extensions/${testCase.id}');
+    expect(runner).toContain('Create the extension package under this absolute directory');
+    expect(runner).toContain('Do not create or modify ${wrongCheckoutBase}');
+    expect(runner).toContain('scoped_worktree_changes');
+    expect(runner).toContain('wrong_checkout_write');
+    expect(runner).toContain('readSourceFiles');
+    expect(runner).toContain('/\\.(tsx|ts|jsx|js)$/');
     expect(runner).toContain('quality.json');
   });
 
