@@ -302,6 +302,45 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
     expect(container.textContent).not.toContain('Save shortcuts');
   });
 
+  it('rejects duplicate shortcut edits before writing desktop preferences', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<DesktopKeyboardShortcutsSettingsSection />);
+    });
+    await flushAsyncWork();
+    mocks.updateDesktopAppPreferences.mockClear();
+
+    const shortcutButton = container.querySelector('#settings-keyboard-conversationMode');
+    if (!(shortcutButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected conversation mode shortcut capture button');
+    }
+
+    act(() => {
+      shortcutButton.focus();
+      shortcutButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    act(() => {
+      shortcutButton.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          key: 'n',
+          code: 'KeyN',
+          metaKey: true,
+        }),
+      );
+    });
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('Duplicate shortcut: CommandOrControl+N is already assigned.');
+    expect(mocks.updateDesktopAppPreferences).not.toHaveBeenCalled();
+  });
+
   it('detects shortcut conflicts even when modifiers are declared in a different order', async () => {
     vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
       {
