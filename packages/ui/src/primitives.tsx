@@ -241,6 +241,78 @@ export const SidebarNavButton = forwardRef<
   );
 });
 
+export function SidebarSection({
+  title,
+  actions,
+  children,
+  className,
+  headerClassName,
+  bodyClassName,
+  titleClassName,
+  ...props
+}: {
+  title: ReactNode;
+  actions?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+  headerClassName?: string;
+  bodyClassName?: string;
+  titleClassName?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <section className={cx('ui-sidebar-section', className)} {...props}>
+      <div className={cx('ui-sidebar-section-header', headerClassName)}>
+        <SectionLabel tone="accent" className={cx('ui-sidebar-section-title', titleClassName)}>
+          {title}
+        </SectionLabel>
+        {actions ? <div className="ui-sidebar-section-actions">{actions}</div> : null}
+      </div>
+      {children ? <div className={cx('ui-sidebar-section-body', bodyClassName)}>{children}</div> : null}
+    </section>
+  );
+}
+
+export const SidebarRow = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    title: ReactNode;
+    meta?: ReactNode;
+    leading?: ReactNode;
+    trailing?: ReactNode;
+    selected?: boolean;
+    titleClassName?: string;
+    metaClassName?: string;
+  }
+>(function SidebarRow(
+  { title, meta, leading, trailing, selected = false, className, titleClassName, metaClassName, type = 'button', ...props },
+  ref,
+) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      aria-current={props['aria-current'] ?? (selected ? 'page' : undefined)}
+      className={cx('ui-sidebar-row', selected && 'ui-sidebar-row-selected', className)}
+      {...props}
+    >
+      {leading ? <span className="ui-sidebar-row-leading">{leading}</span> : null}
+      <span className="ui-sidebar-row-main">
+        <span className={cx('ui-sidebar-row-title', titleClassName)}>{title}</span>
+        {meta ? <span className={cx('ui-sidebar-row-meta', metaClassName)}>{meta}</span> : null}
+      </span>
+      {trailing ? <span className="ui-sidebar-row-trailing">{trailing}</span> : null}
+    </button>
+  );
+});
+
+export function SidebarMessage({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-sidebar-message', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
 export const TreeItemButton = forwardRef<
   HTMLButtonElement,
   ButtonHTMLAttributes<HTMLButtonElement> & {

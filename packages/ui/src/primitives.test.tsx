@@ -74,7 +74,10 @@ import {
   SettingToggleRow,
   ShelfHeader,
   ShelfSection,
+  SidebarMessage,
   SidebarNavButton,
+  SidebarRow,
+  SidebarSection,
   Stat,
   StatGrid,
   SupportingText,
@@ -145,6 +148,28 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-sidebar-nav-item-active');
     expect(html).toContain('aria-current="page"');
     expect(html).toContain('Settings');
+  });
+
+  it('renders left sidebar section primitives with native row anatomy', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        SidebarSection,
+        { title: 'Prompt Presets', actions: createElement(IconButton, { 'aria-label': 'New preset' }, '+') },
+        createElement(SidebarRow, { title: 'Code review', trailing: 'Use', selected: true }),
+        createElement(SidebarMessage, null, 'No presets yet.'),
+      ),
+    );
+
+    expect(html).toContain('ui-sidebar-section');
+    expect(html).toContain('ui-sidebar-section-title');
+    expect(html).toContain('ui-sidebar-section-actions');
+    expect(html).toContain('ui-sidebar-row');
+    expect(html).toContain('ui-sidebar-row-selected');
+    expect(html).toContain('aria-current="page"');
+    expect(html).toContain('ui-sidebar-row-trailing');
+    expect(html).toContain('ui-sidebar-message');
+    expect(html).toContain('Prompt Presets');
+    expect(html).toContain('Code review');
   });
 
   it('renders semantic tree item buttons without imposing visual row styling', () => {
