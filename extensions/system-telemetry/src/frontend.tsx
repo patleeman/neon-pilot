@@ -103,8 +103,8 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
         {summary && <PulseRow summary={summary} />}
 
         <AppPageSection title="Usage" layout="stacked" bodyClassName="space-y-4">
-          {tokensDaily && <TracesDailyUsage data={tokensDaily} />}
           {tokensDaily && <TracesHeatmap data={tokensDaily} />}
+          {tokensDaily && <TracesDailyUsage data={tokensDaily} />}
           {modelUsage && summary && (
             <TracesModelUsage
               models={modelUsage}
