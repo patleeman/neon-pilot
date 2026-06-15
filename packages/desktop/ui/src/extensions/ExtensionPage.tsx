@@ -5,7 +5,7 @@ import { addNotification } from '../components/notifications/notificationStore';
 import { ErrorState, LoadingState } from '../components/ui';
 import { NativeExtensionSurfaceHost } from './NativeExtensionSurfaceHost';
 import { isNativeExtensionPageSurface, type NativeExtensionViewSummary } from './types';
-import { useExtensionRegistry } from './useExtensionRegistry';
+import { type ExtensionRegistryEntry, useExtensionRegistry } from './useExtensionRegistry';
 
 const STALE_EXTENSION_ROUTES = new Set(['/gateways', '/local-models']);
 const CRITICAL_SYSTEM_EXTENSION_PAGES: NativeExtensionViewSummary[] = [
@@ -28,15 +28,51 @@ function routeMatches(route: string, pathname: string): boolean {
   return pathname === route || pathname.startsWith(`${route}/`);
 }
 
+function compareRouteMatch(left: { route: string }, right: { route: string }, pathname: string): number {
+  const leftExact = left.route === pathname;
+  const rightExact = right.route === pathname;
+  if (leftExact !== rightExact) return leftExact ? -1 : 1;
+  return right.route.length - left.route.length;
+}
+
+function findMainViewRoute(
+  extensions: ExtensionRegistryEntry[],
+  pathname: string,
+): (NativeExtensionViewSummary & { route: string; location: 'main' }) | undefined {
+  const matches: Array<NativeExtensionViewSummary & { route: string; location: 'main' }> = [];
+  for (const extension of extensions) {
+    if (!extension.enabled) continue;
+    for (const view of extension.contributes?.views ?? []) {
+      if (view.location !== 'main' || typeof view.route !== 'string' || !routeMatches(view.route, pathname)) continue;
+      matches.push({
+        ...view,
+        extensionId: extension.id,
+        packageType: extension.packageType ?? 'user',
+        frontend: extension.frontend,
+        location: 'main',
+        route: view.route,
+      });
+    }
+  }
+  return matches.sort((left, right) => compareRouteMatch(left, right, pathname))[0];
+}
+
 export function ExtensionPage() {
   const location = useLocation();
   const registry = useExtensionRegistry();
-  const nativeSurface = useMemo(
-    () =>
-      registry.surfaces.find((candidate) => isNativeExtensionPageSurface(candidate) && routeMatches(candidate.route, location.pathname)) ??
-      CRITICAL_SYSTEM_EXTENSION_PAGES.find((candidate) => routeMatches(candidate.route ?? '', location.pathname)),
-    [location.pathname, registry.surfaces],
-  );
+  const nativeSurface = useMemo(() => {
+    const surfaceMatches = registry.surfaces
+      .filter((candidate): candidate is NativeExtensionViewSummary & { route: string; location: 'main' } =>
+        isNativeExtensionPageSurface(candidate),
+      )
+      .filter((candidate) => routeMatches(candidate.route, location.pathname))
+      .sort((left, right) => compareRouteMatch(left, right, location.pathname));
+    return (
+      surfaceMatches[0] ??
+      findMainViewRoute(registry.extensions, location.pathname) ??
+      CRITICAL_SYSTEM_EXTENSION_PAGES.find((candidate) => routeMatches(candidate.route ?? '', location.pathname))
+    );
+  }, [location.pathname, registry.extensions, registry.surfaces]);
   const staleExtensionRoute = STALE_EXTENSION_ROUTES.has(location.pathname);
 
   useEffect(() => {

@@ -1,9 +1,9 @@
 .settings-page-shell.ui-app-page-shell {
-  padding-block: 1.5rem;
+  padding-block: 1.25rem;
 }
 
 .settings-page-main.ui-app-page-main {
-  max-width: 50rem;
+  max-width: none;
 }
 
 .settings-page-toc-nav {
@@ -66,8 +66,6 @@
 }
 
 .settings-page-detail {
-  max-width: 44rem;
-  margin-inline: auto;
   width: 100%;
 }
 
@@ -90,9 +88,10 @@
 .settings-page-row-group.ui-settings-panel {
   gap: 0;
   overflow: hidden;
-  border-color: rgb(var(--color-border-subtle));
-  border-radius: 0.5rem;
-  background: rgb(var(--color-surface-2) / 0.55);
+  border-color: rgb(var(--color-border-subtle) / 0.74);
+  border-radius: 0;
+  border-inline: 0;
+  background: transparent;
   padding: 0;
 }
 
@@ -203,6 +202,12 @@
 
 .settings-page-provider-row-selected {
   background: rgb(var(--color-elevated) / 0.55);
+}
+
+.settings-page-provider-empty-row {
+  min-height: 2.75rem;
+  border-bottom: 1px solid rgb(var(--color-border-subtle) / 0.68);
+  padding: 0.625rem 0.75rem;
 }
 
 .settings-page-log-files {

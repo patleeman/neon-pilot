@@ -753,7 +753,7 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderPage('settings-desktop');
     await flushAsyncWork();
 
-    const button = queryButton(container, 'Clean up telemetry index');
+    const button = queryButtonByLabel(container, 'Clean up telemetry index');
     await act(async () => {
       button.click();
     });
