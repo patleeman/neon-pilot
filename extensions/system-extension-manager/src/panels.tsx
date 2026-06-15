@@ -1458,7 +1458,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           className={cx('group cursor-default', selected ? 'bg-accent/10' : '')}
           onClick={() => setDetailsExtensionId(extension.id)}
         >
-          <DataTableCell className="min-w-0 py-4 pl-0 pr-6">
+          <DataTableCell className="min-w-0 py-3 pl-0 pr-6">
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
                 <TextButton className="truncate text-left text-[14px] font-semibold" onClick={() => setDetailsExtensionId(extension.id)}>
@@ -1466,9 +1466,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 </TextButton>
                 <span className="shrink-0 text-[11px] text-dim">{extensionSourceLabel(extension)}</span>
               </div>
-              <CardBody as="div" className="mt-0.5 max-w-[42rem] whitespace-normal break-words">
-                {extension.description || 'No description provided.'}
-              </CardBody>
               {extension.status === 'invalid' || extension.healthError || extension.buildError || extension.diagnostics?.length ? (
                 <div className="mt-1 text-[12px] text-danger">
                   {extension.status === 'invalid'
@@ -1488,14 +1485,14 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               ) : null}
             </div>
           </DataTableCell>
-          <DataTableCell className="whitespace-nowrap py-4 text-[12px]">
+          <DataTableCell className="whitespace-nowrap py-3 text-[12px]">
             <span className={extensionStatusClass(extension, unavailableCatalogItem)}>
               {extensionStatusLabel(extension, unavailableCatalogItem)}
             </span>
           </DataTableCell>
-          <DataTableCell className="py-4 text-[12px] leading-5 text-secondary">{formatAppearsInSummary(extension)}</DataTableCell>
+          <DataTableCell className="py-3 text-[12px] leading-5 text-secondary">{formatAppearsInSummary(extension)}</DataTableCell>
           {options.showEnablement ? (
-            <DataTableCell className="whitespace-nowrap py-4">
+            <DataTableCell className="whitespace-nowrap py-3">
               {extension.status === 'invalid' ? (
                 <span className="text-[12px] text-danger">Invalid</span>
               ) : (
@@ -1503,7 +1500,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               )}
             </DataTableCell>
           ) : null}
-          <DataTableCell className="w-40 min-w-40 py-4 pr-0 text-right">
+          <DataTableCell className="w-40 min-w-40 py-3 pr-0 text-right">
             {renderExtensionActions(extension, busy, catalogItem, route)}
           </DataTableCell>
         </DataTableRow>
@@ -1533,9 +1530,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                   </TextButton>
                   <span className="text-[11px] text-dim">{extensionSourceLabel(extension)}</span>
                 </div>
-                <CardBody as="div" className="mt-1 max-w-none whitespace-normal break-words">
-                  {extension.description || 'No description provided.'}
-                </CardBody>
               </div>
               <span className={cx('shrink-0 text-[12px]', extensionStatusClass(extension, unavailableCatalogItem))}>
                 {extensionStatusLabel(extension, unavailableCatalogItem)}
@@ -1630,7 +1624,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             {!embedded ? (
               <AppPageIntro
                 title="Extensions"
-                summary="Manage installed extensions and built-in capabilities."
                 actions={
                   <div className="flex min-w-[26rem] items-center gap-2">
                     <SearchInput
