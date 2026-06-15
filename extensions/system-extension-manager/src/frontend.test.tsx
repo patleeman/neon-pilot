@@ -359,6 +359,27 @@ describe('ExtensionManagerPage', () => {
     });
   });
 
+  it('enables a disabled extension through the rendered installed row workflow', async () => {
+    mocks.extensionInstallations.mockResolvedValue([{ ...createExtension(), enabled: false, status: 'disabled' }]);
+    mocks.updateExtension.mockResolvedValue({
+      extension: { ...createExtension(), enabled: true, status: 'enabled' },
+      actionResult: { ok: true },
+    });
+    renderPage();
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    expect(screen.getByText('1 installed · 0 enabled')).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText('Enable Menu Test'));
+
+    await waitFor(() => {
+      expect(screen.getByText('1 installed · 1 enabled')).toBeTruthy();
+    });
+    expect(screen.getByLabelText('Disable Menu Test')).toBeTruthy();
+    expect(mocks.updateExtension).toHaveBeenCalledWith('menu-test', { enabled: true });
+    expect(mocks.notifyExtensionRegistryChanged).toHaveBeenCalled();
+  });
+
   it('combines installed add-ons and built-ins in the all extensions count', async () => {
     mocks.extensionInstallations.mockResolvedValue([createExtension(), createSystemExtension()]);
     renderPage();
