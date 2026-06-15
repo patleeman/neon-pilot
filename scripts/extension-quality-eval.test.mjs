@@ -97,6 +97,7 @@ describe('extension quality eval assets', () => {
     const visualRubric = readFileSync(new URL('../benchmarks/extension-quality/visual-rubric.md', import.meta.url), 'utf8');
     const patterns = readFileSync(new URL('../benchmarks/extension-quality/ui-patterns.md', import.meta.url), 'utf8');
     const visualRunner = readFileSync(new URL('./extension-visual-eval.mjs', import.meta.url), 'utf8');
+    const visualJudgeRunner = readFileSync(new URL('./extension-visual-judge.mjs', import.meta.url), 'utf8');
     const packageJson = readFileSync(new URL('../package.json', import.meta.url), 'utf8');
 
     expect(rubric).toContain('Frontend UX');
@@ -147,6 +148,13 @@ describe('extension quality eval assets', () => {
     expect(visualRunner).toContain('controlTaste');
     expect(visualRunner).toContain('baseline-screenshots');
     expect(visualRunner).toContain('generated-screenshots');
+    expect(visualJudgeRunner).toContain('input_image');
+    expect(visualJudgeRunner).toContain('visual-capture-summary.json');
+    expect(visualJudgeRunner).toContain('opencode-go/kimi-k2.5');
+    expect(visualJudgeRunner).toContain('opencode-go/mimo-v2.5');
+    expect(visualJudgeRunner).toContain('opencode-go/qwen3.6-plus');
+    expect(visualJudgeRunner).toContain('/responses');
     expect(packageJson).toContain('eval:extension-visual');
+    expect(packageJson).toContain('eval:extension-visual-judge');
   });
 });

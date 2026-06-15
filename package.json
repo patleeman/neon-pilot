@@ -73,6 +73,7 @@
     "eval:ds4": "node scripts/ds4-agent-eval.mjs",
     "eval:extension-quality": "node scripts/extension-quality-eval.mjs",
     "eval:extension-visual": "node scripts/extension-visual-eval.mjs",
+    "eval:extension-visual-judge": "node scripts/extension-visual-judge.mjs",
     "bench:ds4": "node scripts/ds4-task-benchmark.mjs",
     "bench:agent": "node scripts/neon-pilot-agent-benchmark.mjs"
   },

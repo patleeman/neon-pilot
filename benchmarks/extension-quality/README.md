@@ -75,6 +75,17 @@ pnpm run eval:extension-visual -- \
 
 The visual runner keeps full-size screenshots and also writes downscaled judge copies under `judge-screenshots/` by default. Use `--judge-image-max-px=<pixels>` to adjust the largest edge for delegated judges that cannot inline large PNGs.
 
+Run screenshot-backed judges through the direct image-input runner, not delegated file reads:
+
+```bash
+pnpm run eval:extension-visual-judge -- \
+  --capture=artifacts/extension-quality/settings-calibration \
+  --models=opencode-go/kimi-k2.5,opencode-go/mimo-v2.5,opencode-go/qwen3.6-plus
+```
+
+This runner reads screenshot bytes itself and sends them as `input_image` data URLs to the Neon Pilot model gateway. Use `--base-url=<url>` when the gateway is not on the default `http://127.0.0.1:8766/v1`.
+The bundled AI Gateway extension must be enabled and listening before this runner can call real judges; otherwise the runner will emit judge-runner errors instead of visual scores.
+
 ## Case Contract
 
 Rows in `tasks.jsonl` are JSON objects with:
