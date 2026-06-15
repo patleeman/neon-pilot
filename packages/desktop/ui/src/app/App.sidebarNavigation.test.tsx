@@ -2,7 +2,7 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DesktopAppEvent, SessionMeta } from '../shared/types';
@@ -27,25 +27,28 @@ const apiMock = vi.hoisted(() => ({
   extensionCommands: vi.fn(),
 }));
 const fetchSessionsSnapshotMock = vi.fn();
-let desktopListener: { onopen?: () => void; onevent?: (event: DesktopAppEvent) => void } | null = null;
-
-vi.mock('../desktop/desktopRealtime', () => ({
-  subscribeDesktopRealtimeAppEvents: subscribeDesktopAppEventsMock,
-}));
-
-vi.mock('../client/api', () => ({
-  api: apiMock,
-}));
-
-vi.mock('../session/sessionSnapshot', () => ({
-  fetchSessionsSnapshot: fetchSessionsSnapshotMock,
-}));
-
-vi.mock('../extensions/useExtensionRegistry', () => ({
-  ExtensionRegistryProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useExtensionRegistry: () => ({
-    extensions: [],
-    routes: [],
+const extensionRegistryMock = vi.hoisted(() => ({
+  state: {
+    extensions: [
+      {
+        id: 'system-settings',
+        name: 'Settings',
+        enabled: true,
+        packageType: 'system',
+        contributes: {
+          nav: [
+            {
+              id: 'settings',
+              label: 'Settings',
+              icon: 'gear',
+              route: '/settings',
+              section: 'settings',
+            },
+          ],
+        },
+      },
+    ],
+    routes: [{ route: '/settings', extensionId: 'system-settings', surfaceId: 'settings', packageType: 'system' }],
     surfaces: [],
     topBarElements: [],
     messageActions: [],
@@ -73,7 +76,25 @@ vi.mock('../extensions/useExtensionRegistry', () => ({
     activityTreeItemActions: [],
     loading: false,
     error: null,
-  }),
+  },
+}));
+let desktopListener: { onopen?: () => void; onevent?: (event: DesktopAppEvent) => void } | null = null;
+
+vi.mock('../desktop/desktopRealtime', () => ({
+  subscribeDesktopRealtimeAppEvents: subscribeDesktopAppEventsMock,
+}));
+
+vi.mock('../client/api', () => ({
+  api: apiMock,
+}));
+
+vi.mock('../session/sessionSnapshot', () => ({
+  fetchSessionsSnapshot: fetchSessionsSnapshotMock,
+}));
+
+vi.mock('../extensions/useExtensionRegistry', () => ({
+  ExtensionRegistryProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useExtensionRegistry: () => extensionRegistryMock.state,
 }));
 
 vi.mock('../pages/ConversationPage', () => ({
@@ -84,7 +105,10 @@ vi.mock('../pages/ConversationPage', () => ({
 }));
 
 vi.mock('../extensions/ExtensionRouteHost', () => ({
-  ExtensionRouteHost: () => <main>Extension route</main>,
+  ExtensionRouteHost: () => {
+    const location = useLocation();
+    return <main>{`Extension route ${location.pathname}${location.search}${location.hash}`}</main>;
+  },
 }));
 
 function session(overrides: Partial<SessionMeta> & Pick<SessionMeta, 'id' | 'title'>): SessionMeta {
@@ -159,6 +183,13 @@ async function findSidebarConversationRowControl(id: string): Promise<HTMLElemen
   const button = row.querySelector<HTMLButtonElement>('button[role="treeitem"], button');
   if (button) return button;
   throw new Error(`Missing sidebar row control ${id}: ${row.outerHTML}`);
+}
+
+async function findSidebarRouteButton(route: string): Promise<HTMLButtonElement> {
+  await waitFor(() => {
+    expect(document.querySelector(`button[data-route="${route}"]`)).not.toBeNull();
+  });
+  return document.querySelector<HTMLButtonElement>(`button[data-route="${route}"]`)!;
 }
 
 describe('App sidebar conversation navigation workflow', () => {
@@ -244,5 +275,30 @@ describe('App sidebar conversation navigation workflow', () => {
     await screen.findByText('Conversation route conv-second');
     await expectActiveSidebarRow('conv-second');
     expect(screen.getByText('Second persisted thread')).toBeTruthy();
+  });
+
+  it('opens settings from app chrome and hydrates the settings route after reload', async () => {
+    ({ root } = await renderAppAt('/conversations/conv-first'));
+
+    await screen.findByText('Conversation route conv-first');
+    const settingsButton = await findSidebarRouteButton('/settings');
+    await act(async () => {
+      fireEvent.click(settingsButton);
+      await Promise.resolve();
+    });
+
+    await screen.findByText('Extension route /settings');
+    expect(window.location.pathname).toBe('/settings');
+
+    act(() => {
+      root?.unmount();
+    });
+    root = null;
+    document.body.innerHTML = '';
+
+    ({ root } = await renderAppAt('/settings'));
+
+    await screen.findByText('Extension route /settings');
+    expect((await findSidebarRouteButton('/settings')).className).toContain('ui-sidebar-nav-item-active');
   });
 });
