@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React, { act } from 'react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useParams } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
@@ -44,13 +44,24 @@ function setViewportWidth(width: number) {
   });
 }
 
+function ConversationRouteFixture() {
+  const { id } = useParams();
+  return (
+    <div>
+      <div>Conversation saved</div>
+      <div>{`Conversation route ${id ?? 'missing'}`}</div>
+      <Link to="/conversations/conv-2">Open second conversation</Link>
+    </div>
+  );
+}
+
 function renderLayout(pathname = '/conversations/new') {
   return render(
     <MemoryRouter initialEntries={[pathname]}>
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route path="conversations/new" element={<div>Conversation draft</div>} />
-          <Route path="conversations/:id" element={<div>Conversation saved</div>} />
+          <Route path="conversations/:id" element={<ConversationRouteFixture />} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -157,6 +168,42 @@ describe('Layout workbench toggle', () => {
 
     expect(sidebarPane?.style.width).toBe('280px');
     expect(workbenchPane?.style.width).toBe('640px');
+  });
+
+  it('persists dragged sidebar and workbench widths across conversation route transitions', () => {
+    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+
+    renderLayout('/conversations/conv-1');
+
+    expect(screen.getByText('Conversation route conv-1')).toBeTruthy();
+    let resizeHandles = [...document.querySelectorAll<HTMLElement>('.cursor-col-resize')];
+    expect(resizeHandles.length).toBeGreaterThanOrEqual(2);
+
+    act(() => {
+      fireEvent.mouseDown(resizeHandles[0], { clientX: 224 });
+      fireEvent.mouseMove(document, { clientX: 300 });
+      fireEvent.mouseUp(document);
+    });
+
+    act(() => {
+      fireEvent.mouseDown(resizeHandles[1], { clientX: 1000 });
+      fireEvent.mouseMove(document, { clientX: 900 });
+      fireEvent.mouseUp(document);
+    });
+
+    expect(window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY)).toBe('300');
+    expect(window.localStorage.getItem('pa:workbench-document-width')).toBe('620');
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open second conversation' }));
+
+    expect(screen.getByText('Conversation route conv-2')).toBeTruthy();
+    resizeHandles = [...document.querySelectorAll<HTMLElement>('.cursor-col-resize')];
+    expect(resizeHandles.length).toBeGreaterThanOrEqual(2);
+    const sidebarPane = screen.getByLabelText('Loading sidebar').closest<HTMLElement>('[style*="width"]');
+    const workbenchPane = document.querySelector<HTMLElement>('[data-workbench-document-pane="true"]');
+
+    expect(sidebarPane?.style.width).toBe('300px');
+    expect(workbenchPane?.style.width).toBe('620px');
   });
 
   it('accepts command-only desktop shortcut events for command-backed app chrome actions', () => {
