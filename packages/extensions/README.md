@@ -181,7 +181,7 @@ Rules:
 - Backend actions point to named backend exports.
 - Color themes are token maps under `contributes.themes`; use `--color-*` CSS variables with RGB triplet strings.
 - Permissions are intent declarations today and should match what the extension can do.
-- For `location: "sidebar"` views, use `SidebarSection`, `SidebarRow`, and `SidebarMessage` for flat lists. Use `SidebarTreeSection` for hierarchical sidebar data; it wraps the Pierre-backed `ActivityTreeView` in native left-sidebar chrome.
+- For `location: "sidebar"` views, use `SidebarSection` with `actionItems`, `SidebarList`, `SidebarTemplateList`, and `SidebarMessage` for flat lists. Use `SidebarTreeSection` for hierarchical sidebar data; it wraps the Pierre-backed `ActivityTreeView` in native left-sidebar chrome. Do not hand-roll nested sidebar rails, filter tabs, description-heavy rows, or local card/list chrome inside the host sidebar.
 
 ## Color themes
 
@@ -307,7 +307,7 @@ Start with the smallest shared primitive that fits the job, then compose upward:
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`, `InlineStatus`, `StatusBadge`
 - Lists and tables: `DataTable`, `DataTableEmptyRow`, `DataTableActionGroup`, `ResourceList`, `ResourceListRow`
 - Runtime pages: `RuntimePage`, `RuntimeStatusStrip`, `RuntimeHeaderControls`, `MetricTile`, `DashboardGrid`
-- Rails, sidebars, and settings panels: `RailSubsection`, `SidebarSection`, `SidebarRow`, `SidebarMessage`, `SidebarTreeSection`, `ActivityTreeView`, `SettingsForm`, `SettingsSection`, `SettingsField`
+- Rails, sidebars, and settings panels: `RailSubsection`, `SidebarSection`, `SidebarActionHeader`, `SidebarList`, `SidebarTemplateList`, `SidebarRow`, `SidebarMessage`, `SidebarTreeSection`, `ActivityTreeView`, `SettingsForm`, `SettingsSection`, `SettingsField`
 - Chat and files: `ChatView`, `ChatRailComposer`, `ExtensionChatRail`, `ResourcePickerDialog`
 
 Use local markup for product-specific layout and content, but extract repeated chrome, action groups, pickers, chat surfaces, table actions, runtime summaries, and settings rows into shared UI instead of creating extension-local lookalikes. See [Design system](../../docs/design-system.md) and [`packages/ui`](../ui/README.md) for the full component catalog, Storybook guidance, and replacement checklist.

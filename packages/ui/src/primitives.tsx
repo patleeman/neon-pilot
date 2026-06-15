@@ -241,9 +241,57 @@ export const SidebarNavButton = forwardRef<
   );
 });
 
+export interface SidebarAction {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  disabled?: boolean;
+  title?: string;
+  onClick: () => void;
+}
+
+export function SidebarActionHeader({
+  title,
+  actions,
+  className,
+  titleClassName,
+  actionsClassName,
+}: {
+  title: ReactNode;
+  actions?: readonly SidebarAction[];
+  className?: string;
+  titleClassName?: string;
+  actionsClassName?: string;
+}) {
+  return (
+    <div className={cx('ui-sidebar-section-header', className)}>
+      <SectionLabel tone="accent" className={cx('ui-sidebar-section-title', titleClassName)}>
+        {title}
+      </SectionLabel>
+      {actions && actions.length > 0 ? (
+        <div className={cx('ui-sidebar-section-actions', actionsClassName)}>
+          {actions.map((action) => (
+            <IconButton
+              key={action.id}
+              aria-label={action.label}
+              title={action.title ?? action.label}
+              compact
+              disabled={action.disabled}
+              onClick={action.onClick}
+            >
+              {action.icon}
+            </IconButton>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function SidebarSection({
   title,
   actions,
+  actionItems,
   children,
   className,
   headerClassName,
@@ -253,20 +301,25 @@ export function SidebarSection({
 }: {
   title: ReactNode;
   actions?: ReactNode;
+  actionItems?: readonly SidebarAction[];
   children?: ReactNode;
   className?: string;
   headerClassName?: string;
   bodyClassName?: string;
   titleClassName?: string;
-} & HTMLAttributes<HTMLDivElement>) {
+} & Omit<HTMLAttributes<HTMLDivElement>, 'title'>) {
   return (
     <section className={cx('ui-sidebar-section', className)} {...props}>
-      <div className={cx('ui-sidebar-section-header', headerClassName)}>
-        <SectionLabel tone="accent" className={cx('ui-sidebar-section-title', titleClassName)}>
-          {title}
-        </SectionLabel>
-        {actions ? <div className="ui-sidebar-section-actions">{actions}</div> : null}
-      </div>
+      {actionItems ? (
+        <SidebarActionHeader title={title} actions={actionItems} className={headerClassName} titleClassName={titleClassName} />
+      ) : (
+        <div className={cx('ui-sidebar-section-header', headerClassName)}>
+          <SectionLabel tone="accent" className={cx('ui-sidebar-section-title', titleClassName)}>
+            {title}
+          </SectionLabel>
+          {actions ? <div className="ui-sidebar-section-actions">{actions}</div> : null}
+        </div>
+      )}
       {children ? <div className={cx('ui-sidebar-section-body', bodyClassName)}>{children}</div> : null}
     </section>
   );
@@ -274,7 +327,7 @@ export function SidebarSection({
 
 export const SidebarRow = forwardRef<
   HTMLButtonElement,
-  ButtonHTMLAttributes<HTMLButtonElement> & {
+  Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title'> & {
     title: ReactNode;
     meta?: ReactNode;
     leading?: ReactNode;
@@ -309,6 +362,109 @@ export function SidebarMessage({ children, className, ...props }: HTMLAttributes
   return (
     <div className={cx('ui-sidebar-message', className)} {...props}>
       {children}
+    </div>
+  );
+}
+
+export interface SidebarListItem {
+  id: string;
+  title: ReactNode;
+  meta?: ReactNode;
+  leading?: ReactNode;
+  trailing?: ReactNode;
+  disabled?: boolean;
+  ariaLabel?: string;
+}
+
+export function SidebarList({
+  items,
+  selectedId,
+  loading = false,
+  loadingMessage = 'Loading...',
+  emptyMessage = 'No items yet.',
+  className,
+  itemClassName,
+  onSelect,
+}: {
+  items: readonly SidebarListItem[];
+  selectedId?: string | null;
+  loading?: boolean;
+  loadingMessage?: ReactNode;
+  emptyMessage?: ReactNode;
+  className?: string;
+  itemClassName?: string;
+  onSelect: (item: SidebarListItem) => void;
+}) {
+  if (loading) return <SidebarMessage className={className}>{loadingMessage}</SidebarMessage>;
+  if (items.length === 0) return <SidebarMessage className={className}>{emptyMessage}</SidebarMessage>;
+
+  return (
+    <div className={cx('ui-sidebar-list', className)}>
+      {items.map((item) => (
+        <SidebarRow
+          key={item.id}
+          title={item.title}
+          meta={item.meta}
+          leading={item.leading}
+          trailing={item.trailing}
+          selected={item.id === selectedId}
+          disabled={item.disabled}
+          aria-label={item.ariaLabel}
+          className={itemClassName}
+          onClick={() => onSelect(item)}
+        />
+      ))}
+    </div>
+  );
+}
+
+export interface SidebarTemplateItem {
+  id: string;
+  title: ReactNode;
+  meta?: ReactNode;
+  leading?: ReactNode;
+  disabled?: boolean;
+  actionLabel?: ReactNode;
+  ariaLabel?: string;
+}
+
+export function SidebarTemplateList({
+  templates,
+  title = 'Starter templates',
+  actionLabel = 'Use',
+  emptyMessage = 'No templates yet.',
+  className,
+  titleClassName,
+  itemClassName,
+  onSelect,
+}: {
+  templates: readonly SidebarTemplateItem[];
+  title?: ReactNode;
+  actionLabel?: ReactNode;
+  emptyMessage?: ReactNode;
+  className?: string;
+  titleClassName?: string;
+  itemClassName?: string;
+  onSelect: (template: SidebarTemplateItem) => void;
+}) {
+  if (templates.length === 0) return <SidebarMessage className={className}>{emptyMessage}</SidebarMessage>;
+
+  return (
+    <div className={cx('ui-sidebar-template-list', className)}>
+      <div className={cx('ui-sidebar-subsection-label', titleClassName)}>{title}</div>
+      {templates.map((template) => (
+        <SidebarRow
+          key={template.id}
+          title={template.title}
+          meta={template.meta}
+          leading={template.leading}
+          trailing={template.actionLabel ?? actionLabel}
+          disabled={template.disabled}
+          aria-label={template.ariaLabel}
+          className={itemClassName}
+          onClick={() => onSelect(template)}
+        />
+      ))}
     </div>
   );
 }

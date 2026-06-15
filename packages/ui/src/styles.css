@@ -1087,6 +1087,22 @@ body {
   padding: 0.125rem 0 0.75rem;
 }
 
+.ui-sidebar-list,
+.ui-sidebar-template-list {
+  min-width: 0;
+}
+
+.ui-sidebar-subsection-label {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0.5rem 1rem 0.25rem;
+  color: rgb(var(--color-dim));
+  font-size: 0.75rem;
+  line-height: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ui-sidebar-row {
   position: relative;
   display: flex;

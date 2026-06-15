@@ -4,6 +4,8 @@ Use this rubric with real screenshots from the Neon Pilot host. Do not score vis
 
 Read `docs/design/neon-pilot-taste.md` before judging. Treat that document as the canonical application taste profile and use the named negative smells when reporting failures.
 
+For sidebar views, compare against `docs/design/examples/sidebar/README.md`.
+
 ## Required Inputs
 
 - Baseline screenshots from existing Neon Pilot surfaces that match the generated extension's surface class.
@@ -28,6 +30,7 @@ Use 1-5 for each dimension.
 - **Data Surface Taste**: Starter content should feel purposeful, not like fake demo records. Metadata belongs in compact subdued properties, not prominent raw timestamp rows. Repeatable values such as tags must use true token/tag controls or selectable suggestions, never comma-separated text inputs.
 - **Compositional Density**: Empty panes, starter areas, and form fields must balance the viewport. Empty list columns should not dominate the page, starter sections should be compact and task-shaped, and textareas should not swallow the editor before core metadata is complete.
 - **Surface Selection**: Navigation models should use the host surface that already exists. If an extension nav item can replace the left sidebar body with `sidebarView`, do not build a second left rail inside the main page. Sidebar views should match native sidebar section/row chrome instead of inventing panel, card, filter-tab, or description-heavy list styling. Main pages should be the working editor/detail surface, not an embedded mini-app shell.
+- **Sidebar Discipline**: Sidebar views should use `SidebarSection` with `actionItems`, `SidebarList`, `SidebarTemplateList`, `SidebarMessage`, or `SidebarTreeSection` for hierarchical Pierre-backed trees. Fail hand-rolled sidebar rails, row descriptions, local card/list chrome, arbitrary header action markup, and starter-template sections that do not scan like compact native sidebar rows.
 - **Action Chrome**: Common actions use IDE-like icon buttons, toolbars, rows, menus, and command-backed affordances. Text buttons are reserved for domain-specific, ambiguous, primary, or destructive actions.
 - **Editing Model**: Durable objects use inline or selection-driven editing when practical. Modal CRUD is a failure unless the flow is short, blocking, destructive, or transient.
 - **Interaction Clarity**: Primary, secondary, navigation, and destructive actions are visually clear and placed predictably.
@@ -65,6 +68,10 @@ Use 1-5 for each dimension.
 - `nested_in_page_sidebar`
 - `wrong_surface_selection`
 - `sidebar_chrome_mismatch`
+- `sidebar_missing_shared_primitives`
+- `sidebar_row_descriptions`
+- `sidebar_local_card_chrome`
+- `sidebar_header_action_mismatch`
 - `card_grid_default`
 - `sparse_empty_state`
 - `weak_empty_state`
@@ -104,6 +111,7 @@ Judges must return strict JSON:
     "hierarchy": 3,
     "density": 3,
     "surfaceDiscipline": 3,
+    "sidebarDiscipline": 3,
     "textEconomy": 3,
     "states": 3,
     "controlTaste": 3,

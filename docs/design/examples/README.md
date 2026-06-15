@@ -11,6 +11,10 @@ Each example should include:
 
 Do not treat examples as one-off complaints. If an example captures a repeatable pattern, promote the rule into the taste doc or visual rubric.
 
+## Current Positive/Do-Don't Anchors
+
+- `sidebar/README.md`
+
 ## Current Negative Anchors
 
 - `negative/ai-generated-saas.md`

@@ -74,10 +74,13 @@ import {
   SettingToggleRow,
   ShelfHeader,
   ShelfSection,
+  SidebarActionHeader,
+  SidebarList,
   SidebarMessage,
   SidebarNavButton,
   SidebarRow,
   SidebarSection,
+  SidebarTemplateList,
   Stat,
   StatGrid,
   SupportingText,
@@ -170,6 +173,56 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-sidebar-message');
     expect(html).toContain('Prompt Presets');
     expect(html).toContain('Code review');
+  });
+
+  it('renders structured sidebar actions and data-driven sidebar lists', () => {
+    const actionHtml = renderToStaticMarkup(
+      createElement(SidebarActionHeader, {
+        title: 'Prompt Presets',
+        actions: [{ id: 'new', label: 'New preset', icon: '+', onClick: () => {} }],
+      }),
+    );
+    expect(actionHtml).toContain('ui-sidebar-section-header');
+    expect(actionHtml).toContain('aria-label="New preset"');
+    expect(actionHtml).toContain('ui-icon-button-compact');
+
+    const listHtml = renderToStaticMarkup(
+      createElement(SidebarList, {
+        items: [
+          { id: 'review', title: 'Code review' },
+          { id: 'debug', title: 'Bug analysis', meta: 'off' },
+        ],
+        selectedId: 'debug',
+        onSelect: () => {},
+      }),
+    );
+    expect(listHtml).toContain('ui-sidebar-list');
+    expect(listHtml).toContain('ui-sidebar-row-selected');
+    expect(listHtml).toContain('Bug analysis');
+    expect(listHtml).toContain('off');
+
+    const emptyHtml = renderToStaticMarkup(createElement(SidebarList, { items: [], onSelect: () => {}, emptyMessage: 'No presets yet.' }));
+    expect(emptyHtml).toContain('ui-sidebar-message');
+    expect(emptyHtml).toContain('No presets yet.');
+  });
+
+  it('renders starter template lists with native compact rows', () => {
+    const html = renderToStaticMarkup(
+      createElement(SidebarTemplateList, {
+        templates: [
+          { id: 'review', title: 'Code review' },
+          { id: 'brief', title: 'Decision brief', actionLabel: 'Start' },
+        ],
+        onSelect: () => {},
+      }),
+    );
+
+    expect(html).toContain('ui-sidebar-template-list');
+    expect(html).toContain('ui-sidebar-subsection-label');
+    expect(html).toContain('Starter templates');
+    expect(html).toContain('Code review');
+    expect(html).toContain('Use');
+    expect(html).toContain('Start');
   });
 
   it('renders semantic tree item buttons without imposing visual row styling', () => {

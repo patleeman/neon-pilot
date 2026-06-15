@@ -326,6 +326,7 @@ function writeJudgePrompt(outDir, baseline, generated, metadata) {
           hierarchy: 1,
           density: 1,
           surfaceDiscipline: 1,
+          sidebarDiscipline: 1,
           textEconomy: 1,
           states: 1,
           controlTaste: 1,
