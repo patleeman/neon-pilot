@@ -246,6 +246,17 @@ function SidebarSvgIcon({ path }: { path: string }) {
   );
 }
 
+function RefreshIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <path d="M13 7a5 5 0 0 0-8.5-3.2L3 5.3" />
+      <path d="M3 2.8v2.5h2.5" />
+      <path d="M3 9a5 5 0 0 0 8.5 3.2L13 10.7" />
+      <path d="M13 13.2v-2.5h-2.5" />
+    </svg>
+  );
+}
+
 export function GatewaysSidebar({ pa, context }: ExtensionSurfaceProps) {
   const [state, setState] = useState<GatewayState>(emptyGatewayState);
   const [loading, setLoading] = useState(true);
@@ -551,7 +562,14 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
   return (
     <div className="h-full overflow-y-auto">
       <AppPageLayout shellClassName="max-w-[74rem]" contentClassName="space-y-5">
-        <AppPageIntro title="Telegram Gateway" actions={<ToolbarButton onClick={refresh}>Refresh</ToolbarButton>} />
+        <AppPageIntro
+          title="Telegram Gateway"
+          actions={
+            <IconButton aria-label="Refresh gateway" title="Refresh gateway" onClick={refresh}>
+              <RefreshIcon />
+            </IconButton>
+          }
+        />
 
         {error ? <Notice tone="danger">{error}</Notice> : null}
         {message ? <Notice tone="success">{message}</Notice> : null}

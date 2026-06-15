@@ -21,11 +21,11 @@ import {
   Button,
   CenteredLoadingState,
   ErrorState,
+  IconButton,
   MetricTile,
   SegmentedControl,
   StatGrid,
   StatusDot,
-  ToolbarButton,
 } from '@neon-pilot/extensions/ui';
 import { useState } from 'react';
 
@@ -92,7 +92,9 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
           actions={
             <div className="flex items-center gap-2">
               <TimeRangeSelector value={range} onChange={setRange} />
-              <ToolbarButton onClick={refetch}>Refresh</ToolbarButton>
+              <IconButton aria-label="Refresh telemetry" title="Refresh telemetry" onClick={refetch}>
+                <RefreshIcon />
+              </IconButton>
             </div>
           }
         />
@@ -149,6 +151,17 @@ function TimeRangeSelector({ value, onChange }: { value: TraceRange; onChange: (
   ];
 
   return <SegmentedControl ariaLabel="Telemetry time range" value={value} options={options} onChange={onChange} />;
+}
+
+function RefreshIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <path d="M13 7a5 5 0 0 0-8.5-3.2L3 5.3" />
+      <path d="M3 2.8v2.5h2.5" />
+      <path d="M3 9a5 5 0 0 0 8.5 3.2L13 10.7" />
+      <path d="M13 13.2v-2.5h-2.5" />
+    </svg>
+  );
 }
 
 // ── Pulse Row ────────────────────────────────────────────────────────────────
