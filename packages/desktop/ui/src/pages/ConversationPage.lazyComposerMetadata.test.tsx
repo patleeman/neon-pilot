@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
-import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext } from '../app/contexts';
@@ -27,6 +27,9 @@ const apiMock = vi.hoisted(() => ({
   setSavedWorkspacePaths: vi.fn(),
   pickFolder: vi.fn(),
   changeConversationCwd: vi.fn(),
+  createLiveSession: vi.fn(),
+  reserveConversation: vi.fn(),
+  destroySession: vi.fn(),
   workspaceUncommittedDiff: vi.fn(),
 }));
 
@@ -192,6 +195,7 @@ vi.mock('../components/ConversationDrawingsPickerModal', () => ({
 }));
 
 vi.mock('../hooks/useDesktopConversationState', () => ({
+  primeReservedDesktopConversationStateCache: vi.fn(),
   useDesktopConversationState: () => desktopConversationState,
 }));
 
@@ -287,6 +291,49 @@ function renderDraftConversationPage() {
     >
       <MemoryRouter initialEntries={['/conversations/new']}>
         <ConversationPage draft />
+      </MemoryRouter>
+    </AppDataContext.Provider>,
+  );
+}
+
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{`${location.pathname}${location.search}${location.hash}`}</div>;
+}
+
+function DraftConversationRouteHarness() {
+  return (
+    <>
+      <LocationProbe />
+      <Routes>
+        <Route path="/conversations/new" element={<ConversationPage draft />} />
+        <Route path="/conversations/:id" element={<div>Reserved conversation route</div>} />
+      </Routes>
+    </>
+  );
+}
+
+function renderRoutedDraftConversationPage() {
+  sessionStore.replaceAll([]);
+  sessionStore.markReady?.();
+
+  return render(
+    <AppDataContext.Provider
+      value={{
+        projects: null,
+        sessions: [],
+        tasks: [],
+        runs: null,
+        executions: null,
+        setProjects: vi.fn(),
+        setSessions: vi.fn(),
+        setTasks: vi.fn(),
+        setRuns: vi.fn(),
+        setExecutions: vi.fn(),
+      }}
+    >
+      <MemoryRouter initialEntries={['/conversations/new']}>
+        <DraftConversationRouteHarness />
       </MemoryRouter>
     </AppDataContext.Provider>,
   );
@@ -453,6 +500,18 @@ beforeEach(() => {
     cwd: '/tmp/project',
     changed: false,
   });
+  apiMock.reserveConversation.mockResolvedValue({
+    id: 'reserved-conv',
+    sessionFile: '/tmp/reserved-conv.jsonl',
+    cwd: '',
+    perf: {},
+  });
+  apiMock.createLiveSession.mockResolvedValue({
+    id: 'reserved-conv',
+    sessionFile: '/tmp/reserved-conv.jsonl',
+    bootstrap: undefined,
+  });
+  apiMock.destroySession.mockResolvedValue({ ok: true });
   apiMock.workspaceUncommittedDiff.mockResolvedValue({
     branch: 'main',
     changeCount: 0,
@@ -465,6 +524,8 @@ beforeEach(() => {
     remoteControlledConversationIds: [],
   });
   sessionTabsMock.isWithinLocalWriteGrace.mockReturnValue(true);
+  sessionTabsMock.ensureConversationTabOpen.mockReset();
+  sessionTabsMock.setActiveConversationTab.mockReset();
 });
 
 afterEach(() => {
@@ -730,6 +791,52 @@ describe('ConversationPage lazy composer metadata', () => {
 
     listbox = screen.getByRole('listbox', { name: 'Saved workspaces' });
     expect(within(listbox).getByText('late-picked-workspace')).toBeTruthy();
+  });
+
+  it('routes a submitted draft prompt to the reserved conversation before live-session creation settles', async () => {
+    vi.useRealTimers();
+    let resolveCreateLiveSession: (value: { id: string; sessionFile: string; bootstrap: undefined }) => void = () => {};
+    apiMock.createLiveSession.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCreateLiveSession = resolve;
+      }),
+    );
+
+    renderRoutedDraftConversationPage();
+
+    const textarea = screen.getByPlaceholderText(/Message Neon Pilot/i);
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: 'Persist this thread in the sidebar' } });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location').textContent).toBe('/conversations/reserved-conv');
+    });
+    expect(apiMock.reserveConversation).toHaveBeenCalledWith(undefined);
+    expect(apiMock.createLiveSession).toHaveBeenCalledWith(
+      undefined,
+      'Persist this thread in the sidebar',
+      expect.objectContaining({ reservedSessionFile: '/tmp/reserved-conv.jsonl' }),
+    );
+
+    await waitFor(
+      () => {
+        expect(sessionTabsMock.ensureConversationTabOpen).toHaveBeenCalledWith('reserved-conv');
+      },
+      { timeout: 2_500 },
+    );
+
+    await act(async () => {
+      resolveCreateLiveSession({ id: 'reserved-conv', sessionFile: '/tmp/reserved-conv.jsonl', bootstrap: undefined });
+      await Promise.resolve();
+    });
   });
 
   it('ignores an older live session context refresh after a same-thread workspace switch triggers a newer one', async () => {
