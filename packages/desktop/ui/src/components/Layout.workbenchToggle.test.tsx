@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
 import { setExtensionCommandContext } from '../extensions/commands';
+import { SIDEBAR_WIDTH_STORAGE_KEY } from '../local/localSettings';
 import { sessionStore } from '../store';
 import { APP_LAYOUT_MODE_STORAGE_KEY } from '../ui-state/appLayoutMode';
 import { Layout } from './Layout';
@@ -35,6 +36,14 @@ class ResizeObserverShim {
   disconnect() {}
 }
 
+function setViewportWidth(width: number) {
+  Object.defineProperty(window, 'innerWidth', {
+    configurable: true,
+    writable: true,
+    value: width,
+  });
+}
+
 function renderLayout(pathname = '/conversations/new') {
   return render(
     <MemoryRouter initialEntries={[pathname]}>
@@ -52,6 +61,7 @@ describe('Layout workbench toggle', () => {
   beforeEach(() => {
     installLocalStorageShim();
     window.localStorage.clear();
+    setViewportWidth(1600);
     document.documentElement.dataset.neonPilotDesktop = '1';
     Object.defineProperty(window, 'ResizeObserver', {
       configurable: true,
@@ -133,6 +143,20 @@ describe('Layout workbench toggle', () => {
 
     expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Hide workbench' })).toBeTruthy();
+  });
+
+  it('restores saved sidebar and workbench document widths on conversation workbench routes', () => {
+    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, '280');
+    window.localStorage.setItem('pa:workbench-document-width', '640');
+
+    renderLayout('/conversations/conv-1');
+
+    const sidebarPane = screen.getByLabelText('Loading sidebar').closest<HTMLElement>('[style*="width"]');
+    const workbenchPane = document.querySelector<HTMLElement>('[data-workbench-document-pane="true"]');
+
+    expect(sidebarPane?.style.width).toBe('280px');
+    expect(workbenchPane?.style.width).toBe('640px');
   });
 
   it('accepts command-only desktop shortcut events for command-backed app chrome actions', () => {
