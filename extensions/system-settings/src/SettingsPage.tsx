@@ -4,7 +4,6 @@ import {
   type AppTelemetryLogBundleExport,
   type AppTelemetryLogDiagnostics,
   Checkbox,
-  type ColorTheme,
   createDesktopAwareEventSource,
   createModelEditorDraft,
   createProviderEditorDraft,
@@ -50,6 +49,8 @@ import {
   SettingsField,
   SettingsPanel,
   SettingsPanelHost,
+  SettingsRow,
+  SettingToggleRow,
   subscribeDesktopProviderOAuthLogin,
   type TelemetryDbMaintenanceResult,
   TextButton,
@@ -82,6 +83,7 @@ const SETTINGS_QUICK_LINKS = [
 
 const SETTINGS_PANEL_COMPACT_CLASS = 'settings-page-panel-compact';
 const SETTINGS_PANEL_DENSE_CLASS = 'settings-page-panel-dense';
+const SETTINGS_ROW_GROUP_CLASS = 'settings-page-row-group';
 
 type SettingsQuickLink = { id: string; label: ReactNode; summary?: ReactNode; children?: readonly SettingsQuickLink[] };
 type SettingsQuickLinkId = string;
@@ -385,41 +387,62 @@ function parseOAuthPromptOptions(message: string): Array<{ id: string; label: st
   return options;
 }
 
-function ThemeDefaultSelect({
-  label,
-  value,
-  themes,
-  onChange,
+function SettingsGroup({
+  title,
+  description,
+  actions,
+  children,
+  className,
+  contentClassName,
+  id,
 }: {
-  label: string;
-  value: string;
-  themes: ColorTheme[];
-  onChange: (theme: string) => void;
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  contentClassName?: string;
+  id?: string;
 }) {
   return (
-    <label className="space-y-1.5 text-xs font-medium text-secondary">
-      <span>{label}</span>
-      <span className="relative block">
-        <Select
-          className="h-9 min-w-0 truncate bg-surface/70 pr-9 text-[12px] font-medium"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        >
-          {themes.map((theme) => (
-            <option key={theme.id} value={theme.id}>
-              {theme.label}
-            </option>
-          ))}
-        </Select>
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 20 20"
-          className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-dim"
-        >
-          <path d="M6 8l4 4 4-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
-        </svg>
-      </span>
-    </label>
+    <SettingsPanel
+      id={id}
+      title={title}
+      description={description}
+      actions={actions}
+      className={cx(SETTINGS_ROW_GROUP_CLASS, className)}
+      contentClassName={cx('settings-page-row-list', contentClassName)}
+    >
+      {children}
+    </SettingsPanel>
+  );
+}
+
+function SettingsControlRow({
+  title,
+  description,
+  children,
+  disabled,
+  className,
+  actionsClassName,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  children?: ReactNode;
+  disabled?: boolean;
+  className?: string;
+  actionsClassName?: string;
+}) {
+  return (
+    <SettingsRow
+      title={title}
+      description={description}
+      disabled={disabled}
+      className={cx('settings-page-control-row', className)}
+      actionsClassName={cx('settings-page-control-actions', actionsClassName)}
+    >
+      {children}
+    </SettingsRow>
   );
 }
 
@@ -766,12 +789,12 @@ export function DesktopKeyboardShortcutsSettingsSection() {
   }
 
   return (
-    <SettingsPanel title="Keyboard shortcuts" description="Every desktop menu shortcut is configurable and auto-saves immediately.">
+    <SettingsGroup title="Keyboard shortcuts">
       {loading ? <p className="ui-card-meta">Loading keyboard shortcuts…</p> : null}
       {!loading && !preferencesState ? <p className="ui-card-meta">Keyboard shortcuts are available in the desktop app.</p> : null}
       {preferencesState ? (
         <div className="space-y-4">
-          <div className="divide-y divide-border-subtle/70">
+          <div className="settings-page-row-list">
             {shortcutItems.map((item) => {
               const editableId = item.extensionId ? null : item.editable ? (item.id as DesktopKeyboardShortcutId) : null;
               const shortcutValue = item.extensionId
@@ -780,14 +803,17 @@ export function DesktopKeyboardShortcutsSettingsSection() {
                   ? draft[editableId]
                   : '';
               return (
-                <div key={item.id} className="grid gap-3 py-3 first:pt-0 sm:grid-cols-[minmax(0,1fr)_18rem] sm:items-center">
-                  <span className="min-w-0 space-y-1">
-                    <span className="block text-[13px] font-medium text-primary">{item.label}</span>
-                    <span className="block text-[12px] leading-5 text-secondary">
+                <SettingsControlRow
+                  key={item.id}
+                  title={item.label}
+                  description={
+                    <>
                       {item.owner}
                       {item.description ? ` · ${item.description}` : ''}
-                    </span>
-                  </span>
+                    </>
+                  }
+                  actionsClassName="settings-page-shortcut-actions"
+                >
                   {editableId || item.extensionId ? (
                     <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
                       <KeyboardShortcutCaptureInput
@@ -827,7 +853,7 @@ export function DesktopKeyboardShortcutsSettingsSection() {
                       ) : null}
                     </div>
                   ) : null}
-                </div>
+                </SettingsControlRow>
               );
             })}
           </div>
@@ -856,7 +882,7 @@ export function DesktopKeyboardShortcutsSettingsSection() {
           </div>
         </div>
       ) : null}
-    </SettingsPanel>
+    </SettingsGroup>
   );
 }
 
@@ -990,19 +1016,23 @@ export function CommandsSettingsSection() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <SearchInput value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search commands…" />
       {loading ? <p className="ui-card-meta">Loading commands…</p> : null}
-      <div className="divide-y divide-border-subtle/70">
+      <SettingsGroup title="Command shortcuts" className="settings-page-commands-group">
         {visibleRows.map((command) => (
-          <div key={commandDisplayId(command)} className="grid gap-3 py-3 first:pt-0 sm:grid-cols-[minmax(0,1fr)_22rem] sm:items-start">
-            <div className="min-w-0 space-y-1">
-              <div className="text-[13px] font-medium text-primary">{command.title ?? commandDisplayId(command)}</div>
-              <div className="font-mono text-[11px] text-dim">{commandDisplayId(command)}</div>
-              <div className="text-[12px] text-secondary">
+          <SettingsControlRow
+            key={commandDisplayId(command)}
+            title={command.title ?? commandDisplayId(command)}
+            description={
+              <>
+                <span className="font-mono">{commandDisplayId(command)}</span>
+                <span className="mx-1">·</span>
                 {command.category ?? 'Command'} · {command.extensionId ?? 'host'}
-              </div>
-            </div>
+              </>
+            }
+            actionsClassName="settings-page-command-actions"
+          >
             <div className="space-y-2">
               {command.keybindings.map((keybinding) => {
                 const id = keybindingSettingId(keybinding);
@@ -1040,9 +1070,9 @@ export function CommandsSettingsSection() {
                 );
               })}
             </div>
-          </div>
+          </SettingsControlRow>
         ))}
-      </div>
+      </SettingsGroup>
       {!loading && visibleRows.length === 0 ? <p className="ui-card-meta">No commands match that search.</p> : null}
       {error ? <p className="text-[12px] text-danger">{error}</p> : null}
       {notice ? <p className="text-[12px] text-success">{notice}</p> : null}
@@ -1191,9 +1221,8 @@ function TelemetryLogsSettingsPanel() {
   }, []);
 
   return (
-    <SettingsPanel
+    <SettingsGroup
       title="Telemetry logs"
-      description="Local diagnostics and troubleshooting exports."
       actions={
         <>
           <ToolbarButton type="button" onClick={openLogFolder} disabled={!data?.logDir || action !== null}>
@@ -1211,25 +1240,14 @@ function TelemetryLogsSettingsPanel() {
       {loading ? <p className="ui-card-meta">Loading telemetry log details…</p> : null}
       {error ? <p className="text-[12px] text-danger">{error}</p> : null}
       {data ? (
-        <div className="space-y-3">
-          <div className="grid gap-2 text-[13px] text-secondary sm:grid-cols-3">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-dim">Files</div>
-              <div className="text-primary">{data.fileCount}</div>
-            </div>
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-dim">Size</div>
-              <div className="text-primary">{formatTelemetryLogBytes(data.sizeBytes)}</div>
-            </div>
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-dim">Location</div>
-              <div className="truncate font-mono text-[12px] text-primary" title={data.logDir}>
-                {data.logDir}
-              </div>
-            </div>
-          </div>
+        <>
+          <SettingsControlRow title="Files" description={data.logDir}>
+            <span className="text-[13px] text-primary">
+              {data.fileCount} · {formatTelemetryLogBytes(data.sizeBytes)}
+            </span>
+          </SettingsControlRow>
           {data.files.length > 0 ? (
-            <div className="space-y-1.5">
+            <div className="settings-page-log-files">
               {data.files.slice(0, 3).map((file) => (
                 <div key={file.path} className="flex items-center justify-between gap-3 text-[12px] text-secondary">
                   <span className="min-w-0 truncate font-mono text-primary" title={file.path}>
@@ -1242,10 +1260,10 @@ function TelemetryLogsSettingsPanel() {
           ) : (
             <p className="ui-card-meta">No telemetry log files yet.</p>
           )}
-        </div>
+        </>
       ) : null}
       {notice ? <p className="ui-card-meta break-words">{notice}</p> : null}
-    </SettingsPanel>
+    </SettingsGroup>
   );
 }
 
@@ -1417,9 +1435,8 @@ function NeonPilotCliSettingsPanel() {
   }
 
   return (
-    <SettingsPanel
+    <SettingsGroup
       title="Command line"
-      description="Global shell launcher for Neon Pilot administration."
       actions={
         <>
           <ToolbarButton type="button" onClick={() => void refresh()} disabled={action !== null}>
@@ -1438,20 +1455,17 @@ function NeonPilotCliSettingsPanel() {
       }
     >
       {status ? (
-        <div className="space-y-2 text-[13px]">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className={status.globallyInstalled ? 'text-success' : 'text-secondary'}>
-              {status.globallyInstalled ? 'Installed' : 'Not installed'}
-            </span>
-            <code className="break-all text-secondary">{status.linkPath}</code>
-          </div>
-          <p className="ui-card-meta break-all">Target: {status.target}</p>
-        </div>
+        <SettingsControlRow
+          title={status.globallyInstalled ? 'Installed' : 'Not installed'}
+          description={<code className="break-all">{status.target}</code>}
+        >
+          <code className="break-all text-[12px] text-secondary">{status.linkPath}</code>
+        </SettingsControlRow>
       ) : (
         <p className="ui-card-meta">Loading CLI status...</p>
       )}
       {error ? <p className="text-[12px] text-danger">{error}</p> : null}
-    </SettingsPanel>
+    </SettingsGroup>
   );
 }
 
@@ -1529,30 +1543,23 @@ export function DesktopConnectionsSettingsPanel() {
 
   return (
     <div className="space-y-0">
-      <SettingsPanel title="App behavior" description="Control how the menu bar app starts and how downloaded updates install.">
+      <SettingsGroup title="App behavior">
         {!getDesktopBridge() && isDesktopShell() ? (
           <p className="text-[12px] text-danger">Desktop bridge unavailable. Restart the desktop app and try again.</p>
         ) : null}
         {appPreferencesState ? (
-          <div className="space-y-4">
-            <label className="inline-flex items-center gap-3 text-[14px] text-primary" htmlFor="desktop-auto-install-updates">
-              <Checkbox
-                id="desktop-auto-install-updates"
-                type="checkbox"
-                checked={appPreferencesState.autoInstallUpdates}
-                onChange={(event) => {
-                  void handleUpdateAppPreferences({ autoInstallUpdates: event.target.checked });
-                }}
-                disabled={action !== null || !appPreferencesState.update.supported}
-              />
-              <span>Install downloaded updates automatically</span>
-            </label>
-            <p className="ui-card-meta break-words">{formatDesktopUpdateSummary(appPreferencesState)}</p>
+          <>
+            <SettingToggleRow
+              title="Auto-install updates"
+              description={formatDesktopUpdateSummary(appPreferencesState)}
+              checked={appPreferencesState.autoInstallUpdates}
+              onCheckedChange={(checked) => {
+                void handleUpdateAppPreferences({ autoInstallUpdates: checked });
+              }}
+              disabled={action !== null || !appPreferencesState.update.supported}
+            />
 
-            <div className="space-y-2">
-              <label className="block text-[12px] font-medium text-secondary" htmlFor="desktop-update-path">
-                Update path
-              </label>
+            <SettingsControlRow title="Update path">
               <Select
                 id="desktop-update-path"
                 value={appPreferencesState.updatePath}
@@ -1565,30 +1572,23 @@ export function DesktopConnectionsSettingsPanel() {
                 <option value="stable">Stable releases only</option>
                 <option value="test">Test releases and RCs</option>
               </Select>
-              <p className="ui-card-meta break-words">
-                Stable follows production releases. Test allows release candidates and pre-release builds for early validation.
-              </p>
-            </div>
+            </SettingsControlRow>
 
-            <label className="inline-flex items-center gap-3 text-[14px] text-primary" htmlFor="desktop-start-on-system-start">
-              <Checkbox
-                id="desktop-start-on-system-start"
-                type="checkbox"
-                checked={appPreferencesState.startOnSystemStart}
-                onChange={(event) => {
-                  void handleUpdateAppPreferences({ startOnSystemStart: event.target.checked });
-                }}
-                disabled={action !== null || !appPreferencesState.supportsStartOnSystemStart}
-              />
-              <span>Start Neon Pilot when you sign in</span>
-            </label>
-            <p className="ui-card-meta break-words">{formatStartOnSystemStartSummary(appPreferencesState)}</p>
-          </div>
+            <SettingToggleRow
+              title="Start on sign in"
+              description={formatStartOnSystemStartSummary(appPreferencesState)}
+              checked={appPreferencesState.startOnSystemStart}
+              onCheckedChange={(checked) => {
+                void handleUpdateAppPreferences({ startOnSystemStart: checked });
+              }}
+              disabled={action !== null || !appPreferencesState.supportsStartOnSystemStart}
+            />
+          </>
         ) : (
           <p className="ui-card-meta">Loading desktop app settings…</p>
         )}
         {appPreferencesError ? <p className="text-[12px] text-danger">{appPreferencesError}</p> : null}
-      </SettingsPanel>
+      </SettingsGroup>
       <NeonPilotCliSettingsPanel />
     </div>
   );
@@ -1745,7 +1745,7 @@ function ExtensionSettingsSection({
           }
           const groupedEntries = [...entriesByGroup.entries()];
           return (
-            <SettingsPanel
+            <SettingsGroup
               key={extensionId}
               id={settingsExtensionAnchorId(extensionId)}
               title={extensionLabels?.get(extensionId) ?? formatExtensionFallbackLabel(extensionId)}
@@ -1781,7 +1781,7 @@ function ExtensionSettingsSection({
               </div>
               {saveNotice && !hasPendingChanges ? <p className="text-[12px] text-accent">{saveNotice}</p> : null}
               {saveError ? <p className="text-[12px] text-danger">{saveError}</p> : null}
-            </SettingsPanel>
+            </SettingsGroup>
           );
         })}
       </div>
@@ -1791,7 +1791,7 @@ function ExtensionSettingsSection({
   return (
     <div className={separated ? 'space-y-0 border-t border-border-subtle/70 pt-6' : 'space-y-0'}>
       {[...grouped.entries()].map(([group, entries]) => (
-        <SettingsPanel key={group} title={group} className={SETTINGS_PANEL_DENSE_CLASS}>
+        <SettingsGroup key={group} title={group} className={SETTINGS_PANEL_DENSE_CLASS}>
           {entries.map((entry) => (
             <SettingsField
               key={entry.key}
@@ -1817,7 +1817,7 @@ function ExtensionSettingsSection({
           </div>
           {saveNotice && !hasPendingChanges ? <p className="text-[12px] text-accent">{saveNotice}</p> : null}
           {saveError ? <p className="text-[12px] text-danger">{saveError}</p> : null}
-        </SettingsPanel>
+        </SettingsGroup>
       ))}
     </div>
   );
@@ -1832,15 +1832,14 @@ function ExtensionSettingsComponentPanels({
   return (
     <div className="space-y-0 border-t border-border-subtle/70 pt-6">
       {registrations.map((registration) => (
-        <SettingsPanel
+        <SettingsGroup
           key={`${registration.extensionId}:${registration.id}`}
           id={registration.sectionId}
           title={registration.label}
-          description={registration.description}
           className={SETTINGS_PANEL_DENSE_CLASS}
         >
           <SettingsPanelHost registration={registration} />
-        </SettingsPanel>
+        </SettingsGroup>
       ))}
     </div>
   );
@@ -1968,14 +1967,17 @@ function ExtensionSecretsSection() {
 
   return (
     <div className="space-y-0">
-      <SettingsPanel
-        title="Secret storage"
-        description="Secrets are stored separately from settings and are never returned to the UI after save."
-      >
-        <div className="space-y-3">
-          <label className="ui-card-meta" htmlFor="settings-secret-backend">
-            Backend
-          </label>
+      <SettingsGroup title="Secret storage">
+        <SettingsControlRow
+          title="Backend"
+          description={
+            activeBackend === 'keychain'
+              ? 'macOS Keychain'
+              : activeBackend === 'env-only'
+                ? 'Environment only'
+                : 'Local file'
+          }
+        >
           <Select
             id="settings-secret-backend"
             value={activeBackend}
@@ -1988,36 +1990,29 @@ function ExtensionSecretsSection() {
             <option value="file">Local file</option>
             <option value="env-only">Environment only</option>
           </Select>
-          <p className="ui-card-meta">
-            {activeBackend === 'keychain'
-              ? 'Recommended on macOS. Secrets are stored in the system Keychain.'
-              : activeBackend === 'env-only'
-                ? 'Read-only. Secrets must come from declared environment variables.'
-                : 'Development/headless fallback. Secrets are stored in a local file outside settings.json.'}
-          </p>
-        </div>
-      </SettingsPanel>
+        </SettingsControlRow>
+      </SettingsGroup>
 
       {grouped.size === 0 ? (
-        <SettingsPanel title="Extension secrets">
+        <SettingsGroup title="Extension secrets">
           <p className="ui-card-meta">No installed extensions declare secrets.</p>
-        </SettingsPanel>
+        </SettingsGroup>
       ) : (
         [...grouped.entries()].map(([extensionId, secrets]) => (
-          <SettingsPanel key={extensionId} title={extensionId}>
-            <div className="space-y-4">
+          <SettingsGroup key={extensionId} title={extensionId}>
+            <>
               {secrets.map((secret) => (
-                <div key={secret.key} className="space-y-2 border-b border-border-subtle/60 pb-4 last:border-b-0 last:pb-0">
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-[13px] font-medium text-primary">{secret.label}</p>
-                      {secret.description ? <p className="ui-card-meta">{secret.description}</p> : null}
-                      {secret.env ? <p className="ui-card-meta">Environment fallback: {secret.env}</p> : null}
-                    </div>
-                    <p className="ui-card-meta">
+                <SettingsControlRow
+                  key={secret.key}
+                  title={secret.label}
+                  description={
+                    <>
                       <SecretSourceLabel source={secret.source} />
-                    </p>
-                  </div>
+                      {secret.env ? ` · ${secret.env}` : ''}
+                    </>
+                  }
+                  actionsClassName="settings-page-secret-actions"
+                >
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <TextInput
                       type="password"
@@ -2055,10 +2050,10 @@ function ExtensionSecretsSection() {
                   {!secret.writable ? (
                     <p className="ui-card-meta">The active backend is read-only. Set the environment variable instead.</p>
                   ) : null}
-                </div>
+                </SettingsControlRow>
               ))}
-            </div>
-          </SettingsPanel>
+            </>
+          </SettingsGroup>
         ))
       )}
 
@@ -3186,13 +3181,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
             <div className="settings-page-sections flex flex-col gap-4">
             <SettingsSection id="settings-appearance" label="Appearance" description="Theme, accent, and visual defaults.">
-              <SettingsPanel title="Theme" className={SETTINGS_PANEL_COMPACT_CLASS}>
-                <div className="space-y-3">
-                  <div className="grid gap-2 border-b border-border-subtle/60 pb-3 sm:grid-cols-[minmax(10rem,14rem)_minmax(0,1fr)] sm:items-center">
-                    <div className="min-w-0">
-                      <p className="text-[12px] font-medium text-primary">Mode</p>
-                      <p className="ui-card-meta">Current: {availableThemes.find((availableTheme) => availableTheme.id === theme)?.label ?? theme}</p>
-                    </div>
+              <SettingsGroup title="Theme" className={SETTINGS_PANEL_COMPACT_CLASS}>
+                  <SettingsControlRow
+                    title="Mode"
+                    description={availableThemes.find((availableTheme) => availableTheme.id === theme)?.label ?? theme}
+                  >
                     <SegmentedControl
                       ariaLabel="Theme mode selection"
                       value={themePreference}
@@ -3203,23 +3196,40 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         { value: 'dark', label: 'Dark' },
                       ]}
                     />
-                  </div>
-                  <div className="grid gap-3 border-b border-border-subtle/60 pb-3 md:grid-cols-2">
-                    <ThemeDefaultSelect
-                      label="Light default"
+                  </SettingsControlRow>
+                  <SettingsControlRow title="Light default">
+                    <Select
+                      className="h-8 min-w-0 truncate bg-surface/70 pr-9 text-[12px] font-medium"
                       value={lightTheme}
-                      themes={availableThemes.filter((availableTheme) => availableTheme.appearance === 'light')}
-                      onChange={setLightTheme}
-                    />
-                    <ThemeDefaultSelect
-                      label="Dark default"
+                      onChange={(event) => setLightTheme(event.target.value)}
+                      aria-label="Light default theme"
+                    >
+                      {availableThemes
+                        .filter((availableTheme) => availableTheme.appearance === 'light')
+                        .map((availableTheme) => (
+                          <option key={availableTheme.id} value={availableTheme.id}>
+                            {availableTheme.label}
+                          </option>
+                        ))}
+                    </Select>
+                  </SettingsControlRow>
+                  <SettingsControlRow title="Dark default">
+                    <Select
+                      className="h-8 min-w-0 truncate bg-surface/70 pr-9 text-[12px] font-medium"
                       value={darkTheme}
-                      themes={availableThemes.filter((availableTheme) => availableTheme.appearance === 'dark')}
-                      onChange={setDarkTheme}
-                    />
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-[minmax(10rem,14rem)_minmax(0,1fr)] sm:items-center">
-                    <p className="text-[12px] font-medium text-primary">Accent</p>
+                      onChange={(event) => setDarkTheme(event.target.value)}
+                      aria-label="Dark default theme"
+                    >
+                      {availableThemes
+                        .filter((availableTheme) => availableTheme.appearance === 'dark')
+                        .map((availableTheme) => (
+                          <option key={availableTheme.id} value={availableTheme.id}>
+                            {availableTheme.label}
+                          </option>
+                        ))}
+                    </Select>
+                  </SettingsControlRow>
+                  <SettingsControlRow title="Accent">
                     <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Accent color">
                       {availableAccents.map((entry) => {
                         const isSelected = accent === entry.id;
@@ -3246,23 +3256,23 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         );
                       })}
                     </div>
-                  </div>
-                </div>
-              </SettingsPanel>
+                  </SettingsControlRow>
+              </SettingsGroup>
             </SettingsSection>
 
             <SettingsSection id="settings-conversation" label="Conversation" description="Model and behavior defaults for new chats.">
               <div className="space-y-0">
-                <SettingsPanel title="Default model" description="Used for new chats and runs unless a model is picked explicitly.">
+                <SettingsGroup title="Model defaults">
                   {modelsLoading && !modelState ? (
                     <p className="ui-card-meta">Loading models…</p>
                   ) : modelsError && !modelState ? (
                     <p className="text-[12px] text-danger">Failed to load models: {modelsError}</p>
                   ) : modelState ? (
                     <>
-                      <label className="ui-card-meta" htmlFor="settings-model">
-                        Model
-                      </label>
+                      <SettingsControlRow
+                        title="Default model"
+                        description={savingPreference === 'model' ? 'Saving...' : formatModelSummary(selectedModel, 'No model selected')}
+                      >
                       <Select
                         id="settings-model"
                         value={modelState.currentModel}
@@ -3284,13 +3294,16 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                           </optgroup>
                         ))}
                       </Select>
-                      <p className="ui-card-meta">
-                        {savingPreference === 'model' ? 'Saving default model...' : formatModelSummary(selectedModel, 'No model selected.')}
-                      </p>
+                      </SettingsControlRow>
 
-                      <label className="ui-card-meta pt-1" htmlFor="settings-thinking">
-                        Thinking level
-                      </label>
+                      <SettingsControlRow
+                        title="Thinking level"
+                        description={
+                          savingPreference === 'thinking'
+                            ? 'Saving...'
+                            : formatThinkingLevelLabel(modelState.currentThinkingLevel)
+                        }
+                      >
                       <Select
                         id="settings-thinking"
                         value={modelState.currentThinkingLevel}
@@ -3305,39 +3318,43 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                           </option>
                         ))}
                       </Select>
-                      <p className="ui-card-meta">
-                        {savingPreference === 'thinking'
-                          ? 'Saving thinking level…'
-                          : `Current thinking level: ${formatThinkingLevelLabel(modelState.currentThinkingLevel)}`}
-                      </p>
+                      </SettingsControlRow>
                     </>
                   ) : null}
 
                   {modelError && <p className="text-[12px] text-danger">{modelError}</p>}
-                </SettingsPanel>
+                </SettingsGroup>
                 <ExtensionSettingsSection includeExtensionIds={['system-settings']} includeGroups={['Conversation']} separated={false} />
               </div>
             </SettingsSection>
 
             <SettingsSection id="settings-workspace" label="Workspace" description="Default working directory and local context paths.">
               <div className="space-y-0">
-                <SettingsPanel title="Working directory" description="Fallback cwd for new chats and web actions.">
+                <SettingsGroup title="Working directory">
                   {defaultCwdLoading && !defaultCwdState ? (
                     <p className="ui-card-meta">Loading default working directory…</p>
                   ) : defaultCwdLoadError && !defaultCwdState ? (
                     <p className="text-[12px] text-danger">Failed to load default working directory: {defaultCwdLoadError}</p>
                   ) : defaultCwdState ? (
                     <form
-                      className="space-y-3"
+                      className="contents"
                       onSubmit={(event) => {
                         event.preventDefault();
                         void handleDefaultCwdSave();
                       }}
                     >
-                      <label className="ui-card-meta" htmlFor="settings-default-cwd">
-                        Path
-                      </label>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <SettingsControlRow
+                        title="Default cwd"
+                        description={
+                          savingDefaultCwd
+                            ? 'Saving...'
+                            : defaultCwdState.currentCwd
+                              ? `Default · ${defaultCwdState.effectiveCwd}`
+                              : `Process · ${defaultCwdState.effectiveCwd}`
+                        }
+                        actionsClassName="settings-page-cwd-actions"
+                      >
+                      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                         <TextInput
                           id="settings-default-cwd"
                           value={defaultCwdDraft}
@@ -3366,17 +3383,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                           {pickingDefaultCwd ? 'Choosing…' : 'Choose…'}
                         </ToolbarButton>
                       </div>
-                      <p className="ui-card-meta break-all">
-                        {savingDefaultCwd
-                          ? 'Saving default working directory…'
-                          : defaultCwdState.currentCwd
-                            ? `Default cwd · ${defaultCwdState.effectiveCwd}`
-                            : `Process cwd · ${defaultCwdState.effectiveCwd}`}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="ui-card-meta">
-                          {savingDefaultCwd ? 'Saving…' : defaultCwdDirty ? 'Auto-save pending…' : 'Auto-saved'}
-                        </span>
+                      </SettingsControlRow>
+                      <SettingsControlRow
+                        title="Runtime fallback"
+                        description={savingDefaultCwd ? 'Saving…' : defaultCwdDirty ? 'Auto-save pending…' : 'Auto-saved'}
+                      >
                         <ToolbarButton
                           type="button"
                           onClick={() => {
@@ -3386,16 +3397,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         >
                           Use process cwd
                         </ToolbarButton>
-                      </div>
-                      <p className="ui-card-meta">
-                        Absolute, <span className="font-mono text-[11px]">~/…</span>, or relative. Leave blank to use the runtime process
-                        cwd.
-                      </p>
+                      </SettingsControlRow>
                     </form>
                   ) : null}
 
                   {defaultCwdSaveError && <p className="text-[12px] text-danger">{defaultCwdSaveError}</p>}
-                </SettingsPanel>
+                </SettingsGroup>
               </div>
             </SettingsSection>
 
@@ -3422,11 +3429,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               description="Provider definitions, model overrides, and credential management."
             >
               <div className="space-y-0">
-                <SettingsPanel title="Provider & model definitions">
-                  <div className="space-y-5">
-                    <div className="space-y-3 min-w-0">
-                      <h3 className="text-[13px] font-medium text-primary">Providers</h3>
-
+                <SettingsGroup title="Provider definitions">
+                  <>
                       {modelProviderLoading && !modelProviderState ? (
                         <p className="ui-card-meta">Loading provider definitions…</p>
                       ) : modelProviderError && !modelProviderState ? (
@@ -3437,12 +3441,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                           {providerAuthError && !providerAuthState && (
                             <p className="text-[12px] text-danger">Failed to load provider credentials: {providerAuthError}</p>
                           )}
-                          <div className="space-y-4">
-                            <div className="space-y-3">
-                              <div className="space-y-1">
-                                <h4 className="text-[13px] font-medium text-primary">Add provider</h4>
-                              </div>
-                              <div className="flex max-w-xl flex-col gap-2 sm:flex-row sm:items-center">
+                          <SettingsControlRow title="Add provider" actionsClassName="settings-page-provider-add-actions">
+                              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                                 <Select
                                   id="settings-model-provider-picker"
                                   value={modelProviderPickerId}
@@ -3474,14 +3474,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   Continue
                                 </ToolbarButton>
                               </div>
-                            </div>
-                          </div>
+                          </SettingsControlRow>
                         </>
                       ) : null}
-                    </div>
 
                     {selectedModelProviderId !== '' && (
-                      <div className="space-y-5 rounded-lg border border-border-subtle bg-surface/50 p-4">
+                      <div className="settings-page-provider-editor space-y-5">
                         <div className="flex items-start justify-between gap-4">
                           <div className="space-y-1">
                             <h3 className="text-[15px] font-medium text-primary">
@@ -4545,9 +4543,9 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
                     {modelProviderState && (
                       <div className="space-y-2">
-                        <p className="ui-card-meta">Configured providers</p>
+                        <h3 className="settings-page-subsection-title">Configured providers</h3>
                         {configuredProviderSummaries.length > 0 ? (
-                          <div className="space-y-2">
+                          <div className="settings-page-provider-list">
                             {configuredProviderSummaries.map((provider) => {
                               const selected = provider.id === selectedModelProviderId || provider.id === selectedProviderId;
                               return (
@@ -4562,8 +4560,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   }}
                                   selected={selected}
                                   className={cx(
-                                    'group flex w-full items-center justify-between gap-4 rounded-lg border border-border-subtle bg-surface/70 px-3 py-3',
-                                    selected ? 'border-border-default bg-elevated' : 'hover:border-border-default hover:bg-surface',
+                                    'settings-page-provider-row group flex w-full items-center justify-between gap-4',
+                                    selected && 'settings-page-provider-row-selected',
                                   )}
                                   aria-pressed={selected}
                                 >
@@ -4589,8 +4587,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         )}
                       </div>
                     )}
-                  </div>
-                </SettingsPanel>
+                  </>
+                </SettingsGroup>
               </div>
             </SettingsSection>
 

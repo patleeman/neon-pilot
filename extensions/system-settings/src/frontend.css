@@ -1,9 +1,9 @@
 .settings-page-shell.ui-app-page-shell {
-  padding-block: 1.25rem;
+  padding-block: 1.5rem;
 }
 
 .settings-page-main.ui-app-page-main {
-  max-width: 58rem;
+  max-width: 50rem;
 }
 
 .settings-page-toc-nav {
@@ -66,7 +66,9 @@
 }
 
 .settings-page-detail {
-  max-width: 58rem;
+  max-width: 44rem;
+  margin-inline: auto;
+  width: 100%;
 }
 
 .settings-page-header {
@@ -77,13 +79,139 @@
   min-height: 0;
 }
 
+.settings-page-section + .settings-page-section {
+  margin-top: 0.25rem;
+}
+
 .settings-page-section-title {
   letter-spacing: 0;
 }
 
+.settings-page-row-group.ui-settings-panel {
+  gap: 0;
+  overflow: hidden;
+  border-color: rgb(var(--color-border-subtle));
+  border-radius: 0.5rem;
+  background: rgb(var(--color-surface-2) / 0.55);
+  padding: 0;
+}
+
+.settings-page-row-group > .ui-settings-panel-header {
+  min-height: 2.5rem;
+  border-bottom: 1px solid rgb(var(--color-border-subtle) / 0.78);
+  padding: 0.625rem 0.75rem;
+}
+
+.settings-page-row-group .ui-settings-panel-title {
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  font-weight: 600;
+}
+
+.settings-page-row-group .ui-settings-panel-description {
+  display: none;
+}
+
+.settings-page-row-group > .ui-settings-panel-content {
+  gap: 0;
+  padding: 0;
+}
+
+.settings-page-row-list {
+  gap: 0;
+}
+
+.settings-page-control-row.ui-settings-row,
+.settings-page-row-group .ui-settings-field {
+  min-height: 2.75rem;
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.68);
+  padding: 0.5rem 0.75rem;
+}
+
+.settings-page-row-group .ui-settings-panel-content > .settings-page-control-row:first-child,
+.settings-page-row-group .ui-settings-panel-content > .ui-settings-field:first-child,
+.settings-page-row-list > .settings-page-control-row:first-child,
+.settings-page-row-list > .ui-settings-field:first-child {
+  border-top: 0;
+}
+
+.settings-page-control-row .ui-settings-row-title,
+.settings-page-row-group .ui-field-label {
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+}
+
+.settings-page-control-row .ui-settings-row-description,
+.settings-page-row-group .ui-field-hint {
+  max-width: 30rem;
+  font-size: 0.75rem;
+  line-height: 1.2rem;
+  color: rgb(var(--color-secondary));
+}
+
+.settings-page-control-actions.ui-settings-row-actions {
+  justify-content: flex-end;
+  min-width: 13rem;
+  max-width: 22rem;
+}
+
+.settings-page-control-actions .ui-select,
+.settings-page-control-actions .ui-input {
+  min-height: 2rem;
+  height: 2rem;
+}
+
+.settings-page-cwd-actions.ui-settings-row-actions,
+.settings-page-secret-actions.ui-settings-row-actions,
+.settings-page-command-actions.ui-settings-row-actions,
+.settings-page-shortcut-actions.ui-settings-row-actions,
+.settings-page-provider-add-actions.ui-settings-row-actions {
+  max-width: none;
+}
+
+.settings-page-command-actions.ui-settings-row-actions {
+  min-width: 20rem;
+}
+
+.settings-page-provider-editor {
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.78);
+  padding: 0.875rem 0.75rem 1rem;
+}
+
+.settings-page-subsection-title {
+  padding: 0.75rem 0.75rem 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.125rem;
+  color: rgb(var(--color-primary));
+}
+
+.settings-page-provider-list {
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.68);
+}
+
+.settings-page-provider-row {
+  border-bottom: 1px solid rgb(var(--color-border-subtle) / 0.68);
+  border-radius: 0;
+  background: transparent;
+  padding: 0.625rem 0.75rem;
+}
+
+.settings-page-provider-row:hover {
+  background: rgb(var(--color-surface) / 0.52);
+}
+
+.settings-page-provider-row-selected {
+  background: rgb(var(--color-elevated) / 0.55);
+}
+
+.settings-page-log-files {
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.68);
+  padding: 0.5rem 0.75rem;
+}
+
 .settings-page-panel-compact.ui-settings-panel {
-  gap: 0.5rem;
-  padding-block: 0.625rem;
+  gap: 0;
 }
 
 .settings-page-panel-compact > .ui-settings-panel-header {
@@ -104,8 +232,7 @@
 }
 
 .settings-page-panel-dense.ui-settings-panel {
-  gap: 0.25rem;
-  padding-block: 0.5rem;
+  gap: 0;
 }
 
 .settings-page-panel-dense > .ui-settings-panel-header {
@@ -153,6 +280,23 @@
 
 @media (min-width: 1280px) {
   .settings-page-shell.ui-app-page-shell {
-    padding-inline: 2rem;
+    padding-inline: 2.5rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .settings-page-main.ui-app-page-main,
+  .settings-page-detail {
+    max-width: none;
+  }
+
+  .settings-page-control-actions.ui-settings-row-actions {
+    justify-content: flex-start;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .settings-page-command-actions.ui-settings-row-actions {
+    min-width: 0;
   }
 }
