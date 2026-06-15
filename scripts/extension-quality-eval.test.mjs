@@ -54,8 +54,21 @@ describe('extension quality eval assets', () => {
     expect(runner).toContain('wrong_checkout_write');
     expect(runner).toContain('readSourceFiles');
     expect(runner).toContain('/\\.(tsx|ts|jsx|js)$/');
+    expect(runner).toContain('Hard gates outrank visual taste');
     expect(runner).toContain('Choose the most user-friendly input');
     expect(runner).toContain('Do not use a textarea as a shortcut');
+    expect(runner).toContain('durable shell visible even when empty');
+    expect(runner).toContain('avoid full-page placeholder canvases');
+    expect(runner).toContain('visually judgeable on first launch');
+    expect(runner).toContain('without reading as fake demo data');
+    expect(runner).toContain('Do not use emoji as UI artwork');
+    expect(runner).toContain('Do not use a comma-separated text input for tags');
+    expect(runner).toContain('Do not expose raw metadata dumps');
+    expect(runner).toContain('Prefer direct navigation command actions');
+    expect(runner).toContain('Manifest nav icons must use the host allowlist');
+    expect(runner).toContain('immediately before mutation');
+    expect(runner).toContain('read and honor that route state on first render');
+    expect(runner).toContain('must visibly show the new/create editor');
     expect(runner).toContain('require-visual');
     expect(runner).toContain('visual_review');
     expect(runner).toContain('visual-review.md');
@@ -75,6 +88,12 @@ describe('extension quality eval assets', () => {
     expect(rubric).toContain('no_visual_qa');
     expect(rubric).toContain('screenshot-backed visual review');
     expect(rubric).toContain('lazy_textarea');
+    expect(rubric).toContain('empty_canvas');
+    expect(rubric).toContain('unjudgeable_first_launch');
+    expect(rubric).toContain('emoji_artwork');
+    expect(rubric).toContain('comma_tag_input');
+    expect(rubric).toContain('raw_metadata_dump');
+    expect(rubric).toContain('demo_seed_content');
 
     expect(visualRubric).toContain('Host Fit');
     expect(visualRubric).toContain('Control Taste');

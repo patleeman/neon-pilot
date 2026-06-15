@@ -18,6 +18,9 @@ Use 1-5 for each dimension.
 - **Density & Layout**: Spacing and content density fit the surface: main page, rail, composer, transcript, settings, or detail pane.
 - **State Quality**: Empty, loading, error, success, disabled, and long-running states look intentional and distinct.
 - **Control Taste**: Uses the most user-friendly input for each job: structured editors, key/value rows, segmented controls, toggles, selects, pickers, steppers, and tag/resource choosers when appropriate. Raw text inputs and textareas are reserved for genuinely free-form text, code, or prompt bodies.
+- **Empty-State Density**: CRUD/list pages keep their real workflow shell visible before data exists: header actions, filters/search when useful, a list/table/resource region, and detail/editor/preview or guidance panel. A mostly blank page with a small centered message should fail unless the extension surface is intentionally tiny.
+- **First-Launch Judgeability**: The initial screen must still show enough concrete structure to judge the product: starter templates, representative rows, a preview/guidance panel, or visible create/editor state. Blank database screens that are technically correct but visually empty should fail.
+- **Data Surface Taste**: Starter content should feel purposeful, not like fake demo records. Metadata belongs in compact subdued properties, not prominent raw timestamp rows. Repeatable values such as tags must use true token/tag controls or selectable suggestions, never comma-separated text inputs.
 - **Interaction Clarity**: Primary, secondary, navigation, and destructive actions are visually clear and placed predictably.
 - **Text Robustness**: Long titles, paths, prompts, logs, tags, and row content wrap or truncate without overlap.
 - **Accessibility Signals**: Icon-only controls, inputs, focus states, and destructive actions are legible and inspectable.
@@ -42,7 +45,13 @@ Use 1-5 for each dimension.
 - `nested_cards`
 - `decorative_noise`
 - `weak_empty_state`
+- `empty_canvas`
+- `unjudgeable_first_launch`
 - `lazy_textarea`
+- `emoji_artwork`
+- `comma_tag_input`
+- `raw_metadata_dump`
+- `demo_seed_content`
 - `wrong_input_control`
 - `raw_json_editor`
 - `missing_secondary_state`
