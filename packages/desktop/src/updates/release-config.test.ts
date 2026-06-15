@@ -45,6 +45,7 @@ describe('desktop release config', () => {
     expect(electronBuilderConfig.files).toEqual(
       expect.arrayContaining([
         'node_modules/better-sqlite3{,/**/*}',
+        'node_modules/@silvia-odwyer/photon-node{,/**/*}',
         'node_modules/bindings{,/**/*}',
         'node_modules/file-uri-to-path{,/**/*}',
         'node_modules/node-pty{,/**/*}',
@@ -53,6 +54,7 @@ describe('desktop release config', () => {
     expect(electronBuilderConfig.asarUnpack).toEqual(
       expect.arrayContaining([
         'node_modules/better-sqlite3/**/*',
+        'node_modules/@silvia-odwyer/photon-node/**/*',
         'node_modules/bindings/**/*',
         'node_modules/file-uri-to-path/**/*',
         'node_modules/node-pty/**/*',

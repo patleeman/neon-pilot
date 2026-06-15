@@ -46,6 +46,12 @@ describe('desktop server bundle lazy module entries', () => {
     expect(buildScript).toContain("entryPoints: [resolve(packageRoot, 'server/protocolCli.ts')]");
   });
 
+  it('externalizes the Photon image runtime so packaged read tools can load it from disk', () => {
+    const buildScript = readRepoFile('packages/desktop/scripts/build-server-bundle.mjs');
+
+    expect(buildScript).toContain("'@silvia-odwyer/photon-node'");
+  });
+
   it('packages every relative backend API lazy module used by extension wrappers', () => {
     const backendApiFiles = ['automations.ts', 'gateways.ts', 'images.ts', 'knowledge.ts', 'modelGateway.ts'].map(
       (file) => `packages/desktop/server/extensions/backendApi/${file}`,
