@@ -144,12 +144,12 @@ async function waitForLoadedBody(cdp, child, label, timeoutMs = 45_000) {
   throw new Error(`Timed out waiting for ${label}. Last body text:\n${lastBody.slice(-1200)}`);
 }
 
-async function postJson(cdp, path, body) {
+async function requestJson(cdp, method, path, body) {
   const result = await evalJs(
     cdp,
     `(async () => {
       const response = await fetch(${JSON.stringify(path)}, {
-        method: 'POST',
+        method: ${JSON.stringify(method)},
         headers: { 'content-type': 'application/json' },
         body: ${JSON.stringify(JSON.stringify(body ?? {}))}
       });
@@ -161,6 +161,18 @@ async function postJson(cdp, path, body) {
   );
   if (!result.ok) throw new Error(`${path} returned ${result.status}: ${JSON.stringify(result.body)}`);
   return result.body;
+}
+
+async function postJson(cdp, path, body) {
+  return requestJson(cdp, 'POST', path, body);
+}
+
+async function patchJson(cdp, path, body) {
+  return requestJson(cdp, 'PATCH', path, body);
+}
+
+async function deleteJson(cdp, path) {
+  return requestJson(cdp, 'DELETE', path, {});
 }
 
 function routeSlug(route) {
@@ -220,6 +232,23 @@ function readManifest(extensionDir) {
   if (!existsSync(manifestPath)) return {};
   try {
     return JSON.parse(readFileSync(manifestPath, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function readManifestFromZip(zipPath) {
+  const entries = spawnSync('zipinfo', ['-1', zipPath], { cwd: repoRoot, encoding: 'utf8' });
+  if (entries.status !== 0) return {};
+  const manifestEntry = entries.stdout
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .find((entry) => entry.endsWith('/extension.json'));
+  if (!manifestEntry) return {};
+  const manifest = spawnSync('unzip', ['-p', zipPath, manifestEntry], { cwd: repoRoot, encoding: 'utf8' });
+  if (manifest.status !== 0) return {};
+  try {
+    return JSON.parse(manifest.stdout);
   } catch {
     return {};
   }
@@ -356,6 +385,8 @@ export async function runVisualCapture() {
   const outDir = resolve(repoRoot, arg('out', `artifacts/extension-quality/visual-${timestamp()}`));
   const extensionDirArg = arg('extension-dir');
   const extensionDir = extensionDirArg ? resolve(extensionDirArg) : '';
+  const extensionZipArg = arg('extension-zip');
+  const extensionZip = extensionZipArg ? resolve(extensionZipArg) : '';
   const preserveState = boolArg('preserve-state');
   const calibrationTarget = arg('calibration-target');
   const targetRoutes = calibrationRoutes(calibrationTarget);
@@ -369,8 +400,10 @@ export async function runVisualCapture() {
     .filter(Boolean);
   const judgeImageMaxPixels = numberArg('judge-image-max-px', 900);
 
+  if (extensionDir && extensionZip) throw new Error('Pass either --extension-dir or --extension-zip, not both.');
   if (!existsSync(appPath)) throw new Error(`App not found: ${appPath}`);
   if (appEntry && !existsSync(resolve(appEntry))) throw new Error(`App entry not found: ${resolve(appEntry)}`);
+  if (extensionZip && !existsSync(extensionZip)) throw new Error(`Extension zip not found: ${extensionZip}`);
   mkdirSync(outDir, { recursive: true });
 
   const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-extension-visual-'));
@@ -435,11 +468,21 @@ export async function runVisualCapture() {
 
     let generated = [];
     let manifest = {};
-    if (extensionDir) {
-      manifest = readManifest(extensionDir);
-      const zipPath = packExtension(extensionDir, outDir);
-      await postJson(cdp, '/api/extensions/import', { zipPath });
+    if (extensionDir || extensionZip) {
+      manifest = extensionDir ? readManifest(extensionDir) : readManifestFromZip(extensionZip);
+      const zipPath = extensionZip || packExtension(extensionDir, outDir);
+      if (typeof manifest?.id === 'string' && manifest.id.trim()) {
+        await deleteJson(cdp, `/api/extensions/${encodeURIComponent(manifest.id)}`).catch(() => null);
+      }
+      const imported = await postJson(cdp, '/api/extensions/import', { zipPath });
+      const importedExtensionId =
+        typeof imported?.extension?.id === 'string' ? imported.extension.id : typeof manifest?.id === 'string' ? manifest.id : '';
+      if (importedExtensionId) {
+        await patchJson(cdp, `/api/extensions/${encodeURIComponent(importedExtensionId)}`, { enabled: true });
+      }
       await postJson(cdp, '/api/extensions/reload', {});
+      await cdp.send('Page.reload', { ignoreCache: true });
+      await waitForLoadedBody(cdp, child, 'post-import reload');
       const routes = requestedGeneratedRoutes.length > 0 ? requestedGeneratedRoutes : inferGeneratedRoutes(manifest);
       generated = [];
       for (const route of routes) {
@@ -457,6 +500,7 @@ export async function runVisualCapture() {
       tempRoot: preserveState ? tempRoot : undefined,
       stateRoot: preserveState ? stateRoot : undefined,
       extensionDir: extensionDir || undefined,
+      extensionZip: extensionZip || undefined,
       extensionId: manifest?.id,
       calibrationTarget: calibrationTarget || undefined,
       task: arg('task', ''),

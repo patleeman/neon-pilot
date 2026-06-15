@@ -1,16 +1,14 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
-  AppPageEmptyState,
   AppPageIntro,
   AppPageLayout,
   CodeBlock,
   Disclosure,
   Field,
+  IconButton,
   Notice,
   PanelHeader,
-  PanelMessage,
   Pill,
-  RailSubsection,
   ResourceListItem,
   SectionLabel,
   SurfacePanel,
@@ -182,6 +180,32 @@ function WorkflowCard({ workflow, selected, onSelect }: { workflow: WorkflowSumm
   );
 }
 
+function RefreshIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path d="M13 3.5v3h-3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12.3 6.3A4.7 4.7 0 1 0 13 8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path d="M8 3.5v9M3.5 8h9" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SaveIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M4 2.75h6.8L13.25 5.2V13A1.25 1.25 0 0 1 12 14.25H4A1.25 1.25 0 0 1 2.75 13V4A1.25 1.25 0 0 1 4 2.75Z" />
+      <path d="M5.25 2.75v4h5.5v-4M5.25 14.25v-4.5h5.5v4.5" />
+    </svg>
+  );
+}
+
 export function DynamicWorkflowTranscriptBlock({ block }: { block: { details?: unknown; text?: string } }) {
   const details = block.details && typeof block.details === 'object' ? (block.details as WorkflowSummary) : null;
   const agents = details?.agents;
@@ -227,6 +251,7 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [savedWorkflows, setSavedWorkflows] = useState<WorkflowTemplate[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [detail, setDetail] = useState<WorkflowDetail | null>(null);
   const [draft, setDraft] = useState<SavedWorkflowDraft>(EMPTY_DRAFT);
   const [draftOpen, setDraftOpen] = useState(false);
@@ -234,6 +259,16 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const selected = detail?.workflow ?? workflows.find((workflow) => workflow.id === selectedId) ?? null;
+  const selectedTemplate =
+    selectedId === null
+      ? (savedWorkflows.find((workflow) => workflow.id === selectedTemplateId) ??
+        templates.find((template) => template.id === selectedTemplateId) ??
+        savedWorkflows[0] ??
+        templates[0] ??
+        null)
+      : null;
+  const pageSummary = `${workflows.length} runs / ${savedWorkflows.length} saved / ${templates.length} templates`;
+  const hasLibraryItems = workflows.length > 0 || savedWorkflows.length > 0 || templates.length > 0;
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -243,10 +278,13 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
       const templateResult = (await pa.extension.invoke('listWorkflowTemplates', {})) as { templates?: WorkflowTemplate[] };
       const savedResult = (await pa.extension.invoke('listSavedWorkflows', {})) as { workflows?: WorkflowTemplate[] };
       const next = result.workflows ?? [];
+      const nextTemplates = templateResult.templates ?? [];
+      const nextSaved = savedResult.workflows ?? [];
       setWorkflows(next);
-      setTemplates(templateResult.templates ?? []);
-      setSavedWorkflows(savedResult.workflows ?? []);
+      setTemplates(nextTemplates);
+      setSavedWorkflows(nextSaved);
       setSelectedId((current) => current ?? next[0]?.id ?? null);
+      setSelectedTemplateId((current) => current ?? nextSaved[0]?.id ?? nextTemplates[0]?.id ?? null);
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
     } finally {
@@ -327,146 +365,256 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="flex min-h-full flex-col gap-8">
+      <AppPageLayout shellClassName="max-w-[76rem]" contentClassName="flex min-h-full flex-col gap-5">
         <AppPageIntro
           title="Workflows"
-          summary="Dynamic workflow runs, spawned agents, phases, and results."
-          actions={<ToolbarButton onClick={() => void refresh()}>Refresh</ToolbarButton>}
+          summary={pageSummary}
+          actions={
+            <IconButton aria-label="Refresh workflows" title="Refresh workflows" onClick={() => void refresh()}>
+              <RefreshIcon />
+            </IconButton>
+          }
         />
 
         {error ? <Notice tone="danger">{error}</Notice> : null}
 
-        <div className="grid min-h-[34rem] gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
-          <section className="min-w-0 space-y-5 border-t border-border-subtle pt-4">
+        <div className="grid min-h-[calc(100vh-11rem)] gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
+          <section className="flex min-w-0 flex-col border-t border-border-subtle pt-3">
             <div className="flex items-center justify-between gap-3">
-              <SectionLabel>Runs</SectionLabel>
-              {loading ? <span className="text-[11px] text-dim">Refreshing...</span> : null}
-            </div>
-            {loading && workflows.length === 0 ? <div className="text-[12px] text-dim">Loading workflows...</div> : null}
-            {!loading && workflows.length === 0 ? (
-              <AppPageEmptyState align="start" title="No workflows" body="Dynamic workflow runs will appear here." />
-            ) : null}
-            <div className="space-y-2">
-              {workflows.map((workflow) => (
-                <WorkflowCard
-                  key={workflow.id}
-                  workflow={workflow}
-                  selected={workflow.id === selectedId}
-                  onSelect={() => setSelectedId(workflow.id)}
-                />
-              ))}
-            </div>
-            <RailSubsection
-              title="Saved"
-              actions={
-                <ToolbarButton
+              <SectionLabel>Workflow Library</SectionLabel>
+              <div className="flex items-center gap-2">
+                {loading ? <span className="text-[11px] text-dim">Refreshing...</span> : null}
+                <IconButton
+                  compact
+                  aria-label="New saved workflow"
+                  title="New saved workflow"
                   onClick={() => {
                     setDraft(EMPTY_DRAFT);
                     setDraftError(null);
                     setDraftOpen(true);
                   }}
                 >
-                  New
-                </ToolbarButton>
-              }
-            >
-              {savedWorkflows.length === 0 ? <PanelMessage className="px-0 py-0">No saved workflows yet.</PanelMessage> : null}
-              {savedWorkflows.map((item) => (
-                <SurfacePanel key={item.id} muted className="px-3 py-2 shadow-none">
-                  <div className="truncate text-[13px] font-medium text-primary">{item.name}</div>
-                  {item.description ? <div className="mt-1 line-clamp-2 text-[12px] text-secondary">{item.description}</div> : null}
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <ToolbarButton onClick={() => void runSaved(item)}>Run</ToolbarButton>
-                    <ToolbarButton
-                      onClick={() => {
-                        setDraft(templateToDraft(item));
-                        setDraftError(null);
-                        setDraftOpen(true);
-                      }}
-                    >
-                      Edit
-                    </ToolbarButton>
-                    <ToolbarButton onClick={() => void deleteSaved(item)}>Delete</ToolbarButton>
-                  </div>
-                </SurfacePanel>
-              ))}
-              {draftOpen ? (
-                <SurfacePanel muted className="space-y-2 px-3 py-3 shadow-none">
-                  <div className="text-[13px] font-medium text-primary">{draft.id ? 'Edit saved workflow' : 'New saved workflow'}</div>
-                  {draftError ? <Notice tone="danger">{draftError}</Notice> : null}
-                  <Field label="Name">
-                    <TextInput value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
-                  </Field>
-                  <Field label="Description">
-                    <TextInput
-                      value={draft.description}
-                      onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Agent model">
-                    <TextInput
-                      placeholder="opencode-go/deepseek-v4-flash"
-                      value={draft.agentModel}
-                      onChange={(event) => setDraft((current) => ({ ...current, agentModel: event.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Allowed tools">
-                    <TextInput
-                      placeholder="read,bash"
-                      value={draft.allowedToolsText}
-                      onChange={(event) => setDraft((current) => ({ ...current, allowedToolsText: event.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Args JSON">
-                    <Textarea
-                      className="h-24 font-mono text-[12px]"
-                      value={draft.argsText}
-                      onChange={(event) => setDraft((current) => ({ ...current, argsText: event.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Script">
-                    <Textarea
-                      className="h-40 font-mono text-[12px]"
-                      value={draft.script}
-                      onChange={(event) => setDraft((current) => ({ ...current, script: event.target.value }))}
-                    />
-                  </Field>
-                  <div className="flex flex-wrap gap-2">
-                    <ToolbarButton onClick={() => void saveDraft()}>Save</ToolbarButton>
-                    <ToolbarButton
-                      onClick={() => {
-                        setDraftOpen(false);
-                        setDraftError(null);
-                      }}
-                    >
-                      Close
-                    </ToolbarButton>
-                  </div>
-                </SurfacePanel>
+                  <PlusIcon />
+                </IconButton>
+                <IconButton compact aria-label="Refresh workflow library" title="Refresh workflow library" onClick={() => void refresh()}>
+                  <RefreshIcon />
+                </IconButton>
+              </div>
+            </div>
+            <div className="mt-3 flex-1 overflow-hidden">
+              {loading && !hasLibraryItems ? (
+                <div className="border-b border-border-subtle py-2 text-[12px] text-dim">Loading workflows...</div>
               ) : null}
-            </RailSubsection>
-            <RailSubsection title="Examples">
-              {templates.map((item) => (
-                <SurfacePanel key={item.id} muted className="px-3 py-2 shadow-none">
-                  <div className="truncate text-[13px] font-medium text-primary">{item.name}</div>
-                  {item.description ? <div className="mt-1 line-clamp-2 text-[12px] text-secondary">{item.description}</div> : null}
-                  <div className="mt-2 flex gap-2">
-                    <ToolbarButton onClick={() => void saveTemplate(item)}>Save</ToolbarButton>
-                  </div>
-                </SurfacePanel>
+              <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] border-y border-border-subtle py-1.5 text-[11px] uppercase text-dim">
+                <span>Type</span>
+                <span>Name</span>
+                <span className="text-right">State</span>
+              </div>
+              {!loading && workflows.length === 0 ? (
+                <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] border-b border-border-subtle py-1.5 text-[12px]">
+                  <span className="text-dim">Run</span>
+                  <span className="truncate text-secondary">No active or completed runs</span>
+                  <span className="text-right text-dim">0</span>
+                </div>
+              ) : null}
+              {workflows.map((workflow) => (
+                <WorkflowCard
+                  key={workflow.id}
+                  workflow={workflow}
+                  selected={workflow.id === selectedId}
+                  onSelect={() => {
+                    setSelectedId(workflow.id);
+                    setSelectedTemplateId(null);
+                  }}
+                />
               ))}
-            </RailSubsection>
+              {!loading && savedWorkflows.length === 0 ? (
+                <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] border-b border-border-subtle py-1.5 text-[12px]">
+                  <span className="text-dim">Saved</span>
+                  <span className="truncate text-secondary">No reusable workflows</span>
+                  <span className="text-right text-dim">0</span>
+                </div>
+              ) : null}
+              {savedWorkflows.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={cx(
+                    'grid w-full grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2 border-b border-border-subtle py-1.5 text-left text-[12px] hover:bg-surface-hover',
+                    selectedId === null && selectedTemplate?.id === item.id && 'bg-accent/10',
+                  )}
+                  onClick={() => {
+                    setSelectedId(null);
+                    setSelectedTemplateId(item.id);
+                  }}
+                >
+                  <span className="text-dim">Saved</span>
+                  <span className="min-w-0 truncate font-medium text-primary">{item.name}</span>
+                  <span className="text-right text-secondary">ready</span>
+                </button>
+              ))}
+              {templates.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={cx(
+                    'grid w-full grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2 border-b border-border-subtle py-1.5 text-left text-[12px] hover:bg-surface-hover',
+                    selectedId === null && selectedTemplate?.id === item.id && 'bg-accent/10',
+                  )}
+                  onClick={() => {
+                    setSelectedId(null);
+                    setSelectedTemplateId(item.id);
+                  }}
+                >
+                  <span className="text-dim">Template</span>
+                  <span className="min-w-0 truncate font-medium text-primary">{item.name}</span>
+                  <span className="text-right text-secondary">stock</span>
+                </button>
+              ))}
+            </div>
+            {draftOpen ? (
+              <SurfacePanel muted className="space-y-2 px-3 py-3 shadow-none">
+                <div className="text-[13px] font-medium text-primary">{draft.id ? 'Edit saved workflow' : 'New saved workflow'}</div>
+                {draftError ? <Notice tone="danger">{draftError}</Notice> : null}
+                <Field label="Name">
+                  <TextInput value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
+                </Field>
+                <Field label="Description">
+                  <TextInput
+                    value={draft.description}
+                    onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
+                  />
+                </Field>
+                <Field label="Agent model">
+                  <TextInput
+                    placeholder="opencode-go/deepseek-v4-flash"
+                    value={draft.agentModel}
+                    onChange={(event) => setDraft((current) => ({ ...current, agentModel: event.target.value }))}
+                  />
+                </Field>
+                <Field label="Allowed tools">
+                  <TextInput
+                    placeholder="read,bash"
+                    value={draft.allowedToolsText}
+                    onChange={(event) => setDraft((current) => ({ ...current, allowedToolsText: event.target.value }))}
+                  />
+                </Field>
+                <Field label="Args JSON">
+                  <Textarea
+                    className="h-24 font-mono text-[12px]"
+                    value={draft.argsText}
+                    onChange={(event) => setDraft((current) => ({ ...current, argsText: event.target.value }))}
+                  />
+                </Field>
+                <Field label="Script">
+                  <Textarea
+                    className="h-40 font-mono text-[12px]"
+                    value={draft.script}
+                    onChange={(event) => setDraft((current) => ({ ...current, script: event.target.value }))}
+                  />
+                </Field>
+                <div className="flex flex-wrap gap-2">
+                  <ToolbarButton onClick={() => void saveDraft()}>Save</ToolbarButton>
+                  <ToolbarButton
+                    onClick={() => {
+                      setDraftOpen(false);
+                      setDraftError(null);
+                    }}
+                  >
+                    Close
+                  </ToolbarButton>
+                </div>
+              </SurfacePanel>
+            ) : null}
           </section>
 
-          <section className="min-w-0 space-y-4 border-t border-border-subtle pt-4">
+          <section className="flex min-w-0 flex-col border-t border-border-subtle pt-3">
             <div className="flex min-h-7 items-center justify-between gap-3">
-              <h2 className="min-w-0 truncate text-[16px] font-semibold text-primary">{selected?.name ?? 'Details'}</h2>
+              <h2 className="min-w-0 truncate text-[16px] font-semibold text-primary">
+                {selected?.name ?? selectedTemplate?.name ?? 'Details'}
+              </h2>
+              {selectedTemplate ? (
+                <div className="flex items-center gap-2">
+                  <ToolbarButton onClick={() => void runSaved(selectedTemplate)}>Run</ToolbarButton>
+                  <IconButton
+                    compact
+                    aria-label={`Save ${selectedTemplate.name}`}
+                    title={`Save ${selectedTemplate.name}`}
+                    onClick={() => void saveTemplate(selectedTemplate)}
+                  >
+                    <SaveIcon />
+                  </IconButton>
+                </div>
+              ) : null}
             </div>
-            {!selected ? (
-              <AppPageEmptyState align="start" title="Select a workflow" body="Run details, agents, and logs are shown here." />
+            {!selected && !selectedTemplate ? (
+              <div className="mt-3 grid max-w-xl gap-0 text-[12px]">
+                {[
+                  ['Status', 'No run selected'],
+                  ['Agents', '0 total'],
+                  ['Events', '0 recorded'],
+                  ['Result', 'Waiting for a workflow run'],
+                ].map(([label, value]) => (
+                  <div key={label} className="grid grid-cols-[7rem_minmax(0,1fr)] border-b border-border-subtle py-2">
+                    <span className="text-dim">{label}</span>
+                    <span className="truncate text-secondary">{value}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {selectedTemplate ? (
+              <div className="mt-3 grid flex-1 grid-rows-[auto_minmax(0,1fr)] gap-3">
+                <div className="grid gap-0 text-[12px] md:grid-cols-2">
+                  {[
+                    ['Type', savedWorkflows.some((item) => item.id === selectedTemplate.id) ? 'Saved workflow' : 'Template'],
+                    ['Model', selectedTemplate.model || 'default'],
+                    ['Working directory', selectedTemplate.cwd || 'current conversation'],
+                    ['Args', selectedTemplate.args ? 'configured' : 'empty'],
+                    ['Updated', formatDate(selectedTemplate.updatedAt) || 'bundled'],
+                    ['Script', `${selectedTemplate.script.split('\n').length} lines`],
+                  ].map(([label, value]) => (
+                    <div key={label} className="grid grid-cols-[8rem_minmax(0,1fr)] border-b border-border-subtle py-2">
+                      <span className="text-dim">{label}</span>
+                      <span className="truncate text-secondary">{value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1fr)_16rem]">
+                  <SurfacePanel muted className="min-h-0 overflow-hidden shadow-none">
+                    <PanelHeader
+                      title="Script Preview"
+                      meta={`${selectedTemplate.script.split('\n').length} lines`}
+                      className="px-3 py-2"
+                    />
+                    <CodeBlock compact className="max-h-[26rem] overflow-auto border-0 bg-transparent p-3 text-secondary">
+                      {selectedTemplate.script}
+                    </CodeBlock>
+                  </SurfacePanel>
+                  <SurfacePanel muted className="shadow-none">
+                    <PanelHeader title="Run Setup" meta="ready" className="px-3 py-2" />
+                    <div className="space-y-2 px-3 py-2 text-[12px]">
+                      <div className="grid grid-cols-[5rem_minmax(0,1fr)] border-b border-border-subtle py-1.5">
+                        <span className="text-dim">Agents</span>
+                        <span className="text-secondary">
+                          {selectedTemplate.agentDefaults && typeof selectedTemplate.agentDefaults === 'object' ? 'configured' : 'default'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-[5rem_minmax(0,1fr)] border-b border-border-subtle py-1.5">
+                        <span className="text-dim">Source</span>
+                        <span className="truncate text-secondary">{selectedTemplate.id}</span>
+                      </div>
+                      <div className="grid grid-cols-[5rem_minmax(0,1fr)] border-b border-border-subtle py-1.5">
+                        <span className="text-dim">Status</span>
+                        <span className="text-secondary">Selectable from library</span>
+                      </div>
+                      {selectedTemplate.description ? <p className="pt-1 text-secondary">{selectedTemplate.description}</p> : null}
+                    </div>
+                  </SurfacePanel>
+                </div>
+              </div>
             ) : null}
             {selected ? (
-              <div className="space-y-4">
+              <div className="mt-3 space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <Pill tone={statusTone(selected.status)}>{selected.status}</Pill>
                   <span className="text-[12px] text-secondary">{selected.cwd}</span>
