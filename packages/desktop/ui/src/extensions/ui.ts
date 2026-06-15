@@ -1,5 +1,5 @@
 export type { ActivityTreeItem } from '../activity/activityTree';
-export { type ActivityTreeDropPosition, ActivityTreeView } from '../activity/ActivityTreeView';
+export { type ActivityTreeDropPosition, ActivityTreeView, type ActivityTreeViewProps } from '../activity/ActivityTreeView';
 export { buildDesktopWebSocketUrl } from '../client/endpoints';
 export { buildApiPath } from '../client/apiBase';
 export { ChatRailComposer, type ChatRailComposerProps } from '../components/chat/ChatRailComposer';
@@ -195,4 +195,5 @@ export { lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
 export { type ExtensionChatContextMessage, ExtensionChatRail, type ExtensionChatRailProps } from './ExtensionChatRail';
 export { streamExtensionRouteSse } from './extensionRouteStream';
 export { type ExtensionSettingsPanelRegistration, SettingsPanelHost } from './SettingsPanelHost';
+export { SidebarTreeSection, type SidebarTreeSectionProps } from './SidebarTreeSection';
 export type { ExtensionSurfaceProps } from './types';

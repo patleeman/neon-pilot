@@ -32,6 +32,7 @@ A polished prompt-presets extension should expose the actual workflow:
 - Use the host left sidebar body for the preset navigator when the extension owns preset selection. Contribute a `views[].location: "sidebar"` view and connect it through `contributes.nav[].sidebarView`.
 - Do not put a second left navigation rail inside the main page when the host sidebar can hold that navigation model.
 - Sidebar view: use `SidebarSection`, `SidebarRow`, and `SidebarMessage` from `@neon-pilot/extensions/ui`. They encode the native left-sidebar section style: uppercase accent section label, compact icon actions, no card/list panel chrome, and rows that scan like thread rows.
+- For hierarchical sidebar data, use `SidebarTreeSection` instead of hand-rolling nested rows. It combines the native sidebar section chrome with the Pierre-backed `ActivityTreeView`.
 - Do not add visible filter tabs such as `All` / `Enabled` unless the user has enough real data and a workflow reason to need them.
 - Starter templates should be compact sidebar rows. Prefer title-only rows with a subdued row action; avoid descriptions, tag subtitles, large bordered cards, or marketing grids.
 - Main route: editor/detail surface similar to file or knowledge editing. Selecting a preset in the sidebar opens it in the main editor area.

@@ -9,11 +9,13 @@ import { ActivityTreeRow } from './ActivityTreeRow';
 
 export type ActivityTreeDropPosition = 'before' | 'after';
 
-interface ActivityTreeViewProps {
+export interface ActivityTreeViewProps {
   items: readonly ActivityTreeItem[];
   activeItemId?: string | null;
+  ariaLabel?: string;
   className?: string;
   style?: CSSProperties;
+  emptyMessage?: ReactNode;
   canDragItem?: (item: ActivityTreeItem) => boolean;
   canDropItem?: (
     draggedItem: ActivityTreeItem,
@@ -58,8 +60,10 @@ export function getActivityTreeRowPaddingLeftRem(item: ActivityTreeItem, depth: 
 export function ActivityTreeView({
   items,
   activeItemId,
+  ariaLabel = 'Threads',
   className,
   style,
+  emptyMessage = 'No threads yet.',
   canDragItem,
   canDropItem,
   collapsedGroupItemIds,
@@ -248,12 +252,12 @@ export function ActivityTreeView({
   }
 
   if (pathModel.entries.length === 0) {
-    return <PanelMessage className="px-4 py-2">No threads yet.</PanelMessage>;
+    return <PanelMessage className="px-4 py-2">{emptyMessage}</PanelMessage>;
   }
 
   return (
     <div className={className} style={style} onClick={contextMenu ? closeContextMenu : undefined}>
-      <div role="tree" aria-label="Threads" className="space-y-px px-1 py-0.5">
+      <div role="tree" aria-label={ariaLabel} className="space-y-px px-1 py-0.5">
         {visibleEntries.map(({ item, path }) => {
           const depth = Math.max(0, path.split('/').filter(Boolean).length - 1);
           const active = path === selectedPath;

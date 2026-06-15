@@ -70,6 +70,27 @@ function renderTree(renderItems: ActivityTreeItem[] = items, activeItemId?: stri
 }
 
 describe('ActivityTreeView', () => {
+  it('supports extension-owned tree labels and empty state copy', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    try {
+      act(() => {
+        root.render(<ActivityTreeView items={[]} ariaLabel="Prompt preset tree" emptyMessage="No presets yet." />);
+      });
+      expect(container.textContent).toContain('No presets yet.');
+
+      act(() => {
+        root.render(<ActivityTreeView items={items} ariaLabel="Prompt preset tree" />);
+      });
+      expect(container.querySelector('[role="tree"]')?.getAttribute('aria-label')).toBe('Prompt preset tree');
+    } finally {
+      act(() => root.unmount());
+      container.remove();
+    }
+  });
+
   it('uses compact sidebar indentation for nested rows', () => {
     const group: ActivityTreeItem = { id: 'group:test', kind: 'group', title: 'Project', status: 'idle' };
     const child: ActivityTreeItem = { ...items[0]!, parentId: group.id };
