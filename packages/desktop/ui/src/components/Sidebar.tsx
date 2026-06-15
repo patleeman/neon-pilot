@@ -3276,10 +3276,11 @@ export function Sidebar() {
         cwd: explicitCwd,
         replace: location.pathname === DRAFT_CONVERSATION_ROUTE,
         focusComposer: true,
+        existingSessions: sessions,
       });
       setDraftCwd(explicitCwd);
     },
-    [location.pathname, navigate],
+    [location.pathname, navigate, sessions],
   );
 
   const handleOpenThreadSwitcher = useCallback(() => {

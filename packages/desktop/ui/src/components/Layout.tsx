@@ -1907,6 +1907,7 @@ export function Layout() {
           initialComposerText: draft?.initialComposerText,
           initialPromptText: draft?.initialPromptText,
           replace: location.pathname === DRAFT_CONVERSATION_ROUTE,
+          existingSessions: sessions,
         });
         return true;
       } catch (error) {
@@ -1920,7 +1921,7 @@ export function Layout() {
         creatingNewConversationRef.current = false;
       }
     },
-    [location.pathname, navigate],
+    [location.pathname, navigate, sessions],
   );
 
   const lastWorkbenchRouteRef = useRef<{ pathname: string; search: string }>({ pathname: '/conversations/new', search: '' });

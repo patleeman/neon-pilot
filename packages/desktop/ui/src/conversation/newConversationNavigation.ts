@@ -2,8 +2,12 @@ import type { NavigateFunction } from 'react-router-dom';
 
 import { api } from '../client/api';
 import { ensureConversationTabOpen } from '../session/sessionTabs';
+import type { SessionMeta } from '../shared/types';
+import { normalizeConversationGroupCwd } from './conversationCwdGroups';
 import { markConversationInitialPromptAlreadySubmitted } from './conversationInitialState';
 import { primeCreatedConversationOpenCaches } from './conversationSessionLifecycle';
+import { isNeutralChatCwdPath } from './conversationCwdPresentation';
+import { NEW_CONVERSATION_TITLE, normalizeConversationTitle } from './conversationTitle';
 import {
   clearDraftConversationAttachments,
   clearDraftConversationComposer,
@@ -34,6 +38,7 @@ export interface StartDraftConversationInput {
   focusComposer?: boolean;
   initialComposerText?: string | null;
   initialPromptText?: string | null;
+  existingSessions?: readonly SessionMeta[] | null;
 }
 
 function focusComposerAfterNavigation(): void {
@@ -41,6 +46,30 @@ function focusComposerAfterNavigation(): void {
   window.requestAnimationFrame(() => {
     window.requestAnimationFrame(dispatch);
   });
+}
+
+function getSessionWorkspaceCwd(session: Pick<SessionMeta, 'cwd' | 'workspaceCwd'>): string {
+  const workspaceCwd = session.workspaceCwd?.trim();
+  if (workspaceCwd && !isNeutralChatCwdPath(workspaceCwd)) {
+    return normalizeConversationGroupCwd(workspaceCwd);
+  }
+
+  const cwd = session.cwd?.trim();
+  return cwd && !isNeutralChatCwdPath(cwd) ? normalizeConversationGroupCwd(cwd) : '';
+}
+
+function isReusableNewConversationSession(session: SessionMeta): boolean {
+  return session.messageCount === 0 && normalizeConversationTitle(session.title) === NEW_CONVERSATION_TITLE;
+}
+
+export function findReusableNewConversationForCwd(
+  sessions: readonly SessionMeta[] | null | undefined,
+  cwd: string | null | undefined,
+): SessionMeta | null {
+  const normalizedCwd = normalizeConversationGroupCwd(cwd);
+  return (
+    sessions?.find((session) => isReusableNewConversationSession(session) && getSessionWorkspaceCwd(session) === normalizedCwd) ?? null
+  );
 }
 
 /**
@@ -53,6 +82,27 @@ export async function startNewConversation(input: StartDraftConversationInput): 
   const thinkingLevel = readDraftConversationThinkingLevel();
   const initialPromptText = input.initialPromptText?.trim() ?? input.initialComposerText?.trim() ?? '';
   const shouldFocusComposer = input.focusComposer === true && !initialPromptText;
+  const reusableSession =
+    initialPromptText.length === 0 ? findReusableNewConversationForCwd(input.existingSessions, cwd) : null;
+
+  if (reusableSession) {
+    clearDraftConversationAttachments();
+    clearDraftConversationComposer();
+    clearDraftConversationContextDocs();
+    clearDraftConversationCwd();
+    clearDraftConversationModelPreferences();
+    ensureConversationTabOpen(reusableSession.id);
+    input.navigate(`/conversations/${encodeURIComponent(reusableSession.id)}`, {
+      replace: input.replace,
+      state: {
+        focusComposer: shouldFocusComposer,
+      },
+    });
+    if (shouldFocusComposer) {
+      focusComposerAfterNavigation();
+    }
+    return reusableSession.id;
+  }
 
   try {
     const created = await api.createLiveSession(cwd || undefined, initialPromptText || undefined, {
