@@ -46,21 +46,21 @@ export function TracesModelUsage({
 
   return (
     <SurfacePanel className="overflow-hidden">
-      <PanelHeader title="Model Usage & Cost" meta="Last 24h" />
+      <PanelHeader title="Model Usage" meta="Last 24h" />
 
-      <DashboardGrid columns={2}>
+      <DashboardGrid columns={2} divide="both">
         {/* Cell 1: Tokens by model */}
         <DashboardGridCell>
           <SectionLabel tone="muted" className="mb-3 block">
             Tokens by Model
           </SectionLabel>
-          <div className="flex gap-4 flex-wrap pb-3 mb-3 border-b border-border-subtle">
-            <MetricTile value={formatNumber(totalTokens)} label="Total" tone="accent" size="lg" appearance="plain" />
-            <MetricTile value={formatNumber(tokensInput)} label="Input" size="lg" appearance="plain" />
-            <MetricTile value={formatNumber(tokensOutput)} label="Output" size="lg" appearance="plain" />
-            <MetricTile value={formatNumber(tokensCached)} label="Cache Read" tone="success" size="lg" appearance="plain" />
-            <MetricTile value={formatNumber(tokensCachedWrite)} label="Cache Write" tone="warning" size="lg" appearance="plain" />
-            <MetricTile value={cacheHitRateLabel} label="Cached Share" tone="accent" size="lg" appearance="plain" />
+          <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-2 border-b border-border-subtle pb-3 sm:grid-cols-3">
+            <MetricTile value={formatNumber(totalTokens)} label="Total" tone="accent" appearance="plain" align="left" />
+            <MetricTile value={formatNumber(tokensInput)} label="Input" appearance="plain" align="left" />
+            <MetricTile value={formatNumber(tokensOutput)} label="Output" appearance="plain" align="left" />
+            <MetricTile value={formatNumber(tokensCached)} label="Cache Read" tone="success" appearance="plain" align="left" />
+            <MetricTile value={formatNumber(tokensCachedWrite)} label="Cache Write" tone="warning" appearance="plain" align="left" />
+            <MetricTile value={cacheHitRateLabel} label="Cached Share" tone="accent" appearance="plain" align="left" />
           </div>
           {models.map((m) => {
             const hitRate = cacheByModel[m.modelId];
@@ -83,31 +83,17 @@ export function TracesModelUsage({
           <SectionLabel tone="muted" className="mb-3 block">
             Cost Breakdown
           </SectionLabel>
-          <div className="flex flex-wrap gap-1 mb-3">
-            {(() => {
-              const top = models.slice(0, 4);
-              const totalCost = top.reduce((s, m) => s + m.cost, 0);
-              const colors = [
-                'from-[#6c8aff] to-[#4a6ae0]',
-                'from-[#ff9f0a] to-[#e08500]',
-                'from-[#4cd964] to-[#2db84d]',
-                'from-[#ff6b6b] to-[#e04a4a]',
-              ];
-              return top.map((m, i) => {
-                const flexSize = totalCost > 0 ? Math.max((m.cost / totalCost) * 4, 0.3) : 1;
-                return (
-                  <div
-                    key={m.modelId}
-                    className={`bg-gradient-to-br ${colors[i % colors.length]} rounded-lg p-2.5 min-h-[50px] flex flex-col justify-end`}
-                    style={{ flex: flexSize }}
-                  >
-                    <div className="text-[11px] font-semibold text-white/90">{m.modelId}</div>
-                    <div className="text-[10px] font-mono text-white/70">${m.cost.toFixed(2)}</div>
-                    <div className="text-[9px] text-white/50">{formatNumber(m.tokens)} tok</div>
-                  </div>
-                );
-              });
-            })()}
+          <div className="space-y-1">
+            {models.slice(0, 6).map((m) => (
+              <BarRow
+                key={m.modelId}
+                label={<span className="model-tag">{m.modelId}</span>}
+                value={`$${m.cost.toFixed(2)}`}
+                pct={m.cost / Math.max(...models.map((model) => model.cost), 0.01)}
+                tone="warning"
+                badge={`${formatNumber(m.tokens)} tok`}
+              />
+            ))}
           </div>
         </DashboardGridCell>
 
@@ -116,9 +102,9 @@ export function TracesModelUsage({
           <SectionLabel tone="muted" className="mb-3 block">
             Throughput
           </SectionLabel>
-          <div className="flex gap-2 mb-3">
-            <MetricTile className="flex-1" value={`${totalThroughputTokensPerSec}`} label="tok/s avg" tone="accent" />
-            <MetricTile className="flex-1" value={`${peakThroughputTokensPerSec}`} label="tok/s peak" tone="warning" />
+          <div className="mb-3 grid grid-cols-2 gap-3">
+            <MetricTile value={`${totalThroughputTokensPerSec}`} label="tok/s avg" tone="accent" appearance="plain" align="left" />
+            <MetricTile value={`${peakThroughputTokensPerSec}`} label="tok/s peak" tone="warning" appearance="plain" align="left" />
           </div>
           {throughput.length > 0 ? (
             throughput.map((t) => (
@@ -153,7 +139,7 @@ export function TracesModelUsage({
             pct={Math.min((tokensInput + tokensCached) / Math.max(totalTokens, 1), 1)}
             tone="success"
           />
-          <div className="mt-2 pt-2 border-t border-border-subtle text-[11px] text-dim">
+          <div className="mt-2 border-t border-border-subtle pt-2 text-[11px] text-dim">
             {cacheHitRate > 0 ? <span className="text-warning">{cacheHitRateLabel}</span> : null} of prompt input read from cache
           </div>
         </DashboardGridCell>

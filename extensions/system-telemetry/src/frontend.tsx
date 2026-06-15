@@ -89,7 +89,6 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
       <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
         <AppPageIntro
           title="Telemetry"
-          summary="Monitoring, usage, and runtime instrumentation across recent agent activity."
           actions={
             <div className="flex items-center gap-2">
               <TimeRangeSelector value={range} onChange={setRange} />
