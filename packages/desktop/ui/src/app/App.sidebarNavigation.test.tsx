@@ -297,6 +297,31 @@ describe('App sidebar conversation navigation workflow', () => {
     expect(screen.getByText('Second persisted thread')).toBeTruthy();
   });
 
+  it('reopens the most recently archived conversation and restores its route', async () => {
+    ({ root } = await renderAppAt('/conversations/conv-second'));
+
+    await screen.findByText('Conversation route conv-second');
+    await expectActiveSidebarRow('conv-second');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { action: 'toggle-conversation-archive' } }));
+    });
+    await flushApp();
+
+    await screen.findByText('Conversation route conv-first');
+    expect(window.location.pathname).toBe('/conversations/conv-first');
+    expect(document.querySelector('[data-sidebar-session-id="conv-second"]')).toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { action: 'reopen-closed-conversation' } }));
+    });
+    await flushApp();
+
+    await screen.findByText('Conversation route conv-second');
+    expect(window.location.pathname).toBe('/conversations/conv-second');
+    await expectActiveSidebarRow('conv-second');
+  });
+
   it('opens settings from app chrome and hydrates the settings route after reload', async () => {
     ({ root } = await renderAppAt('/conversations/conv-first'));
 
