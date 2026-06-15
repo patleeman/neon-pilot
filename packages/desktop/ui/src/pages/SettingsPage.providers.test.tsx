@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { SettingsPage } from '../../../../../extensions/system-settings/src/SettingsPage';
+import { SettingsPage, SettingsSidebar } from '../../../../../extensions/system-settings/src/SettingsPage';
 import { useAppEvents, useSseConnection } from '../app/contexts';
 import { api } from '../client/api';
 import { useApi } from '../hooks/useApi';
@@ -57,6 +57,34 @@ function renderPage(sectionId?: string) {
   return { container };
 }
 
+function renderSettingsSidebar(hash = '') {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const execute = vi.fn().mockResolvedValue(true);
+
+  act(() => {
+    root.render(
+      <SettingsSidebar
+        pa={{ commands: { execute } }}
+        context={{
+          route: '/settings',
+          pathname: '/settings',
+          search: '',
+          hash,
+          params: {},
+          query: {},
+          conversationId: null,
+          cwd: null,
+        }}
+      />,
+    );
+  });
+
+  mountedRoots.push(root);
+  return { container, execute };
+}
+
 async function flushAsyncWork() {
   await act(async () => {
     await Promise.resolve();
@@ -96,6 +124,14 @@ function queryProviderPicker(container: HTMLElement): HTMLSelectElement {
     throw new Error('Expected provider picker');
   }
   return picker;
+}
+
+function querySettingsTocLink(container: HTMLElement, sectionId: string): HTMLAnchorElement {
+  const link = container.querySelector(`nav[aria-label="Settings sections"] a[href="#${sectionId}"]`);
+  if (!(link instanceof HTMLAnchorElement)) {
+    throw new Error(`Expected settings table-of-contents link for ${sectionId}`);
+  }
+  return link;
 }
 
 function click(button: HTMLButtonElement) {
@@ -144,6 +180,7 @@ describe('SettingsPage provider model editor', () => {
     removeProviderCredentialMock = vi.spyOn(api, 'removeProviderCredential');
     maintainTelemetryDbMock = vi.spyOn(api, 'maintainTelemetryDb');
     vi.clearAllMocks();
+    window.history.replaceState(null, '', '/settings');
 
     vi.mocked(useTheme).mockReturnValue({
       theme: 'studio-dark',
@@ -436,6 +473,23 @@ describe('SettingsPage provider model editor', () => {
       });
     }
     document.body.innerHTML = '';
+  });
+
+  it('navigates between settings sections through the rendered settings sidebar', async () => {
+    const { container, execute } = renderSettingsSidebar('#settings-workspace');
+    await flushAsyncWork();
+
+    const workspaceLink = querySettingsTocLink(container, 'settings-workspace');
+    expect(workspaceLink.getAttribute('aria-current')).toBe('location');
+
+    const providersLink = querySettingsTocLink(container, 'settings-providers');
+
+    act(() => {
+      providersLink.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    });
+    await flushAsyncWork();
+
+    expect(execute).toHaveBeenCalledWith('app.navigate', { to: '/settings#settings-providers' });
   });
 
   it('adds a model directly to a picked built-in provider without saving the provider first', async () => {
