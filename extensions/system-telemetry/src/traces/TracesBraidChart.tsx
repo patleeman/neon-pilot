@@ -10,7 +10,7 @@ export function TracesBraidChart({ data }: { data: TraceTokenDaily[] }) {
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader
-          title={`🧶 Time Series — Last ${data?.length ?? 0} Days`}
+          title={`Time Series — Last ${data?.length ?? 0} Days`}
           meta="Need 2+ data points"
           metaClassName="bg-transparent px-0"
         />
@@ -51,7 +51,7 @@ export function TracesBraidChart({ data }: { data: TraceTokenDaily[] }) {
   return (
     <SurfacePanel className="overflow-hidden">
       <PanelHeader
-        title={`🧶 Time Series — Last ${data.length} Days`}
+        title={`Time Series — Last ${data.length} Days`}
         meta={`${hasErrors ? '4' : '3'} metrics overlaid`}
         metaClassName="bg-transparent px-0"
       />

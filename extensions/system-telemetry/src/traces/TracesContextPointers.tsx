@@ -12,7 +12,7 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
   if (!data || data.summary.totalSuggested === 0) {
     return (
       <SurfacePanel className="overflow-hidden">
-        <PanelHeader title="🔍 Suggested Context Usage" meta="No data yet" metaClassName="bg-transparent px-0" />
+        <PanelHeader title="Suggested Context Usage" meta="No data yet" metaClassName="bg-transparent px-0" />
         <div className="p-6 text-center text-[12px] text-dim">Tracks how often agents inspect suggested related-conversation pointers.</div>
       </SurfacePanel>
     );
@@ -23,7 +23,7 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
 
   return (
     <SurfacePanel className="overflow-hidden">
-      <PanelHeader title="🔍 Suggested Context Usage" meta={`${summary.usageRate}% of sessions used suggestions`} />
+      <PanelHeader title="Suggested Context Usage" meta={`${summary.usageRate}% of sessions used suggestions`} />
 
       <DashboardGrid columns={4} divide="x" className="border-b border-border-subtle">
         <MetricTile

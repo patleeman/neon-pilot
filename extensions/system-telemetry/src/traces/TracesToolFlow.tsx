@@ -17,7 +17,7 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
   if (!data || (data.transitions.length === 0 && data.coOccurrences.length === 0)) {
     return (
       <SurfacePanel className="overflow-hidden">
-        <PanelHeader title="🔀 Tool Flow & Trajectories" meta="No tool sequences yet" metaClassName="bg-transparent px-0" />
+        <PanelHeader title="Tool Flow & Trajectories" meta="No tool sequences yet" metaClassName="bg-transparent px-0" />
         <PanelMessage align="center" className="p-6">
           Appears after multiple tool calls are recorded.
         </PanelMessage>
@@ -28,7 +28,7 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
   return (
     <SurfacePanel className="overflow-hidden">
       <PanelHeader
-        title="🔀 Tool Flow & Trajectories"
+        title="Tool Flow & Trajectories"
         meta={`${data.transitions.length} transitions · ${data.coOccurrences.length} co-occurrences`}
       />
       <DashboardGrid columns={2}>

@@ -20,7 +20,7 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
   if (!loop) {
     return (
       <SurfacePanel className="overflow-hidden">
-        <PanelHeader title="🔄 Agent Loop Health" meta="No data yet" metaClassName="bg-transparent px-0" />
+        <PanelHeader title="Agent Loop Health" meta="No data yet" metaClassName="bg-transparent px-0" />
         <PanelMessage align="center" className="p-6">
           Loop metrics appear after agent runs complete.
         </PanelMessage>
@@ -30,7 +30,7 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
 
   return (
     <SurfacePanel className="overflow-hidden">
-      <PanelHeader title="🔄 Agent Loop Health" meta="Selected range" />
+      <PanelHeader title="Agent Loop Health" meta="Selected range" />
       <div className="p-4">
         {/* Loop stats grid */}
         <StatGrid className="mb-4 !grid-cols-2 gap-2.5 lg:!grid-cols-4">
