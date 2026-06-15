@@ -1,6 +1,5 @@
 import {
   api,
-  AppPageIntro,
   AppPageLayout,
   type AppTelemetryLogBundleExport,
   type AppTelemetryLogDiagnostics,
@@ -70,15 +69,15 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import { useLocation } from 'react-router-dom';
 
 const SETTINGS_QUICK_LINKS = [
-  { id: 'settings-appearance', label: 'Appearance', summary: 'Theme, accent, and visual defaults' },
-  { id: 'settings-providers', label: 'Providers', summary: 'Models, overrides, and credentials' },
-  { id: 'settings-conversation', label: 'Conversation', summary: 'Model and behavior defaults' },
-  { id: 'settings-workspace', label: 'Workspace', summary: 'Default cwd and local context' },
-  { id: 'settings-commands', label: 'Commands', summary: 'Command palette actions and keyboard shortcuts' },
-  { id: 'settings-security', label: 'Security', summary: 'Secret storage and extension credentials' },
-  { id: 'settings-extensions', label: 'Extensions', summary: 'Preferences declared by installed extensions' },
-  { id: 'settings-desktop', label: 'Desktop', summary: 'App behavior, remotes, and keyboard shortcuts' },
-] as const satisfies readonly { id: string; label: string; summary: string }[];
+  { id: 'settings-appearance', label: 'Appearance' },
+  { id: 'settings-providers', label: 'Providers' },
+  { id: 'settings-conversation', label: 'Conversation' },
+  { id: 'settings-workspace', label: 'Workspace' },
+  { id: 'settings-commands', label: 'Commands' },
+  { id: 'settings-security', label: 'Security' },
+  { id: 'settings-extensions', label: 'Extensions' },
+  { id: 'settings-desktop', label: 'Desktop' },
+] as const satisfies readonly { id: string; label: string }[];
 
 type SettingsQuickLink = { id: string; label: ReactNode; summary?: ReactNode; children?: readonly SettingsQuickLink[] };
 type SettingsQuickLinkId = string;
@@ -423,7 +422,6 @@ function ThemeDefaultSelect({
 function SettingsSection({
   id,
   label,
-  description,
   children,
   className,
 }: {
@@ -444,11 +442,10 @@ function SettingsSection({
     <section
       id={id}
       style={{ order: sectionOrder === -1 ? 1000 : sectionOrder }}
-      className={cx('scroll-mt-24 space-y-8 border-t border-border-subtle pt-10 first:border-t-0 first:pt-0', className)}
+      className={cx('scroll-mt-20 space-y-5 border-t border-border-subtle/80 pt-7 first:border-t-0 first:pt-0', className)}
     >
-      <div className="max-w-2xl space-y-2">
-        <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.03em] text-primary">{label}</h2>
-        {description ? <p className="text-[14px] leading-6 text-secondary">{description}</p> : null}
+      <div className="max-w-2xl space-y-1">
+        <h2 className="text-[22px] font-semibold leading-snug text-primary">{label}</h2>
       </div>
       {children}
     </section>
@@ -1218,20 +1215,15 @@ function SettingsTableOfContents({
         aria-current={active ? 'location' : undefined}
       >
         <span className={cx('settings-page-toc-label block font-medium', nested ? 'text-[12px]' : 'text-[13px]')}>{item.label}</span>
-        {item.summary ? (
-          <span className={cx('settings-page-toc-summary mt-0.5 block text-[11px] leading-5', active ? 'text-primary/75' : 'text-dim')}>
-            {item.summary}
-          </span>
-        ) : null}
       </a>
     );
   };
 
   return (
     <aside className="settings-page-toc">
-      <nav aria-label="Settings sections" className="settings-page-toc-nav space-y-3">
+      <nav aria-label="Settings sections" className="settings-page-toc-nav space-y-2">
         <div className="ui-app-page-toc-title">On this page</div>
-        <div className="settings-page-toc-list space-y-2">
+        <div className="settings-page-toc-list space-y-1">
           {items.map((item) => (
             <div key={item.id} className="space-y-1">
               {renderLink(item)}
@@ -1464,24 +1456,6 @@ export function DesktopConnectionsSettingsPanel() {
   );
 }
 
-function formatInjectedExtensionDescription(entries: UnifiedSettingsEntry[]): ReactNode {
-  const extensionIds = [...new Set(entries.map((entry) => entry.extensionId).filter(Boolean))];
-  if (extensionIds.length === 0) return null;
-
-  return (
-    <>
-      Injected by{' '}
-      {extensionIds.map((extensionId, index) => (
-        <span key={extensionId}>
-          {index > 0 ? ', ' : null}
-          <span className="font-mono text-primary">{extensionId}</span>
-        </span>
-      ))}
-      .
-    </>
-  );
-}
-
 function ExtensionSettingsSection({
   includeExtensionIds,
   excludeExtensionIds,
@@ -1637,7 +1611,6 @@ function ExtensionSettingsSection({
               key={extensionId}
               id={settingsExtensionAnchorId(extensionId)}
               title={extensionLabels?.get(extensionId) ?? formatExtensionFallbackLabel(extensionId)}
-              description={formatInjectedExtensionDescription(entries)}
             >
               {groupedEntries.map(([group, groupEntries]) => (
                 <div key={group} className="space-y-3">
@@ -1678,7 +1651,7 @@ function ExtensionSettingsSection({
   return (
     <div className={separated ? 'space-y-0 border-t border-border-subtle/70 pt-6' : 'space-y-0'}>
       {[...grouped.entries()].map(([group, entries]) => (
-        <SettingsPanel key={group} title={group} description={formatInjectedExtensionDescription(entries)}>
+        <SettingsPanel key={group} title={group}>
           {entries.map((entry) => (
             <SettingsField
               key={entry.key}
@@ -3077,9 +3050,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
             ) : undefined
           }
         >
-          <AppPageIntro title="Settings" summary="Appearance, conversation defaults, workspace, skills, providers, and desktop behavior." />
+          <header className="flex min-h-8 items-center">
+            <h1 className="text-[24px] font-semibold leading-tight text-primary">Settings</h1>
+          </header>
 
-          <div className="flex flex-col gap-12">
+          <div className="flex flex-col gap-8">
             <SettingsSection id="settings-appearance" label="Appearance" description="Theme, accent, and visual defaults.">
               <SettingsPanel title="Theme" description="Choose Auto to follow the OS.">
                 <div className="space-y-4">

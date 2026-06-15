@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 
-import { Button, cx, FieldHint, FieldLabel, IconButton, Select, Switch, TextInput } from '../components/ui';
+import { cx, FieldHint, FieldLabel, IconButton, Select, Switch, TextInput } from '../components/ui';
 import type { UnifiedSettingsEntry } from '../shared/types';
 
 const EMOJI_OPTIONS = ['👍', '👎', '✅', '❓', '💡', '📋', '❤️', '🚀', '👀', '🙌', '🙏', '⚠️'];
@@ -21,10 +21,12 @@ export function SettingsField({ entry, value, onChange }: SettingsFieldProps) {
   };
 
   return (
-    <div className="ui-field py-3 first:pt-0">
-      <FieldLabel>{label}</FieldLabel>
-      {entry.description ? <FieldHint>{entry.description}</FieldHint> : null}
-      {renderControl(entry, currentValue, handleChange)}
+    <div className="grid gap-2 border-b border-border-subtle/60 py-2.5 last:border-b-0 sm:grid-cols-[minmax(10rem,14rem)_minmax(0,1fr)] sm:items-start">
+      <div className="min-w-0 pt-1">
+        <FieldLabel>{label}</FieldLabel>
+        {entry.description ? <FieldHint className="line-clamp-2">{entry.description}</FieldHint> : null}
+      </div>
+      <div className="min-w-0">{renderControl(entry, currentValue, handleChange)}</div>
     </div>
   );
 }
@@ -107,10 +109,10 @@ function EmojiLabelListControl({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <div className="space-y-2">
         {rows.map((item, index) => (
-          <div key={index} className="grid max-w-[640px] grid-cols-[92px_minmax(0,500px)_28px] items-center gap-2">
+          <div key={index} className="grid max-w-[640px] grid-cols-[76px_minmax(0,500px)_28px] items-center gap-1.5">
             <Select
               aria-label={`Emoji for reply action ${index + 1}`}
               value={item.emoji}
@@ -158,13 +160,14 @@ function EmojiLabelListControl({
           </div>
         ))}
       </div>
-      <Button
-        variant="ghost"
-        className="px-3 py-1.5 text-[12px]"
+      <IconButton
+        compact
+        aria-label="Add reply action"
+        title="Add"
         onClick={() => updateItems([...rows, { emoji: EMOJI_OPTIONS[0], label: '' }])}
       >
-        Add action
-      </Button>
+        +
+      </IconButton>
     </div>
   );
 }
