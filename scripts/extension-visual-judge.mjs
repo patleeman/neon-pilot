@@ -17,6 +17,14 @@ function arg(name, fallback = '') {
   return index >= 0 ? (args[index + 1] ?? 'true') : fallback;
 }
 
+function firstArg(names, fallback = '') {
+  for (const name of names) {
+    const value = arg(name);
+    if (value) return value;
+  }
+  return fallback;
+}
+
 function boolArg(name) {
   return arg(name, 'false') === 'true';
 }
@@ -70,7 +78,10 @@ function readImageInput(file) {
 }
 
 function screenshotItemsFromSummary(summary) {
-  const items = [...(Array.isArray(summary.baseline) ? summary.baseline : []), ...(Array.isArray(summary.generated) ? summary.generated : [])];
+  const items = [
+    ...(Array.isArray(summary.baseline) ? summary.baseline : []),
+    ...(Array.isArray(summary.generated) ? summary.generated : []),
+  ];
   return items
     .map((item) => ({
       route: typeof item?.route === 'string' ? item.route : '',
@@ -186,7 +197,12 @@ function aggregateResults(results) {
   return {
     models: results.map((result) => result.model),
     usableVisualJudges: usable.map((result) => result.model),
-    decision: usable.length > 0 && usable.every((result) => result.judge?.decision === 'pass') ? 'pass' : failures.length > 0 ? 'fail' : 'borderline',
+    decision:
+      usable.length > 0 && usable.every((result) => result.judge?.decision === 'pass')
+        ? 'pass'
+        : failures.length > 0
+          ? 'fail'
+          : 'borderline',
     results: results.map((result) => ({
       model: result.model,
       status: result.status,
@@ -199,7 +215,7 @@ function aggregateResults(results) {
 }
 
 export async function runVisualJudges() {
-  const captureDir = resolve(repoRoot, arg('capture', 'artifacts/extension-quality/settings-calibration'));
+  const captureDir = resolve(repoRoot, firstArg(['capture', 'capture-dir'], 'artifacts/extension-quality/settings-calibration'));
   const outDir = resolve(arg('out', resolve(captureDir, 'visual-judges')));
   const baseUrl = arg('base-url', process.env.MODEL_GATEWAY_BASE_URL ?? 'http://127.0.0.1:8766/v1');
   const apiKey = arg('api-key', process.env.MODEL_GATEWAY_API_KEY ?? 'visual-judge');

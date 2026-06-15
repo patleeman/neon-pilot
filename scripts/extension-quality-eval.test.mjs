@@ -66,6 +66,8 @@ describe('extension quality eval assets', () => {
     expect(runner).toContain("ALLOWED_NAV_SECTIONS = new Set(['primary', 'settings'])");
     expect(runner).toContain('manifestContributionProblems');
     expect(runner).toContain('Choose the most user-friendly input');
+    expect(runner).toContain('Choose the right host surface before laying out controls');
+    expect(runner).toContain('Do not build a second left navigation/sidebar inside the main page');
     expect(runner).toContain('Do not use a textarea as a shortcut');
     expect(runner).toContain('durable shell visible even when empty');
     expect(runner).toContain('create/edit must remain in the list/detail or inspector layout');
@@ -119,6 +121,7 @@ describe('extension quality eval assets', () => {
     expect(visualRubric).toContain('Text Economy');
     expect(visualRubric).toContain('Action Chrome');
     expect(visualRubric).toContain('Control Taste');
+    expect(visualRubric).toContain('Surface Selection');
     expect(visualRubric).toContain('Density & Layout');
     expect(visualRubric).toContain('no_image_access');
     expect(visualRubric).toContain('title_description_noise');
@@ -126,8 +129,11 @@ describe('extension quality eval assets', () => {
     expect(visualRubric).toContain('modal_crud_flow');
     expect(visualRubric).toContain('wrong_input_control');
     expect(visualRubric).toContain('full_page_crud_form');
+    expect(visualRubric).toContain('wrong_surface_selection');
     expect(patterns).toContain('CRUD Management Page');
     expect(patterns).toContain('Prompt Presets Page');
+    expect(patterns).toContain('views[].location: "sidebar"');
+    expect(patterns).toContain('contributes.nav[].sidebarView');
     expect(patterns).toContain('Never use comma-separated text inputs');
     expect(patterns).toContain('resource rows, table rows, or subdued action rows');
     expect(patterns).toContain('Do not replace the whole surface with a full-page form');
@@ -150,6 +156,7 @@ describe('extension quality eval assets', () => {
     expect(visualRunner).toContain('generated-screenshots');
     expect(visualJudgeRunner).toContain('input_image');
     expect(visualJudgeRunner).toContain('visual-capture-summary.json');
+    expect(visualJudgeRunner).toContain("firstArg(['capture', 'capture-dir']");
     expect(visualJudgeRunner).toContain('opencode-go/kimi-k2.5');
     expect(visualJudgeRunner).toContain('opencode-go/mimo-v2.5');
     expect(visualJudgeRunner).toContain('opencode-go/qwen3.6-plus');
