@@ -134,6 +134,7 @@ describe('Layout workbench toggle', () => {
     window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
     const refreshListener = vi.fn();
     window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
+    setExtensionCommandContext('workbench.hasActiveFile', true);
     renderLayout('/conversations/conv-1?workspaceFile=%2Frepo%2FREADME.md');
 
     act(() => {

@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.20** — patch release.
+**v0.11.21** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.20
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.21
 
 Highlights in this train:
 
-- Fixes packaged OpenAI Desktop Plugin reinstall by bundling the Codex plugin template into extension build output.
-- Repairs Codex plugin registration so the Neon Pilot plugin, MCP server, and delegated-agent tools can be refreshed from Settings.
-- Adds wait-any delegated-run orchestration for parallel Neon Pilot subagent investigations.
-- Renames the local Responses-compatible integration to AI Gateway across Settings, docs, website copy, and Codex provider metadata.
-- Keeps extension packaging docs aligned with static `templates/` build behavior for packaged desktop releases.
+- Hardens routed extension pages so Settings and installable extension routes open through the expected most-specific manifest view.
+- Improves the installable-extension visual evaluation workflow with direct zip imports, registry reloads, replacement of existing installed copies, and zip metadata in capture manifests.
+- Refines Dynamic Workflows first-launch UI into a denser component-library surface with a compact workflow library, template details, and script/run setup panels.
+- Tightens app and extension visual consistency across Settings, Extensions, Telemetry, Automations, Workflows, and installable extension pages with screenshot-backed visual-eval coverage.
+- Refreshes Pi runtime packages to `^0.79.4` for the 0.11.21 patch train.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

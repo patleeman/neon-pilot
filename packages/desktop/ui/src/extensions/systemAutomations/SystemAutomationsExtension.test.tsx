@@ -92,7 +92,7 @@ describe('AutomationsPage', () => {
     );
 
     expect(container.textContent).toContain('No automations yet');
-    expect(container.textContent).toContain('Create one to run scheduled or conversation-bound agent work.');
+    expect(container.textContent).toContain('Use New automation for scheduled or conversation-bound agent work.');
     expect(container.textContent).toContain('All');
     expect(container.querySelector('input[placeholder="Search automations…"]')).not.toBeNull();
     expect(Array.from(container.querySelectorAll('th')).map((cell) => cell.textContent)).toEqual(['Name', 'Schedule', 'Status', 'Actions']);

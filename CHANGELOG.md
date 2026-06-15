@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.21 — 2026-06-15
+
+### Highlights
+
+- Hardens routed extension pages so Settings and installable extension routes open through the expected most-specific manifest view.
+- Improves the installable-extension visual evaluation workflow with direct zip imports, registry reloads, replacement of existing installed copies, and zip metadata in capture manifests.
+- Refines Dynamic Workflows first-launch UI into a denser component-library surface with a compact workflow library, template details, and script/run setup panels.
+- Tightens app and extension visual consistency across Settings, Extensions, Telemetry, Automations, Workflows, and installable extension pages with screenshot-backed visual-eval coverage.
+- Refreshes Pi runtime packages to `^0.79.4` for the 0.11.21 patch train.
+
+### Notes
+
+- 42 commits since the previous release.
+
 ## 0.11.20 — 2026-06-14
 
 ### Highlights

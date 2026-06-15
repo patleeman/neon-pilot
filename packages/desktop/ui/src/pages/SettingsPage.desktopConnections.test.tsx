@@ -102,9 +102,9 @@ describe('DesktopConnectionsSettingsPanel', () => {
     const { container } = renderPanel();
     await flushAsyncWork();
 
-    expect(container.textContent).toContain('Install downloaded updates automatically');
+    expect(container.textContent).toContain('Auto-install updates');
     expect(container.textContent).toContain('Update path');
-    expect(container.textContent).toContain('Start Neon Pilot when you sign in');
+    expect(container.textContent).toContain('Start on sign in');
   });
 });
 
@@ -369,12 +369,11 @@ describe('CommandsSettingsSection', () => {
     });
     await flushAsyncWork();
 
-    const rows = Array.from(container.querySelectorAll('.grid.gap-3.py-3'));
-    const hostComposerRow = rows.find((row) => row.textContent?.includes('Focus Composer'));
+    const rows = Array.from(container.querySelectorAll('.settings-page-control-row'));
     const threadRow = rows.find((row) => row.textContent?.includes('Open thread palette'));
     const commandRow = rows.find((row) => row.textContent?.includes('Open command palette'));
-    expect(hostComposerRow?.textContent).toContain('composer.focus');
-    expect(hostComposerRow?.textContent).toContain('host');
+    expect(threadRow).toBeDefined();
+    expect(commandRow).toBeDefined();
     expect(threadRow?.textContent).toContain('⌘/Ctrl + p');
     expect(threadRow?.textContent).not.toContain('⌘/Ctrl + Shift + p');
     expect(commandRow?.textContent).toContain('⌘/Ctrl + Shift + p');
@@ -397,7 +396,7 @@ describe('CommandsSettingsSection', () => {
     );
   });
 
-  it('shows host commands as read-only in the command shortcut catalog', async () => {
+  it('keeps host commands out of the editable command shortcut catalog', async () => {
     installDesktopBridge();
     mocks.readDesktopAppPreferences.mockResolvedValue({
       available: true,
@@ -420,20 +419,9 @@ describe('CommandsSettingsSection', () => {
     await flushAsyncWork();
 
     expect(keybindingsSpy).toHaveBeenCalled();
-    const rows = Array.from(container.querySelectorAll('.grid.gap-3.py-3'));
-    const focusComposerRow = rows.find((row) => row.textContent?.includes('Focus Composer'));
-    expect(focusComposerRow?.textContent).toContain('composer.focus');
-    expect(focusComposerRow?.textContent).toContain('host');
-
-    const shortcutCapture = focusComposerRow?.querySelector<HTMLButtonElement>('.ui-shortcut-capture');
-    expect(shortcutCapture).toBeInstanceOf(HTMLButtonElement);
-    expect(shortcutCapture?.disabled).toBe(true);
-    expect(shortcutCapture?.textContent).toContain('⌘/Ctrl + Alt + L');
-    expect(focusComposerRow?.querySelector('button[aria-label^="Clear shortcut"]')).toBeNull();
-    expect(focusComposerRow?.querySelector('button[aria-label^="Enable shortcut"]')).toBeNull();
-
-    shortcutCapture?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    shortcutCapture?.dispatchEvent(new KeyboardEvent('keydown', { key: 'K', metaKey: true, bubbles: true }));
+    const rows = Array.from(container.querySelectorAll('.settings-page-control-row'));
+    const focusComposerRow = rows.find((row) => row.textContent?.includes('Focus composer'));
+    expect(focusComposerRow).toBeUndefined();
     expect(updateSpy).not.toHaveBeenCalled();
   });
 });
