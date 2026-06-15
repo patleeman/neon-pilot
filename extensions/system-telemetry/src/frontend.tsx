@@ -19,11 +19,12 @@ import {
   AppPageLayout,
   AppPageSection,
   Button,
+  CenteredLoadingState,
   ErrorState,
-  LoadingState,
+  MetricTile,
   SegmentedControl,
-  Stat,
   StatGrid,
+  StatusDot,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
 import { useState } from 'react';
@@ -67,11 +68,7 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
   } = useTracesData(range, pa);
 
   if (loading && !summary) {
-    return (
-      <div className="flex h-full items-center justify-center px-6">
-        <LoadingState label="Loading trace data…" />
-      </div>
-    );
+    return <CenteredLoadingState label="Loading trace data…" />;
   }
 
   if (error) {
@@ -162,50 +159,53 @@ function PulseRow({ summary }: { summary: NonNullable<ReturnType<typeof useTrace
     {
       label: 'Traced Sessions',
       value: String(summary.activeSessions),
-      cls: 'text-accent',
+      tone: 'accent' as const,
       trend: `${summary.activeSessions > 0 ? '✦' : '—'} observed in range`,
       dot: summary.activeSessions > 0,
     },
     {
       label: 'Runs Today',
       value: String(summary.runsToday),
-      cls: 'text-primary',
+      tone: 'default' as const,
       trend: `${summary.toolCalls} tool calls`,
     },
     {
       label: 'Total Cost',
       value: `$${summary.totalCost.toFixed(2)}`,
-      cls: 'text-warning',
+      tone: 'warning' as const,
       trend: `${(summary.tokensTotal / 1000).toFixed(0)}K tokens`,
     },
     {
       label: 'Tokens Today',
       value: formatTokens(summary.tokensTotal),
-      cls: 'text-success',
+      tone: 'success' as const,
       trend: `in ${formatTokens(summary.tokensInput)} · cached ${formatTokens(summary.tokensCached)} · out ${formatTokens(summary.tokensOutput)}`,
     },
     {
       label: 'Tool Errors',
       value: String(summary.toolErrors),
-      cls: summary.toolErrors > 0 ? 'text-danger' : 'text-primary',
+      tone: summary.toolErrors > 0 ? ('danger' as const) : ('default' as const),
       trend: `${((summary.toolErrors / Math.max(summary.toolCalls, 1)) * 100).toFixed(1)}% error rate`,
       dot: summary.toolErrors > 0,
     },
   ];
 
   return (
-    <StatGrid className="!grid-cols-1 overflow-hidden rounded-xl border border-border-subtle bg-surface sm:!grid-cols-2 lg:!grid-cols-5">
+    <StatGrid compact className="!grid-cols-1 sm:!grid-cols-2 lg:!grid-cols-5">
       {cards.map((card) => (
-        <Stat
+        <MetricTile
           key={card.label}
           label={card.label}
           value={card.value}
           detail={card.trend}
-          valueClassName={`font-mono text-[24px] ${card.cls}`}
-          className="relative flex min-w-0 flex-col gap-2 border-border-subtle px-4 py-4 sm:[&:not(:first-child)]:border-l max-sm:border-t max-sm:first:border-t-0"
+          tone={card.tone}
+          align="left"
+          appearance="plain"
+          valueClassName="font-mono tabular-nums"
+          className="relative min-w-0"
         >
-          {card.dot && <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-accent animate-pulse" />}
-        </Stat>
+          {card.dot ? <StatusDot tone={card.tone === 'danger' ? 'danger' : 'accent'} size="xs" className="absolute right-1 top-1" /> : null}
+        </MetricTile>
       ))}
     </StatGrid>
   );
