@@ -14,10 +14,10 @@ import {
   DataTableActionGroup,
   DataTableBody,
   DataTableCell,
+  DataTableEmptyRow,
   DataTableHead,
   DataTableHeaderCell,
   DataTableRow,
-  EmptyState,
   ErrorState,
   Field,
   FilterToolbar,
@@ -40,7 +40,7 @@ import {
   TextInput,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface ConversationOption {
   id: string;
@@ -644,7 +644,7 @@ function FormSection({
   id: EditorSectionId;
   title: string;
   description: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <SettingsSection id={id} title={title} description={description} className="scroll-mt-8 xl:grid-cols-[11rem_minmax(0,1fr)]">
@@ -828,6 +828,7 @@ function TaskActionsMenu({
 
 function AutomationTable({
   tasks,
+  empty,
   logById,
   busy,
   nowMs,
@@ -837,6 +838,7 @@ function AutomationTable({
   onDeleteTask,
 }: {
   tasks: ScheduledTaskSummary[];
+  empty?: ReactNode;
   logById: Record<string, string>;
   busy: string | null;
   nowMs: number;
@@ -868,6 +870,11 @@ function AutomationTable({
           </DataTableRow>
         </DataTableHead>
         <DataTableBody>
+          {tasks.length === 0 ? (
+            <DataTableEmptyRow colSpan={4} cellClassName="px-6 py-10 text-left">
+              {empty ?? 'No automations.'}
+            </DataTableEmptyRow>
+          ) : null}
           {tasks.map((task) => {
             const scope = taskScopeText(task);
             const taskBusy = busy === `run:${task.id}` || busy === `delete:${task.id}`;
@@ -955,6 +962,16 @@ function AutomationTable({
         </DataTableBody>
       </DataTable>
     </section>
+  );
+}
+
+function AutomationTableEmptyContent({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
+  return (
+    <div className="mx-auto flex max-w-[34rem] flex-col items-start gap-2 text-left">
+      <div className="text-[13px] font-semibold text-primary">{title}</div>
+      <div className="text-[12px] leading-5 text-secondary">{body}</div>
+      {action ? <div className="pt-1">{action}</div> : null}
+    </div>
   );
 }
 
@@ -1397,7 +1414,12 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                     </ToolbarButton>
                   </div>
                 ) : (
-                  <ToolbarButton type="button" className="self-start" disabled={busy === 'create-chat'} onClick={() => void createWithChat()}>
+                  <ToolbarButton
+                    type="button"
+                    className="self-start"
+                    disabled={busy === 'create-chat'}
+                    onClick={() => void createWithChat()}
+                  >
                     {busy === 'create-chat' ? 'Opening chat…' : 'Create with chat'}
                   </ToolbarButton>
                 )}
@@ -1822,76 +1844,53 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
 
         {!editorOpen && (
           <div className="space-y-4">
-            {tasks.length === 0 ? (
-              <EmptyState
-                title="No automations yet"
-                body="Create one to run scheduled or conversation-bound agent work."
-                className="py-10"
-              />
-            ) : (
-              <div className="space-y-4">
-                <FilterToolbar
-                  filters={
-                    <SegmentedControl
-                      value={filter}
-                      options={AUTOMATION_FILTER_OPTIONS}
-                      ariaLabel="Filter automations"
-                      className="flex-wrap"
-                      onChange={setFilter}
-                    />
-                  }
-                  search={
-                    <SearchInput
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder="Search automations…"
-                      className="w-72 bg-surface/40 text-[13px]"
-                    />
-                  }
+            <FilterToolbar
+              filters={
+                <SegmentedControl
+                  value={filter}
+                  options={AUTOMATION_FILTER_OPTIONS}
+                  ariaLabel="Filter automations"
+                  className="flex-wrap"
+                  onChange={setFilter}
                 />
+              }
+              search={
+                <SearchInput
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search automations…"
+                  className="w-72 bg-surface/40 text-[13px]"
+                />
+              }
+            />
 
-                {filteredTasks.length === 0 ? (
-                  <EmptyState title="No matching automations" body="Adjust the filter or search query." />
-                ) : shouldSplitSections ? (
-                  <div className="space-y-6">
-                    {visibleCurrentTasks.length > 0 ? (
-                      <AutomationTable
-                        tasks={visibleCurrentTasks}
-                        logById={logById}
-                        busy={busy}
-                        nowMs={nowMs}
-                        onRunTask={(taskId) => void runTask(taskId)}
-                        onOpenEditor={openEditor}
-                        onToggleLog={(taskId) => void toggleLog(taskId)}
-                        onDeleteTask={(task) => void deleteTask(task)}
-                      />
-                    ) : (
-                      <div className="py-2 text-[13px] text-secondary">No current automations.</div>
-                    )}
-
-                    {visiblePastDueTasks.length > 0 ? (
-                      <AppPageSection
-                        title="Past due"
-                        meta={<span className="text-warning">{visiblePastDueTasks.length} shown</span>}
-                        className="border-t border-border-subtle/70 pt-4"
-                        titleClassName="text-[18px]"
-                      >
-                        <AutomationTable
-                          tasks={visiblePastDueTasks}
-                          logById={logById}
-                          busy={busy}
-                          nowMs={nowMs}
-                          onRunTask={(taskId) => void runTask(taskId)}
-                          onOpenEditor={openEditor}
-                          onToggleLog={(taskId) => void toggleLog(taskId)}
-                          onDeleteTask={(task) => void deleteTask(task)}
-                        />
-                      </AppPageSection>
-                    ) : null}
-                  </div>
-                ) : (
+            {filteredTasks.length === 0 ? (
+              <AutomationTable
+                tasks={[]}
+                empty={
+                  tasks.length === 0 ? (
+                    <AutomationTableEmptyContent
+                      title="No automations yet"
+                      body="Create one to run scheduled or conversation-bound agent work."
+                      action={<ToolbarButton onClick={() => openEditor()}>New automation</ToolbarButton>}
+                    />
+                  ) : (
+                    <AutomationTableEmptyContent title="No matching automations" body="Adjust the filter or search query." />
+                  )
+                }
+                logById={logById}
+                busy={busy}
+                nowMs={nowMs}
+                onRunTask={(taskId) => void runTask(taskId)}
+                onOpenEditor={openEditor}
+                onToggleLog={(taskId) => void toggleLog(taskId)}
+                onDeleteTask={(task) => void deleteTask(task)}
+              />
+            ) : shouldSplitSections ? (
+              <div className="space-y-6">
+                {visibleCurrentTasks.length > 0 ? (
                   <AutomationTable
-                    tasks={filter === 'past-due' ? visiblePastDueTasks : filteredTasks}
+                    tasks={visibleCurrentTasks}
                     logById={logById}
                     busy={busy}
                     nowMs={nowMs}
@@ -1900,8 +1899,41 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                     onToggleLog={(taskId) => void toggleLog(taskId)}
                     onDeleteTask={(task) => void deleteTask(task)}
                   />
+                ) : (
+                  <div className="py-2 text-[13px] text-secondary">No current automations.</div>
                 )}
+
+                {visiblePastDueTasks.length > 0 ? (
+                  <AppPageSection
+                    title="Past due"
+                    meta={<span className="text-warning">{visiblePastDueTasks.length} shown</span>}
+                    className="border-t border-border-subtle/70 pt-4"
+                    titleClassName="text-[18px]"
+                  >
+                    <AutomationTable
+                      tasks={visiblePastDueTasks}
+                      logById={logById}
+                      busy={busy}
+                      nowMs={nowMs}
+                      onRunTask={(taskId) => void runTask(taskId)}
+                      onOpenEditor={openEditor}
+                      onToggleLog={(taskId) => void toggleLog(taskId)}
+                      onDeleteTask={(task) => void deleteTask(task)}
+                    />
+                  </AppPageSection>
+                ) : null}
               </div>
+            ) : (
+              <AutomationTable
+                tasks={filter === 'past-due' ? visiblePastDueTasks : filteredTasks}
+                logById={logById}
+                busy={busy}
+                nowMs={nowMs}
+                onRunTask={(taskId) => void runTask(taskId)}
+                onOpenEditor={openEditor}
+                onToggleLog={(taskId) => void toggleLog(taskId)}
+                onDeleteTask={(task) => void deleteTask(task)}
+              />
             )}
           </div>
         )}

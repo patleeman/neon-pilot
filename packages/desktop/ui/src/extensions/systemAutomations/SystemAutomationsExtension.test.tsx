@@ -84,6 +84,21 @@ describe('AutomationsPage', () => {
     expect(container.textContent).toContain('Workday start');
   });
 
+  it('preserves the automation table shell when no automations exist', async () => {
+    const { container } = await renderPage(
+      createPa({
+        list: vi.fn(async () => []),
+      }),
+    );
+
+    expect(container.textContent).toContain('No automations yet');
+    expect(container.textContent).toContain('Create one to run scheduled or conversation-bound agent work.');
+    expect(container.textContent).toContain('All');
+    expect(container.querySelector('input[placeholder="Search automations…"]')).not.toBeNull();
+    expect(Array.from(container.querySelectorAll('th')).map((cell) => cell.textContent)).toEqual(['Name', 'Schedule', 'Status', 'Actions']);
+    expect(container.querySelector('td[colspan="4"]')).not.toBeNull();
+  });
+
   it('starts an automation run from the row action', async () => {
     const pa = createPa();
     const { container } = await renderPage(pa);
