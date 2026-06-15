@@ -25,6 +25,11 @@ describe('system-settings manifest', () => {
     expect(views.find((v: { id: string }) => v.id === 'settings')).toBeDefined();
     expect(views.find((v: { id: string }) => v.id === 'providers')).toBeDefined();
     expect(views.find((v: { id: string }) => v.id === 'desktop')).toBeDefined();
+    expect(views.find((v: { id: string; location?: string }) => v.id === 'settings-sidebar')).toMatchObject({
+      location: 'sidebar',
+      component: 'SettingsSidebar',
+    });
+    expect(manifest.contributes.nav).toContainEqual(expect.objectContaining({ id: 'settings-nav', sidebarView: 'settings-sidebar' }));
   });
 
   it('does not declare a settings keybinding that duplicates the desktop menu shortcut', () => {

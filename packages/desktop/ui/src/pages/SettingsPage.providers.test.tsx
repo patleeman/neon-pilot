@@ -47,22 +47,13 @@ function renderPage(sectionId?: string) {
     root.render(
       <MemoryRouter initialEntries={['/settings']}>
         <Routes>
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings" element={<SettingsPage sectionIds={sectionId ? [sectionId] : undefined} />} />
         </Routes>
       </MemoryRouter>,
     );
   });
 
   mountedRoots.push(root);
-  if (sectionId) {
-    const sectionLink = container.querySelector<HTMLAnchorElement>(`a[href="#${sectionId}"]`);
-    if (!(sectionLink instanceof HTMLAnchorElement)) {
-      throw new Error(`Expected settings link for ${sectionId}`);
-    }
-    act(() => {
-      sectionLink.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    });
-  }
   return { container };
 }
 

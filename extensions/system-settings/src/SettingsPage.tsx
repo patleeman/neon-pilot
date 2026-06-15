@@ -64,6 +64,7 @@ import {
   useTheme,
   formatKeyboardShortcutLabel,
 } from '@neon-pilot/extensions/settings';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -549,6 +550,63 @@ function buildExtensionSettingsQuickLinks({
     })
     .sort((a, b) => a.sortGroup - b.sortGroup || a.sortOrder - b.sortOrder || String(a.label).localeCompare(String(b.label)))
     .map(({ id, label }) => ({ id, label }));
+}
+
+function useSettingsNavigation(sectionIds?: readonly SettingsQuickLinkId[]) {
+  const extensionRegistry = useExtensionRegistry();
+  const { data: settingsSchemaForToc } = useApi<UnifiedSettingsEntry[]>(api.settingsSchema as never);
+  const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
+  const visibleSectionIds = useMemo(() => (sectionIds ? new Set(sectionIds) : null), [sectionIds]);
+  const extensionSettingsQuickLinks = useMemo(
+    () =>
+      buildExtensionSettingsQuickLinks({
+        schema: settingsSchemaForToc,
+        settingsComponents: extensionRegistry.settingsComponents,
+        extensions: extensionRegistry.extensions,
+      }),
+    [extensionRegistry.extensions, extensionRegistry.settingsComponents, settingsSchemaForToc],
+  );
+  const settingsQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
+    if (extensionSettingsQuickLinks.length === 0) {
+      return SETTINGS_QUICK_LINKS;
+    }
+    return SETTINGS_QUICK_LINKS.map((item) =>
+      item.id === 'settings-extensions' ? { ...item, children: extensionSettingsQuickLinks } : item,
+    );
+  }, [extensionSettingsQuickLinks]);
+  const shellQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
+    return desktopEnvironment?.isElectron || isDesktopShell()
+      ? settingsQuickLinks
+      : settingsQuickLinks.filter((item) => item.id !== 'settings-desktop');
+  }, [desktopEnvironment?.isElectron, settingsQuickLinks]);
+  const visibleQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
+    return visibleSectionIds ? shellQuickLinks.filter((item) => visibleSectionIds.has(item.id)) : shellQuickLinks;
+  }, [shellQuickLinks, visibleSectionIds]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    readDesktopEnvironment()
+      .then((environment) => {
+        if (!cancelled) {
+          setDesktopEnvironment(environment);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDesktopEnvironment(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return {
+    settingsNavLinks: sectionIds ? visibleQuickLinks : shellQuickLinks,
+    visibleSectionIds,
+  };
 }
 
 function formatStartOnSystemStartSummary(state: DesktopAppPreferencesState | null): string {
@@ -1263,6 +1321,57 @@ function SettingsTableOfContents({
         </div>
       </nav>
     </aside>
+  );
+}
+
+async function navigateSettingsSidebar(pa: ExtensionSurfaceProps['pa'], sectionId: SettingsQuickLinkId) {
+  const to = `/settings#${sectionId}`;
+  const handled = await pa.commands?.execute?.('app.navigate', { to });
+  if (!handled && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('neon-pilot-desktop-navigate', { detail: { route: to } }));
+  }
+}
+
+export function SettingsSidebar({ pa, context }: ExtensionSurfaceProps) {
+  const { settingsNavLinks } = useSettingsNavigation();
+  const visibleTocLinks = useMemo(() => flattenSettingsQuickLinks(settingsNavLinks), [settingsNavLinks]);
+  const initialActiveId = readSettingsSectionIdFromHash(context.hash);
+  const [activeQuickLinkId, setActiveQuickLinkId] = useState<SettingsQuickLinkId>(
+    visibleTocLinks.some((item) => item.id === initialActiveId) ? initialActiveId : SETTINGS_QUICK_LINKS[0].id,
+  );
+  const [settingsQuery, setSettingsQuery] = useState('');
+
+  useEffect(() => {
+    const hashSectionId = readSettingsSectionIdFromHash(context.hash);
+    if (visibleTocLinks.some((item) => item.id === hashSectionId)) {
+      setActiveQuickLinkId(hashSectionId);
+      return;
+    }
+    if (!visibleTocLinks.some((item) => item.id === activeQuickLinkId)) {
+      setActiveQuickLinkId(visibleTocLinks[0]?.id ?? SETTINGS_QUICK_LINKS[0].id);
+    }
+  }, [activeQuickLinkId, context.hash, visibleTocLinks]);
+
+  return (
+    <div className="settings-sidebar flex h-full min-h-0 flex-col bg-transparent">
+      <div className="settings-sidebar-header px-4 pb-1 pt-1">
+        <div className="flex items-center gap-1">
+          <span className="settings-sidebar-title flex-1">Settings</span>
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+        <SettingsTableOfContents
+          items={settingsNavLinks}
+          activeId={activeQuickLinkId}
+          query={settingsQuery}
+          onQueryChange={setSettingsQuery}
+          onNavigate={(sectionId) => {
+            setActiveQuickLinkId(sectionId);
+            void navigateSettingsSidebar(pa, sectionId);
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -1999,7 +2108,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     error: providerAuthError,
     refetch: refetchProviderAuth,
   } = useApi(api.providerAuth);
-  const { data: settingsSchemaForToc } = useApi<UnifiedSettingsEntry[]>(api.settingsSchema as never);
   const [savingPreference, setSavingPreference] = useState<'model' | 'visionModel' | 'thinking' | 'serviceTier' | null>(null);
   const [modelError, setModelError] = useState<string | null>(null);
   const [defaultCwdDraft, setDefaultCwdDraft] = useState('');
@@ -2034,38 +2142,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
   const settingsScrollRef = useRef<HTMLDivElement | null>(null);
   const [activeQuickLinkId, setActiveQuickLinkId] = useState<SettingsQuickLinkId>(SETTINGS_QUICK_LINKS[0].id);
-  const [settingsQuery, setSettingsQuery] = useState('');
 
-  const visibleSectionIds = useMemo(() => (sectionIds ? new Set(sectionIds) : null), [sectionIds]);
+  const { settingsNavLinks, visibleSectionIds } = useSettingsNavigation(sectionIds);
   const extensionLabels = useMemo(() => {
     return new Map(extensionRegistry.extensions.map((extension) => [extension.id, extension.name]));
   }, [extensionRegistry.extensions]);
-  const extensionSettingsQuickLinks = useMemo(
-    () =>
-      buildExtensionSettingsQuickLinks({
-        schema: settingsSchemaForToc,
-        settingsComponents: extensionRegistry.settingsComponents,
-        extensions: extensionRegistry.extensions,
-      }),
-    [extensionRegistry.extensions, extensionRegistry.settingsComponents, settingsSchemaForToc],
-  );
-  const settingsQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
-    if (extensionSettingsQuickLinks.length === 0) {
-      return SETTINGS_QUICK_LINKS;
-    }
-    return SETTINGS_QUICK_LINKS.map((item) =>
-      item.id === 'settings-extensions' ? { ...item, children: extensionSettingsQuickLinks } : item,
-    );
-  }, [extensionSettingsQuickLinks]);
-  const shellQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
-    return desktopEnvironment?.isElectron || isDesktopShell()
-      ? settingsQuickLinks
-      : settingsQuickLinks.filter((item) => item.id !== 'settings-desktop');
-  }, [desktopEnvironment?.isElectron, settingsQuickLinks]);
-  const visibleQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
-    return visibleSectionIds ? shellQuickLinks.filter((item) => visibleSectionIds.has(item.id)) : shellQuickLinks;
-  }, [shellQuickLinks, visibleSectionIds]);
-  const settingsNavLinks = sectionIds ? visibleQuickLinks : shellQuickLinks;
   const visibleTocLinks = useMemo(() => flattenSettingsQuickLinks(settingsNavLinks), [settingsNavLinks]);
   const activeRootSectionId = useMemo<SettingsQuickLinkId>(() => {
     for (const item of settingsNavLinks) {
@@ -3095,19 +3176,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       <div ref={settingsScrollRef} className="h-full overflow-y-auto">
         <AppPageLayout
           shellClassName="settings-page-shell"
-          contentClassName="settings-page-workbench"
+          contentClassName="settings-page-main"
         >
-          {settingsNavLinks.length > 0 ? (
-            <div className="settings-page-rail">
-              <SettingsTableOfContents
-                items={settingsNavLinks}
-                activeId={activeQuickLinkId}
-                query={settingsQuery}
-                onQueryChange={setSettingsQuery}
-                onNavigate={navigateToSection}
-              />
-            </div>
-          ) : null}
           <div className="settings-page-detail flex min-w-0 flex-col gap-4">
             <header className="settings-page-header flex min-h-7 items-center border-b border-border-subtle/70 pb-2">
               <h1 className="text-[18px] font-semibold leading-tight text-primary">Settings</h1>

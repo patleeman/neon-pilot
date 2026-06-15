@@ -35,11 +35,11 @@ function buildUseApiResult<T>(data: T) {
   };
 }
 
-function renderPage(pathname: string): string {
+function renderPage(pathname: string, sectionIds?: React.ComponentProps<typeof SettingsPage>['sectionIds']): string {
   return renderToString(
     <MemoryRouter initialEntries={[pathname]}>
       <Routes>
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings" element={<SettingsPage sectionIds={sectionIds} />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -330,15 +330,8 @@ describe('SettingsPage', () => {
     const html = renderPage('/settings');
 
     expect(html).toContain('>Settings</h1>');
-    expect(html).toContain('aria-label="Settings sections"');
-    expect(html.indexOf('href="#settings-appearance"')).toBeLessThan(html.indexOf('href="#settings-providers"'));
-    expect(html.indexOf('href="#settings-providers"')).toBeLessThan(html.indexOf('href="#settings-conversation"'));
-    expect(html.indexOf('href="#settings-conversation"')).toBeLessThan(html.indexOf('href="#settings-workspace"'));
-    expect(html.indexOf('href="#settings-workspace"')).toBeLessThan(html.indexOf('href="#settings-commands"'));
-    expect(html.indexOf('href="#settings-commands"')).toBeLessThan(html.indexOf('href="#settings-security"'));
-    expect(html.indexOf('href="#settings-security"')).toBeLessThan(html.indexOf('href="#settings-extensions"'));
+    expect(html).not.toContain('aria-label="Settings sections"');
     expect(html).toContain('Theme');
-    expect(html).toContain('href="#settings-extensions"');
     expect(html).not.toContain('AGENTS.md files');
     expect(html).not.toContain('Image Probe');
     expect(html).not.toContain('Knowledge base');
@@ -364,7 +357,7 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('Runtime services');
     expect(html).not.toContain('Operational overview');
     expect(html).not.toContain('Restart daemon');
-    expect(html).toContain('href="#settings-providers"');
+    expect(html).toContain('Theme');
     expect(html).not.toContain('Related Views');
   });
 
@@ -383,7 +376,7 @@ describe('SettingsPage', () => {
       userAgent: 'Mozilla/5.0 Electron/31.0.2',
     });
 
-    const html = renderPage('/settings');
+    const html = renderPage('/settings', ['settings-desktop']);
 
     expect(html).toContain('Desktop');
   });

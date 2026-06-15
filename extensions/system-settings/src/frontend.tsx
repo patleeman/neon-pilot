@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { SettingsPage } from './SettingsPage';
+import { SettingsPage, SettingsSidebar } from './SettingsPage';
 import './frontend.css';
 
 type SettingsSectionId =
@@ -20,7 +20,7 @@ function SettingsSectionPage({ sectionIds }: { sectionIds: SettingsSectionId[] }
   return <SettingsPage sectionIds={sectionIds} />;
 }
 
-export { SettingsPage };
+export { SettingsPage, SettingsSidebar };
 
 export function ProviderSettingsPage() {
   return <SettingsSectionPage sectionIds={['settings-providers']} />;

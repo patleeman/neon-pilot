@@ -59,7 +59,8 @@
         "label": "Settings",
         "route": "/settings",
         "icon": "gear",
-        "section": "settings"
+        "section": "settings",
+        "sidebarView": "settings-sidebar"
       }
     ],
     "commands": [
@@ -327,6 +328,16 @@
         "location": "main",
         "route": "/settings/desktop",
         "component": "DesktopSettingsPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      },
+      {
+        "id": "settings-sidebar",
+        "title": "Settings",
+        "location": "sidebar",
+        "component": "SettingsSidebar",
+        "icon": "gear",
         "placement": "primary",
         "scope": "global",
         "activation": "on-route"

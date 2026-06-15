@@ -111,14 +111,14 @@ describe('SettingsPage — untested panel rendering', () => {
   });
 
   it('does not render extension manager management UI in settings', () => {
-    const html = renderPage('/settings');
+    const html = renderPage('/settings', ['settings-extensions']);
     expect(html).toContain('Extensions');
     expect(html).not.toContain('AGENTS.md files');
   });
 
-  it('renders the aggregate extensions quick link', () => {
+  it('renders the aggregate extensions section without the old in-page quick link', () => {
     const html = renderPage('/settings');
-    expect(html).toContain('href="#settings-extensions"');
+    expect(html).not.toContain('href="#settings-extensions"');
     expect(html).not.toContain('Installed extensions, imported plugin packages, instruction files, skills, tools, and extension settings.');
   });
 
@@ -129,7 +129,7 @@ describe('SettingsPage — untested panel rendering', () => {
   });
 
   it('renders the providers section heading', () => {
-    const html = renderPage('/settings');
+    const html = renderPage('/settings', ['settings-providers']);
     expect(html).toContain('Providers');
   });
 
