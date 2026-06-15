@@ -31,8 +31,9 @@ A polished prompt-presets extension should expose the actual workflow:
 
 - Use the host left sidebar body for the preset navigator when the extension owns preset selection. Contribute a `views[].location: "sidebar"` view and connect it through `contributes.nav[].sidebarView`.
 - Do not put a second left navigation rail inside the main page when the host sidebar can hold that navigation model.
-- Sidebar view: compact header, icon add/refresh actions, search, enabled/all filter, saved presets count, and compact starter-template rows when no saved presets exist.
-- Starter templates should be list rows with a small icon, title, one useful line, tags, and a chevron/action. Do not render them as large bordered cards or a marketing grid.
+- Sidebar view: match the native left-sidebar section style: uppercase accent section label, compact icon actions, no card/list panel chrome, and rows that scan like thread rows.
+- Do not add visible filter tabs such as `All` / `Enabled` unless the user has enough real data and a workflow reason to need them.
+- Starter templates should be compact sidebar rows. Prefer title-only rows with a subdued row action; avoid descriptions, tag subtitles, large bordered cards, or marketing grids.
 - Main route: editor/detail surface similar to file or knowledge editing. Selecting a preset in the sidebar opens it in the main editor area.
 - Main editor: compact toolbar, title, description with counters if useful, tokenized tags with removable chips and suggestion buttons, enabled switch, prompt editor, and a preview/usage region.
 - Keep the selection/editing model spatially stable. `?new=true` should select/create a draft in the main editor while the sidebar navigator remains the navigator.
