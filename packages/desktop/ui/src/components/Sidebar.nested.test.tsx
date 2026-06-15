@@ -6,12 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext, LiveTitlesContext, SseConnectionContext } from '../app/contexts.js';
 import {
+  ACTIVE_SESSION_ID_STORAGE_KEY,
   ARCHIVED_SESSION_IDS_STORAGE_KEY,
   buildSidebarNavSectionStorageKey,
   OPEN_SESSION_IDS_STORAGE_KEY,
   PINNED_SESSION_IDS_STORAGE_KEY,
   SAVED_WORKSPACE_PATHS_STORAGE_KEY,
 } from '../local/localSettings.js';
+import { resetLocalWriteGrace } from '../session/sessionTabs.js';
 import type { SessionMeta } from '../shared/types.js';
 import { sessionStore } from '../store';
 import { Sidebar } from './Sidebar.js';
@@ -56,17 +58,27 @@ function readStoredIds(key: string): string[] {
   return JSON.parse(localStorage.getItem(key) ?? '[]') as string[];
 }
 
-function renderSidebar(pathname: string, sessions: SessionMeta[]) {
+type RemoteSidebarLayout = {
+  sessionIds: string[];
+  pinnedSessionIds?: string[];
+  archivedSessionIds?: string[];
+  activeConversationId?: string | null;
+  workspacePaths?: string[];
+};
+
+function renderSidebar(pathname: string, sessions: SessionMeta[], remoteLayout?: RemoteSidebarLayout) {
   // Seed the store so useConversations finds the sessions it needs
   sessionStore.replaceAll(sessions);
   sessionStore.markReady?.();
-  apiMocks.openConversationTabs.mockResolvedValue({
-    sessionIds: readStoredIds(OPEN_SESSION_IDS_STORAGE_KEY),
-    pinnedSessionIds: readStoredIds(PINNED_SESSION_IDS_STORAGE_KEY),
-    archivedSessionIds: readStoredIds(ARCHIVED_SESSION_IDS_STORAGE_KEY),
-    activeConversationId: pathname.startsWith('/conversations/') ? pathname.slice('/conversations/'.length) : undefined,
-    workspacePaths: [],
-  });
+  apiMocks.openConversationTabs.mockResolvedValue(
+    remoteLayout ?? {
+      sessionIds: readStoredIds(OPEN_SESSION_IDS_STORAGE_KEY),
+      pinnedSessionIds: readStoredIds(PINNED_SESSION_IDS_STORAGE_KEY),
+      archivedSessionIds: readStoredIds(ARCHIVED_SESSION_IDS_STORAGE_KEY),
+      activeConversationId: pathname.startsWith('/conversations/') ? pathname.slice('/conversations/'.length) : undefined,
+      workspacePaths: [],
+    },
+  );
 
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -141,6 +153,7 @@ describe('Sidebar branch conversation interactions', () => {
     apiMocks.setSavedWorkspacePaths.mockResolvedValue([]);
     apiMocks.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+    resetLocalWriteGrace();
     Object.defineProperty(window, 'neonPilotDesktop', { value: {}, configurable: true });
   });
 
@@ -272,6 +285,28 @@ describe('Sidebar branch conversation interactions', () => {
 
     expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['first', 'second']);
     expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual([]);
+  });
+
+  it('hydrates an existing active conversation from the remote layout after reload', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+    const container = renderSidebar(
+      '/conversations/existing',
+      [session({ id: 'existing', title: 'Persisted thread' })],
+      {
+        sessionIds: ['existing'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        activeConversationId: 'existing',
+        workspacePaths: [],
+      },
+    );
+    await flush();
+
+    const existingRow = row(container, 'existing');
+    expect(existingRow.textContent).toContain('Persisted thread');
+    expect(existingRow.className).toContain('ui-sidebar-session-row-active');
+    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['existing']);
+    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('existing');
   });
 
   it('keeps a workspace group saved after closing its last open conversation', async () => {
