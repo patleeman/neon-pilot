@@ -139,6 +139,18 @@ Users should be able to select an object, inspect it, edit fields in place, and 
 
 Use modals only for destructive confirmations, rare blocking decisions, or short transient flows where context is not useful.
 
+## Workflow Representation
+
+When a screen feels ugly, confusing, or hard to grok, the root problem is often the workflow representation, not the styling.
+
+Do not fix a weak surface by adding more explanatory copy, padding, headings, dividers, cards, or status decoration. First identify the objects, the user's next decision, and the natural editing model. A clearer object model should make the UI feel obvious with less text.
+
+- Provider/setup flows should optimize the happy path first: choose provider, add credential, auto-detect models, then expose advanced model editing after connection.
+- A form embedded at the bottom of a list usually means the workflow model is wrong. Prefer selected row -> detail editor, inline expansion, or a short guided flow.
+- Lists must look like lists: distinct rows, compact metadata, predictable row actions, and no card-grid default for operational records.
+- Do not duplicate host navigation inside extension content. Use host sidebars, top bars, and detail surfaces before inventing in-page rails.
+- Visual consistency issues count as product failures: mismatched header heights, padding, backgrounds, title bars, and misplaced controls are not harmless polish.
+
 ## Actions
 
 Use IDE-like action chrome.
@@ -210,6 +222,7 @@ Use these names in review notes and judge output:
 - `modal_crud_flow`: normal create/edit behavior hidden behind modal forms.
 - `card_grid_default`: repeated operational records rendered as cards when rows/tables/lists fit better.
 - `decorative_status`: glowing pills, oversized status badges, or status treatments used as ornament.
+- `wrong_workflow_representation`: styling a confusing form/list/page instead of choosing the right object model, control model, and host surface.
 
 ## Extension UI Checklist
 
@@ -224,4 +237,5 @@ Before shipping or judging generated extension UI:
 7. Does secondary text earn its space?
 8. Is the empty state compact and layout-preserving?
 9. Are color and status treatments neutral and semantic?
-10. Does the page feel like a Neon Pilot workbench contribution, not an embedded standalone app?
+10. Does the workflow representation make the screen obvious without extra explanation?
+11. Does the page feel like a Neon Pilot workbench contribution, not an embedded standalone app?

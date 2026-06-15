@@ -29,9 +29,12 @@ A good CRUD extension page should feel like a compact tool surface, not a demo f
 
 A polished prompt-presets extension should expose the actual workflow:
 
-- Left pane: compact header, icon add/refresh actions, search, enabled/all filter, saved presets count, and compact starter-template rows when no saved presets exist.
+- Use the host left sidebar body for the preset navigator when the extension owns preset selection. Contribute a `views[].location: "sidebar"` view and connect it through `contributes.nav[].sidebarView`.
+- Do not put a second left navigation rail inside the main page when the host sidebar can hold that navigation model.
+- Sidebar view: compact header, icon add/refresh actions, search, enabled/all filter, saved presets count, and compact starter-template rows when no saved presets exist.
 - Starter templates should be list rows with a small icon, title, one useful line, tags, and a chevron/action. Do not render them as large bordered cards or a marketing grid.
-- Right pane default/create/edit: keep the inspector visible. Use a compact toolbar, title, description with counters if useful, tokenized tags with removable chips and suggestion buttons, enabled switch, prompt editor, and a preview/usage region.
-- Keep the list/search/filter context visible while editing. `?new=true` should select the create inspector, not navigate to a separate form page.
+- Main route: editor/detail surface similar to file or knowledge editing. Selecting a preset in the sidebar opens it in the main editor area.
+- Main editor: compact toolbar, title, description with counters if useful, tokenized tags with removable chips and suggestion buttons, enabled switch, prompt editor, and a preview/usage region.
+- Keep the selection/editing model spatially stable. `?new=true` should select/create a draft in the main editor while the sidebar navigator remains the navigator.
 - Primary actions: create/save, cancel, delete only in edit mode with confirmation.
 - Avoid raw implementation details. Users should see what the preset does, where it applies, and how it will be invoked.

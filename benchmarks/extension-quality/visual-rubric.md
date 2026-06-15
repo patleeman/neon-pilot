@@ -27,6 +27,7 @@ Use 1-5 for each dimension.
 - **First-Launch Judgeability**: The initial screen must still show enough concrete structure to judge the product: starter templates, representative rows, a preview/guidance panel, or visible create/editor state. Blank database screens that are technically correct but visually empty should fail.
 - **Data Surface Taste**: Starter content should feel purposeful, not like fake demo records. Metadata belongs in compact subdued properties, not prominent raw timestamp rows. Repeatable values such as tags must use true token/tag controls or selectable suggestions, never comma-separated text inputs.
 - **Compositional Density**: Empty panes, starter areas, and form fields must balance the viewport. Empty list columns should not dominate the page, starter sections should be compact and task-shaped, and textareas should not swallow the editor before core metadata is complete.
+- **Surface Selection**: Navigation models should use the host surface that already exists. If an extension nav item can replace the left sidebar body with `sidebarView`, do not build a second left rail inside the main page. Main pages should be the working editor/detail surface, not an embedded mini-app shell.
 - **Action Chrome**: Common actions use IDE-like icon buttons, toolbars, rows, menus, and command-backed affordances. Text buttons are reserved for domain-specific, ambiguous, primary, or destructive actions.
 - **Editing Model**: Durable objects use inline or selection-driven editing when practical. Modal CRUD is a failure unless the flow is short, blocking, destructive, or transient.
 - **Interaction Clarity**: Primary, secondary, navigation, and destructive actions are visually clear and placed predictably.
@@ -61,6 +62,8 @@ Use 1-5 for each dimension.
 - `text_button_sprawl`
 - `modal_crud_flow`
 - `full_page_crud_form`
+- `nested_in_page_sidebar`
+- `wrong_surface_selection`
 - `card_grid_default`
 - `sparse_empty_state`
 - `weak_empty_state`

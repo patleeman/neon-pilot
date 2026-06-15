@@ -88,6 +88,8 @@ function casePrompt(testCase, worktree) {
     '- Use shared UI primitives and constrained controls where possible.',
     '- Follow the Neon Pilot taste profile, visual rubric, refinement workflow, and negative examples below. These are application-specific design requirements, not optional inspiration.',
     '- Follow the positive UI pattern guidance below. Treat it as the target shape for CRUD/list/detail extension pages.',
+    '- Choose the right host surface before laying out controls. If the extension owns a navigation model for selectable objects, prefer a `views[].location: "sidebar"` sidebar view connected through `contributes.nav[].sidebarView`, with the main route reserved for the editor/detail surface.',
+    '- Do not build a second left navigation/sidebar inside the main page when the host sidebar can own that object navigator.',
     '- Choose the most user-friendly input for each field. Prefer structured row editors, key/value editors, segmented controls, toggles, selects, pickers, steppers, and tag/resource choosers over raw text inputs or textareas when the data has known structure.',
     '- Do not use a textarea as a shortcut for structured data, lists, key/value pairs, modes, or settings. Use a textarea only for genuinely long free-form prose/code/prompt content.',
     '- Design the default and empty states as real product surfaces, not demos: align with existing Neon Pilot page rhythm, density, headings, section structure, and host control styling.',
