@@ -97,4 +97,39 @@ describe('CommandPalette', () => {
     expect(listener).toHaveBeenCalledOnce();
     window.removeEventListener('neon-pilot-extension-command-execute', listener);
   });
+
+  it('executes a rendered command workflow and closes the palette when handled', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionQuickOpen').mockResolvedValue([]);
+    Element.prototype.scrollIntoView = vi.fn();
+    const listener = vi.fn((event: Event) => {
+      const detail = (event as CustomEvent<{ command: string; resolve?: (handled: boolean) => void }>).detail;
+      expect(detail.command).toBe('layout.toggleSidebar');
+      detail.resolve?.(true);
+    });
+    window.addEventListener('neon-pilot-extension-command-execute', listener);
+
+    render(
+      <MemoryRouter initialEntries={['/conversations/conv-1']}>
+        <CommandPalette />
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'commands', query: 'toggle left sidebar' } }));
+    });
+
+    const command = await screen.findByText('Toggle Left Sidebar');
+    const button = command.closest('button');
+    expect(button).toBeTruthy();
+
+    fireEvent.click(button!);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Command palette' })).toBeNull();
+    });
+    expect(listener).toHaveBeenCalledOnce();
+    window.removeEventListener('neon-pilot-extension-command-execute', listener);
+  });
 });

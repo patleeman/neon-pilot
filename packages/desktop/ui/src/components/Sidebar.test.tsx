@@ -972,6 +972,47 @@ describe('Sidebar', () => {
     expect(html).not.toContain('aria-label="Find threads and archived conversations"');
   });
 
+  it('restores native thread controls after leaving an extension sidebar surface', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'hermes-remote-agent',
+        enabled: true,
+        packageType: 'user',
+        contributes: {
+          nav: [
+            {
+              id: 'nav',
+              label: 'Hermes',
+              route: '/ext/hermes',
+              icon: 'sparkle',
+              sidebarView: 'sessions-sidebar',
+            },
+          ],
+        },
+      },
+    ];
+    extensionRegistryMock.state.surfaces = [
+      {
+        extensionId: 'hermes-remote-agent',
+        id: 'sessions-sidebar',
+        title: 'Hermes Sessions',
+        location: 'sidebar',
+        component: 'HermesSessionsSidebar',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+    ];
+
+    const extensionHtml = renderSidebar('/ext/hermes');
+    expect(extensionHtml).toContain('data-testid="mock-sidebar-extension-surface"');
+    expect(extensionHtml).not.toContain('aria-label="Find threads and archived conversations"');
+
+    const chatHtml = renderSidebar('/conversations/conv-123');
+    expect(chatHtml).not.toContain('data-testid="mock-sidebar-extension-surface"');
+    expect(chatHtml).toContain('aria-label="Find threads and archived conversations"');
+    expect(chatHtml).toContain('Clarify background run link');
+    expect(chatHtml).toContain('ui-sidebar-session-row-active');
+  });
+
   it('hides enabled extension nav entries that do not have a registered route or sidebar surface', () => {
     extensionRegistryMock.state.extensions = [
       {
