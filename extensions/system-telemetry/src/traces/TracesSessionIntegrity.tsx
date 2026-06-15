@@ -6,7 +6,16 @@
  */
 
 import type { AppTelemetryEventRow } from '@neon-pilot/extensions/data';
-import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableHeaderCell, DataTableRow } from '@neon-pilot/extensions/ui';
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+  PanelHeader,
+  SurfacePanel,
+} from '@neon-pilot/extensions/ui';
 
 interface Props {
   events: AppTelemetryEventRow[];
@@ -18,14 +27,11 @@ export function TracesSessionIntegrity({ events }: Props) {
   }
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold text-primary">Session Integrity</h3>
-        <span className="text-[11px] text-dim">{events.length} prompt cache misses</span>
-      </div>
-      <DataTable className="rounded-lg border border-border-subtle">
+    <SurfacePanel className="overflow-hidden">
+      <PanelHeader title="Session Integrity" meta={`${events.length} prompt cache misses`} />
+      <DataTable>
         <DataTableHead>
-          <DataTableRow className="bg-surface/50 hover:bg-surface/50">
+          <DataTableRow>
             <DataTableHeaderCell>Time</DataTableHeaderCell>
             <DataTableHeaderCell>Session</DataTableHeaderCell>
             <DataTableHeaderCell>Old Size</DataTableHeaderCell>
@@ -50,7 +56,7 @@ export function TracesSessionIntegrity({ events }: Props) {
           })}
         </DataTableBody>
       </DataTable>
-    </section>
+    </SurfacePanel>
   );
 }
 
