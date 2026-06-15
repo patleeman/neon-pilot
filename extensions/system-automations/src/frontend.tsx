@@ -965,12 +965,11 @@ function AutomationTable({
   );
 }
 
-function AutomationTableEmptyContent({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
+function AutomationTableEmptyContent({ title, body }: { title: string; body: string }) {
   return (
-    <div className="mx-auto flex max-w-[34rem] flex-col items-start gap-2 text-left">
-      <div className="text-[13px] font-semibold text-primary">{title}</div>
-      <div className="text-[12px] leading-5 text-secondary">{body}</div>
-      {action ? <div className="pt-1">{action}</div> : null}
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-left">
+      <span className="text-[12px] font-medium text-primary">{title}</span>
+      <span className="text-[12px] text-secondary">{body}</span>
     </div>
   );
 }
@@ -1871,8 +1870,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                   tasks.length === 0 ? (
                     <AutomationTableEmptyContent
                       title="No automations yet"
-                      body="Create one to run scheduled or conversation-bound agent work."
-                      action={<ToolbarButton onClick={() => openEditor()}>New automation</ToolbarButton>}
+                      body="Use New automation for scheduled or conversation-bound agent work."
                     />
                   ) : (
                     <AutomationTableEmptyContent title="No matching automations" body="Adjust the filter or search query." />
