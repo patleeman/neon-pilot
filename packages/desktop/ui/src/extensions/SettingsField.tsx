@@ -9,10 +9,11 @@ interface SettingsFieldProps {
   entry: UnifiedSettingsEntry;
   value: unknown;
   description?: string;
+  showDescription?: boolean;
   onChange: (key: string, value: unknown) => void;
 }
 
-export function SettingsField({ entry, value, onChange }: SettingsFieldProps) {
+export function SettingsField({ entry, value, showDescription = true, onChange }: SettingsFieldProps) {
   const currentValue = value ?? entry.default;
   const label = formatSettingsFieldLabel(entry.key);
 
@@ -24,7 +25,7 @@ export function SettingsField({ entry, value, onChange }: SettingsFieldProps) {
     <div className="grid gap-2 border-b border-border-subtle/60 py-2.5 last:border-b-0 sm:grid-cols-[minmax(10rem,14rem)_minmax(0,1fr)] sm:items-start">
       <div className="min-w-0 pt-1">
         <FieldLabel>{label}</FieldLabel>
-        {entry.description ? <FieldHint className="line-clamp-2">{entry.description}</FieldHint> : null}
+        {showDescription && entry.description ? <FieldHint className="line-clamp-2">{entry.description}</FieldHint> : null}
       </div>
       <div className="min-w-0">{renderControl(entry, currentValue, handleChange)}</div>
     </div>

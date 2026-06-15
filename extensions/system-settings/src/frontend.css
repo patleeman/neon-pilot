@@ -1,0 +1,51 @@
+.settings-page-panel-compact.ui-settings-panel {
+  gap: 0.5rem;
+  padding-block: 1rem;
+}
+
+.settings-page-panel-compact > .ui-settings-panel-header {
+  gap: 0.375rem;
+}
+
+.settings-page-panel-compact .ui-settings-panel-title {
+  font-size: 1rem;
+  line-height: 1.25rem;
+}
+
+.settings-page-panel-compact .ui-settings-panel-description {
+  display: none;
+}
+
+.settings-page-panel-compact > .ui-settings-panel-content {
+  gap: 0.5rem;
+}
+
+.settings-page-panel-dense.ui-settings-panel {
+  gap: 0.375rem;
+  padding-block: 0.75rem;
+}
+
+.settings-page-panel-dense > .ui-settings-panel-header {
+  gap: 0.25rem;
+}
+
+.settings-page-panel-dense .ui-settings-panel-title {
+  font-size: 0.9375rem;
+  line-height: 1.25rem;
+}
+
+.settings-page-panel-dense .ui-settings-panel-description {
+  display: none;
+}
+
+.settings-page-panel-dense > .ui-settings-panel-content {
+  gap: 0.375rem;
+}
+
+.settings-page-panel-dense .ui-field-hint {
+  display: none;
+}
+
+.settings-page-panel-dense > .ui-settings-panel-content > .grid {
+  padding-block: 0.5rem;
+}

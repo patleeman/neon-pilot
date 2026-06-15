@@ -50,7 +50,6 @@ import {
   SettingsPanel,
   SettingsPanelHost,
   subscribeDesktopProviderOAuthLogin,
-  SwatchOption,
   type TelemetryDbMaintenanceResult,
   TextButton,
   Textarea,
@@ -78,6 +77,9 @@ const SETTINGS_QUICK_LINKS = [
   { id: 'settings-extensions', label: 'Extensions' },
   { id: 'settings-desktop', label: 'Desktop' },
 ] as const satisfies readonly { id: string; label: string }[];
+
+const SETTINGS_PANEL_COMPACT_CLASS = 'settings-page-panel-compact';
+const SETTINGS_PANEL_DENSE_CLASS = 'settings-page-panel-dense';
 
 type SettingsQuickLink = { id: string; label: ReactNode; summary?: ReactNode; children?: readonly SettingsQuickLink[] };
 type SettingsQuickLinkId = string;
@@ -1611,15 +1613,17 @@ function ExtensionSettingsSection({
               key={extensionId}
               id={settingsExtensionAnchorId(extensionId)}
               title={extensionLabels?.get(extensionId) ?? formatExtensionFallbackLabel(extensionId)}
+              className={SETTINGS_PANEL_DENSE_CLASS}
             >
               {groupedEntries.map(([group, groupEntries]) => (
-                <div key={group} className="space-y-3">
+                <div key={group} className="space-y-1.5">
                   {groupedEntries.length > 1 ? <h4 className="text-[13px] font-medium text-primary">{group}</h4> : null}
                   {groupEntries.map((entry) => (
                     <SettingsField
                       key={entry.key}
                       entry={entry}
                       value={draft[entry.key]}
+                      showDescription={false}
                       onChange={(key, val) => {
                         markEdited(key);
                         setDraft((prev) => ({ ...prev, [key]: val }));
@@ -1630,13 +1634,13 @@ function ExtensionSettingsSection({
                   ))}
                 </div>
               ))}
-              <div className="flex items-center gap-2 pt-2">
-                <ToolbarButton type="button" className="text-accent" disabled={!hasPendingChanges || saving} onClick={saveChanges}>
-                  {saving ? 'Saving…' : 'Save'}
-                </ToolbarButton>
-                <ToolbarButton type="button" disabled={!hasPendingChanges || saving} onClick={resetChanges}>
-                  Reset
-                </ToolbarButton>
+              <div className="flex items-center gap-1.5 pt-1">
+                <IconButton compact type="button" aria-label="Save extension settings" title="Save" disabled={!hasPendingChanges || saving} onClick={saveChanges}>
+                  <SettingsIcon name="check" />
+                </IconButton>
+                <IconButton compact type="button" aria-label="Reset extension settings" title="Reset" disabled={!hasPendingChanges || saving} onClick={resetChanges}>
+                  <SettingsIcon name="x" />
+                </IconButton>
                 {hasPendingChanges ? <p className="ui-card-meta">Unsaved changes.</p> : null}
               </div>
               {saveNotice && !hasPendingChanges ? <p className="text-[12px] text-accent">{saveNotice}</p> : null}
@@ -1651,12 +1655,13 @@ function ExtensionSettingsSection({
   return (
     <div className={separated ? 'space-y-0 border-t border-border-subtle/70 pt-6' : 'space-y-0'}>
       {[...grouped.entries()].map(([group, entries]) => (
-        <SettingsPanel key={group} title={group}>
+        <SettingsPanel key={group} title={group} className={SETTINGS_PANEL_DENSE_CLASS}>
           {entries.map((entry) => (
             <SettingsField
               key={entry.key}
               entry={entry}
               value={draft[entry.key]}
+              showDescription={false}
               onChange={(key, val) => {
                 markEdited(key);
                 setDraft((prev) => ({ ...prev, [key]: val }));
@@ -1665,13 +1670,13 @@ function ExtensionSettingsSection({
               }}
             />
           ))}
-          <div className="flex items-center gap-2 pt-2">
-            <ToolbarButton type="button" className="text-accent" disabled={!hasPendingChanges || saving} onClick={saveChanges}>
-              {saving ? 'Saving…' : 'Save'}
-            </ToolbarButton>
-            <ToolbarButton type="button" disabled={!hasPendingChanges || saving} onClick={resetChanges}>
-              Reset
-            </ToolbarButton>
+          <div className="flex items-center gap-1.5 pt-1">
+            <IconButton compact type="button" aria-label="Save settings" title="Save" disabled={!hasPendingChanges || saving} onClick={saveChanges}>
+              <SettingsIcon name="check" />
+            </IconButton>
+            <IconButton compact type="button" aria-label="Reset settings" title="Reset" disabled={!hasPendingChanges || saving} onClick={resetChanges}>
+              <SettingsIcon name="x" />
+            </IconButton>
             {hasPendingChanges ? <p className="ui-card-meta">Unsaved changes.</p> : null}
           </div>
           {saveNotice && !hasPendingChanges ? <p className="text-[12px] text-accent">{saveNotice}</p> : null}
@@ -1696,6 +1701,7 @@ function ExtensionSettingsComponentPanels({
           id={registration.sectionId}
           title={registration.label}
           description={registration.description}
+          className={SETTINGS_PANEL_DENSE_CLASS}
         >
           <SettingsPanelHost registration={registration} />
         </SettingsPanel>
@@ -3056,9 +3062,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
           <div className="flex flex-col gap-8">
             <SettingsSection id="settings-appearance" label="Appearance" description="Theme, accent, and visual defaults.">
-              <SettingsPanel title="Theme" description="Choose Auto to follow the OS.">
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-3">
+              <SettingsPanel title="Theme" className={SETTINGS_PANEL_COMPACT_CLASS}>
+                <div className="space-y-3">
+                  <div className="grid gap-2 border-b border-border-subtle/60 pb-3 sm:grid-cols-[minmax(10rem,14rem)_minmax(0,1fr)] sm:items-center">
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-medium text-primary">Mode</p>
+                      <p className="ui-card-meta">Current: {availableThemes.find((availableTheme) => availableTheme.id === theme)?.label ?? theme}</p>
+                    </div>
                     <SegmentedControl
                       ariaLabel="Theme mode selection"
                       value={themePreference}
@@ -3069,12 +3079,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         { value: 'dark', label: 'Dark' },
                       ]}
                     />
-                    <span className="ui-card-meta">
-                      Current theme: {availableThemes.find((availableTheme) => availableTheme.id === theme)?.label ?? theme}
-                      {themePreference === 'system' ? ' (auto)' : ''}
-                    </span>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-3 border-b border-border-subtle/60 pb-3 md:grid-cols-2">
                     <ThemeDefaultSelect
                       label="Light default"
                       value={lightTheme}
@@ -3088,28 +3094,31 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                       onChange={setDarkTheme}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <div>
-                      <p className="ui-card-meta font-medium text-primary">Accent color</p>
-                      <p className="ui-card-meta">Signal color for active navigation, focus rings, and primary actions.</p>
-                    </div>
+                  <div className="grid gap-2 sm:grid-cols-[minmax(10rem,14rem)_minmax(0,1fr)] sm:items-center">
+                    <p className="text-[12px] font-medium text-primary">Accent</p>
                     <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Accent color">
                       {availableAccents.map((entry) => {
                         const isSelected = accent === entry.id;
                         const currentTokens = theme.includes('dark') ? entry.dark : entry.light;
                         return (
-                          <SwatchOption
+                          <button
                             key={entry.id}
-                            checked={isSelected}
-                            label={entry.label}
-                            swatch={
-                              <span
-                                className="h-full w-full"
-                                style={{ backgroundColor: `rgb(${currentTokens.accent.replaceAll(' ', ', ')})` }}
-                              />
-                            }
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            aria-label={entry.label}
+                            className={cx(
+                              'inline-flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-elevated transition-colors hover:border-border-default',
+                              isSelected && 'border-accent bg-accent/10',
+                            )}
+                            title={entry.label}
                             onClick={() => setAccent(entry.id as ThemeAccent)}
-                          />
+                          >
+                            <span
+                              className="h-4 w-4 rounded-full border border-border-default"
+                              style={{ backgroundColor: `rgb(${currentTokens.accent.replaceAll(' ', ', ')})` }}
+                            />
+                          </button>
                         );
                       })}
                     </div>

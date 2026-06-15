@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { SettingsPage } from './SettingsPage';
+import './frontend.css';
 
 type SettingsSectionId =
   | 'settings-appearance'
