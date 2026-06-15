@@ -25,6 +25,7 @@
 html {
   background: var(--bg);
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -33,6 +34,7 @@ body {
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   background: #05070b;
+  overflow-x: hidden;
 }
 
 a {
@@ -157,6 +159,7 @@ nav {
 }
 
 .hero-copy {
+  min-width: 0;
   padding-top: 6px;
 }
 
@@ -185,6 +188,8 @@ h1 {
 
 .cta-row {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
   gap: 14px;
   margin-top: 24px;
 }
@@ -212,6 +217,8 @@ h1 {
 }
 
 .quick-install {
+  min-width: 0;
+  width: 100%;
   max-width: 720px;
   margin-top: 16px;
   overflow: hidden;
@@ -243,6 +250,7 @@ h1 {
 .quick-install code {
   display: block;
   overflow-x: auto;
+  max-width: 100%;
   padding: 12px 14px;
   color: #e7e4db;
   font-family: var(--mono);
@@ -253,13 +261,14 @@ h1 {
 
 .hero-points {
   display: grid;
+  min-width: 0;
   gap: 31px;
   padding-top: 9px;
 }
 
 .hero-points article {
   display: grid;
-  grid-template-columns: 38px 1fr;
+  grid-template-columns: 38px minmax(0, 1fr);
   gap: 18px;
 }
 
@@ -279,11 +288,13 @@ h1 {
 .hero-points p {
   color: #aaa69e;
   font-size: 0.82rem;
+  overflow-wrap: anywhere;
 }
 
 .user-path {
   display: grid;
   grid-template-columns: 0.7fr 1.3fr;
+  min-width: 0;
   gap: 34px;
   align-items: start;
   margin-top: 24px;
@@ -303,6 +314,7 @@ h1 {
 .user-path-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  min-width: 0;
   gap: 10px;
 }
 
@@ -355,6 +367,7 @@ h1 {
 }
 
 .flow-step {
+  min-width: 0;
   min-height: 112px;
   padding: 10px 8px;
 }
@@ -392,6 +405,7 @@ small,
 
 .message span,
 .command {
+  min-width: 0;
   padding: 13px 15px;
   border: 1px solid #20283a;
   border-radius: 7px;
@@ -443,6 +457,7 @@ small,
 
 .command {
   margin-top: 13px;
+  overflow-wrap: anywhere;
 }
 
 .command kbd {
@@ -1411,8 +1426,8 @@ footer a {
   header,
   main,
   footer {
-    padding-left: 18px;
-    padding-right: 18px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
   .brand small,
@@ -1421,7 +1436,64 @@ footer a {
   }
 
   h1 {
-    font-size: 2.4rem;
+    font-size: 2.08rem;
+    line-height: 1.1;
+    letter-spacing: -0.045em;
+  }
+
+  .hero {
+    gap: 28px;
+    padding-top: 34px;
+  }
+
+  .hero-copy p {
+    font-size: 0.94rem;
+  }
+
+  .btn {
+    width: 100%;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .quick-install div {
+    gap: 4px;
+  }
+
+  .hero-points {
+    gap: 24px;
+  }
+
+  .hero-points article {
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .hero-points strong {
+    font-size: 1rem;
+  }
+
+  .hero-points p {
+    font-size: 0.86rem;
+    line-height: 1.55;
+  }
+
+  .user-path {
+    margin-top: 18px;
+    padding: 18px;
+  }
+
+  .user-path h2 {
+    font-size: 1.32rem;
+  }
+
+  .user-path-grid article {
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .flow {
+    padding: 10px;
   }
 
   .closing,
