@@ -66,23 +66,32 @@ Users can choose **Settings → App behavior → Update path** to follow either 
 
 ## Release Flow
 
-Each release command performs these steps in order:
+The release commands intentionally split versioning from publish and local verification:
+
+- `pnpm run release:desktop:patch|minor|major` runs the semver bump first, then runs the publish flow.
+- `pnpm run release:publish` publishes the already-current version/tag. Use this after a prepared version commit or when retrying a failed publish.
+- `pnpm run release:verify-local` builds and smokes a local packaged app without notarizing, pushing, creating a GitHub release, or uploading artifacts.
+
+The version bump path performs:
+
+1. **Version bump** — `pnpm version` bumps the version following semver
+2. **Pi update** — refreshes the direct Pi runtime packages to the latest published version
+3. **Dependency sync** — updates workspace package versions and regenerates `pnpm-lock.yaml`
+4. **Changelog scaffold** — adds a dated `CHANGELOG.md` section with a release-note TODO and commit count since the previous tag
+5. **Release note edit** — replace the TODO with 3-6 human-written bullets summarizing user-visible outcomes and important reliability/build changes; do not dump raw commit messages
+
+The publish path performs:
 
 1. **Supply-chain audit** — runs `scfw audit npm` through `scripts/scfw-pnpm-npm-adapter.mjs`, which presents the pnpm lockfile as npm list JSON; blocks the release if any critical/malicious findings are reported. Requires [`scfw`](https://github.com/DataDog/supply-chain-firewall) installed via `pipx install scfw`. Bypassable with `NEON_PILOT_RELEASE_SKIP_SCFW_AUDIT=1` in emergencies.
-2. **Version bump** — `pnpm version` bumps the version following semver
-3. **Pi update** — refreshes the direct Pi runtime packages to the latest published version
-4. **Dependency sync** — updates workspace package versions and regenerates `pnpm-lock.yaml`
-5. **Changelog scaffold** — adds a dated `CHANGELOG.md` section with a release-note TODO and commit count since the previous tag
-6. **Release note edit** — replace the TODO with 3-6 human-written bullets summarizing user-visible outcomes and important reliability/build changes; do not dump raw commit messages
-7. **Pre-release checks** — runs `pnpm run check:release` from a clean release snapshot, including TypeScript, Settings page render tests, extension smoke tests, packaged extension validation, and the release reliability doctor
-8. **Release QA** — run `pnpm run qa:release` and complete the hands-on checklist in `docs/release-qa.md` against the app build or packaged release candidate; record commit SHA, build, and pass/fail notes before continuing
-9. **Build** — builds signed desktop artifacts locally
-10. **Extension golden smoke** — launches the packaged app in isolated state, verifies the release-critical extension matrix, opens extension routes, and invokes representative extension backend actions
-11. **Notarize** — submits the built `.app` for Apple notarization
-12. **Smoke test** — launches the built app in an isolated environment and verifies basic functionality
-13. **Git push** — pushes the version commit and tag to the remote
-14. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
-15. **First-party extension release** — publish the matching `patleeman/neon-pilot-extensions` release tag and assets for the same app version. The release must include `neon-extension-catalog.json` plus every stable `.neon-extension.zip` package that should appear in Settings → Extensions → Install.
+2. **Pre-release checks** — runs `pnpm run check:release` from a clean release snapshot: TypeScript build, system extension build/packaging checks, the full Vitest suite, extension static boundary checks, and the release reliability doctor
+3. **Release QA** — run `pnpm run qa:release` and complete the hands-on checklist in `docs/release-qa.md` against the app build or packaged release candidate; record commit SHA, build, and pass/fail notes before continuing
+4. **Build** — builds signed desktop artifacts locally
+5. **Extension golden smoke** — launches the packaged app in isolated state, verifies the release-critical extension matrix, opens extension routes, and invokes representative extension backend actions
+6. **Notarize** — submits the built `.app` for Apple notarization
+7. **Smoke test** — launches the built app in an isolated environment and verifies basic functionality
+8. **Git push** — pushes the version commit and tag to the remote
+9. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
+10. **First-party extension release** — publish the matching `patleeman/neon-pilot-extensions` release tag and assets for the same app version. The release must include `neon-extension-catalog.json` plus every stable `.neon-extension.zip` package that should appear in Settings → Extensions → Install.
 
 Use `pnpm run release:verify-local` for release-blocking repro and iteration before rerunning `pnpm run release:publish`. It builds the full signed desktop app with Electron Builder `--publish never`, packages installable extensions, validates packaged extensions, then runs the extension golden smoke, automated release smoke, seeded startup idle smoke, and full desktop performance smoke against `dist/release/*.app`. It intentionally does not notarize, push tags, create releases, or upload assets.
 
@@ -201,7 +210,7 @@ The publish script loads Apple credentials from `NEON_PILOT_RELEASE_ENV`, then `
 ## Gotchas
 
 - `pnpm version prerelease --preid=rc` only bumps the version and creates a git tag. It does not build or upload artifacts. Run `pnpm run release:publish` for the full signed release.
-- `desktop:dist` runs `tsc --build --force` through the desktop package build chain. If pre-existing server TypeScript errors block the build, use the direct esbuild/electron-builder path:
+- `desktop:dist` runs the desktop package `clean`, `build:deps`, and `build:main` scripts before Electron Builder. It does not run the full workspace TypeScript build. If you need full TypeScript validation, run `pnpm run build:ts` or `pnpm run desktop:build` first. If pre-existing server TypeScript errors block the full desktop build but you need a local package for investigation, use the direct esbuild/electron-builder path:
 
   ```bash
   cd packages/desktop

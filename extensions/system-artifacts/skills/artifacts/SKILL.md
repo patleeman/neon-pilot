@@ -162,7 +162,7 @@ Then choose the right home:
 
 ## Related docs
 
-- [Decision Guide](../../../../docs/decision-guide.md)
+- [Build an Extension](../../../../docs/build-an-extension.md)
 - [Projects](../../../../docs/projects.md)
 - [Conversations](../../../../docs/conversations.md)
-- [Web UI Guide](../../../../docs/web-ui.md)
+- [Neon Pilot Taste](../../../../docs/design/neon-pilot-taste.md)

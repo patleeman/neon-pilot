@@ -67,14 +67,14 @@
         <h2 id="copy-paste-prompt">Copy-paste prompt</h2>
         <pre><code>Build a Neon Pilot extension that [does what].
 
-Before implementation, ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass.
+Before implementation, produce a short UX brief and ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass. The brief must name the primary user, the job-to-be-done, the primary surface, the default/empty/loading/error/success states, the main actions, and the shared UI primitives you will reuse from `@neon-pilot/extensions/ui`.
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
 - tab-local right rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
-Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes.</code></pre>
+Implement it with editable source files, build it, reload it, visually test the exact user path, fix any layout or interaction problems you see, and checkpoint the changes.</code></pre>
         <p>
           Add concrete product details after the first sentence: what data it should show, what actions it should support, and what “done”
           looks like.
@@ -92,9 +92,20 @@ Implement it with editable source files, build it, reload it, visually test it, 
           <li>
             Inspect existing extension ids, routes, nav labels, action ids, commands, settings components, and tools before choosing names.
           </li>
+          <li>Write a short UX brief before implementation:</li>
+          <p>
+            - <strong>Primary user and job</strong>: who uses it, what they are trying to accomplish, and what they should inspect or change
+            first. - <strong>Primary surface</strong>: exactly one first-version surface: <code>main-page</code>, <code>right-rail</code>,
+            <code>workbench-detail</code>, <code>settingsComponent</code>, backend tool/action, or theme. -
+            <strong>Information architecture</strong>: the core sections, list/detail structure, controls, and command-backed actions. -
+            <strong>State model</strong>: default, empty, loading, error, success, disabled, and long-running states. -
+            <strong>Primitive plan</strong>: which <code>@neon-pilot/extensions/ui</code> components will be used for page shell,
+            lists/tables, forms, feedback, dialogs, runtime status, rails, or workbench chrome. - <strong>Visual acceptance</strong>: what
+            must be visible in the app screenshot or manual inspection before calling the UI correct.
+          </p>
           <li>
-            Pick exactly one primary surface for the first version: <code>main-page</code>, <code>right-rail</code>,
-            <code>workbench-detail</code>, <code>settingsComponent</code>, backend tool/action, or theme.
+            Ask focused questions for unresolved UX/product decisions before writing code. If the user gave enough detail, state the
+            assumptions and proceed.
           </li>
           <li>
             Start from
@@ -120,8 +131,12 @@ Implement it with editable source files, build it, reload it, visually test it, 
             surface the user will use: open the route, rail, Settings section, command, composer control, or agent tool.
           </li>
           <li>
-            Exercise empty, loading, error, and success states when the surface has UI; for backend tools/actions, run one representative
-            invocation and inspect the transcript or visible result.
+            Exercise empty, loading, error, success, disabled, and long-running states when the surface has UI; for backend tools/actions,
+            run one representative invocation and inspect the transcript or visible result.
+          </li>
+          <li>
+            Visually inspect the UI against the brief. Check layout density, text wrapping, keyboard/focus behavior, responsive constraints,
+            empty/error copy, command availability, and whether shared primitives were used instead of one-off chrome.
           </li>
           <li>Update the extension <code>README.md</code> with install/build/use notes and any non-obvious behavior.</li>
           <li>

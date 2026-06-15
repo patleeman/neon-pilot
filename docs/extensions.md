@@ -1762,14 +1762,16 @@ pnpm run test:extensions
 pnpm test
 ```
 
-`pnpm run check:extensions` first runs
-`scripts/check-extension-backend-api.mjs` to keep the SDK backend subpath list and
-host backend API implementation list in lockstep, and to block backend API seams
-from statically importing known heavy/runtime internals. It also runs
-`scripts/check-filesystem-authority.mjs` and `scripts/check-packaged-extensions.mjs`. That packaged check imports every bundled system
-extension backend from its built `dist` output, verifies backend
-action handler exports, smoke-calls known safe tool surfaces such as `scheduled_task`, and runs product-critical smoke calls for Knowledge,
-Automations, and Diffs extension actions. It fails on forbidden bare imports
+`pnpm run check:extensions` runs `check:extensions:static`, then the focused
+extension smoke tests. The static gate is defined in `package.json` and currently
+checks worker coverage, SDK/backend API shims, filesystem authority,
+conversation-storage boundaries, core/extension imports, product-runtime to
+extension-host seams, permission boundaries, extension-host runtime boundaries,
+and packaged extension bundles. The packaged check imports every bundled system
+extension backend from its built `dist` output, verifies backend action handler
+exports, smoke-calls known safe tool surfaces such as `scheduled_task`, and runs
+product-critical smoke calls for Knowledge, Automations, and Diffs extension
+actions. It fails on forbidden bare imports
 that are not available inside the packaged desktop app, such as
 `@earendil-works/pi-coding-agent`, `@neon-pilot/core`,
 `@neon-pilot/daemon`, `jsdom`, and `@sinclair/typebox`. It also rejects

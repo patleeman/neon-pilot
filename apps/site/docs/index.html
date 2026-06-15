@@ -144,7 +144,22 @@
             <a href="./performance-diagnostics.html">Performance diagnostics</a> — renderer timing tripwires for conversation load and API
             latency
           </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/sqlite-migrations.md">SQLite migrations</a> — shared versioned
+            schema migration framework
+          </li>
+          <li><a href="./release-qa.html">Release QA</a> — required release gate and hands-on smoke checklist</li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/release-test-inventory.md">Release test inventory</a> — broad
+            release-risk checklist
+          </li>
         </ul>
+        <p>
+          The public website docs are built from the page list in
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/apps/site/build-docs.mjs"><code>apps/site/build-docs.mjs</code></a
+          >. Update that list when a repo doc should appear on neonpilot.net; keep this README as the human and agent map for the source
+          tree.
+        </p>
         <h2 id="builder-and-architecture-docs">Builder and Architecture Docs</h2>
         <ul>
           <li>
@@ -166,6 +181,20 @@
           <li>
             <a href="./design-system.html">Design system</a> — shared UI package, Storybook, and extension-friendly component guidance
           </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/design/neon-pilot-taste.md">Neon Pilot taste</a> — mandatory UI
+            taste and control-selection guidance for app and extension work
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/design/extension-visual-refinement.md"
+              >Extension visual refinement</a
+            >
+            — screenshot-backed iteration loop for generated extension UI
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/design/examples/README.md">Design examples</a> — positive and
+            negative visual anchors
+          </li>
           <li><a href="./development.html">Development workflow</a> — validation, UI QA, checkpoints, and secret scanning</li>
           <li>
             <a href="./desktop-api-boundary.html">Desktop API Boundary</a> — HTTP data plane, WebSocket realtime plane, and native-only IPC
@@ -183,6 +212,12 @@
           <li>
             <a href="./renderer-isolation.html">Renderer isolation</a> — process ownership, critical lanes, and transcript projection
             boundaries
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/product-extension-process-split.md"
+              >Product runtime and extension host split</a
+            >
+            — architecture and validation for the product/extension process boundary
           </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions">System extensions</a> — feature-owned docs and
@@ -257,7 +292,10 @@
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-diffs/README.md">Diffs</a> — checkpoint and
             workspace diff inspection
           </li>
-          <li>Dynamic Workflows — model-authored workflow coordinators that fan out daemon-backed subagents</li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-dynamic-workflows/README.md">Dynamic Workflows</a>
+            — model-authored workflow coordinators that fan out daemon-backed subagents
+          </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-excalidraw-input/README.md">Excalidraw Input</a> —
             composer drawing input
@@ -304,7 +342,10 @@
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-model-picker/README.md">Model Picker</a> — composer
             model and thinking controls
           </li>
-          <li>Neon Pilot CLI — unified CLI control plane for internal agents and external callers</li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-neon-pilot-admin-cli/README.md">Neon Pilot CLI</a>
+            — unified CLI control plane for internal agents and external callers
+          </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-openai-desktop-plugin/README.md"
               >OpenAI Desktop Plugin</a
@@ -409,23 +450,19 @@
             collaborative writing surface
           </li>
         </ul>
-        <h2 id="sections">Sections</h2>
-        <p><strong>View Modes</strong> — Conversation and Workbench views, plus conversation context attachments.</p>
+        <h2 id="source-docs-scope">Source Docs Scope</h2>
         <p>
-          <strong>Core Product Model</strong> — conversations and projects. Core stays a small stable platform; product features should live
-          in system or user extensions.
+          Treat root docs, <code>docs/</code>, <code>extensions/*/README.md</code>, <code>packages/*/README.md</code>, and benchmark docs as
+          source documentation. Ignore generated or packaged copies under <code>dist/</code>, <code>packages/*/dist/</code>, app bundles,
+          and other build outputs during docs audits unless the task is specifically about packaged resources.
         </p>
-        <p><strong>Desktop App</strong> — Electron shell and app-level behavior.</p>
-        <p><strong>Background Runtime</strong> — daemon lifecycle and runtime operations.</p>
-        <p><strong>Connectivity</strong> — runtime connectivity architecture.</p>
-        <p><strong>Operations</strong> — development workflow, configuration file format, and release cycle.</p>
         <p class="edit-link"><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/README.md">Edit this page on GitHub →</a></p>
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
         <a href="#quick-start">Quick start</a><a href="#start-here">Start here</a><a href="#common-tasks">Common Tasks</a
         ><a href="#reference">Reference</a><a href="#builder-and-architecture-docs">Builder and Architecture Docs</a
-        ><a href="#extension-docs">Extension docs</a><a href="#sections">Sections</a>
+        ><a href="#extension-docs">Extension docs</a><a href="#source-docs-scope">Source Docs Scope</a>
       </aside>
     </main>
   </body>

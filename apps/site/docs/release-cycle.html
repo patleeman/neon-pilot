@@ -66,17 +66,15 @@
         <p>Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.20</p>
         <p>Highlights in this train:</p>
         <ul>
+          <li>Fixes packaged OpenAI Desktop Plugin reinstall by bundling the Codex plugin template into extension build output.</li>
           <li>
-            Fixes packaged OpenAI Desktop Plugin reinstall by bundling the Codex plugin template into extension build output.
+            Repairs Codex plugin registration so the Neon Pilot plugin, MCP server, and delegated-agent tools can be refreshed from
+            Settings.
           </li>
+          <li>Adds wait-any delegated-run orchestration for parallel Neon Pilot subagent investigations.</li>
           <li>
-            Repairs Codex plugin registration so the Neon Pilot plugin, MCP server, and delegated-agent tools can be refreshed from Settings.
-          </li>
-          <li>
-            Adds wait-any delegated-run orchestration for parallel Neon Pilot subagent investigations.
-          </li>
-          <li>
-            Renames the local Responses-compatible integration to AI Gateway across Settings, docs, website copy, and Codex provider metadata.
+            Renames the local Responses-compatible integration to AI Gateway across Settings, docs, website copy, and Codex provider
+            metadata.
           </li>
           <li>Keeps extension packaging docs aligned with static <code>templates/</code> build behavior for packaged desktop releases.</li>
           <li>Keep this section aligned with <code>package.json</code>, <code>CHANGELOG.md</code>, and the tag being prepared.</li>
@@ -170,14 +168,20 @@ pnpm run release:desktop:major</code></pre>
           default to stable releases only.
         </p>
         <h2 id="release-flow">Release Flow</h2>
-        <p>Each release command performs these steps in order:</p>
-        <ol>
+        <p>The release commands intentionally split versioning from publish and local verification:</p>
+        <ul>
+          <li><code>pnpm run release:desktop:patch|minor|major</code> runs the semver bump first, then runs the publish flow.</li>
           <li>
-            <strong>Supply-chain audit</strong> — runs <code>scfw audit npm</code> through <code>scripts/scfw-pnpm-npm-adapter.mjs</code>,
-            which presents the pnpm lockfile as npm list JSON; blocks the release if any critical/malicious findings are reported. Requires
-            <a href="https://github.com/DataDog/supply-chain-firewall"><code>scfw</code></a> installed via <code>pipx install scfw</code>.
-            Bypassable with <code>NEON_PILOT_RELEASE_SKIP_SCFW_AUDIT=1</code> in emergencies.
+            <code>pnpm run release:publish</code> publishes the already-current version/tag. Use this after a prepared version commit or
+            when retrying a failed publish.
           </li>
+          <li>
+            <code>pnpm run release:verify-local</code> builds and smokes a local packaged app without notarizing, pushing, creating a GitHub
+            release, or uploading artifacts.
+          </li>
+        </ul>
+        <p>The version bump path performs:</p>
+        <ol>
           <li><strong>Version bump</strong> — <code>pnpm version</code> bumps the version following semver</li>
           <li><strong>Pi update</strong> — refreshes the direct Pi runtime packages to the latest published version</li>
           <li><strong>Dependency sync</strong> — updates workspace package versions and regenerates <code>pnpm-lock.yaml</code></li>
@@ -189,9 +193,19 @@ pnpm run release:desktop:major</code></pre>
             <strong>Release note edit</strong> — replace the TODO with 3-6 human-written bullets summarizing user-visible outcomes and
             important reliability/build changes; do not dump raw commit messages
           </li>
+        </ol>
+        <p>The publish path performs:</p>
+        <ol>
           <li>
-            <strong>Pre-release checks</strong> — runs <code>pnpm run check:release</code> from a clean release snapshot, including
-            TypeScript, Settings page render tests, extension smoke tests, packaged extension validation, and the release reliability doctor
+            <strong>Supply-chain audit</strong> — runs <code>scfw audit npm</code> through <code>scripts/scfw-pnpm-npm-adapter.mjs</code>,
+            which presents the pnpm lockfile as npm list JSON; blocks the release if any critical/malicious findings are reported. Requires
+            <a href="https://github.com/DataDog/supply-chain-firewall"><code>scfw</code></a> installed via <code>pipx install scfw</code>.
+            Bypassable with <code>NEON_PILOT_RELEASE_SKIP_SCFW_AUDIT=1</code> in emergencies.
+          </li>
+          <li>
+            <strong>Pre-release checks</strong> — runs <code>pnpm run check:release</code> from a clean release snapshot: TypeScript build,
+            system extension build/packaging checks, the full Vitest suite, extension static boundary checks, and the release reliability
+            doctor
           </li>
           <li>
             <strong>Release QA</strong> — run <code>pnpm run qa:release</code> and complete the hands-on checklist in
@@ -370,8 +384,11 @@ pnpm run release:publish</code></pre>
             artifacts. Run <code>pnpm run release:publish</code> for the full signed release.
           </li>
           <li>
-            <code>desktop:dist</code> runs <code>tsc --build --force</code> through the desktop package build chain. If pre-existing server
-            TypeScript errors block the build, use the direct esbuild/electron-builder path:
+            <code>desktop:dist</code> runs the desktop package <code>clean</code>, <code>build:deps</code>, and
+            <code>build:main</code> scripts before Electron Builder. It does not run the full workspace TypeScript build. If you need full
+            TypeScript validation, run <code>pnpm run build:ts</code> or <code>pnpm run desktop:build</code> first. If pre-existing server
+            TypeScript errors block the full desktop build but you need a local package for investigation, use the direct
+            esbuild/electron-builder path:
           </li>
         </ul>
         <p>

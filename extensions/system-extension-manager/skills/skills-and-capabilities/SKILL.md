@@ -66,7 +66,7 @@ Reach for an extension only when you need new tools, UI, event handling, runtime
 
 ## Related docs
 
-- [Knowledge](../../../system-knowledge/README.md)
-- [Decision Guide](../../../../docs/decision-guide.md)
-- [Command-Line Guide (`pa`)](../../../../docs/command-line.md)
-- [Web UI Guide](../../../../docs/web-ui.md)
+- [Knowledge Base](../../../../docs/knowledge-base.md)
+- [Build an Extension](../../../../docs/build-an-extension.md)
+- [Neon Pilot CLI](../../../../docs/cli.md)
+- [Neon Pilot Taste](../../../../docs/design/neon-pilot-taste.md)

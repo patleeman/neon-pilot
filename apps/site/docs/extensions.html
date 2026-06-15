@@ -95,14 +95,14 @@
         <p>Users should usually describe the feature they want and let their agent create the extension:</p>
         <pre><code>Build a Neon Pilot extension that [does what].
 
-Before implementation, ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass.
+Before implementation, produce a short UX brief and ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass. The brief must name the primary user, the job-to-be-done, the primary surface, the default/empty/loading/error/success states, the main actions, and the shared UI primitives you will reuse from `@neon-pilot/extensions/ui`.
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
 - tab-local right rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
-Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes.</code></pre>
+Implement it with editable source files, build it, reload it, visually test the exact user path, fix any layout or interaction problems you see, and checkpoint the changes.</code></pre>
         <p>
           The agent should create editable <code>src/</code> files, declare contributions in <code>extension.json</code>, build, validate,
           reload, inspect the UI when present, and checkpoint only touched files. Manual manifest/API details below are reference material.
@@ -117,6 +117,15 @@ Implement it with editable source files, build it, reload it, visually test it, 
           <li>
             <strong>Product choices clarified</strong>: ambiguous workflow, data/action, persistence, and visual design decisions were
             resolved with the user before building.
+          </li>
+          <li>
+            <strong>UX brief written first</strong>: primary user, job-to-be-done, information architecture, states, main actions,
+            command-backed entry points, and visual acceptance criteria were stated before implementation.
+          </li>
+          <li>
+            <strong>Shared primitives selected</strong>: page shell, rail/workbench chrome, forms, resource lists/tables, dialogs, status,
+            loading, empty, and error states use <code>@neon-pilot/extensions/ui</code> primitives unless a local custom component is
+            clearly justified.
           </li>
           <li>
             <strong>Boundary clean</strong>: extension runtime code imports from <code>@neon-pilot/extensions</code>,
@@ -151,6 +160,10 @@ Implement it with editable source files, build it, reload it, visually test it, 
           <li>
             <strong>Actions command-backed</strong>: meaningful user-reachable actions are contributed as commands so they can appear in the
             command palette, be invoked programmatically, and be hot-keyed with default or user-editable keybindings when appropriate.
+          </li>
+          <li>
+            <strong>Visual pass recorded</strong>: the app route, rail, Settings section, composer control, or transcript renderer was
+            visually inspected for density, wrapping, focus/keyboard behavior, responsive constraints, and obvious overlap or clipping.
           </li>
           <li>
             <strong>Docs local</strong>: the extension has or updates a <code>README.md</code> with build, reload, validation, and usage
@@ -2356,6 +2369,10 @@ pnpm run extension:build -- /path/to/my-extension</code></pre>
           serves that built file as an extension bundle resource, so frontend dist output must not leave
           <code>@neon-pilot/extensions/*</code> as bare runtime imports.
         </p>
+        <p>
+          The extension builder also copies extension-local <code>bin/</code> and <code>templates/</code> directories into
+          <code>dist/</code> so packaged desktop releases can load static sidecars and templates without source-tree access.
+        </p>
         <h3 id="hot-reload">Hot Reload</h3>
         <p>
           After changing backend code, use Extension Manager's <strong>Reload</strong> button or restart the app. The frontend is
@@ -2375,13 +2392,13 @@ pnpm run test:extensions
 # Or include in the full test suite
 pnpm test</code></pre>
         <p>
-          <code>pnpm run check:extensions</code> first runs <code>scripts/check-extension-backend-api.mjs</code> to keep the SDK backend
-          subpath list and host backend API implementation list in lockstep, and to block backend API seams from statically importing known
-          heavy/runtime internals. It also runs <code>scripts/check-filesystem-authority.mjs</code> and
-          <code>scripts/check-packaged-extensions.mjs</code>. That packaged check imports every bundled system extension backend from its
-          built <code>dist</code> output, verifies backend action handler exports, smoke-calls known safe tool surfaces such as
-          <code>scheduled_task</code>, and runs product-critical smoke calls for Knowledge, Automations, and Diffs extension actions. It
-          fails on forbidden bare imports that are not available inside the packaged desktop app, such as
+          <code>pnpm run check:extensions</code> runs <code>check:extensions:static</code>, then the focused extension smoke tests. The
+          static gate is defined in <code>package.json</code> and currently checks worker coverage, SDK/backend API shims, filesystem
+          authority, conversation-storage boundaries, core/extension imports, product-runtime to extension-host seams, permission
+          boundaries, extension-host runtime boundaries, and packaged extension bundles. The packaged check imports every bundled system
+          extension backend from its built <code>dist</code> output, verifies backend action handler exports, smoke-calls known safe tool
+          surfaces such as <code>scheduled_task</code>, and runs product-critical smoke calls for Knowledge, Automations, and Diffs
+          extension actions. It fails on forbidden bare imports that are not available inside the packaged desktop app, such as
           <code>@earendil-works/pi-coding-agent</code>, <code>@neon-pilot/core</code>, <code>@neon-pilot/daemon</code>, <code>jsdom</code>,
           and <code>@sinclair/typebox</code>. It also rejects absolute or <code>file:</code> imports, forbidden bundled runtime path
           fragments, and backend bundles over their explicit byte budget. The packaged-extension hardening knobs live in

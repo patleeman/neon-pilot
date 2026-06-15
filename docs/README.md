@@ -49,6 +49,11 @@ If you are new to Neon Pilot, read these first:
 - [Telemetry](telemetry.md) — local JSONL telemetry logs, SQLite observability indexes, exports, and runtime producers
 - [Activity tree](activity-tree.md) — shared model for conversations, executions, and future sidebar sub-items
 - [Performance diagnostics](performance-diagnostics.md) — renderer timing tripwires for conversation load and API latency
+- [SQLite migrations](sqlite-migrations.md) — shared versioned schema migration framework
+- [Release QA](release-qa.md) — required release gate and hands-on smoke checklist
+- [Release test inventory](release-test-inventory.md) — broad release-risk checklist
+
+The public website docs are built from the page list in [`apps/site/build-docs.mjs`](../apps/site/build-docs.mjs). Update that list when a repo doc should appear on neonpilot.net; keep this README as the human and agent map for the source tree.
 
 ## Builder and Architecture Docs
 
@@ -57,12 +62,16 @@ If you are new to Neon Pilot, read these first:
 - [Extension API types](../packages/extensions/README.md) — SDK package with exported types for frontend and backend code
 - [Extension templates](extension-templates/README.md) — copy-paste stubs for data-dashboard, crud-page, and settings-section patterns
 - [Design system](design-system.md) — shared UI package, Storybook, and extension-friendly component guidance
+- [Neon Pilot taste](design/neon-pilot-taste.md) — mandatory UI taste and control-selection guidance for app and extension work
+- [Extension visual refinement](design/extension-visual-refinement.md) — screenshot-backed iteration loop for generated extension UI
+- [Design examples](design/examples/README.md) — positive and negative visual anchors
 - [Development workflow](development.md) — validation, UI QA, checkpoints, and secret scanning
 - [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native-only IPC policy
 - [Daemon](daemon.md) — background process and runtime lifecycle
 - [Sandboxing](sandboxing.md) — shared process execution launcher, wrapper extensions, and direct process API policy
 - [Filesystem Authority](filesystem-authority.md) — shared scoped filesystem boundary, backend seam, policy hooks, and command-sandbox root grants
 - [Renderer isolation](renderer-isolation.md) — process ownership, critical lanes, and transcript projection boundaries
+- [Product runtime and extension host split](product-extension-process-split.md) — architecture and validation for the product/extension process boundary
 - [System extensions](../extensions) — feature-owned docs and implementation packages
 - [First-party optional extensions](https://github.com/patleeman/neon-pilot-extensions) — optional packages distributed from GitHub release artifacts
 
@@ -86,7 +95,7 @@ Bundled system extensions:
 - [Context Usage](../extensions/system-context-usage/README.md) — composer status for context-window usage
 - [Conversation Tools](../extensions/system-conversation-tools/README.md) — conversation inspection, titles, working directories, and CLI commands
 - [Diffs](../extensions/system-diffs/README.md) — checkpoint and workspace diff inspection
-- Dynamic Workflows — model-authored workflow coordinators that fan out daemon-backed subagents
+- [Dynamic Workflows](../extensions/system-dynamic-workflows/README.md) — model-authored workflow coordinators that fan out daemon-backed subagents
 - [Excalidraw Input](../extensions/system-excalidraw-input/README.md) — composer drawing input
 - [Extension Manager](../extensions/system-extension-manager/README.md) — extension registry, validation, import/export, and diagnostics
 - [File Explorer](../extensions/system-files/README.md) — workspace file browsing
@@ -99,7 +108,7 @@ Bundled system extensions:
 - [MCP](../extensions/system-mcp/README.md) — configured MCP server inspection, auth, and calls
 - [AI Gateway](../extensions/system-model-gateway/README.md) — opt-in local Responses API proxy for external coding agents; disabled by default while Codex Desktop custom-model picker fixes are pending upstream
 - [Model Picker](../extensions/system-model-picker/README.md) — composer model and thinking controls
-- Neon Pilot CLI — unified CLI control plane for internal agents and external callers
+- [Neon Pilot CLI](../extensions/system-neon-pilot-admin-cli/README.md) — unified CLI control plane for internal agents and external callers
 - [OpenAI Desktop Plugin](../extensions/system-openai-desktop-plugin/README.md) — Settings-managed installer for the external Codex/OpenAI Desktop `neon-pilot` plugin with a CLI skill and focused delegated-agent MCP bridge
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run onboarding bootstrap and conversation flow
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
@@ -128,16 +137,6 @@ Optional first-party extensions from [`patleeman/neon-pilot-extensions`](https:/
 - [Video Probe](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-video-probe) — video analysis via local or remote video-capable models
 - [Writing Studio](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-writing-studio) — document-first collaborative writing surface
 
-## Sections
+## Source Docs Scope
 
-**View Modes** — Conversation and Workbench views, plus conversation context attachments.
-
-**Core Product Model** — conversations and projects. Core stays a small stable platform; product features should live in system or user extensions.
-
-**Desktop App** — Electron shell and app-level behavior.
-
-**Background Runtime** — daemon lifecycle and runtime operations.
-
-**Connectivity** — runtime connectivity architecture.
-
-**Operations** — development workflow, configuration file format, and release cycle.
+Treat root docs, `docs/`, `extensions/*/README.md`, `packages/*/README.md`, and benchmark docs as source documentation. Ignore generated or packaged copies under `dist/`, `packages/*/dist/`, app bundles, and other build outputs during docs audits unless the task is specifically about packaged resources.
