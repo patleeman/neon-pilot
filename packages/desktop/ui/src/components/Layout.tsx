@@ -1476,6 +1476,7 @@ export function Layout() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { versions } = useAppEvents();
   const activeConversationId = getActiveConversationId(location.pathname);
+  const layoutSessions = useAllSessions();
   const activeSessionCwd = useSession(activeConversationId)?.cwd ?? null;
   const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
@@ -1907,7 +1908,7 @@ export function Layout() {
           initialComposerText: draft?.initialComposerText,
           initialPromptText: draft?.initialPromptText,
           replace: location.pathname === DRAFT_CONVERSATION_ROUTE,
-          existingSessions: sessions,
+          existingSessions: layoutSessions,
         });
         return true;
       } catch (error) {
@@ -1921,7 +1922,7 @@ export function Layout() {
         creatingNewConversationRef.current = false;
       }
     },
-    [location.pathname, navigate, sessions],
+    [layoutSessions, location.pathname, navigate],
   );
 
   const lastWorkbenchRouteRef = useRef<{ pathname: string; search: string }>({ pathname: '/conversations/new', search: '' });
