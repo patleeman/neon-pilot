@@ -151,6 +151,28 @@ Do not fix a weak surface by adding more explanatory copy, padding, headings, di
 - Do not duplicate host navigation inside extension content. Use host sidebars, top bars, and detail surfaces before inventing in-page rails.
 - Visual consistency issues count as product failures: mismatched header heights, padding, backgrounds, title bars, and misplaced controls are not harmless polish.
 
+## Host Sidebar Surfaces
+
+The left sidebar is app chrome. Extension sidebar views should feel like they temporarily replace the native Threads body, not like a standalone panel embedded inside the sidebar.
+
+Use the native sidebar grammar:
+
+- section title: compact uppercase accent label, same weight/color/rhythm as `Threads`
+- actions: compact icon buttons beside the section title
+- rows: title-first, single-scan rows with hover/selected states matching native thread rows
+- empty text: compact inline sidebar message, not a centered card
+- spacing: align to the host sidebar's section/header/row rhythm
+
+Avoid:
+
+- second-level panel chrome inside the sidebar
+- visible filter tabs by default, especially `All` / `Enabled`, before there is enough data and workflow need
+- row descriptions that repeat or explain the title
+- tag subtitles, decorative chips, badges, or raw metadata in sidebar rows
+- search boxes by default for tiny lists; prefer command palette/search actions until the list size justifies persistent search
+
+If an extension needs an object navigator, the sidebar should select objects and the main/workbench surface should edit or inspect the selected object. Do not make the sidebar row carry the whole object model.
+
 ## Actions
 
 Use IDE-like action chrome.
