@@ -47,8 +47,28 @@ const extensionRegistryMock = vi.hoisted(() => ({
           ],
         },
       },
+      {
+        id: 'system-automations',
+        name: 'Automations',
+        enabled: true,
+        packageType: 'system',
+        contributes: {
+          nav: [
+            {
+              id: 'automations',
+              label: 'Automations',
+              icon: 'automation',
+              route: '/automations',
+              section: 'primary',
+            },
+          ],
+        },
+      },
     ],
-    routes: [{ route: '/settings', extensionId: 'system-settings', surfaceId: 'settings', packageType: 'system' }],
+    routes: [
+      { route: '/settings', extensionId: 'system-settings', surfaceId: 'settings', packageType: 'system' },
+      { route: '/automations', extensionId: 'system-automations', surfaceId: 'automations', packageType: 'system' },
+    ],
     surfaces: [],
     topBarElements: [],
     messageActions: [],
@@ -300,5 +320,31 @@ describe('App sidebar conversation navigation workflow', () => {
 
     await screen.findByText('Extension route /settings');
     expect((await findSidebarRouteButton('/settings')).className).toContain('ui-sidebar-nav-item-active');
+  });
+
+  it('opens an extension route from the primary sidebar nav and hydrates it after reload', async () => {
+    ({ root } = await renderAppAt('/conversations/conv-first'));
+
+    await screen.findByText('Conversation route conv-first');
+    const extensionButton = await findSidebarRouteButton('/automations');
+    await act(async () => {
+      fireEvent.click(extensionButton);
+      await Promise.resolve();
+    });
+
+    await screen.findByText('Extension route /automations');
+    expect(window.location.pathname).toBe('/automations');
+    expect((await findSidebarRouteButton('/automations')).className).toContain('ui-sidebar-nav-item-active');
+
+    act(() => {
+      root?.unmount();
+    });
+    root = null;
+    document.body.innerHTML = '';
+
+    ({ root } = await renderAppAt('/automations'));
+
+    await screen.findByText('Extension route /automations');
+    expect((await findSidebarRouteButton('/automations')).className).toContain('ui-sidebar-nav-item-active');
   });
 });
