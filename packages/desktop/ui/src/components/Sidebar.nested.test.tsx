@@ -254,6 +254,26 @@ describe('Sidebar branch conversation interactions', () => {
     expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
   });
 
+  it('reopens the most recently archived conversation through the desktop shortcut workflow', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['first', 'second']));
+    renderSidebar('/conversations/second', [session({ id: 'first', title: 'First thread' }), session({ id: 'second', title: 'Second thread' })]);
+    await flush();
+
+    dispatchDesktopShortcutCommand('conversation.toggleArchived');
+    await flush();
+
+    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['first']);
+    expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['second']);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { action: 'reopen-closed-conversation' } }));
+    });
+    await flush();
+
+    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['first', 'second']);
+    expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual([]);
+  });
+
   it('keeps a workspace group saved after closing its last open conversation', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['solo']));
     renderSidebar('/conversations/solo', [session({ id: 'solo', title: 'Solo thread', cwd: '/repo/solo', cwdSlug: 'solo' })]);
