@@ -1359,12 +1359,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     .join(' · ');
 
   const sectionTitle = activeFilter === 'attention' ? 'Needs Attention' : activeFilter === 'platform' ? 'Platform' : 'Extensions';
-  const sectionDescription =
-    activeFilter === 'attention'
-      ? 'Extensions with diagnostics, updates, invalid state, or catalog drift.'
-      : activeFilter === 'platform'
-        ? 'Required system surfaces that keep Neon Pilot configurable, diagnosable, and repairable.'
-        : 'Installed extensions and built-in capabilities.';
   const hasSearchQuery = query.trim().length > 0;
   const emptyVisibleExtensionsTitle = hasSearchQuery
     ? 'No matching extensions'
@@ -1735,9 +1729,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             <section className="space-y-5">
               <div className="flex items-end justify-between gap-3">
                 <div>
-                  <h2 className="text-[24px] font-semibold leading-tight text-primary">{sectionTitle}</h2>
-                  <p className="mt-1 text-[12px] text-secondary">{sectionSummary}</p>
-                  <p className="mt-1 text-[12px] text-secondary">{sectionDescription}</p>
+                  {activeFilter === 'all' ? null : <h2 className="text-[18px] font-semibold leading-tight text-primary">{sectionTitle}</h2>}
+                  <p className={cx(activeFilter === 'all' ? 'text-[12px] text-secondary' : 'mt-1 text-[12px] text-secondary')}>
+                    {sectionSummary}
+                  </p>
                 </div>
               </div>
               {extensions.length === 0 ? (
