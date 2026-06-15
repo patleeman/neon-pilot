@@ -27,8 +27,8 @@ The managed plugin is installed into a Neon Pilot-owned local Codex marketplace 
 Install and reinstall run the equivalent of:
 
 ```sh
-codex plugin marketplace add ~/.local/share/neon-pilot/codex-plugin-marketplace --json
-codex plugin add neon-pilot@neon-pilot-local --json
+codex plugin marketplace add --json ~/.local/share/neon-pilot/codex-plugin-marketplace
+codex plugin add --json neon-pilot@neon-pilot-local
 codex mcp add neon-pilot -- node ~/.local/share/neon-pilot/codex-plugin-marketplace/plugins/neon-pilot/mcp/neon-pilot-subagent.mjs
 ```
 

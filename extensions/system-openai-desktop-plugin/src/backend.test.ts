@@ -31,6 +31,31 @@ function makeCtx() {
 }
 
 describe('OpenAI Desktop plugin installer', () => {
+  it('passes Codex JSON flags before positional plugin arguments', async () => {
+    const marketplaceRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-codex-marketplace-'));
+    const calls: Array<{ command: string; args: string[] }> = [];
+    const ctx = {
+      shell: {
+        async exec(input: { command: string; args?: string[] }) {
+          calls.push({ command: input.command, args: input.args ?? [] });
+          return { stdout: '{}', stderr: '', executionWrappers: [] };
+        },
+      },
+    } as never;
+
+    await installPlugin({ marketplaceRoot, force: true }, ctx);
+    await removePlugin({ marketplaceRoot }, ctx);
+
+    expect(calls.map((call) => call.args)).toEqual([
+      ['plugin', 'marketplace', 'add', '--json', marketplaceRoot],
+      ['plugin', 'add', '--json', 'neon-pilot@neon-pilot-local'],
+      ['mcp', 'add', 'neon-pilot', '--', 'node', join(marketplaceRoot, 'plugins', 'neon-pilot', 'mcp', 'neon-pilot-subagent.mjs')],
+      ['mcp', 'remove', 'neon-pilot'],
+      ['plugin', 'remove', '--json', 'neon-pilot@neon-pilot-local'],
+      ['plugin', 'marketplace', 'remove', '--json', 'neon-pilot-local'],
+    ]);
+  });
+
   it('installs into a Codex CLI marketplace and removes cleanly', async () => {
     const marketplaceRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-codex-marketplace-'));
     const codexHome = mkdtempSync(join(tmpdir(), 'neon-pilot-codex-home-'));

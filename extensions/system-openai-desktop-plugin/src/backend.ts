@@ -234,13 +234,13 @@ export async function installPlugin(input: unknown, ctx?: ExtensionBackendContex
   const marketplace = ensureMarketplaceEntry(paths.marketplacePath);
   const codexSteps: JsonRecord[] = [];
   if (ctx && shouldManageCodex(input)) {
-    const addMarketplace = await runCodex(ctx, ['plugin', 'marketplace', 'add', paths.marketplaceRoot, '--json'], input);
+    const addMarketplace = await runCodex(ctx, ['plugin', 'marketplace', 'add', '--json', paths.marketplaceRoot], input);
     codexSteps.push({ command: 'plugin marketplace add', ok: shellOk(addMarketplace), stdout: addMarketplace.stdout, stderr: addMarketplace.stderr });
     if (!shellOk(addMarketplace) && !codexError(addMarketplace).includes('already')) {
       throw new Error(`Failed to register Codex marketplace: ${codexError(addMarketplace)}`);
     }
 
-    const addPlugin = await runCodex(ctx, ['plugin', 'add', `${PLUGIN_NAME}@${MARKETPLACE_NAME}`, '--json'], input);
+    const addPlugin = await runCodex(ctx, ['plugin', 'add', '--json', `${PLUGIN_NAME}@${MARKETPLACE_NAME}`], input);
     codexSteps.push({ command: 'plugin add', ok: shellOk(addPlugin), stdout: addPlugin.stdout, stderr: addPlugin.stderr });
     if (!shellOk(addPlugin)) {
       throw new Error(`Failed to install Codex plugin: ${codexError(addPlugin)}`);
@@ -278,7 +278,7 @@ export async function removePlugin(input: unknown, ctx?: ExtensionBackendContext
       stderr: removeMcpResult.stderr,
     });
 
-    const removePluginResult = await runCodex(ctx, ['plugin', 'remove', `${PLUGIN_NAME}@${MARKETPLACE_NAME}`, '--json'], input);
+    const removePluginResult = await runCodex(ctx, ['plugin', 'remove', '--json', `${PLUGIN_NAME}@${MARKETPLACE_NAME}`], input);
     codexSteps.push({
       command: 'plugin remove',
       ok: shellOk(removePluginResult),
@@ -286,7 +286,7 @@ export async function removePlugin(input: unknown, ctx?: ExtensionBackendContext
       stderr: removePluginResult.stderr,
     });
 
-    const removeMarketplaceResult = await runCodex(ctx, ['plugin', 'marketplace', 'remove', MARKETPLACE_NAME, '--json'], input);
+    const removeMarketplaceResult = await runCodex(ctx, ['plugin', 'marketplace', 'remove', '--json', MARKETPLACE_NAME], input);
     codexSteps.push({
       command: 'plugin marketplace remove',
       ok: shellOk(removeMarketplaceResult),
