@@ -4,7 +4,7 @@ import React, { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { COMMAND_PALETTE_STATE_EVENT } from '../commands/commandPaletteEvents.js';
+import { COMMAND_PALETTE_STATE_EVENT, OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents.js';
 import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar.js';
 
 function renderTopBar() {
@@ -46,6 +46,30 @@ describe('DesktopTopBar interactions', () => {
     });
 
     expect(input.value).toBe('');
+  });
+
+  it('opens the command palette from top-bar search focus and typed queries', () => {
+    const openEvents: Array<{ query?: string; anchorRect?: unknown }> = [];
+    const listener = vi.fn((event: Event) => {
+      openEvents.push((event as CustomEvent).detail ?? {});
+    });
+    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
+
+    renderTopBar();
+
+    const input = screen.getByLabelText('Search threads, models, settings') as HTMLInputElement;
+    fireEvent.focus(input);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(openEvents.at(-1)).toMatchObject({ query: '' });
+
+    fireEvent.change(input, { target: { value: 'toggle left sidebar' } });
+
+    expect(input.value).toBe('toggle left sidebar');
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(openEvents.at(-1)).toMatchObject({ query: 'toggle left sidebar' });
+
+    window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
   });
 
   it('handles shared app history navigation commands', async () => {
