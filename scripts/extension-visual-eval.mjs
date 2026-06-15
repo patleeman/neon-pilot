@@ -172,10 +172,31 @@ function routeSlug(route) {
   );
 }
 
+function numberArg(name, fallback) {
+  const value = Number(arg(name, String(fallback)));
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function resizeScreenshotForJudge(file, outDir, maxPixels) {
+  if (!maxPixels) return '';
+  const judgeDir = resolve(outDir, 'judge-screenshots');
+  mkdirSync(judgeDir, { recursive: true });
+  const resized = resolve(judgeDir, basename(file));
+  const result = spawnSync('sips', ['-Z', String(maxPixels), file, '--out', resized], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) {
+    throw new Error(`sips resize failed for ${file}:\n${result.stdout}\n${result.stderr}`);
+  }
+  return resized;
+}
+
 async function captureRoute(cdp, child, route, outDir, group) {
   await cdp.send('Page.navigate', { url: `neon-pilot://app${route}` });
-  const body = await waitForLoadedBody(cdp, child, route);
+  await waitForLoadedBody(cdp, child, route);
   await sleep(900);
+  const body = String(await evalJs(cdp, 'document.body ? document.body.innerText : ""')).trim();
   const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   const file = resolve(outDir, group, `${routeSlug(route)}.png`);
   write(file, Buffer.from(screenshot.data, 'base64'));
@@ -204,6 +225,31 @@ function readManifest(extensionDir) {
   }
 }
 
+function readTextFile(path) {
+  return existsSync(path) ? readFileSync(path, 'utf8') : '';
+}
+
+function readNamedDoc(label, path) {
+  const absolutePath = resolve(repoRoot, path);
+  const text = readTextFile(absolutePath).trim();
+  return text ? [`## ${label}`, '', `Source: ${path}`, '', text].join('\n') : [`## ${label}`, '', `Source missing: ${path}`].join('\n');
+}
+
+function readJudgeContext() {
+  return [
+    readNamedDoc('Neon Pilot Taste Profile', 'docs/design/neon-pilot-taste.md'),
+    readNamedDoc('Extension Visual Quality Rubric', 'benchmarks/extension-quality/visual-rubric.md'),
+    readNamedDoc('Extension Visual Refinement Loop', 'docs/design/extension-visual-refinement.md'),
+    readNamedDoc('Negative Example Gallery', 'docs/design/examples/README.md'),
+    readNamedDoc('Negative Anchor: AI Generated SaaS', 'docs/design/examples/negative/ai-generated-saas.md'),
+    readNamedDoc('Negative Anchor: Title Description Noise', 'docs/design/examples/negative/title-description-noise.md'),
+    readNamedDoc('Negative Anchor: Text Button Sprawl', 'docs/design/examples/negative/text-button-sprawl.md'),
+    readNamedDoc('Negative Anchor: Box In Box', 'docs/design/examples/negative/box-in-box.md'),
+    readNamedDoc('Negative Anchor: Sparse Empty State', 'docs/design/examples/negative/sparse-empty-state.md'),
+    readNamedDoc('Negative Anchor: Modal CRUD Flow', 'docs/design/examples/negative/modal-crud-flow.md'),
+  ].join('\n\n---\n\n');
+}
+
 function inferGeneratedRoutes(manifest) {
   const contributes = manifest?.contributes && typeof manifest.contributes === 'object' ? manifest.contributes : {};
   const routes = [];
@@ -219,38 +265,52 @@ function inferGeneratedRoutes(manifest) {
   return [...new Set(routes)].filter((route) => route.startsWith('/'));
 }
 
+function calibrationRoutes(target) {
+  if (target === 'settings')
+    return ['/settings', '/settings#settings-providers', '/settings#settings-desktop', '/settings#settings-extensions'];
+  return [];
+}
+
+function screenshotPathForJudge(item) {
+  return item.judgeScreenshot || item.screenshot;
+}
+
 function writeJudgePrompt(outDir, baseline, generated, metadata) {
+  const judgeContext = readJudgeContext();
+  const generatedOrTarget = generated.length > 0 ? generated : baseline;
+  const subjectHeading = generated.length > 0 ? 'Generated Screenshots' : 'Target Screenshots';
   const prompt = [
     '# Extension Visual Eval Judge Prompt',
     '',
-    'You are judging whether a generated Neon Pilot extension visually fits the app and looks shippable in one shot.',
+    generated.length > 0
+      ? 'You are judging whether a generated Neon Pilot extension visually fits the app and looks shippable in one shot.'
+      : 'You are judging an existing Neon Pilot app surface to calibrate the visual taste rubric before a redesign.',
     '',
     '## Context',
     '',
     `Task: ${metadata.task ?? 'unknown'}`,
     `Generated extension: ${metadata.extensionId ?? 'unknown'}`,
+    `Calibration target: ${metadata.calibrationTarget ?? 'none'}`,
     '',
     '## Baseline Screenshots',
     '',
-    ...baseline.map((item) => `- ${item.route}: ${item.screenshot}`),
+    ...baseline.map((item) => `- ${item.route}: ${screenshotPathForJudge(item)}`),
     '',
-    '## Generated Screenshots',
+    `## ${subjectHeading}`,
     '',
-    ...generated.map((item) => `- ${item.route}: ${item.screenshot}`),
+    ...generatedOrTarget.map((item) => `- ${item.route}: ${screenshotPathForJudge(item)}`),
     '',
-    '## Rubric',
+    '## Taste Profile, Rubric, and Examples',
     '',
-    'Score 1-5 for each dimension:',
+    judgeContext,
     '',
-    '- hostFit: matches Neon Pilot visual language, not generic SaaS chrome',
-    '- hierarchy: main job and primary action are obvious within 3 seconds',
-    '- density: spacing and information density fit the surface',
-    '- states: visible empty/loading/error/success/disabled states are intentional',
-    '- controlTaste: uses structured, task-shaped controls instead of lazy raw inputs/textareas where better controls fit',
-    '- interactionClarity: primary/secondary/destructive actions are clear',
-    '- textRobustness: long labels, paths, prompts, logs, and row text behave well',
-    '- accessibilitySignals: labels, focus affordances, button semantics, icon clarity',
-    '- polish: alignment, rhythm, typography, no overlap/clipping/nested-card mess',
+    'Judge requirements:',
+    '',
+    '- Inspect screenshots. Do not score from source code alone.',
+    '- Cite screenshot routes when making findings.',
+    '- Use the rubric dimensions and failure tags exactly where possible.',
+    '- Be strict about IDE/tooling density, text economy, flat surfaces, action chrome, and neutral color.',
+    '- Return strict JSON only.',
     '',
     'Return strict JSON:',
     '',
@@ -262,16 +322,22 @@ function writeJudgePrompt(outDir, baseline, generated, metadata) {
         decision: 'pass|borderline|fail',
         scores: {
           hostFit: 1,
+          workbenchFit: 1,
           hierarchy: 1,
           density: 1,
+          surfaceDiscipline: 1,
+          textEconomy: 1,
           states: 1,
           controlTaste: 1,
+          actionChrome: 1,
+          editingModel: 1,
           interactionClarity: 1,
           textRobustness: 1,
           accessibilitySignals: 1,
+          colorRestraint: 1,
           polish: 1,
         },
-        failureTags: ['too_sparse'],
+        failureTags: ['too_sparse', 'title_description_noise'],
         topFindings: ['Short concrete finding with screenshot reference.'],
         mustFix: ['Specific change required before shipping.'],
       },
@@ -290,7 +356,9 @@ export async function runVisualCapture() {
   const extensionDirArg = arg('extension-dir');
   const extensionDir = extensionDirArg ? resolve(extensionDirArg) : '';
   const preserveState = boolArg('preserve-state');
-  const baselineRoutes = arg('baseline-routes', '/conversations/new,/settings,/extensions')
+  const calibrationTarget = arg('calibration-target');
+  const targetRoutes = calibrationRoutes(calibrationTarget);
+  const baselineRoutes = arg('baseline-routes', targetRoutes.length ? targetRoutes.join(',') : '/conversations/new,/settings,/extensions')
     .split(',')
     .map((route) => route.trim())
     .filter(Boolean);
@@ -298,6 +366,7 @@ export async function runVisualCapture() {
     .split(',')
     .map((route) => route.trim())
     .filter(Boolean);
+  const judgeImageMaxPixels = numberArg('judge-image-max-px', 900);
 
   if (!existsSync(appPath)) throw new Error(`App not found: ${appPath}`);
   if (appEntry && !existsSync(resolve(appEntry))) throw new Error(`App entry not found: ${resolve(appEntry)}`);
@@ -355,7 +424,13 @@ export async function runVisualCapture() {
     await waitForLoadedBody(cdp, child, 'initial route');
 
     const baseline = [];
-    for (const route of baselineRoutes) baseline.push(await captureRoute(cdp, child, route, outDir, 'baseline-screenshots'));
+    for (const route of baselineRoutes) {
+      const capture = await captureRoute(cdp, child, route, outDir, 'baseline-screenshots');
+      baseline.push({
+        ...capture,
+        judgeScreenshot: resizeScreenshotForJudge(capture.screenshot, outDir, judgeImageMaxPixels),
+      });
+    }
 
     let generated = [];
     let manifest = {};
@@ -366,7 +441,13 @@ export async function runVisualCapture() {
       await postJson(cdp, '/api/extensions/reload', {});
       const routes = requestedGeneratedRoutes.length > 0 ? requestedGeneratedRoutes : inferGeneratedRoutes(manifest);
       generated = [];
-      for (const route of routes) generated.push(await captureRoute(cdp, child, route, outDir, 'generated-screenshots'));
+      for (const route of routes) {
+        const capture = await captureRoute(cdp, child, route, outDir, 'generated-screenshots');
+        generated.push({
+          ...capture,
+          judgeScreenshot: resizeScreenshotForJudge(capture.screenshot, outDir, judgeImageMaxPixels),
+        });
+      }
     }
 
     const metadata = {
@@ -376,9 +457,11 @@ export async function runVisualCapture() {
       stateRoot: preserveState ? stateRoot : undefined,
       extensionDir: extensionDir || undefined,
       extensionId: manifest?.id,
+      calibrationTarget: calibrationTarget || undefined,
       task: arg('task', ''),
       baseline,
       generated,
+      judgeImageMaxPixels,
     };
     write(resolve(outDir, 'visual-capture-summary.json'), `${JSON.stringify(metadata, null, 2)}\n`, 'utf8');
     writeJudgePrompt(outDir, baseline, generated, metadata);

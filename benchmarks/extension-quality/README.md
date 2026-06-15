@@ -45,6 +45,10 @@ Useful options:
 
 Build, doctor, static checks, and source heuristics do **not** prove that the extension looks good. They only prove that it is loadable and follows some structural rules.
 
+Visual review must use the Neon Pilot taste profile in `docs/design/neon-pilot-taste.md`. When iterating on generated UI, follow `docs/design/extension-visual-refinement.md` and compare against examples under `docs/design/examples/`.
+
+For frontend-heavy cases, prefer a visual-concept-first loop: generate several static UI directions, choose the strongest target, then implement against that reference. This avoids relying on the coding model to invent visual taste from prose alone.
+
 For each case, the runner writes `<case-id>/visual-review.md` with the expected screenshot/review contract. A case has screenshot-backed visual evidence only when both exist:
 
 - `<case-id>/screenshots/*.png`
@@ -60,6 +64,16 @@ The visual review should inspect the extension in the real Neon Pilot host, not 
 - distinct empty/loading/error/success/disabled/long-running states
 - labeled icon controls and visible focus behavior
 - absence of nested cards, decorative chips, bespoke chrome, and one-note color styling
+
+To calibrate the rubric against the existing Settings UI before redesigning it, capture Settings-focused screenshots and a judge prompt:
+
+```bash
+pnpm run eval:extension-visual -- \
+  --calibration-target=settings \
+  --out=artifacts/extension-quality/settings-calibration
+```
+
+The visual runner keeps full-size screenshots and also writes downscaled judge copies under `judge-screenshots/` by default. Use `--judge-image-max-px=<pixels>` to adjust the largest edge for delegated judges that cannot inline large PNGs.
 
 ## Case Contract
 
