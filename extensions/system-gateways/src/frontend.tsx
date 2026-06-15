@@ -551,164 +551,121 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
   return (
     <div className="h-full overflow-y-auto">
       <AppPageLayout shellClassName="max-w-[74rem]" contentClassName="space-y-5">
-        <AppPageIntro
-          title="Telegram Gateway"
-          summary="Route Telegram chats into Neon Pilot conversations."
-          actions={<ToolbarButton onClick={refresh}>Refresh</ToolbarButton>}
-        />
+        <AppPageIntro title="Telegram Gateway" actions={<ToolbarButton onClick={refresh}>Refresh</ToolbarButton>} />
 
         {error ? <Notice tone="danger">{error}</Notice> : null}
         {message ? <Notice tone="success">{message}</Notice> : null}
 
-        <AppPageSection layout="stacked" bodyClassName="space-y-6">
-          <section aria-labelledby="telegram-heading" className="min-w-0 space-y-5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="min-w-0">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-accent/15 text-[13px] font-semibold text-accent">
-                    T
-                  </span>
-                  <div className="min-w-0">
-                    <h2 id="telegram-heading" className="text-[18px] font-semibold text-primary">
-                      Telegram
-                    </h2>
-                    <p className="mt-1 text-[13px] leading-5 text-muted">Run Neon Pilot from Telegram DMs, groups, and topics.</p>
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted">
-                  <span className="inline-flex items-center gap-1.5">
-                    <StatusDot tone={telegramTone} />
-                    {telegramReady ? 'Connected' : token.configured ? formatStatus(telegramStatus) : 'Needs Bot Token'}
-                  </span>
-                  <span>{token.configured ? 'Credentials saved' : 'Credentials missing'}</span>
-                  <span>
-                    {telegramBindings.length} active {telegramBindings.length === 1 ? 'route' : 'routes'}
-                  </span>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {telegramConnection ? (
-                  <ToolbarButton
-                    disabled={!token.configured || busy === 'toggle-telegram'}
-                    onClick={() => toggleTelegram(!telegramConnection.enabled)}
-                  >
-                    {telegramConnection.enabled ? 'Pause Telegram' : 'Start Telegram'}
-                  </ToolbarButton>
-                ) : null}
-                <ToolbarButton disabled={!token.configured || busy === 'remove-telegram-token'} onClick={removeTelegramToken}>
-                  Remove Token
-                </ToolbarButton>
-              </div>
-            </div>
-
-            <div className="text-[12px] leading-5 text-secondary">
-              Create a Telegram bot with{' '}
+        <AppPageSection layout="stacked" bodyClassName="space-y-4">
+          <div className="flex flex-col gap-3 border-b border-border-subtle pb-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted">
+              <span className="inline-flex items-center gap-1.5 font-medium text-primary">
+                <StatusDot tone={telegramTone} />
+                {telegramReady ? 'Connected' : token.configured ? formatStatus(telegramStatus) : 'Needs Bot Token'}
+              </span>
+              <span>{token.configured ? 'Token saved' : 'Token required'}</span>
+              <span>
+                {telegramBindings.length} active {telegramBindings.length === 1 ? 'route' : 'routes'}
+              </span>
               <TextLink href="https://t.me/BotFather" target="_blank" rel="noreferrer">
                 BotFather
               </TextLink>
-              , then save the token here. Neon Pilot stores it in extension secrets.
             </div>
-          </section>
-        </AppPageSection>
-
-        <AppPageSection
-          title="Credentials"
-          description="The bot token starts the Telegram gateway runtime and lets it receive incoming chat updates."
-          meta={<span className={token.configured ? 'text-success' : 'text-warning'}>{token.configured ? 'Saved' : 'Required'}</span>}
-          layout="stacked"
-          titleClassName="text-[18px]"
-          bodyClassName="max-w-3xl"
-        >
-          <form className="space-y-3" onSubmit={saveTelegramToken}>
-            <Field label="Bot Token">
-              <TextInput
-                name="telegramBotToken"
-                type="password"
-                autoComplete="off"
-                spellCheck={false}
-                value={tokenDraft}
-                placeholder={token.configured ? 'Configured' : '123456:ABC...'}
-                onChange={(event: ChangeEvent<HTMLInputElement>) => setTokenDraft(event.target.value)}
-              />
-            </Field>
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" variant="action" disabled={busy === 'telegram-token'}>
-                Save Bot Token
-              </Button>
+              {telegramConnection ? (
+                <ToolbarButton
+                  disabled={!token.configured || busy === 'toggle-telegram'}
+                  onClick={() => toggleTelegram(!telegramConnection.enabled)}
+                >
+                  {telegramConnection.enabled ? 'Pause Telegram' : 'Start Telegram'}
+                </ToolbarButton>
+              ) : null}
+              <ToolbarButton disabled={!token.configured || busy === 'remove-telegram-token'} onClick={removeTelegramToken}>
+                Remove Token
+              </ToolbarButton>
             </div>
-          </form>
-        </AppPageSection>
+          </div>
 
-        <AppPageSection
-          title="Route Messages"
-          description="Connect one Telegram chat to one Neon Pilot conversation. Routed conversations also appear in the Telegram Gateway sidebar."
-          layout="stacked"
-          titleClassName="text-[18px]"
-        >
-          {token.configured ? (
-            <form className="space-y-4" onSubmit={attachConversation}>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-3">
-                  <h3 className="text-[13px] font-semibold text-primary">Conversation</h3>
-                  <Field label="Conversation">
-                    <Select
-                      name="conversationId"
-                      autoComplete="off"
-                      value={form.conversationId}
-                      onChange={(event: ChangeEvent<HTMLSelectElement>) => selectConversation(event.target.value)}
-                    >
-                      <option value="">Choose a conversation...</option>
-                      {conversations.map((conversation) => (
-                        <option key={conversation.id} value={conversation.id}>
-                          {conversationLabel(conversation)}
-                        </option>
-                      ))}
-                      {form.conversationId && !conversations.some((conversation) => conversation.id === form.conversationId) ? (
-                        <option value={form.conversationId}>{form.conversationTitle || form.conversationId}</option>
-                      ) : null}
-                    </Select>
-                  </Field>
-                  <p className="text-[12px] leading-5 text-muted">
-                    {form.conversationId
-                      ? `Routes into ${form.conversationTitle || form.conversationId}.`
-                      : 'Pick the conversation that should receive this chat.'}
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  <h3 className="text-[13px] font-semibold text-primary">Telegram Chat</h3>
-                  <Field label="Telegram Chat ID">
-                    <TextInput
-                      name="telegramChatId"
-                      autoComplete="off"
-                      spellCheck={false}
-                      value={form.externalChatId}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        setForm((current) => ({ ...current, externalChatId: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field label="Telegram Chat Label">
-                    <TextInput
-                      name="telegramChatLabel"
-                      autoComplete="off"
-                      value={form.externalChatLabel}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        setForm((current) => ({ ...current, externalChatLabel: event.target.value }))
-                      }
-                    />
-                  </Field>
-                </div>
-              </div>
-              <Button type="submit" variant="action" disabled={busy === 'attach-telegram'}>
-                Save Route
+          <div className="grid gap-5 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.4fr)]">
+            <form className="space-y-3" onSubmit={saveTelegramToken}>
+              <SectionLabel tone="muted">Credentials</SectionLabel>
+              <Field label="Bot Token">
+                <TextInput
+                  name="telegramBotToken"
+                  type="password"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={tokenDraft}
+                  placeholder={token.configured ? 'Configured' : '123456:ABC…'}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) => setTokenDraft(event.target.value)}
+                />
+              </Field>
+              <Button type="submit" variant="action" disabled={busy === 'telegram-token'}>
+                Save Token
               </Button>
             </form>
-          ) : (
-            <PanelMessage>Save a bot token before routing Telegram chats into conversations.</PanelMessage>
-          )}
+
+            <div className="space-y-3">
+              <SectionLabel tone="muted">Route</SectionLabel>
+              {token.configured ? (
+                <form className="space-y-3" onSubmit={attachConversation}>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Field label="Conversation">
+                      <Select
+                        name="conversationId"
+                        autoComplete="off"
+                        value={form.conversationId}
+                        onChange={(event: ChangeEvent<HTMLSelectElement>) => selectConversation(event.target.value)}
+                      >
+                        <option value="">Choose a conversation…</option>
+                        {conversations.map((conversation) => (
+                          <option key={conversation.id} value={conversation.id}>
+                            {conversationLabel(conversation)}
+                          </option>
+                        ))}
+                        {form.conversationId && !conversations.some((conversation) => conversation.id === form.conversationId) ? (
+                          <option value={form.conversationId}>{form.conversationTitle || form.conversationId}</option>
+                        ) : null}
+                      </Select>
+                    </Field>
+                    <Field label="Telegram Chat ID">
+                      <TextInput
+                        name="telegramChatId"
+                        autoComplete="off"
+                        spellCheck={false}
+                        value={form.externalChatId}
+                        onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                          setForm((current) => ({ ...current, externalChatId: event.target.value }))
+                        }
+                      />
+                    </Field>
+                    <Field label="Telegram Chat Label">
+                      <TextInput
+                        name="telegramChatLabel"
+                        autoComplete="off"
+                        value={form.externalChatLabel}
+                        onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                          setForm((current) => ({ ...current, externalChatLabel: event.target.value }))
+                        }
+                      />
+                    </Field>
+                  </div>
+                  {form.conversationId ? (
+                    <div className="text-[12px] leading-5 text-muted">Routes into {form.conversationTitle || form.conversationId}.</div>
+                  ) : null}
+                  <Button type="submit" variant="action" disabled={busy === 'attach-telegram'}>
+                    Save Route
+                  </Button>
+                </form>
+              ) : (
+                <PanelMessage>Save a bot token before routing Telegram chats into conversations.</PanelMessage>
+              )}
+            </div>
+          </div>
         </AppPageSection>
 
-        <AppPageSection title="Active Routes" layout="stacked" titleClassName="text-[18px]">
+        <AppPageSection layout="stacked" bodyClassName="space-y-2">
+          <SectionLabel tone="muted">Active Routes</SectionLabel>
           <DataTable>
             <DataTableHead>
               <DataTableRow>
@@ -747,7 +704,8 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
         </AppPageSection>
 
         {unassignedTelegramTargets.length > 0 ? (
-          <AppPageSection title="Incoming Chats" layout="stacked">
+          <AppPageSection layout="stacked" bodyClassName="space-y-2">
+            <SectionLabel tone="muted">Incoming Chats</SectionLabel>
             <DataTable>
               <DataTableHead>
                 <DataTableRow>
@@ -771,7 +729,8 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
           </AppPageSection>
         ) : null}
 
-        <AppPageSection title="Recent Activity" layout="stacked" titleClassName="text-[18px]">
+        <AppPageSection layout="stacked" bodyClassName="space-y-2">
+          <SectionLabel tone="muted">Recent Activity</SectionLabel>
           <DataTable>
             <DataTableHead>
               <DataTableRow>
