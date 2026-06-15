@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import { getDurableSessionsDir } from '@neon-pilot/core';
 
+import { upsertConversationCatalogSession } from './conversationCatalog.js';
 import { resolveNeutralChatCwd } from './conversationCwd.js';
 import { readConversationSessionMetaByFile } from './conversationService.js';
 
@@ -34,6 +35,9 @@ export function reserveConversationSession(input: { cwd?: string | null; profile
 
   const meta = readConversationSessionMetaByFile(sessionFile);
   const metaAtMs = performance.now();
+  if (meta) {
+    upsertConversationCatalogSession(meta);
+  }
   const conversationId = meta?.id || id;
   const idAtMs = performance.now();
   if (!conversationId) {

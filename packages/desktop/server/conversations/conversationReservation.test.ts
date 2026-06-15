@@ -5,12 +5,14 @@ const fs = vi.hoisted(() => ({ mkdirSync: vi.fn(), writeFileSync: vi.fn() }));
 const core = vi.hoisted(() => ({ getDurableSessionsDir: vi.fn(() => '/durable/sessions') }));
 const cwd = vi.hoisted(() => ({ resolveNeutralChatCwd: vi.fn(() => '/neutral/chat') }));
 const service = vi.hoisted(() => ({ readConversationSessionMetaByFile: vi.fn(() => ({ id: 'catalog-id' })) }));
+const catalog = vi.hoisted(() => ({ upsertConversationCatalogSession: vi.fn() }));
 
 vi.mock('node:crypto', () => crypto);
 vi.mock('node:fs', () => fs);
 vi.mock('@neon-pilot/core', () => core);
 vi.mock('./conversationCwd.js', () => cwd);
 vi.mock('./conversationService.js', () => service);
+vi.mock('./conversationCatalog.js', () => catalog);
 
 import { reserveConversationSession } from './conversationReservation.js';
 
@@ -22,6 +24,18 @@ describe('reserveConversationSession', () => {
   });
 
   it('creates a durable empty session and returns the catalog conversation id', () => {
+    const meta = {
+      id: 'catalog-id',
+      file: '/durable/sessions/--Users-patrick-project--/session-uuid.jsonl',
+      timestamp: '2026-06-15T00:00:00.000Z',
+      cwd: '/Users/patrick/project',
+      cwdSlug: 'Users-patrick-project',
+      model: 'unknown',
+      title: 'New Conversation',
+      messageCount: 0,
+    };
+    service.readConversationSessionMetaByFile.mockReturnValue(meta);
+
     const result = reserveConversationSession({ cwd: '/Users/patrick/project' });
 
     expect(fs.mkdirSync).toHaveBeenCalledWith('/durable/sessions/--Users-patrick-project--', { recursive: true });
@@ -38,6 +52,7 @@ describe('reserveConversationSession', () => {
     expect(service.readConversationSessionMetaByFile).toHaveBeenCalledWith(
       '/durable/sessions/--Users-patrick-project--/session-uuid.jsonl',
     );
+    expect(catalog.upsertConversationCatalogSession).toHaveBeenCalledWith(meta);
     expect(result).toMatchObject({
       id: 'catalog-id',
       sessionFile: '/durable/sessions/--Users-patrick-project--/session-uuid.jsonl',
@@ -59,5 +74,6 @@ describe('reserveConversationSession', () => {
     service.readConversationSessionMetaByFile.mockReturnValue(null);
 
     expect(reserveConversationSession({ cwd: '/repo' }).id).toBe('session-uuid');
+    expect(catalog.upsertConversationCatalogSession).not.toHaveBeenCalled();
   });
 });
