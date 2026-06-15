@@ -44,6 +44,7 @@ import {
   type SecretsState,
   type SecretStatusEntry,
   SearchInput,
+  SectionLabel,
   SegmentedControl,
   Select,
   SettingsField,
@@ -1356,7 +1357,7 @@ export function SettingsSidebar({ pa, context }: ExtensionSurfaceProps) {
     <div className="settings-sidebar flex h-full min-h-0 flex-col bg-transparent">
       <div className="settings-sidebar-header px-4 pb-1 pt-1">
         <div className="flex items-center gap-1">
-          <span className="settings-sidebar-title flex-1">Settings</span>
+          <SectionLabel className="flex-1">Settings</SectionLabel>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
