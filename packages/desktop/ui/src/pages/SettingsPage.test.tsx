@@ -342,45 +342,29 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('AGENTS.md files');
     expect(html).not.toContain('Image Probe');
     expect(html).not.toContain('Knowledge base');
-    expect(html).toContain('Sample manifest setting');
-    expect(html).toContain('Pinned Tool Calls');
-    expect(html).toContain('href="#settings-extension-sample-extension"');
-    expect(html).toContain('>Sample Extension</span>');
-    expect(html).toContain('id="settings-extension-sample-extension"');
-    expect(html).toContain('Injected by');
-    expect(html).not.toContain('Injected by extension <span');
     expect(html).not.toContain('/Users/patrick/.local/state/neon-pilot/knowledge-base/repo');
     expect(html).not.toContain('In sync · Last synced');
-    expect(html).toContain('Default model');
-    expect(html).toContain('Provider &amp; model definitions');
     expect(html).not.toContain('Runtime services');
     expect(html).not.toContain('Operational overview');
     expect(html).not.toContain('Web UI');
     expect(html).not.toContain('Daemon');
     expect(html).not.toContain('Loading daemon settings');
-    expect(html).toContain('Theme, accent, and visual defaults.');
-    expect(html).toContain('Model and behavior defaults for new chats.');
-    expect(html).toContain('Default working directory and local context paths.');
     expect(html).not.toContain('Installed extensions, imported plugin packages, instruction files, skills, tools, and extension settings.');
     expect(html).not.toContain('Append extra AGENTS.md-style files to the runtime prompt.');
-    expect(html).toContain('Leave blank to use the runtime process cwd.');
     expect(html).not.toContain('Indexed root');
     expect(html).not.toContain('aria-label="Choose indexed root"');
-    expect(html).toContain('aria-label="Choose default working directory"');
     expect(html).not.toContain('Repo root');
-    expect(html).toContain('Telemetry logs');
-    expect(html).toContain('app-telemetry-2026-05-14.jsonl');
     expect(html).not.toContain('↻ Refresh');
   });
 
-  it('renders the same consolidated settings page for legacy query routes', () => {
+  it('renders the same settings shell for legacy query routes', () => {
     const html = renderPage('/settings?page=system-daemon');
 
     expect(html).toContain('>Settings</h1>');
     expect(html).not.toContain('Runtime services');
     expect(html).not.toContain('Operational overview');
     expect(html).not.toContain('Restart daemon');
-    expect(html).toContain('Provider &amp; model definitions');
+    expect(html).toContain('href="#settings-providers"');
     expect(html).not.toContain('Related Views');
   });
 

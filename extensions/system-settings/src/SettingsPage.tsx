@@ -444,10 +444,10 @@ function SettingsSection({
     <section
       id={id}
       style={{ order: sectionOrder === -1 ? 1000 : sectionOrder }}
-      className={cx('scroll-mt-20 space-y-5 border-t border-border-subtle/80 pt-7 first:border-t-0 first:pt-0', className)}
+      className={cx('settings-page-section scroll-mt-20 space-y-3 border-t border-border-subtle/80 pt-4 first:border-t-0 first:pt-0', className)}
     >
-      <div className="max-w-2xl space-y-1">
-        <h2 className="text-[22px] font-semibold leading-snug text-primary">{label}</h2>
+      <div className="max-w-2xl">
+        <h2 className="settings-page-section-title text-[16px] font-semibold leading-snug text-primary">{label}</h2>
       </div>
       {children}
     </section>
@@ -1193,12 +1193,29 @@ function TelemetryLogsSettingsPanel() {
 function SettingsTableOfContents({
   items,
   activeId,
+  query,
+  onQueryChange,
   onNavigate,
 }: {
   items: readonly SettingsQuickLink[];
   activeId: SettingsQuickLinkId;
+  query: string;
+  onQueryChange: (query: string) => void;
   onNavigate: (sectionId: SettingsQuickLinkId) => void;
 }) {
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredItems = useMemo(() => {
+    if (!normalizedQuery) return items;
+    return items
+      .map((item) => {
+        const matchingChildren = item.children?.filter((child) => child.label.toLowerCase().includes(normalizedQuery)) ?? [];
+        if (item.label.toLowerCase().includes(normalizedQuery)) return item;
+        if (matchingChildren.length > 0) return { ...item, children: matchingChildren };
+        return null;
+      })
+      .filter((item): item is SettingsQuickLink => item !== null);
+  }, [items, normalizedQuery]);
+
   const renderLink = (item: SettingsQuickLink, nested = false) => {
     const active = item.id === activeId;
     return (
@@ -1211,7 +1228,7 @@ function SettingsTableOfContents({
         }}
         className={cx(
           'ui-app-page-toc-link settings-page-toc-link',
-          nested && 'settings-page-toc-link-nested py-1.5 pl-3',
+          nested && 'settings-page-toc-link-nested',
           active && 'ui-app-page-toc-link-active',
         )}
         aria-current={active ? 'location' : undefined}
@@ -1223,17 +1240,26 @@ function SettingsTableOfContents({
 
   return (
     <aside className="settings-page-toc">
-      <nav aria-label="Settings sections" className="settings-page-toc-nav space-y-2">
-        <div className="ui-app-page-toc-title">On this page</div>
+      <nav aria-label="Settings sections" className="settings-page-toc-nav space-y-3">
+        <SearchInput
+          value={query}
+          onChange={(event) => onQueryChange(event.currentTarget.value)}
+          placeholder="Search settings..."
+          className="settings-page-search h-8 bg-surface/70 text-[12px]"
+          aria-label="Search settings"
+        />
         <div className="settings-page-toc-list space-y-1">
-          {items.map((item) => (
+          {filteredItems.map((item) => (
             <div key={item.id} className="space-y-1">
               {renderLink(item)}
-              {item.children && item.children.length > 0 ? (
-                <div className="ml-3 space-y-1 border-l border-border-subtle/70 pl-2">{item.children.map((child) => renderLink(child, true))}</div>
+              {item.children &&
+              item.children.length > 0 &&
+              (normalizedQuery || item.id === activeId || item.children.some((child) => child.id === activeId)) ? (
+                <div className="settings-page-toc-children space-y-1">{item.children.map((child) => renderLink(child, true))}</div>
               ) : null}
             </div>
           ))}
+          {filteredItems.length === 0 ? <div className="settings-page-toc-empty">No settings found</div> : null}
         </div>
       </nav>
     </aside>
@@ -2008,6 +2034,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
   const settingsScrollRef = useRef<HTMLDivElement | null>(null);
   const [activeQuickLinkId, setActiveQuickLinkId] = useState<SettingsQuickLinkId>(SETTINGS_QUICK_LINKS[0].id);
+  const [settingsQuery, setSettingsQuery] = useState('');
 
   const visibleSectionIds = useMemo(() => (sectionIds ? new Set(sectionIds) : null), [sectionIds]);
   const extensionLabels = useMemo(() => {
@@ -2030,14 +2057,28 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       item.id === 'settings-extensions' ? { ...item, children: extensionSettingsQuickLinks } : item,
     );
   }, [extensionSettingsQuickLinks]);
+  const shellQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
+    return desktopEnvironment?.isElectron || isDesktopShell()
+      ? settingsQuickLinks
+      : settingsQuickLinks.filter((item) => item.id !== 'settings-desktop');
+  }, [desktopEnvironment?.isElectron, settingsQuickLinks]);
   const visibleQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
-    const shellFiltered =
-      desktopEnvironment?.isElectron || isDesktopShell()
-        ? settingsQuickLinks
-        : settingsQuickLinks.filter((item) => item.id !== 'settings-desktop');
-    return visibleSectionIds ? shellFiltered.filter((item) => visibleSectionIds.has(item.id)) : shellFiltered;
-  }, [desktopEnvironment?.isElectron, settingsQuickLinks, visibleSectionIds]);
-  const visibleTocLinks = useMemo(() => flattenSettingsQuickLinks(visibleQuickLinks), [visibleQuickLinks]);
+    return visibleSectionIds ? shellQuickLinks.filter((item) => visibleSectionIds.has(item.id)) : shellQuickLinks;
+  }, [shellQuickLinks, visibleSectionIds]);
+  const settingsNavLinks = sectionIds ? visibleQuickLinks : shellQuickLinks;
+  const visibleTocLinks = useMemo(() => flattenSettingsQuickLinks(settingsNavLinks), [settingsNavLinks]);
+  const activeRootSectionId = useMemo<SettingsQuickLinkId>(() => {
+    for (const item of settingsNavLinks) {
+      if (item.id === activeQuickLinkId || item.children?.some((child) => child.id === activeQuickLinkId)) {
+        return item.id;
+      }
+    }
+    return settingsNavLinks[0]?.id ?? SETTINGS_QUICK_LINKS[0].id;
+  }, [activeQuickLinkId, settingsNavLinks]);
+  const renderedSectionIds = useMemo(
+    () => visibleSectionIds ?? new Set<SettingsQuickLinkId>([activeRootSectionId]),
+    [activeRootSectionId, visibleSectionIds],
+  );
 
   useEffect(() => {
     const rawSectionId = readSettingsSectionIdFromHash(location.hash);
@@ -2072,13 +2113,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       return;
     }
 
-    const nextId = visibleQuickLinks[0]?.id ?? SETTINGS_QUICK_LINKS[0].id;
+    const nextId = settingsNavLinks[0]?.id ?? SETTINGS_QUICK_LINKS[0].id;
     setActiveQuickLinkId(nextId);
-  }, [activeQuickLinkId, visibleQuickLinks, visibleTocLinks]);
+  }, [activeQuickLinkId, settingsNavLinks, visibleTocLinks]);
 
   useEffect(() => {
     const container = settingsScrollRef.current;
-    if (!container || typeof window === 'undefined' || visibleTocLinks.length === 0) {
+    if (!sectionIds || !container || typeof window === 'undefined' || visibleTocLinks.length === 0) {
       return undefined;
     }
 
@@ -3040,27 +3081,39 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
   function navigateToSection(sectionId: SettingsQuickLinkId) {
     setActiveQuickLinkId(sectionId);
-    const section = settingsScrollRef.current?.querySelector<HTMLElement>(`#${sectionId}`);
-    section?.scrollIntoView({ block: 'start' });
+    const scrollContainer = settingsScrollRef.current;
+    if (scrollContainer && typeof scrollContainer.scrollTo === 'function') {
+      scrollContainer.scrollTo({ top: 0 });
+    }
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', `#${sectionId}`);
+    }
   }
 
   return (
-    <VisibleSettingsSectionsContext.Provider value={visibleSectionIds}>
+    <VisibleSettingsSectionsContext.Provider value={renderedSectionIds}>
       <div ref={settingsScrollRef} className="h-full overflow-y-auto">
         <AppPageLayout
-          asideLayout="centered"
-          contentClassName="flex flex-col gap-10"
-          aside={
-            visibleQuickLinks.length > 1 ? (
-              <SettingsTableOfContents items={visibleQuickLinks} activeId={activeQuickLinkId} onNavigate={navigateToSection} />
-            ) : undefined
-          }
+          shellClassName="settings-page-shell"
+          contentClassName="settings-page-workbench"
         >
-          <header className="flex min-h-8 items-center">
-            <h1 className="text-[24px] font-semibold leading-tight text-primary">Settings</h1>
-          </header>
+          {settingsNavLinks.length > 0 ? (
+            <div className="settings-page-rail">
+              <SettingsTableOfContents
+                items={settingsNavLinks}
+                activeId={activeQuickLinkId}
+                query={settingsQuery}
+                onQueryChange={setSettingsQuery}
+                onNavigate={navigateToSection}
+              />
+            </div>
+          ) : null}
+          <div className="settings-page-detail flex min-w-0 flex-col gap-4">
+            <header className="settings-page-header flex min-h-7 items-center border-b border-border-subtle/70 pb-2">
+              <h1 className="text-[18px] font-semibold leading-tight text-primary">Settings</h1>
+            </header>
 
-          <div className="flex flex-col gap-8">
+            <div className="settings-page-sections flex flex-col gap-4">
             <SettingsSection id="settings-appearance" label="Appearance" description="Theme, accent, and visual defaults.">
               <SettingsPanel title="Theme" className={SETTINGS_PANEL_COMPACT_CLASS}>
                 <div className="space-y-3">
@@ -4474,6 +4527,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               <DesktopConnectionsSettingsPanel />
               <TelemetryLogsSettingsPanel />
             </SettingsSection>
+            </div>
           </div>
         </AppPageLayout>
       </div>

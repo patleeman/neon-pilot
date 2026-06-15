@@ -36,11 +36,11 @@ function buildUseApiResult<T>(data: T) {
   };
 }
 
-function renderPage(pathname: string): string {
+function renderPage(pathname: string, sectionIds?: React.ComponentProps<typeof SettingsPage>['sectionIds']): string {
   return renderToString(
     <MemoryRouter initialEntries={[pathname]}>
       <Routes>
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings" element={<SettingsPage sectionIds={sectionIds} />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -134,7 +134,7 @@ describe('SettingsPage — untested panel rendering', () => {
   });
 
   it('renders the desktop section heading', () => {
-    const html = renderPage('/settings');
+    const html = renderPage('/settings', ['settings-desktop']);
     expect(html).toContain('Desktop');
     expect(html).toContain('App behavior');
     expect(html).toContain('Command line');

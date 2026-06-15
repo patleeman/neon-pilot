@@ -38,7 +38,7 @@ function buildUseApiResult<T>(data: T) {
   };
 }
 
-function renderPage() {
+function renderPage(sectionId?: string) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -54,6 +54,15 @@ function renderPage() {
   });
 
   mountedRoots.push(root);
+  if (sectionId) {
+    const sectionLink = container.querySelector<HTMLAnchorElement>(`a[href="#${sectionId}"]`);
+    if (!(sectionLink instanceof HTMLAnchorElement)) {
+      throw new Error(`Expected settings link for ${sectionId}`);
+    }
+    act(() => {
+      sectionLink.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    });
+  }
   return { container };
 }
 
@@ -439,7 +448,7 @@ describe('SettingsPage provider model editor', () => {
   });
 
   it('adds a model directly to a picked built-in provider without saving the provider first', async () => {
-    const { container } = renderPage();
+    const { container } = renderPage('settings-providers');
     await flushAsyncWork();
 
     updateSelectValue(queryProviderPicker(container), 'anthropic');
@@ -472,7 +481,7 @@ describe('SettingsPage provider model editor', () => {
   });
 
   it('refreshes models from advanced config', async () => {
-    const { container } = renderPage();
+    const { container } = renderPage('settings-providers');
     await flushAsyncWork();
 
     updateSelectValue(queryProviderPicker(container), 'anthropic');
@@ -551,7 +560,7 @@ describe('SettingsPage provider model editor', () => {
       updatedAt: '2026-05-07T00:00:00.000Z',
     });
 
-    const { container } = renderPage();
+    const { container } = renderPage('settings-providers');
     await flushAsyncWork();
 
     const providerButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('openai-codex'));
@@ -645,7 +654,7 @@ describe('SettingsPage provider model editor', () => {
       updatedAt: '2026-05-07T00:00:00.000Z',
     });
 
-    const { container } = renderPage();
+    const { container } = renderPage('settings-providers');
     await flushAsyncWork();
 
     const providerButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('openai-codex'));
@@ -684,7 +693,7 @@ describe('SettingsPage provider model editor', () => {
     });
 
     try {
-      const { container } = renderPage();
+      const { container } = renderPage('settings-providers');
       await flushAsyncWork();
 
       const providerButton = Array.from(container.querySelectorAll('button')).find((button) =>
@@ -709,7 +718,7 @@ describe('SettingsPage provider model editor', () => {
   });
 
   it('opens known providers from the preconfigured provider picker', async () => {
-    const { container } = renderPage();
+    const { container } = renderPage('settings-providers');
     await flushAsyncWork();
 
     expect(container.textContent).toContain('Add provider');
@@ -722,7 +731,7 @@ describe('SettingsPage provider model editor', () => {
   });
 
   it('shows provider API key entry when the selected provider supports API keys', async () => {
-    const { container } = renderPage();
+    const { container } = renderPage('settings-providers');
     await flushAsyncWork();
 
     updateSelectValue(queryProviderPicker(container), 'anthropic');
@@ -734,7 +743,23 @@ describe('SettingsPage provider model editor', () => {
   });
 
   it('runs telemetry database maintenance from settings', async () => {
-    const { container } = renderPage();
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
+        getEnvironment: vi.fn().mockResolvedValue({ isElectron: true }),
+        readDesktopAppPreferences: vi.fn().mockResolvedValue({
+          available: true,
+          supportsStartOnSystemStart: true,
+          autoInstallUpdates: false,
+          updatePath: 'stable',
+          startOnSystemStart: false,
+          keyboardShortcuts: {},
+          update: { supported: false, status: 'idle', currentVersion: '0.0.0' },
+        }),
+        updateDesktopAppPreferences: vi.fn(),
+      },
+    });
+
+    const { container } = renderPage('settings-desktop');
     await flushAsyncWork();
 
     const button = queryButton(container, 'Clean up telemetry index');
