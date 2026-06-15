@@ -183,6 +183,18 @@ export function readSettingsSectionIdFromHash(hash: string): string {
   }
 }
 
+export function scrollSettingsSectionIntoView(container: HTMLElement | null, sectionId: SettingsQuickLinkId) {
+  const section = typeof document === 'undefined' ? null : document.getElementById(sectionId);
+  if (section && container?.contains(section)) {
+    section.scrollIntoView({ block: 'start' });
+    return;
+  }
+
+  if (container && typeof container.scrollTo === 'function') {
+    container.scrollTo({ top: 0 });
+  }
+}
+
 type ShortcutListItem = {
   id: string;
   owner: string;
@@ -3158,10 +3170,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
   function navigateToSection(sectionId: SettingsQuickLinkId) {
     setActiveQuickLinkId(sectionId);
-    const scrollContainer = settingsScrollRef.current;
-    if (scrollContainer && typeof scrollContainer.scrollTo === 'function') {
-      scrollContainer.scrollTo({ top: 0 });
-    }
+    window.requestAnimationFrame(() => scrollSettingsSectionIntoView(settingsScrollRef.current, sectionId));
     if (typeof window !== 'undefined') {
       window.history.replaceState(null, '', `#${sectionId}`);
     }

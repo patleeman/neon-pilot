@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest';
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { formatSettingsModelOptionValue, readSettingsSectionIdFromHash, resolveSettingsModelOption } from './SettingsPage';
+import {
+  formatSettingsModelOptionValue,
+  readSettingsSectionIdFromHash,
+  resolveSettingsModelOption,
+  scrollSettingsSectionIntoView,
+} from './SettingsPage';
 
 const MODELS = [
   {
@@ -51,5 +57,37 @@ describe('settings hash section parsing', () => {
   it('decodes valid section hashes', () => {
     expect(readSettingsSectionIdFromHash('#settings-providers')).toBe('settings-providers');
     expect(readSettingsSectionIdFromHash('#extension%3Asystem-settings')).toBe('extension:system-settings');
+  });
+});
+
+describe('settings section scrolling', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('scrolls the concrete nested settings anchor into view', () => {
+    const container = document.createElement('div');
+    const section = document.createElement('section');
+    const scrollIntoView = vi.fn();
+    section.id = 'extension:system-settings';
+    section.scrollIntoView = scrollIntoView;
+    container.appendChild(section);
+    document.body.appendChild(container);
+
+    scrollSettingsSectionIntoView(container, 'extension:system-settings');
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' });
+  });
+
+  it('falls back to the container top when the anchor is not rendered', () => {
+    const container = document.createElement('div');
+    const scrollTo = vi.fn();
+    container.scrollTo = scrollTo;
+    document.body.appendChild(container);
+
+    scrollSettingsSectionIntoView(container, 'settings-extension-missing');
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
   });
 });
