@@ -25,7 +25,7 @@ Use focused client workflow tests before relying on Electron smoke tests. Electr
 | Settings | Settings nav opens provider and desktop panels, edits constrained controls, persists through reload, and shows validation errors | Existing settings panel tests cover components. Add panel workflow tests with API persistence mocks. |
 | Geometry | Sidebar/workbench resizing, layout mode changes, tab rail visibility, and route transitions preserve bounded dimensions | Existing sizing/model tests cover helpers. Add Layout workflow tests for visible mode transitions and persisted widths. |
 | Command palette | Opens commands, extension commands, file/conversation search, empty states, keyboard navigation | Existing command palette tests cover pieces. Add app-shell workflow test for route/action results. |
-| Recovery | Stale snapshots, missing session metadata, failed backend calls, and reconnects preserve valid local UI while surfacing errors | Expand `useConversations` and route recovery tests for representative failure paths. |
+| Recovery | Stale snapshots, missing session metadata, failed backend calls, and reconnects preserve valid local UI while surfacing errors | `ui/src/hooks/useConversations.test.tsx` covers stale remote layout, out-of-order metadata, full-snapshot races, and failed row metadata preserving placeholders. Add route-level recovery tests for visible notices/reconnect states. |
 
 ## Required Checks
 

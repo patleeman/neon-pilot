@@ -449,6 +449,33 @@ describe('useConversations', () => {
     expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-one']);
   });
 
+  it('keeps a placeholder tab when row metadata fails before any full snapshot arrives', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['open-missing-meta']));
+    localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, 'open-missing-meta');
+    apiMocks.openConversationTabs.mockResolvedValue({
+      sessionIds: ['open-missing-meta'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'open-missing-meta',
+      workspacePaths: [],
+    });
+    apiMocks.sessionMeta.mockRejectedValue(new Error('session meta unavailable'));
+
+    renderStatefulProbe({
+      sessions: [],
+      tasks: null,
+    });
+
+    await flushAsyncWork();
+
+    expect(apiMocks.sessionMeta).toHaveBeenCalledWith('open-missing-meta');
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['open-missing-meta']);
+    expect(latestHookResult?.tabs.map((session) => session.title)).toEqual(['Connecting…']);
+    expect(latestHookResult?.activeId).toBe('open-missing-meta');
+    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-missing-meta']);
+    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('open-missing-meta');
+  });
+
   it('does not let an older manual refetch overwrite a newer snapshot', async () => {
     let resolveFirst!: (sessions: SessionMeta[]) => void;
     let resolveSecond!: (sessions: SessionMeta[]) => void;
