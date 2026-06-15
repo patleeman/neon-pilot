@@ -106,6 +106,98 @@ describe('DesktopConnectionsSettingsPanel', () => {
     expect(container.textContent).toContain('Update path');
     expect(container.textContent).toContain('Start on sign in');
   });
+
+  it('persists app behavior changes through the desktop bridge', async () => {
+    mocks.readDesktopAppPreferences
+      .mockResolvedValueOnce({
+        available: true,
+        supportsStartOnSystemStart: true,
+        autoInstallUpdates: true,
+        updatePath: 'test',
+        startOnSystemStart: false,
+        keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
+        update: {
+          supported: true,
+          status: 'idle',
+          currentVersion: '0.3.7',
+        },
+      })
+      .mockResolvedValueOnce({
+        available: true,
+        supportsStartOnSystemStart: true,
+        autoInstallUpdates: false,
+        updatePath: 'test',
+        startOnSystemStart: false,
+        keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
+        update: {
+          supported: true,
+          status: 'idle',
+          currentVersion: '0.3.7',
+        },
+      })
+      .mockResolvedValueOnce({
+        available: true,
+        supportsStartOnSystemStart: true,
+        autoInstallUpdates: false,
+        updatePath: 'stable',
+        startOnSystemStart: false,
+        keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
+        update: {
+          supported: true,
+          status: 'idle',
+          currentVersion: '0.3.7',
+        },
+      })
+      .mockResolvedValue({
+        available: true,
+        supportsStartOnSystemStart: true,
+        autoInstallUpdates: false,
+        updatePath: 'stable',
+        startOnSystemStart: true,
+        keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
+        update: {
+          supported: true,
+          status: 'idle',
+          currentVersion: '0.3.7',
+        },
+      });
+
+    const { container } = renderPanel();
+    await flushAsyncWork();
+
+    const autoInstallSwitch = container.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Auto-install updates"]');
+    if (!(autoInstallSwitch instanceof HTMLButtonElement)) {
+      throw new Error('Expected auto-install switch');
+    }
+    act(() => {
+      autoInstallSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    const updatePathSelect = container.querySelector<HTMLSelectElement>('#desktop-update-path');
+    if (!(updatePathSelect instanceof HTMLSelectElement)) {
+      throw new Error('Expected update path select');
+    }
+    act(() => {
+      updatePathSelect.value = 'stable';
+      updatePathSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    const startOnSignInSwitch = container.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Start on sign in"]');
+    if (!(startOnSignInSwitch instanceof HTMLButtonElement)) {
+      throw new Error('Expected start-on-sign-in switch');
+    }
+    act(() => {
+      startOnSignInSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    expect(mocks.updateDesktopAppPreferences).toHaveBeenCalledWith({ autoInstallUpdates: false });
+    expect(mocks.updateDesktopAppPreferences).toHaveBeenCalledWith({ updatePath: 'stable' });
+    expect(mocks.updateDesktopAppPreferences).toHaveBeenCalledWith({ startOnSystemStart: true });
+    expect(mocks.readDesktopAppPreferences).toHaveBeenCalledTimes(4);
+  });
 });
 
 describe('DesktopKeyboardShortcutsSettingsSection', () => {

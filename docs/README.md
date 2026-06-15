@@ -66,6 +66,7 @@ The public website docs are built from the page list in [`apps/site/build-docs.m
 - [Extension visual refinement](design/extension-visual-refinement.md) — screenshot-backed iteration loop for generated extension UI
 - [Design examples](design/examples/README.md) — positive and negative visual anchors
 - [Development workflow](development.md) — validation, UI QA, checkpoints, and secret scanning
+- [Client workflow tests](client-workflow-tests.md) — frontend workflow coverage matrix for chat, sidebar, extensions, settings, geometry, and recovery paths
 - [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native-only IPC policy
 - [Daemon](daemon.md) — background process and runtime lifecycle
 - [Sandboxing](sandboxing.md) — shared process execution launcher, wrapper extensions, and direct process API policy

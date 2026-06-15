@@ -528,6 +528,57 @@ describe('useConversations', () => {
     expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-live']);
   });
 
+  it('keeps a newly reserved conversation in the sidebar through snapshot refresh and stale remote layout sync', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['reserved-conv']));
+    localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, 'reserved-conv');
+    apiMocks.openConversationTabs.mockResolvedValueOnce({
+      sessionIds: ['reserved-conv'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'reserved-conv',
+      workspacePaths: [],
+    });
+    apiMocks.openConversationTabs.mockResolvedValue({
+      sessionIds: [],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+    });
+
+    const reservedSession = createSession({
+      id: 'reserved-conv',
+      file: '/tmp/reserved-conv.jsonl',
+      title: 'New Conversation',
+      messageCount: 0,
+    });
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    renderProbeIntoRoot(root, {
+      sessions: [reservedSession],
+      tasks: null,
+    });
+    await flushAsyncWork();
+
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['reserved-conv']);
+    expect(latestHookResult?.activeId).toBe('reserved-conv');
+
+    renderProbeIntoRoot(root, {
+      sessions: [{ ...reservedSession, messageCount: 1, title: 'Reserved conversation persisted' }],
+      tasks: null,
+    });
+    await flushAsyncWork();
+
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['reserved-conv']);
+    expect(latestHookResult?.tabs.map((session) => session.title)).toEqual(['Reserved conversation persisted']);
+    expect(latestHookResult?.activeId).toBe('reserved-conv');
+    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['reserved-conv']);
+    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('reserved-conv');
+  });
+
   describe('bootstrap / individual sessionMeta fetch race', () => {
     it('preserves all open IDs when individual sessionMeta fetches resolve out of order', async () => {
       localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['open-a', 'open-b', 'open-c']));

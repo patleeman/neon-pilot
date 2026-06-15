@@ -117,6 +117,24 @@ describe('Layout workbench toggle', () => {
     expect((screen.getByRole('button', { name: 'Show workbench' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it('persists workbench mode after toggling app chrome and restores it on rerender', () => {
+    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'compact');
+    const view = renderLayout('/conversations/conv-1');
+
+    expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show workbench' }));
+
+    expect(window.localStorage.getItem(APP_LAYOUT_MODE_STORAGE_KEY)).toBe('workbench');
+    expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
+
+    view.unmount();
+    renderLayout('/conversations/conv-1');
+
+    expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Hide workbench' })).toBeTruthy();
+  });
+
   it('accepts command-only desktop shortcut events for command-backed app chrome actions', () => {
     window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'compact');
     renderLayout('/conversations/conv-1');
