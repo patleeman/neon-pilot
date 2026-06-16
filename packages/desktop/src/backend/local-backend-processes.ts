@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { getStateRoot } from '@neon-pilot/core';
@@ -126,7 +126,8 @@ function renderBackendChildExit(code: number | null, signal: NodeJS.Signals | nu
 async function readOpenConversationTabsFastPath(): Promise<unknown> {
   const { readSavedUiPreferences } = await import('../../server/ui/uiPreferences.js');
   const { buildDesktopOpenConversationTabsResponse } = await import('../../server/app/localApiOpenTabsPresentation.js');
-  const saved = readSavedUiPreferences(join(getStateRoot(), 'settings.json'));
+  const { getRuntimeSettingsFilePath } = await import('../../server/ui/settingsPersistence.js');
+  const saved = readSavedUiPreferences(getRuntimeSettingsFilePath(getStateRoot()));
   return buildDesktopOpenConversationTabsResponse(saved);
 }
 
@@ -134,6 +135,7 @@ async function updateOpenConversationTabsFastPath(input: unknown): Promise<unkno
   const { buildDesktopOpenConversationTabsResponse } = await import('../../server/app/localApiOpenTabsPresentation.js');
   const openTabsModule: typeof import('../../server/app/localApiOpenTabs.js') = await import('../../server/app/localApiOpenTabs.js');
   const { writeSavedUiPreferences } = await import('../../server/ui/uiPreferences.js');
+  const { getRuntimeSettingsFilePath, persistSettingsWrite } = await import('../../server/ui/settingsPersistence.js');
   openTabsModule.validateDesktopOpenConversationTabsUpdate(input);
   const update = input as {
     sessionIds?: string[];
@@ -143,16 +145,20 @@ async function updateOpenConversationTabsFastPath(input: unknown): Promise<unkno
     workspacePaths?: string[];
     conversationWorkspaceMigrated?: boolean | null;
   };
-  const saved = writeSavedUiPreferences(
-    {
-      openConversationIds: update.sessionIds,
-      pinnedConversationIds: update.pinnedSessionIds,
-      archivedConversationIds: update.archivedSessionIds,
-      activeConversationId: update.activeConversationId,
-      workspacePaths: update.workspacePaths,
-      conversationWorkspaceMigrated: update.conversationWorkspaceMigrated,
-    },
-    join(getStateRoot(), 'settings.json'),
+  const saved = persistSettingsWrite(
+    (settingsFile) =>
+      writeSavedUiPreferences(
+        {
+          openConversationIds: update.sessionIds,
+          pinnedConversationIds: update.pinnedSessionIds,
+          archivedConversationIds: update.archivedSessionIds,
+          activeConversationId: update.activeConversationId,
+          workspacePaths: update.workspacePaths,
+          conversationWorkspaceMigrated: update.conversationWorkspaceMigrated,
+        },
+        settingsFile,
+      ),
+    { runtimeSettingsFile: getRuntimeSettingsFilePath(getStateRoot()) },
   );
   return {
     ok: true,
@@ -164,8 +170,9 @@ async function updateOpenConversationTabsByOperationFastPath(input: unknown): Pr
   const { buildDesktopOpenConversationTabsResponse } = await import('../../server/app/localApiOpenTabsPresentation.js');
   const openTabsModule: typeof import('../../server/app/localApiOpenTabs.js') = await import('../../server/app/localApiOpenTabs.js');
   const { readSavedUiPreferences, writeSavedUiPreferences } = await import('../../server/ui/uiPreferences.js');
+  const { getRuntimeSettingsFilePath, persistSettingsWrite } = await import('../../server/ui/settingsPersistence.js');
   openTabsModule.validateDesktopOpenConversationOperation(input);
-  const settingsFile = join(getStateRoot(), 'settings.json');
+  const settingsFile = getRuntimeSettingsFilePath(getStateRoot());
   const current = readSavedUiPreferences(settingsFile);
   const next = openTabsModule.applyDesktopOpenConversationOperation(
     {
@@ -176,15 +183,19 @@ async function updateOpenConversationTabsByOperationFastPath(input: unknown): Pr
     },
     input,
   );
-  const saved = writeSavedUiPreferences(
-    {
-      openConversationIds: next.sessionIds,
-      pinnedConversationIds: next.pinnedSessionIds,
-      archivedConversationIds: next.archivedSessionIds,
-      activeConversationId: next.activeConversationId,
-      conversationWorkspaceMigrated: true,
-    },
-    settingsFile,
+  const saved = persistSettingsWrite(
+    (targetSettingsFile) =>
+      writeSavedUiPreferences(
+        {
+          openConversationIds: next.sessionIds,
+          pinnedConversationIds: next.pinnedSessionIds,
+          archivedConversationIds: next.archivedSessionIds,
+          activeConversationId: next.activeConversationId,
+          conversationWorkspaceMigrated: true,
+        },
+        targetSettingsFile,
+      ),
+    { runtimeSettingsFile: settingsFile },
   );
   return {
     ok: true,

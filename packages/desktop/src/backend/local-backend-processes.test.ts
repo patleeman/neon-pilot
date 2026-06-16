@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -646,6 +646,9 @@ describe('LocalBackendProcesses', () => {
   });
 
   it('serves open conversation tabs in the main process and warms the backend child', async () => {
+    const originalStateRoot = process.env.NEON_PILOT_STATE_ROOT;
+    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-open-tabs-read-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     class MainProcessLayoutBackend extends LocalBackendProcesses {
       readonly calls: string[] = [];
 
@@ -659,32 +662,58 @@ describe('LocalBackendProcesses', () => {
       }
     }
 
-    const backend = new MainProcessLayoutBackend();
-    const response = await backend.dispatchApiRequest({
-      method: 'GET',
-      path: '/api/ui/open-conversations',
-    });
+    try {
+      const runtimeSettingsFile = join(stateRoot, 'neon-pilot-runtime', 'settings.json');
+      mkdirSync(join(stateRoot, 'neon-pilot-runtime'), { recursive: true });
+      writeFileSync(
+        runtimeSettingsFile,
+        JSON.stringify({
+          ui: {
+            openConversationIds: ['runtime-conv'],
+            activeConversationId: 'runtime-conv',
+            conversationWorkspaceRevision: 3,
+            conversationWorkspaceUpdatedAt: '2026-06-16T00:00:00.000Z',
+            conversationWorkspaceMigratedAt: '2026-06-16T00:00:00.000Z',
+          },
+        }),
+      );
+      mkdirSync(stateRoot, { recursive: true });
+      writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ ui: { openConversationIds: ['wrong-root-conv'] } }));
 
-    expect(response.statusCode).toBe(200);
-    expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
-      localApi: {
-        fastPath: 'main-process',
-      },
-    });
-    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
-      sessionIds: expect.any(Array),
-      pinnedSessionIds: expect.any(Array),
-      archivedSessionIds: expect.any(Array),
-      activeConversationId: null,
-      workspacePaths: expect.any(Array),
-      remoteControlledConversationIds: expect.any(Array),
-    });
-    await vi.waitFor(() => expect(backend.calls).toEqual(['ensureStarted']));
-    await vi.waitFor(() =>
-      expect(
-        (backend as unknown as { criticalExtensionRegistryModulePromise?: Promise<unknown> }).criticalExtensionRegistryModulePromise,
-      ).toBeTruthy(),
-    );
+      const backend = new MainProcessLayoutBackend();
+      const response = await backend.dispatchApiRequest({
+        method: 'GET',
+        path: '/api/ui/open-conversations',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+        localApi: {
+          fastPath: 'main-process',
+        },
+      });
+      expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+        sessionIds: ['runtime-conv'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        activeConversationId: 'runtime-conv',
+        workspacePaths: [],
+        remoteControlledConversationIds: [],
+      });
+      await vi.waitFor(() => expect(backend.calls).toEqual(['ensureStarted']));
+      await vi.waitFor(() =>
+        expect(
+          (backend as unknown as { criticalExtensionRegistryModulePromise?: Promise<unknown> }).criticalExtensionRegistryModulePromise,
+        ).toBeTruthy(),
+      );
+    } finally {
+      if (originalStateRoot === undefined) {
+        delete process.env.NEON_PILOT_STATE_ROOT;
+      } else {
+        process.env.NEON_PILOT_STATE_ROOT = originalStateRoot;
+      }
+      rmSync(stateRoot, { recursive: true, force: true });
+    }
   });
 
   it('serves the critical extension registry from warmed main-process modules', async () => {
@@ -796,7 +825,17 @@ describe('LocalBackendProcesses', () => {
       });
       expect(body.conversationWorkspaceUpdatedAt).toEqual(expect.any(String));
       expect(body.conversationWorkspaceMigratedAt).toEqual(expect.any(String));
-      expect(JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8'))).toMatchObject({
+      expect(JSON.parse(readFileSync(join(stateRoot, 'neon-pilot-runtime', 'settings.json'), 'utf-8'))).toMatchObject({
+        ui: {
+          openConversationIds: ['conv-open'],
+          pinnedConversationIds: ['conv-pinned'],
+          archivedConversationIds: ['conv-archived'],
+          activeConversationId: 'conv-pinned',
+          workspacePaths: ['/repo'],
+          conversationWorkspaceRevision: 1,
+        },
+      });
+      expect(JSON.parse(readFileSync(join(stateRoot, 'config', 'local', 'settings.json'), 'utf-8'))).toMatchObject({
         ui: {
           openConversationIds: ['conv-open'],
           pinnedConversationIds: ['conv-pinned'],
@@ -849,7 +888,14 @@ describe('LocalBackendProcesses', () => {
         activeConversationId: 'conv-fast',
         conversationWorkspaceRevision: 1,
       });
-      expect(JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8'))).toMatchObject({
+      expect(JSON.parse(readFileSync(join(stateRoot, 'neon-pilot-runtime', 'settings.json'), 'utf-8'))).toMatchObject({
+        ui: {
+          openConversationIds: ['conv-fast'],
+          activeConversationId: 'conv-fast',
+          conversationWorkspaceRevision: 1,
+        },
+      });
+      expect(JSON.parse(readFileSync(join(stateRoot, 'config', 'local', 'settings.json'), 'utf-8'))).toMatchObject({
         ui: {
           openConversationIds: ['conv-fast'],
           activeConversationId: 'conv-fast',
