@@ -100,8 +100,11 @@ Implement it with editable source files, build it, reload it, visually test the 
             <strong>Information architecture</strong>: the core sections, list/detail structure, controls, and command-backed actions. -
             <strong>State model</strong>: default, empty, loading, error, success, disabled, and long-running states. -
             <strong>Primitive plan</strong>: which <code>@neon-pilot/extensions/ui</code> components will be used for page shell,
-            lists/tables, forms, feedback, dialogs, runtime status, rails, or workbench chrome. - <strong>Visual acceptance</strong>: what
-            must be visible in the app screenshot or manual inspection before calling the UI correct.
+            lists/tables, forms, feedback, dialogs, runtime status, rails, or workbench chrome. For Settings components, use
+            <code>@neon-pilot/extensions/settings</code> row-list primitives (<code>SettingsPanel</code>, <code>SettingsRow</code>,
+            <code>Switch</code>, <code>Select</code>, <code>TextInput</code>, <code>ToolbarButton</code>) and autosave normal preferences. -
+            <strong>Visual acceptance</strong>: what must be visible in the app screenshot or manual inspection before calling the UI
+            correct.
           </p>
           <li>
             Ask focused questions for unresolved UX/product decisions before writing code. If the user gave enough detail, state the
@@ -130,6 +133,10 @@ Implement it with editable source files, build it, reload it, visually test the 
             Run <code>neon-pilot extensions smoke &lt;extension-id&gt;</code> when the app is running, then validate through the same
             surface the user will use: open the route, rail, Settings section, command, composer control, or agent tool.
           </li>
+          <p>
+            For a Settings component, open <code>/settings#&lt;sectionId&gt;</code> and inspect it beside neighboring Settings sections for
+            row spacing, padding, title hierarchy, and action alignment.
+          </p>
           <li>
             Exercise empty, loading, error, success, disabled, and long-running states when the surface has UI; for backend tools/actions,
             run one representative invocation and inspect the transcript or visible result.
@@ -187,7 +194,7 @@ Implement it with editable source files, build it, reload it, visually test the 
                   ><code>settings-section</code></a
                 >
               </td>
-              <td>Section in the shared Settings page. No separate route.</td>
+              <td>Section in the shared Settings page. No separate route. Autosaving row-list example.</td>
             </tr>
           </tbody>
         </table>

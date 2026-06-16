@@ -290,6 +290,12 @@ async function stripTestingAttributes(cdp) {
         element.removeAttribute('data-test');
         element.removeAttribute('data-qa');
       }
+      for (const element of document.querySelectorAll('body *')) {
+        const text = (element.textContent || '').trim().toUpperCase();
+        if ((text === 'TESTING' || text === 'TEST' || text === 'DEV') && element.getBoundingClientRect().width <= 140) {
+          element.remove();
+        }
+      }
       return true;
     })()`,
   );

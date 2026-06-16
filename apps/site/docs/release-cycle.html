@@ -62,21 +62,30 @@
           produce a release — release is a manual local process.
         </p>
         <h2 id="current-release">Current release</h2>
-        <p><strong>v0.11.20</strong> — patch release.</p>
-        <p>Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.20</p>
+        <p><strong>v0.11.22-rc.0</strong> — release candidate.</p>
+        <p>Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.22-rc.0</p>
         <p>Highlights in this train:</p>
         <ul>
-          <li>Fixes packaged OpenAI Desktop Plugin reinstall by bundling the Codex plugin template into extension build output.</li>
           <li>
-            Repairs Codex plugin registration so the Neon Pilot plugin, MCP server, and delegated-agent tools can be refreshed from
-            Settings.
+            Makes conversation workspace state backend-owned so sidebar hydration, route recovery, and quick reloads converge on the same
+            open/archive state instead of drifting between renderer snapshots.
           </li>
-          <li>Adds wait-any delegated-run orchestration for parallel Neon Pilot subagent investigations.</li>
           <li>
-            Renames the local Responses-compatible integration to AI Gateway across Settings, docs, website copy, and Codex provider
-            metadata.
+            Hardens conversation startup and reuse flows, including reserved conversation persistence, empty-conversation reuse by cwd,
+            first-message route handoff, and stale workspace event filtering.
           </li>
-          <li>Keeps extension packaging docs aligned with static <code>templates/</code> build behavior for packaged desktop releases.</li>
+          <li>
+            Improves app navigation coverage across chat, settings, extension routes, command palette actions, sidebar reopen flows, and
+            layout width restoration.
+          </li>
+          <li>
+            Tightens recovery behavior for missing conversation metadata and stale layout/session reads so conversation routes reopen with
+            the expected catalog-backed state.
+          </li>
+          <li>
+            Keeps extension settings work checkpointed for the RC train while preserving the current Pi runtime package set at
+            <code>^0.79.4</code>.
+          </li>
           <li>Keep this section aligned with <code>package.json</code>, <code>CHANGELOG.md</code>, and the tag being prepared.</li>
         </ul>
         <h2 id="rc-release-operating-instructions">RC release operating instructions</h2>

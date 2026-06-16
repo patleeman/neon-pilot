@@ -197,7 +197,15 @@ async function runVisualJudges() {
     try {
       const response = await postResponses(baseUrl, apiKey, request, timeoutMs);
       const rawText = responseText(response);
-      const judge = parseJudgeJson(rawText);
+      let judge;
+      try {
+        judge = parseJudgeJson(rawText);
+      } catch (error) {
+        const result = { model, status: 'error', error: error instanceof Error ? error.message : String(error), rawText };
+        results.push(result);
+        write(resolve(outDir, `${safeModelFileName(model)}.error.json`), `${JSON.stringify(result, null, 2)}\n`);
+        continue;
+      }
       const result = { model, status: 'pass', judge, rawText };
       results.push(result);
       write(resolve(outDir, `${safeModelFileName(model)}.json`), `${JSON.stringify(result, null, 2)}\n`);

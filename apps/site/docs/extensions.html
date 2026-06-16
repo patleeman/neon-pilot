@@ -1084,6 +1084,45 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           The component receives <code>pa</code> and <code>settingsContext</code>. Use this for rich settings UIs; use
           <code>settings</code> for simple scalar settings managed by the built-in extension settings form.
         </p>
+        <p>
+          Settings components are hosted inside the shared Settings page, so they must use the same compact row-list grammar as core
+          Settings:
+        </p>
+        <ul>
+          <li>
+            Import settings-surface primitives from <code>@neon-pilot/extensions/settings</code>, especially <code>SettingsPanel</code>,
+            <code>SettingsRow</code>, <code>Switch</code>, <code>Select</code>, <code>TextInput</code>, <code>Textarea</code>,
+            <code>ToolbarButton</code>, <code>LoadingState</code>, and <code>Notice</code>.
+          </li>
+          <li>
+            Do not render another page title, redundant <code>Settings</code> heading, local sidebar, hero, card stack, or custom form
+            chrome inside the component. The host owns the page title, scroll anchor, outer width, and section spacing.
+          </li>
+          <li>
+            Render <code>SettingsPanel</code> elements directly from the settings component when possible. Avoid wrapping all panels in a
+            generic layout container because the host applies the shared row-list spacing, borders, and padding to direct panels.
+          </li>
+          <li>
+            Group related controls in one <code>SettingsPanel</code>; each setting is a <code>SettingsRow</code> with label and operational
+            secondary text on the left and the control/action on the right.
+          </li>
+          <li>
+            Normal preferences autosave on change, blur, or a short debounce. Do not show persistent Save/Cancel buttons for ordinary
+            settings rows.
+          </li>
+          <li>
+            Use text buttons only for explicit commands such as <code>Sync now</code>, <code>Install model</code>,
+            <code>Test connection</code>, or destructive actions. Keep them aligned in the row action area.
+          </li>
+          <li>
+            Avoid nested bordered panels inside Settings. If a complex editor truly needs a nested structure, make it visually flatter than
+            a standalone app page and verify it against the whole Settings page, not just a cropped component screenshot.
+          </li>
+          <li>
+            Validate with <code>/settings#&lt;sectionId&gt;</code> plus whole-page or scroll-depth screenshots when the section can extend
+            below the first viewport.
+          </li>
+        </ul>
         <h3 id="composer-controls-composercontrols">Composer Controls (<code>composerControls</code>)</h3>
         <p>
           Add component-backed controls in the composer bottom row. Core owns the row layout and passes composer state/actions through
@@ -1801,7 +1840,10 @@ export async function ping(_input: unknown, ctx: ExtensionBackendContext) {
             </tr>
           </tbody>
         </table>
-        <p>All settings are stored in a single <code>&lt;stateRoot&gt;/settings.json</code> file.</p>
+        <p>
+          All manifest-declared settings autosave through the shared Settings UI and are stored in a single
+          <code>&lt;stateRoot&gt;/settings.json</code> file.
+        </p>
         <table>
           <thead>
             <tr>

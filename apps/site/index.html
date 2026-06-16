@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#05070b" />
+    <meta name="theme-color" content="#f7f7f4" />
     <meta
       name="description"
-      content="Neon Pilot is a durable AI agent runtime with a desktop app, background automation, extensions, and knowledge management."
+      content="Neon Pilot is a local macOS agent runtime and workbench for durable conversations, background runs, extensions, and knowledge."
     />
-    <title>Neon Pilot — durable desktop agent runtime</title>
+    <title>Neon Pilot - local AI agent runtime and workbench</title>
     <link rel="icon" href="./mark.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,265 +18,240 @@
   <body>
     <a class="skip" href="#main">Skip to content</a>
 
-    <header>
+    <header class="site-header">
       <a class="brand" href="#main" aria-label="Neon Pilot home">
-        <span class="brand-mark"><img src="./mark.svg" alt="" /></span>
+        <span class="brand-mark"><img src="./mark.svg" alt="" width="22" height="22" /></span>
         <span>Neon Pilot</span>
       </a>
       <nav aria-label="Primary">
-        <a href="#overview">Overview</a>
+        <a href="#product">Product</a>
         <a href="./docs/">Docs</a>
         <a href="./extensions.html">Extensions</a>
-        <a href="https://github.com/patleeman/neon-pilot" rel="noopener">GitHub ↗</a>
+        <a href="https://github.com/patleeman/neon-pilot" rel="noopener">GitHub</a>
       </nav>
-      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
     </header>
 
     <main id="main">
-      <section class="hero" id="overview" aria-labelledby="hero-title">
+      <section class="hero" id="product" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <h1 id="hero-title">A desktop app for AI agents that keep working</h1>
-          <p>
-            Neon Pilot is a local macOS workspace where you chat with an agent, give it files and tools, let it run background work, and
-            keep the results across sessions.
+          <p class="eyebrow">Local macOS runtime</p>
+          <h1 id="hero-title">The local AI agent runtime and workbench.</h1>
+          <p class="hero-lede">
+            Neon Pilot gives coding agents a durable desktop home: conversations, background work, tools, extensions, knowledge, and
+            checkpoints in one local app.
           </p>
-          <p>Use it for code, docs, research, automation, and custom workflows that should become part of your agent environment.</p>
+
+          <div class="proof-list" aria-label="Primary product guarantees">
+            <div>
+              <strong>Local by default</strong>
+              <span>Conversations, data, and runtime state stay on your machine.</span>
+            </div>
+            <div>
+              <strong>Built for long work</strong>
+              <span>Run follow-ups, scheduled tasks, and daemon-backed jobs after one reply ends.</span>
+            </div>
+            <div>
+              <strong>Extensible by design</strong>
+              <span>Add commands, pages, tools, settings, and skills as first-class extensions.</span>
+            </div>
+          </div>
+
           <div class="cta-row">
-            <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">⌄ Download for macOS</a>
-            <a class="btn" href="https://github.com/patleeman/neon-pilot">View on GitHub <span>◖</span></a>
+            <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
+            <a class="btn" href="./docs/">Read the Docs</a>
           </div>
-          <div class="quick-install" aria-label="Quick install command">
-            <div>
-              <span>Quick install</span>
-              <a href="https://github.com/patleeman/neon-pilot/releases/latest">or download the latest release</a>
-            </div>
-            <!-- prettier-ignore -->
-            <code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap</code>
-          </div>
-        </div>
-        <div class="hero-points" aria-label="Primary differentiators">
-          <article>
-            <span>⌘</span>
-            <div>
-              <strong>Extension-first</strong>
-              <p>Commands, tools, pages, panels, and workflows live in extensions.</p>
-            </div>
-          </article>
-          <article>
-            <span>◷</span>
-            <div>
-              <strong>Daemon-backed</strong>
-              <p>Automations, persisted runs, follow-ups, and scheduled work keep moving.</p>
-            </div>
-          </article>
-          <article>
-            <span>◇</span>
-            <div>
-              <strong>Knowledge-aware</strong>
-              <p>Use files, instruction layers, skills, projects, and synced knowledge as context.</p>
-            </div>
-          </article>
-        </div>
-      </section>
 
-      <section class="user-path" aria-labelledby="user-path-title">
-        <div>
-          <p class="eyebrow">What you can do</p>
-          <h2 id="user-path-title">Start with a conversation. Grow into a workspace.</h2>
-        </div>
-        <div class="user-path-grid">
-          <article>
-            <span>1</span>
-            <h3>Ask the agent to work</h3>
-            <p>
-              Start a conversation, attach files or folders, and ask Neon Pilot to inspect code, draft docs, debug problems, or plan work.
-            </p>
-          </article>
-          <article>
-            <span>2</span>
-            <h3>Let work continue</h3>
-            <p>Use background runs, follow-ups, automations, and deferred resumes when a task should keep moving after one reply.</p>
-          </article>
-          <article>
-            <span>3</span>
-            <h3>Keep reusable context</h3>
-            <p>Connect knowledge, instruction files, skills, project notes, and previous conversations so future turns have memory.</p>
-          </article>
-          <article>
-            <span>4</span>
-            <h3>Add capabilities</h3>
-            <p>Install extensions or ask the agent to build one when you need a new tool, page, command, integration, or workflow.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="flow" aria-label="A feature request becoming a reusable capability">
-        <div class="flow-step request">
-          <small>You ask for a capability</small>
-          <div class="message"><b>PM</b><span>Build a workflow that triages failed CI logs</span></div>
-          <em>9:41 AM</em>
-        </div>
-        <div class="arrow">→</div>
-        <div class="flow-step">
-          <small>Neon Pilot turns it into an extension</small>
-          <ul>
-            <li>Pick the right extension surface</li>
-            <li>Add command palette actions</li>
-            <li>Register a reusable agent tool</li>
-            <li>Wire results into the transcript</li>
-          </ul>
-        </div>
-        <div class="arrow">→</div>
-        <div class="flow-step build">
-          <small>It builds, tests, and wires it in</small>
-          <ul>
-            <li>Created: ci-triage extension</li>
-            <li>Added: paste/log attachment flow</li>
-            <li>Built: parser and summary action</li>
-            <li>Tests: tool result rendering</li>
-            <li>Docs: workflow usage</li>
-          </ul>
-        </div>
-        <div class="arrow">→</div>
-        <div class="flow-step ready">
-          <small>It becomes reusable</small>
-          <p class="integrated">CI triage ready</p>
-          <div class="command">
-            Triage failed CI <kbd>Command</kbd><span>Analyze logs from the palette, composer, or agent toolbelt.</span>
+          <div class="quick-install" aria-label="Install command">
+            <div class="quick-install-header">
+              <span>Install and bootstrap</span>
+              <a href="https://github.com/patleeman/neon-pilot/releases/latest">Latest release</a>
+            </div>
+            <div class="command-row">
+              <!-- prettier-ignore -->
+              <code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap</code>
+              <button type="button" class="copy-command" aria-label="Copy install command">Copy</button>
+            </div>
+            <p>Requires macOS. Fully open source under MIT.</p>
           </div>
         </div>
+
+        <figure class="hero-shot">
+          <img
+            src="./screenshots/dark/extensions.png"
+            alt="Neon Pilot desktop app showing the local extension manager with built-in capabilities, routes, commands, and enabled states."
+            width="1440"
+            height="960"
+            fetchpriority="high"
+          />
+        </figure>
       </section>
 
-      <section class="app-shot" aria-label="Neon Pilot screenshot">
-        <img
-          src="./screenshots/dark/workbench.png"
-          alt="Neon Pilot desktop app showing a local workspace, conversation, workbench, and file explorer."
-        />
-      </section>
-
-      <section class="cards primary-cards" aria-label="Primary features">
+      <section class="capability-strip" aria-label="Core capabilities">
         <article>
-          <span>☷</span>
-          <h2>Extension-first</h2>
+          <span aria-hidden="true">01</span>
+          <strong>Local by Default</strong>
+          <p>Your agent workspace runs from a macOS desktop app with local state, config, and files.</p>
+        </article>
+        <article>
+          <span aria-hidden="true">02</span>
+          <strong>Background Runs</strong>
+          <p>Let tasks continue as daemon-backed work, scheduled automations, follow-ups, or deferred resumes.</p>
+        </article>
+        <article>
+          <span aria-hidden="true">03</span>
+          <strong>Extensions</strong>
+          <p>Install or build native capabilities with commands, tools, pages, settings, skills, and docs.</p>
+        </article>
+        <article>
+          <span aria-hidden="true">04</span>
+          <strong>Knowledge</strong>
+          <p>Attach files, projects, instruction layers, generated context, and git-backed knowledge.</p>
+        </article>
+      </section>
+
+      <section class="explain split-section" aria-labelledby="what-title">
+        <div>
+          <p class="eyebrow">What it is</p>
+          <h2 id="what-title">A desktop shell for agent work that should survive the chat turn.</h2>
+        </div>
+        <div class="text-column">
           <p>
-            Neon Pilot keeps core small. Product workflows become system or user extensions with manifests, commands, tools, UI, settings,
-            and docs.
+            Neon Pilot is not another hosted chat surface. It is a local runtime around the agent: transcript storage, workspace context,
+            background execution, extension hosting, model/provider settings, and reusable workflow surfaces.
           </p>
-          <a href="#self-extension">Learn more →</a>
-        </article>
+          <p>Use it when a task needs files, tools, follow-through, and durable state instead of a single disposable answer.</p>
+        </div>
+      </section>
+
+      <section class="workflow" aria-label="Workflow from conversation to reusable capability">
+        <div class="workflow-step">
+          <span>Ask</span>
+          <strong>Start with a conversation</strong>
+          <p>Attach files or folders, choose a model, and ask the agent to inspect, write, debug, plan, or automate.</p>
+        </div>
+        <div class="workflow-step">
+          <span>Run</span>
+          <strong>Let work continue</strong>
+          <p>Promote longer tasks into background runs, follow-ups, scheduled automations, and checkpointed changes.</p>
+        </div>
+        <div class="workflow-step">
+          <span>Keep</span>
+          <strong>Turn patterns into tools</strong>
+          <p>When a workflow repeats, make it an extension with commands, UI, backend actions, docs, and tests.</p>
+        </div>
+      </section>
+
+      <section class="screens" aria-label="Product screenshots">
+        <figure class="screen-main">
+          <img
+            src="./screenshots/dark/settings.png"
+            alt="Neon Pilot settings showing appearance and provider configuration."
+            width="1440"
+            height="960"
+            loading="lazy"
+          />
+          <figcaption>
+            <strong>Configure the runtime</strong>
+            <span>Providers, models, appearance, workspace behavior, commands, and desktop settings live in one app.</span>
+          </figcaption>
+        </figure>
+        <div class="screen-stack">
+          <figure>
+            <img
+              src="./screenshots/dark/workbench.png"
+              alt="Neon Pilot new conversation screen with sidebar, composer, model control, and workspace controls."
+              width="1440"
+              height="960"
+              loading="lazy"
+            />
+            <figcaption>Conversation workbench</figcaption>
+          </figure>
+          <figure>
+            <img src="./screenshots/dark/command-palette.png" alt="Neon Pilot command palette." width="1440" height="960" loading="lazy" />
+            <figcaption>Command palette</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="deep-grid" aria-label="Product principles">
         <article>
-          <span>◷</span>
-          <h2>Background work</h2>
+          <p class="eyebrow">Extension-first</p>
+          <h2>Keep core small. Add workflows as extensions.</h2>
           <p>
-            Daemon-backed automations, persisted runs, subagents, scheduled tasks, deferred resumes, and follow-ups keep work durable across
-            restarts.
+            Neon Pilot's product surface is built around first-party and user extensions. A capability can contribute pages, sidebar views,
+            settings, commands, agent tools, skills, and backend actions without bloating the runtime core.
           </p>
-          <a href="#runtime">Learn more →</a>
+          <a href="./docs/extensions.html">Read extension docs</a>
         </article>
         <article>
-          <span>◇</span>
-          <h2>Knowledge and context</h2>
-          <p>Attach files, folders, generated context, instruction files, skills, and git-backed knowledge so agents can carry history.</p>
-          <a href="#context">Learn more →</a>
+          <p class="eyebrow">Durable work</p>
+          <h2>Give agents somewhere to continue.</h2>
+          <p>
+            Conversations, branches, artifacts, checkpoints, automations, scheduled tasks, and daemon-backed runs persist across app
+            restarts, so useful work can keep moving outside one synchronous response.
+          </p>
+          <a href="./docs/conversations.html">Read conversation docs</a>
         </article>
-      </section>
-
-      <section class="surface-strip" aria-label="Neon Pilot product surfaces">
-        <figure>
-          <img src="./screenshots/dark/command-palette.png" alt="Neon Pilot command palette screenshot." />
-          <figcaption>Commands</figcaption>
-        </figure>
-        <figure>
-          <img src="./screenshots/dark/extensions.png" alt="Neon Pilot extensions settings screenshot." />
-          <figcaption>Extensions</figcaption>
-        </figure>
-        <figure>
-          <img src="./screenshots/dark/settings.png" alt="Neon Pilot provider settings screenshot." />
-          <figcaption>Provider settings</figcaption>
-        </figure>
-      </section>
-
-      <span id="extensions" class="anchor-target"></span>
-      <section id="self-extension" class="deep split">
-        <div>
-          <p class="eyebrow">Self-extension lifecycle</p>
-          <h2>Ask for a feature. Keep the capability.</h2>
-          <p class="section-copy">
-            Neon Pilot is more than a coding agent in a chat box. When your workflow changes, the capability can become a real extension:
-            command-backed, documented, testable, and available again next time.
+        <article>
+          <p class="eyebrow">Context</p>
+          <h2>Bring the right workspace into the turn.</h2>
+          <p>
+            Files, folders, projects, instruction layers, skills, generated context, screenshots, and knowledge sync give agents practical
+            operating context without rebuilding it from scratch each time.
           </p>
-        </div>
-        <div class="feature-ideas panel">
-          <div class="panel-title">Features you can ask it to build</div>
-          <ul>
-            <li>“Add a settings page for my team’s defaults.”</li>
-            <li>“Create a release checklist for this repo.”</li>
-            <li>“Build a workflow that triages failed CI logs.”</li>
-            <li>“Turn this recurring process into a reusable skill.”</li>
-            <li>“Add a local tool for cleaning stale branches.”</li>
-          </ul>
-        </div>
-      </section>
-
-      <section id="runtime" class="deep split reverse">
-        <div class="feature-ideas panel pi-capabilities">
-          <div class="panel-title">Runtime capabilities</div>
-          <ul>
-            <li>Persisted conversations, branches, and transcripts</li>
-            <li>Daemon-backed automations and scheduled tasks</li>
-            <li>Artifacts, telemetry, and activity surfaces</li>
-            <li>Extension host APIs for tools, commands, and pages</li>
-          </ul>
-        </div>
-        <div>
-          <p class="eyebrow">Durable runtime</p>
-          <h2>Give your agent a real workspace.</h2>
-          <p class="section-copy">
-            Conversations, runs, automations, command surfaces, model settings, and extension services all share the same local desktop
-            runtime instead of disappearing when a single response ends.
-          </p>
-        </div>
-      </section>
-
-      <section id="context" class="deep split">
-        <div>
-          <p class="eyebrow">Context and knowledge</p>
-          <h2>Bring the right memory into the turn.</h2>
-          <p class="section-copy">
-            Use the composer, mentions, attached files, generated context, projects, skills, and git-backed knowledge base sync to make each
-            conversation aware of the work around it.
-          </p>
-        </div>
-        <figure class="screen-card"><img src="./screenshots/dark/settings.png" alt="Model provider settings in Neon Pilot." /></figure>
+          <a href="./docs/conversation-context.html">Read context docs</a>
+        </article>
       </section>
 
       <section class="closing">
         <div>
-          <h2>Ready to make Neon Pilot your own?</h2>
-          <p>Fully open source under MIT. Available on macOS today.</p>
+          <p class="eyebrow">macOS today</p>
+          <h2>Install the local workbench and make it your own.</h2>
+          <p>Download the app, bootstrap the CLI, then add the workflows and extensions your workspace needs.</p>
         </div>
-        <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">⌄ Download for macOS</a>
+        <div class="closing-actions">
+          <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
+          <a class="btn" href="./docs/getting-started.html">Getting Started</a>
+        </div>
       </section>
     </main>
 
     <dialog class="image-popout" aria-label="Expanded screenshot">
-      <button type="button" class="image-popout-close" aria-label="Close expanded screenshot">×</button>
+      <button type="button" class="image-popout-close" aria-label="Close expanded screenshot">Close</button>
       <img alt="" />
     </dialog>
 
     <footer>
-      <span>Open source · MIT · macOS today</span>
+      <span>Open source under MIT. Built for local macOS agent workflows.</span>
       <div>
-        <a href="https://github.com/patleeman/neon-pilot">GitHub</a><a href="https://github.com/patleeman/neon-pilot/releases">Releases</a
-        ><a href="./docs/">Docs</a>
+        <a href="https://github.com/patleeman/neon-pilot">GitHub</a>
+        <a href="https://github.com/patleeman/neon-pilot/releases">Releases</a>
+        <a href="./docs/">Docs</a>
       </div>
     </footer>
+
     <script>
+      const installCommand =
+        'curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap';
+      const copyButton = document.querySelector('.copy-command');
+      copyButton?.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(installCommand);
+          copyButton.textContent = 'Copied';
+          window.setTimeout(() => {
+            copyButton.textContent = 'Copy';
+          }, 1600);
+        } catch {
+          copyButton.textContent = 'Select';
+        }
+      });
+
       const popout = document.querySelector('.image-popout');
       const popoutImage = popout?.querySelector('img');
       const closePopout = popout?.querySelector('button');
 
-      document.querySelectorAll('.app-shot img, .surface-strip img, .screen-card img').forEach((image) => {
+      document.querySelectorAll('.hero-shot img, .screens img').forEach((image) => {
         image.tabIndex = 0;
         image.setAttribute('role', 'button');
         image.setAttribute('aria-label', `Expand screenshot: ${image.alt}`);
