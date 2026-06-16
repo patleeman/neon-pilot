@@ -5,7 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { useLocation, useParams } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { resetLocalWriteGrace, resetRemoteConversationLayoutCache } from '../session/sessionTabs';
+import { fetchRemoteConversationLayout, resetLocalWriteGrace, resetRemoteConversationLayoutCache } from '../session/sessionTabs';
 import type { DesktopAppEvent, SessionMeta } from '../shared/types';
 import { resetAllStores } from '../store/stores';
 
@@ -447,7 +447,7 @@ describe('App sidebar conversation navigation workflow', () => {
         pinnedSessionIds: [],
         archivedSessionIds: ['conv-first'],
         activeConversationId: 'conv-second',
-        workspacePaths: [],
+        workspacePaths: ['/tmp/event-workspace'],
         remoteControlledConversationIds: [],
         conversationWorkspaceRevision: 2,
         conversationWorkspaceUpdatedAt: '2026-06-15T12:01:00.000Z',
@@ -459,6 +459,39 @@ describe('App sidebar conversation navigation workflow', () => {
     await findSidebarRow('conv-second');
     await waitFor(() => {
       expect(apiMock.setOpenConversationTabs).not.toHaveBeenCalled();
+    });
+
+    const openConversationTabsCalls = apiMock.openConversationTabs.mock.calls.length;
+    await expect(fetchRemoteConversationLayout()).resolves.toMatchObject({
+      workspacePaths: ['/tmp/event-workspace'],
+      conversationWorkspaceRevision: 2,
+    });
+    expect(apiMock.openConversationTabs).toHaveBeenCalledTimes(openConversationTabsCalls);
+  });
+
+  it('refreshes saved workspace groups when the backend invalidates workspace state', async () => {
+    workspaceLayout = {
+      ...workspaceLayout,
+      workspacePaths: ['/tmp/old-workspace'],
+    };
+    ({ root } = await renderAppAt('/conversations/new'));
+
+    await screen.findByText('old-workspace');
+
+    workspaceLayout = {
+      ...workspaceLayout,
+      workspacePaths: ['/tmp/new-workspace'],
+    };
+
+    await act(async () => {
+      desktopListener?.onevent?.({ type: 'invalidate', topics: ['workspace'] });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await screen.findByText('new-workspace');
+    await waitFor(() => {
+      expect(screen.queryByText('old-workspace')).toBeNull();
     });
   });
 

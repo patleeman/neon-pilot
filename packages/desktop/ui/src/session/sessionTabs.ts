@@ -49,6 +49,15 @@ interface ConversationLayoutInput {
   activeSessionId?: unknown;
 }
 
+type RemoteConversationLayoutInput = ConversationLayoutInput & {
+  activeConversationId?: unknown;
+  workspacePaths?: Iterable<unknown>;
+  remoteControlledConversationIds?: Iterable<unknown>;
+  conversationWorkspaceRevision?: unknown;
+  conversationWorkspaceUpdatedAt?: unknown;
+  conversationWorkspaceMigratedAt?: unknown;
+};
+
 function normalizeSessionId(value: unknown): string {
   const normalized = typeof value === 'string' ? value.trim() : '';
   return normalized.startsWith('pending-') ? '' : normalized;
@@ -145,18 +154,7 @@ let remoteLayoutCache: RemoteConversationLayout | null = null;
 let remoteLayoutCacheAt = 0;
 let conversationLayoutProjection: ConversationLayout | null = null;
 
-function normalizeRemoteConversationLayout(input: {
-  sessionIds?: Iterable<unknown>;
-  pinnedSessionIds?: Iterable<unknown>;
-  archivedSessionIds?: Iterable<unknown>;
-  activeConversationId?: unknown;
-  activeSessionId?: unknown;
-  workspacePaths?: Iterable<unknown>;
-  remoteControlledConversationIds?: Iterable<unknown>;
-  conversationWorkspaceRevision?: unknown;
-  conversationWorkspaceUpdatedAt?: unknown;
-  conversationWorkspaceMigratedAt?: unknown;
-}): RemoteConversationLayout {
+function normalizeRemoteConversationLayout(input: RemoteConversationLayoutInput): RemoteConversationLayout {
   const layout = normalizeConversationLayout({
     sessionIds: input.sessionIds,
     pinnedSessionIds: input.pinnedSessionIds,
@@ -416,7 +414,12 @@ export function replaceConversationLayout(layout: ConversationLayoutInput): Conv
   return writeConversationLayout(next, { local: true });
 }
 
-export function applyRemoteConversationLayout(layout: ConversationLayoutInput): ConversationLayout {
+export function applyRemoteConversationLayout(layout: RemoteConversationLayoutInput): ConversationLayout {
+  if (layout.workspacePaths !== undefined) {
+    remoteLayoutCache = normalizeRemoteConversationLayout(layout);
+    remoteLayoutCacheAt = Date.now();
+  }
+
   const current = readConversationLayout();
   const next = normalizeConversationLayout(layout);
   if (sameConversationLayout(current, next)) {

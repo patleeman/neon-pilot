@@ -121,7 +121,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
 
     function syncLayout(attempt = 0): void {
       void fetchRemoteConversationLayout({ refresh: true, reason: 'use-conversations-bootstrap' })
-        .then(({ sessionIds, pinnedSessionIds, archivedSessionIds, activeSessionId }) => {
+        .then((remote) => {
           if (cancelled) {
             return;
           }
@@ -133,10 +133,15 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
           }
 
           const nextLayout = applyRemoteConversationLayout({
-            sessionIds,
-            pinnedSessionIds,
-            archivedSessionIds,
-            activeSessionId,
+            sessionIds: remote.sessionIds,
+            pinnedSessionIds: remote.pinnedSessionIds,
+            archivedSessionIds: remote.archivedSessionIds,
+            activeSessionId: remote.activeSessionId,
+            workspacePaths: remote.workspacePaths,
+            remoteControlledConversationIds: remote.remoteControlledConversationIds,
+            conversationWorkspaceRevision: remote.conversationWorkspaceRevision,
+            conversationWorkspaceUpdatedAt: remote.conversationWorkspaceUpdatedAt,
+            conversationWorkspaceMigratedAt: remote.conversationWorkspaceMigratedAt,
           });
           applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
           setLayoutHydrating(false);

@@ -473,6 +473,11 @@ export function App() {
             pinnedSessionIds: payload.pinnedSessionIds,
             archivedSessionIds: payload.archivedSessionIds,
             activeSessionId: payload.activeConversationId,
+            workspacePaths: payload.workspacePaths,
+            remoteControlledConversationIds: payload.remoteControlledConversationIds,
+            conversationWorkspaceRevision: payload.conversationWorkspaceRevision,
+            conversationWorkspaceUpdatedAt: payload.conversationWorkspaceUpdatedAt,
+            conversationWorkspaceMigratedAt: payload.conversationWorkspaceMigratedAt,
           });
           return;
         case 'open_session':

@@ -137,6 +137,37 @@ describe('sessionTabs', () => {
     });
   });
 
+  it('updates the remote workspace cache from backend workspace events', async () => {
+    apiMocks.openConversationTabs.mockResolvedValueOnce({
+      sessionIds: ['session-1'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: ['/stale'],
+      activeConversationId: 'session-1',
+      remoteControlledConversationIds: [],
+    });
+
+    await fetchRemoteConversationLayout();
+
+    applyRemoteConversationLayout({
+      sessionIds: ['session-1'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'session-1',
+      workspacePaths: ['/fresh'],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 2,
+      conversationWorkspaceUpdatedAt: '2026-06-15T12:01:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+    });
+
+    const layout = await fetchRemoteConversationLayout();
+
+    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(layout.workspacePaths).toEqual(['/fresh']);
+    expect(layout.conversationWorkspaceRevision).toBe(2);
+  });
+
   it('coalesces concurrent remote layout refreshes without reusing the cache', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-27T00:00:00.000Z'));

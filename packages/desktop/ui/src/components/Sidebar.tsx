@@ -2196,8 +2196,17 @@ export function Sidebar() {
     const requestId = workspaceLoadLifecycleRef.current.latestRequestId + 1;
     workspaceLoadLifecycleRef.current.latestRequestId = requestId;
     try {
-      const { sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, workspacePaths } =
-        await api.openConversationTabs();
+      const {
+        sessionIds,
+        pinnedSessionIds,
+        archivedSessionIds,
+        activeConversationId,
+        workspacePaths,
+        remoteControlledConversationIds,
+        conversationWorkspaceRevision,
+        conversationWorkspaceUpdatedAt,
+        conversationWorkspaceMigratedAt,
+      } = await api.openConversationTabs();
       if (
         workspaceLoadLifecycleRef.current.disposed ||
         workspaceLoadLifecycleRef.current.latestRequestId !== requestId
@@ -2210,6 +2219,11 @@ export function Sidebar() {
           pinnedSessionIds,
           archivedSessionIds,
           activeSessionId: activeConversationId,
+          workspacePaths,
+          remoteControlledConversationIds,
+          conversationWorkspaceRevision,
+          conversationWorkspaceUpdatedAt,
+          conversationWorkspaceMigratedAt,
         });
       }
       persistSavedWorkspacePathsState(workspacePaths);
@@ -2239,6 +2253,16 @@ export function Sidebar() {
       setWorkspaceBootstrapHasOpenConversations(false);
     });
   }, [loadSavedWorkspacePaths]);
+
+  useEffect(() => {
+    if (versions.workspace === 0) {
+      return;
+    }
+
+    void loadSavedWorkspacePaths().catch(() => {
+      // Keep the last known workspace list; the next invalidation or picker open will retry.
+    });
+  }, [loadSavedWorkspacePaths, versions.workspace]);
 
   useEffect(() => {
     if (!workspaceQuickSelectOpen) {
