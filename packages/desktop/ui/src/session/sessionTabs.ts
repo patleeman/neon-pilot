@@ -177,8 +177,8 @@ function normalizeRemoteConversationLayout(input: RemoteConversationLayoutInput)
 function isStaleRemoteConversationLayout(next: RemoteConversationLayout): boolean {
   return (
     remoteLayoutCache !== null &&
-    next.conversationWorkspaceRevision > 0 &&
-    remoteLayoutCache.conversationWorkspaceRevision > next.conversationWorkspaceRevision
+    ((next.conversationWorkspaceRevision > 0 && remoteLayoutCache.conversationWorkspaceRevision > next.conversationWorkspaceRevision) ||
+      (isWithinLocalWriteGrace() && remoteLayoutCache.conversationWorkspaceRevision >= next.conversationWorkspaceRevision))
   );
 }
 

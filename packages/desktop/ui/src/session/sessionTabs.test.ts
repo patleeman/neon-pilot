@@ -28,6 +28,7 @@ import {
   readOpenSessionIds,
   readPinnedSessionIds,
   reopenMostRecentlyArchivedConversation,
+  resetLocalWriteGrace,
   replaceConversationLayout,
   resetRemoteConversationLayoutCache,
   setConversationArchivedState,
@@ -205,6 +206,47 @@ describe('sessionTabs', () => {
     expect(apiMocks.openConversationTabs).not.toHaveBeenCalled();
     expect(cachedLayout.workspacePaths).toEqual(['/newer']);
     expect(cachedLayout.conversationWorkspaceRevision).toBe(3);
+  });
+
+  it('keeps a local workspace write over an equal-revision backend event during the write grace window', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-15T12:03:00.000Z'));
+
+    applyRemoteConversationLayout({
+      sessionIds: ['open-a'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'open-a',
+      workspacePaths: ['/repo'],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 3,
+      conversationWorkspaceUpdatedAt: '2026-06-15T12:03:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+    });
+
+    closeConversationTab('open-a');
+
+    const staleLayout = applyRemoteConversationLayout({
+      sessionIds: ['open-a'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'open-a',
+      workspacePaths: ['/repo'],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 3,
+      conversationWorkspaceUpdatedAt: '2026-06-15T12:03:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+    });
+
+    expect(staleLayout).toEqual({
+      sessionIds: [],
+      pinnedSessionIds: [],
+      archivedSessionIds: ['open-a'],
+      activeSessionId: null,
+    });
+    expect(readConversationLayout()).toEqual(staleLayout);
+
+    resetLocalWriteGrace();
   });
 
   it('coalesces concurrent remote layout refreshes without reusing the cache', async () => {
