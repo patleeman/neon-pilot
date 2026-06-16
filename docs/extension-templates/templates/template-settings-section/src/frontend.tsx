@@ -1,8 +1,8 @@
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
-import { ToolbarButton } from '@neon-pilot/extensions/ui';
-import { useCallback, useEffect, useState } from 'react';
+import { LoadingState, Notice, SettingsPanel, SettingsRow, Switch, TextInput } from '@neon-pilot/extensions/settings';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-// Mirror the shape from src/backend.ts
+// Mirror the shape from src/backend.ts.
 interface MySettings {
   apiKey: string;
   endpoint: string;
@@ -11,113 +11,113 @@ interface MySettings {
 
 const defaultSettings: MySettings = { apiKey: '', endpoint: 'https://api.example.com', enabled: false };
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-function inputClass() {
-  return 'w-full rounded-lg border border-border-subtle bg-surface/70 px-3 py-2 text-[13px] text-primary shadow-none outline-none transition-colors placeholder:text-dim focus:border-accent/50 focus:bg-surface';
-}
-
-// Compact two-column label + input layout that fits inside a settings section.
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="grid gap-1.5 sm:grid-cols-[12rem_minmax(0,1fr)] sm:items-start">
-      <div className="pt-2">
-        <span className="text-[13px] font-medium text-primary">{label}</span>
-        {hint ? <p className="mt-0.5 text-[11px] leading-5 text-dim">{hint}</p> : null}
-      </div>
-      <div>{children}</div>
-    </div>
-  );
-}
-
-// ── settings section component ────────────────────────────────────────────────
-// The host renders this component inside the Settings page under your section heading.
-// Props are injected by the host; pa is always present.
-
+// The host renders this component inside the Settings page. It owns the page
+// title, outer width, scroll anchor, and section spacing; this component should
+// render only compact settings row groups.
 export function MySettingsSection({ pa }: { pa: NativeExtensionClient }) {
   const [settings, setSettings] = useState<MySettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [savingKey, setSavingKey] = useState<keyof MySettings | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
 
-  // Load saved settings on mount
   useEffect(() => {
     pa.extension
       .invoke('templateSettingsLoad', {})
       .then((result) => {
-        setSettings(result as MySettings);
+        setSettings({ ...defaultSettings, ...(result as Partial<MySettings>) });
       })
       .catch((err: Error) => {
-        pa.ui.notify({ type: 'error', message: `Failed to load settings: ${err.message}`, source: 'template-settings-section' });
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
+        pa.ui.notify({ type: 'error', message: `Failed to load settings: ${message}`, source: 'template-settings-section' });
       })
       .finally(() => setLoading(false));
   }, [pa]);
 
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   const save = useCallback(
-    async (event: React.FormEvent) => {
-      event.preventDefault();
-      setSaving(true);
-      setNotice(null);
+    async (patch: Partial<MySettings>, key: keyof MySettings) => {
+      setSavingKey(key);
+      setError(null);
       try {
-        await pa.extension.invoke('templateSettingsSave', settings);
-        setNotice('Settings saved.');
+        await pa.extension.invoke('templateSettingsSave', patch);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        pa.ui.notify({ type: 'error', message: `Failed to save settings: ${msg}`, source: 'template-settings-section' });
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
+        pa.ui.notify({ type: 'error', message: `Failed to save settings: ${message}`, source: 'template-settings-section' });
       } finally {
-        setSaving(false);
+        setSavingKey(null);
       }
     },
-    [pa, settings],
+    [pa],
+  );
+
+  const update = useCallback(
+    <K extends keyof MySettings>(key: K, value: MySettings[K], options: { debounce?: boolean } = {}) => {
+      setSettings((current) => ({ ...current, [key]: value }));
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+      if (options.debounce) {
+        debounceRef.current = window.setTimeout(() => {
+          void save({ [key]: value }, key);
+        }, 600);
+        return;
+      }
+      void save({ [key]: value }, key);
+    },
+    [save],
   );
 
   if (loading) {
-    return <div className="py-4 text-[13px] text-dim">Loading…</div>;
+    return <LoadingState label="Loading integration settings…" />;
   }
 
   return (
-    <form onSubmit={save} className="space-y-5">
-      {/* Add/remove fields below to match your settings shape */}
+    <div className="space-y-3">
+      <SettingsPanel title="Integration">
+        <SettingsRow
+          title="Enabled"
+          description={settings.enabled ? 'Integration requests are allowed.' : 'Integration requests are disabled.'}
+        >
+          <Switch checked={settings.enabled} aria-label="Enable integration" onClick={() => update('enabled', !settings.enabled)} />
+        </SettingsRow>
 
-      <Field label="Enabled">
-        <label className="flex items-center gap-2 pt-2 text-[13px] text-secondary">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-border-default bg-base text-accent focus:outline-none"
-            checked={settings.enabled}
-            onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })}
+        <SettingsRow
+          title="API key"
+          description={settings.apiKey ? 'Stored by the extension backend.' : 'Enter the secret value issued by the integration.'}
+        >
+          <TextInput
+            type="password"
+            value={settings.apiKey}
+            placeholder="sk-..."
+            autoComplete="off"
+            spellCheck={false}
+            aria-label="API key"
+            disabled={savingKey === 'apiKey'}
+            onChange={(event) => setSettings((current) => ({ ...current, apiKey: event.currentTarget.value }))}
+            onBlur={(event) => void save({ apiKey: event.currentTarget.value }, 'apiKey')}
           />
-          Enable My Integration
-        </label>
-      </Field>
+        </SettingsRow>
 
-      <Field label="API key" hint="Your secret API key. Never logged or shared.">
-        <input
-          className={inputClass()}
-          type="password"
-          autoComplete="off"
-          placeholder="sk-…"
-          value={settings.apiKey}
-          onChange={(e) => setSettings({ ...settings, apiKey: e.target.value })}
-        />
-      </Field>
+        <SettingsRow title="Endpoint" description={savingKey === 'endpoint' ? 'Saving…' : 'Base URL for API requests.'}>
+          <TextInput
+            type="url"
+            value={settings.endpoint}
+            placeholder="https://api.example.com"
+            autoComplete="off"
+            spellCheck={false}
+            aria-label="Endpoint"
+            onChange={(event) => update('endpoint', event.currentTarget.value, { debounce: true })}
+          />
+        </SettingsRow>
+      </SettingsPanel>
 
-      <Field label="Endpoint" hint="Base URL for the API. Change only if you use a self-hosted instance.">
-        <input
-          className={inputClass()}
-          type="url"
-          autoComplete="off"
-          value={settings.endpoint}
-          onChange={(e) => setSettings({ ...settings, endpoint: e.target.value })}
-        />
-      </Field>
-
-      <div className="flex items-center gap-3 pt-1">
-        <ToolbarButton type="submit" disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
-        </ToolbarButton>
-        {notice ? <span className="text-[13px] text-secondary">{notice}</span> : null}
-      </div>
-    </form>
+      {error ? <Notice tone="danger">{error}</Notice> : null}
+    </div>
   );
 }

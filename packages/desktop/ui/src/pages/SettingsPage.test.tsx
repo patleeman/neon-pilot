@@ -329,7 +329,8 @@ describe('SettingsPage', () => {
   it('renders the reorganized single-page settings view', () => {
     const html = renderPage('/settings');
 
-    expect(html).toContain('>Settings</h1>');
+    expect(html).toContain('>Appearance</h1>');
+    expect(html).not.toContain('>Settings</h1>');
     expect(html).not.toContain('aria-label="Settings sections"');
     expect(html).toContain('Theme');
     expect(html).not.toContain('AGENTS.md files');
@@ -353,7 +354,8 @@ describe('SettingsPage', () => {
   it('renders the same settings shell for legacy query routes', () => {
     const html = renderPage('/settings?page=system-daemon');
 
-    expect(html).toContain('>Settings</h1>');
+    expect(html).toContain('>Appearance</h1>');
+    expect(html).not.toContain('>Settings</h1>');
     expect(html).not.toContain('Runtime services');
     expect(html).not.toContain('Operational overview');
     expect(html).not.toContain('Restart daemon');

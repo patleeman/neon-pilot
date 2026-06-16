@@ -689,6 +689,17 @@ Add one component-backed section to the main Settings page.
 
 The component receives `pa` and `settingsContext`. Use this for rich settings UIs; use `settings` for simple scalar settings managed by the built-in extension settings form.
 
+Settings components are hosted inside the shared Settings page, so they must use the same compact row-list grammar as core Settings:
+
+- Import settings-surface primitives from `@neon-pilot/extensions/settings`, especially `SettingsPanel`, `SettingsRow`, `Switch`, `Select`, `TextInput`, `Textarea`, `ToolbarButton`, `LoadingState`, and `Notice`.
+- Do not render another page title, redundant `Settings` heading, local sidebar, hero, card stack, or custom form chrome inside the component. The host owns the page title, scroll anchor, outer width, and section spacing.
+- Render `SettingsPanel` elements directly from the settings component when possible. Avoid wrapping all panels in a generic layout container because the host applies the shared row-list spacing, borders, and padding to direct panels.
+- Group related controls in one `SettingsPanel`; each setting is a `SettingsRow` with label and operational secondary text on the left and the control/action on the right.
+- Normal preferences autosave on change, blur, or a short debounce. Do not show persistent Save/Cancel buttons for ordinary settings rows.
+- Use text buttons only for explicit commands such as `Sync now`, `Install model`, `Test connection`, or destructive actions. Keep them aligned in the row action area.
+- Avoid nested bordered panels inside Settings. If a complex editor truly needs a nested structure, make it visually flatter than a standalone app page and verify it against the whole Settings page, not just a cropped component screenshot.
+- Validate with `/settings#<sectionId>` plus whole-page or scroll-depth screenshots when the section can extend below the first viewport.
+
 ### Composer Controls (`composerControls`)
 
 Add component-backed controls in the composer bottom row. Core owns the row layout and passes composer state/actions through `controlContext`; extensions own visible controls such as attachments, model preferences, dictation, and goal mode.
@@ -1292,7 +1303,7 @@ The Settings UI renders the appropriate control based on `type`:
 | `number`  | Number input |
 | `select`  | Dropdown     |
 
-All settings are stored in a single `<stateRoot>/settings.json` file.
+All manifest-declared settings autosave through the shared Settings UI and are stored in a single `<stateRoot>/settings.json` file.
 
 | Property      | Description                                   | Required   |
 | ------------- | --------------------------------------------- | ---------- |

@@ -1,9 +1,10 @@
 .settings-page-shell.ui-app-page-shell {
-  padding-block: 1.25rem;
+  padding-block: 1.35rem;
 }
 
 .settings-page-main.ui-app-page-main {
-  max-width: none;
+  max-width: 50rem;
+  margin-inline: auto;
 }
 
 .settings-page-toc-nav {
@@ -69,35 +70,36 @@
   width: 100%;
 }
 
-.settings-page-header {
-  margin-bottom: 0.125rem;
-}
-
 .settings-page-section {
   min-height: 0;
 }
 
 .settings-page-section + .settings-page-section {
-  margin-top: 0.25rem;
+  margin-top: 0.75rem;
 }
 
 .settings-page-section-title {
   letter-spacing: 0;
 }
 
+.settings-page-section-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
 .settings-page-row-group.ui-settings-panel {
   gap: 0;
   overflow: hidden;
-  border-color: rgb(var(--color-border-subtle) / 0.74);
-  border-radius: 0;
-  border-inline: 0;
-  background: transparent;
+  border: 1px solid rgb(var(--color-border-subtle) / 0.78);
+  border-radius: 0.5rem;
+  background: rgb(var(--color-surface-2) / 0.58);
   padding: 0;
 }
 
 .settings-page-row-group > .ui-settings-panel-header {
-  min-height: 2.5rem;
-  border-bottom: 1px solid rgb(var(--color-border-subtle) / 0.78);
+  min-height: 2.25rem;
+  border-bottom: 1px solid rgb(var(--color-border-subtle) / 0.55);
   padding: 0.625rem 0.75rem;
 }
 
@@ -123,8 +125,25 @@
 .settings-page-control-row.ui-settings-row,
 .settings-page-row-group .ui-settings-field {
   min-height: 2.75rem;
-  border-top: 1px solid rgb(var(--color-border-subtle) / 0.68);
-  padding: 0.5rem 0.75rem;
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.42);
+  padding: 0.625rem 0.75rem;
+}
+
+.settings-page-control-row.ui-settings-row {
+  gap: 1rem;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.settings-page-row-group .ui-settings-field {
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .settings-page-row-group .ui-settings-panel-content > .settings-page-control-row:first-child,
@@ -173,12 +192,12 @@
 }
 
 .settings-page-provider-editor {
-  border-top: 1px solid rgb(var(--color-border-subtle) / 0.78);
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.42);
   padding: 0.875rem 0.75rem 1rem;
 }
 
 .settings-page-subsection-title {
-  padding: 0.75rem 0.75rem 0.25rem;
+  padding: 0.75rem 0.75rem 0.375rem;
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.125rem;
@@ -186,11 +205,11 @@
 }
 
 .settings-page-provider-list {
-  border-top: 1px solid rgb(var(--color-border-subtle) / 0.68);
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.42);
 }
 
 .settings-page-provider-row {
-  border-bottom: 1px solid rgb(var(--color-border-subtle) / 0.68);
+  border-bottom: 1px solid rgb(var(--color-border-subtle) / 0.36);
   border-radius: 0;
   background: transparent;
   padding: 0.625rem 0.75rem;
@@ -206,12 +225,12 @@
 
 .settings-page-provider-empty-row {
   min-height: 2.75rem;
-  border-bottom: 1px solid rgb(var(--color-border-subtle) / 0.68);
+  border-bottom: 1px solid rgb(var(--color-border-subtle) / 0.36);
   padding: 0.625rem 0.75rem;
 }
 
 .settings-page-log-files {
-  border-top: 1px solid rgb(var(--color-border-subtle) / 0.68);
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.42);
   padding: 0.5rem 0.75rem;
 }
 
@@ -224,8 +243,8 @@
 }
 
 .settings-page-panel-compact .ui-settings-panel-title {
-  font-size: 1rem;
-  line-height: 1.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
 }
 
 .settings-page-panel-compact .ui-settings-panel-description {
@@ -245,8 +264,8 @@
 }
 
 .settings-page-panel-dense .ui-settings-panel-title {
-  font-size: 0.9375rem;
-  line-height: 1.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
 }
 
 .settings-page-panel-dense .ui-settings-panel-description {
@@ -255,6 +274,89 @@
 
 .settings-page-panel-dense > .ui-settings-panel-content {
   gap: 0.25rem;
+}
+
+.settings-page-extension-settings-group > .ui-settings-panel-content,
+.settings-page-extension-components-group > .ui-settings-panel-content {
+  gap: 0;
+}
+
+.settings-page-extension-settings-section,
+.settings-page-extension-component {
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.42);
+}
+
+.settings-page-extension-settings-section:first-child,
+.settings-page-extension-component:first-child {
+  border-top: 0;
+}
+
+.settings-page-extension-subheading {
+  min-height: 2.125rem;
+  padding: 0.625rem 0.75rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.125rem;
+  color: rgb(var(--color-primary));
+}
+
+.settings-page-extension-group-label {
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.42);
+  padding: 0.5rem 0.75rem 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1rem;
+  text-transform: uppercase;
+  color: rgb(var(--color-tertiary));
+}
+
+.settings-page-extension-settings-section > .ui-settings-field,
+.settings-page-extension-component .ui-settings-row,
+.settings-page-extension-component .ui-settings-field {
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.settings-page-extension-component-body {
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.42);
+  padding: 0.75rem;
+}
+
+.settings-page-extension-component-body > .ui-settings-panel {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid rgb(var(--color-border-subtle) / 0.66);
+  border-radius: 0.5rem;
+  background: rgb(var(--color-surface-2) / 0.42);
+  padding: 0;
+}
+
+.settings-page-extension-component-body > .ui-settings-panel + .ui-settings-panel {
+  margin-top: 0.75rem;
+}
+
+.settings-page-extension-component-body > .ui-settings-panel > .ui-settings-panel-header {
+  min-height: 2.25rem;
+  border-bottom: 1px solid rgb(var(--color-border-subtle) / 0.5);
+  padding: 0.625rem 0.75rem;
+}
+
+.settings-page-extension-component-body > .ui-settings-panel > .ui-settings-panel-content {
+  gap: 0;
+  padding: 0;
+}
+
+.settings-page-extension-component-body > .ui-settings-row:first-child,
+.settings-page-extension-component-body > .ui-settings-field:first-child {
+  border-top: 0;
+}
+
+.settings-page-panel-message {
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.42);
+  padding: 0.625rem 0.75rem;
 }
 
 .settings-page-panel-dense .ui-field-hint {

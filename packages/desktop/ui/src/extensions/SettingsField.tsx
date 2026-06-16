@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 
-import { cx, FieldHint, FieldLabel, IconButton, Select, Switch, TextInput } from '../components/ui';
+import { cx, IconButton, Select, Switch, TextInput } from '../components/ui';
 import type { UnifiedSettingsEntry } from '../shared/types';
 
 const EMOJI_OPTIONS = ['👍', '👎', '✅', '❓', '💡', '📋', '❤️', '🚀', '👀', '🙌', '🙏', '⚠️'];
@@ -8,26 +8,31 @@ const EMOJI_OPTIONS = ['👍', '👎', '✅', '❓', '💡', '📋', '❤️', '
 interface SettingsFieldProps {
   entry: UnifiedSettingsEntry;
   value: unknown;
+  label?: ReactNode;
   description?: string;
   showDescription?: boolean;
   onChange: (key: string, value: unknown) => void;
 }
 
-export function SettingsField({ entry, value, showDescription = true, onChange }: SettingsFieldProps) {
+export function SettingsField({ entry, value, label: labelOverride, description, showDescription = true, onChange }: SettingsFieldProps) {
   const currentValue = value ?? entry.default;
-  const label = formatSettingsFieldLabel(entry.key);
+  const label = labelOverride ?? formatSettingsFieldLabel(entry.key);
+  const hint = description ?? entry.description;
+  const isBoolean = entry.type === 'boolean';
 
   const handleChange = (newValue: unknown) => {
     onChange(entry.key, newValue);
   };
 
   return (
-    <div className="grid gap-2 border-b border-border-subtle/60 py-2.5 last:border-b-0 sm:grid-cols-[minmax(10rem,14rem)_minmax(0,1fr)] sm:items-start">
-      <div className="min-w-0 pt-1">
-        <FieldLabel>{label}</FieldLabel>
-        {showDescription && entry.description ? <FieldHint className="line-clamp-2">{entry.description}</FieldHint> : null}
+    <div className="flex flex-col gap-2 border-b border-border-subtle/60 px-3 py-2.5 last:border-b-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <div className="min-w-0 flex-1 pt-0.5">
+        <span className="block text-[13px] font-medium leading-5 text-primary">{label}</span>
+        {showDescription && hint ? <span className="line-clamp-2 block max-w-[34rem] text-[12px] leading-5 text-secondary">{hint}</span> : null}
       </div>
-      <div className="min-w-0">{renderControl(entry, currentValue, handleChange)}</div>
+      <div className={cx('min-w-0', isBoolean ? 'sm:w-auto sm:flex-shrink-0 sm:self-center' : 'sm:w-[min(100%,32rem)] sm:flex-shrink-0')}>
+        {renderControl(entry, currentValue, handleChange)}
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ Contributes a section to the main Settings page at `/settings`. No separate rout
 Good for integration configuration, feature toggles, and preferences that belong alongside other
 system settings rather than on their own page.
 
-Derived from: `system-settings` settings contribution pattern, `system-local-models` settings section.
+Derived from: the shared Settings row-list grammar used by `system-settings`.
 
 ## Files
 
@@ -19,14 +19,16 @@ Derived from: `system-settings` settings contribution pattern, `system-local-mod
 2. Change `contributes.settingsComponent.id`, `sectionId`, `label`, and `description`.
 3. Change `"component"` to match your exported component name.
 4. Update backend action ids in `extension.json` and the matching `pa.extension.invoke(...)` ids in `src/frontend.tsx`.
-5. Add/remove form fields in `src/frontend.tsx`.
+5. Add/remove `SettingsRow` controls in `src/frontend.tsx`.
 6. Replace the in-memory store in `src/backend.ts` with your persistence layer (e.g. `ctx.settings`).
 
 ## Notes
 
 - The host owns the section header and scroll anchor. Your component starts after the heading.
-- Keep the section compact — this lives inside the shared Settings page alongside other sections.
-- Use `SettingsField` from `@neon-pilot/extensions/settings` for consistent label/input layout if available,
-  or fall back to the inline `Field` helper in the template.
+- Keep the section compact; it lives inside the shared Settings page alongside other sections.
+- Use `SettingsPanel` and `SettingsRow` from `@neon-pilot/extensions/settings` instead of custom form chrome.
+- Normal preferences should autosave on change, blur, or a short debounce. Do not add persistent Save/Cancel buttons for ordinary settings rows.
+- The row anatomy is always label and operational secondary text on the left, control/status/action on the right.
+- Reserve text buttons for explicit commands such as refresh, test connection, sync, install, or destructive actions.
 - Validate by opening Settings and confirming the contributed section renders, loads settings, saves changes,
-  and shows a useful error if the backend action fails.
+  shows a useful error if the backend action fails, and aligns with neighboring Settings sections.

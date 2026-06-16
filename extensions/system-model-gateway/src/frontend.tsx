@@ -11,7 +11,6 @@ import {
   LoadingState,
   Notice,
   Pill,
-  SettingsSection,
   SupportingText,
   TextInput,
   ToolbarButton,
@@ -203,8 +202,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
   }
 
   return (
-    <div className="space-y-0">
-      <SettingsSection title="AI Gateway" description="Expose Neon Pilot model providers through a local OpenAI Responses-compatible endpoint.">
+    <div className="space-y-5">
         {loading ? <LoadingState label="Loading AI Gateway settings..." /> : null}
 
         {!loading ? (
@@ -243,9 +241,6 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
                 />
               </Field>
               <div className="flex flex-wrap items-center gap-2 pb-0.5">
-                <ToolbarButton disabled={busy === 'save' || port === String(status.port)} onClick={() => void savePort()}>
-                  Save port
-                </ToolbarButton>
                 <ToolbarButton disabled={busy !== null} onClick={() => void load()}>
                   Refresh
                 </ToolbarButton>
@@ -329,7 +324,6 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
             </div>
           </div>
         ) : null}
-      </SettingsSection>
     </div>
   );
 }

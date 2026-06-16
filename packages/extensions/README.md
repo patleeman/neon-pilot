@@ -307,10 +307,14 @@ Start with the smallest shared primitive that fits the job, then compose upward:
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`, `InlineStatus`, `StatusBadge`
 - Lists and tables: `DataTable`, `DataTableEmptyRow`, `DataTableActionGroup`, `ResourceList`, `ResourceListRow`
 - Runtime pages: `RuntimePage`, `RuntimeStatusStrip`, `RuntimeHeaderControls`, `MetricTile`, `DashboardGrid`
-- Rails, sidebars, and settings panels: `RailSubsection`, `SidebarSection`, `SidebarActionHeader`, `SidebarList`, `SidebarTemplateList`, `SidebarRow`, `SidebarMessage`, `SidebarTreeSection`, `ActivityTreeView`, `SettingsForm`, `SettingsSection`, `SettingsField`
+- Rails, sidebars, and settings panels: `RailSubsection`, `SidebarSection`, `SidebarActionHeader`, `SidebarList`, `SidebarTemplateList`, `SidebarRow`, `SidebarMessage`, `SidebarTreeSection`, `ActivityTreeView`, `SettingsPanel`, `SettingsRow`, `SettingsField`, `Switch`, `Select`, `TextInput`, `Textarea`, `ToolbarButton`
 - Chat and files: `ChatView`, `ChatRailComposer`, `ExtensionChatRail`, `ResourcePickerDialog`
 
 Use local markup for product-specific layout and content, but extract repeated chrome, action groups, pickers, chat surfaces, table actions, runtime summaries, and settings rows into shared UI instead of creating extension-local lookalikes. See [Design system](../../docs/design-system.md) and [`packages/ui`](../ui/README.md) for the full component catalog, Storybook guidance, and replacement checklist.
+
+Settings components are not standalone app pages. When contributing `contributes.settingsComponent`, import from `@neon-pilot/extensions/settings` and render compact `SettingsPanel` groups containing `SettingsRow` controls. The host owns the page title, outer width, scroll anchor, and section spacing. Normal preferences should autosave on change, blur, or debounce; reserve visible buttons for explicit commands such as refresh, install, sync, test connection, or destructive actions.
+
+Prefer returning `SettingsPanel` elements directly from the settings component instead of wrapping the whole component in a generic layout div. The Settings host normalizes direct panels into the shared row-list visual grammar, including spacing, borders, and padding.
 
 System backend extensions can also import deliberate backend primitives through the backend seam:
 

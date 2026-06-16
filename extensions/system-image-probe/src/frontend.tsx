@@ -1,5 +1,5 @@
 import { api, type ModelState, useApi } from '@neon-pilot/extensions/settings';
-import { Field, LoadingState, Notice, Select } from '@neon-pilot/extensions/ui';
+import { LoadingState, Notice, Select, SettingsRow } from '@neon-pilot/extensions/ui';
 import { useEffect, useMemo, useState } from 'react';
 
 type ModelOption = ModelState['models'][number];
@@ -47,7 +47,7 @@ export function ImageProbeSettings() {
   }
 
   return (
-    <section id="settings-image-probe" className="scroll-mt-24 space-y-3">
+    <div id="settings-image-probe" className="space-y-0">
       {loading && !modelState ? (
         <LoadingState label="Loading models…" />
       ) : error && !modelState ? (
@@ -55,9 +55,9 @@ export function ImageProbeSettings() {
           {error}
         </Notice>
       ) : modelState ? (
-        <Field
-          label="Vision model"
-          hint={
+        <SettingsRow
+          title="Vision model"
+          description={
             saving
               ? 'Saving vision model…'
               : selectedVisionModel
@@ -80,10 +80,10 @@ export function ImageProbeSettings() {
               </option>
             ))}
           </Select>
-        </Field>
+        </SettingsRow>
       ) : null}
 
       {saveError ? <Notice tone="danger">{saveError}</Notice> : null}
-    </section>
+    </div>
   );
 }

@@ -6,7 +6,7 @@ import {
   LoadingState,
   Notice,
   Select,
-  SettingsSection,
+  SettingsRow,
   Spinner,
   TextInput,
   ToolbarButton,
@@ -235,7 +235,7 @@ export function DictationButton({
   );
 }
 
-export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExtensionClient; settingsContext?: { extensionId?: string } }) {
+export function DictationSettingsPanel({ pa }: { pa: NativeExtensionClient; settingsContext?: { extensionId?: string } }) {
   const [settings, setSettings] = useState<DictationSettings | null>(null);
   const [model, setModel] = useState('base.en');
   const [customModelUrl, setCustomModelUrl] = useState('');
@@ -307,35 +307,22 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
     }
   }
 
-  const statusLabel =
-    model.trim()
-      ? status?.installed
-        ? `Installed locally${status.sizeBytes ? ` · ${formatBytes(status.sizeBytes)}` : ''}`
-        : 'Not installed yet'
-      : 'Pick a model to check install status.';
+  const statusLabel = model.trim()
+    ? status?.installed
+      ? `Installed locally${status.sizeBytes ? ` · ${formatBytes(status.sizeBytes)}` : ''}`
+      : 'Not installed yet'
+    : 'Pick a model to check install status.';
 
   return (
-    <div className="space-y-0">
-      <SettingsSection
-        title="Local Dictation"
-        description={
-          <>
-            Record audio from the composer mic button and transcribe it locally via Whisper.cpp.
-            {settingsContext?.extensionId ? (
-              <>
-                {' '}
-                Injected by <span className="font-mono text-primary">{settingsContext.extensionId}</span>.
-              </>
-            ) : null}
-          </>
-        }
-      >
-        {!settings ? <LoadingState label="Loading dictation settings..." /> : null}
-        {settings ? (
-          <div className="space-y-3">
-            <Field label="Model" className="pt-1">
+    <div className="space-y-3">
+      {!settings ? <LoadingState label="Loading dictation settings..." /> : null}
+      {settings ? (
+        <div className="space-y-3">
+          <SettingsRow title="Model" description={statusLabel} actionsClassName="min-w-0 max-w-none">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               <Select
                 id="settings-dictation-model"
+                className="min-w-0 sm:w-80"
                 value={TRANSCRIPTION_MODEL_IDS.has(model) ? model : CUSTOM_MODEL_VALUE}
                 onChange={(event) => {
                   const next = event.target.value;
@@ -356,46 +343,45 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
                 ))}
                 <option value={CUSTOM_MODEL_VALUE}>Custom Hugging Face URL…</option>
               </Select>
-            </Field>
-            {!TRANSCRIPTION_MODEL_IDS.has(model) ? (
-              <Field
-                label="Custom model URL"
-                hint={
-                  <>
-                    Use a direct Hugging Face <span className="font-mono">/resolve/</span> URL to a Whisper.cpp-compatible{' '}
-                    <span className="font-mono">ggml-*.bin</span> file.
-                  </>
-                }
+              <ToolbarButton
+                type="button"
+                className="whitespace-nowrap"
+                disabled={Boolean(busy) || !model.trim()}
+                onClick={() => void install()}
               >
-                <TextInput
-                  id="settings-dictation-custom-model"
-                  value={customModelUrl}
-                  onChange={(event) => {
-                    setCustomModelUrl(event.target.value);
-                    setModel(event.target.value);
-                  }}
-                  onBlur={() => void saveFields(customModelUrl)}
-                  className="font-mono text-[13px]"
-                  placeholder="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </Field>
-            ) : null}
-            <p className={cx('text-[12px]', status?.installed ? 'text-success' : 'text-dim')}>{statusLabel}</p>
-            <ToolbarButton
-              type="button"
-              className="rounded-lg px-3 py-1.5 text-[12px] shadow-none"
-              disabled={Boolean(busy) || !model.trim()}
-              onClick={() => void install()}
+                {busy === 'Installing…' ? 'Installing…' : status?.installed ? 'Reinstall local model' : 'Install local model'}
+              </ToolbarButton>
+            </div>
+          </SettingsRow>
+          {!TRANSCRIPTION_MODEL_IDS.has(model) ? (
+            <Field
+              label="Custom model URL"
+              hint={
+                <>
+                  Use a direct Hugging Face <span className="font-mono">/resolve/</span> URL to a Whisper.cpp-compatible{' '}
+                  <span className="font-mono">ggml-*.bin</span> file.
+                </>
+              }
             >
-              {busy === 'Installing…' ? 'Installing…' : status?.installed ? 'Reinstall local model' : 'Install local model'}
-            </ToolbarButton>
-            {busy === 'Saving…' ? <LoadingState label="Saving..." /> : null}
-            {message ? <Notice>{message}</Notice> : null}
-          </div>
-        ) : null}
-      </SettingsSection>
+              <TextInput
+                id="settings-dictation-custom-model"
+                value={customModelUrl}
+                onChange={(event) => {
+                  setCustomModelUrl(event.target.value);
+                  setModel(event.target.value);
+                }}
+                onBlur={() => void saveFields(customModelUrl)}
+                className="font-mono text-[13px]"
+                placeholder="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </Field>
+          ) : null}
+          {busy === 'Saving…' ? <LoadingState label="Saving..." /> : null}
+          {message ? <Notice>{message}</Notice> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

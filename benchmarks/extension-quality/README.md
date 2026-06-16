@@ -74,6 +74,8 @@ pnpm run eval:extension-visual -- \
 ```
 
 The visual runner keeps full-size screenshots and also writes downscaled judge copies under `judge-screenshots/` by default. Use `--judge-image-max-px=<pixels>` to adjust the largest edge for delegated judges that cannot inline large PNGs.
+By default, each route captures viewport, whole-page, and scroll-depth evidence (`scroll-top`, `scroll-middle`, and `scroll-bottom` when the page scrolls). Use `--capture-modes=viewport` or `--viewport-only=true` only for tiny non-scrolling surfaces where a single screen is genuinely enough.
+Settings calibration covers every top-level settings page so judges can compare negative space, padding rhythm, control alignment, and component grammar across sibling pages and below the fold.
 
 Run screenshot-backed judges through the direct image-input runner, not delegated file reads:
 

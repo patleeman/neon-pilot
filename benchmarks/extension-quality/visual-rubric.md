@@ -10,6 +10,7 @@ For sidebar views, compare against `docs/design/examples/sidebar/README.md`.
 
 - Baseline screenshots from existing Neon Pilot surfaces that match the generated extension's surface class.
 - Generated extension screenshots from the real app host.
+- Whole-page or scroll-depth screenshots for long pages. A single first viewport is not enough when content continues below the fold.
 - The original user task and expected primary surface.
 - Empty/default plus at least one populated, editor, error, loading, or secondary state when the workflow has one.
 
@@ -21,7 +22,9 @@ Use 1-5 for each dimension.
 - **Information Hierarchy**: The main job, current state, and primary action are obvious within 3 seconds.
 - **Workbench Fit**: Chooses the right Neon Pilot layout mode: chat + workbench, solo panel, list + detail, main + context tabs, or a rare modal/drawer focus.
 - **Density & Layout**: Spacing and content density fit IDE/tooling use. Sparse is more often wrong than busy.
+- **Negative Space Rhythm**: Padding, row heights, section gaps, empty-state insets, and control spacing are intentional and consistent. Controls should not hug borders, float in blank space, or change rhythm between neighboring sections.
 - **Surface Discipline**: Uses flat, divider-light workbench surfaces. Avoids box-in-box layouts, nested cards, and card grids for operational records.
+- **Consistency**: Similar settings, rows, actions, labels, and extension-provided panels use the same component grammar across the whole page and across sibling pages. Mixed boxed/unboxed rows, local one-off panels, title-size drift, and inconsistent action placement should fail.
 - **Text Economy**: Avoids repeated title/description pairs and keeps secondary text reserved for operational value.
 - **State Quality**: Empty, loading, error, success, disabled, and long-running states look intentional and distinct.
 - **Control Taste**: Uses the most user-friendly input for each job: structured editors, key/value rows, segmented controls, toggles, selects, pickers, steppers, and tag/resource choosers when appropriate. Raw text inputs and textareas are reserved for genuinely free-form text, code, or prompt bodies.
@@ -53,6 +56,9 @@ Use 1-5 for each dimension.
 - `wrong_layout_mode`
 - `too_sparse`
 - `too_dense`
+- `negative_space_inconsistent`
+- `inconsistent_component_grammar`
+- `single_viewport_insufficient`
 - `weak_hierarchy`
 - `generic_saas`
 - `ai_purple_gradient`
@@ -110,7 +116,9 @@ Judges must return strict JSON:
     "workbenchFit": 3,
     "hierarchy": 3,
     "density": 3,
+    "negativeSpace": 3,
     "surfaceDiscipline": 3,
+    "consistency": 3,
     "sidebarDiscipline": 3,
     "textEconomy": 3,
     "states": 3,

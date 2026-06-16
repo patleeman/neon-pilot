@@ -171,7 +171,10 @@ describe('SettingsPage provider model editor', () => {
   let startProviderOAuthLoginMock: ReturnType<typeof vi.spyOn>;
   let removeProviderCredentialMock: ReturnType<typeof vi.spyOn>;
   let maintainTelemetryDbMock: ReturnType<typeof vi.spyOn>;
+  let updateSettingsMock: ReturnType<typeof vi.spyOn>;
   let modelsRefetchMock: ReturnType<typeof vi.fn>;
+  let settingsResult: ReturnType<typeof buildUseApiResult<Record<string, unknown>>>;
+  let settingsSchemaResult: ReturnType<typeof buildUseApiResult<unknown[]>>;
 
   beforeEach(() => {
     saveModelProviderModelMock = vi.spyOn(api, 'saveModelProviderModel');
@@ -179,6 +182,7 @@ describe('SettingsPage provider model editor', () => {
     startProviderOAuthLoginMock = vi.spyOn(api, 'startProviderOAuthLogin');
     removeProviderCredentialMock = vi.spyOn(api, 'removeProviderCredential');
     maintainTelemetryDbMock = vi.spyOn(api, 'maintainTelemetryDb');
+    updateSettingsMock = vi.spyOn(api, 'updateSettings').mockResolvedValue({});
     vi.clearAllMocks();
     window.history.replaceState(null, '', '/settings');
 
@@ -336,8 +340,8 @@ describe('SettingsPage provider model editor', () => {
       sessions: [],
       pendingPairings: [],
     });
-    const settingsResult = buildUseApiResult({});
-    const settingsSchemaResult = buildUseApiResult([]);
+    settingsResult = buildUseApiResult({});
+    settingsSchemaResult = buildUseApiResult([]);
 
     vi.mocked(useApi).mockImplementation((fetcher, key) => {
       if (fetcher === api.skillFolders) {
@@ -466,6 +470,7 @@ describe('SettingsPage provider model editor', () => {
     startProviderOAuthLoginMock.mockRestore();
     removeProviderCredentialMock.mockRestore();
     maintainTelemetryDbMock.mockRestore();
+    updateSettingsMock.mockRestore();
     delete (window as { neonPilotDesktop?: unknown }).neonPilotDesktop;
     for (const root of mountedRoots.splice(0)) {
       act(() => {
@@ -490,6 +495,33 @@ describe('SettingsPage provider model editor', () => {
     await flushAsyncWork();
 
     expect(execute).toHaveBeenCalledWith('app.navigate', { to: '/settings#settings-providers' });
+  });
+
+  it('auto-saves extension settings without save or reset controls', async () => {
+    settingsResult = buildUseApiResult({ 'sample.label': 'Old label' });
+    settingsSchemaResult = buildUseApiResult([
+      {
+        extensionId: 'sample-extension',
+        key: 'sample.label',
+        type: 'string',
+        default: 'Old label',
+        description: 'Sample extension setting',
+        group: 'Sample',
+        order: 1,
+      },
+    ]);
+
+    const { container } = renderPage('settings-extensions');
+    await flushAsyncWork();
+
+    expect(container.querySelector('button[aria-label="Save extension settings"]')).toBeNull();
+    expect(container.querySelector('button[aria-label="Reset extension settings"]')).toBeNull();
+
+    const input = queryInput(container, 'input[value="Old label"]');
+    updateInputValue(input, 'New label');
+    await flushAsyncWork();
+
+    expect(updateSettingsMock).toHaveBeenCalledWith({ 'sample.label': 'New label' });
   });
 
   it('adds a model directly to a picked built-in provider without saving the provider first', async () => {

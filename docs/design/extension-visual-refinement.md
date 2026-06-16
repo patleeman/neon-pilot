@@ -24,6 +24,7 @@ Use this workflow when building or evaluating a generated Neon Pilot extension U
 
 4. **Capture visual evidence.**
    Capture existing app reference pages and the generated extension route. Include default/empty plus at least one populated, editor, error, loading, or secondary state when the workflow has one.
+   For long pages, capture the first viewport, whole-page evidence, and scroll-depth views near the middle and bottom. A polished top viewport does not prove the page is consistent below the fold.
 
 5. **Judge with the rubric.**
    Use multiple visual judges when available. Judges must inspect screenshots, score rubric dimensions, cite visual evidence, and return concrete must-fix items.
@@ -76,12 +77,15 @@ Judges should reject generic "looks good" answers. A useful judge result names s
 - Does empty/default state preserve the working layout?
 - Does it avoid purple AI-gradient SaaS styling?
 - Does it support inline or selection-driven editing where practical?
+- Is negative space consistent across the whole page: row padding, section gaps, empty-state insets, control height, and right-edge action alignment?
+- Does the same component grammar hold across sibling sections and extension-provided panels, or do lower-page areas quietly switch to bespoke boxes/forms?
 
 ## Hard Gates
 
 Fail the visual pass when any of these are true:
 
 - screenshots were not captured from the real host
+- only a single viewport was captured for a long or scrollable page
 - the route is blank, broken, or visually unjudgeable
 - the page looks like a standalone SaaS app
 - the main UI is sparse enough that the workflow cannot be understood
@@ -90,6 +94,7 @@ Fail the visual pass when any of these are true:
 - repeated operational records default to card grids without justification
 - common tool actions are scattered as text buttons
 - the design relies on nested cards, decorative gradients, glowing pills, or heavy custom chrome
+- neighboring settings or panels use inconsistent padding, row structure, title hierarchy, or action alignment
 
 ## Repair Bias
 

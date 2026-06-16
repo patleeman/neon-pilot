@@ -97,6 +97,21 @@ Use flat, dense workbench surfaces.
 
 Cards are appropriate only when the item benefits from spatial preview, visual comparison, or repeated card-like content. They are not the default page structure.
 
+## Settings Surfaces
+
+Settings pages use one cohesive settings grammar. They should look like a compact IDE preferences pane, with Codex-style grouped rows, not a collection of unrelated forms.
+
+- The content title is the current settings page, such as `Appearance`, `Providers`, or `Extensions`. Do not render a redundant top-level `Settings` title inside the settings content.
+- Use one page title, then section headings only when they divide real conceptual groups. Avoid title stacks like `Settings` -> `Appearance` -> `Theme` unless each level changes the user's decision.
+- A conceptual group should be one cohesive rounded row list: a single background, one outside border, and subtle internal dividers between rows.
+- Do not mix boxed and unboxed controls inside the same conceptual group. If one row in a group is boxed, all sibling rows share the same list container.
+- Rows use the same anatomy everywhere: label and earned secondary text on the left; the control, status, or actions on the right.
+- Management sections, such as providers, MCP servers, extension repositories, and installed integrations, use the same list grammar: a small section heading/tool action above a single bordered list with rows.
+- Avoid long runs of standalone horizontal rules. Dividers belong inside a cohesive list or between major page regions only.
+- Extension-provided settings must inherit the host settings grammar. Generic extension settings, extension manager controls, and system extension panels should not invent separate spacing, borders, title sizes, or row structures.
+- Settings auto-save when changing normal preferences. Do not show persistent Save/Cancel buttons for ordinary settings rows.
+- Keep the page content max-width constrained and centered within the workspace region, so wide windows do not stretch rows into unreadable bands.
+
 ## Text Economy
 
 Neon Pilot copy should be technical, literal, and compact.

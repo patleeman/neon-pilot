@@ -50,8 +50,8 @@ import {
   SettingsPanel,
   SettingsPanelHost,
   SettingsRow,
-  SettingToggleRow,
   subscribeDesktopProviderOAuthLogin,
+  Switch,
   type TelemetryDbMaintenanceResult,
   TextButton,
   Textarea,
@@ -406,6 +406,7 @@ function SettingsGroup({
   className,
   contentClassName,
   id,
+  hideHeader,
 }: {
   title: ReactNode;
   description?: ReactNode;
@@ -414,7 +415,20 @@ function SettingsGroup({
   className?: string;
   contentClassName?: string;
   id?: string;
+  hideHeader?: boolean;
 }) {
+  if (hideHeader) {
+    return (
+      <section
+        id={id}
+        aria-label={typeof title === 'string' ? title : undefined}
+        className={cx('ui-settings-panel', SETTINGS_ROW_GROUP_CLASS, className)}
+      >
+        <div className={cx('ui-settings-panel-content settings-page-row-list', contentClassName)}>{children}</div>
+      </section>
+    );
+  }
+
   return (
     <SettingsPanel
       id={id}
@@ -480,20 +494,17 @@ function SettingsSection({
     <section
       id={id}
       style={{ order: sectionOrder === -1 ? 1000 : sectionOrder }}
-      className={cx(
-        'settings-page-section scroll-mt-20 space-y-3 border-t border-border-subtle/80 pt-4 first:border-t-0 first:pt-0',
-        className,
-      )}
+      className={cx('settings-page-section scroll-mt-20 space-y-4 pt-4 first:pt-0', className)}
     >
-      <div className="max-w-2xl">
-        <h2 className="settings-page-section-title text-[16px] font-semibold leading-snug text-primary">{label}</h2>
+      <div className="settings-page-section-heading">
+        <h1 className="settings-page-section-title text-[18px] font-semibold leading-tight text-primary">{label}</h1>
       </div>
       {children}
     </section>
   );
 }
 
-function formatDesktopUpdateSummary(state: DesktopAppPreferencesState | null): string {
+function formatDesktopUpdateSummary(state: DesktopAppPreferencesState | null): string | undefined {
   if (!state || !state.available) {
     return 'Desktop app settings are unavailable in this window.';
   }
@@ -520,7 +531,7 @@ function formatDesktopUpdateSummary(state: DesktopAppPreferencesState | null): s
       return update.lastError ? `Update error: ${update.lastError}` : 'The last update action failed.';
     case 'idle':
     default:
-      return `Current version: ${update.currentVersion}.`;
+      return undefined;
   }
 }
 
@@ -532,6 +543,16 @@ function formatExtensionFallbackLabel(extensionId: string): string {
     .filter(Boolean);
   if (words.length === 0) return extensionId;
   return words.map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(' ');
+}
+
+function formatSettingsEntryFallbackLabel(key: string): string {
+  const segment = key.split('.').pop() ?? key;
+  return segment
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/^./, (char) => char.toUpperCase());
 }
 
 function settingsExtensionAnchorId(extensionId: string): SettingsQuickLinkId {
@@ -644,7 +665,7 @@ function useSettingsNavigation(sectionIds?: readonly SettingsQuickLinkId[]) {
   };
 }
 
-function formatStartOnSystemStartSummary(state: DesktopAppPreferencesState | null): string {
+function formatStartOnSystemStartSummary(state: DesktopAppPreferencesState | null): string | undefined {
   if (!state || !state.available) {
     return 'Desktop app settings are unavailable in this window.';
   }
@@ -653,9 +674,7 @@ function formatStartOnSystemStartSummary(state: DesktopAppPreferencesState | nul
     return 'Start on system start is only available in packaged desktop builds.';
   }
 
-  return state.startOnSystemStart
-    ? 'Neon Pilot will launch in the background when you sign in to this Mac.'
-    : 'Neon Pilot only starts when you open it manually.';
+  return undefined;
 }
 
 export function DesktopKeyboardShortcutsSettingsSection() {
@@ -1300,7 +1319,7 @@ function TelemetryLogsSettingsPanel() {
               ))}
             </div>
           ) : (
-            <p className="ui-card-meta">No telemetry log files yet.</p>
+            <p className="settings-page-panel-message ui-card-meta">No telemetry log files yet.</p>
           )}
         </>
       ) : null}
@@ -1606,22 +1625,27 @@ export function DesktopConnectionsSettingsPanel() {
   }
 
   return (
-    <div className="space-y-0">
+    <div className="settings-page-section-stack">
       <SettingsGroup title="App behavior">
         {!getDesktopBridge() && isDesktopShell() ? (
           <p className="text-[12px] text-danger">Desktop bridge unavailable. Restart the desktop app and try again.</p>
         ) : null}
         {appPreferencesState ? (
           <>
-            <SettingToggleRow
+            <SettingsControlRow
               title="Auto-install updates"
               description={formatDesktopUpdateSummary(appPreferencesState)}
-              checked={appPreferencesState.autoInstallUpdates}
-              onCheckedChange={(checked) => {
-                void handleUpdateAppPreferences({ autoInstallUpdates: checked });
-              }}
               disabled={action !== null || !appPreferencesState.update.supported}
-            />
+            >
+              <Switch
+                checked={appPreferencesState.autoInstallUpdates}
+                disabled={action !== null || !appPreferencesState.update.supported}
+                aria-label="Auto-install updates"
+                onClick={() => {
+                  void handleUpdateAppPreferences({ autoInstallUpdates: !appPreferencesState.autoInstallUpdates });
+                }}
+              />
+            </SettingsControlRow>
 
             <SettingsControlRow title="Update path">
               <Select
@@ -1638,15 +1662,20 @@ export function DesktopConnectionsSettingsPanel() {
               </Select>
             </SettingsControlRow>
 
-            <SettingToggleRow
+            <SettingsControlRow
               title="Start on sign in"
               description={formatStartOnSystemStartSummary(appPreferencesState)}
-              checked={appPreferencesState.startOnSystemStart}
-              onCheckedChange={(checked) => {
-                void handleUpdateAppPreferences({ startOnSystemStart: checked });
-              }}
               disabled={action !== null || !appPreferencesState.supportsStartOnSystemStart}
-            />
+            >
+              <Switch
+                checked={appPreferencesState.startOnSystemStart}
+                disabled={action !== null || !appPreferencesState.supportsStartOnSystemStart}
+                aria-label="Start on sign in"
+                onClick={() => {
+                  void handleUpdateAppPreferences({ startOnSystemStart: !appPreferencesState.startOnSystemStart });
+                }}
+              />
+            </SettingsControlRow>
           </>
         ) : (
           <p className="ui-card-meta">Loading desktop app settings…</p>
@@ -1676,10 +1705,7 @@ function ExtensionSettingsSection({
   const { data: values, loading, error } = useApi<Record<string, unknown>>(api.settings as never);
   const { data: schema, loading: schemaLoading, error: schemaError } = useApi<UnifiedSettingsEntry[]>(api.settingsSchema as never);
   const [draft, setDraft] = useState<Record<string, unknown>>({});
-  const [savedValues, setSavedValues] = useState<Record<string, unknown>>({});
-  const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveNotice, setSaveNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (saveError)
@@ -1689,6 +1715,7 @@ function ExtensionSettingsSection({
   }, [saveError]);
 
   const editedKeys = useRef(new Set<string>());
+  const saveSequenceByKey = useRef(new Map<string, number>());
 
   // Track explicit user edits so the values-refetch merge below preserves
   // only keys the user has touched, not every key that happens to differ.
@@ -1698,7 +1725,6 @@ function ExtensionSettingsSection({
 
   useEffect(() => {
     if (values) {
-      setSavedValues(values);
       setDraft((prev) => {
         // Start from the fresh backend snapshot, then overlay only the keys
         // the user explicitly edited since the last save.
@@ -1711,42 +1737,28 @@ function ExtensionSettingsSection({
     }
   }, [values]);
 
-  useEffect(() => {
-    if (!values || !draft) return;
-    if (getSettingsChanges(draft, savedValues).length === 0) {
+  const autosaveSetting = useCallback(
+    async (key: string, val: unknown) => {
+      markEdited(key);
+      setDraft((prev) => ({ ...prev, [key]: val }));
+      const sequence = (saveSequenceByKey.current.get(key) ?? 0) + 1;
+      saveSequenceByKey.current.set(key, sequence);
       setSaveError(null);
-    }
-  }, [draft, savedValues, values]);
-
-  const pendingChanges = useMemo(() => {
-    if (!draft) return {};
-    return Object.fromEntries(getSettingsChanges(draft, savedValues));
-  }, [draft, savedValues]);
-  const hasPendingChanges = Object.keys(pendingChanges).length > 0;
-
-  const saveChanges = useCallback(async () => {
-    if (!hasPendingChanges) return;
-    setSaving(true);
-    setSaveError(null);
-    try {
-      await api.updateSettings(pendingChanges);
-      editedKeys.current.clear();
-      setSavedValues((prev) => ({ ...prev, ...pendingChanges }));
-      window.dispatchEvent(new CustomEvent(EXTENSION_REGISTRY_CHANGED_EVENT));
-      setSaveNotice('Saved.');
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
-  }, [hasPendingChanges, pendingChanges]);
-
-  const resetChanges = useCallback(() => {
-    editedKeys.current.clear();
-    setDraft(savedValues);
-    setSaveNotice(null);
-    setSaveError(null);
-  }, [savedValues]);
+      try {
+        await api.updateSettings({ [key]: val });
+        if (saveSequenceByKey.current.get(key) !== sequence) {
+          return;
+        }
+        editedKeys.current.delete(key);
+        window.dispatchEvent(new CustomEvent(EXTENSION_REGISTRY_CHANGED_EVENT));
+      } catch (err) {
+        if (saveSequenceByKey.current.get(key) === sequence) {
+          setSaveError(err instanceof Error ? err.message : String(err));
+        }
+      }
+    },
+    [markEdited],
+  );
 
   const filteredEntries = useMemo(() => {
     if (!schema) return [];
@@ -1799,75 +1811,48 @@ function ExtensionSettingsSection({
 
   if (groupByExtension) {
     return (
-      <div className={separated ? 'space-y-0 border-t border-border-subtle/70 pt-6' : 'space-y-0'}>
-        {entriesByExtension.map(([extensionId, entries]) => {
-          const entriesByGroup = new Map<string, UnifiedSettingsEntry[]>();
-          for (const entry of entries) {
-            const group = entry.group || 'General';
-            if (!entriesByGroup.has(group)) entriesByGroup.set(group, []);
-            entriesByGroup.get(group)!.push(entry);
-          }
-          const groupedEntries = [...entriesByGroup.entries()];
-          return (
-            <SettingsGroup
-              key={extensionId}
-              id={settingsExtensionAnchorId(extensionId)}
-              title={extensionLabels?.get(extensionId) ?? formatExtensionFallbackLabel(extensionId)}
-              className={SETTINGS_PANEL_DENSE_CLASS}
-            >
-              {groupedEntries.map(([group, groupEntries]) => (
-                <div key={group} className="space-y-1.5">
-                  {groupedEntries.length > 1 ? <h4 className="text-[13px] font-medium text-primary">{group}</h4> : null}
-                  {groupEntries.map((entry) => (
-                    <SettingsField
-                      key={entry.key}
-                      entry={entry}
-                      value={draft[entry.key]}
-                      showDescription={false}
-                      onChange={(key, val) => {
-                        markEdited(key);
-                        setDraft((prev) => ({ ...prev, [key]: val }));
-                        setSaveNotice(null);
-                        setSaveError(null);
-                      }}
-                    />
-                  ))}
-                </div>
-              ))}
-              <div className="flex items-center gap-1.5 pt-1">
-                <IconButton
-                  compact
-                  type="button"
-                  aria-label="Save extension settings"
-                  title="Save"
-                  disabled={!hasPendingChanges || saving}
-                  onClick={saveChanges}
-                >
-                  <SettingsIcon name="check" />
-                </IconButton>
-                <IconButton
-                  compact
-                  type="button"
-                  aria-label="Reset extension settings"
-                  title="Reset"
-                  disabled={!hasPendingChanges || saving}
-                  onClick={resetChanges}
-                >
-                  <SettingsIcon name="x" />
-                </IconButton>
-                {hasPendingChanges ? <p className="ui-card-meta">Unsaved changes.</p> : null}
+      <div className={separated ? 'pt-4' : undefined}>
+        <SettingsGroup title="Extension settings" className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-extension-settings-group')}>
+          {entriesByExtension.map(([extensionId, entries]) => {
+            const entriesByGroup = new Map<string, UnifiedSettingsEntry[]>();
+            for (const entry of entries) {
+              const group = entry.group || 'General';
+              if (!entriesByGroup.has(group)) entriesByGroup.set(group, []);
+              entriesByGroup.get(group)!.push(entry);
+            }
+            const groupedEntries = [...entriesByGroup.entries()];
+            const extensionLabel = extensionLabels?.get(extensionId) ?? formatExtensionFallbackLabel(extensionId);
+            const showExtensionSubheading = entries.length > 1;
+            return (
+              <div key={extensionId} id={settingsExtensionAnchorId(extensionId)} className="settings-page-extension-settings-section">
+                {showExtensionSubheading ? <div className="settings-page-extension-subheading">{extensionLabel}</div> : null}
+                {groupedEntries.map(([group, groupEntries]) => (
+                  <div key={group} className="contents">
+                    {groupedEntries.length > 1 ? <div className="settings-page-extension-group-label">{group}</div> : null}
+                    {groupEntries.map((entry) => (
+                      <SettingsField
+                        key={entry.key}
+                        entry={entry}
+                        value={draft[entry.key]}
+                        label={formatSettingsEntryFallbackLabel(entry.key)}
+                        description={entry.description ? `${extensionLabel} · ${entry.description}` : extensionLabel}
+                        showDescription
+                        onChange={(key, val) => void autosaveSetting(key, val)}
+                      />
+                    ))}
+                  </div>
+                ))}
               </div>
-              {saveNotice && !hasPendingChanges ? <p className="text-[12px] text-accent">{saveNotice}</p> : null}
-              {saveError ? <p className="text-[12px] text-danger">{saveError}</p> : null}
-            </SettingsGroup>
-          );
-        })}
+            );
+          })}
+          {saveError ? <p className="settings-page-panel-message text-[12px] text-danger">{saveError}</p> : null}
+        </SettingsGroup>
       </div>
     );
   }
 
   return (
-    <div className={separated ? 'space-y-0 border-t border-border-subtle/70 pt-6' : 'space-y-0'}>
+    <div className={separated ? 'space-y-3 pt-4' : 'space-y-3'}>
       {[...grouped.entries()].map(([group, entries]) => (
         <SettingsGroup key={group} title={group} className={SETTINGS_PANEL_DENSE_CLASS}>
           {entries.map((entry) => (
@@ -1876,38 +1861,9 @@ function ExtensionSettingsSection({
               entry={entry}
               value={draft[entry.key]}
               showDescription={false}
-              onChange={(key, val) => {
-                markEdited(key);
-                setDraft((prev) => ({ ...prev, [key]: val }));
-                setSaveNotice(null);
-                setSaveError(null);
-              }}
+              onChange={(key, val) => void autosaveSetting(key, val)}
             />
           ))}
-          <div className="flex items-center gap-1.5 pt-1">
-            <IconButton
-              compact
-              type="button"
-              aria-label="Save settings"
-              title="Save"
-              disabled={!hasPendingChanges || saving}
-              onClick={saveChanges}
-            >
-              <SettingsIcon name="check" />
-            </IconButton>
-            <IconButton
-              compact
-              type="button"
-              aria-label="Reset settings"
-              title="Reset"
-              disabled={!hasPendingChanges || saving}
-              onClick={resetChanges}
-            >
-              <SettingsIcon name="x" />
-            </IconButton>
-            {hasPendingChanges ? <p className="ui-card-meta">Unsaved changes.</p> : null}
-          </div>
-          {saveNotice && !hasPendingChanges ? <p className="text-[12px] text-accent">{saveNotice}</p> : null}
           {saveError ? <p className="text-[12px] text-danger">{saveError}</p> : null}
         </SettingsGroup>
       ))}
@@ -1922,23 +1878,23 @@ function ExtensionSettingsComponentPanels({
 }) {
   if (registrations.length === 0) return null;
   return (
-    <div className="space-y-0 border-t border-border-subtle/70 pt-6">
-      {registrations.map((registration) => (
-        <SettingsGroup
-          key={`${registration.extensionId}:${registration.id}`}
-          id={registration.sectionId}
-          title={registration.label}
-          className={SETTINGS_PANEL_DENSE_CLASS}
-        >
-          <SettingsPanelHost registration={registration} />
-        </SettingsGroup>
-      ))}
+    <div className="pt-4">
+      <SettingsGroup title="Extension integrations" className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-extension-components-group')}>
+        {registrations.map((registration) => (
+          <div
+            key={`${registration.extensionId}:${registration.id}`}
+            id={registration.sectionId}
+            className="settings-page-extension-component"
+          >
+            <div className="settings-page-extension-subheading">{registration.label}</div>
+            <div className="settings-page-extension-component-body">
+              <SettingsPanelHost registration={registration} />
+            </div>
+          </div>
+        ))}
+      </SettingsGroup>
     </div>
   );
-}
-
-function getSettingsChanges(draft: Record<string, unknown>, values: Record<string, unknown>): Array<[string, unknown]> {
-  return Object.entries(draft).filter(([key, val]) => val !== values[key]);
 }
 
 function SecretSourceLabel({ source }: { source: SecretStatusEntry['source'] }) {
@@ -1997,7 +1953,6 @@ function ExtensionSecretsSection() {
   const saveSecret = async (secret: SecretStatusEntry) => {
     const value = drafts[secret.key]?.trim() ?? '';
     if (!value) {
-      setErrorMessage('Enter a secret value before saving.');
       return;
     }
     setSavingKey(secret.key);
@@ -2058,7 +2013,7 @@ function ExtensionSecretsSection() {
   if (error && !secretsState) return <p className="text-[12px] text-danger">Failed to load secrets: {error}</p>;
 
   return (
-    <div className="space-y-0">
+    <div className="settings-page-section-stack">
       <SettingsGroup title="Secret storage">
         <SettingsControlRow
           title="Backend"
@@ -2081,7 +2036,7 @@ function ExtensionSecretsSection() {
 
       {grouped.size === 0 ? (
         <SettingsGroup title="Extension secrets">
-          <p className="ui-card-meta">No installed extensions declare secrets.</p>
+          <p className="settings-page-panel-message ui-card-meta">No installed extensions declare secrets.</p>
         </SettingsGroup>
       ) : (
         [...grouped.entries()].map(([extensionId, secrets]) => (
@@ -2109,20 +2064,21 @@ function ExtensionSecretsSection() {
                         setErrorMessage(null);
                         setNotice(null);
                       }}
+                      onBlur={() => {
+                        void saveSecret(secret);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          event.currentTarget.blur();
+                        }
+                      }}
                       className="min-w-0 flex-1 font-mono text-[13px]"
                       autoComplete="off"
                       spellCheck={false}
                       disabled={!secret.writable || savingKey === secret.key}
                     />
-                    <ToolbarButton
-                      type="button"
-                      disabled={!secret.writable || savingKey === secret.key || !(drafts[secret.key] ?? '').trim()}
-                      onClick={() => {
-                        void saveSecret(secret);
-                      }}
-                    >
-                      {savingKey === secret.key ? 'Saving…' : secret.configured ? 'Replace' : 'Save'}
-                    </ToolbarButton>
+                    {savingKey === secret.key ? <span className="ui-card-meta">Saving…</span> : null}
                     <ToolbarButton
                       type="button"
                       disabled={!secret.writable || savingKey === secret.key || !secret.configured || secret.source === 'env'}
@@ -3255,14 +3211,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     <VisibleSettingsSectionsContext.Provider value={renderedSectionIds}>
       <div ref={settingsScrollRef} className="h-full overflow-y-auto">
         <AppPageLayout shellClassName="settings-page-shell" contentClassName="settings-page-main">
-          <div className="settings-page-detail flex min-w-0 flex-col gap-4">
-            <header className="settings-page-header flex min-h-7 items-center border-b border-border-subtle/70 pb-2">
-              <h1 className="text-[18px] font-semibold leading-tight text-primary">Settings</h1>
-            </header>
-
-            <div className="settings-page-sections flex flex-col gap-4">
+          <div className="settings-page-detail flex min-w-0 flex-col">
+            <div className="settings-page-sections flex flex-col gap-6">
               <SettingsSection id="settings-appearance" label="Appearance" description="Theme, accent, and visual defaults.">
-                <SettingsGroup title="Theme" className={SETTINGS_PANEL_COMPACT_CLASS}>
+                <SettingsGroup title="Theme" className={SETTINGS_PANEL_COMPACT_CLASS} hideHeader>
                   <SettingsControlRow
                     title="Mode"
                     description={availableThemes.find((availableTheme) => availableTheme.id === theme)?.label ?? theme}
@@ -3342,7 +3294,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               </SettingsSection>
 
               <SettingsSection id="settings-conversation" label="Conversation" description="Model and behavior defaults for new chats.">
-                <div className="space-y-0">
+                <div className="settings-page-section-stack">
                   <SettingsGroup title="Model defaults">
                     {modelsLoading && !modelState ? (
                       <p className="ui-card-meta">Loading models…</p>
@@ -3408,7 +3360,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               </SettingsSection>
 
               <SettingsSection id="settings-workspace" label="Workspace" description="Default working directory and local context paths.">
-                <div className="space-y-0">
+                <div className="settings-page-section-stack">
                   <SettingsGroup title="Working directory">
                     {defaultCwdLoading && !defaultCwdState ? (
                       <p className="ui-card-meta">Loading default working directory…</p>
@@ -3503,7 +3455,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                 label="Providers"
                 description="Provider definitions, model overrides, and credential management."
               >
-                <div className="space-y-0">
+                <div className="settings-page-section-stack">
                   <SettingsGroup title="Provider definitions">
                     <>
                       {modelProviderLoading && !modelProviderState ? (

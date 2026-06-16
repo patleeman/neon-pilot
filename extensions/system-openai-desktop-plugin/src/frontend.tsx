@@ -1,8 +1,6 @@
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
-import { LoadingState, Notice, Pill, SettingsSection, SupportingText, ToolbarButton } from '@neon-pilot/extensions/ui';
+import { LoadingState, Notice, Pill, SettingsPanel, SettingsRow, SupportingText, ToolbarButton } from '@neon-pilot/extensions/settings';
 import React, { useCallback, useEffect, useState } from 'react';
-
-import './frontend.css';
 
 interface PluginStatus {
   installed: boolean;
@@ -99,97 +97,80 @@ export function OpenAiDesktopPluginSettingsPanel({ pa }: { pa: NativeExtensionCl
     }
   }
 
-  const codexInstalled = status.codex?.checked ? status.codex.pluginInstalled === true && status.codex.pluginEnabled === true : status.installed;
+  const codexInstalled = status.codex?.checked
+    ? status.codex.pluginInstalled === true && status.codex.pluginEnabled === true
+    : status.installed;
   const installed = status.installed && codexInstalled;
   const mcpRegistered = status.codex?.mcp?.registered === true;
   const mcpTools = status.codex?.mcp?.tools ?? [];
   const hasInstalledArtifacts = hasInstallArtifacts(status);
 
   return (
-    <div className="openai-desktop-plugin-settings">
-      <SettingsSection title="OpenAI Desktop Plugin" description="Install the focused Neon Pilot plugin for Codex and OpenAI Desktop.">
-        {loading ? <LoadingState label="Loading OpenAI Desktop plugin status..." /> : null}
-        {!loading ? (
-          <div className="space-y-5">
-            <div className="openai-desktop-plugin-status-grid">
-              <div>
-                <div className="ui-card-meta">Plugin</div>
-                <div className="mt-1">
-                  <Pill tone={installed ? 'success' : 'neutral'}>{installed ? 'Installed' : 'Not installed'}</Pill>
-                </div>
-              </div>
-              <div>
-                <div className="ui-card-meta">Codex plugin</div>
-                <div className="mt-1">
-                  <Pill tone={codexInstalled ? 'success' : 'neutral'}>{codexInstalled ? 'Enabled' : 'Not enabled'}</Pill>
-                </div>
-              </div>
-              <div>
-                <div className="ui-card-meta">MCP server</div>
-                <div className="mt-1">
-                  <Pill tone={mcpRegistered ? 'success' : 'neutral'}>{mcpRegistered ? 'Registered' : 'Not registered'}</Pill>
-                </div>
-              </div>
-            </div>
+    <>
+      {loading ? <LoadingState label="Loading OpenAI Desktop plugin status..." /> : null}
+      {!loading ? (
+        <>
+          <SettingsPanel title="Status">
+            <SettingsRow title="Plugin">
+              <Pill tone={installed ? 'success' : 'neutral'}>{installed ? 'Installed' : 'Not installed'}</Pill>
+            </SettingsRow>
+            <SettingsRow title="Codex plugin">
+              <Pill tone={codexInstalled ? 'success' : 'neutral'}>{codexInstalled ? 'Enabled' : 'Not enabled'}</Pill>
+            </SettingsRow>
+            <SettingsRow title="MCP server">
+              <Pill tone={mcpRegistered ? 'success' : 'neutral'}>{mcpRegistered ? 'Registered' : 'Not registered'}</Pill>
+            </SettingsRow>
+          </SettingsPanel>
 
-            {error ? <Notice tone="danger">{error}</Notice> : null}
-            {message ? <Notice tone="success">{message}</Notice> : null}
+          {error ? <Notice tone="danger">{error}</Notice> : null}
+          {message ? <Notice tone="success">{message}</Notice> : null}
 
-            <div className="flex flex-wrap items-center gap-2">
-              <ToolbarButton disabled={busy !== null || installed} onClick={() => void run('installPlugin', {}, 'Neon Pilot plugin installed in Codex.')}>
-                Install
-              </ToolbarButton>
-              <ToolbarButton
-                disabled={busy !== null}
-                onClick={() => void run('installPlugin', { force: true }, 'Neon Pilot plugin reinstalled in Codex.')}
-              >
-                Reinstall
-              </ToolbarButton>
-              <ToolbarButton
-                disabled={busy !== null || !hasInstalledArtifacts}
-                onClick={() => void run('removePlugin', {}, 'Neon Pilot plugin removed from Codex.')}
-              >
-                Remove
-              </ToolbarButton>
-              <ToolbarButton disabled={busy !== null} onClick={() => void load()}>
-                Refresh
-              </ToolbarButton>
-            </div>
+          <SettingsPanel title="Actions">
+            <SettingsRow title="Install" description="Install or refresh the Codex plugin and MCP server registration.">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <ToolbarButton
+                  disabled={busy !== null || installed}
+                  onClick={() => void run('installPlugin', {}, 'Neon Pilot plugin installed in Codex.')}
+                >
+                  Install
+                </ToolbarButton>
+                <ToolbarButton
+                  disabled={busy !== null}
+                  onClick={() => void run('installPlugin', { force: true }, 'Neon Pilot plugin reinstalled in Codex.')}
+                >
+                  Reinstall
+                </ToolbarButton>
+                <ToolbarButton
+                  disabled={busy !== null || !hasInstalledArtifacts}
+                  onClick={() => void run('removePlugin', {}, 'Neon Pilot plugin removed from Codex.')}
+                >
+                  Remove
+                </ToolbarButton>
+                <ToolbarButton disabled={busy !== null} onClick={() => void load()}>
+                  Refresh
+                </ToolbarButton>
+              </div>
+            </SettingsRow>
+          </SettingsPanel>
 
-            <div className="openai-desktop-plugin-paths">
-              <div>
-                <div className="ui-card-meta">Version</div>
-                <div className="openai-desktop-plugin-path">{status.installedVersion ?? '0.1.1'}</div>
-              </div>
-              <div>
-                <div className="ui-card-meta">Marketplace</div>
-                <div className="openai-desktop-plugin-path">{status.marketplaceRoot || 'Not created yet'}</div>
-              </div>
-              <div>
-                <div className="ui-card-meta">Plugin source</div>
-                <div className="openai-desktop-plugin-path">{status.pluginPath || 'Not created yet'}</div>
-              </div>
-              <div>
-                <div className="ui-card-meta">Marketplace manifest</div>
-                <div className="openai-desktop-plugin-path">{status.marketplacePath || 'Not created yet'}</div>
-              </div>
-            </div>
+          <SettingsPanel title="Files">
+            <SettingsRow title="Version" description={status.installedVersion ?? '0.1.1'} />
+            <SettingsRow title="Marketplace" description={status.marketplaceRoot || 'Not created yet'} />
+            <SettingsRow title="Plugin source" description={status.pluginPath || 'Not created yet'} />
+            <SettingsRow title="Marketplace manifest" description={status.marketplacePath || 'Not created yet'} />
+          </SettingsPanel>
 
-            <div className="openai-desktop-plugin-tools">
-              <div className="ui-card-meta">MCP tools exposed in Codex</div>
-              <div className="openai-desktop-plugin-tool-list">
-                {mcpTools.length > 0 ? mcpTools.map((tool) => <code key={tool}>{tool}</code>) : <span>No tools reported yet.</span>}
-              </div>
-            </div>
+          <SettingsPanel title="MCP tools">
+            <SettingsRow title="Exposed tools" description={mcpTools.length > 0 ? mcpTools.join(', ') : 'No tools reported yet.'} />
+          </SettingsPanel>
 
-            <SupportingText>
-              Install writes a local Codex marketplace, registers it with `codex plugin marketplace add`, and installs `neon-pilot@neon-pilot-local`.
-              It also registers a Desktop-visible `neon-pilot` MCP entry with `codex mcp add`. Reinstall refreshes the generated plugin files before
-              asking Codex to install the plugin again.
-            </SupportingText>
-          </div>
-        ) : null}
-      </SettingsSection>
-    </div>
+          <SupportingText>
+            Install writes a local Codex marketplace, registers it with `codex plugin marketplace add`, and installs
+            `neon-pilot@neon-pilot-local`. It also registers a Desktop-visible `neon-pilot` MCP entry with `codex mcp add`. Reinstall
+            refreshes the generated plugin files before asking Codex to install the plugin again.
+          </SupportingText>
+        </>
+      ) : null}
+    </>
   );
 }

@@ -8,7 +8,7 @@
   "defaultEnabled": true,
   "frontend": {
     "entry": "dist/frontend.js",
-    "styles": ["dist/frontend.css"]
+    "styles": []
   },
   "backend": {
     "entry": "dist/backend.mjs",

@@ -24,7 +24,9 @@ function arg(name, fallback = '') {
   const found = args.find((value) => value.startsWith(prefix));
   if (found) return found.slice(prefix.length);
   const index = args.indexOf(exact);
-  return index >= 0 ? (args[index + 1] ?? 'true') : fallback;
+  if (index < 0) return fallback;
+  const next = args[index + 1];
+  return next && !next.startsWith('--') ? next : 'true';
 }
 
 function boolArg(name) {
@@ -204,17 +206,134 @@ function resizeScreenshotForJudge(file, outDir, maxPixels) {
   return resized;
 }
 
-async function captureRoute(cdp, child, route, outDir, group) {
+function captureModeSet() {
+  const raw = arg('capture-modes', 'viewport,full,scroll')
+    .split(',')
+    .map((mode) => mode.trim().toLowerCase())
+    .filter(Boolean);
+  const modes = new Set(raw.length > 0 ? raw : ['viewport']);
+  if (boolArg('viewport-only')) return new Set(['viewport']);
+  return modes;
+}
+
+function screenshotFileName(route, variant) {
+  return `${routeSlug(route)}${variant === 'viewport' ? '' : `.${variant}`}.png`;
+}
+
+async function findPrimaryScrollContainer(cdp) {
+  return evalJs(
+    cdp,
+    `(() => {
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      const candidates = [document.scrollingElement, document.documentElement, document.body, ...document.querySelectorAll('*')]
+        .filter(Boolean)
+        .map((el) => {
+          const style = window.getComputedStyle(el);
+          const overflowY = style.overflowY;
+          const scrollable = /(auto|scroll|overlay)/.test(overflowY) || el === document.scrollingElement || el === document.body || el === document.documentElement;
+          const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
+          const rect = el.getBoundingClientRect?.() ?? { top: 0, left: 0, width: window.innerWidth, height: viewportHeight };
+          return {
+            scrollable,
+            maxScroll,
+            tagName: el.tagName,
+            id: el.id || '',
+            className: typeof el.className === 'string' ? el.className : '',
+            visibleArea: Math.max(0, Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0)) * Math.max(0, rect.width),
+          };
+        })
+        .filter((item) => item.scrollable && item.maxScroll > 24)
+        .sort((a, b) => (b.maxScroll - a.maxScroll) || (b.visibleArea - a.visibleArea));
+      return candidates[0] ?? null;
+    })()`,
+  );
+}
+
+async function setPrimaryScrollFraction(cdp, fraction) {
+  return evalJs(
+    cdp,
+    `(() => {
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      const candidates = [document.scrollingElement, document.documentElement, document.body, ...document.querySelectorAll('*')]
+        .filter(Boolean)
+        .map((el) => {
+          const style = window.getComputedStyle(el);
+          const overflowY = style.overflowY;
+          const scrollable = /(auto|scroll|overlay)/.test(overflowY) || el === document.scrollingElement || el === document.body || el === document.documentElement;
+          const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
+          const rect = el.getBoundingClientRect?.() ?? { top: 0, left: 0, width: window.innerWidth, height: viewportHeight };
+          return { el, scrollable, maxScroll, visibleArea: Math.max(0, Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0)) * Math.max(0, rect.width) };
+        })
+        .filter((item) => item.scrollable && item.maxScroll > 24)
+        .sort((a, b) => (b.maxScroll - a.maxScroll) || (b.visibleArea - a.visibleArea));
+      const target = candidates[0]?.el ?? document.scrollingElement ?? document.documentElement;
+      const maxScroll = Math.max(0, target.scrollHeight - target.clientHeight);
+      target.scrollTop = Math.round(maxScroll * ${JSON.stringify(fraction)});
+      return { maxScroll, scrollTop: target.scrollTop };
+    })()`,
+  );
+}
+
+async function captureScreenshot(cdp, route, outDir, group, variant, captureBeyondViewport) {
+  const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport });
+  const file = resolve(outDir, group, screenshotFileName(route, variant));
+  write(file, Buffer.from(screenshot.data, 'base64'));
+  return file;
+}
+
+async function captureRoute(cdp, child, route, outDir, group, modes = captureModeSet()) {
   await cdp.send('Page.navigate', { url: `neon-pilot://app${route}` });
   await waitForLoadedBody(cdp, child, route);
   await sleep(900);
   const body = String(await evalJs(cdp, 'document.body ? document.body.innerText : ""')).trim();
-  const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
-  const file = resolve(outDir, group, `${routeSlug(route)}.png`);
-  write(file, Buffer.from(screenshot.data, 'base64'));
-  const textFile = file.replace(/\.png$/, '.txt');
+  const captures = [];
+  const textFile = resolve(outDir, group, `${routeSlug(route)}.txt`);
   write(textFile, `${body}\n`, 'utf8');
-  return { route, screenshot: file, text: textFile };
+
+  if (modes.has('viewport')) {
+    await setPrimaryScrollFraction(cdp, 0);
+    await sleep(250);
+    captures.push({
+      route,
+      variant: 'viewport',
+      screenshot: await captureScreenshot(cdp, route, outDir, group, 'viewport', false),
+      text: textFile,
+    });
+  }
+
+  if (modes.has('full') || modes.has('fullpage')) {
+    await setPrimaryScrollFraction(cdp, 0);
+    await sleep(250);
+    captures.push({
+      route,
+      variant: 'full-page',
+      screenshot: await captureScreenshot(cdp, route, outDir, group, 'full-page', true),
+      text: textFile,
+    });
+  }
+
+  if (modes.has('scroll') || modes.has('scroll-depth')) {
+    const scrollContainer = await findPrimaryScrollContainer(cdp);
+    if (scrollContainer?.maxScroll > 24) {
+      for (const [variant, fraction] of [
+        ['scroll-top', 0],
+        ['scroll-middle', 0.5],
+        ['scroll-bottom', 1],
+      ]) {
+        await setPrimaryScrollFraction(cdp, fraction);
+        await sleep(450);
+        captures.push({
+          route,
+          variant,
+          scroll: { fraction, container: scrollContainer },
+          screenshot: await captureScreenshot(cdp, route, outDir, group, variant, false),
+          text: textFile,
+        });
+      }
+    }
+  }
+
+  return captures;
 }
 
 function packExtension(extensionDir, outDir) {
@@ -296,7 +415,16 @@ function inferGeneratedRoutes(manifest) {
 
 function calibrationRoutes(target) {
   if (target === 'settings')
-    return ['/settings', '/settings#settings-providers', '/settings#settings-desktop', '/settings#settings-extensions'];
+    return [
+      '/settings',
+      '/settings#settings-providers',
+      '/settings#settings-conversation',
+      '/settings#settings-workspace',
+      '/settings#settings-commands',
+      '/settings#settings-security',
+      '/settings#settings-extensions',
+      '/settings#settings-desktop',
+    ];
   return [];
 }
 
@@ -323,11 +451,11 @@ function writeJudgePrompt(outDir, baseline, generated, metadata) {
     '',
     '## Baseline Screenshots',
     '',
-    ...baseline.map((item) => `- ${item.route}: ${screenshotPathForJudge(item)}`),
+    ...baseline.map((item) => `- ${item.route}${item.variant ? ` [${item.variant}]` : ''}: ${screenshotPathForJudge(item)}`),
     '',
     `## ${subjectHeading}`,
     '',
-    ...generatedOrTarget.map((item) => `- ${item.route}: ${screenshotPathForJudge(item)}`),
+    ...generatedOrTarget.map((item) => `- ${item.route}${item.variant ? ` [${item.variant}]` : ''}: ${screenshotPathForJudge(item)}`),
     '',
     '## Taste Profile, Rubric, and Examples',
     '',
@@ -337,6 +465,10 @@ function writeJudgePrompt(outDir, baseline, generated, metadata) {
     '',
     '- Inspect screenshots. Do not score from source code alone.',
     '- Cite screenshot routes when making findings.',
+    '- Compare screenshots across routes and scroll positions. Do not judge each image in isolation.',
+    '- Audit negative space: padding, row height, section gaps, control alignment, empty-state padding, and whether whitespace rhythm is consistent across the whole page.',
+    '- Audit component grammar consistency: boxed versus unboxed rows, title sizes, divider use, action placement, and whether extension-provided panels inherit host settings layout.',
+    '- Treat a good top viewport as insufficient when middle, bottom, full-page, or sibling-page screenshots show inconsistent spacing or controls.',
     '- Use the rubric dimensions and failure tags exactly where possible.',
     '- Be strict about IDE/tooling density, text economy, flat surfaces, action chrome, and neutral color.',
     '- Return strict JSON only.',
@@ -354,7 +486,9 @@ function writeJudgePrompt(outDir, baseline, generated, metadata) {
           workbenchFit: 1,
           hierarchy: 1,
           density: 1,
+          negativeSpace: 1,
           surfaceDiscipline: 1,
+          consistency: 1,
           sidebarDiscipline: 1,
           textEconomy: 1,
           states: 1,
@@ -399,6 +533,7 @@ export async function runVisualCapture() {
     .map((route) => route.trim())
     .filter(Boolean);
   const judgeImageMaxPixels = numberArg('judge-image-max-px', 900);
+  const captureModes = captureModeSet();
 
   if (extensionDir && extensionZip) throw new Error('Pass either --extension-dir or --extension-zip, not both.');
   if (!existsSync(appPath)) throw new Error(`App not found: ${appPath}`);
@@ -459,11 +594,13 @@ export async function runVisualCapture() {
 
     const baseline = [];
     for (const route of baselineRoutes) {
-      const capture = await captureRoute(cdp, child, route, outDir, 'baseline-screenshots');
-      baseline.push({
-        ...capture,
-        judgeScreenshot: resizeScreenshotForJudge(capture.screenshot, outDir, judgeImageMaxPixels),
-      });
+      const captures = await captureRoute(cdp, child, route, outDir, 'baseline-screenshots', captureModes);
+      for (const capture of captures) {
+        baseline.push({
+          ...capture,
+          judgeScreenshot: resizeScreenshotForJudge(capture.screenshot, outDir, judgeImageMaxPixels),
+        });
+      }
     }
 
     let generated = [];
@@ -486,11 +623,13 @@ export async function runVisualCapture() {
       const routes = requestedGeneratedRoutes.length > 0 ? requestedGeneratedRoutes : inferGeneratedRoutes(manifest);
       generated = [];
       for (const route of routes) {
-        const capture = await captureRoute(cdp, child, route, outDir, 'generated-screenshots');
-        generated.push({
-          ...capture,
-          judgeScreenshot: resizeScreenshotForJudge(capture.screenshot, outDir, judgeImageMaxPixels),
-        });
+        const captures = await captureRoute(cdp, child, route, outDir, 'generated-screenshots', captureModes);
+        for (const capture of captures) {
+          generated.push({
+            ...capture,
+            judgeScreenshot: resizeScreenshotForJudge(capture.screenshot, outDir, judgeImageMaxPixels),
+          });
+        }
       }
     }
 
@@ -507,6 +646,7 @@ export async function runVisualCapture() {
       baseline,
       generated,
       judgeImageMaxPixels,
+      captureModes: [...captureModes],
     };
     write(resolve(outDir, 'visual-capture-summary.json'), `${JSON.stringify(metadata, null, 2)}\n`, 'utf8');
     writeJudgePrompt(outDir, baseline, generated, metadata);

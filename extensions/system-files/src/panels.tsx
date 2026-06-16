@@ -11,6 +11,12 @@ function getWorkspaceFilePath(search: string): string | null {
   return new URLSearchParams(search).get(WORKSPACE_FILE_PARAM);
 }
 
+function isChatWorkspaceCwd(cwd: string | null | undefined): boolean {
+  if (!cwd) return false;
+  const normalized = cwd.replace(/\\/g, '/').replace(/\/+$/, '');
+  return normalized.endsWith('/chat-workspaces') || normalized.includes('/chat-workspaces/');
+}
+
 export function WorkspaceFilesPanel({ context }: ExtensionSurfaceProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeFilePath = getWorkspaceFilePath(searchParams.toString());
@@ -34,6 +40,15 @@ export function WorkspaceFilesPanel({ context }: ExtensionSurfaceProps) {
         eyebrow="File Explorer"
         title="Add a workspace to browse files"
         body="File Explorer needs a working directory. Start or open a local conversation with a workspace to show the file tree."
+      />
+    );
+  }
+  if (isChatWorkspaceCwd(context.cwd)) {
+    return (
+      <CenteredMessage
+        eyebrow="File Explorer"
+        title="Not available in chat conversations"
+        body="File browsing requires a project workspace. Start a new conversation with a project directory, or switch to an existing project conversation, to browse files."
       />
     );
   }
@@ -63,6 +78,16 @@ export function WorkspaceFileDetailPanel({ context }: ExtensionSurfaceProps) {
         eyebrow="File Explorer"
         title="Add a workspace to open files"
         body="File previews need a working directory. Start or open a local conversation with a workspace, then pick a file from the tree."
+      />
+    );
+  }
+
+  if (isChatWorkspaceCwd(context.cwd)) {
+    return (
+      <CenteredMessage
+        eyebrow="File Explorer"
+        title="Not available in chat conversations"
+        body="File browsing requires a project workspace. Start a new conversation with a project directory, or switch to an existing project conversation, to browse files."
       />
     );
   }

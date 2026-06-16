@@ -24,7 +24,7 @@ export async function loadSettings(_input: unknown, _ctx: ExtensionBackendContex
   return { ...stored };
 }
 
-export async function saveSettings(input: unknown, _ctx: ExtensionBackendContext): Promise<{ ok: boolean }> {
+export async function saveSettings(input: unknown, _ctx: ExtensionBackendContext): Promise<{ ok: boolean; settings: MySettings }> {
   const incoming = input as Partial<MySettings>;
   stored = {
     apiKey: typeof incoming.apiKey === 'string' ? incoming.apiKey : stored.apiKey,
@@ -32,6 +32,6 @@ export async function saveSettings(input: unknown, _ctx: ExtensionBackendContext
     enabled: typeof incoming.enabled === 'boolean' ? incoming.enabled : stored.enabled,
   };
   // Example with ctx.settings:
-  //   await ctx.settings.set('apiKey', stored.apiKey);
-  return { ok: true };
+  //   if (typeof incoming.apiKey === 'string') await ctx.settings.set('apiKey', incoming.apiKey);
+  return { ok: true, settings: { ...stored } };
 }

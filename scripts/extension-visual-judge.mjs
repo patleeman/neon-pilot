@@ -14,7 +14,9 @@ function arg(name, fallback = '') {
   const found = args.find((value) => value.startsWith(prefix));
   if (found) return found.slice(prefix.length);
   const index = args.indexOf(exact);
-  return index >= 0 ? (args[index + 1] ?? 'true') : fallback;
+  if (index < 0) return fallback;
+  const next = args[index + 1];
+  return next && !next.startsWith('--') ? next : 'true';
 }
 
 function firstArg(names, fallback = '') {
@@ -85,6 +87,7 @@ function screenshotItemsFromSummary(summary) {
   return items
     .map((item) => ({
       route: typeof item?.route === 'string' ? item.route : '',
+      variant: typeof item?.variant === 'string' ? item.variant : '',
       path: typeof item?.judgeScreenshot === 'string' ? item.judgeScreenshot : typeof item?.screenshot === 'string' ? item.screenshot : '',
     }))
     .filter((item) => item.route && item.path);
@@ -105,7 +108,9 @@ function imageInputsForCapture(captureDir) {
 function buildPrompt(captureDir, items) {
   const promptPath = resolve(captureDir, arg('prompt', 'visual-judge-prompt.md'));
   const prompt = existsSync(promptPath) ? readText(promptPath) : '';
-  const imageList = items.map((item, index) => `${index + 1}. ${item.route}: ${item.path}`).join('\n');
+  const imageList = items
+    .map((item, index) => `${index + 1}. ${item.route}${item.variant ? ` [${item.variant}]` : ''}: ${item.path}`)
+    .join('\n');
   return [
     prompt || '# Extension Visual Eval Judge Prompt',
     '',

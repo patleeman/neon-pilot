@@ -1,4 +1,4 @@
-import { api, ErrorState, LoadingState, SettingToggleRow, SettingsSection, ToolbarButton, useApi } from '@neon-pilot/extensions/settings';
+import { api, ErrorState, LoadingState, SettingsRow, Switch, ToolbarButton, useApi } from '@neon-pilot/extensions/settings';
 import { useEffect, useState } from 'react';
 
 type Settings = {
@@ -54,23 +54,31 @@ export function NeonPilotAgentSettingsPanel() {
   }
 
   return (
-    <SettingsSection title="CLI access" description="Control whether Neon Pilot CLI entrypoints can be launched by other tools.">
+    <div className="space-y-3">
       {loading ? <LoadingState label="Loading settings..." /> : null}
       {error ? <ErrorState title="Settings failed to load" body={error instanceof Error ? error.message : String(error)} /> : null}
-      <SettingToggleRow
+      <SettingsRow
         title="CLI entrypoint"
         description="Allows neon-pilot to administer Neon Pilot, run delegated tasks, start subagents, and inspect runs."
-        checked={settings.cliEnabled}
         disabled={saving}
-        onCheckedChange={(checked) => void save({ cliEnabled: checked })}
-      />
+        actionsClassName="max-w-none"
+      >
+        <div className="flex items-center gap-2">
+          <ToolbarButton disabled={saving} onClick={() => void refetch()}>
+            Refresh
+          </ToolbarButton>
+          <Switch
+            checked={settings.cliEnabled}
+            disabled={saving}
+            aria-label="CLI entrypoint"
+            onClick={() => void save({ cliEnabled: !settings.cliEnabled })}
+          />
+        </div>
+      </SettingsRow>
       <div className="flex items-center gap-2 text-[12px] text-secondary">
-        <ToolbarButton disabled={saving} onClick={() => void refetch()}>
-          Refresh
-        </ToolbarButton>
         {message ? <span className="text-success">{message}</span> : null}
         {saveError ? <span className="text-danger">{saveError}</span> : null}
       </div>
-    </SettingsSection>
+    </div>
   );
 }

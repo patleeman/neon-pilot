@@ -33,6 +33,7 @@ Use this as the no-ambiguity loop for an agent building an extension in a repo c
    - **Information architecture**: the core sections, list/detail structure, controls, and command-backed actions.
    - **State model**: default, empty, loading, error, success, disabled, and long-running states.
    - **Primitive plan**: which `@neon-pilot/extensions/ui` components will be used for page shell, lists/tables, forms, feedback, dialogs, runtime status, rails, or workbench chrome.
+     For Settings components, use `@neon-pilot/extensions/settings` row-list primitives (`SettingsPanel`, `SettingsRow`, `Switch`, `Select`, `TextInput`, `ToolbarButton`) and autosave normal preferences.
    - **Visual acceptance**: what must be visible in the app screenshot or manual inspection before calling the UI correct.
 4. Ask focused questions for unresolved UX/product decisions before writing code. If the user gave enough detail, state the assumptions and proceed.
 5. Start from [`docs/extension-templates/`](extension-templates/README.md) when the feature matches a template; otherwise copy the closest first-party extension shape.
@@ -41,6 +42,7 @@ Use this as the no-ambiguity loop for an agent building an extension in a repo c
 8. Run `neon-pilot-extension doctor <extension-dir>` when the CLI is available; in a packaged app, run `neon-pilot extensions validate --package-root <extension-dir>` before install or `neon-pilot extensions validate <extension-id>` after install. For repo extension or boundary work, also run `pnpm run check:extensions:static`.
 9. Reload extensions from Settings -> Extensions, or restart the desktop app when reload is unavailable.
 10. Run `neon-pilot extensions smoke <extension-id>` when the app is running, then validate through the same surface the user will use: open the route, rail, Settings section, command, composer control, or agent tool.
+    For a Settings component, open `/settings#<sectionId>` and inspect it beside neighboring Settings sections for row spacing, padding, title hierarchy, and action alignment.
 11. Exercise empty, loading, error, success, disabled, and long-running states when the surface has UI; for backend tools/actions, run one representative invocation and inspect the transcript or visible result.
 12. Visually inspect the UI against the brief. Check layout density, text wrapping, keyboard/focus behavior, responsive constraints, empty/error copy, command availability, and whether shared primitives were used instead of one-off chrome.
 13. Update the extension `README.md` with install/build/use notes and any non-obvious behavior.
@@ -54,11 +56,11 @@ Do not stop after a successful build. A built extension is only ready after its 
 Before writing from scratch, check [`docs/extension-templates/`](extension-templates/README.md) for copy-paste stubs
 derived from real first-party extensions:
 
-| Template                                                                       | Pattern                                                   |
-| ------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| [`data-dashboard`](extension-templates/templates/template-data-dashboard/)     | Read-only page — load from backend, render table or cards |
-| [`crud-page`](extension-templates/templates/template-crud-page/)               | List + slide-in form editor. Full CRUD.                   |
-| [`settings-section`](extension-templates/templates/template-settings-section/) | Section in the shared Settings page. No separate route.   |
+| Template                                                                       | Pattern                                                                              |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| [`data-dashboard`](extension-templates/templates/template-data-dashboard/)     | Read-only page — load from backend, render table or cards                            |
+| [`crud-page`](extension-templates/templates/template-crud-page/)               | List + slide-in form editor. Full CRUD.                                              |
+| [`settings-section`](extension-templates/templates/template-settings-section/) | Section in the shared Settings page. No separate route. Autosaving row-list example. |
 
 Copy the matching folder, rename the extension id, replace domain types, and build.
 

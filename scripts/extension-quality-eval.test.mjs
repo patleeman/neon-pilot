@@ -128,9 +128,13 @@ describe('extension quality eval assets', () => {
     expect(visualRubric).toContain('Sidebar Discipline');
     expect(visualRubric).toContain('docs/design/examples/sidebar/README.md');
     expect(visualRubric).toContain('Density & Layout');
+    expect(visualRubric).toContain('Negative Space Rhythm');
     expect(visualRubric).toContain('no_image_access');
     expect(visualRubric).toContain('title_description_noise');
     expect(visualRubric).toContain('text_button_sprawl');
+    expect(visualRubric).toContain('inconsistent_component_grammar');
+    expect(visualRubric).toContain('single_viewport_insufficient');
+    expect(visualRubric).toContain('Negative Space Rhythm');
     expect(visualRubric).toContain('modal_crud_flow');
     expect(visualRubric).toContain('wrong_input_control');
     expect(visualRubric).toContain('full_page_crud_form');
@@ -150,12 +154,21 @@ describe('extension quality eval assets', () => {
     expect(patterns).toContain('SidebarTemplateList');
     expect(patterns).toContain("Sidebar don't");
     expect(visualRunner).toContain('Page.captureScreenshot');
+    expect(visualRunner).toContain('capture-modes');
+    expect(visualRunner).toContain('captureBeyondViewport');
+    expect(visualRunner).toContain('scroll-middle');
+    expect(visualRunner).toContain('scroll-bottom');
     expect(visualRunner).toContain('judge-image-max-px');
     expect(visualRunner).toContain('judge-screenshots');
     expect(visualRunner).toContain('sips');
     expect(visualRunner).toContain('calibrationRoutes');
     expect(visualRunner).toContain("target === 'settings'");
     expect(visualRunner).toContain('/settings#settings-providers');
+    expect(visualRunner).toContain('/settings#settings-conversation');
+    expect(visualRunner).toContain('/settings#settings-security');
+    expect(visualRunner).toContain('/settings#settings-extensions');
+    expect(visualRunner).toContain('negativeSpace');
+    expect(visualRunner).toContain('consistency');
     expect(visualRunner).toContain('Neon Pilot Taste Profile');
     expect(visualRunner).toContain('Title Description Noise');
     expect(visualRunner).toContain('Text Button Sprawl');
@@ -167,6 +180,7 @@ describe('extension quality eval assets', () => {
     expect(visualRunner).toContain('baseline-screenshots');
     expect(visualRunner).toContain('generated-screenshots');
     expect(visualJudgeRunner).toContain('input_image');
+    expect(visualJudgeRunner).toContain('variant');
     expect(visualJudgeRunner).toContain('visual-capture-summary.json');
     expect(visualJudgeRunner).toContain("firstArg(['capture', 'capture-dir']");
     expect(visualJudgeRunner).toContain('opencode-go/kimi-k2.5');
@@ -175,5 +189,37 @@ describe('extension quality eval assets', () => {
     expect(visualJudgeRunner).toContain('/responses');
     expect(packageJson).toContain('eval:extension-visual');
     expect(packageJson).toContain('eval:extension-visual-judge');
+  });
+
+  it('documents the shared settings component grammar for extension authors', () => {
+    const extensionsDoc = readFileSync(new URL('../docs/extensions.md', import.meta.url), 'utf8');
+    const sdkReadme = readFileSync(new URL('../packages/extensions/README.md', import.meta.url), 'utf8');
+    const buildGuide = readFileSync(new URL('../docs/build-an-extension.md', import.meta.url), 'utf8');
+    const templateReadme = readFileSync(
+      new URL('../docs/extension-templates/templates/template-settings-section/README.md', import.meta.url),
+      'utf8',
+    );
+    const templateFrontend = readFileSync(
+      new URL('../docs/extension-templates/templates/template-settings-section/src/frontend.tsx', import.meta.url),
+      'utf8',
+    );
+    const settingsFacade = readFileSync(new URL('../packages/extensions/src/settings.ts', import.meta.url), 'utf8');
+
+    for (const doc of [extensionsDoc, sdkReadme, buildGuide, templateReadme]) {
+      expect(doc).toContain('SettingsPanel');
+      expect(doc).toContain('SettingsRow');
+      expect(doc).toContain('autosave');
+    }
+
+    expect(extensionsDoc).toContain('Do not render another page title');
+    expect(extensionsDoc).toContain('Do not show persistent Save/Cancel buttons');
+    expect(templateFrontend).toContain("from '@neon-pilot/extensions/settings'");
+    expect(templateFrontend).toContain('SettingsPanel');
+    expect(templateFrontend).toContain('SettingsRow');
+    expect(templateFrontend).toContain('debounce');
+    expect(templateFrontend).not.toContain('type="submit"');
+    expect(settingsFacade).toContain('SettingsRow');
+    expect(settingsFacade).toContain('SettingsField');
+    expect(settingsFacade).toContain('Switch');
   });
 });
