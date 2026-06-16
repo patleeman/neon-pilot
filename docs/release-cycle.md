@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.22-rc.0** — release candidate.
+**v0.11.22** — stable release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.22-rc.0
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.22
 
 Highlights in this train:
 
-- Makes conversation workspace state backend-owned so sidebar hydration, route recovery, and quick reloads converge on the same open/archive state instead of drifting between renderer snapshots.
-- Hardens conversation startup and reuse flows, including reserved conversation persistence, empty-conversation reuse by cwd, first-message route handoff, and stale workspace event filtering.
-- Improves app navigation coverage across chat, settings, extension routes, command palette actions, sidebar reopen flows, and layout width restoration.
-- Tightens recovery behavior for missing conversation metadata and stale layout/session reads so conversation routes reopen with the expected catalog-backed state.
-- Keeps extension settings work checkpointed for the RC train while preserving the current Pi runtime package set at `^0.79.4`.
+- Promotes the 0.11.22 RC conversation and navigation hardening to the stable channel, including backend-owned workspace state, route recovery, sidebar hydration, and empty-conversation reuse fixes.
+- Ships the redesigned public site refresh with stronger first-screen product context, updated feature coverage, and release-aligned internal documentation.
+- Adds the site visual evaluation loop so screenshot capture, visual judgments, and refinement work can be repeated against the public site with the same workflow used for app surfaces.
+- Refreshes Pi runtime packages to `^0.79.5` for the stable 0.11.22 train.
+- Keeps the stable app release aligned with the matching first-party extension catalog and installable extension artifacts.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

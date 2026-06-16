@@ -12,19 +12,19 @@ importers:
         specifier: 0.21.1
         version: 0.21.1(zod@4.3.6)
       '@earendil-works/pi-ai':
-        specifier: ^0.79.4
-        version: 0.79.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
+        specifier: ^0.79.5
+        version: 0.79.5(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
       '@earendil-works/pi-coding-agent':
-        specifier: ^0.79.4
-        version: 0.79.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
+        specifier: ^0.79.5
+        version: 0.79.5(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
       '@excalidraw/excalidraw':
         specifier: 0.18.1
         version: 0.18.1(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@neon-pilot/desktop':
-        specifier: workspace:0.11.22-rc.0
+        specifier: workspace:0.11.22
         version: link:packages/desktop
       '@neon-pilot/ui':
-        specifier: workspace:0.11.22-rc.0
+        specifier: workspace:0.11.22
         version: link:packages/ui
       '@pierre/trees':
         specifier: 1.0.0-beta.3
@@ -97,7 +97,7 @@ importers:
         specifier: 3.4.1
         version: 3.4.1
       '@neon-pilot/core':
-        specifier: workspace:0.11.22-rc.0
+        specifier: workspace:0.11.22
         version: link:packages/core
       '@types/jsdom':
         specifier: 28.0.1
@@ -188,11 +188,11 @@ importers:
   packages/desktop:
     dependencies:
       '@earendil-works/pi-agent-core':
-        specifier: ^0.79.4
-        version: 0.79.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
+        specifier: ^0.79.5
+        version: 0.79.5(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
       '@earendil-works/pi-coding-agent':
-        specifier: ^0.79.4
-        version: 0.79.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
+        specifier: ^0.79.5
+        version: 0.79.5(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
       '@fontsource-variable/geist':
         specifier: 5.2.9
         version: 5.2.9
@@ -200,13 +200,13 @@ importers:
         specifier: 5.2.8
         version: 5.2.8
       '@neon-pilot/core':
-        specifier: workspace:0.11.22-rc.0
+        specifier: workspace:0.11.22
         version: link:../core
       '@neon-pilot/extensions':
-        specifier: workspace:0.11.22-rc.0
+        specifier: workspace:0.11.22
         version: link:../extensions
       '@neon-pilot/ui':
-        specifier: workspace:0.11.22-rc.0
+        specifier: workspace:0.11.22
         version: link:../ui
       '@silvia-odwyer/photon-node':
         specifier: 0.3.4
@@ -776,22 +776,22 @@ packages:
     resolution: {integrity: sha512-0cp4PsWQ/9avqTVMCtZ+GirikIA36ikvjtHweU4/j8yLtgObI0+JUPhYFScgwlteveGB1rt3Cm8UhN04XayDig==}
     engines: {node: '>= 8.9.0'}
 
-  '@earendil-works/pi-agent-core@0.79.4':
-    resolution: {integrity: sha512-xkaZ3yK2XbP9HYdHrrdj/6HqZPM0o/mwbjMSU4RTJyR3HjDG0ZrPz76Hg6s0W+G4u6PpJr1mGx/srCG+3eQA8A==}
+  '@earendil-works/pi-agent-core@0.79.5':
+    resolution: {integrity: sha512-yOxzx8SRJkGsZTJWfe9VACkAF4amwHUgvFShn8uoYR7/fnhF69Sz0n7TIh8qRH21fBDvo1RLex4NK/iXFQ3u2Q==}
     engines: {node: '>=22.19.0'}
 
-  '@earendil-works/pi-ai@0.79.4':
-    resolution: {integrity: sha512-Z1j+YP+6ZyPBKDUoc5m0GO/o1hPK17fWeErtDgegCTpm2dcKzuFvL/7GTqHeJkVkfpeXRwO37xOfgozQbK6EUw==}
-    engines: {node: '>=22.19.0'}
-    hasBin: true
-
-  '@earendil-works/pi-coding-agent@0.79.4':
-    resolution: {integrity: sha512-PthzVzM5m4XH/hrU+2fVjuwuH5M4eMFWbd0NCRScH14XKpwlPc8/Fh6JDz0jQb5kTBT9oQT183YLTHVVulFL9A==}
+  '@earendil-works/pi-ai@0.79.5':
+    resolution: {integrity: sha512-LwZfV8HNvT90A9n5foA/a6/JMh5n/1lh1rRzOn+68kiFitf/tz3HTBpeSNFnUL4KLIdwp1lczjl4U2EJX0egvQ==}
     engines: {node: '>=22.19.0'}
     hasBin: true
 
-  '@earendil-works/pi-tui@0.79.4':
-    resolution: {integrity: sha512-/ZhfFiHSBMH7AbDrBQIN+UWlJnl9tSEpLYICRGGMzmNfyCqX+30NYacIhyOEaD8R5rS6wJZysAOPU0yNwigbXw==}
+  '@earendil-works/pi-coding-agent@0.79.5':
+    resolution: {integrity: sha512-5fs2+N+KGkGWNWdTC54ft4jm7MzyZwj7wkTGJWudjem+3pq73qM1N+Rewfai9FxvY3IeoPFG7Tq3q3FzF0BsXQ==}
+    engines: {node: '>=22.19.0'}
+    hasBin: true
+
+  '@earendil-works/pi-tui@0.79.5':
+    resolution: {integrity: sha512-u6GXJ85e8ReEa1wG0jT53HVkI6a+CccCX1yAtQOpZhiTFklv4nYdbZr3J2TAKi4QKptCPSpRJb+QqZZ4Jy6eiA==}
     engines: {node: '>=22.19.0'}
 
   '@electron/asar@3.4.1':
@@ -4976,11 +4976,6 @@ packages:
   markdown-table@3.0.4:
     resolution: {integrity: sha512-wiYz4+JrLyb/DqW2hkFJxP7Vd7JuTDm77fvbM8VfEQdmSMqcImWeeRbHwZjBjIFki/VaMK2BhFi7oUUZeM5bqw==}
 
-  marked@15.0.12:
-    resolution: {integrity: sha512-8dD6FusOQSrpv9Z1rdNMdlSgQOIP880DHqnohobOmYLElGEqAL/JvxvuxZO16r4HtjTlfPRDC1hbvxC9dPN2nA==}
-    engines: {node: '>= 18'}
-    hasBin: true
-
   marked@16.4.2:
     resolution: {integrity: sha512-TI3V8YYWvkVf3KJe1dRkpnjs68JUPyEa5vjKrp1XEEJUAOaQc+Qj+L1qWbPd0SJuAdQkFU0h73sXXqwDYxsiDA==}
     engines: {node: '>= 20'}
@@ -4988,6 +4983,11 @@ packages:
 
   marked@17.0.5:
     resolution: {integrity: sha512-6hLvc0/JEbRjRgzI6wnT2P1XuM1/RrrDEX0kPt0N7jGm1133g6X7DlxFasUIx+72aKAr904GTxhSLDrd5DIlZg==}
+    engines: {node: '>= 20'}
+    hasBin: true
+
+  marked@18.0.5:
+    resolution: {integrity: sha512-S6GcvALHg6K4ohtu4E7x0a1AqhAjp6cV8KhLSyN9qVapnzJkusVBxZRcIU9AeYsbe6P1hKDusSbEOzGyyuce6w==}
     engines: {node: '>= 20'}
     hasBin: true
 
@@ -7529,9 +7529,9 @@ snapshots:
       ajv: 6.14.0
       ajv-keywords: 3.5.2(ajv@6.14.0)
 
-  '@earendil-works/pi-agent-core@0.79.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)':
+  '@earendil-works/pi-agent-core@0.79.5(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)':
     dependencies:
-      '@earendil-works/pi-ai': 0.79.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
+      '@earendil-works/pi-ai': 0.79.5(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
       ignore: 7.0.5
       typebox: 1.1.38
       yaml: 2.9.0
@@ -7543,7 +7543,7 @@ snapshots:
       - ws
       - zod
 
-  '@earendil-works/pi-ai@0.79.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)':
+  '@earendil-works/pi-ai@0.79.5(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)':
     dependencies:
       '@anthropic-ai/sdk': 0.91.1(zod@4.3.6)
       '@aws-sdk/client-bedrock-runtime': 3.1048.0
@@ -7563,11 +7563,11 @@ snapshots:
       - ws
       - zod
 
-  '@earendil-works/pi-coding-agent@0.79.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)':
+  '@earendil-works/pi-coding-agent@0.79.5(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)':
     dependencies:
-      '@earendil-works/pi-agent-core': 0.79.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
-      '@earendil-works/pi-ai': 0.79.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
-      '@earendil-works/pi-tui': 0.79.4
+      '@earendil-works/pi-agent-core': 0.79.5(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
+      '@earendil-works/pi-ai': 0.79.5(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
+      '@earendil-works/pi-tui': 0.79.5
       '@silvia-odwyer/photon-node': 0.3.4
       chalk: 5.6.2
       cross-spawn: 7.0.6
@@ -7593,10 +7593,10 @@ snapshots:
       - ws
       - zod
 
-  '@earendil-works/pi-tui@0.79.4':
+  '@earendil-works/pi-tui@0.79.5':
     dependencies:
       get-east-asian-width: 1.6.0
-      marked: 15.0.12
+      marked: 18.0.5
 
   '@electron/asar@3.4.1':
     dependencies:
@@ -12126,11 +12126,11 @@ snapshots:
 
   markdown-table@3.0.4: {}
 
-  marked@15.0.12: {}
-
   marked@16.4.2: {}
 
   marked@17.0.5: {}
+
+  marked@18.0.5: {}
 
   matcher@3.0.0:
     dependencies:

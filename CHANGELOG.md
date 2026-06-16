@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.22 — 2026-06-16
+
+### Highlights
+
+- Promotes the 0.11.22 RC conversation and navigation hardening to the stable channel, including backend-owned workspace state, route recovery, sidebar hydration, and empty-conversation reuse fixes.
+- Ships the redesigned public site refresh with stronger first-screen product context, updated feature coverage, and release-aligned internal documentation.
+- Adds the site visual evaluation loop so screenshot capture, visual judgments, and refinement work can be repeated against the public site with the same workflow used for app surfaces.
+- Refreshes Pi runtime packages to `^0.79.5` for the stable 0.11.22 train.
+- Keeps the stable app release aligned with the matching first-party extension catalog and installable extension artifacts.
+
+### Notes
+
+- 3 commits since the previous release.
+
 ## 0.11.22-rc.0 — 2026-06-16
 
 ### Highlights
