@@ -281,10 +281,25 @@ async function captureScreenshot(cdp, route, outDir, group, variant, captureBeyo
   return file;
 }
 
+async function stripTestingAttributes(cdp) {
+  await evalJs(
+    cdp,
+    `(() => {
+      for (const element of document.querySelectorAll('[data-testid], [data-test], [data-qa]')) {
+        element.removeAttribute('data-testid');
+        element.removeAttribute('data-test');
+        element.removeAttribute('data-qa');
+      }
+      return true;
+    })()`,
+  );
+}
+
 async function captureRoute(cdp, child, route, outDir, group, modes = captureModeSet()) {
   await cdp.send('Page.navigate', { url: `neon-pilot://app${route}` });
   await waitForLoadedBody(cdp, child, route);
   await sleep(900);
+  if (boolArg('strip-test-attrs')) await stripTestingAttributes(cdp);
   const body = String(await evalJs(cdp, 'document.body ? document.body.innerText : ""')).trim();
   const captures = [];
   const textFile = resolve(outDir, group, `${routeSlug(route)}.txt`);

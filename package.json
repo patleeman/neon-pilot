@@ -74,6 +74,9 @@
     "eval:extension-quality": "node scripts/extension-quality-eval.mjs",
     "eval:extension-visual": "node scripts/extension-visual-eval.mjs",
     "eval:extension-visual-judge": "node scripts/extension-visual-judge.mjs",
+    "eval:site-visual": "node scripts/site-visual-eval.mjs",
+    "eval:site-visual-judge": "node scripts/site-visual-judge.mjs",
+    "site:capture-app-screenshots": "node scripts/site-capture-app-screenshots.mjs",
     "bench:ds4": "node scripts/ds4-task-benchmark.mjs",
     "bench:agent": "node scripts/neon-pilot-agent-benchmark.mjs"
   },
