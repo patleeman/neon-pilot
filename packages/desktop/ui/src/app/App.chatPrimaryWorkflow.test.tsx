@@ -20,6 +20,7 @@ const apiMock = vi.hoisted(() => ({
   sessionMeta: vi.fn(),
   openConversationTabs: vi.fn(),
   setOpenConversationTabs: vi.fn(),
+  updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
   gateways: vi.fn(),
   markConversationAttentionRead: vi.fn(),
@@ -193,6 +194,7 @@ describe('App chat primary live workflow', () => {
       workspacePaths: [],
     });
     apiMock.setOpenConversationTabs.mockResolvedValue({ ok: true });
+    apiMock.updateConversationWorkspace.mockResolvedValue({ ok: true });
     apiMock.setSavedWorkspacePaths.mockResolvedValue([]);
     apiMock.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });
     apiMock.markConversationAttentionRead.mockResolvedValue({ ok: true });

@@ -5,10 +5,19 @@ import { createRoot, type Root } from 'react-dom/client';
 import { useLocation, useParams } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetLocalWriteGrace, resetRemoteConversationLayoutCache } from '../session/sessionTabs';
 import type { DesktopAppEvent, SessionMeta } from '../shared/types';
 
 (globalThis as typeof globalThis & { React?: typeof React; IS_REACT_ACT_ENVIRONMENT?: boolean }).React = React;
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+type TestWorkspaceLayout = {
+  sessionIds: string[];
+  pinnedSessionIds: string[];
+  archivedSessionIds: string[];
+  activeConversationId: string | null;
+  workspacePaths: string[];
+};
 
 const subscribeDesktopAppEventsMock = vi.fn();
 const apiMock = vi.hoisted(() => ({
@@ -19,6 +28,7 @@ const apiMock = vi.hoisted(() => ({
   sessionMeta: vi.fn(),
   openConversationTabs: vi.fn(),
   setOpenConversationTabs: vi.fn(),
+  updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
   gateways: vi.fn(),
   markConversationAttentionRead: vi.fn(),
@@ -99,6 +109,7 @@ const extensionRegistryMock = vi.hoisted(() => ({
   },
 }));
 let desktopListener: { onopen?: () => void; onevent?: (event: DesktopAppEvent) => void } | null = null;
+let workspaceLayout: TestWorkspaceLayout;
 
 vi.mock('../desktop/desktopRealtime', () => ({
   subscribeDesktopRealtimeAppEvents: subscribeDesktopAppEventsMock,
@@ -218,6 +229,8 @@ describe('App sidebar conversation navigation workflow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    resetLocalWriteGrace();
+    resetRemoteConversationLayoutCache();
     desktopListener = null;
     subscribeDesktopAppEventsMock.mockImplementation((listener) => {
       desktopListener = listener;
@@ -234,14 +247,66 @@ describe('App sidebar conversation navigation workflow', () => {
     apiMock.tasks.mockResolvedValue([]);
     apiMock.daemon.mockResolvedValue(null);
     apiMock.sessionMeta.mockImplementation(async (id: string) => sessions.find((candidate) => candidate.id === id) ?? null);
-    apiMock.openConversationTabs.mockResolvedValue({
+    workspaceLayout = {
       sessionIds: ['conv-first', 'conv-second'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
       activeConversationId: 'conv-first',
       workspacePaths: [],
+    };
+    apiMock.openConversationTabs.mockImplementation(async () => ({
+      ...workspaceLayout,
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-06-15T12:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+    }));
+    apiMock.setOpenConversationTabs.mockImplementation(
+      async (
+        sessionIds?: string[] | null,
+        pinnedSessionIds?: string[] | null,
+        archivedSessionIds?: string[] | null,
+        workspacePaths?: string[] | null,
+        activeConversationId?: string | null,
+      ) => {
+        workspaceLayout = {
+          sessionIds: sessionIds ?? workspaceLayout.sessionIds,
+          pinnedSessionIds: pinnedSessionIds ?? workspaceLayout.pinnedSessionIds,
+          archivedSessionIds: archivedSessionIds ?? workspaceLayout.archivedSessionIds,
+          workspacePaths: workspacePaths ?? workspaceLayout.workspacePaths,
+          activeConversationId: activeConversationId ?? workspaceLayout.activeConversationId,
+        };
+        return { ok: true, ...workspaceLayout, remoteControlledConversationIds: [] };
+      },
+    );
+    apiMock.updateConversationWorkspace.mockImplementation(async (input: { operation: string; sessionId?: string; active?: boolean }) => {
+      const sessionId = typeof input.sessionId === 'string' ? input.sessionId : '';
+      if (input.operation === 'open' && sessionId && !workspaceLayout.sessionIds.includes(sessionId)) {
+        workspaceLayout = {
+          ...workspaceLayout,
+          sessionIds: [...workspaceLayout.sessionIds, sessionId],
+          archivedSessionIds: workspaceLayout.archivedSessionIds.filter((id) => id !== sessionId),
+          activeConversationId: input.active === false ? workspaceLayout.activeConversationId : sessionId,
+        };
+      } else if ((input.operation === 'close' || input.operation === 'archive') && sessionId) {
+        workspaceLayout = {
+          ...workspaceLayout,
+          sessionIds: workspaceLayout.sessionIds.filter((id) => id !== sessionId),
+          pinnedSessionIds: workspaceLayout.pinnedSessionIds.filter((id) => id !== sessionId),
+          archivedSessionIds: [...workspaceLayout.archivedSessionIds.filter((id) => id !== sessionId), sessionId],
+          activeConversationId: workspaceLayout.activeConversationId === sessionId ? null : workspaceLayout.activeConversationId,
+        };
+      } else if (input.operation === 'restore' && sessionId) {
+        workspaceLayout = {
+          ...workspaceLayout,
+          sessionIds: workspaceLayout.sessionIds.includes(sessionId) ? workspaceLayout.sessionIds : [...workspaceLayout.sessionIds, sessionId],
+          archivedSessionIds: workspaceLayout.archivedSessionIds.filter((id) => id !== sessionId),
+        };
+      } else if (input.operation === 'setActive') {
+        workspaceLayout = { ...workspaceLayout, activeConversationId: sessionId || null };
+      }
+      return { ok: true, ...workspaceLayout, remoteControlledConversationIds: [] };
     });
-    apiMock.setOpenConversationTabs.mockResolvedValue({ ok: true });
     apiMock.setSavedWorkspacePaths.mockResolvedValue([]);
     apiMock.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });
     apiMock.markConversationAttentionRead.mockResolvedValue({ ok: true });
@@ -297,6 +362,29 @@ describe('App sidebar conversation navigation workflow', () => {
     expect(screen.getByText('Second persisted thread')).toBeTruthy();
   });
 
+  it('hydrates persisted conversation rows from the sidebar workspace bootstrap when the initial layout read misses', async () => {
+    fetchSessionsSnapshotMock.mockImplementation(() => new Promise<SessionMeta[]>(() => {}));
+    apiMock.openConversationTabs
+      .mockRejectedValueOnce(new Error('initial layout bootstrap failed'))
+      .mockImplementation(async () => ({
+        ...workspaceLayout,
+        remoteControlledConversationIds: [],
+        conversationWorkspaceRevision: 1,
+        conversationWorkspaceUpdatedAt: '2026-06-15T12:00:00.000Z',
+        conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+      }));
+
+    ({ root } = await renderAppAt('/conversations/new'));
+
+    await screen.findByText('Draft conversation route');
+    await findSidebarRow('conv-first');
+    await findSidebarRow('conv-second');
+    expect(screen.getByText('First persisted thread')).toBeTruthy();
+    expect(screen.getByText('Second persisted thread')).toBeTruthy();
+    expect(apiMock.sessionMeta).toHaveBeenCalledWith('conv-first');
+    expect(apiMock.sessionMeta).toHaveBeenCalledWith('conv-second');
+  });
+
   it('reopens the most recently archived conversation and restores its route', async () => {
     ({ root } = await renderAppAt('/conversations/conv-second'));
 
@@ -320,6 +408,34 @@ describe('App sidebar conversation navigation workflow', () => {
     await screen.findByText('Conversation route conv-second');
     expect(window.location.pathname).toBe('/conversations/conv-second');
     await expectActiveSidebarRow('conv-second');
+  });
+
+  it('applies backend workspace events to the sidebar projection', async () => {
+    ({ root } = await renderAppAt('/conversations/conv-first'));
+
+    await screen.findByText('Conversation route conv-first');
+    await expectActiveSidebarRow('conv-first');
+
+    await act(async () => {
+      desktopListener?.onevent?.({
+        type: 'conversation_workspace_changed',
+        sessionIds: ['conv-second'],
+        pinnedSessionIds: [],
+        archivedSessionIds: ['conv-first'],
+        activeConversationId: 'conv-second',
+        workspacePaths: [],
+        remoteControlledConversationIds: [],
+        conversationWorkspaceRevision: 2,
+        conversationWorkspaceUpdatedAt: '2026-06-15T12:01:00.000Z',
+        conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+      });
+      await Promise.resolve();
+    });
+
+    await findSidebarRow('conv-second');
+    await waitFor(() => {
+      expect(apiMock.setOpenConversationTabs).not.toHaveBeenCalled();
+    });
   });
 
   it('opens settings from app chrome and hydrates the settings route after reload', async () => {

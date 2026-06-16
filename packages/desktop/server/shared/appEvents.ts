@@ -43,6 +43,18 @@ export type AppEvent =
   | { type: 'extension_command'; command: string; args?: unknown; sourceExtensionId?: string; requestId?: string }
   | { type: 'session_meta_changed'; sessionId: string; running?: boolean }
   | { type: 'session_file_changed'; sessionId: string }
+  | {
+      type: 'conversation_workspace_changed';
+      sessionIds: string[];
+      pinnedSessionIds: string[];
+      archivedSessionIds: string[];
+      activeConversationId: string | null;
+      workspacePaths: string[];
+      remoteControlledConversationIds: string[];
+      conversationWorkspaceRevision: number;
+      conversationWorkspaceUpdatedAt: string | null;
+      conversationWorkspaceMigratedAt: string | null;
+    }
   | { type: 'open_session'; sessionId: string };
 
 export interface AppEventMonitorOptions {

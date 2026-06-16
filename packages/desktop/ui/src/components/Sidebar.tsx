@@ -74,7 +74,9 @@ import { normalizeWorkspacePaths, readStoredWorkspacePaths, writeStoredWorkspace
 import { routeIsKnowledge, routeMatchesPrefix } from '../navigation/routeRegistry';
 import { sessionNeedsAttention } from '../session/sessionIndicators';
 import {
+  applyRemoteConversationLayout,
   type ConversationShelf,
+  isWithinLocalWriteGrace,
   type OpenConversationDropPosition,
   readConversationLayout,
   replaceConversationLayout,
@@ -2194,12 +2196,21 @@ export function Sidebar() {
     const requestId = workspaceLoadLifecycleRef.current.latestRequestId + 1;
     workspaceLoadLifecycleRef.current.latestRequestId = requestId;
     try {
-      const { sessionIds, pinnedSessionIds, workspacePaths } = await api.openConversationTabs();
+      const { sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, workspacePaths } =
+        await api.openConversationTabs();
       if (
         workspaceLoadLifecycleRef.current.disposed ||
         workspaceLoadLifecycleRef.current.latestRequestId !== requestId
       ) {
         return false;
+      }
+      if (!isWithinLocalWriteGrace()) {
+        applyRemoteConversationLayout({
+          sessionIds,
+          pinnedSessionIds,
+          archivedSessionIds,
+          activeSessionId: activeConversationId,
+        });
       }
       persistSavedWorkspacePathsState(workspacePaths);
       setWorkspaceBootstrapHasOpenConversations(sessionIds.length > 0 || pinnedSessionIds.length > 0);

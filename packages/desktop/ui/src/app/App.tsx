@@ -19,7 +19,7 @@ import { ExtensionRegistryProvider } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import { ConversationPage } from '../pages/ConversationPage';
 import { fetchSessionsSnapshot } from '../session/sessionSnapshot';
-import { openConversationTab } from '../session/sessionTabs';
+import { applyRemoteConversationLayout, openConversationTab } from '../session/sessionTabs';
 import type { AppEventTopic, DaemonState, DesktopAppEvent, DurableRunListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
 import { executionStore, runStore, sessionStore, taskStore, titleStore } from '../store';
 import { ThemeProvider } from '../ui-state/theme';
@@ -448,6 +448,14 @@ export function App() {
           return;
         case 'session_file_changed':
           bumpConversationVersion(payload.sessionId);
+          return;
+        case 'conversation_workspace_changed':
+          applyRemoteConversationLayout({
+            sessionIds: payload.sessionIds,
+            pinnedSessionIds: payload.pinnedSessionIds,
+            archivedSessionIds: payload.archivedSessionIds,
+            activeSessionId: payload.activeConversationId,
+          });
           return;
         case 'open_session':
           openConversationTab(payload.sessionId);

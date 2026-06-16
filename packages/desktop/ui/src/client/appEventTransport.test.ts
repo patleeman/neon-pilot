@@ -35,5 +35,30 @@ describe('normalizeAppEvent', () => {
       type: 'session_meta_changed',
       sessionId: 'conversation-1',
     });
+    expect(
+      normalizeAppEvent({
+        type: 'conversation_workspace_changed',
+        sessionIds: ['conversation-1'],
+        pinnedSessionIds: ['conversation-2'],
+        archivedSessionIds: ['conversation-3'],
+        activeConversationId: 'conversation-1',
+        workspacePaths: ['/repo'],
+        remoteControlledConversationIds: [],
+        conversationWorkspaceRevision: 2,
+        conversationWorkspaceUpdatedAt: '2026-06-15T12:01:00.000Z',
+        conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+      }),
+    ).toEqual({
+      type: 'conversation_workspace_changed',
+      sessionIds: ['conversation-1'],
+      pinnedSessionIds: ['conversation-2'],
+      archivedSessionIds: ['conversation-3'],
+      activeConversationId: 'conversation-1',
+      workspacePaths: ['/repo'],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 2,
+      conversationWorkspaceUpdatedAt: '2026-06-15T12:01:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+    });
   });
 });

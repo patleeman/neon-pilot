@@ -119,6 +119,31 @@ export function createExtensionConversationsCapability(
     return entry;
   };
 
+  const publishConversationWorkspaceChanged = (saved: {
+    openConversationIds: string[];
+    pinnedConversationIds: string[];
+    archivedConversationIds: string[];
+    activeConversationId?: string | null;
+    workspacePaths: string[];
+    remoteControlledConversationIds: string[];
+    conversationWorkspaceRevision: number;
+    conversationWorkspaceUpdatedAt: string | null;
+    conversationWorkspaceMigratedAt: string | null;
+  }) => {
+    publishAppEvent({
+      type: 'conversation_workspace_changed',
+      sessionIds: saved.openConversationIds,
+      pinnedSessionIds: saved.pinnedConversationIds,
+      archivedSessionIds: saved.archivedConversationIds,
+      activeConversationId: saved.activeConversationId ?? null,
+      workspacePaths: saved.workspacePaths,
+      remoteControlledConversationIds: saved.remoteControlledConversationIds,
+      conversationWorkspaceRevision: saved.conversationWorkspaceRevision,
+      conversationWorkspaceUpdatedAt: saved.conversationWorkspaceUpdatedAt,
+      conversationWorkspaceMigratedAt: saved.conversationWorkspaceMigratedAt,
+    });
+  };
+
   const removeDeletedConversationWorkspaceReferences = async (conversationIds: string[]) => {
     if (!serverContext?.getSettingsFile || conversationIds.length === 0) return;
     const deletedIds = new Set(conversationIds);
@@ -358,6 +383,9 @@ export function createExtensionConversationsCapability(
         activeConversationId: saved.activeConversationId ?? null,
         workspacePaths: saved.workspacePaths,
         remoteControlledConversationIds: saved.remoteControlledConversationIds,
+        conversationWorkspaceRevision: saved.conversationWorkspaceRevision,
+        conversationWorkspaceUpdatedAt: saved.conversationWorkspaceUpdatedAt,
+        conversationWorkspaceMigratedAt: saved.conversationWorkspaceMigratedAt,
       };
     },
 
@@ -410,6 +438,7 @@ export function createExtensionConversationsCapability(
       activeConversationId?: string | null;
       workspacePaths?: string[] | null;
       remoteControlledConversationIds?: string[] | null;
+      conversationWorkspaceMigrated?: boolean | null;
     }): Promise<unknown> {
       if (!serverContext?.getSettingsFile) {
         throw new Error('Conversation workspace is unavailable.');
@@ -427,6 +456,7 @@ export function createExtensionConversationsCapability(
               activeConversationId: input.activeConversationId,
               workspacePaths: input.workspacePaths,
               remoteControlledConversationIds: input.remoteControlledConversationIds,
+              conversationWorkspaceMigrated: input.conversationWorkspaceMigrated,
             },
             settingsFile,
           ),
@@ -451,6 +481,7 @@ export function createExtensionConversationsCapability(
           archivedConversationIds: saved.archivedConversationIds,
           activeConversationId: saved.activeConversationId ?? null,
         });
+        publishConversationWorkspaceChanged(saved);
       }
       if (input.workspacePaths !== undefined || before.workspacePaths.join('\0') !== saved.workspacePaths.join('\0')) {
         invalidateAppTopics('workspace');
@@ -463,6 +494,9 @@ export function createExtensionConversationsCapability(
         activeConversationId: saved.activeConversationId ?? null,
         workspacePaths: saved.workspacePaths,
         remoteControlledConversationIds: saved.remoteControlledConversationIds,
+        conversationWorkspaceRevision: saved.conversationWorkspaceRevision,
+        conversationWorkspaceUpdatedAt: saved.conversationWorkspaceUpdatedAt,
+        conversationWorkspaceMigratedAt: saved.conversationWorkspaceMigratedAt,
       };
     },
 

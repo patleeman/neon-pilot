@@ -60,6 +60,22 @@ Renderer product code should depend on typed clients:
 
 Do not add new product-data methods to the Electron preload bridge. If product data is only available through an internal module, expose it through an HTTP route or WebSocket event/control message instead.
 
+## Conversation State Ownership
+
+Conversation workspace state and run state are backend-owned product state. The renderer may keep an in-memory projection for immediate paint and optimistic interactions, but it must not persist authoritative conversation state in browser storage.
+
+Backend-owned conversation workspace state includes:
+
+- open conversation IDs
+- pinned conversation IDs
+- archived conversation IDs
+- active conversation ID
+- saved workspace paths and remote-controlled conversation IDs
+
+Backend-owned run state includes whether a conversation is running, recovering, waiting, compacting, stale, or idle. Renderer stream reducers can project live deltas for paint, but durable run/composer/sidebar state must be refreshed from the backend snapshot or realtime events derived from backend runtime state.
+
+`localStorage` is allowed only for truly local UI preferences or one-time legacy migration. It must not be an ongoing peer database for open/pinned/archived/active conversations or running state. If a renderer needs responsive interaction, update an in-memory projection, send a bounded HTTP mutation, and reconcile from the backend response/event. Do not let session snapshots, local caches, or transcript metadata prune or rewrite workspace membership.
+
 ## Extension API rule
 
 Extensions should use the public `@neon-pilot/extensions` SDK and host-provided clients/capabilities. Extension code must not import desktop internals or depend on Electron IPC channels.

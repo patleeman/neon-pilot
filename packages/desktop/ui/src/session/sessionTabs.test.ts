@@ -3,13 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const apiMocks = vi.hoisted(() => ({
   openConversationTabs: vi.fn(),
   setOpenConversationTabs: vi.fn(),
+  updateConversationWorkspace: vi.fn(),
 }));
 
 vi.mock('../client/api', () => ({
   api: apiMocks,
 }));
 
-import { ARCHIVED_SESSION_IDS_STORAGE_KEY, OPEN_SESSION_IDS_STORAGE_KEY, PINNED_SESSION_IDS_STORAGE_KEY } from '../local/localSettings';
+import {
+  ACTIVE_SESSION_ID_STORAGE_KEY,
+  ARCHIVED_SESSION_IDS_STORAGE_KEY,
+  OPEN_SESSION_IDS_STORAGE_KEY,
+  PINNED_SESSION_IDS_STORAGE_KEY,
+} from '../local/localSettings';
 import {
   applyRemoteConversationLayout,
   closeConversationTab,
@@ -59,7 +65,9 @@ describe('sessionTabs', () => {
     vi.stubGlobal('window', { dispatchEvent });
     apiMocks.openConversationTabs.mockReset();
     apiMocks.setOpenConversationTabs.mockReset();
+    apiMocks.updateConversationWorkspace.mockReset();
     apiMocks.setOpenConversationTabs.mockResolvedValue({ ok: true });
+    apiMocks.updateConversationWorkspace.mockResolvedValue({ ok: true });
     resetRemoteConversationLayoutCache();
 
     if (typeof CustomEvent === 'undefined') {
@@ -123,6 +131,9 @@ describe('sessionTabs', () => {
       workspacePaths: ['/repo'],
       activeSessionId: 'session-1',
       remoteControlledConversationIds: ['session-2'],
+      conversationWorkspaceRevision: 0,
+      conversationWorkspaceUpdatedAt: null,
+      conversationWorkspaceMigratedAt: null,
     });
   });
 
@@ -187,7 +198,7 @@ describe('sessionTabs', () => {
       activeConversationId: 'cached-session',
       remoteControlledConversationIds: ['remote-controlled-session'],
     });
-    apiMocks.setOpenConversationTabs.mockResolvedValueOnce({
+    apiMocks.updateConversationWorkspace.mockResolvedValueOnce({
       sessionIds: ['cached-session', 'local-session'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -203,13 +214,76 @@ describe('sessionTabs', () => {
 
     expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
     expect(layout).toEqual({
-      sessionIds: ['local-session'],
+      sessionIds: ['cached-session', 'local-session'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
       activeSessionId: 'local-session',
       workspacePaths: ['/cached'],
       remoteControlledConversationIds: ['remote-controlled-session'],
+      conversationWorkspaceRevision: 0,
+      conversationWorkspaceUpdatedAt: null,
+      conversationWorkspaceMigratedAt: null,
     });
+  });
+
+  it('migrates legacy localStorage layout once when backend workspace is unmigrated', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['legacy-open']));
+    localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['legacy-pin']));
+    localStorage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['legacy-archived']));
+    localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, 'legacy-open');
+    apiMocks.openConversationTabs.mockResolvedValueOnce({
+      sessionIds: [],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: [],
+      activeConversationId: null,
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 0,
+      conversationWorkspaceUpdatedAt: null,
+      conversationWorkspaceMigratedAt: null,
+    });
+    apiMocks.setOpenConversationTabs.mockResolvedValueOnce({
+      sessionIds: ['legacy-open'],
+      pinnedSessionIds: ['legacy-pin'],
+      archivedSessionIds: ['legacy-archived'],
+      workspacePaths: [],
+      activeConversationId: 'legacy-open',
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+    });
+
+    const layout = await fetchRemoteConversationLayout();
+
+    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledWith(
+      ['legacy-open'],
+      ['legacy-pin'],
+      ['legacy-archived'],
+      undefined,
+      'legacy-open',
+      { conversationWorkspaceMigrated: true },
+    );
+    expect(layout.sessionIds).toEqual(['legacy-open']);
+    expect(layout.pinnedSessionIds).toEqual(['legacy-pin']);
+    expect(layout.archivedSessionIds).toEqual(['legacy-archived']);
+    expect(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
+  });
+
+  it('does not persist local workspace actions to localStorage', () => {
+    ensureConversationTabOpen('session-1');
+    pinConversationTab('session-1');
+    setConversationArchivedState('session-1', true);
+
+    expect(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
+    expect(apiMocks.updateConversationWorkspace).toHaveBeenCalled();
+    expect(apiMocks.setOpenConversationTabs).not.toHaveBeenCalled();
   });
 
   it('applies remote conversation layout exactly without archiving closed tabs', () => {
@@ -219,6 +293,8 @@ describe('sessionTabs', () => {
 
     expect(layout).toEqual({ sessionIds: ['session-2'], pinnedSessionIds: [], archivedSessionIds: [], activeSessionId: null });
     expect(readArchivedSessionIds()).toEqual([]);
+    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledTimes(1);
+    expect(apiMocks.updateConversationWorkspace).not.toHaveBeenCalled();
   });
 
   it('opens a conversation tab once even when asked repeatedly', () => {

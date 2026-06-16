@@ -27,14 +27,12 @@ export function resolveConversationComposerRunState(input: {
   desktopLiveSessionIsStreaming?: boolean | null;
   hasStaleTurnState: boolean;
 }): { allowQueuedPrompts: boolean; defaultComposerBehavior: 'steer' | 'followUp' | undefined; streamControlsActive: boolean } {
-  const explicitlyIdle = input.sessionIsRunning === false && !input.hasStaleTurnState;
+  const liveSessionIsStreaming = input.bootstrapLiveSessionIsStreaming === true || input.desktopLiveSessionIsStreaming === true;
+  const explicitlyIdle = input.sessionIsRunning === false && !liveSessionIsStreaming && !input.hasStaleTurnState;
   const streamControlsActive =
     !input.hasStaleTurnState &&
     !explicitlyIdle &&
-    (input.streamIsStreaming ||
-      input.bootstrapLiveSessionIsStreaming === true ||
-      input.desktopLiveSessionIsStreaming === true ||
-      input.sessionIsRunning === true);
+    (input.streamIsStreaming || liveSessionIsStreaming || input.sessionIsRunning === true);
 
   return {
     allowQueuedPrompts: streamControlsActive || input.hasStaleTurnState,

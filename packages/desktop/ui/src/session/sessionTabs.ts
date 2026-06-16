@@ -35,7 +35,12 @@ export interface ConversationLayout {
 export interface RemoteConversationLayout extends ConversationLayout {
   workspacePaths: string[];
   remoteControlledConversationIds: string[];
+  conversationWorkspaceRevision: number;
+  conversationWorkspaceUpdatedAt: string | null;
+  conversationWorkspaceMigratedAt: string | null;
 }
+
+type ConversationWorkspaceOperation = Parameters<typeof api.updateConversationWorkspace>[0];
 
 interface ConversationLayoutInput {
   sessionIds?: Iterable<unknown>;
@@ -138,6 +143,7 @@ function sameConversationLayout(left: ConversationLayout, right: ConversationLay
 let remoteLayoutPromise: Promise<RemoteConversationLayout> | null = null;
 let remoteLayoutCache: RemoteConversationLayout | null = null;
 let remoteLayoutCacheAt = 0;
+let conversationLayoutProjection: ConversationLayout | null = null;
 
 function normalizeRemoteConversationLayout(input: {
   sessionIds?: Iterable<unknown>;
@@ -147,6 +153,9 @@ function normalizeRemoteConversationLayout(input: {
   activeSessionId?: unknown;
   workspacePaths?: Iterable<unknown>;
   remoteControlledConversationIds?: Iterable<unknown>;
+  conversationWorkspaceRevision?: unknown;
+  conversationWorkspaceUpdatedAt?: unknown;
+  conversationWorkspaceMigratedAt?: unknown;
 }): RemoteConversationLayout {
   const layout = normalizeConversationLayout({
     sessionIds: input.sessionIds,
@@ -158,13 +167,36 @@ function normalizeRemoteConversationLayout(input: {
     ...layout,
     workspacePaths: normalizeSessionIds(input.workspacePaths ?? []),
     remoteControlledConversationIds: normalizeSessionIds(input.remoteControlledConversationIds ?? []),
+    conversationWorkspaceRevision:
+      typeof input.conversationWorkspaceRevision === 'number' && Number.isFinite(input.conversationWorkspaceRevision)
+        ? Math.max(0, Math.floor(input.conversationWorkspaceRevision))
+        : 0,
+    conversationWorkspaceUpdatedAt: typeof input.conversationWorkspaceUpdatedAt === 'string' ? input.conversationWorkspaceUpdatedAt : null,
+    conversationWorkspaceMigratedAt: typeof input.conversationWorkspaceMigratedAt === 'string' ? input.conversationWorkspaceMigratedAt : null,
   };
+}
+
+function isRemoteConversationLayoutPayload(value: unknown): value is Parameters<typeof normalizeRemoteConversationLayout>[0] {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const candidate = value as {
+    sessionIds?: unknown;
+    pinnedSessionIds?: unknown;
+    archivedSessionIds?: unknown;
+  };
+  return Array.isArray(candidate.sessionIds) && Array.isArray(candidate.pinnedSessionIds) && Array.isArray(candidate.archivedSessionIds);
 }
 
 export function resetRemoteConversationLayoutCache(): void {
   remoteLayoutPromise = null;
   remoteLayoutCache = null;
   remoteLayoutCacheAt = 0;
+  conversationLayoutProjection = null;
+}
+
+function hasConversationWorkspaceIds(layout: Pick<ConversationLayout, 'sessionIds' | 'pinnedSessionIds' | 'archivedSessionIds'>): boolean {
+  return layout.sessionIds.length > 0 || layout.pinnedSessionIds.length > 0 || layout.archivedSessionIds.length > 0;
 }
 
 export async function fetchRemoteConversationLayout(
@@ -181,6 +213,9 @@ export async function fetchRemoteConversationLayout(
       ...readConversationLayout(),
       workspacePaths: remoteLayoutCache.workspacePaths,
       remoteControlledConversationIds: remoteLayoutCache.remoteControlledConversationIds,
+      conversationWorkspaceRevision: remoteLayoutCache.conversationWorkspaceRevision,
+      conversationWorkspaceUpdatedAt: remoteLayoutCache.conversationWorkspaceUpdatedAt,
+      conversationWorkspaceMigratedAt: remoteLayoutCache.conversationWorkspaceMigratedAt,
     };
   }
   if (options.refresh && remoteLayoutCache && Date.now() - remoteLayoutCacheAt < LOCAL_WRITE_GRACE_MS) {
@@ -190,10 +225,24 @@ export async function fetchRemoteConversationLayout(
     return remoteLayoutPromise;
   }
 
-  const promise = api.openConversationTabs().then((layout) => {
-    const normalized = normalizeRemoteConversationLayout(layout);
+  const promise = api.openConversationTabs().then(async (layout) => {
+    let normalized = normalizeRemoteConversationLayout(layout);
+    const legacyLayout = readLegacyConversationLayout();
+    if (!normalized.conversationWorkspaceMigratedAt && !hasConversationWorkspaceIds(normalized) && hasConversationWorkspaceIds(legacyLayout)) {
+      const migrated = await api.setOpenConversationTabs(
+        legacyLayout.sessionIds,
+        legacyLayout.pinnedSessionIds,
+        legacyLayout.archivedSessionIds,
+        undefined,
+        legacyLayout.activeSessionId,
+        { conversationWorkspaceMigrated: true },
+      );
+      normalized = normalizeRemoteConversationLayout(migrated);
+      clearLegacyConversationLayout();
+    }
     remoteLayoutCache = normalized;
     remoteLayoutCacheAt = Date.now();
+    conversationLayoutProjection = normalized;
     return normalized;
   });
   remoteLayoutPromise = promise;
@@ -208,9 +257,53 @@ export async function fetchRemoteConversationLayout(
 
 function persistConversationLayoutToServer(layout: ConversationLayout): void {
   void api
-    .setOpenConversationTabs(layout.sessionIds, layout.pinnedSessionIds, layout.archivedSessionIds, undefined, layout.activeSessionId)
+    .setOpenConversationTabs(layout.sessionIds, layout.pinnedSessionIds, layout.archivedSessionIds, undefined, layout.activeSessionId, {
+      conversationWorkspaceMigrated: true,
+    })
+    .then((saved) => {
+      if (!isRemoteConversationLayoutPayload(saved)) {
+        return;
+      }
+      const normalized = normalizeRemoteConversationLayout(saved);
+      remoteLayoutCache = normalized;
+      remoteLayoutCacheAt = Date.now();
+      conversationLayoutProjection = normalized;
+      dispatchConversationLayoutChanged(normalized);
+      clearLegacyConversationLayout();
+    })
     .catch(() => {
-      // Ignore best-effort sync failures.
+      void fetchRemoteConversationLayout({ refresh: true, reason: 'persist-failed' })
+        .then((remote) => {
+          dispatchConversationLayoutChanged(remote);
+        })
+        .catch(() => {
+          // Keep the in-memory projection until connectivity recovers.
+        });
+    });
+}
+
+function persistConversationOperationToServer(operation: ConversationWorkspaceOperation): void {
+  void api
+    .updateConversationWorkspace(operation)
+    .then((saved) => {
+      if (!isRemoteConversationLayoutPayload(saved)) {
+        return;
+      }
+      const normalized = normalizeRemoteConversationLayout(saved);
+      remoteLayoutCache = normalized;
+      remoteLayoutCacheAt = Date.now();
+      conversationLayoutProjection = normalized;
+      dispatchConversationLayoutChanged(normalized);
+      clearLegacyConversationLayout();
+    })
+    .catch(() => {
+      void fetchRemoteConversationLayout({ refresh: true, reason: `operation-failed:${operation.operation}` })
+        .then((remote) => {
+          dispatchConversationLayoutChanged(remote);
+        })
+        .catch(() => {
+          // Keep the in-memory projection until connectivity recovers.
+        });
     });
 }
 
@@ -230,13 +323,32 @@ function readStoredSessionIds(storageKey: string): string[] {
   return [];
 }
 
-export function readConversationLayout(): ConversationLayout {
+function readLegacyConversationLayout(): ConversationLayout {
   return normalizeConversationLayout({
     sessionIds: readStoredSessionIds(OPEN_SESSION_IDS_STORAGE_KEY),
     pinnedSessionIds: readStoredSessionIds(PINNED_SESSION_IDS_STORAGE_KEY),
     archivedSessionIds: readStoredSessionIds(ARCHIVED_SESSION_IDS_STORAGE_KEY),
     activeSessionId: localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY),
   });
+}
+
+function clearLegacyConversationLayout(): void {
+  try {
+    localStorage.removeItem(OPEN_SESSION_IDS_STORAGE_KEY);
+    localStorage.removeItem(PINNED_SESSION_IDS_STORAGE_KEY);
+    localStorage.removeItem(ARCHIVED_SESSION_IDS_STORAGE_KEY);
+    localStorage.removeItem(ACTIVE_SESSION_ID_STORAGE_KEY);
+  } catch {
+    // Ignore storage cleanup failures.
+  }
+}
+
+export function readConversationLayout(): ConversationLayout {
+  if (conversationLayoutProjection) {
+    return conversationLayoutProjection;
+  }
+
+  return readLegacyConversationLayout();
 }
 
 export function readOpenSessionIds(): string[] {
@@ -251,44 +363,46 @@ export function readArchivedSessionIds(): string[] {
   return readConversationLayout().archivedSessionIds;
 }
 
-function writeStoredSessionIds(storageKey: string, sessionIds: readonly string[]): void {
-  try {
-    if (sessionIds.length > 0) {
-      localStorage.setItem(storageKey, JSON.stringify(sessionIds));
-    } else {
-      localStorage.removeItem(storageKey);
-    }
-  } catch {
-    // Ignore storage write failures.
-  }
-}
-
 function writeConversationLayout(layout: ConversationLayout, options: { local?: boolean } = {}): ConversationLayout {
   if (options.local) {
     lastLocalWriteAt = Date.now();
   }
   const normalizedLayout = normalizeConversationLayout(layout);
-
-  writeStoredSessionIds(OPEN_SESSION_IDS_STORAGE_KEY, normalizedLayout.sessionIds);
-  writeStoredSessionIds(PINNED_SESSION_IDS_STORAGE_KEY, normalizedLayout.pinnedSessionIds);
-  writeStoredSessionIds(ARCHIVED_SESSION_IDS_STORAGE_KEY, normalizedLayout.archivedSessionIds);
-  try {
-    if (normalizedLayout.activeSessionId) {
-      localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, normalizedLayout.activeSessionId);
-    } else {
-      localStorage.removeItem(ACTIVE_SESSION_ID_STORAGE_KEY);
-    }
-  } catch {
-    // Ignore storage write failures.
-  }
+  conversationLayoutProjection = normalizedLayout;
   persistConversationLayoutToServer(normalizedLayout);
-  window.dispatchEvent(
-    new CustomEvent(CONVERSATION_LAYOUT_CHANGED_EVENT, {
-      detail: normalizedLayout,
-    }),
-  );
+  dispatchConversationLayoutChanged(normalizedLayout);
 
   return normalizedLayout;
+}
+
+function writeConversationLayoutFromOperation(
+  layout: ConversationLayout,
+  operation: ConversationWorkspaceOperation,
+  options: { local?: boolean } = {},
+): ConversationLayout {
+  if (options.local) {
+    lastLocalWriteAt = Date.now();
+  }
+  const normalizedLayout = normalizeConversationLayout(layout);
+  conversationLayoutProjection = normalizedLayout;
+  persistConversationOperationToServer(operation);
+  dispatchConversationLayoutChanged(normalizedLayout);
+  return normalizedLayout;
+}
+
+function acceptConversationLayoutSnapshot(layout: ConversationLayout): ConversationLayout {
+  const normalizedLayout = normalizeConversationLayout(layout);
+  conversationLayoutProjection = normalizedLayout;
+  dispatchConversationLayoutChanged(normalizedLayout);
+  return normalizedLayout;
+}
+
+function dispatchConversationLayoutChanged(layout: ConversationLayout): void {
+  window.dispatchEvent(
+    new CustomEvent(CONVERSATION_LAYOUT_CHANGED_EVENT, {
+      detail: layout,
+    }),
+  );
 }
 
 export function replaceConversationLayout(layout: ConversationLayoutInput): ConversationLayout {
@@ -309,7 +423,7 @@ export function applyRemoteConversationLayout(layout: ConversationLayoutInput): 
     return current;
   }
 
-  return writeConversationLayout(next);
+  return acceptConversationLayoutSnapshot(next);
 }
 
 export function setActiveConversationTab(sessionId: string | null | undefined): ConversationLayout {
@@ -321,28 +435,33 @@ export function setActiveConversationTab(sessionId: string | null | undefined): 
     return current;
   }
 
-  return writeConversationLayout({ ...current, activeSessionId: nextActiveSessionId }, { local: true });
+  return writeConversationLayoutFromOperation(
+    { ...current, activeSessionId: nextActiveSessionId },
+    { operation: 'setActive', sessionId: nextActiveSessionId },
+    { local: true },
+  );
 }
 
-export function ensureConversationTabOpen(sessionId: string | null | undefined): string[] {
+export function ensureConversationTabOpen(sessionId: string | null | undefined, options: { active?: boolean } = {}): string[] {
   const normalizedSessionId = normalizeSessionId(sessionId);
   const layout = readConversationLayout();
   if (!normalizedSessionId || layout.pinnedSessionIds.includes(normalizedSessionId) || layout.sessionIds.includes(normalizedSessionId)) {
     return layout.sessionIds;
   }
 
-  return writeConversationLayout(
+  return writeConversationLayoutFromOperation(
     {
       ...layout,
       sessionIds: [...layout.sessionIds, normalizedSessionId],
-      activeSessionId: normalizedSessionId,
+      activeSessionId: options.active === false ? layout.activeSessionId : normalizedSessionId,
     },
+    { operation: 'open', sessionId: normalizedSessionId, active: options.active },
     { local: true },
   ).sessionIds;
 }
 
-export function openConversationTab(sessionId: string): string[] {
-  return ensureConversationTabOpen(sessionId);
+export function openConversationTab(sessionId: string, options: { active?: boolean } = {}): string[] {
+  return ensureConversationTabOpen(sessionId, options);
 }
 
 export function closeConversationTab(sessionId: string): string[] {
@@ -353,10 +472,17 @@ export function closeConversationTab(sessionId: string): string[] {
     return current.sessionIds;
   }
 
-  return replaceConversationLayout({
-    sessionIds: nextSessionIds,
-    pinnedSessionIds: current.pinnedSessionIds,
-  }).sessionIds;
+  return writeConversationLayoutFromOperation(
+    applyArchiveTransitions(
+      current,
+      normalizeConversationLayout({
+        ...current,
+        sessionIds: nextSessionIds,
+      }),
+    ),
+    { operation: 'close', sessionId: normalizedSessionId },
+    { local: true },
+  ).sessionIds;
 }
 
 export function setConversationArchivedState(sessionId: string, archived: boolean): ConversationLayout {
@@ -372,11 +498,16 @@ export function setConversationArchivedState(sessionId: string, archived: boolea
   const nextSessionIds = archived ? openWithoutSession : [...openWithoutSession, normalizedSessionId];
   const nextArchivedSessionIds = archived ? [...archivedWithoutSession, normalizedSessionId] : archivedWithoutSession;
 
-  return replaceConversationLayout({
-    sessionIds: nextSessionIds,
-    pinnedSessionIds: nextPinnedSessionIds,
-    archivedSessionIds: nextArchivedSessionIds,
-  });
+  return writeConversationLayoutFromOperation(
+    {
+      sessionIds: nextSessionIds,
+      pinnedSessionIds: nextPinnedSessionIds,
+      archivedSessionIds: nextArchivedSessionIds,
+      activeSessionId: current.activeSessionId && archived && current.activeSessionId === normalizedSessionId ? null : current.activeSessionId,
+    },
+    { operation: archived ? 'archive' : 'restore', sessionId: normalizedSessionId },
+    { local: true },
+  );
 }
 
 export function reopenMostRecentlyArchivedConversation(): {
@@ -420,10 +551,18 @@ export function unpinConversationTab(sessionId: string, options: { open?: boolea
       ? current.sessionIds
       : [...current.sessionIds, normalizedSessionId];
 
-  return replaceConversationLayout({
-    sessionIds: nextSessionIds,
-    pinnedSessionIds: nextPinnedSessionIds,
-  });
+  return writeConversationLayoutFromOperation(
+    applyArchiveTransitions(
+      current,
+      normalizeConversationLayout({
+        ...current,
+        sessionIds: nextSessionIds,
+        pinnedSessionIds: nextPinnedSessionIds,
+      }),
+    ),
+    { operation: 'unpin', sessionId: normalizedSessionId, open: options.open },
+    { local: true },
+  );
 }
 
 function moveConversationToSection(
@@ -488,7 +627,11 @@ export function moveConversationTab(
     return current;
   }
 
-  return writeConversationLayout(next, { local: true });
+  return writeConversationLayoutFromOperation(
+    next,
+    { operation: 'move', sessionId, targetSection, targetSessionId, position },
+    { local: true },
+  );
 }
 
 export function shiftConversationTab(sessionId: string, direction: -1 | 1): ConversationLayout {

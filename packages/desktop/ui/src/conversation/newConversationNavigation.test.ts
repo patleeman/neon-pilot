@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const apiMocks = vi.hoisted(() => ({
   createLiveSession: vi.fn(),
   setOpenConversationTabs: vi.fn(),
+  updateConversationWorkspace: vi.fn(),
 }));
 
 vi.mock('../client/api', () => ({
@@ -10,6 +11,7 @@ vi.mock('../client/api', () => ({
 }));
 
 import { ACTIVE_SESSION_ID_STORAGE_KEY, OPEN_SESSION_IDS_STORAGE_KEY } from '../local/localSettings';
+import { readConversationLayout, resetRemoteConversationLayoutCache } from '../session/sessionTabs';
 import type { SessionMeta } from '../shared/types';
 import { readDraftConversationComposer, readDraftConversationCwd } from './draftConversation';
 import { findReusableNewConversationForCwd, startNewConversation, startNewLiveConversation } from './newConversationNavigation';
@@ -50,6 +52,7 @@ describe('startNewLiveConversation', () => {
     vi.stubGlobal('window', { dispatchEvent: vi.fn() });
     apiMocks.createLiveSession.mockReset();
     apiMocks.setOpenConversationTabs.mockReset();
+    apiMocks.updateConversationWorkspace.mockReset();
     if (typeof CustomEvent === 'undefined') {
       vi.stubGlobal(
         'CustomEvent',
@@ -76,6 +79,8 @@ describe('startNewLiveConversation', () => {
       isRunning: false,
     });
     apiMocks.setOpenConversationTabs.mockResolvedValue({ ok: true });
+    apiMocks.updateConversationWorkspace.mockResolvedValue({ ok: true });
+    resetRemoteConversationLayoutCache();
   });
 
   afterEach(() => {
@@ -93,8 +98,8 @@ describe('startNewLiveConversation', () => {
         focusComposer: false,
       },
     });
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['new-conversation']);
-    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('new-conversation');
+    expect(readConversationLayout().sessionIds).toEqual(['new-conversation']);
+    expect(readConversationLayout().activeSessionId).toBe('new-conversation');
   });
 
   it('preserves the draft surface when requested', async () => {
@@ -115,6 +120,7 @@ describe('startNewLiveConversation', () => {
 describe('startNewConversation', () => {
   beforeEach(() => {
     apiMocks.createLiveSession.mockReset();
+    apiMocks.updateConversationWorkspace.mockReset();
     const sessionStorage = createStorage();
     vi.stubGlobal('localStorage', createStorage());
     vi.stubGlobal('sessionStorage', sessionStorage);
@@ -145,6 +151,8 @@ describe('startNewConversation', () => {
       sessionFile: '/tmp/new-conversation.jsonl',
       bootstrap: undefined,
     });
+    apiMocks.updateConversationWorkspace.mockResolvedValue({ ok: true });
+    resetRemoteConversationLayoutCache();
   });
 
   afterEach(() => {
@@ -184,8 +192,8 @@ describe('startNewConversation', () => {
         focusComposer: true,
       },
     });
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['existing-new']);
-    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('existing-new');
+    expect(readConversationLayout().sessionIds).toEqual(['existing-new']);
+    expect(readConversationLayout().activeSessionId).toBe('existing-new');
   });
 
   it('does not reuse a conversation that already has messages', async () => {

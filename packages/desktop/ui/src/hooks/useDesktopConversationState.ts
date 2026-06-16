@@ -371,15 +371,32 @@ function mergeDesktopConversationState(
   next: DesktopConversationState,
 ): DesktopConversationState {
   const previousCwdChange = previous?.conversationId === next.conversationId ? previous.stream.cwdChange : null;
+  const previousOptimisticLive =
+    previous?.conversationId === next.conversationId &&
+    previous.liveSession.live === true &&
+    previous.sessionDetail === null &&
+    !previous.stream.hasSnapshot &&
+    previous.stream.blocks.length === 0;
+  const nextWithPreservedOptimisticLive =
+    previousOptimisticLive && next.liveSession.live === false
+      ? {
+          ...next,
+          liveSession: previous.liveSession,
+          stream: {
+            ...next.stream,
+            isStreaming: next.stream.isStreaming || previous.stream.isStreaming,
+          },
+        }
+      : next;
 
-  if (!previousCwdChange || next.stream.cwdChange) {
-    return next;
+  if (!previousCwdChange || nextWithPreservedOptimisticLive.stream.cwdChange) {
+    return nextWithPreservedOptimisticLive;
   }
 
   return {
-    ...next,
+    ...nextWithPreservedOptimisticLive,
     stream: {
-      ...next.stream,
+      ...nextWithPreservedOptimisticLive.stream,
       cwdChange: previousCwdChange,
     },
   };
@@ -461,19 +478,20 @@ function createDesktopConversationStateFromBootstrap(
   const stream = createEmptyDesktopConversationStreamState();
   const sessionDetail = bootstrap.sessionDetail;
   const liveSession = bootstrap.liveSession ?? { live: false as const };
+  const seededStream = liveSession.live ? { ...stream, isStreaming: liveSession.isStreaming } : stream;
   return {
     conversationId,
     sessionDetail,
     liveSession,
     stream: sessionDetail
       ? {
-          ...stream,
+          ...seededStream,
           blocks: sessionDetail.blocks,
           blockOffset: sessionDetail.blockOffset,
           totalBlocks: sessionDetail.totalBlocks,
           contextUsage: sessionDetail.contextUsage,
         }
-      : stream,
+      : seededStream,
   };
 }
 

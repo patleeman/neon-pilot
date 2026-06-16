@@ -13,7 +13,7 @@ import {
   PINNED_SESSION_IDS_STORAGE_KEY,
   SAVED_WORKSPACE_PATHS_STORAGE_KEY,
 } from '../local/localSettings.js';
-import { resetLocalWriteGrace } from '../session/sessionTabs.js';
+import { readConversationLayout, resetLocalWriteGrace, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
 import type { SessionMeta } from '../shared/types.js';
 import { sessionStore } from '../store';
 import { Sidebar } from './Sidebar.js';
@@ -23,6 +23,7 @@ Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 const apiMocks = vi.hoisted(() => ({
   openConversationTabs: vi.fn(),
   setOpenConversationTabs: vi.fn(),
+  updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
   gateways: vi.fn(),
 }));
@@ -138,6 +139,10 @@ function dispatchDesktopShortcutCommand(command: string): void {
 }
 
 function readJsonList(key: string): string[] {
+  const layout = readConversationLayout();
+  if (key === OPEN_SESSION_IDS_STORAGE_KEY) return layout.sessionIds;
+  if (key === PINNED_SESSION_IDS_STORAGE_KEY) return layout.pinnedSessionIds;
+  if (key === ARCHIVED_SESSION_IDS_STORAGE_KEY) return layout.archivedSessionIds;
   return JSON.parse(localStorage.getItem(key) ?? '[]') as string[];
 }
 
@@ -146,14 +151,17 @@ describe('Sidebar branch conversation interactions', () => {
     vi.stubGlobal('localStorage', createStorage());
     apiMocks.openConversationTabs.mockReset();
     apiMocks.setOpenConversationTabs.mockReset();
+    apiMocks.updateConversationWorkspace.mockReset();
     apiMocks.setSavedWorkspacePaths.mockReset();
     apiMocks.gateways.mockReset();
     apiMocks.openConversationTabs.mockResolvedValue({ sessionIds: [], pinnedSessionIds: [], archivedSessionIds: [], workspacePaths: [] });
     apiMocks.setOpenConversationTabs.mockResolvedValue({ ok: true });
+    apiMocks.updateConversationWorkspace.mockResolvedValue({ ok: true });
     apiMocks.setSavedWorkspacePaths.mockResolvedValue([]);
     apiMocks.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
     resetLocalWriteGrace();
+    resetRemoteConversationLayoutCache();
     Object.defineProperty(window, 'neonPilotDesktop', { value: {}, configurable: true });
   });
 
@@ -306,7 +314,7 @@ describe('Sidebar branch conversation interactions', () => {
     expect(existingRow.textContent).toContain('Persisted thread');
     expect(existingRow.className).toContain('ui-sidebar-session-row-active');
     expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['existing']);
-    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('existing');
+    expect(readConversationLayout().activeSessionId).toBe('existing');
   });
 
   it('keeps a workspace group saved after closing its last open conversation', async () => {

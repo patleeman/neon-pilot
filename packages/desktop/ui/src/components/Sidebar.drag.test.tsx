@@ -11,6 +11,7 @@ import {
   PINNED_SESSION_IDS_STORAGE_KEY,
   SAVED_WORKSPACE_PATHS_STORAGE_KEY,
 } from '../local/localSettings.js';
+import { readConversationLayout, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
 import type { SessionMeta } from '../shared/types.js';
 import { sessionStore } from '../store';
 import { Sidebar } from './Sidebar.js';
@@ -20,6 +21,7 @@ Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 const apiMocks = vi.hoisted(() => ({
   openConversationTabs: vi.fn(),
   setOpenConversationTabs: vi.fn(),
+  updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
   changeConversationCwd: vi.fn(),
   gateways: vi.fn(),
@@ -177,22 +179,34 @@ describe('Sidebar group drag reordering', () => {
     vi.stubGlobal('localStorage', createStorage());
     apiMocks.openConversationTabs.mockReset();
     apiMocks.setOpenConversationTabs.mockReset();
+    apiMocks.updateConversationWorkspace.mockReset();
     apiMocks.setSavedWorkspacePaths.mockReset();
     apiMocks.changeConversationCwd.mockReset();
     apiMocks.gateways.mockReset();
     apiMocks.sessions.mockReset();
-    apiMocks.setOpenConversationTabs.mockResolvedValue({
-      ok: true,
-      sessionIds: [],
-      pinnedSessionIds: [],
-      archivedSessionIds: [],
-      workspacePaths: [],
-    });
+    apiMocks.setOpenConversationTabs.mockImplementation(
+      async (
+        sessionIds: string[] = [],
+        pinnedSessionIds: string[] = [],
+        archivedSessionIds: string[] = [],
+        workspacePaths?: string[] | null,
+        activeConversationId?: string | null,
+      ) => ({
+        ok: true,
+        sessionIds,
+        pinnedSessionIds,
+        archivedSessionIds,
+        activeConversationId: activeConversationId ?? null,
+        workspacePaths: workspacePaths ?? [],
+      }),
+    );
+    apiMocks.updateConversationWorkspace.mockResolvedValue({ ok: true });
     apiMocks.setSavedWorkspacePaths.mockResolvedValue([]);
     apiMocks.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });
     apiMocks.sessions.mockResolvedValue([]);
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+    resetRemoteConversationLayoutCache();
   });
 
   afterEach(() => {
@@ -243,8 +257,10 @@ describe('Sidebar group drag reordering', () => {
     expect(getGroupOrder(container)).toEqual([betaPath, alphaPath]);
     expect(localStorage.getItem(THREADS_SORT_BY_STORAGE_KEY)).toBe('manual');
     expect(JSON.parse(localStorage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY) ?? '[]')).toEqual([betaPath, alphaPath]);
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-beta', 'conv-alpha']);
-    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledWith(['conv-beta', 'conv-alpha'], [], [], undefined, null);
+    expect(readConversationLayout().sessionIds).toEqual(['conv-beta', 'conv-alpha']);
+    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledWith(['conv-beta', 'conv-alpha'], [], [], undefined, null, {
+      conversationWorkspaceMigrated: true,
+    });
     expect(apiMocks.setSavedWorkspacePaths).toHaveBeenCalledWith([betaPath, alphaPath]);
   });
 
@@ -295,7 +311,7 @@ describe('Sidebar group drag reordering', () => {
 
     expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-alpha', betaPath, expect.any(String), undefined);
     expect(apiMocks.sessions).toHaveBeenCalled();
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-alpha-moved', 'conv-beta']);
+    expect(readConversationLayout().sessionIds).toEqual(['conv-alpha-moved', 'conv-beta']);
     expect(container.textContent).toContain('Moved conversation to beta-worktree.');
   });
 
@@ -395,7 +411,7 @@ describe('Sidebar group drag reordering', () => {
     await flushAsyncWork();
 
     expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-project', null, expect.any(String), null);
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-project-moved', 'conv-chat']);
+    expect(readConversationLayout().sessionIds).toEqual(['conv-project-moved', 'conv-chat']);
     expect(container.textContent).toContain('Moved conversation to Chats.');
   });
 

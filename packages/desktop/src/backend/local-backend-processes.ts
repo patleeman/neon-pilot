@@ -436,6 +436,9 @@ export class LocalBackendProcesses {
           activeConversationId: null,
           workspacePaths: [],
           remoteControlledConversationIds: [],
+          conversationWorkspaceRevision: 0,
+          conversationWorkspaceUpdatedAt: null,
+          conversationWorkspaceMigratedAt: null,
           nodeBrowserViews: [],
         }),
       });
@@ -497,6 +500,9 @@ export class LocalBackendProcesses {
           activeConversationId: null,
           workspacePaths: [],
           remoteControlledConversationIds: [],
+          conversationWorkspaceRevision: 0,
+          conversationWorkspaceUpdatedAt: null,
+          conversationWorkspaceMigratedAt: null,
           nodeBrowserViews: [],
         }),
       });

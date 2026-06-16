@@ -12,6 +12,9 @@ describe('localApiOpenTabsPresentation', () => {
         activeConversationId: 'a',
         workspacePaths: ['/tmp'],
         remoteControlledConversationIds: ['d'],
+        conversationWorkspaceRevision: 3,
+        conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+        conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
       }),
     ).toEqual({
       sessionIds: ['a'],
@@ -20,6 +23,9 @@ describe('localApiOpenTabsPresentation', () => {
       activeConversationId: 'a',
       workspacePaths: ['/tmp'],
       remoteControlledConversationIds: ['d'],
+      conversationWorkspaceRevision: 3,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
     });
   });
 
@@ -31,6 +37,9 @@ describe('localApiOpenTabsPresentation', () => {
         archivedConversationIds: [],
         workspacePaths: [],
         remoteControlledConversationIds: [],
+        conversationWorkspaceRevision: 0,
+        conversationWorkspaceUpdatedAt: null,
+        conversationWorkspaceMigratedAt: null,
       }).activeConversationId,
     ).toBeNull();
   });

@@ -591,6 +591,60 @@ describe('useDesktopConversationState', () => {
     expect(desktopConversationState).toHaveBeenCalledWith('conv-created', { tailBlocks: 20 });
   });
 
+  it('seeds stream running state from live bootstrap metadata before the stream snapshot arrives', async () => {
+    vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
+
+    primeDesktopConversationStateCache(
+      'conv-running-bootstrap',
+      {
+        conversationId: 'conv-running-bootstrap',
+        sessionDetail: {
+          meta: {
+            id: 'conv-running-bootstrap',
+            file: '/repo/session.jsonl',
+            timestamp: '2026-06-15T00:00:00.000Z',
+            cwd: '/repo',
+            cwdSlug: 'repo',
+            model: 'gpt',
+            title: 'Running Conversation',
+            messageCount: 1,
+          },
+          blocks: [{ type: 'user', id: 'user-1', text: 'Keep going', ts: '2026-06-15T00:00:00.000Z' }],
+          blockOffset: 0,
+          totalBlocks: 1,
+          contextUsage: null,
+        },
+        liveSession: {
+          live: true,
+          id: 'conv-running-bootstrap',
+          cwd: '/repo',
+          sessionFile: '/repo/session.jsonl',
+          isStreaming: true,
+        },
+      },
+      { tailBlocks: 20 },
+    );
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-running-bootstrap" tailBlocks={20} />);
+      await flushPromises();
+    });
+
+    expect(latestState?.loading).toBe(false);
+    expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ live: true, isStreaming: true }));
+    expect(latestState?.state?.stream.isStreaming).toBe(true);
+  });
+
   it('seeds saved desktop conversations from the bootstrap cache while refreshing desktop state', async () => {
     const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
 
@@ -990,6 +1044,97 @@ describe('useDesktopConversationState', () => {
     );
     expect(desktopConversationState).toHaveBeenCalledWith('conv-reserved', { tailBlocks: 20 });
     expect(eventSources).toHaveLength(1);
+  });
+
+  it('does not let a stale non-live refresh make a reserved new conversation resume before sending', async () => {
+    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+      conversationId: 'conv-reserved',
+      sessionDetail: {
+        meta: {
+          id: 'conv-reserved',
+          file: '/repo/reserved.jsonl',
+          timestamp: '2026-05-24T00:00:00.000Z',
+          cwd: '/repo',
+          cwdSlug: 'repo',
+          model: 'gpt-5',
+          title: 'New Conversation',
+          messageCount: 1,
+          isRunning: false,
+        },
+        blocks: [{ type: 'user', id: 'user-1', text: 'Hi there', ts: '2026-05-24T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        contextUsage: null,
+      },
+      bootstrap: null,
+      liveSession: { live: false, title: null, isStreaming: false, hasStaleTurnState: false },
+      stream: {
+        blocks: [],
+        blockOffset: 0,
+        totalBlocks: 0,
+        hasSnapshot: false,
+        isStreaming: false,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    });
+    const resumeSession = vi.spyOn(api, 'resumeSession').mockResolvedValue({ id: 'conv-reserved' });
+    const promptSession = vi.spyOn(api, 'promptSession').mockResolvedValue({ ok: true });
+
+    primeReservedDesktopConversationStateCache(
+      {
+        conversationId: 'conv-reserved',
+        sessionFile: '/repo/reserved.jsonl',
+        cwd: '/repo',
+      },
+      { tailBlocks: 20 },
+    );
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-reserved" tailBlocks={20} />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.sessionDetail?.blocks).toEqual([expect.objectContaining({ type: 'user', text: 'Hi there' })]);
+    expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ live: true, id: 'conv-reserved' }));
+
+    await act(async () => {
+      await latestState?.send('Follow up');
+      await flushPromises();
+    });
+
+    expect(resumeSession).not.toHaveBeenCalled();
+    expect(promptSession).toHaveBeenCalledWith(
+      'conv-reserved',
+      'Follow up',
+      undefined,
+      undefined,
+      undefined,
+      expect.any(String),
+      undefined,
+      undefined,
+    );
   });
 
   it('flushes text deltas on the next animation frame', async () => {

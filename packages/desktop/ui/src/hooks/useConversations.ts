@@ -1,8 +1,8 @@
 /**
  * Arc-style tab model:
- *   - pinnedIds               (backend settings, mirrored to localStorage) = conversations always visible above open tabs
- *   - openIds                 (backend settings, mirrored to localStorage) = active workspace tabs below the pinned shelf
- *   - archivedConversationIds (backend settings, mirrored to localStorage) = conversations explicitly archived out of live/review focus
+ *   - pinnedIds               (backend workspace state) = conversations always visible above open tabs
+ *   - openIds                 (backend workspace state) = active workspace tabs below the pinned shelf
+ *   - archivedConversationIds (backend workspace state) = conversations explicitly archived out of live/review focus
  *   - archivedSessions        = all other sessions, restored on demand
  *
  * Restoring an archived conversation calls restoreSession() → removes archived state → tab appears.
@@ -21,6 +21,7 @@ import {
   CONVERSATION_LAYOUT_CHANGED_EVENT,
   type ConversationLayout,
   type ConversationShelf,
+  fetchRemoteConversationLayout,
   isWithinLocalWriteGrace,
   moveConversationTab,
   type OpenConversationDropPosition,
@@ -71,30 +72,6 @@ function buildPlaceholderSessionMeta(id: string, title?: string): SessionMeta {
   };
 }
 
-function mergeRemoteConversationLayoutWithProtectedLocalIds(
-  remote: ConversationLayout,
-  current: ConversationLayout,
-  protectedSessionIds: ReadonlySet<string>,
-): ConversationLayout {
-  const appendProtectedIds = (remoteIds: string[], currentIds: string[]) => {
-    const nextIds = [...remoteIds];
-    const nextIdSet = new Set(nextIds);
-    for (const id of currentIds) {
-      if (protectedSessionIds.has(id) && !nextIdSet.has(id)) {
-        nextIds.push(id);
-        nextIdSet.add(id);
-      }
-    }
-    return nextIds;
-  };
-
-  return {
-    ...remote,
-    sessionIds: appendProtectedIds(remote.sessionIds, current.sessionIds),
-    pinnedSessionIds: appendProtectedIds(remote.pinnedSessionIds, current.pinnedSessionIds),
-  };
-}
-
 export function useConversations(options: { includeArchivedSessions?: boolean } = {}) {
   const initialLayout = useMemo(() => readConversationLayout(), []);
   const [openIds, setOpenIds] = useState(() => initialLayout.sessionIds);
@@ -112,7 +89,6 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   const { status: sseStatus } = useSseConnection();
   const seenRunningAutomationIdsRef = useRef<Set<string>>(new Set());
   const missingSessionMetaInflightRef = useRef<Set<string>>(new Set());
-  const hasSyncedRemoteLayoutAfterSessionChangeRef = useRef(false);
   const latestRefetchRequestIdRef = useRef(0);
 
   const automationThreadTitleBySessionId = useMemo(
@@ -140,14 +116,14 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   useEffect(() => {
     let cancelled = false;
 
-    void api
-      .openConversationTabs()
-      .then(({ sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId }) => {
+    void fetchRemoteConversationLayout({ refresh: true, reason: 'use-conversations-bootstrap' })
+      .then(({ sessionIds, pinnedSessionIds, archivedSessionIds, activeSessionId }) => {
         if (cancelled) {
           return;
         }
 
         if (isWithinLocalWriteGrace()) {
+          applyLayoutState(readConversationLayout(), { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
           setLayoutHydrating(false);
           return;
         }
@@ -156,7 +132,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
           sessionIds,
           pinnedSessionIds,
           archivedSessionIds,
-          activeSessionId: activeConversationId,
+          activeSessionId,
         });
         applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
         setLayoutHydrating(false);
@@ -165,7 +141,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
         if (!cancelled) {
           setLayoutHydrating(false);
         }
-        // Ignore bootstrap failures and keep the browser-local fallback.
+        // Ignore bootstrap failures and keep the current in-memory projection.
       });
 
     return () => {
@@ -185,83 +161,6 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
     return next;
   }, []);
 
-  const remoteLayoutLastSyncedAt = useRef(0);
-  const REMOTE_LAYOUT_SYNC_COOLDOWN_MS = 3_000;
-
-  useEffect(() => {
-    if (!hasSyncedRemoteLayoutAfterSessionChangeRef.current) {
-      hasSyncedRemoteLayoutAfterSessionChangeRef.current = true;
-      return;
-    }
-
-    const now = Date.now();
-    if (now - remoteLayoutLastSyncedAt.current < REMOTE_LAYOUT_SYNC_COOLDOWN_MS) {
-      return;
-    }
-    remoteLayoutLastSyncedAt.current = now;
-
-    let cancelled = false;
-
-    void api
-      .openConversationTabs()
-      .then(({ sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId }) => {
-        if (cancelled) {
-          return;
-        }
-        // Skip if we wrote locally within the grace window — the server may not
-        // have persisted our change yet and would overwrite it.
-        if (isWithinLocalWriteGrace()) {
-          return;
-        }
-        const currentLayout = readConversationLayout();
-        if (
-          currentLayout.sessionIds.join('\0') === sessionIds.join('\0') &&
-          currentLayout.pinnedSessionIds.join('\0') === pinnedSessionIds.join('\0') &&
-          currentLayout.archivedSessionIds.join('\0') === archivedSessionIds.join('\0') &&
-          currentLayout.activeSessionId === activeConversationId
-        ) {
-          return;
-        }
-
-        const currentWorkspaceIds = new Set([...currentLayout.sessionIds, ...currentLayout.pinnedSessionIds]);
-        const protectedSessionIds = new Set([
-          ...liveTitles.keys(),
-          ...automationThreadTitleBySessionId.keys(),
-          ...(sessions ?? []).filter((session) => currentWorkspaceIds.has(session.id)).map((session) => session.id),
-        ]);
-
-        // During bootstrap (individual session meta fetches in progress), protect
-        // all locally-open conversations from being overwritten by the remote layout.
-        // Individual metas arrive one-at-a-time and would not cover the full set of
-        // open IDs, so only the inflight guard keeps them from being pruned.
-        if (missingSessionMetaInflightRef.current.size > 0) {
-          for (const id of currentWorkspaceIds) {
-            protectedSessionIds.add(id);
-          }
-        }
-        const remoteLayout = mergeRemoteConversationLayoutWithProtectedLocalIds(
-          { sessionIds, pinnedSessionIds, archivedSessionIds, activeSessionId: activeConversationId },
-          currentLayout,
-          protectedSessionIds,
-        );
-
-        const nextLayout = applyRemoteConversationLayout({
-          sessionIds: remoteLayout.sessionIds,
-          pinnedSessionIds: remoteLayout.pinnedSessionIds,
-          archivedSessionIds: remoteLayout.archivedSessionIds,
-          activeSessionId: remoteLayout.activeSessionId,
-        });
-        applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
-      })
-      .catch(() => {
-        // Ignore workspace sync failures and keep the browser-local fallback.
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [automationThreadTitleBySessionId, liveTitles, sessions]);
-
   useEffect(() => {
     if (tasks === null) {
       return;
@@ -275,28 +174,10 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
     );
 
     if (newlyRunningThreadIds.size > 0) {
-      const currentLayout = readConversationLayout();
-      const nextSessionIds = [...currentLayout.sessionIds];
-      let changed = false;
-
       for (const threadId of newlyRunningThreadIds) {
-        if (currentLayout.pinnedSessionIds.includes(threadId) || nextSessionIds.includes(threadId)) {
-          continue;
-        }
-
-        nextSessionIds.push(threadId);
-        changed = true;
+        openConversationTab(threadId, { active: false });
       }
-
-      if (changed) {
-        const nextLayout = replaceConversationLayout({
-          sessionIds: nextSessionIds,
-          pinnedSessionIds: currentLayout.pinnedSessionIds,
-          archivedSessionIds: currentLayout.archivedSessionIds,
-          activeSessionId: currentLayout.activeSessionId,
-        });
-        applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
-      }
+      applyLayoutState(readConversationLayout(), { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
     }
 
     seenRunningAutomationIdsRef.current = nextRunningAutomationIds;
@@ -418,53 +299,6 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
     }
   }, [automationThreadTitleBySessionId, liveTitles, openIds, pinnedIds, sessionsById, sessionsReady]);
 
-  useEffect(() => {
-    if (!sessionsReady) {
-      return;
-    }
-
-    const knownSessionIds = new Set([
-      ...sessions.map((session) => session.id),
-      ...liveTitles.keys(),
-      ...automationThreadTitleBySessionId.keys(),
-      ...missingSessionMetaInflightRef.current,
-    ]);
-
-    if (sessions.length === 0 || (missingSessionMetaInflightRef.current.size > 0 && sessions.length < openIds.length)) {
-      for (const id of [...openIds, ...pinnedIds, ...(activeId ? [activeId] : [])]) {
-        knownSessionIds.add(id);
-      }
-    }
-
-    // During the local-write grace window, protect locally-open conversations from
-    // being pruned. Fork/branch/cwd-change flows can add a replacement session id
-    // synchronously before the server sessions list catches up.
-    if (isWithinLocalWriteGrace()) {
-      for (const id of [...openIds, ...pinnedIds, ...(activeId ? [activeId] : [])]) {
-        knownSessionIds.add(id);
-      }
-    }
-
-    const nextOpenIds = openIds.filter((id) => knownSessionIds.has(id));
-    const nextPinnedIds = pinnedIds.filter((id) => knownSessionIds.has(id));
-    const nextArchivedConversationIds = archivedConversationIds.filter((id) => knownSessionIds.has(id));
-
-    if (
-      nextOpenIds.length === openIds.length &&
-      nextPinnedIds.length === pinnedIds.length &&
-      nextArchivedConversationIds.length === archivedConversationIds.length
-    ) {
-      return;
-    }
-
-    const nextLayout = replaceConversationLayout({
-      sessionIds: nextOpenIds,
-      pinnedSessionIds: nextPinnedIds,
-      archivedSessionIds: nextArchivedConversationIds,
-      activeSessionId: activeId && knownSessionIds.has(activeId) ? activeId : null,
-    });
-    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
-  }, [activeId, archivedConversationIds, automationThreadTitleBySessionId, liveTitles, openIds, pinnedIds, sessions]);
   const pinnedSessions = useMemo(
     () =>
       pinnedIds.map((id) => {

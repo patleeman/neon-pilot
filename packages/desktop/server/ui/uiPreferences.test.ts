@@ -8,6 +8,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readSavedUiPreferences, writeSavedUiPreferences } from './uiPreferences.js';
 
 const tempDirs: string[] = [];
+const EMPTY_WORKSPACE_METADATA = {
+  conversationWorkspaceRevision: 0,
+  conversationWorkspaceUpdatedAt: null,
+  conversationWorkspaceMigratedAt: null,
+};
 
 afterEach(async () => {
   vi.useRealTimers();
@@ -30,6 +35,7 @@ describe('readSavedUiPreferences', () => {
       activeConversationId: null,
       workspacePaths: [],
       remoteControlledConversationIds: [],
+      ...EMPTY_WORKSPACE_METADATA,
       nodeBrowserViews: [],
     });
   });
@@ -56,6 +62,7 @@ describe('readSavedUiPreferences', () => {
       activeConversationId: null,
       workspacePaths: ['/tmp/alpha', '/tmp/beta'],
       remoteControlledConversationIds: [],
+      ...EMPTY_WORKSPACE_METADATA,
       nodeBrowserViews: [],
     });
   });
@@ -63,6 +70,8 @@ describe('readSavedUiPreferences', () => {
 
 describe('writeSavedUiPreferences', () => {
   it('writes the workspace and archived conversation ids while preserving unrelated settings', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-01T00:00:00.000Z'));
     const dir = createTempDir();
     const file = join(dir, 'settings.json');
     writeFileSync(
@@ -93,11 +102,15 @@ describe('writeSavedUiPreferences', () => {
         pinnedConversationIds: ['session-3', 'session-4'],
         archivedConversationIds: ['session-5', 'session-6'],
         workspacePaths: ['/tmp/alpha', '/tmp/beta'],
+        conversationWorkspaceRevision: 1,
+        conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
       },
     });
   });
 
   it('preserves the other lists when only one list is updated', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-01T00:00:00.000Z'));
     const dir = createTempDir();
     const file = join(dir, 'settings.json');
     writeFileSync(
@@ -122,6 +135,9 @@ describe('writeSavedUiPreferences', () => {
       activeConversationId: null,
       workspacePaths: ['/tmp/alpha'],
       remoteControlledConversationIds: ['session-2'],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: null,
       nodeBrowserViews: [],
     });
   });
@@ -153,6 +169,7 @@ describe('writeSavedUiPreferences', () => {
       activeConversationId: null,
       workspacePaths: [],
       remoteControlledConversationIds: [],
+      ...EMPTY_WORKSPACE_METADATA,
       nodeBrowserViews: [
         {
           id: 'shared-skills',
@@ -225,6 +242,8 @@ describe('writeSavedUiPreferences', () => {
   });
 
   it('removes the nested keys when given empty lists', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-01T00:00:00.000Z'));
     const dir = createTempDir();
     const file = join(dir, 'settings.json');
     writeFileSync(
@@ -241,6 +260,61 @@ describe('writeSavedUiPreferences', () => {
 
     writeSavedUiPreferences({ openConversationIds: [], pinnedConversationIds: [], archivedConversationIds: [], workspacePaths: [] }, file);
 
-    expect(JSON.parse(readFileSync(file, 'utf-8'))).toEqual({});
+    expect(JSON.parse(readFileSync(file, 'utf-8'))).toEqual({
+      ui: {
+        conversationWorkspaceRevision: 1,
+        conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      },
+    });
+  });
+
+  it('stamps migrated workspace metadata when requested', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-01T00:00:00.000Z'));
+    const dir = createTempDir();
+    const file = join(dir, 'settings.json');
+
+    writeSavedUiPreferences({ openConversationIds: ['session-1'], conversationWorkspaceMigrated: true }, file);
+
+    expect(readSavedUiPreferences(file)).toEqual({
+      openConversationIds: ['session-1'],
+      pinnedConversationIds: [],
+      archivedConversationIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+      nodeBrowserViews: [],
+    });
+  });
+
+  it('advances workspace revisions across a multi-action persistence flow', () => {
+    vi.useFakeTimers();
+    const dir = createTempDir();
+    const file = join(dir, 'settings.json');
+
+    vi.setSystemTime(new Date('2026-04-01T00:00:00.000Z'));
+    writeSavedUiPreferences({ openConversationIds: ['open-a', 'open-b'], conversationWorkspaceMigrated: true }, file);
+
+    vi.setSystemTime(new Date('2026-04-01T00:00:01.000Z'));
+    writeSavedUiPreferences({ openConversationIds: ['open-a'], pinnedConversationIds: ['open-b'] }, file);
+
+    vi.setSystemTime(new Date('2026-04-01T00:00:02.000Z'));
+    writeSavedUiPreferences({ openConversationIds: [], pinnedConversationIds: ['open-b'], archivedConversationIds: ['open-a'] }, file);
+
+    expect(readSavedUiPreferences(file)).toEqual({
+      openConversationIds: [],
+      pinnedConversationIds: ['open-b'],
+      archivedConversationIds: ['open-a'],
+      activeConversationId: null,
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 3,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:02.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+      nodeBrowserViews: [],
+    });
   });
 });

@@ -11,7 +11,7 @@ import {
   PINNED_SESSION_IDS_STORAGE_KEY,
 } from '../local/localSettings.js';
 import { mergeSessionSnapshotPreservingOrder } from '../session/sessionListState.js';
-import { resetLocalWriteGrace } from '../session/sessionTabs.js';
+import { resetLocalWriteGrace, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
 import type { ScheduledTaskSummary, SessionMeta } from '../shared/types.js';
 import { sessionStore, taskStore } from '../store';
 import { useConversations } from './useConversations.js';
@@ -22,6 +22,7 @@ const apiMocks = vi.hoisted(() => ({
   openConversationTabs: vi.fn(),
   sessionMeta: vi.fn(),
   setOpenConversationTabs: vi.fn(),
+  updateConversationWorkspace: vi.fn(),
 }));
 
 const fetchSessionsSnapshotMock = vi.hoisted(() => vi.fn());
@@ -317,6 +318,7 @@ describe('useConversations', () => {
     apiMocks.openConversationTabs.mockReset();
     apiMocks.sessionMeta.mockReset();
     apiMocks.setOpenConversationTabs.mockReset();
+    apiMocks.updateConversationWorkspace.mockReset();
     fetchSessionsSnapshotMock.mockReset();
     apiMocks.openConversationTabs.mockResolvedValue({
       sessionIds: [],
@@ -324,6 +326,10 @@ describe('useConversations', () => {
       archivedSessionIds: [],
       activeConversationId: null,
       workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
     });
     apiMocks.setOpenConversationTabs.mockResolvedValue({
       ok: true,
@@ -332,12 +338,26 @@ describe('useConversations', () => {
       archivedSessionIds: [],
       activeConversationId: null,
       workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 2,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:01.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+    });
+    apiMocks.updateConversationWorkspace.mockResolvedValue({
+      ok: true,
+      sessionIds: ['conv-auto'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 2,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:01.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
     });
     apiMocks.sessionMeta.mockImplementation(async (id: string) => createSession({ id, title: `Loaded ${id}` }));
-    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
-    localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
-    localStorage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
     resetLocalWriteGrace();
+    resetRemoteConversationLayoutCache();
     latestHookResult = null;
   });
 
@@ -362,8 +382,9 @@ describe('useConversations', () => {
 
     await flushAsyncWork();
 
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-auto']);
-    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalled();
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['conv-auto']);
+    expect(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(apiMocks.updateConversationWorkspace).toHaveBeenCalledWith({ operation: 'open', sessionId: 'conv-auto', active: false });
   });
 
   it('sorts archived conversations by latest activity', async () => {
@@ -381,11 +402,18 @@ describe('useConversations', () => {
     expect(latestHookResult?.archivedSessions.map((session) => session.id)).toEqual(['newest', 'middle', 'older']);
   });
 
-  it('drops stale layout ids that are not in the loaded session snapshot', async () => {
-    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['real-open', 'stale-open']));
-    localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['stale-pinned']));
-    localStorage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['stale-archived']));
-    localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, 'stale-open');
+  it('preserves backend workspace ids that are not in the loaded session snapshot', async () => {
+    apiMocks.openConversationTabs.mockResolvedValue({
+      sessionIds: ['real-open', 'stale-open'],
+      pinnedSessionIds: ['stale-pinned'],
+      archivedSessionIds: ['stale-archived'],
+      activeConversationId: 'stale-open',
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+    });
 
     renderProbe({
       sessions: [createSession({ id: 'real-open', title: 'Real conversation' })],
@@ -394,14 +422,12 @@ describe('useConversations', () => {
 
     await flushAsyncWork();
 
-    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['real-open']);
-    expect(latestHookResult?.pinnedSessions).toEqual([]);
-    expect(latestHookResult?.archivedConversationIds).toEqual([]);
-    expect(latestHookResult?.activeId).toBeNull();
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['real-open']);
-    expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['real-open', 'stale-open']);
+    expect(latestHookResult?.pinnedSessions.map((session) => session.id)).toEqual(['stale-pinned']);
+    expect(latestHookResult?.archivedConversationIds).toEqual(['stale-archived']);
+    expect(latestHookResult?.activeId).toBe('stale-open');
+    expect(apiMocks.setOpenConversationTabs).not.toHaveBeenCalled();
+    expect(apiMocks.updateConversationWorkspace).not.toHaveBeenCalled();
   });
 
   it('hydrates remote layout when local layout is empty', async () => {
@@ -424,11 +450,57 @@ describe('useConversations', () => {
     expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
     expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['remote-conv']);
     expect(latestHookResult?.activeId).toBe('remote-conv');
-    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('remote-conv');
+    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
+  });
+
+  it('migrates browser-local open conversations when cold-start backend layout is unmigrated', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['local-open']));
+    localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['local-pinned']));
+    localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, 'local-open');
+    apiMocks.openConversationTabs.mockResolvedValue({
+      sessionIds: [],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 0,
+      conversationWorkspaceUpdatedAt: null,
+      conversationWorkspaceMigratedAt: null,
+    });
+    apiMocks.setOpenConversationTabs.mockResolvedValueOnce({
+      ok: true,
+      sessionIds: ['local-open'],
+      pinnedSessionIds: ['local-pinned'],
+      archivedSessionIds: [],
+      activeConversationId: 'local-open',
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+    });
+
+    renderProbe({
+      sessions: [
+        createSession({ id: 'local-open', title: 'Local open conversation' }),
+        createSession({ id: 'local-pinned', title: 'Local pinned conversation' }),
+      ],
+      tasks: null,
+    });
+
+    await flushAsyncWork();
+
+    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['local-open']);
+    expect(latestHookResult?.pinnedSessions.map((session) => session.id)).toEqual(['local-pinned']);
+    expect(latestHookResult?.activeId).toBe('local-open');
+    expect(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
   });
 
   it('loads row metadata for backend-open ids before the full sessions snapshot arrives', async () => {
-    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['open-one']));
     apiMocks.openConversationTabs.mockResolvedValue({
       sessionIds: ['open-one'],
       pinnedSessionIds: [],
@@ -446,12 +518,9 @@ describe('useConversations', () => {
 
     expect(apiMocks.sessionMeta).toHaveBeenCalledWith('open-one');
     expect(latestHookResult?.tabs.map((session) => session.title)).toEqual(['Loaded open-one']);
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-one']);
   });
 
   it('keeps a placeholder tab when row metadata fails before any full snapshot arrives', async () => {
-    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['open-missing-meta']));
-    localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, 'open-missing-meta');
     apiMocks.openConversationTabs.mockResolvedValue({
       sessionIds: ['open-missing-meta'],
       pinnedSessionIds: [],
@@ -472,8 +541,81 @@ describe('useConversations', () => {
     expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['open-missing-meta']);
     expect(latestHookResult?.tabs.map((session) => session.title)).toEqual(['Connecting…']);
     expect(latestHookResult?.activeId).toBe('open-missing-meta');
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-missing-meta']);
-    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('open-missing-meta');
+  });
+
+  it('keeps a multi-action workspace flow in backend-backed projection without localStorage writes', async () => {
+    apiMocks.openConversationTabs.mockResolvedValue({
+      sessionIds: ['open-a', 'open-b'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'open-a',
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+    });
+    apiMocks.updateConversationWorkspace.mockImplementation(
+      async (
+        input:
+          | { operation: string; sessionId?: string | null }
+          | {
+              operation: 'move';
+              sessionId: string;
+              targetSection: 'open' | 'pinned';
+              targetSessionId?: string | null;
+              position?: 'before' | 'after' | null;
+            },
+      ) => ({
+        ok: true,
+        sessionIds: ['open-a'],
+        pinnedSessionIds: ['open-b'],
+        archivedSessionIds: input.operation === 'close' ? ['open-c'] : [],
+        activeConversationId: null,
+        workspacePaths: [],
+        remoteControlledConversationIds: [],
+        conversationWorkspaceRevision: 2,
+        conversationWorkspaceUpdatedAt: '2026-04-01T00:00:01.000Z',
+        conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+      }),
+    );
+
+    renderProbe({
+      sessions: [
+        createSession({ id: 'open-a', title: 'Open A' }),
+        createSession({ id: 'open-b', title: 'Open B' }),
+        createSession({ id: 'open-c', title: 'Open C' }),
+      ],
+      tasks: null,
+    });
+    await flushAsyncWork();
+
+    act(() => {
+      latestHookResult?.openSession('open-c');
+      latestHookResult?.pinSession('open-b');
+      latestHookResult?.archiveSession('open-a');
+      latestHookResult?.restoreSession('open-a');
+      latestHookResult?.moveSession('open-a', 'open', 'open-c', 'before');
+      latestHookResult?.closeSession('open-c');
+    });
+
+    expect(latestHookResult?.pinnedIds).toEqual(['open-b']);
+    expect(latestHookResult?.openIds).toEqual(['open-a']);
+    expect(latestHookResult?.archivedConversationIds).toEqual(['open-c']);
+    expect(apiMocks.updateConversationWorkspace).toHaveBeenCalledTimes(6);
+    expect(apiMocks.updateConversationWorkspace).toHaveBeenNthCalledWith(1, { operation: 'open', sessionId: 'open-c' });
+    expect(apiMocks.updateConversationWorkspace).toHaveBeenNthCalledWith(2, {
+      operation: 'move',
+      sessionId: 'open-b',
+      targetSection: 'pinned',
+      targetSessionId: null,
+      position: 'before',
+    });
+    expect(apiMocks.updateConversationWorkspace).toHaveBeenLastCalledWith({ operation: 'close', sessionId: 'open-c' });
+    expect(apiMocks.setOpenConversationTabs).not.toHaveBeenCalled();
+    expect(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBeNull();
   });
 
   it('does not let an older manual refetch overwrite a newer snapshot', async () => {
@@ -514,21 +656,17 @@ describe('useConversations', () => {
     expect(sessionStore.get('older')).toBeUndefined();
   });
 
-  it('does not let stale remote layout sync close locally visible live conversation tabs', async () => {
-    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-live']));
+  it('does not let session refresh close backend-visible live conversation tabs', async () => {
     apiMocks.openConversationTabs.mockResolvedValueOnce({
       sessionIds: ['conv-live'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
       activeConversationId: null,
       workspacePaths: [],
-    });
-    apiMocks.openConversationTabs.mockResolvedValue({
-      sessionIds: [],
-      pinnedSessionIds: [],
-      archivedSessionIds: [],
-      activeConversationId: null,
-      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
     });
 
     const container = document.createElement('div');
@@ -552,25 +690,20 @@ describe('useConversations', () => {
     await flushAsyncWork();
 
     expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['conv-live']);
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-live']);
+    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps a newly reserved conversation in the sidebar through snapshot refresh and stale remote layout sync', async () => {
-    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['reserved-conv']));
-    localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, 'reserved-conv');
+  it('keeps a newly reserved conversation in the sidebar through snapshot refresh', async () => {
     apiMocks.openConversationTabs.mockResolvedValueOnce({
       sessionIds: ['reserved-conv'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
       activeConversationId: 'reserved-conv',
       workspacePaths: [],
-    });
-    apiMocks.openConversationTabs.mockResolvedValue({
-      sessionIds: [],
-      pinnedSessionIds: [],
-      archivedSessionIds: [],
-      activeConversationId: null,
-      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
     });
 
     const reservedSession = createSession({
@@ -602,19 +735,21 @@ describe('useConversations', () => {
     expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['reserved-conv']);
     expect(latestHookResult?.tabs.map((session) => session.title)).toEqual(['Reserved conversation persisted']);
     expect(latestHookResult?.activeId).toBe('reserved-conv');
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['reserved-conv']);
-    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('reserved-conv');
+    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
   });
 
   describe('bootstrap / individual sessionMeta fetch race', () => {
     it('preserves all open IDs when individual sessionMeta fetches resolve out of order', async () => {
-      localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['open-a', 'open-b', 'open-c']));
       apiMocks.openConversationTabs.mockResolvedValue({
         sessionIds: ['open-a', 'open-b', 'open-c'],
         pinnedSessionIds: [],
         archivedSessionIds: [],
         activeConversationId: null,
         workspacePaths: [],
+        remoteControlledConversationIds: [],
+        conversationWorkspaceRevision: 1,
+        conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+        conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
       });
 
       // Deferred promises let us control resolution order.
@@ -652,7 +787,6 @@ describe('useConversations', () => {
       await flushAsyncWork();
 
       expect(latestHookResult?.tabs.map((s) => s.id)).toEqual(['open-a', 'open-b', 'open-c']);
-      expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-a', 'open-b', 'open-c']);
 
       // Resolve remaining.
       resolveA(createSession({ id: 'open-a', title: 'Session A' }));
@@ -661,17 +795,19 @@ describe('useConversations', () => {
 
       expect(latestHookResult?.tabs.map((s) => s.id)).toEqual(['open-a', 'open-b', 'open-c']);
       expect(latestHookResult?.tabs.map((s) => s.title)).toEqual(['Session A', 'Session B', 'Session C']);
-      expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-a', 'open-b', 'open-c']);
     });
 
     it('does not let individual sessionMeta fetches overwrite a later-arriving full snapshot', async () => {
-      localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['open-a', 'open-b']));
       apiMocks.openConversationTabs.mockResolvedValue({
         sessionIds: ['open-a', 'open-b'],
         pinnedSessionIds: [],
         archivedSessionIds: [],
         activeConversationId: null,
         workspacePaths: [],
+        remoteControlledConversationIds: [],
+        conversationWorkspaceRevision: 1,
+        conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+        conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
       });
 
       let resolveA!: (session: SessionMeta) => void;
@@ -713,14 +849,20 @@ describe('useConversations', () => {
 
       expect(latestHookResult?.tabs.map((s) => s.title)).toEqual(['Snapshot A', 'Snapshot B']);
       expect(latestHookResult?.tabs.map((s) => s.id)).toEqual(['open-a', 'open-b']);
-      expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-a', 'open-b']);
     });
 
-    it('still prunes stale layout IDs when no individual meta fetches are in flight', async () => {
-      localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['real-open', 'stale-open']));
-      localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['stale-pinned']));
-      localStorage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['stale-archived']));
-      localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, 'stale-open');
+    it('keeps backend workspace IDs even when no individual meta fetches are in flight', async () => {
+      apiMocks.openConversationTabs.mockResolvedValue({
+        sessionIds: ['real-open', 'stale-open'],
+        pinnedSessionIds: ['stale-pinned'],
+        archivedSessionIds: ['stale-archived'],
+        activeConversationId: 'stale-open',
+        workspacePaths: [],
+        remoteControlledConversationIds: [],
+        conversationWorkspaceRevision: 1,
+        conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+        conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+      });
 
       // Use the snapshot-style probe to match app behavior.
       renderSnapshotProbe({
@@ -730,19 +872,25 @@ describe('useConversations', () => {
 
       await flushAsyncWork();
 
-      expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['real-open']);
-      expect(latestHookResult?.pinnedSessions).toEqual([]);
-      expect(latestHookResult?.archivedConversationIds).toEqual([]);
-      expect(latestHookResult?.activeId).toBeNull();
-      expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['real-open']);
-      expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
-      expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBeNull();
-      expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
+      expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['real-open', 'stale-open']);
+      expect(latestHookResult?.pinnedSessions.map((session) => session.id)).toEqual(['stale-pinned']);
+      expect(latestHookResult?.archivedConversationIds).toEqual(['stale-archived']);
+      expect(latestHookResult?.activeId).toBe('stale-open');
     });
   });
 
-  it('uses the latest session snapshot as the source of truth for running state', () => {
-    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-running']));
+  it('uses the latest session snapshot as the source of truth for running state', async () => {
+    apiMocks.openConversationTabs.mockResolvedValue({
+      sessionIds: ['conv-running'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+    });
     const container = document.createElement('div');
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -752,12 +900,14 @@ describe('useConversations', () => {
       sessions: [createSession({ id: 'conv-running', isRunning: true })],
       tasks: null,
     });
+    await flushAsyncWork();
     expect(latestHookResult?.tabs[0]?.isRunning).toBe(true);
 
     renderProbeIntoRoot(root, {
       sessions: [createSession({ id: 'conv-running', isRunning: false })],
       tasks: null,
     });
+    await flushAsyncWork();
     expect(latestHookResult?.tabs[0]?.isRunning).toBe(false);
   });
 });

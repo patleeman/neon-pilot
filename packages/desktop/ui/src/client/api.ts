@@ -561,6 +561,9 @@ export const api = {
       workspacePaths: string[];
       activeConversationId?: string | null;
       remoteControlledConversationIds?: string[];
+      conversationWorkspaceRevision?: number;
+      conversationWorkspaceUpdatedAt?: string | null;
+      conversationWorkspaceMigratedAt?: string | null;
     }>('/ui/open-conversations'),
   setOpenConversationTabs: async (
     sessionIds?: string[] | null,
@@ -568,6 +571,7 @@ export const api = {
     archivedSessionIds?: string[] | null,
     workspacePaths?: string[] | null,
     activeConversationId?: string | null,
+    options: { conversationWorkspaceMigrated?: boolean | null } = {},
   ) => {
     const request = {
       ...(sessionIds !== undefined ? { sessionIds } : {}),
@@ -575,6 +579,9 @@ export const api = {
       ...(archivedSessionIds !== undefined ? { archivedSessionIds } : {}),
       ...(workspacePaths !== undefined ? { workspacePaths } : {}),
       ...(activeConversationId !== undefined ? { activeConversationId } : {}),
+      ...(options.conversationWorkspaceMigrated !== undefined
+        ? { conversationWorkspaceMigrated: options.conversationWorkspaceMigrated }
+        : {}),
     };
     return patch<{
       ok: true;
@@ -584,8 +591,40 @@ export const api = {
       workspacePaths: string[];
       activeConversationId?: string | null;
       remoteControlledConversationIds?: string[];
+      conversationWorkspaceRevision?: number;
+      conversationWorkspaceUpdatedAt?: string | null;
+      conversationWorkspaceMigratedAt?: string | null;
     }>('/ui/open-conversations', request);
   },
+  updateConversationWorkspace: async (
+    input:
+      | { operation: 'open'; sessionId: string; active?: boolean | null }
+      | { operation: 'close'; sessionId: string }
+      | { operation: 'pin'; sessionId: string }
+      | { operation: 'unpin'; sessionId: string; open?: boolean | null }
+      | { operation: 'archive'; sessionId: string; archived?: boolean | null }
+      | { operation: 'restore'; sessionId: string }
+      | { operation: 'setActive'; sessionId?: string | null }
+      | {
+          operation: 'move';
+          sessionId: string;
+          targetSection: 'open' | 'pinned';
+          targetSessionId?: string | null;
+          position?: 'before' | 'after' | null;
+        },
+  ) =>
+    post<{
+      ok: true;
+      sessionIds: string[];
+      pinnedSessionIds: string[];
+      archivedSessionIds: string[];
+      workspacePaths: string[];
+      activeConversationId?: string | null;
+      remoteControlledConversationIds?: string[];
+      conversationWorkspaceRevision?: number;
+      conversationWorkspaceUpdatedAt?: string | null;
+      conversationWorkspaceMigratedAt?: string | null;
+    }>('/ui/open-conversations/operation', input),
   savedWorkspacePaths: async () => {
     const { workspacePaths } = await api.openConversationTabs();
     return workspacePaths;

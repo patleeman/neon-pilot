@@ -1241,6 +1241,15 @@ describe('api desktop transport', () => {
           workspacePaths: ['/tmp/beta'],
         });
       }
+      if (path === '/api/ui/open-conversations/operation' && init?.method === 'POST') {
+        return createJsonResponse({
+          ok: true,
+          sessionIds: ['conversation-7'],
+          pinnedSessionIds: ['conversation-5'],
+          archivedSessionIds: [],
+          workspacePaths: ['/tmp/beta'],
+        });
+      }
       if (path === '/api/ui/open-conversations') {
         return createJsonResponse({
           sessionIds: ['conversation-1'],
@@ -1282,6 +1291,7 @@ describe('api desktop transport', () => {
     const { api } = await import('./api');
     const layout = await api.openConversationTabs();
     const savedLayout = await api.setOpenConversationTabs(['conversation-4'], ['conversation-5'], ['conversation-6']);
+    const operationLayout = await api.updateConversationWorkspace({ operation: 'pin', sessionId: 'conversation-7' });
 
     expect(readOpenConversationTabs).not.toHaveBeenCalled();
     expect(updateOpenConversationTabs).not.toHaveBeenCalled();
@@ -1298,6 +1308,18 @@ describe('api desktop transport', () => {
       pinnedSessionIds: ['conversation-5'],
       archivedSessionIds: ['conversation-6'],
       workspacePaths: ['/tmp/beta'],
+    });
+    expect(operationLayout).toEqual({
+      ok: true,
+      sessionIds: ['conversation-7'],
+      pinnedSessionIds: ['conversation-5'],
+      archivedSessionIds: [],
+      workspacePaths: ['/tmp/beta'],
+    });
+    expect(fetchMock).toHaveBeenCalledWith('/api/ui/open-conversations/operation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ operation: 'pin', sessionId: 'conversation-7' }),
     });
   });
 });
