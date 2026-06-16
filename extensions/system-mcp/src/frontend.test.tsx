@@ -38,6 +38,21 @@ vi.mock('@neon-pilot/extensions/settings', () => ({
       {children}
     </section>
   ),
+  SettingsRow: ({
+    title,
+    description,
+    children,
+  }: {
+    title: React.ReactNode;
+    description?: React.ReactNode;
+    children: React.ReactNode;
+  }) => (
+    <section>
+      <h4>{title}</h4>
+      {description ? <p>{description}</p> : null}
+      {children}
+    </section>
+  ),
   Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
   TextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   ToolbarButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
@@ -106,7 +121,7 @@ describe('McpSettingsPanel', () => {
     const html = renderToString(<McpSettingsPanel />);
 
     expect(mocks.useApi).toHaveBeenCalledWith(expect.any(Function), 'system-mcp-settings');
-    expect(html).toContain('MCP servers');
+    expect(html).toContain('Explicit config');
     expect(html).toContain('Add server');
     expect(html).toContain('Explicit servers');
     expect(html).toContain('Skill-bundled servers');

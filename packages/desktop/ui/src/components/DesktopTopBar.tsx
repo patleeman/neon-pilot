@@ -268,17 +268,6 @@ export function DesktopTopBar({
     setAppPreferences(state);
   }
 
-  if (!showDesktopChrome) {
-    return null;
-  }
-
-  const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;
-  const dragStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
-  const environmentBadgeLabel =
-    environment?.launchMode === 'rc' ? 'RC' : environment?.launchMode === 'dev' || environment?.launchMode === 'testing' ? 'Testing' : null;
-  const environmentBadgeTitle = environment?.launchMode === 'rc' ? 'Release candidate build' : 'Testing build';
-  const readyUpdateVersion = appPreferences?.update.status === 'ready' ? appPreferences.update.downloadedVersion : undefined;
-
   function openPaletteFromSearch(query = searchQuery) {
     const rect = searchShellRef.current?.getBoundingClientRect();
     window.dispatchEvent(
@@ -320,6 +309,17 @@ export function DesktopTopBar({
     window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, handlePaletteShortcut, true);
     return () => window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, handlePaletteShortcut, true);
   }, [searchQuery]);
+
+  if (!showDesktopChrome) {
+    return null;
+  }
+
+  const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;
+  const dragStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
+  const environmentBadgeLabel =
+    environment?.launchMode === 'rc' ? 'RC' : environment?.launchMode === 'dev' || environment?.launchMode === 'testing' ? 'Testing' : null;
+  const environmentBadgeTitle = environment?.launchMode === 'rc' ? 'Release candidate build' : 'Testing build';
+  const readyUpdateVersion = appPreferences?.update.status === 'ready' ? appPreferences.update.downloadedVersion : undefined;
 
   return (
     <div className="ui-desktop-top-bar">

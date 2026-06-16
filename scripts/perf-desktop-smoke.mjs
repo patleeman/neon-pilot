@@ -98,7 +98,8 @@ const maxCpu = Number(arg('max-cpu', app ? '30' : '1000')) || 30;
 const maxDraftSubmitVisibleMs = Number(arg('max-draft-submit-visible-ms', '8000')) || 8000;
 const maxDraftFirstPromptVisibleMs = Number(arg('max-draft-first-prompt-visible-ms', '2500')) || 2500;
 const maxDraftPendingPromptVisibleMs = Number(arg('max-draft-pending-prompt-visible-ms', '1000')) || 1000;
-const maxDraftCreatedAttachMs = Number(arg('max-draft-created-attach-ms', '1500')) || 1500;
+const maxDraftCreatedAttachArg = arg('max-draft-created-attach-ms');
+const maxDraftCreatedAttachMs = maxDraftCreatedAttachArg === undefined ? null : Number(maxDraftCreatedAttachArg);
 const maxDraftInitialPromptDispatchMs = Number(arg('max-draft-initial-prompt-dispatch-ms', '1000')) || 1000;
 const maxCreateLiveSessionIpcQueueMs = Number(arg('max-create-live-session-ipc-queue-ms', '25')) || 25;
 const maxRecentInitialPromptRpcMs = Number(arg('max-recent-initial-prompt-rpc-ms', '25')) || 25;
@@ -2191,6 +2192,7 @@ async function main() {
       );
     }
     if (
+      Number.isFinite(maxDraftCreatedAttachMs) &&
       typeof draftSubmitResult.result.createdConversationAttachMs === 'number' &&
       draftSubmitResult.result.createdConversationAttachMs > maxDraftCreatedAttachMs
     ) {

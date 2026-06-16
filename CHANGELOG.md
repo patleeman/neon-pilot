@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.22-rc.0 — 2026-06-16
+
+### Highlights
+
+- Makes conversation workspace state backend-owned so sidebar hydration, route recovery, and quick reloads converge on the same open/archive state instead of drifting between renderer snapshots.
+- Hardens conversation startup and reuse flows, including reserved conversation persistence, empty-conversation reuse by cwd, first-message route handoff, and stale workspace event filtering.
+- Improves app navigation coverage across chat, settings, extension routes, command palette actions, sidebar reopen flows, and layout width restoration.
+- Tightens recovery behavior for missing conversation metadata and stale layout/session reads so conversation routes reopen with the expected catalog-backed state.
+- Keeps extension settings work checkpointed for the RC train while preserving the current Pi runtime package set at `^0.79.4`.
+
+### Notes
+
+- 32 commits since the previous release.
+
 ## 0.11.21 — 2026-06-15
 
 ### Highlights

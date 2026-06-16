@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.21** — patch release.
+**v0.11.22-rc.0** — release candidate.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.21
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.22-rc.0
 
 Highlights in this train:
 
-- Hardens routed extension pages so Settings and installable extension routes open through the expected most-specific manifest view.
-- Improves the installable-extension visual evaluation workflow with direct zip imports, registry reloads, replacement of existing installed copies, and zip metadata in capture manifests.
-- Refines Dynamic Workflows first-launch UI into a denser component-library surface with a compact workflow library, template details, and script/run setup panels.
-- Tightens app and extension visual consistency across Settings, Extensions, Telemetry, Automations, Workflows, and installable extension pages with screenshot-backed visual-eval coverage.
-- Refreshes Pi runtime packages to `^0.79.4` for the 0.11.21 patch train.
+- Makes conversation workspace state backend-owned so sidebar hydration, route recovery, and quick reloads converge on the same open/archive state instead of drifting between renderer snapshots.
+- Hardens conversation startup and reuse flows, including reserved conversation persistence, empty-conversation reuse by cwd, first-message route handoff, and stale workspace event filtering.
+- Improves app navigation coverage across chat, settings, extension routes, command palette actions, sidebar reopen flows, and layout width restoration.
+- Tightens recovery behavior for missing conversation metadata and stale layout/session reads so conversation routes reopen with the expected catalog-backed state.
+- Keeps extension settings work checkpointed for the RC train while preserving the current Pi runtime package set at `^0.79.4`.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

@@ -4156,7 +4156,7 @@ export function Sidebar() {
     );
   }, [extensionNavItems, extensionRegistry.surfaces, location.pathname]);
   const newConversationHotkeyLabel = getNewConversationHotkeyLabel();
-  const chatButtonActive = routeMatchesPrefix(location.pathname, '/conversations');
+  const chatButtonActive = location.pathname === DRAFT_CONVERSATION_ROUTE;
   return (
     <>
       <aside className="flex-1 flex flex-col overflow-hidden">
