@@ -33,6 +33,7 @@ import {
 } from './contexts';
 
 const SESSION_META_REFRESH_DELAY_MS = 750;
+const SESSIONS_SNAPSHOT_RETRY_DELAYS_MS = [500, 1_000, 2_000, 4_000, 8_000];
 
 function areJsonSnapshotsEqual(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
@@ -190,6 +191,7 @@ export function App() {
   // authoritative running state already pushed over the desktop event stream.
   const refreshSessionMetaSeqRef = useRef(new Map<string, number>());
   const refreshSessionMetaTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const sessionsSnapshotRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionRunningOverridesRef = useRef(new Map<string, boolean>());
 
   const setTitle = useCallback((id: string, title: string) => {
@@ -285,6 +287,10 @@ export function App() {
         window.clearTimeout(timer);
       }
       refreshSessionMetaTimersRef.current.clear();
+      if (sessionsSnapshotRetryTimerRef.current !== null) {
+        window.clearTimeout(sessionsSnapshotRetryTimerRef.current);
+        sessionsSnapshotRetryTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -321,7 +327,11 @@ export function App() {
     return !snapshotRequestLifecycleRef.current.disposed && snapshotRequestLifecycleRef.current.seqByKey.get(key) === seq;
   }, []);
 
-  const loadSessionsSnapshot = useCallback(() => {
+  const loadSessionsSnapshot = useCallback((retryAttempt = 0) => {
+    if (sessionsSnapshotRetryTimerRef.current !== null) {
+      window.clearTimeout(sessionsSnapshotRetryTimerRef.current);
+      sessionsSnapshotRetryTimerRef.current = null;
+    }
     const requestSeq = beginSnapshotRequest('sessions');
     void fetchSessionsSnapshot()
       .then((items) => {
@@ -331,7 +341,15 @@ export function App() {
         setSessions(items);
       })
       .catch(() => {
-        // Keep waiting for SSE or a later retry.
+        if (!isLatestSnapshotRequest('sessions', requestSeq)) {
+          return;
+        }
+        const retryDelay =
+          SESSIONS_SNAPSHOT_RETRY_DELAYS_MS[Math.min(retryAttempt, SESSIONS_SNAPSHOT_RETRY_DELAYS_MS.length - 1)] ?? 8_000;
+        sessionsSnapshotRetryTimerRef.current = window.setTimeout(() => {
+          sessionsSnapshotRetryTimerRef.current = null;
+          loadSessionsSnapshot(retryAttempt + 1);
+        }, retryDelay);
       });
   }, [beginSnapshotRequest, isLatestSnapshotRequest, setSessions]);
 

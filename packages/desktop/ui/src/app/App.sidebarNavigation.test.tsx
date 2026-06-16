@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resetLocalWriteGrace, resetRemoteConversationLayoutCache } from '../session/sessionTabs';
 import type { DesktopAppEvent, SessionMeta } from '../shared/types';
+import { resetAllStores } from '../store/stores';
 
 (globalThis as typeof globalThis & { React?: typeof React; IS_REACT_ACT_ENVIRONMENT?: boolean }).React = React;
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -229,6 +230,7 @@ describe('App sidebar conversation navigation workflow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    resetAllStores();
     resetLocalWriteGrace();
     resetRemoteConversationLayoutCache();
     desktopListener = null;
@@ -383,6 +385,28 @@ describe('App sidebar conversation navigation workflow', () => {
     expect(screen.getByText('Second persisted thread')).toBeTruthy();
     expect(apiMock.sessionMeta).toHaveBeenCalledWith('conv-first');
     expect(apiMock.sessionMeta).toHaveBeenCalledWith('conv-second');
+  });
+
+  it('retries the cold-start sessions snapshot without showing a false empty thread state', async () => {
+    workspaceLayout = {
+      sessionIds: [],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+    };
+    fetchSessionsSnapshotMock.mockRejectedValueOnce(new Error('local backend still warming')).mockResolvedValue(sessions);
+
+    ({ root } = await renderAppAt('/conversations/new'));
+
+    await screen.findByText('Draft conversation route');
+    expect(document.querySelector('[data-sidebar-session-id="conv-first"]')).toBeNull();
+    expect(screen.queryByText('No threads yet.')).toBeNull();
+
+    expect(screen.getByText('Loading threads…')).toBeTruthy();
+    await waitFor(() => expect(fetchSessionsSnapshotMock).toHaveBeenCalledTimes(2), { timeout: 2_000 });
+    await waitFor(() => expect(screen.queryByText('Loading threads…')).toBeNull());
+    expect(fetchSessionsSnapshotMock).toHaveBeenCalledTimes(2);
   });
 
   it('reopens the most recently archived conversation and restores its route', async () => {

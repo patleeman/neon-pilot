@@ -336,7 +336,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
         : withTitles.filter((session) => !openIdSet.has(session.id) && !pinnedIdSet.has(session.id)).sort(compareSessionsByRecentActivity),
     [openIdSet, options.includeArchivedSessions, pinnedIdSet, withTitles],
   );
-  const loading = !sessionsReady && (sseStatus === 'connecting' || sseStatus === 'reconnecting');
+  const loading = layoutHydrating || !sessionsReady || sseStatus === 'connecting' || sseStatus === 'reconnecting';
 
   return {
     pinnedIds,

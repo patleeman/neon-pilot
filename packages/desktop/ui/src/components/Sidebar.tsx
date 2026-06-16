@@ -4203,6 +4203,7 @@ export function Sidebar() {
             <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 pb-3">
               <div className="py-0.5 space-y-0.5">
                 {!loading &&
+                sessionsReady &&
                 renderedConversationItems.length === 0 &&
                 !(threadsOrganizeMode === 'project' && groupedConversationRows.length > 0) ? (
                   <PanelMessage className="px-4 py-2">
@@ -4218,6 +4219,7 @@ export function Sidebar() {
                   <ActivityTreeView
                     items={activityTreeItems}
                     activeItemId={activeActivityTreeItemId}
+                    emptyMessage={loading || !sessionsReady ? 'Loading threads…' : 'No threads yet.'}
                     className="min-h-0"
                     canDragItem={canDragActivityTreeItem}
                     canDropItem={canDropActivityTreeItem}
@@ -4501,9 +4503,9 @@ export function Sidebar() {
                         {!collapsed ? (
                           group.items.length > 0 ? (
                             group.items.map(renderConversationRow)
-                          ) : (
+                          ) : !loading && sessionsReady ? (
                             <PanelMessage className="px-4 pb-1 pt-0">No threads yet.</PanelMessage>
-                          )
+                          ) : null
                         ) : null}
                       </div>
                     );

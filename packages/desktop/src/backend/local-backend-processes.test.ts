@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { bootstrapMocks, criticalRegistryMocks, readConversationSessionsCapabilityMock, reserveConversationSessionMock } = vi.hoisted(
@@ -748,6 +751,120 @@ describe('LocalBackendProcesses', () => {
       activeConversationId: null,
     });
     await vi.waitFor(() => expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('backend warmup failed')));
+  });
+
+  it('persists full open conversation tab updates in the main process', async () => {
+    const originalStateRoot = process.env.NEON_PILOT_STATE_ROOT;
+    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-open-tabs-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    try {
+      class MainProcessLayoutBackend extends LocalBackendProcesses {
+        override async ensureStarted(): Promise<void> {
+          // The write must not depend on the child backend.
+        }
+      }
+
+      const backend = new MainProcessLayoutBackend();
+      const response = await backend.dispatchApiRequest({
+        method: 'PATCH',
+        path: '/api/ui/open-conversations',
+        body: {
+          sessionIds: ['conv-open'],
+          pinnedSessionIds: ['conv-pinned'],
+          archivedSessionIds: ['conv-archived'],
+          activeConversationId: 'conv-pinned',
+          workspacePaths: ['/repo'],
+          conversationWorkspaceMigrated: true,
+        },
+      });
+
+      const body = JSON.parse(new TextDecoder().decode(response.body));
+      expect(response.statusCode).toBe(200);
+      expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+        localApi: {
+          fastPath: 'main-process',
+        },
+      });
+      expect(body).toMatchObject({
+        ok: true,
+        sessionIds: ['conv-open'],
+        pinnedSessionIds: ['conv-pinned'],
+        archivedSessionIds: ['conv-archived'],
+        activeConversationId: 'conv-pinned',
+        workspacePaths: ['/repo'],
+        conversationWorkspaceRevision: 1,
+      });
+      expect(body.conversationWorkspaceUpdatedAt).toEqual(expect.any(String));
+      expect(body.conversationWorkspaceMigratedAt).toEqual(expect.any(String));
+      expect(JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8'))).toMatchObject({
+        ui: {
+          openConversationIds: ['conv-open'],
+          pinnedConversationIds: ['conv-pinned'],
+          archivedConversationIds: ['conv-archived'],
+          activeConversationId: 'conv-pinned',
+          workspacePaths: ['/repo'],
+          conversationWorkspaceRevision: 1,
+        },
+      });
+    } finally {
+      if (originalStateRoot === undefined) {
+        delete process.env.NEON_PILOT_STATE_ROOT;
+      } else {
+        process.env.NEON_PILOT_STATE_ROOT = originalStateRoot;
+      }
+      rmSync(stateRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('persists open conversation tab operations when backend warmup fails', async () => {
+    const stderrWrite = vi.fn();
+    process.stderr.write = stderrWrite as unknown as typeof process.stderr.write;
+    const originalStateRoot = process.env.NEON_PILOT_STATE_ROOT;
+    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-open-tab-operation-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    try {
+      class FailingWarmupBackend extends LocalBackendProcesses {
+        override async ensureStarted(): Promise<void> {
+          throw new Error('backend child missing');
+        }
+      }
+
+      const backend = new FailingWarmupBackend();
+      const response = await backend.dispatchApiRequest({
+        method: 'POST',
+        path: '/api/ui/open-conversations/operation',
+        body: { operation: 'open', sessionId: 'conv-fast', active: true },
+      });
+
+      const body = JSON.parse(new TextDecoder().decode(response.body));
+      expect(response.statusCode).toBe(200);
+      expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+        localApi: {
+          fastPath: 'main-process',
+        },
+      });
+      expect(body).toMatchObject({
+        ok: true,
+        sessionIds: ['conv-fast'],
+        activeConversationId: 'conv-fast',
+        conversationWorkspaceRevision: 1,
+      });
+      expect(JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8'))).toMatchObject({
+        ui: {
+          openConversationIds: ['conv-fast'],
+          activeConversationId: 'conv-fast',
+          conversationWorkspaceRevision: 1,
+        },
+      });
+      await vi.waitFor(() => expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('backend warmup failed')));
+    } finally {
+      if (originalStateRoot === undefined) {
+        delete process.env.NEON_PILOT_STATE_ROOT;
+      } else {
+        process.env.NEON_PILOT_STATE_ROOT = originalStateRoot;
+      }
+      rmSync(stateRoot, { recursive: true, force: true });
+    }
   });
 
   it('reserves conversations in the main process and warms the backend child without prewarming live resources', async () => {

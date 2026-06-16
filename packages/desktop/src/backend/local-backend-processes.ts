@@ -125,14 +125,70 @@ function renderBackendChildExit(code: number | null, signal: NodeJS.Signals | nu
 
 async function readOpenConversationTabsFastPath(): Promise<unknown> {
   const { readSavedUiPreferences } = await import('../../server/ui/uiPreferences.js');
+  const { buildDesktopOpenConversationTabsResponse } = await import('../../server/app/localApiOpenTabsPresentation.js');
   const saved = readSavedUiPreferences(join(getStateRoot(), 'settings.json'));
+  return buildDesktopOpenConversationTabsResponse(saved);
+}
+
+async function updateOpenConversationTabsFastPath(input: unknown): Promise<unknown> {
+  const { buildDesktopOpenConversationTabsResponse } = await import('../../server/app/localApiOpenTabsPresentation.js');
+  const openTabsModule: typeof import('../../server/app/localApiOpenTabs.js') = await import('../../server/app/localApiOpenTabs.js');
+  const { writeSavedUiPreferences } = await import('../../server/ui/uiPreferences.js');
+  openTabsModule.validateDesktopOpenConversationTabsUpdate(input);
+  const update = input as {
+    sessionIds?: string[];
+    pinnedSessionIds?: string[];
+    archivedSessionIds?: string[];
+    activeConversationId?: string | null;
+    workspacePaths?: string[];
+    conversationWorkspaceMigrated?: boolean | null;
+  };
+  const saved = writeSavedUiPreferences(
+    {
+      openConversationIds: update.sessionIds,
+      pinnedConversationIds: update.pinnedSessionIds,
+      archivedConversationIds: update.archivedSessionIds,
+      activeConversationId: update.activeConversationId,
+      workspacePaths: update.workspacePaths,
+      conversationWorkspaceMigrated: update.conversationWorkspaceMigrated,
+    },
+    join(getStateRoot(), 'settings.json'),
+  );
   return {
-    sessionIds: saved.openConversationIds,
-    pinnedSessionIds: saved.pinnedConversationIds,
-    archivedSessionIds: saved.archivedConversationIds,
-    activeConversationId: saved.activeConversationId ?? null,
-    workspacePaths: saved.workspacePaths,
-    remoteControlledConversationIds: saved.remoteControlledConversationIds,
+    ok: true,
+    ...buildDesktopOpenConversationTabsResponse(saved),
+  };
+}
+
+async function updateOpenConversationTabsByOperationFastPath(input: unknown): Promise<unknown> {
+  const { buildDesktopOpenConversationTabsResponse } = await import('../../server/app/localApiOpenTabsPresentation.js');
+  const openTabsModule: typeof import('../../server/app/localApiOpenTabs.js') = await import('../../server/app/localApiOpenTabs.js');
+  const { readSavedUiPreferences, writeSavedUiPreferences } = await import('../../server/ui/uiPreferences.js');
+  openTabsModule.validateDesktopOpenConversationOperation(input);
+  const settingsFile = join(getStateRoot(), 'settings.json');
+  const current = readSavedUiPreferences(settingsFile);
+  const next = openTabsModule.applyDesktopOpenConversationOperation(
+    {
+      sessionIds: current.openConversationIds,
+      pinnedSessionIds: current.pinnedConversationIds,
+      archivedSessionIds: current.archivedConversationIds,
+      activeConversationId: current.activeConversationId,
+    },
+    input,
+  );
+  const saved = writeSavedUiPreferences(
+    {
+      openConversationIds: next.sessionIds,
+      pinnedConversationIds: next.pinnedSessionIds,
+      archivedConversationIds: next.archivedSessionIds,
+      activeConversationId: next.activeConversationId,
+      conversationWorkspaceMigrated: true,
+    },
+    settingsFile,
+  );
+  return {
+    ok: true,
+    ...buildDesktopOpenConversationTabsResponse(saved),
   };
 }
 
@@ -460,6 +516,14 @@ export class LocalBackendProcesses {
       this.warmBackendChild();
       this.warmCriticalExtensionRegistryModule();
       return this.makeJsonResponse(await readOpenConversationTabsFastPath(), 'main-process');
+    }
+    if (input.method === 'PATCH' && path === '/api/ui/open-conversations') {
+      this.warmBackendChild();
+      return this.makeJsonResponse(await updateOpenConversationTabsFastPath(jsonBody), 'main-process');
+    }
+    if (input.method === 'POST' && path === '/api/ui/open-conversations/operation') {
+      this.warmBackendChild();
+      return this.makeJsonResponse(await updateOpenConversationTabsByOperationFastPath(jsonBody), 'main-process');
     }
     if (input.method === 'GET' && path === '/api/extensions/registry/critical') {
       const registry = await this.warmCriticalExtensionRegistryModule();
