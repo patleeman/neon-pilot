@@ -3283,6 +3283,14 @@ export function Sidebar() {
     [location.pathname, navigate, sessions],
   );
 
+  const handleChatButtonClick = useCallback(() => {
+    if (routeMatchesPrefix(location.pathname, '/conversations')) {
+      void handleNewConversation();
+    } else {
+      navigate('/conversations');
+    }
+  }, [handleNewConversation, location.pathname, navigate]);
+
   const handleOpenThreadSwitcher = useCallback(() => {
     window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'threads' } }));
   }, []);
@@ -3711,7 +3719,7 @@ export function Sidebar() {
       const key = normalizeHotkeyKey(event.key);
       if (matchesLetterHotkey(event, 'KeyN', 'n')) {
         event.preventDefault();
-        void handleNewConversation();
+        handleChatButtonClick();
         return;
       }
 
@@ -3729,7 +3737,7 @@ export function Sidebar() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleNewConversation, jumpToConversation, navigateConversation, shiftActiveConversation]);
+  }, [handleChatButtonClick, handleNewConversation, jumpToConversation, navigateConversation, shiftActiveConversation]);
 
   function handleCloseDraftTab() {
     const closeDraft = () => {
@@ -4113,7 +4121,7 @@ export function Sidebar() {
     );
   }, [extensionNavItems, extensionRegistry.surfaces, location.pathname]);
   const newConversationHotkeyLabel = getNewConversationHotkeyLabel();
-  const chatButtonActive = location.pathname === DRAFT_CONVERSATION_ROUTE;
+  const chatButtonActive = routeMatchesPrefix(location.pathname, '/conversations');
   return (
     <>
       <aside className="flex-1 flex flex-col overflow-hidden">
@@ -4123,7 +4131,7 @@ export function Sidebar() {
           newConversationHotkeyLabel={newConversationHotkeyLabel}
           items={primaryNavItems}
           onNewConversation={() => {
-            void handleNewConversation();
+            handleChatButtonClick();
           }}
         />
 
