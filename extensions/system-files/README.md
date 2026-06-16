@@ -4,8 +4,6 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 ---
 
-<!-- Source: docs/file-explorer.md -->
-
 # File Explorer
 
 The File Explorer is a file tree browser in a workbench tab-local rail. It provides quick access to workspace and knowledge files without leaving the conversation.

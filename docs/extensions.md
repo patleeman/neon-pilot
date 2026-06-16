@@ -739,7 +739,7 @@ The component receives `pa` and `toolContext`. `toolContext.addFiles(files)` rou
 
 ### Prompt Assembly
 
-Prompt Assembly is the single runtime surface for deciding what the agent sees before a turn starts. It inventories and explains skills, tools, prompt templates, prompt context provider blocks, and diagnostics from providers, hooks, validation, and runtime policy. The built-in Prompt Assembly page at `/prompt-assembly` is the inspection and management surface.
+Prompt Assembly is the single runtime surface for deciding what the agent sees before a turn starts. It inventories and explains skills, tools, prompt templates, prompt context provider blocks, and diagnostics from providers, hooks, validation, and runtime policy. The user-facing inspection surface is exposed through Settings -> Extensions and Extension Manager details; Prompt Assembly does not contribute a standalone navigation route.
 
 Use static manifest contributions first:
 

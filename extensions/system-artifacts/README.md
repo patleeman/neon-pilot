@@ -4,8 +4,6 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 ---
 
-<!-- Source: docs/artifacts.md -->
-
 # Artifacts
 
 Artifacts are rendered outputs visible inside a conversation. They support HTML, Mermaid diagrams, and copyable LaTeX source. Saving one inserts a transcript card you can open as its own workbench tab beside the conversation.

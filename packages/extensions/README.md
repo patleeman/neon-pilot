@@ -714,7 +714,7 @@ Prompt assembly providers and hooks are the advanced escape hatch for extensions
 }
 ```
 
-Prompt assembly providers are isolated: failures, timeouts, and malformed items become diagnostics and do not block the rest of assembly. Instruction providers return inspectable layers (`{ "layers": [...] }`) instead of silently mutating the system prompt. Hooks are powerful and should require clear user-facing diagnostics. Do not use hooks to silently rewrite the system prompt; contribute instruction/context through first-class providers instead. The built-in Prompt Assembly page at `/prompt-assembly` is the inspection and management surface.
+Prompt assembly providers are isolated: failures, timeouts, and malformed items become diagnostics and do not block the rest of assembly. Instruction providers return inspectable layers (`{ "layers": [...] }`) instead of silently mutating the system prompt. Hooks are powerful and should require clear user-facing diagnostics. Do not use hooks to silently rewrite the system prompt; contribute instruction/context through first-class providers instead. The user-facing Prompt Assembly inspection surface is exposed through Settings -> Extensions and Extension Manager details.
 
 ## Surfaces and contribution choices
 

@@ -4,8 +4,6 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 ---
 
-<!-- Source: docs/ask-user-question.md -->
-
 # Ask User Question
 
 The `ask_user` tool presents interactive prompts to the user through the desktop UI. It supports single questions with quick-reply options and multi-question forms with radio and checkbox styles.
@@ -132,8 +130,6 @@ The user must respond before the agent continues. The response is returned to th
 
 ---
 
-<!-- Source: docs/change-working-directory.md -->
-
 # Change Working Directory
 
 The `neon-pilot conversations cwd` CLI command switches the conversation's working directory. After the change, all tool calls (file reads, shell commands, file writes) execute relative to the new directory.
@@ -187,15 +183,13 @@ The `neon-pilot conversations cwd` CLI command switches the conversation's worki
 
 ## Compared to @ references
 
-|          | `neon-pilot conversations cwd`                      | `@` file reference          |
+|          | `neon-pilot conversations cwd`          | `@` file reference          |
 | -------- | --------------------------------------- | --------------------------- |
 | Scope    | All subsequent tool calls               | Single message              |
 | Cwd      | Permanently changed                     | Unchanged                   |
 | Use case | Working in a different part of the tree | Referencing a specific file |
 
 ---
-
-<!-- Source: docs/conversation-inspect.md -->
 
 # Conversation Inspect (CLI/Admin)
 

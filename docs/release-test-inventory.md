@@ -51,9 +51,9 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Nav item: Settings.
 - Command: `open-settings`.
 - Pages/views: Settings, Provider settings, Desktop settings.
-- Settings keys: `secrets.provider` (`keychain`, `file`, `env-only`) and `conversation.transcriptDisclosure` (`auto`, `expanded`).
+- Settings keys: `secrets.provider` (`keychain`, `file`, `env-only`), `conversation.transcriptDisclosure` (`auto`, `expanded`), `conversation.diffDisclosure`, and `conversation.pinnedToolCalls`.
 - Test provider add/edit/remove, model/provider validation, secrets redaction, desktop preferences, keyboard shortcut preferences, persistence after restart.
-- Extension settings components hosted here: Knowledge Base, Dictation, MCP tools, Extension search paths, Alleycat host when enabled.
+- Extension settings components hosted here: extension repositories, Knowledge Base when installed, Dictation, MCP tools, Image Probe, AI Gateway, OpenAI Desktop Plugin, Neon Pilot CLI, Alleycat host when installed.
 
 ### `/settings/providers` — Provider settings
 
@@ -100,11 +100,27 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Test event list, filters, route timing records, extension/runtime producers, empty state, malformed log handling, export/inspection if available.
 - Backend report routes/functions: summary, model usage, cost by conversation, tool health, context, agent loop, daily tokens, tool flow, cache efficiency, system prompt, auto mode, context pointers, session integrity.
 
-### `/prompt-assembly` — Prompt Assembly (`system-prompt-assembly`)
+### `/workflows` — Dynamic Workflows (`system-dynamic-workflows`, default disabled)
 
-- Nav item: Prompt Assembly.
-- Actions: `inspectPromptAssembly`, `updatePromptAssemblySkillEnabled`.
-- Test assembled prompt inspection, instruction layers, skill enable/disable, diagnostics display, reload persistence.
+- Nav item: Workflows when enabled.
+- Agent tool/action: `workflow`.
+- Actions: `workflow`, `listWorkflows`, `getWorkflow`, `cancelWorkflow`, `listWorkflowTemplates`, `saveWorkflow`, `listSavedWorkflows`, `deleteSavedWorkflow`, `runSavedWorkflow`.
+- Settings keys: default agent model, default allowed tools, max concurrent agents, max total agents, node timeout, workflow timeout.
+- Test workflow template list, run/cancel, saved workflow create/delete/run, transcript block rendering, concurrent subagent limits, invalid JavaScript, timeout, and persisted run history.
+- Skill: `dynamic-workflows`.
+
+### `/gateways` — Telegram Gateway (`system-gateways`)
+
+- Nav item: Gateways.
+- Gateway provider: `telegram`.
+- Secret: `telegramBotToken`.
+- Test Telegram setup state, token save/redaction, start/stop/status, invalid token, incoming command routing, gateway sidebar, empty/error states, and extension disable cleanup.
+
+### Prompt Assembly runtime inspection (`system-prompt-assembly`)
+
+- Product surface: Settings -> Extensions and Extension Manager details. Prompt Assembly does not contribute a standalone nav item or `/prompt-assembly` route.
+- Actions: `inspectAgentRuntime`, `inspectPromptAssembly`, `updatePromptAssemblySkillEnabled`, `updateRuntimeCapability`.
+- Test runtime capability inventory, instruction layers, skill enable/disable, runtime capability toggles, diagnostics display, reload persistence, and failure isolation.
 
 ### `/ext/system-local-models` — Local Models (`system-local-models`, default disabled)
 
@@ -142,7 +158,13 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Views: Workspace files tab-local rail, workspace file detail.
 - Test tree load, cwd switching, file open, large file, binary/image file, diff view, readonly mode, missing file, permission errors.
 
-### Browser (`system-browser`, default installed)
+### Terminal (`system-terminal`)
+
+- View: PTY-backed terminal panel in the Workbench rail.
+- Actions: `terminalCreate`, `terminalWrite`, `terminalDrain`, `terminalResize`, `terminalClose`; stream route `/stream`.
+- Test create/write/read/resize/close, SSE output stream, cwd handling, shell startup failure, long output, process cleanup, and app reload cleanup.
+
+### Browser (`system-browser`, first-party optional)
 
 - Views: Browser workbench tabs.
 - Commands/buttons/keybindings: open browser (`mod+shift+b`), new tab (`mod+t`), reopen closed tab (`mod+shift+t`), close tab (`mod+w`), focus location bar (`mod+l`).
@@ -173,7 +195,16 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Composer git status indicator.
 - Test clean/dirty repo, branch display, untracked files, non-git cwd, permission errors.
 
-### Suggested Context (`system-suggested-context`, default disabled)
+### Scratchpad (`system-scratchpad`)
+
+- View: conversation-scoped scratchpad.
+- Agent tool/action: `scratchpad` with get/set/patch behavior.
+- Conversation connection provider and turn-context provider: `scratchpad`.
+- Command/hotkey: `scratchpad.open` (`Cmd/Ctrl+Shift+S` default when available).
+- CLI commands: `conversations scratchpad get`, `set`, and `patch`.
+- Test open/edit/save/patch, connection shelf display, turn-context inclusion, CLI get/set/patch, empty state, and reload persistence.
+
+### Suggested Context (`system-suggested-context`, first-party optional)
 
 - Installable new-conversation suggested context UI and prompt context provider.
 - Action: `warmPointers`.
@@ -187,7 +218,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 ### Goal Mode (`system-auto-mode`)
 
 - Agent tool: `goal` with `objective`, `status`.
-- UI: goal-mode indicator/control where present.
+- Slash command: `/goal` for set/view/pause/resume/clear.
 - Test start/replace goal, complete goal, invalid premature complete, conversation persistence, auto-mode behavior.
 - Skill: `goal-mode`.
 
@@ -225,16 +256,12 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 ### Conversation tool (`system-conversation-tools`)
 
-- Agent tool: `conversation`.
-- Actions: ask user question, duplicate conversation, copy working directory, copy conversation ID, copy deeplink.
-- Command/keybinding: `open-thread-palette` / Open conversation palette (`mod+p`).
+- Agent tool: `ask_user`.
+- Actions: ask user question, conversation inspection/title/cwd helpers, deferred resume, duplicate conversation, copy working directory, copy conversation ID, copy deeplink.
+- Command/keybindings: `open-thread-palette` (`mod+p`) and `open-command-palette` (`mod+shift+p`).
 - Conversation list context menu IDs: `duplicate-conversation`, `copy-working-directory`, `copy-conversation-id`, `copy-deeplink`.
-- Transcript renderers: ask-user-question tool block, terminal bash tool block.
-- Tool operations to test:
-  - Ask: `question`, `details`, quick `options`, structured `questions` with radio/check styles.
-  - Inspect: `list`, `search`, `query`, `diff`, `outline`, `read_window`; filters by ids, roles, types, tools, text, order, windows, limits.
-  - Conversation mutation: set title, change cwd with optional continue prompt.
-  - Deferred resume: delay/at, trigger, deliver as steer/follow-up, reason requirement.
+- Transcript renderer: terminal bash tool block.
+- Tool/action operations to test: ask-user single and structured questions, inspect/list/search/query/diff/outline/read-window, title changes, cwd changes with optional continue prompt, deferred resume delay/at triggers, and conversation open-list state.
 
 ### Web/search/image tools
 
@@ -252,7 +279,8 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 ### Codex Compatibility (`system-codex-profile`)
 
-- Agent tools/actions: `apply_patch`, `image`, `write-file`, `apply-patch-edit`.
+- Agent tools/actions: `apply_patch`, `image`.
+- Model profile: `codex-compatible`.
 - Image tool: generate/edit, size, quality, background, source selection/count, transparent/opaque, failures.
 - Test patch success, patch failure, write new file, overwrite file, invalid path, permissions, transcript output.
 
@@ -266,6 +294,26 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Actions: `alleycatStart`, `alleycatStop`, `alleycatStatus`, `rotateToken`.
 - Host/settings surface.
 - Test host start/stop/status, pairing token rotation, mobile connect/disconnect, invalid token, port conflict.
+
+### Neon Pilot CLI (`system-neon-pilot-admin-cli`)
+
+- Agent tool: `neon_pilot`.
+- CLI commands: app update, app commands, control-plane doctor, heartbeats, bootstrap configure/doctor/defaults/provider setup.
+- Settings component: Neon Pilot CLI.
+- Skill: `neon-pilot-admin-cli`.
+- Test command discovery, doctor output, bootstrap dry-run/setup flows, provider key stdin handling, app-command list/run, heartbeat start/list/stop, and structured JSON error output.
+
+### AI Gateway (`system-model-gateway`, default disabled)
+
+- Settings component: AI Gateway.
+- Actions: `status`, `updateSettings`, `installCodexConfig`, `removeCodexConfig`, `clearLogs`.
+- Test disabled default, enable/start status, Responses-compatible loopback URL, Codex config install/remove, settings persistence, log clearing, port conflict, and disable cleanup.
+
+### OpenAI Desktop Plugin (`system-openai-desktop-plugin`)
+
+- Settings component: OpenAI Desktop Plugin.
+- Actions: `status`, `installPlugin`, `removePlugin`.
+- Test installed/missing status, install/reinstall/remove, generated skill and MCP bridge files, Codex/OpenAI Desktop config instructions, and stale install cleanup.
 
 ## External gateway commands
 
@@ -292,47 +340,55 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 Every contributed manifest ID below must appear in a release test plan. This section exists to catch exact buttons/actions/renderers by stable ID, even when the human-readable sections above describe them by title.
 
-### system-alleycat — Kitty Litter Mobile Pairing (Alleycat) (default disabled)
+Bundled system-extension entries are derived from local `extensions/*/extension.json` manifests. First-party optional packages are listed separately because their manifests live in installable release artifacts; validate their exact IDs from the installed package manifest during release QA.
 
-- settingsComponent: alleycat
-- backend actions: alleycatStart, alleycatStop, alleycatStatus, rotateToken
+### Bundled system extensions
 
 ### system-artifacts — Artifacts
 
-- tools: artifact
-- views: conversation-artifacts, artifact-detail
-- transcriptRenderers: artifact-tool-block for artifact
 - skills: artifacts
+- tools: artifact/artifact
+- transcriptRenderers: artifact-tool-block for artifact
+- views: conversation-artifacts, artifact-detail
 - backend actions: artifact
 
 ### system-auto-mode — Goal Mode
 
-- tools: goal
-- composerControls: goal-mode
+- slashCommands: goal
 - skills: goal-mode
+- tools: goal/goal
+- backend actions: handleSlashGoal
 
 ### system-automations — Automations
 
-- tools: scheduled-task/scheduled_task
-- views: page (/automations)
+- cliCommands: tasks-list, tasks-get, tasks-save, tasks-delete, tasks-validate, tasks-run
 - nav: nav (/automations)
 - skills: async-attention, scheduled-tasks
+- tools: scheduled-task/scheduled_task
+- views: page (/automations)
 - backend actions: scheduledTask, deferredResume
 
 ### system-caffeinate — Caffeinate
 
+- commands: caffeinate.toggle
+- keybindings: caffeinate.toggle [mod+shift+c]
+- settings: caffeinate.autoStart
 - topBarElements: caffeinate-toggle
-- backend actions: caffeinateStatus, caffeinateStart, caffeinateStop, caffeinateToggle
+- backend actions: caffeinateStatus, caffeinateStartup, caffeinateStart, caffeinateStop, caffeinateToggle
 
 ### system-codex-profile — Codex Compatibility
 
-- tools: apply-patch/apply_patch, write-file, apply-patch-edit
-- modelProfiles: 0
-- backend actions: applyPatch, applyPatchEdit, writeFile
+- modelProfiles: codex-compatible
+- tools: apply-patch/apply_patch, image/image
+- backend actions: applyPatch, image
 
 ### system-composer-attachments — Composer Attachments
 
 - composerControls: attach-files
+
+### system-context-hardening — Context Hardening
+
+- agent extension: createContextHardeningAgentExtension
 
 ### system-context-usage — Context Usage
 
@@ -340,47 +396,56 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 
 ### system-conversation-tools — Conversation Tools
 
-- tools: conversation
-- commands: open-thread-palette
-- keybindings: open-thread-palette [mod+p]
-- transcriptRenderers: ask-user-question-tool-block for ask_user_question, terminal-bash-tool-block for bash
-- contextMenus: duplicate-conversation on conversationList, copy-working-directory on conversationList, copy-conversation-id on conversationList, copy-deeplink on conversationList
-- Host commands: `conversation.duplicate`, `conversation.copyWorkingDirectory`, `conversation.copyId`, `conversation.copyDeeplink`.
-- backend actions: conversationTool, duplicateConversation, copyWorkingDirectory, copyConversationId, copyDeeplink
+- cliCommands: conversations-list, conversations-search, conversations-activity, conversations-connections, conversations-inspect, conversations-transcript-read, conversations-create, ask, conversations-title, conversations-cwd, conversations-ensure-live, conversations-send, conversations-run-turn, conversations-abort, conversations-compact, conversations-fork, conversations-tools, conversations-rollback, conversations-workspace, conversations-workspace-update, conversations-open-list, conversations-open-add, conversations-open-remove, conversations-open-pin, conversations-open-unpin, conversations-open-active, conversations-archive, conversations-unarchive, conversations-delete, conversations-retention-prune, conversations-transcript-append, conversations-transcript-update
+- commands: open-thread-palette, open-command-palette
+- contextMenus: duplicate-conversation, copy-working-directory, copy-conversation-id, copy-deeplink
+- keybindings: open-thread-palette [mod+p], open-command-palette [mod+shift+p]
+- tools: ask_user/ask_user
+- transcriptRenderers: terminal-bash-tool-block for bash
+- backend actions: conversationTool, askUser, conversationInspect, conversationTitle, conversationCwd, deferredResume, duplicateConversation, copyWorkingDirectory, copyConversationId, copyDeeplink
 
-### system-diffs — Checkpoints
+### system-diffs — Diffs
 
-- tools: checkpoint
+- tools: checkpoint/checkpoint
 - transcriptRenderers: checkpoint-tool-block for checkpoint
 - backend actions: checkpoint
 
-### system-duckduckgo-search — DuckDuckGo Search
+### system-dynamic-workflows — Dynamic Workflows (default disabled)
 
-- tools: duckduckgo-search/web_search
-- backend actions: duckDuckGoSearch
-
-### system-exa-search — Exa Search
-
-- tools: exa-search/web_search
-- secrets: exaApiKey
-- backend actions: exaSearch
+- nav: workflows-nav (/workflows)
+- settings: dynamicWorkflows.defaultAgentModel, dynamicWorkflows.defaultAgentAllowedTools, dynamicWorkflows.maxConcurrentAgents, dynamicWorkflows.maxTotalAgents, dynamicWorkflows.nodeTimeoutMinutes, dynamicWorkflows.workflowTimeoutMinutes
+- skills: dynamic-workflows
+- tools: workflow/workflow
+- transcriptBlocks: dynamic_workflow
+- views: page (/workflows)
+- backend actions: workflow, listWorkflows, getWorkflow, cancelWorkflow, listWorkflowTemplates, saveWorkflow, listSavedWorkflows, deleteSavedWorkflow, runSavedWorkflow
 
 ### system-excalidraw-input — Excalidraw input
 
-- keybindings: excalidraw.createDrawing
 - composerInputTools: excalidraw
+- keybindings: excalidraw.createDrawing [mod+shift+x]
+- views: drawings, drawing-detail
 
 ### system-extension-manager — Extension Manager
 
-- views: page (/extensions)
+- cliCommands: extensions-list, extensions-create, extensions-snapshot, extensions-delete, extensions-catalog, extensions-install, extensions-update, extensions-install-url, extensions-install-marketplace, extensions-validate, extensions-reload, extensions-smoke, extensions-enable, extensions-disable, extensions-paths, extensions-sources
 - nav: extensions-nav (/extensions)
+- settingsComponent: extension-repositories (settings-extension-repositories)
 - skills: skills-and-capabilities, local-extension-development
-- settingsComponent: extension-search-paths
-- backend actions: listExtensions, createExtension, snapshotExtension, reloadExtension, validateExtension, listHostViewComponents, readSearchPaths, updateSearchPaths, manageExtension
+- views: extensions-page (/extensions)
+- backend actions: listExtensions, createExtension, snapshotExtension, reloadExtension, smokeExtension, validateExtension, listInstallableExtensions, installCatalogExtension, installExtensionFromUrl, updateCatalogExtension, installMarketplacePackage, listHostViewComponents, readSearchPaths, updateSearchPaths, readExtensionSources, updateExtensionSources, reloadExtensions, manageExtension
 
 ### system-files — File Explorer
 
+- settings: systemFiles.transcriptPathLinkTarget
 - views: workspace-files, workspace-file-detail
+
+### system-gateways — Telegram Gateway
+
+- gatewayProviders: telegram
+- nav: gateways-nav (/gateways)
+- secrets: telegramBotToken
+- views: page (/gateways), gateways-sidebar
 
 ### system-git-status — Git Status
 
@@ -388,105 +453,131 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 
 ### system-image-probe — Image Probe
 
+- settingsComponent: image-probe-settings (settings-image-probe)
 - tools: probe-image/probe_image
 - backend actions: probeImage
 
-### system-knowledge — Knowledge
-
-- views: knowledge-page (/knowledge), knowledge-sidebar, knowledge-tree, knowledge-file
-- nav: knowledge (/knowledge)
-- promptReferences: knowledge-files
-- quickOpen: knowledge-files
-- mentions: knowledge-files
-- settingsComponent: knowledge-base
-- backend actions: readState, updateState, sync, knowledgeListFiles, knowledgeTree, knowledgeReadFile, knowledgeWriteFile, knowledgeCreateFolder, knowledgeDeleteFile, knowledgeRename, knowledgeMove, knowledgeBacklinks, knowledgeSearch, knowledgeUploadImage, knowledgeImportUrl, resolvePromptReferences
-
 ### system-local-dictation — Local Dictation
 
-- keybindings: dictation.toggle
 - composerButtons: dictation
-- settingsComponent: dictation
+- keybindings: dictation.toggle [mod+shift+m]
+- settingsComponent: dictation (settings-dictation)
 - backend actions: readSettings, updateSettings, modelStatus, installModel, transcribeFile
 
 ### system-mcp — MCP
 
-- tools: mcp
-- settingsComponent: mcp-tools
+- settingsComponent: mcp-tools (settings-capabilities)
+- tools: mcp/mcp
 - backend actions: mcpTool, inspectSettings, saveExplicitConfig, testServer, authServer, logoutServer
+
+### system-model-gateway — AI Gateway (default disabled)
+
+- settingsComponent: model-gateway-settings (settings-model-gateway)
+- backend actions: status, updateSettings, installCodexConfig, removeCodexConfig, clearLogs
 
 ### system-model-picker — Model Picker
 
 - composerControls: model-preferences
+
+### system-neon-pilot-admin-cli — Neon Pilot CLI
+
+- cliCommands: app-update, app-commands-list, app-commands-run, control-plane-doctor, heartbeats-start, heartbeats-list, heartbeats-stop, bootstrap-doctor, bootstrap-configure, bootstrap-defaults-set, bootstrap-provider-set-key, bootstrap-provider-save, bootstrap-provider-model
+- settingsComponent: neon-pilot-cli (neon-pilot-cli)
+- skills: neon-pilot-admin-cli
+- tools: neon-pilot-admin/neon_pilot
+- backend actions: neonPilotAdmin, manageAppCommands, controlPlaneDoctor, neonPilotTool, neonPilotAgent, readSettings, updateSettings
 
 ### system-onboarding — Onboarding
 
 - topBarElements: onboarding-bootstrap
 - backend actions: ensure
 
+### system-openai-desktop-plugin — OpenAI Desktop Plugin
+
+- settingsComponent: openai-desktop-plugin-settings (settings-openai-desktop-plugin)
+- backend actions: status, installPlugin, removePlugin
+
 ### system-prompt-assembly — Prompt Assembly
 
-- views: prompt-assembly-page (/prompt-assembly)
-- nav: prompt-assembly-nav (/prompt-assembly)
-- backend actions: inspectPromptAssembly, updatePromptAssemblySkillEnabled
+- backend actions: inspectAgentRuntime, inspectPromptAssembly, updatePromptAssemblySkillEnabled, updateRuntimeCapability
 
 ### system-reply-actions — Reply Actions
 
-- selectionActions: reply-agree, reply-disagree, reply-question, reply-think-harder, reply-try-again, reply-do-it
+- settings: systemReplyActions.emojiPickerItems
+- selectionActions: emoji-picker-item
 
 ### system-runs — Background Work
 
-- tools: bash-background/bash, background-bash/background_bash, subagent
+- cliCommands: background-commands-list, background-commands-get, background-commands-logs, background-commands-start, background-commands-rerun, background-commands-cancel
 - composerShelves: activity-shelf
 - skills: runs
+- tools: bash-background/bash, background-bash/background_bash, subagent/subagent
 - backend actions: bash, background_bash, subagent
+
+### system-scratchpad — Scratchpad
+
+- cliCommands: conversations-scratchpad-get, conversations-scratchpad-set, conversations-scratchpad-patch
+- commands: scratchpad.open
+- conversationConnectionProviders: scratchpad
+- keybindings: scratchpad.open [mod+shift+s]
+- tools: scratchpad/scratchpad
+- turnContextProviders: scratchpad
+- views: scratchpad
+- backend actions: getScratchpad, setScratchpad, patchScratchpad, scratchpadTool, provideTurnContext, listScratchpadConnections
 
 ### system-settings — Settings panels
 
-- views: settings (/settings), providers (/settings/providers), desktop (/settings/desktop)
-- nav: settings-nav (/settings)
+- cliCommands: settings-list, settings-schema, settings-get, settings-set, settings-reset
 - commands: open-settings
-- settings: secrets.provider, conversation.transcriptDisclosure
+- nav: settings-nav (/settings)
+- settings: secrets.provider, conversation.transcriptDisclosure, conversation.diffDisclosure, conversation.pinnedToolCalls
+- views: settings (/settings), providers (/settings/providers), desktop (/settings/desktop), settings-sidebar
+- backend actions: manageSettings, manageCli
 
 ### system-skills — Skills
 
 - backend actions: listSkills, updateSkillEnabled
 
-### system-suggested-context — Suggested Context (installable, default disabled)
-
-- newConversationPanels: suggested-context
-- promptContextProviders: provide-prompt-context
-- backend actions: warmPointers
-
 ### system-telemetry — Telemetry
 
-- views: page (/telemetry)
 - nav: telemetry-nav (/telemetry)
+- views: page (/telemetry)
+- backend actions: getTelemetryData
 
-### system-todo — Todos (default enabled)
+### system-terminal — Terminal
 
-- tools: todo
+- views: terminal-panel
+- backend actions: terminalCreate, terminalWrite, terminalDrain, terminalResize, terminalClose
+
+### system-todo — Todos
+
 - composerShelves: todos
+- conversationConnectionProviders: todos
+- tools: todo/todo
 - turnContextProviders: todos
-- backend actions: getState, addItem, updateItem, deleteItem, clearItems, todoTool, provideTurnContext
+- backend actions: getState, addItem, updateItem, deleteItem, clearItems, setPlan, todoTool, provideTurnContext, listTodoConnections
 
 ### system-web-tools — Web fetch
 
 - tools: web-fetch/web_fetch
 - backend actions: webFetch
 
-### system-browser — Browser (default installed)
+### First-party optional catalog
 
-- tools: browser_snapshot, browser_cdp, browser_screenshot
-- views: browser-tabs, browser-workbench
-- commands: open-browser
-- keybindings: open-browser [mod+shift+b], new-browser-tab [mod+t], reopen-browser-tab [mod+shift+t], close-browser-tab [mod+w], focus-browser-location [mod+l]
-- transcriptRenderers: browser-snapshot-tool-block for browser_snapshot, browser-cdp-tool-block for browser_cdp, browser-screenshot-tool-block for browser_screenshot
-- skills: browser
-- backend actions: browserSnapshot, browserCdp, browserScreenshot
+Validate these by installing from the catalog or release artifact and reading the installed extension manifest:
 
-### system-local-models — Local Models (default disabled)
-
-- views: main (/ext/system-local-models)
-- nav: system-local-models (/ext/system-local-models)
-- modelDiscovery: {"action":"localModelsDiscover"}
-- backend actions: localModelsStatus, localModelsMlxSetModel, localModelsMlxSetup, localModelsMlxUpdateRuntime, localModelsMlxStart, localModelsMlxStop, localModelsMlxSearch, localModelsSearch, localModelsModelDetails, localModelsGgufDownload, localModelsGgufCancelDownload, localModelsGgufSaveSettings, localModelsGgufSetModel, localModelsGgufReveal, localModelsMlxDelete, localModelsGgufDelete, localModelsGgufInstallRuntime, localModelsGgufStart, localModelsGgufStop, localModelsGgufRunPrompt, localModelsDiscover
+- system-agent-browser — Agent Browser
+- system-alleycat — Kitty Litter Mobile Pairing
+- system-auto-router — Auto Router
+- system-browser — Browser
+- system-ds4 — DS4
+- system-duckduckgo-search — DuckDuckGo Search
+- system-dynamic-workflows — Dynamic Workflows
+- system-exa-search — Exa Search
+- system-hermes-agent — Hermes Agent
+- system-knowledge — Knowledge
+- system-local-models — Local Models
+- system-self-preservation — Self Preservation
+- system-suggested-context — Suggested Context
+- system-video-probe — Video Probe
+- system-writing-studio — Writing Studio

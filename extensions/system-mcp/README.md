@@ -4,8 +4,6 @@ This extension owns the agent MCP tool and the Settings → Tools MCP panel. The
 
 ---
 
-<!-- Source: docs/mcp.md -->
-
 # MCP
 
 Neon Pilot supports the Model Context Protocol (MCP) for integrating external tools, data sources, and services.

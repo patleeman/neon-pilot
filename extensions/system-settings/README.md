@@ -76,13 +76,11 @@ await api.updateSettings({ 'myExt.timeout': 60 }); // updates + returns merged
 | Conversation | Built-in (model, thinking)                                                                     |
 | Workspace    | Built-in (default working dir)                                                                 |
 | Extensions   | Built-in extension enablement, imported packages, AGENTS.md files, skills, tools, and settings |
-| Commands     | Built-in and extension command/keybinding editor                                                |
+| Commands     | Built-in and extension command/keybinding editor                                               |
 | Providers    | Built-in (model providers, credentials)                                                        |
 | Desktop      | Built-in (updates, app behavior)                                                               |
 
-Knowledge setup lives in the Knowledge extension and is surfaced in Settings
-through its component-backed Knowledge Base panel. Manifest-declared extension
-settings render in the Settings page's Extension Settings section.
+Knowledge setup lives in the installable Knowledge extension when that package is installed and is surfaced in Settings through its component-backed Knowledge Base panel. Manifest-declared extension settings render in the Settings page's Extension Settings section.
 
 The first-party Conversation extension setting `conversation.transcriptDisclosure`
 controls whether transcript tool/thinking details use auto-collapse or stay
@@ -164,13 +162,6 @@ Set defaults for:
 - **Default thinking level** — off, minimal, low, medium, high, xhigh
 
 Models are discovered from configured providers and listed automatically.
-
-- Provider selection (currently only `local-whisper`)
-- Model selection
-- Install button to preload the model
-- Installation status indicator
-
-<!-- Source: docs/providers-models.md -->
 
 # Providers & Models
 
@@ -263,8 +254,6 @@ Configure providers in Settings. Each provider entry specifies:
 
 ---
 
-<!-- Source: docs/dictation.md -->
-
 # Dictation
 
-Dictation now lives in the bundled `system-local-dictation` extension.
+Dictation lives in the bundled `system-local-dictation` extension. Its Settings panel owns Whisper.cpp provider selection, model selection, model install/preload, and installation status.

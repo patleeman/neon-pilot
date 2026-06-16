@@ -4,8 +4,6 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 ---
 
-<!-- Source: docs/automations.md -->
-
 # Automations
 
 Automations is the desktop UI for managing scheduled background tasks. Navigate to `/automations` to view, create, edit, and manage automations. Scheduled tasks are managed in this page and attention surfaces, not in every conversation composer.
@@ -77,8 +75,6 @@ From the activity history, click a run ID to view the run details and logs. See 
 Automations are stored in the daemon's automation store (SQLite database at `<state-root>/daemon/`). The daemon scheduler checks for due automations and executes them. The UI communicates with the daemon through the tasks API.
 
 ---
-
-<!-- Source: docs/scheduled-tasks.md -->
 
 # Scheduled Tasks
 
@@ -194,22 +190,20 @@ Internal agents use the `neon_pilot` tool with `heartbeat_start`, `heartbeat_lis
 
 The `scheduled_task` tool manages tasks from within a conversation:
 
-| Action      | Description                                                                 |
-| ----------- | --------------------------------------------------------------------------- |
-| `list`      | List tasks                                                                  |
-| `get`       | Get a task by ID                                                            |
-| `save`      | Create or update a task                                                     |
-| `delete`    | Delete a task                                                               |
-| `validate`  | Validate task configuration                                                 |
-| `run`       | Trigger immediate execution                                                 |
+| Action     | Description                 |
+| ---------- | --------------------------- |
+| `list`     | List tasks                  |
+| `get`      | Get a task by ID            |
+| `save`     | Create or update a task     |
+| `delete`   | Delete a task               |
+| `validate` | Validate task configuration |
+| `run`      | Trigger immediate execution |
 
 ## Managing Tasks
 
 Tasks are managed through the `scheduled_task` agent tool or the Automations UI. See [Automations](README.md) for the desktop UI.
 
 ---
-
-<!-- Source: docs/followups.md -->
 
 # Follow-up Queue
 

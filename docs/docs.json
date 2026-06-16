@@ -12,7 +12,8 @@
       "items": [
         { "title": "Views", "path": "views.md" },
         { "title": "Conversation Context", "path": "conversation-context.md" },
-        { "title": "Host View Components", "path": "host-view-components.md" }
+        { "title": "Host View Components", "path": "host-view-components.md" },
+        { "title": "Design System", "path": "design-system.md" }
       ]
     },
     {
@@ -37,6 +38,8 @@
         { "title": "Daemon", "path": "daemon.md" },
         { "title": "Sandboxing", "path": "sandboxing.md" },
         { "title": "Filesystem Authority", "path": "filesystem-authority.md" },
+        { "title": "Product Extension Process Split", "path": "product-extension-process-split.md" },
+        { "title": "Renderer Isolation", "path": "renderer-isolation.md" },
         { "title": "SQLite Migrations", "path": "sqlite-migrations.md" },
         { "title": "Telemetry", "path": "telemetry.md" }
       ]
@@ -51,14 +54,26 @@
       ]
     },
     {
+      "title": "CLI",
+      "items": [
+        { "title": "Neon Pilot CLI", "path": "cli.md" },
+        { "title": "CLI Reference", "path": "cli-reference.md" }
+      ]
+    },
+    {
       "title": "Operations",
       "items": [
         { "title": "Configuration", "path": "configuration.md" },
         { "title": "Development Workflow", "path": "development.md" },
         { "title": "Knowledge Base Sync", "path": "knowledge-base.md" },
         { "title": "Release Cycle", "path": "release-cycle.md" },
+        { "title": "Release QA", "path": "release-qa.md" },
         { "title": "Release Test Inventory", "path": "release-test-inventory.md" }
       ]
+    },
+    {
+      "title": "Test Coverage",
+      "items": [{ "title": "Client Workflow Tests", "path": "client-workflow-tests.md" }]
     }
   ],
   "redirects": [{ "from": "index.md", "to": "README.md" }]

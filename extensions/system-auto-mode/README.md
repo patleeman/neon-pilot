@@ -4,8 +4,6 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 ---
 
-<!-- Source: docs/auto-mode.md -->
-
 # Auto Mode and Run Modes
 
 Auto mode is conversation-scoped background continuation. The composer exposes it as a run-mode selector with four states: Manual, Nudge, Mission, and Loop.

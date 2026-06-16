@@ -128,10 +128,12 @@ Optional first-party extensions from [`patleeman/neon-pilot-extensions`](https:/
 - [Auto Router](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-auto-router) — judge-based model routing controls
 - [Browser](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-browser) — Workbench browser views and browser automation
 - [DuckDuckGo Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-duckduckgo-search) — web search using DuckDuckGo's HTML page
+- [Dynamic Workflows](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-dynamic-workflows) — workflow coordinators that fan out daemon-backed subagents
 - [DS4](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-ds4) — local DeepSeek V4 Flash provider/profile for antirez/ds4
 - [Exa Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-exa-search) — Exa web search
 - [Hermes Agent](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-hermes-agent) — Hermes Agent API session interface
 - [Kitty Litter Mobile Pairing](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-alleycat) — mobile pairing bridge
+- [Knowledge](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge) — knowledge base browsing, editing, references, and sync
 - [Local Models](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-local-models) — MLX and GGUF model runtime management
 - [Self Preservation](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-self-preservation) — process self-preservation guard
 - [Suggested Context](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context) — related conversation suggestions

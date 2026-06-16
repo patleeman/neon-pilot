@@ -4,8 +4,6 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 ---
 
-<!-- Source: docs/image-generation.md -->
-
 # Image Generation
 
 The agent can generate and edit images using the `image` tool. Images are rendered inline in the conversation and can be used as source material for further editing.
