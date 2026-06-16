@@ -453,6 +453,37 @@ describe('useConversations', () => {
     expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
   });
 
+  it('retries remote layout hydration without declaring an empty workspace', async () => {
+    apiMocks.openConversationTabs
+      .mockRejectedValueOnce(new Error('backend warming'))
+      .mockResolvedValueOnce({
+        sessionIds: ['remote-after-retry'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        activeConversationId: 'remote-after-retry',
+        workspacePaths: [],
+      });
+
+    renderProbe({
+      sessions: [createSession({ id: 'remote-after-retry', title: 'Remote after retry' })],
+      tasks: null,
+    });
+
+    await flushAsyncWork();
+
+    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(latestHookResult?.layoutHydrating).toBe(true);
+    expect(latestHookResult?.loading).toBe(true);
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual([]);
+
+    await vi.waitFor(() => expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(2), { timeout: 2_000 });
+    await flushAsyncWork();
+
+    expect(latestHookResult?.layoutHydrating).toBe(false);
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['remote-after-retry']);
+    expect(latestHookResult?.activeId).toBe('remote-after-retry');
+  });
+
   it('migrates browser-local open conversations when cold-start backend layout is unmigrated', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['local-open']));
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['local-pinned']));

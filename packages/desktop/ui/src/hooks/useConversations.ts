@@ -39,6 +39,8 @@ import {
 import type { SessionMeta } from '../shared/types';
 import { sessionStore, useAllSessions, useAllTasks, useSessionsReady } from '../store';
 
+const CONVERSATION_LAYOUT_BOOTSTRAP_RETRY_DELAYS_MS = [500, 1_000, 2_000, 4_000, 8_000];
+
 function compareSessionsByRecentActivity(left: SessionMeta, right: SessionMeta): number {
   return (right.lastActivityAt ?? right.timestamp).localeCompare(left.lastActivityAt ?? left.timestamp);
 }
@@ -115,37 +117,52 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
 
   useEffect(() => {
     let cancelled = false;
+    let retryTimer: ReturnType<typeof window.setTimeout> | null = null;
 
-    void fetchRemoteConversationLayout({ refresh: true, reason: 'use-conversations-bootstrap' })
-      .then(({ sessionIds, pinnedSessionIds, archivedSessionIds, activeSessionId }) => {
-        if (cancelled) {
-          return;
-        }
+    function syncLayout(attempt = 0): void {
+      void fetchRemoteConversationLayout({ refresh: true, reason: 'use-conversations-bootstrap' })
+        .then(({ sessionIds, pinnedSessionIds, archivedSessionIds, activeSessionId }) => {
+          if (cancelled) {
+            return;
+          }
 
-        if (isWithinLocalWriteGrace()) {
-          applyLayoutState(readConversationLayout(), { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+          if (isWithinLocalWriteGrace()) {
+            applyLayoutState(readConversationLayout(), { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+            setLayoutHydrating(false);
+            return;
+          }
+
+          const nextLayout = applyRemoteConversationLayout({
+            sessionIds,
+            pinnedSessionIds,
+            archivedSessionIds,
+            activeSessionId,
+          });
+          applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
           setLayoutHydrating(false);
-          return;
-        }
-
-        const nextLayout = applyRemoteConversationLayout({
-          sessionIds,
-          pinnedSessionIds,
-          archivedSessionIds,
-          activeSessionId,
+        })
+        .catch(() => {
+          if (cancelled) {
+            return;
+          }
+          const retryDelay =
+            CONVERSATION_LAYOUT_BOOTSTRAP_RETRY_DELAYS_MS[
+              Math.min(attempt, CONVERSATION_LAYOUT_BOOTSTRAP_RETRY_DELAYS_MS.length - 1)
+            ] ?? 8_000;
+          retryTimer = window.setTimeout(() => {
+            retryTimer = null;
+            syncLayout(attempt + 1);
+          }, retryDelay);
         });
-        applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
-        setLayoutHydrating(false);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setLayoutHydrating(false);
-        }
-        // Ignore bootstrap failures and keep the current in-memory projection.
-      });
+    }
+
+    syncLayout();
 
     return () => {
       cancelled = true;
+      if (retryTimer !== null) {
+        window.clearTimeout(retryTimer);
+      }
     };
   }, []);
 
