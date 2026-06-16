@@ -174,6 +174,14 @@ function normalizeRemoteConversationLayout(input: RemoteConversationLayoutInput)
   };
 }
 
+function isStaleRemoteConversationLayout(next: RemoteConversationLayout): boolean {
+  return (
+    remoteLayoutCache !== null &&
+    next.conversationWorkspaceRevision > 0 &&
+    remoteLayoutCache.conversationWorkspaceRevision > next.conversationWorkspaceRevision
+  );
+}
+
 function isRemoteConversationLayoutPayload(value: unknown): value is Parameters<typeof normalizeRemoteConversationLayout>[0] {
   if (!value || typeof value !== 'object') {
     return false;
@@ -415,13 +423,18 @@ export function replaceConversationLayout(layout: ConversationLayoutInput): Conv
 }
 
 export function applyRemoteConversationLayout(layout: RemoteConversationLayoutInput): ConversationLayout {
+  const normalizedRemoteLayout = normalizeRemoteConversationLayout(layout);
+  if (isStaleRemoteConversationLayout(normalizedRemoteLayout)) {
+    return readConversationLayout();
+  }
+
   if (layout.workspacePaths !== undefined) {
-    remoteLayoutCache = normalizeRemoteConversationLayout(layout);
+    remoteLayoutCache = normalizedRemoteLayout;
     remoteLayoutCacheAt = Date.now();
   }
 
   const current = readConversationLayout();
-  const next = normalizeConversationLayout(layout);
+  const next = normalizeConversationLayout(normalizedRemoteLayout);
   if (sameConversationLayout(current, next)) {
     return current;
   }

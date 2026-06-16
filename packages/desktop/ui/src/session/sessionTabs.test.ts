@@ -168,6 +168,45 @@ describe('sessionTabs', () => {
     expect(layout.conversationWorkspaceRevision).toBe(2);
   });
 
+  it('ignores stale backend workspace events after a newer revision is applied', async () => {
+    applyRemoteConversationLayout({
+      sessionIds: ['newer-open'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'newer-open',
+      workspacePaths: ['/newer'],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 3,
+      conversationWorkspaceUpdatedAt: '2026-06-15T12:03:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+    });
+
+    const staleLayout = applyRemoteConversationLayout({
+      sessionIds: ['older-open'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'older-open',
+      workspacePaths: ['/older'],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 2,
+      conversationWorkspaceUpdatedAt: '2026-06-15T12:02:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+    });
+
+    expect(staleLayout).toEqual({
+      sessionIds: ['newer-open'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeSessionId: 'newer-open',
+    });
+    expect(readConversationLayout()).toEqual(staleLayout);
+
+    const cachedLayout = await fetchRemoteConversationLayout();
+    expect(apiMocks.openConversationTabs).not.toHaveBeenCalled();
+    expect(cachedLayout.workspacePaths).toEqual(['/newer']);
+    expect(cachedLayout.conversationWorkspaceRevision).toBe(3);
+  });
+
   it('coalesces concurrent remote layout refreshes without reusing the cache', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-27T00:00:00.000Z'));
