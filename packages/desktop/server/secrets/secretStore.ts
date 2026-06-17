@@ -202,8 +202,9 @@ function createKeychainSecretBackend(stateRoot: string): SecretBackend {
       }
     },
     set(key, value) {
-      execFileSync('security', ['add-generic-password', '-U', '-s', KEYCHAIN_SERVICE, '-a', key, '-w', value], {
-        stdio: ['ignore', 'ignore', 'pipe'],
+      execFileSync('security', ['add-generic-password', '-U', '-s', KEYCHAIN_SERVICE, '-a', key, '-w'], {
+        input: `${value}\n${value}\n`,
+        stdio: ['pipe', 'ignore', 'pipe'],
       });
       addSecretIndexKey(stateRoot, key);
     },

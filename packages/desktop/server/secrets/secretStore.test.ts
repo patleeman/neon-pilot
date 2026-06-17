@@ -4,6 +4,14 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const { execFileSyncMock } = vi.hoisted(() => ({
+  execFileSyncMock: vi.fn(),
+}));
+
+vi.mock('node:child_process', () => ({
+  execFileSync: execFileSyncMock,
+}));
+
 vi.mock('../extensions/extensionRegistry.js', () => ({
   listExtensionSecretRegistrations: () => [
     {
@@ -36,6 +44,7 @@ function createTempStateRoot(): string {
 describe('secretStore', () => {
   afterEach(() => {
     delete process.env.EXA_API_KEY;
+    execFileSyncMock.mockReset();
   });
 
   it('defaults to a platform-appropriate backend', () => {
@@ -86,6 +95,21 @@ describe('secretStore', () => {
     writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'keychain' } }));
 
     expect(resolveIndexedProviderApiKey('openrouter', stateRoot)).toBeUndefined();
+  });
+
+  it.runIf(process.platform === 'darwin')('writes Keychain secrets through stdin instead of process arguments', () => {
+    const stateRoot = createTempStateRoot();
+    mkdirSync(stateRoot, { recursive: true });
+    writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'keychain' } }));
+
+    setProviderApiKeySecret('openrouter', 'provider-secret', stateRoot);
+
+    expect(execFileSyncMock).toHaveBeenCalledWith('security', ['add-generic-password', '-U', '-s', 'neon-pilot', '-a', 'provider:openrouter:apiKey', '-w'], {
+      input: 'provider-secret\nprovider-secret\n',
+      stdio: ['pipe', 'ignore', 'pipe'],
+    });
+    expect(execFileSyncMock.mock.calls.flatMap(([, args]) => args as string[])).not.toContain('provider-secret');
+    expect(JSON.parse(readFileSync(join(stateRoot, 'secrets.index.json'), 'utf-8'))).toEqual(['provider:openrouter:apiKey']);
   });
 
   it('prefers stored secrets over environment variables', () => {
