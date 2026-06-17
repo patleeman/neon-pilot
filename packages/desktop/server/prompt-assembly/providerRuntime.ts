@@ -25,16 +25,21 @@ export async function invokePromptAssemblyProvider<T>(input: {
   const providerId = `${input.provider.extensionId}/${input.provider.id}`;
   const diagnostics: AssemblyDiagnostic[] = [];
   let timeout: NodeJS.Timeout | undefined;
+  const abortController = new AbortController();
   try {
     const timeoutMs = input.timeoutMs ?? DEFAULT_PROVIDER_TIMEOUT_MS;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      timeout = setTimeout(() => reject(new Error(`Timed out after ${timeoutMs}ms`)), timeoutMs);
+      timeout = setTimeout(() => {
+        abortController.abort();
+        reject(new Error(`Timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
     });
     const result = await Promise.race([
       getExtensionHostClient().invokeAction({
         extensionId: input.provider.extensionId,
         actionId: input.provider.handler,
         input: input.payload,
+        signal: abortController.signal,
       }),
       timeoutPromise,
     ]);

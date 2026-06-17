@@ -37,6 +37,7 @@ describe('providerRuntime', () => {
       extensionId: 'ext',
       actionId: 'getItems',
       input: { cwd: '/repo' },
+      signal: expect.any(AbortSignal),
     });
 
     extensionHostClient.invokeAction.mockResolvedValueOnce({ ok: true, result: [{ id: 'array' }] });
@@ -71,6 +72,12 @@ describe('providerRuntime', () => {
       diagnostics: [
         expect.objectContaining({ code: 'prompt-assembly-provider-error', message: 'Provider provider error: Timed out after 25ms' }),
       ],
+    });
+    expect(extensionHostClient.invokeAction).toHaveBeenCalledWith({
+      extensionId: 'ext',
+      actionId: 'getItems',
+      input: {},
+      signal: expect.objectContaining({ aborted: true }),
     });
     vi.useRealTimers();
   });
