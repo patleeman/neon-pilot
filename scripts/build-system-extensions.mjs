@@ -43,6 +43,11 @@ function assertBuiltEntriesExist(extensionDir) {
   if (typeof manifest.backend?.entry === 'string' && manifest.backend.entry.trim().length > 0) {
     requiredEntries.push(manifest.backend.entry.startsWith('src/') ? 'dist/backend.mjs' : manifest.backend.entry);
   }
+  for (const webapp of manifest.contributes?.webapps ?? []) {
+    if (typeof webapp.entry === 'string' && webapp.entry.trim().length > 0) {
+      requiredEntries.push(webapp.entry);
+    }
+  }
 
   const missingEntries = requiredEntries.filter((entry) => !existsSync(join(extensionDir, entry)));
   if (missingEntries.length > 0) {

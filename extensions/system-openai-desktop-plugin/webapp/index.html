@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Workbench</title>
+    <link rel="stylesheet" href="./app.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="picker" aria-labelledby="workbench-title">
+        <p class="eyebrow">Workbench</p>
+        <div class="title-row">
+          <h1 id="workbench-title">Open a sidecar</h1>
+          <button id="refresh" type="button" title="Refresh sidecars" aria-label="Refresh sidecars">Refresh</button>
+        </div>
+        <div id="status" class="status">Loading sidecars...</div>
+        <div id="tiles" class="tiles" aria-live="polite"></div>
+      </section>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

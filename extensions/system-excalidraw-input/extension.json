@@ -10,6 +10,15 @@
     "styles": []
   },
   "contributes": {
+    "webapps": [
+      {
+        "id": "drawing",
+        "title": "Drawing",
+        "description": "Full-page Excalidraw sidecar for Codex Desktop.",
+        "entry": "dist/webapp/index.html",
+        "localhostName": "drawing-neon-pilot"
+      }
+    ],
     "keybindings": [
       {
         "id": "excalidraw.createDrawing",

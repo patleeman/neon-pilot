@@ -20,6 +20,15 @@
     ]
   },
   "contributes": {
+    "webapps": [
+      {
+        "id": "codex-home",
+        "title": "Workbench",
+        "description": "Codex Desktop extension sidecar launcher.",
+        "entry": "dist/webapp/index.html",
+        "localhostName": "codex-home-neon-pilot"
+      }
+    ],
     "settingsComponent": {
       "id": "openai-desktop-plugin-settings",
       "component": "OpenAiDesktopPluginSettingsPanel",

@@ -63,7 +63,7 @@ describe('conversation inspect extension cache integration', () => {
       `import { parentPort } from 'node:worker_threads'; parentPort?.on('message', (request) => parentPort.postMessage({ id: request.id, ok: true, action: request.action, result: { source: 'repo-worker' }, text: 'repo worker text' }));`,
     );
     process.env.NEON_PILOT_REPO_ROOT = workerRepoRoot;
-    setDefaultExtensionBackendWorkerUrl(new URL('../../dist/server/extensions/extensionBackendWorker.js', import.meta.url));
+    setDefaultExtensionBackendWorkerUrl(new URL('../dist/extensions/extensionBackendWorker.js', import.meta.url));
 
     const action = await invokeExtensionAction(
       'system-conversation-tools',

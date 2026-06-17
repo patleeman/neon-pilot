@@ -64,6 +64,15 @@
     ]
   },
   "contributes": {
+    "webapps": [
+      {
+        "id": "scratchpad",
+        "title": "Scratchpad",
+        "description": "Conversation-scoped markdown sidecar for Codex Desktop.",
+        "entry": "dist/webapp/index.html",
+        "localhostName": "scratchpad-neon-pilot"
+      }
+    ],
     "views": [
       {
         "id": "scratchpad",

@@ -66,7 +66,7 @@ function setPackagedResourcesPath(value = '/Applications/Neon Pilot.app/Contents
 
 beforeEach(() => {
   setExtensionHostClient(createInProcessExtensionHostClient());
-  setDefaultExtensionBackendWorkerUrl(new URL('../../dist/server/extensions/extensionBackendWorker.js', import.meta.url));
+  setDefaultExtensionBackendWorkerUrl(new URL('../dist/extensions/extensionBackendWorker.js', import.meta.url));
 });
 
 afterEach(() => {
@@ -327,6 +327,84 @@ describe('registerExtensionRoutes', () => {
     expect(hostRes.type).toHaveBeenCalledWith('text/html; charset=utf-8');
     expect(hostRes.sendFile).toHaveBeenCalledWith(join(extensionRoot, 'dist', 'webapp', 'index.html'));
   });
+
+  it('serves webapp bridge discovery and extension actions from localhost webapp origins', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-webapp-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(join(extensionRoot, 'dist', 'webapp'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        enabled: true,
+        permissions: ['storage:readwrite'],
+        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'saveTask', handler: 'saveTask', worker: { enabled: true } }] },
+        contributes: {
+          webapps: [{ id: 'board', title: 'Board Webapp', entry: 'dist/webapp/index.html' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'webapp', 'index.html'), '<h1>Board</h1>');
+    writeFileSync(
+      join(extensionRoot, 'dist', 'backend.mjs'),
+      'export async function saveTask(input, ctx) { await ctx.storage.put("tasks/one", input); return { saved: await ctx.storage.get("tasks/one") }; }',
+    );
+    const harness = createHarness();
+
+    const discoveryRes = createResponse();
+    await harness.getHandler('*')(
+      {
+        method: 'GET',
+        path: '/.neon/api/extensions/webapps',
+        get: (name: string) => (name.toLowerCase() === 'host' ? 'board-agent-board.localhost' : undefined),
+      } as never,
+      discoveryRes,
+    );
+    expect(discoveryRes.json).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'board',
+          extensionId: 'agent-board',
+          localhostUrl: 'https://board-agent-board.localhost',
+        }),
+      ]),
+    );
+
+    const actionRes = createResponse();
+    await harness.postHandler('*')(
+      {
+        method: 'POST',
+        path: '/.neon/api/extensions/agent-board/actions/saveTask',
+        body: { title: 'Ship it' },
+        get: (name: string) => (name.toLowerCase() === 'host' ? 'board-agent-board.localhost' : undefined),
+      } as never,
+      actionRes,
+    );
+    expect(actionRes.json).toHaveBeenCalledWith({ ok: true, result: { saved: { title: 'Ship it' } } });
+
+    const forwardedBodyRes = createResponse();
+    await harness.postHandler('*')(
+      {
+        method: 'POST',
+        path: '/.neon/api/extensions/agent-board/actions/saveTask',
+        body: Buffer.from(JSON.stringify({ title: 'Forwarded through localhost proxy' })).toJSON(),
+        get: (name: string) =>
+          name.toLowerCase() === 'host'
+            ? 'board-agent-board.localhost'
+            : name.toLowerCase() === 'content-type'
+              ? 'application/json'
+              : undefined,
+      } as never,
+      forwardedBodyRes,
+    );
+    expect(forwardedBodyRes.json).toHaveBeenCalledWith({
+      ok: true,
+      result: { saved: { title: 'Forwarded through localhost proxy' } },
+    });
+  }, 30000);
 
   it('proxies extension webapp requests without inventing empty request bodies', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-webapp-'));
@@ -833,6 +911,7 @@ describe('registerExtensionRoutes', () => {
         schemaVersion: 2,
         id: 'agent-board',
         name: 'Agent Board',
+        permissions: ['storage:readwrite'],
         backend: { entry: 'dist/backend.mjs', actions: [{ id: 'saveTask', handler: 'saveTask', worker: { enabled: true } }] },
       }),
     );

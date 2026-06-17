@@ -398,6 +398,13 @@ The host exposes:
 - `POST /api/extensions/webapps/localhost-proxy/trust` to trust the generated local certificate on supported platforms.
 - `GET /webapps/{extensionId}/{webappId}/...` as a direct debug route.
 
+Inside a webapp's own `.localhost` origin, use the `/.neon` bridge for host APIs. The bridge keeps the page same-origin while forwarding to the extension host:
+
+- `GET /.neon/api/extensions/webapps/current` returns the current webapp contribution.
+- `GET /.neon/api/extensions/webapps` and `GET /.neon/api/extensions/webapps/localhost-proxy` mirror discovery/status.
+- `POST /.neon/api/extensions/{extensionId}/actions/{actionId}` invokes declared backend actions.
+- `GET|POST /.neon/api/conversations/{conversationId}/attachments`, `GET|PATCH|DELETE /.neon/api/conversations/{conversationId}/attachments/{attachmentId}`, and `GET /.neon/api/conversations/{conversationId}/attachments/{attachmentId}/asset` expose conversation attachments for sidecar editors.
+
 ### Message Actions (`messageActions`)
 
 Add hover-reveal text buttons on messages, inline with copy/fork/rewind.

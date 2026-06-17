@@ -9,6 +9,7 @@ Do not store secrets, credentials, private keys, tokens, or unrelated long-term 
 ## User Surface
 
 - Workbench right rail: open **Scratchpad** from the workbench tool rail, command palette command **Scratchpad: Open Scratchpad**, or `Cmd/Ctrl+Shift+S`.
+- Codex Desktop sidecar: open the hosted webapp at `scratchpad-neon-pilot.localhost?conversationId=<id>` to edit the same conversation-scoped markdown note through the `/.neon` action bridge.
 - Scope: one scratchpad per conversation.
 - Enable/disable: this is a normal system extension (`system-scratchpad`) with `defaultEnabled: true`; disable or re-enable it from Settings → Extensions when available for non-required system extensions.
 

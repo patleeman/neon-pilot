@@ -5,3 +5,7 @@ Provides the composer drawing tool and Workbench drawing panel as a system exten
 The extension contributes a composer input tool that opens an Excalidraw modal and returns a serialized scene plus PNG preview to the host composer. Users can also run **Create Drawing** from the command palette or press `Cmd/Ctrl+Shift+X`. For existing conversations, the editor can also save the drawing as a conversation attachment. The lightweight button loads first; the Excalidraw editor, styles, and export stack are split into lazy chunks loaded only when the modal opens.
 
 The extension also contributes a Workbench drawing tab. Opening the drawing surface creates a drawing editor inside that tab, so drawings do not depend on a companion tab rail. Saving from the Workbench editor persists the drawing to the active conversation when one is available; attaching publishes the drawing payload back to the composer through the extension event channel.
+
+## Codex Desktop sidecar
+
+The extension also contributes a hosted webapp at `drawing-neon-pilot.localhost` for Codex Desktop sidecar use. It serves a full-page Excalidraw editor from `dist/webapp/index.html`; with `?conversationId=...`, Save writes a conversation attachment through the `/.neon` bridge, and without a conversation it still supports local scene and PNG downloads.

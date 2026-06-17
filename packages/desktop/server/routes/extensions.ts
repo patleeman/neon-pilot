@@ -5,6 +5,14 @@ import type { Express, Request, Response } from 'express';
 import type { NextFunction } from 'express';
 
 import { buildCriticalExtensionRegistryResponse } from '../app/localApiExtensionRegistryPresentation.js';
+import {
+  createConversationAttachmentCapability,
+  deleteConversationAttachmentCapability,
+  readConversationAttachmentCapability,
+  readConversationAttachmentDownloadCapability,
+  readConversationAttachmentsCapability,
+  updateConversationAttachmentCapability,
+} from '../conversations/conversationAssetsCapability.js';
 import { pingDaemon, startBackgroundRun } from '../daemon/index.js';
 import { acknowledgeHostCommand, executeHostCommandInRenderer } from '../extensions/extensionCommandBridge.js';
 import { findExtensionCommandRegistration } from '../extensions/extensionCommandLookup.js';
@@ -240,6 +248,167 @@ async function dispatchExtensionWebappRequest(webapp: ExtensionWebappSummary, re
     return;
   }
   await serveStaticExtensionWebapp(webapp, requestPath, res);
+}
+
+function webappBridgePath(path: string): string | null {
+  const normalized = normalizeRequestPath(path);
+  if (normalized === '/.neon') return '/';
+  if (!normalized.startsWith('/.neon/')) return null;
+  return normalizeRequestPath(normalized.slice('/.neon'.length));
+}
+
+function runtimeScopeForWebappBridge(context?: Pick<ServerRouteContext, 'getRuntimeScope'>): string {
+  return context?.getRuntimeScope?.() ?? 'shared';
+}
+
+async function readWebappBridgeRequestBody(req: Request): Promise<unknown> {
+  const parseBodyValue = (value: unknown): unknown => {
+    if (Buffer.isBuffer(value)) return parseBodyValue(value.toString('utf8'));
+    if (
+      value &&
+      typeof value === 'object' &&
+      (value as { type?: unknown }).type === 'Buffer' &&
+      Array.isArray((value as { data?: unknown }).data)
+    ) {
+      return parseBodyValue(Buffer.from((value as { data: number[] }).data).toString('utf8'));
+    }
+    if (typeof value !== 'string') return value;
+    const text = value.trim();
+    if (!text) return undefined;
+    const contentType = req.get('content-type')?.toLowerCase() ?? '';
+    if (contentType.includes('application/json')) return JSON.parse(text) as unknown;
+    return value;
+  };
+
+  if (req.body !== undefined) return parseBodyValue(req.body);
+  if (req.method === 'GET' || req.method === 'HEAD') return undefined;
+
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.byteLength;
+    if (size > 25 * 1024 * 1024) throw new Error('Webapp bridge request body is too large.');
+    chunks.push(buffer);
+  }
+
+  if (chunks.length === 0) return undefined;
+  const text = Buffer.concat(chunks).toString('utf8');
+  return parseBodyValue(text);
+}
+
+async function dispatchExtensionWebappBridgeRequest(
+  webapp: ExtensionWebappSummary,
+  req: Request,
+  res: Response,
+  context?: Pick<ServerRouteContext, 'getRuntimeScope'> & Partial<Pick<ServerRouteContext, 'getStateRoot' | 'getServerPort'>>,
+): Promise<boolean> {
+  const path = webappBridgePath(req.path || '/');
+  if (!path) return false;
+
+  const method = req.method.toUpperCase();
+  const signal = createExtensionRequestAbortSignal(req, res);
+  let bodyPromise: Promise<unknown> | null = null;
+  const body = () => {
+    bodyPromise ??= readWebappBridgeRequestBody(req);
+    return bodyPromise;
+  };
+
+  try {
+    if (method === 'GET' && path === '/api/extensions/webapps/current') {
+      res.json(enrichWebappSummary(webapp, context));
+      return true;
+    }
+
+    if (method === 'GET' && path === '/api/extensions/webapps') {
+      const webapps = await listWebappsFromHost();
+      res.json(webapps.map((item) => enrichWebappSummary(item, context)));
+      return true;
+    }
+
+    if (method === 'GET' && path === '/api/extensions/webapps/localhost-proxy') {
+      res.json(getLocalhostWebappProxyStatus() ?? { running: false });
+      return true;
+    }
+
+    const actionMatch = /^\/api\/extensions\/([^/]+)\/actions\/([^/]+)$/u.exec(path);
+    if (method === 'POST' && actionMatch) {
+      res.json(
+        await getExtensionHostClient().invokeAction({
+          extensionId: decodeURIComponent(actionMatch[1] ?? ''),
+          actionId: decodeURIComponent(actionMatch[2] ?? ''),
+          input: await body(),
+          serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+          signal,
+        }),
+      );
+      return true;
+    }
+
+    const profile = runtimeScopeForWebappBridge(context);
+    const attachmentAssetMatch = /^\/api\/conversations\/([^/]+)\/attachments\/([^/]+)\/asset$/u.exec(path);
+    if (method === 'GET' && attachmentAssetMatch) {
+      res.json(
+        readConversationAttachmentDownloadCapability(profile, {
+          conversationId: decodeURIComponent(attachmentAssetMatch[1] ?? ''),
+          attachmentId: decodeURIComponent(attachmentAssetMatch[2] ?? ''),
+          asset: req.query.asset === 'preview' ? 'preview' : 'source',
+          revision: typeof req.query.revision === 'string' ? Number(req.query.revision) : undefined,
+        }),
+      );
+      return true;
+    }
+
+    const attachmentMatch = /^\/api\/conversations\/([^/]+)\/attachments\/([^/]+)$/u.exec(path);
+    if (attachmentMatch) {
+      const conversationId = decodeURIComponent(attachmentMatch[1] ?? '');
+      const attachmentId = decodeURIComponent(attachmentMatch[2] ?? '');
+      if (method === 'GET') {
+        res.json(readConversationAttachmentCapability(profile, { conversationId, attachmentId }));
+        return true;
+      }
+      if (method === 'PATCH') {
+        const input = await body();
+        res.json(
+          updateConversationAttachmentCapability(profile, {
+            conversationId,
+            attachmentId,
+            ...((input && typeof input === 'object' ? input : {}) as object),
+          }),
+        );
+        return true;
+      }
+      if (method === 'DELETE') {
+        res.json(deleteConversationAttachmentCapability(profile, { conversationId, attachmentId }));
+        return true;
+      }
+    }
+
+    const attachmentsMatch = /^\/api\/conversations\/([^/]+)\/attachments$/u.exec(path);
+    if (attachmentsMatch) {
+      const conversationId = decodeURIComponent(attachmentsMatch[1] ?? '');
+      if (method === 'GET') {
+        res.json(readConversationAttachmentsCapability(profile, conversationId));
+        return true;
+      }
+      if (method === 'POST') {
+        const input = await body();
+        res.json(
+          createConversationAttachmentCapability(profile, {
+            conversationId,
+            ...((input && typeof input === 'object' ? input : {}) as object),
+          }),
+        );
+        return true;
+      }
+    }
+
+    res.status(404).json({ error: 'Unknown Neon Pilot webapp bridge route.' });
+    return true;
+  } catch (err) {
+    sendRouteError(res, 'extension webapp bridge error', err);
+    return true;
+  }
 }
 
 async function readExtensionActionTargetFromHost(
@@ -1194,6 +1363,9 @@ export function registerExtensionRoutes(
       const webapp = await findWebappByHost(host);
       if (!webapp) {
         next?.();
+        return;
+      }
+      if (await dispatchExtensionWebappBridgeRequest(webapp, req, res, context)) {
         return;
       }
       await dispatchExtensionWebappRequest(webapp, req, res, req.path || '/');

@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { join, resolve } from 'path';
+import { join } from 'path';
 
 import { validateConversationId } from './conversation-project-links.js';
-import { getDurableConversationAttentionDir, getStateRoot } from './runtime/paths.js';
+import { getDurableConversationAttentionDir } from './runtime/paths.js';
 
 const PROFILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-_]*$/;
 
@@ -48,10 +48,6 @@ export interface ConversationAttentionSummary {
   unreadActivityIds: string[];
   needsAttention: boolean;
   attentionUpdatedAt: string;
-}
-
-function getConversationAttentionStateRoot(stateRoot?: string): string {
-  return resolve(stateRoot ?? getStateRoot());
 }
 
 function validateProfileName(profile: string): void {

@@ -49,6 +49,10 @@ const buildOutputs = [];
 buildNativeSidecarIfPresent();
 copyStaticDirectoryIfPresent('bin', buildOutputs);
 copyStaticDirectoryIfPresent('templates', buildOutputs);
+copyStaticDirectoryIfPresent('webapp', buildOutputs, {
+  filter: (source) => !/\.[cm]?[tj]sx?$/u.test(source),
+});
+await buildStandaloneWebappIfPresent(buildOutputs);
 
 const frontendSource = join(packageRoot, 'src', 'frontend.tsx');
 if (manifest.frontend?.entry && existsSync(frontendSource)) {
@@ -169,12 +173,58 @@ function buildNativeSidecarIfPresent() {
   copyFileSync(source, aliasDestination);
 }
 
-function copyStaticDirectoryIfPresent(name, buildOutputs) {
+function copyStaticDirectoryIfPresent(name, buildOutputs, options = {}) {
   const source = join(packageRoot, name);
   if (!existsSync(source)) return;
   const destination = join(tempDistPath, name);
-  cpSync(source, destination, { recursive: true });
+  cpSync(source, destination, {
+    recursive: true,
+    ...(typeof options.filter === 'function' ? { filter: options.filter } : {}),
+  });
   buildOutputs.push({ path: relativeToPackage(destination), bytes: 0, imports: [] });
+}
+
+async function buildStandaloneWebappIfPresent(buildOutputs) {
+  const candidates = ['app.tsx', 'app.ts', 'main.tsx', 'main.ts'];
+  const entry = candidates.map((name) => join(packageRoot, 'webapp', name)).find((candidate) => existsSync(candidate));
+  if (!entry) return;
+
+  const outdir = join(tempDistPath, 'webapp');
+  mkdirSync(outdir, { recursive: true });
+  const result = await build({
+    entryPoints: [entry],
+    outdir,
+    entryNames: 'app',
+    chunkNames: 'chunks/[name]-[hash]',
+    assetNames: 'assets/[name]-[hash]',
+    bundle: true,
+    splitting: true,
+    platform: 'browser',
+    format: 'esm',
+    target: 'es2022',
+    define: {
+      'import.meta.env.PROD': 'false',
+      'import.meta.env.DEV': 'true',
+    },
+    jsx: 'automatic',
+    sourcemap: emitSourceMaps,
+    logLevel: 'info',
+    conditions: ['browser', 'production'],
+    nodePaths: findAppNodeModules(),
+    metafile: true,
+    loader: {
+      '.woff': 'dataurl',
+      '.woff2': 'dataurl',
+      '.ttf': 'dataurl',
+      '.otf': 'dataurl',
+      '.png': 'dataurl',
+      '.jpg': 'dataurl',
+      '.jpeg': 'dataurl',
+      '.gif': 'dataurl',
+      '.svg': 'dataurl',
+    },
+  });
+  recordBuildOutputs(buildOutputs, result.metafile);
 }
 
 function toBuildOutputPath(manifestRelativePath) {

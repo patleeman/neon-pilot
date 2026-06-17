@@ -50,6 +50,10 @@ The MCP tools map onto the existing Neon Pilot CLI protocol:
 
 Keep additional Neon Pilot operations in the skill as CLI guidance unless there is a clear reason to expose a new, bounded MCP operation.
 
+## Workbench sidecar
+
+The extension contributes a Codex Desktop webapp sidecar at `codex-home-neon-pilot.localhost`. It is a lightweight Workbench launcher that discovers other extension webapps through `/.neon/api/extensions/webapps` and opens the sidecar surfaces that make sense inside Codex Desktop, currently Drawing and Scratchpad.
+
 ## Validation
 
 From the repo root:

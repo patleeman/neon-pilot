@@ -206,6 +206,8 @@ Use `contributes.webapps` when an extension needs to expose a local webpage as a
 
 Neon Pilot exposes `GET /api/extensions/webapps` for discovery, `GET /api/extensions/webapps/localhost-proxy` for proxy/certificate status, `POST /api/extensions/webapps/localhost-proxy/trust` to trust the generated local certificate on supported platforms, and `/webapps/{extensionId}/{webappId}/...` as a direct debug route.
 
+From the page itself, call host APIs through the same-origin `/.neon` bridge. Supported bridge routes include current-webapp discovery (`GET /.neon/api/extensions/webapps/current`), all-webapp discovery/status, declared backend action invocation (`POST /.neon/api/extensions/{extensionId}/actions/{actionId}`), and conversation attachment create/read/update/delete/download routes under `/.neon/api/conversations/{conversationId}/attachments`.
+
 Static `entry` paths must be package-relative. Proxy `target` URLs must be loopback HTTP(S): `localhost`, `127.0.0.1`, or `::1`.
 
 ## Color themes

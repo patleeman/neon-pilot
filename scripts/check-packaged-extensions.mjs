@@ -277,6 +277,9 @@ function requiredBuiltEntries(manifest) {
   if (typeof manifest.backend?.entry === 'string' && manifest.backend.entry.trim().length > 0) {
     entries.push(manifest.backend.entry.startsWith('src/') ? 'dist/backend.mjs' : manifest.backend.entry);
   }
+  for (const webapp of manifest.contributes?.webapps ?? []) {
+    if (typeof webapp.entry === 'string' && webapp.entry.trim().length > 0) entries.push(webapp.entry);
+  }
   if (entries.length > 0) entries.push('dist/build-manifest.json');
   return [...new Set(entries)];
 }
@@ -284,6 +287,24 @@ function requiredBuiltEntries(manifest) {
 function sourceEntryPath(extensionDir, relativePath) {
   if (!relativePath || !relativePath.startsWith('src/')) return undefined;
   return join(extensionDir, relativePath);
+}
+
+function listWebappSourcePaths(extensionDir) {
+  const root = join(extensionDir, 'webapp');
+  if (!existsSync(root)) return [];
+  const result = [];
+  const visit = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        visit(path);
+      } else if (entry.isFile()) {
+        result.push(path);
+      }
+    }
+  };
+  visit(root);
+  return result;
 }
 
 function assertPackagedAppContainsEveryExtensionBundle() {
@@ -470,6 +491,7 @@ for (const extensionDir of listPackagedExtensionDirs()) {
     manifestPath,
     sourceEntryPath(extensionDir, manifest.frontend?.entry ? 'src/frontend.tsx' : null),
     sourceEntryPath(extensionDir, manifest.backend?.entry),
+    ...listWebappSourcePaths(extensionDir),
   ];
 
   if (hasBuildManifest) row.manifest = isBuildManifestStale(buildManifestPath, sourcePaths) ? 'stale' : 'ok';
