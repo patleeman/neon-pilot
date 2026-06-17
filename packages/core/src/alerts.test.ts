@@ -104,6 +104,50 @@ describe('alerts', () => {
     );
   });
 
+  it('drops stored alerts with invalid kinds instead of rewriting them as deferred resumes', () => {
+    const stateRoot = createTempDir('pa-alerts-');
+    const statePath = join(stateRoot, 'pi-agent', 'state', 'alerts', 'shared.json');
+    mkdirSync(join(stateRoot, 'pi-agent', 'state', 'alerts'), { recursive: true });
+    writeFileSync(
+      statePath,
+      `${JSON.stringify(
+        {
+          version: 1,
+          alerts: {
+            valid: {
+              profile: 'shared',
+              kind: 'blocked',
+              severity: 'disruptive',
+              status: 'active',
+              title: 'Valid alert',
+              body: 'Keep this alert.',
+              createdAt: '2026-03-26T13:00:00.000Z',
+              sourceKind: 'test',
+              sourceId: 'valid',
+              requiresAck: true,
+            },
+            corrupt: {
+              profile: 'shared',
+              kind: 'unknown-kind',
+              severity: 'disruptive',
+              status: 'active',
+              title: 'Corrupt alert',
+              body: 'Do not silently rewrite this alert.',
+              createdAt: '2026-03-26T13:00:00.000Z',
+              sourceKind: 'test',
+              sourceId: 'corrupt',
+              requiresAck: true,
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    expect(listAlerts({ stateRoot, profile: 'shared' })).toEqual([expect.objectContaining({ id: 'valid', kind: 'blocked' })]);
+  });
+
   it('rejects invalid mutation timestamps', () => {
     const stateRoot = createTempDir('pa-alerts-');
 

@@ -98,7 +98,7 @@ function normalizeStatus(value: unknown): AlertStatus {
   return 'active';
 }
 
-function normalizeKind(value: unknown): AlertKind {
+function normalizeKind(value: unknown): AlertKind | undefined {
   switch (value) {
     case 'approval-needed':
     case 'blocked':
@@ -108,7 +108,7 @@ function normalizeKind(value: unknown): AlertKind {
     case 'task-callback':
       return value;
     default:
-      return 'deferred-resume';
+      return undefined;
   }
 }
 
@@ -123,8 +123,9 @@ function parseAlertRecord(value: unknown): AlertRecord | undefined {
   const body = normalizeOptionalString(value.body);
   const sourceKind = normalizeOptionalString(value.sourceKind);
   const sourceId = normalizeOptionalString(value.sourceId);
+  const kind = normalizeKind(value.kind);
 
-  if (!id || !profile || !title || !body || !sourceKind || !sourceId) {
+  if (!id || !profile || !kind || !title || !body || !sourceKind || !sourceId) {
     return undefined;
   }
 
@@ -134,7 +135,7 @@ function parseAlertRecord(value: unknown): AlertRecord | undefined {
   const alert: AlertRecord = {
     id,
     profile: normalizeRuntimeScope(profile),
-    kind: normalizeKind(value.kind),
+    kind,
     severity: normalizeSeverity(value.severity),
     status: normalizeStatus(value.status),
     title,
