@@ -1,7 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
 
@@ -77,6 +78,19 @@ function secretIndexPath(stateRoot: string): string {
   return join(stateRoot, 'secrets.index.json');
 }
 
+function writeFileAtomic(path: string, content: string, mode: number): void {
+  const dir = dirname(path);
+  mkdirSync(dir, { recursive: true });
+  const tempPath = join(dir, `.${basename(path)}.${process.pid}.${randomUUID()}.tmp`);
+  try {
+    writeFileSync(tempPath, content, { mode });
+    renameSync(tempPath, path);
+  } catch (error) {
+    if (existsSync(tempPath)) rmSync(tempPath, { force: true });
+    throw error;
+  }
+}
+
 function readSecretIndex(stateRoot: string): string[] {
   const path = secretIndexPath(stateRoot);
   if (!existsSync(path)) return [];
@@ -97,8 +111,7 @@ function writeSecretIndex(stateRoot: string, keys: string[]): void {
     if (existsSync(path)) rmSync(path);
     return;
   }
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(normalized, null, 2)}\n`, { mode: 0o600 });
+  writeFileAtomic(path, `${JSON.stringify(normalized, null, 2)}\n`, 0o600);
 }
 
 function addSecretIndexKey(stateRoot: string, key: string): void {
@@ -124,6 +137,18 @@ function readFileSecrets(stateRoot: string): Record<string, string> {
   }
 }
 
+function writeFileSecretsAndIndex(stateRoot: string, secrets: Record<string, string>, removedKeys: string[] = []): void {
+  const path = fileSecretsPath(stateRoot);
+  const secretKeys = Object.keys(secrets).sort();
+  if (secretKeys.length === 0) {
+    if (existsSync(path)) rmSync(path);
+  } else {
+    writeFileAtomic(path, `${JSON.stringify(Object.fromEntries(secretKeys.map((key) => [key, secrets[key]!])), null, 2)}\n`, 0o600);
+  }
+  const removed = new Set(removedKeys);
+  writeSecretIndex(stateRoot, [...readSecretIndex(stateRoot).filter((key) => !removed.has(key)), ...secretKeys]);
+}
+
 function createFileSecretBackend(stateRoot: string): SecretBackend {
   return {
     id: 'file',
@@ -132,24 +157,14 @@ function createFileSecretBackend(stateRoot: string): SecretBackend {
       return readFileSecrets(stateRoot)[key];
     },
     set(key, value) {
-      const path = fileSecretsPath(stateRoot);
       const secrets = readFileSecrets(stateRoot);
       secrets[key] = value;
-      mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, `${JSON.stringify(secrets, null, 2)}\n`, { mode: 0o600 });
-      addSecretIndexKey(stateRoot, key);
+      writeFileSecretsAndIndex(stateRoot, secrets);
     },
     delete(key) {
-      const path = fileSecretsPath(stateRoot);
       const secrets = readFileSecrets(stateRoot);
       delete secrets[key];
-      if (Object.keys(secrets).length === 0) {
-        if (existsSync(path)) rmSync(path);
-        removeSecretIndexKey(stateRoot, key);
-        return;
-      }
-      writeFileSync(path, `${JSON.stringify(secrets, null, 2)}\n`, { mode: 0o600 });
-      removeSecretIndexKey(stateRoot, key);
+      writeFileSecretsAndIndex(stateRoot, secrets, [key]);
     },
   };
 }

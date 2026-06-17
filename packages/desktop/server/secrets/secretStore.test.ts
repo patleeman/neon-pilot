@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -64,6 +64,9 @@ describe('secretStore', () => {
       'extension:system-exa-search:exaApiKey': 'exa-secret',
     });
     expect(JSON.parse(readFileSync(join(stateRoot, 'secrets.index.json'), 'utf-8'))).toEqual(['extension:system-exa-search:exaApiKey']);
+    expect(statSync(join(stateRoot, 'secrets.json')).mode & 0o777).toBe(0o600);
+    expect(statSync(join(stateRoot, 'secrets.index.json')).mode & 0o777).toBe(0o600);
+    expect(readdirSync(stateRoot).filter((entry) => entry.endsWith('.tmp'))).toEqual([]);
   });
 
   it('tracks provider API keys in the secret index for backend migration', () => {
@@ -118,6 +121,24 @@ describe('secretStore', () => {
 
     expect(resolveSecret('system-exa-search', 'exaApiKey', stateRoot)).toBeUndefined();
     expect(listSecretStatuses(stateRoot)[0]).toMatchObject({ configured: false, source: null });
+    expect(existsSync(join(stateRoot, 'secrets.json'))).toBe(false);
+    expect(existsSync(join(stateRoot, 'secrets.index.json'))).toBe(false);
+  });
+
+  it('keeps file secret payload and index consistent when deleting one key', () => {
+    const stateRoot = createTempStateRoot();
+    mkdirSync(stateRoot, { recursive: true });
+    writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
+    setSecret('system-exa-search', 'exaApiKey', 'stored-secret', stateRoot);
+    setProviderApiKeySecret('openrouter', 'provider-secret', stateRoot);
+
+    deleteSecret('system-exa-search', 'exaApiKey', stateRoot);
+
+    expect(JSON.parse(readFileSync(join(stateRoot, 'secrets.json'), 'utf-8'))).toEqual({
+      'provider:openrouter:apiKey': 'provider-secret',
+    });
+    expect(JSON.parse(readFileSync(join(stateRoot, 'secrets.index.json'), 'utf-8'))).toEqual(['provider:openrouter:apiKey']);
+    expect(readdirSync(stateRoot).filter((entry) => entry.endsWith('.tmp'))).toEqual([]);
   });
 
   it('rejects writes for env-only backend', () => {
