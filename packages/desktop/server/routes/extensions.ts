@@ -747,7 +747,7 @@ export function registerExtensionRoutes(
       res.status(201).json(importRuntimeExtensionBundle(req.body as { zipPath?: unknown }));
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const status = /required|not found|unsafe|must|already exists|empty/i.test(message) ? 400 : 500;
+      const status = /required|not found|unsafe|symlink|must|already exists|empty/i.test(message) ? 400 : 500;
       logError('extension import error', { message, stack: err instanceof Error ? err.stack : undefined });
       res.status(status).json({ error: message });
     }

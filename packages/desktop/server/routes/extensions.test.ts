@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -854,6 +854,35 @@ describe('registerExtensionRoutes', () => {
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({ error: 'Extension bundle contains unsafe paths.' });
+  });
+
+  it('rejects extension bundles containing symlink entries', () => {
+    const zipRoot = mkdtempSync(join(tmpdir(), 'pa-ext-symlink-'));
+    const symlinkZip = join(zipRoot, 'symlink.zip');
+    const payloadRoot = join(zipRoot, 'payload');
+    mkdirSync(join(payloadRoot, 'agent-board', 'dist'), { recursive: true });
+    writeFileSync(
+      join(payloadRoot, 'agent-board', 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        frontend: { entry: 'dist/frontend.js' },
+      }),
+    );
+    writeFileSync(join(payloadRoot, 'agent-board', 'dist', 'frontend.js'), 'export function AgentBoardPage() {}');
+    writeFileSync(join(payloadRoot, 'agent-board', 'dist', 'build-manifest.json'), '{}');
+    symlinkSync('/tmp', join(payloadRoot, 'agent-board', 'dist', 'linked-target'));
+    execFileSync('zip', ['-qry', symlinkZip, 'agent-board'], { cwd: payloadRoot });
+
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const harness = createHarness();
+    const res = createResponse();
+    harness.postHandler('/api/extensions/import')({ body: { zipPath: symlinkZip } }, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Extension bundle contains symlink entries.' });
   });
 
   it('snapshots runtime extensions', () => {

@@ -339,22 +339,33 @@ export function exportRuntimeExtension(extensionId: string, stateRoot: string = 
   return { ok: true as const, extensionId, exportPath };
 }
 
-function readZipEntries(zipPath: string): string[] {
-  const output = execFileSync('zipinfo', ['-1', zipPath], { encoding: 'utf-8' });
-  return output
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+interface ZipEntry {
+  path: string;
+  mode: string;
 }
 
-function assertSafeZipEntries(entries: string[]): void {
+function readZipEntries(zipPath: string): ZipEntry[] {
+  const output = execFileSync('zipinfo', ['-l', zipPath], { encoding: 'utf-8' });
+  return output
+    .split('\n')
+    .map((line) => {
+      const match = /^([bcdlps-][rwxStTs-]{9})\s+\S+\s+\S+\s+\d+\s+\S+\s+\d+\s+\S+\s+\S+\s+(.+)$/.exec(line.trim());
+      return match ? { mode: match[1] as string, path: match[2] as string } : null;
+    })
+    .filter((entry): entry is ZipEntry => entry !== null);
+}
+
+function assertSafeZipEntries(entries: ZipEntry[]): void {
   if (entries.length === 0) {
     throw new Error('Extension bundle is empty.');
   }
 
   for (const entry of entries) {
-    if (entry.startsWith('/') || entry.includes('..') || entry.includes('\\')) {
+    if (entry.path.startsWith('/') || entry.path.includes('..') || entry.path.includes('\\')) {
       throw new Error('Extension bundle contains unsafe paths.');
+    }
+    if (entry.mode.startsWith('l')) {
+      throw new Error('Extension bundle contains symlink entries.');
     }
   }
 }
