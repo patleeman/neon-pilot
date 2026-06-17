@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { init, parse } from 'es-module-lexer';
 
 import type { ExtensionManifest } from './extensionManifest.js';
+import { forbiddenExtensionBackendNativeImports } from './extensionProcessGuard.js';
 import type { LoadedExtensionManifest } from './extensionRegistry.js';
 import { findExtensionEntry, parseExtensionManifest } from './extensionRegistry.js';
 
@@ -33,14 +34,6 @@ export interface ExtensionDoctorReport {
 }
 
 const nodeBuiltins = new Set([...builtinModules, ...builtinModules.map((name) => `node:${name}`)]);
-const forbiddenBackendSourceImports = new Set([
-  'child_process',
-  'node:child_process',
-  'cluster',
-  'node:cluster',
-  'worker_threads',
-  'node:worker_threads',
-]);
 const forbiddenPackagedBackendPrefixes = [
   '@earendil-works/pi-coding-agent',
   '@neon-pilot/core',
@@ -469,7 +462,7 @@ function validateFrontendBundleRuntime(filePath: string, findings: ExtensionDoct
 
 function validateForbiddenSourceImports(filePath: string, findings: ExtensionDoctorFinding[]) {
   const source = readFileSync(filePath, 'utf8');
-  for (const specifier of forbiddenBackendSourceImports) {
+  for (const specifier of forbiddenExtensionBackendNativeImports) {
     if (source.includes(`'${specifier}'`) || source.includes(`"${specifier}"`)) {
       add(
         findings,

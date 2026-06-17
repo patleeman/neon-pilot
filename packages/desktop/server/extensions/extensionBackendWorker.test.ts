@@ -84,6 +84,39 @@ export async function doThing(input, ctx) {
     expect(workerThreads.parentPort.postMessage).toHaveBeenCalledWith({ id: 10, ok: true, result: { ok: true } });
   });
 
+  it('rejects backend exports that import forbidden native modules', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+import { execFile } from 'node:child_process';
+
+export async function doThing() {
+  return execFile;
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 11,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-forbidden-native' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+
+    await waitForPostMessage({
+      id: 11,
+      ok: false,
+      error: expect.stringContaining('forbidden native module "node:child_process"'),
+    });
+  });
+
   it('runs backend exports with serialized runtime context', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });

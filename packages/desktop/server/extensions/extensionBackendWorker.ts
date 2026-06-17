@@ -16,7 +16,7 @@ import type {
   ExtensionBackendWorkerRequest,
   ExtensionBackendWorkerResponse,
 } from './extensionBackendWorkerProtocol.js';
-import { withExtensionProcessGuard } from './extensionProcessGuard.js';
+import { assertExtensionBackendNativeImportsAllowed, withExtensionProcessGuard } from './extensionProcessGuard.js';
 
 const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
 const pendingCapabilities = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
@@ -64,11 +64,14 @@ function loadModule(extensionId: string, compiled: { path: string; hash: string 
     return cached.module;
   }
 
-  const module = withExtensionProcessGuard(
-    extensionId,
-    'backend import',
-    () => import(`${pathToFileURL(compiled.path).href}?v=${encodeURIComponent(compiled.hash)}`) as Promise<ExtensionBackendModule>,
-  );
+  const module = (async () => {
+    await assertExtensionBackendNativeImportsAllowed(extensionId, 'backend import', compiled.path);
+    return withExtensionProcessGuard(
+      extensionId,
+      'backend import',
+      () => import(`${pathToFileURL(compiled.path).href}?v=${encodeURIComponent(compiled.hash)}`) as Promise<ExtensionBackendModule>,
+    );
+  })();
   backendModuleCache.set(extensionId, { cacheKey, module });
   return module;
 }

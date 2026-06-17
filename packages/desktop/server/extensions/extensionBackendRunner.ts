@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { createExtensionBackendCapabilityDispatcher } from './extensionBackendCapabilities.js';
 import { ExtensionBackendWorkerPool } from './extensionBackendWorkerClient.js';
 import { recordExtensionHostAuditEvent } from './extensionHostAudit.js';
-import { withExtensionProcessGuard } from './extensionProcessGuard.js';
+import { assertExtensionBackendNativeImportsAllowed, withExtensionProcessGuard } from './extensionProcessGuard.js';
 
 const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
 
@@ -167,12 +167,14 @@ export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner 
       const module = auditBackendOperation(
         extensionId,
         extensionBackendOperation('backend-import', 'backend import', { target: compiled.path }),
-        () =>
-          withExtensionProcessGuard(
+        async () => {
+          await assertExtensionBackendNativeImportsAllowed(extensionId, 'backend import', compiled.path);
+          return withExtensionProcessGuard(
             extensionId,
             'backend import',
             () => import(`${pathToFileURL(compiled.path).href}?v=${encodeURIComponent(compiled.hash)}`) as Promise<ExtensionBackendModule>,
-          ),
+          );
+        },
       );
       backendModuleCache.set(extensionId, { cacheKey, module });
       return module;
