@@ -67,6 +67,22 @@ describe('toSse tool execution events', () => {
     expect(end && 'details' in end ? end.details : undefined).toBeUndefined();
   });
 
+  it('broadcasts structured streamed tool partials with text content', () => {
+    const partialResult = { content: [{ type: 'text', text: 'streamed output' }] };
+
+    expect(
+      toSse({
+        type: 'tool_execution_update',
+        toolCallId: 'tool-structured',
+        partialResult,
+      } as never),
+    ).toEqual({
+      type: 'tool_update',
+      toolCallId: 'tool-structured',
+      partialResult,
+    });
+  });
+
   it('broadcasts bash tool names directly', () => {
     const start = toSse({
       type: 'tool_execution_start',
