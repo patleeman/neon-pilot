@@ -950,6 +950,14 @@ async function callMcpToolWithServerConfig(
     log?: (message: string) => void;
   },
 ): Promise<McpOperationResult<McpToolCallResult>> {
+  if (server.transport === 'stdio' && server.raw.allowToolCalls !== true) {
+    return {
+      stdout: '',
+      stderr: '',
+      exitCode: 1,
+      error: `MCP stdio tool calls are disabled for ${server.name}. Set allowToolCalls: true in the server config to enable this command-execution path.`,
+    };
+  }
   return withMcpOperation(server, options, async (connection) => {
     const result = await withTimeout(
       connection.client.callTool({

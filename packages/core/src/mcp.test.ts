@@ -279,6 +279,7 @@ function writeFixtureMcpConfig(cwd: string, serverPath: string, extraServerConfi
           fixture: {
             command: process.execPath,
             args: [serverPath],
+            allowToolCalls: true,
             ...extraServerConfig,
           },
         },
@@ -290,6 +291,17 @@ function writeFixtureMcpConfig(cwd: string, serverPath: string, extraServerConfi
 }
 
 describe('native MCP client', () => {
+  it('blocks stdio tool calls unless the server explicitly allows them', async () => {
+    const cwd = makeTempDir('pa-mcp-stdio-deny');
+    const serverPath = writeFixtureMcpServer(cwd);
+    writeFixtureMcpConfig(cwd, serverPath, { allowToolCalls: false });
+
+    const result = await callMcpTool('fixture', 'echo', { text: 'hello' }, { cwd });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.error).toContain('MCP stdio tool calls are disabled for fixture');
+  });
+
   it('inspects and calls a stdio server', async () => {
     const cwd = makeTempDir('pa-mcp-server');
     const serverPath = writeFixtureMcpServer(cwd);
@@ -373,7 +385,7 @@ describe('native MCP client', () => {
     const serverPath = writeFixtureMcpServer(cwd);
 
     const result = await callMcpToolDirect(
-      { name: 'fixture', transport: 'stdio', command: process.execPath, args: [serverPath], raw: {} },
+      { name: 'fixture', transport: 'stdio', command: process.execPath, args: [serverPath], raw: { allowToolCalls: true } },
       'echo',
       { text: 'direct hello' },
       { cwd },
