@@ -93,6 +93,40 @@ describe('resolveChildProcessEnv', () => {
     expect(resolved.PATH).toBe('/opt/homebrew/bin:/usr/bin:/base/bin');
   });
 
+  it('filters loader and runtime injection variables captured from the interactive shell', () => {
+    const shellPath = createFakeInteractiveShell({
+      entries: [
+        'PATH=/opt/homebrew/bin:/usr/bin',
+        'FROM_SHELL=1',
+        'LD_PRELOAD=/tmp/inject.so',
+        'LD_LIBRARY_PATH=/tmp/lib',
+        'DYLD_INSERT_LIBRARIES=/tmp/inject.dylib',
+        'DYLD_LIBRARY_PATH=/tmp/dylib',
+        'NODE_OPTIONS=--require /tmp/hook.js',
+        'ELECTRON_RUN_AS_NODE=1',
+      ],
+    });
+    const baseEnv = {
+      SHELL: shellPath,
+      HOME: '/tmp/patrick',
+      PATH: '/usr/bin:/base/bin',
+      NODE_OPTIONS: '--max-old-space-size=1024',
+    };
+
+    const resolved = resolveChildProcessEnv({}, baseEnv);
+
+    expect(resolved).toMatchObject({
+      FROM_SHELL: '1',
+      NODE_OPTIONS: '--max-old-space-size=1024',
+    });
+    expect(resolved.PATH).toBe('/opt/homebrew/bin:/usr/bin:/base/bin');
+    expect(resolved.LD_PRELOAD).toBeUndefined();
+    expect(resolved.LD_LIBRARY_PATH).toBeUndefined();
+    expect(resolved.DYLD_INSERT_LIBRARIES).toBeUndefined();
+    expect(resolved.DYLD_LIBRARY_PATH).toBeUndefined();
+    expect(resolved.ELECTRON_RUN_AS_NODE).toBeUndefined();
+  });
+
   it('uses the login + interactive zsh env so login PATH entries are available', () => {
     const shellPath = createFakeInteractiveShell({
       entriesByArg: {

@@ -7,6 +7,17 @@ const ENV_CAPTURE_END = '__NEON_PILOT_ENV_END__';
 const ENV_CAPTURE_COMMAND = `printf '%s\\0' '${ENV_CAPTURE_START}'; env -0; printf '%s\\0' '${ENV_CAPTURE_END}'`;
 const ENV_CAPTURE_TIMEOUT_MS = 5_000;
 const ENV_CAPTURE_MAX_BUFFER = 4 * 1024 * 1024;
+const UNSAFE_CAPTURED_ENV_KEYS = new Set([
+  'DYLD_FORCE_FLAT_NAMESPACE',
+  'DYLD_INSERT_LIBRARIES',
+  'DYLD_LIBRARY_PATH',
+  'DYLD_PRINT_LIBRARIES',
+  'ELECTRON_RUN_AS_NODE',
+  'LD_AUDIT',
+  'LD_LIBRARY_PATH',
+  'LD_PRELOAD',
+  'NODE_OPTIONS',
+]);
 
 let cachedShellEnvSignature: string | null = null;
 let cachedShellEnv: NodeJS.ProcessEnv | null = null;
@@ -87,6 +98,11 @@ function setNormalizedPathValue(env: NodeJS.ProcessEnv, pathKey: string, value: 
   env[pathKey] = value;
 }
 
+function isUnsafeCapturedEnvKey(key: string): boolean {
+  const normalized = process.platform === 'win32' ? key.toUpperCase() : key;
+  return UNSAFE_CAPTURED_ENV_KEYS.has(normalized);
+}
+
 function resolveShellCaptureArgSets(shellPath: string): string[][] | null {
   const shellName = basename(shellPath).toLowerCase();
 
@@ -129,6 +145,9 @@ function parseCapturedEnvironment(stdout: Buffer): NodeJS.ProcessEnv | null {
     }
 
     const key = entry.slice(0, equalsIndex);
+    if (isUnsafeCapturedEnvKey(key)) {
+      continue;
+    }
     env[key] = entry.slice(equalsIndex + 1);
   }
 
