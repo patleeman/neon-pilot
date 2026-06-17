@@ -248,6 +248,34 @@ describe('AutomationsPage', () => {
     );
   });
 
+  it('keeps the editor open when chat creation cannot be opened', async () => {
+    const pa = createPa();
+    pa.commands.execute = vi.fn(async () => false) as never;
+    const { container } = await renderPage(pa);
+    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New automation');
+    if (!newButton) throw new Error('New automation button not found');
+
+    await act(async () => {
+      newButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const chatButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create with chat');
+    if (!chatButton) throw new Error('Create with chat button not found');
+
+    await act(async () => {
+      chatButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(pa.automations.create).not.toHaveBeenCalled();
+    expect(pa.ui.notify).toHaveBeenCalledWith({
+      type: 'error',
+      message: 'Could not open chat for automation creation.',
+      source: 'system-automations',
+    });
+    expect(container.textContent).toContain('Create with chat');
+  });
+
   it('lets recurring schedules be composed from controls', async () => {
     const pa = createPa();
     const { container } = await renderPage(pa);
