@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { EventEmitter } from 'node:events';
+
 const inProcess = vi.hoisted(() => ({ getDaemonClientTransportOverride: vi.fn() }));
 const core = vi.hoisted(() => ({ resolveNeonPilotRuntimeChannelConfig: vi.fn(() => ({ companionPort: 4567 })) }));
 const events = vi.hoisted(() => ({
@@ -7,7 +9,9 @@ const events = vi.hoisted(() => ({
 }));
 const appEvents = vi.hoisted(() => ({ publishAppEvent: vi.fn() }));
 const logging = vi.hoisted(() => ({ logWarn: vi.fn() }));
+const net = vi.hoisted(() => ({ createConnection: vi.fn() }));
 
+vi.mock('net', () => net);
 vi.mock('./in-process-client.js', () => inProcess);
 vi.mock('@neon-pilot/core', () => core);
 vi.mock('./events.js', () => events);
@@ -17,14 +21,21 @@ vi.mock('../config.js', () => ({ loadDaemonConfig: vi.fn(() => ({ ipc: { socketP
 vi.mock('../paths.js', () => ({ resolveDaemonPaths: vi.fn((socketPath) => ({ socketPath })) }));
 
 import {
+  cancelDurableRun,
   emitDaemonEvent,
   emitDaemonEventNonFatal,
   followUpDurableRun,
   getCompanionUrl,
   getDaemonStatus,
+  getDurableRun,
+  listDurableRuns,
+  listRecoverableWebLiveConversationRunsFromDaemon,
   pingDaemon,
+  rerunDurableRun,
+  startScheduledTaskRun,
   startBackgroundRun,
   stopDaemon,
+  syncWebLiveConversationRunState,
 } from './client.js';
 
 describe('daemon client transport paths', () => {
@@ -32,6 +43,27 @@ describe('daemon client transport paths', () => {
     vi.clearAllMocks();
     inProcess.getDaemonClientTransportOverride.mockReturnValue(undefined);
   });
+
+  function mockSocketResponse(result: unknown) {
+    const socket = new EventEmitter() as EventEmitter & {
+      write: ReturnType<typeof vi.fn>;
+      end: ReturnType<typeof vi.fn>;
+      destroy: ReturnType<typeof vi.fn>;
+    };
+    socket.end = vi.fn();
+    socket.destroy = vi.fn();
+    socket.write = vi.fn((payload: string) => {
+      const request = JSON.parse(payload.trim()) as { id: string };
+      queueMicrotask(() => {
+        socket.emit('data', `${JSON.stringify({ id: request.id, ok: true, result })}\n`);
+      });
+    });
+    net.createConnection.mockReturnValueOnce(socket);
+    queueMicrotask(() => {
+      socket.emit('connect');
+    });
+    return socket;
+  }
 
   it('uses the in-process transport override for daemon operations', async () => {
     const transport = {
@@ -80,6 +112,50 @@ describe('daemon client transport paths', () => {
       'http://[::1]:9999',
     );
     await expect(getCompanionUrl({ ipc: { socketPath: '/sock' }, companion: {} } as never)).resolves.toBe('http://127.0.0.1:4567');
+  });
+
+  it('sends durable run fallback request envelopes over the daemon socket', async () => {
+    const config = { ipc: { socketPath: '/custom.sock' } } as never;
+
+    const listSocket = mockSocketResponse({ runs: [{ runId: 'run-1' }] });
+    await expect(listDurableRuns(config)).resolves.toEqual({ runs: [{ runId: 'run-1' }] });
+    expect(listSocket.write).toHaveBeenCalledWith(expect.stringMatching(/"type":"runs\.list"/));
+
+    const getSocket = mockSocketResponse({ run: { runId: 'run-1' } });
+    await expect(getDurableRun('run-1', config)).resolves.toEqual({ run: { runId: 'run-1' } });
+    expect(getSocket.write).toHaveBeenCalledWith(expect.stringContaining('"type":"runs.get"'));
+    expect(getSocket.write).toHaveBeenCalledWith(expect.stringContaining('"runId":"run-1"'));
+
+    const startTaskSocket = mockSocketResponse({ accepted: true, runId: 'task-run-1' });
+    await expect(startScheduledTaskRun('task-1', config)).resolves.toEqual({ accepted: true, runId: 'task-run-1' });
+    expect(startTaskSocket.write).toHaveBeenCalledWith(expect.stringContaining('"type":"runs.startTask"'));
+    expect(startTaskSocket.write).toHaveBeenCalledWith(expect.stringContaining('"taskId":"task-1"'));
+
+    const cancelSocket = mockSocketResponse({ accepted: true });
+    await expect(cancelDurableRun('run-1', config)).resolves.toEqual({ accepted: true });
+    expect(cancelSocket.write).toHaveBeenCalledWith(expect.stringContaining('"type":"runs.cancel"'));
+    expect(cancelSocket.write).toHaveBeenCalledWith(expect.stringContaining('"runId":"run-1"'));
+
+    const rerunSocket = mockSocketResponse({ accepted: true, runId: 'run-2' });
+    await expect(rerunDurableRun('run-1', config)).resolves.toEqual({ accepted: true, runId: 'run-2' });
+    expect(rerunSocket.write).toHaveBeenCalledWith(expect.stringContaining('"type":"runs.rerun"'));
+    expect(rerunSocket.write).toHaveBeenCalledWith(expect.stringContaining('"runId":"run-1"'));
+  });
+
+  it('sends web live conversation fallback request envelopes over the daemon socket', async () => {
+    const config = { ipc: { socketPath: '/custom.sock' } } as never;
+    const input = { conversationId: 'conv-1', sessionId: 'session-1', runId: 'run-1' } as never;
+
+    const syncSocket = mockSocketResponse({ ok: true });
+    await expect(syncWebLiveConversationRunState(input, config)).resolves.toEqual({ ok: true });
+    expect(syncSocket.write).toHaveBeenCalledWith(expect.stringContaining('"type":"conversations.sync"'));
+    expect(syncSocket.write).toHaveBeenCalledWith(expect.stringContaining('"conversationId":"conv-1"'));
+
+    const recoverableSocket = mockSocketResponse({ conversations: [{ conversationId: 'conv-1' }] });
+    await expect(listRecoverableWebLiveConversationRunsFromDaemon(config)).resolves.toEqual({
+      conversations: [{ conversationId: 'conv-1' }],
+    });
+    expect(recoverableSocket.write).toHaveBeenCalledWith(expect.stringContaining('"type":"conversations.recoverable"'));
   });
 
   it('emits non-fatal warnings and notifications when daemon events are dropped or unavailable', async () => {
