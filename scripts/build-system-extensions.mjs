@@ -2,7 +2,7 @@
 /* eslint-env node */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,6 +12,10 @@ const extensionBuildScript = join(repoRoot, 'scripts', 'extension-build.mjs');
 const extensionPackScript = join(repoRoot, 'scripts', 'extension-pack.mjs');
 const installableBundleRoot = join(repoRoot, 'dist', 'installable-extensions');
 const defaultInstallableExtensionIds = new Set(['system-dynamic-workflows']);
+
+function defaultInstallableBundleFileName(extensionId) {
+  return `${extensionId}.neon-extension.zip`;
+}
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -66,6 +70,15 @@ for (const extensionDir of extensionDirs) {
 console.log(`Built and verified ${extensionDirs.length} extensions.`);
 
 mkdirSync(installableBundleRoot, { recursive: true });
+const allowedInstallableBundleNames = new Set([...defaultInstallableExtensionIds].map(defaultInstallableBundleFileName));
+for (const entry of readdirSync(installableBundleRoot, { withFileTypes: true })) {
+  if (!entry.isFile() || !entry.name.endsWith('.neon-extension.zip')) continue;
+  if (allowedInstallableBundleNames.has(entry.name)) continue;
+  const staleBundlePath = join(installableBundleRoot, entry.name);
+  console.log(`Removing stale installable bundle ${staleBundlePath.replace(`${repoRoot}/`, '')}`);
+  unlinkSync(staleBundlePath);
+}
+
 for (const extensionDir of extensionDirs) {
   const manifest = readJson(join(extensionDir, 'extension.json'));
   if (!defaultInstallableExtensionIds.has(manifest.id)) continue;

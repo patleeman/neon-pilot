@@ -29,6 +29,7 @@ const packagedAppResourcesRoot = inputRoot.endsWith('.app') ? join(inputRoot, 'C
 const directExtensionRoot = !packagedAppResourcesRoot && existsSync(join(inputRoot, 'extension.json')) ? inputRoot : null;
 const extensionsRoot = packagedAppResourcesRoot ? join(packagedAppResourcesRoot, 'extensions') : join(inputRoot, 'extensions');
 const defaultInstallableExtensionIds = new Set(['system-dynamic-workflows']);
+const defaultInstallableBundleNames = new Set([...defaultInstallableExtensionIds].map((id) => `${id}.neon-extension.zip`));
 
 if (packagedAppResourcesRoot) {
   Object.defineProperty(process, 'resourcesPath', {
@@ -333,6 +334,15 @@ function assertPackagedAppContainsEveryExtensionBundle() {
     for (const entry of requiredBuiltEntries(sourceManifest)) {
       const packagedEntry = join(packagedDir, entry);
       if (!existsSync(packagedEntry)) failures.push(`${id}: packaged app is missing required prebuilt bundle ${entry}`);
+    }
+  }
+
+  const bundleRoot = join(packagedAppResourcesRoot, 'installable-extension-bundles');
+  if (!existsSync(bundleRoot)) return;
+  for (const entry of readdirSync(bundleRoot, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.neon-extension.zip')) continue;
+    if (!defaultInstallableBundleNames.has(entry.name)) {
+      failures.push(`unexpected packaged installable extension bundle: ${entry.name}`);
     }
   }
 }
