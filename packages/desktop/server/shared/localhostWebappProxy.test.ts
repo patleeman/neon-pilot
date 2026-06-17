@@ -88,13 +88,13 @@ describe('localhost webapp proxy', () => {
       const response = await httpRequest({
         port: status.http.port,
         path: '/board?view=mine',
-        host: 'board.agent-board.localhost',
+        host: 'board-agent-board.localhost',
       });
 
       expect(response.statusCode).toBe(200);
       expect(response.headers['x-neon-pilot-localhost-proxy']).toBe('1');
       expect(response.body).toContain('Sidecar');
-      expect(seen).toEqual([{ path: '/board?view=mine', host: 'board.agent-board.localhost', body: undefined }]);
+      expect(seen).toEqual([{ path: '/board?view=mine', host: 'board-agent-board.localhost', body: undefined }]);
     } finally {
       rmSync(stateRoot, { recursive: true, force: true });
     }

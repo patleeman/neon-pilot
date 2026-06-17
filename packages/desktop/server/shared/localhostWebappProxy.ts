@@ -18,9 +18,7 @@ type Logger = {
   warn?: (message: string, fields?: Record<string, unknown>) => void;
 };
 
-type ListenerState =
-  | { enabled: true; port: number }
-  | { enabled: false; port: number; error: string };
+type ListenerState = { enabled: true; port: number } | { enabled: false; port: number; error: string };
 
 export interface LocalhostWebappProxyStatus {
   running: boolean;
@@ -86,10 +84,7 @@ function normalizeRequestHeaders(headers: IncomingMessage['headers']): Record<st
   return normalized;
 }
 
-function writeDispatchResponse(
-  response: ServerResponse,
-  result: Awaited<ReturnType<DispatchLocalRequest>>,
-): void {
+function writeDispatchResponse(response: ServerResponse, result: Awaited<ReturnType<DispatchLocalRequest>>): void {
   const headers: Record<string, string> = { ...result.headers, [PROXY_HEADER]: '1' };
   delete headers['connection'];
   delete headers['content-length'];
@@ -120,31 +115,40 @@ function certificatePaths(stateRoot: string): { dir: string; certPath: string; k
   };
 }
 
-function ensureCertificate(stateRoot: string): { certPath: string; keyPath: string; generated: boolean; error?: string } {
+function buildCertificateConfig(hostnames: string[]): string {
+  const names = Array.from(new Set(['localhost', ...hostnames.map((hostname) => hostname.trim().toLowerCase()).filter(Boolean)])).sort();
+  return [
+    '[req]',
+    'distinguished_name=req_distinguished_name',
+    'x509_extensions=v3_req',
+    'prompt=no',
+    '[req_distinguished_name]',
+    `CN=${names[0] ?? 'localhost'}`,
+    '[v3_req]',
+    'subjectAltName=@alt_names',
+    '[alt_names]',
+    ...names.map((name, index) => `DNS.${index + 1}=${name}`),
+    '',
+  ].join('\n');
+}
+
+function ensureCertificate(
+  stateRoot: string,
+  hostnames: string[] = [],
+): { certPath: string; keyPath: string; generated: boolean; error?: string } {
   const paths = certificatePaths(stateRoot);
   mkdirSync(paths.dir, { recursive: true, mode: 0o700 });
-  if (existsSync(paths.certPath) && existsSync(paths.keyPath)) {
+  const config = buildCertificateConfig(hostnames);
+  if (
+    existsSync(paths.certPath) &&
+    existsSync(paths.keyPath) &&
+    existsSync(paths.configPath) &&
+    readFileSync(paths.configPath, 'utf-8') === config
+  ) {
     return { certPath: paths.certPath, keyPath: paths.keyPath, generated: false };
   }
 
-  writeFileSync(
-    paths.configPath,
-    [
-      '[req]',
-      'distinguished_name=req_distinguished_name',
-      'x509_extensions=v3_req',
-      'prompt=no',
-      '[req_distinguished_name]',
-      'CN=*.localhost',
-      '[v3_req]',
-      'subjectAltName=@alt_names',
-      '[alt_names]',
-      'DNS.1=localhost',
-      'DNS.2=*.localhost',
-      '',
-    ].join('\n'),
-    { mode: 0o600 },
-  );
+  writeFileSync(paths.configPath, config, { mode: 0o600 });
 
   const result = spawnSync(
     'openssl',
@@ -180,8 +184,13 @@ function ensureCertificate(stateRoot: string): { certPath: string; keyPath: stri
   return { certPath: paths.certPath, keyPath: paths.keyPath, generated: true };
 }
 
-function readCertificate(stateRoot: string): { cert: Buffer; key: Buffer; certPath: string; keyPath: string; error?: undefined } | { certPath: string; keyPath: string; error: string } {
-  const cert = ensureCertificate(stateRoot);
+function readCertificate(
+  stateRoot: string,
+  hostnames: string[] = [],
+):
+  | { cert: Buffer; key: Buffer; certPath: string; keyPath: string; error?: undefined }
+  | { certPath: string; keyPath: string; error: string } {
+  const cert = ensureCertificate(stateRoot, hostnames);
   if (cert.error) return { certPath: cert.certPath, keyPath: cert.keyPath, error: cert.error };
   try {
     return {
@@ -217,7 +226,11 @@ function trustCertificate(certPath: string): { ok: true } | { ok: false; error: 
   if (result.error || result.status !== 0) {
     return {
       ok: false,
-      error: result.error?.message || result.stderr.trim() || result.stdout.trim() || 'Could not add localhost certificate to the login keychain.',
+      error:
+        result.error?.message ||
+        result.stderr.trim() ||
+        result.stdout.trim() ||
+        'Could not add localhost certificate to the login keychain.',
     };
   }
   return { ok: true };
@@ -264,6 +277,7 @@ export async function startLocalhostWebappProxy(options: {
   httpPort?: number;
   httpsPort?: number | null;
   host?: string;
+  certificateHostnames?: string[];
 }): Promise<LocalhostWebappProxy> {
   if (activeProxy) return activeProxy;
   const host = options.host ?? '127.0.0.1';
@@ -271,8 +285,12 @@ export async function startLocalhostWebappProxy(options: {
   const desiredHttpsPort = options.httpsPort === undefined ? DEFAULT_HTTPS_PORT : options.httpsPort;
   const certificate =
     desiredHttpsPort === null
-      ? { certPath: certificatePaths(options.stateRoot).certPath, keyPath: certificatePaths(options.stateRoot).keyPath, error: 'HTTPS listener disabled.' }
-      : readCertificate(options.stateRoot);
+      ? {
+          certPath: certificatePaths(options.stateRoot).certPath,
+          keyPath: certificatePaths(options.stateRoot).keyPath,
+          error: 'HTTPS listener disabled.',
+        }
+      : readCertificate(options.stateRoot, options.certificateHostnames);
   let httpsState: ListenerState = {
     enabled: false,
     port: desiredHttpsPort ?? DEFAULT_HTTPS_PORT,
@@ -304,11 +322,14 @@ export async function startLocalhostWebappProxy(options: {
   };
 
   const createHttpsListener = () =>
-    createHttpsServer({ cert: 'cert' in certificate ? certificate.cert : Buffer.alloc(0), key: 'key' in certificate ? certificate.key : Buffer.alloc(0) }, (request, response) => {
-      void dispatchRequest(request, response).catch((error) => {
-        writeError(response, 500, error instanceof Error ? error.message : String(error));
-      });
-    });
+    createHttpsServer(
+      { cert: 'cert' in certificate ? certificate.cert : Buffer.alloc(0), key: 'key' in certificate ? certificate.key : Buffer.alloc(0) },
+      (request, response) => {
+        void dispatchRequest(request, response).catch((error) => {
+          writeError(response, 500, error instanceof Error ? error.message : String(error));
+        });
+      },
+    );
 
   let httpsServer: HttpsServer | null = null;
   if (desiredHttpsPort !== null && !certificate.error) {
@@ -317,21 +338,22 @@ export async function startLocalhostWebappProxy(options: {
     httpsServer = listener.server as HttpsServer | null;
   }
 
-  const createHttpListener = () => createServer((request, response) => {
-    const hostname = normalizeHostHeader(request.headers.host);
-    if (httpsState.enabled && isWebappLocalhost(hostname)) {
-      const portSuffix = httpsState.port === DEFAULT_HTTPS_PORT ? '' : `:${String(httpsState.port)}`;
-      response.writeHead(302, {
-        Location: `https://${hostname}${portSuffix}${request.url || '/'}`,
-        [PROXY_HEADER]: '1',
+  const createHttpListener = () =>
+    createServer((request, response) => {
+      const hostname = normalizeHostHeader(request.headers.host);
+      if (httpsState.enabled && isWebappLocalhost(hostname)) {
+        const portSuffix = httpsState.port === DEFAULT_HTTPS_PORT ? '' : `:${String(httpsState.port)}`;
+        response.writeHead(302, {
+          Location: `https://${hostname}${portSuffix}${request.url || '/'}`,
+          [PROXY_HEADER]: '1',
+        });
+        response.end();
+        return;
+      }
+      void dispatchRequest(request, response).catch((error) => {
+        writeError(response, 500, error instanceof Error ? error.message : String(error));
       });
-      response.end();
-      return;
-    }
-    void dispatchRequest(request, response).catch((error) => {
-      writeError(response, 500, error instanceof Error ? error.message : String(error));
     });
-  });
   const httpListener = await listenWithFallback({ create: createHttpListener, port: httpPort, host });
   const httpServer = httpListener.server as HttpServer | null;
   const httpState = httpListener.state;
@@ -350,7 +372,10 @@ export async function startLocalhostWebappProxy(options: {
       },
       urls: {
         scheme,
-        defaultPort: scheme === 'https' ? httpsState.enabled && httpsState.port === DEFAULT_HTTPS_PORT : httpState.enabled && httpState.port === DEFAULT_HTTP_PORT,
+        defaultPort:
+          scheme === 'https'
+            ? httpsState.enabled && httpsState.port === DEFAULT_HTTPS_PORT
+            : httpState.enabled && httpState.port === DEFAULT_HTTP_PORT,
       },
     };
   };

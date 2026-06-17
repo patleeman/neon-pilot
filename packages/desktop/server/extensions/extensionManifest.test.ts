@@ -35,7 +35,7 @@ describe('extension manifest schema constants', () => {
           { id: 'page', title: 'Agent Board', location: 'main', route: '/ext/agent-board', component: 'AgentBoardPage' },
           { id: 'rail', title: 'Board', location: 'rightRail', scope: 'conversation', component: 'AgentBoardRail' },
         ],
-        webapps: [{ id: 'board', title: 'Board Webapp', entry: 'dist/webapp/index.html', localhostName: 'board.agent-board' }],
+        webapps: [{ id: 'board', title: 'Board Webapp', entry: 'dist/webapp/index.html', localhostName: 'board-agent-board' }],
         nav: [{ id: 'nav', label: 'Agent Board', route: '/ext/agent-board', icon: 'kanban' }],
         composerInputTools: [{ id: 'draw', component: 'DrawButton', title: 'Draw', when: '!streamIsStreaming' }],
         selectionActions: [{ id: 'send-selection', title: 'Send Selection', action: 'sendSelection', kinds: ['text', 'messages'] }],
@@ -54,7 +54,7 @@ describe('extension manifest schema constants', () => {
     };
 
     expect(manifest.contributes?.views?.map((surface) => surface.id)).toEqual(['page', 'rail']);
-    expect(manifest.contributes?.webapps?.[0]?.localhostName).toBe('board.agent-board');
+    expect(manifest.contributes?.webapps?.[0]?.localhostName).toBe('board-agent-board');
     expect(manifest.contributes?.composerInputTools?.[0]?.component).toBe('DrawButton');
   });
 

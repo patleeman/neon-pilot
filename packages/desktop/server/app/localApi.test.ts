@@ -269,7 +269,7 @@ describe('desktop local API extension routes', () => {
     const response = await dispatchDesktopLocalApiRequest({
       method: 'GET',
       path: '/api/extensions',
-      headers: { host: 'board.agent-webapp.localhost' },
+      headers: { host: 'board-agent-webapp.localhost' },
     });
 
     expect(response.statusCode).toBe(200);

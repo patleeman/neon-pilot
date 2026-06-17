@@ -292,8 +292,8 @@ describe('registerExtensionRoutes', () => {
         expect.objectContaining({
           id: 'board',
           extensionId: 'agent-board',
-          localhostName: 'board.agent-board',
-          localhostUrl: 'https://board.agent-board.localhost',
+          localhostName: 'board-agent-board',
+          localhostUrl: 'https://board-agent-board.localhost',
         }),
       ]),
     );
@@ -320,7 +320,7 @@ describe('registerExtensionRoutes', () => {
       {
         method: 'GET',
         path: '/',
-        get: (name: string) => (name.toLowerCase() === 'host' ? 'board.agent-board.localhost' : undefined),
+        get: (name: string) => (name.toLowerCase() === 'host' ? 'board-agent-board.localhost' : undefined),
       } as never,
       hostRes,
     );
@@ -345,11 +345,12 @@ describe('registerExtensionRoutes', () => {
         },
       }),
     );
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
-      new Response(JSON.stringify({ ok: true }), {
-        status: 202,
-        headers: { 'content-type': 'application/json' },
-      }),
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 202,
+          headers: { 'content-type': 'application/json' },
+        }),
     );
     const harness = createHarness();
 
@@ -359,9 +360,9 @@ describe('registerExtensionRoutes', () => {
         method: 'POST',
         path: '/api/refresh',
         originalUrl: '/api/refresh?force=1',
-        headers: { host: 'board.agent-board.localhost', 'content-type': 'application/json' },
+        headers: { host: 'board-agent-board.localhost', 'content-type': 'application/json' },
         body: undefined,
-        get: (name: string) => (name.toLowerCase() === 'host' ? 'board.agent-board.localhost' : undefined),
+        get: (name: string) => (name.toLowerCase() === 'host' ? 'board-agent-board.localhost' : undefined),
       } as never,
       emptyPostRes,
     );
@@ -378,9 +379,9 @@ describe('registerExtensionRoutes', () => {
         method: 'POST',
         path: '/api/refresh',
         originalUrl: '/api/refresh',
-        headers: { host: 'board.agent-board.localhost', 'content-type': 'application/json' },
+        headers: { host: 'board-agent-board.localhost', 'content-type': 'application/json' },
         body: { mode: 'full' },
-        get: (name: string) => (name.toLowerCase() === 'host' ? 'board.agent-board.localhost' : undefined),
+        get: (name: string) => (name.toLowerCase() === 'host' ? 'board-agent-board.localhost' : undefined),
       } as never,
       jsonPostRes,
     );

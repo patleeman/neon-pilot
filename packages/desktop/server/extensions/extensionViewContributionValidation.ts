@@ -47,6 +47,10 @@ function isDnsSafeName(value: string): boolean {
   return /^[a-z0-9](?:[a-z0-9.-]{0,61}[a-z0-9])?$/.test(value) && !value.includes('..');
 }
 
+function isDnsSafeLabel(value: string): boolean {
+  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(value);
+}
+
 function validateWebappId(value: string, path: string): void {
   if (!isDnsSafeName(value)) {
     throw new Error(`Extension manifest ${path} must be a lowercase DNS-safe webapp id.`);
@@ -54,8 +58,8 @@ function validateWebappId(value: string, path: string): void {
 }
 
 function validateLocalhostName(value: string, path: string): void {
-  if (!isDnsSafeName(value)) {
-    throw new Error(`Extension manifest ${path} must be a lowercase DNS-safe localhost name.`);
+  if (!isDnsSafeLabel(value)) {
+    throw new Error(`Extension manifest ${path} must be a lowercase DNS-safe localhost label.`);
   }
 }
 
@@ -97,7 +101,8 @@ export function validateWebappContributions(value: unknown): void {
     validateOptionalBoolean(webapp.spaFallback, `contributes.webapps[${index}].spaFallback`);
     if (webapp.entry !== undefined) validateWebappPath(webapp.entry as string, `contributes.webapps[${index}].entry`);
     if (webapp.target !== undefined) validateLoopbackHttpTarget(webapp.target as string, `contributes.webapps[${index}].target`);
-    if (webapp.localhostName !== undefined) validateLocalhostName(webapp.localhostName as string, `contributes.webapps[${index}].localhostName`);
+    if (webapp.localhostName !== undefined)
+      validateLocalhostName(webapp.localhostName as string, `contributes.webapps[${index}].localhostName`);
     if (webapp.entry !== undefined && webapp.target !== undefined) {
       throw new Error(`Extension manifest contributes.webapps[${index}] must declare either entry or target, not both.`);
     }

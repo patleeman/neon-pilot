@@ -195,14 +195,14 @@ Use `contributes.webapps` when an extension needs to expose a local webpage as a
         "id": "board",
         "title": "Agent Board",
         "entry": "dist/webapp/index.html",
-        "localhostName": "board.agent-board"
+        "localhostName": "board-agent-board"
       }
     ]
   }
 }
 ```
 
-`localhostName` defaults to `{webappId}.{extensionId}` and maps to `https://{localhostName}.localhost` through Neon Pilot's built-in localhost webapp proxy. The desktop backend starts that proxy automatically, tries HTTPS on `443` plus HTTP on `80`, and redirects HTTP to HTTPS when the HTTPS listener is available. If privileged ports are unavailable, discovery responses include the actual fallback port.
+`localhostName` defaults to `{webappId}-{extensionId}` and maps to `https://{localhostName}.localhost` through Neon Pilot's built-in localhost webapp proxy. Explicit `localhostName` values must be a single lowercase DNS label so the generated local HTTPS certificate can match the hostname. The desktop backend starts that proxy automatically, tries HTTPS on `443` plus HTTP on `80`, and redirects HTTP to HTTPS when the HTTPS listener is available. If privileged ports are unavailable, discovery responses include the actual fallback port.
 
 Neon Pilot exposes `GET /api/extensions/webapps` for discovery, `GET /api/extensions/webapps/localhost-proxy` for proxy/certificate status, `POST /api/extensions/webapps/localhost-proxy/trust` to trust the generated local certificate on supported platforms, and `/webapps/{extensionId}/{webappId}/...` as a direct debug route.
 

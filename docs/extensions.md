@@ -366,7 +366,7 @@ Static webapps serve files from the extension package. `entry` points at the HTM
         "title": "Agent Board",
         "description": "Sidecar task board",
         "entry": "dist/webapp/index.html",
-        "localhostName": "board.agent-board"
+        "localhostName": "board-agent-board"
       }
     ]
   }
@@ -383,14 +383,14 @@ Proxy webapps forward requests to an extension-managed loopback HTTP service. `t
         "id": "dev",
         "title": "Local Dev App",
         "target": "http://127.0.0.1:5173",
-        "localhostName": "dev.agent-board"
+        "localhostName": "dev-agent-board"
       }
     ]
   }
 }
 ```
 
-The default `localhostName` is `{webappId}.{extensionId}` and maps to `https://{localhostName}.localhost` through Neon Pilot's built-in localhost webapp proxy. The backend starts that proxy automatically, tries to bind HTTPS on port `443` and HTTP on port `80`, and redirects HTTP to HTTPS when the HTTPS listener is available. If privileged ports are unavailable, discovery responses include the actual fallback port.
+The default `localhostName` is `{webappId}-{extensionId}` and maps to `https://{localhostName}.localhost` through Neon Pilot's built-in localhost webapp proxy. Explicit `localhostName` values must be a single lowercase DNS label so the generated local HTTPS certificate can match the hostname. The backend starts that proxy automatically, tries to bind HTTPS on port `443` and HTTP on port `80`, and redirects HTTP to HTTPS when the HTTPS listener is available. If privileged ports are unavailable, discovery responses include the actual fallback port.
 
 The host exposes:
 

@@ -285,8 +285,22 @@ export function setDesktopWorkbenchBrowserToolHost(host: WorkbenchBrowserToolHos
 }
 
 export async function startDesktopLocalhostWebappProxy(options: Omit<Parameters<typeof startLocalhostWebappProxy>[0], 'dispatch'>) {
+  let certificateHostnames: string[] = [];
+  try {
+    const { snapshot } = await getExtensionHostClient().readRegistryPresentation();
+    certificateHostnames = ((snapshot as { webapps?: unknown[] }).webapps ?? []).flatMap((webapp) =>
+      webapp && typeof webapp === 'object' && typeof (webapp as { localhostName?: unknown }).localhostName === 'string'
+        ? [`${(webapp as { localhostName: string }).localhostName}.localhost`]
+        : [],
+    );
+  } catch (error) {
+    options.logger?.warn?.('localhost webapp certificate host discovery failed', {
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
   return startLocalhostWebappProxy({
     ...options,
+    certificateHostnames,
     dispatch: dispatchDesktopLocalApiRequest,
   });
 }

@@ -1384,7 +1384,7 @@ export function readExtensionRegistrySnapshot(): ExtensionRegistrySnapshot {
       ...webapp,
       extensionId: extension.id,
       packageType: extension.packageType ?? 'user',
-      localhostName: webapp.localhostName?.trim() || `${webapp.id}.${extension.id}`,
+      localhostName: webapp.localhostName?.trim() || `${webapp.id}-${extension.id}`,
     })),
   );
   const routes = [
