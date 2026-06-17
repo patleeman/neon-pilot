@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -147,6 +147,7 @@ describe('SettingsStore', () => {
       });
       const raw = JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8')) as Record<string, unknown>;
       expect(raw).toEqual({ 'app.timeout': 60, 'app.featureX': true });
+      expect(statSync(join(stateRoot, 'settings.json')).mode & 0o777).toBe(0o600);
     });
 
     it('updates existing overrides', () => {

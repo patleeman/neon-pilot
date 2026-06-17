@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -66,6 +66,7 @@ describe('writeSavedDefaultCwdPreference', () => {
       defaultModel: 'gpt-5.4',
       defaultCwd: './workspace',
     });
+    expect(statSync(file).mode & 0o777).toBe(0o600);
   });
 
   it('clears the saved cwd when given an empty value', () => {

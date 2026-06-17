@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -176,6 +176,7 @@ describe('writeConversationPlanDefaults', () => {
         },
       },
     });
+    expect(statSync(file).mode & 0o777).toBe(0o600);
   });
 });
 

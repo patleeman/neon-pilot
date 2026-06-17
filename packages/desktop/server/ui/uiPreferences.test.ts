@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -106,6 +106,7 @@ describe('writeSavedUiPreferences', () => {
         conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
       },
     });
+    expect(statSync(file).mode & 0o777).toBe(0o600);
   });
 
   it('preserves the other lists when only one list is updated', () => {

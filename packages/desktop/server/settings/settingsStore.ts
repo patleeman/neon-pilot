@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
@@ -45,7 +45,9 @@ function readRawOverrides(stateRoot: string): Record<string, unknown> {
 function writeOverrides(overrides: Record<string, unknown>, stateRoot: string): void {
   const dir = join(stateRoot);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(getSettingsFilePath(stateRoot), `${JSON.stringify(overrides, null, 2)}\n`);
+  const filePath = getSettingsFilePath(stateRoot);
+  writeFileSync(filePath, `${JSON.stringify(overrides, null, 2)}\n`, { mode: 0o600 });
+  chmodSync(filePath, 0o600);
 }
 
 function mergeDefaults(overrides: Record<string, unknown>, schema: ExtensionSettingsRegistration[]): Record<string, unknown> {

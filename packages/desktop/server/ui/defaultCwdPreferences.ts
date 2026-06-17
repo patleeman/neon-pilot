@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 import { resolveRequestedCwd } from '../conversations/conversationCwd.js';
@@ -81,7 +81,8 @@ export function writeSavedDefaultCwdPreference(
   }
 
   mkdirSync(dirname(settingsFile), { recursive: true });
-  writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + '\n');
+  writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + '\n', { mode: 0o600 });
+  chmodSync(settingsFile, 0o600);
 
   return readSavedDefaultCwdPreferences(settingsFile, baseDir);
 }

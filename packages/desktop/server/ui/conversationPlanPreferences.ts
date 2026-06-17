@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 export type ConversationPlanItemRecord =
@@ -57,7 +57,8 @@ function readSettingsObject(settingsFile: string): Record<string, unknown> {
 
 function writeSettingsObject(settingsFile: string, settings: Record<string, unknown>): void {
   mkdirSync(dirname(settingsFile), { recursive: true });
-  writeFileSync(settingsFile, `${JSON.stringify(settings, null, 2)}\n`);
+  writeFileSync(settingsFile, `${JSON.stringify(settings, null, 2)}\n`, { mode: 0o600 });
+  chmodSync(settingsFile, 0o600);
 }
 
 function normalizeTimestamp(value: unknown, fallback: string): string {
