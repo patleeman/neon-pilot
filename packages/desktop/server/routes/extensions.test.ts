@@ -396,23 +396,47 @@ describe('registerExtensionRoutes', () => {
     await harness.postHandler('*')(
       {
         method: 'POST',
+        protocol: 'http',
         path: '/.neon/api/extensions/agent-board/actions/saveTask',
         body: { title: 'Ship it' },
-        get: (name: string) => (name.toLowerCase() === 'host' ? 'board-agent-board.localhost' : undefined),
+        get: (name: string) =>
+          name.toLowerCase() === 'host'
+            ? 'board-agent-board.localhost'
+            : name.toLowerCase() === 'origin'
+              ? 'http://board-agent-board.localhost'
+              : undefined,
       } as never,
       actionRes,
     );
     expect(actionRes.json).toHaveBeenCalledWith({ ok: true, result: { saved: { title: 'Ship it' } } });
 
+    const crossOriginRes = createResponse();
+    await harness.postHandler('*')(
+      {
+        method: 'POST',
+        protocol: 'http',
+        path: '/.neon/api/extensions/agent-board/actions/saveTask',
+        body: { title: 'Blocked' },
+        get: (name: string) =>
+          name.toLowerCase() === 'host' ? 'board-agent-board.localhost' : name.toLowerCase() === 'origin' ? 'https://evil.example' : undefined,
+      } as never,
+      crossOriginRes,
+    );
+    expect(crossOriginRes.status).toHaveBeenCalledWith(403);
+    expect(crossOriginRes.json).toHaveBeenCalledWith({ error: 'Cross-origin request rejected.' });
+
     const forwardedBodyRes = createResponse();
     await harness.postHandler('*')(
       {
         method: 'POST',
+        protocol: 'http',
         path: '/.neon/api/extensions/agent-board/actions/saveTask',
         body: Buffer.from(JSON.stringify({ title: 'Forwarded through localhost proxy' })).toJSON(),
         get: (name: string) =>
           name.toLowerCase() === 'host'
             ? 'board-agent-board.localhost'
+            : name.toLowerCase() === 'origin'
+              ? 'http://board-agent-board.localhost'
             : name.toLowerCase() === 'content-type'
               ? 'application/json'
               : undefined,

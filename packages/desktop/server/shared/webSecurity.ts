@@ -72,7 +72,7 @@ export function isTrustedOrigin(originHeader: string | null | undefined, request
   }
 }
 
-function requestOriginFromExpress(req: Request): string | null {
+export function requestOriginFromExpress(req: Request): string | null {
   return resolveRequestOrigin({
     host: req.get('host'),
     forwardedHost: req.get('x-forwarded-host'),
@@ -84,6 +84,14 @@ function requestOriginFromExpress(req: Request): string | null {
 function isSecureRequest(req: Request): boolean {
   const origin = requestOriginFromExpress(req);
   return origin?.startsWith('https://') === true;
+}
+
+export function isSameOriginUnsafeRequest(req: Request): boolean {
+  if (SAFE_METHODS.has(req.method.toUpperCase())) {
+    return true;
+  }
+
+  return isTrustedOrigin(req.get('origin'), requestOriginFromExpress(req));
 }
 
 export function applyWebSecurityHeaders(req: Request, res: Response, next: NextFunction): void {
@@ -101,14 +109,7 @@ export function applyWebSecurityHeaders(req: Request, res: Response, next: NextF
 }
 
 export function enforceSameOriginUnsafeRequests(req: Request, res: Response, next: NextFunction): void {
-  if (SAFE_METHODS.has(req.method.toUpperCase())) {
-    next();
-    return;
-  }
-
-  const requestOrigin = requestOriginFromExpress(req);
-  const originHeader = req.get('origin');
-  if (!isTrustedOrigin(originHeader, requestOrigin)) {
+  if (!isSameOriginUnsafeRequest(req)) {
     res.status(403).json({ error: 'Cross-origin request rejected.' });
     return;
   }

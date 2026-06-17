@@ -32,6 +32,7 @@ import { createExtensionRunsCapability } from '../extensions/extensionRuns.js';
 import { logError } from '../middleware/index.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
 import { getLocalhostWebappProxyStatus, trustLocalhostWebappProxyCertificate } from '../shared/localhostWebappProxy.js';
+import { isSameOriginUnsafeRequest } from '../shared/webSecurity.js';
 import type { ServerRouteContext } from './context.js';
 
 async function readExtensionInstallSummariesWithRuntimeState() {
@@ -352,6 +353,11 @@ async function dispatchExtensionWebappBridgeRequest(
   if (!path) return false;
 
   const method = req.method.toUpperCase();
+  if (!isSameOriginUnsafeRequest(req)) {
+    res.status(403).json({ error: 'Cross-origin request rejected.' });
+    return true;
+  }
+
   const signal = createExtensionRequestAbortSignal(req, res);
   let bodyPromise: Promise<unknown> | null = null;
   const body = () => {

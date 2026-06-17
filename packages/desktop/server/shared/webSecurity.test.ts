@@ -5,6 +5,7 @@ import {
   applyWebSecurityHeaders,
   createInMemoryRateLimit,
   enforceSameOriginUnsafeRequests,
+  isSameOriginUnsafeRequest,
   isTrustedOrigin,
   resolveRequestOrigin,
 } from './webSecurity.js';
@@ -200,6 +201,27 @@ describe('enforceSameOriginUnsafeRequests', () => {
 
     expect(res.status).toHaveBeenCalledWith(403);
     expect(res.json).toHaveBeenCalledWith({ error: 'Cross-origin request rejected.' });
+  });
+
+  it('reports whether unsafe requests are same-origin', () => {
+    expect(
+      isSameOriginUnsafeRequest(
+        createRequest({
+          method: 'post',
+          protocol: 'http',
+          headers: { host: 'board.localhost', origin: 'http://board.localhost' },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isSameOriginUnsafeRequest(
+        createRequest({
+          method: 'post',
+          protocol: 'http',
+          headers: { host: 'board.localhost', origin: 'https://evil.example' },
+        }),
+      ),
+    ).toBe(false);
   });
 });
 
