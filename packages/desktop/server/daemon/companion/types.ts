@@ -8,9 +8,9 @@ export const COMPANION_SOCKET_PATH = `${COMPANION_API_ROOT}/socket`;
 export type CompanionSurfaceType = 'desktop_ui' | 'ios_native';
 
 export interface CompanionHostHello {
-  hostInstanceId: string;
-  hostLabel: string;
-  daemonVersion: string;
+  hostInstanceId?: string;
+  hostLabel?: string;
+  daemonVersion?: string;
   protocolVersion: string;
   transport: {
     websocket: true;
@@ -21,7 +21,7 @@ export interface CompanionHostHello {
     pairingRequired: true;
     bearerTokens: true;
   };
-  capabilities: {
+  capabilities?: {
     fullConversationLifecycle: boolean;
     executionTargets: boolean;
     executionTargetSwitching: boolean;

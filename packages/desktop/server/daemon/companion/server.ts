@@ -242,6 +242,21 @@ function buildHello(stateRoot: string): CompanionHostHello {
   };
 }
 
+function buildPublicHello(): CompanionHostHello {
+  return {
+    protocolVersion: COMPANION_PROTOCOL_VERSION,
+    transport: {
+      websocket: true,
+      singleSocket: true,
+      httpAvailable: true,
+    },
+    auth: {
+      pairingRequired: true,
+      bearerTokens: true,
+    },
+  };
+}
+
 function normalizeCompanionRequestPathname(pathname: string): string {
   if (pathname === '/v1' || pathname.startsWith('/v1/')) {
     return `/companion${pathname}`;
@@ -540,7 +555,7 @@ export class DaemonCompanionServer {
     const pathname = normalizeCompanionRequestPathname(requestUrl.pathname);
 
     if (request.method === 'GET' && pathname === `${COMPANION_API_ROOT}/hello`) {
-      sendJson(response, 200, buildHello(this.stateRoot));
+      sendJson(response, 200, buildPublicHello());
       return;
     }
 
