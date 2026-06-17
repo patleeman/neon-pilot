@@ -39,25 +39,6 @@ interface GatewayStatus {
   models: number;
   defaultModel: string;
   catalogPath?: string;
-  codexConfig?: {
-    configPath: string;
-    installed: boolean;
-    managed: boolean;
-    hasNeonPilotProvider: boolean;
-    activeProvider?: string;
-    activeModel?: string;
-    activeCatalogPath?: string;
-    catalogPath?: string;
-    referenceCheck?: {
-      ok: boolean;
-      codexPath?: string;
-      models?: number;
-      hasDefaultModel?: boolean;
-      hasFakeModel?: boolean;
-      sampleModels?: string[];
-      error?: string;
-    };
-  };
   lastError?: string;
   logs: GatewayLogEntry[];
 }
@@ -93,20 +74,16 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
   const [copied, setCopied] = useState(false);
   const copyResetTimeoutRef = React.useRef<number | null>(null);
 
-  const codexConfig = useMemo(
+  const gatewayConfig = useMemo(
     () =>
       [
-        ...(status.catalogPath ? [`model_catalog_json = "${status.catalogPath.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`] : []),
-        '',
-        '[model_providers.neon-pilot]',
-        'name = "Neon Pilot AI Gateway"',
-        `base_url = "${status.baseUrl}"`,
-        'wire_api = "responses"',
-        `experimental_bearer_token = "${status.authToken.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`,
+        `base_url=${JSON.stringify(status.baseUrl)}`,
+        `auth_token=${JSON.stringify(status.authToken)}`,
+        `default_model=${JSON.stringify(status.defaultModel)}`,
+        ...(status.catalogPath ? [`model_catalog=${JSON.stringify(status.catalogPath)}`] : []),
       ].join('\n'),
-    [status.authToken, status.baseUrl, status.catalogPath],
+    [status.authToken, status.baseUrl, status.catalogPath, status.defaultModel],
   );
-  const referenceCheck = status.codexConfig?.referenceCheck;
 
   const load = useCallback(async () => {
     const next = (await pa.extension.invoke('status', {})) as GatewayStatus;
@@ -162,7 +139,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
   async function copyConfig() {
     setCopied(false);
     try {
-      await navigator.clipboard.writeText(codexConfig);
+      await navigator.clipboard.writeText(gatewayConfig);
       setCopied(true);
       if (copyResetTimeoutRef.current !== null) {
         window.clearTimeout(copyResetTimeoutRef.current);
@@ -173,36 +150,6 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
       }, 1600);
     } catch (copyError) {
       setError(readError(copyError));
-    }
-  }
-
-  async function installCodexConfig() {
-    setBusy('installCodexConfig');
-    setError(null);
-    setMessage(null);
-    try {
-      const next = (await pa.extension.invoke('installCodexConfig', {})) as GatewayStatus;
-      setStatus({ ...DEFAULT_STATUS, ...next, logs: next.logs ?? [] });
-      setMessage('Neon Pilot installed in Codex config.');
-    } catch (installError) {
-      setError(readError(installError));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function removeCodexConfig() {
-    setBusy('removeCodexConfig');
-    setError(null);
-    setMessage(null);
-    try {
-      const next = (await pa.extension.invoke('removeCodexConfig', {})) as GatewayStatus;
-      setStatus({ ...DEFAULT_STATUS, ...next, logs: next.logs ?? [] });
-      setMessage('Neon Pilot removed from Codex config.');
-    } catch (removeError) {
-      setError(readError(removeError));
-    } finally {
-      setBusy(null);
     }
   }
 
@@ -268,38 +215,14 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-[13px] font-semibold text-primary">Codex config</div>
-                <SupportingText>
-                  {status.codexConfig?.installed
-                    ? `Catalog installed in ${status.codexConfig.configPath}`
-                    : `Not installed in ${status.codexConfig?.configPath ?? '~/.codex/config.toml'}`}
-                </SupportingText>
+                <div className="text-[13px] font-semibold text-primary">Client config</div>
+                <SupportingText>Use these values in external clients that support OpenAI Responses-compatible endpoints.</SupportingText>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <ToolbarButton disabled={busy === 'installCodexConfig'} onClick={() => void installCodexConfig()}>
-                  {status.codexConfig?.installed ? 'Reinstall' : 'Install'}
-                </ToolbarButton>
-                <ToolbarButton
-                  disabled={busy === 'removeCodexConfig' || !status.codexConfig?.installed}
-                  onClick={() => void removeCodexConfig()}
-                >
-                  Remove
-                </ToolbarButton>
                 <ToolbarButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy'}</ToolbarButton>
               </div>
             </div>
-            {referenceCheck ? (
-              <Notice tone={referenceCheck.ok ? 'success' : 'warning'}>
-                {referenceCheck.ok
-                  ? `Codex app-server sees ${referenceCheck.models ?? 0} gateway models without changing the active provider. Current Desktop builds may still hide them in the picker.`
-                  : `Codex reference check failed: ${referenceCheck.error ?? 'gateway models were not found in Codex debug models.'}`}
-              </Notice>
-            ) : status.codexConfig?.installed ? (
-              <Notice tone="warning">
-                Catalog installed. Current Codex Desktop builds may still hide custom catalog models in the conversation picker.
-              </Notice>
-            ) : null}
-            <pre className="model-gateway-code">{codexConfig}</pre>
+            <pre className="model-gateway-code">{gatewayConfig}</pre>
           </div>
 
           <div className="space-y-2">

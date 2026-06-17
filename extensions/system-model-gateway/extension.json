@@ -26,8 +26,6 @@
     "actions": [
       { "id": "status", "handler": "status", "title": "AI Gateway status", "worker": { "enabled": true } },
       { "id": "updateSettings", "handler": "updateSettings", "title": "Update AI Gateway settings", "worker": { "enabled": true } },
-      { "id": "installCodexConfig", "handler": "installCodexConfig", "title": "Install Codex AI Gateway config", "worker": { "enabled": true } },
-      { "id": "removeCodexConfig", "handler": "removeCodexConfig", "title": "Remove Codex AI Gateway config", "worker": { "enabled": true } },
       { "id": "clearLogs", "handler": "clearLogs", "title": "Clear AI Gateway logs", "worker": { "enabled": true } }
     ],
     "routes": [

@@ -1,8 +1,7 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { parse as parseToml } from 'smol-toml';
 import { describe, expect, it, vi } from 'vitest';
 
 const { streamMock } = vi.hoisted(() => ({
@@ -20,9 +19,6 @@ vi.mock('@earendil-works/pi-ai', async (importOriginal) => {
 import {
   buildContext,
   createModelGatewayResponse,
-  installModelGatewayCodexConfig,
-  readModelGatewayCodexConfigStatus,
-  removeModelGatewayCodexConfig,
   requestToolsToPiTools,
   responsesInputToPiMessages,
   streamModelGatewayResponseEvents,
@@ -373,13 +369,13 @@ describe('modelGatewayRuntime', () => {
     }
   });
 
-  it('writes a Codex model catalog for custom provider model metadata', () => {
+  it('writes a model catalog for custom provider model metadata', () => {
     const runtimeDir = mkdtempSync(join(tmpdir(), 'model-gateway-catalog-'));
     try {
       const path = writeModelGatewayCatalog({ runtimeDir });
       const catalog = JSON.parse(readFileSync(path, 'utf8')) as { models: Array<Record<string, unknown>> };
 
-      expect(path).toBe(join(runtimeDir, 'model-gateway', 'codex-model-catalog.json'));
+      expect(path).toBe(join(runtimeDir, 'model-gateway', 'model-catalog.json'));
       expect(fileMode(path)).toBe(0o600);
       expect(catalog.models).toEqual(
         expect.arrayContaining([
@@ -399,7 +395,7 @@ describe('modelGatewayRuntime', () => {
     }
   });
 
-  it('orders auto first in the Codex model catalog when gateway models exist', () => {
+  it('orders auto first in the model catalog when gateway models exist', () => {
     const runtimeDir = mkdtempSync(join(tmpdir(), 'model-gateway-catalog-models-'));
     try {
       writeFileSync(
@@ -428,95 +424,4 @@ describe('modelGatewayRuntime', () => {
     }
   });
 
-  it('installs a managed Codex catalog without changing the active provider lane', () => {
-    const runtimeDir = mkdtempSync(join(tmpdir(), 'model-gateway-install-'));
-    const configPath = join(runtimeDir, 'codex', 'config.toml');
-    try {
-      mkdirSync(join(runtimeDir, 'codex'), { recursive: true });
-      writeFileSync(
-        configPath,
-        [
-          'model = "gpt-5.5"',
-          'model_provider = "openai"',
-          'approval_policy = "never"',
-          '',
-          '[model_providers.neon-pilot]',
-          'base_url = "http://old"',
-          '',
-          '[profiles.default]',
-          'model = "gpt-5.5"',
-          '',
-        ].join('\n'),
-      );
-      chmodSync(configPath, 0o644);
-
-      const result = installModelGatewayCodexConfig(
-        { runtimeDir },
-        { host: '127.0.0.1', port: 8766, defaultModel: 'auto', authToken: 'test-gateway-token' },
-        { configPath },
-      );
-      const next = readFileSync(configPath, 'utf8');
-      const parsed = parseToml(next) as {
-        model?: string;
-        model_provider?: string;
-        model_catalog_json?: string;
-        approval_policy?: string;
-        model_providers?: Record<string, { base_url?: string; experimental_bearer_token?: string }>;
-        neon_pilot_model_gateway?: { managed?: boolean };
-      };
-
-      expect(result.status).toMatchObject({ installed: true, activeProvider: 'openai', activeModel: 'gpt-5.5' });
-      expect(result.backupPath && existsSync(result.backupPath)).toBe(true);
-      expect(fileMode(configPath)).toBe(0o600);
-      expect(result.backupPath ? fileMode(result.backupPath) : undefined).toBe(0o600);
-      expect(fileMode(join(runtimeDir, 'model-gateway', 'codex-model-catalog.json'))).toBe(0o600);
-      expect(parsed).toMatchObject({
-        model: 'gpt-5.5',
-        model_provider: 'openai',
-        approval_policy: 'never',
-        model_providers: { 'neon-pilot': { base_url: 'http://127.0.0.1:8766/v1', experimental_bearer_token: 'test-gateway-token' } },
-        neon_pilot_model_gateway: {
-          managed: true,
-        },
-      });
-      expect(parsed.model_catalog_json).toBe(join(runtimeDir, 'model-gateway', 'codex-model-catalog.json'));
-      expect(next).not.toContain('base_url = "http://old"');
-    } finally {
-      rmSync(runtimeDir, { recursive: true, force: true });
-    }
-  });
-
-  it('removes the managed Codex config and keeps user-owned top-level settings', () => {
-    const runtimeDir = mkdtempSync(join(tmpdir(), 'model-gateway-remove-'));
-    const configPath = join(runtimeDir, 'codex', 'config.toml');
-    try {
-      mkdirSync(join(runtimeDir, 'codex'), { recursive: true });
-      writeFileSync(configPath, 'model = "gpt-5.5"\nmodel_provider = "openai"\napproval_policy = "never"\n');
-      installModelGatewayCodexConfig(
-        { runtimeDir },
-        { host: '127.0.0.1', port: 8766, defaultModel: 'auto', authToken: 'test-gateway-token' },
-        { configPath },
-      );
-      const result = removeModelGatewayCodexConfig({ runtimeDir }, { configPath });
-      const next = readFileSync(configPath, 'utf8');
-      const parsed = parseToml(next) as {
-        model?: string;
-        model_provider?: string;
-        approval_policy?: string;
-        model_providers?: Record<string, unknown>;
-        neon_pilot_model_gateway?: unknown;
-      };
-
-      expect(result.status).toMatchObject({ installed: false, managed: false });
-      expect(result.backupPath && existsSync(result.backupPath)).toBe(true);
-      expect(fileMode(configPath)).toBe(0o600);
-      expect(result.backupPath ? fileMode(result.backupPath) : undefined).toBe(0o600);
-      expect(parsed).toMatchObject({ model: 'gpt-5.5', model_provider: 'openai', approval_policy: 'never' });
-      expect(parsed.model_providers?.['neon-pilot']).toBeUndefined();
-      expect(parsed.neon_pilot_model_gateway).toBeUndefined();
-      expect(readModelGatewayCodexConfigStatus({ runtimeDir }, { configPath })).toMatchObject({ installed: false });
-    } finally {
-      rmSync(runtimeDir, { recursive: true, force: true });
-    }
-  });
 });

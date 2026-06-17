@@ -22,41 +22,7 @@ vi.mock(
       return [{ id: 'neon-pilot-fake', object: 'model', created: 0, owned_by: 'neon-pilot' }];
     },
     writeModelGatewayCatalog() {
-      return '/tmp/model-gateway/codex-model-catalog.json';
-    },
-    readModelGatewayCodexConfigStatus() {
-      return {
-        configPath: '/tmp/.codex/config.toml',
-        installed: false,
-        managed: false,
-        hasNeonPilotProvider: false,
-        catalogPath: '/tmp/model-gateway/codex-model-catalog.json',
-      };
-    },
-    installModelGatewayCodexConfig() {
-      return {
-        status: {
-          configPath: '/tmp/.codex/config.toml',
-          installed: true,
-          managed: true,
-          hasNeonPilotProvider: true,
-          activeProvider: 'neon-pilot',
-          activeModel: 'auto',
-          activeCatalogPath: '/tmp/model-gateway/codex-model-catalog.json',
-          catalogPath: '/tmp/model-gateway/codex-model-catalog.json',
-        },
-      };
-    },
-    removeModelGatewayCodexConfig() {
-      return {
-        status: {
-          configPath: '/tmp/.codex/config.toml',
-          installed: false,
-          managed: false,
-          hasNeonPilotProvider: false,
-          catalogPath: '/tmp/model-gateway/codex-model-catalog.json',
-        },
-      };
+      return '/tmp/model-gateway/model-catalog.json';
     },
     async createModelGatewayResponse(_ctx: unknown, body: { model?: unknown; input?: unknown }) {
       return {
@@ -92,9 +58,7 @@ import {
   clearLogs,
   gatewayServiceHealth,
   healthRoute,
-  installCodexConfig,
   modelsRoute,
-  removeCodexConfig,
   responsesRoute,
   startGatewayService,
   status,
@@ -320,15 +284,5 @@ describe('system-model-gateway backend', () => {
 
   it('clears recent activity logs', async () => {
     await expect(clearLogs({}, ctx())).resolves.toMatchObject({ logs: [] });
-  });
-
-  it('installs and removes the managed Codex config through backend actions', async () => {
-    const context = ctx();
-    await expect(installCodexConfig({}, context)).resolves.toMatchObject({
-      codexConfig: { installed: false, configPath: '/tmp/.codex/config.toml' },
-    });
-    await expect(removeCodexConfig({}, context)).resolves.toMatchObject({
-      codexConfig: { installed: false, configPath: '/tmp/.codex/config.toml' },
-    });
   });
 });

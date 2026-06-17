@@ -1,7 +1,5 @@
-import { spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { AuthStorage, ModelRegistry } from '@earendil-works/pi-coding-agent';
 import {
@@ -16,7 +14,6 @@ import {
   type TextContent,
   Type,
 } from '@earendil-works/pi-ai';
-import { parse as parseToml, stringify as stringifyToml } from 'smol-toml';
 
 import { readSavedModelRef } from './models/modelPreferences.js';
 
@@ -57,33 +54,6 @@ export interface ModelGatewayResponseOptions {
   signal?: AbortSignal;
 }
 
-export interface ModelGatewayCodexConfigStatus {
-  configPath: string;
-  installed: boolean;
-  managed: boolean;
-  hasNeonPilotProvider: boolean;
-  activeProvider?: string;
-  activeModel?: string;
-  activeCatalogPath?: string;
-  catalogPath?: string;
-  referenceCheck?: ModelGatewayCodexReferenceCheck;
-}
-
-export interface ModelGatewayCodexConfigResult {
-  status: ModelGatewayCodexConfigStatus;
-  backupPath?: string;
-}
-
-export interface ModelGatewayCodexReferenceCheck {
-  ok: boolean;
-  codexPath?: string;
-  models?: number;
-  hasDefaultModel?: boolean;
-  hasFakeModel?: boolean;
-  sampleModels?: string[];
-  error?: string;
-}
-
 export interface ResponsesRequest {
   model?: unknown;
   input?: unknown;
@@ -111,15 +81,7 @@ type RuntimeContext = {
   runtimeDir: string;
 };
 
-const CODEX_PLAN_TIERS = ['free', 'plus', 'pro', 'team', 'business', 'enterprise'];
-// Keep the managed top-level footprint to model_catalog_json until Codex Desktop
-// fixes custom catalog picker filtering and provider-scoped thread listing:
-// https://github.com/openai/codex/issues/19694
-// https://github.com/openai/codex/issues/14370
-const CODEX_CONFIG_MANAGED_TOP_LEVEL_KEYS = new Set(['model_catalog_json']);
-const CODEX_CONFIG_MANAGED_TABLE = 'neon_pilot_model_gateway';
-const CODEX_APP_CLI_PATH = '/Applications/Codex.app/Contents/Resources/codex';
-const CODEX_CONFIG_REFERENCE_CHECK_KEY = 'referenceCheck';
+const MODEL_GATEWAY_PLAN_TIERS = ['free', 'plus', 'pro', 'team', 'business', 'enterprise'];
 const PRIVATE_FILE_MODE = 0o600;
 
 function nowSeconds(): number {
@@ -580,17 +542,17 @@ function catalogEntry(model: ModelGatewayModel, index: number): Record<string, u
     upgrade: null,
     priority,
     prefer_websockets: false,
-    available_in_plans: CODEX_PLAN_TIERS,
-    base_instructions: 'You are a coding agent running in Codex through Neon Pilot AI Gateway.',
+    available_in_plans: MODEL_GATEWAY_PLAN_TIERS,
+    base_instructions: 'You are a coding agent running through Neon Pilot AI Gateway.',
     model_messages: {
-      instructions_template: 'You are Codex running on {model_name} through Neon Pilot AI Gateway. Be a helpful, direct coding collaborator.',
+      instructions_template: 'You are running on {model_name} through Neon Pilot AI Gateway. Be a helpful, direct coding collaborator.',
       instructions_variables: { model_name: displayName },
     },
   };
 }
 
 export function modelGatewayCatalogPath(ctx: RuntimeContext): string {
-  return join(ctx.runtimeDir, 'model-gateway', 'codex-model-catalog.json');
+  return join(ctx.runtimeDir, 'model-gateway', 'model-catalog.json');
 }
 
 export function writeModelGatewayCatalog(ctx: RuntimeContext): string {
@@ -604,177 +566,6 @@ export function writeModelGatewayCatalog(ctx: RuntimeContext): string {
 function writePrivateFile(path: string, content: string): void {
   writeFileSync(path, content, { mode: PRIVATE_FILE_MODE });
   chmodSync(path, PRIVATE_FILE_MODE);
-}
-
-function codexConfigPath(input?: unknown): string {
-  const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
-  return typeof record.configPath === 'string' && record.configPath.trim() ? record.configPath.trim() : join(homedir(), '.codex', 'config.toml');
-}
-
-function shouldCheckCodexReference(input?: unknown): boolean {
-  const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
-  if (typeof record[CODEX_CONFIG_REFERENCE_CHECK_KEY] === 'boolean') return record[CODEX_CONFIG_REFERENCE_CHECK_KEY];
-  return codexConfigPath(input) === join(homedir(), '.codex', 'config.toml');
-}
-
-function backupCodexConfig(configPath: string): string | undefined {
-  if (!existsSync(configPath)) return undefined;
-  const stamp = new Date().toISOString().replaceAll(/[-:]/g, '').replace(/\..+$/, '').replace('T', '-');
-  const backupPath = `${configPath}.bak.neon-pilot-${stamp}`;
-  copyFileSync(configPath, backupPath);
-  chmodSync(backupPath, PRIVATE_FILE_MODE);
-  return backupPath;
-}
-
-type TomlRecord = Record<string, unknown>;
-
-function readTomlConfig(text: string): TomlRecord {
-  if (!text.trim()) return {};
-  const parsed = parseToml(text) as unknown;
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('Codex config must be a TOML table.');
-  }
-  return parsed as TomlRecord;
-}
-
-function readStringProperty(record: TomlRecord, key: string): string | undefined {
-  const value = record[key];
-  return typeof value === 'string' ? value : undefined;
-}
-
-function readRecordProperty(record: TomlRecord, key: string): TomlRecord | undefined {
-  const value = record[key];
-  return value && typeof value === 'object' && !Array.isArray(value) ? (value as TomlRecord) : undefined;
-}
-
-function readManagedConfigTable(config: TomlRecord): TomlRecord | undefined {
-  return readRecordProperty(config, CODEX_CONFIG_MANAGED_TABLE);
-}
-
-function isManagedCodexConfig(config: TomlRecord): boolean {
-  return readManagedConfigTable(config)?.managed === true;
-}
-
-function writeTomlConfig(config: TomlRecord): string {
-  return `${stringifyToml(config).trim()}\n`;
-}
-
-function resolveCodexCliPath(): string | undefined {
-  if (existsSync(CODEX_APP_CLI_PATH)) return CODEX_APP_CLI_PATH;
-  const lookup = spawnSync('sh', ['-lc', 'command -v codex'], { encoding: 'utf8', timeout: 2_000 });
-  const candidate = lookup.status === 0 ? lookup.stdout.trim().split('\n')[0]?.trim() : undefined;
-  return candidate || undefined;
-}
-
-function readModelSlug(value: unknown): string | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
-  const record = value as Record<string, unknown>;
-  return typeof record.slug === 'string' ? record.slug : typeof record.model === 'string' ? record.model : typeof record.id === 'string' ? record.id : undefined;
-}
-
-function checkCodexReferenceModels(configPath: string, defaultModel: string | undefined): ModelGatewayCodexReferenceCheck {
-  const codexPath = resolveCodexCliPath();
-  if (!codexPath) return { ok: false, error: 'Codex CLI was not found.' };
-  const codexHome = dirname(configPath);
-  const result = spawnSync(codexPath, ['debug', 'models'], {
-    cwd: codexHome,
-    env: { ...process.env, CODEX_HOME: codexHome },
-    encoding: 'utf8',
-    timeout: 10_000,
-    maxBuffer: 8 * 1024 * 1024,
-  });
-  if (result.error) {
-    return { ok: false, codexPath, error: result.error.message };
-  }
-  if (result.status !== 0) {
-    const message = result.stderr.trim() || result.stdout.trim() || `Codex exited with status ${result.status}.`;
-    return { ok: false, codexPath, error: message.slice(0, 500) };
-  }
-  try {
-    const parsed = JSON.parse(result.stdout) as { models?: unknown };
-    const models = Array.isArray(parsed.models) ? parsed.models.map(readModelSlug).filter((slug): slug is string => Boolean(slug)) : [];
-    const expectedDefaultModel = defaultModel || DEFAULT_MODEL_GATEWAY_MODEL_ID;
-    return {
-      ok: models.includes(DEFAULT_MODEL_GATEWAY_MODEL_ID) && models.includes(FAKE_MODEL_GATEWAY_MODEL_ID),
-      codexPath,
-      models: models.length,
-      hasDefaultModel: models.includes(expectedDefaultModel),
-      hasFakeModel: models.includes(FAKE_MODEL_GATEWAY_MODEL_ID),
-      sampleModels: models.slice(0, 8),
-    };
-  } catch (error) {
-    return { ok: false, codexPath, error: error instanceof Error ? error.message : String(error) };
-  }
-}
-
-export function readModelGatewayCodexConfigStatus(ctx: RuntimeContext, input?: unknown): ModelGatewayCodexConfigStatus {
-  const configPath = codexConfigPath(input);
-  const text = existsSync(configPath) ? readFileSync(configPath, 'utf8') : '';
-  const config = readTomlConfig(text);
-  const providers = readRecordProperty(config, 'model_providers') ?? {};
-  const installed = isManagedCodexConfig(config);
-  const activeProvider = readStringProperty(config, 'model_provider');
-  const activeModel = readStringProperty(config, 'model');
-  const activeCatalogPath = readStringProperty(config, 'model_catalog_json');
-  const hasNeonPilotProvider = Boolean(readRecordProperty(providers, 'neon-pilot'));
-  return {
-    configPath,
-    installed,
-    managed: installed,
-    hasNeonPilotProvider,
-    activeProvider,
-    activeModel,
-    activeCatalogPath,
-    catalogPath: modelGatewayCatalogPath(ctx),
-    ...(shouldCheckCodexReference(input) && installed && hasNeonPilotProvider && activeCatalogPath
-      ? { referenceCheck: checkCodexReferenceModels(configPath, activeModel) }
-      : {}),
-  };
-}
-
-export function installModelGatewayCodexConfig(ctx: RuntimeContext, settings: ModelGatewaySettings, input?: unknown): ModelGatewayCodexConfigResult {
-  const configPath = codexConfigPath(input);
-  mkdirSync(dirname(configPath), { recursive: true });
-  const existing = existsSync(configPath) ? readFileSync(configPath, 'utf8') : '';
-  const backupPath = backupCodexConfig(configPath);
-  const catalogPath = writeModelGatewayCatalog(ctx);
-  const config = readTomlConfig(existing);
-  const providers = readRecordProperty(config, 'model_providers') ?? {};
-  providers['neon-pilot'] = {
-    name: 'Neon Pilot AI Gateway',
-    base_url: `http://${settings.host}:${settings.port}/v1`,
-    wire_api: 'responses',
-    experimental_bearer_token: settings.authToken,
-  };
-  config.model_providers = providers;
-  config[CODEX_CONFIG_MANAGED_TABLE] = {
-    managed: true,
-  };
-  config.model_catalog_json = catalogPath;
-  writePrivateFile(configPath, writeTomlConfig(config));
-  return { status: readModelGatewayCodexConfigStatus(ctx, input), ...(backupPath ? { backupPath } : {}) };
-}
-
-export function removeModelGatewayCodexConfig(ctx: RuntimeContext, input?: unknown): ModelGatewayCodexConfigResult {
-  const configPath = codexConfigPath(input);
-  if (!existsSync(configPath)) return { status: readModelGatewayCodexConfigStatus(ctx, input) };
-  const existing = readFileSync(configPath, 'utf8');
-  const config = readTomlConfig(existing);
-  if (!isManagedCodexConfig(config)) return { status: readModelGatewayCodexConfigStatus(ctx, input) };
-  const backupPath = backupCodexConfig(configPath);
-  for (const key of CODEX_CONFIG_MANAGED_TOP_LEVEL_KEYS) {
-    delete config[key];
-  }
-  const providers = readRecordProperty(config, 'model_providers');
-  if (providers) {
-    delete providers['neon-pilot'];
-    if (Object.keys(providers).length === 0) {
-      delete config.model_providers;
-    }
-  }
-  delete config[CODEX_CONFIG_MANAGED_TABLE];
-  writePrivateFile(configPath, writeTomlConfig(config));
-  return { status: readModelGatewayCodexConfigStatus(ctx, input), ...(backupPath ? { backupPath } : {}) };
 }
 
 function resolveDefaultModelRef(ctx: RuntimeContext, models: Array<Model<Api>>): string {

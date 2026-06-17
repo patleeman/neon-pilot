@@ -220,9 +220,6 @@ importers:
       node-pty:
         specifier: ^1.0.0
         version: 1.1.0
-      smol-toml:
-        specifier: 1.6.1
-        version: 1.6.1
       whisper-cpp-node:
         specifier: 0.2.12
         version: 0.2.12

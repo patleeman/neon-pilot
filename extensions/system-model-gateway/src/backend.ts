@@ -5,11 +5,8 @@ import type { ExtensionBackendContext, ExtensionRouteRequest, ExtensionRouteResp
 
 import {
   createModelGatewayResponse,
-  installModelGatewayCodexConfig,
   listModelGatewayModels,
   modelGatewaySettingsFrom,
-  readModelGatewayCodexConfigStatus,
-  removeModelGatewayCodexConfig,
   type ModelGatewaySettings,
   type ModelGatewayStatus,
   type ResponsesRequest,
@@ -77,10 +74,9 @@ function appendLog(entry: Omit<GatewayLogEntry, 'id' | 'at'>): void {
   logs.splice(MAX_LOGS);
 }
 
-async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySettings, input?: unknown): Promise<GatewayState> {
+async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySettings): Promise<GatewayState> {
   const models = (await listModelGatewayModels(ctx)).length;
   const catalogPath = await writeModelGatewayCatalog(ctx);
-  const codexConfig = await readModelGatewayCodexConfigStatus(ctx, input);
   return {
     running: Boolean(server?.listening),
     host: settings.host,
@@ -90,7 +86,6 @@ async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySet
     models,
     defaultModel: settings.defaultModel,
     catalogPath,
-    codexConfig,
     logs: [...logs],
     ...(lastError ? { lastError } : {}),
   };
@@ -112,7 +107,7 @@ async function ensureLoopbackServer(ctx: ExtensionBackendContext): Promise<Gatew
 }
 
 export async function status(_input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
-  return statusFor(ctx, await readSettings(ctx), _input);
+  return statusFor(ctx, await readSettings(ctx));
 }
 
 export async function updateSettings(input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
@@ -127,16 +122,6 @@ export async function updateSettings(input: unknown, ctx: ExtensionBackendContex
 export async function clearLogs(_input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
   logs.splice(0);
   return statusFor(ctx, await readSettings(ctx));
-}
-
-export async function installCodexConfig(input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
-  await installModelGatewayCodexConfig(ctx, await readSettings(ctx), input);
-  return statusFor(ctx, await readSettings(ctx), input);
-}
-
-export async function removeCodexConfig(input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
-  await removeModelGatewayCodexConfig(ctx, input);
-  return statusFor(ctx, await readSettings(ctx), input);
 }
 
 export async function startGatewayService(_input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {

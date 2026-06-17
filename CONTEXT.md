@@ -85,10 +85,6 @@ A bundled extension shipped with the app or repo. System extensions can still ow
 
 A bundled system extension that exposes Neon Pilot model providers through an API surface external coding agents can use.
 
-### OpenAI Desktop Plugin
-
-A bundled system extension that installs and manages the external Codex/OpenAI Desktop `neon-pilot` plugin. The generated plugin contributes a Neon Pilot CLI skill plus a narrow delegated-agent MCP bridge.
-
 ### Required system extension
 
 A bundled extension that owns a platform repair, configuration, routing, prompt assembly, terminal, or background-work surface that must stay available for the app to manage itself.

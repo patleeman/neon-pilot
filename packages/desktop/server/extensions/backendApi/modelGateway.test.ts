@@ -20,9 +20,6 @@ describe('backendApi/modelGateway', () => {
     await modelGateway.modelGatewaySettingsFrom({ port: 9000 });
     await modelGateway.listModelGatewayModels(ctx as never);
     await modelGateway.writeModelGatewayCatalog(ctx as never);
-    await modelGateway.readModelGatewayCodexConfigStatus(ctx as never, { profile: 'default' });
-    await modelGateway.installModelGatewayCodexConfig(ctx as never, settings as never, { profile: 'default' });
-    await modelGateway.removeModelGatewayCodexConfig(ctx as never, { profile: 'default' });
     await modelGateway.createModelGatewayResponse(ctx as never, request as never, settings as never, { signal: undefined });
     await modelGateway.streamModelGatewayResponseEvents(ctx as never, request as never, settings as never, { signal: undefined });
 
@@ -34,28 +31,6 @@ describe('backendApi/modelGateway', () => {
     expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(
       4,
       '../../modelGatewayRuntime.js',
-      'readModelGatewayCodexConfigStatus',
-      ctx,
-      { profile: 'default' },
-    );
-    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(
-      5,
-      '../../modelGatewayRuntime.js',
-      'installModelGatewayCodexConfig',
-      ctx,
-      settings,
-      { profile: 'default' },
-    );
-    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(
-      6,
-      '../../modelGatewayRuntime.js',
-      'removeModelGatewayCodexConfig',
-      ctx,
-      { profile: 'default' },
-    );
-    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(
-      7,
-      '../../modelGatewayRuntime.js',
       'createModelGatewayResponse',
       ctx,
       request,
@@ -63,7 +38,7 @@ describe('backendApi/modelGateway', () => {
       { signal: undefined },
     );
     expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(
-      8,
+      5,
       '../../modelGatewayRuntime.js',
       'streamModelGatewayResponseEvents',
       ctx,

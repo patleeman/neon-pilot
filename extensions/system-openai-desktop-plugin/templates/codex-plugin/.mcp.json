@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "neon-pilot": {
-      "cwd": ".",
-      "command": "node",
-      "args": ["./mcp/neon-pilot-subagent.mjs"]
-    }
-  }
-}

@@ -53,7 +53,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Pages/views: Settings, Provider settings, Desktop settings.
 - Settings keys: `secrets.provider` (`keychain`, `file`, `env-only`), `conversation.transcriptDisclosure` (`auto`, `expanded`), `conversation.diffDisclosure`, and `conversation.pinnedToolCalls`.
 - Test provider add/edit/remove, model/provider validation, secrets redaction, desktop preferences, keyboard shortcut preferences, persistence after restart.
-- Extension settings components hosted here: extension repositories, Knowledge Base when installed, Dictation, MCP tools, Image Probe, AI Gateway, OpenAI Desktop Plugin, Neon Pilot CLI, Alleycat host when installed.
+- Extension settings components hosted here: extension repositories, Knowledge Base when installed, Dictation, MCP tools, Image Probe, AI Gateway, Neon Pilot CLI, Alleycat host when installed.
 
 ### `/settings/providers` — Provider settings
 
@@ -306,14 +306,8 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 ### AI Gateway (`system-model-gateway`, default disabled)
 
 - Settings component: AI Gateway.
-- Actions: `status`, `updateSettings`, `installCodexConfig`, `removeCodexConfig`, `clearLogs`.
-- Test disabled default, enable/start status, Responses-compatible loopback URL, Codex config install/remove, settings persistence, log clearing, port conflict, and disable cleanup.
-
-### OpenAI Desktop Plugin (`system-openai-desktop-plugin`)
-
-- Settings component: OpenAI Desktop Plugin.
-- Actions: `status`, `installPlugin`, `removePlugin`.
-- Test installed/missing status, install/reinstall/remove, generated skill and MCP bridge files, Codex/OpenAI Desktop config instructions, and stale install cleanup.
+- Actions: `status`, `updateSettings`, `clearLogs`.
+- Test disabled default, enable/start status, Responses-compatible loopback URL, client config copy, settings persistence, log clearing, port conflict, and disable cleanup.
 
 ## External gateway commands
 
@@ -473,7 +467,7 @@ Bundled system-extension entries are derived from local `extensions/*/extension.
 ### system-model-gateway — AI Gateway (default disabled)
 
 - settingsComponent: model-gateway-settings (settings-model-gateway)
-- backend actions: status, updateSettings, installCodexConfig, removeCodexConfig, clearLogs
+- backend actions: status, updateSettings, clearLogs
 
 ### system-model-picker — Model Picker
 
@@ -491,11 +485,6 @@ Bundled system-extension entries are derived from local `extensions/*/extension.
 
 - topBarElements: onboarding-bootstrap
 - backend actions: ensure
-
-### system-openai-desktop-plugin — OpenAI Desktop Plugin
-
-- settingsComponent: openai-desktop-plugin-settings (settings-openai-desktop-plugin)
-- backend actions: status, installPlugin, removePlugin
 
 ### system-prompt-assembly — Prompt Assembly
 

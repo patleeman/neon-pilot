@@ -1,7 +1,7 @@
 # AI Gateway
 
 AI Gateway is a bundled system extension that exposes an OpenAI Responses-compatible proxy for external coding agents. The extension is
-bundled but disabled by default while Codex Desktop's custom-model picker support is incomplete.
+bundled but disabled by default.
 
 When the extension is enabled, Neon Pilot starts a local loopback gateway automatically. Users configure it from Settings rather than from a
 dedicated nav page:
@@ -9,16 +9,13 @@ dedicated nav page:
 1. Open Settings → Extensions → AI Gateway.
 2. Confirm the endpoint, defaulting to `http://127.0.0.1:8766/v1`.
 3. Change the port if needed; saving the port restarts the listener.
-4. Use Install to add a managed `model_catalog_json` entry and Neon Pilot provider definition to `~/.codex/config.toml`, or Remove to delete
-   the managed catalog entry and provider definition.
-5. Copy the Codex config snippet for disposable client testing. It includes `model_catalog_json`, which points Codex at the generated local
-   model catalog for picker/model metadata.
-6. Check Recent activity for loopback requests and errors.
+4. Copy the client config values for external clients that support OpenAI Responses-compatible endpoints.
+5. Check Recent activity for loopback requests and errors.
 
 The gateway uses Neon Pilot's normal app default model when clients send `model = "auto"`. Clients may also request any concrete model listed
-by `GET /v1/models`. Codex clients do not use `/v1/models` to populate their model picker; they use the local `model_catalog_json` file.
+by `GET /v1/models`. The extension also writes a local model catalog file for clients that prefer file-based model metadata.
 
-The first validation target is Codex compatibility without touching the currently running Codex Desktop session:
+The first validation target is the local Responses-compatible contract:
 
 1. Use the extension host routes for deterministic contract checks:
    - `GET /api/extensions/system-model-gateway/routes/health`
@@ -26,22 +23,6 @@ The first validation target is Codex compatibility without touching the currentl
    - `POST /api/extensions/system-model-gateway/routes/v1/responses`
 2. Use the fake model `neon-pilot-fake` for credential-free smoke tests.
 3. Point disposable clients at the Settings endpoint, normally `http://127.0.0.1:8766/v1`.
-
-The Settings install/remove buttons write the user's real `~/.codex/config.toml` and create timestamped `.bak.neon-pilot-*` backups before
-modifying an existing file. The installer deliberately does not set top-level `model_provider` or `model`: Codex Desktop filters the sidebar
-thread list by the active provider lane, so taking over `model_provider` hides existing OpenAI-backed Desktop threads.
-
-This is intentionally more conservative than `sybil-solutions/codex-shim`. The shim installs an active custom provider and then patches the
-Codex Desktop Electron bundle so the renderer keeps showing picker models and recent threads. Neon Pilot does not patch
-`/Applications/Codex.app` by default. Track these upstream issues before enabling Desktop picker parity by default:
-
-- https://github.com/openai/codex/issues/19694 — Desktop filters models returned from `model_catalog_json` after app-server has loaded them.
-- https://github.com/openai/codex/issues/15138 — main conversation picker behaves differently from CLI/Automations for custom providers.
-- https://github.com/openai/codex/issues/10867 — Desktop custom-provider model picker support.
-- https://github.com/openai/codex/issues/14370 — Desktop sidebar can hide workspace threads because of recent-window/provider filtering.
-
-For compatibility testing, prefer a separate Codex CLI process with an isolated config/home, then manually test Desktop after lower-level smoke
-checks pass.
 
 ## Validation
 
@@ -57,35 +38,16 @@ Run `build:server` whenever gateway host behavior changes. The extension backend
 that host API lazy-loads `packages/desktop/server/dist/modelGatewayRuntime.js` in worker-backed service/action paths. `build-main` alone does
 not refresh that server bundle.
 
-For live Codex CLI checks, use an isolated Codex home:
+For live client checks, configure a disposable external client with:
 
-```bash
-tmp_home=$(mktemp -d)
-cat > "$tmp_home/config.toml" <<'EOF'
-model_catalog_json = "/path/to/neon-pilot/model-gateway/codex-model-catalog.json"
-approval_policy = "never"
-sandbox_mode = "read-only"
-
-[model_providers.neon-pilot]
-name = "Neon Pilot AI Gateway"
-base_url = "http://127.0.0.1:8766/v1"
-wire_api = "responses"
-experimental_bearer_token = "<generated gateway token>"
-EOF
-
-CODEX_HOME="$tmp_home" /Applications/Codex.app/Contents/Resources/codex exec \
-  -c 'model_provider="neon-pilot"' -c 'model="auto"' \
-  --json --skip-git-repo-check -C /tmp \
-  "Run pwd with the shell tool, then reply with exactly DONE." </dev/null
-rm -rf "$tmp_home"
+```text
+base_url="http://127.0.0.1:8766/v1"
+auth_token="<generated gateway token>"
+default_model="auto"
+model_catalog="/path/to/neon-pilot/model-gateway/model-catalog.json"
 ```
 
 The fake model proves the Responses shape and SSE lifecycle without provider credentials. Real provider checks require Neon Pilot provider credentials in the runtime's normal Pi-backed model configuration.
-
-Codex app-server reads `model_catalog_json` when listing picker metadata, but current Desktop builds may still hide custom catalog models in the
-conversation picker because of renderer-side filtering. Keep the provider inactive in the global config so existing Desktop threads stay
-visible; use explicit CLI overrides or a dedicated profile when a disposable Codex process should route requests through the gateway. If
-upstream fixes the picker and sidebar issues above, revisit the installer and decide whether the extension can be enabled by default.
 
 If the loopback endpoint does not bind after restart, the extension stays manageable from Settings and reports the listener error there. Change
 the port or stop the other process, then Refresh or save the port again.
