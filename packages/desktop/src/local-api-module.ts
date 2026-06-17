@@ -27,6 +27,13 @@ export interface LocalApiModule {
     headers?: Record<string, string>;
     signal?: AbortSignal;
   }): Promise<DesktopLocalApiDispatchResult>;
+  startDesktopLocalhostWebappProxy(input: {
+    stateRoot: string;
+    logger?: {
+      info?: (message: string, fields?: Record<string, unknown>) => void;
+      warn?: (message: string, fields?: Record<string, unknown>) => void;
+    };
+  }): Promise<{ close(): Promise<void> }>;
   readDesktopAppStatus(): Promise<unknown>;
   readDesktopDaemonState(): Promise<unknown>;
   readDesktopSessions(): Promise<unknown>;

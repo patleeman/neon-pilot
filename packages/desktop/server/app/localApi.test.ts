@@ -276,4 +276,16 @@ describe('desktop local API extension routes', () => {
     expect(response.headers['content-type']).toContain('text/html');
     expect(Buffer.from(response.body).toString('utf-8')).toContain('Board Webapp');
   }, 30000);
+
+  it('serves localhost webapp proxy status through the desktop local API fast path', async () => {
+    process.env.NEON_PILOT_STATE_ROOT = tempStateRoot;
+
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/extensions/webapps/localhost-proxy',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(readJsonBody(response)).toEqual({ running: false });
+  }, 30000);
 });

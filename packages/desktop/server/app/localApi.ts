@@ -160,6 +160,11 @@ import type { ServerRouteContext } from '../routes/context.js';
 import { registerServerRoutes } from '../routes/registerAll.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
 import { invalidateAppTopics, publishAppEvent, subscribeAppEvents } from '../shared/appEvents.js';
+import {
+  getLocalhostWebappProxyStatus,
+  startLocalhostWebappProxy,
+  trustLocalhostWebappProxyCertificate,
+} from '../shared/localhostWebappProxy.js';
 import { logError, logWarn } from '../shared/logging.js';
 import { readConversationPlansWorkspace } from '../ui/conversationPlanPreferences.js';
 import { readSavedDefaultCwdPreferences, writeSavedDefaultCwdPreference } from '../ui/defaultCwdPreferences.js';
@@ -277,6 +282,13 @@ type DesktopAppBridgeEvent = { type: 'open' } | { type: 'event'; event: unknown 
 
 export function setDesktopWorkbenchBrowserToolHost(host: WorkbenchBrowserToolHost | null): void {
   setWorkbenchBrowserToolHost(host);
+}
+
+export async function startDesktopLocalhostWebappProxy(options: Omit<Parameters<typeof startLocalhostWebappProxy>[0], 'dispatch'>) {
+  return startLocalhostWebappProxy({
+    ...options,
+    dispatch: dispatchDesktopLocalApiRequest,
+  });
 }
 
 class LocalApiResponse {
@@ -841,9 +853,9 @@ function dispatchFastConversationContentSearch(input: { body?: unknown }): Deskt
   };
 }
 
-function createDesktopLocalApiJsonResponse(value: unknown): DesktopLocalApiDispatchResult {
+function createDesktopLocalApiJsonResponse(value: unknown, statusCode = 200): DesktopLocalApiDispatchResult {
   return {
-    statusCode: 200,
+    statusCode,
     headers: { 'content-type': 'application/json; charset=utf-8' },
     body: new TextEncoder().encode(JSON.stringify(value)),
   };
@@ -991,6 +1003,15 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   }
   if (method === 'GET' && path === '/api/extensions/mentions') {
     return createDesktopLocalApiJsonResponse((await getExtensionHostClient().readRegistryPresentation()).mentionRegistrations);
+  }
+  if (method === 'GET' && path === '/api/extensions/webapps/localhost-proxy') {
+    return createDesktopLocalApiJsonResponse(getLocalhostWebappProxyStatus() ?? { running: false });
+  }
+  if (method === 'POST' && path === '/api/extensions/webapps/localhost-proxy/trust') {
+    const result = trustLocalhostWebappProxyCertificate();
+    return result
+      ? createDesktopLocalApiJsonResponse(result, result.ok ? 200 : 503)
+      : createDesktopLocalApiJsonResponse({ ok: false, error: 'Neon Pilot localhost webapp proxy is not running.' }, 503);
   }
   if (method === 'GET' && path === '/api/extensions/registry/critical') {
     return createDesktopLocalApiJsonResponse(
