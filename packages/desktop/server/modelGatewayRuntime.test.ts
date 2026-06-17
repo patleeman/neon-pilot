@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -30,6 +30,10 @@ import {
 } from './modelGatewayRuntime.js';
 
 describe('modelGatewayRuntime', () => {
+  function fileMode(path: string): number {
+    return statSync(path).mode & 0o777;
+  }
+
   function createRuntimeWithModel(prefix: string): string {
     const runtimeDir = mkdtempSync(join(tmpdir(), prefix));
     writeFileSync(
@@ -376,6 +380,7 @@ describe('modelGatewayRuntime', () => {
       const catalog = JSON.parse(readFileSync(path, 'utf8')) as { models: Array<Record<string, unknown>> };
 
       expect(path).toBe(join(runtimeDir, 'model-gateway', 'codex-model-catalog.json'));
+      expect(fileMode(path)).toBe(0o600);
       expect(catalog.models).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -443,6 +448,7 @@ describe('modelGatewayRuntime', () => {
           '',
         ].join('\n'),
       );
+      chmodSync(configPath, 0o644);
 
       const result = installModelGatewayCodexConfig(
         { runtimeDir },
@@ -461,6 +467,9 @@ describe('modelGatewayRuntime', () => {
 
       expect(result.status).toMatchObject({ installed: true, activeProvider: 'openai', activeModel: 'gpt-5.5' });
       expect(result.backupPath && existsSync(result.backupPath)).toBe(true);
+      expect(fileMode(configPath)).toBe(0o600);
+      expect(result.backupPath ? fileMode(result.backupPath) : undefined).toBe(0o600);
+      expect(fileMode(join(runtimeDir, 'model-gateway', 'codex-model-catalog.json'))).toBe(0o600);
       expect(parsed).toMatchObject({
         model: 'gpt-5.5',
         model_provider: 'openai',
@@ -500,6 +509,8 @@ describe('modelGatewayRuntime', () => {
 
       expect(result.status).toMatchObject({ installed: false, managed: false });
       expect(result.backupPath && existsSync(result.backupPath)).toBe(true);
+      expect(fileMode(configPath)).toBe(0o600);
+      expect(result.backupPath ? fileMode(result.backupPath) : undefined).toBe(0o600);
       expect(parsed).toMatchObject({ model: 'gpt-5.5', model_provider: 'openai', approval_policy: 'never' });
       expect(parsed.model_providers?.['neon-pilot']).toBeUndefined();
       expect(parsed.neon_pilot_model_gateway).toBeUndefined();

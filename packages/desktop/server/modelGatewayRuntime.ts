@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -120,6 +120,7 @@ const CODEX_CONFIG_MANAGED_TOP_LEVEL_KEYS = new Set(['model_catalog_json']);
 const CODEX_CONFIG_MANAGED_TABLE = 'neon_pilot_model_gateway';
 const CODEX_APP_CLI_PATH = '/Applications/Codex.app/Contents/Resources/codex';
 const CODEX_CONFIG_REFERENCE_CHECK_KEY = 'referenceCheck';
+const PRIVATE_FILE_MODE = 0o600;
 
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
@@ -596,8 +597,13 @@ export function writeModelGatewayCatalog(ctx: RuntimeContext): string {
   const path = modelGatewayCatalogPath(ctx);
   mkdirSync(join(ctx.runtimeDir, 'model-gateway'), { recursive: true });
   const models = listModelGatewayModels(ctx);
-  writeFileSync(path, `${JSON.stringify({ models: models.map(catalogEntry) }, null, 2)}\n`);
+  writePrivateFile(path, `${JSON.stringify({ models: models.map(catalogEntry) }, null, 2)}\n`);
   return path;
+}
+
+function writePrivateFile(path: string, content: string): void {
+  writeFileSync(path, content, { mode: PRIVATE_FILE_MODE });
+  chmodSync(path, PRIVATE_FILE_MODE);
 }
 
 function codexConfigPath(input?: unknown): string {
@@ -616,6 +622,7 @@ function backupCodexConfig(configPath: string): string | undefined {
   const stamp = new Date().toISOString().replaceAll(/[-:]/g, '').replace(/\..+$/, '').replace('T', '-');
   const backupPath = `${configPath}.bak.neon-pilot-${stamp}`;
   copyFileSync(configPath, backupPath);
+  chmodSync(backupPath, PRIVATE_FILE_MODE);
   return backupPath;
 }
 
@@ -744,7 +751,7 @@ export function installModelGatewayCodexConfig(ctx: RuntimeContext, settings: Mo
     managed: true,
   };
   config.model_catalog_json = catalogPath;
-  writeFileSync(configPath, writeTomlConfig(config));
+  writePrivateFile(configPath, writeTomlConfig(config));
   return { status: readModelGatewayCodexConfigStatus(ctx, input), ...(backupPath ? { backupPath } : {}) };
 }
 
@@ -766,7 +773,7 @@ export function removeModelGatewayCodexConfig(ctx: RuntimeContext, input?: unkno
     }
   }
   delete config[CODEX_CONFIG_MANAGED_TABLE];
-  writeFileSync(configPath, writeTomlConfig(config));
+  writePrivateFile(configPath, writeTomlConfig(config));
   return { status: readModelGatewayCodexConfigStatus(ctx, input), ...(backupPath ? { backupPath } : {}) };
 }
 
