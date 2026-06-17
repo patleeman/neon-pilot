@@ -282,11 +282,7 @@ function isHostCommandAction(action: string): boolean {
     action === 'sidebar.focus' ||
     action === 'focus.next' ||
     action === 'focus.previous' ||
-    action === 'selection.activate' ||
-    action.startsWith('navigate:') ||
-    action.startsWith('commandPalette:') ||
-    action.startsWith('rightRail:') ||
-    action.startsWith('layout:')
+    action === 'selection.activate'
   );
 }
 

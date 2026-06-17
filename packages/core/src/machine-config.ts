@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
-import { basename, dirname, join, resolve } from 'path';
+import { dirname, join, resolve } from 'path';
 
 import { writeAppTelemetryEvent } from './app-telemetry-db.js';
 import { getConfigRoot } from './runtime/paths.js';
@@ -155,40 +155,6 @@ function normalizeMachineConfig(value: unknown): MachineConfigDocument {
   };
 }
 
-function resolveConfigDirectory(options: MachineConfigOptions = {}): string {
-  if (options.filePath) {
-    return dirname(resolve(options.filePath));
-  }
-
-  return resolve(options.configRoot ?? getConfigRoot());
-}
-
-function readLegacyMachineConfigSections(options: MachineConfigOptions = {}): Record<string, unknown> {
-  const configDir = resolveConfigDirectory(options);
-  const legacySections: Record<string, unknown> = {};
-
-  const daemon = readJsonObjectFile(join(configDir, 'daemon.json'), 'legacy daemon config');
-  if (daemon) {
-    legacySections.daemon = daemon;
-  }
-
-  return legacySections;
-}
-
-function removeLegacyMachineConfigFiles(options: MachineConfigOptions = {}): void {
-  const configDir = resolveConfigDirectory(options);
-  const currentFilePath = getMachineConfigFilePath(options);
-
-  for (const fileName of ['daemon.json']) {
-    const legacyPath = join(configDir, fileName);
-    if (legacyPath === currentFilePath) {
-      continue;
-    }
-
-    rmSync(legacyPath, { force: true });
-  }
-}
-
 export function getMachineConfigFilePath(options: MachineConfigOptions = {}): string {
   if (options.filePath) {
     return resolve(options.filePath);
@@ -206,46 +172,10 @@ export function getMachineConfigFilePath(options: MachineConfigOptions = {}): st
   return join(resolve(getConfigRoot()), 'config.json');
 }
 
-function resolveSectionOptions(section: MachineConfigSectionKey, options: MachineConfigOptions = {}): MachineConfigOptions {
-  if (options.filePath || options.configRoot) {
-    return options;
-  }
-
-  if (section === 'daemon') {
-    const explicit = process.env.NEON_PILOT_DAEMON_CONFIG;
-    if (explicit && explicit.trim().length > 0) {
-      return { filePath: explicit.trim() };
-    }
-  }
-
-  return options;
-}
-
-function getLegacySingleSection(options: MachineConfigOptions = {}): {
-  section: MachineConfigSectionKey;
-  filePath: string;
-} | null {
-  const filePath = getMachineConfigFilePath(options);
-  const fileName = basename(filePath);
-
-  if (fileName === 'daemon.json') {
-    return { section: 'daemon', filePath };
-  }
-
-  return null;
-}
-
 export function readMachineConfig(options: MachineConfigOptions = {}): MachineConfigDocument {
   const filePath = getMachineConfigFilePath(options);
-  const legacySingleSection = getLegacySingleSection(options);
-  if (legacySingleSection) {
-    const sectionValue = readJsonObjectFile(legacySingleSection.filePath, `legacy ${legacySingleSection.section} config`);
-    return normalizeMachineConfig(sectionValue ? { [legacySingleSection.section]: sectionValue } : {});
-  }
-
-  const legacySections = readLegacyMachineConfigSections(options);
   const document = readJsonObjectFile(filePath, 'machine config') ?? {};
-  return normalizeMachineConfig(deepMerge(legacySections, document));
+  return normalizeMachineConfig(document);
 }
 
 export function writeMachineConfig(document: MachineConfigDocument, options: MachineConfigOptions = {}): MachineConfigDocument {
@@ -254,7 +184,6 @@ export function writeMachineConfig(document: MachineConfigDocument, options: Mac
 
   mkdirSync(dirname(filePath), { recursive: true });
   writeFileSync(filePath, `${JSON.stringify(normalized, null, 2)}\n`);
-  removeLegacyMachineConfigFiles(options);
 
   return normalized;
 }
@@ -270,17 +199,7 @@ export function readMachineConfigSection(
   section: MachineConfigSectionKey,
   options: MachineConfigOptions = {},
 ): Record<string, unknown> | undefined {
-  const sectionOptions = resolveSectionOptions(section, options);
-  const legacySingleSection = getLegacySingleSection(sectionOptions);
-  if (legacySingleSection) {
-    if (legacySingleSection.section !== section) {
-      return undefined;
-    }
-
-    return normalizeSection(readJsonObjectFile(legacySingleSection.filePath, `legacy ${section} config`));
-  }
-
-  return readMachineConfig(sectionOptions)[section];
+  return readMachineConfig(options)[section];
 }
 
 export function updateMachineConfigSection(
@@ -288,29 +207,6 @@ export function updateMachineConfigSection(
   updater: (current: Record<string, unknown> | undefined, document: MachineConfigDocument) => Record<string, unknown> | undefined,
   options: MachineConfigOptions = {},
 ): MachineConfigDocument {
-  const sectionOptions = resolveSectionOptions(section, options);
-  const legacySingleSection = getLegacySingleSection(sectionOptions);
-  if (legacySingleSection) {
-    if (legacySingleSection.section !== section) {
-      return readMachineConfig(sectionOptions);
-    }
-
-    const currentSection = normalizeSection(readJsonObjectFile(legacySingleSection.filePath, `legacy ${section} config`));
-    const currentDocument = normalizeMachineConfig(currentSection ? { [section]: currentSection } : {});
-    const updated = normalizeSection(updater(currentSection, currentDocument));
-    const filePath = legacySingleSection.filePath;
-
-    if (updated) {
-      mkdirSync(dirname(filePath), { recursive: true });
-      writeFileSync(filePath, `${JSON.stringify(updated, null, 2)}\n`);
-      return normalizeMachineConfig({ [section]: updated });
-    }
-
-    mkdirSync(dirname(filePath), { recursive: true });
-    writeFileSync(filePath, '{}\n');
-    return {};
-  }
-
   return updateMachineConfig((current) => {
     const next = { ...current };
     const updated = normalizeSection(updater(current[section], current));
@@ -322,7 +218,7 @@ export function updateMachineConfigSection(
     }
 
     return next;
-  }, sectionOptions);
+  }, options);
 }
 
 export function readMachineInstructionFiles(options: MachineConfigOptions = {}): string[] {

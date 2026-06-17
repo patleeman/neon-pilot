@@ -110,7 +110,7 @@ describe('desktopConversationState reducer', () => {
     } as never);
     state = applyDesktopConversationStreamEvent(state, {
       type: 'tool_start',
-      toolName: 'shell',
+      toolName: 'bash',
       args: { cmd: 'pwd' },
       toolCallId: 'tool-1',
     } as never);

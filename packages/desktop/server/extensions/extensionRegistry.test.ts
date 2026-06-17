@@ -404,7 +404,7 @@ describe('extension registry', () => {
         id: 'bad-ext',
         name: 'Bad Ext',
         contributes: {
-          keybindings: [{ id: 'open', title: 'Open', keys: 'mod+o', command: 'navigate:/bad' }],
+          keybindings: [{ id: 'open', title: 'Open', keys: 'mod+o', command: 'bad.command' }],
         },
       }),
     ).toThrow(/contributes\.keybindings\[0\]\.keys/);
@@ -913,8 +913,8 @@ describe('extension registry', () => {
   it('exposes schema values for agents and the extension manager', () => {
     expect(readExtensionSchema()).toEqual(
       expect.objectContaining({
-        placements: expect.arrayContaining(['main', 'right', 'slash']),
-        surfaceKinds: expect.arrayContaining(['page', 'toolPanel', 'slashCommand']),
+        placements: expect.arrayContaining(['main', 'right']),
+        surfaceKinds: expect.arrayContaining(['page', 'toolPanel']),
         iconNames: expect.arrayContaining(['automation', 'kanban']),
         contributions: expect.arrayContaining(['themes']),
       }),

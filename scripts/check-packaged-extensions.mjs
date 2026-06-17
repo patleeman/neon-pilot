@@ -390,11 +390,9 @@ function createSmokeContext(extensionId) {
   const noop = () => undefined;
   return {
     extensionId,
-    profile: 'shared',
     runtimeScope: 'shared',
     runtimeDir: join(repoRoot, 'tmp', 'extension-smoke-runtime'),
     runtimeSettingsFilePath: join(repoRoot, 'tmp', 'extension-smoke-runtime', 'settings.json'),
-    profileSettingsFilePath: join(repoRoot, 'tmp', 'extension-smoke-runtime', 'settings.json'),
     toolContext: { conversationId: 'extension-smoke-test', cwd: repoRoot },
     ui: { invalidate: noop },
     log: { info: noop, warn: noop, error: noop },
@@ -420,7 +418,7 @@ function createSmokeContext(extensionId) {
     filesystem: {},
     workspace: {},
     conversations: {},
-    runs: {},
+    executions: {},
     attention: {},
     automations: {},
     vault: {},

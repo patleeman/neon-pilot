@@ -150,5 +150,5 @@
       }
     }
   },
-  "permissions": ["conversations:readwrite", "runs:read", "runs:write", "storage:readwrite"]
+  "permissions": ["conversations:readwrite", "executions:read", "executions:start", "storage:readwrite"]
 }

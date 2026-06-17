@@ -437,7 +437,7 @@ export function AgentBoardPage({ pa, context }: ExtensionSurfaceProps) {
 
 Surface components receive props. Do not read globals like `window.PA`; it makes tests and reload behavior worse.
 
-The host provides `pa` for stable app capabilities: backend action invocation, extension storage, workspace files, runs, automations, browser state, and lightweight UI prompts. Prefer PA components for common app chrome, but use normal React and scoped CSS for custom product UI.
+The host provides `pa` for stable app capabilities: backend action invocation, extension storage, workspace files, executions, automations, browser state, and lightweight UI prompts. Prefer PA components for common app chrome, but use normal React and scoped CSS for custom product UI.
 
 Every extension renders under a host root such as `<section data-extension-id="agent-board">`. Keep CSS scoped to the extension and avoid global shell-looking selectors.
 
@@ -498,7 +498,7 @@ return {
 
 Use `truncated: true` and omit `patch` for huge diffs instead of stuffing giant blobs into transcript state.
 
-Use `ctx.executions` / `pa.executions` for durable async work. An execution is the product/API object for background commands, subagents, scheduled attempts, and other durable work. Durable runs are runtime storage plumbing; `ctx.runs` / `pa.runs` remain compatibility aliases for older extensions and should not be used for new code. Declare `executions:read`, `executions:start`, and/or `executions:cancel` permissions for new extension features.
+Use `ctx.executions` / `pa.executions` for durable async work. An execution is the product/API object for background commands, subagents, scheduled attempts, and other durable work. Durable runs are runtime storage plumbing, not an extension UI/API surface. Declare `executions:read`, `executions:start`, and/or `executions:cancel` permissions for extension features.
 
 ## Composer slash commands
 
@@ -614,7 +614,7 @@ Use `contributes.transcriptBlocks` plus `ctx.conversations.appendTranscriptBlock
 
 Use `ctx.conversations.metadata` for small extension-owned facts attached to conversations. Metadata is namespaced by extension by default and can be queried by namespace, which is the right shape for board/task state, badges, and other lightweight conversation indexes. Store large documents in extension storage or a dedicated host document API instead.
 
-For conversation reads, prefer indexed conversation APIs such as `ctx.conversations.list()`, `ctx.conversations.getMeta(...)`, `ctx.conversations.getBlocks(...)`, and backend helpers `getConversationMeta(...)` / `getConversationBlocks(...)`. Raw session helpers are deprecated escape hatches; do not use transcript/session-file readers for global list, search, ranking, or startup paths.
+For conversation reads, use indexed conversation APIs such as `ctx.conversations.list()`, `ctx.conversations.getMeta(...)`, `ctx.conversations.getBlocks(...)`, and backend helpers `getConversationMeta(...)` / `getConversationBlocks(...)`. Do not use transcript/session-file readers for global list, search, ranking, or startup paths.
 
 Use `ctx.conversations.getWorkspace()` and `ctx.conversations.updateWorkspace(...)` when an extension needs to mirror or control the shared conversation workspace. The workspace includes `openConversationIds`, `pinnedConversationIds`, `archivedConversationIds`, `activeConversationId`, and workspace paths. Workspace open/close/focus is presentation state; keep it separate from archive/unarchive lifecycle and live/running runtime state.
 
@@ -854,8 +854,6 @@ Extension command contributions may point at a backend action or at a built-in h
 The Extension Manager includes a command inspector for listing commands, running them with JSON args, and editing/resetting contributed keybindings.
 
 Add keybinding contributions for high-frequency actions and for actions where the UI implies keyboard operation. Prefer user-editable keybindings through command metadata over hardcoded shortcut listeners, and avoid shipping action surfaces that cannot be hot-keyed when they are part of a repeated workflow.
-
-Legacy string commands still work for compatibility: `navigate:/path`, `commandPalette:threads|files|commands|search`, `rightRail:{extensionId}/{surfaceId}`, `layout:compact|workbench`, and desktop shortcut aliases such as `core.newConversation`, `core.settings`, `core.findOnPage`, `core.toggleSidebar`, and `core.toggleRightRail`.
 
 Frontend extensions can call `pa.commands.execute(id, args)`, `pa.commands.list()`, and `pa.commands.setContext(key, value)`. Backend actions can call `ctx.commands.execute(id, args)` for extension-contributed commands and built-in host commands; host command execution is delivered to the renderer over the app event stream.
 

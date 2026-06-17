@@ -13,9 +13,9 @@ import {
 } from './composerPreferenceCommands';
 
 vi.mock('../../extensions/ComposerButtonHost', () => ({
-  ComposerButtonHost: ({ registration, buttonContext }: { registration: { id: string }; buttonContext: { renderMode: string } }) => (
-    <span data-control-id={registration.id} data-render-mode={buttonContext.renderMode}>
-      {registration.id}:{buttonContext.renderMode}
+  ComposerButtonHost: ({ registration, controlContext }: { registration: { id: string }; controlContext: { renderMode: string } }) => (
+    <span data-control-id={registration.id} data-render-mode={controlContext.renderMode}>
+      {registration.id}:{controlContext.renderMode}
     </span>
   ),
 }));
@@ -29,8 +29,8 @@ function control(id: string, priority: number) {
 
 function rowProps(overrides: Partial<React.ComponentProps<typeof ConversationPreferencesRow>> = {}) {
   return {
-    composerButtons: [control('model-preferences', 10), control('goal-mode', 100)],
-    composerButtonContext: {
+    composerControls: [control('model-preferences', 10), control('goal-mode', 100)],
+    composerControlContext: {
       composerDisabled: false,
       streamIsStreaming: false,
       composerHasContent: false,

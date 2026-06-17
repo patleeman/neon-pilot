@@ -1,4 +1,3 @@
-import { AskUserQuestionToolParams } from './askUserQuestionAgentExtension.js';
 import { ChangeWorkingDirectoryToolParams } from './changeWorkingDirectoryAgentExtension.js';
 import { ConversationInspectToolParams } from './conversationInspectAgentExtension.js';
 import { ConversationTitleToolParams } from './conversationTitleAgentExtension.js';
@@ -100,7 +99,6 @@ export const ConversationToolParams = {
     action: {
       type: 'string',
       enum: [
-        'ask',
         'activity',
         'connections',
         'inspect',
@@ -126,7 +124,6 @@ export const ConversationToolParams = {
         'rollback',
       ],
     },
-    ...properties(AskUserQuestionToolParams),
     inspectAction,
     ...inspectProperties,
     ...properties(ConversationTitleToolParams),
@@ -139,7 +136,6 @@ export const ConversationToolParams = {
 } as const;
 
 export const CONVERSATION_ACTIONS = [
-  'ask',
   'activity',
   'connections',
   'inspect',

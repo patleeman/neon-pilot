@@ -8,7 +8,6 @@ describe('prompt assembly public types', () => {
     const source: AssemblySource = { kind: 'extension', label: 'Extension', extensionId: 'ext', root: '/root' };
     const context: AssemblyRuntimeContext = {
       runtimeScope: 'shared',
-      profile: 'legacy',
       repoRoot: '/repo',
       modelRef: 'provider/model',
       provider: 'provider',
@@ -16,7 +15,6 @@ describe('prompt assembly public types', () => {
     };
     const plan: PromptAssemblyPlan = {
       runtimeScope: 'shared',
-      profile: 'legacy',
       repoRoot: '/repo',
       skills: { skillPaths: ['/skills'], inlineSkills: [], diagnostics: [diagnostic] },
       tools: { activeToolNames: ['bash'], diagnostics: [] },
@@ -29,7 +27,7 @@ describe('prompt assembly public types', () => {
     expect({ diagnostic, source, context, plan }).toMatchObject({
       diagnostic: { severity: 'warning', code: 'code' },
       source: { kind: 'extension', extensionId: 'ext' },
-      context: { runtimeScope: 'shared', profile: 'legacy' },
+      context: { runtimeScope: 'shared' },
       plan: { runtimeScope: 'shared', tools: { activeToolNames: ['bash'] } },
     });
   });

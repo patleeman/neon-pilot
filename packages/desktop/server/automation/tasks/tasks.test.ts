@@ -33,6 +33,7 @@ import {
   listStoredAutomations,
   loadAutomationRuntimeStateMap,
   loadAutomationSchedulerState,
+  saveAutomationRuntimeStateMap,
   saveAutomationSchedulerState,
   setStoredAutomationThreadBinding,
 } from '../store.js';
@@ -46,6 +47,36 @@ function createTempDir(prefix: string): string {
   const dir = mkdtempSync(join(tmpdir(), prefix));
   tempDirs.push(dir);
   return dir;
+}
+
+function seedAutomation(
+  stateRoot: string,
+  input: {
+    id: string;
+    title?: string;
+    cron?: string;
+    at?: string;
+    prompt?: string;
+    enabled?: boolean;
+    cwd?: string;
+    modelRef?: string;
+    timeoutSeconds?: number;
+    catchUpWindowSeconds?: number;
+  },
+) {
+  return createStoredAutomation({
+    id: input.id,
+    title: input.title ?? input.id,
+    enabled: input.enabled ?? true,
+    cron: input.cron,
+    at: input.at,
+    prompt: input.prompt ?? input.title ?? input.id,
+    cwd: input.cwd,
+    modelRef: input.modelRef,
+    timeoutSeconds: input.timeoutSeconds ?? 1800,
+    catchUpWindowSeconds: input.catchUpWindowSeconds,
+    dbPath: resolveRuntimeDbPath(stateRoot),
+  });
 }
 
 function createTimerEvent(): DaemonEvent {
@@ -292,7 +323,6 @@ describe('tasks module scheduling', () => {
       createStoredAutomation({
         dbPath,
         id: 'fractional-timeout',
-        profile: 'assistant',
         title: 'Fractional timeout',
         enabled: true,
         cron: '0 * * * *',
@@ -310,7 +340,6 @@ describe('tasks module scheduling', () => {
       createStoredAutomation({
         dbPath,
         id: 'unsafe-timeout',
-        profile: 'assistant',
         title: 'Unsafe timeout',
         enabled: true,
         cron: '0 * * * *',
@@ -323,7 +352,6 @@ describe('tasks module scheduling', () => {
       createStoredAutomation({
         dbPath,
         id: 'huge-timeout',
-        profile: 'assistant',
         title: 'Huge timeout',
         enabled: true,
         cron: '0 * * * *',
@@ -336,7 +364,6 @@ describe('tasks module scheduling', () => {
       createStoredAutomation({
         dbPath,
         id: 'unsafe-catch-up',
-        profile: 'assistant',
         title: 'Unsafe catch-up',
         enabled: true,
         cron: '0 * * * *',
@@ -350,7 +377,6 @@ describe('tasks module scheduling', () => {
       createStoredAutomation({
         dbPath,
         id: 'huge-catch-up',
-        profile: 'assistant',
         title: 'Huge catch-up',
         enabled: true,
         cron: '0 * * * *',
@@ -368,7 +394,6 @@ describe('tasks module scheduling', () => {
     const automation = createStoredAutomation({
       dbPath,
       id: 'normalized-at',
-      profile: 'assistant',
       title: 'Normalized at',
       enabled: true,
       at: '2026-03-02T10:00:00Z',
@@ -391,7 +416,6 @@ describe('tasks module scheduling', () => {
     const automation = createStoredAutomation({
       dbPath,
       id: 'default-catch-up',
-      profile: 'assistant',
       title: 'Default catch-up',
       enabled: true,
       cron: '0 * * * *',
@@ -410,7 +434,6 @@ describe('tasks module scheduling', () => {
       createStoredAutomation({
         dbPath,
         id: 'malformed-at',
-        profile: 'assistant',
         title: 'Malformed at',
         enabled: true,
         at: '9999',
@@ -427,7 +450,6 @@ describe('tasks module scheduling', () => {
     createStoredAutomation({
       dbPath,
       id: 'activity-limit',
-      profile: 'assistant',
       title: 'Activity limit',
       enabled: true,
       cron: '0 * * * *',
@@ -471,7 +493,6 @@ describe('tasks module scheduling', () => {
     createStoredAutomation({
       dbPath,
       id: 'unsafe-activity-limit',
-      profile: 'assistant',
       title: 'Unsafe activity limit',
       enabled: true,
       cron: '0 * * * *',
@@ -505,7 +526,6 @@ describe('tasks module scheduling', () => {
     createStoredAutomation({
       dbPath,
       id: 'unsafe-activity-count',
-      profile: 'assistant',
       title: 'Unsafe activity count',
       enabled: true,
       cron: '0 * * * *',
@@ -535,7 +555,6 @@ describe('tasks module scheduling', () => {
     createStoredAutomation({
       dbPath,
       id: 'invalid-activity-time',
-      profile: 'assistant',
       title: 'Invalid activity time',
       enabled: true,
       cron: '0 * * * *',
@@ -581,7 +600,6 @@ describe('tasks module scheduling', () => {
     createStoredAutomation({
       dbPath,
       id: 'corrupt-activity-time',
-      profile: 'assistant',
       title: 'Corrupt activity time',
       enabled: true,
       cron: '0 * * * *',
@@ -613,7 +631,6 @@ describe('tasks module scheduling', () => {
     createStoredAutomation({
       dbPath,
       id: 'non-iso-activity-time',
-      profile: 'assistant',
       title: 'Non ISO activity time',
       enabled: true,
       cron: '0 * * * *',
@@ -645,7 +662,6 @@ describe('tasks module scheduling', () => {
     createStoredAutomation({
       dbPath,
       id: 'non-iso-activity-example-time',
-      profile: 'assistant',
       title: 'Non ISO activity example time',
       enabled: true,
       cron: '0 * * * *',
@@ -680,7 +696,6 @@ describe('tasks module scheduling', () => {
     createStoredAutomation({
       dbPath,
       id: 'corrupt-runtime-state',
-      profile: 'assistant',
       title: 'Corrupt runtime state',
       enabled: true,
       cron: '0 * * * *',
@@ -730,7 +745,6 @@ describe('tasks module scheduling', () => {
     createStoredAutomation({
       dbPath,
       id: 'non-iso-runtime-state',
-      profile: 'assistant',
       title: 'Non ISO runtime state',
       enabled: true,
       cron: '0 * * * *',
@@ -778,7 +792,6 @@ describe('tasks module scheduling', () => {
     const automation = createStoredAutomation({
       dbPath,
       id: 'corrupt-automation-time',
-      profile: 'assistant',
       title: 'Corrupt automation time',
       enabled: true,
       cron: '0 * * * *',
@@ -848,9 +861,7 @@ describe('tasks module scheduling', () => {
   it('retries one-time tasks up to 3 attempts and resolves on success', async () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');
-    const taskPath = join(taskDir, 'nightly.task.md');
-
-    writeFileSync(taskPath, `---\nid: nightly\nat: "2026-03-02T10:00:05.000Z"\n---\nRun nightly update\n`);
+    seedAutomation(stateRoot, { id: 'nightly', title: 'Nightly', at: '2026-03-02T10:00:05.000Z', prompt: 'Run nightly update' });
 
     let currentTime = new Date('2026-03-02T10:00:00.000Z');
 
@@ -914,9 +925,7 @@ describe('tasks module scheduling', () => {
   it('writes durable run records for scheduled task executions', async () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');
-    const taskPath = join(taskDir, 'nightly.task.md');
-
-    writeFileSync(taskPath, `---\nid: nightly\nat: "2026-03-02T10:00:05.000Z"\nprofile: datadog\n---\nRun nightly update\n`);
+    seedAutomation(stateRoot, { id: 'nightly', title: 'Nightly', at: '2026-03-02T10:00:05.000Z', prompt: 'Run nightly update' });
 
     let currentTime = new Date('2026-03-02T10:00:00.000Z');
 
@@ -983,10 +992,8 @@ describe('tasks module scheduling', () => {
   it('starts requested task runs with the provided durable run id', async () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');
-    const taskPath = join(taskDir, 'run-now.task.md');
     const requestedRunId = 'task-run-now-requested';
-
-    writeFileSync(taskPath, `---\nid: run-now\nat: "2026-03-03T10:00:00.000Z"\nprofile: datadog\n---\nRun immediately when requested\n`);
+    seedAutomation(stateRoot, { id: 'run-now', title: 'Run now', at: '2026-03-03T10:00:00.000Z', prompt: 'Run immediately when requested' });
 
     const currentTime = new Date('2026-03-02T10:00:00.000Z');
     const runTask = vi.fn(async (request: TaskRunRequest) => {
@@ -1029,7 +1036,6 @@ describe('tasks module scheduling', () => {
       source: {
         type: 'scheduled-task',
         id: 'run-now',
-        filePath: taskPath,
       },
     });
     expect(loadDurableRunStatus(runPaths.statusPath)).toMatchObject({
@@ -1044,11 +1050,9 @@ describe('tasks module scheduling', () => {
   it('ignores requested task runs while a prior requested run is still active', async () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');
-    const taskPath = join(taskDir, 'run-now.task.md');
     const firstRunId = 'task-run-now-first';
     const secondRunId = 'task-run-now-second';
-
-    writeFileSync(taskPath, `---\nid: run-now\nat: "2026-03-03T10:00:00.000Z"\nprofile: datadog\n---\nRun immediately when requested\n`);
+    seedAutomation(stateRoot, { id: 'run-now', title: 'Run now', at: '2026-03-03T10:00:00.000Z', prompt: 'Run immediately when requested' });
 
     const currentTime = new Date('2026-03-02T10:00:00.000Z');
     let releaseRun: (() => void) | undefined;
@@ -1099,13 +1103,8 @@ describe('tasks module scheduling', () => {
   it('runs all due tasks as direct daemon subprocesses', async () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');
-
-    writeFileSync(
-      join(taskDir, 'default-mode.task.md'),
-      `---\nid: default-mode\nat: "2026-03-02T10:00:00.000Z"\n---\nRun using default execution\n`,
-    );
-
-    writeFileSync(join(taskDir, 'second-run.task.md'), `---\nid: second-run\nat: "2026-03-02T10:00:00.000Z"\n---\nRun the second task\n`);
+    seedAutomation(stateRoot, { id: 'default-mode', title: 'Default mode', at: '2026-03-02T10:00:00.000Z', prompt: 'Run using default execution' });
+    seedAutomation(stateRoot, { id: 'second-run', title: 'Second run', at: '2026-03-02T10:00:00.000Z', prompt: 'Run the second task' });
 
     let currentTime = new Date('2026-03-02T09:59:00.000Z');
     const runTask = vi.fn(async (request: TaskRunRequest) => createRunResult(request, true, currentTime.toISOString()));
@@ -1151,18 +1150,7 @@ describe('tasks module scheduling', () => {
     const taskDir = join(repoRoot, 'profiles', 'datadog', 'agent', 'tasks');
     mkdirSync(taskDir, { recursive: true });
     const stateRoot = createTempDir('tasks-module-state-');
-    const taskPath = join(taskDir, 'daily-report.task.md');
-
-    writeFileSync(
-      taskPath,
-      `---
-id: daily-report
-at: "2026-03-02T10:00:00.000Z"
-profile: datadog
----
-Write daily report
-`,
-    );
+    seedAutomation(stateRoot, { id: 'daily-report', title: 'Daily report', at: '2026-03-02T10:00:00.000Z', prompt: 'Write daily report' });
 
     let currentTime = new Date('2026-03-02T09:59:00.000Z');
 
@@ -1208,18 +1196,12 @@ Write daily report
     mkdirSync(taskDir, { recursive: true });
     const stateRoot = createTempDir('tasks-module-state-');
     const daemonRoot = join(stateRoot, 'daemon');
-    const taskPath = join(taskDir, 'memory-maintenance.task.md');
-
-    writeFileSync(
-      taskPath,
-      `---
-id: datadog-memory-maintenance
-at: "2026-03-02T10:00:00.000Z"
-profile: datadog
----
-Maintain durable memory
-`,
-    );
+    seedAutomation(daemonRoot, {
+      id: 'datadog-memory-maintenance',
+      title: 'Datadog memory maintenance',
+      at: '2026-03-02T10:00:00.000Z',
+      prompt: 'Maintain durable memory',
+    });
 
     let currentTime = new Date('2026-03-02T09:59:00.000Z');
 
@@ -1277,19 +1259,13 @@ Maintain durable memory
     const taskDir = join(repoRoot, 'profiles', 'datadog', 'agent', 'tasks');
     mkdirSync(taskDir, { recursive: true });
     const stateRoot = createTempDir('tasks-module-state-');
-    const taskPath = join(taskDir, 'recover-me.task.md');
     const priorRunId = 'task-recover-me-prior';
-
-    writeFileSync(
-      taskPath,
-      `---
-id: recover-me
-at: "2026-03-02T10:00:00.000Z"
-profile: datadog
----
-Recover me after restart
-`,
-    );
+    const task = seedAutomation(stateRoot, {
+      id: 'recover-me',
+      title: 'Recover me',
+      at: '2026-03-02T10:00:00.000Z',
+      prompt: 'Recover me after restart',
+    });
 
     const runsRoot = resolveDurableRunsRoot(stateRoot);
     const priorRunPaths = resolveDurableRunPaths(runsRoot, priorRunId);
@@ -1303,7 +1279,7 @@ Recover me after restart
         source: {
           type: 'scheduled-task',
           id: 'recover-me',
-          filePath: taskPath,
+          filePath: task.filePath,
         },
       }),
     );
@@ -1319,27 +1295,20 @@ Recover me after restart
       }),
     );
 
-    writeFileSync(
-      join(stateRoot, 'task-state.json'),
-      JSON.stringify(
-        {
-          version: 1,
-          tasks: {
-            [taskPath]: {
-              id: 'recover-me',
-              filePath: taskPath,
-              scheduleType: 'at',
-              running: true,
-              runningStartedAt: '2026-03-02T10:00:00.000Z',
-              activeRunId: priorRunId,
-              lastRunId: priorRunId,
-              lastStatus: 'running',
-            },
-          },
+    saveAutomationRuntimeStateMap(
+      {
+        'recover-me': {
+          id: 'recover-me',
+          filePath: task.filePath,
+          scheduleType: 'at',
+          running: true,
+          runningStartedAt: '2026-03-02T10:00:00.000Z',
+          activeRunId: priorRunId,
+          lastRunId: priorRunId,
+          lastStatus: 'running',
         },
-        null,
-        2,
-      ),
+      },
+      { dbPath: resolveRuntimeDbPath(stateRoot) },
     );
 
     const currentTime = new Date('2026-03-02T10:30:00.000Z');
@@ -1380,7 +1349,7 @@ Recover me after restart
     expect(runTask).toHaveBeenCalledTimes(1);
 
     const persistedState = loadAutomationRuntimeStateMap({ dbPath: resolveRuntimeDbPath(stateRoot) });
-    expect(persistedState['recover-me']?.filePath).toBe(taskPath);
+    expect(persistedState['recover-me']?.filePath).toBe(task.filePath);
     expect(persistedState['recover-me']?.activeRunId).toBeUndefined();
     expect(persistedState['recover-me']?.lastRunId).not.toBe(priorRunId);
     expect(persistedState['recover-me']?.oneTimeResolvedStatus).toBe('success');
@@ -1393,18 +1362,7 @@ Recover me after restart
     const taskDir = join(repoRoot, 'profiles', 'datadog', 'agent', 'tasks');
     mkdirSync(taskDir, { recursive: true });
     const stateRoot = createTempDir('tasks-module-state-');
-    const taskPath = join(taskDir, 'daily-report.task.md');
-
-    writeFileSync(
-      taskPath,
-      `---
-id: daily-report
-at: "2026-03-02T10:00:00.000Z"
-profile: datadog
----
-Write daily report
-`,
-    );
+    seedAutomation(stateRoot, { id: 'daily-report', title: 'Daily report', at: '2026-03-02T10:00:00.000Z', prompt: 'Write daily report' });
 
     const currentTime = new Date('2026-03-02T10:30:00.000Z');
     const runTask = vi.fn(async (request: TaskRunRequest) => createRunResult(request, true, currentTime.toISOString()));
@@ -1449,18 +1407,7 @@ Write daily report
     const taskDir = join(repoRoot, 'profiles', 'datadog', 'agent', 'tasks');
     mkdirSync(taskDir, { recursive: true });
     const stateRoot = createTempDir('tasks-module-state-');
-    const taskPath = join(taskDir, 'hourly.task.md');
-
-    writeFileSync(
-      taskPath,
-      `---
-id: hourly
-cron: "0 * * * *"
-profile: datadog
----
-Run hourly task
-`,
-    );
+    seedAutomation(stateRoot, { id: 'hourly', title: 'Hourly', cron: '0 * * * *', prompt: 'Run hourly task' });
 
     saveAutomationSchedulerState({ lastEvaluatedAt: '2026-03-02T09:59:30.000Z' }, { dbPath: resolveRuntimeDbPath(stateRoot) });
 
@@ -1517,7 +1464,6 @@ Run hourly task
     createStoredAutomation({
       dbPath,
       id: 'morning-brief',
-      profile: 'assistant',
       title: 'Morning brief',
       enabled: true,
       cron: '0 * * * *',
@@ -1581,7 +1527,6 @@ Run hourly task
     createStoredAutomation({
       dbPath,
       id: 'morning-brief',
-      profile: 'assistant',
       title: 'Morning brief',
       enabled: true,
       cron: '0 * * * *',
@@ -1653,7 +1598,6 @@ Run hourly task
     createStoredAutomation({
       dbPath,
       id: 'policy-catch-up',
-      profile: 'assistant',
       title: 'Policy catch up',
       enabled: true,
       cron: '0 * * * *',
@@ -1699,7 +1643,6 @@ Run hourly task
     createStoredAutomation({
       dbPath,
       id: 'daily-flex',
-      profile: 'assistant',
       title: 'Daily flexible run',
       enabled: true,
       cron: '* * * * *',
@@ -1752,7 +1695,6 @@ Run hourly task
     createStoredAutomation({
       dbPath,
       id: 'broken-thread',
-      profile: 'assistant',
       title: 'Broken thread',
       enabled: true,
       cron: '* * * * *',
@@ -1805,9 +1747,7 @@ Run hourly task
   it('skips overlapping cron runs when prior run is still active', async () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');
-    const taskPath = join(taskDir, 'heartbeat.task.md');
-
-    writeFileSync(taskPath, `---\nid: heartbeat\ncron: "* * * * *"\n---\nHeartbeat task\n`);
+    seedAutomation(stateRoot, { id: 'heartbeat', title: 'Heartbeat', cron: '* * * * *', prompt: 'Heartbeat task' });
 
     let currentTime = new Date('2026-03-02T10:00:00.000Z');
 
@@ -1862,9 +1802,7 @@ Run hourly task
   it('creates a conversation callback wakeup for bound task completions', async () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');
-    const taskPath = join(taskDir, 'watch-prod.task.md');
-
-    writeFileSync(taskPath, `---\nid: watch-prod\nat: "2026-03-02T10:00:05.000Z"\nprofile: datadog\n---\nWatch the prod gates\n`);
+    seedAutomation(stateRoot, { id: 'watch-prod', title: 'Watch prod', at: '2026-03-02T10:00:05.000Z', prompt: 'Watch the prod gates' });
 
     setTaskCallbackBinding({
       stateRoot,
@@ -1929,7 +1867,6 @@ Run hourly task
     createStoredAutomation({
       dbPath,
       id: 'conversation-check',
-      profile: 'assistant',
       title: 'Conversation check',
       enabled: true,
       at: '2026-03-02T10:00:05.000Z',
@@ -2008,7 +1945,6 @@ Run hourly task
     createStoredAutomation({
       dbPath,
       id: 'hourly-check',
-      profile: 'assistant',
       title: 'Hourly check',
       enabled: true,
       cron: '0 * * * *',
@@ -2075,9 +2011,7 @@ Run hourly task
   it('reaps completed one-time tasks after 7 days', async () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');
-    const taskPath = join(taskDir, 'cleanup.task.md');
-
-    writeFileSync(taskPath, `---\nid: cleanup\nat: "2026-03-02T10:00:00.000Z"\n---\nCleanup task\n`);
+    seedAutomation(stateRoot, { id: 'cleanup', title: 'Cleanup', at: '2026-03-02T10:00:00.000Z', prompt: 'Cleanup task' });
 
     let currentTime = new Date('2026-03-02T09:59:00.000Z');
 
@@ -2110,12 +2044,12 @@ Run hourly task
       return (status.totalRuns ?? 0) === 1;
     });
 
-    expect(existsSync(taskPath)).toBe(true);
+    expect(listStoredAutomations({ dbPath: resolveRuntimeDbPath(stateRoot) }).map((task) => task.id)).toContain('cleanup');
 
     currentTime = new Date('2026-03-10T10:00:10.000Z');
     await module.handleEvent(createTimerEvent(), context);
 
-    expect(existsSync(taskPath)).toBe(false);
+    expect(listStoredAutomations({ dbPath: resolveRuntimeDbPath(stateRoot) }).map((task) => task.id)).not.toContain('cleanup');
 
     const persistedState = loadAutomationRuntimeStateMap({ dbPath: resolveRuntimeDbPath(stateRoot) });
     expect(Object.keys(persistedState).length).toBe(0);
@@ -2126,9 +2060,7 @@ Run hourly task
   it('reaps skipped one-time tasks after 7 days', async () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');
-    const taskPath = join(taskDir, 'missed.task.md');
-
-    writeFileSync(taskPath, `---\nid: missed\nat: "2026-03-02T09:00:00.000Z"\n---\nMissed task\n`);
+    seedAutomation(stateRoot, { id: 'missed', title: 'Missed', at: '2026-03-02T09:00:00.000Z', prompt: 'Missed task' });
 
     let currentTime = new Date('2026-03-02T10:00:00.000Z');
 
@@ -2154,12 +2086,12 @@ Run hourly task
     await module.start(context);
 
     expect(runTask).toHaveBeenCalledTimes(0);
-    expect(existsSync(taskPath)).toBe(true);
+    expect(listStoredAutomations({ dbPath: resolveRuntimeDbPath(stateRoot) }).map((task) => task.id)).toContain('missed');
 
     currentTime = new Date('2026-03-10T10:00:10.000Z');
     await module.handleEvent(createTimerEvent(), context);
 
-    expect(existsSync(taskPath)).toBe(false);
+    expect(listStoredAutomations({ dbPath: resolveRuntimeDbPath(stateRoot) }).map((task) => task.id)).not.toContain('missed');
 
     const persistedState = loadAutomationRuntimeStateMap({ dbPath: resolveRuntimeDbPath(stateRoot) });
     expect(Object.keys(persistedState).length).toBe(0);

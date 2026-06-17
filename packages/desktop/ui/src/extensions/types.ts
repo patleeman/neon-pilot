@@ -232,15 +232,6 @@ interface ExtensionComposerControlContribution {
   priority?: number;
 }
 
-interface ExtensionComposerButtonContribution {
-  id: string;
-  component: string;
-  title?: string;
-  placement?: 'afterModelPicker' | 'actions';
-  when?: string;
-  priority?: number;
-}
-
 interface ExtensionComposerInputToolContribution {
   id: string;
   component: string;
@@ -424,7 +415,6 @@ interface ExtensionContributions {
   composerShelves?: ExtensionComposerShelfContribution[];
   newConversationPanels?: ExtensionNewConversationPanelContribution[];
   composerControls?: ExtensionComposerControlContribution[];
-  composerButtons?: ExtensionComposerButtonContribution[];
   composerInputTools?: ExtensionComposerInputToolContribution[];
   toolbarActions?: ExtensionToolbarActionContribution[];
   contextMenus?: ExtensionContextMenuContribution[];
@@ -468,8 +458,8 @@ interface ExtensionThemeContribution {
 
 interface LegacyExtensionSurfaceBase {
   id: string;
-  placement: 'left' | 'main' | 'right' | 'conversation' | 'command' | 'slash';
-  kind: 'navItem' | 'navSection' | 'page' | 'toolPanel' | 'inlineAction' | 'command' | 'slashCommand';
+  placement: 'left' | 'main' | 'right' | 'conversation';
+  kind: 'navItem' | 'navSection' | 'page' | 'toolPanel' | 'inlineAction';
   title?: string;
   label?: string;
   icon?: ExtensionIconName;

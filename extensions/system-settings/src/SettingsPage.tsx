@@ -24,7 +24,6 @@ import {
   isDesktopShell,
   KeyboardShortcutCaptureInput,
   listHostCommands,
-  normalizeLegacyCommand,
   type ModelEditorDraft,
   type ModelProviderApi,
   type ModelProviderConfig,
@@ -1182,8 +1181,7 @@ export function desktopShortcutIdForHostCommand(command: CommandSettingsEntry): 
   if (command.extensionId !== 'host') return null;
   const commandId = command.id ?? command.surfaceId ?? '';
   for (const registration of CORE_KEYBOARD_SHORTCUT_REGISTRATIONS) {
-    const normalized = normalizeLegacyCommand(registration.command);
-    if (normalized.command === commandId && settingsArgsMatch(normalized.args, command.args)) {
+    if (registration.command === commandId && settingsArgsMatch(registration.args, command.args)) {
       return registration.id as DesktopKeyboardShortcutId;
     }
   }

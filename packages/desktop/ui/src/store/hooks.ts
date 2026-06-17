@@ -56,10 +56,7 @@ export function useSessionPresence(id: string | null | undefined): RunningState 
   return useDerivedValue(subscribe, getSnapshot);
 }
 
-// ── Legacy compatibility ─────────────────────────────────────────────────────
-// Returns the full sessions array for code that still needs to iterate
-// all sessions (e.g. sidebar layout). Prefer useSession(id) for per-session
-// subscriptions.
+// ── Collection hooks ─────────────────────────────────────────────────────────
 
 export function useAllSessions(): readonly SessionMeta[] {
   const subscribe = useCallback((onStoreChange: () => void) => sessionStore.subscribeAll(onStoreChange), []);

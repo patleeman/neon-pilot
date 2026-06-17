@@ -7,7 +7,6 @@ import { createExtensionHostToolContextSnapshot } from '../extensions/extensionH
 import { buildToolInjectionPlanAsync, listToolDefinitionsAsync, type ToolDefinition as InventoryToolDefinition } from './toolInventory.js';
 
 export interface ToolGatewayRuntimeContext {
-  profile?: string;
   runtimeScope?: string;
   repoRoot?: string;
   modelRef?: string;
@@ -37,7 +36,7 @@ export interface ToolGatewayInvokeInput {
 
 function runtimeContext(input?: ToolGatewayRuntimeContext) {
   return {
-    profile: input?.runtimeScope ?? input?.profile ?? 'shared',
+    profile: input?.runtimeScope ?? 'shared',
     repoRoot: input?.repoRoot ?? process.cwd(),
     modelRef: input?.modelRef,
   };

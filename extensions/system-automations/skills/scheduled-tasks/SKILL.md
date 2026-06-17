@@ -64,29 +64,6 @@ Canonical storage:
 
 Automation definitions and scheduler runtime state now live in the daemon SQLite database.
 
-Legacy `*.task.md` files under the daemon task directory are treated as import sources, not the primary record. If present, they are imported into SQLite and then the daemon/UI operate on the database copy.
-
-## Legacy task-file import format
-
-Legacy scheduled-task files are Markdown with YAML frontmatter.
-
-```md
----
-id: daily-status
-enabled: true
-cron: '0 9 * * 1-5'
-model: 'openai-codex/gpt-5.4'
-cwd: '~/agent-workspace'
-timeoutSeconds: 1800
----
-
-Summarize yesterday's work and top priorities for today.
-```
-
-The Markdown body is the prompt sent to Pi.
-
-New automations created from the web UI are stored directly in SQLite instead of writing `*.task.md` files.
-
 For the current automation UI and storage model, see the Automations extension README.
 
 ## Required schedule fields
@@ -168,7 +145,7 @@ Each execution still writes a durable run record under the daemon state root.
 
 A scheduled task can optionally callback into the conversation that created it.
 
-That callback path is intentionally separate from the durable `*.task.md` definition because conversation ids and session files are local runtime state.
+That callback path is intentionally separate from the automation definition because conversation ids and session files are local runtime state.
 
 When enabled, a task completion or failure can create:
 
@@ -208,7 +185,7 @@ Common actions:
 
 - `save` — create or update a task definition
 - `get` — inspect one task
-- `validate` — validate a legacy task definition or proposed payload
+- `validate` — validate stored task definitions or a proposed payload
 - `run` — trigger a task immediately
 
 Useful `save` fields beyond the schedule itself:
@@ -254,10 +231,9 @@ pa daemon status
 
 Typical problems:
 
-- malformed or missing frontmatter
 - both `cron` and `at` set
 - neither `cron` nor `at` set
-- empty Markdown body
+- empty prompt
 
 Quick check:
 
@@ -267,9 +243,8 @@ Use the `scheduled_task` tool with `action: "validate"`.
 
 1. create or edit automations in the web UI when possible
 2. use the `scheduled_task` tool to inspect, validate, or trigger automations programmatically
-3. if you still manage legacy `*.task.md` files, validate them before expecting them to import cleanly
-4. check daemon status with `pa daemon status`
-5. look for the resulting run/status on the automation and its owning thread if the automation is meant to surface attention
+3. check daemon status with `pa daemon status`
+4. look for the resulting run/status on the automation and its owning thread if the automation is meant to surface attention
 
 ## Related docs
 

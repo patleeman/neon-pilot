@@ -116,7 +116,7 @@ export function ConversationComposerActions({
         <ComposerButtonHost
           key={`${button.extensionId}:${button.id}`}
           registration={button}
-          buttonContext={{
+          controlContext={{
             composerDisabled,
             streamIsStreaming,
             composerHasContent,

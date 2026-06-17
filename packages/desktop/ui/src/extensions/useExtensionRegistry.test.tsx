@@ -153,7 +153,6 @@ describe('useExtensionRegistry', () => {
         frontendEntry: 'dist/frontend.js',
       },
     ]);
-    expect(result.current.composerButtons).toEqual([]);
     expect(result.current.composerInputTools).toEqual([
       {
         extensionId: 'test-extension',
@@ -362,7 +361,7 @@ describe('useExtensionRegistry', () => {
             name: 'Disabled Extension',
             frontend: { entry: 'dist/frontend.js', styles: [] },
             contributes: {
-              composerButtons: [{ id: 'disabled-button', component: 'DisabledButton', placement: 'actions' }],
+              composerControls: [{ id: 'disabled-control', component: 'DisabledControl', slot: 'actions' }],
               statusBarItems: [{ id: 'disabled-status', label: 'Disabled status', component: 'DisabledStatus', alignment: 'right' }],
             },
           },
@@ -388,7 +387,7 @@ describe('useExtensionRegistry', () => {
     expect(result.current.extensions.map((entry) => entry.id)).toEqual(['disabled-extension']);
     expect(result.current.routes).toEqual([]);
     expect(result.current.surfaces).toEqual([]);
-    expect(result.current.composerButtons).toEqual([]);
+    expect(result.current.composerControls).toEqual([]);
     expect(result.current.statusBarItems).toEqual([]);
   });
 
@@ -492,7 +491,7 @@ describe('useExtensionRegistry', () => {
       expect(result.current.activityTreeItemElements).toEqual([]);
       expect(result.current.activityTreeItemStyles).toEqual([]);
       expect(result.current.statusBarItems).toEqual([]);
-      expect(result.current.composerButtons).toEqual([]);
+      expect(result.current.composerControls).toEqual([]);
       expect(result.current.composerInputTools).toEqual([]);
     } finally {
       (api as unknown as { extensionRegistry: typeof originalExtensionRegistry }).extensionRegistry = originalExtensionRegistry;

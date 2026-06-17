@@ -246,7 +246,7 @@ function formatCheckpoint(record: NonNullable<Awaited<ReturnType<typeof getConve
 }
 
 export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendContext) {
-  const profile = ctx.profile;
+  const profile = ctx.runtimeScope;
   const conversationId = readRequiredString(ctx.toolContext?.conversationId, 'conversationId');
   switch (input.action) {
     case 'list': {

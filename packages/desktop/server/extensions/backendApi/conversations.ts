@@ -97,13 +97,13 @@ export async function readExtensionConversationMetadata(input: {
   conversationId: string;
   extensionId: string;
   namespace?: string;
-  profile?: string;
+  runtimeScope?: string;
 }) {
   return callModuleExport('../../extensions/extensionConversationMetadata.js', 'readConversationMetadata', {
     conversationId: input.conversationId,
     extensionId: input.extensionId,
     namespace: input.namespace,
-    profile: input.profile ?? 'shared',
+    runtimeScope: input.runtimeScope ?? 'shared',
   });
 }
 
@@ -167,13 +167,13 @@ export async function importConversationSession(...args: unknown[]) {
   return callModuleExport('../../conversations/sessionExchange.js', 'importConversationSession', ...args);
 }
 
-export async function getConversationBlocks(conversationId: unknown, options: { profile?: string; tailBlocks?: number } = {}) {
+export async function getConversationBlocks(conversationId: unknown, options: { runtimeScope?: string; tailBlocks?: number } = {}) {
   const result = await callModuleExport<{ sessionRead?: { detail?: unknown } }>(
     '../../conversations/conversationService.js',
     'readSessionDetailForRoute',
     {
       conversationId,
-      profile: options.profile ?? 'shared',
+      profile: options.runtimeScope ?? 'shared',
       tailBlocks: options.tailBlocks,
     },
   );
@@ -182,16 +182,6 @@ export async function getConversationBlocks(conversationId: unknown, options: { 
 
 export async function getConversationMeta(conversationId: unknown) {
   return callModuleExport('../../conversations/conversationSessionCapability.js', 'readConversationSessionMetaCapability', conversationId);
-}
-
-/** @deprecated Use getConversationBlocks/readSessionDetailForRoute. */
-export async function readSessionBlocks(...args: unknown[]) {
-  return callModuleExport<Record<string, unknown> | undefined>('../../conversations/sessions.js', 'readSessionBlocks', ...args);
-}
-
-/** @deprecated Use getConversationMeta/readConversationSessionMetaCapability. */
-export async function readSessionMeta(...args: unknown[]) {
-  return callModuleExport<Record<string, unknown> | undefined>('../../conversations/sessions.js', 'readSessionMeta', ...args);
 }
 
 export async function persistTraceContextPointerInspect(...args: unknown[]) {

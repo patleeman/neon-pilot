@@ -35,25 +35,6 @@ describe('codex tool activation', () => {
     expect(removed).toEqual([['write', 'edit']]);
   });
 
-  it('falls back to active-set mutation when granular helpers are unavailable', () => {
-    const handlers = new Map<string, (event: unknown, ctx: unknown) => void>();
-    codexCompatibilityExtension({
-      on: (event: string, handler: (event: unknown, ctx: unknown) => void) => handlers.set(event, handler),
-    } as never);
-    const calls: string[][] = [];
-
-    handlers.get('session_start')?.(
-      {},
-      {
-        getActiveTools: () => ['bash', 'read', 'write', 'edit', 'artifact'],
-        setActiveTools: (tools: string[]) => calls.push(tools),
-        modelProfile: { kind: 'resolved', profile: { id: 'codex-compatible' } },
-      },
-    );
-
-    expect(calls).toEqual([['bash', 'read', 'artifact', 'apply_patch']]);
-  });
-
   it('does nothing for non-Codex sessions', () => {
     const handlers = new Map<string, (event: unknown, ctx: unknown) => void>();
     codexCompatibilityExtension({

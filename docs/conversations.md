@@ -44,7 +44,7 @@ Long saved conversations open on their latest transcript segment. When earlier h
 
 Saved-conversation summaries are cache-first. UI and suggested-context reads only return summaries already present in the local conversation context DB; they must not generate missing summaries on the request path. New closed conversations enqueue summary generation immediately. Older missing/stale summaries are discovered by a delayed, metered background queue after startup grace, processed one at a time with a short gap between jobs, and skipped for live/running conversations. This keeps old profiles useful over time without turning app launch or list rendering into a whole-profile summarization burst.
 
-Conversation read models live in `<state-root>/sync/pi-agent/conversations.db`. JSONL transcript files remain the append-only source of truth for recovery/export, but list/search/summary/detail request paths should use the SQLite read models instead of scanning transcript files. Older `conversation-context.db` files are copied forward into `conversations.db` on first open.
+Conversation read models live in `<state-root>/sync/pi-agent/conversations.db`. JSONL transcript files remain the append-only source of truth for recovery/export, but list/search/summary/detail request paths should use the SQLite read models instead of scanning transcript files.
 
 Runtime code should not import `conversations/sessions.js` directly. Normal callers use `conversationService.ts` and extension-facing capabilities. The only allowed direct transcript seams are:
 

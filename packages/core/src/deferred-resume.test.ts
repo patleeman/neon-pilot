@@ -44,7 +44,7 @@ describe('deferred resume state', () => {
     expect(parseDeferredResumeDelayMs('later')).toBeUndefined();
   });
 
-  it('loads legacy entries without explicit status as scheduled', () => {
+  it('loads entries without explicit status as scheduled', () => {
     const dir = createTempDir('deferred-resume-state-');
     const stateFile = join(dir, 'state.json');
 

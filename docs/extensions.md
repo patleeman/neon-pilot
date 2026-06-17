@@ -174,7 +174,7 @@ The manifest declares what your extension contributes:
 | Field                             | Purpose                                                                                       | Docs                                                                                      |
 | --------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `views`                           | UI surfaces (pages, panels, sidebar replacements)                                             | See `docs/views.md`                                                                       |
-| `webapps`                         | Locally hosted sidecar webpages exposed through `.localhost` names                            | [See below](#webapps)                                                                    |
+| `webapps`                         | Locally hosted sidecar webpages exposed through `.localhost` names                            | [See below](#webapps)                                                                     |
 | `nav`                             | Left sidebar navigation items; can reference a sidebar view with `sidebarView`                |                                                                                           |
 | `commands`                        | Extension actions invokable by command IDs                                                    | See [Commands and keybindings](../packages/extensions/README.md#commands-and-keybindings) |
 | `cliCommands`                     | Product administration commands contributed to the `neon-pilot` CLI                           | [See below](#cli-commands-clicommands)                                                    |
@@ -214,7 +214,6 @@ The manifest declares what your extension contributes:
 | `composerShelves`                 | Sections above the composer                                                                   | [See below](#composer-shelves-composershelves)                                            |
 | `newConversationPanels`           | Panels on the new conversation page                                                           | [See below](#new-conversation-panels-newconversationpanels)                               |
 | `composerControls`                | Component controls in the composer bottom row                                                 | [See below](#composer-controls-composercontrols)                                          |
-| `composerButtons`                 | Legacy composer controls                                                                      | [See below](#composer-buttons-composerbuttons)                                            |
 | `composerInputTools`              | Component tools beside composer controls                                                      | [See below](#composer-input-tools-composerinputtools)                                     |
 | `toolbarActions`                  | Icon buttons in composer toolbar                                                              | [See below](#toolbar-actions-toolbaractions)                                              |
 | `conversationDecorators`          | Badges on conversation list items                                                             | [See below](#conversation-decorators-conversationdecorators)                              |
@@ -715,7 +714,7 @@ Provider items can omit `section`; omitted values are assigned to the contributi
 Items with a different section are ignored by that tab. Providers may expose `list()` for default results and `search(query, limit)` for content-backed search.
 `order` is optional and controls tab ordering after the built-in Threads tab.
 
-Keybindings can open a quick-open surface directly with legacy `commandPalette:<section>` or the first-class command form `command: "palette.open", args: { "scope": "knowledge" }`.
+Keybindings can open a quick-open surface directly with `command: "palette.open", args: { "scope": "knowledge" }`.
 
 ### Settings Component (`settingsComponent`)
 
@@ -764,11 +763,7 @@ Add component-backed controls in the composer bottom row. Core owns the row layo
 }
 ```
 
-Slots are `leading`, `preferences`, and `actions`. Controls sort by `priority` ascending, then extension id, then contribution id. The component receives `pa`, `controlContext`, and the legacy alias `buttonContext`. `controlContext.renderMode` is `inline` or `menu`; `insertText(text)` inserts at the current composer selection; `appendText(text)` inserts at the end when available; `openFilePicker()` opens the core-owned attachment input; and model/goal fields expose the current composer preference state.
-
-### Composer Buttons (`composerButtons`)
-
-Legacy alias for composer controls. Existing `placement: "afterModelPicker"` maps to `slot: "preferences"`; `placement: "actions"` maps to `slot: "actions"`. New extensions should use `composerControls`.
+Slots are `leading`, `preferences`, and `actions`. Controls sort by `priority` ascending, then extension id, then contribution id. The component receives `pa` and `controlContext`. `controlContext.renderMode` is `inline` or `menu`; `insertText(text)` inserts at the current composer selection; `appendText(text)` inserts at the end when available; `openFilePicker()` opens the core-owned attachment input; and model/goal fields expose the current composer preference state.
 
 ### Composer Input Tools (`composerInputTools`)
 
@@ -1207,7 +1202,7 @@ The `pa` client provides:
 - `pa.storage.*` — read/write extension state
 - `pa.workspace.*` — workspace file operations
 - `pa.browser.*` — browser control
-- `pa.runs.*` — background run operations
+- `pa.executions.*` — background execution operations
 - `pa.automations.*` — scheduled task management
 - `pa.events.publish(event, payload)` — publish inter-extension events
 - `pa.extensions.callAction(id, action, input)` — call another extension's action
@@ -1404,7 +1399,7 @@ The `ExtensionBackendContext` provides:
 | `ctx.database`      | Extension-owned SQLite databases with optional versioned migrations                                     |
 | `ctx.attention`     | Enqueue/list/cancel async conversation attention events (wakeups, callbacks)                            |
 | `ctx.automations`   | Scheduled task management                                                                               |
-| `ctx.runs`          | Background run management                                                                               |
+| `ctx.executions`    | Background execution management                                                                         |
 | `ctx.conversations` | Conversation read/write operations                                                                      |
 | `ctx.filesystem`    | Scoped filesystem authority for workspace, extension file storage, temp, artifact, and other host roots |
 | `ctx.workspace`     | Workspace file operations (read, write, list); convenience wrapper over the filesystem authority        |
@@ -1681,9 +1676,9 @@ enforces permissions for storage and conversation operations.
     "knowledge:read",
     "knowledge:write",
     "knowledge:readwrite",
-    "runs:read",
-    "runs:start",
-    "runs:cancel",
+    "executions:read",
+    "executions:start",
+    "executions:cancel",
     "ui:notify"
   ]
 }

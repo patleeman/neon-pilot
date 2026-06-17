@@ -26,7 +26,7 @@ function createCtx(overrides: Record<string, unknown> = {}) {
   return {
     extensionId: 'system-onboarding',
     extensions: { setEnabled: mockSetExtensionEnabled },
-    profile: 'test-profile',
+    runtimeScope: 'shared',
     storage,
     conversations,
     runtime,

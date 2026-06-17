@@ -26,7 +26,6 @@ describe('@neon-pilot/daemon barrel', () => {
       expect.objectContaining({
         createStoredAutomation: expect.any(Function),
         listStoredAutomations: expect.any(Function),
-        parseTaskDefinition: expect.any(Function),
         createBackgroundRunId: expect.any(Function),
         createDurableRunManifest: expect.any(Function),
         createWebLiveConversationRunId: expect.any(Function),

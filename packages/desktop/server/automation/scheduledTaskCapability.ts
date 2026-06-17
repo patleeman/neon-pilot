@@ -85,7 +85,7 @@ function buildScheduledTaskSummary(
   return {
     id: task.id,
     title: task.title,
-    filePath: task.legacyFilePath,
+    filePath: task.filePath,
     scheduleType: task.schedule.type,
     targetType: task.targetType,
     running: runtime?.running ?? false,
@@ -133,7 +133,7 @@ export function buildScheduledTaskDetail(
     ...(runtime ?? {}),
     id: metadata.id,
     title: metadata.title,
-    filePath: task.legacyFilePath,
+    filePath: task.filePath,
     scheduleType: metadata.scheduleType,
     targetType: metadata.targetType,
     running: runtime?.running ?? false,
@@ -308,7 +308,6 @@ export async function createScheduledTaskCapability(profile: string, input: Sche
   }
 
   const createdTask = createStoredAutomation({
-    profile,
     title: input.title ?? '',
     enabled: input.enabled ?? true,
     cron: input.cron,
@@ -419,7 +418,7 @@ export async function deleteScheduledTaskCapability(profile: string, taskId: str
     throw new Error('Task not found');
   }
 
-  const deleted = deleteStoredAutomation(resolvedTask.task.id, { profile });
+  const deleted = deleteStoredAutomation(resolvedTask.task.id);
   if (!deleted) {
     throw new Error('Task not found');
   }

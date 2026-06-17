@@ -186,25 +186,14 @@ export function resolveProfileAlertsStateFile(options: ResolveAlertOptions): str
   return join(resolveStateRoot(options.stateRoot), 'pi-agent', 'state', 'alerts', `${normalizeRuntimeScope(options.profile)}.json`);
 }
 
-function resolveLegacyProfileAlertsStateFile(options: ResolveAlertOptions): string | undefined {
-  const legacyProfile = options.profile.trim();
-  if (!legacyProfile || legacyProfile === DEFAULT_RUNTIME_SCOPE) {
-    return undefined;
-  }
-
-  return join(resolveStateRoot(options.stateRoot), 'pi-agent', 'state', 'alerts', `${legacyProfile}.json`);
-}
-
 export function loadAlertState(options: ResolveAlertOptions): AlertStateFile {
   const path = resolveProfileAlertsStateFile(options);
-  const legacyPath = resolveLegacyProfileAlertsStateFile(options);
-  const readablePath = existsSync(path) ? path : legacyPath && existsSync(legacyPath) ? legacyPath : undefined;
-  if (!readablePath) {
+  if (!existsSync(path)) {
     return createEmptyAlertState();
   }
 
   try {
-    const raw = readFileSync(readablePath, 'utf-8').trim();
+    const raw = readFileSync(path, 'utf-8').trim();
     if (raw.length === 0) {
       return createEmptyAlertState();
     }

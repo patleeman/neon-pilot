@@ -47,7 +47,7 @@ import {
   setExtensionEnabled,
   setExtensionHealthError,
 } from './extensionRegistry.js';
-import { createExtensionExecutionsCapability, createExtensionRunsCapability } from './extensionRuns.js';
+import { createExtensionExecutionsCapability } from './extensionRuns.js';
 import { refreshHostSkillMcpConfig } from './extensionRuntimeCapability.js';
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
@@ -78,14 +78,10 @@ export interface ExtensionBackendEventPublishInput {
 export interface ExtensionBackendContext {
   extensionId: string;
   runtimeScope: string;
-  /** @deprecated Use runtimeScope. Profiles are legacy storage plumbing. */
-  profile: string;
   /** Absolute path to the neon-pilot-runtime directory. */
   runtimeDir: string;
   /** Absolute path to the runtime settings file. */
   runtimeSettingsFilePath: string;
-  /** @deprecated Use runtimeSettingsFilePath. Profiles are legacy storage plumbing. */
-  profileSettingsFilePath: string;
   toolContext?: {
     conversationId?: string;
     cwd?: string;
@@ -110,7 +106,6 @@ export interface ExtensionBackendContext {
   database: ReturnType<typeof createExtensionDatabaseManager>;
   attention: ReturnType<typeof createExtensionAttentionCapability>;
   automations: ReturnType<typeof createExtensionAutomationsCapability>;
-  runs: ReturnType<typeof createExtensionRunsCapability>;
   executions: ReturnType<typeof createExtensionExecutionsCapability>;
   models: ReturnType<typeof createExtensionModelsCapability>;
   knowledge: ReturnType<typeof createExtensionKnowledgeCapability>;
@@ -349,13 +344,7 @@ export class ExtensionLoadError extends Error {
 export type ExtensionActionInvokeResult = { ok: true; result: unknown } | { ok: false; error: string };
 
 function isHostCommandAction(action: string): boolean {
-  return (
-    isKnownHostCommand(action) ||
-    action.startsWith('navigate:') ||
-    action.startsWith('commandPalette:') ||
-    action.startsWith('rightRail:') ||
-    action.startsWith('layout:')
-  );
+  return isKnownHostCommand(action);
 }
 
 function createStorage(extensionId: string): ExtensionBackendContext['storage'] {
@@ -412,10 +401,8 @@ export function createBackendContext(
   return {
     extensionId,
     runtimeScope,
-    profile: runtimeScope,
     runtimeDir: resolvedPiAgentRuntimeDir,
     runtimeSettingsFilePath,
-    profileSettingsFilePath: runtimeSettingsFilePath,
     ...(toolContext ? { toolContext } : {}),
     ...(agentToolContext ? { agentToolContext } : {}),
     runtime: {
@@ -432,7 +419,6 @@ export function createBackendContext(
     database: createExtensionDatabaseManager(extensionId),
     attention: createExtensionAttentionCapability(extensionId, toolContext),
     automations: createExtensionAutomationsCapability(serverContext),
-    runs: createExtensionRunsCapability(extensionId),
     executions: createExtensionExecutionsCapability(extensionId),
     models: createExtensionModelsCapability(serverContext),
     knowledge: createExtensionKnowledgeCapability(),

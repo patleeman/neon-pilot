@@ -63,13 +63,6 @@ export interface NativeExtensionClient {
     readLog(executionId: string, tail?: number): Promise<unknown>;
     cancel(executionId: string): Promise<unknown>;
   };
-  runs: {
-    start(input: unknown): Promise<unknown>;
-    get(runId: string): Promise<unknown>;
-    list(): Promise<unknown>;
-    readLog(runId: string, tail?: number): Promise<unknown>;
-    cancel(runId: string): Promise<unknown>;
-  };
   storage: {
     get<T = unknown>(key: string): Promise<T | null>;
     put(key: string, value: unknown, opts?: { expectedVersion?: number }): Promise<unknown>;
@@ -219,23 +212,6 @@ export function createNativeExtensionClient(extensionId: string): NativeExtensio
       },
       cancel(executionId) {
         return api.cancelExecution(executionId);
-      },
-    },
-    runs: {
-      start(input) {
-        return api.startExtensionRun(extensionId, input);
-      },
-      get(runId) {
-        return api.durableRun(runId);
-      },
-      list() {
-        return api.runs();
-      },
-      readLog(runId, tail) {
-        return api.durableRunLog(runId, tail);
-      },
-      cancel(runId) {
-        return api.cancelDurableRun(runId);
       },
     },
     storage: {

@@ -1,19 +1,11 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-
 import {
-  ensureLegacyTaskImports,
   getAutomationDbPath,
   getStoredAutomation,
   listStoredAutomations,
   loadAutomationRuntimeStateMap,
   loadDaemonConfig,
-  type ParsedTaskDefinition,
-  parseTaskDefinition,
   type StoredAutomation,
 } from '@neon-pilot/daemon';
-
-const MAX_SCHEDULED_TASK_DURATION_SECONDS = 7 * 24 * 60 * 60;
 
 export interface TaskRuntimeEntry {
   id?: string;
@@ -32,7 +24,7 @@ export interface ScheduledTaskFileMetadata {
   id: string;
   title: string;
   enabled: boolean;
-  scheduleType: ParsedTaskDefinition['schedule']['type'];
+  scheduleType: StoredAutomation['schedule']['type'];
   targetType: 'background-agent' | 'conversation';
   cron?: string;
   at?: string;
@@ -57,28 +49,6 @@ export interface LoadedScheduledTasksForProfile {
   parseErrors: ScheduledTaskParseError[];
   runtimeState: Record<string, TaskRuntimeEntry>;
   runtimeEntries: TaskRuntimeEntry[];
-}
-
-function normalizePath(value: string): string {
-  return resolve(value).replace(/\\/g, '/');
-}
-
-function readRequiredString(value: string | undefined, label: string): string {
-  const normalized = value?.trim();
-  if (!normalized) {
-    throw new Error(`${label} is required.`);
-  }
-
-  return normalized;
-}
-
-function readOptionalString(value: string | null | undefined): string | undefined {
-  const normalized = value?.trim();
-  return normalized && normalized.length > 0 ? normalized : undefined;
-}
-
-function yamlString(value: string): string {
-  return JSON.stringify(value);
 }
 
 function toRuntimeEntries(): { runtimeState: Record<string, TaskRuntimeEntry>; runtimeEntries: TaskRuntimeEntry[] } {
@@ -122,14 +92,6 @@ function hydrateMetadata(task: StoredAutomation): ScheduledTaskFileMetadata {
   };
 }
 
-export function validateScheduledTaskDefinition(filePath: string, rawContent: string): ParsedTaskDefinition {
-  return parseTaskDefinition({
-    filePath,
-    rawContent,
-    defaultTimeoutSeconds: loadDaemonConfig().modules.tasks.defaultTimeoutSeconds,
-  });
-}
-
 export function getScheduledTaskStateFilePath(): string {
   return getAutomationDbPath();
 }
@@ -138,80 +100,19 @@ export function taskDirForProfile(_profile: string): string {
   return loadDaemonConfig().modules.tasks.taskDir;
 }
 
-export function listScheduledTaskDefinitionFiles(taskDir: string): string[] {
-  if (!existsSync(taskDir)) {
-    return [];
-  }
-
-  const output: string[] = [];
-  const stack = [resolve(taskDir)];
-
-  while (stack.length > 0) {
-    const current = stack.pop() as string;
-    const entries = readdirSync(current, { withFileTypes: true });
-
-    for (const entry of entries) {
-      const fullPath = join(current, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(fullPath);
-        continue;
-      }
-      if (entry.isFile() && entry.name.endsWith('.task.md')) {
-        output.push(fullPath);
-      }
-    }
-  }
-
-  output.sort();
-  return output;
-}
-
 export function loadScheduledTaskRuntimeState(): Record<string, TaskRuntimeEntry> {
   return toRuntimeEntries().runtimeState;
 }
 
-export function inferTaskProfileFromFilePath(filePath: string): string | undefined {
-  const normalized = normalizePath(filePath);
-  const match = normalized.match(/\/profiles\/([^/]+)\/agent\/tasks(?:\/|$)/);
-  return match?.[1];
-}
-
-export function readScheduledTaskFileMetadata(filePath: string): ScheduledTaskFileMetadata {
-  const fileContent = readFileSync(filePath, 'utf-8');
-  const parsed = validateScheduledTaskDefinition(filePath, fileContent);
-
-  return {
-    id: parsed.id,
-    title: parsed.title ?? parsed.id,
-    enabled: parsed.enabled,
-    scheduleType: parsed.schedule.type,
-    targetType: 'background-agent',
-    cron: parsed.schedule.type === 'cron' ? parsed.schedule.expression : undefined,
-    at: parsed.schedule.type === 'at' ? parsed.schedule.at : undefined,
-    model: parsed.modelRef,
-    profile: parsed.profile,
-    cwd: parsed.cwd,
-    timeoutSeconds: parsed.timeoutSeconds,
-    prompt: parsed.prompt.split('\n')[0]?.slice(0, 120) ?? '',
-    promptBody: parsed.prompt,
-  };
-}
-
 export function loadScheduledTasksForProfile(profile: string): LoadedScheduledTasksForProfile {
-  const config = loadDaemonConfig();
   const taskDir = taskDirForProfile(profile);
-  const importResult = ensureLegacyTaskImports({
-    taskDir,
-    defaultTimeoutSeconds: config.modules.tasks.defaultTimeoutSeconds,
-    dbPath: getAutomationDbPath(config),
-  });
-  const tasks = listStoredAutomations({ profile, dbPath: getAutomationDbPath(config) });
+  const tasks = listStoredAutomations({ dbPath: getAutomationDbPath() });
   const { runtimeState, runtimeEntries } = toRuntimeEntries();
 
   return {
     taskDir,
     tasks,
-    parseErrors: importResult.parseErrors,
+    parseErrors: [],
     runtimeState,
     runtimeEntries,
   };
@@ -226,7 +127,7 @@ export function resolveScheduledTaskForProfile(
   runtime?: TaskRuntimeEntry;
 } {
   const loaded = loadScheduledTasksForProfile(profile);
-  const task = getStoredAutomation(taskId, { profile, dbPath: getAutomationDbPath() });
+  const task = getStoredAutomation(taskId, { dbPath: getAutomationDbPath() });
 
   if (!task) {
     throw new Error(`Task not found: ${taskId}`);
@@ -237,104 +138,6 @@ export function resolveScheduledTaskForProfile(
     task,
     runtime: loaded.runtimeState[task.id],
   };
-}
-
-export function buildScheduledTaskMarkdown(input: {
-  taskId: string;
-  profile: string;
-  title?: string | null;
-  enabled: boolean;
-  cron?: string | null;
-  at?: string | null;
-  model?: string | null;
-  thinkingLevel?: string | null;
-  cwd?: string | null;
-  timeoutSeconds?: number | null;
-  catchUpWindowSeconds?: number | null;
-  prompt: string;
-}): string {
-  const cron = readOptionalString(input.cron);
-  const at = readOptionalString(input.at);
-  if (Boolean(cron) === Boolean(at)) {
-    throw new Error('Provide exactly one of cron or at.');
-  }
-
-  const lines = ['---', `id: ${yamlString(input.taskId)}`];
-
-  const title = readOptionalString(input.title ?? undefined);
-  if (title) {
-    lines.push(`title: ${yamlString(title)}`);
-  }
-
-  lines.push(`enabled: ${input.enabled ? 'true' : 'false'}`);
-
-  if (cron) {
-    lines.push(`cron: ${yamlString(cron)}`);
-  } else {
-    lines.push(`at: ${yamlString(readRequiredString(at, 'at'))}`);
-  }
-
-  lines.push(`profile: ${yamlString(input.profile)}`);
-
-  const model = readOptionalString(input.model);
-  if (model) {
-    lines.push(`model: ${yamlString(model)}`);
-  }
-
-  const thinkingLevel = readOptionalString(input.thinkingLevel);
-  if (thinkingLevel) {
-    lines.push(`thinking: ${yamlString(thinkingLevel)}`);
-  }
-
-  const cwd = readOptionalString(input.cwd);
-  if (cwd) {
-    lines.push(`cwd: ${yamlString(cwd)}`);
-  }
-
-  if (input.timeoutSeconds !== undefined && input.timeoutSeconds !== null) {
-    if (
-      !Number.isSafeInteger(input.timeoutSeconds) ||
-      input.timeoutSeconds <= 0 ||
-      input.timeoutSeconds > MAX_SCHEDULED_TASK_DURATION_SECONDS
-    ) {
-      throw new Error('timeoutSeconds must be a positive integer.');
-    }
-    lines.push(`timeoutSeconds: ${input.timeoutSeconds}`);
-  }
-
-  if (input.catchUpWindowSeconds !== undefined && input.catchUpWindowSeconds !== null) {
-    if (
-      !Number.isSafeInteger(input.catchUpWindowSeconds) ||
-      input.catchUpWindowSeconds <= 0 ||
-      input.catchUpWindowSeconds > MAX_SCHEDULED_TASK_DURATION_SECONDS
-    ) {
-      throw new Error('catchUpWindowSeconds must be a positive integer.');
-    }
-    lines.push(`catchUpWindowSeconds: ${input.catchUpWindowSeconds}`);
-  }
-
-  lines.push('---');
-  lines.push(readRequiredString(input.prompt, 'prompt'));
-
-  return `${lines.join('\n').trimEnd()}\n`;
-}
-
-export function taskBelongsToProfile(task: { filePath: string }, profile: string): boolean {
-  const inferredProfile = inferTaskProfileFromFilePath(task.filePath);
-  if (inferredProfile) {
-    return inferredProfile === profile;
-  }
-
-  if (!existsSync(task.filePath)) {
-    return false;
-  }
-
-  try {
-    const metadata = readScheduledTaskFileMetadata(task.filePath);
-    return metadata.profile === profile;
-  } catch {
-    return false;
-  }
 }
 
 export function toScheduledTaskMetadata(task: StoredAutomation): ScheduledTaskFileMetadata {

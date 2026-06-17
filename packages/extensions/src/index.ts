@@ -76,14 +76,6 @@ export interface NativeExtensionClient {
     readLog(executionId: string, tail?: number): Promise<unknown>;
     cancel(executionId: string): Promise<unknown>;
   };
-  /** @deprecated Use `executions`. */
-  runs: {
-    start(input: unknown): Promise<unknown>;
-    get(runId: string): Promise<unknown>;
-    list(): Promise<unknown[]>;
-    readLog(runId: string, tail?: number): Promise<unknown>;
-    cancel(runId: string): Promise<unknown>;
-  };
   /** Extension-scoped key/value storage. Persisted across sessions. */
   storage: {
     get<T = unknown>(key: string): Promise<T | null>;
@@ -198,9 +190,6 @@ export type ExtensionIconName =
 export type ExtensionPermission =
   | 'agent:run'
   | 'agent:conversations'
-  | 'runs:read'
-  | 'runs:start'
-  | 'runs:cancel'
   | 'executions:read'
   | 'executions:start'
   | 'executions:cancel'
@@ -244,8 +233,6 @@ export interface ExtensionFrontend {
 export interface ExtensionHostComponentReference {
   host: string;
   props?: Record<string, unknown>;
-  /** Legacy shorthand for overrides.wrapper. */
-  override?: string;
   /** Extension frontend exports used to customize supported host override slots. */
   overrides?: Record<string, string>;
 }
@@ -587,18 +574,6 @@ export interface ExtensionComposerControlContribution {
   priority?: number;
 }
 
-export interface ExtensionComposerButtonContribution {
-  id: string;
-  component: string;
-  title?: string;
-  /** @deprecated Use composerControls[].slot. */
-  placement?: 'afterModelPicker' | 'actions';
-  /** Condition for visibility, e.g. "composerHasContent && !streamIsStreaming" */
-  when?: string;
-  /** Sort priority. Higher = closer to submit button. Default 0. */
-  priority?: number;
-}
-
 export interface ExtensionComposerInputToolContribution {
   id: string;
   component: string;
@@ -868,7 +843,6 @@ export interface ExtensionContributions {
   composerShelves?: ExtensionComposerShelfContribution[];
   draftConversationCreate?: ExtensionDraftConversationCreateContribution[];
   composerControls?: ExtensionComposerControlContribution[];
-  composerButtons?: ExtensionComposerButtonContribution[];
   composerInputTools?: ExtensionComposerInputToolContribution[];
   toolbarActions?: ExtensionToolbarActionContribution[];
   contextMenus?: ExtensionContextMenuContribution[];
@@ -1207,14 +1181,6 @@ export interface NeonPilotClient {
     readLog(executionId: string, tail?: number): Promise<string | Record<string, unknown>>;
     cancel(executionId: string): Promise<ExtensionRunSummary | Record<string, unknown>>;
   };
-  /** @deprecated Use executions. */
-  runs: {
-    start(input: unknown): Promise<ExtensionRunSummary>;
-    get(runId: string): Promise<ExtensionRunSummary>;
-    list(): Promise<ExtensionRunSummary[]>;
-    readLog(runId: string, tail?: number): Promise<string | Record<string, unknown>>;
-    cancel(runId: string): Promise<ExtensionRunSummary | Record<string, unknown>>;
-  };
   storage: {
     get<T = unknown>(key: string): Promise<T | null>;
     put(key: string, value: unknown, opts?: { expectedVersion?: number }): Promise<unknown>;
@@ -1377,14 +1343,10 @@ export interface ExtensionBackendContext {
    * legacy path compatibility.
    */
   runtimeScope: string;
-  /** @deprecated Use runtimeScope. Profiles are legacy storage plumbing. */
-  profile: string;
   /** Absolute path to the neon-pilot-runtime directory. */
   runtimeDir: string;
   /** Absolute path to the runtime settings file. */
   runtimeSettingsFilePath: string;
-  /** @deprecated Use runtimeSettingsFilePath. Profiles are legacy storage plumbing. */
-  profileSettingsFilePath: string;
   runtime: {
     getLiveSessionResourceOptions(): unknown;
     getRepoRoot(): string;
@@ -1397,7 +1359,6 @@ export interface ExtensionBackendContext {
     list<T = unknown>(prefix?: string): Promise<Array<{ key: string; value: T }>>;
   };
   database: ExtensionDatabaseManager;
-  runs: Record<string, (...args: never[]) => Promise<unknown>>;
   attention: {
     enqueue(input: {
       conversationId?: string;

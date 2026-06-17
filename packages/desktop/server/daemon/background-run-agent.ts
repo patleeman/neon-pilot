@@ -4,8 +4,6 @@ import { fileURLToPath } from 'node:url';
 
 export interface BackgroundRunAgentSpec {
   prompt: string;
-  /** @deprecated Ignored; background agents always use the shared runtime scope. */
-  profile?: string;
   model?: string;
   noSession?: boolean;
   /** When set, only these tool names are exposed to the background agent. */

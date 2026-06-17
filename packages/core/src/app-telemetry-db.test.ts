@@ -130,33 +130,6 @@ describe('app-telemetry-db', () => {
     expect(traceResult.vacuumed).toBe(false);
   });
 
-  it('deletes legacy app telemetry DB after successful import', () => {
-    const legacyDir = join(testDir, 'pi-agent', 'state', 'trace');
-    mkdirSync(legacyDir, { recursive: true });
-    const legacyPath = join(legacyDir, 'app-telemetry.db');
-    const legacyDb = openSqliteDatabase(legacyPath);
-    legacyDb.exec(`
-      CREATE TABLE app_telemetry_events (
-        id TEXT PRIMARY KEY, ts TEXT NOT NULL, source TEXT NOT NULL, category TEXT NOT NULL, name TEXT NOT NULL,
-        session_id TEXT, run_id TEXT, route TEXT, status INTEGER, duration_ms REAL, count INTEGER, value REAL, metadata_json TEXT
-      )
-    `);
-    legacyDb
-      .prepare(`INSERT INTO app_telemetry_events (id, ts, source, category, name) VALUES (?, ?, ?, ?, ?)`)
-      .run('legacy-event', new Date().toISOString(), 'server', 'legacy', 'imported');
-    legacyDb.close();
-
-    maintainAppTelemetryDb(testDir);
-    closeAppTelemetryDbs();
-
-    const db = openSqliteDatabase(join(testDir, 'observability', 'observability.db'));
-    const row = db.prepare(`SELECT COUNT(*) AS count FROM app_telemetry_events WHERE id = 'legacy-event'`).get() as { count: number };
-    db.close();
-
-    expect(row.count).toBe(1);
-    expect(existsSync(legacyPath)).toBe(false);
-  });
-
   it('drops events without category or name', () => {
     writeAppTelemetryEvent({ source: 'server', category: '', name: 'request' });
     writeAppTelemetryEvent({ source: 'server', category: 'api', name: '' });

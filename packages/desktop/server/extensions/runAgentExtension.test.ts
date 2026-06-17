@@ -442,7 +442,7 @@ describe('run agent extension', () => {
         cwd: '/tmp/workspace',
       });
       expect(setTaskCallbackBindingMock).toHaveBeenCalledWith({
-        profile: 'shared',
+        profile: 'assistant',
         taskId: 'deploy-watch',
         conversationId: 'conv-callback',
         sessionFile: '/tmp/sessions/conv-callback.jsonl',
@@ -497,7 +497,7 @@ describe('run agent extension', () => {
       callbackConversation: {
         conversationId: 'conv-callback',
         sessionFile: '/tmp/sessions/conv-callback.jsonl',
-        profile: 'shared',
+        profile: 'assistant',
         repoRoot: '/repo',
       },
       checkpointPayload: {

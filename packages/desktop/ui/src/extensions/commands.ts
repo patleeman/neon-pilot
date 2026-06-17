@@ -1744,34 +1744,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
   ];
 }
 
-export function normalizeLegacyCommand(command: string): { command: string; args?: Record<string, unknown> } {
-  if (command === 'core.newConversation') return { command: 'conversation.new' };
-  if (command === 'core.closeTab') return { command: 'conversation.close' };
-  if (command === 'core.reopenClosedTab') return { command: 'conversation.reopenClosed' };
-  if (command === 'core.previousConversation') return { command: 'conversation.previous' };
-  if (command === 'core.nextConversation') return { command: 'conversation.next' };
-  if (command === 'core.togglePinned') return { command: 'conversation.togglePinned' };
-  if (command === 'core.archiveRestoreConversation') return { command: 'conversation.toggleArchived' };
-  if (command === 'core.renameConversation') return { command: 'conversation.rename' };
-  if (command === 'core.focusComposer') return { command: 'composer.focus' };
-  if (command === 'core.editWorkingDirectory') return { command: 'conversation.editCwd' };
-  if (command === 'core.findOnPage') return { command: 'page.find' };
-  if (command === 'core.settings') return { command: 'app.navigate', args: { to: '/settings' } };
-  if (command === 'core.toggleSidebar') return { command: 'layout.toggleSidebar' };
-  if (command === 'core.toggleRightRail') return { command: 'layout.toggleRightRail' };
-  if (command.startsWith('navigate:')) return { command: 'app.navigate', args: { to: command.slice('navigate:'.length) } };
-  if (command.startsWith('commandPalette:')) return { command: 'palette.open', args: { scope: command.slice('commandPalette:'.length) } };
-  if (command.startsWith('rightRail:')) {
-    const [extensionId, surfaceId] = command.slice('rightRail:'.length).split('/');
-    return { command: 'rail.open', args: { extensionId, surfaceId } };
-  }
-  if (command.startsWith('layout:')) return { command: 'layout.set', args: { mode: command.slice('layout:'.length) } };
-  return { command };
-}
-
 function isHostCommandString(command: string): boolean {
-  const normalized = normalizeLegacyCommand(command).command;
-  return listHostCommands().some((candidate) => candidate.id === normalized);
+  return listHostCommands().some((candidate) => candidate.id === command);
 }
 
 function findExtensionCommand(command: string, options: ExtensionCommandExecutorOptions): ExtensionCommandRegistration | undefined {
@@ -1785,14 +1759,13 @@ function findExtensionCommand(command: string, options: ExtensionCommandExecutor
 }
 
 export function canExecuteExtensionCommand(command: string, args: unknown, options: ExtensionCommandExecutorOptions): boolean {
-  const invocation = normalizeLegacyCommand(command);
-  const commandArgs = (args ?? invocation.args) as ExtensionCommandArgs;
-  const hostCommand = createHostCommands(options).find((candidate) => candidate.id === invocation.command);
+  const commandArgs = args as ExtensionCommandArgs;
+  const hostCommand = createHostCommands(options).find((candidate) => candidate.id === command);
   if (hostCommand) {
     return hostCommand.canExecute ? hostCommand.canExecute(commandArgs, options.context ?? {}) : true;
   }
 
-  const extensionCommand = findExtensionCommand(invocation.command, options);
+  const extensionCommand = findExtensionCommand(command, options);
   if (!extensionCommand) return false;
   if (!evaluateCommandEnablement(extensionCommand.enablement, options.context)) return false;
   const effectiveArgs = commandArgs ?? (extensionCommand.args as ExtensionCommandArgs);
@@ -1804,11 +1777,10 @@ export function canExecuteExtensionCommand(command: string, args: unknown, optio
 
 export async function executeExtensionCommand(command: string, args: unknown, options: ExtensionCommandExecutorOptions): Promise<boolean> {
   const startedAt = performance.now();
-  const invocation = normalizeLegacyCommand(command);
-  const commandArgs = (args ?? invocation.args) as ExtensionCommandArgs;
+  const commandArgs = args as ExtensionCommandArgs;
   let handled = false;
   try {
-    const hostCommand = createHostCommands(options).find((candidate) => candidate.id === invocation.command);
+    const hostCommand = createHostCommands(options).find((candidate) => candidate.id === command);
     if (hostCommand) {
       if (hostCommand.canExecute && !hostCommand.canExecute(commandArgs, options.context ?? {})) return false;
       handled = Boolean(await hostCommand.execute(commandArgs));
@@ -1816,7 +1788,7 @@ export async function executeExtensionCommand(command: string, args: unknown, op
     }
     // Prefer scoped match (extensionId.surfaceId) over bare surfaceId to avoid
     // cross-extension collisions. Bare matches are only accepted when unambiguous.
-    const extensionCommand = findExtensionCommand(invocation.command, options);
+    const extensionCommand = findExtensionCommand(command, options);
     if (!extensionCommand) return false;
     if (!evaluateCommandEnablement(extensionCommand.enablement, options.context)) return false;
     const effectiveArgs = commandArgs ?? (extensionCommand.args as ExtensionCommandArgs);
@@ -1833,7 +1805,7 @@ export async function executeExtensionCommand(command: string, args: unknown, op
       category: 'commands',
       name: 'execute',
       durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
-      metadata: { command: invocation.command, originalCommand: command, handled },
+      metadata: { command, handled },
     });
   }
 }

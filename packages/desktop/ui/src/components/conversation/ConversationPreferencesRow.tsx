@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { type ComposerButtonContext, ComposerButtonHost } from '../../extensions/ComposerButtonHost';
+import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
+
+import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { setExtensionCommandContext } from '../../extensions/commands';
 import type { ExtensionComposerControlRegistration } from '../../extensions/useExtensionRegistry';
 import { cx, IconButton } from '../ui';
@@ -21,19 +23,19 @@ function MoreHorizontalIcon({ className }: { className?: string }) {
 }
 
 export function ConversationPreferencesRow({
-  composerButtons = [],
-  composerButtonContext,
+  composerControls = [],
+  composerControlContext,
   inlineLimit,
 }: {
-  composerButtons: ExtensionComposerControlRegistration[];
-  composerButtonContext: Omit<ComposerButtonContext, 'renderMode'>;
+  composerControls: ExtensionComposerControlRegistration[];
+  composerControlContext: Omit<ComposerControlContext, 'renderMode'>;
   inlineLimit: number;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const inlineCount = Math.max(0, inlineLimit);
-  const inlineControls = composerButtons.slice(0, inlineCount);
-  const menuControls = composerButtons.slice(inlineCount);
+  const inlineControls = composerControls.slice(0, inlineCount);
+  const menuControls = composerControls.slice(inlineCount);
   const hasMenuItems = menuControls.length > 0;
 
   useEffect(() => {
@@ -101,7 +103,7 @@ export function ConversationPreferencesRow({
         <ComposerButtonHost
           key={`${control.extensionId}:${control.id}`}
           registration={control}
-          buttonContext={{ ...composerButtonContext, renderMode: 'inline' }}
+          controlContext={{ ...composerControlContext, renderMode: 'inline' }}
         />
       ))}
 
@@ -132,7 +134,7 @@ export function ConversationPreferencesRow({
                   <ComposerButtonHost
                     key={`${control.extensionId}:${control.id}`}
                     registration={control}
-                    buttonContext={{ ...composerButtonContext, renderMode: 'menu' }}
+                    controlContext={{ ...composerControlContext, renderMode: 'menu' }}
                   />
                 ))}
               </div>

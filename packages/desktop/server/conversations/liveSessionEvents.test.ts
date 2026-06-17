@@ -67,17 +67,17 @@ describe('toSse tool execution events', () => {
     expect(end && 'details' in end ? end.details : undefined).toBeUndefined();
   });
 
-  it('canonicalizes shell aliases to bash before broadcasting', () => {
+  it('broadcasts bash tool names directly', () => {
     const start = toSse({
       type: 'tool_execution_start',
       toolCallId: 'shell-1',
-      toolName: '_shell',
+      toolName: 'bash',
       args: { command: 'pwd', background: true },
     } as never);
     const end = toSse({
       type: 'tool_execution_end',
       toolCallId: 'shell-1',
-      toolName: 'shell',
+      toolName: 'bash',
       isError: false,
       result: { content: [{ type: 'text', text: 'done' }] },
     } as never);

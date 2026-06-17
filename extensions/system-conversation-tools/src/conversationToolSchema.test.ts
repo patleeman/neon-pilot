@@ -5,7 +5,6 @@ import { CONVERSATION_ACTIONS, ConversationToolParams } from './conversationTool
 describe('conversationToolSchema', () => {
   it('declares the supported conversation actions in UI/tool order', () => {
     expect(CONVERSATION_ACTIONS).toEqual([
-      'ask',
       'activity',
       'connections',
       'inspect',
@@ -37,7 +36,6 @@ describe('conversationToolSchema', () => {
     expect(Object.keys(ConversationToolParams.properties)).toEqual(
       expect.arrayContaining([
         'action',
-        'question',
         'inspectAction',
         'title',
         'cwd',

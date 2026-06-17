@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { type SqliteDatabase } from '@neon-pilot/core';
 
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
-import { ensureConversationsDbFileMigrated } from './conversationDbPaths.js';
+import { ensureConversationsDbFile } from './conversationDbPaths.js';
 import type { SessionMeta } from './conversationTypes.js';
 import type { SessionDetail } from './conversationTypes.js';
 
@@ -36,7 +36,7 @@ const DEFAULT_CATALOG_BACKFILL_DELAY_MS = 5 * 60_000;
 function getDb(): SqliteDatabase {
   if (db) return db;
 
-  const dbFile = ensureConversationsDbFileMigrated();
+  const dbFile = ensureConversationsDbFile();
   mkdirSync(dirname(dbFile), { recursive: true });
   db = openRecoveringRuntimeSqliteDb(dbFile);
   db.pragma('journal_mode = WAL');

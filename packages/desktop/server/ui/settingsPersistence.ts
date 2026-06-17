@@ -11,8 +11,8 @@ function getDefaultLocalRuntimeConfigDir(): string {
   return join(getConfigRoot(), 'local');
 }
 
-function readLocalProfileDir(explicitLocalProfileDir?: string): string {
-  const value = explicitLocalProfileDir ?? process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
+function readLocalRuntimeConfigDir(explicitLocalRuntimeConfigDir?: string): string {
+  const value = explicitLocalRuntimeConfigDir;
 
   if (typeof value === 'string' && value.trim().length > 0) {
     return value.trim();
@@ -21,29 +21,29 @@ function readLocalProfileDir(explicitLocalProfileDir?: string): string {
   return getDefaultLocalRuntimeConfigDir();
 }
 
-export function resolveLocalProfileSettingsFilePath(explicitLocalProfileDir?: string): string {
-  const localProfileDir = readLocalProfileDir(explicitLocalProfileDir);
-  const nestedAgentDir = join(localProfileDir, 'agent');
+export function resolveLocalRuntimeSettingsFilePath(explicitLocalRuntimeConfigDir?: string): string {
+  const localRuntimeConfigDir = readLocalRuntimeConfigDir(explicitLocalRuntimeConfigDir);
+  const nestedAgentDir = join(localRuntimeConfigDir, 'agent');
 
   if (existsSync(nestedAgentDir) && statSync(nestedAgentDir).isDirectory()) {
     return join(nestedAgentDir, 'settings.json');
   }
 
-  if (existsSync(localProfileDir) && !statSync(localProfileDir).isDirectory()) {
-    throw new Error(`Local runtime config path is not a directory: ${localProfileDir}`);
+  if (existsSync(localRuntimeConfigDir) && !statSync(localRuntimeConfigDir).isDirectory()) {
+    throw new Error(`Local runtime config path is not a directory: ${localRuntimeConfigDir}`);
   }
 
-  return join(localProfileDir, 'settings.json');
+  return join(localRuntimeConfigDir, 'settings.json');
 }
 
 export interface PersistSettingsWriteOptions {
   runtimeSettingsFile?: string;
   localSettingsFile?: string;
-  localProfileDir?: string;
+  localRuntimeConfigDir?: string;
 }
 
 export function persistSettingsWrite<T>(writeSettingsFile: (settingsFile: string) => T, options: PersistSettingsWriteOptions = {}): T {
-  const localSettingsFile = options.localSettingsFile ?? resolveLocalProfileSettingsFilePath(options.localProfileDir);
+  const localSettingsFile = options.localSettingsFile ?? resolveLocalRuntimeSettingsFilePath(options.localRuntimeConfigDir);
   const runtimeSettingsFile = options.runtimeSettingsFile ?? getRuntimeSettingsFilePath();
 
   writeSettingsFile(localSettingsFile);

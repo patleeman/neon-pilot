@@ -50,8 +50,6 @@ export interface RuntimeSkillInjectionPlan {
 
 export interface SkillRuntimeContext {
   runtimeScope?: string;
-  /** @deprecated Runtime resources are no longer user-profile scoped. Use runtimeScope. */
-  profile?: string;
   repoRoot: string;
 }
 

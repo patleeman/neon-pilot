@@ -30,12 +30,12 @@
         "scope": "global"
       }
     ],
-    "composerButtons": [
+    "composerControls": [
       {
         "id": "dictation",
         "component": "DictationButton",
         "title": "Dictation",
-        "placement": "actions",
+        "slot": "actions",
         "priority": 100
       }
     ],

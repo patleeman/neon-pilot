@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { getRuntimeSettingsFilePath, persistSettingsWrite, resolveLocalProfileSettingsFilePath } from './settingsPersistence.js';
+import { getRuntimeSettingsFilePath, persistSettingsWrite, resolveLocalRuntimeSettingsFilePath } from './settingsPersistence.js';
 
 const tempDirs: string[] = [];
 
@@ -19,18 +19,18 @@ function createTempDir(prefix = 'neon-pilot-web-settings-persist-'): string {
   return dir;
 }
 
-describe('resolveLocalProfileSettingsFilePath', () => {
+describe('resolveLocalRuntimeSettingsFilePath', () => {
   it('uses <local>/agent/settings.json when the nested agent dir exists', () => {
     const localDir = createTempDir();
     mkdirSync(join(localDir, 'agent'), { recursive: true });
 
-    expect(resolveLocalProfileSettingsFilePath(localDir)).toBe(join(localDir, 'agent', 'settings.json'));
+    expect(resolveLocalRuntimeSettingsFilePath(localDir)).toBe(join(localDir, 'agent', 'settings.json'));
   });
 
   it('falls back to <local>/settings.json when local dir exists without nested agent dir', () => {
     const localDir = createTempDir();
 
-    expect(resolveLocalProfileSettingsFilePath(localDir)).toBe(join(localDir, 'settings.json'));
+    expect(resolveLocalRuntimeSettingsFilePath(localDir)).toBe(join(localDir, 'settings.json'));
   });
 
   it('throws when local path exists but is not a directory', () => {
@@ -38,7 +38,7 @@ describe('resolveLocalProfileSettingsFilePath', () => {
     const file = join(localDir, 'local-file');
     writeFileSync(file, '{}\n');
 
-    expect(() => resolveLocalProfileSettingsFilePath(file)).toThrow(`Local runtime config path is not a directory: ${file}`);
+    expect(() => resolveLocalRuntimeSettingsFilePath(file)).toThrow(`Local runtime config path is not a directory: ${file}`);
   });
 });
 

@@ -18,7 +18,6 @@ export type {
   AutomationSchedulerState,
   AutomationTargetType,
   AutomationThreadMode,
-  LegacyAutomationImportIssue,
   StoredAutomation,
 } from '../automation/store.js';
 export {
@@ -27,7 +26,6 @@ export {
   closeAutomationDbs,
   createStoredAutomation,
   deleteStoredAutomation,
-  ensureLegacyTaskImports,
   getAutomationDbPath,
   getStoredAutomation,
   listAutomationActivityEntries,
@@ -45,7 +43,6 @@ export { setTaskCallbackBinding } from '@neon-pilot/core';
 
 // Tasks (previously daemon/modules/) — now at packages/desktop/server/automation/tasks/
 export type { ParsedTaskDefinition } from '../automation/tasks/tasks-parser.js';
-export { parseTaskDefinition } from '../automation/tasks/tasks-parser.js';
 
 // Runs — now at packages/desktop/server/runs/
 export {

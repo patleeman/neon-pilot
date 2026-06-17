@@ -331,7 +331,7 @@ async function waitExtensionRegistryReady(cdp, child, timeoutMs = 45_000) {
         const composerReady = Boolean(document.querySelector('textarea:not([disabled])'));
         const registryReady = perf?.extensionRegistryLoading === false;
         const registryCounts = perf?.extensionRegistryCounts || {};
-        const hasCriticalExtensionUi = (registryCounts.topBarElements ?? 0) > 0 || (registryCounts.composerButtons ?? 0) > 0 || (registryCounts.composerInputTools ?? 0) > 0 || (registryCounts.routes ?? 0) > 0;
+        const hasCriticalExtensionUi = (registryCounts.topBarElements ?? 0) > 0 || (registryCounts.composerControls ?? 0) > 0 || (registryCounts.composerInputTools ?? 0) > 0 || (registryCounts.routes ?? 0) > 0;
         return !document.querySelector('#app-loader') && composerReady && registryReady && hasCriticalExtensionUi;
       })()`,
     );

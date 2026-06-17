@@ -213,13 +213,11 @@ function readBackgroundRunAgent(value: unknown): StartBackgroundRunRequestInput[
   }
 
   const prompt = readRequiredString(value.prompt, 'runs.startBackground agent.prompt');
-  const profile = readOptionalString(value.profile);
   const model = readOptionalString(value.model);
   const noSession = readOptionalBoolean(value.noSession, 'runs.startBackground agent.noSession');
 
   return {
     prompt,
-    ...(profile ? { profile } : {}),
     ...(model ? { model } : {}),
     ...(noSession !== undefined ? { noSession } : {}),
   };

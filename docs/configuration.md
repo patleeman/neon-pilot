@@ -12,7 +12,7 @@ Neon Pilot no longer has user-selectable profiles. Some storage paths and compat
 | `<config-root>`     | `<state-root>/config`                                       | `NEON_PILOT_CONFIG_ROOT`       | Machine-local durable config                                                    |
 | Machine agent dir   | `~/.config/agents`                                          | none                           | Canonical secondary location for machine-local agent files                      |
 | Machine config file | `<config-root>/config.json`                                 | `NEON_PILOT_CONFIG_FILE`       | Knowledge root/sync, extra instruction files, skill folders, daemon/ui sections |
-| Local config dir    | `<config-root>/local`                                       | `NEON_PILOT_LOCAL_PROFILE_DIR` | Local settings mirror for active runtime settings                               |
+| Local config dir    | `<config-root>/local`                                       | none                           | Local settings mirror for active runtime settings                               |
 
 ## Machine config
 

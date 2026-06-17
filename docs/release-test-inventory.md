@@ -459,7 +459,7 @@ Bundled system-extension entries are derived from local `extensions/*/extension.
 
 ### system-local-dictation — Local Dictation
 
-- composerButtons: dictation
+- composerControls: dictation
 - keybindings: dictation.toggle [mod+shift+m]
 - settingsComponent: dictation (settings-dictation)
 - backend actions: readSettings, updateSettings, modelStatus, installModel, transcribeFile

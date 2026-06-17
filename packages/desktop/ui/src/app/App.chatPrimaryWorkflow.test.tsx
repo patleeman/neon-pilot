@@ -56,7 +56,6 @@ vi.mock('../extensions/useExtensionRegistry', () => ({
     settingsComponent: null,
     settingsComponents: [],
     composerControls: [],
-    composerButtons: [],
     composerInputTools: [],
     toolbarActions: [],
     contextMenus: [],

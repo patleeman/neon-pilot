@@ -25,16 +25,16 @@ function encodeId(id: string): string {
   return encodeURIComponent(normalized);
 }
 
-function metadataDir(profile: string, stateRoot = getStateRoot()): string {
-  return join(stateRoot, 'conversation-metadata', profile || 'shared');
+function metadataDir(runtimeScope: string, stateRoot = getStateRoot()): string {
+  return join(stateRoot, 'conversation-metadata', runtimeScope || 'shared');
 }
 
-function metadataPath(conversationId: string, profile: string, stateRoot?: string): string {
-  return join(metadataDir(profile, stateRoot), `${encodeId(conversationId)}.json`);
+function metadataPath(conversationId: string, runtimeScope: string, stateRoot?: string): string {
+  return join(metadataDir(runtimeScope, stateRoot), `${encodeId(conversationId)}.json`);
 }
 
-function readFile(conversationId: string, profile: string, stateRoot?: string): ConversationMetadataFile {
-  const file = metadataPath(conversationId, profile, stateRoot);
+function readFile(conversationId: string, runtimeScope: string, stateRoot?: string): ConversationMetadataFile {
+  const file = metadataPath(conversationId, runtimeScope, stateRoot);
   if (!existsSync(file)) {
     return { version: 1, conversationId: conversationId.trim(), namespaces: {}, updatedAt: new Date(0).toISOString() };
   }
@@ -51,8 +51,8 @@ function readFile(conversationId: string, profile: string, stateRoot?: string): 
   }
 }
 
-function writeFile(state: ConversationMetadataFile, profile: string, stateRoot?: string): void {
-  const file = metadataPath(state.conversationId, profile, stateRoot);
+function writeFile(state: ConversationMetadataFile, runtimeScope: string, stateRoot?: string): void {
+  const file = metadataPath(state.conversationId, runtimeScope, stateRoot);
   const namespaces = Object.fromEntries(Object.entries(state.namespaces).filter(([, value]) => Object.keys(value).length > 0));
   if (Object.keys(namespaces).length === 0) {
     rmSync(file, { force: true });
@@ -91,15 +91,15 @@ export function readConversationMetadata(input: {
   conversationId: string;
   namespace?: string;
   extensionId: string;
-  profile?: string;
+  runtimeScope?: string;
   stateRoot?: string;
 }): Record<string, unknown> {
   const namespace = namespaceKey(input.namespace, input.extensionId);
-  return { ...(readFile(input.conversationId, input.profile ?? 'shared', input.stateRoot).namespaces[namespace] ?? {}) };
+  return { ...(readFile(input.conversationId, input.runtimeScope ?? 'shared', input.stateRoot).namespaces[namespace] ?? {}) };
 }
 
-export function listConversationMetadataNamespaces(input: { conversationId: string; profile?: string; stateRoot?: string }): string[] {
-  return Object.entries(readFile(input.conversationId, input.profile ?? 'shared', input.stateRoot).namespaces)
+export function listConversationMetadataNamespaces(input: { conversationId: string; runtimeScope?: string; stateRoot?: string }): string[] {
+  return Object.entries(readFile(input.conversationId, input.runtimeScope ?? 'shared', input.stateRoot).namespaces)
     .filter(([, value]) => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0)
     .map(([namespace]) => namespace)
     .sort();
@@ -110,13 +110,13 @@ export async function writeConversationMetadata(input: {
   namespace?: string;
   values: Record<string, unknown>;
   extensionId: string;
-  profile?: string;
+  runtimeScope?: string;
   stateRoot?: string;
 }): Promise<Record<string, unknown>> {
   if (!input.values || typeof input.values !== 'object' || Array.isArray(input.values)) throw new Error('values must be an object');
-  const profile = input.profile ?? 'shared';
+  const runtimeScope = input.runtimeScope ?? 'shared';
   const namespace = namespaceKey(input.namespace, input.extensionId);
-  const state = readFile(input.conversationId, profile, input.stateRoot);
+  const state = readFile(input.conversationId, runtimeScope, input.stateRoot);
   const existing = state.namespaces[namespace] ?? {};
   const next = { ...existing };
   for (const [key, value] of Object.entries(input.values)) {
@@ -130,7 +130,7 @@ export async function writeConversationMetadata(input: {
     namespaces: { ...state.namespaces, [namespace]: next },
     updatedAt: new Date().toISOString(),
   };
-  writeFile(updated, profile, input.stateRoot);
+  writeFile(updated, runtimeScope, input.stateRoot);
   invalidateAppTopics('sessions');
   publishAppEvent({ type: 'session_meta_changed', sessionId: input.conversationId.trim() });
   await publishExtensionHostEvent('conversationSessions', {
@@ -142,18 +142,18 @@ export async function writeConversationMetadata(input: {
   return { ...next };
 }
 
-export function queryConversationMetadata(input: ConversationMetadataQuery & { profile?: string; stateRoot?: string }): Array<{
+export function queryConversationMetadata(input: ConversationMetadataQuery & { runtimeScope?: string; stateRoot?: string }): Array<{
   conversationId: string;
   metadata: Record<string, unknown>;
 }> {
-  const dir = metadataDir(input.profile ?? 'shared', input.stateRoot);
+  const dir = metadataDir(input.runtimeScope ?? 'shared', input.stateRoot);
   if (!existsSync(dir)) return [];
   const limit = Number.isSafeInteger(input.limit) && input.limit && input.limit > 0 ? Math.min(input.limit, 1000) : 1000;
   const results: Array<{ conversationId: string; metadata: Record<string, unknown> }> = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
     const conversationId = decodeURIComponent(entry.name.slice(0, -'.json'.length));
-    const metadata = readFile(conversationId, input.profile ?? 'shared', input.stateRoot).namespaces[input.namespace] ?? {};
+    const metadata = readFile(conversationId, input.runtimeScope ?? 'shared', input.stateRoot).namespaces[input.namespace] ?? {};
     if (!matchesWhere(metadata, input.where)) continue;
     results.push({ conversationId, metadata: { ...metadata } });
     if (results.length >= limit) break;

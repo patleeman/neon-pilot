@@ -96,7 +96,6 @@ export async function doThing(_input, ctx) {
     repoRoot: ctx.runtime.getRepoRoot(),
     runtimeDir: ctx.runtimeDir,
     runtimeSettingsFilePath: ctx.runtimeSettingsFilePath,
-    profileSettingsFilePath: ctx.profileSettingsFilePath,
     resources: ctx.runtime.getLiveSessionResourceOptions(),
   };
 }
@@ -133,7 +132,6 @@ export async function doThing(_input, ctx) {
         repoRoot: '/repo',
         runtimeDir: '/runtime',
         runtimeSettingsFilePath: '/runtime/settings.json',
-        profileSettingsFilePath: '/runtime/settings.json',
         resources: {
           additionalExtensionPaths: ['/ext'],
           additionalSkillPaths: ['/skills'],
@@ -156,7 +154,6 @@ export async function doThing(_input, ctx) {
   return {
     runtimeDir: ctx.runtimeDir,
     runtimeSettingsFilePath: ctx.runtimeSettingsFilePath,
-    profileSettingsFilePath: ctx.profileSettingsFilePath,
   };
 }
 `,
@@ -185,7 +182,6 @@ export async function doThing(_input, ctx) {
       result: {
         runtimeDir,
         runtimeSettingsFilePath: join(runtimeDir, 'settings.json'),
-        profileSettingsFilePath: join(runtimeDir, 'settings.json'),
       },
     });
   });
@@ -428,7 +424,7 @@ export async function doThing(_input, ctx) {
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'metadata.get',
-      input: { conversationId: 'conv-1', namespace: 'todos', profile: 'project' },
+      input: { conversationId: 'conv-1', namespace: 'todos', runtimeScope: 'project' },
     });
     workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: { count: 0 } });
 
@@ -438,7 +434,7 @@ export async function doThing(_input, ctx) {
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'metadata.set',
-      input: { conversationId: 'conv-1', namespace: 'todos', values: { count: 1 }, profile: 'project' },
+      input: { conversationId: 'conv-1', namespace: 'todos', values: { count: 1 }, runtimeScope: 'project' },
     });
     workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { count: 1 } });
 
@@ -448,7 +444,7 @@ export async function doThing(_input, ctx) {
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'metadata.query',
-      input: { namespace: 'todos', where: [{ key: 'count', op: 'eq', value: 1 }], limit: 5, profile: 'project' },
+      input: { namespace: 'todos', where: [{ key: 'count', op: 'eq', value: 1 }], limit: 5, runtimeScope: 'project' },
     });
     workerThreads.messageHandler?.({
       id: 3,

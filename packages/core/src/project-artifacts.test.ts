@@ -144,42 +144,6 @@ describe('project artifacts', () => {
     });
   });
 
-  it('rejects invalid project timestamps when parsing yaml', () => {
-    const yaml = `id: artifact-model
-createdAt: not-a-date
-updatedAt: 2026-03-10T12:00:00.000Z
-title: Durable artifact model
-description: Create a durable artifact model.
-summary: Project created.
-status: created
-`;
-
-    expect(() => parseProject(yaml)).toThrow('Invalid Project createdAt');
-  });
-
-  it('defaults a missing plan block when parsing legacy yaml', () => {
-    const yaml = `id: artifact-model
-createdAt: 2026-03-10T12:00:00.000Z
-updatedAt: 2026-03-10T12:00:00.000Z
-title: Durable artifact model
-description: Create a durable artifact model.
-summary: Project created.
-status: created
-`;
-
-    expect(parseProject(yaml)).toMatchObject({
-      id: 'artifact-model',
-      title: 'Durable artifact model',
-      description: 'Create a durable artifact model.',
-      summary: 'Project created.',
-      status: 'created',
-      plan: {
-        milestones: [],
-        tasks: [],
-      },
-    });
-  });
-
   it('writes and reads canonical project files', () => {
     const dir = createTempDir();
     const path = join(dir, 'state.yaml');

@@ -14,7 +14,7 @@ import { checkpoint } from './backend.js';
 
 function createCtx(overrides?: Record<string, unknown>) {
   return {
-    profile: 'test-profile',
+    runtimeScope: 'test-profile',
     toolContext: { conversationId: 'conv-1', cwd: '/tmp/test-repo' },
     ui: { invalidate: vi.fn() },
     ...overrides,

@@ -10,12 +10,7 @@ vi.mock('../client/api', () => ({
   api: apiMocks,
 }));
 
-import {
-  ACTIVE_SESSION_ID_STORAGE_KEY,
-  ARCHIVED_SESSION_IDS_STORAGE_KEY,
-  OPEN_SESSION_IDS_STORAGE_KEY,
-  PINNED_SESSION_IDS_STORAGE_KEY,
-} from '../local/localSettings';
+import { ACTIVE_SESSION_ID_STORAGE_KEY, ARCHIVED_SESSION_IDS_STORAGE_KEY, OPEN_SESSION_IDS_STORAGE_KEY, PINNED_SESSION_IDS_STORAGE_KEY } from '../local/localSettings';
 import {
   applyRemoteConversationLayout,
   closeConversationTab,
@@ -92,7 +87,7 @@ describe('sessionTabs', () => {
     vi.unstubAllGlobals();
   });
 
-  it('sanitizes stored open, pinned, and archived session ids', () => {
+  it('starts from an empty layout before the server snapshot arrives', () => {
     localStorage.setItem(
       OPEN_SESSION_IDS_STORAGE_KEY,
       JSON.stringify([' session-1 ', '', null, 'session-2', 'session-3', 'pending-shell']),
@@ -101,14 +96,14 @@ describe('sessionTabs', () => {
     localStorage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['session-3', 'session-4', ' session-5 ', 'session-5']));
 
     expect(readConversationLayout()).toEqual({
-      sessionIds: ['session-1', 'session-3'],
-      pinnedSessionIds: ['session-2', 'session-4'],
-      archivedSessionIds: ['session-5'],
+      sessionIds: [],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
       activeSessionId: null,
     });
-    expect(readOpenSessionIds()).toEqual(['session-1', 'session-3']);
-    expect(readPinnedSessionIds()).toEqual(['session-2', 'session-4']);
-    expect(readArchivedSessionIds()).toEqual(['session-5']);
+    expect(readOpenSessionIds()).toEqual([]);
+    expect(readPinnedSessionIds()).toEqual([]);
+    expect(readArchivedSessionIds()).toEqual([]);
   });
 
   it('coalesces concurrent remote layout reads', async () => {
@@ -338,7 +333,7 @@ describe('sessionTabs', () => {
     });
   });
 
-  it('migrates legacy localStorage layout once when backend workspace is unmigrated', async () => {
+  it('uses the backend workspace layout even when old localStorage keys exist', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['legacy-open']));
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['legacy-pin']));
     localStorage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['legacy-archived']));
@@ -368,21 +363,14 @@ describe('sessionTabs', () => {
 
     const layout = await fetchRemoteConversationLayout();
 
-    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledWith(
-      ['legacy-open'],
-      ['legacy-pin'],
-      ['legacy-archived'],
-      undefined,
-      'legacy-open',
-      { conversationWorkspaceMigrated: true },
-    );
-    expect(layout.sessionIds).toEqual(['legacy-open']);
-    expect(layout.pinnedSessionIds).toEqual(['legacy-pin']);
-    expect(layout.archivedSessionIds).toEqual(['legacy-archived']);
-    expect(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
+    expect(apiMocks.setOpenConversationTabs).not.toHaveBeenCalled();
+    expect(layout.sessionIds).toEqual([]);
+    expect(layout.pinnedSessionIds).toEqual([]);
+    expect(layout.archivedSessionIds).toEqual([]);
+    expect(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY)).toBe(JSON.stringify(['legacy-open']));
+    expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBe(JSON.stringify(['legacy-pin']));
+    expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBe(JSON.stringify(['legacy-archived']));
+    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('legacy-open');
   });
 
   it('does not persist local workspace actions to localStorage', () => {

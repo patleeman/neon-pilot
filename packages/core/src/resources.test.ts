@@ -11,7 +11,7 @@ import {
   materializeRuntimeResourcesToAgentDir,
   mergeJsonFiles,
   readPackageSourceTargetState,
-  resolveLocalProfileSettingsFilePath,
+  resolveLocalRuntimeSettingsFilePath,
   resolveRuntimeResources,
 } from './index.js';
 
@@ -79,7 +79,7 @@ describe('runtime resource loader', () => {
     const resolved = resolveRuntimeResources('datadog', {
       repoRoot: repo,
       runtimeConfigRoot,
-      localProfileDir: local,
+      localRuntimeConfigDir: local,
     });
 
     expect(resolved.layers.map((layer) => layer.name)).toEqual(['defaults', 'durable', 'local']);
@@ -116,7 +116,7 @@ describe('runtime resource loader', () => {
     const resolved = resolveRuntimeResources('shared', {
       repoRoot: repo,
       runtimeConfigRoot,
-      localProfileDir: join(repo, '.local-profile'),
+      localRuntimeConfigDir: join(repo, '.local-profile'),
     });
 
     expect(resolved.agentsFiles).toEqual([
@@ -144,7 +144,7 @@ describe('runtime resource loader', () => {
     const resolved = resolveRuntimeResources('shared', {
       repoRoot: repo,
       runtimeConfigRoot,
-      localProfileDir: join(repo, '.local-profile'),
+      localRuntimeConfigDir: join(repo, '.local-profile'),
       cwd,
     });
 
@@ -189,7 +189,7 @@ describe('runtime resource loader', () => {
     const resolved = resolveRuntimeResources('shared', {
       repoRoot: repo,
       runtimeConfigRoot,
-      localProfileDir: join(repo, '.local-profile'),
+      localRuntimeConfigDir: join(repo, '.local-profile'),
     });
 
     expect(resolved.skillDirs).toEqual(
@@ -218,7 +218,7 @@ metadata:
     const resolved = resolveRuntimeResources('shared', {
       repoRoot: repo,
       runtimeConfigRoot,
-      localProfileDir: join(repo, '.local-profile'),
+      localRuntimeConfigDir: join(repo, '.local-profile'),
     });
 
     expect(resolved.skillDirs).toEqual(expect.arrayContaining([join(syncRoot, 'skills', 'datadog-helper')]));
@@ -246,10 +246,10 @@ metadata:
     const runtimeConfigRoot = createTempRuntimeConfigRoot();
     const syncRoot = join(runtimeConfigRoot, '..');
     const runtime = mkdtempSync(join(tmpdir(), 'neon-pilot-runtime-'));
+    const localRuntimeConfigDir = mkdtempSync(join(tmpdir(), 'neon-pilot-local-'));
     tempDirs.push(runtime);
+    tempDirs.push(localRuntimeConfigDir);
     process.env.NEON_PILOT_KNOWLEDGE_ROOT = syncRoot;
-    process.env.NEON_PILOT_LOCAL_PROFILE_DIR = mkdtempSync(join(tmpdir(), 'neon-pilot-local-'));
-    tempDirs.push(process.env.NEON_PILOT_LOCAL_PROFILE_DIR);
 
     writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
     writeFile(join(repo, 'defaults/agent/APPEND_SYSTEM.md'), 'shared append\n');
@@ -277,7 +277,7 @@ description: Commit and push the agent's current work.
     const resolved = resolveRuntimeResources('datadog', {
       repoRoot: repo,
       runtimeConfigRoot,
-      localProfileDir: process.env.NEON_PILOT_LOCAL_PROFILE_DIR,
+      localRuntimeConfigDir,
     });
     const result = materializeRuntimeResourcesToAgentDir(resolved, runtime);
     const runtimeSettings = JSON.parse(readFileSync(join(runtime, 'settings.json'), 'utf-8')) as Record<string, unknown>;
@@ -340,15 +340,15 @@ description: Commit and push the agent's current work.
 
     const localInstall = installPackageSource({
       repoRoot: repo,
-      localProfileDir: local,
+      localRuntimeConfigDir: local,
       source: './local-package',
       target: 'local',
       sourceBaseDir: repo,
     });
 
     expect(localInstall.installed).toBe(true);
-    expect(localInstall.settingsPath).toBe(resolveLocalProfileSettingsFilePath({ localProfileDir: local }));
-    expect(readPackageSourceTargetState('local', { repoRoot: repo, localProfileDir: local }).packages).toEqual([
+    expect(localInstall.settingsPath).toBe(resolveLocalRuntimeSettingsFilePath({ localRuntimeConfigDir: local }));
+    expect(readPackageSourceTargetState('local', { repoRoot: repo, localRuntimeConfigDir: local }).packages).toEqual([
       { source: '/existing-package', filtered: false },
       { source: join(repo, 'local-package'), filtered: false },
     ]);
@@ -364,7 +364,7 @@ description: Commit and push the agent's current work.
     const resolved = resolveRuntimeResources('shared', {
       repoRoot: repo,
       runtimeConfigRoot,
-      localProfileDir: join(repo, '.local-profile'),
+      localRuntimeConfigDir: join(repo, '.local-profile'),
     });
     const args = buildPiResourceArgs(resolved);
 
@@ -373,7 +373,7 @@ description: Commit and push the agent's current work.
     expect(args).toContain(join(syncRoot, 'skills', 'test'));
   });
 
-  it('loads shared resources from canonical underscored durable directories', () => {
+  it('loads shared resources from canonical durable directories', () => {
     const repo = createTempRepo();
     const root = mkdtempSync(join(tmpdir(), 'neon-pilot-legacy-sync-'));
     const syncRoot = join(root, 'sync');
@@ -383,7 +383,7 @@ description: Commit and push the agent's current work.
     writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
     writeFile(join(runtimeConfigRoot, 'shared', 'settings.json'), JSON.stringify({ defaultModel: 'gpt-5.4' }));
     writeFile(
-      join(syncRoot, '_skills', 'checkpoint', 'SKILL.md'),
+      join(syncRoot, 'skills', 'checkpoint', 'SKILL.md'),
       `---
 name: checkpoint
 description: Commit your work.
@@ -399,11 +399,11 @@ description: Commit your work.
       repoRoot: repo,
       knowledgeRoot: syncRoot,
       runtimeConfigRoot,
-      localProfileDir: join(repo, '.local-profile'),
+      localRuntimeConfigDir: join(repo, '.local-profile'),
     });
 
     expect(resolved.agentsFiles).toEqual([join(repo, 'defaults/agent/AGENTS.md')]);
     expect(resolved.settingsFiles).toContain(join(runtimeConfigRoot, 'shared', 'settings.json'));
-    expect(resolved.skillDirs).toEqual(expect.arrayContaining([join(syncRoot, '_skills', 'checkpoint')]));
+    expect(resolved.skillDirs).toEqual(expect.arrayContaining([join(syncRoot, 'skills', 'checkpoint')]));
   });
 });

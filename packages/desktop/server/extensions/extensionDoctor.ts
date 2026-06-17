@@ -487,7 +487,6 @@ function collectFrontendComponents(manifest: ExtensionManifest): string[] {
   return [
     ...(contributions?.views ?? []).map((item) => item.component),
     ...(contributions?.composerControls ?? []).map((item) => item.component),
-    ...(contributions?.composerButtons ?? []).map((item) => item.component),
     ...(contributions?.composerInputTools ?? []).map((item) => item.component),
     ...(contributions?.composerShelves ?? []).map((item) => item.component),
     ...(contributions?.topBarElements ?? []).map((item) => item.component),

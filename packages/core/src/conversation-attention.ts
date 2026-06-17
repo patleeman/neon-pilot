@@ -54,16 +54,6 @@ function getConversationAttentionStateRoot(stateRoot?: string): string {
   return resolve(stateRoot ?? getStateRoot());
 }
 
-function resolveLegacyConversationAttentionStatePath(options: ConversationAttentionStateOptions): string {
-  return join(
-    getConversationAttentionStateRoot(options.stateRoot),
-    'pi-agent',
-    'state',
-    'conversation-attention',
-    `${options.profile}.json`,
-  );
-}
-
 function validateProfileName(profile: string): void {
   if (!PROFILE_NAME_PATTERN.test(profile)) {
     throw new Error(`Invalid profile name "${profile}". Profile names may only include letters, numbers, dashes, and underscores.`);
@@ -213,22 +203,7 @@ export function loadConversationAttentionState(options: ConversationAttentionSta
     return document;
   }
 
-  const legacyPath = resolveLegacyConversationAttentionStatePath(options);
-  if (legacyPath === path) {
-    return emptyDocument(options.profile);
-  }
-
-  const legacyDocument = readConversationAttentionStateFile(legacyPath, options.profile);
-  if (!legacyDocument) {
-    return emptyDocument(options.profile);
-  }
-
-  saveConversationAttentionState({
-    profile: options.profile,
-    stateRoot: options.stateRoot,
-    document: legacyDocument,
-  });
-  return legacyDocument;
+  return emptyDocument(options.profile);
 }
 
 export function saveConversationAttentionState(options: {

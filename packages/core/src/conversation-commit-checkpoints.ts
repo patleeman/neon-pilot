@@ -174,36 +174,12 @@ function normalizeCheckpointComment(value: unknown): ConversationCommitCheckpoin
   };
 }
 
-function normalizeCheckpointComments(
-  value: Partial<ConversationCommitCheckpointRecord> & { comment?: string; commentUpdatedAt?: string },
-): ConversationCommitCheckpointComment[] {
+function normalizeCheckpointComments(value: Partial<ConversationCommitCheckpointRecord>): ConversationCommitCheckpointComment[] {
   if (Array.isArray(value.comments)) {
     return value.comments.map((comment) => normalizeCheckpointComment(comment));
   }
 
-  const legacyComment = normalizeOptionalText(value.comment as string | undefined);
-  if (!legacyComment) {
-    return [];
-  }
-
-  const updatedAt = normalizeIsoTimestamp(
-    typeof value.commentUpdatedAt === 'string'
-      ? value.commentUpdatedAt
-      : typeof value.updatedAt === 'string'
-        ? value.updatedAt
-        : new Date().toISOString(),
-    'commentUpdatedAt',
-  );
-
-  return [
-    {
-      id: `legacy-${randomUUID()}`,
-      authorName: 'You',
-      body: legacyComment,
-      createdAt: updatedAt,
-      updatedAt,
-    },
-  ];
+  return [];
 }
 
 function normalizeCheckpointRecord(value: unknown): ConversationCommitCheckpointRecord {
@@ -211,7 +187,7 @@ function normalizeCheckpointRecord(value: unknown): ConversationCommitCheckpoint
     throw new Error('Commit checkpoint document is invalid.');
   }
 
-  const record = value as Partial<ConversationCommitCheckpointRecord> & { comment?: string; commentUpdatedAt?: string };
+  const record = value as Partial<ConversationCommitCheckpointRecord>;
   const id = typeof record.id === 'string' ? record.id.trim() : '';
   validateConversationCommitCheckpointId(id);
 
@@ -325,8 +301,6 @@ export function saveConversationCommitCheckpoint(options: {
   committedAt: string;
   createdAt?: string;
   updatedAt?: string;
-  comment?: string;
-  commentUpdatedAt?: string;
   comments?: ConversationCommitCheckpointComment[];
   files: ConversationCommitCheckpointFile[];
   linesAdded: number;
@@ -341,20 +315,7 @@ export function saveConversationCommitCheckpoint(options: {
 
   const updatedAt = normalizeIsoTimestamp(options.updatedAt ?? new Date().toISOString(), 'updatedAt');
   const explicitComments = Array.isArray(options.comments) ? options.comments.map((comment) => normalizeCheckpointComment(comment)) : null;
-  const legacyComment = normalizeOptionalText(options.comment);
-  const comments =
-    explicitComments ??
-    (legacyComment
-      ? [
-          {
-            id: randomUUID(),
-            authorName: 'You',
-            body: legacyComment,
-            createdAt: normalizeIsoTimestamp(options.commentUpdatedAt ?? updatedAt, 'commentUpdatedAt'),
-            updatedAt: normalizeIsoTimestamp(options.commentUpdatedAt ?? updatedAt, 'commentUpdatedAt'),
-          } satisfies ConversationCommitCheckpointComment,
-        ]
-      : []);
+  const comments = explicitComments ?? [];
 
   const record: ConversationCommitCheckpointRecord = {
     id: checkpointId,

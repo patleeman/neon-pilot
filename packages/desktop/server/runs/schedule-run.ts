@@ -54,8 +54,6 @@ interface TargetConversation {
 export interface TargetAgent {
   type: 'agent';
   prompt: string;
-  /** @deprecated Ignored; agent runs always use the shared runtime scope. */
-  profile?: string;
   model?: string;
   noSession?: boolean;
 }

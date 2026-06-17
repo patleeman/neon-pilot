@@ -18,7 +18,6 @@ describe('system-skills backend', () => {
   const refreshSkillMcpConfig = vi.fn();
   const ctx = {
     runtimeScope: 'scope',
-    profile: 'profile',
     runtimeDir: '/runtime',
     runtime: { getRepoRoot: () => '/repo', refreshSkillMcpConfig },
   } as never;

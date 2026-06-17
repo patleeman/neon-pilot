@@ -127,8 +127,6 @@ describe('runtime config path helpers', () => {
     delete process.env.NEON_PILOT_STATE_ROOT;
     delete process.env.NEON_PILOT_CONFIG_ROOT;
     delete process.env.NEON_PILOT_CONFIG_FILE;
-    delete process.env.NEON_PILOT_PROFILES_ROOT;
-    delete process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
     delete process.env.NEON_PILOT_KNOWLEDGE_ROOT;
   });
 
@@ -162,19 +160,17 @@ describe('runtime config path helpers', () => {
 
   it('honors explicit overrides', () => {
     process.env.NEON_PILOT_CONFIG_ROOT = '/custom/config';
-    process.env.NEON_PILOT_PROFILES_ROOT = '/custom/runtime';
-    process.env.NEON_PILOT_LOCAL_PROFILE_DIR = '/custom/local';
     process.env.NEON_PILOT_KNOWLEDGE_ROOT = '/custom/knowledge';
 
     expect(getConfigRoot()).toBe('/custom/config');
     expect(getKnowledgeRoot()).toBe('/custom/knowledge');
-    expect(getRuntimeConfigRoot()).toBe('/custom/runtime');
+    expect(getRuntimeConfigRoot()).toBe('/custom/config/runtime');
     expect(getDurableRuntimeConfigRoot()).toBe('/custom/config/runtime');
     expect(getDurableAgentFilePath()).toBe('/custom/knowledge/AGENTS.md');
     expect(getDurableSkillsDir()).toBe('/custom/knowledge/skills');
     expect(getDurableNotesDir()).toBe('/custom/knowledge/notes');
     expect(getDurableProjectsDir()).toBe('/custom/knowledge/projects');
-    expect(getLocalRuntimeConfigDir()).toBe('/custom/local');
+    expect(getLocalRuntimeConfigDir()).toBe('/custom/config/local');
   });
 
   it('reads knowledge root from machine config when no env override is set', () => {
@@ -192,10 +188,8 @@ describe('runtime config path helpers', () => {
     rmSync(stateRoot, { recursive: true, force: true });
   });
 
-  it('keeps knowledge directory fallbacks for skills and tasks while runtime config stays machine-local', () => {
+  it('keeps durable knowledge directories canonical while runtime config stays machine-local', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-state-'));
-    mkdirSync(join(stateRoot, 'sync', 'skills'), { recursive: true });
-    mkdirSync(join(stateRoot, 'sync', 'tasks'), { recursive: true });
 
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     process.env.NEON_PILOT_KNOWLEDGE_ROOT = join(stateRoot, 'sync');

@@ -100,31 +100,31 @@ describe('extensionConversationMetadata', () => {
       conversationId: 'c1',
       extensionId: 'ext',
       values: { status: 'open', priority: 1 },
-      profile: 'p',
+      runtimeScope: 'p',
       stateRoot,
     });
     await writeConversationMetadata({
       conversationId: 'c2',
       extensionId: 'ext',
       values: { status: 'closed', priority: 2 },
-      profile: 'p',
+      runtimeScope: 'p',
       stateRoot,
     });
-    await writeConversationMetadata({ conversationId: 'c3', extensionId: 'ext', values: { status: 'open' }, profile: 'p', stateRoot });
+    await writeConversationMetadata({ conversationId: 'c3', extensionId: 'ext', values: { status: 'open' }, runtimeScope: 'p', stateRoot });
 
-    expect(queryConversationMetadata({ namespace: 'ext', profile: 'p', stateRoot, where: [{ key: 'status', value: 'open' }] })).toEqual([
+    expect(queryConversationMetadata({ namespace: 'ext', runtimeScope: 'p', stateRoot, where: [{ key: 'status', value: 'open' }] })).toEqual([
       { conversationId: 'c1', metadata: { status: 'open', priority: 1 } },
       { conversationId: 'c3', metadata: { status: 'open' } },
     ]);
     expect(
-      queryConversationMetadata({ namespace: 'ext', profile: 'p', stateRoot, where: [{ key: 'priority', op: 'in', value: [2, 3] }] }),
+      queryConversationMetadata({ namespace: 'ext', runtimeScope: 'p', stateRoot, where: [{ key: 'priority', op: 'in', value: [2, 3] }] }),
     ).toEqual([{ conversationId: 'c2', metadata: { status: 'closed', priority: 2 } }]);
     expect(
-      queryConversationMetadata({ namespace: 'ext', profile: 'p', stateRoot, where: [{ key: 'priority', op: 'exists' }], limit: 1 }),
+      queryConversationMetadata({ namespace: 'ext', runtimeScope: 'p', stateRoot, where: [{ key: 'priority', op: 'exists' }], limit: 1 }),
     ).toHaveLength(1);
     expect(
-      queryConversationMetadata({ namespace: 'ext', profile: 'p', stateRoot, where: [{ key: 'status', op: 'neq', value: 'open' }] }),
+      queryConversationMetadata({ namespace: 'ext', runtimeScope: 'p', stateRoot, where: [{ key: 'status', op: 'neq', value: 'open' }] }),
     ).toEqual([{ conversationId: 'c2', metadata: { status: 'closed', priority: 2 } }]);
-    expect(queryConversationMetadata({ namespace: 'ext', profile: 'missing', stateRoot })).toEqual([]);
+    expect(queryConversationMetadata({ namespace: 'ext', runtimeScope: 'missing', stateRoot })).toEqual([]);
   });
 });

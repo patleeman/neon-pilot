@@ -148,8 +148,3 @@ export function closeExtensionStateDbs(): void {
   }
   dbCache.clear();
 }
-
-/** @deprecated Use {@link closeExtensionStateDbs} instead. */
-export function clearExtensionStateDbCacheForTests(): void {
-  closeExtensionStateDbs();
-}

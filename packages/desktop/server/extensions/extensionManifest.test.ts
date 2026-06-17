@@ -17,7 +17,7 @@ describe('extension manifest schema constants', () => {
   it('defines the native extension registry constants', () => {
     expect(EXTENSION_MANIFEST_VERSION).toBe(2);
     expect(EXTENSION_PACKAGE_TYPES).toEqual(['user', 'system']);
-    expect(EXTENSION_PLACEMENTS).toEqual(['left', 'main', 'right', 'conversation', 'command', 'slash']);
+    expect(EXTENSION_PLACEMENTS).toEqual(['left', 'main', 'right', 'conversation']);
     expect(EXTENSION_SURFACE_KINDS).toContain('toolPanel');
     expect(EXTENSION_RIGHT_SURFACE_SCOPES).toEqual(['global', 'conversation', 'workspace', 'selection']);
     expect(EXTENSION_ICON_NAMES).toContain('kanban');
@@ -50,7 +50,7 @@ describe('extension manifest schema constants', () => {
         onDisableAction: 'stopSync',
         onUninstallAction: 'cleanup',
       },
-      permissions: ['runs:start', 'storage:readwrite'],
+      permissions: ['executions:start', 'storage:readwrite'],
     };
 
     expect(manifest.contributes?.views?.map((surface) => surface.id)).toEqual(['page', 'rail']);
@@ -60,8 +60,10 @@ describe('extension manifest schema constants', () => {
 
   it('exposes type guards for manifest generation and validation', () => {
     expect(isExtensionPlacement('main')).toBe(true);
+    expect(isExtensionPlacement('command')).toBe(false);
     expect(isExtensionPlacement('footer')).toBe(false);
-    expect(isExtensionSurfaceKind('slashCommand')).toBe(true);
+    expect(isExtensionSurfaceKind('command')).toBe(false);
+    expect(isExtensionSurfaceKind('slashCommand')).toBe(false);
     expect(isExtensionSurfaceKind('widget')).toBe(false);
     expect(isExtensionIconName('kanban')).toBe(true);
     expect(isExtensionIconName('made-up')).toBe(false);

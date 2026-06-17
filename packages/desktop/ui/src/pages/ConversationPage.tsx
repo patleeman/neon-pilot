@@ -2476,7 +2476,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         extensionCount: extensionRegistry.extensions.length,
         routeCount: extensionRegistry.routes.length,
         surfaceCount: extensionRegistry.surfaces.length,
-        composerButtonCount: extensionRegistry.composerButtons.length,
+        composerControlCount: extensionRegistry.composerControls.length,
         composerShelfCount: extensionRegistry.composerShelves.length,
         conversationHeaderElementCount: extensionRegistry.conversationHeaderElements.length,
         error: extensionRegistry.error,
@@ -2486,7 +2486,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     return () => cancelAnimationFrame(frame);
   }, [
     draft,
-    extensionRegistry.composerButtons.length,
+    extensionRegistry.composerControls.length,
     extensionRegistry.composerShelves.length,
     extensionRegistry.conversationHeaderElements.length,
     extensionRegistry.error,

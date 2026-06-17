@@ -2,7 +2,6 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, write
 import { basename, dirname, join, resolve } from 'path';
 import { parseDocument, stringify } from 'yaml';
 
-import { migrateLegacyProfileMemoryDirs } from './memory-docs.js';
 import { type ProjectDocument, type ProjectMilestoneDocument, type ProjectTaskDocument, readProject } from './project-artifacts.js';
 import { getDurableNodesDir, getDurableNotesDir, getDurableProjectsDir, getDurableSkillsDir, getKnowledgeRoot } from './runtime/paths.js';
 
@@ -946,7 +945,6 @@ export function validateUnifiedNodeId(id: string): void {
 
 export function loadUnifiedNodes(options: ResolveNodesOptions = {}): LoadUnifiedNodesResult {
   const knowledgeRoot = resolveKnowledgeRoot(options);
-  migrateLegacyProfileMemoryDirs({ knowledgeRoot: options.knowledgeRoot });
   const notesDir = getDurableNotesDir(knowledgeRoot);
   const projectsDir = getDurableProjectsDir(knowledgeRoot);
   const skillsDir = getDurableSkillsDir(knowledgeRoot);

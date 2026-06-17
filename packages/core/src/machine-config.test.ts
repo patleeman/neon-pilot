@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -50,15 +50,19 @@ describe('machine config', () => {
     expect(getMachineConfigFilePath()).toBe(join(configDir, 'custom-config.json'));
   });
 
-  it('still honors legacy section-specific env overrides', () => {
+  it('ignores section-specific env overrides and writes daemon config into config.json', () => {
     const configDir = createTempDir('pa-machine-config-');
     const daemonConfigPath = join(configDir, 'daemon.json');
     process.env.NEON_PILOT_DAEMON_CONFIG = daemonConfigPath;
+    process.env.NEON_PILOT_CONFIG_FILE = join(configDir, 'config.json');
 
     updateMachineConfigSection('daemon', () => ({ modules: { tasks: { pollIntervalMs: 5000 } } }));
 
     expect(readMachineConfigSection('daemon')).toEqual({ modules: { tasks: { pollIntervalMs: 5000 } } });
-    expect(JSON.parse(readFileSync(daemonConfigPath, 'utf-8'))).toEqual({ modules: { tasks: { pollIntervalMs: 5000 } } });
+    expect(existsSync(daemonConfigPath)).toBe(false);
+    expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toEqual({
+      daemon: { modules: { tasks: { pollIntervalMs: 5000 } } },
+    });
   });
 
   it('ignores dangerous merge keys in machine config sections', () => {

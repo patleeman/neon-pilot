@@ -100,10 +100,10 @@ function MicIcon() {
 
 export function DictationButton({
   pa,
-  buttonContext,
+  controlContext,
 }: {
   pa: NativeExtensionClient;
-  buttonContext: {
+  controlContext: {
     composerDisabled: boolean;
     insertText: (text: string) => void;
     appendText?: (text: string) => void;
@@ -116,7 +116,7 @@ export function DictationButton({
   const captureRef = useRef<ComposerDictationCapture | null>(null);
   const pendingStartRef = useRef<Promise<void> | null>(null);
   const pointerRef = useRef<{ pointerId: number; startedAt: number; startedExistingRecording: boolean } | null>(null);
-  const toggleAvailable = !buttonContext.composerDisabled && state !== 'transcribing';
+  const toggleAvailable = !controlContext.composerDisabled && state !== 'transcribing';
 
   useEffect(() => {
     pa.commands.setContext('toggleAvailable', toggleAvailable);
@@ -151,10 +151,10 @@ export function DictationButton({
     } finally {
       setState('idle');
     }
-  }, [buttonContext, pa]);
+  }, [pa]);
 
   const start = useCallback(async () => {
-    if (buttonContext.composerDisabled || captureRef.current || pendingStartRef.current || state === 'transcribing') return;
+    if (controlContext.composerDisabled || captureRef.current || pendingStartRef.current || state === 'transcribing') return;
     const pendingStart = (async () => {
       try {
         setSamples([]);
@@ -173,7 +173,7 @@ export function DictationButton({
     })();
     pendingStartRef.current = pendingStart;
     await pendingStart;
-  }, [buttonContext.composerDisabled, pa, state]);
+  }, [controlContext.composerDisabled, pa, state]);
 
   useEffect(() => {
     const handleDictationToggleCommand = () => {
@@ -191,7 +191,7 @@ export function DictationButton({
       <IconButton
         shape="circle"
         onPointerDown={(event) => {
-          if (event.button !== 0 || buttonContext.composerDisabled || state === 'transcribing') return;
+          if (event.button !== 0 || controlContext.composerDisabled || state === 'transcribing') return;
           event.preventDefault();
           event.currentTarget.setPointerCapture(event.pointerId);
           const startedExistingRecording = captureRef.current !== null;
@@ -211,7 +211,7 @@ export function DictationButton({
           pointerRef.current = null;
           if (!pointer.startedExistingRecording) void stop();
         }}
-        disabled={buttonContext.composerDisabled || state === 'transcribing'}
+        disabled={controlContext.composerDisabled || state === 'transcribing'}
         className={cx(
           'touch-none transition-colors disabled:cursor-default disabled:opacity-40',
           state === 'recording'

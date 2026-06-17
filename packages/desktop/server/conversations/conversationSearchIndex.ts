@@ -5,7 +5,7 @@ import { type SqliteDatabase } from '@neon-pilot/core';
 
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
 import { upsertConversationCatalogSession } from './conversationCatalog.js';
-import { ensureConversationsDbFileMigrated } from './conversationDbPaths.js';
+import { ensureConversationsDbFile } from './conversationDbPaths.js';
 import { readConversationSummary } from './conversationSummaries.js';
 import { listTranscriptBackedConversationSessions, readTranscriptBackedConversationSearchText } from './conversationTranscriptOps.js';
 import type { SessionMeta } from './conversationTypes.js';
@@ -41,7 +41,7 @@ let indexingActive = false;
 let indexingTimer: ReturnType<typeof setTimeout> | null = null;
 
 function resolveSearchDbFile(): string {
-  return ensureConversationsDbFileMigrated();
+  return ensureConversationsDbFile();
 }
 
 function getDb(): SqliteDatabase {

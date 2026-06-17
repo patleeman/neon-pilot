@@ -99,7 +99,7 @@ async function ensureOnce(input: EnsureInput | undefined, ctx: ExtensionBackendC
 }
 
 export async function ensure(input: unknown, ctx: ExtensionBackendContext): Promise<EnsureResult> {
-  const runtimeScope = ctx.runtimeScope ?? ctx.profile;
+  const runtimeScope = ctx.runtimeScope;
   const existingTask = ensureInFlightByRuntimeScope.get(runtimeScope);
   if (existingTask) {
     return existingTask;

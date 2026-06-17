@@ -1,5 +1,5 @@
 import { EXTENSION_HOST_VIEW_COMPONENTS, getHostViewComponentDefinition } from './extensionManifest.js';
-import { requireString, validateEnum, validateOptionalString } from './extensionManifestValidation.js';
+import { requireString, validateEnum } from './extensionManifestValidation.js';
 import { isRecord } from './extensionRegistryConfig.js';
 
 export function validateThemeTokens(value: unknown, path: string): void {
@@ -28,7 +28,6 @@ export function validateViewComponent(value: unknown, path: string): void {
   validateEnum(host, EXTENSION_HOST_VIEW_COMPONENTS, `${path}.host`);
   const definition = getHostViewComponentDefinition(host);
   const allowedOverrideSlots = Object.keys(definition?.overrideSlots ?? {});
-  validateOptionalString(value.override, `${path}.override`);
   if (value.props !== undefined && !isRecord(value.props)) {
     throw new Error(`Extension manifest ${path}.props must be an object.`);
   }
@@ -42,8 +41,5 @@ export function validateViewComponent(value: unknown, path: string): void {
       }
       requireString(exportName, `${path}.overrides.${slot}`);
     }
-  }
-  if (value.override !== undefined && !allowedOverrideSlots.includes('wrapper')) {
-    throw new Error(`Extension manifest ${path}.override is only supported by host components with a wrapper slot.`);
   }
 }

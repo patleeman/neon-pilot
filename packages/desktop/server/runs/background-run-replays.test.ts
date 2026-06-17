@@ -180,7 +180,6 @@ describe('background run replay helpers', () => {
       cwd: '/repo',
       agent: {
         prompt: 'Continue from the failing deploy step.',
-        profile: 'datadog',
         model: 'openai-codex/gpt-5.4',
       },
       source: {

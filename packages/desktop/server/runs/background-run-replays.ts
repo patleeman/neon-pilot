@@ -85,37 +85,27 @@ function readCallbackConversation(run: ScannedDurableRun): StartBackgroundRunInp
 
 function readTaskSlug(run: ScannedDurableRun): string | undefined {
   const metadata = readMetadata(run);
-  const spec = readSpec(run);
-  return (
-    readOptionalString(metadata.taskSlug) ??
-    readOptionalString(spec?.taskSlug) ??
-    readOptionalString(run.manifest?.source?.id) ??
-    readOptionalString(run.runId)
-  );
+  return readOptionalString(metadata.taskSlug) ?? readOptionalString(run.manifest?.source?.id) ?? readOptionalString(run.runId);
 }
 
 function readCwd(run: ScannedDurableRun): string | undefined {
   const metadata = readMetadata(run);
   const target = readTarget(run);
-  const spec = readSpec(run);
-  return readOptionalString(metadata.cwd) ?? readOptionalString(target?.cwd) ?? readOptionalString(spec?.cwd);
+  return readOptionalString(metadata.cwd) ?? readOptionalString(target?.cwd);
 }
 
 function readAgentSpec(run: ScannedDurableRun): StartBackgroundRunInput['agent'] | undefined {
   const target = readTarget(run);
-  const legacyAgent = isRecord(run.checkpoint?.payload?.agent) ? run.checkpoint?.payload?.agent : undefined;
-  const prompt = readOptionalString(target?.prompt) ?? readOptionalString(legacyAgent?.prompt);
+  const prompt = readOptionalString(target?.prompt);
   if (!prompt) {
     return undefined;
   }
 
-  const profile = readOptionalString(target?.profile) ?? readOptionalString(legacyAgent?.profile);
-  const model = readOptionalString(target?.model) ?? readOptionalString(legacyAgent?.model);
-  const noSession = target?.noSession === true || legacyAgent?.noSession === true;
+  const model = readOptionalString(target?.model);
+  const noSession = target?.noSession === true;
 
   return {
     prompt,
-    ...(profile ? { profile } : {}),
     ...(model ? { model } : {}),
     ...(noSession ? { noSession: true } : {}),
   };
@@ -123,7 +113,7 @@ function readAgentSpec(run: ScannedDurableRun): StartBackgroundRunInput['agent']
 
 function readShellCommand(run: ScannedDurableRun): string | undefined {
   const target = readTarget(run);
-  return readOptionalString(target?.command) ?? readOptionalString(run.checkpoint?.payload?.shellCommand);
+  return readOptionalString(target?.command);
 }
 
 function readArgv(run: ScannedDurableRun): string[] | undefined {

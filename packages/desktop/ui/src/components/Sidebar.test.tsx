@@ -27,7 +27,6 @@ const extensionRegistryMock = vi.hoisted(() => ({
     settingsComponent: null,
     settingsComponents: [],
     composerControls: [],
-    composerButtons: [],
     composerInputTools: [],
     toolbarActions: [],
     contextMenus: [],

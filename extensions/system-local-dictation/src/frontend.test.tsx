@@ -25,7 +25,7 @@ function renderDictationButton(input: { composerDisabled: boolean; setContext: R
             ui: { toast: vi.fn() },
           } as never
         }
-        buttonContext={{
+        controlContext={{
           composerDisabled: input.composerDisabled,
           insertText: vi.fn(),
         }}
@@ -60,7 +60,7 @@ describe('DictationButton', () => {
               ui: { toast: vi.fn() },
             } as never
           }
-          buttonContext={{
+          controlContext={{
             composerDisabled: true,
             insertText: vi.fn(),
           }}

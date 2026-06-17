@@ -177,7 +177,6 @@ export function createBackgroundRunId(taskSlug: string, createdAt: string): stri
 export async function createBackgroundRunRecord(runsRoot: string, input: StartBackgroundRunInput): Promise<StartBackgroundRunRecord> {
   const { argv, shellCommand, agent } = ensureCommandSpec(input);
 
-  // Build ScheduleRunInput from legacy input
   const scheduleInput = buildScheduleRunInputFromBackgroundRun(input, argv, shellCommand, agent);
 
   // scheduleRun expects daemonRoot where runs are stored under <daemonRoot>/runs/

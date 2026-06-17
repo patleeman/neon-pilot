@@ -105,12 +105,12 @@ describe('buildSkillInventory', () => {
 
     try {
       expect(
-        buildSkillInventory({ profile: 'test', repoRoot: root })
+        buildSkillInventory({ runtimeScope: 'test', repoRoot: root })
           .filter((skill) => skill.enabled)
           .map((skill) => skill.id),
       ).toEqual([]);
       expect(
-        (await buildSkillInventoryAsync({ profile: 'test', repoRoot: root })).filter((skill) => skill.enabled).map((skill) => skill.id),
+        (await buildSkillInventoryAsync({ runtimeScope: 'test', repoRoot: root })).filter((skill) => skill.enabled).map((skill) => skill.id),
       ).toEqual([]);
     } finally {
       unregisterFirst();

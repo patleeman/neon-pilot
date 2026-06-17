@@ -285,7 +285,7 @@ describe('modelGatewayRuntime', () => {
         model_catalog_json?: string;
         approval_policy?: string;
         model_providers?: Record<string, { base_url?: string }>;
-        neon_pilot_model_gateway?: { managed?: boolean; previous_top_level?: Record<string, unknown> };
+        neon_pilot_model_gateway?: { managed?: boolean };
       };
 
       expect(result.status).toMatchObject({ installed: true, activeProvider: 'openai', activeModel: 'gpt-5.5' });
@@ -297,7 +297,6 @@ describe('modelGatewayRuntime', () => {
         model_providers: { 'neon-pilot': { base_url: 'http://127.0.0.1:8766/v1' } },
         neon_pilot_model_gateway: {
           managed: true,
-          previous_top_level: {},
         },
       });
       expect(parsed.model_catalog_json).toBe(join(runtimeDir, 'model-gateway', 'codex-model-catalog.json'));
@@ -307,7 +306,7 @@ describe('modelGatewayRuntime', () => {
     }
   });
 
-  it('removes the managed Codex config and restores previous top-level settings', () => {
+  it('removes the managed Codex config and keeps user-owned top-level settings', () => {
     const runtimeDir = mkdtempSync(join(tmpdir(), 'model-gateway-remove-'));
     const configPath = join(runtimeDir, 'codex', 'config.toml');
     try {

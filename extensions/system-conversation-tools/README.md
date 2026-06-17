@@ -6,7 +6,7 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 # Ask User Question
 
-The `ask_user` tool presents interactive prompts to the user through the desktop UI. It supports single questions with quick-reply options and multi-question forms with radio and checkbox styles.
+The `ask_user` tool presents interactive prompts to the user through the desktop UI. It supports one or more structured questions with radio and checkbox styles.
 
 ## Question Styles
 
@@ -14,16 +14,13 @@ The `ask_user` tool presents interactive prompts to the user through the desktop
 | -------------------- | ------------------------------------------------- | ------------------------ |
 | `radio`              | Single choice from options                        | One selected value       |
 | `check` / `checkbox` | Multiple choice                                   | Array of selected values |
-| Legacy text          | Single question with optional quick-reply buttons | Text + selected option   |
 
 ## Parameters
 
 | Parameter   | Type     | Description                           |
 | ----------- | -------- | ------------------------------------- |
-| `question`  | string   | Legacy single-question text           |
 | `details`   | string   | Context or description                |
-| `options`   | string[] | Legacy quick-reply options (max 6)    |
-| `questions` | object[] | Multi-question mode (max 8 questions) |
+| `questions` | object[] | Question prompts (max 8 questions)    |
 
 ### Question object
 
@@ -33,7 +30,6 @@ When using `questions[]`, each question has:
 | ---------- | ---------------------------------- | -------------------------------------- |
 | `id`       | string                             | Stable identifier for tracking answers |
 | `label`    | string                             | User-facing question                   |
-| `question` | string                             | Alias for `label`                      |
 | `details`  | string                             | Supporting context                     |
 | `style`    | `"radio"`, `"check"`, `"checkbox"` | Input style                            |
 | `options`  | array                              | Available answers (max 12)             |
@@ -56,7 +52,7 @@ Options can be simple strings or objects:
 
 ## Examples
 
-### Single question with quick replies
+### Single question
 
 ```json
 {
@@ -116,7 +112,6 @@ Options can be simple strings or objects:
 | ------------------------- | ----- |
 | Max questions per call    | 8     |
 | Max options per question  | 12    |
-| Max options (legacy mode) | 6     |
 
 ## Desktop UI Rendering
 
@@ -124,7 +119,6 @@ In the desktop app, questions render as a modal dialog:
 
 - **Radio** — radio buttons with one selection
 - **Check/checkbox** — checkboxes with multiple selection
-- **Legacy** — prompt text with optional quick-reply buttons below
 
 The user must respond before the agent continues. The response is returned to the agent as structured data.
 

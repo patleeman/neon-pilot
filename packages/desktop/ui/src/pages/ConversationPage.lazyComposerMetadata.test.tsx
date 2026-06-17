@@ -53,7 +53,6 @@ const emptyExtensionRegistry = {
   settingsComponent: null,
   settingsComponents: [],
   composerControls: [],
-  composerButtons: [],
   composerInputTools: [],
   toolbarActions: [],
   contextMenus: [],

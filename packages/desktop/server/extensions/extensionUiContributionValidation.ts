@@ -65,16 +65,6 @@ export function validateComposerControlContributions(value: unknown): void {
   }
 }
 
-export function validateComposerButtonContributions(value: unknown): void {
-  for (const [index, button] of assertRecordArray(value, 'contributes.composerButtons').entries()) {
-    requireString(button.id, `contributes.composerButtons[${index}].id`);
-    requireString(button.component, `contributes.composerButtons[${index}].component`);
-    validateOptionalString(button.title, `contributes.composerButtons[${index}].title`);
-    validateOptionalString(button.when, `contributes.composerButtons[${index}].when`);
-    validateOptionalInteger(button.priority, `contributes.composerButtons[${index}].priority`);
-  }
-}
-
 export function validateComposerInputToolContributions(value: unknown): void {
   for (const [index, tool] of assertRecordArray(value, 'contributes.composerInputTools').entries()) {
     requireString(tool.id, `contributes.composerInputTools[${index}].id`);

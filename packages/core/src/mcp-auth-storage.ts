@@ -1,6 +1,4 @@
-import { readdirSync } from 'node:fs';
 import fs from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { resolveStatePaths } from './runtime/paths.js';
@@ -11,15 +9,6 @@ export interface LockfileData {
   pid: number;
   port: number;
   timestamp: number;
-}
-
-function getLegacyMcpRemoteBaseDir(): string {
-  const explicit = process.env.MCP_REMOTE_CONFIG_DIR?.trim();
-  if (explicit) {
-    return resolve(explicit);
-  }
-
-  return join(homedir(), '.mcp-auth');
 }
 
 function getNeonPilotMcpBaseDir(): string {
@@ -33,19 +22,6 @@ function getNeonPilotMcpBaseDir(): string {
 
 export function getMcpAuthConfigDir(): string {
   return join(getNeonPilotMcpBaseDir(), MCP_AUTH_SCHEMA_VERSION);
-}
-
-function getLegacyConfigDirs(): string[] {
-  const baseDir = getLegacyMcpRemoteBaseDir();
-
-  try {
-    return readdirSync(baseDir, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && entry.name.startsWith('mcp-remote-'))
-      .map((entry) => join(baseDir, entry.name))
-      .sort((left, right) => right.localeCompare(left));
-  } catch {
-    return [];
-  }
 }
 
 async function ensureConfigDir(): Promise<void> {
@@ -63,12 +39,6 @@ function getMcpAuthFilePath(serverUrlHash: string, filename: string): string {
   const safeHash = assertSafeFileSegment(serverUrlHash);
   const safeFilename = assertSafeFileSegment(filename);
   return join(getMcpAuthConfigDir(), `${safeHash}_${safeFilename}`);
-}
-
-function getLegacyMcpAuthFilePaths(serverUrlHash: string, filename: string): string[] {
-  const safeHash = assertSafeFileSegment(serverUrlHash);
-  const safeFilename = assertSafeFileSegment(filename);
-  return getLegacyConfigDirs().map((dir) => join(dir, `${safeHash}_${safeFilename}`));
 }
 
 async function readExistingFile(filePaths: string[]): Promise<string | undefined> {
@@ -90,10 +60,7 @@ export async function readJsonFile<T>(
   filename: string,
   schema: { parseAsync: (value: unknown) => Promise<T> },
 ): Promise<T | undefined> {
-  const content = await readExistingFile([
-    getMcpAuthFilePath(serverUrlHash, filename),
-    ...getLegacyMcpAuthFilePaths(serverUrlHash, filename),
-  ]);
+  const content = await readExistingFile([getMcpAuthFilePath(serverUrlHash, filename)]);
 
   if (!content) {
     return undefined;
@@ -120,7 +87,7 @@ async function writePrivateFile(path: string, data: string): Promise<void> {
 }
 
 export async function readTextFile(serverUrlHash: string, filename: string): Promise<string | undefined> {
-  return readExistingFile([getMcpAuthFilePath(serverUrlHash, filename), ...getLegacyMcpAuthFilePaths(serverUrlHash, filename)]);
+  return readExistingFile([getMcpAuthFilePath(serverUrlHash, filename)]);
 }
 
 export async function writeTextFile(serverUrlHash: string, filename: string, text: string): Promise<void> {

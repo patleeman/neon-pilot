@@ -47,17 +47,17 @@ vi.mock('../../extensions/commands', () => ({
 
 vi.mock('../../extensions/ComposerButtonHost', () => ({
   ComposerButtonHost: ({
-    buttonContext,
+    controlContext,
     registration,
   }: {
-    buttonContext: { currentModel: string; currentThinkingLevel: string; models: ModelInfo[] };
+    controlContext: { currentModel: string; currentThinkingLevel: string; models: ModelInfo[] };
     registration: { id: string };
   }) => {
     if (registration.id === 'attach-files') return <button title="Attach image or file">Attach</button>;
     if (registration.id === 'model-preferences') {
-      const selectedModel = buttonContext.models.find((model) => model.id === buttonContext.currentModel);
-      const modelLabel = selectedModel?.name ?? (buttonContext.currentModel.trim() || 'Select model');
-      const thinkingLabel = buttonContext.currentThinkingLevel === 'xhigh' ? 'Extra high' : buttonContext.currentThinkingLevel || 'Unset';
+      const selectedModel = controlContext.models.find((model) => model.id === controlContext.currentModel);
+      const modelLabel = selectedModel?.name ?? (controlContext.currentModel.trim() || 'Select model');
+      const thinkingLabel = controlContext.currentThinkingLevel === 'xhigh' ? 'Extra high' : controlContext.currentThinkingLevel || 'Unset';
       return (
         <span>
           {modelLabel} {thinkingLabel}

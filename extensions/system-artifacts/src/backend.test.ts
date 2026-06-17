@@ -18,7 +18,7 @@ import { artifact } from './backend.js';
 
 function createCtx(overrides?: Record<string, unknown>) {
   return {
-    profile: 'test-profile',
+    runtimeScope: 'test-profile',
     toolContext: { conversationId: 'conv-1' },
     ui: { invalidate: mockInvalidate },
     ...overrides,

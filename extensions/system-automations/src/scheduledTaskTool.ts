@@ -35,7 +35,6 @@ const ScheduledTaskToolParams = {
   type: 'object',
   properties: {
     action: { type: 'string', enum: SCHEDULED_TASK_ACTION_VALUES },
-    profile: { type: 'string', description: 'Deprecated. Ignored; scheduled tasks use the shared runtime scope.' },
     taskId: { type: 'string', description: 'Task id for get/save/delete/run/validate.' },
     title: { type: 'string', description: 'Human-readable title for the automation. Defaults to taskId.' },
     enabled: { type: 'boolean', description: 'Whether the task is enabled when saving.' },
@@ -250,7 +249,7 @@ async function formatTaskDetail(
     `schedule: ${formatSchedule(task)}`,
     `target: ${formatTargetLabel(task)}`,
     `enabled: ${task.enabled ? 'true' : 'false'}`,
-    `profile: ${task.profile}`,
+    `runtimeScope: ${task.profile}`,
     `timeoutSeconds: ${task.timeoutSeconds}`,
     `threadMode: ${threadDetail.threadMode}`,
   ];
@@ -320,18 +319,15 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
       parameters: ScheduledTaskToolParams,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
         try {
-          void readOptionalString(params.profile);
-          void options.getRuntimeScope();
-          const profile = 'shared';
+          const runtimeScope = options.getRuntimeScope();
 
           switch (params.action as ScheduledTaskAction) {
             case 'list': {
-              const loaded = await loadScheduledTasksForProfile(profile);
+              const loaded = await loadScheduledTasksForProfile(runtimeScope);
               return {
                 content: [{ type: 'text' as const, text: await formatTaskList(loaded) }],
                 details: {
                   action: 'list',
-                  profile,
                   count: loaded.tasks.length,
                   taskIds: loaded.tasks.map((task) => task.id),
                   parseErrorCount: loaded.parseErrors.length,
@@ -341,13 +337,12 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
 
             case 'get': {
               const taskId = readRequiredString(params.taskId, 'taskId');
-              const { task, runtime } = await resolveScheduledTaskForProfile(profile, taskId);
-              const callbackBinding = await getTaskCallbackBinding({ profile, taskId });
+              const { task, runtime } = await resolveScheduledTaskForProfile(runtimeScope, taskId);
+              const callbackBinding = await getTaskCallbackBinding({ profile: runtimeScope, taskId });
               return {
                 content: [{ type: 'text' as const, text: await formatTaskDetail(task, runtime, callbackBinding) }],
                 details: {
                   action: 'get',
-                  profile,
                   taskId,
                   filePath: task.filePath,
                 },
@@ -355,7 +350,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
             }
 
             case 'save': {
-              const loaded = await loadScheduledTasksForProfile(profile);
+              const loaded = await loadScheduledTasksForProfile(runtimeScope);
               const taskId = readRequiredString(params.taskId, 'taskId');
               const existing = loaded.tasks.find((task) => task.id === taskId);
               const targetType =
@@ -468,10 +463,10 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                 : saved;
 
               if (targetType === 'conversation') {
-                await clearTaskCallbackBinding({ profile, taskId });
+                await clearTaskCallbackBinding({ profile: runtimeScope, taskId });
               } else if (params.deliverResultToConversation === true) {
                 await setTaskCallbackBinding({
-                  profile,
+                  profile: runtimeScope,
                   taskId,
                   conversationId: currentConversationId,
                   sessionFile,
@@ -483,7 +478,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                   autoResumeIfOpen: params.autoResumeIfOpen ?? true,
                 });
               } else if (params.deliverResultToConversation === false) {
-                await clearTaskCallbackBinding({ profile, taskId });
+                await clearTaskCallbackBinding({ profile: runtimeScope, taskId });
               }
 
               await invalidateAppTopics('tasks');
@@ -499,7 +494,6 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                 ],
                 details: {
                   action: 'save',
-                  profile,
                   taskId,
                   filePath: task.filePath,
                   targetType,
@@ -512,22 +506,21 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
 
             case 'delete': {
               const taskId = readRequiredString(params.taskId, 'taskId');
-              await deleteStoredAutomation(taskId, { profile });
-              await clearTaskCallbackBinding({ profile, taskId });
+              await deleteStoredAutomation(taskId);
+              await clearTaskCallbackBinding({ profile: runtimeScope, taskId });
               await invalidateAppTopics('tasks');
 
               return {
                 content: [{ type: 'text' as const, text: `Deleted scheduled task @${taskId}.` }],
                 details: {
                   action: 'delete',
-                  profile,
                   taskId,
                 },
               };
             }
 
             case 'validate': {
-              const loaded = await loadScheduledTasksForProfile(profile);
+              const loaded = await loadScheduledTasksForProfile(runtimeScope);
               if (params.taskId) {
                 const taskId = readRequiredString(params.taskId, 'taskId');
                 const match = loaded.tasks.find((task) => task.id === taskId);
@@ -548,7 +541,6 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                   isError: !valid,
                   details: {
                     action: 'validate',
-                    profile,
                     taskId,
                     valid,
                   },
@@ -570,7 +562,6 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                 isError: !valid,
                 details: {
                   action: 'validate',
-                  profile,
                   valid,
                   count: loaded.tasks.length,
                   parseErrorCount: loaded.parseErrors.length,
@@ -580,7 +571,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
 
             case 'run': {
               const taskId = readRequiredString(params.taskId, 'taskId');
-              const { task } = await resolveScheduledTaskForProfile(profile, taskId);
+              const { task } = await resolveScheduledTaskForProfile(runtimeScope, taskId);
               if (!(await pingDaemon())) throw new Error('Daemon is not responding. Ensure the desktop app is running.');
               const result = await startScheduledTaskRun(task.id);
               recordTelemetryEvent({
@@ -589,7 +580,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                 name: 'run_tool_run',
                 runId: result.runId,
                 status: result.accepted ? 202 : 409,
-                metadata: { profile, taskId: task.id, title: task.title, reason: result.reason },
+                metadata: { runtimeScope, taskId: task.id, title: task.title, reason: result.reason },
               });
               if (!result.accepted) {
                 throw new Error(result.reason ?? `Could not start scheduled task @${taskId}.`);
@@ -600,7 +591,6 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                 content: [{ type: 'text' as const, text: `Started scheduled task @${taskId} as run ${result.runId}.` }],
                 details: {
                   action: 'run',
-                  profile,
                   taskId,
                   runId: result.runId,
                 },

@@ -6,7 +6,6 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { existsSync, rmSync } from 'node:fs';
 
 import {
   type AppTelemetryLogEvent,
@@ -17,7 +16,6 @@ import {
 import {
   applyObservabilityMigrations,
   ensureObservabilityDbDir,
-  resolveLegacyAppTelemetryDbPath,
   resolveObservabilityDbPath,
 } from './observability-db.js';
 import { openSqliteDatabase, type SqliteDatabase } from './sqlite.js';
@@ -74,54 +72,6 @@ function logTelemetryStorageError(message: string, error: unknown): void {
   );
 }
 
-function deleteLegacyAppTelemetryDb(legacyPath: string): void {
-  try {
-    rmSync(legacyPath, { force: true });
-  } catch (error) {
-    logTelemetryStorageError(`failed to delete imported legacy app telemetry DB at ${legacyPath}`, error);
-  }
-}
-
-function importLegacyAppTelemetryEvents(db: SqliteDatabase, stateRoot?: string): void {
-  const legacyPath = resolveLegacyAppTelemetryDbPath(stateRoot);
-  if (!existsSync(legacyPath) || legacyPath === resolveAppTelemetryDbPath(stateRoot)) return;
-
-  const imported = db.prepare(`SELECT value FROM observability_imports WHERE key = ?`).get('app-telemetry') as
-    | { value?: string }
-    | undefined;
-  if (imported?.value === legacyPath) {
-    deleteLegacyAppTelemetryDb(legacyPath);
-    return;
-  }
-
-  let importedSuccessfully = false;
-  try {
-    db.exec(`ATTACH DATABASE ${JSON.stringify(legacyPath)} AS legacy_app_telemetry`);
-    db.exec(`
-      INSERT OR IGNORE INTO app_telemetry_events (
-        id, ts, source, category, name, session_id, run_id, route, status, duration_ms, count, value, metadata_json
-      )
-      SELECT id, ts, source, category, name, session_id, run_id, route, status, duration_ms, count, value, metadata_json
-      FROM legacy_app_telemetry.app_telemetry_events
-    `);
-    db.prepare(`INSERT OR REPLACE INTO observability_imports (key, value, imported_at) VALUES (?, ?, ?)`).run(
-      'app-telemetry',
-      legacyPath,
-      new Date().toISOString(),
-    );
-    importedSuccessfully = true;
-  } catch (error) {
-    logTelemetryStorageError(`failed to import legacy app telemetry DB at ${legacyPath}`, error);
-  } finally {
-    try {
-      db.exec(`DETACH DATABASE legacy_app_telemetry`);
-    } catch {
-      // ignore
-    }
-    if (importedSuccessfully) deleteLegacyAppTelemetryDb(legacyPath);
-  }
-}
-
 function getAppTelemetryDb(stateRoot?: string): SqliteDatabase {
   const path = resolveAppTelemetryDbPath(stateRoot);
   const cached = dbCache.get(path);
@@ -131,9 +81,7 @@ function getAppTelemetryDb(stateRoot?: string): SqliteDatabase {
 
   const db = openSqliteDatabase(path);
   db.exec(SCHEMA);
-  db.exec(`CREATE TABLE IF NOT EXISTS observability_imports (key TEXT PRIMARY KEY, value TEXT NOT NULL, imported_at TEXT NOT NULL)`);
   applyObservabilityMigrations(db, 'app-telemetry', APP_TELEMETRY_MIGRATIONS);
-  importLegacyAppTelemetryEvents(db, stateRoot);
   maybePruneAppTelemetryEvents(db, path, { force: true });
   dbCache.set(path, db);
   return db;

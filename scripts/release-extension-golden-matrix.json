@@ -31,9 +31,8 @@
     "routes": 6,
     "surfaces": 6,
     "composerShelves": 2,
-    "composerControls": 2,
+    "composerControls": 3,
     "composerInputTools": 1,
-    "composerButtons": 1,
     "transcriptRenderers": 3,
     "settings": 1
   },

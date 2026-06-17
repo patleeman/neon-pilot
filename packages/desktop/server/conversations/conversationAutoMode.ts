@@ -67,16 +67,9 @@ function normalizeTask(value: unknown): ConversationAutoModeTask | null {
 
 function normalizeState(data: unknown): ConversationAutoModeState | null {
   if (!isRecord(data)) return null;
-  const hasExplicitMode = typeof data.mode === 'string';
-  const mode = hasExplicitMode
-    ? normalizeRunMode(data.mode)
-    : data.enabled === true
-      ? 'nudge'
-      : data.enabled === false
-        ? 'manual'
-        : 'manual';
-  if (hasExplicitMode && mode === 'manual' && data.mode !== 'manual') return null;
-  if (!hasExplicitMode && typeof data.enabled !== 'boolean') return null;
+  if (typeof data.mode !== 'string') return null;
+  const mode = normalizeRunMode(data.mode);
+  if (mode === 'manual' && data.mode !== 'manual') return null;
   const state: ConversationAutoModeState = {
     enabled: mode !== 'manual',
     mode,

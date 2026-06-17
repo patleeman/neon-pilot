@@ -18,23 +18,6 @@ export function ensureObservabilityDbDir(stateRoot?: string): string {
   return dir;
 }
 
-function resolveExistingLegacyDbPath(stateRoot: string | undefined, filename: string): string {
-  const root = stateRoot ?? getStateRoot();
-  const direct = join(root, 'pi-agent', 'state', 'trace', filename);
-  if (existsSync(direct)) return direct;
-
-  const sync = join(root, 'sync', 'pi-agent', 'state', 'trace', filename);
-  return existsSync(sync) ? sync : direct;
-}
-
-export function resolveLegacyTraceDbPath(stateRoot?: string): string {
-  return resolveExistingLegacyDbPath(stateRoot, 'trace.db');
-}
-
-export function resolveLegacyAppTelemetryDbPath(stateRoot?: string): string {
-  return resolveExistingLegacyDbPath(stateRoot, 'app-telemetry.db');
-}
-
 export function applyObservabilityMigrations(db: SqliteDatabase, namespace: string, migrations: Migration[]): number {
   if (migrations.length === 0) return 0;
 

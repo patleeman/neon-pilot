@@ -111,9 +111,7 @@ const CODEX_PLAN_TIERS = ['free', 'plus', 'pro', 'team', 'business', 'enterprise
 // https://github.com/openai/codex/issues/19694
 // https://github.com/openai/codex/issues/14370
 const CODEX_CONFIG_MANAGED_TOP_LEVEL_KEYS = new Set(['model_catalog_json']);
-const CODEX_CONFIG_LEGACY_TOP_LEVEL_KEYS = new Set(['model_provider', 'model', 'model_catalog_json']);
 const CODEX_CONFIG_MANAGED_TABLE = 'neon_pilot_model_gateway';
-const CODEX_CONFIG_PREVIOUS_TOP_LEVEL_TABLE = 'previous_top_level';
 const CODEX_APP_CLI_PATH = '/Applications/Codex.app/Contents/Resources/codex';
 const CODEX_CONFIG_REFERENCE_CHECK_KEY = 'referenceCheck';
 
@@ -643,10 +641,6 @@ function isManagedCodexConfig(config: TomlRecord): boolean {
   return readManagedConfigTable(config)?.managed === true;
 }
 
-function readPreviousTopLevel(config: TomlRecord): TomlRecord {
-  return readRecordProperty(readManagedConfigTable(config) ?? {}, CODEX_CONFIG_PREVIOUS_TOP_LEVEL_TABLE) ?? {};
-}
-
 function writeTomlConfig(config: TomlRecord): string {
   return `${stringifyToml(config).trim()}\n`;
 }
@@ -731,25 +725,6 @@ export function installModelGatewayCodexConfig(ctx: RuntimeContext, settings: Mo
   const backupPath = backupCodexConfig(configPath);
   const catalogPath = writeModelGatewayCatalog(ctx);
   const config = readTomlConfig(existing);
-  const wasManaged = isManagedCodexConfig(config);
-  const previousTopLevel = wasManaged ? readPreviousTopLevel(config) : {};
-  // Older Neon Pilot installs set top-level model_provider/model like codex-shim.
-  // Restore those keys first so reinstalling migrates users back to the
-  // catalog-only shape that keeps existing OpenAI-backed Desktop threads visible.
-  if (wasManaged) {
-    for (const key of CODEX_CONFIG_LEGACY_TOP_LEVEL_KEYS) {
-      if (Object.prototype.hasOwnProperty.call(previousTopLevel, key)) {
-        config[key] = previousTopLevel[key];
-      } else {
-        delete config[key];
-      }
-    }
-  }
-  for (const key of CODEX_CONFIG_MANAGED_TOP_LEVEL_KEYS) {
-    if (!Object.prototype.hasOwnProperty.call(previousTopLevel, key) && Object.prototype.hasOwnProperty.call(config, key)) {
-      previousTopLevel[key] = config[key];
-    }
-  }
   const providers = readRecordProperty(config, 'model_providers') ?? {};
   providers['neon-pilot'] = {
     name: 'Neon Pilot AI Gateway',
@@ -760,7 +735,6 @@ export function installModelGatewayCodexConfig(ctx: RuntimeContext, settings: Mo
   config.model_providers = providers;
   config[CODEX_CONFIG_MANAGED_TABLE] = {
     managed: true,
-    [CODEX_CONFIG_PREVIOUS_TOP_LEVEL_TABLE]: previousTopLevel,
   };
   config.model_catalog_json = catalogPath;
   writeFileSync(configPath, writeTomlConfig(config));
@@ -774,13 +748,8 @@ export function removeModelGatewayCodexConfig(ctx: RuntimeContext, input?: unkno
   const config = readTomlConfig(existing);
   if (!isManagedCodexConfig(config)) return { status: readModelGatewayCodexConfigStatus(ctx, input) };
   const backupPath = backupCodexConfig(configPath);
-  const previousTopLevel = readPreviousTopLevel(config);
-  for (const key of CODEX_CONFIG_LEGACY_TOP_LEVEL_KEYS) {
-    if (Object.prototype.hasOwnProperty.call(previousTopLevel, key)) {
-      config[key] = previousTopLevel[key];
-    } else if (CODEX_CONFIG_MANAGED_TOP_LEVEL_KEYS.has(key)) {
-      delete config[key];
-    }
+  for (const key of CODEX_CONFIG_MANAGED_TOP_LEVEL_KEYS) {
+    delete config[key];
   }
   const providers = readRecordProperty(config, 'model_providers');
   if (providers) {

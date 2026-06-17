@@ -36,8 +36,6 @@ export interface ExtensionComposerControlRegistration {
   frontendEntry?: string;
 }
 
-export type ExtensionComposerButtonRegistration = ExtensionComposerControlRegistration;
-
 export interface ExtensionComposerInputToolRegistration {
   extensionId: string;
   id: string;
@@ -235,7 +233,6 @@ const EMPTY_EXTENSION_REGISTRY_STATE: ExtensionRegistryState = {
   settingsComponent: null,
   settingsComponents: [],
   composerControls: [],
-  composerButtons: [],
   composerInputTools: [],
   toolbarActions: [],
   contextMenus: [],
@@ -273,7 +270,6 @@ export interface ExtensionRegistryState {
   settingsComponent: ExtensionSettingsComponentRegistration | null;
   settingsComponents: ExtensionSettingsComponentRegistration[];
   composerControls: ExtensionComposerControlRegistration[];
-  composerButtons: ExtensionComposerButtonRegistration[];
   composerInputTools: ExtensionComposerInputToolRegistration[];
   toolbarActions: ExtensionToolbarActionRegistration[];
   contextMenus: ExtensionContextMenuRegistration[];
@@ -406,26 +402,6 @@ function normalizeComposerControls(extensions: ExtensionManifest[]): ExtensionCo
         ...(control.title ? { title: control.title } : {}),
         ...(control.when ? { when: control.when } : {}),
         ...(typeof control.priority === 'number' ? { priority: control.priority } : {}),
-        frontendEntry: extension.frontend?.entry,
-      });
-    }
-  }
-  result.sort(compareComposerControls);
-  return result;
-}
-
-function normalizeComposerButtons(extensions: ExtensionManifest[]): ExtensionComposerButtonRegistration[] {
-  const result: ExtensionComposerButtonRegistration[] = [];
-  for (const extension of extensions) {
-    for (const button of extension.contributes?.composerButtons ?? []) {
-      result.push({
-        extensionId: extension.id,
-        id: button.id,
-        component: button.component,
-        slot: button.placement === 'actions' ? 'actions' : 'preferences',
-        ...(button.title ? { title: button.title } : {}),
-        ...(button.when ? { when: button.when } : {}),
-        ...(typeof button.priority === 'number' ? { priority: button.priority } : {}),
         frontendEntry: extension.frontend?.entry,
       });
     }
@@ -804,8 +780,7 @@ function normalizeExtensionRegistryState(
   const enabledRegistryExtensions = registryExtensions.filter((extension) => extension.enabled);
   const enabledExtensionIds = new Set(enabledRegistryExtensions.map((extension) => extension.id));
   const settingsComponents = normalizeSettingsComponents(enabledRegistryExtensions);
-  const composerButtons = normalizeComposerButtons(enabledRegistryExtensions);
-  const composerControls = [...normalizeComposerControls(enabledRegistryExtensions), ...composerButtons].sort(compareComposerControls);
+  const composerControls = normalizeComposerControls(enabledRegistryExtensions);
 
   return {
     extensions: registryExtensions,
@@ -818,7 +793,6 @@ function normalizeExtensionRegistryState(
     settingsComponents,
     settingsComponent: settingsComponents[0] ?? null,
     composerControls,
-    composerButtons,
     composerInputTools: normalizeComposerInputTools(enabledRegistryExtensions),
     toolbarActions: normalizeToolbarActions(enabledRegistryExtensions),
     contextMenus: normalizeContextMenus(enabledRegistryExtensions),
@@ -863,7 +837,7 @@ function recordLoadedExtensionRegistry(state: ExtensionRegistryState): void {
       routes: state.routes.length,
       surfaces: state.surfaces.length,
       topBarElements: state.topBarElements.length,
-      composerButtons: state.composerButtons.length,
+      composerControls: state.composerControls.length,
       composerInputTools: state.composerInputTools.length,
     },
   });

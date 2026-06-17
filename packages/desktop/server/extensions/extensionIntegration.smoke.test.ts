@@ -10,7 +10,7 @@ import type { ExtensionRegistrySnapshot } from './extensionRegistry.js';
 import {
   listExtensionCommandRegistrations,
   listExtensionCliCommandRegistrations,
-  listExtensionComposerButtonRegistrations,
+  listExtensionComposerControlRegistrations,
   listExtensionComposerInputToolRegistrations,
   listExtensionComposerShelfRegistrations,
   listExtensionContextMenuRegistrations,
@@ -356,13 +356,6 @@ describe('extension manifests - structural validation', () => {
 
       const content = readFileSync(frontendPath, 'utf-8');
 
-      // Composer buttons
-      for (const btn of s.manifest.contributes?.composerButtons ?? []) {
-        const cmp = btn.component;
-        const pattern = new RegExp(`(export\\s+(async\\s+)?function\\s+${cmp}|export\\s*\\{[^}]*\\b${cmp}\\b)`);
-        expect(pattern.test(content), `${s.id}: composer button component "${cmp}" not exported`).toBe(true);
-      }
-
       // Composer input tools
       for (const tool of s.manifest.contributes?.composerInputTools ?? []) {
         const cmp = tool.component;
@@ -444,9 +437,6 @@ describe('extension manifests - structural validation', () => {
       'openBrowserBackend',
       'attachConversation',
     ]);
-    // Known system action prefixes that don't reference backend handlers
-    const knownSystemActionPrefixes = ['commandPalette:', 'navigate:', 'rightRail:'];
-
     for (const ext of summaries) {
       if (ext.packageType !== 'system') continue;
       const backendActionIds = new Set((ext.manifest.backend?.actions ?? []).map((a) => a.id));
@@ -478,13 +468,11 @@ describe('extension manifests - structural validation', () => {
         if (knownBuiltInFrontendActions.has(action)) continue;
         // If the action matches a known host command, it's valid
         if (isKnownHostCommand(action)) continue;
-        // If the action starts with a known system prefix, it's valid
-        if (knownSystemActionPrefixes.some((prefix) => action.startsWith(prefix))) continue;
         // Otherwise, flag it as potentially dangling
         expect(
           false,
           `${ext.id}: ${source} references action "${action}" which is not a known backend action ` +
-            `[${[...backendActionIds].join(', ')}], known frontend action, or system action prefix. ` +
+            `[${[...backendActionIds].join(', ')}], known frontend action, or host command. ` +
             `If this is a custom frontend action, add it to knownBuiltInFrontendActions.`,
         ).toBe(true);
       }
@@ -676,16 +664,12 @@ describe('extension manifests - structural validation', () => {
       if (ext.packageType !== 'system') continue;
       const navItems = ext.manifest.contributes?.nav ?? [];
       const backendActionIds = new Set((ext.manifest.backend?.actions ?? []).map((a) => a.id));
-      const knownBadgeActions = new Set(['commandPalette:threads']);
-
       for (const nav of navItems) {
         if (!nav.badgeAction) continue;
-        if (knownBadgeActions.has(nav.badgeAction)) continue;
         if (backendActionIds.has(nav.badgeAction)) continue;
-        if (nav.badgeAction.startsWith('commandPalette:') || nav.badgeAction.startsWith('navigate:')) continue;
         expect(
           false,
-          `${ext.id}: nav "${nav.id}" badgeAction "${nav.badgeAction}" is not a known backend action, built-in badge action, or system action prefix`,
+          `${ext.id}: nav "${nav.id}" badgeAction "${nav.badgeAction}" is not a known backend action`,
         ).toBe(true);
       }
     }
@@ -856,12 +840,12 @@ describe('extension manifests - cross-extension conflict detection', () => {
     ).toEqual([]);
   });
 
-  it('no duplicate composer button ids', () => {
-    const buttons = listExtensionComposerButtonRegistrations();
-    const conflicts = findAllStringConflicts(buttons.map((b) => [b.id, b.extensionId]));
+  it('no duplicate composer control ids', () => {
+    const controls = listExtensionComposerControlRegistrations();
+    const conflicts = findAllStringConflicts(controls.map((control) => [control.id, control.extensionId]));
     expect(
       [...conflicts].map(([id, sources]) => `${id}: ${sources.join(', ')}`),
-      'Duplicate composer button ids',
+      'Duplicate composer control ids',
     ).toEqual([]);
   });
 
@@ -1542,7 +1526,7 @@ describe('extension integration - summary report', () => {
     const contextMenuRegistrations = listExtensionContextMenuRegistrations();
     const messageActionRegistrations = listExtensionMessageActionRegistrations();
     const composerShelfRegistrations = listExtensionComposerShelfRegistrations();
-    const composerButtonRegistrations = listExtensionComposerButtonRegistrations();
+    const composerControlRegistrations = listExtensionComposerControlRegistrations();
     const composerInputToolRegistrations = listExtensionComposerInputToolRegistrations();
     const keybindingRegistrations = listExtensionKeybindingRegistrations();
     const statusBarRegistrations = listExtensionStatusBarItemRegistrations();
@@ -1571,7 +1555,7 @@ describe('extension integration - summary report', () => {
       `  Context menus: ${contextMenuRegistrations.length}`,
       `  Message actions: ${messageActionRegistrations.length}`,
       `  Composer shelves: ${composerShelfRegistrations.length}`,
-      `  Composer buttons: ${composerButtonRegistrations.length}`,
+      `  Composer controls: ${composerControlRegistrations.length}`,
       `  Composer input tools: ${composerInputToolRegistrations.length}`,
       `  Keybindings: ${keybindingRegistrations.length}`,
       `  Status bar items: ${statusBarRegistrations.length}`,

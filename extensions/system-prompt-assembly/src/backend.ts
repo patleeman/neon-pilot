@@ -41,7 +41,7 @@ export async function inspectAgentRuntime(input: unknown, ctx: ExtensionBackendC
     typeof body.repoRoot === 'string' && body.repoRoot.trim() ? body.repoRoot.trim() : (runtime?.getRepoRoot?.() ?? process.cwd());
   const cwd = typeof body.cwd === 'string' && body.cwd.trim() ? body.cwd.trim() : (resourceOptions.cwd ?? repoRoot);
   const modelRef = typeof body.modelRef === 'string' ? body.modelRef : undefined;
-  const runtimeScope = ctx.runtimeScope ?? ctx.profile;
+  const runtimeScope = ctx.runtimeScope;
   const runtimeCtx = { runtimeScope, repoRoot, cwd, modelRef };
   const [plan, skills, tools, promptTemplates, instructions, extensions, mcp] = await Promise.all([
     buildPromptAssemblyPlanAsync(runtimeCtx),

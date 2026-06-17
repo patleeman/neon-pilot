@@ -29,7 +29,6 @@ type RunToolExecutionParams = {
   command?: string;
   prompt?: string;
   model?: string;
-  profile?: string;
   cwd?: string;
   tail?: unknown;
   deliverResultToConversation?: boolean;
@@ -59,7 +58,6 @@ const RunToolParams = {
     command: { type: 'string', description: 'Shell command to execute for start.' },
     prompt: { type: 'string', description: 'Agent prompt body for start_agent, or the follow-up prompt for follow_up.' },
     model: { type: 'string', description: 'Optional full model ref for start_agent, for example openai-codex/gpt-5.4.' },
-    profile: { type: 'string', description: 'Deprecated. Ignored; agent runs use the shared runtime scope.' },
     cwd: { type: 'string', description: 'Working directory for start. Defaults to the current conversation cwd.' },
     tail: { type: 'number', minimum: 1, maximum: 1000, description: 'Number of log lines to include for logs.' },
     deliverResultToConversation: {
@@ -334,6 +332,7 @@ export function createRunAgentExtension(options: {
               const cwd = readRequiredString(params.cwd ?? ctx.cwd, 'cwd');
               const conversationId = ctx.sessionManager.getSessionId();
               const conversationFile = ctx.sessionManager.getSessionFile();
+              const runtimeScope = options.getRuntimeScope();
               const deliverResultToConversation = params.deliverResultToConversation === true;
               if (deliverResultToConversation && !conversationFile) {
                 throw new Error('deliverResultToConversation requires an active persisted conversation.');
@@ -344,7 +343,7 @@ export function createRunAgentExtension(options: {
                   ? {
                       conversationId,
                       sessionFile: conversationFile,
-                      profile: 'shared',
+                      profile: runtimeScope,
                       repoRoot: options.repoRoot,
                     }
                   : undefined;
@@ -415,6 +414,7 @@ export function createRunAgentExtension(options: {
               const cwd = readRequiredString(params.cwd ?? ctx.cwd, 'cwd');
               const conversationId = ctx.sessionManager.getSessionId();
               const conversationFile = readOptionalString(ctx.sessionManager.getSessionFile());
+              const runtimeScope = options.getRuntimeScope();
               const deliverResultToConversation = params.deliverResultToConversation === true;
               if (deliverResultToConversation && !conversationFile) {
                 throw new Error('deliverResultToConversation requires an active persisted conversation.');
@@ -425,14 +425,11 @@ export function createRunAgentExtension(options: {
                   ? {
                       conversationId,
                       sessionFile: conversationFile,
-                      profile: 'shared',
+                      profile: runtimeScope,
                       repoRoot: options.repoRoot,
                     }
                   : undefined;
               const model = readOptionalString(params.model);
-              void readOptionalString(params.profile);
-              void options.getRuntimeScope();
-              const profile = 'shared';
               const defer = readOptionalString(params.defer);
               const cron = readOptionalString(params.cron);
               const at = readOptionalString(params.at);
@@ -482,7 +479,7 @@ export function createRunAgentExtension(options: {
 
                 if (deliverResultToConversation && conversationFile) {
                   await setTaskCallbackBinding({
-                    profile,
+                    profile: runtimeScope,
                     taskId: task.id,
                     conversationId,
                     sessionFile: conversationFile,
@@ -506,7 +503,7 @@ export function createRunAgentExtension(options: {
                     taskSlug,
                     cwd,
                     model,
-                    profile,
+                    runtimeScope,
                     defer,
                     cron,
                     at: scheduledAt,
@@ -529,7 +526,6 @@ export function createRunAgentExtension(options: {
                     taskSlug,
                     cwd,
                     model,
-                    profile,
                     ...(defer ? { defer } : {}),
                     ...(cron ? { cron } : {}),
                     ...(scheduledAt ? { at: scheduledAt } : {}),
@@ -604,7 +600,6 @@ export function createRunAgentExtension(options: {
                   taskSlug,
                   cwd,
                   model,
-                  profile,
                   logPath: result.logPath,
                   ...(loop ? { loop: true } : {}),
                   deliverResultToConversation,

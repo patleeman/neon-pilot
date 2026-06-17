@@ -48,7 +48,6 @@ type CriticalExtensionContributionKey = keyof Pick<
   | 'draftConversationCreate'
   | 'newConversationPanels'
   | 'composerControls'
-  | 'composerButtons'
   | 'composerInputTools'
   | 'toolbarActions'
   | 'contextMenus'
@@ -78,7 +77,6 @@ const CRITICAL_EXTENSION_CONTRIBUTION_KEYS: CriticalExtensionContributionKey[] =
   'draftConversationCreate',
   'newConversationPanels',
   'composerControls',
-  'composerButtons',
   'composerInputTools',
   'toolbarActions',
   'contextMenus',

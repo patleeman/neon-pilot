@@ -111,25 +111,14 @@ export function resolveTaskCallbackBindingsFile(options: { profile: string; stat
   );
 }
 
-function resolveLegacyTaskCallbackBindingsFile(options: { profile: string; stateRoot?: string }): string | undefined {
-  const legacyProfile = options.profile.trim();
-  if (!legacyProfile || legacyProfile === DEFAULT_RUNTIME_SCOPE) {
-    return undefined;
-  }
-
-  return join(resolveStateRoot(options.stateRoot), 'pi-agent', 'state', 'task-callback-bindings', `${legacyProfile}.json`);
-}
-
 export function loadTaskCallbackBindings(options: { profile: string; stateRoot?: string }): Record<string, TaskCallbackBinding> {
   const path = resolveTaskCallbackBindingsFile(options);
-  const legacyPath = resolveLegacyTaskCallbackBindingsFile(options);
-  const readablePath = existsSync(path) ? path : legacyPath && existsSync(legacyPath) ? legacyPath : undefined;
-  if (!readablePath) {
+  if (!existsSync(path)) {
     return {};
   }
 
   try {
-    const raw = readFileSync(readablePath, 'utf-8').trim();
+    const raw = readFileSync(path, 'utf-8').trim();
     if (raw.length === 0) {
       return {};
     }

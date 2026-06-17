@@ -9,7 +9,7 @@ import { createRuntimeModelRegistry } from '../models/modelRegistry.js';
 import { logWarn } from '../shared/logging.js';
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
 import { readConversationAutoTitleSettings } from './conversationAutoTitle.js';
-import { ensureConversationsDbFileMigrated, resolveAgentRuntimeDir } from './conversationDbPaths.js';
+import { ensureConversationsDbFile, resolveAgentRuntimeDir } from './conversationDbPaths.js';
 import { readTranscriptBackedConversationSearchText } from './conversationTranscriptOps.js';
 import type { SessionMeta } from './conversationTypes.js';
 
@@ -123,7 +123,7 @@ function resolveSettingsFile(): string {
 }
 
 function resolveSummaryDbFile(): string {
-  return ensureConversationsDbFileMigrated();
+  return ensureConversationsDbFile();
 }
 
 function normalizeString(value: unknown, fallback = ''): string {

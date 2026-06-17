@@ -63,7 +63,7 @@ describe('tasks-store', () => {
           tasks: {
             valid: {
               id: 'valid',
-              filePath: '/tmp/valid.task.md',
+              filePath: '/__automations__/valid.automation.md',
               scheduleType: 'at',
               running: true,
               runningStartedAt: '2026-03-01T00:00:00.000Z',
@@ -77,11 +77,11 @@ describe('tasks-store', () => {
               oneTimeCompletedAt: '2026-03-01T00:10:00.000Z',
             },
             malformedMissingId: {
-              filePath: '/tmp/malformed.task.md',
+              filePath: '/__automations__/malformed.automation.md',
             },
             malformedFields: {
               id: 'malformed',
-              filePath: '/tmp/malformed.task.md',
+              filePath: '/__automations__/malformed.automation.md',
               scheduleType: 'invalid',
               running: 'yes',
               lastRunAt: 'not-a-date',
@@ -107,7 +107,7 @@ describe('tasks-store', () => {
 
     expect(loaded.tasks.valid).toMatchObject({
       id: 'valid',
-      filePath: '/tmp/valid.task.md',
+      filePath: '/__automations__/valid.automation.md',
       scheduleType: 'at',
       running: false,
       runningStartedAt: undefined,
@@ -120,7 +120,7 @@ describe('tasks-store', () => {
 
     expect(loaded.tasks.malformedFields).toMatchObject({
       id: 'malformed',
-      filePath: '/tmp/malformed.task.md',
+      filePath: '/__automations__/malformed.automation.md',
       scheduleType: 'cron',
       running: false,
       runningStartedAt: undefined,
@@ -173,7 +173,7 @@ describe('tasks-store', () => {
           tasks: {
             task: {
               id: 'task',
-              filePath: '/tmp/task.task.md',
+              filePath: '/__automations__/task.automation.md',
               scheduleType: 'at',
               lastRunAt: '1',
               oneTimeResolvedAt: '1',
@@ -190,7 +190,7 @@ describe('tasks-store', () => {
       tasks: {
         task: {
           id: 'task',
-          filePath: '/tmp/task.task.md',
+          filePath: '/__automations__/task.automation.md',
           scheduleType: 'at',
           running: false,
           lastRunAt: undefined,

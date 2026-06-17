@@ -3,12 +3,10 @@ import { IconButton } from '@neon-pilot/extensions/ui';
 
 export function AttachFilesComposerControl({
   controlContext,
-  buttonContext,
 }: {
-  controlContext?: ComposerControlContext;
-  buttonContext: ComposerControlContext;
+  controlContext: ComposerControlContext;
 }) {
-  const context = controlContext ?? buttonContext;
+  const context = controlContext;
   const handleOpenFilePicker = () => {
     context.openFilePicker();
   };

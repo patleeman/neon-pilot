@@ -3424,7 +3424,7 @@ describe('conversation auto mode', () => {
     expect(finalState.mission?.tasks[1].status).toBe('pending');
   });
 
-  it('legacy enabled:true maps to mode nudge with backward compat', async () => {
+  it('ignores auto mode entries without an explicit mode', async () => {
     const appendCustomEntry = vi.fn();
 
     setLiveEntry('session-legacy', {
@@ -3456,8 +3456,8 @@ describe('conversation auto mode', () => {
     });
 
     const state = readLiveSessionAutoModeState('session-legacy');
-    expect(state.mode).toBe('nudge');
-    expect(state.enabled).toBe(true);
+    expect(state.mode).toBe('manual');
+    expect(state.enabled).toBe(false);
   });
 });
 

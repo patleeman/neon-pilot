@@ -653,7 +653,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
               <ComposerButtonHost
                 key={`${control.extensionId}:${control.id}`}
                 registration={control}
-                buttonContext={{ ...composerControlContext, renderMode: 'inline' }}
+                controlContext={{ ...composerControlContext, renderMode: 'inline' }}
               />
             ))}
             <CoreDrawingControl
@@ -696,8 +696,8 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
               />
             )}
             <ConversationPreferencesRow
-              composerButtons={visiblePreferenceControls}
-              composerButtonContext={composerControlContext}
+              composerControls={visiblePreferenceControls}
+              composerControlContext={composerControlContext}
               inlineLimit={getComposerPreferenceInlineLimit(composerShellWidth)}
             />
           </div>

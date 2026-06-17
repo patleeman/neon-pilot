@@ -1,11 +1,10 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { join, resolve } from 'path';
 
 import {
   createProjectActivityEntry,
   type ProjectActivityEntryDocument,
   type ProjectActivityNotificationState,
-  readProjectActivityEntry,
 } from './project-artifacts.js';
 import { getStateRoot } from './runtime/paths.js';
 import { openSqliteDatabase, type SqliteDatabase } from './sqlite.js';
@@ -64,11 +63,6 @@ export function validateActivityId(activityId: string): void {
 export function resolveProfileActivityStateDir(options: ResolveActivityOptions): string {
   validateProfileName(options.profile);
   return join(getActivityStateRoot(options.stateRoot), 'pi-agent', 'state', 'activity', options.profile);
-}
-
-function resolveLegacyProfileActivityStateDir(options: ResolveActivityOptions): string {
-  validateProfileName(options.profile);
-  return join(getActivityStateRoot(options.stateRoot), 'pi-agent', 'state', 'inbox', options.profile);
 }
 
 export function resolveProfileActivityDir(options: ResolveActivityOptions): string {
@@ -156,24 +150,6 @@ function serializeActivityEntry(entry: ProjectActivityEntryDocument): string {
   });
 }
 
-function hasLegacyMarkdownActivityState(options: ResolveActivityOptions): boolean {
-  const legacyReadStatePath = join(resolveLegacyProfileActivityStateDir(options), 'read-state.json');
-  if (existsSync(legacyReadStatePath)) {
-    return true;
-  }
-
-  const legacyActivityDir = join(resolveLegacyProfileActivityStateDir(options), 'activities');
-  if (!existsSync(legacyActivityDir)) {
-    return false;
-  }
-
-  return readdirSync(legacyActivityDir, { withFileTypes: true }).some((entry) => entry.isFile() && entry.name.endsWith('.md'));
-}
-
-function hasLegacyActivityDb(options: ResolveActivityOptions): boolean {
-  return existsSync(join(resolveLegacyProfileActivityStateDir(options), 'runtime.db'));
-}
-
 function openActivityDb(options: ResolveActivityOptions, create = false): SqliteDatabase | null {
   const dbPath = resolveProfileActivityDbPath(options);
   const cached = runtimeDbCache.get(dbPath);
@@ -181,7 +157,7 @@ function openActivityDb(options: ResolveActivityOptions, create = false): Sqlite
     return cached;
   }
 
-  const shouldCreate = create || existsSync(dbPath) || hasLegacyActivityDb(options) || hasLegacyMarkdownActivityState(options);
+  const shouldCreate = create || existsSync(dbPath);
   if (!shouldCreate) {
     return null;
   }
@@ -208,144 +184,8 @@ function openActivityDb(options: ResolveActivityOptions, create = false): Sqlite
     PRAGMA user_version = 1;
   `);
 
-  migrateLegacyActivityStorage(db, options);
   runtimeDbCache.set(dbPath, db);
   return db;
-}
-
-function migrateLegacyActivityStorage(db: SqliteDatabase, options: ResolveActivityOptions): void {
-  const legacyStateDir = resolveLegacyProfileActivityStateDir(options);
-  const legacyDbPath = join(legacyStateDir, 'runtime.db');
-  const legacyActivityDir = join(legacyStateDir, 'activities');
-  const legacyReadStatePath = join(legacyStateDir, 'read-state.json');
-  const insertActivity = db.prepare(`
-    INSERT OR REPLACE INTO activity_entries (id, created_at, entry_json)
-    VALUES (?, ?, ?)
-  `);
-  const insertReadState = db.prepare(`
-    INSERT OR IGNORE INTO activity_read_state (activity_id)
-    VALUES (?)
-  `);
-
-  const activityEntriesToInsert: ProjectActivityEntryDocument[] = [];
-  const activityFilesToDelete: string[] = [];
-  const readStateIdsToInsert: string[] = [];
-  let deleteLegacyReadState = false;
-  let deleteLegacyDb = false;
-
-  if (existsSync(legacyDbPath)) {
-    const legacyDb = openSqliteDatabase(legacyDbPath);
-    try {
-      const legacyRows = legacyDb
-        .prepare(
-          `
-        SELECT id, created_at, entry_json
-        FROM activity_entries
-        ORDER BY created_at DESC, id DESC
-      `,
-        )
-        .all() as StoredActivityRow[];
-      for (const row of legacyRows) {
-        try {
-          activityEntriesToInsert.push(parseStoredActivityEntry(row.entry_json, row.id));
-        } catch {
-          continue;
-        }
-      }
-    } catch {
-      // Ignore malformed legacy sqlite rows and preserve what we can from markdown state below.
-    }
-
-    try {
-      const rows = legacyDb
-        .prepare(
-          `
-        SELECT activity_id
-        FROM activity_read_state
-        ORDER BY activity_id ASC
-      `,
-        )
-        .all() as Array<{ activity_id: string }>;
-      readStateIdsToInsert.push(...rows.map((row) => row.activity_id));
-    } catch {
-      // Ignore missing legacy read-state tables.
-    }
-
-    legacyDb.close();
-    deleteLegacyDb = true;
-  }
-
-  if (existsSync(legacyActivityDir)) {
-    for (const activityFile of readdirSync(legacyActivityDir, { withFileTypes: true })) {
-      if (!activityFile.isFile() || !activityFile.name.endsWith('.md')) {
-        continue;
-      }
-
-      const path = join(legacyActivityDir, activityFile.name);
-
-      try {
-        const entry = readProjectActivityEntry(path);
-        validateActivityId(entry.id);
-        activityEntriesToInsert.push(entry);
-        activityFilesToDelete.push(path);
-      } catch {
-        continue;
-      }
-    }
-  }
-
-  if (existsSync(legacyReadStatePath)) {
-    try {
-      const parsed = JSON.parse(readFileSync(legacyReadStatePath, 'utf-8')) as unknown;
-      if (Array.isArray(parsed)) {
-        readStateIdsToInsert.push(
-          ...parsed
-            .filter((value): value is string => typeof value === 'string')
-            .map((value) => value.trim())
-            .filter((value) => value.length > 0),
-        );
-        deleteLegacyReadState = true;
-      }
-    } catch {
-      // Ignore malformed legacy read-state files and leave them in place.
-    }
-  }
-
-  if (activityEntriesToInsert.length > 0 || readStateIdsToInsert.length > 0) {
-    const dedupedEntries = new Map<string, ProjectActivityEntryDocument>();
-    for (const entry of activityEntriesToInsert) {
-      const existing = dedupedEntries.get(entry.id);
-      if (!existing || entry.createdAt >= existing.createdAt) {
-        dedupedEntries.set(entry.id, entry);
-      }
-    }
-
-    const tx = db.transaction((entries: ProjectActivityEntryDocument[], readStateIds: string[]) => {
-      for (const entry of entries) {
-        insertActivity.run(entry.id, entry.createdAt, serializeActivityEntry(entry));
-      }
-
-      for (const activityId of normalizeReadStateIds(readStateIds)) {
-        insertReadState.run(activityId);
-      }
-    });
-
-    tx([...dedupedEntries.values()], readStateIdsToInsert);
-  }
-
-  for (const path of activityFilesToDelete) {
-    rmSync(path, { force: true });
-  }
-
-  if (deleteLegacyReadState) {
-    rmSync(legacyReadStatePath, { force: true });
-  }
-
-  if (deleteLegacyDb) {
-    rmSync(legacyDbPath, { force: true });
-    rmSync(`${legacyDbPath}-wal`, { force: true });
-    rmSync(`${legacyDbPath}-shm`, { force: true });
-  }
 }
 
 function selectActivityRows(options: ResolveActivityOptions): StoredActivityRow[] {

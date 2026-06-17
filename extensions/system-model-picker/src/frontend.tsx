@@ -674,16 +674,14 @@ function Chevron({ className }: { className?: string }) {
 export function ModelPreferencesComposerControl({
   pa,
   controlContext,
-  buttonContext,
 }: {
   pa: {
     commands?: { execute(command: string, args?: unknown): Promise<boolean> };
     extensions: { callAction(extensionId: string, actionId: string, input?: unknown): Promise<unknown> };
   };
-  controlContext?: ComposerControlContext;
-  buttonContext: ComposerControlContext;
+  controlContext: ComposerControlContext;
 }) {
-  const context = controlContext ?? buttonContext;
+  const context = controlContext;
   useCloseComposerMenusOnOutsideInteraction();
   const variant = context.renderMode;
   const selectedModel = resolveModel(context.models, context.currentModel);

@@ -42,10 +42,6 @@ export const buildLiveSessionResourceOptionsForRuntime = (..._args: unknown[]): 
 export const querySessionSuggestedPointerIds = (_sessionId: string): Promise<Set<string>> => hostResolved();
 export const getConversationMeta = (..._args: unknown[]): unknown => hostResolved();
 export const getConversationBlocks = (..._args: unknown[]): unknown => hostResolved();
-/** @deprecated Use getConversationMeta. */
-export const readSessionMeta = (..._args: unknown[]): unknown => hostResolved();
-/** @deprecated Use getConversationBlocks. */
-export const readSessionBlocks = (..._args: unknown[]): unknown => hostResolved();
 export const readConversationSummary = (..._args: unknown[]): unknown => hostResolved();
 export const searchIndexedConversationDocuments = (..._args: unknown[]): unknown => hostResolved();
 export const scheduleConversationSearchIndexing = (..._args: unknown[]): unknown => hostResolved();

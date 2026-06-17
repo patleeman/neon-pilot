@@ -12,7 +12,7 @@ import {
 import { CORE_KEYBOARD_SHORTCUT_REGISTRATIONS, DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS } from '../../../src/keyboard-shortcuts';
 import { api } from '../client/api';
 import type { NeonPilotDesktopBridge } from '../desktop/desktopBridge';
-import { listHostCommands, normalizeLegacyCommand } from '../extensions/commands';
+import { listHostCommands } from '../extensions/commands';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -426,20 +426,19 @@ describe('CommandsSettingsSection', () => {
     vi.restoreAllMocks();
   });
 
-  it('maps every host-backed desktop shortcut registration through the shared command normalizer', () => {
+  it('maps every host-backed desktop shortcut registration without legacy command aliases', () => {
     const hostCommandIds = new Set(listHostCommands().map((command) => command.id));
     const desktopNativeCommands = new Set(['core.showApp', 'core.quit']);
 
     for (const registration of CORE_KEYBOARD_SHORTCUT_REGISTRATIONS) {
       if (desktopNativeCommands.has(registration.command)) continue;
 
-      const normalized = normalizeLegacyCommand(registration.command);
-      expect(hostCommandIds.has(normalized.command), registration.id).toBe(true);
+      expect(hostCommandIds.has(registration.command), registration.id).toBe(true);
       expect(
         desktopShortcutIdForHostCommand({
-          id: normalized.command,
+          id: registration.command,
           extensionId: 'host',
-          args: normalized.args,
+          args: registration.args,
         }),
         registration.id,
       ).toBe(registration.id);

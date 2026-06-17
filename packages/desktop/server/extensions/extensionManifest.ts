@@ -3,10 +3,10 @@ export const EXTENSION_MANIFEST_VERSION = 2;
 export const EXTENSION_PACKAGE_TYPES = ['user', 'system'] as const;
 export type ExtensionPackageType = (typeof EXTENSION_PACKAGE_TYPES)[number];
 
-export const EXTENSION_PLACEMENTS = ['left', 'main', 'right', 'conversation', 'command', 'slash'] as const;
+export const EXTENSION_PLACEMENTS = ['left', 'main', 'right', 'conversation'] as const;
 export type ExtensionPlacement = (typeof EXTENSION_PLACEMENTS)[number];
 
-export const EXTENSION_SURFACE_KINDS = ['navItem', 'navSection', 'page', 'toolPanel', 'inlineAction', 'command', 'slashCommand'] as const;
+export const EXTENSION_SURFACE_KINDS = ['navItem', 'navSection', 'page', 'toolPanel', 'inlineAction'] as const;
 export type ExtensionSurfaceKind = (typeof EXTENSION_SURFACE_KINDS)[number];
 
 export const EXTENSION_RIGHT_SURFACE_SCOPES = ['global', 'conversation', 'workspace', 'selection'] as const;
@@ -50,9 +50,6 @@ export type ExtensionIconName = (typeof EXTENSION_ICON_NAMES)[number];
 export const EXTENSION_PERMISSIONS = [
   'agent:run',
   'agent:conversations',
-  'runs:read',
-  'runs:start',
-  'runs:cancel',
   'executions:read',
   'executions:start',
   'executions:cancel',
@@ -138,7 +135,6 @@ export interface ExtensionContributions {
   draftConversationCreate?: ExtensionDraftConversationCreateContribution[];
   newConversationPanels?: ExtensionNewConversationPanelContribution[];
   composerControls?: ExtensionComposerControlContribution[];
-  composerButtons?: ExtensionComposerButtonContribution[];
   composerInputTools?: ExtensionComposerInputToolContribution[];
   toolbarActions?: ExtensionToolbarActionContribution[];
   contextMenus?: ExtensionContextMenuContribution[];
@@ -275,15 +271,6 @@ export interface ExtensionComposerControlContribution {
   component: string;
   title?: string;
   slot?: 'leading' | 'preferences' | 'actions';
-  when?: string;
-  priority?: number;
-}
-
-export interface ExtensionComposerButtonContribution {
-  id: string;
-  component: string;
-  title?: string;
-  placement?: 'afterModelPicker' | 'actions';
   when?: string;
   priority?: number;
 }
@@ -530,8 +517,6 @@ interface ExtensionSearchProviderContribution {
 export interface ExtensionHostComponentReference {
   host: string;
   props?: Record<string, unknown>;
-  /** Legacy shorthand for overrides.wrapper. */
-  override?: string;
   /** Extension frontend exports used to customize supported host override slots. */
   overrides?: Record<string, string>;
 }
@@ -718,9 +703,7 @@ export type ExtensionSurface =
   | ExtensionLeftNavSectionSurface
   | ExtensionMainPageSurface
   | ExtensionRightToolPanelSurface
-  | ExtensionConversationInlineActionSurface
-  | ExtensionCommandSurface
-  | ExtensionSlashCommandSurface;
+  | ExtensionConversationInlineActionSurface;
 
 interface ExtensionSurfaceBase {
   id: string;
@@ -773,22 +756,6 @@ export interface ExtensionConversationInlineActionSurface extends ExtensionSurfa
   action: string;
   icon?: ExtensionIconName;
   when?: 'message' | 'selection' | 'composer';
-}
-
-export interface ExtensionCommandSurface extends ExtensionSurfaceBase {
-  placement: 'command';
-  kind: 'command';
-  title: string;
-  action: string;
-  icon?: ExtensionIconName;
-}
-
-export interface ExtensionSlashCommandSurface extends ExtensionSurfaceBase {
-  placement: 'slash';
-  kind: 'slashCommand';
-  name: string;
-  description: string;
-  action: string;
 }
 
 export interface ExtensionBackend {

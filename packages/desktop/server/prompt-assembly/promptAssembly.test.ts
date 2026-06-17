@@ -200,8 +200,8 @@ describe('buildPromptAssemblyPlan', () => {
     writeFileSync(promptTemplatePath, '# Summary\n');
 
     const { buildPromptAssemblyPlan, buildPromptAssemblyPlanAsync } = await import('./promptAssembly.js');
-    const asyncPlan = await buildPromptAssemblyPlanAsync({ profile: 'test', repoRoot: root, modelRef: 'openai/gpt-4o' });
-    const plan = buildPromptAssemblyPlan({ profile: 'test', repoRoot: root, modelRef: 'openai/gpt-4o' });
+    const asyncPlan = await buildPromptAssemblyPlanAsync({ runtimeScope: 'test', repoRoot: root, modelRef: 'openai/gpt-4o' });
+    const plan = buildPromptAssemblyPlan({ runtimeScope: 'test', repoRoot: root, modelRef: 'openai/gpt-4o' });
 
     expect(plan.skills.skillPaths).toEqual(
       expect.arrayContaining([
@@ -239,7 +239,7 @@ describe('buildPromptAssemblyPlan', () => {
     writeFileSync(promptTemplatePath, '# Summary\n');
 
     const { buildPromptAssemblyPlanAsync } = await import('./promptAssembly.js');
-    const asyncPlan = await buildPromptAssemblyPlanAsync({ profile: 'test', repoRoot: root, modelRef: 'openai/gpt-4o' });
+    const asyncPlan = await buildPromptAssemblyPlanAsync({ runtimeScope: 'test', repoRoot: root, modelRef: 'openai/gpt-4o' });
 
     expect(asyncPlan.diagnostics.filter((diagnostic) => diagnostic.code === 'prompt-assembly-provider-invalid-item')).toHaveLength(2);
     promptAssemblyHooks = [];

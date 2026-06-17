@@ -44,15 +44,6 @@ export interface DeferredResumeStateFile {
   resumes: Record<string, DeferredResumeRecord>;
 }
 
-interface LegacyDeferredResumeRecord {
-  id: string;
-  sessionFile: string;
-  prompt: string;
-  dueAt: string;
-  createdAt: string;
-  attempts: number;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -322,11 +313,9 @@ function normalizeDocument(value: unknown): DeferredResumeStateFile | null {
 
   const resumes: Record<string, DeferredResumeRecord> = {};
   for (const [id, record] of Object.entries(value.resumes)) {
-    const legacyRecord = record as LegacyDeferredResumeRecord | undefined;
     const parsedRecord = parseRecord({
       id,
-      ...legacyRecord,
-      status: isRecord(record) && record.status ? record.status : 'scheduled',
+      ...(isRecord(record) ? record : {}),
     });
     if (!parsedRecord) {
       continue;
@@ -399,11 +388,7 @@ export function loadDeferredResumeState(path = resolveDeferredResumeStateFile())
 
     const resumes: Record<string, DeferredResumeRecord> = {};
     for (const value of Object.values(parsed.resumes)) {
-      const legacyRecord = value as LegacyDeferredResumeRecord | undefined;
-      const parsedRecord = parseRecord({
-        ...legacyRecord,
-        status: isRecord(value) && value.status ? value.status : 'scheduled',
-      });
+      const parsedRecord = parseRecord(value);
       if (!parsedRecord) {
         continue;
       }

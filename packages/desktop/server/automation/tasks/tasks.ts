@@ -26,7 +26,6 @@ import {
 import {
   appendAutomationActivityEntry,
   deleteStoredAutomation,
-  ensureLegacyTaskImports,
   getStoredAutomation,
   listStoredAutomations,
   loadAutomationRuntimeStateMap,
@@ -973,11 +972,6 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
     }
 
     try {
-      ensureLegacyTaskImports({
-        taskDir,
-        defaultTimeoutSeconds,
-        dbPath: runtimeDbPath,
-      });
       const task = getStoredAutomation(taskId, { dbPath: runtimeDbPath });
       if (!task) {
         context.logger.warn(`ignoring requested task run for missing task id=${taskId}`);
@@ -1019,12 +1013,6 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
   }): Promise<void> => {
     const recoveryTime = now();
     const recoveryIso = recoveryTime.toISOString();
-    ensureLegacyTaskImports({
-      taskDir,
-      defaultTimeoutSeconds,
-      dbPath: runtimeDbPath,
-    });
-
     for (const task of listStoredAutomations({ dbPath: runtimeDbPath })) {
       const record = ensureTaskRecord(taskState, task);
       if (!task.enabled || !record.activeRunId || activeRuns.has(task.key)) {
@@ -1114,20 +1102,11 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       state.lastTickAt = nowIso;
       state.lastError = undefined;
 
-      const importResult = ensureLegacyTaskImports({
-        taskDir,
-        defaultTimeoutSeconds,
-        dbPath: runtimeDbPath,
-      });
       const parsedTasks = listStoredAutomations({ dbPath: runtimeDbPath });
       const activeTaskKeys = new Set(parsedTasks.map((task) => task.key));
 
       state.knownTasks = parsedTasks.length;
-      state.parseErrors = importResult.parseErrors.length;
-
-      for (const issue of importResult.parseErrors) {
-        context.logger.warn(`invalid task file ${issue.filePath}: ${issue.error}`);
-      }
+      state.parseErrors = 0;
 
       reconcileDeletedTaskState(activeTaskKeys);
 
@@ -1293,11 +1272,6 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       mkdirSync(taskDir, { recursive: true, mode: 0o700 });
       mkdirSync(durableRunsRoot, { recursive: true, mode: 0o700 });
 
-      ensureLegacyTaskImports({
-        taskDir,
-        defaultTimeoutSeconds,
-        dbPath: runtimeDbPath,
-      });
       taskState = createEmptyTaskState();
       taskState.tasks = loadAutomationRuntimeStateMap({ dbPath: runtimeDbPath });
       taskState.lastEvaluatedAt = loadAutomationSchedulerState({ dbPath: runtimeDbPath }).lastEvaluatedAt;

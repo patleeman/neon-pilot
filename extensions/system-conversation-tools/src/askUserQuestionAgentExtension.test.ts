@@ -56,7 +56,6 @@ describe('ask user question agent extension', () => {
     expect(tool.parameters).toMatchObject({
       type: 'object',
       properties: {
-        question: { type: 'string' },
         questions: {
           type: 'array',
           minItems: 1,
@@ -86,7 +85,7 @@ describe('ask user question agent extension', () => {
             options: [' staging ', 'prod'],
           },
           {
-            question: ' Which notifications should I enable? ',
+            label: ' Which notifications should I enable? ',
             style: 'checkbox',
             options: [
               { value: 'email', label: 'Email' },
@@ -130,16 +129,21 @@ describe('ask user question agent extension', () => {
     });
   });
 
-  it('still supports the legacy single-question form', async () => {
+  it('supports single-question structured payloads', async () => {
     const tool = registerAskUserQuestionTool();
     const ctx = createToolContext();
 
     const result = await tool.execute(
       'tool-2',
       {
-        question: ' Which environment should I deploy to? ',
         details: ' Pick one target so I can continue. ',
-        options: [' staging ', 'prod', 'prod'],
+        questions: [
+          {
+            label: ' Which environment should I deploy to? ',
+            details: ' Pick one target so I can continue. ',
+            options: [' staging ', 'prod', 'prod'],
+          },
+        ],
       },
       undefined,
       undefined,
@@ -162,7 +166,48 @@ describe('ask user question agent extension', () => {
     });
   });
 
-  it('rejects invalid structured questions', async () => {
+  it('rejects payloads without structured questions', async () => {
+    const tool = registerAskUserQuestionTool();
+    const ctx = createToolContext();
+
+    await expect(
+      tool.execute(
+        'tool-3',
+        {
+          question: 'Which environment should I deploy to?',
+          options: ['staging', 'prod'],
+        },
+        undefined,
+        undefined,
+        ctx,
+      ),
+    ).rejects.toThrow('questions is required.');
+  });
+
+  it('rejects structured questions without labels', async () => {
+    const tool = registerAskUserQuestionTool();
+    const ctx = createToolContext();
+
+    await expect(
+      tool.execute(
+        'tool-3',
+        {
+          questions: [
+            {
+              question: 'Missing label alias',
+              style: 'radio',
+              options: ['yes', 'no'],
+            },
+          ],
+        },
+        undefined,
+        undefined,
+        ctx,
+      ),
+    ).rejects.toThrow('questions[0] requires label.');
+  });
+
+  it('rejects structured questions without options', async () => {
     const tool = registerAskUserQuestionTool();
     const ctx = createToolContext();
 

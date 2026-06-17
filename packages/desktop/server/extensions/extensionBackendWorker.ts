@@ -189,10 +189,8 @@ function createWorkerBackendContext(
   return {
     extensionId,
     runtimeScope,
-    profile: runtimeScope,
     runtimeDir,
     runtimeSettingsFilePath,
-    profileSettingsFilePath: runtimeSettingsFilePath,
     ...(options.toolContext
       ? {
           toolContext: {
@@ -325,14 +323,14 @@ function createWorkerBackendContext(
         callHostCapability(extensionId, 'conversations', 'prune', input),
       metadata: {
         get: (input: { conversationId: string; namespace?: string }) =>
-          callHostCapability(extensionId, 'conversations', 'metadata.get', { ...input, profile: runtimeScope }),
+          callHostCapability(extensionId, 'conversations', 'metadata.get', { ...input, runtimeScope }),
         set: (input: { conversationId: string; namespace?: string; values: Record<string, unknown> }) =>
-          callHostCapability(extensionId, 'conversations', 'metadata.set', { ...input, profile: runtimeScope }),
+          callHostCapability(extensionId, 'conversations', 'metadata.set', { ...input, runtimeScope }),
         query: (input: {
           namespace?: string;
           where?: Array<{ key: string; op?: 'eq' | 'neq' | 'in' | 'exists'; value?: unknown }>;
           limit?: number;
-        }) => callHostCapability(extensionId, 'conversations', 'metadata.query', { ...input, profile: runtimeScope }),
+        }) => callHostCapability(extensionId, 'conversations', 'metadata.query', { ...input, runtimeScope }),
       },
     },
     extensions: {

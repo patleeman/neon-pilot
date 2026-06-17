@@ -1,12 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { createServerRouteContext } from './routeContext.js';
 
 describe('createServerRouteContext', () => {
-  beforeEach(() => {
-    process.env.NEON_PILOT_PROFILES_ROOT = '/tmp/test-runtime-config';
-  });
-
   it('maps the provided route context callbacks and values', async () => {
     const options = {
       repoRoot: '/repo',
@@ -34,7 +30,7 @@ describe('createServerRouteContext', () => {
           name: 'agent-browser',
           source: 'shared',
           description: 'Browser automation',
-          path: '/knowledge/_skills/agent-browser/SKILL.md',
+          path: '/knowledge/skills/agent-browser/SKILL.md',
         },
       ],
       listProfileAgentItems: () => [{ source: 'shared', path: '/knowledge/_profiles/assistant/AGENTS.md' }],
@@ -46,7 +42,7 @@ describe('createServerRouteContext', () => {
 
     expect(context.getRuntimeScope()).toBe('shared');
     expect(context.getRepoRoot()).toBe('/repo');
-    expect(context.getRuntimeConfigRoot()).toBe('/tmp/test-runtime-config');
+    expect(context.getRuntimeConfigRoot()).toMatch(/\/config\/runtime$/);
     expect(context.getSettingsFile()).toBe('/repo/settings.json');
     expect(context.getAuthFile()).toBe('/repo/auth.json');
     expect(context.getStateRoot()).toBe('/state');

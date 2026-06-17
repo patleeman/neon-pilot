@@ -8,8 +8,6 @@ import codexCompactionExtension from './compaction.js';
 
 interface ApplyPatchInput {
   patch?: string;
-  path?: string;
-  edits?: Array<{ oldText: string; newText: string }>;
 }
 
 type FilePatch =
@@ -76,23 +74,14 @@ interface ToolExecutionResult {
 export default function codexCompatibilityExtension(pi: ExtensionAPI): void {
   const activateCodexTools = (ctx: {
     modelProfile?: { kind?: string; profile?: { id?: string } };
-    getActiveTools?: () => string[];
-    setActiveTools?: (toolNames: string[]) => void;
     addActiveTools?: (toolNames: string[]) => void;
     removeActiveTools?: (toolNames: string[]) => void;
   }): void => {
     if (ctx.modelProfile?.kind !== 'resolved' || ctx.modelProfile.profile?.id !== 'codex-compatible') {
       return;
     }
-    if (ctx.addActiveTools && ctx.removeActiveTools) {
-      ctx.addActiveTools(['apply_patch']);
-      ctx.removeActiveTools(['write', 'edit']);
-      return;
-    }
-
-    // Backward-compatible path for older runtimes that only expose setActiveTools.
-    const activeTools = ctx.getActiveTools?.() ?? [];
-    ctx.setActiveTools?.([...new Set([...activeTools.filter((tool) => tool !== 'write' && tool !== 'edit'), 'apply_patch'])]);
+    ctx.addActiveTools?.(['apply_patch']);
+    ctx.removeActiveTools?.(['write', 'edit']);
   };
 
   codexCompactionExtension(pi);
@@ -414,22 +403,6 @@ function applyFilePatch(filePatch: FilePatch, cwd: string): { result: ApplyResul
   };
 }
 
-function legacyEditsToPatch(input: ApplyPatchInput): string {
-  const path = input.path?.trim();
-  if (!path) throw new Error('Either patch or path is required.');
-  if (!input.edits?.length) throw new Error('Either patch or edits are required.');
-  return [
-    '*** Begin Patch',
-    `*** Update File: ${path}`,
-    ...input.edits.flatMap((edit) => [
-      '@@',
-      ...edit.oldText.split('\n').map((line) => `-${line}`),
-      ...edit.newText.split('\n').map((line) => `+${line}`),
-    ]),
-    '*** End Patch',
-  ].join('\n');
-}
-
 function formatResults(results: ApplyResult[]): string {
   return [
     `Applied patch to ${results.length} file${results.length === 1 ? '' : 's'}.`,
@@ -446,7 +419,8 @@ function formatResults(results: ApplyResult[]): string {
 
 function applyPatchesFromInput(input: ApplyPatchInput, ctx: ToolContext): ApplyPatchOutcome {
   const cwd = readCwd(ctx);
-  const patch = input.patch?.trim() ?? legacyEditsToPatch(input);
+  const patch = input.patch?.trim();
+  if (!patch) throw new Error('patch is required.');
   const filePatches = parsePatch(patch);
 
   // Preflight: validate every operation before applying any.
@@ -460,7 +434,6 @@ function applyPatchesFromInput(input: ApplyPatchInput, ctx: ToolContext): ApplyP
 }
 
 export async function applyPatch(input: ApplyPatchInput, ctx: ToolContext) {
-  if (!input.patch?.trim()) throw new Error('patch is required.');
   const outcome = applyPatchesFromInput(input, ctx);
   return { text: formatResults(outcome.results), details: outcome };
 }

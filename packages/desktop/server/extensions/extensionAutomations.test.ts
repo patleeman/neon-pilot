@@ -123,7 +123,7 @@ describe('extensionAutomations', () => {
     });
 
     expect(daemon.createStoredAutomation).toHaveBeenCalledWith(
-      expect.objectContaining({ profile: 'shared', title: 'New', targetType: 'conversation', prompt: 'Go' }),
+      expect.objectContaining({ title: 'New', targetType: 'conversation', prompt: 'Go' }),
     );
     expect(threads.applyScheduledTaskThreadBinding).toHaveBeenCalledWith(
       'task-1',
@@ -138,7 +138,7 @@ describe('extensionAutomations', () => {
     daemon.deleteStoredAutomation.mockReturnValue(true);
 
     await expect(createExtensionAutomationsCapability(context).delete('task-1')).resolves.toEqual({ ok: true, deleted: true });
-    expect(daemon.deleteStoredAutomation).toHaveBeenCalledWith('task-1', { profile: 'shared' });
+    expect(daemon.deleteStoredAutomation).toHaveBeenCalledWith('task-1');
     expect(core.clearTaskCallbackBinding).toHaveBeenCalledWith({ profile: 'shared', taskId: 'task-1' });
     expect(middleware.invalidateAppTopics).toHaveBeenCalledWith('tasks');
   });

@@ -24,22 +24,9 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "question": {
-              "type": "string",
-              "description": "Legacy single-question form. Use questions[] for multiple questions or check-style questions."
-            },
             "details": {
               "type": "string",
-              "description": "Optional overall context, or legacy single-question context when question is used alone."
-            },
-            "options": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "maxItems": 6,
-              "description": "Legacy quick-reply options for a single-question prompt."
+              "description": "Optional overall context for the prompt."
             },
             "questions": {
               "type": "array",
@@ -56,10 +43,6 @@
                   "label": {
                     "type": "string",
                     "description": "User-facing question label."
-                  },
-                  "question": {
-                    "type": "string",
-                    "description": "Alias for label."
                   },
                   "details": {
                     "type": "string",

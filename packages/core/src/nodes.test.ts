@@ -30,7 +30,6 @@ function createTempStateRoot(): string {
   tempDirs.push(dir);
   process.env.NEON_PILOT_STATE_ROOT = dir;
   process.env.NEON_PILOT_KNOWLEDGE_ROOT = join(dir, 'sync');
-  process.env.NEON_PILOT_PROFILES_ROOT = join(dir, 'config', 'runtime');
   return dir;
 }
 
@@ -196,7 +195,7 @@ Ubuntu workstation details.
     );
 
     writeFile(
-      join(stateRoot, 'sync', '_skills', 'agent-browser', 'SKILL.md'),
+      join(stateRoot, 'sync', 'skills', 'agent-browser', 'SKILL.md'),
       `---
 name: agent-browser
 description: Automate browsers.
@@ -290,7 +289,7 @@ status: active
     expect(projectNode?.body).toContain('Ship the feature.');
 
     const skillDirs = listUnifiedSkillNodeDirs('assistant', { knowledgeRoot });
-    expect(skillDirs).toEqual([join(stateRoot, 'sync', '_skills', 'agent-browser')]);
+    expect(skillDirs).toEqual([join(stateRoot, 'sync', 'skills', 'agent-browser')]);
   });
 
   it('reports duplicate ids across notes and projects and lints references', () => {

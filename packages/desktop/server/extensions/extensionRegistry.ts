@@ -134,15 +134,11 @@ import {
   buildExtensionModelProfileRegistrations as buildExtensionModelProfileContributionRegistrations,
 } from './extensionSimpleContributions.js';
 import { buildExtensionSkillRegistrations as buildExtensionSkillRegistrationsValue } from './extensionSkillRegistrations.js';
-import {
-  buildLegacyExtensionSlashCommandRegistrations,
-  buildNativeExtensionSlashCommandRegistrations,
-} from './extensionSlashCommandRegistrations.js';
+import { buildNativeExtensionSlashCommandRegistrations } from './extensionSlashCommandRegistrations.js';
 import { buildExtensionStartupGuardResult, buildExtensionStartupMarker, parseExtensionStartupMarker } from './extensionStartupMarker.js';
 import { validateExtensionSurfaceContributions } from './extensionSurfaceValidation.js';
 import { buildExtensionToolRegistrations as buildExtensionToolContributionRegistrations } from './extensionToolContributions.js';
 import {
-  validateComposerButtonContributions,
   validateComposerControlContributions,
   validateComposerInputToolContributions,
   validateComposerShelfContributions,
@@ -467,7 +463,7 @@ export interface ExtensionToolbarActionRegistration {
   priority?: number;
 }
 
-export interface ExtensionComposerButtonRegistration {
+export interface ExtensionComposerControlRegistration {
   extensionId: string;
   id: string;
   packageType: ExtensionPackageType;
@@ -1035,10 +1031,6 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
     validateComposerControlContributions(contributes.composerControls);
   }
 
-  if (contributes.composerButtons !== undefined) {
-    validateComposerButtonContributions(contributes.composerButtons);
-  }
-
   if (contributes.composerInputTools !== undefined) {
     validateComposerInputToolContributions(contributes.composerInputTools);
   }
@@ -1344,7 +1336,6 @@ export function readExtensionSchema() {
       'draftConversationCreate',
       'newConversationPanels',
       'composerControls',
-      'composerButtons',
       'composerInputTools',
       'toolbarActions',
       'selectionActions',
@@ -1407,27 +1398,11 @@ export function listExtensionMentionRegistrations(): ExtensionMentionRegistratio
 }
 
 export function listExtensionCommandRegistrations(): ExtensionCommandRegistration[] {
-  const snapshot = readExtensionRegistrySnapshot();
-  const legacy = snapshot.surfaces.flatMap((surface) =>
-    surface.kind === 'command'
-      ? [
-          {
-            extensionId: surface.extensionId,
-            surfaceId: surface.id,
-            packageType: surface.packageType,
-            title: surface.title,
-            action: surface.action,
-            ...(surface.icon ? { icon: surface.icon } : {}),
-          },
-        ]
-      : [],
-  );
-  const native = snapshot.extensions.flatMap((extension) => {
+  return readExtensionRegistrySnapshot().extensions.flatMap((extension) => {
     const contributed = buildExtensionContributedCommandRegistrations(extension);
     const autoCommands = buildExtensionAutoCommandRegistrations(extension);
     return [...contributed, ...autoCommands];
   });
-  return [...legacy, ...native];
 }
 
 export function listExtensionCliCommandRegistrations(): ExtensionCliCommandRegistration[] {
@@ -1484,9 +1459,7 @@ export function findExtensionCommandRegistration(commandId: string): ExtensionCo
 
 export function listExtensionSlashCommandRegistrations(): ExtensionSlashCommandRegistration[] {
   const snapshot = readExtensionRegistrySnapshot();
-  const legacy = buildLegacyExtensionSlashCommandRegistrations(snapshot.surfaces);
-  const native = buildNativeExtensionSlashCommandRegistrations(snapshot.extensions);
-  return [...legacy, ...native];
+  return buildNativeExtensionSlashCommandRegistrations(snapshot.extensions);
 }
 
 export function listExtensionPromptContextProviderRegistrations(
@@ -1697,10 +1670,10 @@ export function listExtensionNewConversationPanelRegistrations(
     .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
 }
 
-export function listExtensionComposerButtonRegistrations(stateRoot: string = getStateRoot()): ExtensionComposerButtonRegistration[] {
+export function listExtensionComposerControlRegistrations(stateRoot: string = getStateRoot()): ExtensionComposerControlRegistration[] {
   return listEnabledExtensionEntries(stateRoot)
     .flatMap((entry) => {
-      const controls = (entry.manifest.contributes?.composerControls ?? []).flatMap((control): ExtensionComposerButtonRegistration[] => {
+      const controls = (entry.manifest.contributes?.composerControls ?? []).flatMap((control): ExtensionComposerControlRegistration[] => {
         const id = control.id.trim();
         const component = control.component.trim();
         if (!id || !component) return [];
@@ -1718,25 +1691,7 @@ export function listExtensionComposerButtonRegistrations(stateRoot: string = get
           },
         ];
       });
-      const buttons = (entry.manifest.contributes?.composerButtons ?? []).flatMap((button): ExtensionComposerButtonRegistration[] => {
-        const id = button.id.trim();
-        const component = button.component.trim();
-        if (!id || !component) return [];
-        return [
-          {
-            extensionId: entry.manifest.id,
-            id,
-            packageType: entry.manifest.packageType ?? 'user',
-            component,
-            slot: button.placement === 'actions' ? 'actions' : 'preferences',
-            ...(button.title ? { title: button.title } : {}),
-            ...(button.when ? { when: button.when } : {}),
-            ...(typeof button.priority === 'number' ? { priority: button.priority } : {}),
-            frontendEntry: entry.manifest.frontend?.entry,
-          },
-        ];
-      });
-      return [...controls, ...buttons];
+      return controls;
     })
     .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0) || a.extensionId.localeCompare(b.extensionId) || a.id.localeCompare(b.id));
 }

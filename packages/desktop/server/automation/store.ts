@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 
 import {
   migrateWithBackup,
@@ -22,8 +22,8 @@ import {
   type AutomationActivityEntryInput,
   listAutomationActivityEntriesFromDb,
 } from './activity-store.js';
-import { parseCronExpression, type ParsedTaskDefinition, type ParsedTaskSchedule, parseTaskDefinition } from './tasks/tasks-parser.js';
-import { loadTaskState, type TaskRuntimeState } from './tasks/tasks-store.js';
+import { parseCronExpression, type ParsedTaskDefinition, type ParsedTaskSchedule } from './tasks/tasks-parser.js';
+import type { TaskRuntimeState } from './tasks/tasks-store.js';
 
 export type {
   AutomationActivityEntry,
@@ -46,7 +46,7 @@ export const DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS = 15 * 60;
 // ── Schema migrations ────────────────────────────────────────────────────────
 
 /** Current schema version for the automation database. */
-const AUTOMATION_SCHEMA_VERSION = 3;
+const AUTOMATION_SCHEMA_VERSION = 4;
 
 const AUTOMATION_MIGRATIONS: Migration[] = [
   {
@@ -126,7 +126,6 @@ const AUTOMATION_MIGRATIONS: Migration[] = [
           conversation_behavior TEXT,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
-          legacy_file_path TEXT,
           thread_mode TEXT NOT NULL DEFAULT 'dedicated',
           thread_session_file TEXT,
           thread_conversation_id TEXT
@@ -148,7 +147,6 @@ const AUTOMATION_MIGRATIONS: Migration[] = [
           'conversation_behavior',
           'created_at',
           'updated_at',
-          'legacy_file_path',
           'thread_mode',
           'thread_session_file',
           'thread_conversation_id',
@@ -224,6 +222,123 @@ const AUTOMATION_MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    version: 4,
+    description: 'Remove legacy file-backed automation import schema',
+    up: (db) => {
+      const columnNames = readTableColumnNames(db, 'automations');
+      if (columnNames.has('legacy_file_path')) {
+        safeRebuildTable({
+          db,
+          tableName: 'automations',
+          createSql: `CREATE TABLE automations (
+            id TEXT PRIMARY KEY,
+            runtime_scope TEXT NOT NULL DEFAULT 'shared',
+            title TEXT NOT NULL,
+            enabled INTEGER NOT NULL,
+            schedule_type TEXT NOT NULL,
+            cron TEXT,
+            at TEXT,
+            prompt TEXT NOT NULL,
+            cwd TEXT,
+            model_ref TEXT,
+            thinking_level TEXT,
+            timeout_seconds INTEGER NOT NULL,
+            catch_up_window_seconds INTEGER,
+            policies_json TEXT,
+            target_type TEXT NOT NULL DEFAULT 'background-agent',
+            conversation_behavior TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            thread_mode TEXT NOT NULL DEFAULT 'dedicated',
+            thread_session_file TEXT,
+            thread_conversation_id TEXT
+          )`,
+          columns: [
+            'id',
+            'runtime_scope',
+            'title',
+            'enabled',
+            'schedule_type',
+            'cron',
+            'at',
+            'prompt',
+            'cwd',
+            'model_ref',
+            'thinking_level',
+            'timeout_seconds',
+            'catch_up_window_seconds',
+            'policies_json',
+            'target_type',
+            'conversation_behavior',
+            'created_at',
+            'updated_at',
+            'thread_mode',
+            'thread_session_file',
+            'thread_conversation_id',
+          ],
+          childTableDefs: [
+            {
+              tableName: 'automation_state',
+              createSql: `CREATE TABLE automation_state (
+                automation_id TEXT PRIMARY KEY,
+                running INTEGER NOT NULL DEFAULT 0,
+                running_started_at TEXT,
+                active_run_id TEXT,
+                last_run_id TEXT,
+                last_status TEXT,
+                last_run_at TEXT,
+                last_success_at TEXT,
+                last_failure_at TEXT,
+                last_error TEXT,
+                last_log_path TEXT,
+                last_scheduled_minute TEXT,
+                last_attempt_count INTEGER,
+                one_time_resolved_at TEXT,
+                one_time_resolved_status TEXT,
+                one_time_completed_at TEXT,
+                FOREIGN KEY (automation_id) REFERENCES automations(id) ON DELETE CASCADE
+              )`,
+              columns: [
+                'automation_id',
+                'running',
+                'running_started_at',
+                'active_run_id',
+                'last_run_id',
+                'last_status',
+                'last_run_at',
+                'last_success_at',
+                'last_failure_at',
+                'last_error',
+                'last_log_path',
+                'last_scheduled_minute',
+                'last_attempt_count',
+                'one_time_resolved_at',
+                'one_time_resolved_status',
+                'one_time_completed_at',
+              ],
+            },
+            {
+              tableName: 'automation_activity',
+              createSql: `CREATE TABLE automation_activity (
+                seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                automation_id TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                payload_json TEXT,
+                FOREIGN KEY (automation_id) REFERENCES automations(id) ON DELETE CASCADE
+              )`,
+              columns: ['seq', 'automation_id', 'kind', 'created_at', 'payload_json'],
+            },
+          ],
+          validate: true,
+          strict: true,
+        });
+      }
+
+      db.exec('DROP TABLE IF EXISTS legacy_automation_imports');
+    },
+  },
 ];
 
 export interface StoredAutomation extends ParsedTaskDefinition {
@@ -235,22 +350,14 @@ export interface StoredAutomation extends ParsedTaskDefinition {
   policies: AutomationPolicy[];
   createdAt: string;
   updatedAt: string;
-  legacyFilePath?: string;
   threadMode: AutomationThreadMode;
   threadSessionFile?: string;
   threadConversationId?: string;
 }
 
-export interface LegacyAutomationImportIssue {
-  filePath: string;
-  error: string;
-}
-
 export interface AutomationMutationInput {
   id?: string;
   runtimeScope?: string;
-  /** @deprecated Legacy input accepted during migration; ignored and normalized to shared. */
-  profile?: string;
   title: string;
   enabled?: boolean;
   cron?: string | null;
@@ -289,7 +396,6 @@ type StoredAutomationRow = {
   conversation_behavior: string | null;
   created_at: string;
   updated_at: string;
-  legacy_file_path: string | null;
   thread_mode: string | null;
   thread_session_file: string | null;
   thread_conversation_id: string | null;
@@ -314,7 +420,6 @@ type AutomationStateRow = {
   one_time_completed_at: string | null;
 };
 
-const LEGACY_TASK_FILE_SUFFIX = '.task.md';
 const dbCache = new Map<string, SqliteDatabase>();
 
 /** Run a PASSIVE WAL checkpoint on all cached automation databases (non-blocking). */
@@ -456,10 +561,6 @@ function serializeAutomationPolicies(policies: AutomationPolicy[]): string {
   return JSON.stringify(normalizeAutomationPolicies(policies));
 }
 
-function automationFileName(input: { id: string; legacyFilePath?: string }): string {
-  return input.legacyFilePath ? basename(input.legacyFilePath) : `${input.id}.automation.md`;
-}
-
 function slugifyTitle(title: string): string {
   const normalized = title
     .toLowerCase()
@@ -467,16 +568,6 @@ function slugifyTitle(title: string): string {
     .replace(/^-+/, '')
     .replace(/-+$/, '');
   return normalized || 'automation';
-}
-
-function humanizeLegacyTaskTitle(id: string): string {
-  return (
-    id
-      .replace(/[-_]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .replace(/^[a-z]/, (value) => value.toUpperCase()) || id
-  );
 }
 
 function toBooleanInt(value: boolean): number {
@@ -512,7 +603,6 @@ function openAutomationDb(dbPath: string = getAutomationDbPath()): SqliteDatabas
       conversation_behavior TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      legacy_file_path TEXT,
       thread_mode TEXT NOT NULL DEFAULT 'dedicated',
       thread_session_file TEXT,
       thread_conversation_id TEXT
@@ -537,14 +627,6 @@ function openAutomationDb(dbPath: string = getAutomationDbPath()): SqliteDatabas
       one_time_completed_at TEXT,
       FOREIGN KEY (automation_id) REFERENCES automations(id) ON DELETE CASCADE
     );
-
-    CREATE TABLE IF NOT EXISTS legacy_automation_imports (
-      legacy_file_path TEXT PRIMARY KEY,
-      automation_id TEXT,
-      imported_at TEXT NOT NULL
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_legacy_automation_imports_automation_id ON legacy_automation_imports(automation_id);
 
     CREATE TABLE IF NOT EXISTS automation_scheduler_state (
       key TEXT PRIMARY KEY,
@@ -586,9 +668,6 @@ function openAutomationDb(dbPath: string = getAutomationDbPath()): SqliteDatabas
   }
 
   db.exec('CREATE INDEX IF NOT EXISTS idx_automations_runtime_scope_title ON automations(runtime_scope, title)');
-  db.exec(
-    'CREATE UNIQUE INDEX IF NOT EXISTS idx_automations_legacy_file_path ON automations(legacy_file_path) WHERE legacy_file_path IS NOT NULL',
-  );
 
   dbCache.set(resolved, db);
   return db;
@@ -618,14 +697,13 @@ function toParsedSchedule(row: StoredAutomationRow): ParsedTaskSchedule {
 }
 
 function rowToStoredAutomation(row: StoredAutomationRow): StoredAutomation {
-  const legacyFilePath = readOptionalString(row.legacy_file_path);
-  const filePath = legacyFilePath ?? buildSyntheticAutomationFilePath(row.id);
+  const filePath = buildSyntheticAutomationFilePath(row.id);
   const createdAt = readOptionalTimestamp(row.created_at) ?? new Date().toISOString();
   const updatedAt = readOptionalTimestamp(row.updated_at) ?? createdAt;
   return {
     key: row.id,
     filePath,
-    fileName: automationFileName({ id: row.id, legacyFilePath }),
+    fileName: `${row.id}.automation.md`,
     id: row.id,
     title: row.title,
     enabled: row.enabled === 1,
@@ -643,7 +721,6 @@ function rowToStoredAutomation(row: StoredAutomationRow): StoredAutomation {
     conversationBehavior: readAutomationConversationBehavior(row.conversation_behavior),
     createdAt,
     updatedAt,
-    legacyFilePath,
     threadMode: normalizeAutomationThreadMode(row.thread_mode),
     threadSessionFile: readOptionalString(row.thread_session_file),
     threadConversationId: readOptionalString(row.thread_conversation_id),
@@ -703,40 +780,12 @@ function rowToRuntimeState(row: AutomationStateRow): TaskRuntimeState {
   };
 }
 
-function collectLegacyTaskFiles(taskDir: string): string[] {
-  if (!existsSync(taskDir)) {
-    return [];
-  }
-
-  const output: string[] = [];
-  const stack = [resolve(taskDir)];
-
-  while (stack.length > 0) {
-    const current = stack.pop() as string;
-    const entries = readdirSync(current, { withFileTypes: true });
-
-    for (const entry of entries) {
-      const fullPath = join(current, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(fullPath);
-        continue;
-      }
-      if (entry.isFile() && entry.name.endsWith(LEGACY_TASK_FILE_SUFFIX)) {
-        output.push(fullPath);
-      }
-    }
-  }
-
-  output.sort();
-  return output;
-}
-
 function readStoredAutomationRows(db: SqliteDatabase, runtimeScope?: string): StoredAutomationRow[] {
   if (runtimeScope) {
     return db
       .prepare(
         `
-      SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
+      SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, thread_mode, thread_session_file, thread_conversation_id
       FROM automations
       WHERE runtime_scope = ?
       ORDER BY title COLLATE NOCASE ASC, created_at ASC, id ASC
@@ -748,7 +797,7 @@ function readStoredAutomationRows(db: SqliteDatabase, runtimeScope?: string): St
   return db
     .prepare(
       `
-    SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
+    SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, thread_mode, thread_session_file, thread_conversation_id
     FROM automations
     ORDER BY runtime_scope ASC, title COLLATE NOCASE ASC, created_at ASC, id ASC
   `,
@@ -857,20 +906,20 @@ export function getAutomationDbPath(config = loadDaemonConfig()): string {
   return resolveRuntimeDbPath(resolveDaemonPaths(config.ipc.socketPath).root);
 }
 
-export function listStoredAutomations(options: { runtimeScope?: string; profile?: string; dbPath?: string } = {}): StoredAutomation[] {
+export function listStoredAutomations(options: { runtimeScope?: string; dbPath?: string } = {}): StoredAutomation[] {
   const db = openAutomationDb(options.dbPath);
-  return readStoredAutomationRows(db, options.runtimeScope ?? (options.profile ? 'shared' : undefined)).map(rowToStoredAutomation);
+  return readStoredAutomationRows(db, options.runtimeScope).map(rowToStoredAutomation);
 }
 
 export function getStoredAutomation(
   id: string,
-  options: { runtimeScope?: string; profile?: string; dbPath?: string } = {},
+  options: { runtimeScope?: string; dbPath?: string } = {},
 ): StoredAutomation | undefined {
   const db = openAutomationDb(options.dbPath);
   const row = db
     .prepare(
       `
-    SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
+    SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, thread_mode, thread_session_file, thread_conversation_id
     FROM automations
     WHERE id = ?
   `,
@@ -879,7 +928,7 @@ export function getStoredAutomation(
   if (!row) {
     return undefined;
   }
-  if ((options.runtimeScope ?? (options.profile ? 'shared' : undefined)) && row.runtime_scope !== (options.runtimeScope ?? 'shared')) {
+  if (options.runtimeScope && row.runtime_scope !== options.runtimeScope) {
     return undefined;
   }
   return rowToStoredAutomation(row);
@@ -894,8 +943,8 @@ export function createStoredAutomation(input: AutomationMutationInput & { dbPath
   db.prepare(
     `
     INSERT INTO automations (
-      id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'dedicated', NULL, NULL)
+      id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, thread_mode, thread_session_file, thread_conversation_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'dedicated', NULL, NULL)
   `,
   ).run(
     id,
@@ -923,9 +972,8 @@ export function createStoredAutomation(input: AutomationMutationInput & { dbPath
 
 export function updateStoredAutomation(
   id: string,
-  input: Partial<Omit<AutomationMutationInput, 'id' | 'profile' | 'runtimeScope'>> & {
+  input: Partial<Omit<AutomationMutationInput, 'id' | 'runtimeScope'>> & {
     runtimeScope?: string;
-    profile?: string;
     dbPath?: string;
   },
 ): StoredAutomation {
@@ -1023,7 +1071,7 @@ export function setStoredAutomationThreadBinding(
   return getStoredAutomation(id, { dbPath: input.dbPath }) as StoredAutomation;
 }
 
-export function deleteStoredAutomation(id: string, options: { runtimeScope?: string; profile?: string; dbPath?: string } = {}): boolean {
+export function deleteStoredAutomation(id: string, options: { runtimeScope?: string; dbPath?: string } = {}): boolean {
   const existing = getStoredAutomation(id, options);
   if (!existing) {
     return false;
@@ -1031,10 +1079,6 @@ export function deleteStoredAutomation(id: string, options: { runtimeScope?: str
 
   const db = openAutomationDb(options.dbPath);
   const result = db.prepare('DELETE FROM automations WHERE id = ?').run(id);
-
-  if (result.changes > 0 && existing.legacyFilePath) {
-    rmSync(existing.legacyFilePath, { force: true });
-  }
 
   return result.changes > 0;
 }
@@ -1055,7 +1099,7 @@ export function loadAutomationRuntimeStateMap(options: { dbPath?: string } = {})
   for (const row of rows) {
     const record = rowToRuntimeState(row);
     const automation = automations.get(row.automation_id);
-    record.filePath = automation?.legacyFilePath ?? automation?.filePath ?? buildSyntheticAutomationFilePath(row.automation_id);
+    record.filePath = automation?.filePath ?? buildSyntheticAutomationFilePath(row.automation_id);
     record.scheduleType = automation?.schedule.type ?? 'cron';
     output[row.automation_id] = record;
   }
@@ -1161,139 +1205,4 @@ export function appendAutomationActivityEntry(
 ): AutomationActivityEntry {
   const db = openAutomationDb(options.dbPath);
   return appendAutomationActivityEntryToDb(db, automationId, input);
-}
-
-export function ensureLegacyTaskImports(options: {
-  taskDir: string;
-  defaultTimeoutSeconds: number;
-  dbPath?: string;
-  legacyStateFile?: string;
-}): { importedCount: number; parseErrors: LegacyAutomationImportIssue[] } {
-  const db = openAutomationDb(options.dbPath);
-  const parseErrors: LegacyAutomationImportIssue[] = [];
-  const files = collectLegacyTaskFiles(options.taskDir);
-  const importedAt = new Date().toISOString();
-  const importedPaths = new Set(
-    (db.prepare('SELECT legacy_file_path FROM legacy_automation_imports').all() as Array<{ legacy_file_path: string }>).map(
-      (row) => row.legacy_file_path,
-    ),
-  );
-  let importedCount = 0;
-
-  const insertAutomation = db.prepare(`
-    INSERT INTO automations (
-      id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'dedicated', NULL, NULL)
-  `);
-  const markImported = db.prepare(`
-    INSERT INTO legacy_automation_imports (legacy_file_path, automation_id, imported_at)
-    VALUES (?, ?, ?)
-    ON CONFLICT(legacy_file_path) DO NOTHING
-  `);
-
-  const tx = db.transaction(() => {
-    for (const filePath of files) {
-      if (importedPaths.has(filePath)) {
-        continue;
-      }
-
-      try {
-        const parsed = parseTaskDefinition({
-          filePath,
-          rawContent: readFileSync(filePath, 'utf-8'),
-          defaultTimeoutSeconds: options.defaultTimeoutSeconds,
-        });
-        const id = nextAutomationId(db, parsed.title ?? humanizeLegacyTaskTitle(parsed.id), parsed.id);
-        insertAutomation.run(
-          id,
-          'shared',
-          parsed.title ?? humanizeLegacyTaskTitle(parsed.id),
-          toBooleanInt(parsed.enabled),
-          parsed.schedule.type,
-          parsed.schedule.type === 'cron' ? parsed.schedule.expression : null,
-          parsed.schedule.type === 'at' ? parsed.schedule.at : null,
-          parsed.prompt,
-          parsed.cwd ?? null,
-          parsed.modelRef ?? null,
-          parsed.thinkingLevel ?? null,
-          parsed.timeoutSeconds,
-          null,
-          serializeAutomationPolicies(
-            normalizeAutomationPolicies(undefined, parsed.schedule.type === 'cron' ? DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS : undefined),
-          ),
-          'background-agent',
-          null,
-          importedAt,
-          importedAt,
-          filePath,
-        );
-        markImported.run(filePath, id, importedAt);
-        importedPaths.add(filePath);
-        importedCount += 1;
-      } catch (error) {
-        parseErrors.push({
-          filePath,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-  });
-
-  tx();
-
-  const legacyStateFile = options.legacyStateFile ?? join(dirname(options.dbPath ?? getAutomationDbPath()), 'task-state.json');
-  if (existsSync(legacyStateFile)) {
-    const legacyState = loadTaskState(legacyStateFile);
-    const existingStateIds = new Set(
-      (db.prepare('SELECT automation_id FROM automation_state').all() as Array<{ automation_id: string }>).map((row) => row.automation_id),
-    );
-    const automations = listStoredAutomations({ dbPath: options.dbPath });
-    const automationById = new Map(automations.map((automation) => [automation.id, automation]));
-    const automationByLegacyFilePath = new Map(
-      automations.flatMap((automation) => (automation.legacyFilePath ? [[resolve(automation.legacyFilePath), automation] as const] : [])),
-    );
-
-    const upsert = db.prepare(`
-      INSERT INTO automation_state (
-        automation_id, running, running_started_at, active_run_id, last_run_id, last_status, last_run_at, last_success_at, last_failure_at, last_error, last_log_path, last_scheduled_minute, last_attempt_count, one_time_resolved_at, one_time_resolved_status, one_time_completed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(automation_id) DO NOTHING
-    `);
-
-    const stateTx = db.transaction(() => {
-      for (const record of Object.values(legacyState.tasks)) {
-        const automation = automationByLegacyFilePath.get(resolve(record.filePath)) ?? automationById.get(record.id);
-        if (!automation || existingStateIds.has(automation.id)) {
-          continue;
-        }
-
-        upsert.run(
-          automation.id,
-          toBooleanInt(record.running),
-          record.runningStartedAt ?? null,
-          record.activeRunId ?? null,
-          record.lastRunId ?? null,
-          record.lastStatus ?? null,
-          record.lastRunAt ?? null,
-          record.lastSuccessAt ?? null,
-          record.lastFailureAt ?? null,
-          record.lastError ?? null,
-          record.lastLogPath ?? null,
-          record.lastScheduledMinute ?? null,
-          record.lastAttemptCount ?? null,
-          record.oneTimeResolvedAt ?? null,
-          record.oneTimeResolvedStatus ?? null,
-          record.oneTimeCompletedAt ?? null,
-        );
-        existingStateIds.add(automation.id);
-      }
-    });
-
-    stateTx();
-  }
-
-  return {
-    importedCount,
-    parseErrors,
-  };
 }

@@ -55,10 +55,10 @@ function registerTool(): RegisteredTool {
 function task(overrides: Record<string, unknown> = {}) {
   return {
     id: 'task-1',
-    key: 'shared:task-1',
+    key: 'runtime:task-1',
     title: 'Task One',
     enabled: true,
-    profile: 'shared',
+    profile: 'runtime',
     filePath: '/__automations__/task-1.json',
     schedule: { type: 'cron', expression: '0 9 * * *' },
     targetType: 'background-agent',
@@ -83,7 +83,7 @@ describe('scheduledTaskTool', () => {
     automations.loadScheduledTasksForProfile.mockResolvedValue({
       tasks: [task()],
       parseErrors: [{ filePath: '/bad.json', error: 'bad json' }],
-      runtimeState: { 'shared:task-1': { running: true } },
+      runtimeState: { 'runtime:task-1': { running: true } },
     });
 
     const result = await registerTool().execute('call-1', { action: 'list' });
@@ -91,7 +91,7 @@ describe('scheduledTaskTool', () => {
     expect(result.content[0].text).toContain('Scheduled tasks:');
     expect(result.content[0].text).toContain('- @task-1 [running] Task One · cron 0 9 * * * · job');
     expect(result.content[0].text).toContain('Parse errors: /bad.json: bad json');
-    expect(result.details).toMatchObject({ action: 'list', profile: 'shared', count: 1, taskIds: ['task-1'], parseErrorCount: 1 });
+    expect(result.details).toMatchObject({ action: 'list', count: 1, taskIds: ['task-1'], parseErrorCount: 1 });
   });
 
   it('formats task detail with thread and callback metadata', async () => {
@@ -114,7 +114,7 @@ describe('scheduledTaskTool', () => {
 
     const result = await registerTool().execute('call-1', { action: 'get', taskId: ' task-1 ' });
 
-    expect(automations.resolveScheduledTaskForProfile).toHaveBeenCalledWith('shared', 'task-1');
+    expect(automations.resolveScheduledTaskForProfile).toHaveBeenCalledWith('runtime', 'task-1');
     expect(result.content[0].text).toContain('threadConversationId: conv-1');
     expect(result.content[0].text).toContain('callbackConversationId: conv-callback');
     expect(result.content[0].text).toContain('callbackOnSuccess: passive');
@@ -156,7 +156,7 @@ describe('scheduledTaskTool', () => {
       'task-1',
       expect.objectContaining({ threadMode: 'existing', threadConversationId: 'conv-1' }),
     );
-    expect(automations.clearTaskCallbackBinding).toHaveBeenCalledWith({ profile: 'shared', taskId: 'task-1' });
+    expect(automations.clearTaskCallbackBinding).toHaveBeenCalledWith({ profile: 'runtime', taskId: 'task-1' });
     expect(result.content[0].text).toBe('Saved scheduled task @task-1 for tomorrow at 6pm.');
   });
 

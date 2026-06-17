@@ -466,83 +466,12 @@ function parseProjectStateDocument(object: Record<string, unknown>, baseDocument
   };
 }
 
-function parseLegacyProjectDocument(object: Record<string, unknown>, label: string): ProjectDocument {
-  const description =
-    readOptionalYamlString(object, 'description', label) ??
-    readOptionalYamlString(object, 'summary', label) ??
-    readRequiredYamlString(object, 'title', label);
-  const requirementsValue = object.requirements;
-  const requirements =
-    requirementsValue === undefined || requirementsValue === null
-      ? {
-          goal: description,
-          acceptanceCriteria: [],
-        }
-      : parseProjectRequirements(assertPlainObject(requirementsValue, `${label}.requirements`), `${label}.requirements`);
-
-  const baseDocument: ProjectDocument = {
-    id: readRequiredYamlString(object, 'id', label),
-    ownerProfile: readOptionalYamlString(object, 'ownerProfile', label) ?? 'shared',
-    createdAt: normalizeIsoTimestamp(readRequiredYamlString(object, 'createdAt', label), 'Project createdAt'),
-    updatedAt: normalizeIsoTimestamp(readRequiredYamlString(object, 'updatedAt', label), 'Project updatedAt'),
-    ...(readOptionalYamlString(object, 'archivedAt', label)
-      ? { archivedAt: normalizeIsoTimestamp(readOptionalYamlString(object, 'archivedAt', label)!, 'Project archivedAt') }
-      : {}),
-    title: readRequiredYamlString(object, 'title', label),
-    description,
-    repoRoot: readOptionalYamlString(object, 'repoRoot', label),
-    summary: readOptionalYamlString(object, 'summary', label) ?? description,
-    requirements,
-    status: readOptionalYamlString(object, 'status', label) ?? 'active',
-    blockers: readOptionalYamlStringArray(object, 'blockers', label) ?? [],
-    currentFocus: readOptionalYamlString(object, 'currentFocus', label),
-    recentProgress: readOptionalYamlStringArray(object, 'recentProgress', label) ?? [],
-    planSummary: readOptionalYamlString(object, 'planSummary', label),
-    completionSummary: readOptionalYamlString(object, 'completionSummary', label),
-    plan: {
-      milestones: [],
-      tasks: [],
-    },
-  };
-
-  return parseProjectStateDocument(object, baseDocument, label);
-}
-
 function readProjectNode(path: string): { document: ProjectDocument; body: string } {
   const stateContent = readFileSync(path, 'utf-8');
   const stateObject = parseYamlDocument(stateContent, 'Project state');
   const projectDocPath = join(dirname(path), 'project.md');
-  const legacyIndexPath = join(dirname(path), 'INDEX.md');
-  const legacyBriefPath = join(dirname(path), 'BRIEF.md');
-  const existingIndexPath = existsSync(projectDocPath)
-    ? projectDocPath
-    : existsSync(legacyIndexPath)
-      ? legacyIndexPath
-      : existsSync(legacyBriefPath)
-        ? legacyBriefPath
-        : null;
-
-  if (!existingIndexPath) {
-    return {
-      document: parseLegacyProjectDocument(stateObject, 'Project state'),
-      body: '',
-    };
-  }
-
-  const rawIndex = readFileSync(existingIndexPath, 'utf-8');
-  let index: { frontmatter: Record<string, unknown>; body: string } | null = null;
-  try {
-    index = splitMarkdownNode(rawIndex, 'Project index');
-  } catch {
-    index = null;
-  }
-
-  if (!index) {
-    return {
-      document: parseLegacyProjectDocument(stateObject, 'Project state'),
-      body: rawIndex.trim(),
-    };
-  }
+  const rawIndex = readFileSync(projectDocPath, 'utf-8');
+  const index = splitMarkdownNode(rawIndex, 'Project index');
 
   const frontmatter = index.frontmatter;
   const kind = readRequiredYamlString(frontmatter, 'kind', 'Project index');
@@ -582,13 +511,8 @@ export function formatProject(document: ProjectDocument): string {
   return stringifyYamlDocument(formatProjectState(document));
 }
 
-export function parseProject(yaml: string, baseDocument?: ProjectDocument): ProjectDocument {
-  const object = parseYamlDocument(yaml, baseDocument ? 'Project state' : 'Project');
-
-  if (!baseDocument) {
-    return parseLegacyProjectDocument(object, 'Project');
-  }
-
+export function parseProject(yaml: string, baseDocument: ProjectDocument): ProjectDocument {
+  const object = parseYamlDocument(yaml, 'Project state');
   return parseProjectStateDocument(object, baseDocument, 'Project state');
 }
 
@@ -598,20 +522,11 @@ export function readProject(path: string): ProjectDocument {
 
 export function readProjectIndexBody(path: string): string | null {
   const projectDocPath = join(dirname(path), 'project.md');
-  const legacyIndexPath = join(dirname(path), 'INDEX.md');
-  const legacyBriefPath = join(dirname(path), 'BRIEF.md');
-  const existingIndexPath = existsSync(projectDocPath)
-    ? projectDocPath
-    : existsSync(legacyIndexPath)
-      ? legacyIndexPath
-      : existsSync(legacyBriefPath)
-        ? legacyBriefPath
-        : null;
-  if (!existingIndexPath) {
+  if (!existsSync(projectDocPath)) {
     return null;
   }
 
-  const raw = readFileSync(existingIndexPath, 'utf-8');
+  const raw = readFileSync(projectDocPath, 'utf-8');
   try {
     return splitMarkdownNode(raw, 'Project index').body;
   } catch {

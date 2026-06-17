@@ -153,7 +153,6 @@ describe('extension backend action invocation', () => {
 
     expect(context.runtimeDir).toBe('/state-root/neon-pilot-runtime');
     expect(context.runtimeSettingsFilePath).toBe('/runtime/from-route/settings.json');
-    expect(context.profileSettingsFilePath).toBe('/runtime/from-route/settings.json');
   });
 
   it('passes the server route settings file into worker action contexts', async () => {
@@ -665,10 +664,16 @@ describe('extension backend action invocation', () => {
     setWorkerImportBackendRunnerForTests(workerRunner);
 
     await expect(
-      invokeExtensionAction('system-conversation-tools', 'askUser', { question: 'Proceed?', options: ['Yes', 'No'] }, undefined, {
-        conversationId: 'conv-1',
-        cwd: '/repo',
-      }),
+      invokeExtensionAction(
+        'system-conversation-tools',
+        'askUser',
+        { questions: [{ label: 'Proceed?', options: ['Yes', 'No'] }] },
+        undefined,
+        {
+          conversationId: 'conv-1',
+          cwd: '/repo',
+        },
+      ),
     ).resolves.toEqual({
       ok: true,
       result: { content: [{ type: 'text', text: 'Asked the user a question.' }], details: { action: 'ask_user' } },
@@ -720,7 +725,7 @@ describe('extension backend action invocation', () => {
       }),
       'askUser',
       { type: 'action', label: 'action askUser', target: 'askUser' },
-      [{ question: 'Proceed?', options: ['Yes', 'No'] }],
+      [{ questions: [{ label: 'Proceed?', options: ['Yes', 'No'] }] }],
       {
         context: expect.objectContaining({
           type: 'backend',

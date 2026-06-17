@@ -1,10 +1,4 @@
 import { api } from '../client/api';
-import {
-  ACTIVE_SESSION_ID_STORAGE_KEY,
-  ARCHIVED_SESSION_IDS_STORAGE_KEY,
-  OPEN_SESSION_IDS_STORAGE_KEY,
-  PINNED_SESSION_IDS_STORAGE_KEY,
-} from '../local/localSettings';
 
 export const CONVERSATION_LAYOUT_CHANGED_EVENT = 'pa:conversation-layout-changed';
 
@@ -201,10 +195,6 @@ export function resetRemoteConversationLayoutCache(): void {
   conversationLayoutProjection = null;
 }
 
-function hasConversationWorkspaceIds(layout: Pick<ConversationLayout, 'sessionIds' | 'pinnedSessionIds' | 'archivedSessionIds'>): boolean {
-  return layout.sessionIds.length > 0 || layout.pinnedSessionIds.length > 0 || layout.archivedSessionIds.length > 0;
-}
-
 export async function fetchRemoteConversationLayout(
   options: { refresh?: boolean; reason?: string } = {},
 ): Promise<RemoteConversationLayout> {
@@ -233,19 +223,6 @@ export async function fetchRemoteConversationLayout(
 
   const promise = api.openConversationTabs().then(async (layout) => {
     let normalized = normalizeRemoteConversationLayout(layout);
-    const legacyLayout = readLegacyConversationLayout();
-    if (!normalized.conversationWorkspaceMigratedAt && !hasConversationWorkspaceIds(normalized) && hasConversationWorkspaceIds(legacyLayout)) {
-      const migrated = await api.setOpenConversationTabs(
-        legacyLayout.sessionIds,
-        legacyLayout.pinnedSessionIds,
-        legacyLayout.archivedSessionIds,
-        undefined,
-        legacyLayout.activeSessionId,
-        { conversationWorkspaceMigrated: true },
-      );
-      normalized = normalizeRemoteConversationLayout(migrated);
-      clearLegacyConversationLayout();
-    }
     remoteLayoutCache = normalized;
     remoteLayoutCacheAt = Date.now();
     conversationLayoutProjection = normalized;
@@ -275,7 +252,6 @@ function persistConversationLayoutToServer(layout: ConversationLayout): void {
       remoteLayoutCacheAt = Date.now();
       conversationLayoutProjection = normalized;
       dispatchConversationLayoutChanged(normalized);
-      clearLegacyConversationLayout();
     })
     .catch(() => {
       void fetchRemoteConversationLayout({ refresh: true, reason: 'persist-failed' })
@@ -300,7 +276,6 @@ function persistConversationOperationToServer(operation: ConversationWorkspaceOp
       remoteLayoutCacheAt = Date.now();
       conversationLayoutProjection = normalized;
       dispatchConversationLayoutChanged(normalized);
-      clearLegacyConversationLayout();
     })
     .catch(() => {
       void fetchRemoteConversationLayout({ refresh: true, reason: `operation-failed:${operation.operation}` })
@@ -313,48 +288,12 @@ function persistConversationOperationToServer(operation: ConversationWorkspaceOp
     });
 }
 
-function readStoredSessionIds(storageKey: string): string[] {
-  try {
-    const raw = localStorage.getItem(storageKey);
-    if (raw) {
-      const parsed = JSON.parse(raw) as unknown;
-      if (Array.isArray(parsed)) {
-        return normalizeSessionIds(parsed);
-      }
-    }
-  } catch {
-    // Ignore malformed storage.
-  }
-
-  return [];
-}
-
-function readLegacyConversationLayout(): ConversationLayout {
-  return normalizeConversationLayout({
-    sessionIds: readStoredSessionIds(OPEN_SESSION_IDS_STORAGE_KEY),
-    pinnedSessionIds: readStoredSessionIds(PINNED_SESSION_IDS_STORAGE_KEY),
-    archivedSessionIds: readStoredSessionIds(ARCHIVED_SESSION_IDS_STORAGE_KEY),
-    activeSessionId: localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY),
-  });
-}
-
-function clearLegacyConversationLayout(): void {
-  try {
-    localStorage.removeItem(OPEN_SESSION_IDS_STORAGE_KEY);
-    localStorage.removeItem(PINNED_SESSION_IDS_STORAGE_KEY);
-    localStorage.removeItem(ARCHIVED_SESSION_IDS_STORAGE_KEY);
-    localStorage.removeItem(ACTIVE_SESSION_ID_STORAGE_KEY);
-  } catch {
-    // Ignore storage cleanup failures.
-  }
-}
-
 export function readConversationLayout(): ConversationLayout {
   if (conversationLayoutProjection) {
     return conversationLayoutProjection;
   }
 
-  return readLegacyConversationLayout();
+  return normalizeConversationLayout({});
 }
 
 export function readOpenSessionIds(): string[] {

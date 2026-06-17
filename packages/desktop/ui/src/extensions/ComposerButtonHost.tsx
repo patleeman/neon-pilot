@@ -8,11 +8,8 @@ import { createNativeExtensionClient } from './nativePaClient';
 import { systemExtensionModules } from './systemExtensionModules';
 import type { ExtensionComposerControlRegistration } from './useExtensionRegistry';
 
-export type ComposerButtonContext = ComposerControlContext;
-
 type ComposerButtonComponent = ComponentType<{
   pa: ReturnType<typeof createNativeExtensionClient>;
-  buttonContext: ComposerButtonContext;
   controlContext: ComposerControlContext;
 }>;
 
@@ -30,10 +27,10 @@ function loadButtonModule(registration: ExtensionComposerControlRegistration, re
 
 export function ComposerButtonHost({
   registration,
-  buttonContext,
+  controlContext,
 }: {
   registration: ExtensionComposerControlRegistration;
-  buttonContext: ComposerButtonContext;
+  controlContext: ComposerControlContext;
 }) {
   const moduleKey = `${registration.extensionId}:${registration.frontendEntry ?? ''}:${getExtensionRegistryRevision()}`;
   const pa = useMemo(() => createNativeExtensionClient(registration.extensionId), [registration.extensionId]);
@@ -52,7 +49,7 @@ export function ComposerButtonHost({
 
   return (
     <Suspense fallback={null}>
-      <Component pa={pa} buttonContext={buttonContext} controlContext={buttonContext} />
+      <Component pa={pa} controlContext={controlContext} />
     </Suspense>
   );
 }

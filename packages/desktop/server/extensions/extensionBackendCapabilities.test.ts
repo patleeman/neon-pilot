@@ -327,7 +327,7 @@ describe('extension backend capability dispatcher', () => {
           extensionId: 'system-todo',
           capability: 'conversations',
           operation: 'metadata.get',
-          input: { conversationId: 'conv-1', namespace: 'todos', profile: 'shared' },
+          input: { conversationId: 'conv-1', namespace: 'todos', runtimeScope: 'shared' },
         }),
       ),
     ).resolves.toEqual({ items: [] });
@@ -339,7 +339,7 @@ describe('extension backend capability dispatcher', () => {
           extensionId: 'system-todo',
           capability: 'conversations',
           operation: 'metadata.set',
-          input: { conversationId: 'conv-1', values: { items: [{ id: 'todo-1' }] }, profile: 'shared' },
+          input: { conversationId: 'conv-1', values: { items: [{ id: 'todo-1' }] }, runtimeScope: 'shared' },
         }),
       ),
     ).resolves.toEqual({ items: [{ id: 'todo-1' }] });
@@ -351,7 +351,7 @@ describe('extension backend capability dispatcher', () => {
           extensionId: 'system-todo',
           capability: 'conversations',
           operation: 'metadata.query',
-          input: { namespace: 'todos', where: [{ key: 'status', op: 'eq', value: 'open' }], limit: 5, profile: 'shared' },
+          input: { namespace: 'todos', where: [{ key: 'status', op: 'eq', value: 'open' }], limit: 5, runtimeScope: 'shared' },
         }),
       ),
     ).resolves.toEqual([{ conversationId: 'conv-1', metadata: { items: [] } }]);
@@ -359,18 +359,18 @@ describe('extension backend capability dispatcher', () => {
     expect(conversations.metadata.get).toHaveBeenCalledWith('system-todo', {
       conversationId: 'conv-1',
       namespace: 'todos',
-      profile: 'shared',
+      runtimeScope: 'shared',
     });
     expect(conversations.metadata.set).toHaveBeenCalledWith('system-todo', {
       conversationId: 'conv-1',
       values: { items: [{ id: 'todo-1' }] },
-      profile: 'shared',
+      runtimeScope: 'shared',
     });
     expect(conversations.metadata.query).toHaveBeenCalledWith('system-todo', {
       namespace: 'todos',
       where: [{ key: 'status', op: 'eq', value: 'open' }],
       limit: 5,
-      profile: 'shared',
+      runtimeScope: 'shared',
     });
   });
 

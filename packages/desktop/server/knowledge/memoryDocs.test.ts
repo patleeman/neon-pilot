@@ -47,7 +47,7 @@ function notePath(stateRoot: string, noteId: string): string {
 }
 
 function skillPath(skillId: string, fileName = 'SKILL.md'): string {
-  return join(getDurableSkillsDir(dirname(getRuntimeConfigRoot())), skillId, fileName);
+  return join(getDurableSkillsDir(process.env.NEON_PILOT_KNOWLEDGE_ROOT), skillId, fileName);
 }
 
 beforeEach(() => {
@@ -56,7 +56,6 @@ beforeEach(() => {
     ...originalEnv,
     NEON_PILOT_STATE_ROOT: stateRoot,
     NEON_PILOT_KNOWLEDGE_ROOT: join(stateRoot, 'sync'),
-    NEON_PILOT_PROFILES_ROOT: join(stateRoot, 'sync', 'runtime'),
   };
   clearMemoryBrowserCaches();
 });

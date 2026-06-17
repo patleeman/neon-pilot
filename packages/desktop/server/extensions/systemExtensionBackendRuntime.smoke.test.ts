@@ -160,9 +160,9 @@ let metadataValue = null;
 
 const ctx = {
   extensionId,
-  profile: 'shared',
+  runtimeScope: 'shared',
   runtimeDir,
-  profileSettingsFilePath: join(tempRoot, 'profile-settings.json'),
+  runtimeSettingsFilePath: join(tempRoot, 'settings.json'),
   toolContext: {
     conversationId: 'smoke-conversation',
     sessionId: 'smoke-session',

@@ -116,7 +116,7 @@ import {
 type TestTask = {
   id: string;
   title: string;
-  legacyFilePath: string;
+  filePath: string;
   schedule: { type: 'cron'; expression: string } | { type: 'at'; at: string };
   enabled: boolean;
   prompt: string;
@@ -134,7 +134,7 @@ function createTask(overrides: Partial<TestTask> = {}): TestTask {
   return {
     id: overrides.id ?? 'task-1',
     title: overrides.title ?? 'Task 1',
-    legacyFilePath: overrides.legacyFilePath ?? `/tasks/${overrides.id ?? 'task-1'}.md`,
+    filePath: overrides.filePath ?? `/__automations__/${overrides.id ?? 'task-1'}.automation.md`,
     schedule: overrides.schedule ?? { type: 'cron', expression: '0 * * * *' },
     enabled: overrides.enabled ?? true,
     prompt: overrides.prompt ?? 'Prompt body',
@@ -266,7 +266,7 @@ describe('scheduledTaskCapability', () => {
       {
         id: 'task-1',
         title: 'Cron task',
-        filePath: '/tasks/task-1.md',
+        filePath: '/__automations__/task-1.automation.md',
         scheduleType: 'cron',
         running: true,
         enabled: true,
@@ -291,7 +291,7 @@ describe('scheduledTaskCapability', () => {
       {
         id: 'task-2',
         title: 'One-off task',
-        filePath: '/tasks/task-2.md',
+        filePath: '/__automations__/task-2.automation.md',
         scheduleType: 'at',
         running: false,
         enabled: false,
@@ -342,7 +342,7 @@ describe('scheduledTaskCapability', () => {
       ...createRuntime({ id: 'task-created', running: false }),
       id: 'task-created',
       title: 'Saved task',
-      filePath: '/tasks/task-created.md',
+      filePath: '/__automations__/task-created.automation.md',
       scheduleType: 'cron',
       running: false,
       enabled: true,
@@ -369,7 +369,7 @@ describe('scheduledTaskCapability', () => {
       ...createRuntime({ id: 'task-created', running: false }),
       id: 'task-created',
       title: 'Saved task',
-      filePath: '/tasks/task-created.md',
+      filePath: '/__automations__/task-created.automation.md',
       scheduleType: 'cron',
       running: false,
       enabled: true,
@@ -414,7 +414,7 @@ describe('scheduledTaskCapability', () => {
         ...createRuntime({ id: 'task-created', running: false }),
         id: 'task-created',
         title: 'Saved task',
-        filePath: '/tasks/task-created.md',
+        filePath: '/__automations__/task-created.automation.md',
         scheduleType: 'cron',
         running: false,
         enabled: true,
@@ -437,7 +437,6 @@ describe('scheduledTaskCapability', () => {
       },
     });
     expect(createStoredAutomationMock).toHaveBeenCalledWith({
-      profile: 'assistant',
       title: 'Created task',
       enabled: false,
       cron: '*/5 * * * *',
@@ -476,7 +475,7 @@ describe('scheduledTaskCapability', () => {
         ...createRuntime({ id: 'task-created', running: true }),
         id: 'task-created',
         title: 'Updated task',
-        filePath: '/tasks/task-created.md',
+        filePath: '/__automations__/task-created.automation.md',
         scheduleType: 'cron',
         running: true,
         enabled: true,
@@ -526,7 +525,7 @@ describe('scheduledTaskCapability', () => {
       ok: true,
       deleted: true,
     });
-    expect(deleteStoredAutomationMock).toHaveBeenCalledWith('task-1', { profile: 'assistant' });
+    expect(deleteStoredAutomationMock).toHaveBeenCalledWith('task-1');
     expect(clearTaskCallbackBindingMock).toHaveBeenCalledWith({ profile: 'assistant', taskId: 'task-1' });
     expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks');
   });

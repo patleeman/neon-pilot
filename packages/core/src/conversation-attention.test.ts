@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'fs';
+import { mkdtempSync, readFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -52,46 +52,6 @@ describe('conversation attention storage', () => {
     });
 
     expect(readFileSync(resolveConversationAttentionStatePath({ stateRoot, profile: 'assistant' }), 'utf-8')).toContain('"conv-123"');
-  });
-
-  it('migrates legacy local attention state into the synced path', () => {
-    const stateRoot = createTempStateRoot();
-    const legacyPath = join(stateRoot, 'pi-agent', 'state', 'conversation-attention', 'assistant.json');
-    mkdirSync(join(stateRoot, 'pi-agent', 'state', 'conversation-attention'), { recursive: true });
-    writeFileSync(
-      legacyPath,
-      `${JSON.stringify(
-        {
-          version: 1,
-          profile: 'assistant',
-          conversations: {
-            'conv-legacy': {
-              conversationId: 'conv-legacy',
-              acknowledgedMessageCount: 4,
-              readAt: '2026-03-12T12:05:00.000Z',
-              updatedAt: '2026-03-12T12:05:00.000Z',
-            },
-          },
-        },
-        null,
-        2,
-      )}\n`,
-    );
-
-    expect(loadConversationAttentionState({ stateRoot, profile: 'assistant' })).toEqual({
-      version: 1,
-      profile: 'assistant',
-      conversations: {
-        'conv-legacy': {
-          conversationId: 'conv-legacy',
-          acknowledgedMessageCount: 4,
-          readAt: '2026-03-12T12:05:00.000Z',
-          updatedAt: '2026-03-12T12:05:00.000Z',
-        },
-      },
-    });
-
-    expect(readFileSync(resolveConversationAttentionStatePath({ stateRoot, profile: 'assistant' }), 'utf-8')).toContain('"conv-legacy"');
   });
 
   it('marks conversations read and unread', () => {

@@ -1,7 +1,6 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 import { deferredResume } from '../../system-automations/src/conversationQueueBackend.js';
-import { executeAskUserQuestion } from './askUserQuestionAgentExtension.js';
 import {
   executeChangeWorkingDirectory,
   type RequestConversationWorkingDirectoryChangeInput,
@@ -47,12 +46,12 @@ export function createConversationAgentExtension(options: {
       name: 'conversation_admin',
       label: 'Conversation',
       description:
-        'Ask the user, inspect conversations, set the title, change working directory, or schedule a deferred resume for this conversation.',
+        'Inspect conversations, set the title, change working directory, or schedule a deferred resume for this conversation.',
       promptSnippet:
-        'Use conversation_admin for conversation/session state, questions, inspection, title, cwd changes, and deferred resumes.',
+        'Use conversation_admin for conversation/session state, inspection, title, cwd changes, and deferred resumes.',
       promptGuidelines: [
         'Use action="deferred_resume" for wait-then-continue; do not run sleep in bash.',
-        'Ask the user only when blocked on a real decision or approval.',
+        'Use ask_user for user questions; do not route questions through conversation_admin.',
       ],
       parameters: ConversationToolParams,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
@@ -60,8 +59,6 @@ export function createConversationAgentExtension(options: {
         const payload = payloadWithoutAction(params as Record<string, unknown>);
 
         switch (action) {
-          case 'ask':
-            return executeAskUserQuestion(payload, ctx);
           case 'inspect':
             return executeConversationInspectTool(conversationInspectPayload(params as Record<string, unknown>), ctx);
           case 'set_title':

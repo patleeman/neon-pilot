@@ -14,7 +14,7 @@ import {
   getDurableSkillsDir,
   getDurableTasksDir,
   getKnowledgeRoot,
-  getLocalRuntimeConfigDir as getCanonicalLocalProfileDir,
+  getLocalRuntimeConfigDir as getCanonicalLocalRuntimeConfigDir,
   getStateRoot,
   getSyncRoot,
 } from './runtime/paths.js';
@@ -50,7 +50,7 @@ export interface ResolvedRuntimeResources {
 export interface ResolveResourceOptions {
   repoRoot?: string;
   knowledgeRoot?: string;
-  localProfileDir?: string;
+  localRuntimeConfigDir?: string;
   runtimeConfigRoot?: string;
   /** Optional pre-resolved extension directory paths. When provided, core will use these instead of auto-discovering extensions. */
   extensionDirs?: string[];
@@ -241,33 +241,33 @@ function extractPackageSource(entry: unknown): string | undefined {
   return typeof source === 'string' ? source : undefined;
 }
 
-export function resolveLocalProfileDir(options: ResolveResourceOptions = {}): string {
-  const explicit = options.localProfileDir;
+export function resolveLocalRuntimeConfigDir(options: ResolveResourceOptions = {}): string {
+  const explicit = options.localRuntimeConfigDir;
 
   if (typeof explicit === 'string' && explicit.trim().length > 0) {
     return resolve(expandHomePath(explicit.trim()));
   }
 
-  return getCanonicalLocalProfileDir();
+  return getCanonicalLocalRuntimeConfigDir();
 }
 
-export function resolveLocalProfileSettingsFilePath(options: ResolveResourceOptions = {}): string {
-  const localProfileDir = resolveLocalProfileDir(options);
-  const nestedAgentDir = join(localProfileDir, 'agent');
+export function resolveLocalRuntimeSettingsFilePath(options: ResolveResourceOptions = {}): string {
+  const localRuntimeConfigDir = resolveLocalRuntimeConfigDir(options);
+  const nestedAgentDir = join(localRuntimeConfigDir, 'agent');
 
   if (existsSync(nestedAgentDir)) {
     if (!statSync(nestedAgentDir).isDirectory()) {
-      throw new Error(`Local profile agent path is not a directory: ${nestedAgentDir}`);
+      throw new Error(`Local runtime config agent path is not a directory: ${nestedAgentDir}`);
     }
 
     return join(nestedAgentDir, 'settings.json');
   }
 
-  if (existsSync(localProfileDir) && !statSync(localProfileDir).isDirectory()) {
-    throw new Error(`Local profile path is not a directory: ${localProfileDir}`);
+  if (existsSync(localRuntimeConfigDir) && !statSync(localRuntimeConfigDir).isDirectory()) {
+    throw new Error(`Local runtime config path is not a directory: ${localRuntimeConfigDir}`);
   }
 
-  return join(localProfileDir, 'settings.json');
+  return join(localRuntimeConfigDir, 'settings.json');
 }
 
 export function resolveRuntimeSettingsFilePath(runtimeScope: string, options: ResolveResourceOptions = {}): string {
@@ -323,7 +323,7 @@ export function readConfiguredPackageSources(settingsPath: string): ConfiguredPa
 }
 
 export function readPackageSourceTargetState(target: PackageInstallTarget, options: ResolveResourceOptions = {}): PackageSourceTargetState {
-  const settingsPath = resolveLocalProfileSettingsFilePath(options);
+  const settingsPath = resolveLocalRuntimeSettingsFilePath(options);
 
   return {
     target,
@@ -333,7 +333,7 @@ export function readPackageSourceTargetState(target: PackageInstallTarget, optio
 }
 
 export function installPackageSource(options: InstallPackageSourceOptions): InstallPackageSourceResult {
-  const settingsPath = resolveLocalProfileSettingsFilePath(options);
+  const settingsPath = resolveLocalRuntimeSettingsFilePath(options);
   const normalizedSource = normalizePackageSource(options.source, options.sourceBaseDir ?? process.cwd());
   const configuredPackages = readConfiguredPackageEntries(settingsPath);
   const settingsDir = dirname(settingsPath);
@@ -388,7 +388,7 @@ function resolveKnowledgeRoot(options: ResolveResourceOptions = {}): string {
 }
 
 function resolveRuntimeConfigRoot(options: ResolveResourceOptions = {}): string {
-  const explicit = options.runtimeConfigRoot ?? process.env.NEON_PILOT_PROFILES_ROOT;
+  const explicit = options.runtimeConfigRoot;
   if (typeof explicit === 'string' && explicit.trim().length > 0) {
     return resolve(expandHomePath(explicit.trim()));
   }
@@ -635,7 +635,7 @@ function buildResourceLayers(input: {
     layers.push({ name: 'durable', agentDir: input.knowledgeRoot });
   }
 
-  const localBase = resolveLocalProfileDir(input.options);
+  const localBase = resolveLocalRuntimeConfigDir(input.options);
   const localAgentDir = existingDir(join(localBase, 'agent')) ?? existingDir(localBase);
   if (localAgentDir) {
     layers.push({ name: 'local', agentDir: localAgentDir });

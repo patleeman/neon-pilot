@@ -505,7 +505,8 @@
     ]
   },
   "permissions": [
-    "runs:read",
-    "runs:write"
+    "executions:read",
+    "executions:start",
+    "executions:cancel"
   ]
 }

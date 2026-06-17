@@ -30,8 +30,8 @@ describe('resolveModelProvidersFilePath', () => {
   it('uses shared models.json path', () => {
     const dir = createTempDir();
 
-    expect(resolveModelProvidersFilePath('shared', { profilesDir: dir })).toBe(join(dir, 'shared', 'models.json'));
-    expect(resolveModelProvidersFilePath('assistant', { profilesDir: dir })).toBe(join(dir, 'shared', 'models.json'));
+    expect(resolveModelProvidersFilePath('shared', { runtimeConfigRoot: dir })).toBe(join(dir, 'shared', 'models.json'));
+    expect(resolveModelProvidersFilePath('assistant', { runtimeConfigRoot: dir })).toBe(join(dir, 'shared', 'models.json'));
   });
 });
 
@@ -39,7 +39,7 @@ describe('readModelProvidersState', () => {
   it('returns an empty state when the file is missing', () => {
     const dir = createTempDir();
 
-    expect(readModelProvidersState('assistant', { profilesDir: dir })).toEqual({
+    expect(readModelProvidersState('assistant', { runtimeConfigRoot: dir })).toEqual({
       filePath: join(dir, 'shared', 'models.json'),
       providers: [],
     });
@@ -65,7 +65,7 @@ describe('upsertModelProvider', () => {
           supportsDeveloperRole: false,
         },
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     expect(state.providers).toEqual([
@@ -118,7 +118,7 @@ describe('upsertModelProvider', () => {
         contextWindow: 262144,
         maxTokens: 32768,
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     const state = upsertModelProvider(
@@ -128,7 +128,7 @@ describe('upsertModelProvider', () => {
         baseUrl: 'http://desktop:8000/v1',
         api: 'openai-completions',
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     expect(state.providers[0]?.models.map((model) => model.id)).toEqual(['qwen-reap']);
@@ -147,7 +147,7 @@ describe('upsertModelProviderModel', () => {
         api: 'openai-completions',
         apiKey: 'local-dev',
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     const first = upsertModelProviderModel(
@@ -168,7 +168,7 @@ describe('upsertModelProviderModel', () => {
           supportsDeveloperRole: false,
         },
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     expect(first.providers[0]?.models).toEqual([
@@ -205,7 +205,7 @@ describe('upsertModelProviderModel', () => {
         contextWindow: 131072,
         maxTokens: 16384,
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     expect(second.providers[0]?.models[0]).toMatchObject({
@@ -228,7 +228,7 @@ describe('upsertModelProviderModel', () => {
         baseUrl: 'http://desktop:8000/v1',
         api: 'openai-completions',
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     const state = upsertModelProviderModel(
@@ -240,7 +240,7 @@ describe('upsertModelProviderModel', () => {
         contextWindow: 131072.5,
         maxTokens: 16384.5,
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     expect(state.providers[0]?.models[0]).toMatchObject({
@@ -267,7 +267,7 @@ describe('upsertModelProviderModel', () => {
         baseUrl: 'http://desktop:8000/v1',
         api: 'openai-completions',
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     const state = upsertModelProviderModel(
@@ -279,7 +279,7 @@ describe('upsertModelProviderModel', () => {
         contextWindow: Number.MAX_SAFE_INTEGER + 1,
         maxTokens: Number.MAX_SAFE_INTEGER + 1,
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     expect(state.providers[0]?.models[0]).toMatchObject({
@@ -306,7 +306,7 @@ describe('upsertModelProviderModel', () => {
         baseUrl: 'http://desktop:8000/v1',
         api: 'openai-completions',
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     const state = upsertModelProviderModel(
@@ -318,7 +318,7 @@ describe('upsertModelProviderModel', () => {
         contextWindow: Number.MAX_SAFE_INTEGER,
         maxTokens: Number.MAX_SAFE_INTEGER,
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     expect(state.providers[0]?.models[0]).toMatchObject({
@@ -345,7 +345,7 @@ describe('upsertModelProviderModel', () => {
         baseUrl: 'http://desktop:8000/v1',
         api: 'openai-completions',
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     const state = upsertModelProviderModel(
@@ -359,7 +359,7 @@ describe('upsertModelProviderModel', () => {
           output: 0,
         },
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     expect(state.providers[0]?.models[0]?.cost).toEqual({
@@ -386,7 +386,7 @@ describe('upsertModelProviderModel', () => {
         baseUrl: 'http://desktop:8000/v1',
         api: 'openai-completions',
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     const state = upsertModelProviderModel(
@@ -402,7 +402,7 @@ describe('upsertModelProviderModel', () => {
           cacheWrite: 0.5,
         },
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
     expect(state.providers[0]?.models[0]?.cost).toEqual({
@@ -425,10 +425,10 @@ describe('removeModelProvider', () => {
         baseUrl: 'http://desktop:8000/v1',
         api: 'openai-completions',
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
-    const result = removeModelProvider('assistant', 'desktop', { profilesDir: dir });
+    const result = removeModelProvider('assistant', 'desktop', { runtimeConfigRoot: dir });
 
     expect(result.removed).toBe(true);
     expect(result.state.providers).toEqual([]);
@@ -449,7 +449,7 @@ describe('removeModelProviderModel', () => {
         baseUrl: 'http://desktop:8000/v1',
         api: 'openai-completions',
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
     upsertModelProviderModel(
       'assistant',
@@ -460,10 +460,10 @@ describe('removeModelProviderModel', () => {
         reasoning: true,
         input: ['text'],
       },
-      { profilesDir: dir },
+      { runtimeConfigRoot: dir },
     );
 
-    const result = removeModelProviderModel('assistant', 'desktop', 'qwen-reap', { profilesDir: dir });
+    const result = removeModelProviderModel('assistant', 'desktop', 'qwen-reap', { runtimeConfigRoot: dir });
 
     expect(result.removed).toBe(true);
     expect(result.state.providers).toEqual([

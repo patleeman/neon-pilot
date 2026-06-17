@@ -8,7 +8,6 @@ import {
   evaluateCommandEnablement,
   executeExtensionCommand,
   listHostCommands,
-  normalizeLegacyCommand,
 } from './commands';
 
 describe('extension commands', () => {
@@ -43,24 +42,8 @@ describe('extension commands', () => {
 
     for (const registration of CORE_KEYBOARD_SHORTCUT_REGISTRATIONS) {
       if (desktopNativeCommands.has(registration.command)) continue;
-      expect(hostCommandIds.has(normalizeLegacyCommand(registration.command).command), registration.id).toBe(true);
+      expect(hostCommandIds.has(registration.command), registration.id).toBe(true);
     }
-  });
-
-  it('normalizes legacy host command strings', () => {
-    expect(normalizeLegacyCommand('navigate:/settings')).toEqual({ command: 'app.navigate', args: { to: '/settings' } });
-    expect(normalizeLegacyCommand('commandPalette:threads')).toEqual({ command: 'palette.open', args: { scope: 'threads' } });
-    expect(normalizeLegacyCommand('layout:workbench')).toEqual({ command: 'layout.set', args: { mode: 'workbench' } });
-    expect(normalizeLegacyCommand('core.settings')).toEqual({ command: 'app.navigate', args: { to: '/settings' } });
-    expect(normalizeLegacyCommand('core.toggleSidebar')).toEqual({ command: 'layout.toggleSidebar' });
-    expect(normalizeLegacyCommand('core.findOnPage')).toEqual({ command: 'page.find' });
-    expect(normalizeLegacyCommand('core.closeTab')).toEqual({ command: 'conversation.close' });
-    expect(normalizeLegacyCommand('core.archiveRestoreConversation')).toEqual({ command: 'conversation.toggleArchived' });
-    expect(normalizeLegacyCommand('core.renameConversation')).toEqual({ command: 'conversation.rename' });
-    expect(normalizeLegacyCommand('rightRail:system-browser/browser-tabs')).toEqual({
-      command: 'rail.open',
-      args: { extensionId: 'system-browser', surfaceId: 'browser-tabs' },
-    });
   });
 
   it('evaluates the intentionally tiny enablement language', () => {
@@ -1614,7 +1597,7 @@ describe('extension commands', () => {
     await expect(executeExtensionCommand('system-test.run-action', undefined, options)).resolves.toBe(false);
   });
 
-  it('executes core shortcut aliases through host commands', async () => {
+  it('executes host commands directly', async () => {
     const navigate = vi.fn();
     const toggleSidebar = vi.fn(() => true);
     const findOnPage = vi.fn(() => true);
@@ -1627,9 +1610,9 @@ describe('extension commands', () => {
       findOnPage,
     };
 
-    await expect(executeExtensionCommand('core.settings', undefined, options)).resolves.toBe(true);
-    await expect(executeExtensionCommand('core.toggleSidebar', undefined, options)).resolves.toBe(true);
-    await expect(executeExtensionCommand('core.findOnPage', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('app.navigate', { to: '/settings' }, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('layout.toggleSidebar', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('page.find', undefined, options)).resolves.toBe(true);
 
     expect(navigate).toHaveBeenCalledWith('/settings');
     expect(toggleSidebar).toHaveBeenCalledTimes(1);

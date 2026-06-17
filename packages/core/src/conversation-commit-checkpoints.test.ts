@@ -152,7 +152,7 @@ describe('conversation commit checkpoint storage', () => {
     ).toEqual([record.id]);
   });
 
-  it('appends checkpoint comments and migrates legacy note fields', () => {
+  it('appends checkpoint comments to existing checkpoint comments', () => {
     const stateRoot = createTempStateRoot();
     const record = saveConversationCommitCheckpoint({
       stateRoot,
@@ -167,13 +167,20 @@ describe('conversation commit checkpoint storage', () => {
       committedAt: '2026-04-14T12:00:00.000Z',
       linesAdded: 12,
       linesDeleted: 3,
-      comment: 'Legacy note.',
-      commentUpdatedAt: '2026-04-14T12:10:00.000Z',
+      comments: [
+        {
+          id: 'comment-existing',
+          authorName: 'You',
+          body: 'Existing note.',
+          createdAt: '2026-04-14T12:10:00.000Z',
+          updatedAt: '2026-04-14T12:10:00.000Z',
+        },
+      ],
       files: [],
     });
 
     expect(record.comments).toHaveLength(1);
-    expect(record.comments[0]).toMatchObject({ body: 'Legacy note.' });
+    expect(record.comments[0]).toMatchObject({ body: 'Existing note.' });
 
     const updated = addConversationCommitCheckpointComment({
       stateRoot,
@@ -189,7 +196,7 @@ describe('conversation commit checkpoint storage', () => {
       id: record.id,
       commentCount: 2,
       comments: [
-        expect.objectContaining({ body: 'Legacy note.' }),
+        expect.objectContaining({ body: 'Existing note.' }),
         expect.objectContaining({ body: 'Needs a cleaner follow-up.', authorName: 'You' }),
       ],
     });

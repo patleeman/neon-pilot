@@ -75,7 +75,7 @@ describe('resources negative tests', () => {
       const resolved = resolveRuntimeResources('shared', {
         repoRoot: repo,
         runtimeConfigRoot,
-        localProfileDir: local,
+        localRuntimeConfigDir: local,
       });
 
       expect(resolved.layers.map((layer) => layer.name)).toEqual(['defaults', 'durable', 'local']);
@@ -131,7 +131,7 @@ describe('resources negative tests', () => {
       const resolved = resolveRuntimeResources('shared', {
         repoRoot: repo,
         runtimeConfigRoot,
-        localProfileDir: join(repo, '.local-profile'),
+        localRuntimeConfigDir: join(repo, '.local-profile'),
       });
       materializeRuntimeResourcesToAgentDir(resolved, runtime);
 
@@ -152,7 +152,7 @@ describe('resources negative tests', () => {
       const resolved = resolveRuntimeResources('shared', {
         repoRoot: repo,
         runtimeConfigRoot,
-        localProfileDir: join(repo, '.local-profile'),
+        localRuntimeConfigDir: join(repo, '.local-profile'),
       });
       const result = materializeRuntimeResourcesToAgentDir(resolved, runtime);
 
@@ -197,7 +197,7 @@ describe('resources negative tests', () => {
       const resolved = resolveRuntimeResources('shared', {
         repoRoot: repo,
         runtimeConfigRoot,
-        localProfileDir: join(repo, '.local-profile'),
+        localRuntimeConfigDir: join(repo, '.local-profile'),
       });
       const emptyResolved = {
         ...resolved,

@@ -49,7 +49,7 @@ const SKILLS: PromptReferenceSkill[] = [
     name: 'backfill-tests',
     source: 'durable node',
     description: 'Backfill tests for existing code.',
-    path: '/knowledge/_skills/backfill-tests/SKILL.md',
+    path: '/knowledge/skills/backfill-tests/SKILL.md',
   },
 ];
 
@@ -126,7 +126,7 @@ describe('promptReferences', () => {
     const skillContext = buildReferencedSkillsContext(SKILLS, '/repo');
     expect(skillContext).toContain('Referenced skills:');
     expect(skillContext).toContain('@backfill-tests');
-    expect(skillContext).toContain('path: /knowledge/_skills/backfill-tests/SKILL.md');
+    expect(skillContext).toContain('path: /knowledge/skills/backfill-tests/SKILL.md');
     expect(skillContext).toContain('source: durable node');
     expect(skillContext).toContain('description: Backfill tests for existing code.');
   });

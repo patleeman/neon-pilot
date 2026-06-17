@@ -147,7 +147,6 @@ import {
   type LegacyToolWorkspaceMetadata,
   readLegacyToolWorkspaceMetadata as readLegacyToolWorkspaceMetadataFromMessage,
 } from './sessionWorkspaceMetadata.js';
-import { normalizeTranscriptToolName } from './toolNames.js';
 
 const DEFAULT_SESSIONS_DIR = getDurableSessionsDir();
 export const SESSIONS_DIR = DEFAULT_SESSIONS_DIR;
@@ -1131,7 +1130,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
             type: 'tool_use',
             id: `${baseId}-c${blocks.length}`,
             ts,
-            tool: normalizeTranscriptToolName(block.name ?? 'unknown'),
+            tool: block.name ?? 'unknown',
             input: block.arguments ?? {},
             output: '',
             toolCallId: block.id,
@@ -1180,7 +1179,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
           type: 'tool_use',
           id: `${baseId}-c${blocks.length}`,
           ts,
-          tool: normalizeTranscriptToolName(toolName ?? 'unknown'),
+          tool: toolName ?? 'unknown',
           input: {},
           output: resultText,
           toolCallId,
@@ -1212,7 +1211,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
             },
           ];
         });
-      const normalizedToolName = normalizeTranscriptToolName(toolName ?? 'unknown');
+      const normalizedToolName = toolName ?? 'unknown';
       const hasOriginalToolCall = idx !== undefined;
       if (
         !hasOriginalToolCall ||

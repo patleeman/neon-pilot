@@ -12,17 +12,12 @@ const conversationsBackend = vi.hoisted(() => ({
   requestConversationWorkingDirectoryChange: vi.fn(),
 }));
 const queue = vi.hoisted(() => ({ deferredResume: vi.fn() }));
-const ask = vi.hoisted(() => ({ executeAskUserQuestion: vi.fn() }));
 const cwd = vi.hoisted(() => ({ executeChangeWorkingDirectory: vi.fn() }));
 const inspect = vi.hoisted(() => ({ executeConversationInspectTool: vi.fn() }));
 const title = vi.hoisted(() => ({ executeSetConversationTitle: vi.fn() }));
 
 vi.mock('@neon-pilot/extensions/backend/conversations', () => conversationsBackend);
 vi.mock('../../system-automations/src/conversationQueueBackend.js', () => queue);
-vi.mock('./askUserQuestionAgentExtension.js', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./askUserQuestionAgentExtension.js')>()),
-  ...ask,
-}));
 vi.mock('./changeWorkingDirectoryAgentExtension.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./changeWorkingDirectoryAgentExtension.js')>()),
   ...cwd,
@@ -73,7 +68,7 @@ function ctx(overrides: Record<string, unknown> = {}) {
     },
   };
   return {
-    profile: 'shared',
+    runtimeScope: 'shared',
     log: { info: vi.fn() },
     toolContext: { conversationId: 'conv-1', sessionFile: '/session.json', cwd: '/repo' },
     conversations,
@@ -84,7 +79,6 @@ function ctx(overrides: Record<string, unknown> = {}) {
 describe('system-conversation-tools backend routing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    ask.executeAskUserQuestion.mockResolvedValue({ content: [{ type: 'text', text: 'asked' }] });
     inspect.executeConversationInspectTool.mockResolvedValue({ content: [{ type: 'text', text: 'inspected' }] });
     title.executeSetConversationTitle.mockResolvedValue({ content: [{ type: 'text', text: 'titled' }] });
     cwd.executeChangeWorkingDirectory.mockResolvedValue({ content: [{ type: 'text', text: 'changed' }] });
@@ -114,14 +108,8 @@ describe('system-conversation-tools backend routing', () => {
     expect((context as { log: { info: ReturnType<typeof vi.fn> } }).log.info).toHaveBeenCalledTimes(4);
   });
 
-  it('routes ask, inspect, and set_title actions with normalized payloads', async () => {
+  it('routes inspect and set_title actions with normalized payloads', async () => {
     const context = ctx();
-
-    await conversationTool({ action: 'ask', question: 'Proceed?' }, context);
-    expect(ask.executeAskUserQuestion).toHaveBeenCalledWith(
-      { question: 'Proceed?' },
-      expect.objectContaining({ sessionManager: expect.objectContaining({ getSessionId: expect.any(Function) }), cwd: '/repo' }),
-    );
 
     await conversationTool({ action: 'inspect', inspectAction: 'query', conversationId: 'conv-2' }, context);
     expect(inspect.executeConversationInspectTool).toHaveBeenCalledWith(
@@ -332,8 +320,9 @@ describe('system-conversation-tools backend routing', () => {
   it('exposes split tool handlers with focused payloads', async () => {
     const context = ctx();
 
-    await askUser({ question: 'Proceed?' }, context);
-    expect(ask.executeAskUserQuestion).toHaveBeenLastCalledWith({ question: 'Proceed?' }, expect.objectContaining({ cwd: '/repo' }));
+    const askUserPayload = { questions: [{ label: 'Proceed?', options: ['Yes', 'No'] }] };
+    const askResult = await askUser(askUserPayload, context);
+    expect(askResult).toMatchObject({ details: { action: 'ask_user', questions: [{ label: 'Proceed?' }] } });
 
     await conversationInspect({ action: 'query', conversationId: 'conv-2' }, context);
     expect(inspect.executeConversationInspectTool).toHaveBeenLastCalledWith(

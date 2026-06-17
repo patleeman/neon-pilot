@@ -24,7 +24,7 @@ function createPa(
 ): NativeExtensionClient {
   return {
     extension: { invoke: vi.fn(), getManifest: vi.fn(), listSurfaces: vi.fn() },
-    runs: { start: vi.fn(), get: vi.fn(), list: vi.fn(), readLog: vi.fn(), cancel: vi.fn() },
+    executions: { start: vi.fn(), get: vi.fn(), list: vi.fn(), readLog: vi.fn(), cancel: vi.fn() },
     storage: { get: vi.fn(), put: vi.fn(), delete: vi.fn(), list: vi.fn() },
     commands: { execute: vi.fn(async () => true), list: vi.fn(async () => []), setContext: vi.fn() },
     ui: { toast: vi.fn(), notify: vi.fn(), confirm: vi.fn(async () => true), ...uiOverrides },

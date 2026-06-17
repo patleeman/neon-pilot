@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  validateComposerButtonContributions,
   validateComposerControlContributions,
   validateComposerInputToolContributions,
   validateComposerShelfContributions,
@@ -18,7 +17,6 @@ describe('extensionUiContributionValidation', () => {
     expect(validateComposerShelfContributions([{ id: 'shelf', component: 'Shelf', placement: 'top' }])).toBeUndefined();
     expect(validateNewConversationPanelContributions([{ id: 'panel', component: 'Panel', priority: 1 }])).toBeUndefined();
     expect(validateComposerControlContributions([{ id: 'control', component: 'Control', slot: 'actions', priority: 1 }])).toBeUndefined();
-    expect(validateComposerButtonContributions([{ id: 'button', component: 'Button', priority: 1 }])).toBeUndefined();
     expect(validateComposerInputToolContributions([{ id: 'tool', component: 'Tool', priority: 1 }])).toBeUndefined();
   });
 

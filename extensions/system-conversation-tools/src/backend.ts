@@ -584,9 +584,6 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
   const payload = payloadWithoutAction(params);
 
   switch (action) {
-    case 'ask':
-      return executeAskUserQuestion(payload, sessionManagerCtx);
-
     case 'activity':
       return toolResult(
         action,
@@ -646,7 +643,7 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
     case 'deferred_resume': {
       const { deferredAction, ...resumePayload } = payload;
       const result = await deferredResume({ ...resumePayload, action: deferredAction } as never, {
-        profile: ctx.profile,
+        profile: ctx.runtimeScope,
         toolContext: {
           sessionId: conversationId,
           sessionFile: toolCtx?.sessionFile,
@@ -832,7 +829,7 @@ export async function deferredResumeTool(input: unknown, ctx: ExtensionBackendCo
   const toolCtx = ctx.toolContext;
   const conversationId = toolCtx?.conversationId ?? toolCtx?.sessionId ?? '';
   const result = await deferredResume(input as never, {
-    profile: ctx.profile,
+    profile: ctx.runtimeScope,
     toolContext: {
       sessionId: conversationId,
       sessionFile: toolCtx?.sessionFile,

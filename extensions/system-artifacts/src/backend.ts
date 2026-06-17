@@ -64,7 +64,7 @@ function formatArtifact(record: NonNullable<Awaited<ReturnType<typeof getConvers
 
 export async function artifact(input: ArtifactInput, ctx: ArtifactBackendContext) {
   const conversationId = readConversationId(input, ctx);
-  const profile = ctx.profile;
+  const profile = ctx.runtimeScope;
 
   switch (input.action) {
     case 'save': {

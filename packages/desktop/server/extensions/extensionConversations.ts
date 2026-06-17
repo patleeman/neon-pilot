@@ -344,7 +344,7 @@ export function createExtensionConversationsCapability(
           conversationId: input.conversationId,
           namespace: input.namespace,
           extensionId,
-          profile: serverContext?.getRuntimeScope?.() ?? 'shared',
+          runtimeScope: serverContext?.getRuntimeScope?.() ?? 'shared',
         });
       },
       async set(input: { conversationId: string; namespace?: string; values: Record<string, unknown> }): Promise<Record<string, unknown>> {
@@ -353,7 +353,7 @@ export function createExtensionConversationsCapability(
           namespace: input.namespace,
           values: input.values,
           extensionId,
-          profile: serverContext?.getRuntimeScope?.() ?? 'shared',
+          runtimeScope: serverContext?.getRuntimeScope?.() ?? 'shared',
         });
       },
       async query(input: {
@@ -365,7 +365,7 @@ export function createExtensionConversationsCapability(
           namespace: input.namespace?.trim() || extensionId,
           where: input.where,
           limit: input.limit,
-          profile: serverContext?.getRuntimeScope?.() ?? 'shared',
+          runtimeScope: serverContext?.getRuntimeScope?.() ?? 'shared',
         });
       },
     },

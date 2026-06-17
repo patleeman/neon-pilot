@@ -44,7 +44,6 @@ function normalizeScheduledTaskCliInput(input: unknown): unknown {
   return {
     ...input,
     ...(args[0] ? { taskId: args[0] } : {}),
-    ...(flagString(flags, 'profile') ? { profile: flagString(flags, 'profile') } : {}),
     ...(flagString(flags, 'title') ? { title: flagString(flags, 'title') } : {}),
     ...(flagString(flags, 'cron') ? { cron: flagString(flags, 'cron') } : {}),
     ...(flagString(flags, 'at') ? { at: flagString(flags, 'at') } : {}),

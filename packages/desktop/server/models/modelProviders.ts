@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { getConfigRoot, getDurableModelsDir, getDurableRuntimeConfigRoot } from '@neon-pilot/core';
+import { getDurableRuntimeConfigRoot } from '@neon-pilot/core';
 
 export type ModelProviderApi = 'openai-completions' | 'openai-responses' | 'anthropic-messages' | 'google-generative-ai';
 export type ModelProviderInputType = 'text' | 'image';
@@ -69,9 +69,6 @@ export interface EditableModelProviderModelConfig {
 
 export interface ModelProviderFileOptions {
   runtimeConfigRoot?: string;
-  /** @deprecated Use runtimeConfigRoot. */
-  profilesDir?: string;
-  modelsDir?: string;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -100,45 +97,17 @@ function normalizeModelId(modelId: string): string {
   return normalized;
 }
 
-function resolveProfilesDir(options: ModelProviderFileOptions = {}): string {
+function resolveRuntimeConfigRoot(options: ModelProviderFileOptions = {}): string {
   const explicitRuntimeConfigRoot = options.runtimeConfigRoot?.trim();
   if (explicitRuntimeConfigRoot) {
     return explicitRuntimeConfigRoot;
   }
 
-  const explicitProfilesDir = options.profilesDir?.trim();
-  if (explicitProfilesDir) {
-    return explicitProfilesDir;
-  }
-
-  const explicitLegacyModelsDir = options.modelsDir?.trim();
-  if (explicitLegacyModelsDir) {
-    return explicitLegacyModelsDir;
-  }
-
   return getDurableRuntimeConfigRoot();
 }
 
-function resolveLegacyModelsDir(options: ModelProviderFileOptions = {}): string {
-  const normalized = options.modelsDir?.trim();
-  if (normalized) {
-    return normalized;
-  }
-  return getDurableModelsDir();
-}
-
-function resolveLegacyModelProvidersFilePath(profile: string, options: ModelProviderFileOptions = {}): string {
-  const normalizedProfile = normalizeProfile(profile);
-  const fileName = normalizedProfile === 'shared' ? 'global.json' : `${normalizedProfile}.json`;
-  return join(resolveLegacyModelsDir(options), fileName);
-}
-
-function resolveLegacyProfileModelProvidersFilePath(profile: string): string {
-  return join(getConfigRoot(), 'profiles', normalizeProfile(profile), 'models.json');
-}
-
 export function resolveModelProvidersFilePath(profile: string, options: ModelProviderFileOptions = {}): string {
-  return join(resolveProfilesDir(options), normalizeProfile(profile), 'models.json');
+  return join(resolveRuntimeConfigRoot(options), normalizeProfile(profile), 'models.json');
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -164,33 +133,12 @@ function readWritableRawConfig(profile: string, options: ModelProviderFileOption
     return readRawConfig(canonicalPath);
   }
 
-  const legacyPath = resolveLegacyModelProvidersFilePath(profile, options);
-  if (existsSync(legacyPath)) {
-    return readRawConfig(legacyPath);
-  }
-
-  const legacyProfilePath = resolveLegacyProfileModelProvidersFilePath(profile);
-  if (existsSync(legacyProfilePath)) {
-    return readRawConfig(legacyProfilePath);
-  }
-
   return {};
 }
 
 function writeRawConfig(filePath: string, config: JsonRecord): void {
   mkdirSync(dirname(filePath), { recursive: true });
   writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`);
-}
-
-function finalizeCanonicalWrite(profile: string, filePath: string, options: ModelProviderFileOptions = {}): void {
-  const legacyPath = resolveLegacyModelProvidersFilePath(profile, options);
-  if (legacyPath !== filePath && existsSync(legacyPath)) {
-    rmSync(legacyPath, { force: true });
-  }
-  const legacyProfilePath = resolveLegacyProfileModelProvidersFilePath(profile);
-  if (legacyProfilePath !== filePath && existsSync(legacyProfilePath)) {
-    rmSync(legacyProfilePath, { force: true });
-  }
 }
 
 function ensureProvidersObject(config: JsonRecord): Record<string, unknown> {
@@ -437,7 +385,6 @@ export function upsertModelProvider(
   applyProviderUpdate(provider, update);
   providers[normalizedProviderId] = provider;
   writeRawConfig(filePath, config);
-  finalizeCanonicalWrite(normalizedProfile, filePath, options);
   return readModelProvidersState(normalizedProfile, options);
 }
 
@@ -455,7 +402,6 @@ export function removeModelProvider(
 
   delete providers[normalizedProviderId];
   writeRawConfig(filePath, config);
-  finalizeCanonicalWrite(normalizedProfile, filePath, options);
 
   return {
     removed,
@@ -492,7 +438,6 @@ export function upsertModelProviderModel(
   provider.models = models;
   providers[normalizedProviderId] = provider;
   writeRawConfig(filePath, config);
-  finalizeCanonicalWrite(normalizedProfile, filePath, options);
   return readModelProvidersState(normalizedProfile, options);
 }
 
@@ -524,7 +469,6 @@ export function removeModelProviderModel(
   provider.models = remainingModels;
   providers[normalizedProviderId] = provider;
   writeRawConfig(filePath, config);
-  finalizeCanonicalWrite(normalizedProfile, filePath, options);
 
   return {
     removed,

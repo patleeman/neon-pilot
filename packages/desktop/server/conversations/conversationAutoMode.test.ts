@@ -90,30 +90,12 @@ describe('conversation auto mode state defaults', () => {
 });
 
 describe('readConversationAutoModeStateFromEntries', () => {
-  it('reads the latest valid auto mode state entry (backward compat: enabled=true → mode=nudge)', () => {
-    expect(
-      readConversationAutoModeStateFromEntries([
-        { type: 'custom', customType: 'conversation-auto-mode', data: { enabled: true, updatedAt: '2026-04-12T10:00:00.000Z' } },
-      ]),
-    ).toEqual({
-      enabled: true,
-      mode: 'nudge',
-      stopReason: null,
-      updatedAt: '2026-04-12T10:00:00.000Z',
-    });
-  });
-
-  it('reads the latest valid auto mode state entry (backward compat: enabled=false → mode=manual)', () => {
+  it('ignores auto mode entries without an explicit mode', () => {
     expect(
       readConversationAutoModeStateFromEntries([
         { type: 'custom', customType: 'conversation-auto-mode', data: { enabled: false, updatedAt: '2026-04-12T10:00:00.000Z' } },
       ]),
-    ).toEqual({
-      enabled: false,
-      mode: 'manual',
-      stopReason: null,
-      updatedAt: '2026-04-12T10:00:00.000Z',
-    });
+    ).toEqual(DEFAULT_CONVERSATION_AUTO_MODE_STATE);
   });
 
   it('reads mode: "nudge" as enabled', () => {
@@ -233,7 +215,7 @@ describe('readConversationAutoModeStateFromEntries', () => {
   it('drops non-ISO timestamps', () => {
     expect(
       readConversationAutoModeStateFromEntries([
-        { type: 'custom', customType: 'conversation-auto-mode', data: { enabled: true, updatedAt: '1' } },
+        { type: 'custom', customType: 'conversation-auto-mode', data: { mode: 'nudge', enabled: true, updatedAt: '1' } },
       ]),
     ).toMatchObject({ enabled: true, stopReason: null, updatedAt: null });
   });

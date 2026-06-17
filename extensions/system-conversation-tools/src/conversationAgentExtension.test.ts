@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const queue = vi.hoisted(() => ({ deferredResume: vi.fn() }));
-const ask = vi.hoisted(() => ({ executeAskUserQuestion: vi.fn() }));
 const cwd = vi.hoisted(() => ({ executeChangeWorkingDirectory: vi.fn() }));
 const inspect = vi.hoisted(() => ({ executeConversationInspectTool: vi.fn() }));
 const title = vi.hoisted(() => ({ executeSetConversationTitle: vi.fn() }));
@@ -16,10 +15,6 @@ const conversationsBackend = vi.hoisted(() => ({
 
 vi.mock('@neon-pilot/extensions/backend/conversations', () => conversationsBackend);
 vi.mock('../../system-automations/src/conversationQueueBackend.js', () => queue);
-vi.mock('./askUserQuestionAgentExtension.js', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./askUserQuestionAgentExtension.js')>()),
-  ...ask,
-}));
 vi.mock('./changeWorkingDirectoryAgentExtension.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./changeWorkingDirectoryAgentExtension.js')>()),
   ...cwd,
@@ -60,7 +55,6 @@ const ctx: ToolCtx = {
 describe('conversationAgentExtension', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    ask.executeAskUserQuestion.mockResolvedValue({ content: [{ type: 'text', text: 'asked' }] });
     inspect.executeConversationInspectTool.mockResolvedValue({ content: [{ type: 'text', text: 'inspected' }] });
     title.executeSetConversationTitle.mockResolvedValue({ content: [{ type: 'text', text: 'titled' }] });
     cwd.executeChangeWorkingDirectory.mockResolvedValue({ content: [{ type: 'text', text: 'changed' }] });
@@ -78,11 +72,8 @@ describe('conversationAgentExtension', () => {
     );
   });
 
-  it('routes ask, inspect, set_title, and cwd changes', async () => {
+  it('routes inspect, set_title, and cwd changes', async () => {
     const { tool, pi, requestConversationWorkingDirectoryChange } = register();
-
-    await tool.execute('call-1', { action: 'ask', question: 'Proceed?' }, undefined, undefined, ctx);
-    expect(ask.executeAskUserQuestion).toHaveBeenCalledWith({ question: 'Proceed?' }, ctx);
 
     await tool.execute('call-1', { action: 'inspect', inspectAction: 'query', conversationId: 'conv-2' }, undefined, undefined, ctx);
     expect(inspect.executeConversationInspectTool).toHaveBeenCalledWith({ action: 'query', conversationId: 'conv-2' }, ctx);

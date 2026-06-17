@@ -456,8 +456,8 @@
     ]
   },
   "permissions": [
-    "runs:read",
-    "runs:start",
+    "executions:read",
+    "executions:start",
     "conversations:readwrite",
     "ui:notify"
   ]

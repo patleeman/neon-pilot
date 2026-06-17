@@ -180,10 +180,10 @@ interface ExtensionBackendCapabilityConversations {
     input: { olderThanMs: number; archivedOnly?: boolean | null; dryRun?: boolean | null },
   ): Promise<unknown> | unknown;
   metadata: {
-    get(extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }): Promise<unknown> | unknown;
+    get(extensionId: string, input: { conversationId: string; namespace?: string; runtimeScope?: string }): Promise<unknown> | unknown;
     set(
       extensionId: string,
-      input: { conversationId: string; namespace?: string; values: Record<string, unknown>; profile?: string },
+      input: { conversationId: string; namespace?: string; values: Record<string, unknown>; runtimeScope?: string },
     ): Promise<unknown> | unknown;
     query(
       extensionId: string,
@@ -191,7 +191,7 @@ interface ExtensionBackendCapabilityConversations {
         namespace?: string;
         where?: Array<{ key: string; op?: 'eq' | 'neq' | 'in' | 'exists'; value?: unknown }>;
         limit?: number;
-        profile?: string;
+        runtimeScope?: string;
       },
     ): Promise<unknown> | unknown;
   };
@@ -209,13 +209,7 @@ interface ExtensionBackendCapabilityCommands {
 }
 
 function isHostCommandAction(action: string): boolean {
-  return (
-    isKnownHostCommand(action) ||
-    action.startsWith('navigate:') ||
-    action.startsWith('commandPalette:') ||
-    action.startsWith('rightRail:') ||
-    action.startsWith('layout:')
-  );
+  return isKnownHostCommand(action);
 }
 
 interface ExtensionBackendCapabilityModels {
@@ -762,7 +756,7 @@ function dispatchConversationsCapability(
     const metadataInput = {
       conversationId: requireString(input.conversationId, 'Conversation id'),
       ...(input.namespace !== undefined ? { namespace: optionalString(input.namespace, 'Conversation metadata namespace') } : {}),
-      ...(input.profile !== undefined ? { profile: optionalString(input.profile, 'Conversation metadata profile') } : {}),
+      ...(input.runtimeScope !== undefined ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation metadata runtimeScope') } : {}),
     };
     return conversations.metadata.get(request.extensionId, metadataInput);
   }
@@ -771,7 +765,7 @@ function dispatchConversationsCapability(
     const metadataInput = {
       conversationId: requireString(input.conversationId, 'Conversation id'),
       ...(input.namespace !== undefined ? { namespace: optionalString(input.namespace, 'Conversation metadata namespace') } : {}),
-      ...(input.profile !== undefined ? { profile: optionalString(input.profile, 'Conversation metadata profile') } : {}),
+      ...(input.runtimeScope !== undefined ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation metadata runtimeScope') } : {}),
     };
     const values = optionalRecord(input.values, 'Conversation metadata values');
     if (!values) throw new Error('Conversation metadata values must be an object.');
@@ -781,7 +775,7 @@ function dispatchConversationsCapability(
   if (request.operation === 'metadata.query') {
     return conversations.metadata.query(request.extensionId, {
       ...(input.namespace !== undefined ? { namespace: optionalString(input.namespace, 'Conversation metadata namespace') } : {}),
-      ...(input.profile !== undefined ? { profile: optionalString(input.profile, 'Conversation metadata profile') } : {}),
+      ...(input.runtimeScope !== undefined ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation metadata runtimeScope') } : {}),
       ...(input.where !== undefined ? { where: optionalConversationMetadataWhere(input.where) } : {}),
       ...(input.limit !== undefined ? { limit: optionalNumber(input.limit, 'Conversation metadata limit') } : {}),
     });
@@ -1784,11 +1778,11 @@ export function createExtensionBackendCapabilityDispatcher(
       input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['prune']>[0],
     ) => createExtensionConversationsCapability().prune(input),
     metadata: {
-      get: (extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }) =>
+      get: (extensionId: string, input: { conversationId: string; namespace?: string; runtimeScope?: string }) =>
         readConversationMetadata({ ...input, extensionId }),
       set: (
         extensionId: string,
-        input: { conversationId: string; namespace?: string; values: Record<string, unknown>; profile?: string },
+        input: { conversationId: string; namespace?: string; values: Record<string, unknown>; runtimeScope?: string },
       ) => writeConversationMetadata({ ...input, extensionId }),
       query: (
         extensionId: string,
@@ -1796,7 +1790,7 @@ export function createExtensionBackendCapabilityDispatcher(
           namespace?: string;
           where?: Array<{ key: string; op?: 'eq' | 'neq' | 'in' | 'exists'; value?: unknown }>;
           limit?: number;
-          profile?: string;
+          runtimeScope?: string;
         },
       ) => queryConversationMetadata({ ...input, namespace: input.namespace?.trim() || extensionId }),
     },

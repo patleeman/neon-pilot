@@ -14,8 +14,6 @@ export interface AssemblySource {
 
 export interface AssemblyRuntimeContext {
   runtimeScope?: string;
-  /** @deprecated Runtime resources are no longer user-profile scoped. Use runtimeScope. */
-  profile?: string;
   repoRoot: string;
   modelRef?: string;
   provider?: string;
@@ -24,8 +22,6 @@ export interface AssemblyRuntimeContext {
 
 export interface PromptAssemblyPlan {
   runtimeScope: string;
-  /** @deprecated Runtime resources are no longer user-profile scoped. */
-  profile?: string;
   repoRoot: string;
   skills: {
     skillPaths: string[];

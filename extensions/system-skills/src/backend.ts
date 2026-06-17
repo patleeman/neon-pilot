@@ -3,7 +3,7 @@ import { buildSkillInventoryAsync, setSkillEnabled } from '@neon-pilot/extension
 
 export async function listSkills(_input: unknown, ctx: ExtensionBackendContext) {
   const skills = (
-    await buildSkillInventoryAsync({ runtimeScope: ctx.runtimeScope ?? ctx.profile, repoRoot: ctx.runtime.getRepoRoot() })
+    await buildSkillInventoryAsync({ runtimeScope: ctx.runtimeScope, repoRoot: ctx.runtime.getRepoRoot() })
   ).map((skill) => ({
     id: skill.id,
     name: skill.title,

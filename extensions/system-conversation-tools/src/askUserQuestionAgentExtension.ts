@@ -1,6 +1,5 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
-const ASK_USER_LEGACY_MAX_OPTIONS = 6;
 const ASK_USER_MAX_QUESTIONS = 8;
 const ASK_USER_MAX_OPTIONS_PER_QUESTION = 12;
 
@@ -19,7 +18,6 @@ const AskUserQuestionPromptParams = {
   properties: {
     id: { type: 'string', description: 'Optional stable question id used to track the answer locally.' },
     label: { type: 'string', description: 'User-facing question label.' },
-    question: { type: 'string', description: 'Alias for label.' },
     details: { type: 'string', description: 'Optional supporting context for this question.' },
     style: {
       type: 'string',
@@ -42,19 +40,9 @@ const AskUserQuestionPromptParams = {
 export const AskUserQuestionToolParams = {
   type: 'object',
   properties: {
-    question: {
-      type: 'string',
-      description: 'Legacy single-question form. Use questions[] for multiple questions or check-style questions.',
-    },
     details: {
       type: 'string',
-      description: 'Optional overall context, or legacy single-question context when question is used alone.',
-    },
-    options: {
-      type: 'array',
-      items: { type: 'string', minLength: 1 },
-      description: 'Legacy quick-reply options for a single-question prompt.',
-      maxItems: ASK_USER_LEGACY_MAX_OPTIONS,
+      description: 'Optional overall context for the prompt.',
     },
     questions: {
       type: 'array',
@@ -177,15 +165,14 @@ function normalizeStructuredPrompt(value: unknown, index: number): AskUserQuesti
   const candidate = value as {
     id?: unknown;
     label?: unknown;
-    question?: unknown;
     details?: unknown;
     style?: unknown;
     type?: unknown;
     options?: unknown;
   };
-  const label = readOptionalString(candidate.label) ?? readOptionalString(candidate.question);
+  const label = readOptionalString(candidate.label);
   if (!label) {
-    throw new Error(`questions[${index}] requires label or question.`);
+    throw new Error(`questions[${index}] requires label.`);
   }
 
   const options = normalizeOptions(candidate.options);
@@ -205,32 +192,8 @@ function normalizeStructuredPrompt(value: unknown, index: number): AskUserQuesti
   };
 }
 
-function normalizeLegacyQuestion(params: { question?: unknown; details?: unknown; options?: unknown }): AskUserQuestionPayload {
-  const question = readOptionalString(params.question);
-  if (!question) {
-    throw new Error('question is required when questions is not provided.');
-  }
-
-  const details = readOptionalString(params.details);
-  const options = normalizeOptions(params.options);
-
-  return {
-    questions: [
-      {
-        id: 'question-1',
-        label: question,
-        ...(details ? { details } : {}),
-        style: 'radio',
-        options,
-      },
-    ],
-  };
-}
-
 function normalizePayload(params: {
-  question?: unknown;
   details?: unknown;
-  options?: unknown;
   questions?: unknown;
 }): AskUserQuestionPayload {
   if (Array.isArray(params.questions) && params.questions.length > 0) {
@@ -245,7 +208,7 @@ function normalizePayload(params: {
     };
   }
 
-  return normalizeLegacyQuestion(params);
+  throw new Error('questions is required.');
 }
 
 function formatResultText(payload: AskUserQuestionPayload): string {
@@ -271,7 +234,7 @@ function formatResultText(payload: AskUserQuestionPayload): string {
 }
 
 export async function executeAskUserQuestion(params: unknown, ctx: { sessionManager: { getSessionId(): string } }) {
-  const payload = normalizePayload(params as { question?: unknown; details?: unknown; options?: unknown; questions?: unknown });
+  const payload = normalizePayload(params as { details?: unknown; questions?: unknown });
   const conversationId = ctx.sessionManager.getSessionId();
 
   return {
