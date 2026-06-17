@@ -84,7 +84,7 @@ The publish path performs:
 
 1. **Supply-chain audit** — runs `scfw audit npm` through `scripts/scfw-pnpm-npm-adapter.mjs`, which presents the pnpm lockfile as npm list JSON; blocks the release if any critical/malicious findings are reported. Requires [`scfw`](https://github.com/DataDog/supply-chain-firewall) installed via `pipx install scfw`. Bypassable with `NEON_PILOT_RELEASE_SKIP_SCFW_AUDIT=1` in emergencies.
 2. **Pre-release checks** — runs `pnpm run check:release` from a clean release snapshot: TypeScript build, system extension build/packaging checks, the full Vitest suite, extension static boundary checks, and the release reliability doctor
-3. **Release QA** — run `pnpm run qa:release` and complete the hands-on checklist in `docs/release-qa.md` against the app build or packaged release candidate; record commit SHA, build, and pass/fail notes before continuing
+3. **Release QA** — run `pnpm run qa:release` and complete the hands-on checklist in `docs/release-qa.md` against the app build or packaged release candidate; record commit SHA, build, and pass/fail notes before continuing. `release:publish` requires `NEON_PILOT_RELEASE_QA_ACK=1` plus `NEON_PILOT_RELEASE_QA_NOTES=/path/to/notes.md`, or an explicit `NEON_PILOT_RELEASE_QA_WAIVED=1` with `NEON_PILOT_RELEASE_QA_WAIVER_REASON`, before any tag push or GitHub asset upload.
 4. **Build** — builds signed desktop artifacts locally
 5. **Extension golden smoke** — launches the packaged app in isolated state, verifies the release-critical extension matrix, opens extension routes, and invokes representative extension backend actions
 6. **Notarize** — submits the built `.app` for Apple notarization

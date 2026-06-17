@@ -14,6 +14,16 @@ pnpm run qa:release
 
 `qa:release` is an orchestrated checklist runner. It runs the release reliability doctor and prints the required hands-on checks that must be performed against a running app or packaged candidate.
 
+`release:publish` requires an explicit acknowledgment before it pushes the tag or uploads GitHub release assets:
+
+```bash
+NEON_PILOT_RELEASE_QA_ACK=1 \
+NEON_PILOT_RELEASE_QA_NOTES=/absolute/path/to/release-qa-notes.md \
+pnpm run release:publish
+```
+
+Use `NEON_PILOT_RELEASE_QA_WAIVED=1` only for an intentional waiver, and include `NEON_PILOT_RELEASE_QA_WAIVER_REASON`.
+
 ## Hands-on smoke checklist
 
 Record pass/fail notes, the commit SHA, and the app build used.

@@ -558,6 +558,42 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
   requireManualSmokeTestApproval(appPath, 'Automated smoke was skipped by NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE=1.');
 }
 
+function requireReleaseQaAcknowledgement(env) {
+  if (isTruthyEnv(env.NEON_PILOT_RELEASE_QA_WAIVED)) {
+    const reason = String(env.NEON_PILOT_RELEASE_QA_WAIVER_REASON ?? '').trim();
+    if (!reason) {
+      fail('NEON_PILOT_RELEASE_QA_WAIVED=1 requires NEON_PILOT_RELEASE_QA_WAIVER_REASON.');
+    }
+
+    console.warn(`Release QA checklist waived: ${reason}`);
+    return;
+  }
+
+  if (!isTruthyEnv(env.NEON_PILOT_RELEASE_QA_ACK)) {
+    fail(
+      [
+        'Release QA acknowledgment is required before pushing/uploading artifacts.',
+        'Run pnpm run qa:release, complete docs/release-qa.md, and record commit SHA, app build, and pass/fail notes.',
+        'Then rerun with NEON_PILOT_RELEASE_QA_ACK=1 and NEON_PILOT_RELEASE_QA_NOTES=/path/to/notes.md.',
+        'To deliberately waive this gate, set NEON_PILOT_RELEASE_QA_WAIVED=1 and NEON_PILOT_RELEASE_QA_WAIVER_REASON.',
+      ].join('\n'),
+    );
+  }
+
+  const notesPath = env.NEON_PILOT_RELEASE_QA_NOTES ? resolve(repoRoot, env.NEON_PILOT_RELEASE_QA_NOTES) : '';
+  if (!notesPath) {
+    fail('NEON_PILOT_RELEASE_QA_ACK=1 requires NEON_PILOT_RELEASE_QA_NOTES=/path/to/notes.md.');
+  }
+  if (!existsSync(notesPath)) {
+    fail(`Release QA notes file not found: ${notesPath}`);
+  }
+  if (!readFileSync(notesPath, 'utf8').trim()) {
+    fail(`Release QA notes file is empty: ${notesPath}`);
+  }
+
+  console.log(`Release QA gate acknowledged with notes: ${notesPath}`);
+}
+
 const packageJson = readJsonFile(packageJsonPath);
 const version = packageJson.version;
 const tag = `v${version}`;
@@ -595,6 +631,7 @@ const desktopReleaseFiles = collectReleaseFiles(releaseDir, version);
 const files = desktopReleaseFiles;
 notarizeDistributionContainers(env, desktopReleaseFiles);
 requireSmokeTestApproval(env, releaseDir, buildRoot);
+requireReleaseQaAcknowledgement(env);
 
 console.log(`Pushing ${tag} to GitHub...`);
 pushReleaseRef(tag);
