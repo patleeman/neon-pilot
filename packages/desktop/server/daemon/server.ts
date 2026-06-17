@@ -62,6 +62,7 @@ import type {
 interface ModuleRuntime {
   module: DaemonModule;
   status: DaemonModuleStatus;
+  started: boolean;
 }
 
 interface ActiveBackgroundRunHandle {
@@ -221,6 +222,7 @@ export class NeonPilotDaemon {
       .filter((module) => module.enabled)
       .map((module) => ({
         module,
+        started: false,
         status: {
           name: module.name,
           enabled: true,
@@ -288,6 +290,7 @@ export class NeonPilotDaemon {
 
       for (const moduleRuntime of this.modules) {
         await moduleRuntime.module.start(this.createModuleContext(moduleRuntime.module.name));
+        moduleRuntime.started = true;
         this.registerModuleSubscriptions(moduleRuntime);
         this.registerModuleTimers(moduleRuntime.module);
       }
@@ -328,7 +331,12 @@ export class NeonPilotDaemon {
 
       this.log('info', `neon-pilotd started pid=${this.pid} socket=${this.paths.socketPath}`);
     } catch (error) {
-      this.releaseProcessLock();
+      try {
+        await this.stop();
+      } catch (cleanupError) {
+        this.log('warn', `daemon startup cleanup failed: ${(cleanupError as Error).message}`);
+        this.releaseProcessLock();
+      }
       throw error;
     }
   }
@@ -353,9 +361,10 @@ export class NeonPilotDaemon {
     this.companionServer = undefined;
 
     for (const moduleRuntime of this.modules) {
-      if (moduleRuntime.module.stop) {
+      if (moduleRuntime.started && moduleRuntime.module.stop) {
         try {
           await moduleRuntime.module.stop(this.createModuleContext(moduleRuntime.module.name));
+          moduleRuntime.started = false;
         } catch (error) {
           this.log('warn', `module stop failed: ${moduleRuntime.module.name}: ${(error as Error).message}`);
         }
@@ -373,7 +382,14 @@ export class NeonPilotDaemon {
         return;
       }
 
-      this.server.close(() => resolve());
+      try {
+        this.server.close(() => resolve());
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ERR_SERVER_NOT_RUNNING') {
+          this.log('warn', `ipc server close failed: ${(error as Error).message}`);
+        }
+        resolve();
+      }
     });
 
     stopPeriodicWalCheckpoint();

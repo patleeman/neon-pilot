@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { createConnection } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { DaemonConfig } from '../config.js';
+import { resolveDaemonPaths } from '../paths.js';
 import { NeonPilotDaemon } from './server.js';
 
 const tempDirs: string[] = [];
@@ -83,5 +84,30 @@ describe('daemon logging', () => {
     expect(daemon.isRunning()).toBe(false);
     socket.destroy();
     daemon = undefined;
+  });
+
+  it('rolls back pid, socket, and lock files when companion startup fails', async () => {
+    const socketPath = join(createTempDir('daemon-startup-rollback-'), 'neon-pilotd.sock');
+    const paths = resolveDaemonPaths(socketPath);
+    const failingConfig: DaemonConfig = {
+      ...createTestConfig(socketPath),
+      companion: { enabled: true, host: '256.256.256.256', port: 0 },
+    };
+
+    daemon = new NeonPilotDaemon({ config: failingConfig, stopRequestBehavior: 'reject' });
+
+    await expect(daemon.start()).rejects.toThrow();
+    expect(daemon.isRunning()).toBe(false);
+    expect(existsSync(paths.socketPath)).toBe(false);
+    expect(existsSync(paths.pidFile)).toBe(false);
+    expect(existsSync(`${paths.pidFile}.lock`)).toBe(false);
+
+    daemon = new NeonPilotDaemon({
+      config: { ...createTestConfig(socketPath), companion: { enabled: false } },
+      stopRequestBehavior: 'reject',
+    });
+
+    await expect(daemon.start()).resolves.toBeUndefined();
+    expect(daemon.isRunning()).toBe(true);
   });
 });
