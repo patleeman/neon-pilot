@@ -4,7 +4,8 @@ interface RuntimeAgentHooksModule {
   buildLiveSessionExtensionFactoriesForRuntime(...args: unknown[]): unknown;
   buildLiveSessionResourceOptionsForRuntime(...args: unknown[]): unknown;
 }
-const dynamicImport = new Function('specifier', 'return import(specifier)') as <T>(specifier: string) => Promise<T>;
+
+const RUNTIME_AGENT_HOOKS_MODULE = '../runtimeAgentHooks.js';
 
 export async function getRuntimeDir(): Promise<string> {
   return callServerModuleExport<string>('@neon-pilot/core', 'getPiAgentRuntimeDir');
@@ -13,15 +14,21 @@ export async function getRuntimeDir(): Promise<string> {
 export async function buildLiveSessionExtensionFactoriesForRuntime(
   ...args: Parameters<RuntimeAgentHooksModule['buildLiveSessionExtensionFactoriesForRuntime']>
 ) {
-  const module = await dynamicImport<RuntimeAgentHooksModule>('../runtimeAgentHooks.js');
-  return module.buildLiveSessionExtensionFactoriesForRuntime(...args);
+  return callServerModuleExport<ReturnType<RuntimeAgentHooksModule['buildLiveSessionExtensionFactoriesForRuntime']>>(
+    RUNTIME_AGENT_HOOKS_MODULE,
+    'buildLiveSessionExtensionFactoriesForRuntime',
+    ...args,
+  );
 }
 
 export async function buildLiveSessionResourceOptionsForRuntime(
   ...args: Parameters<RuntimeAgentHooksModule['buildLiveSessionResourceOptionsForRuntime']>
 ) {
-  const module = await dynamicImport<RuntimeAgentHooksModule>('../runtimeAgentHooks.js');
-  return module.buildLiveSessionResourceOptionsForRuntime(...args);
+  return callServerModuleExport<ReturnType<RuntimeAgentHooksModule['buildLiveSessionResourceOptionsForRuntime']>>(
+    RUNTIME_AGENT_HOOKS_MODULE,
+    'buildLiveSessionResourceOptionsForRuntime',
+    ...args,
+  );
 }
 
 export async function buildSessionContextForRuntime(entries: unknown[], leafId: string | null): Promise<{ messages: unknown[] }> {

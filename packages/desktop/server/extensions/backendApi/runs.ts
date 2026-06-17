@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { callDaemonExport } from './daemonBridge.js';
+import { callServerModuleExport } from './serverModuleResolver.js';
 
 export interface ScheduledTaskThreadInput {
   threadMode?: string | null;
@@ -9,15 +10,9 @@ export interface ScheduledTaskThreadInput {
   threadSessionFile?: string | null;
 }
 
-const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<Record<string, unknown>>;
-
 export async function invalidateAppTopics(topics: string | string[]): Promise<void> {
   try {
-    const appEvents = await dynamicImport('../../shared/appEvents.js');
-    const invalidate = appEvents.invalidateAppTopics;
-    if (typeof invalidate === 'function') {
-      invalidate(topics);
-    }
+    await callServerModuleExport<void>('../../shared/appEvents.js', 'invalidateAppTopics', topics);
   } catch {
     // Invalidation is best-effort for extension backend bundles.
   }

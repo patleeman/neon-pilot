@@ -85,8 +85,25 @@ function collectTypeImportSpecifiers(filePath) {
 
 function collectHostBackendRuntimeSpecifiers(filePath) {
   const source = readFileSync(filePath, 'utf8');
-  const matches = source.matchAll(/['"]\.\.\/\.\.\/([^'"]+\.js)['"]/g);
-  return [...new Set([...matches].map((match) => match[1]))].sort();
+  const serverRelativeMatches = [...source.matchAll(/['"](\.\.\/\.\.\/[^'"]+\.js)['"]/g)].map((match) => match[1]);
+  const extensionRelativeMatches = [
+    ...source.matchAll(/\b(?:callModuleExport|callServerModuleExport|importServerExtensionModule|importServerModule)\s*\(\s*['"](\.\.\/[^'"]+\.js)['"]/g),
+  ].map((match) => match[1]);
+  return [...new Set([...serverRelativeMatches, ...extensionRelativeMatches].map(normalizeHostBackendRuntimeSpecifier))]
+    .filter(Boolean)
+    .sort();
+}
+
+function normalizeHostBackendRuntimeSpecifier(specifier) {
+  if (specifier.startsWith('../../')) return specifier.slice('../../'.length);
+  if (specifier.startsWith('../')) return `extensions/${specifier.slice('../'.length)}`;
+  return undefined;
+}
+
+function collectRawDynamicImportUsages(filePath) {
+  const source = readFileSync(filePath, 'utf8');
+  const matches = source.matchAll(/new\s+Function\s*\([^)]*\bimport\s*\(/g);
+  return [...matches].map((match) => match[0]);
 }
 
 function isForbiddenStaticImport(specifier) {
@@ -141,6 +158,14 @@ for (const fileName of readdirSync(hostBackendApiRoot)) {
     failures,
     `backendApi/${fileName} statically imports, type-imports, or re-exports heavy/runtime modules (${forbidden.join(', ')}); route them through a narrow lazy host seam instead`,
   );
+  if (fileName !== 'serverModuleResolver.ts') {
+    const rawDynamicImportUsages = collectRawDynamicImportUsages(filePath);
+    assert(
+      rawDynamicImportUsages.length === 0,
+      failures,
+      `backendApi/${fileName} defines raw dynamic import helpers (${rawDynamicImportUsages.join(', ')}); use serverModuleResolver instead`,
+    );
+  }
 }
 
 const buildScript = readFileSync(buildScriptPath, 'utf8');
