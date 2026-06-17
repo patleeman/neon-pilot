@@ -577,9 +577,12 @@ async function sendExtensionSseResponse(
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders?.();
+  const iterator = events[Symbol.asyncIterator]();
   try {
-    for await (const event of events) {
-      if (signal.aborted) break;
+    for (;;) {
+      const next = await nextSseEventOrAbort(iterator, signal);
+      if (next.done || signal.aborted) break;
+      const event = next.value;
       if (event.id) res.write(`id: ${event.id}\n`);
       if (event.event) res.write(`event: ${event.event}\n`);
       if (typeof event.retry === 'number') res.write(`retry: ${event.retry}\n`);
@@ -588,8 +591,27 @@ async function sendExtensionSseResponse(
       res.write('\n');
     }
   } finally {
+    await iterator.return?.();
     res.end();
   }
+}
+
+function nextSseEventOrAbort<T>(iterator: AsyncIterator<T>, signal: AbortSignal): Promise<IteratorResult<T>> {
+  if (signal.aborted) return Promise.resolve({ done: true, value: undefined });
+  return new Promise<IteratorResult<T>>((resolve, reject) => {
+    const onAbort = () => resolve({ done: true, value: undefined });
+    signal.addEventListener('abort', onAbort, { once: true });
+    iterator.next().then(
+      (next) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(next);
+      },
+      (error) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      },
+    );
+  });
 }
 
 async function readExtensionFile(req: Request, res: Response): Promise<void> {

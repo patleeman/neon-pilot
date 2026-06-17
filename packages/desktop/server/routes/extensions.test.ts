@@ -19,7 +19,7 @@ type Handler = (
 ) => void | Promise<void>;
 
 function createResponse() {
-  return {
+  return Object.assign(new EventEmitter(), {
     json: vi.fn(),
     send: vi.fn(),
     sendFile: vi.fn(),
@@ -29,7 +29,7 @@ function createResponse() {
     flushHeaders: vi.fn(),
     status: vi.fn().mockReturnThis(),
     type: vi.fn().mockReturnThis(),
-  };
+  });
 }
 
 function createHarness() {
@@ -260,6 +260,45 @@ describe('registerExtensionRoutes', () => {
     expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/event-stream; charset=utf-8');
     expect(res.write).toHaveBeenCalledWith('event: ready\n');
     expect(res.write).toHaveBeenCalledWith('data: {"ok":true}\n');
+    expect(res.end).toHaveBeenCalled();
+  });
+
+  it('closes suspended extension backend SSE iterators when the client disconnects', async () => {
+    const returnSpy = vi.fn(async () => ({ done: true, value: undefined }));
+    const events = {
+      [Symbol.asyncIterator]() {
+        return {
+          next: vi
+            .fn()
+            .mockResolvedValueOnce({ done: false, value: { event: 'ready', data: { ok: true } } })
+            .mockImplementation(() => new Promise(() => undefined)),
+          return: returnSpy,
+        };
+      },
+    };
+    setExtensionHostClient({
+      invokeRoute: vi.fn(async () => ({ status: 200, stream: 'sse', events })),
+    } as never);
+    const harness = createHarness();
+    const res = createResponse();
+
+    const request = new EventEmitter() as EventEmitter & {
+      method: string;
+      params: Record<string, string>;
+      query: Record<string, string>;
+      body?: unknown;
+    };
+    request.method = 'GET';
+    request.params = { id: 'agent-board', 0: 'events' };
+    request.query = {};
+
+    const routePromise = harness.getHandler('/api/extensions/:id/*')(request, res);
+    await vi.waitFor(() => expect(res.write).toHaveBeenCalledWith('event: ready\n'));
+
+    res.emit('close');
+    await routePromise;
+
+    expect(returnSpy).toHaveBeenCalledTimes(1);
     expect(res.end).toHaveBeenCalled();
   });
 
