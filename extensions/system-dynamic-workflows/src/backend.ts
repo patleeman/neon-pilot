@@ -522,15 +522,37 @@ async function openStorageBackedDatabase(ctx: ExtensionBackendContext): Promise<
           return undefined;
         },
         all(...params: unknown[]) {
-          if (sql.includes('FROM workflow_nodes')) return Array.from(nodes.values()).filter((row) => row.workflow_id === params[0]);
-          if (sql.includes('FROM workflow_events')) return events.filter((row) => row.workflow_id === params[0]);
-          if (sql.includes('FROM workflow_runs')) return Array.from(runs.values());
-          if (sql.includes('FROM saved_workflows')) return Array.from(saved.values());
+          if (sql.includes('FROM workflow_nodes')) {
+            return Array.from(nodes.values())
+              .filter((row) => row.workflow_id === params[0])
+              .sort(compareRecordStrings('created_at', 'asc'));
+          }
+          if (sql.includes('FROM workflow_events')) {
+            return events.filter((row) => row.workflow_id === params[0]).sort(compareRecordStrings('created_at', 'asc'));
+          }
+          if (sql.includes('FROM workflow_runs')) {
+            return applyOptionalLimit(Array.from(runs.values()).sort(compareRecordStrings('created_at', 'desc')), params[0]);
+          }
+          if (sql.includes('FROM saved_workflows')) return Array.from(saved.values()).sort(compareRecordStrings('updated_at', 'desc'));
           return [];
         },
       };
     },
   } as ExtensionSqliteDatabase;
+}
+
+function compareRecordStrings(key: string, direction: 'asc' | 'desc') {
+  return (left: Record<string, unknown>, right: Record<string, unknown>) => {
+    const leftValue = typeof left[key] === 'string' ? left[key] : '';
+    const rightValue = typeof right[key] === 'string' ? right[key] : '';
+    const result = leftValue.localeCompare(rightValue);
+    return direction === 'asc' ? result : -result;
+  };
+}
+
+function applyOptionalLimit<T>(rows: T[], limit: unknown): T[] {
+  const normalized = typeof limit === 'number' && Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : rows.length;
+  return rows.slice(0, normalized);
 }
 
 function rowToRun(row: unknown): WorkflowRunRecord | null {

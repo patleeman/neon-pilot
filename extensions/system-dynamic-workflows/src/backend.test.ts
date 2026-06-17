@@ -147,6 +147,44 @@ function createCtx(settings: unknown = {}) {
   };
 }
 
+function createStoredRun(id: string, name: string, createdAt: string) {
+  return {
+    id,
+    name,
+    description: null,
+    status: 'completed',
+    cwd: '/repo',
+    parent_conversation_id: null,
+    block_id: null,
+    script: 'return workflow.finish("done");',
+    args_json: 'null',
+    result_text: 'done',
+    error: null,
+    active_phase: null,
+    model: null,
+    agent_defaults_json: '{}',
+    settings_json: '{}',
+    created_at: createdAt,
+    updated_at: createdAt,
+    completed_at: createdAt,
+  };
+}
+
+function createStoredSavedWorkflow(id: string, name: string, updatedAt: string) {
+  return {
+    id,
+    name,
+    description: null,
+    script: 'return workflow.finish("done");',
+    args_json: 'null',
+    cwd: '/repo',
+    model: null,
+    agent_defaults_json: '{}',
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: updatedAt,
+  };
+}
+
 describe('dynamic workflows backend', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -339,6 +377,60 @@ describe('dynamic workflows backend', () => {
     expect(result).toMatchObject({ details: { status: 'completed', result: 'stored' } });
     await expect(listWorkflows({}, ctx)).resolves.toMatchObject({
       workflows: [expect.objectContaining({ name: 'Storage', resultText: 'stored' })],
+    });
+  });
+
+  it('keeps storage fallback workflow lists ordered like sqlite queries', async () => {
+    const storage = new Map<string, unknown>([
+      [
+        'dynamic-workflows.store',
+        {
+          runs: [
+            createStoredRun('older', 'Older', '2026-01-01T00:00:00.000Z'),
+            createStoredRun('newest', 'Newest', '2026-01-03T00:00:00.000Z'),
+            createStoredRun('middle', 'Middle', '2026-01-02T00:00:00.000Z'),
+          ],
+          saved: [
+            createStoredSavedWorkflow('saved-older', 'Saved older', '2026-01-01T00:00:00.000Z'),
+            createStoredSavedWorkflow('saved-newest', 'Saved newest', '2026-01-03T00:00:00.000Z'),
+            createStoredSavedWorkflow('saved-middle', 'Saved middle', '2026-01-02T00:00:00.000Z'),
+          ],
+          nodes: [
+            { id: 'node-newer', workflow_id: 'newest', prompt: 'second', status: 'completed', created_at: '2026-01-03T00:00:02.000Z' },
+            { id: 'node-older', workflow_id: 'newest', prompt: 'first', status: 'completed', created_at: '2026-01-03T00:00:01.000Z' },
+          ],
+          events: [
+            { id: 'event-newer', workflow_id: 'newest', event_type: 'log', message: 'second', created_at: '2026-01-03T00:00:02.000Z' },
+            { id: 'event-older', workflow_id: 'newest', event_type: 'log', message: 'first', created_at: '2026-01-03T00:00:01.000Z' },
+          ],
+        },
+      ],
+    ]);
+    const ctx = {
+      runtime: { getRepoRoot: () => '/repo' },
+      storage: {
+        get: vi.fn(async (key: string) => storage.get(key)),
+        put: vi.fn(async (key: string, value: unknown) => storage.set(key, value)),
+      },
+      toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+      conversations: {
+        appendTranscriptBlock: vi.fn(async () => ({ blockId: 'block-1' })),
+        updateTranscriptBlock: vi.fn(async () => ({ blockId: 'block-1' })),
+      },
+    } as never;
+
+    await expect(listWorkflows({ limit: 2 }, ctx)).resolves.toMatchObject({
+      workflows: [
+        { id: 'newest', name: 'Newest' },
+        { id: 'middle', name: 'Middle' },
+      ],
+    });
+    await expect(listSavedWorkflows({}, ctx)).resolves.toMatchObject({
+      workflows: [
+        { id: 'saved-newest', name: 'Saved newest' },
+        { id: 'saved-middle', name: 'Saved middle' },
+        { id: 'saved-older', name: 'Saved older' },
+      ],
     });
   });
 
