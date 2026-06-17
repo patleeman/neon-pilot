@@ -166,6 +166,7 @@ import {
   trustLocalhostWebappProxyCertificate,
 } from '../shared/localhostWebappProxy.js';
 import { logError, logWarn } from '../shared/logging.js';
+import { isSameOriginUnsafeRequestInput } from '../shared/webSecurity.js';
 import { readConversationPlansWorkspace } from '../ui/conversationPlanPreferences.js';
 import { readSavedDefaultCwdPreferences, writeSavedDefaultCwdPreference } from '../ui/defaultCwdPreferences.js';
 import { getRuntimeSettingsFilePath, persistSettingsWrite } from '../ui/settingsPersistence.js';
@@ -454,6 +455,21 @@ function createLocalApiRequest(input: {
 function shouldPrioritizeWebappHostRoute(headers?: Record<string, string>): boolean {
   const host = readLocalApiRequestHeader(normalizeLocalApiRequestHeaders(headers), 'host')?.split(':')[0]?.trim().toLowerCase() ?? '';
   return host.endsWith(WEBAPP_LOCALHOST_SUFFIX) && host.length > WEBAPP_LOCALHOST_SUFFIX.length;
+}
+
+function isTrustedDesktopLocalApiDispatch(input: { method: string; url: URL; headers?: Record<string, string> }): boolean {
+  const headers = normalizeLocalApiRequestHeaders(input.headers);
+  return isSameOriginUnsafeRequestInput(
+    {
+      method: input.method,
+      originHeader: readLocalApiRequestHeader(headers, 'origin'),
+      host: readLocalApiRequestHeader(headers, 'host') ?? input.url.host,
+      forwardedHost: readLocalApiRequestHeader(headers, 'x-forwarded-host'),
+      protocol: input.url.protocol.replace(/:$/, ''),
+      forwardedProto: readLocalApiRequestHeader(headers, 'x-forwarded-proto'),
+    },
+    { allowMissingOrigin: true },
+  );
 }
 
 function findLocalApiRouteForRequest(routes: RegisteredRoute[], method: string, pathname: string, headers?: Record<string, string>) {
@@ -1488,6 +1504,10 @@ export async function dispatchDesktopLocalApiRequest(input: {
   const startedAtMs = performance.now();
   process.stderr.write(`[perf] dispatch ${input.method} ${input.path}\n`);
   const url = new URL(input.path, 'http://desktop.local');
+  if (!isTrustedDesktopLocalApiDispatch({ method: input.method, url, headers: input.headers })) {
+    return createDesktopLocalApiErrorResponse(403, 'Cross-origin request rejected.');
+  }
+
   const isWebappHostRequest = shouldPrioritizeWebappHostRoute(input.headers);
   let productResponse: DesktopLocalApiDispatchResult | null;
   try {

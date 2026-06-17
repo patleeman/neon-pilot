@@ -93,6 +93,36 @@ describe('desktop local API conversation actions', () => {
 });
 
 describe('desktop local API conversation rename route', () => {
+  it('rejects unsafe cross-origin dispatch before product handlers run', async () => {
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'PATCH',
+      path: '/api/conversations/test-id/title',
+      body: { name: '' },
+      headers: {
+        host: 'desktop.local',
+        origin: 'https://evil.example',
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(Buffer.from(response.body).toString('utf-8')).toBe('Cross-origin request rejected.');
+  });
+
+  it('allows unsafe same-origin dispatches to reach product handlers', async () => {
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'PATCH',
+      path: '/api/conversations/test-id/title',
+      body: { name: '' },
+      headers: {
+        host: 'desktop.local',
+        origin: 'http://desktop.local',
+      },
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(Buffer.from(response.body).toString('utf-8')).toBe('name required');
+  });
+
   it('rejects rename with missing name instead of throwing No local API route', async () => {
     const response = await dispatchDesktopLocalApiRequest({
       method: 'PATCH',

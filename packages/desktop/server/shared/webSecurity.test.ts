@@ -5,6 +5,7 @@ import {
   applyWebSecurityHeaders,
   createInMemoryRateLimit,
   enforceSameOriginUnsafeRequests,
+  isSameOriginUnsafeRequestInput,
   isSameOriginUnsafeRequest,
   isTrustedOrigin,
   resolveRequestOrigin,
@@ -221,6 +222,27 @@ describe('enforceSameOriginUnsafeRequests', () => {
           headers: { host: 'board.localhost', origin: 'https://evil.example' },
         }),
       ),
+    ).toBe(false);
+  });
+
+  it('supports trusted in-process unsafe dispatches without an origin header', () => {
+    expect(
+      isSameOriginUnsafeRequestInput(
+        {
+          method: 'PATCH',
+          host: 'desktop.local',
+          protocol: 'http',
+        },
+        { allowMissingOrigin: true },
+      ),
+    ).toBe(true);
+
+    expect(
+      isSameOriginUnsafeRequestInput({
+        method: 'PATCH',
+        host: 'desktop.local',
+        protocol: 'http',
+      }),
     ).toBe(false);
   });
 });

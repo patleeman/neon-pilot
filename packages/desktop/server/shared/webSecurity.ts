@@ -72,6 +72,36 @@ export function isTrustedOrigin(originHeader: string | null | undefined, request
   }
 }
 
+export function isSameOriginUnsafeRequestInput(
+  input: {
+    method: string;
+    originHeader?: string | null;
+    host?: string | null;
+    forwardedHost?: string | null;
+    protocol?: string | null;
+    forwardedProto?: string | null;
+  },
+  options: { allowMissingOrigin?: boolean } = {},
+): boolean {
+  if (SAFE_METHODS.has(input.method.toUpperCase())) {
+    return true;
+  }
+
+  if (options.allowMissingOrigin && (typeof input.originHeader !== 'string' || input.originHeader.trim().length === 0)) {
+    return true;
+  }
+
+  return isTrustedOrigin(
+    input.originHeader,
+    resolveRequestOrigin({
+      host: input.host,
+      forwardedHost: input.forwardedHost,
+      protocol: input.protocol,
+      forwardedProto: input.forwardedProto,
+    }),
+  );
+}
+
 export function requestOriginFromExpress(req: Request): string | null {
   return resolveRequestOrigin({
     host: req.get('host'),
@@ -87,11 +117,14 @@ function isSecureRequest(req: Request): boolean {
 }
 
 export function isSameOriginUnsafeRequest(req: Request): boolean {
-  if (SAFE_METHODS.has(req.method.toUpperCase())) {
-    return true;
-  }
-
-  return isTrustedOrigin(req.get('origin'), requestOriginFromExpress(req));
+  return isSameOriginUnsafeRequestInput({
+    method: req.method,
+    originHeader: req.get('origin'),
+    host: req.get('host'),
+    forwardedHost: req.get('x-forwarded-host'),
+    protocol: req.protocol,
+    forwardedProto: req.get('x-forwarded-proto'),
+  });
 }
 
 export function applyWebSecurityHeaders(req: Request, res: Response, next: NextFunction): void {
