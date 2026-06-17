@@ -53,6 +53,10 @@ export interface ModelGatewayStatus {
   lastError?: string;
 }
 
+export interface ModelGatewayResponseOptions {
+  signal?: AbortSignal;
+}
+
 export interface ModelGatewayCodexConfigStatus {
   configPath: string;
   installed: boolean;
@@ -814,13 +818,19 @@ export function buildContext(body: ResponsesRequest): Context {
   };
 }
 
-export async function createModelGatewayResponse(ctx: RuntimeContext, body: ResponsesRequest, settings: ModelGatewaySettings): Promise<ResponsesResponse> {
+export async function createModelGatewayResponse(
+  ctx: RuntimeContext,
+  body: ResponsesRequest,
+  settings: ModelGatewaySettings,
+  options: ModelGatewayResponseOptions = {},
+): Promise<ResponsesResponse> {
   const requestedModel = typeof body.model === 'string' && body.model.trim() ? body.model.trim() : settings.defaultModel;
   if (requestedModel === FAKE_MODEL_GATEWAY_MODEL_ID) return fakeResponse(body, requestedModel);
   const { model, apiKey, headers } = await resolveModel(ctx, requestedModel);
   const message = await stream(model, buildContext(body), {
     apiKey,
     headers,
+    signal: options.signal,
     temperature: typeof body.temperature === 'number' ? body.temperature : undefined,
     maxTokens: typeof body.max_output_tokens === 'number' ? body.max_output_tokens : undefined,
   }).result();
@@ -840,6 +850,7 @@ export async function* streamModelGatewayResponseEvents(
   ctx: RuntimeContext,
   body: ResponsesRequest,
   settings: ModelGatewaySettings,
+  options: ModelGatewayResponseOptions = {},
 ): AsyncIterable<Record<string, unknown> | '[DONE]'> {
   const id = responseId();
   const requestedModel = typeof body.model === 'string' && body.model.trim() ? body.model.trim() : settings.defaultModel;
@@ -861,6 +872,7 @@ export async function* streamModelGatewayResponseEvents(
   const piStream = stream(model, buildContext(body), {
     apiKey,
     headers,
+    signal: options.signal,
     temperature: typeof body.temperature === 'number' ? body.temperature : undefined,
     maxTokens: typeof body.max_output_tokens === 'number' ? body.max_output_tokens : undefined,
   });

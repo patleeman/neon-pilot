@@ -1,5 +1,6 @@
 import type {
   ModelGatewayModel,
+  ModelGatewayResponseOptions,
   ModelGatewayRuntimeContext,
   ModelGatewaySettings,
   ModelGatewayCodexConfigResult,
@@ -20,6 +21,7 @@ export type {
   ModelGatewayRuntimeContext,
   ModelGatewaySettings,
   ModelGatewayStatus,
+  ModelGatewayResponseOptions,
   ResponsesRequest,
   ResponsesResponse,
 } from '@neon-pilot/extensions/backend/modelGateway';
@@ -56,16 +58,18 @@ export function createModelGatewayResponse(
   ctx: ModelGatewayRuntimeContext,
   body: ResponsesRequest,
   settings: ModelGatewaySettings,
+  options?: ModelGatewayResponseOptions,
 ): Promise<ResponsesResponse> {
-  return callServerModuleExport(RUNTIME_MODULE, 'createModelGatewayResponse', ctx, body, settings) as Promise<ResponsesResponse>;
+  return callServerModuleExport(RUNTIME_MODULE, 'createModelGatewayResponse', ctx, body, settings, options) as Promise<ResponsesResponse>;
 }
 
 export async function streamModelGatewayResponseEvents(
   ctx: ModelGatewayRuntimeContext,
   body: ResponsesRequest,
   settings: ModelGatewaySettings,
+  options?: ModelGatewayResponseOptions,
 ): Promise<AsyncIterable<Record<string, unknown> | '[DONE]'>> {
-  return callServerModuleExport(RUNTIME_MODULE, 'streamModelGatewayResponseEvents', ctx, body, settings) as Promise<
+  return callServerModuleExport(RUNTIME_MODULE, 'streamModelGatewayResponseEvents', ctx, body, settings, options) as Promise<
     AsyncIterable<Record<string, unknown> | '[DONE]'>
   >;
 }

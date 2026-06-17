@@ -1,6 +1,10 @@
 import { createServer } from 'node:net';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const modelGatewayMock = vi.hoisted(() => ({
+  streamSignals: [] as Array<AbortSignal | undefined>,
+}));
+
 vi.mock(
   '@neon-pilot/extensions/backend/modelGateway',
   () => ({
@@ -64,8 +68,19 @@ vi.mock(
         output: [{ id: 'msg_0', type: 'message', status: 'completed', role: 'assistant', content: [] }],
       };
     },
-    async *streamModelGatewayResponseEvents() {
+    async *streamModelGatewayResponseEvents(_ctx: unknown, _body: unknown, _settings: unknown, options?: { signal?: AbortSignal }) {
+      modelGatewayMock.streamSignals.push(options?.signal);
       yield { type: 'response.created', response: { id: 'resp_test', status: 'in_progress' } };
+      if (options?.signal) {
+        await new Promise<void>((resolve) => {
+          if (options.signal?.aborted) {
+            resolve();
+            return;
+          }
+          options.signal?.addEventListener('abort', () => resolve(), { once: true });
+        });
+        if (options.signal.aborted) return;
+      }
       yield { type: 'response.completed', response: { id: 'resp_test', status: 'completed' } };
       yield '[DONE]';
     },
@@ -121,6 +136,7 @@ function ctx(overrides?: Partial<Record<string, unknown>>, initialStorage?: Reco
 describe('system-model-gateway backend', () => {
   afterEach(async () => {
     await stopGatewayService({}, ctx());
+    modelGatewayMock.streamSignals.splice(0);
   });
 
   it('serves health with the default loopback target', async () => {
@@ -230,6 +246,33 @@ describe('system-model-gateway backend', () => {
       body: JSON.stringify({ model: 'neon-pilot-fake', input: 'hello' }),
     });
     expect(authorizedResponse.status).toBe(200);
+  });
+
+  it('aborts loopback streaming responses when the client disconnects', async () => {
+    const port = await getFreePort();
+    const context = ctx(undefined, { settings: { port } });
+    const state = await startGatewayService({}, context);
+    const token = (state as { authToken: string }).authToken;
+    const controller = new AbortController();
+
+    const response = await fetch(`http://127.0.0.1:${port}/v1/responses/stream`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'neon-pilot-fake', input: 'hello' }),
+      signal: controller.signal,
+    });
+    expect(response.status).toBe(200);
+
+    const reader = response.body?.getReader();
+    expect(reader).toBeDefined();
+    const firstChunk = await reader!.read();
+    expect(new TextDecoder().decode(firstChunk.value)).toContain('response.created');
+
+    controller.abort();
+
+    const signal = modelGatewayMock.streamSignals.at(-1);
+    expect(signal).toBeDefined();
+    await vi.waitFor(() => expect(signal?.aborted).toBe(true));
   });
 
   it('clears stale listener errors after a later successful loopback request', async () => {

@@ -89,6 +89,10 @@ export interface ModelGatewayRuntimeContext {
   runtimeDir: string;
 }
 
+export interface ModelGatewayResponseOptions {
+  signal?: AbortSignal;
+}
+
 export const modelGatewaySettingsFrom = (_value: unknown): Promise<ModelGatewaySettings> => hostResolved();
 export const listModelGatewayModels = (_ctx: ModelGatewayRuntimeContext): Promise<ModelGatewayModel[]> => hostResolved();
 export const writeModelGatewayCatalog = (_ctx: ModelGatewayRuntimeContext): Promise<string> => hostResolved();
@@ -105,9 +109,11 @@ export const createModelGatewayResponse = (
   _ctx: ModelGatewayRuntimeContext,
   _body: ResponsesRequest,
   _settings: ModelGatewaySettings,
+  _options?: ModelGatewayResponseOptions,
 ): Promise<ResponsesResponse> => hostResolved();
 export const streamModelGatewayResponseEvents = (
   _ctx: ModelGatewayRuntimeContext,
   _body: ResponsesRequest,
   _settings: ModelGatewaySettings,
+  _options?: ModelGatewayResponseOptions,
 ): AsyncIterable<Record<string, unknown> | '[DONE]'> => hostResolved();

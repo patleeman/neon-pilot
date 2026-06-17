@@ -173,7 +173,7 @@ export async function responsesRoute(request: ExtensionRouteRequest, ctx: Extens
       return {
         status: 200,
         stream: 'sse',
-        events: routeSseEvents(ctx, body, settings),
+        events: routeSseEvents(ctx, body, settings, request.signal),
       };
     }
     return jsonResponse(200, await createModelGatewayResponse(ctx, body, settings));
@@ -188,13 +188,13 @@ export async function responsesStreamRoute(request: ExtensionRouteRequest, ctx: 
   return {
     status: 200,
     stream: 'sse',
-    events: routeSseEvents(ctx, { ...body, stream: true }, settings),
+    events: routeSseEvents(ctx, { ...body, stream: true }, settings, request.signal),
   };
 }
 
-async function* routeSseEvents(ctx: ExtensionBackendContext, body: ResponsesRequest, settings: ModelGatewaySettings) {
+async function* routeSseEvents(ctx: ExtensionBackendContext, body: ResponsesRequest, settings: ModelGatewaySettings, signal?: AbortSignal) {
   try {
-    for await (const event of await streamModelGatewayResponseEvents(ctx, body, settings)) {
+    for await (const event of await streamModelGatewayResponseEvents(ctx, body, settings, { signal })) {
       yield sseEvent(event);
     }
   } catch (error) {
@@ -291,6 +291,18 @@ function sendSse(response: ServerResponse): void {
   });
 }
 
+function abortControllerForRequest(request: IncomingMessage, response: ServerResponse): AbortController {
+  const controller = new AbortController();
+  const abort = () => {
+    if (!controller.signal.aborted) controller.abort();
+  };
+  request.once('aborted', abort);
+  response.once('close', () => {
+    if (!response.writableEnded) abort();
+  });
+  return controller;
+}
+
 async function handleHttpRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -326,7 +338,11 @@ async function handleHttpRequest(
         statusCode = 200;
         lastError = undefined;
         sendSse(response);
-        for await (const event of await streamModelGatewayResponseEvents(ctx, { ...body, stream: true }, settings)) {
+        const abortController = abortControllerForRequest(request, response);
+        for await (const event of await streamModelGatewayResponseEvents(ctx, { ...body, stream: true }, settings, {
+          signal: abortController.signal,
+        })) {
+          if (abortController.signal.aborted) return;
           response.write(`data: ${typeof event === 'string' ? event : JSON.stringify(event)}\n\n`);
         }
         response.end();
