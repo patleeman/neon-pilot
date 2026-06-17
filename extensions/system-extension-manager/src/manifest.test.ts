@@ -42,6 +42,42 @@ describe('system-extension-manager manifest', () => {
     );
   });
 
+  it('command-backs extension manager workflows', () => {
+    const commands = new Map(manifest.contributes.commands.map((command: { id: string }) => [command.id, command]));
+
+    expect(commands.get('open')).toMatchObject({
+      title: 'Open Extensions',
+      action: 'app.navigate',
+      args: { to: '/extensions' },
+    });
+    expect(commands.get('reload-registry')).toMatchObject({
+      title: 'Reload Extensions',
+      action: 'reloadExtensions',
+    });
+    expect(commands.get('list-catalog')).toMatchObject({
+      title: 'List Installable Extensions',
+      action: 'listInstallableExtensions',
+    });
+    expect(commands.get('install-catalog')).toMatchObject({
+      title: 'Install Catalog Extension',
+      action: 'installCatalogExtension',
+      argsSchema: {
+        required: ['id'],
+        properties: { id: { type: 'string' } },
+        additionalProperties: false,
+      },
+    });
+    expect(commands.get('update-catalog')).toMatchObject({
+      title: 'Update Catalog Extension',
+      action: 'updateCatalogExtension',
+      argsSchema: {
+        required: ['id'],
+        properties: { id: { type: 'string' } },
+        additionalProperties: false,
+      },
+    });
+  });
+
   it('declares required permissions', () => {
     expect(manifest.permissions).toContain('extensions:read');
     expect(manifest.permissions).toContain('extensions:write');
