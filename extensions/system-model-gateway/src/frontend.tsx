@@ -91,6 +91,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const copyResetTimeoutRef = React.useRef<number | null>(null);
 
   const codexConfig = useMemo(
     () =>
@@ -127,6 +128,15 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
     };
   }, [load]);
 
+  useEffect(() => {
+    return () => {
+      if (copyResetTimeoutRef.current !== null) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+        copyResetTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   async function savePort() {
     const nextPort = Number(port);
     if (!Number.isSafeInteger(nextPort) || nextPort < 1 || nextPort > 65535) {
@@ -154,7 +164,13 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
     try {
       await navigator.clipboard.writeText(codexConfig);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
+      if (copyResetTimeoutRef.current !== null) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+      }
+      copyResetTimeoutRef.current = window.setTimeout(() => {
+        setCopied(false);
+        copyResetTimeoutRef.current = null;
+      }, 1600);
     } catch (copyError) {
       setError(readError(copyError));
     }
@@ -205,127 +221,130 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
 
   return (
     <div className="space-y-5">
-        {loading ? <LoadingState label="Loading AI Gateway settings..." /> : null}
+      {loading ? <LoadingState label="Loading AI Gateway settings..." /> : null}
 
-        {!loading ? (
-          <div className="space-y-5">
-            <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_8rem_10rem]">
-              <div className="min-w-0">
-                <div className="ui-card-meta">Endpoint</div>
-                <div className="mt-1 truncate font-mono text-[13px] text-primary">{status.baseUrl}</div>
-              </div>
-              <div>
-                <div className="ui-card-meta">Status</div>
-                <div className="mt-1">
-                  <Pill tone={status.running ? 'success' : 'danger'}>{status.running ? 'Running' : 'Unavailable'}</Pill>
-                </div>
-              </div>
-              <div>
-                <div className="ui-card-meta">Models</div>
-                <div className="mt-1 text-[13px] text-primary">{status.models}</div>
+      {!loading ? (
+        <div className="space-y-5">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_8rem_10rem]">
+            <div className="min-w-0">
+              <div className="ui-card-meta">Endpoint</div>
+              <div className="mt-1 truncate font-mono text-[13px] text-primary">{status.baseUrl}</div>
+            </div>
+            <div>
+              <div className="ui-card-meta">Status</div>
+              <div className="mt-1">
+                <Pill tone={status.running ? 'success' : 'danger'}>{status.running ? 'Running' : 'Unavailable'}</Pill>
               </div>
             </div>
-
-            {status.lastError ? <Notice tone="danger">{status.lastError}</Notice> : null}
-            {error ? <Notice tone="danger">{error}</Notice> : null}
-            {message ? <Notice tone="success">{message}</Notice> : null}
-
-            <div className="grid gap-3 md:grid-cols-[12rem_auto] md:items-end">
-              <Field label="Port" hint="Changing the port restarts the local listener.">
-                <TextInput
-                  id="settings-model-gateway-port"
-                  value={port}
-                  inputMode="numeric"
-                  onChange={(event) => setPort(event.currentTarget.value)}
-                  onBlur={() => {
-                    if (port !== String(status.port)) void savePort();
-                  }}
-                />
-              </Field>
-              <div className="flex flex-wrap items-center gap-2 pb-0.5">
-                <ToolbarButton disabled={busy !== null} onClick={() => void load()}>
-                  Refresh
-                </ToolbarButton>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="text-[13px] font-semibold text-primary">Codex config</div>
-                  <SupportingText>
-                    {status.codexConfig?.installed
-                      ? `Catalog installed in ${status.codexConfig.configPath}`
-                      : `Not installed in ${status.codexConfig?.configPath ?? '~/.codex/config.toml'}`}
-                  </SupportingText>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <ToolbarButton disabled={busy === 'installCodexConfig'} onClick={() => void installCodexConfig()}>
-                    {status.codexConfig?.installed ? 'Reinstall' : 'Install'}
-                  </ToolbarButton>
-                  <ToolbarButton disabled={busy === 'removeCodexConfig' || !status.codexConfig?.installed} onClick={() => void removeCodexConfig()}>
-                    Remove
-                  </ToolbarButton>
-                  <ToolbarButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy'}</ToolbarButton>
-                </div>
-              </div>
-              {referenceCheck ? (
-                <Notice tone={referenceCheck.ok ? 'success' : 'warning'}>
-                  {referenceCheck.ok
-                    ? `Codex app-server sees ${referenceCheck.models ?? 0} gateway models without changing the active provider. Current Desktop builds may still hide them in the picker.`
-                    : `Codex reference check failed: ${referenceCheck.error ?? 'gateway models were not found in Codex debug models.'}`}
-                </Notice>
-              ) : status.codexConfig?.installed ? (
-                <Notice tone="warning">
-                  Catalog installed. Current Codex Desktop builds may still hide custom catalog models in the conversation picker.
-                </Notice>
-              ) : null}
-              <pre className="model-gateway-code">{codexConfig}</pre>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="text-[13px] font-semibold text-primary">Recent activity</div>
-                  <SupportingText>Latest loopback requests and errors from this app session.</SupportingText>
-                </div>
-                <ToolbarButton disabled={busy === 'clearLogs' || status.logs.length === 0} onClick={() => void clearLogs()}>
-                  Clear logs
-                </ToolbarButton>
-              </div>
-              <DataTable>
-                <DataTableHead>
-                  <DataTableRow>
-                    <DataTableHeaderCell>Time</DataTableHeaderCell>
-                    <DataTableHeaderCell>Route</DataTableHeaderCell>
-                    <DataTableHeaderCell>Model</DataTableHeaderCell>
-                    <DataTableHeaderCell>Status</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">Duration</DataTableHeaderCell>
-                  </DataTableRow>
-                </DataTableHead>
-                <DataTableBody>
-                  {status.logs.length === 0 ? (
-                    <DataTableEmptyRow colSpan={5}>No gateway activity yet.</DataTableEmptyRow>
-                  ) : (
-                    status.logs.slice(0, 12).map((entry) => (
-                      <DataTableRow key={entry.id}>
-                        <DataTableCell>{formatTime(entry.at)}</DataTableCell>
-                        <DataTableCell>
-                          <span className="font-mono text-[12px]">
-                            {entry.method} {entry.path}
-                          </span>
-                        </DataTableCell>
-                        <DataTableCell>{entry.model || 'auto'}</DataTableCell>
-                        <DataTableCell>{entry.error ? `${entry.status} · ${entry.error}` : entry.status}</DataTableCell>
-                        <DataTableCell align="right">{entry.durationMs}ms</DataTableCell>
-                      </DataTableRow>
-                    ))
-                  )}
-                </DataTableBody>
-              </DataTable>
+            <div>
+              <div className="ui-card-meta">Models</div>
+              <div className="mt-1 text-[13px] text-primary">{status.models}</div>
             </div>
           </div>
-        ) : null}
+
+          {status.lastError ? <Notice tone="danger">{status.lastError}</Notice> : null}
+          {error ? <Notice tone="danger">{error}</Notice> : null}
+          {message ? <Notice tone="success">{message}</Notice> : null}
+
+          <div className="grid gap-3 md:grid-cols-[12rem_auto] md:items-end">
+            <Field label="Port" hint="Changing the port restarts the local listener.">
+              <TextInput
+                id="settings-model-gateway-port"
+                value={port}
+                inputMode="numeric"
+                onChange={(event) => setPort(event.currentTarget.value)}
+                onBlur={() => {
+                  if (port !== String(status.port)) void savePort();
+                }}
+              />
+            </Field>
+            <div className="flex flex-wrap items-center gap-2 pb-0.5">
+              <ToolbarButton disabled={busy !== null} onClick={() => void load()}>
+                Refresh
+              </ToolbarButton>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[13px] font-semibold text-primary">Codex config</div>
+                <SupportingText>
+                  {status.codexConfig?.installed
+                    ? `Catalog installed in ${status.codexConfig.configPath}`
+                    : `Not installed in ${status.codexConfig?.configPath ?? '~/.codex/config.toml'}`}
+                </SupportingText>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <ToolbarButton disabled={busy === 'installCodexConfig'} onClick={() => void installCodexConfig()}>
+                  {status.codexConfig?.installed ? 'Reinstall' : 'Install'}
+                </ToolbarButton>
+                <ToolbarButton
+                  disabled={busy === 'removeCodexConfig' || !status.codexConfig?.installed}
+                  onClick={() => void removeCodexConfig()}
+                >
+                  Remove
+                </ToolbarButton>
+                <ToolbarButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy'}</ToolbarButton>
+              </div>
+            </div>
+            {referenceCheck ? (
+              <Notice tone={referenceCheck.ok ? 'success' : 'warning'}>
+                {referenceCheck.ok
+                  ? `Codex app-server sees ${referenceCheck.models ?? 0} gateway models without changing the active provider. Current Desktop builds may still hide them in the picker.`
+                  : `Codex reference check failed: ${referenceCheck.error ?? 'gateway models were not found in Codex debug models.'}`}
+              </Notice>
+            ) : status.codexConfig?.installed ? (
+              <Notice tone="warning">
+                Catalog installed. Current Codex Desktop builds may still hide custom catalog models in the conversation picker.
+              </Notice>
+            ) : null}
+            <pre className="model-gateway-code">{codexConfig}</pre>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[13px] font-semibold text-primary">Recent activity</div>
+                <SupportingText>Latest loopback requests and errors from this app session.</SupportingText>
+              </div>
+              <ToolbarButton disabled={busy === 'clearLogs' || status.logs.length === 0} onClick={() => void clearLogs()}>
+                Clear logs
+              </ToolbarButton>
+            </div>
+            <DataTable>
+              <DataTableHead>
+                <DataTableRow>
+                  <DataTableHeaderCell>Time</DataTableHeaderCell>
+                  <DataTableHeaderCell>Route</DataTableHeaderCell>
+                  <DataTableHeaderCell>Model</DataTableHeaderCell>
+                  <DataTableHeaderCell>Status</DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">Duration</DataTableHeaderCell>
+                </DataTableRow>
+              </DataTableHead>
+              <DataTableBody>
+                {status.logs.length === 0 ? (
+                  <DataTableEmptyRow colSpan={5}>No gateway activity yet.</DataTableEmptyRow>
+                ) : (
+                  status.logs.slice(0, 12).map((entry) => (
+                    <DataTableRow key={entry.id}>
+                      <DataTableCell>{formatTime(entry.at)}</DataTableCell>
+                      <DataTableCell>
+                        <span className="font-mono text-[12px]">
+                          {entry.method} {entry.path}
+                        </span>
+                      </DataTableCell>
+                      <DataTableCell>{entry.model || 'auto'}</DataTableCell>
+                      <DataTableCell>{entry.error ? `${entry.status} · ${entry.error}` : entry.status}</DataTableCell>
+                      <DataTableCell align="right">{entry.durationMs}ms</DataTableCell>
+                    </DataTableRow>
+                  ))
+                )}
+              </DataTableBody>
+            </DataTable>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
