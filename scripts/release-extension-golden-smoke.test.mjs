@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
+import { defaultInstallableExtensionIds } from './default-installable-extensions.mjs';
 import { evaluateTextExpectations, loadMatrix, parseArgs, validateMatrix } from './release-extension-golden-smoke.mjs';
 
 describe('release extension golden smoke', () => {
@@ -14,6 +15,18 @@ describe('release extension golden smoke', () => {
     expect(matrix.agentTools.expectedNames).toContain('bash');
     expect(matrix.agentTools.expectedNames).toContain('todo');
     expect(matrix.agentTools.invocations.some((invocation) => invocation.name === 'scheduled_task')).toBe(true);
+  });
+
+  it('keeps default installable extensions covered by release golden smoke', () => {
+    const matrix = loadMatrix(new URL('./release-extension-golden-matrix.json', import.meta.url));
+    const coveredInstallableIds = new Set([
+      ...matrix.installablePackages.map((entry) => entry.extensionId),
+      ...matrix.catalogInstalls.map((entry) => entry.extensionId),
+    ]);
+
+    for (const extensionId of defaultInstallableExtensionIds) {
+      expect(coveredInstallableIds.has(extensionId), `${extensionId} must be covered by release golden smoke`).toBe(true);
+    }
   });
 
   it('rejects malformed route and action entries', () => {
