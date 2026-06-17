@@ -32,6 +32,7 @@ describe('backend api reexports', () => {
         clearImageProbeAttachmentCacheForTests: expect.any(Function),
         getImageProbeAttachments: expect.any(Function),
         getImageProbeAttachmentsById: expect.any(Function),
+        getImageProbeAttachmentsByIdFromAnySession: expect.any(Function),
         rememberImageProbeAttachments: expect.any(Function),
       }),
     );

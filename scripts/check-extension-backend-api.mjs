@@ -42,6 +42,40 @@ const allowedStringHostApiGlobals = new Map([
     ]),
   ],
 ]);
+const allowedHostOnlyBackendValueExports = new Map([
+  [
+    'agent',
+    new Set([
+      // Test hooks for backendApi/agent.ts dynamic-import seams.
+      'resetExtensionAgentDynamicImportForTests',
+      'setExtensionAgentDynamicImportForTests',
+    ]),
+  ],
+  [
+    'automations',
+    new Set([
+      // Internal helpers used by host routes; not part of the public extension backend SDK.
+      'cancelAttentionEventForSessionFile',
+      'enqueueAttentionEventForSessionFile',
+      'listAttentionEventsForSessionFile',
+    ]),
+  ],
+  [
+    'compaction',
+    new Set([
+      // Test hooks for backendApi/compaction.ts dynamic-import seams.
+      'resetExtensionCompactionDynamicImportForTests',
+      'setExtensionCompactionDynamicImportForTests',
+    ]),
+  ],
+  [
+    'gateways',
+    new Set([
+      // Legacy host global seam; public SDK exposes typed gateway operations instead.
+      'TELEGRAM_GATEWAY_HOST_API_GLOBAL',
+    ]),
+  ],
+]);
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -145,6 +179,21 @@ function collectLiteralExportConstants(filePath) {
     }
   }
   return constants;
+}
+
+function collectExportedValueNames(filePath) {
+  const source = readFileSync(filePath, 'utf8');
+  const names = new Set();
+  for (const match of source.matchAll(/\bexport\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\b/g)) {
+    names.add(match[1]);
+  }
+  for (const match of source.matchAll(/\bexport\s+(?:const|let|var)\s+([A-Za-z_$][\w$]*)\b/g)) {
+    names.add(match[1]);
+  }
+  for (const match of source.matchAll(/\bexport\s+class\s+([A-Za-z_$][\w$]*)\b/g)) {
+    names.add(match[1]);
+  }
+  return names;
 }
 
 function isForbiddenStaticImport(specifier) {
@@ -269,6 +318,18 @@ for (const moduleName of ['automations', 'conversations']) {
       `SDK backend/${moduleName}.ts constant ${name} differs from host backendApi/${moduleName}.ts`,
     );
   }
+}
+
+for (const moduleName of hostModules) {
+  const sdkExports = collectExportedValueNames(join(sdkBackendRoot, `${moduleName}.ts`));
+  const hostExports = collectExportedValueNames(join(hostBackendApiRoot, `${moduleName}.ts`));
+  const allowedHostOnlyExports = allowedHostOnlyBackendValueExports.get(moduleName) ?? new Set();
+  const missingSdkExports = [...hostExports].filter((name) => !sdkExports.has(name) && !allowedHostOnlyExports.has(name)).sort();
+  assert(
+    missingSdkExports.length === 0,
+    failures,
+    `host backendApi/${moduleName}.ts exports values missing from packages/extensions/src/backend/${moduleName}.ts (${missingSdkExports.join(', ')})`,
+  );
 }
 
 if (failures.length > 0) {

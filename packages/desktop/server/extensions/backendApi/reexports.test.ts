@@ -25,6 +25,7 @@ describe('backendApi re-export modules', () => {
     expect(images.rememberImageProbeAttachments).toBeTypeOf('function');
     expect(images.getImageProbeAttachments).toBeTypeOf('function');
     expect(images.getImageProbeAttachmentsById).toBeTypeOf('function');
+    expect(images.getImageProbeAttachmentsByIdFromAnySession).toBeTypeOf('function');
     expect(images.clearImageProbeAttachmentCacheForTests).toBeTypeOf('function');
     expect(mcp.callMcpTool).toBeTypeOf('function');
     expect(mcp.inspectMcpServer).toBeTypeOf('function');
