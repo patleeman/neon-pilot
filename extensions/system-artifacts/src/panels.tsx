@@ -10,7 +10,7 @@ import {
   SectionLabel,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { ArtifactToolBlock } from './ArtifactToolBlock.js';
@@ -280,6 +280,17 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const copyResetTimeoutRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (copyResetTimeoutRef.current !== null) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+        copyResetTimeoutRef.current = null;
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!context.conversationId || !artifactId) {
@@ -317,7 +328,13 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
     try {
       await navigator.clipboard.writeText(artifact.content);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
+      if (copyResetTimeoutRef.current !== null) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+      }
+      copyResetTimeoutRef.current = window.setTimeout(() => {
+        setCopied(false);
+        copyResetTimeoutRef.current = null;
+      }, 1200);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Could not copy artifact source.');
     }
