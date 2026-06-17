@@ -31,6 +31,9 @@ describe('extensionViewContributionValidation', () => {
     expect(() => validateWebappContributions([{ id: 'app', title: 'App' }])).toThrow(
       'Extension manifest contributes.webapps[0] must declare entry or target.',
     );
+    expect(() => validateWebappContributions([{ id: 'Bad_Name', title: 'App', entry: 'dist/webapp/index.html' }])).toThrow(
+      'Extension manifest contributes.webapps[0].id must be a lowercase DNS-safe webapp id.',
+    );
     expect(() =>
       validateWebappContributions([{ id: 'app', title: 'App', entry: 'dist/webapp/index.html', target: 'http://127.0.0.1:4173/' }]),
     ).toThrow('Extension manifest contributes.webapps[0] must declare either entry or target, not both.');

@@ -43,8 +43,18 @@ function validateLoopbackHttpTarget(value: string, path: string): void {
   }
 }
 
+function isDnsSafeName(value: string): boolean {
+  return /^[a-z0-9](?:[a-z0-9.-]{0,61}[a-z0-9])?$/.test(value) && !value.includes('..');
+}
+
+function validateWebappId(value: string, path: string): void {
+  if (!isDnsSafeName(value)) {
+    throw new Error(`Extension manifest ${path} must be a lowercase DNS-safe webapp id.`);
+  }
+}
+
 function validatePortlessName(value: string, path: string): void {
-  if (!/^[a-z0-9](?:[a-z0-9.-]{0,61}[a-z0-9])?$/.test(value) || value.includes('..')) {
+  if (!isDnsSafeName(value)) {
     throw new Error(`Extension manifest ${path} must be a lowercase DNS-safe Portless name.`);
   }
 }
@@ -77,7 +87,8 @@ export function validateViewContributions(value: unknown): void {
 
 export function validateWebappContributions(value: unknown): void {
   for (const [index, webapp] of assertRecordArray(value, 'contributes.webapps').entries()) {
-    requireString(webapp.id, `contributes.webapps[${index}].id`);
+    const id = requireString(webapp.id, `contributes.webapps[${index}].id`);
+    validateWebappId(id, `contributes.webapps[${index}].id`);
     requireString(webapp.title, `contributes.webapps[${index}].title`);
     validateOptionalString(webapp.description, `contributes.webapps[${index}].description`);
     validateOptionalString(webapp.entry, `contributes.webapps[${index}].entry`);
