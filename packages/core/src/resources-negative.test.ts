@@ -101,6 +101,21 @@ describe('resources negative tests', () => {
     it('handles empty array of files', () => {
       expect(mergeJsonFiles([])).toEqual({});
     });
+
+    it('ignores dangerous merge keys without polluting prototypes', () => {
+      const repo = createTempDir('neon-pilot-resources-');
+      const file = join(repo, 'settings.json');
+      writeFile(
+        file,
+        '{"__proto__":{"polluted":true},"constructor":{"polluted":true},"prototype":{"polluted":true},"nested":{"ok":true}}',
+      );
+
+      const merged = mergeJsonFiles([file]) as Record<string, unknown>;
+
+      expect(merged).toEqual({ nested: { ok: true } });
+      expect('polluted' in merged).toBe(false);
+      expect('polluted' in Object.prototype).toBe(false);
+    });
   });
 
   describe('materializeRuntimeResourcesToAgentDir edge cases', () => {
