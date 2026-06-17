@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createCompanionPairingCode, pairCompanionDevice } from './auth-store.js';
 import { DaemonCompanionServer } from './server.js';
 
 class FakeWebSocket extends EventEmitter {
@@ -96,6 +97,22 @@ describe('DaemonCompanionServer websocket subscriptions', () => {
         .map((payload) => JSON.parse(payload) as { type?: string; id?: string; ok?: boolean })
         .find((message) => message.type === 'response' && message.id === 'sub-1' && message.ok === true),
     ).toBeUndefined();
+  });
+
+  it('authenticates bearer tokens from headers but not URL query parameters', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'np-companion-server-'));
+    tempRoots.push(stateRoot);
+    const pairing = createCompanionPairingCode(stateRoot);
+    const { bearerToken, device } = pairCompanionDevice(stateRoot, pairing.code);
+    const server = new DaemonCompanionServer({ companion: { enabled: true } } as never, stateRoot);
+
+    const headerRequest = new FakeRequest();
+    headerRequest.headers.authorization = `Bearer ${bearerToken}`;
+    const queryRequest = new FakeRequest();
+    queryRequest.url = `/companion/v1/models?token=${encodeURIComponent(bearerToken)}`;
+
+    await expect((server as never).authenticateBearer(headerRequest as IncomingMessage)).resolves.toMatchObject({ id: device.id });
+    await expect((server as never).authenticateBearer(queryRequest as IncomingMessage)).resolves.toBeNull();
   });
 
   it('keeps unauthenticated hello responses to public discovery fields', async () => {

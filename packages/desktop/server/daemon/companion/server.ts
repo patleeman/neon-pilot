@@ -89,8 +89,7 @@ function readBearerToken(request: IncomingMessage): string {
     return authorization.slice(7).trim();
   }
 
-  const requestUrl = new URL(request.url || '/', 'http://localhost');
-  return requestUrl.searchParams.get('token')?.trim() ?? '';
+  return '';
 }
 
 function isLoopbackAddress(value: string | undefined): boolean {
