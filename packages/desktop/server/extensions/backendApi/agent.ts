@@ -101,11 +101,35 @@ interface ExtensionBackendContextLike {
   };
 }
 
-type PiModule = typeof import('@earendil-works/pi-coding-agent');
-type AgentSessionLike = Awaited<ReturnType<PiModule['createAgentSession']>>['session'] & {
+interface AgentSessionEventLike {
+  type?: string;
+  message?: {
+    role?: string;
+    content?: unknown;
+  };
+  [key: string]: unknown;
+}
+
+interface AgentSessionLike {
   abort?: () => Promise<void> | void;
+  dispose(): void;
   messages?: unknown[];
-};
+  prompt(text: string, options?: { images?: ImageInput[] }): Promise<unknown>;
+  subscribe(listener: (event: AgentSessionEventLike) => void): () => void;
+}
+
+interface PiModule {
+  AuthStorage: {
+    create(path: string): unknown;
+  };
+  ModelRegistry: {
+    create(authStorage: unknown, path: string): { getAvailable(): unknown[] };
+  };
+  SessionManager: {
+    inMemory(cwd: string): unknown;
+  };
+  createAgentSession(options: Record<string, unknown>): Promise<{ session: AgentSessionLike }>;
+}
 
 interface ExtensionAgentConversationRecord {
   id: string;

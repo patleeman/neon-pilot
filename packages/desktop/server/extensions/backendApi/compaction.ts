@@ -20,6 +20,17 @@ const defaultDynamicImport = importServerModule;
 let dynamicImport = defaultDynamicImport;
 const PI_CODING_AGENT_PACKAGE = '@earendil-works/pi-coding-agent';
 
+interface PiCompactionModule {
+  compact(
+    preparation: never,
+    model: never,
+    apiKey: string,
+    headers?: Record<string, string>,
+    customInstructions?: string,
+    signal?: AbortSignal,
+  ): Promise<ExtensionCompactResult>;
+}
+
 export function setExtensionCompactionDynamicImportForTests(importer: typeof dynamicImport): void {
   dynamicImport = importer;
 }
@@ -29,7 +40,7 @@ export function resetExtensionCompactionDynamicImportForTests(): void {
 }
 
 export async function compactConversation(input: ExtensionCompactInput): Promise<ExtensionCompactResult> {
-  const pi = await dynamicImport<typeof import('@earendil-works/pi-coding-agent')>(PI_CODING_AGENT_PACKAGE);
+  const pi = await dynamicImport<PiCompactionModule>(PI_CODING_AGENT_PACKAGE);
   return pi.compact(
     input.preparation as never,
     input.model as never,

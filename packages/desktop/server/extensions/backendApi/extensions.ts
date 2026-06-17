@@ -7,13 +7,36 @@ import type { ExtensionDoctorReport } from '@neon-pilot/extensions/backend/exten
 import { importServerExtensionModule } from './serverModuleResolver.js';
 import { importServerModule } from './serverModuleResolver.js';
 
-type ExtensionLifecycleModule = typeof import('../extensionLifecycle.js');
-type ExtensionBackendModule = typeof import('../extensionBackend.js');
-type ExtensionRegistryModule = typeof import('../extensionRegistry.js');
-type ExtensionCatalogModule = typeof import('../extensionCatalog.js');
-type CoreModule = typeof import('@neon-pilot/core');
+interface ExtensionLifecycleModule {
+  buildRuntimeExtension(extensionId: string): unknown;
+  createRuntimeExtension(options: RuntimeExtensionCreateOptions): unknown;
+  snapshotRuntimeExtension(extensionId: string): unknown;
+  deleteRuntimeExtension(extensionId: string): unknown;
+}
 
-type RuntimeExtensionCreateOptions = Parameters<ExtensionLifecycleModule['createRuntimeExtension']>[0];
+interface ExtensionBackendModule {
+  reloadExtensionBackend(extensionId: string): unknown;
+  runExtensionSelfTest(extensionId: string): unknown;
+}
+
+interface ExtensionRegistryModule {
+  invalidateExtensionRegistryReadCaches(): void;
+  listExtensionInstallSummaries(): unknown;
+}
+
+interface ExtensionCatalogModule {
+  listInstallableExtensionCatalog(): unknown;
+  installCatalogExtension(input: { id?: unknown }): unknown;
+  updateCatalogExtension(input: { id?: unknown }): unknown;
+  installExtensionBundleFromUrl(input: { url?: unknown; expectedId?: unknown }): unknown;
+  readConfiguredExtensionCatalogSources(): unknown[];
+}
+
+interface CoreModule {
+  installPackageSource(input: { source: string; target: 'local'; sourceBaseDir?: string }): unknown;
+}
+
+type RuntimeExtensionCreateOptions = Record<string, unknown>;
 type ValidateExtensionPackageOptions = { extensionId?: string; packageRoot?: string };
 type ExtensionSearchPathWriteOptions = { runtimeDir?: string; runtimeSettingsFilePath?: string; paths?: string[] };
 type ExtensionSourceWriteOptions = { runtimeDir?: string; runtimeSettingsFilePath?: string; sources?: unknown[] };

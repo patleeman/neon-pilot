@@ -1,4 +1,7 @@
-type AppEventsModule = typeof import('../../shared/appEvents.js');
+interface AppEventsModule {
+  publishAppEvent(...args: unknown[]): unknown;
+  invalidateAppTopics(...args: unknown[]): unknown;
+}
 
 const dynamicImport = new Function('specifier', 'return import(specifier)') as <T>(specifier: string) => Promise<T>;
 

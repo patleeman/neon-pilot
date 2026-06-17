@@ -2,6 +2,10 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 
+interface JsdomModule {
+  JSDOM: new (html: string) => { window: { document: Document } };
+}
+
 export interface ReadableHtmlResult {
   markdown: string;
   title?: string;
@@ -49,7 +53,7 @@ function extractTextFallback(html: string): string {
 }
 
 export async function parseDuckDuckGoHtml(input: { html: string; maxResults: number }): Promise<SearchHtmlResult[]> {
-  const { JSDOM } = require('jsdom') as typeof import('jsdom');
+  const { JSDOM } = require('jsdom') as JsdomModule;
   const document = new JSDOM(input.html).window.document;
   const results: SearchHtmlResult[] = [];
 

@@ -1,6 +1,9 @@
 import { callServerModuleExport } from './serverModuleResolver.js';
 
-type RuntimeAgentHooksModule = typeof import('../runtimeAgentHooks.js');
+interface RuntimeAgentHooksModule {
+  buildLiveSessionExtensionFactoriesForRuntime(...args: unknown[]): unknown;
+  buildLiveSessionResourceOptionsForRuntime(...args: unknown[]): unknown;
+}
 const dynamicImport = new Function('specifier', 'return import(specifier)') as <T>(specifier: string) => Promise<T>;
 
 export async function getRuntimeDir(): Promise<string> {
