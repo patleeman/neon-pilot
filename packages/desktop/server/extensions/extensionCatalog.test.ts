@@ -136,6 +136,35 @@ describe('extension catalog', () => {
     );
   });
 
+  it('uses remote first-party release catalog version metadata for update detection', async () => {
+    summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.1.0' }]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          packages: [{ id: 'system-browser', version: '0.2.0', tag: 'v0.10.2', artifact: 'system-browser.neon-extension.zip' }],
+        }),
+      })),
+    );
+
+    const { listInstallableExtensionCatalog } = await import('./extensionCatalog.js');
+    const catalog = await listInstallableExtensionCatalog();
+
+    expect(catalog.extensions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'system-browser',
+          version: '0.2.0',
+          availableVersion: '0.2.0',
+          installedVersion: '0.1.0',
+          updateAvailable: true,
+          bundleUrl: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-browser.neon-extension.zip',
+        }),
+      ]),
+    );
+  });
+
   it('falls back quietly to the baked first-party catalog when the release catalog is not published', async () => {
     vi.stubGlobal(
       'fetch',

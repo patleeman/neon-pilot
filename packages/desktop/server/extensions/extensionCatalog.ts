@@ -392,7 +392,11 @@ async function fetchFirstPartyReleaseCatalog(tag: string): Promise<CatalogSeed[]
         id,
         name: baked?.name ?? titleFromExtensionId(id),
         description: baked?.description ?? `Install ${titleFromExtensionId(id)} from the Neon Pilot extension release catalog.`,
-        ...(baked?.version ? { version: baked.version } : {}),
+        ...(typeof record.version === 'string' && record.version.trim()
+          ? { version: record.version.trim() }
+          : baked?.version
+            ? { version: baked.version }
+            : {}),
         ...(typeof record.tag === 'string' && record.tag.trim() ? { tag: record.tag.trim() } : { tag }),
         ...(typeof record.artifact === 'string' && record.artifact.trim() ? { artifact: record.artifact.trim() } : {}),
         ...(typeof record.path === 'string' && record.path.trim() ? { path: record.path.trim() } : baked?.path ? { path: baked.path } : {}),
