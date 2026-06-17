@@ -50,6 +50,9 @@ const liveSessions = vi.hoisted(() => ({
   renameSession: vi.fn(),
   updateLiveSessionModelPreferences: vi.fn(),
 }));
+const conversationService = vi.hoisted(() => ({
+  readSessionDetailForRoute: vi.fn(async () => ({ sessionRead: { detail: { blocks: [{ type: 'text', text: ' latest reply ' }] } } })),
+}));
 const capability = vi.hoisted(() => ({
   compactLiveSessionCapability: vi.fn(),
   createLiveSessionCapability: vi.fn(async () => ({ id: 'conv-new' })),
@@ -67,9 +70,7 @@ vi.mock('../gateways/telegramGateway.js', () => ({ TelegramGatewayRuntime: runti
 vi.mock('../conversations/liveSessionLifecycle.js', () => lifecycle);
 vi.mock('../conversations/liveSessions.js', () => liveSessions);
 vi.mock('../conversations/liveSessionCapability.js', () => capability);
-vi.mock('../conversations/conversationService.js', () => ({
-  readSessionDetailForRoute: vi.fn(async () => ({ sessionRead: { detail: { blocks: [{ type: 'text', text: ' latest reply ' }] } } })),
-}));
+vi.mock('../conversations/conversationService.js', () => conversationService);
 vi.mock('../middleware/index.js', () => ({ logError: vi.fn() }));
 vi.mock('../shared/appEvents.js', () => appEvents);
 
@@ -85,6 +86,9 @@ import {
 describe('gateway routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    conversationService.readSessionDetailForRoute.mockResolvedValue({
+      sessionRead: { detail: { blocks: [{ type: 'text', text: ' latest reply ' }] } },
+    });
   });
 
   function context() {
@@ -291,5 +295,17 @@ describe('gateway routes', () => {
 
     expect(ensureTelegramRuntime().deliverAssistantReply).toHaveBeenCalledTimes(1);
     expect(ensureTelegramRuntime().deliverAssistantReply).toHaveBeenCalledWith({ conversationId: 'conv-1', text: 'latest reply' });
+
+    ensureTelegramRuntime().deliverAssistantReply.mockClear();
+    conversationService.readSessionDetailForRoute
+      .mockResolvedValueOnce({ sessionRead: { detail: { blocks: [{ id: 'block-1', type: 'text', text: 'OK' }] } } })
+      .mockResolvedValueOnce({ sessionRead: { detail: { blocks: [{ id: 'block-2', type: 'text', text: 'OK' }] } } });
+
+    await handler({ trigger: 'turn_end', conversationId: 'conv-1' });
+    await handler({ trigger: 'turn_end', conversationId: 'conv-1' });
+
+    expect(ensureTelegramRuntime().deliverAssistantReply).toHaveBeenCalledTimes(2);
+    expect(ensureTelegramRuntime().deliverAssistantReply).toHaveBeenNthCalledWith(1, { conversationId: 'conv-1', text: 'OK' });
+    expect(ensureTelegramRuntime().deliverAssistantReply).toHaveBeenNthCalledWith(2, { conversationId: 'conv-1', text: 'OK' });
   });
 });

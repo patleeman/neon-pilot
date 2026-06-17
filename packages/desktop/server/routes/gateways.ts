@@ -113,11 +113,11 @@ export function registerTelegramGatewayLifecycleDelivery(): void {
   lifecycleRegistered = true;
   registerLiveSessionLifecycleHandler(async (event) => {
     if (event.trigger !== 'turn_end') return;
-    const text = await readLatestAssistantText(event.conversationId);
-    if (text && lastTelegramDeliveryByConversation.get(event.conversationId) !== text) {
-      const delivered = await ensureTelegramRuntime().deliverAssistantReply({ conversationId: event.conversationId, text });
+    const reply = await readLatestAssistantReply(event.conversationId);
+    if (reply && lastTelegramDeliveryByConversation.get(event.conversationId) !== reply.deliveryKey) {
+      const delivered = await ensureTelegramRuntime().deliverAssistantReply({ conversationId: event.conversationId, text: reply.text });
       if (delivered) {
-        lastTelegramDeliveryByConversation.set(event.conversationId, text);
+        lastTelegramDeliveryByConversation.set(event.conversationId, reply.deliveryKey);
       }
     }
   });
@@ -264,10 +264,15 @@ export function readTelegramGatewayRuntimeStatus(): { running: boolean } {
   return { running: telegramRuntime !== null };
 }
 
-async function readLatestAssistantText(conversationId: string): Promise<string | null> {
+async function readLatestAssistantReply(conversationId: string): Promise<{ text: string; deliveryKey: string } | null> {
   const { sessionRead } = await readSessionDetailForRoute({ conversationId, profile: getRuntimeScopeFn(), tailBlocks: 20 });
   const block = [...(sessionRead.detail?.blocks ?? [])].reverse().find((candidate) => candidate.type === 'text');
-  return block && block.type === 'text' && block.text.trim() ? block.text.trim() : null;
+  if (!block || block.type !== 'text') return null;
+  const text = block.text.trim();
+  if (!text) return null;
+  const candidate = block as typeof block & { id?: unknown; blockId?: unknown; entryId?: unknown };
+  const identity = [candidate.id, candidate.blockId, candidate.entryId].find((value): value is string => typeof value === 'string' && value);
+  return { text, deliveryKey: identity ? `block:${identity}` : `text:${text}` };
 }
 
 function handleGatewayError(res: Response, err: unknown): void {
