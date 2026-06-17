@@ -11,6 +11,7 @@ const extensionSearchRoots = ['extensions'];
 const allowedFiles = new Set(['packages/desktop/ui/src/extensions/systemExtensionModules.ts']);
 
 const filePattern = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
+const markdownFilePattern = /\.md$/;
 const forbiddenPatterns = [
   /from\s+['"][^'"]*extensions\/[^'"]+\/src\//,
   /import\(\s*['"][^'"]*extensions\/[^'"]+\/src\//,
@@ -26,7 +27,7 @@ function walkTrackedFallback(dir) {
       if (entry.name === 'dist' || entry.name === 'node_modules') return [];
       return walkTrackedFallback(child);
     }
-    return filePattern.test(child) ? [child] : [];
+    return filePattern.test(child) || markdownFilePattern.test(child) ? [child] : [];
   });
 }
 
@@ -74,6 +75,26 @@ const forbiddenExtensionImportPatterns = [
   /from\s+['"][^'"]*packages\/(?:desktop|core|daemon)\//,
   /import\(\s*['"][^'"]*packages\/(?:desktop|core|daemon)\//,
 ];
+const forbiddenExtensionMarkdownPatterns = [
+  ...forbiddenExtensionImportPatterns,
+  /from\s+['"]@earendil-works\/pi-coding-agent(?:\/[^'"]*)?['"]/,
+  /import\(\s*['"]@earendil-works\/pi-coding-agent(?:\/[^'"]*)?['"]/,
+];
+
+function collectMarkdownFencedCodeLines(markdown) {
+  const codeLines = [];
+  const lines = markdown.split('\n');
+  let inFence = false;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) codeLines.push({ line, number: index + 1 });
+  }
+  return codeLines;
+}
 
 for (const file of extensionFiles) {
   const text = readFileSync(resolve(repoRoot, file), 'utf8');
@@ -85,10 +106,25 @@ for (const file of extensionFiles) {
   });
 }
 
+const extensionMarkdownFiles = listFiles(extensionSearchRoots)
+  .filter((file) => markdownFilePattern.test(file))
+  .filter((file) => !file.includes('/dist/'))
+  .filter((file) => existsSync(resolve(repoRoot, file)));
+
+for (const file of extensionMarkdownFiles) {
+  const text = readFileSync(resolve(repoRoot, file), 'utf8');
+  for (const { line, number } of collectMarkdownFencedCodeLines(text)) {
+    if (forbiddenExtensionMarkdownPatterns.some((pattern) => pattern.test(line))) {
+      violations.push(`${relative(repoRoot, resolve(repoRoot, file))}:${number}: ${line.trim()}`);
+    }
+  }
+}
+
 if (violations.length > 0) {
   console.error('Core/extension boundary violation.');
   console.error('Core desktop code must not import extension feature source directly.');
   console.error('Extension runtime code must use @neon-pilot/extensions public APIs instead of app/core internals.');
+  console.error('Extension markdown code examples must follow the same public extension API boundary.');
   console.error('Add the smallest reusable extension SDK/backend subpath when a host capability is missing.');
   console.error(violations.join('\n'));
   process.exit(1);
