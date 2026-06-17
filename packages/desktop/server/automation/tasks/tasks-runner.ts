@@ -300,7 +300,7 @@ async function waitForConversationCompletion(input: {
           started = true;
         }
 
-        if (isRecord(event) && (event.type === 'turn_end' || event.type === 'agent_end') && started) {
+        if (isRecord(event) && (event.type === 'turn_end' || event.type === 'agent_end') && (started || promptDispatchStarted)) {
           completed = true;
         }
       },

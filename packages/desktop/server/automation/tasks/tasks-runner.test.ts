@@ -214,6 +214,40 @@ describe('runTaskInIsolatedPi', () => {
     });
   });
 
+  it('succeeds on terminal conversation events even when agent_start is not observed', async () => {
+    const runsRoot = createTempDir('tasks-runner-runs-');
+    let listener: ((event: unknown) => void) | undefined;
+    const runtime = createRuntime({
+      subscribeConversation: vi.fn().mockImplementation(async (_input, onEvent) => {
+        listener = onEvent;
+        return vi.fn();
+      }),
+      promptConversation: vi.fn().mockImplementation(async () => {
+        queueMicrotask(() => {
+          listener?.({ type: 'text_delta', delta: 'done without start' });
+          listener?.({ type: 'agent_end' });
+        });
+        return { ok: true, accepted: true, delivery: 'started' };
+      }),
+      readConversationBootstrap: vi.fn().mockResolvedValue({ sessionMeta: { id: 'conv-nightly', isRunning: false } }),
+    });
+    mocks.resolveCompanionRuntime.mockResolvedValue(runtime);
+
+    const result = await runTaskInIsolatedPi({
+      task: createTask(),
+      attempt: 1,
+      runsRoot,
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      exitCode: 0,
+      timedOut: false,
+      cancelled: false,
+    });
+    expect(result.outputText).toContain('done without start');
+  });
+
   it('creates a conversation for threadless automations instead of shelling out to a CLI', async () => {
     const runsRoot = createTempDir('tasks-runner-runs-');
     const runtime = createRuntime();
