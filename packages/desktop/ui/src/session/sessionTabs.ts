@@ -164,7 +164,8 @@ function normalizeRemoteConversationLayout(input: RemoteConversationLayoutInput)
         ? Math.max(0, Math.floor(input.conversationWorkspaceRevision))
         : 0,
     conversationWorkspaceUpdatedAt: typeof input.conversationWorkspaceUpdatedAt === 'string' ? input.conversationWorkspaceUpdatedAt : null,
-    conversationWorkspaceMigratedAt: typeof input.conversationWorkspaceMigratedAt === 'string' ? input.conversationWorkspaceMigratedAt : null,
+    conversationWorkspaceMigratedAt:
+      typeof input.conversationWorkspaceMigratedAt === 'string' ? input.conversationWorkspaceMigratedAt : null,
   };
 }
 
@@ -222,7 +223,10 @@ export async function fetchRemoteConversationLayout(
   }
 
   const promise = api.openConversationTabs().then(async (layout) => {
-    let normalized = normalizeRemoteConversationLayout(layout);
+    const normalized = normalizeRemoteConversationLayout(layout);
+    if (isStaleRemoteConversationLayout(normalized) && remoteLayoutCache) {
+      return remoteLayoutCache;
+    }
     remoteLayoutCache = normalized;
     remoteLayoutCacheAt = Date.now();
     conversationLayoutProjection = normalized;
@@ -458,7 +462,8 @@ export function setConversationArchivedState(sessionId: string, archived: boolea
       sessionIds: nextSessionIds,
       pinnedSessionIds: nextPinnedSessionIds,
       archivedSessionIds: nextArchivedSessionIds,
-      activeSessionId: current.activeSessionId && archived && current.activeSessionId === normalizedSessionId ? null : current.activeSessionId,
+      activeSessionId:
+        current.activeSessionId && archived && current.activeSessionId === normalizedSessionId ? null : current.activeSessionId,
     },
     { operation: archived ? 'archive' : 'restore', sessionId: normalizedSessionId },
     { local: true },

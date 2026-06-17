@@ -10,7 +10,12 @@ vi.mock('../client/api', () => ({
   api: apiMocks,
 }));
 
-import { ACTIVE_SESSION_ID_STORAGE_KEY, ARCHIVED_SESSION_IDS_STORAGE_KEY, OPEN_SESSION_IDS_STORAGE_KEY, PINNED_SESSION_IDS_STORAGE_KEY } from '../local/localSettings';
+import {
+  ACTIVE_SESSION_ID_STORAGE_KEY,
+  ARCHIVED_SESSION_IDS_STORAGE_KEY,
+  OPEN_SESSION_IDS_STORAGE_KEY,
+  PINNED_SESSION_IDS_STORAGE_KEY,
+} from '../local/localSettings';
 import {
   applyRemoteConversationLayout,
   closeConversationTab,
@@ -201,6 +206,58 @@ describe('sessionTabs', () => {
     expect(apiMocks.openConversationTabs).not.toHaveBeenCalled();
     expect(cachedLayout.workspacePaths).toEqual(['/newer']);
     expect(cachedLayout.conversationWorkspaceRevision).toBe(3);
+  });
+
+  it('ignores stale remote fetches after newer backend workspace events apply', async () => {
+    let resolveFetch: (layout: unknown) => void = () => undefined;
+    apiMocks.openConversationTabs.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+
+    const refresh = fetchRemoteConversationLayout({ refresh: true });
+
+    applyRemoteConversationLayout({
+      sessionIds: ['newer-open'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'newer-open',
+      workspacePaths: ['/newer'],
+      remoteControlledConversationIds: ['newer-open'],
+      conversationWorkspaceRevision: 4,
+      conversationWorkspaceUpdatedAt: '2026-06-15T12:04:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+    });
+
+    resolveFetch({
+      sessionIds: ['older-open'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: ['/older'],
+      activeConversationId: 'older-open',
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 3,
+      conversationWorkspaceUpdatedAt: '2026-06-15T12:03:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+    });
+
+    const layout = await refresh;
+
+    expect(layout.workspacePaths).toEqual(['/newer']);
+    expect(layout.remoteControlledConversationIds).toEqual(['newer-open']);
+    expect(layout.conversationWorkspaceRevision).toBe(4);
+    expect(readConversationLayout()).toEqual({
+      sessionIds: ['newer-open'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeSessionId: 'newer-open',
+    });
+
+    const cachedLayout = await fetchRemoteConversationLayout();
+    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(cachedLayout.workspacePaths).toEqual(['/newer']);
+    expect(cachedLayout.conversationWorkspaceRevision).toBe(4);
   });
 
   it('keeps a local workspace write over an equal-revision backend event during the write grace window', async () => {
