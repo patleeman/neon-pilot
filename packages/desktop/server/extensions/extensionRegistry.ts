@@ -79,7 +79,13 @@ import { readInvalidExtensionManifestMetadata } from './extensionInvalidManifest
 import { applyExtensionKeybindingConfigPatch } from './extensionKeybindingConfig.js';
 import { buildCustomExtensionKeybindingRegistrations } from './extensionKeybindingCustomRegistrations.js';
 import { buildDeclaredExtensionKeybindingRegistrations } from './extensionKeybindingDeclaredRegistrations.js';
-import type { ExtensionManifest, ExtensionPackageType, ExtensionSurface, ExtensionViewContribution } from './extensionManifest.js';
+import type {
+  ExtensionManifest,
+  ExtensionPackageType,
+  ExtensionSurface,
+  ExtensionViewContribution,
+  ExtensionWebappContribution,
+} from './extensionManifest.js';
 import {
   EXTENSION_ICON_NAMES,
   EXTENSION_PLACEMENTS,
@@ -151,6 +157,7 @@ import {
   validateThemeContributions,
   validateTranscriptRendererContributions,
   validateViewContributions,
+  validateWebappContributions,
 } from './extensionViewContributionValidation.js';
 import { SYSTEM_EXTENSION_ENTRIES } from './systemExtensions.js';
 
@@ -292,6 +299,13 @@ export interface ExtensionRegistrySnapshot {
       extensionId: string;
       packageType: ExtensionPackageType;
       frontend?: ExtensionManifest['frontend'];
+    }
+  >;
+  webapps: Array<
+    ExtensionWebappContribution & {
+      extensionId: string;
+      packageType: ExtensionPackageType;
+      portlessName: string;
     }
   >;
 }
@@ -915,6 +929,9 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   if (contributes.views !== undefined) {
     validateViewContributions(contributes.views);
   }
+  if (contributes.webapps !== undefined) {
+    validateWebappContributions(contributes.webapps);
+  }
 
   if (contributes.nav !== undefined) {
     validateNavigationContributions(contributes.nav);
@@ -1299,6 +1316,7 @@ export function readExtensionSchema() {
     iconNames: EXTENSION_ICON_NAMES,
     contributions: [
       'views',
+      'webapps',
       'nav',
       'commands',
       'keybindings',
@@ -1361,6 +1379,14 @@ export function readExtensionRegistrySnapshot(): ExtensionRegistrySnapshot {
       ...(extension.frontend ? { frontend: extension.frontend } : {}),
     })),
   );
+  const webapps = extensions.flatMap((extension) =>
+    (extension.contributes?.webapps ?? []).map((webapp) => ({
+      ...webapp,
+      extensionId: extension.id,
+      packageType: extension.packageType ?? 'user',
+      portlessName: webapp.portlessName?.trim() || `${webapp.id}.${extension.id}`,
+    })),
+  );
   const routes = [
     ...surfaces.flatMap((surface) =>
       surface.kind === 'page' && 'route' in surface
@@ -1373,7 +1399,7 @@ export function readExtensionRegistrySnapshot(): ExtensionRegistrySnapshot {
         : [],
     ),
   ];
-  return { extensions, routes, surfaces, views };
+  return { extensions, routes, surfaces, views, webapps };
 }
 
 export function listExtensionMentionRegistrations(): ExtensionMentionRegistration[] {

@@ -84,6 +84,16 @@ interface ExtensionViewContribution {
   toolSlot?: string;
 }
 
+interface ExtensionWebappContribution {
+  id: string;
+  title: string;
+  description?: string;
+  entry?: string;
+  target?: string;
+  portlessName?: string;
+  spaFallback?: boolean;
+}
+
 interface ExtensionNavContribution {
   id: string;
   label: string;
@@ -388,6 +398,7 @@ interface ExtensionSettingsComponentContribution {
 
 interface ExtensionContributions {
   views?: ExtensionViewContribution[];
+  webapps?: ExtensionWebappContribution[];
   nav?: ExtensionNavContribution[];
   commands?: ExtensionCommandContribution[];
   keybindings?: ExtensionKeybindingContribution[];

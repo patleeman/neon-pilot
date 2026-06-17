@@ -30,7 +30,7 @@ When asked to build or modify an extension:
 6. Visually inspect any UI surface you changed.
 7. Checkpoint only the files you touched.
 
-Do not create new iframe or webview extensions. Native extensions render React components inside the Neon Pilot UI.
+Do not create new iframe or webview extensions. Native extensions render React components inside the Neon Pilot UI. Use `contributes.webapps` only when the intended surface is a locally hosted browser sidecar reachable through a `.localhost` URL.
 
 ## Where extensions live
 
@@ -116,7 +116,7 @@ Supported top-level fields:
 - `id`, `name`, `description`, `version`. Runtime derives `packageType` from install location: repo/app-bundled packages are system extensions; runtime-installed packages are user extensions.
 - `frontend`: native React bundle entry and optional styles.
 - `backend`: backend module entry, backend actions, backend protocol entrypoints, and optional agent lifecycle factory.
-- `contributes`: views, nav, commands, keybindings, slash commands, mentions, quick-open providers, search providers, gateway providers, prompt reference resolvers, skills, tools, prompt assembly providers/hooks, conversation connection providers, transcript renderers, transcript blocks, selection actions, subscriptions, themes, topBarElements, messageActions, composerShelves, composerControls, toolbarActions, conversationDecorators, conversationLifecycle, composer attachment providers/renderers/resolvers, activity tree item elements/styles/actions, contextMenus, statusBarItems, sidebar views, secrets, and settings metadata.
+- `contributes`: views, webapps, nav, commands, keybindings, slash commands, mentions, quick-open providers, search providers, gateway providers, prompt reference resolvers, skills, tools, prompt assembly providers/hooks, conversation connection providers, transcript renderers, transcript blocks, selection actions, subscriptions, themes, topBarElements, messageActions, composerShelves, composerControls, toolbarActions, conversationDecorators, conversationLifecycle, composer attachment providers/renderers/resolvers, activity tree item elements/styles/actions, contextMenus, statusBarItems, sidebar views, secrets, and settings metadata.
 - `dependsOn`: required or optional extension dependencies surfaced by diagnostics and available for runtime discovery.
 - `permissions`: declared capability intent.
 
@@ -182,6 +182,29 @@ Rules:
 - Color themes are token maps under `contributes.themes`; use `--color-*` CSS variables with RGB triplet strings.
 - Permissions are intent declarations today and should match what the extension can do.
 - For `location: "sidebar"` views, use `SidebarSection` with `actionItems`, `SidebarList`, `SidebarTemplateList`, and `SidebarMessage` for flat lists. Use `SidebarTreeSection` for hierarchical sidebar data; it wraps the Pierre-backed `ActivityTreeView` in native left-sidebar chrome. Do not hand-roll nested sidebar rails, filter tabs, description-heavy rows, or local card/list chrome inside the host sidebar.
+
+## Webapp sidecars
+
+Use `contributes.webapps` when an extension needs to expose a local webpage as a browser sidecar instead of rendering a native React component in the host shell. A webapp can either serve static package files through `entry` or proxy to an extension-managed loopback server through `target`.
+
+```json
+{
+  "contributes": {
+    "webapps": [
+      {
+        "id": "board",
+        "title": "Agent Board",
+        "entry": "dist/webapp/index.html",
+        "portlessName": "board.agent-board"
+      }
+    ]
+  }
+}
+```
+
+`portlessName` defaults to `{webappId}.{extensionId}` and maps to `https://{portlessName}.localhost` when the local Portless CLI alias is registered. Neon Pilot exposes `GET /api/extensions/webapps` for discovery, `POST /api/extensions/webapps/{extensionId}/{webappId}/portless` for alias sync, and `/webapps/{extensionId}/{webappId}/...` as a direct debug route.
+
+Static `entry` paths must be package-relative. Proxy `target` URLs must be loopback HTTP(S): `localhost`, `127.0.0.1`, or `::1`.
 
 ## Color themes
 

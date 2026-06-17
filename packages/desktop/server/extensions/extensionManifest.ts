@@ -107,6 +107,7 @@ export interface ExtensionFrontend {
 
 export interface ExtensionContributions {
   views?: ExtensionViewContribution[];
+  webapps?: ExtensionWebappContribution[];
   nav?: ExtensionNavContribution[];
   commands?: ExtensionCommandContribution[];
   cliCommands?: ExtensionCliCommandContribution[];
@@ -185,6 +186,29 @@ export interface ExtensionGatewayProviderContribution {
   docsUrl?: string;
   /** Sort order for provider summaries. Lower renders first. Default 0. */
   order?: number;
+}
+
+export interface ExtensionWebappContribution {
+  id: string;
+  title: string;
+  description?: string;
+  /**
+   * Static app entrypoint inside the extension package, for example
+   * "dist/webapp/index.html". Non-root requests resolve relative to this
+   * entry's directory.
+   */
+  entry?: string;
+  /**
+   * Loopback HTTP target for an extension-managed dev/server process.
+   * Only localhost, 127.0.0.1, and ::1 targets are accepted.
+   */
+  target?: string;
+  /**
+   * Stable Portless route name. Defaults to "{webappId}.{extensionId}".
+   */
+  portlessName?: string;
+  /** Fall back to the entrypoint for missing static routes. Default true. */
+  spaFallback?: boolean;
 }
 
 export interface ExtensionConversationConnectionProviderContribution {

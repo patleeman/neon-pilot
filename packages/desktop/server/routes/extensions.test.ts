@@ -263,6 +263,61 @@ describe('registerExtensionRoutes', () => {
     expect(res.end).toHaveBeenCalled();
   });
 
+  it('lists and serves extension webapps from package assets', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-webapp-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(join(extensionRoot, 'dist', 'webapp'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        enabled: true,
+        contributes: {
+          webapps: [{ id: 'board', title: 'Board Webapp', entry: 'dist/webapp/index.html' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'webapp', 'index.html'), '<h1>Board</h1>');
+    writeFileSync(join(extensionRoot, 'dist', 'webapp', 'app.js'), 'globalThis.loaded = true;');
+    const harness = createHarness();
+
+    const listRes = createResponse();
+    await harness.getHandler('/api/extensions/webapps')({}, listRes);
+    expect(listRes.json).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'board',
+          extensionId: 'agent-board',
+          portlessName: 'board.agent-board',
+          portlessUrl: 'https://board.agent-board.localhost',
+        }),
+      ]),
+    );
+
+    const assetRes = createResponse();
+    await harness.getHandler('/webapps/:id/:webappId/*')(
+      { method: 'GET', params: { id: 'agent-board', webappId: 'board', 0: 'app.js' }, query: {} },
+      assetRes,
+    );
+    expect(assetRes.type).toHaveBeenCalledWith('text/javascript; charset=utf-8');
+    expect(assetRes.sendFile).toHaveBeenCalledWith(join(extensionRoot, 'dist', 'webapp', 'app.js'));
+
+    const hostRes = createResponse();
+    await harness.getHandler('*')(
+      {
+        method: 'GET',
+        path: '/',
+        get: (name: string) => (name.toLowerCase() === 'host' ? 'board.agent-board.localhost' : undefined),
+      } as never,
+      hostRes,
+    );
+    expect(hostRes.type).toHaveBeenCalledWith('text/html; charset=utf-8');
+    expect(hostRes.sendFile).toHaveBeenCalledWith(join(extensionRoot, 'dist', 'webapp', 'index.html'));
+  });
+
   it('serves per-extension manifest and surfaces', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

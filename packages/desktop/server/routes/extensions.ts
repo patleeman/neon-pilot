@@ -1,6 +1,9 @@
+import { spawnSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
+import { dirname, extname, join as joinPath } from 'node:path';
 
 import type { Express, Request, Response } from 'express';
+import type { NextFunction } from 'express';
 
 import { buildCriticalExtensionRegistryResponse } from '../app/localApiExtensionRegistryPresentation.js';
 import { pingDaemon, startBackgroundRun } from '../daemon/index.js';
@@ -49,6 +52,192 @@ async function readExtensionManifestFromHost(extensionId: string): Promise<Exten
 async function readExtensionInstallSummaryFromHost(extensionId: string): Promise<Record<string, unknown> | null> {
   const { installSummaries } = await getExtensionHostClient().readRegistryPresentation();
   return installSummaries.find((extension) => extension.id === extensionId) ?? null;
+}
+
+type ExtensionWebappSummary = {
+  id: string;
+  title: string;
+  description?: string;
+  entry?: string;
+  target?: string;
+  spaFallback?: boolean;
+  extensionId: string;
+  packageType: 'system' | 'user';
+  portlessName: string;
+};
+
+function normalizeHostHeader(value: string | undefined): string {
+  const host = (value ?? '').trim().toLowerCase();
+  if (!host) return '';
+  if (host.startsWith('[')) {
+    const closing = host.indexOf(']');
+    return closing >= 0 ? host.slice(1, closing) : host;
+  }
+  return host.split(':')[0] ?? '';
+}
+
+function normalizeRequestPath(path: string | undefined): string {
+  const value = path && path.trim() ? path : '/';
+  return value.startsWith('/') ? value : `/${value}`;
+}
+
+function webappPortlessUrl(webapp: Pick<ExtensionWebappSummary, 'portlessName'>): string {
+  return `https://${webapp.portlessName}.localhost`;
+}
+
+function webappDirectUrl(webapp: Pick<ExtensionWebappSummary, 'portlessName'>, context?: { getServerPort?: () => number }): string | null {
+  const port = context?.getServerPort?.();
+  return typeof port === 'number' && Number.isFinite(port) && port > 0 ? `http://${webapp.portlessName}.localhost:${port}` : null;
+}
+
+function enrichWebappSummary(webapp: ExtensionWebappSummary, context?: { getServerPort?: () => number }) {
+  return {
+    ...webapp,
+    portlessUrl: webappPortlessUrl(webapp),
+    directUrl: webappDirectUrl(webapp, context),
+  };
+}
+
+async function listWebappsFromHost(): Promise<ExtensionWebappSummary[]> {
+  const { snapshot } = await getExtensionHostClient().readRegistryPresentation();
+  return ((snapshot as { webapps?: unknown[] }).webapps ?? []).filter(
+    (webapp): webapp is ExtensionWebappSummary =>
+      Boolean(webapp) &&
+      typeof webapp === 'object' &&
+      typeof (webapp as { id?: unknown }).id === 'string' &&
+      typeof (webapp as { extensionId?: unknown }).extensionId === 'string' &&
+      typeof (webapp as { portlessName?: unknown }).portlessName === 'string',
+  );
+}
+
+async function findWebappFromHost(extensionId: string, webappId: string): Promise<ExtensionWebappSummary | null> {
+  const webapps = await listWebappsFromHost();
+  return webapps.find((webapp) => webapp.extensionId === extensionId && webapp.id === webappId) ?? null;
+}
+
+async function findWebappByHost(hostname: string): Promise<ExtensionWebappSummary | null> {
+  if (!hostname.endsWith('.localhost')) return null;
+  const name = hostname.slice(0, -'.localhost'.length);
+  if (!name) return null;
+  const webapps = await listWebappsFromHost();
+  return webapps.find((webapp) => webapp.portlessName === name) ?? null;
+}
+
+function contentTypeForExtensionWebappPath(path: string): string | null {
+  switch (extname(path).toLowerCase()) {
+    case '.html':
+      return 'text/html; charset=utf-8';
+    case '.css':
+      return 'text/css; charset=utf-8';
+    case '.js':
+    case '.mjs':
+      return 'text/javascript; charset=utf-8';
+    case '.json':
+      return 'application/json; charset=utf-8';
+    case '.svg':
+      return 'image/svg+xml';
+    case '.png':
+      return 'image/png';
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.webp':
+      return 'image/webp';
+    case '.gif':
+      return 'image/gif';
+    default:
+      return null;
+  }
+}
+
+async function serveStaticExtensionWebapp(webapp: ExtensionWebappSummary, requestPath: string, res: Response): Promise<void> {
+  if (!webapp.entry) {
+    res.status(404).json({ error: 'Extension webapp has no static entry.' });
+    return;
+  }
+  const normalizedPath = normalizeRequestPath(requestPath);
+  const relativePath =
+    normalizedPath === '/'
+      ? webapp.entry
+      : joinPath(dirname(webapp.entry), normalizedPath.replace(/^\/+/, ''));
+  let filePath = await getExtensionHostClient().resolveFilePath({ extensionId: webapp.extensionId, relativePath });
+  let stats = statSync(filePath, { throwIfNoEntry: false });
+  if (!stats?.isFile() && webapp.spaFallback !== false) {
+    filePath = await getExtensionHostClient().resolveFilePath({ extensionId: webapp.extensionId, relativePath: webapp.entry });
+    stats = statSync(filePath, { throwIfNoEntry: false });
+  }
+  if (!stats?.isFile()) {
+    res.status(404).json({ error: 'Extension webapp asset not found.' });
+    return;
+  }
+  const contentType = contentTypeForExtensionWebappPath(filePath);
+  if (contentType) res.type(contentType);
+  res.sendFile(filePath);
+}
+
+async function proxyExtensionWebapp(webapp: ExtensionWebappSummary, req: Request, res: Response, requestPath: string): Promise<void> {
+  if (!webapp.target) {
+    res.status(404).json({ error: 'Extension webapp has no proxy target.' });
+    return;
+  }
+  const upstream = new URL(normalizeRequestPath(requestPath), webapp.target.endsWith('/') ? webapp.target : `${webapp.target}/`);
+  const query = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+  upstream.search = query.startsWith('?') ? query.slice(1) : '';
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (!value || ['host', 'connection', 'content-length'].includes(key.toLowerCase())) continue;
+    headers.set(key, Array.isArray(value) ? value.join(', ') : value);
+  }
+  const response = await fetch(upstream, {
+    method: req.method,
+    headers,
+    body: ['GET', 'HEAD'].includes(req.method.toUpperCase()) ? undefined : JSON.stringify(req.body ?? {}),
+  });
+  res.status(response.status);
+  response.headers.forEach((value, key) => {
+    if (!['content-encoding', 'content-length', 'transfer-encoding', 'connection'].includes(key.toLowerCase())) {
+      res.setHeader(key, value);
+    }
+  });
+  const buffer = Buffer.from(await response.arrayBuffer());
+  res.send(buffer);
+}
+
+async function dispatchExtensionWebappRequest(webapp: ExtensionWebappSummary, req: Request, res: Response, requestPath: string): Promise<void> {
+  if (webapp.target) {
+    await proxyExtensionWebapp(webapp, req, res, requestPath);
+    return;
+  }
+  await serveStaticExtensionWebapp(webapp, requestPath, res);
+}
+
+function runPortlessAlias(args: string[]): { ok: true; stdout: string; stderr: string } | { ok: false; error: string } {
+  const result = spawnSync('portless', args, { encoding: 'utf-8' });
+  if (result.error) {
+    const error = result.error as NodeJS.ErrnoException;
+    if (error.code === 'ENOENT') return { ok: false, error: 'Portless CLI is not installed. Install it with `npm install -g portless`.' };
+    return { ok: false, error: error.message };
+  }
+  if ((result.status ?? 1) !== 0) {
+    return { ok: false, error: (result.stderr || result.stdout || `portless exited with code ${result.status ?? 1}`).trim() };
+  }
+  return { ok: true, stdout: result.stdout.trim(), stderr: result.stderr.trim() };
+}
+
+function syncPortlessAlias(webapp: ExtensionWebappSummary, context?: { getServerPort?: () => number }, enabled = true) {
+  const port = context?.getServerPort?.();
+  if (typeof port !== 'number' || !Number.isFinite(port) || port <= 0) {
+    return { ok: false, error: 'Neon Pilot server port is unavailable for Portless registration.' };
+  }
+  const result = enabled
+    ? runPortlessAlias(['alias', webapp.portlessName, String(port), '--force'])
+    : runPortlessAlias(['alias', '--remove', webapp.portlessName]);
+  return {
+    ...result,
+    portlessName: webapp.portlessName,
+    portlessUrl: webappPortlessUrl(webapp),
+    port,
+  };
 }
 
 async function readExtensionActionTargetFromHost(
@@ -226,7 +415,7 @@ async function readExtensionFile(req: Request, res: Response): Promise<void> {
 
 export function registerExtensionRoutes(
   router: Pick<Express, 'delete' | 'get' | 'patch' | 'post' | 'put'>,
-  context?: Pick<ServerRouteContext, 'getRuntimeScope'> & Partial<Pick<ServerRouteContext, 'getStateRoot'>>,
+  context?: Pick<ServerRouteContext, 'getRuntimeScope'> & Partial<Pick<ServerRouteContext, 'getStateRoot' | 'getServerPort'>>,
 ): void {
   router.get('/api/extensions/:id/routes/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
   router.post('/api/extensions/:id/routes/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
@@ -283,6 +472,30 @@ export function registerExtensionRoutes(
       });
     } catch (err) {
       sendRouteError(res, 'extensions registry error', err);
+    }
+  });
+
+  router.get('/api/extensions/webapps', async (_req, res) => {
+    try {
+      const webapps = await listWebappsFromHost();
+      res.json(webapps.map((webapp) => enrichWebappSummary(webapp, context)));
+    } catch (err) {
+      sendRouteError(res, 'extensions webapps error', err);
+    }
+  });
+
+  router.post('/api/extensions/webapps/:id/:webappId/portless', async (req, res) => {
+    try {
+      const webapp = await findWebappFromHost(req.params.id, req.params.webappId);
+      if (!webapp) {
+        res.status(404).json({ error: 'Extension webapp not found.' });
+        return;
+      }
+      const enabled = req.body?.enabled !== false;
+      const result = syncPortlessAlias(webapp, context, enabled);
+      res.status(result.ok ? 200 : 503).json(result);
+    } catch (err) {
+      sendRouteError(res, 'extension webapp portless error', err);
     }
   });
 
@@ -457,6 +670,32 @@ export function registerExtensionRoutes(
       res.json([...(manifest.surfaces ?? []), ...(manifest.contributes?.views ?? [])]);
     } catch (err) {
       sendRouteError(res, 'extension surfaces error', err);
+    }
+  });
+
+  router.get('/webapps/:id/:webappId', async (req, res) => {
+    try {
+      const webapp = await findWebappFromHost(req.params.id, req.params.webappId);
+      if (!webapp) {
+        res.status(404).json({ error: 'Extension webapp not found.' });
+        return;
+      }
+      await dispatchExtensionWebappRequest(webapp, req, res, '/');
+    } catch (err) {
+      sendRouteError(res, 'extension webapp route error', err);
+    }
+  });
+
+  router.get('/webapps/:id/:webappId/*', async (req, res) => {
+    try {
+      const webapp = await findWebappFromHost(req.params.id, req.params.webappId);
+      if (!webapp) {
+        res.status(404).json({ error: 'Extension webapp not found.' });
+        return;
+      }
+      await dispatchExtensionWebappRequest(webapp, req, res, `/${(req.params as Record<string, string | undefined>)[0] ?? ''}`);
+    } catch (err) {
+      sendRouteError(res, 'extension webapp route error', err);
     }
   });
 
@@ -952,6 +1191,26 @@ export function registerExtensionRoutes(
       sendRouteError(res, 'extension badge error', err);
     }
   });
+
+  const dispatchHostWebapp = async (req: Request, res: Response, next?: NextFunction) => {
+    try {
+      const host = normalizeHostHeader(req.get('host'));
+      const webapp = await findWebappByHost(host);
+      if (!webapp) {
+        next?.();
+        return;
+      }
+      await dispatchExtensionWebappRequest(webapp, req, res, req.path || '/');
+    } catch (err) {
+      sendRouteError(res, 'extension webapp host route error', err);
+    }
+  };
+
+  router.get('*', dispatchHostWebapp);
+  router.post('*', dispatchHostWebapp);
+  router.put('*', dispatchHostWebapp);
+  router.patch('*', dispatchHostWebapp);
+  router.delete('*', dispatchHostWebapp);
 
   router.get('/api/extensions/:id/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
   router.post('/api/extensions/:id/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));

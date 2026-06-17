@@ -40,6 +40,7 @@ type CriticalExtensionInstallSummary = {
 type CriticalExtensionContributionKey = keyof Pick<
   ExtensionContributions,
   | 'views'
+  | 'webapps'
   | 'nav'
   | 'topBarElements'
   | 'messageActions'
@@ -69,6 +70,7 @@ type CriticalExtensionContributionKey = keyof Pick<
 
 const CRITICAL_EXTENSION_CONTRIBUTION_KEYS: CriticalExtensionContributionKey[] = [
   'views',
+  'webapps',
   'nav',
   'topBarElements',
   'messageActions',

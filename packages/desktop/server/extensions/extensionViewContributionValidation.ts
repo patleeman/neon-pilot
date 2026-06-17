@@ -15,6 +15,40 @@ import {
 } from './extensionManifestValidation.js';
 import { validateThemeTokens, validateViewComponent } from './extensionManifestViewValidation.js';
 
+function validateOptionalBoolean(value: unknown, path: string): void {
+  if (value !== undefined && typeof value !== 'boolean') {
+    throw new Error(`Extension manifest ${path} must be a boolean.`);
+  }
+}
+
+function validateWebappPath(value: string, path: string): void {
+  if (value.startsWith('/') || value.includes('..')) {
+    throw new Error(`Extension manifest ${path} must be a package-relative path that does not contain ..`);
+  }
+}
+
+function validateLoopbackHttpTarget(value: string, path: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`Extension manifest ${path} must be a valid URL.`);
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error(`Extension manifest ${path} must use http or https.`);
+  }
+  const hostname = parsed.hostname.replace(/^\[/, '').replace(/\]$/, '');
+  if (!['localhost', '127.0.0.1', '::1'].includes(hostname)) {
+    throw new Error(`Extension manifest ${path} must target localhost, 127.0.0.1, or ::1.`);
+  }
+}
+
+function validatePortlessName(value: string, path: string): void {
+  if (!/^[a-z0-9](?:[a-z0-9.-]{0,61}[a-z0-9])?$/.test(value) || value.includes('..')) {
+    throw new Error(`Extension manifest ${path} must be a lowercase DNS-safe Portless name.`);
+  }
+}
+
 export function validateViewContributions(value: unknown): void {
   for (const [index, view] of assertRecordArray(value, 'contributes.views').entries()) {
     requireString(view.id, `contributes.views[${index}].id`);
@@ -37,6 +71,24 @@ export function validateViewContributions(value: unknown): void {
       ).entries()) {
         validateEnum(capability, EXTENSION_ROUTE_CAPABILITIES, `contributes.views[${index}].routeCapabilities[${capabilityIndex}]`);
       }
+    }
+  }
+}
+
+export function validateWebappContributions(value: unknown): void {
+  for (const [index, webapp] of assertRecordArray(value, 'contributes.webapps').entries()) {
+    requireString(webapp.id, `contributes.webapps[${index}].id`);
+    requireString(webapp.title, `contributes.webapps[${index}].title`);
+    validateOptionalString(webapp.description, `contributes.webapps[${index}].description`);
+    validateOptionalString(webapp.entry, `contributes.webapps[${index}].entry`);
+    validateOptionalString(webapp.target, `contributes.webapps[${index}].target`);
+    validateOptionalString(webapp.portlessName, `contributes.webapps[${index}].portlessName`);
+    validateOptionalBoolean(webapp.spaFallback, `contributes.webapps[${index}].spaFallback`);
+    if (webapp.entry !== undefined) validateWebappPath(webapp.entry as string, `contributes.webapps[${index}].entry`);
+    if (webapp.target !== undefined) validateLoopbackHttpTarget(webapp.target as string, `contributes.webapps[${index}].target`);
+    if (webapp.portlessName !== undefined) validatePortlessName(webapp.portlessName as string, `contributes.webapps[${index}].portlessName`);
+    if (webapp.entry === undefined && webapp.target === undefined) {
+      throw new Error(`Extension manifest contributes.webapps[${index}] must declare entry or target.`);
     }
   }
 }

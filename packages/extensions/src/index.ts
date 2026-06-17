@@ -278,6 +278,16 @@ export interface ExtensionViewContribution {
   toolSlot?: string;
 }
 
+export interface ExtensionWebappContribution {
+  id: string;
+  title: string;
+  description?: string;
+  entry?: string;
+  target?: string;
+  portlessName?: string;
+  spaFallback?: boolean;
+}
+
 export interface ExtensionNavContribution {
   id: string;
   label: string;
@@ -825,6 +835,7 @@ export interface ExtensionSettingsComponentContribution {
 
 export interface ExtensionContributions {
   views?: ExtensionViewContribution[];
+  webapps?: ExtensionWebappContribution[];
   nav?: ExtensionNavContribution[];
   commands?: ExtensionCommandContribution[];
   cliCommands?: ExtensionCliCommandContribution[];

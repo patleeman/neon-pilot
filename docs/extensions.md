@@ -174,6 +174,7 @@ The manifest declares what your extension contributes:
 | Field                             | Purpose                                                                                       | Docs                                                                                      |
 | --------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `views`                           | UI surfaces (pages, panels, sidebar replacements)                                             | See `docs/views.md`                                                                       |
+| `webapps`                         | Locally hosted sidecar webpages exposed through `.localhost` names                            | [See below](#webapps)                                                                    |
 | `nav`                             | Left sidebar navigation items; can reference a sidebar view with `sidebarView`                |                                                                                           |
 | `commands`                        | Extension actions invokable by command IDs                                                    | See [Commands and keybindings](../packages/extensions/README.md#commands-and-keybindings) |
 | `cliCommands`                     | Product administration commands contributed to the `neon-pilot` CLI                           | [See below](#cli-commands-clicommands)                                                    |
@@ -349,6 +350,47 @@ Views are the primary way to add UI. Three locations:
 - `"conversation"` — one instance per conversation.
 - `"workspace"` — one per workspace/cwd.
 - `"global"` — single instance.
+
+### Webapps
+
+Use `contributes.webapps` when an extension needs a locally hosted webpage sidecar instead of a native React view inside the Neon Pilot shell. Webapps are for browser-grade app surfaces that must be reachable as `.localhost` URLs, for example a Codex Desktop sidecar page. They are still extension contributions: the manifest declares the surface and the host validates package paths, loopback targets, and route names.
+
+Static webapps serve files from the extension package. `entry` points at the HTML entrypoint, and non-root requests resolve relative to the entrypoint directory. Missing static routes fall back to `entry` by default for SPA routing; set `spaFallback: false` for asset-only packages.
+
+```json
+{
+  "contributes": {
+    "webapps": [
+      {
+        "id": "board",
+        "title": "Agent Board",
+        "description": "Sidecar task board",
+        "entry": "dist/webapp/index.html",
+        "portlessName": "board.agent-board"
+      }
+    ]
+  }
+}
+```
+
+Proxy webapps forward requests to an extension-managed loopback HTTP service. `target` must use `http` or `https` and must point at `localhost`, `127.0.0.1`, or `::1`.
+
+```json
+{
+  "contributes": {
+    "webapps": [
+      {
+        "id": "dev",
+        "title": "Local Dev App",
+        "target": "http://127.0.0.1:5173",
+        "portlessName": "dev.agent-board"
+      }
+    ]
+  }
+}
+```
+
+The default Portless name is `{webappId}.{extensionId}`. The host exposes `GET /api/extensions/webapps` for discovery, `GET /webapps/{extensionId}/{webappId}/...` as a direct debug route, and `POST /api/extensions/webapps/{extensionId}/{webappId}/portless` with `{ "enabled": true | false }` to register or remove the Portless alias. Portless is an optional local CLI integration; install it separately when using alias registration. Current Portless releases require Node 24 or newer, so Neon Pilot does not bundle it in the desktop dependency graph.
 
 ### Message Actions (`messageActions`)
 
