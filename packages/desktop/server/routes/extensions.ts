@@ -188,10 +188,11 @@ async function proxyExtensionWebapp(webapp: ExtensionWebappSummary, req: Request
     if (!value || ['host', 'connection', 'content-length'].includes(key.toLowerCase())) continue;
     headers.set(key, Array.isArray(value) ? value.join(', ') : value);
   }
+  const body = buildProxyRequestBody(req);
   const response = await fetch(upstream, {
     method: req.method,
     headers,
-    body: ['GET', 'HEAD'].includes(req.method.toUpperCase()) ? undefined : JSON.stringify(req.body ?? {}),
+    body,
   });
   res.status(response.status);
   response.headers.forEach((value, key) => {
@@ -201,6 +202,12 @@ async function proxyExtensionWebapp(webapp: ExtensionWebappSummary, req: Request
   });
   const buffer = Buffer.from(await response.arrayBuffer());
   res.send(buffer);
+}
+
+function buildProxyRequestBody(req: Request): BodyInit | undefined {
+  if (['GET', 'HEAD'].includes(req.method.toUpperCase()) || req.body === undefined || req.body === null) return undefined;
+  if (typeof req.body === 'string' || req.body instanceof Uint8Array) return req.body;
+  return JSON.stringify(req.body);
 }
 
 async function dispatchExtensionWebappRequest(webapp: ExtensionWebappSummary, req: Request, res: Response, requestPath: string): Promise<void> {

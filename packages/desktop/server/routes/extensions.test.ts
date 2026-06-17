@@ -318,6 +318,69 @@ describe('registerExtensionRoutes', () => {
     expect(hostRes.sendFile).toHaveBeenCalledWith(join(extensionRoot, 'dist', 'webapp', 'index.html'));
   });
 
+  it('proxies extension webapp requests without inventing empty request bodies', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-webapp-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        enabled: true,
+        contributes: {
+          webapps: [{ id: 'board', title: 'Board Webapp', target: 'http://127.0.0.1:5173' }],
+        },
+      }),
+    );
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      new Response(JSON.stringify({ ok: true }), {
+        status: 202,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const harness = createHarness();
+
+    const emptyPostRes = createResponse();
+    await harness.postHandler('*')(
+      {
+        method: 'POST',
+        path: '/api/refresh',
+        originalUrl: '/api/refresh?force=1',
+        headers: { host: 'board.agent-board.localhost', 'content-type': 'application/json' },
+        body: undefined,
+        get: (name: string) => (name.toLowerCase() === 'host' ? 'board.agent-board.localhost' : undefined),
+      } as never,
+      emptyPostRes,
+    );
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      new URL('http://127.0.0.1:5173/api/refresh?force=1'),
+      expect.objectContaining({ method: 'POST', body: undefined }),
+    );
+    expect(emptyPostRes.status).toHaveBeenCalledWith(202);
+
+    const jsonPostRes = createResponse();
+    await harness.postHandler('*')(
+      {
+        method: 'POST',
+        path: '/api/refresh',
+        originalUrl: '/api/refresh',
+        headers: { host: 'board.agent-board.localhost', 'content-type': 'application/json' },
+        body: { mode: 'full' },
+        get: (name: string) => (name.toLowerCase() === 'host' ? 'board.agent-board.localhost' : undefined),
+      } as never,
+      jsonPostRes,
+    );
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      new URL('http://127.0.0.1:5173/api/refresh'),
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ mode: 'full' }) }),
+    );
+  });
+
   it('serves per-extension manifest and surfaces', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
