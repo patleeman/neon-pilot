@@ -132,6 +132,13 @@ function buildCertificateConfig(hostnames: string[]): string {
   ].join('\n');
 }
 
+export function buildOpenSslSpawnEnv(baseEnv: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  if (baseEnv.PATH) env.PATH = baseEnv.PATH;
+  if (process.platform === 'win32' && baseEnv.SystemRoot) env.SystemRoot = baseEnv.SystemRoot;
+  return env;
+}
+
 function ensureCertificate(
   stateRoot: string,
   hostnames: string[] = [],
@@ -169,7 +176,7 @@ function ensureCertificate(
       '-extensions',
       'v3_req',
     ],
-    { encoding: 'utf-8' },
+    { encoding: 'utf-8', env: buildOpenSslSpawnEnv() },
   );
 
   if (result.error || result.status !== 0) {

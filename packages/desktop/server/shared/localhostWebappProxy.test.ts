@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { getLocalhostWebappProxyStatus, startLocalhostWebappProxy, type LocalhostWebappProxy } from './localhostWebappProxy.js';
+import { buildOpenSslSpawnEnv, getLocalhostWebappProxyStatus, startLocalhostWebappProxy, type LocalhostWebappProxy } from './localhostWebappProxy.js';
 
 let proxy: LocalhostWebappProxy | null = null;
 let occupiedServer: Server | null = null;
@@ -62,6 +62,23 @@ afterEach(async () => {
 });
 
 describe('localhost webapp proxy', () => {
+  it('builds a minimal OpenSSL spawn environment', () => {
+    const env = buildOpenSslSpawnEnv({
+      PATH: '/usr/bin:/bin',
+      OPENAI_API_KEY: 'secret',
+      ANTHROPIC_API_KEY: 'secret',
+      HOME: '/Users/test',
+      SystemRoot: 'C:\\Windows',
+    });
+
+    expect(env.PATH).toBe('/usr/bin:/bin');
+    expect(env.OPENAI_API_KEY).toBeUndefined();
+    expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(env.HOME).toBeUndefined();
+    if (process.platform === 'win32') expect(env.SystemRoot).toBe('C:\\Windows');
+    else expect(env.SystemRoot).toBeUndefined();
+  });
+
   it('dispatches .localhost requests through the local API boundary', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'np-localhost-proxy-'));
     try {
