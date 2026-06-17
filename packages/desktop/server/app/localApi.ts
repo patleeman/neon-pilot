@@ -302,7 +302,7 @@ export async function startDesktopLocalhostWebappProxy(options: Omit<Parameters<
   return startLocalhostWebappProxy({
     ...options,
     certificateHostnames,
-    dispatch: dispatchDesktopLocalApiRequest,
+    dispatch: (input) => dispatchDesktopLocalApiRequest({ ...input, trustMode: 'browser' }),
   });
 }
 
@@ -457,7 +457,12 @@ function shouldPrioritizeWebappHostRoute(headers?: Record<string, string>): bool
   return host.endsWith(WEBAPP_LOCALHOST_SUFFIX) && host.length > WEBAPP_LOCALHOST_SUFFIX.length;
 }
 
-function isTrustedDesktopLocalApiDispatch(input: { method: string; url: URL; headers?: Record<string, string> }): boolean {
+function isTrustedDesktopLocalApiDispatch(input: {
+  method: string;
+  url: URL;
+  headers?: Record<string, string>;
+  allowMissingOrigin: boolean;
+}): boolean {
   const headers = normalizeLocalApiRequestHeaders(input.headers);
   return isSameOriginUnsafeRequestInput(
     {
@@ -468,7 +473,7 @@ function isTrustedDesktopLocalApiDispatch(input: { method: string; url: URL; hea
       protocol: input.url.protocol.replace(/:$/, ''),
       forwardedProto: readLocalApiRequestHeader(headers, 'x-forwarded-proto'),
     },
-    { allowMissingOrigin: true },
+    { allowMissingOrigin: input.allowMissingOrigin },
   );
 }
 
@@ -1500,11 +1505,19 @@ export async function dispatchDesktopLocalApiRequest(input: {
   body?: unknown;
   headers?: Record<string, string>;
   signal?: AbortSignal;
+  trustMode?: 'in-process' | 'browser';
 }): Promise<DesktopLocalApiDispatchResult> {
   const startedAtMs = performance.now();
   process.stderr.write(`[perf] dispatch ${input.method} ${input.path}\n`);
   const url = new URL(input.path, 'http://desktop.local');
-  if (!isTrustedDesktopLocalApiDispatch({ method: input.method, url, headers: input.headers })) {
+  if (
+    !isTrustedDesktopLocalApiDispatch({
+      method: input.method,
+      url,
+      headers: input.headers,
+      allowMissingOrigin: input.trustMode !== 'browser',
+    })
+  ) {
     return createDesktopLocalApiErrorResponse(403, 'Cross-origin request rejected.');
   }
 

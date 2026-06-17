@@ -123,6 +123,37 @@ describe('desktop local API conversation rename route', () => {
     expect(Buffer.from(response.body).toString('utf-8')).toBe('name required');
   });
 
+  it('rejects browser-mode unsafe webapp dispatches with missing origin', async () => {
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'PATCH',
+      path: '/api/conversations/test-id/title',
+      body: { name: '' },
+      headers: {
+        host: 'board-agent-board.localhost',
+      },
+      trustMode: 'browser',
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(Buffer.from(response.body).toString('utf-8')).toBe('Cross-origin request rejected.');
+  });
+
+  it('allows browser-mode unsafe webapp same-origin dispatches', async () => {
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'PATCH',
+      path: '/api/conversations/test-id/title',
+      body: { name: '' },
+      headers: {
+        host: 'desktop.local',
+        origin: 'http://desktop.local',
+      },
+      trustMode: 'browser',
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(Buffer.from(response.body).toString('utf-8')).toBe('name required');
+  });
+
   it('rejects rename with missing name instead of throwing No local API route', async () => {
     const response = await dispatchDesktopLocalApiRequest({
       method: 'PATCH',
