@@ -347,7 +347,7 @@ describe('extension catalog', () => {
     await expect(installCatalogExtension({ id: 'system-browser' })).rejects.toThrow('already installed');
   });
 
-  it('installs catalog extensions from repo-built bundles when available', async () => {
+  it('installs fresh remote catalog extensions from URL instead of stale repo-built bundles', async () => {
     const repoRoot = mkdtempSync(join(tmpdir(), 'np-local-bundles-'));
     const bundleDir = join(repoRoot, 'dist', 'installable-extensions');
     const bundlePath = join(bundleDir, 'system-alleycat.neon-extension.zip');
@@ -356,12 +356,20 @@ describe('extension catalog', () => {
     process.env.NEON_PILOT_REPO_ROOT = repoRoot;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => ({
-          packages: [{ id: 'system-alleycat', tag: 'v0.10.2', artifact: 'system-alleycat.neon-extension.zip' }],
-        }),
-      })),
+      vi.fn(async (url: string | URL) =>
+        String(url).endsWith('/neon-extension-catalog.json')
+          ? {
+              ok: true,
+              json: async () => ({
+                packages: [{ id: 'system-alleycat', tag: 'v0.10.2', artifact: 'system-alleycat.neon-extension.zip' }],
+              }),
+            }
+          : {
+              ok: true,
+              headers: new Headers({ 'content-length': '4' }),
+              arrayBuffer: async () => new Uint8Array([5, 6, 7, 8]).buffer,
+            },
+      ),
     );
     importRuntimeExtensionBundle.mockReturnValue({
       ok: true,
@@ -373,8 +381,9 @@ describe('extension catalog', () => {
     const { installCatalogExtension } = await import('./extensionCatalog.js');
     const result = await installCatalogExtension({ id: 'system-alleycat' });
 
-    expect(importRuntimeExtensionBundle).toHaveBeenCalledWith({ zipPath: bundlePath }, undefined);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(importRuntimeExtensionBundle).toHaveBeenCalledTimes(1);
+    expect(importRuntimeExtensionBundle).not.toHaveBeenCalledWith({ zipPath: bundlePath }, undefined);
+    expect(fetch).toHaveBeenCalledTimes(2);
     expect(result.extension).toMatchObject({ id: 'system-alleycat', enabled: false });
     rmSync(repoRoot, { recursive: true, force: true });
   });
@@ -463,6 +472,12 @@ describe('extension catalog', () => {
   });
 
   it('updates catalog extensions and preserves the enabled state', async () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), 'np-local-update-bundles-'));
+    const bundleDir = join(repoRoot, 'dist', 'installable-extensions');
+    const bundlePath = join(bundleDir, 'system-browser.neon-extension.zip');
+    mkdirSync(bundleDir, { recursive: true });
+    writeFileSync(bundlePath, new Uint8Array([1, 2, 3, 4]));
+    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
     summaries
       .mockReturnValueOnce([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.0.1', packageType: 'user' }])
       .mockReturnValueOnce([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.0.1', packageType: 'user' }])
@@ -496,7 +511,10 @@ describe('extension catalog', () => {
     const result = await updateCatalogExtension({ id: 'system-browser' });
 
     expect(deleteRuntimeExtension).toHaveBeenCalledWith('system-browser', undefined);
+    expect(importRuntimeExtensionBundle).not.toHaveBeenCalledWith({ zipPath: bundlePath }, undefined);
+    expect(fetch).toHaveBeenCalledTimes(2);
     expect(setExtensionEnabled).toHaveBeenLastCalledWith('system-browser', true, undefined);
     expect(result).toMatchObject({ ok: true, updated: true, extension: { id: 'system-browser', enabled: true, version: '0.1.0' } });
+    rmSync(repoRoot, { recursive: true, force: true });
   });
 });
