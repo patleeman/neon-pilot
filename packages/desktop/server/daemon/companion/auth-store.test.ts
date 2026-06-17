@@ -59,6 +59,7 @@ describe('companion auth store', () => {
     });
     expect(code.id).toMatch(/^pair-[a-z0-9]+-000102030405$/);
     expect(fs.mkdirSync).toHaveBeenCalledWith('/state/companion', { recursive: true, mode: 0o700 });
+    expect(fs.writeFileSync).toHaveBeenCalledWith(authFile, expect.any(String), { encoding: 'utf-8', mode: 0o600 });
     expect(fs.files.get(authFile)).toContain('hash:AAAAAAAAAAAA');
     expect(fs.files.get(authFile)).not.toContain('AAAA-AAAA-AAAA');
     expect(readCompanionDeviceAdminState(stateRoot, { now }).pendingPairings).toEqual([

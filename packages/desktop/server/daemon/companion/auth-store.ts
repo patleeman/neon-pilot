@@ -188,7 +188,7 @@ function readStore(stateRoot: string, now: Date): CompanionAuthStore {
 function writeStore(stateRoot: string, store: CompanionAuthStore): void {
   const filePath = resolveCompanionAuthStateFile(stateRoot);
   mkdirSync(dirname(filePath), { recursive: true, mode: 0o700 });
-  writeFileSync(filePath, `${JSON.stringify(store, null, 2)}\n`, 'utf-8');
+  writeFileSync(filePath, `${JSON.stringify(store, null, 2)}\n`, { encoding: 'utf-8', mode: 0o600 });
 }
 
 function updateStore<T>(stateRoot: string, mutator: (store: CompanionAuthStore, now: Date) => T, nowInput?: Date): T {
