@@ -78,6 +78,16 @@ describe('mcp-auth-storage', () => {
       expect(result).toBe('hello world');
     });
 
+    it('restores private permissions when rewriting an existing text file', async () => {
+      await writeTextFile('hash3', 'note.txt', 'hello world');
+      const path = join(process.env.NEON_PILOT_MCP_AUTH_DIR!, 'v1', 'hash3_note.txt');
+      chmodSync(path, 0o644);
+
+      await writeTextFile('hash3', 'note.txt', 'updated');
+
+      expect(statSync(path).mode & 0o777).toBe(0o600);
+    });
+
     it('returns undefined for missing text file', async () => {
       const result = await readTextFile('hash3', 'nonexistent.txt');
       expect(result).toBeUndefined();
