@@ -28,7 +28,13 @@ vi.mock('../shared/appEvents.js', () => ({
   startAppEventMonitor: startAppEventMonitorMock,
 }));
 
-import { normalizeDeferredResumePollMs, startBootstrapMonitors, startDeferredResumeLoop, startServerListeners } from './bootstrap.js';
+import {
+  normalizeDeferredResumePollMs,
+  startAttentionDispatchLoop,
+  startBootstrapMonitors,
+  startDeferredResumeLoop,
+  startServerListeners,
+} from './bootstrap.js';
 
 describe('bootstrap monitor helpers', () => {
   beforeEach(() => {
@@ -112,6 +118,26 @@ describe('bootstrap monitor helpers', () => {
     await vi.advanceTimersByTimeAsync(1_000);
     expect(flushLiveDeferredResumes).toHaveBeenCalledTimes(2);
     expect(logWarnMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('unrefs attention dispatch intervals and returns a disposer', async () => {
+    const intervalHandle = { unref: vi.fn() };
+    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval').mockImplementation(() => undefined);
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval').mockImplementation(() => intervalHandle as never);
+    const flushAttentionEvents = vi.fn().mockResolvedValue(undefined);
+
+    const dispose = startAttentionDispatchLoop({
+      flushAttentionEvents,
+      pollMs: 1_000,
+    });
+    await Promise.resolve();
+
+    expect(flushAttentionEvents).toHaveBeenCalledTimes(1);
+    expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 1_000);
+    expect(intervalHandle.unref).toHaveBeenCalledTimes(1);
+
+    dispose();
+    expect(clearIntervalSpy).toHaveBeenCalledWith(intervalHandle);
   });
 });
 

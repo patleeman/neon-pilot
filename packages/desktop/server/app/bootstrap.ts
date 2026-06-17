@@ -80,7 +80,7 @@ export function startBootstrapMonitors(options: {
   }).start();
 }
 
-export function startAttentionDispatchLoop(options: { flushAttentionEvents: () => Promise<void>; pollMs: number }): void {
+export function startAttentionDispatchLoop(options: { flushAttentionEvents: () => Promise<void>; pollMs: number }): () => void {
   const pollMs = normalizeDeferredResumePollMs(options.pollMs);
   persistAppTelemetryEvent({ source: 'system', category: 'system_health', name: 'attention_dispatch_loop_start', value: pollMs });
   void options.flushAttentionEvents().catch((error) => {
@@ -93,7 +93,7 @@ export function startAttentionDispatchLoop(options: { flushAttentionEvents: () =
     logWarn(`Attention dispatch loop failed: ${(error as Error).message}`);
   });
 
-  setInterval(() => {
+  const interval = setInterval(() => {
     void options.flushAttentionEvents().catch((error) => {
       persistAppTelemetryEvent({
         source: 'system',
@@ -104,10 +104,12 @@ export function startAttentionDispatchLoop(options: { flushAttentionEvents: () =
       logWarn(`Attention dispatch loop failed: ${(error as Error).message}`);
     });
   }, pollMs);
+  interval.unref?.();
+  return () => clearInterval(interval);
 }
 
-export function startDeferredResumeLoop(options: { flushLiveDeferredResumes: () => Promise<void>; pollMs: number }): void {
-  startAttentionDispatchLoop({ flushAttentionEvents: options.flushLiveDeferredResumes, pollMs: options.pollMs });
+export function startDeferredResumeLoop(options: { flushLiveDeferredResumes: () => Promise<void>; pollMs: number }): () => void {
+  return startAttentionDispatchLoop({ flushAttentionEvents: options.flushLiveDeferredResumes, pollMs: options.pollMs });
 }
 
 export function normalizeDeferredResumePollMs(value: number): number {
