@@ -31,3 +31,10 @@ export function assertExtensionPermission(extensionId: string, permission: Exten
     throw new ExtensionPermissionError(extensionId, permission, capability);
   }
 }
+
+export function assertExtensionAnyPermission(extensionId: string, permissions: ExtensionPermission[], capability: string): void {
+  if (permissions.some((permission) => extensionHasPermission(extensionId, permission))) {
+    return;
+  }
+  assertExtensionPermission(extensionId, permissions[0]!, capability);
+}

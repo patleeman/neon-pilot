@@ -1,8 +1,32 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createExtensionBackendCapabilityDispatcher } from './extensionBackendCapabilities.js';
 
+const findExtensionEntry = vi.hoisted(() =>
+  vi.fn(() => ({
+    manifest: {
+      permissions: ['filesystem:readwrite', 'settings:readwrite', 'shell:execute', 'storage:readwrite', 'workspace:readwrite'],
+    },
+  })),
+);
+
+vi.mock('./extensionRegistry.js', () => ({
+  findExtensionCommandRegistration: vi.fn(),
+  findExtensionEntry,
+  listExtensionCommandRegistrations: vi.fn(() => []),
+  listExtensionInstallSummaries: vi.fn(() => []),
+  setExtensionEnabled: vi.fn(),
+}));
+
 describe('extension backend capability dispatcher', () => {
+  beforeEach(() => {
+    findExtensionEntry.mockReturnValue({
+      manifest: {
+        permissions: ['filesystem:readwrite', 'settings:readwrite', 'shell:execute', 'storage:readwrite', 'workspace:readwrite'],
+      },
+    });
+  });
+
   it('dispatches extension-scoped live conversation capability calls', async () => {
     const conversations = {
       get: vi.fn(async () => ({ id: 'conv-1', running: false, toolNames: ['read'] })),
@@ -256,10 +280,12 @@ describe('extension backend capability dispatcher', () => {
 
   it('returns final run-turn text from agent_end when no text deltas are emitted', async () => {
     const conversations = {
-      runTurn: vi.fn(async (_extensionId: string, _conversationId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
-        options?.onEvent?.({ type: 'agent_end', text: 'final answer' });
-        return { accepted: true };
-      }),
+      runTurn: vi.fn(
+        async (_extensionId: string, _conversationId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
+          options?.onEvent?.({ type: 'agent_end', text: 'final answer' });
+          return { accepted: true };
+        },
+      ),
       metadata: { get: vi.fn(), set: vi.fn(), query: vi.fn() },
     };
     const dispatch = createExtensionBackendCapabilityDispatcher({ conversations });
@@ -609,6 +635,28 @@ describe('extension backend capability dispatcher', () => {
     expect(workspace.list).toHaveBeenCalledWith('ext', { cwd: '/repo', path: '.', depth: 2 });
   });
 
+  it('requires workspace write or readwrite permission for workspace writes', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['workspace:read'] } });
+    const workspace = {
+      readText: vi.fn(),
+      writeText: vi.fn(),
+      list: vi.fn(),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ workspace });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'workspace',
+        operation: 'writeText',
+        input: { cwd: '/repo', path: 'README.md', content: 'hello' },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission workspace:write to use workspace.writeText.');
+    expect(workspace.writeText).not.toHaveBeenCalled();
+  });
+
   it('dispatches host-owned filesystem root handles', async () => {
     const root = {
       root: { kind: 'extension-storage', id: 'ext:app', path: '/state/ext/files', displayName: 'ext app files' },
@@ -692,6 +740,26 @@ describe('extension backend capability dispatcher', () => {
     expect(root.writeText).toHaveBeenCalledWith('file.txt', 'hello', { atomic: false });
     expect(root.list).toHaveBeenCalledWith('.', { depth: 1, excludeNames: ['node_modules'] });
     expect(root.createTempWorkspace).toHaveBeenCalledWith({ prefix: 'worker-' });
+  });
+
+  it('requires filesystem write or readwrite permission for writable filesystem roots', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['filesystem:read'] } });
+    const filesystem = {
+      requestRoot: vi.fn(),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ filesystem });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'filesystem',
+        operation: 'requestRoot',
+        input: { kind: 'app', access: ['read', 'write'], reason: 'test app files' },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission filesystem:write to use filesystem.requestRoot.');
+    expect(filesystem.requestRoot).not.toHaveBeenCalled();
   });
 
   it('rejects malformed workspace capability inputs', async () => {
@@ -1196,6 +1264,26 @@ describe('extension backend capability dispatcher', () => {
       maxBuffer: 2048,
       env: { A: 'B' },
     });
+  });
+
+  it('requires shell execute permission for shell capability calls', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const shell = {
+      exec: vi.fn(),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ shell });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'shell',
+        operation: 'exec',
+        input: { command: 'git' },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission shell:execute to use shell.exec.');
+    expect(shell.exec).not.toHaveBeenCalled();
   });
 
   it('dispatches host-owned shell spawn handle capability calls', async () => {

@@ -54,6 +54,8 @@ import {
   writeTerminalSession,
 } from './terminalSessions.js';
 import { getWorkbenchBrowserToolHost } from './workbenchBrowserToolHost.js';
+import { assertExtensionAnyPermission } from './extensionPermissions.js';
+import type { ExtensionPermission } from './extensionManifest.js';
 
 type ExtensionLogLevel = 'info' | 'warn' | 'error';
 type ExtensionTelemetrySource = 'server' | 'renderer' | 'agent' | 'system';
@@ -376,6 +378,63 @@ function normalizeLogInput(input: unknown): { message: string; fields?: Record<s
   };
 }
 
+function permissionForReadWriteOperation(
+  readPermission: ExtensionPermission,
+  writePermission: ExtensionPermission,
+  readwritePermission: ExtensionPermission,
+  operation: string,
+  writeOperations: string[],
+): ExtensionPermission[] {
+  return writeOperations.includes(operation) ? [writePermission, readwritePermission] : [readPermission, readwritePermission];
+}
+
+function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCapabilityRequest): ExtensionPermission[] {
+  if (request.capability === 'shell') {
+    return ['shell:execute'];
+  }
+
+  if (request.capability === 'storage') {
+    return permissionForReadWriteOperation('storage:read', 'storage:write', 'storage:readwrite', request.operation, ['put', 'delete']);
+  }
+
+  if (request.capability === 'settings') {
+    return permissionForReadWriteOperation('settings:read', 'settings:write', 'settings:readwrite', request.operation, ['update', 'reset']);
+  }
+
+  if (request.capability === 'workspace') {
+    return permissionForReadWriteOperation('workspace:read', 'workspace:write', 'workspace:readwrite', request.operation, ['writeText']);
+  }
+
+  if (request.capability === 'filesystem') {
+    if (request.operation === 'requestRoot') {
+      const input =
+        request.input && typeof request.input === 'object' && !Array.isArray(request.input)
+          ? (request.input as Record<string, unknown>)
+          : {};
+      const access = Array.isArray(input.access) ? input.access : [];
+      return access.includes('write') ? ['filesystem:write', 'filesystem:readwrite'] : ['filesystem:read', 'filesystem:readwrite'];
+    }
+    return permissionForReadWriteOperation('filesystem:read', 'filesystem:write', 'filesystem:readwrite', request.operation, [
+      'writeBytes',
+      'writeText',
+      'writeJson',
+      'createDirectory',
+      'move',
+      'copyIn',
+      'remove',
+      'createTempWorkspace',
+    ]);
+  }
+
+  return [];
+}
+
+function assertExtensionBackendCapabilityPermission(request: ExtensionBackendWorkerCapabilityRequest): void {
+  const permissions = extensionBackendCapabilityPermissions(request);
+  if (permissions.length === 0) return;
+  assertExtensionAnyPermission(request.extensionId, permissions, `${request.capability}.${request.operation}`);
+}
+
 function dispatchLogCapability(logger: ExtensionBackendCapabilityLogger, request: ExtensionBackendWorkerCapabilityRequest): undefined {
   if (request.operation !== 'info' && request.operation !== 'warn' && request.operation !== 'error') {
     throw new Error(`Unsupported log capability operation: ${request.operation}`);
@@ -394,7 +453,10 @@ function dispatchEventsCapability(events: ExtensionBackendCapabilityEvents, requ
   return events.publish(request.extensionId, requireString(input.event, 'Event name'), input.payload);
 }
 
-function dispatchCommandsCapability(commands: ExtensionBackendCapabilityCommands, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+function dispatchCommandsCapability(
+  commands: ExtensionBackendCapabilityCommands,
+  request: ExtensionBackendWorkerCapabilityRequest,
+): unknown {
   if (request.operation === 'list') {
     return commands.list();
   }
@@ -449,8 +511,7 @@ function dispatchConversationsCapability(
     if (!conversations.activity) {
       throw new Error('Conversation activity capability is unavailable.');
     }
-    const visibility =
-      input.visibility !== undefined ? optionalString(input.visibility, 'Conversation activity visibility') : undefined;
+    const visibility = input.visibility !== undefined ? optionalString(input.visibility, 'Conversation activity visibility') : undefined;
     if (visibility !== undefined && !['primary', 'system', 'hidden', 'visible', 'all'].includes(visibility)) {
       throw new Error('Conversation activity visibility must be one of: primary, system, hidden, visible, all.');
     }
@@ -464,8 +525,7 @@ function dispatchConversationsCapability(
     if (!conversations.connections) {
       throw new Error('Conversation connections capability is unavailable.');
     }
-    const visibility =
-      input.visibility !== undefined ? optionalString(input.visibility, 'Conversation connections visibility') : undefined;
+    const visibility = input.visibility !== undefined ? optionalString(input.visibility, 'Conversation connections visibility') : undefined;
     if (visibility !== undefined && !['primary', 'system', 'hidden', 'visible', 'all'].includes(visibility)) {
       throw new Error('Conversation connections visibility must be one of: primary, system, hidden, visible, all.');
     }
@@ -475,7 +535,9 @@ function dispatchConversationsCapability(
     }
     const surface = input.surface !== undefined ? optionalString(input.surface, 'Conversation connection surface') : undefined;
     if (surface !== undefined && !['activityShelf', 'composerShelf', 'rightRail', 'workbench', 'sidebar', 'cli', 'all'].includes(surface)) {
-      throw new Error('Conversation connection surface must be one of: activityShelf, composerShelf, rightRail, workbench, sidebar, cli, all.');
+      throw new Error(
+        'Conversation connection surface must be one of: activityShelf, composerShelf, rightRail, workbench, sidebar, cli, all.',
+      );
     }
     return conversations.connections(request.extensionId, requireString(input.conversationId, 'Conversation id'), {
       ...(input.active !== undefined ? { active: optionalBoolean(input.active, 'Conversation connections active') } : {}),
@@ -747,7 +809,9 @@ function dispatchConversationsCapability(
     }
     return conversations.prune(request.extensionId, {
       olderThanMs: requireNumber(input.olderThanMs, 'Conversation retention olderThanMs'),
-      ...(input.archivedOnly !== undefined ? { archivedOnly: optionalBoolean(input.archivedOnly, 'Conversation retention archivedOnly') } : {}),
+      ...(input.archivedOnly !== undefined
+        ? { archivedOnly: optionalBoolean(input.archivedOnly, 'Conversation retention archivedOnly') }
+        : {}),
       ...(input.dryRun !== undefined ? { dryRun: optionalBoolean(input.dryRun, 'Conversation retention dryRun') } : {}),
     });
   }
@@ -756,7 +820,9 @@ function dispatchConversationsCapability(
     const metadataInput = {
       conversationId: requireString(input.conversationId, 'Conversation id'),
       ...(input.namespace !== undefined ? { namespace: optionalString(input.namespace, 'Conversation metadata namespace') } : {}),
-      ...(input.runtimeScope !== undefined ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation metadata runtimeScope') } : {}),
+      ...(input.runtimeScope !== undefined
+        ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation metadata runtimeScope') }
+        : {}),
     };
     return conversations.metadata.get(request.extensionId, metadataInput);
   }
@@ -765,7 +831,9 @@ function dispatchConversationsCapability(
     const metadataInput = {
       conversationId: requireString(input.conversationId, 'Conversation id'),
       ...(input.namespace !== undefined ? { namespace: optionalString(input.namespace, 'Conversation metadata namespace') } : {}),
-      ...(input.runtimeScope !== undefined ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation metadata runtimeScope') } : {}),
+      ...(input.runtimeScope !== undefined
+        ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation metadata runtimeScope') }
+        : {}),
     };
     const values = optionalRecord(input.values, 'Conversation metadata values');
     if (!values) throw new Error('Conversation metadata values must be an object.');
@@ -775,7 +843,9 @@ function dispatchConversationsCapability(
   if (request.operation === 'metadata.query') {
     return conversations.metadata.query(request.extensionId, {
       ...(input.namespace !== undefined ? { namespace: optionalString(input.namespace, 'Conversation metadata namespace') } : {}),
-      ...(input.runtimeScope !== undefined ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation metadata runtimeScope') } : {}),
+      ...(input.runtimeScope !== undefined
+        ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation metadata runtimeScope') }
+        : {}),
       ...(input.where !== undefined ? { where: optionalConversationMetadataWhere(input.where) } : {}),
       ...(input.limit !== undefined ? { limit: optionalNumber(input.limit, 'Conversation metadata limit') } : {}),
     });
@@ -1773,10 +1843,8 @@ export function createExtensionBackendCapabilityDispatcher(
       createExtensionConversationsCapability().fork(input),
     setTitle: (_extensionId: string, conversationId: string, title: string) =>
       createExtensionConversationsCapability().setTitle(conversationId, title),
-    prune: (
-      _extensionId: string,
-      input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['prune']>[0],
-    ) => createExtensionConversationsCapability().prune(input),
+    prune: (_extensionId: string, input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['prune']>[0]) =>
+      createExtensionConversationsCapability().prune(input),
     metadata: {
       get: (extensionId: string, input: { conversationId: string; namespace?: string; runtimeScope?: string }) =>
         readConversationMetadata({ ...input, extensionId }),
@@ -1898,6 +1966,8 @@ export function createExtensionBackendCapabilityDispatcher(
       listExtensionState(extensionId, prefix).map((document) => ({ key: document.key, value: document.value })),
   };
   return (request, emit) => {
+    assertExtensionBackendCapabilityPermission(request);
+
     if (request.capability === 'agent') {
       return dispatchAgentCapability(request, emit);
     }
