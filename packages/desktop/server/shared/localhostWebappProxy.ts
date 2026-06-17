@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from 'node:http';
 import { createServer as createHttpsServer, type Server as HttpsServer } from 'node:https';
 import { homedir } from 'node:os';
@@ -145,6 +145,7 @@ function ensureCertificate(
 ): { certPath: string; keyPath: string; generated: boolean; error?: string } {
   const paths = certificatePaths(stateRoot);
   mkdirSync(paths.dir, { recursive: true, mode: 0o700 });
+  chmodSync(paths.dir, 0o700);
   const config = buildCertificateConfig(hostnames);
   if (
     existsSync(paths.certPath) &&
@@ -152,10 +153,12 @@ function ensureCertificate(
     existsSync(paths.configPath) &&
     readFileSync(paths.configPath, 'utf-8') === config
   ) {
+    chmodSync(paths.keyPath, 0o600);
     return { certPath: paths.certPath, keyPath: paths.keyPath, generated: false };
   }
 
   writeFileSync(paths.configPath, config, { mode: 0o600 });
+  chmodSync(paths.configPath, 0o600);
 
   const result = spawnSync(
     'openssl',
@@ -188,6 +191,7 @@ function ensureCertificate(
     };
   }
 
+  chmodSync(paths.keyPath, 0o600);
   return { certPath: paths.certPath, keyPath: paths.keyPath, generated: true };
 }
 

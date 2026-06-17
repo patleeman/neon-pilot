@@ -1,5 +1,5 @@
 import { createServer, request, type Server } from 'node:http';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -165,6 +165,34 @@ describe('localhost webapp proxy', () => {
       expect(status.http.enabled).toBe(true);
       expect(status.http.port).not.toBe(address.port);
       expect(status.urls.defaultPort).toBe(false);
+    } finally {
+      rmSync(stateRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('repairs localhost certificate directory and private-key permissions', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'np-localhost-proxy-'));
+    try {
+      const certDir = join(stateRoot, 'desktop', 'localhost-webapp-proxy');
+      mkdirSync(certDir, { recursive: true });
+      chmodSync(certDir, 0o755);
+
+      proxy = await startLocalhostWebappProxy({
+        stateRoot,
+        httpPort: null,
+        httpsPort: 0,
+        dispatch: async () => ({
+          statusCode: 204,
+          headers: {},
+          body: new Uint8Array(),
+        }),
+      });
+
+      const status = proxy.status();
+      expect(status.certificate.available).toBe(true);
+      expect(statSync(certDir).mode & 0o777).toBe(0o700);
+      expect(statSync(status.certificate.keyPath).mode & 0o777).toBe(0o600);
+      expect(statSync(join(certDir, 'openssl.cnf')).mode & 0o777).toBe(0o600);
     } finally {
       rmSync(stateRoot, { recursive: true, force: true });
     }
