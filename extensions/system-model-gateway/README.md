@@ -70,7 +70,7 @@ sandbox_mode = "read-only"
 name = "Neon Pilot AI Gateway"
 base_url = "http://127.0.0.1:8766/v1"
 wire_api = "responses"
-experimental_bearer_token = "local-neon-pilot"
+experimental_bearer_token = "<generated gateway token>"
 EOF
 
 CODEX_HOME="$tmp_home" /Applications/Codex.app/Contents/Resources/codex exec \

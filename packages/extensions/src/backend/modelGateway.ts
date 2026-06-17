@@ -10,6 +10,7 @@ export interface ModelGatewaySettings {
   port: number;
   host: string;
   defaultModel: string;
+  authToken: string;
 }
 
 export interface ModelGatewayModel {
@@ -27,6 +28,7 @@ export interface ModelGatewayStatus {
   host: string;
   port: number;
   baseUrl: string;
+  authToken: string;
   models: number;
   defaultModel: string;
   catalogPath?: string;

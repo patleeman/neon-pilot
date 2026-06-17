@@ -35,6 +35,7 @@ interface GatewayStatus {
   host: string;
   port: number;
   baseUrl: string;
+  authToken: string;
   models: number;
   defaultModel: string;
   catalogPath?: string;
@@ -66,6 +67,7 @@ const DEFAULT_STATUS: GatewayStatus = {
   host: '127.0.0.1',
   port: 8766,
   baseUrl: 'http://127.0.0.1:8766/v1',
+  authToken: '',
   models: 0,
   defaultModel: 'auto',
   logs: [],
@@ -99,9 +101,9 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
         'name = "Neon Pilot AI Gateway"',
         `base_url = "${status.baseUrl}"`,
         'wire_api = "responses"',
-        'experimental_bearer_token = "local-neon-pilot"',
+        `experimental_bearer_token = "${status.authToken.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`,
       ].join('\n'),
-    [status.baseUrl, status.catalogPath],
+    [status.authToken, status.baseUrl, status.catalogPath],
   );
   const referenceCheck = status.codexConfig?.referenceCheck;
 

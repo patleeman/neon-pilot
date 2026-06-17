@@ -11,7 +11,8 @@ vi.mock(
       const port = typeof record.port === 'number' ? record.port : 8766;
       const host = typeof record.host === 'string' ? record.host : '127.0.0.1';
       const defaultModel = typeof record.defaultModel === 'string' ? record.defaultModel : 'auto';
-      return { port, host, defaultModel };
+      const authToken = typeof record.authToken === 'string' ? record.authToken : '';
+      return { port, host, defaultModel, authToken };
     },
     listModelGatewayModels() {
       return [{ id: 'neon-pilot-fake', object: 'model', created: 0, owned_by: 'neon-pilot' }];
@@ -130,6 +131,7 @@ describe('system-model-gateway backend', () => {
         running: false,
         port: 8766,
         baseUrl: 'http://127.0.0.1:8766/v1',
+        authToken: expect.any(String),
       },
     });
   });
@@ -168,6 +170,7 @@ describe('system-model-gateway backend', () => {
       running: true,
       port,
       baseUrl: `http://127.0.0.1:${port}/v1`,
+      authToken: expect.any(String),
     });
     await expect(updateSettings({ port: nextPort }, context)).resolves.toMatchObject({
       running: true,
@@ -200,6 +203,35 @@ describe('system-model-gateway backend', () => {
     }
   });
 
+  it('requires bearer auth for loopback model and responses routes', async () => {
+    const port = await getFreePort();
+    const context = ctx(undefined, { settings: { port } });
+    const state = await startGatewayService({}, context);
+    const token = (state as { authToken: string }).authToken;
+
+    const unauthorizedModels = await fetch(`http://127.0.0.1:${port}/v1/models`);
+    expect(unauthorizedModels.status).toBe(401);
+
+    const authorizedModels = await fetch(`http://127.0.0.1:${port}/v1/models`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(authorizedModels.status).toBe(200);
+
+    const unauthorizedResponse = await fetch(`http://127.0.0.1:${port}/v1/responses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'neon-pilot-fake', input: 'hello' }),
+    });
+    expect(unauthorizedResponse.status).toBe(401);
+
+    const authorizedResponse = await fetch(`http://127.0.0.1:${port}/v1/responses`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'neon-pilot-fake', input: 'hello' }),
+    });
+    expect(authorizedResponse.status).toBe(200);
+  });
+
   it('clears stale listener errors after a later successful loopback request', async () => {
     const port = await getFreePort();
     const blocker = createServer();
@@ -219,11 +251,13 @@ describe('system-model-gateway backend', () => {
     }
 
     const context = ctx(undefined, { settings: { port } });
-    await expect(startGatewayService({}, context)).resolves.toMatchObject({ running: true, port });
+    const state = await startGatewayService({}, context);
+    expect(state).toMatchObject({ running: true, port });
+    const token = (state as { authToken: string }).authToken;
 
     const invalidResponse = await fetch(`http://127.0.0.1:${port}/v1/responses`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: '{',
     });
     expect(invalidResponse.status).toBe(500);
@@ -233,7 +267,7 @@ describe('system-model-gateway backend', () => {
 
     const validResponse = await fetch(`http://127.0.0.1:${port}/v1/responses`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: 'neon-pilot-fake', input: 'hello' }),
     });
     expect(validResponse.status).toBe(200);

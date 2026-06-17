@@ -28,6 +28,7 @@ export interface ModelGatewaySettings {
   port: number;
   host: string;
   defaultModel: string;
+  authToken: string;
 }
 
 export interface ModelGatewayModel {
@@ -45,6 +46,7 @@ export interface ModelGatewayStatus {
   host: string;
   port: number;
   baseUrl: string;
+  authToken: string;
   models: number;
   defaultModel: string;
   catalogPath?: string;
@@ -456,7 +458,8 @@ export function modelGatewaySettingsFrom(value: unknown): ModelGatewaySettings {
   const port = Number.isSafeInteger(rawPort) && rawPort > 0 && rawPort < 65536 ? rawPort : DEFAULT_MODEL_GATEWAY_PORT;
   const host = typeof record.host === 'string' && record.host.trim() ? record.host.trim() : '127.0.0.1';
   const defaultModel = typeof record.defaultModel === 'string' && record.defaultModel.trim() ? record.defaultModel.trim() : DEFAULT_MODEL_GATEWAY_MODEL_ID;
-  return { port, host, defaultModel };
+  const authToken = typeof record.authToken === 'string' && record.authToken.trim() ? record.authToken.trim() : '';
+  return { port, host, defaultModel, authToken };
 }
 
 export function parseModelRef(ref: string, models: Array<Model<Api>>): Model<Api> | null {
@@ -730,7 +733,7 @@ export function installModelGatewayCodexConfig(ctx: RuntimeContext, settings: Mo
     name: 'Neon Pilot AI Gateway',
     base_url: `http://${settings.host}:${settings.port}/v1`,
     wire_api: 'responses',
-    experimental_bearer_token: 'local-neon-pilot',
+    experimental_bearer_token: settings.authToken,
   };
   config.model_providers = providers;
   config[CODEX_CONFIG_MANAGED_TABLE] = {

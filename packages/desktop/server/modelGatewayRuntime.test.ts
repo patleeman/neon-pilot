@@ -275,7 +275,7 @@ describe('modelGatewayRuntime', () => {
 
       const result = installModelGatewayCodexConfig(
         { runtimeDir },
-        { host: '127.0.0.1', port: 8766, defaultModel: 'auto' },
+        { host: '127.0.0.1', port: 8766, defaultModel: 'auto', authToken: 'test-gateway-token' },
         { configPath },
       );
       const next = readFileSync(configPath, 'utf8');
@@ -284,7 +284,7 @@ describe('modelGatewayRuntime', () => {
         model_provider?: string;
         model_catalog_json?: string;
         approval_policy?: string;
-        model_providers?: Record<string, { base_url?: string }>;
+        model_providers?: Record<string, { base_url?: string; experimental_bearer_token?: string }>;
         neon_pilot_model_gateway?: { managed?: boolean };
       };
 
@@ -294,7 +294,7 @@ describe('modelGatewayRuntime', () => {
         model: 'gpt-5.5',
         model_provider: 'openai',
         approval_policy: 'never',
-        model_providers: { 'neon-pilot': { base_url: 'http://127.0.0.1:8766/v1' } },
+        model_providers: { 'neon-pilot': { base_url: 'http://127.0.0.1:8766/v1', experimental_bearer_token: 'test-gateway-token' } },
         neon_pilot_model_gateway: {
           managed: true,
         },
@@ -312,7 +312,11 @@ describe('modelGatewayRuntime', () => {
     try {
       mkdirSync(join(runtimeDir, 'codex'), { recursive: true });
       writeFileSync(configPath, 'model = "gpt-5.5"\nmodel_provider = "openai"\napproval_policy = "never"\n');
-      installModelGatewayCodexConfig({ runtimeDir }, { host: '127.0.0.1', port: 8766, defaultModel: 'auto' }, { configPath });
+      installModelGatewayCodexConfig(
+        { runtimeDir },
+        { host: '127.0.0.1', port: 8766, defaultModel: 'auto', authToken: 'test-gateway-token' },
+        { configPath },
+      );
       const result = removeModelGatewayCodexConfig({ runtimeDir }, { configPath });
       const next = readFileSync(configPath, 'utf8');
       const parsed = parseToml(next) as {

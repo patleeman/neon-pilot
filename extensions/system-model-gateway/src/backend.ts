@@ -1,3 +1,4 @@
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
 import type { ExtensionBackendContext, ExtensionRouteRequest, ExtensionRouteResponse } from '@neon-pilot/extensions';
@@ -39,7 +40,11 @@ const logs: GatewayLogEntry[] = [];
 const MAX_LOGS = 80;
 
 async function readSettings(ctx: ExtensionBackendContext): Promise<ModelGatewaySettings> {
-  return modelGatewaySettingsFrom(await ctx.storage.get('settings'));
+  const settings = await modelGatewaySettingsFrom(await ctx.storage.get('settings'));
+  if (settings.authToken) return settings;
+  const next = { ...settings, authToken: randomBytes(32).toString('base64url') };
+  await writeSettings(ctx, next);
+  return next;
 }
 
 async function writeSettings(ctx: ExtensionBackendContext, settings: ModelGatewaySettings): Promise<void> {
@@ -81,6 +86,7 @@ async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySet
     host: settings.host,
     port: settings.port,
     baseUrl: `http://${settings.host}:${settings.port}/v1`,
+    authToken: settings.authToken,
     models,
     defaultModel: settings.defaultModel,
     catalogPath,
@@ -88,6 +94,11 @@ async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySet
     logs: [...logs],
     ...(lastError ? { lastError } : {}),
   };
+}
+
+async function loopbackHealthFor(ctx: ExtensionBackendContext, settings: ModelGatewaySettings): Promise<Omit<GatewayState, 'authToken'>> {
+  const { authToken: _authToken, ...state } = await statusFor(ctx, settings);
+  return state;
 }
 
 async function ensureLoopbackServer(ctx: ExtensionBackendContext): Promise<GatewayState> {
@@ -248,6 +259,30 @@ function sendJson(response: ServerResponse, statusCode: number, body: unknown): 
   response.end(JSON.stringify(body));
 }
 
+function sendUnauthorized(response: ServerResponse): void {
+  response.writeHead(401, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'WWW-Authenticate': 'Bearer',
+  });
+  response.end(JSON.stringify({ error: { message: 'Missing or invalid bearer token.' } }));
+}
+
+function bearerTokenFrom(request: IncomingMessage): string | null {
+  const value = request.headers.authorization;
+  if (typeof value !== 'string') return null;
+  const match = /^Bearer\s+(.+)$/i.exec(value.trim());
+  return match?.[1]?.trim() || null;
+}
+
+function hasValidBearerToken(request: IncomingMessage, settings: ModelGatewaySettings): boolean {
+  const received = bearerTokenFrom(request);
+  if (!received || !settings.authToken) return false;
+  const receivedBuffer = Buffer.from(received);
+  const expectedBuffer = Buffer.from(settings.authToken);
+  return receivedBuffer.length === expectedBuffer.length && timingSafeEqual(receivedBuffer, expectedBuffer);
+}
+
 function sendSse(response: ServerResponse): void {
   response.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
@@ -270,7 +305,12 @@ async function handleHttpRequest(
     if (request.method === 'GET' && url.pathname === '/health') {
       statusCode = 200;
       lastError = undefined;
-      sendJson(response, 200, { ok: true, ...(await statusFor(ctx, settings)) });
+      sendJson(response, 200, { ok: true, ...(await loopbackHealthFor(ctx, settings)) });
+      return;
+    }
+    if (url.pathname.startsWith('/v1/') && !hasValidBearerToken(request, settings)) {
+      statusCode = 401;
+      sendUnauthorized(response);
       return;
     }
     if (request.method === 'GET' && url.pathname === '/v1/models') {
