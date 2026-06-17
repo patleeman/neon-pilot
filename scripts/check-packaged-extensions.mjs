@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { init, parse } from 'es-module-lexer';
 
 import { backendBundleByteLimit, criticalSmokeActionInput, FORBIDDEN_BUNDLED_PATH_FRAGMENTS } from './extension-hardening-config.mjs';
+import { defaultInstallableBundleNames, defaultInstallableExtensionIds } from './default-installable-extensions.mjs';
 
 process.setMaxListeners(0);
 
@@ -28,8 +29,8 @@ const inputRoot = process.argv[2] ? resolve(process.argv[2]) : repoRoot;
 const packagedAppResourcesRoot = inputRoot.endsWith('.app') ? join(inputRoot, 'Contents', 'Resources') : null;
 const directExtensionRoot = !packagedAppResourcesRoot && existsSync(join(inputRoot, 'extension.json')) ? inputRoot : null;
 const extensionsRoot = packagedAppResourcesRoot ? join(packagedAppResourcesRoot, 'extensions') : join(inputRoot, 'extensions');
-const defaultInstallableExtensionIds = new Set(['system-dynamic-workflows']);
-const defaultInstallableBundleNames = new Set([...defaultInstallableExtensionIds].map((id) => `${id}.neon-extension.zip`));
+const defaultInstallableExtensionIdSet = new Set(defaultInstallableExtensionIds);
+const defaultInstallableBundleNameSet = new Set(defaultInstallableBundleNames);
 
 if (packagedAppResourcesRoot) {
   Object.defineProperty(process, 'resourcesPath', {
@@ -323,7 +324,7 @@ function assertPackagedAppContainsEveryExtensionBundle() {
     const id = sourceManifest.id ?? sourceDir;
     const packagedDir = packagedById.get(id);
     if (!packagedDir) {
-      if (defaultInstallableExtensionIds.has(id)) {
+      if (defaultInstallableExtensionIdSet.has(id)) {
         const bundlePath = join(packagedAppResourcesRoot, 'installable-extension-bundles', `${id}.neon-extension.zip`);
         if (!existsSync(bundlePath)) failures.push(`${id}: default installable extension is missing packaged bundle ${bundlePath}`);
         continue;
@@ -341,7 +342,7 @@ function assertPackagedAppContainsEveryExtensionBundle() {
   if (!existsSync(bundleRoot)) return;
   for (const entry of readdirSync(bundleRoot, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith('.neon-extension.zip')) continue;
-    if (!defaultInstallableBundleNames.has(entry.name)) {
+    if (!defaultInstallableBundleNameSet.has(entry.name)) {
       failures.push(`unexpected packaged installable extension bundle: ${entry.name}`);
     }
   }

@@ -6,16 +6,14 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from 'no
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { defaultInstallableBundleNames, defaultInstallableExtensionIds } from './default-installable-extensions.mjs';
+
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const extensionsRoot = join(repoRoot, 'extensions');
 const extensionBuildScript = join(repoRoot, 'scripts', 'extension-build.mjs');
 const extensionPackScript = join(repoRoot, 'scripts', 'extension-pack.mjs');
 const installableBundleRoot = join(repoRoot, 'dist', 'installable-extensions');
-const defaultInstallableExtensionIds = new Set(['system-dynamic-workflows']);
-
-function defaultInstallableBundleFileName(extensionId) {
-  return `${extensionId}.neon-extension.zip`;
-}
+const defaultInstallableExtensionIdSet = new Set(defaultInstallableExtensionIds);
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -70,7 +68,7 @@ for (const extensionDir of extensionDirs) {
 console.log(`Built and verified ${extensionDirs.length} extensions.`);
 
 mkdirSync(installableBundleRoot, { recursive: true });
-const allowedInstallableBundleNames = new Set([...defaultInstallableExtensionIds].map(defaultInstallableBundleFileName));
+const allowedInstallableBundleNames = new Set(defaultInstallableBundleNames);
 for (const entry of readdirSync(installableBundleRoot, { withFileTypes: true })) {
   if (!entry.isFile() || !entry.name.endsWith('.neon-extension.zip')) continue;
   if (allowedInstallableBundleNames.has(entry.name)) continue;
@@ -81,7 +79,7 @@ for (const entry of readdirSync(installableBundleRoot, { withFileTypes: true }))
 
 for (const extensionDir of extensionDirs) {
   const manifest = readJson(join(extensionDir, 'extension.json'));
-  if (!defaultInstallableExtensionIds.has(manifest.id)) continue;
+  if (!defaultInstallableExtensionIdSet.has(manifest.id)) continue;
   const outputPath = join(installableBundleRoot, `${manifest.id}.neon-extension.zip`);
   console.log(`Packing installable ${extensionDir.replace(`${repoRoot}/`, '')}`);
   execFileSync(process.execPath, [extensionPackScript, extensionDir, '--out', outputPath], { cwd: repoRoot, stdio: 'inherit' });

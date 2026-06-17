@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { defaultInstallableBundleNames } from './scripts/default-installable-extensions.mjs';
+
 const DEFAULT_DESKTOP_RELEASE_REPO_SLUG = 'patleeman/neon-pilot';
 
 function resolveDesktopReleaseRepoSlug(value = process.env.NEON_PILOT_RELEASE_REPO) {
@@ -145,7 +147,7 @@ const electronBuilderConfig = {
     {
       from: 'dist/installable-extensions',
       to: 'installable-extension-bundles',
-      filter: ['*.neon-extension.zip'],
+      filter: defaultInstallableBundleNames,
     },
     {
       from: 'docs',
