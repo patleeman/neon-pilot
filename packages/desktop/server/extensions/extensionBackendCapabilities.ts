@@ -464,6 +464,19 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
     return ['secrets:read'];
   }
 
+  if (request.capability === 'models') {
+    return permissionForReadWriteOperation('models:read', 'models:write', 'models:readwrite', request.operation, [
+      'saveProvider',
+      'saveProviderModel',
+      'deleteProvider',
+      'deleteProviderModel',
+    ]);
+  }
+
+  if (request.capability === 'image') {
+    return request.operation === 'generate' ? ['images:write'] : [];
+  }
+
   return [];
 }
 

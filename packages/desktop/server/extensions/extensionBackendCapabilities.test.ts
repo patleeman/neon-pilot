@@ -864,6 +864,11 @@ describe('extension backend capability dispatcher', () => {
   });
 
   it('dispatches model capability calls', async () => {
+    findExtensionEntry.mockReturnValue({
+      manifest: {
+        permissions: ['models:readwrite'],
+      },
+    });
     const models = {
       list: vi.fn(async () => [{ id: 'model-1', provider: 'provider-a' }]),
       saveProvider: vi.fn(async () => ({ provider: 'ds4' })),
@@ -955,7 +960,41 @@ describe('extension backend capability dispatcher', () => {
     );
   });
 
+  it('requires model permissions before dispatching model capability calls', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const models = {
+      list: vi.fn(async () => [{ id: 'model-1' }]),
+      saveProvider: vi.fn(async () => ({ provider: 'ds4' })),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ models });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'models',
+        operation: 'list',
+      }),
+    ).rejects.toThrow('requires permission models:read');
+    expect(models.list).not.toHaveBeenCalled();
+
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['models:read'] } });
+    await expect(async () =>
+      dispatch({
+        id: 2,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'models',
+        operation: 'saveProvider',
+        input: { input: { provider: 'ds4' } },
+      }),
+    ).rejects.toThrow('requires permission models:write');
+    expect(models.saveProvider).not.toHaveBeenCalled();
+  });
+
   it('rejects unsupported model capability operations', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['models:readwrite'] } });
     const dispatch = createExtensionBackendCapabilityDispatcher({ models: { list: vi.fn() } });
 
     await expect(async () =>
@@ -1506,6 +1545,11 @@ describe('extension backend capability dispatcher', () => {
   });
 
   it('dispatches host-owned image generation capability calls', async () => {
+    findExtensionEntry.mockReturnValue({
+      manifest: {
+        permissions: ['images:write'],
+      },
+    });
     const image = { generate: vi.fn(async () => ({ text: 'generated' })) };
     const dispatch = createExtensionBackendCapabilityDispatcher({ image });
 
@@ -1529,6 +1573,24 @@ describe('extension backend capability dispatcher', () => {
       input: { prompt: 'draw smoke' },
       toolContext: { sessionFile: '/tmp/session.json', preferredVisionModel: 'openai/gpt-4o' },
     });
+  });
+
+  it('requires image write permission before dispatching host-owned image generation', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const image = { generate: vi.fn(async () => ({ text: 'generated' })) };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ image });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'image',
+        operation: 'generate',
+        input: { input: { prompt: 'draw smoke' } },
+      }),
+    ).rejects.toThrow('requires permission images:write');
+    expect(image.generate).not.toHaveBeenCalled();
   });
 
   it('rejects malformed UI invalidation inputs', async () => {
