@@ -6,7 +6,7 @@ function hostResolved(): never {
   throw new Error('@neon-pilot/extensions/backend/automations must be resolved by the Neon Pilot host runtime.');
 }
 
-export const DEFAULT_DEFERRED_RESUME_PROMPT = '';
+export const DEFAULT_DEFERRED_RESUME_PROMPT = 'Continue when ready.';
 export type LoadedScheduledTasksForProfile = unknown;
 export type TaskRuntimeEntry = unknown;
 export type ScheduledTaskThreadInput = unknown;

@@ -6,12 +6,12 @@ function hostResolved(): never {
   throw new Error('@neon-pilot/extensions/backend/conversations must be resolved by the Neon Pilot host runtime.');
 }
 
-export const CONVERSATION_INSPECT_ACTION_VALUES: readonly string[] = [];
-export const CONVERSATION_INSPECT_BLOCK_TYPE_VALUES: readonly string[] = [];
-export const CONVERSATION_INSPECT_ORDER_VALUES: readonly string[] = [];
-export const CONVERSATION_INSPECT_ROLE_VALUES: readonly string[] = [];
-export const CONVERSATION_INSPECT_SCOPE_VALUES: readonly string[] = [];
-export const CONVERSATION_INSPECT_SEARCH_MODE_VALUES: readonly string[] = [];
+export const CONVERSATION_INSPECT_SCOPE_VALUES = ['all', 'live', 'running', 'archived'] as const;
+export const CONVERSATION_INSPECT_ACTION_VALUES = ['list', 'search', 'query', 'diff', 'outline', 'read_window'] as const;
+export const CONVERSATION_INSPECT_ORDER_VALUES = ['asc', 'desc'] as const;
+export const CONVERSATION_INSPECT_BLOCK_TYPE_VALUES = ['user', 'text', 'context', 'summary', 'tool_use', 'image', 'error'] as const;
+export const CONVERSATION_INSPECT_ROLE_VALUES = ['user', 'assistant', 'tool', 'context', 'summary', 'image', 'error'] as const;
+export const CONVERSATION_INSPECT_SEARCH_MODE_VALUES = ['phrase', 'allTerms', 'anyTerm'] as const;
 
 export const normalizeGeneratedConversationTitle = (..._args: unknown[]): unknown => hostResolved();
 export const resolveRequestedCwd = (..._args: unknown[]): unknown => hostResolved();

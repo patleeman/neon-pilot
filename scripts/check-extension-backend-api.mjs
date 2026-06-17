@@ -106,6 +106,23 @@ function collectRawDynamicImportUsages(filePath) {
   return [...matches].map((match) => match[0]);
 }
 
+function collectLiteralExportConstants(filePath) {
+  const source = readFileSync(filePath, 'utf8');
+  const constants = new Map();
+  const matches = source.matchAll(/\bexport\s+const\s+([A-Z][A-Z0-9_]*)(?:\s*:[^=]+)?\s*=\s*([^;]+);/g);
+  for (const match of matches) {
+    const [, name, rawExpression] = match;
+    const expression = rawExpression.replace(/\s+as\s+const\b/g, '').trim();
+    if (expression.includes('=>') || expression.includes('hostResolved')) continue;
+    try {
+      constants.set(name, JSON.stringify(Function(`"use strict"; return (${expression});`)()));
+    } catch {
+      // Ignore non-literal exports; this check only guards duplicated literal public contract data.
+    }
+  }
+  return constants;
+}
+
 function isForbiddenStaticImport(specifier) {
   if (nodeBuiltins.has(specifier) || specifier.startsWith('node:')) return false;
   if (/^(?:\.\.\/)+\.\.\/core\/src\//.test(specifier)) return true;
@@ -201,6 +218,19 @@ for (const moduleName of hostModules) {
     failures,
     `backendApi/${moduleName}.ts is ${size} bytes; backend API seams should stay narrow, split or lazy-load implementation code`,
   );
+}
+
+for (const moduleName of ['automations', 'conversations']) {
+  const sdkConstants = collectLiteralExportConstants(join(sdkBackendRoot, `${moduleName}.ts`));
+  const hostConstants = collectLiteralExportConstants(join(hostBackendApiRoot, `${moduleName}.ts`));
+  for (const [name, hostValue] of hostConstants) {
+    if (!sdkConstants.has(name)) continue;
+    assert(
+      sdkConstants.get(name) === hostValue,
+      failures,
+      `SDK backend/${moduleName}.ts constant ${name} differs from host backendApi/${moduleName}.ts`,
+    );
+  }
 }
 
 if (failures.length > 0) {
