@@ -373,14 +373,30 @@ function collectReleaseFiles(releaseDir, version) {
 }
 
 function collectPackagedAppPath(releaseDir) {
-  const macOutputDir = resolve(releaseDir, 'mac-arm64');
-  if (!existsSync(macOutputDir)) {
+  if (!existsSync(releaseDir)) {
     return null;
   }
 
-  const appName = readdirSync(macOutputDir).find((name) => name.endsWith('.app'));
+  const entries = readdirSync(releaseDir, { withFileTypes: true });
+  const app = entries.find((entry) => entry.isDirectory() && entry.name.endsWith('.app'));
+  if (app) {
+    return resolve(releaseDir, app.name);
+  }
 
-  return appName ? resolve(macOutputDir, appName) : null;
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    const nestedDir = resolve(releaseDir, entry.name);
+    const nestedApp = readdirSync(nestedDir, { withFileTypes: true }).find(
+      (nestedEntry) => nestedEntry.isDirectory() && nestedEntry.name.endsWith('.app'),
+    );
+    if (nestedApp) {
+      return resolve(nestedDir, nestedApp.name);
+    }
+  }
+
+  return null;
 }
 
 function validatePackagedAutoUpdateConfig(releaseDir, releaseRepo) {

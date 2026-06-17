@@ -72,4 +72,14 @@ describe('release smoke perf budgets', () => {
     expect(autoUpdateIndex).toBeGreaterThan(appPathIndex);
     expect(packagedExtensionsIndex).toBeGreaterThan(autoUpdateIndex);
   });
+
+  it('keeps publish packaged-app discovery aligned with local release verification', () => {
+    const publishSource = readFileSync(new URL('./publish-desktop-release.mjs', import.meta.url), 'utf8');
+    const verifySource = readFileSync(new URL('./verify-desktop-release-build.mjs', import.meta.url), 'utf8');
+
+    expect(publishSource).not.toContain("resolve(releaseDir, 'mac-arm64')");
+    expect(publishSource).toContain("entry.name.endsWith('.app')");
+    expect(publishSource).toContain('readdirSync(nestedDir, { withFileTypes: true })');
+    expect(verifySource).toContain('readdirSync(nestedDir, { withFileTypes: true })');
+  });
 });
