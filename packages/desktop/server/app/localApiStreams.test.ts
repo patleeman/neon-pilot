@@ -208,6 +208,60 @@ describe('localApiStreams', () => {
     });
   });
 
+  it('stops desktop run stream polling after a terminal snapshot grace period', async () => {
+    vi.useFakeTimers();
+    getDurableRunLogCursorMock.mockReturnValue(0);
+    readDurableRunLogDeltaMock.mockReturnValue(undefined);
+    getDurableRunSnapshotMock
+      .mockResolvedValueOnce({
+        detail: { run: { runId: 'run-1', status: 'running' } },
+        log: { path: '/tmp/run.log', log: 'initial' },
+      })
+      .mockResolvedValue({
+        detail: { run: { runId: 'run-1', status: 'cancelled' } },
+        log: { path: '/tmp/run.log', log: 'cancelled' },
+      });
+    const events: unknown[] = [];
+
+    await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/runs/run-1/events'), (event) => events.push(event));
+
+    expect(getDurableRunSnapshotMock).toHaveBeenCalledWith('run-1', 120);
+    expect(events).toEqual([
+      { type: 'open' },
+      {
+        type: 'message',
+        data: JSON.stringify({
+          type: 'snapshot',
+          detail: { run: { runId: 'run-1', status: 'running' } },
+          log: { path: '/tmp/run.log', log: 'initial' },
+        }),
+      },
+    ]);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(getDurableRunSnapshotMock).toHaveBeenCalledTimes(2);
+    expect(events).toContainEqual({
+      type: 'message',
+      data: JSON.stringify({
+        type: 'detail',
+        detail: { run: { runId: 'run-1', status: 'cancelled' } },
+      }),
+    });
+    const snapshotCallsAfterTerminal = getDurableRunSnapshotMock.mock.calls.length;
+    const logReadsAfterTerminal = readDurableRunLogDeltaMock.mock.calls.length;
+
+    await vi.advanceTimersByTimeAsync(1_499);
+    expect(events.at(-1)).not.toEqual({ type: 'close' });
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(events.at(-1)).toEqual({ type: 'close' });
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(getDurableRunSnapshotMock.mock.calls).toHaveLength(snapshotCallsAfterTerminal);
+    expect(readDurableRunLogDeltaMock.mock.calls).toHaveLength(logReadsAfterTerminal);
+  });
+
   it('closes provider OAuth desktop streams when the login is cancelled', async () => {
     const events: unknown[] = [];
     const unsubscribe = vi.fn();

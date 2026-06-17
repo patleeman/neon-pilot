@@ -206,6 +206,7 @@ const ACTIVE_RUN_POLL_INTERVAL_MS = 1_000;
 const IDLE_RUN_POLL_INTERVAL_MS = 5_000;
 const ACTIVE_RUN_LOG_POLL_INTERVAL_MS = 250;
 const IDLE_RUN_LOG_POLL_INTERVAL_MS = 2_000;
+const TERMINAL_RUN_STREAM_GRACE_MS = 1_500;
 
 function isRunStreamActive(snapshot: { detail: { run: { status?: { status?: string } | string } } }): boolean {
   const runStatus = typeof snapshot.detail.run.status === 'string' ? snapshot.detail.run.status : snapshot.detail.run.status?.status;
@@ -237,6 +238,7 @@ async function subscribeDesktopRunStream(url: URL, onEvent: (event: DesktopLocal
   let closed = false;
   let detailPollTimer: ReturnType<typeof setTimeout> | null = null;
   let logPollTimer: ReturnType<typeof setTimeout> | null = null;
+  let terminalStopTimer: ReturnType<typeof setTimeout> | null = null;
   let logPath = initial.log.path;
   let logCursor = getDurableRunLogCursor(logPath);
   let runActive = isRunStreamActive(initial);
@@ -254,11 +256,25 @@ async function subscribeDesktopRunStream(url: URL, onEvent: (event: DesktopLocal
       clearTimeout(logPollTimer);
       logPollTimer = null;
     }
+    if (terminalStopTimer) {
+      clearTimeout(terminalStopTimer);
+      terminalStopTimer = null;
+    }
     onEvent({ type: 'close' });
   };
 
+  const scheduleTerminalStop = () => {
+    if (closed || terminalStopTimer) {
+      return;
+    }
+
+    terminalStopTimer = setTimeout(() => {
+      close();
+    }, TERMINAL_RUN_STREAM_GRACE_MS);
+  };
+
   const scheduleDetailPoll = (delayMs: number) => {
-    if (closed) {
+    if (closed || !runActive) {
       return;
     }
 
@@ -309,6 +325,10 @@ async function subscribeDesktopRunStream(url: URL, onEvent: (event: DesktopLocal
           detail: next.detail,
         });
       }
+      if (!runActive) {
+        scheduleTerminalStop();
+        return;
+      }
       scheduleDetailPoll(getRunStreamPollInterval(next));
     } catch {
       scheduleDetailPoll(ACTIVE_RUN_POLL_INTERVAL_MS);
@@ -353,7 +373,11 @@ async function subscribeDesktopRunStream(url: URL, onEvent: (event: DesktopLocal
         }
       }
     } finally {
-      scheduleLogPoll(getRunLogPollInterval(runActive));
+      if (runActive) {
+        scheduleLogPoll(getRunLogPollInterval(runActive));
+      } else {
+        scheduleTerminalStop();
+      }
     }
   };
 
@@ -363,8 +387,12 @@ async function subscribeDesktopRunStream(url: URL, onEvent: (event: DesktopLocal
     detail: initial.detail,
     log: initial.log,
   });
-  scheduleDetailPoll(getRunStreamPollInterval(initial));
-  scheduleLogPoll(getRunLogPollInterval(runActive));
+  if (runActive) {
+    scheduleDetailPoll(getRunStreamPollInterval(initial));
+    scheduleLogPoll(getRunLogPollInterval(runActive));
+  } else {
+    scheduleTerminalStop();
+  }
 
   return close;
 }
