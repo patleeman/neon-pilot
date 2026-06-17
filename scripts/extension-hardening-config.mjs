@@ -17,7 +17,6 @@ export const BACKEND_BUNDLE_BYTE_LIMITS = new Map([
   ['system-extension-manager', 1 * 1024 * 1024],
   ['system-image-probe', 2 * 1024 * 1024],
   ['system-diffs', 2 * 1024 * 1024],
-  ['system-images', 2 * 1024 * 1024],
   ['system-knowledge', 2 * 1024 * 1024],
   ['system-mcp', 2 * 1024 * 1024],
   ['system-prompt-assembly', 25 * 1024 * 1024],
@@ -25,7 +24,6 @@ export const BACKEND_BUNDLE_BYTE_LIMITS = new Map([
   ['system-skills', 25 * 1024 * 1024],
   ['system-suggested-context', 1 * 1024 * 1024],
   ['system-web-tools', 1 * 1024 * 1024],
-  ['system-session-exchange', 1 * 1024 * 1024],
 ]);
 
 export const FORBIDDEN_BUNDLED_PATH_FRAGMENTS = ['/node_modules/@neon-pilot/daemon/', '/packages/daemon/'];
