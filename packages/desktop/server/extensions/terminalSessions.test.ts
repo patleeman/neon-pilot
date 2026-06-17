@@ -166,6 +166,26 @@ describe('terminal sessions', () => {
     });
   });
 
+  it('prunes exited terminal sessions after the replay retention window', async () => {
+    const { id } = await mod.createTerminalSession({});
+    const onExit = shellSpawn.mock.calls[0][0].onExit;
+
+    vi.useFakeTimers();
+    try {
+      onExit({ code: 0, signal: null });
+
+      expect(mod.drainTerminalSession({ id })).toEqual({ ok: true, output: '', exited: true, exitCode: 0 });
+      await vi.advanceTimersByTimeAsync(29_999);
+      expect(mod.drainTerminalSession({ id })).toEqual({ ok: true, output: '', exited: true, exitCode: 0 });
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(mod.drainTerminalSession({ id })).toEqual({ ok: false, output: '', exited: true, exitCode: null });
+      await expect(mod.streamTerminalSession(routeRequest(id))).resolves.toMatchObject({ status: 404 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not drop burst output chunks before the SSE consumer drains them', async () => {
     const { id } = await mod.createTerminalSession({});
     const onStdout = shellSpawn.mock.calls[0][0].onStdout;

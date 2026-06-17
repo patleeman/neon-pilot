@@ -24,11 +24,13 @@ interface TerminalSession {
   closed: boolean;
   exited: boolean;
   exitCode: number | null;
+  cleanupTimer?: ReturnType<typeof setTimeout>;
 }
 
 const sessions = new Map<string, TerminalSession>();
 const MAX_REPLAY_CHUNKS = 128;
 const STARTUP_OUTPUT_SETTLE_MS = 750;
+const EXITED_SESSION_REPLAY_RETENTION_MS = 30_000;
 const shell = createExtensionShellCapability();
 
 function resolveRealtimeUrl(): string | undefined {
@@ -104,6 +106,18 @@ function broadcastExit(session: TerminalSession, code: number | null): void {
     }
   }
   session.listeners.clear();
+  scheduleExitedSessionCleanup(session);
+}
+
+function scheduleExitedSessionCleanup(session: TerminalSession): void {
+  if (session.cleanupTimer) clearTimeout(session.cleanupTimer);
+  session.cleanupTimer = setTimeout(() => {
+    const current = sessions.get(session.id);
+    if (current !== session || session.closed || !session.exited) return;
+    session.closed = true;
+    sessions.delete(session.id);
+  }, EXITED_SESSION_REPLAY_RETENTION_MS);
+  session.cleanupTimer.unref?.();
 }
 
 export type TerminalSessionEvent =
@@ -153,6 +167,7 @@ export function clearTerminalSessionsForTests(): void {
     } catch {
       /* ignore */
     }
+    if (session.cleanupTimer) clearTimeout(session.cleanupTimer);
     sessions.delete(id);
   }
 }
@@ -169,6 +184,7 @@ function removeSession(id: string): void {
     broadcastExit(session, null);
   }
   session.closed = true;
+  if (session.cleanupTimer) clearTimeout(session.cleanupTimer);
   sessions.delete(id);
 }
 
