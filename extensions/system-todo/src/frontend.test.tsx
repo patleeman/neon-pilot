@@ -146,6 +146,34 @@ describe('TodoShelf', () => {
     expect(screen.queryByText('Open todo')).toBeNull();
   });
 
+  it('keeps the newer conversation visible when an older load resolves last', async () => {
+    let resolveFirst!: (value: typeof state) => void;
+    const secondState = {
+      ...state,
+      items: [{ ...state.items[0]!, id: 'td_second', text: 'Second conversation todo' }],
+    };
+    const invoke = vi
+      .fn()
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        }),
+      )
+      .mockResolvedValueOnce(secondState);
+    const { rerender } = render(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1' }} />);
+
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('getState', { conversationId: 'conv-1' }));
+    rerender(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-2' }} />);
+
+    expect(await screen.findByText('Second conversation todo')).toBeTruthy();
+
+    resolveFirst(state);
+    await Promise.resolve();
+
+    expect(screen.getByText('Second conversation todo')).toBeTruthy();
+    expect(screen.queryByText('Open todo')).toBeNull();
+  });
+
   it('does not refetch when the extension host passes a fresh pa object for the same conversation', async () => {
     const invoke = vi.fn().mockResolvedValue(state);
     const { rerender } = render(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1' }} />);

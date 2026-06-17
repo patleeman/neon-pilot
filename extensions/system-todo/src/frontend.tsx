@@ -68,6 +68,8 @@ export function TodoShelf({
   const [busyId, setBusyId] = useState<string | null>(null);
   const paRef = useRef(pa);
   paRef.current = pa;
+  const activeCacheKeyRef = useRef(activeCacheKey);
+  activeCacheKeyRef.current = activeCacheKey;
 
   const openItems = useMemo(() => state.items.filter((item) => !isDone(item)), [state.items]);
   const doneItems = useMemo(() => state.items.filter(isDone), [state.items]);
@@ -109,12 +111,18 @@ export function TodoShelf({
         todoStateLoadCache.set(key, load);
       }
       const nextState = await load;
+      if (activeCacheKeyRef.current !== key) {
+        return;
+      }
       if (key && nextState.items.length > 0) {
         todoStateCache.set(key, nextState);
       }
       setState(nextState);
       setLoadedConversationId(conversationId);
     } catch (err) {
+      if (activeCacheKeyRef.current !== key) {
+        return;
+      }
       setError(err instanceof Error ? err.message : String(err));
     }
   }, [activeCacheKey, conversationId, invoke]);
