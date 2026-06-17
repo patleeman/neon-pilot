@@ -21,6 +21,14 @@ const findExtensionEntry = vi.hoisted(() =>
     },
   })),
 );
+const terminalSessions = vi.hoisted(() => ({
+  closeTerminalSession: vi.fn(),
+  createTerminalSession: vi.fn(async () => ({ id: 'term-1', pid: 123, usingPty: true, initialOutput: '' })),
+  drainTerminalSession: vi.fn(),
+  resizeTerminalSession: vi.fn(),
+  streamTerminalSession: vi.fn(),
+  writeTerminalSession: vi.fn(),
+}));
 
 vi.mock('./extensionRegistry.js', () => ({
   findExtensionCommandRegistration: vi.fn(),
@@ -29,6 +37,7 @@ vi.mock('./extensionRegistry.js', () => ({
   listExtensionInstallSummaries: vi.fn(() => []),
   setExtensionEnabled: vi.fn(),
 }));
+vi.mock('./terminalSessions.js', () => terminalSessions);
 
 describe('extension backend capability dispatcher', () => {
   beforeEach(() => {
@@ -629,16 +638,37 @@ describe('extension backend capability dispatcher', () => {
       }),
     ).rejects.toThrow('Extension "ext" requires permission conversations:read to use conversations.get.');
     await expect(async () =>
-      dispatch({ id: 2, kind: 'capabilityRequest', extensionId: 'ext', capability: 'secrets', operation: 'get', input: { secretId: 'apiKey' } }),
+      dispatch({
+        id: 2,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'secrets',
+        operation: 'get',
+        input: { secretId: 'apiKey' },
+      }),
     ).rejects.toThrow('Extension "ext" requires permission secrets:read to use secrets.get.');
     await expect(async () =>
-      dispatch({ id: 3, kind: 'capabilityRequest', extensionId: 'ext', capability: 'commands', operation: 'execute', input: { commandId: 'app.open' } }),
+      dispatch({
+        id: 3,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'commands',
+        operation: 'execute',
+        input: { commandId: 'app.open' },
+      }),
     ).rejects.toThrow('Extension "ext" requires permission commands:execute to use commands.execute.');
     await expect(async () =>
       dispatch({ id: 4, kind: 'capabilityRequest', extensionId: 'ext', capability: 'git', operation: 'status', input: { cwd: '/repo' } }),
     ).rejects.toThrow('Extension "ext" requires permission git:read to use git.status.');
     await expect(async () =>
-      dispatch({ id: 5, kind: 'capabilityRequest', extensionId: 'ext', capability: 'notify', operation: 'toast', input: { message: 'Saved' } }),
+      dispatch({
+        id: 5,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'notify',
+        operation: 'toast',
+        input: { message: 'Saved' },
+      }),
     ).rejects.toThrow('Extension "ext" requires permission ui:notify to use notify.toast.');
 
     expect(commands.execute).not.toHaveBeenCalled();
@@ -1405,6 +1435,44 @@ describe('extension backend capability dispatcher', () => {
       }),
     ).rejects.toThrow('Extension "ext" requires permission shell:execute to use shell.exec.');
     expect(shell.exec).not.toHaveBeenCalled();
+  });
+
+  it('requires shell execute permission for terminal capability calls', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    terminalSessions.createTerminalSession.mockClear();
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'terminal',
+        operation: 'create',
+        input: { cwd: '/repo' },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission shell:execute to use terminal.create.');
+    expect(terminalSessions.createTerminalSession).not.toHaveBeenCalled();
+  });
+
+  it('dispatches terminal capability calls with shell execute permission', async () => {
+    terminalSessions.createTerminalSession.mockClear();
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'terminal',
+          operation: 'create',
+          input: { cwd: '/repo' },
+        }),
+      ),
+    ).resolves.toEqual({ id: 'term-1', pid: 123, usingPty: true, initialOutput: '' });
+
+    expect(terminalSessions.createTerminalSession).toHaveBeenCalledWith({ cwd: '/repo' });
   });
 
   it('dispatches host-owned shell spawn handle capability calls', async () => {

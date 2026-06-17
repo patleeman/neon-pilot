@@ -393,6 +393,10 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
     return ['shell:execute'];
   }
 
+  if (request.capability === 'terminal') {
+    return ['shell:execute'];
+  }
+
   if (request.capability === 'storage') {
     return permissionForReadWriteOperation('storage:read', 'storage:write', 'storage:readwrite', request.operation, ['put', 'delete']);
   }

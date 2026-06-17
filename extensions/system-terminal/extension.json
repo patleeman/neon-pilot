@@ -44,5 +44,5 @@
       }
     ]
   },
-  "permissions": []
+  "permissions": ["shell:execute"]
 }
