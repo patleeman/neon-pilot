@@ -1,6 +1,6 @@
 import { createScheduledTaskAgentExtension } from './scheduledTaskTool.js';
 
-interface NativeBackendContext {
+export interface ScheduledTaskBackendContext {
   toolContext?: { conversationId?: string; cwd?: string; sessionFile?: string; sessionId?: string };
   ui?: { invalidate?(topics: string | string[]): void };
 }
@@ -18,7 +18,7 @@ interface ToolExecutionResult {
   details?: Record<string, unknown>;
 }
 
-async function executeRegisteredTool(input: unknown, ctx: NativeBackendContext) {
+async function executeRegisteredTool(input: unknown, ctx: ScheduledTaskBackendContext) {
   let registeredTool: RegisteredTool | undefined;
   createScheduledTaskAgentExtension({ getRuntimeScope: () => 'shared' })({
     registerTool(tool: RegisteredTool) {
@@ -40,7 +40,7 @@ async function executeRegisteredTool(input: unknown, ctx: NativeBackendContext) 
   });
 }
 
-export async function scheduledTask(input: unknown, ctx: NativeBackendContext) {
+export async function scheduledTask(input: unknown, ctx: ScheduledTaskBackendContext) {
   const result = (await executeRegisteredTool(input, ctx)) as ToolExecutionResult;
   ctx.ui?.invalidate?.(['tasks', 'runs', 'sessions']);
   const text = Array.isArray(result?.content)

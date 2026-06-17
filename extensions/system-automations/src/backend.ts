@@ -1,3 +1,5 @@
+import type { ScheduledTaskBackendContext } from './scheduledTaskBackend.js';
+
 export { deferredResume } from './conversationQueueBackend.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -66,7 +68,7 @@ function normalizeScheduledTaskCliInput(input: unknown): unknown {
   };
 }
 
-export async function scheduledTask(input: unknown, ctx: unknown) {
+export async function scheduledTask(input: unknown, ctx: ScheduledTaskBackendContext) {
   const module = await import('./scheduledTaskBackend.js');
-  return module.scheduledTask(normalizeScheduledTaskCliInput(input), ctx as never);
+  return module.scheduledTask(normalizeScheduledTaskCliInput(input), ctx);
 }
