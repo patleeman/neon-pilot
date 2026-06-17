@@ -7,7 +7,7 @@ import {
   upsertAlert,
 } from '@neon-pilot/core';
 import { randomUUID } from 'crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 
 import type { TasksModuleConfig } from '../../config.js';
@@ -41,6 +41,7 @@ import { createEmptyTaskState, type TaskRuntimeState, type TaskStateFile } from 
 import type { DaemonModule } from './types.js';
 
 const MISSED_RUN_EXAMPLE_LIMIT = 5;
+const PRIVATE_TASK_FILE_MODE = 0o600;
 interface MissedTaskRunSummary {
   count: number;
   firstScheduledAt: string;
@@ -100,7 +101,8 @@ function createScheduledTaskRunId(taskId: string, startedAt: string): string {
 
 function writeJsonFile(path: string, value: unknown): void {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-  writeFileSync(path, JSON.stringify(value, null, 2));
+  writeFileSync(path, JSON.stringify(value, null, 2), { mode: PRIVATE_TASK_FILE_MODE });
+  chmodSync(path, PRIVATE_TASK_FILE_MODE);
 }
 
 function copyTaskRunLogToDurableOutput(logPath: string | undefined, outputLogPath: string): void {
@@ -109,7 +111,8 @@ function copyTaskRunLogToDurableOutput(logPath: string | undefined, outputLogPat
   }
 
   const text = readFileSync(logPath, 'utf-8');
-  writeFileSync(outputLogPath, text);
+  writeFileSync(outputLogPath, text, { mode: PRIVATE_TASK_FILE_MODE });
+  chmodSync(outputLogPath, PRIVATE_TASK_FILE_MODE);
 }
 
 function toMinuteKey(at: Date): string {

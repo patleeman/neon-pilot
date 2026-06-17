@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync } from 'fs';
+import { existsSync, mkdtempSync, readFileSync, statSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -176,6 +176,7 @@ describe('runTaskInIsolatedPi', () => {
       surfaceId: 'automation-nightly-run',
     });
     expect(existsSync(result.logPath)).toBe(true);
+    expect(statSync(result.logPath).mode & 0o777).toBe(0o600);
     const log = readFileSync(result.logPath, 'utf-8');
     expect(log).toContain('# mode=conversation-runtime');
     expect(log).toContain('# conversation=conv-nightly');

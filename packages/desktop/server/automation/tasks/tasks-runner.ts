@@ -20,6 +20,7 @@ export type RunnableTaskDefinition = ParsedTaskDefinition &
 
 const MAX_CAPTURED_OUTPUT_CHARS = 16_000;
 const COMPLETION_POLL_INTERVAL_MS = 1000;
+const PRIVATE_TASK_LOG_FILE_MODE = 0o600;
 
 export interface TaskRunRequest {
   task: RunnableTaskDefinition;
@@ -366,7 +367,7 @@ export async function runTaskInIsolatedPi(request: TaskRunRequest): Promise<Task
 
   mkdirSync(logDir, { recursive: true, mode: 0o700 });
 
-  const stream = createWriteStream(logPath, { flags: 'a', encoding: 'utf-8' });
+  const stream = createWriteStream(logPath, { flags: 'a', encoding: 'utf-8', mode: PRIVATE_TASK_LOG_FILE_MODE });
   const capture = createCapturedOutputBuffer();
   let result: TaskRunResult | undefined;
 

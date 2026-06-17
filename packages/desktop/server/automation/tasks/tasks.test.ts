@@ -5,7 +5,7 @@ import {
   openSqliteDatabase,
   setTaskCallbackBinding,
 } from '@neon-pilot/core';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -984,6 +984,8 @@ describe('tasks module scheduling', () => {
       activeAttempt: 1,
       completedAt: '2026-03-02T10:00:10.000Z',
     });
+    expect(statSync(runPaths.resultPath).mode & 0o777).toBe(0o600);
+    expect(statSync(runPaths.outputLogPath).mode & 0o777).toBe(0o600);
     expect(readFileSync(runPaths.outputLogPath, 'utf-8')).toContain('nightly output');
 
     await module.stop?.(context);
