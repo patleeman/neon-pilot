@@ -86,6 +86,7 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setArtifact(null);
     setError(null);
     setCopied(false);
 
