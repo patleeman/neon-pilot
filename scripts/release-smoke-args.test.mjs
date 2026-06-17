@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
-const releaseSmokeArgs = ['--max-conversation-content-open-phase-ms=1500', '--max-conversation-extension-open-phase-ms=1500'];
+const releaseSmokeArgs = [
+  '--max-conversation-content-open-phase-ms=1500',
+  '--max-conversation-extension-open-phase-ms=1500',
+  '--max-related-conversation-results-ms=1500',
+];
 
 describe('release smoke perf budgets', () => {
   it('uses explicit packaged-app conversation-open phase budgets when publishing', () => {
