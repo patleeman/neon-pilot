@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -7,6 +7,8 @@ interface StoredCompanionHostState {
   hostInstanceId: string;
   hostLabel: string;
 }
+
+const HOST_STATE_FILE_MODE = 0o600;
 
 function normalizeHostLabel(value: unknown): string {
   if (typeof value !== 'string') {
@@ -59,7 +61,8 @@ export function writeCompanionHostState(stateRoot: string, state: StoredCompanio
   const normalized = normalizeState(state);
   const filePath = resolveCompanionHostStateFile(stateRoot);
   mkdirSync(dirname(filePath), { recursive: true, mode: 0o700 });
-  writeFileSync(filePath, `${JSON.stringify(normalized, null, 2)}\n`, 'utf-8');
+  writeFileSync(filePath, `${JSON.stringify(normalized, null, 2)}\n`, { encoding: 'utf-8', mode: HOST_STATE_FILE_MODE });
+  chmodSync(filePath, HOST_STATE_FILE_MODE);
   return normalized;
 }
 

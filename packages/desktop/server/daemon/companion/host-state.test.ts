@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const crypto = vi.hoisted(() => ({ randomUUID: vi.fn(() => 'uuid-1') }));
 const fs = vi.hoisted(() => ({
   files: new Map<string, string>(),
+  chmodSync: vi.fn(),
   existsSync: vi.fn((path: string) => fs.files.has(path)),
   mkdirSync: vi.fn(),
   readFileSync: vi.fn((path: string) => fs.files.get(path) ?? ''),
@@ -32,6 +33,8 @@ describe('companion host state', () => {
   it('creates and persists default state when no file exists', () => {
     expect(readCompanionHostState(stateRoot)).toEqual({ hostInstanceId: 'host_uuid-1', hostLabel: 'test-host' });
     expect(fs.mkdirSync).toHaveBeenCalledWith('/state/companion', { recursive: true, mode: 0o700 });
+    expect(fs.writeFileSync).toHaveBeenCalledWith(filePath, expect.any(String), { encoding: 'utf-8', mode: 0o600 });
+    expect(fs.chmodSync).toHaveBeenCalledWith(filePath, 0o600);
     expect(JSON.parse(fs.files.get(filePath) ?? '{}')).toEqual({ hostInstanceId: 'host_uuid-1', hostLabel: 'test-host' });
   });
 
