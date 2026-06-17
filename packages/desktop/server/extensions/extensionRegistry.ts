@@ -88,6 +88,7 @@ import type {
 } from './extensionManifest.js';
 import {
   EXTENSION_ICON_NAMES,
+  EXTENSION_PERMISSIONS,
   EXTENSION_PLACEMENTS,
   EXTENSION_RIGHT_SURFACE_SCOPES,
   EXTENSION_ROUTE_CAPABILITIES,
@@ -1124,6 +1125,17 @@ function validateExtensionSurfaces(surfaces: unknown): void {
   validateExtensionSurfaceContributions(surfaces);
 }
 
+const KNOWN_EXTENSION_PERMISSIONS = new Set<string>(EXTENSION_PERMISSIONS);
+
+function validateExtensionPermissions(permissions: unknown): void {
+  const values = requireStringArray(permissions, 'permissions');
+  for (const permission of values) {
+    if (!KNOWN_EXTENSION_PERMISSIONS.has(permission)) {
+      throw new Error(`Extension manifest permissions contains unknown permission: ${permission}.`);
+    }
+  }
+}
+
 export function parseExtensionManifest(value: unknown): ExtensionManifest {
   assertExtensionManifestRecord(value);
   validateExtensionManifestBasics(value);
@@ -1142,7 +1154,7 @@ export function parseExtensionManifest(value: unknown): ExtensionManifest {
     validateExtensionBackend(value.backend);
   }
   if (value.surfaces !== undefined) validateExtensionSurfaces(value.surfaces);
-  if (value.permissions !== undefined) requireStringArray(value.permissions, 'permissions');
+  if (value.permissions !== undefined) validateExtensionPermissions(value.permissions);
 
   return value as unknown as ExtensionManifest;
 }

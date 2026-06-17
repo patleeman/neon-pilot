@@ -212,15 +212,22 @@ export type ExtensionPermission =
   | 'commands:execute'
   | 'git:read'
   | 'secrets:read'
+  | 'extensions:read'
+  | 'extensions:write'
+  | 'images:read'
+  | 'images:write'
   | 'knowledge:read'
   | 'knowledge:write'
   | 'knowledge:readwrite'
+  | 'mcp:read'
+  | 'mcp:write'
+  | 'network:read'
   | 'conversations:read'
   | 'conversations:write'
   | 'conversations:readwrite'
   | 'network:listen'
-  | 'ui:notify'
-  | `${string}:${string}`;
+  | 'telemetry:read'
+  | 'ui:notify';
 
 export type ExtensionFileChangeStatus = 'added' | 'modified' | 'deleted' | 'renamed' | 'copied' | 'typechange' | 'unmerged' | 'changed';
 

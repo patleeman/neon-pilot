@@ -72,16 +72,24 @@ export const EXTENSION_PERMISSIONS = [
   'commands:execute',
   'git:read',
   'secrets:read',
+  'extensions:read',
+  'extensions:write',
+  'images:read',
+  'images:write',
   'knowledge:read',
   'knowledge:write',
   'knowledge:readwrite',
+  'mcp:read',
+  'mcp:write',
+  'network:read',
   'conversations:read',
   'conversations:write',
   'conversations:readwrite',
   'network:listen',
+  'telemetry:read',
   'ui:notify',
 ] as const;
-export type ExtensionPermission = (typeof EXTENSION_PERMISSIONS)[number] | `${string}:${string}`;
+export type ExtensionPermission = (typeof EXTENSION_PERMISSIONS)[number];
 
 export interface ExtensionManifest {
   schemaVersion: 1 | typeof EXTENSION_MANIFEST_VERSION;

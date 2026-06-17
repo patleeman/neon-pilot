@@ -387,6 +387,24 @@ describe('extension registry', () => {
   });
 
   it('validates manifest contributions before accepting runtime extensions', () => {
+    expect(
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'good-ext',
+        name: 'Good Ext',
+        permissions: ['storage:read', 'commands:execute'],
+      }).permissions,
+    ).toEqual(['storage:read', 'commands:execute']);
+
+    expect(() =>
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'bad-ext',
+        name: 'Bad Ext',
+        permissions: ['storage:read', 'unknown:permission'],
+      }),
+    ).toThrow('Extension manifest permissions contains unknown permission: unknown:permission.');
+
     expect(() =>
       parseExtensionManifest({
         schemaVersion: 2,
