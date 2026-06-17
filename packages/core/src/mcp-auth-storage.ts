@@ -108,10 +108,15 @@ export async function readJsonFile<T>(
 
 export async function writeJsonFile(serverUrlHash: string, filename: string, data: unknown): Promise<void> {
   await ensureConfigDir();
-  await fs.writeFile(getMcpAuthFilePath(serverUrlHash, filename), `${JSON.stringify(data, null, 2)}\n`, {
+  await writePrivateFile(getMcpAuthFilePath(serverUrlHash, filename), `${JSON.stringify(data, null, 2)}\n`);
+}
+
+async function writePrivateFile(path: string, data: string): Promise<void> {
+  await fs.writeFile(path, data, {
     encoding: 'utf-8',
     mode: 0o600,
   });
+  await fs.chmod(path, 0o600);
 }
 
 export async function readTextFile(serverUrlHash: string, filename: string): Promise<string | undefined> {
@@ -120,10 +125,7 @@ export async function readTextFile(serverUrlHash: string, filename: string): Pro
 
 export async function writeTextFile(serverUrlHash: string, filename: string, text: string): Promise<void> {
   await ensureConfigDir();
-  await fs.writeFile(getMcpAuthFilePath(serverUrlHash, filename), text, {
-    encoding: 'utf-8',
-    mode: 0o600,
-  });
+  await writePrivateFile(getMcpAuthFilePath(serverUrlHash, filename), text);
 }
 
 export async function deleteConfigFile(serverUrlHash: string, filename: string): Promise<void> {

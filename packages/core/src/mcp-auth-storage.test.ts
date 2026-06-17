@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { chmodSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -58,6 +58,16 @@ describe('mcp-auth-storage', () => {
       await writeJsonFile('hash2', 'test.json', { second: 'updated' });
       const result = await readJsonFile('hash2', 'test.json', SCHEMA);
       expect(result).toEqual({ second: 'updated' });
+    });
+
+    it('restores private permissions when rewriting an existing JSON file', async () => {
+      await writeJsonFile('hash2', 'test.json', { first: 'value' });
+      const path = join(process.env.NEON_PILOT_MCP_AUTH_DIR!, 'v1', 'hash2_test.json');
+      chmodSync(path, 0o644);
+
+      await writeJsonFile('hash2', 'test.json', { second: 'updated' });
+
+      expect(statSync(path).mode & 0o777).toBe(0o600);
     });
   });
 
