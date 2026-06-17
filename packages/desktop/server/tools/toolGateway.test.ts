@@ -8,13 +8,19 @@ const toolInventory = vi.hoisted(() => ({
   buildToolInjectionPlanAsync: vi.fn(),
   listToolDefinitionsAsync: vi.fn(),
 }));
+const piCodingAgent = vi.hoisted(() => ({
+  createCodingTools: vi.fn(),
+}));
 
+vi.mock('@earendil-works/pi-coding-agent', () => ({
+  createCodingTools: piCodingAgent.createCodingTools,
+}));
 vi.mock('../extensions/extensionHostClient.js', () => ({
   getExtensionHostClient: () => extensionHostClient,
 }));
 vi.mock('./toolInventory.js', () => toolInventory);
 
-import { invokeExtensionToolByName, listInvocableExtensionTools } from './toolGateway.js';
+import { invokeExtensionToolByName, invokeToolByName, listInvocableExtensionTools } from './toolGateway.js';
 
 describe('tool gateway', () => {
   beforeEach(() => {
@@ -22,6 +28,7 @@ describe('tool gateway', () => {
     extensionHostClient.listStaticContributions.mockReset();
     toolInventory.buildToolInjectionPlanAsync.mockReset();
     toolInventory.listToolDefinitionsAsync.mockReset();
+    piCodingAgent.createCodingTools.mockReset();
 
     extensionHostClient.listStaticContributions.mockResolvedValue({
       skills: [],
@@ -58,6 +65,34 @@ describe('tool gateway', () => {
       },
     ]);
     extensionHostClient.invokeAction.mockResolvedValue({ ok: true, result: { text: 'done' } });
+  });
+
+  it('invokes built-in tools through the coding tool gateway with tool-context cwd precedence', async () => {
+    const execute = vi.fn().mockResolvedValue({ content: [{ type: 'text', text: 'README.md' }] });
+    piCodingAgent.createCodingTools.mockReturnValue({
+      ls: { execute },
+    });
+    const signal = new AbortController().signal;
+    const agentContext = {
+      cwd: '/agent-cwd',
+      sessionManager: {
+        getCwd: () => '/session-cwd',
+      },
+    };
+
+    await expect(
+      invokeToolByName({
+        name: 'ls',
+        input: { path: '.' },
+        signal,
+        toolContext: { cwd: '/tool-cwd' },
+        agentContext: agentContext as never,
+      }),
+    ).resolves.toEqual({ content: [{ type: 'text', text: 'README.md' }] });
+
+    expect(piCodingAgent.createCodingTools).toHaveBeenCalledWith('/tool-cwd');
+    expect(execute).toHaveBeenCalledWith(expect.stringMatching(/^tool-gateway-\d+$/), { path: '.' }, signal, undefined, agentContext);
+    expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
   });
 
   it('uses serializable snapshots for non-streaming extension tool calls', async () => {
