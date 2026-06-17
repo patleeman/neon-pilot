@@ -1,7 +1,10 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { basename, dirname, join, resolve } from 'path';
 
 import { resolveMcpConfig } from './mcp.js';
+
+const MCP_CONFIG_DIR_MODE = 0o700;
+const MCP_CONFIG_FILE_MODE = 0o600;
 
 interface McpServersDocument {
   mcpServers: Record<string, unknown>;
@@ -168,7 +171,15 @@ export function writeMergedMcpConfigFile(options: {
 }): BundledMcpConfigBuildResult {
   const result = buildMergedMcpConfigDocument(options);
   const outputPath = resolve(options.outputPath);
-  mkdirSync(dirname(outputPath), { recursive: true });
-  writeFileSync(outputPath, `${JSON.stringify(result.document, null, 2)}\n`);
+  writePrivateMcpConfigJson(outputPath, result.document);
   return result;
+}
+
+export function writePrivateMcpConfigJson(path: string, document: unknown): void {
+  const resolved = resolve(path);
+  const dir = dirname(resolved);
+  mkdirSync(dir, { recursive: true, mode: MCP_CONFIG_DIR_MODE });
+  chmodSync(dir, MCP_CONFIG_DIR_MODE);
+  writeFileSync(resolved, `${JSON.stringify(document, null, 2)}\n`, { mode: MCP_CONFIG_FILE_MODE });
+  chmodSync(resolved, MCP_CONFIG_FILE_MODE);
 }

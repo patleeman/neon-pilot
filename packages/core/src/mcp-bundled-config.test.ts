@@ -1,9 +1,9 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { readBundledSkillMcpManifests } from './mcp-bundled-config.js';
+import { readBundledSkillMcpManifests, writeMergedMcpConfigFile } from './mcp-bundled-config.js';
 
 const tempDirs: string[] = [];
 
@@ -53,5 +53,25 @@ describe('mcp bundled config', () => {
         serverNames: ['jira'],
       },
     ]);
+  });
+
+  it('writes merged MCP config files with private permissions and repairs permissive files', () => {
+    const root = createTempDir();
+    const outputDir = join(root, 'config');
+    const outputPath = join(outputDir, 'mcp.json');
+    mkdirSync(outputDir, { recursive: true, mode: 0o755 });
+    writeFileSync(outputPath, '{}\n');
+    chmodSync(outputDir, 0o755);
+    chmodSync(outputPath, 0o644);
+
+    writeMergedMcpConfigFile({
+      outputPath,
+      env: { HOME: root },
+      skillDirs: [],
+    });
+
+    expect(JSON.parse(readFileSync(outputPath, 'utf8'))).toEqual({ mcpServers: {} });
+    expect(statSync(outputDir).mode & 0o777).toBe(0o700);
+    expect(statSync(outputPath).mode & 0o777).toBe(0o600);
   });
 });
