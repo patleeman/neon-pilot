@@ -942,6 +942,23 @@ async function runWorkflowScript(input: {
   let finished = false;
   let finalResult: unknown;
   const runLimited = createLimiter(input.settings.maxConcurrentAgents);
+  const workflowAbort = new AbortController();
+  const activeNodeRuns = new Map<string, { runId: string; role: string }>();
+  const abortWorkflow = () => workflowAbort.abort();
+  input.signal?.addEventListener('abort', abortWorkflow, { once: true });
+
+  async function cancelActiveNodeRuns(reason: string): Promise<void> {
+    const nodes = Array.from(activeNodeRuns.entries());
+    activeNodeRuns.clear();
+    for (const [nodeId, node] of nodes) {
+      await cancelDurableRun(node.runId).catch(() => undefined);
+      updateNode(input.store, nodeId, { status: 'cancelled', error: reason, completedAt: new Date().toISOString() });
+      appendEvent(input.store, input.workflowId, 'agent.cancelled', reason, { nodeId, runId: node.runId, role: node.role });
+    }
+    if (nodes.length > 0) {
+      await updateTranscriptBlock(input.ctx, input.store, input.workflowId).catch(() => undefined);
+    }
+  }
 
   const workflowApi = {
     phase: async (name: unknown, fn: unknown) => {
@@ -962,7 +979,7 @@ async function runWorkflowScript(input: {
     },
     agent: async (agentInput: unknown) =>
       runLimited(async () => {
-        if (input.signal?.aborted) throw new Error('Workflow cancelled.');
+        if (workflowAbort.signal.aborted) throw new Error('Workflow cancelled.');
         totalAgents += 1;
         if (totalAgents > input.settings.maxTotalAgents) {
           throw new Error(`Workflow exceeded maxTotalAgents (${input.settings.maxTotalAgents}).`);
@@ -1023,9 +1040,11 @@ async function runWorkflowScript(input: {
           throw new Error(reason);
         }
         updateNode(input.store, nodeId, { runId: result.runId });
+        activeNodeRuns.set(nodeId, { runId: result.runId, role });
 
         try {
-          const completed = await waitForRunCompletion(result.runId, timeoutMinutes * 60 * 1000, input.signal);
+          const completed = await waitForRunCompletion(result.runId, timeoutMinutes * 60 * 1000, workflowAbort.signal);
+          activeNodeRuns.delete(nodeId);
           updateNode(input.store, nodeId, {
             status: completed.status,
             resultText: completed.summary,
@@ -1037,8 +1056,13 @@ async function runWorkflowScript(input: {
           return { nodeId, runId: result.runId, status: completed.status, summary: completed.summary, model, allowedTools };
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          updateNode(input.store, nodeId, { status: 'failed', error: message, completedAt: new Date().toISOString() });
-          appendEvent(input.store, input.workflowId, 'agent.failed', message, { nodeId, runId: result.runId });
+          const status: NodeStatus = workflowAbort.signal.aborted ? 'cancelled' : 'failed';
+          if (status === 'cancelled') {
+            await cancelDurableRun(result.runId).catch(() => undefined);
+          }
+          activeNodeRuns.delete(nodeId);
+          updateNode(input.store, nodeId, { status, error: message, completedAt: new Date().toISOString() });
+          appendEvent(input.store, input.workflowId, `agent.${status}`, message, { nodeId, runId: result.runId });
           await updateTranscriptBlock(input.ctx, input.store, input.workflowId);
           throw error;
         }
@@ -1070,16 +1094,33 @@ async function runWorkflowScript(input: {
     { name: `dynamic-workflow:${input.workflowId}`, codeGeneration: { strings: false, wasm: false } },
   );
   const script = new vm.Script(`"use strict";\n(async () => {\n${input.script}\n})()`);
-  const result = await Promise.race([
-    script.runInContext(sandbox, { timeout: 1000 }) as Promise<unknown>,
-    new Promise<never>((_resolve, reject) => {
-      setTimeout(
-        () => reject(new Error(`Workflow timed out after ${input.settings.workflowTimeoutMinutes} minutes.`)),
-        input.settings.workflowTimeoutMinutes * 60 * 1000,
-      ).unref();
-    }),
-  ]);
-  return finished ? finalResult : result;
+  const timeout = setTimeout(() => workflowAbort.abort(), input.settings.workflowTimeoutMinutes * 60 * 1000);
+  timeout.unref();
+  try {
+    const result = await Promise.race([
+      script.runInContext(sandbox, { timeout: 1000 }) as Promise<unknown>,
+      new Promise<never>((_resolve, reject) => {
+        workflowAbort.signal.addEventListener(
+          'abort',
+          () => {
+            reject(
+              new Error(
+                input.signal?.aborted ? 'Workflow cancelled.' : `Workflow timed out after ${input.settings.workflowTimeoutMinutes} minutes.`,
+              ),
+            );
+          },
+          { once: true },
+        );
+      }),
+    ]);
+    return finished ? finalResult : result;
+  } catch (error) {
+    await cancelActiveNodeRuns(error instanceof Error ? error.message : String(error));
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    input.signal?.removeEventListener('abort', abortWorkflow);
+  }
 }
 
 export async function workflow(input: unknown, ctx: ExtensionBackendContext) {

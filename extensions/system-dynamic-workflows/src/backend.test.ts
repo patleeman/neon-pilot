@@ -410,6 +410,31 @@ describe('dynamic workflows backend', () => {
     expect(db.dump().nodes[0]).toMatchObject({ status: 'cancelled' });
   });
 
+  it('cancels started subagent runs when the parent workflow times out', async () => {
+    vi.useFakeTimers();
+    try {
+      settingsApi.readExtensionSettings.mockResolvedValue({ 'dynamicWorkflows.workflowTimeoutMinutes': 1 });
+      runs.getDurableRun.mockResolvedValue({ run: { status: { status: 'running' } } });
+      const { ctx, db } = createCtx();
+      const resultPromise = workflow(
+        {
+          name: 'Timeout',
+          script: `await workflow.agent({ role: "worker", prompt: "slow work" }); return workflow.finish("done");`,
+        },
+        ctx,
+      );
+
+      await vi.waitFor(() => expect(runs.startBackgroundRun).toHaveBeenCalled());
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      await expect(resultPromise).resolves.toMatchObject({ isError: true, details: { status: 'failed' } });
+      expect(runs.cancelDurableRun).toHaveBeenCalledWith('run-1');
+      expect(db.dump().nodes[0]).toMatchObject({ status: 'cancelled', run_id: 'run-1' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('rejects missing script input', async () => {
     const { ctx } = createCtx();
     await expect(workflow({ name: 'Nope', args: { items: ['src/a.ts'] }, agentDefaults: { allowedTools: ['read'] } }, ctx)).rejects.toThrow(
