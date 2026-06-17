@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { dirname, join, resolve } from 'path';
 
@@ -56,6 +56,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 const DANGEROUS_MERGE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const MACHINE_CONFIG_FILE_MODE = 0o600;
 
 function deepMerge(base: Record<string, unknown>, overlay: Record<string, unknown>): Record<string, unknown> {
   const output: Record<string, unknown> = { ...base };
@@ -113,6 +114,11 @@ function readJsonObjectFile(path: string, label: string): Record<string, unknown
     });
     return undefined;
   }
+}
+
+function writeRestrictedJsonFile(path: string, value: Record<string, unknown>): void {
+  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, { mode: MACHINE_CONFIG_FILE_MODE });
+  chmodSync(path, MACHINE_CONFIG_FILE_MODE);
 }
 
 function normalizeStringArray(value: unknown): string[] | undefined {
@@ -183,7 +189,7 @@ export function writeMachineConfig(document: MachineConfigDocument, options: Mac
   const normalized = normalizeMachineConfig(document);
 
   mkdirSync(dirname(filePath), { recursive: true });
-  writeFileSync(filePath, `${JSON.stringify(normalized, null, 2)}\n`);
+  writeRestrictedJsonFile(filePath, normalized);
 
   return normalized;
 }

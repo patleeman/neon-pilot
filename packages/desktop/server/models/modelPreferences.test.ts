@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -97,6 +97,17 @@ describe('normalizeSavedModelPreferences', () => {
     });
   });
 
+  it('repairs settings file permissions when normalization rewrites the file', () => {
+    const dir = createTempDir();
+    const file = join(dir, 'settings.json');
+    writeFileSync(file, JSON.stringify({ defaultModel: 'gpt-5.4' }));
+    chmodSync(file, 0o644);
+
+    normalizeSavedModelPreferences(file, [{ id: 'gpt-5.4', provider: 'openai-codex' }]);
+
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+  });
+
   it('does not rewrite ambiguous or already-matching provider settings', () => {
     const ambiguousDir = createTempDir();
     const ambiguousFile = join(ambiguousDir, 'settings.json');
@@ -146,6 +157,26 @@ describe('normalizeSavedModelPreferences', () => {
 });
 
 describe('writeSavedModelPreferences', () => {
+  it('creates settings JSON files with owner-only permissions', () => {
+    const dir = createTempDir();
+    const file = join(dir, 'settings.json');
+
+    writeSavedModelPreferences({ model: 'gpt-5.4' }, file);
+
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+  });
+
+  it('repairs existing settings file permissions after writing', () => {
+    const dir = createTempDir();
+    const file = join(dir, 'settings.json');
+    writeFileSync(file, JSON.stringify({ theme: 'cobalt2' }));
+    chmodSync(file, 0o644);
+
+    writeSavedModelPreferences({ thinkingLevel: 'high' }, file);
+
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+  });
+
   it('writes model, provider, thinking level, and service tier while preserving unrelated settings', () => {
     const dir = createTempDir();
     const file = join(dir, 'settings.json');

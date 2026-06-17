@@ -1,7 +1,8 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'priority', 'scale']);
+const MODEL_PREFERENCES_FILE_MODE = 0o600;
 
 export interface SavedModelPreferences {
   currentModel: string;
@@ -40,6 +41,11 @@ function readSettingsObject(settingsFile: string): Record<string, unknown> {
   } catch {
     return {};
   }
+}
+
+function writeRestrictedSettingsFile(settingsFile: string, settings: Record<string, unknown>): void {
+  writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + '\n', { mode: MODEL_PREFERENCES_FILE_MODE });
+  chmodSync(settingsFile, MODEL_PREFERENCES_FILE_MODE);
 }
 
 function resolveModelPreference(model: string, models: readonly ModelPreferenceOption[]): { model: string; provider: string } {
@@ -121,7 +127,7 @@ export function normalizeSavedModelPreferences(settingsFile: string, models: rea
   const changed = normalizeSettingsDefaultModelProvider(settings, models);
   if (changed) {
     mkdirSync(dirname(settingsFile), { recursive: true });
-    writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + '\n');
+    writeRestrictedSettingsFile(settingsFile, settings);
   }
 
   return readSavedModelPreferences(settingsFile, models);
@@ -225,7 +231,7 @@ export function writeSavedModelPreferences(
   }
 
   mkdirSync(dirname(settingsFile), { recursive: true });
-  writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + '\n');
+  writeRestrictedSettingsFile(settingsFile, settings);
 
   return readSavedModelPreferences(settingsFile, models);
 }

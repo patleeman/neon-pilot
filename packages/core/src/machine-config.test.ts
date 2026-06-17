@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -102,6 +102,26 @@ describe('machine config', () => {
     writeMachineInstructionFiles([], { configRoot: configDir });
     expect(readMachineInstructionFiles({ configRoot: configDir })).toEqual(getDefaultMachineInstructionFiles());
     expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toEqual({});
+  });
+
+  it('creates machine config JSON files with owner-only permissions', () => {
+    const configDir = createTempDir('pa-machine-config-');
+    const configFile = join(configDir, 'config.json');
+
+    writeMachineInstructionFiles(['/Users/patrick/Documents/neon-pilot/AGENTS.md'], { configRoot: configDir });
+
+    expect(statSync(configFile).mode & 0o777).toBe(0o600);
+  });
+
+  it('repairs existing machine config JSON file permissions after writing', () => {
+    const configDir = createTempDir('pa-machine-config-');
+    const configFile = join(configDir, 'config.json');
+    writeFileSync(configFile, JSON.stringify({ instructionFiles: ['/tmp/AGENTS.md'] }));
+    chmodSync(configFile, 0o644);
+
+    writeMachineSkillDirs(['/Users/patrick/Documents/neon-pilot/skills'], { configRoot: configDir });
+
+    expect(statSync(configFile).mode & 0o777).toBe(0o600);
   });
 
   it('reads and writes skill directories in config.json', () => {
