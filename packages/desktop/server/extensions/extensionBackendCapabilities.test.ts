@@ -648,6 +648,25 @@ describe('extension backend capability dispatcher', () => {
     expect(secrets.get).not.toHaveBeenCalled();
   });
 
+  it('requires conversation write permission for metadata writes', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['conversations:read'] } });
+    const conversations = { metadata: { set: vi.fn() } };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ conversations });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'conversations',
+        operation: 'metadata.set',
+        input: { conversationId: 'conv-1', values: { items: [] } },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission conversations:write to use conversations.metadata.set.');
+
+    expect(conversations.metadata.set).not.toHaveBeenCalled();
+  });
+
   it('dispatches extension-scoped workspace capability calls', async () => {
     const workspace = {
       readText: vi.fn(async () => ({ path: 'README.md', content: 'hello', sha256: 'abc' })),

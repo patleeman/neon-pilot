@@ -423,7 +423,7 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
       'fork',
       'setTitle',
       'prune',
-      'metadataSet',
+      'metadata.set',
     ]);
   }
 
