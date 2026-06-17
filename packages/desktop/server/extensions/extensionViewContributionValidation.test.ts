@@ -31,6 +31,9 @@ describe('extensionViewContributionValidation', () => {
     expect(() => validateWebappContributions([{ id: 'app', title: 'App' }])).toThrow(
       'Extension manifest contributes.webapps[0] must declare entry or target.',
     );
+    expect(() =>
+      validateWebappContributions([{ id: 'app', title: 'App', entry: 'dist/webapp/index.html', target: 'http://127.0.0.1:4173/' }]),
+    ).toThrow('Extension manifest contributes.webapps[0] must declare either entry or target, not both.');
     expect(() => validateWebappContributions([{ id: 'app', title: 'App', entry: '../index.html' }])).toThrow(
       'Extension manifest contributes.webapps[0].entry must be a package-relative path',
     );

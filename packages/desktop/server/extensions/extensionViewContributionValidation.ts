@@ -87,6 +87,9 @@ export function validateWebappContributions(value: unknown): void {
     if (webapp.entry !== undefined) validateWebappPath(webapp.entry as string, `contributes.webapps[${index}].entry`);
     if (webapp.target !== undefined) validateLoopbackHttpTarget(webapp.target as string, `contributes.webapps[${index}].target`);
     if (webapp.portlessName !== undefined) validatePortlessName(webapp.portlessName as string, `contributes.webapps[${index}].portlessName`);
+    if (webapp.entry !== undefined && webapp.target !== undefined) {
+      throw new Error(`Extension manifest contributes.webapps[${index}] must declare either entry or target, not both.`);
+    }
     if (webapp.entry === undefined && webapp.target === undefined) {
       throw new Error(`Extension manifest contributes.webapps[${index}] must declare entry or target.`);
     }
