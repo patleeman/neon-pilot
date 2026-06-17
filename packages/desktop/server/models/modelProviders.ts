@@ -138,7 +138,7 @@ function readWritableRawConfig(profile: string, options: ModelProviderFileOption
 
 function writeRawConfig(filePath: string, config: JsonRecord): void {
   mkdirSync(dirname(filePath), { recursive: true });
-  writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`);
+  writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
 }
 
 function ensureProvidersObject(config: JsonRecord): Record<string, unknown> {

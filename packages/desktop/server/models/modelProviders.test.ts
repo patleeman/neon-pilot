@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, statSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -102,6 +102,7 @@ describe('upsertModelProvider', () => {
         },
       },
     });
+    expect(statSync(join(dir, 'shared', 'models.json')).mode & 0o777).toBe(0o600);
   });
 
   it('preserves existing models when updating provider-level settings', () => {
