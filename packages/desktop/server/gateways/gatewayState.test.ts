@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -9,6 +9,7 @@ import {
   detachArchivedGatewayConversations,
   ensureGatewayConnection,
   readGatewayState,
+  resolveGatewayStateFile,
 } from './gatewayState.js';
 
 let tempDir: string | null = null;
@@ -33,6 +34,14 @@ describe('gatewayState', () => {
     const state = readGatewayState({ stateRoot, profile: 'shared' });
 
     expect(state.connections).toMatchObject([{ provider: 'telegram', label: 'Telegram', status: 'needs_config' }]);
+  });
+
+  it('writes gateway state files with restrictive permissions', () => {
+    const stateRoot = makeStateRoot();
+
+    ensureGatewayConnection({ stateRoot, profile: 'shared', provider: 'telegram' });
+
+    expect(statSync(resolveGatewayStateFile(stateRoot, 'shared')).mode & 0o777).toBe(0o600);
   });
 
   it('keeps extension gateway providers in persisted state and public provider summaries', () => {

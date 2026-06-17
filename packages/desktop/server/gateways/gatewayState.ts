@@ -447,7 +447,10 @@ function readPersistedGatewayState(file: string): PersistedGatewayState {
 
 function writePersistedGatewayState(file: string, state: PersistedGatewayState): void {
   mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, `${JSON.stringify({ ...state, events: state.events.slice(-MAX_GATEWAY_EVENTS) }, null, 2)}\n`, 'utf-8');
+  writeFileSync(file, `${JSON.stringify({ ...state, events: state.events.slice(-MAX_GATEWAY_EVENTS) }, null, 2)}\n`, {
+    encoding: 'utf-8',
+    mode: 0o600,
+  });
 }
 
 function updateGatewayState<T>(input: { stateRoot: string; profile: string }, update: (state: PersistedGatewayState) => T): T {
