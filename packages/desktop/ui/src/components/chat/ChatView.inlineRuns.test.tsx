@@ -236,8 +236,29 @@ describe('ChatView inline run cards', () => {
     document.body.innerHTML = '';
   });
 
-  it.skip('keeps repeated linked runs collapsed until the specific card is expanded', async () => {
-    const { container } = renderChatView(createMessages());
+  it('keeps repeated raw linked run cards collapsed until the specific card is expanded', async () => {
+    const callbackText = [
+      `Durable run ${RUN_ID} has finished.`,
+      'taskSlug=ui-preview-check',
+      'status=completed',
+      `log=/tmp/runs/${RUN_ID}/output.log`,
+      'command=npm test',
+      '',
+      'Recent log tail:',
+      'very noisy callback output',
+    ].join('\n');
+    const { container } = renderChatView([
+      {
+        type: 'text',
+        ts: '2026-03-11T18:00:00.000Z',
+        text: callbackText,
+      },
+      {
+        type: 'text',
+        ts: '2026-03-11T18:00:01.000Z',
+        text: callbackText,
+      },
+    ]);
 
     expect(apiMocks.durableRun).not.toHaveBeenCalled();
     expect(apiMocks.durableRunLog).not.toHaveBeenCalled();
@@ -264,14 +285,30 @@ describe('ChatView inline run cards', () => {
     expect(container.textContent).toContain('Polling live log');
   });
 
-  it.skip('shows a friendly unavailable state when a linked run record cannot be loaded', async () => {
+  it('shows a friendly unavailable state when a raw linked run record cannot be loaded', async () => {
     apiMocks.durableRun.mockRejectedValue(
       new Error("Error invoking remote method 'neon-pilot-desktop:read-durable-run': Error: Run not found"),
     );
     apiMocks.durableRunLog.mockRejectedValue(new Error('Run not found'));
 
-    const { container } = renderChatView(createMessages());
+    const { container } = renderChatView([
+      {
+        type: 'text',
+        ts: '2026-03-11T18:00:00.000Z',
+        text: [
+          `Durable run ${RUN_ID} has finished.`,
+          'taskSlug=ui-preview-check',
+          'status=completed',
+          `log=/tmp/runs/${RUN_ID}/output.log`,
+          'command=npm test',
+          '',
+          'Recent log tail:',
+          'very noisy callback output',
+        ].join('\n'),
+      },
+    ]);
     const runButtons = findInlineRunButtons(container);
+    expect(runButtons).toHaveLength(1);
 
     await act(async () => {
       runButtons[0]?.click();
