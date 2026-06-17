@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const repoRoot = process.cwd();
 const releaseDir = resolve(repoRoot, 'dist', 'release');
+const DEFAULT_DESKTOP_RELEASE_REPO = 'patleeman/neon-pilot';
 
 function fail(message) {
   console.error(message);
@@ -56,6 +57,30 @@ function collectPackagedAppPath() {
   return null;
 }
 
+function validatePackagedAutoUpdateConfig(appPath) {
+  const releaseRepo = process.env.NEON_PILOT_RELEASE_REPO || DEFAULT_DESKTOP_RELEASE_REPO;
+  const appUpdatePath = resolve(appPath, 'Contents', 'Resources', 'app-update.yml');
+  if (!existsSync(appUpdatePath)) {
+    fail(`Packaged auto-update config not found: ${appUpdatePath}`);
+  }
+
+  const config = readFileSync(appUpdatePath, 'utf8');
+  const owner = config.match(/^owner:\s*(.+)$/mu)?.[1]?.trim() ?? '';
+  const repo = config.match(/^repo:\s*(.+)$/mu)?.[1]?.trim() ?? '';
+  const [expectedOwner, expectedRepo] = releaseRepo.split('/', 2);
+
+  if (owner !== expectedOwner || repo !== expectedRepo) {
+    fail(
+      [
+        'Packaged app-update.yml points at the wrong GitHub repo.',
+        `Expected: ${releaseRepo}`,
+        `Actual: ${owner}/${repo}`,
+        `Path: ${appUpdatePath}`,
+      ].join('\n'),
+    );
+  }
+}
+
 rmSync(releaseDir, { recursive: true, force: true });
 
 console.log('Running release checks before local packaged build...');
@@ -68,6 +93,9 @@ const appPath = collectPackagedAppPath();
 if (!appPath) {
   fail(`Packaged desktop app not found under ${releaseDir}.`);
 }
+
+console.log('Validating packaged auto-update feed config...');
+validatePackagedAutoUpdateConfig(appPath);
 
 console.log('Validating packaged extensions against the built app...');
 run('node', ['scripts/check-packaged-extensions.mjs', appPath]);
