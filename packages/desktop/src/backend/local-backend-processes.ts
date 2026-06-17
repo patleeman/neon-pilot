@@ -654,84 +654,123 @@ export class LocalBackendProcesses {
   }
 
   private async startInternal(): Promise<void> {
+    const startedAt = Date.now();
+    const extensionHostAlreadyRunning = Boolean(this.extensionHostChild && !this.extensionHostChild.killed && this.extensionHostBaseUrl && this.extensionHostToken);
     const token = randomUUID();
-    const extensionHostReady = await this.startExtensionHostChild();
-    const child = spawn(process.execPath, [resolveBackendChildEntry()], {
-      stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
-      env: createDesktopChildEnv({
-        ELECTRON_RUN_AS_NODE: '1',
-        NEON_PILOT_BACKEND_TOKEN: token,
-        ...(extensionHostReady
-          ? {
-              NEON_PILOT_EXTENSION_HOST_BASE_URL: `http://127.0.0.1:${String(extensionHostReady.port)}`,
-              NEON_PILOT_EXTENSION_HOST_TOKEN: extensionHostReady.token,
-            }
-          : {}),
-        ...(process.env.NEON_PILOT_REPO_ROOT ? { NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT } : {}),
-      }),
-    });
+    let child: ChildProcess | undefined;
 
-    this.child = child;
+    try {
+      const extensionHostReady = await this.startExtensionHostChild();
+      const childSpawnedAt = Date.now();
+      child = spawn(process.execPath, [resolveBackendChildEntry()], {
+        stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+        env: createDesktopChildEnv({
+          ELECTRON_RUN_AS_NODE: '1',
+          NEON_PILOT_BACKEND_TOKEN: token,
+          ...(extensionHostReady
+            ? {
+                NEON_PILOT_EXTENSION_HOST_BASE_URL: `http://127.0.0.1:${String(extensionHostReady.port)}`,
+                NEON_PILOT_EXTENSION_HOST_TOKEN: extensionHostReady.token,
+              }
+            : {}),
+          ...(process.env.NEON_PILOT_REPO_ROOT ? { NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT } : {}),
+        }),
+      });
 
-    child.stderr?.on('data', (chunk) => {
-      process.stderr.write(`[desktop-backend] ${String(chunk)}`);
-    });
-    child.on('message', (message) => {
-      if (this.isNativeWorkbenchBrowserRequest(message)) {
-        void this.handleNativeWorkbenchBrowserRequest(child, message);
-        return;
-      }
-      if (this.isLocalApiRpcResponse(message)) {
-        this.pendingLocalApiRpcResponses.get(message.id)?.(message);
-      }
-    });
+      this.child = child;
 
-    const ready = await new Promise<BackendReadyMessage>((resolveReady, rejectReady) => {
-      const cleanup = () => {
-        child.off('message', onMessage);
-        child.off('exit', onExit);
-        child.off('error', onError);
-      };
-      const onMessage = (message: unknown) => {
-        if (!isBackendChildMessage(message)) return;
-        if (message.type === 'ready') {
-          cleanup();
-          resolveReady(message);
+      child.stderr?.on('data', (chunk) => {
+        process.stderr.write(`[desktop-backend] ${String(chunk)}`);
+      });
+      child.on('message', (message) => {
+        if (this.isNativeWorkbenchBrowserRequest(message)) {
+          void this.handleNativeWorkbenchBrowserRequest(child, message);
           return;
         }
-        cleanup();
-        rejectReady(new Error(message.error));
-      };
-      const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
-        cleanup();
-        rejectReady(renderBackendChildExit(code, signal));
-      };
-      const onError = (error: Error) => {
-        cleanup();
-        rejectReady(error);
-      };
-      child.on('message', onMessage);
-      child.once('exit', onExit);
-      child.once('error', onError);
-    });
+        if (this.isLocalApiRpcResponse(message)) {
+          this.pendingLocalApiRpcResponses.get(message.id)?.(message);
+        }
+      });
 
-    if (this.disposed) {
-      await this.stop();
-      return;
-    }
+      const readyWaitStartedAt = Date.now();
+      const ready = await new Promise<BackendReadyMessage>((resolveReady, rejectReady) => {
+        const cleanup = () => {
+          child?.off('message', onMessage);
+          child?.off('exit', onExit);
+          child?.off('error', onError);
+        };
+        const onMessage = (message: unknown) => {
+          if (!isBackendChildMessage(message)) return;
+          if (message.type === 'ready') {
+            cleanup();
+            resolveReady(message);
+            return;
+          }
+          cleanup();
+          rejectReady(new Error(message.error));
+        };
+        const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+          cleanup();
+          rejectReady(renderBackendChildExit(code, signal));
+        };
+        const onError = (error: Error) => {
+          cleanup();
+          rejectReady(error);
+        };
+        child.on('message', onMessage);
+        child.once('exit', onExit);
+        child.once('error', onError);
+      });
 
-    this.token = ready.token || token;
-    this.baseUrl = `http://127.0.0.1:${String(ready.port)}`;
-    this.writeCliControlPlaneRecord();
-    this.lastStartPerf = { totalMs: 0, spawnMs: 0, readyWaitMs: 0, assignMs: 0 };
-    child.once('exit', () => {
+      if (this.disposed) {
+        await this.stop();
+        return;
+      }
+
+      const assignStartedAt = Date.now();
+      this.token = ready.token || token;
+      this.baseUrl = `http://127.0.0.1:${String(ready.port)}`;
+      this.writeCliControlPlaneRecord();
+      const assignedAt = Date.now();
+      this.lastStartPerf = {
+        totalMs: assignedAt - startedAt,
+        spawnMs: childSpawnedAt - startedAt,
+        readyWaitMs: assignStartedAt - readyWaitStartedAt,
+        assignMs: assignedAt - assignStartedAt,
+      };
+      child.once('exit', () => {
+        if (this.child === child) {
+          this.child = undefined;
+          this.baseUrl = undefined;
+          this.token = undefined;
+          this.writeCliControlPlaneRecord();
+        }
+      });
+    } catch (error) {
       if (this.child === child) {
         this.child = undefined;
-        this.baseUrl = undefined;
-        this.token = undefined;
+      }
+      this.baseUrl = undefined;
+      this.token = undefined;
+      if (!extensionHostAlreadyRunning) {
+        const extensionHostChild = this.extensionHostChild;
+        this.clearExtensionHostRuntime();
+        await this.stopChild(extensionHostChild);
+      } else {
         this.writeCliControlPlaneRecord();
       }
-    });
+      await this.stopChild(child);
+      throw error;
+    }
+  }
+
+  private clearExtensionHostRuntime(): void {
+    this.extensionHostChild = undefined;
+    this.extensionHostBaseUrl = undefined;
+    this.extensionHostToken = undefined;
+    delete process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL;
+    delete process.env.NEON_PILOT_EXTENSION_HOST_TOKEN;
+    removeNeonPilotCliControlPlaneRecord();
   }
 
   private async stopChild(child: ChildProcess | undefined): Promise<void> {
@@ -824,12 +863,7 @@ export class LocalBackendProcesses {
     });
     child.once('exit', () => {
       if (this.extensionHostChild === child) {
-        this.extensionHostChild = undefined;
-        this.extensionHostBaseUrl = undefined;
-        this.extensionHostToken = undefined;
-        delete process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL;
-        delete process.env.NEON_PILOT_EXTENSION_HOST_TOKEN;
-        removeNeonPilotCliControlPlaneRecord();
+        this.clearExtensionHostRuntime();
       }
     });
     return ready;

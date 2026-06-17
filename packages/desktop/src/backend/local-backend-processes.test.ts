@@ -1,9 +1,10 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { EventEmitter } from 'node:events';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { bootstrapMocks, criticalRegistryMocks, readConversationSessionsCapabilityMock, reserveConversationSessionMock } = vi.hoisted(
+const { bootstrapMocks, childProcessMocks, criticalRegistryMocks, readConversationSessionsCapabilityMock, reserveConversationSessionMock } = vi.hoisted(
   () => ({
     bootstrapMocks: {
       inlineConversationBootstrapAssetsCapability: vi.fn((state: unknown) => state),
@@ -63,11 +64,21 @@ const { bootstrapMocks, criticalRegistryMocks, readConversationSessionsCapabilit
         settings: {},
       })),
     },
+    childProcessMocks: {
+      spawn: vi.fn(),
+    },
     readConversationSessionsCapabilityMock: vi.fn(() => [{ id: 'limited' }]),
     reserveConversationSessionMock: vi.fn(() => ({ id: 'reserved-1', sessionFile: '/tmp/reserved-1.jsonl', cwd: '/repo' })),
   }),
 );
 
+vi.mock('node:child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:child_process')>();
+  return {
+    ...actual,
+    spawn: childProcessMocks.spawn,
+  };
+});
 vi.mock('../../server/conversations/conversationSessionCapability.js', () => ({
   readConversationSessionsCapability: readConversationSessionsCapabilityMock,
 }));
@@ -97,6 +108,26 @@ vi.mock('../../server/extensions/extensionCriticalRegistryPresentation.js', () =
 });
 
 import { createDesktopChildEnv, LocalBackendProcesses, type LocalBackendWorkbenchBrowserToolHost } from './local-backend-processes.js';
+
+class FakeChildProcess extends EventEmitter {
+  stderr = new EventEmitter();
+  killed = false;
+  connected = true;
+  send = vi.fn((message: unknown) => {
+    if ((message as { type?: string })?.type === 'shutdown') {
+      this.connected = false;
+      queueMicrotask(() => this.emit('exit', 0, null));
+    }
+    return true;
+  });
+
+  kill = vi.fn(() => {
+    this.killed = true;
+    this.connected = false;
+    queueMicrotask(() => this.emit('exit', null, 'SIGTERM'));
+    return true;
+  });
+}
 
 function createHost(): LocalBackendWorkbenchBrowserToolHost {
   return {
@@ -132,6 +163,7 @@ describe('LocalBackendProcesses', () => {
 
   afterEach(() => {
     process.stderr.write = originalStderrWrite;
+    childProcessMocks.spawn.mockReset();
     criticalRegistryMocks.moduleLoaded.mockClear();
     criticalRegistryMocks.readCriticalExtensionRegistryResponse.mockClear();
     vi.unstubAllGlobals();
@@ -140,6 +172,65 @@ describe('LocalBackendProcesses', () => {
   it('starts', async () => {
     const backend = new LocalBackendProcesses();
     expect(backend).toBeDefined();
+  });
+
+  it('rolls back extension host state when backend child startup fails and can retry', async () => {
+    const firstExtensionHost = new FakeChildProcess();
+    const firstBackend = new FakeChildProcess();
+    const secondExtensionHost = new FakeChildProcess();
+    const secondBackend = new FakeChildProcess();
+    childProcessMocks.spawn
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => firstExtensionHost.emit('message', { type: 'ready', port: 4101, token: 'extension-host-token-1' }));
+        return firstExtensionHost;
+      })
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => firstBackend.emit('message', { type: 'fatal', error: 'backend failed before ready' }));
+        return firstBackend;
+      })
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => secondExtensionHost.emit('message', { type: 'ready', port: 4102, token: 'extension-host-token-2' }));
+        return secondExtensionHost;
+      })
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => secondBackend.emit('message', { type: 'ready', port: 5102, token: 'backend-token-2' }));
+        return secondBackend;
+      });
+
+    const backend = new LocalBackendProcesses() as LocalBackendProcesses & {
+      child?: unknown;
+      extensionHostChild?: unknown;
+      extensionHostBaseUrl?: string;
+      extensionHostToken?: string;
+      baseUrl?: string;
+      token?: string;
+      lastStartPerf?: { totalMs: number; spawnMs: number; readyWaitMs: number; assignMs: number };
+    };
+
+    await expect(backend.ensureStarted()).rejects.toThrow('backend failed before ready');
+
+    expect(firstBackend.send).toHaveBeenCalledWith({ type: 'shutdown' });
+    expect(firstExtensionHost.send).toHaveBeenCalledWith({ type: 'shutdown' });
+    expect(backend.child).toBeUndefined();
+    expect(backend.extensionHostChild).toBeUndefined();
+    expect(backend.baseUrl).toBeUndefined();
+    expect(backend.token).toBeUndefined();
+    expect(backend.extensionHostBaseUrl).toBeUndefined();
+    expect(backend.extensionHostToken).toBeUndefined();
+    expect(process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL).toBeUndefined();
+    expect(process.env.NEON_PILOT_EXTENSION_HOST_TOKEN).toBeUndefined();
+
+    await expect(backend.ensureStarted()).resolves.toBeUndefined();
+
+    expect(backend.extensionHostBaseUrl).toBe('http://127.0.0.1:4102');
+    expect(backend.baseUrl).toBe('http://127.0.0.1:5102');
+    expect(backend.lastStartPerf).toEqual({
+      totalMs: expect.any(Number),
+      spawnMs: expect.any(Number),
+      readyWaitMs: expect.any(Number),
+      assignMs: expect.any(Number),
+    });
+    expect(backend.lastStartPerf?.totalMs).toBeGreaterThanOrEqual(0);
   });
 
   it('preserves packaged app roots without synthesizing a repo root for child processes', () => {
