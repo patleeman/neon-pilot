@@ -8,8 +8,10 @@ import { join, resolve } from 'node:path';
 const repoRoot = process.cwd();
 const packageJsonPath = resolve(repoRoot, 'package.json');
 const repoEnvPath = resolve(repoRoot, '.env');
+const installableExtensionCatalogPath = resolve(repoRoot, 'packages/desktop/server/extensions/installableExtensionCatalog.generated.ts');
 const defaultEnvPath = join(homedir(), '.config', 'neon-pilot', 'release-env');
 const defaultReleaseRepo = 'patleeman/neon-pilot';
+const defaultFirstPartyExtensionReleaseRepo = 'patleeman/neon-pilot-extensions';
 
 function fail(message) {
   console.error(message);
@@ -594,6 +596,51 @@ function requireReleaseQaAcknowledgement(env) {
   console.log(`Release QA gate acknowledged with notes: ${notesPath}`);
 }
 
+function readExpectedFirstPartyExtensionAssets() {
+  const source = readFileSync(installableExtensionCatalogPath, 'utf8');
+  const ids = [...source.matchAll(/\bid:\s*'([^']+)'/g)].map((match) => match[1]).filter(Boolean).sort();
+  if (ids.length === 0) {
+    fail(`No first-party installable extension IDs found in ${installableExtensionCatalogPath}.`);
+  }
+  return ['neon-extension-catalog.json', ...ids.map((id) => `${id}.neon-extension.zip`)];
+}
+
+function requireFirstPartyExtensionReleaseGate(env, tag) {
+  if (isTruthyEnv(env.NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVED)) {
+    const reason = String(env.NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVER_REASON ?? '').trim();
+    if (!reason) {
+      fail(
+        'NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVED=1 requires NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVER_REASON.',
+      );
+    }
+    console.warn(`First-party extension release gate waived: ${reason}`);
+    return;
+  }
+
+  const extensionRepo = env.NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_REPO || defaultFirstPartyExtensionReleaseRepo;
+  const expectedAssets = readExpectedFirstPartyExtensionAssets();
+  const releaseJson = tryCapture('gh', ['release', 'view', tag, '--repo', extensionRepo, '--json', 'assets']);
+  if (releaseJson.status !== 0) {
+    const rendered = `${releaseJson.stderr}${releaseJson.stdout}`.trim();
+    fail(rendered || `First-party extension release ${tag} not found in ${extensionRepo}.`);
+  }
+
+  const release = JSON.parse(releaseJson.stdout || '{}');
+  const assetNames = new Set((Array.isArray(release.assets) ? release.assets : []).map((asset) => asset?.name).filter(Boolean));
+  const missingAssets = expectedAssets.filter((assetName) => !assetNames.has(assetName));
+  if (missingAssets.length > 0) {
+    fail(
+      [
+        `First-party extension release ${tag} in ${extensionRepo} is missing required assets:`,
+        ...missingAssets.map((assetName) => `- ${assetName}`),
+        'Publish the matching extension release before publishing the desktop app, or set the explicit waiver env vars.',
+      ].join('\n'),
+    );
+  }
+
+  console.log(`First-party extension release gate passed for ${tag} in ${extensionRepo} (${expectedAssets.length} assets).`);
+}
+
 const packageJson = readJsonFile(packageJsonPath);
 const version = packageJson.version;
 const tag = `v${version}`;
@@ -632,6 +679,7 @@ const files = desktopReleaseFiles;
 notarizeDistributionContainers(env, desktopReleaseFiles);
 requireSmokeTestApproval(env, releaseDir, buildRoot);
 requireReleaseQaAcknowledgement(env);
+requireFirstPartyExtensionReleaseGate(env, tag);
 
 console.log(`Pushing ${tag} to GitHub...`);
 pushReleaseRef(tag);

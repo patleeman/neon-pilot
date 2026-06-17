@@ -45,6 +45,19 @@ describe('release smoke perf budgets', () => {
     expect(source).toContain('NEON_PILOT_RELEASE_QA_NOTES');
   });
 
+  it('requires first-party extension release assets before pushing release artifacts', () => {
+    const source = readFileSync(new URL('./publish-desktop-release.mjs', import.meta.url), 'utf8');
+    const extensionGateIndex = source.indexOf('requireFirstPartyExtensionReleaseGate(env, tag);');
+    const pushIndex = source.indexOf('pushReleaseRef(tag);');
+    const releaseUploadIndex = source.indexOf("run('gh', ['release', 'upload'");
+
+    expect(extensionGateIndex).toBeGreaterThan(0);
+    expect(pushIndex).toBeGreaterThan(extensionGateIndex);
+    expect(releaseUploadIndex).toBeGreaterThan(extensionGateIndex);
+    expect(source).toContain('neon-extension-catalog.json');
+    expect(source).toContain('NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVED');
+  });
+
   it('validates packaged auto-update config during local release verification', () => {
     const source = readFileSync(new URL('./verify-desktop-release-build.mjs', import.meta.url), 'utf8');
     const appPathIndex = source.indexOf('const appPath = collectPackagedAppPath();');
