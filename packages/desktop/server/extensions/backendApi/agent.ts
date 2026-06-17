@@ -88,7 +88,12 @@ interface ExtensionBackendContextLike {
   toolContext?: { cwd?: string };
   agentToolContext?: unknown;
   conversations?: {
-    create(input?: { cwd?: string; model?: string | null; thinkingLevel?: string | null }): Promise<{ id: string }>;
+    create(input?: {
+      cwd?: string;
+      model?: string | null;
+      thinkingLevel?: string | null;
+      allowedToolNames?: string[];
+    }): Promise<{ id: string }>;
     sendMessage(conversationId: string, text: string): Promise<{ accepted: boolean }>;
     getMeta(conversationId: string): Promise<unknown>;
     list(): Promise<unknown>;
@@ -410,6 +415,11 @@ function validateConversationMode(input: ExtensionAgentConversationCreateInput):
   return { visibility, persistence };
 }
 
+function normalizeAllowedToolNames(input: { tools?: 'none' | 'default'; allowedToolNames?: string[] }): string[] {
+  if (input.tools === 'none') return [];
+  return [...new Set(input.allowedToolNames ?? [])];
+}
+
 function isUnsupportedActiveToolUpdateError(error: unknown): boolean {
   return error instanceof Error && /does not support active tool updates/i.test(error.message);
 }
@@ -438,7 +448,7 @@ async function createSession(input: ExtensionAgentConversationCreateInput, ctx: 
     authStorage,
     modelRegistry: modelRegistry as never,
     sessionManager: pi.SessionManager.inMemory(cwd),
-    ...(input.tools === 'none' ? { noTools: 'all' as const } : {}),
+    ...(normalizeAllowedToolNames(input).length === 0 ? { noTools: 'all' as const } : {}),
   });
   return { cwd, model, modelRegistry, session: session as AgentSessionLike };
 }
@@ -452,7 +462,7 @@ async function createHiddenLiveSession(input: ExtensionAgentConversationCreateIn
   const options: Record<string, unknown> = {
     ...(input.modelRef ? { initialModel: input.modelRef } : {}),
     ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
-    ...(input.tools === 'none' ? { allowedToolNames: [] } : input.allowedToolNames ? { allowedToolNames: input.allowedToolNames } : {}),
+    allowedToolNames: normalizeAllowedToolNames(input),
   };
   const created = await callServerModuleExport<{ id: string; sessionFile: string }>(
     '../../conversations/liveSessions.js',
@@ -583,7 +593,7 @@ export async function createAgentConversation(
       cwd,
       model: input.modelRef ?? null,
       ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
-      ...(input.allowedToolNames ? { allowedToolNames: input.allowedToolNames } : {}),
+      allowedToolNames: normalizeAllowedToolNames(input),
     });
     const record: ExtensionAgentConversationRecord = {
       id: created.id,
@@ -985,7 +995,7 @@ export async function runAgentTask(
           input: call.params,
           runtime: {
             ...(input.modelRef ? { modelRef: input.modelRef } : {}),
-            directToolNames: [...new Set([...allowedToolNames, 'bash', 'read', 'edit'])],
+            directToolNames: [...allowedToolNames],
           },
           toolContext: {
             conversationId: record.liveSessionId ?? record.id,

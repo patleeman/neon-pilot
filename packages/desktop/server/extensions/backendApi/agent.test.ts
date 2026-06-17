@@ -11,7 +11,7 @@ const serverModuleMocks = vi.hoisted(() => ({
   liveAborted: [] as string[],
   liveSubmitted: [] as Array<{ sessionId: string; text: string; images: unknown }>,
   liveResponses: [] as string[],
-  toolInvocations: [] as Array<{ name: string; input: unknown }>,
+  toolInvocations: [] as Array<{ name: string; input: unknown; runtime: unknown }>,
   callServerModuleExport: vi.fn(async (specifier: string, exportName: string, ...args: unknown[]) => {
     if (specifier === '../../extensions/extensionPermissions.js' && exportName === 'assertExtensionPermission') {
       const [extensionId, permission, capability] = args as [string, string, string];
@@ -65,7 +65,7 @@ const serverModuleMocks = vi.hoisted(() => ({
     }
     if (specifier === '../../tools/toolGateway.js' && exportName === 'invokeToolByName') {
       const [input] = args as [{ name: string; input: unknown }];
-      serverModuleMocks.toolInvocations.push({ name: input.name, input: input.input });
+      serverModuleMocks.toolInvocations.push({ name: input.name, input: input.input, runtime: (input as { runtime?: unknown }).runtime });
       return { content: [{ type: 'text', text: `tool result for ${input.name}` }] };
     }
     throw new Error(`unexpected server module export: ${specifier}#${exportName}`);
@@ -181,6 +181,15 @@ describe('extension agent backend API', () => {
     expect(session.dispose).toHaveBeenCalled();
   });
 
+  it('defaults direct agent tasks to no tools when no allowlist is supplied', async () => {
+    serverModuleMocks.disableLiveSessionCreate = true;
+    const { createAgentSession } = installImporter();
+
+    await expect(runAgentTask({ prompt: 'Describe' }, createCtx())).resolves.toMatchObject({ text: 'probe result' });
+
+    expect(createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/workspace', noTools: 'all' }));
+  });
+
   it('executes DS4 run_tool text calls for allowlisted hidden agent tasks', async () => {
     installImporter();
     serverModuleMocks.liveResponses = [
@@ -198,7 +207,13 @@ describe('extension agent backend API', () => {
     );
 
     expect(result.text).toBe('done');
-    expect(serverModuleMocks.toolInvocations).toEqual([{ name: 'writing_studio_get_canvas', input: { documentId: 'doc-1' } }]);
+    expect(serverModuleMocks.toolInvocations).toEqual([
+      {
+        name: 'writing_studio_get_canvas',
+        input: { documentId: 'doc-1' },
+        runtime: { modelRef: 'ds4/deepseek-v4-flash', directToolNames: ['writing_studio_get_canvas'] },
+      },
+    ]);
     expect(serverModuleMocks.liveSubmitted).toEqual([
       { sessionId: 'live-1', text: 'Review', images: undefined },
       {
@@ -227,7 +242,11 @@ describe('extension agent backend API', () => {
 
     expect(result.text).toBe('annotated');
     expect(serverModuleMocks.toolInvocations).toEqual([
-      { name: 'writing_studio_add_annotation', input: { quote: 'Hello', body: 'Needs a sharper verb.' } },
+      {
+        name: 'writing_studio_add_annotation',
+        input: { quote: 'Hello', body: 'Needs a sharper verb.' },
+        runtime: { modelRef: 'ds4/deepseek-v4-flash', directToolNames: ['writing_studio_add_annotation'] },
+      },
     ]);
     expect(serverModuleMocks.liveSubmitted).toEqual([
       { sessionId: 'live-1', text: 'Annotate', images: undefined },
@@ -262,11 +281,17 @@ describe('extension agent backend API', () => {
     );
     expect(createAttempts.map((call) => call[3])).toEqual([
       { initialModel: 'ds4/deepseek-v4-flash', allowedToolNames: ['writing_studio_add_annotation'] },
-      { initialModel: 'ds4/deepseek-v4-flash' },
+      { initialModel: 'ds4/deepseek-v4-flash', allowedToolNames: [] },
     ]);
-    expect(serverModuleMocks.liveCreated).toEqual([{ cwd: '/workspace', options: { initialModel: 'ds4/deepseek-v4-flash' } }]);
+    expect(serverModuleMocks.liveCreated).toEqual([
+      { cwd: '/workspace', options: { initialModel: 'ds4/deepseek-v4-flash', allowedToolNames: [] } },
+    ]);
     expect(serverModuleMocks.toolInvocations).toEqual([
-      { name: 'writing_studio_add_annotation', input: { quote: 'Hello', body: 'Needs a sharper verb.' } },
+      {
+        name: 'writing_studio_add_annotation',
+        input: { quote: 'Hello', body: 'Needs a sharper verb.' },
+        runtime: { modelRef: 'ds4/deepseek-v4-flash', directToolNames: ['writing_studio_add_annotation'] },
+      },
     ]);
   });
 
@@ -433,7 +458,7 @@ describe('extension agent backend API', () => {
     const aborted = await abortAgentConversation({ conversationId: created.id }, ctx);
 
     expect(created).toMatchObject({ id: 'visible-conversation', visibility: 'visible', persistence: 'saved' });
-    expect(conversations.create).toHaveBeenCalledWith({ cwd: '/visible-cwd', model: 'openai/gpt-vision' });
+    expect(conversations.create).toHaveBeenCalledWith({ cwd: '/visible-cwd', model: 'openai/gpt-vision', allowedToolNames: [] });
     expect(conversations.sendMessage).toHaveBeenCalledWith('visible-conversation', 'keep going');
     expect(sent).toMatchObject({ id: 'visible-conversation', visibility: 'visible', persistence: 'saved' });
     expect(fetched).toMatchObject({ title: 'Visible title', cwd: '/visible-cwd', model: 'gpt-vision' });
