@@ -3,19 +3,62 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { parse as parseToml } from 'smol-toml';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+const { streamMock } = vi.hoisted(() => ({
+  streamMock: vi.fn(),
+}));
+
+vi.mock('@earendil-works/pi-ai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@earendil-works/pi-ai')>();
+  return {
+    ...actual,
+    stream: streamMock,
+  };
+});
 
 import {
   buildContext,
+  createModelGatewayResponse,
   installModelGatewayCodexConfig,
   readModelGatewayCodexConfigStatus,
   removeModelGatewayCodexConfig,
   requestToolsToPiTools,
   responsesInputToPiMessages,
+  streamModelGatewayResponseEvents,
   writeModelGatewayCatalog,
 } from './modelGatewayRuntime.js';
 
 describe('modelGatewayRuntime', () => {
+  function createRuntimeWithModel(prefix: string): string {
+    const runtimeDir = mkdtempSync(join(tmpdir(), prefix));
+    writeFileSync(
+      join(runtimeDir, 'models.json'),
+      JSON.stringify({
+        providers: {
+          test: {
+            baseUrl: 'http://127.0.0.1:1/v1',
+            api: 'openai-responses',
+            apiKey: 'test-key',
+            models: [{ id: 'alpha', name: 'Alpha', input: ['text'], contextWindow: 128000 }],
+          },
+        },
+      }),
+    );
+    return runtimeDir;
+  }
+
+  function usage(input = 11, output = 7) {
+    return {
+      input,
+      output,
+      cacheRead: 3,
+      cacheWrite: 2,
+      totalTokens: input + output,
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+    };
+  }
+
   it('replays Codex Responses function calls before matching tool outputs', () => {
     const messages = responsesInputToPiMessages([
       { role: 'user', content: 'list tmp' },
@@ -196,6 +239,134 @@ describe('modelGatewayRuntime', () => {
       { name: 'apply_patch', parameters: { required: ['patch'] } },
       { name: 'list_mcp_resources', parameters: { type: 'object' } },
     ]);
+  });
+
+  it('converts non-fake provider responses into Responses API output', async () => {
+    const runtimeDir = createRuntimeWithModel('model-gateway-response-');
+    try {
+      streamMock.mockReturnValueOnce({
+        result: async () => ({
+          role: 'assistant',
+          content: [
+            { type: 'text', text: 'Hello' },
+            { type: 'thinking', thinking: 'Plan' },
+            { type: 'toolCall', id: 'call_1', name: 'lookup', arguments: { q: 'neon' } },
+          ],
+          provider: 'test',
+          model: 'alpha',
+          api: 'openai-responses',
+          usage: usage(),
+          stopReason: 'stop',
+          timestamp: Date.now(),
+          responseId: 'resp_provider',
+        }),
+      });
+
+      await expect(
+        createModelGatewayResponse(
+          { runtimeDir },
+          { model: 'test/alpha', input: 'Say hello', temperature: 0.2, max_output_tokens: 64 },
+          { host: '127.0.0.1', port: 8766, defaultModel: 'test/alpha', authToken: 'token' },
+        ),
+      ).resolves.toMatchObject({
+        id: 'resp_provider',
+        object: 'response',
+        status: 'completed',
+        model: 'test/alpha',
+        output: [
+          { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Hello', annotations: [] }] },
+          { type: 'reasoning', summary: [{ type: 'summary_text', text: 'Plan' }] },
+          { type: 'function_call', call_id: 'call_1', name: 'lookup', arguments: '{"q":"neon"}' },
+        ],
+        usage: {
+          input_tokens: 11,
+          output_tokens: 7,
+          total_tokens: 18,
+          input_tokens_details: { cached_tokens: 3, cache_creation_input_tokens: 2 },
+        },
+      });
+
+      expect(streamMock).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'alpha', provider: 'test' }),
+        expect.objectContaining({ messages: [{ role: 'user', content: 'Say hello', timestamp: expect.any(Number) }] }),
+        expect.objectContaining({ apiKey: 'test-key', temperature: 0.2, maxTokens: 64 }),
+      );
+    } finally {
+      rmSync(runtimeDir, { recursive: true, force: true });
+    }
+  });
+
+  it('streams non-fake provider text, tool calls, completion, and done sentinel as Responses events', async () => {
+    const runtimeDir = createRuntimeWithModel('model-gateway-stream-');
+    try {
+      async function* events() {
+        yield { type: 'text_delta', delta: 'Hel' };
+        yield { type: 'text_delta', delta: 'lo' };
+        yield { type: 'toolcall_end', toolCall: { id: 'call_1', name: 'lookup', arguments: { q: 'neon' } } };
+        yield {
+          type: 'done',
+          message: {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'Hello' }],
+            provider: 'test',
+            model: 'alpha',
+            api: 'openai-responses',
+            usage: usage(5, 2),
+            stopReason: 'stop',
+            timestamp: Date.now(),
+            responseId: 'resp_done',
+          },
+        };
+      }
+      streamMock.mockReturnValueOnce(events());
+
+      const output = [];
+      for await (const event of streamModelGatewayResponseEvents(
+        { runtimeDir },
+        { model: 'test/alpha', input: 'Say hello' },
+        { host: '127.0.0.1', port: 8766, defaultModel: 'test/alpha', authToken: 'token' },
+      )) {
+        output.push(event);
+      }
+
+      expect(output).toEqual([
+        expect.objectContaining({ type: 'response.created', response: expect.objectContaining({ status: 'in_progress', model: 'test/alpha' }) }),
+        { type: 'response.output_item.added', output_index: 0, item: { id: 'msg_0', type: 'message', status: 'in_progress', role: 'assistant', content: [] } },
+        { type: 'response.output_text.delta', output_index: 0, content_index: 0, delta: 'Hel' },
+        { type: 'response.output_text.delta', output_index: 0, content_index: 0, delta: 'lo' },
+        {
+          type: 'response.output_item.done',
+          output_index: 0,
+          item: {
+            id: 'call_1',
+            type: 'function_call',
+            status: 'completed',
+            call_id: 'call_1',
+            name: 'lookup',
+            arguments: '{"q":"neon"}',
+          },
+        },
+        { type: 'response.output_text.done', output_index: 1, content_index: 0, text: 'Hello' },
+        {
+          type: 'response.output_item.done',
+          output_index: 1,
+          item: {
+            id: 'msg_1',
+            type: 'message',
+            status: 'completed',
+            role: 'assistant',
+            content: [{ type: 'output_text', text: 'Hello', annotations: [] }],
+          },
+        },
+        expect.objectContaining({
+          type: 'response.completed',
+          response: expect.objectContaining({ id: 'resp_done', status: 'completed', model: 'test/alpha' }),
+        }),
+        '[DONE]',
+      ]);
+    } finally {
+      rmSync(runtimeDir, { recursive: true, force: true });
+    }
   });
 
   it('writes a Codex model catalog for custom provider model metadata', () => {
