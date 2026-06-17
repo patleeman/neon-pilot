@@ -206,6 +206,25 @@ function SaveIcon() {
   );
 }
 
+function EditIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M3.25 11.75v1.5h1.5L12 6l-1.5-1.5-7.25 7.25Z" strokeLinejoin="round" />
+      <path d="m9.5 5.5 1.5 1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M3 4.5h10M6.5 2.75h3L10.25 4.5h-4.5l.75-1.75Z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 4.5 5.6 13a1.25 1.25 0 0 0 1.25 1.1h2.3A1.25 1.25 0 0 0 10.4 13L11 4.5" />
+      <path d="M7 7v4M9 7v4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function DynamicWorkflowTranscriptBlock({ block }: { block: { details?: unknown; text?: string } }) {
   const details = block.details && typeof block.details === 'object' ? (block.details as WorkflowSummary) : null;
   const agents = details?.agents;
@@ -267,6 +286,9 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
         templates[0] ??
         null)
       : null;
+  const selectedSavedWorkflow = selectedTemplate
+    ? (savedWorkflows.find((workflow) => workflow.id === selectedTemplate.id) ?? null)
+    : null;
   const pageSummary = `${workflows.length} runs / ${savedWorkflows.length} saved / ${templates.length} templates`;
   const hasLibraryItems = workflows.length > 0 || savedWorkflows.length > 0 || templates.length > 0;
 
@@ -354,7 +376,14 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
 
   async function deleteSaved(template: WorkflowTemplate) {
     await pa.extension.invoke('deleteSavedWorkflow', { id: template.id });
+    if (selectedTemplateId === template.id) setSelectedTemplateId(null);
     await refresh();
+  }
+
+  function editSaved(template: WorkflowTemplate) {
+    setDraft(templateToDraft(template));
+    setDraftError(null);
+    setDraftOpen(true);
   }
 
   async function runSaved(template: WorkflowTemplate) {
@@ -536,6 +565,26 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
               {selectedTemplate ? (
                 <div className="flex items-center gap-2">
                   <ToolbarButton onClick={() => void runSaved(selectedTemplate)}>Run</ToolbarButton>
+                  {selectedSavedWorkflow ? (
+                    <>
+                      <IconButton
+                        compact
+                        aria-label={`Edit ${selectedSavedWorkflow.name}`}
+                        title={`Edit ${selectedSavedWorkflow.name}`}
+                        onClick={() => editSaved(selectedSavedWorkflow)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        compact
+                        aria-label={`Delete ${selectedSavedWorkflow.name}`}
+                        title={`Delete ${selectedSavedWorkflow.name}`}
+                        onClick={() => void deleteSaved(selectedSavedWorkflow)}
+                      >
+                        <TrashIcon />
+                      </IconButton>
+                    </>
+                  ) : null}
                   <IconButton
                     compact
                     aria-label={`Save ${selectedTemplate.name}`}
