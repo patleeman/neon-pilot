@@ -16,6 +16,14 @@ describe('extensionManifestCoreValidation', () => {
     expect(validateExtensionManifestFrontend({ entry: './frontend.js', styles: ['./style.css'] })).toBeUndefined();
   });
 
+  it('rejects extension manifest ids that are not path-safe package ids', () => {
+    for (const id of ['../escape', 'bad/name', 'bad\\name', '.', 'UPPER', ' ext ', 'x', '-bad', 'bad_underscore']) {
+      expect(() => validateExtensionManifestBasics({ schemaVersion: 2, id, name: 'Extension' })).toThrow(
+        'Extension id must be 2-63 lowercase letters, numbers, or dashes, starting with a letter or number.',
+      );
+    }
+  });
+
   it('preserves validation errors', () => {
     expect(() => assertExtensionManifestRecord(null)).toThrow('Extension manifest must be an object.');
     expect(() => validateExtensionManifestBasics({ schemaVersion: 3, id: 'ext', name: 'Extension' })).toThrow(

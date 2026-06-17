@@ -1,9 +1,18 @@
 import { assertArray, requireString, requireStringArray, validateOptionalString } from './extensionManifestValidation.js';
 import { isRecord } from './extensionRegistryConfig.js';
 
+const EXTENSION_ID_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}$/;
+const EXTENSION_ID_ERROR = 'Extension id must be 2-63 lowercase letters, numbers, or dashes, starting with a letter or number.';
+
 export function assertExtensionManifestRecord(value: unknown): asserts value is Record<string, unknown> {
   if (!isRecord(value)) {
     throw new Error('Extension manifest must be an object.');
+  }
+}
+
+export function validateExtensionId(value: string): void {
+  if (!EXTENSION_ID_PATTERN.test(value)) {
+    throw new Error(EXTENSION_ID_ERROR);
   }
 }
 
@@ -11,7 +20,7 @@ export function validateExtensionManifestBasics(value: Record<string, unknown>):
   if (value.schemaVersion !== 1 && value.schemaVersion !== 2) {
     throw new Error('Extension manifest schemaVersion must be 1 or 2.');
   }
-  requireString(value.id, 'id');
+  validateExtensionId(requireString(value.id, 'id'));
   requireString(value.name, 'name');
   if (value.defaultEnabled !== undefined && typeof value.defaultEnabled !== 'boolean') {
     throw new Error('Extension manifest defaultEnabled must be a boolean.');

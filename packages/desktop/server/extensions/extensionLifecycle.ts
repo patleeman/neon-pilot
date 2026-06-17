@@ -6,6 +6,7 @@ import { basename, join, resolve, sep } from 'node:path';
 import { getStateRoot } from '@neon-pilot/core';
 
 import type { ExtensionManifest } from './extensionManifest.js';
+import { validateExtensionId } from './extensionManifestCoreValidation.js';
 import {
   findExtensionEntry,
   getRuntimeExtensionsRoot,
@@ -30,9 +31,7 @@ function normalizeExtensionId(value: unknown): string {
   }
 
   const id = value.trim();
-  if (!/^[a-z0-9][a-z0-9-]{1,62}$/.test(id)) {
-    throw new Error('Extension id must be 2-63 lowercase letters, numbers, or dashes, starting with a letter or number.');
-  }
+  validateExtensionId(id);
 
   return id;
 }
