@@ -589,6 +589,39 @@ describe('extension host RPC client', () => {
     );
   });
 
+  it('times out protocol entrypoint startup before the extension host responds', async () => {
+    const fetchImpl = vi.fn(
+      (_url: string | URL | Request, init?: RequestInit) =>
+        new Promise<Response>((resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
+          setTimeout(() => resolve(jsonResponse({ ok: true, channel: { port: 1234, token: 'channel-token' } })), 50);
+        }),
+    );
+    const client = createExtensionHostRpcClient({ baseUrl: 'http://127.0.0.1:1234', token: 'secret', fetchImpl, protocolTimeoutMs: 1 });
+
+    await expect(
+      client.invokeProtocolEntrypoint({
+        protocolId: 'acp',
+        input: {},
+        serverContextSnapshot: { runtimeScope: 'shared' },
+        stdio: {
+          stdin: new PassThrough(),
+          stdout: new Writable({
+            write(_chunk, _encoding, callback) {
+              callback();
+            },
+          }),
+          stderr: new Writable({
+            write(_chunk, _encoding, callback) {
+              callback();
+            },
+          }),
+        },
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toThrow('Extension host protocol entrypoint timed out after 1ms.');
+  });
+
   it('rejects function-bearing backend routes before transport', async () => {
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl: vi.fn() });
 

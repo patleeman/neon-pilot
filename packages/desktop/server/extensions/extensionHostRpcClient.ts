@@ -15,9 +15,11 @@ export interface ExtensionHostRpcClientOptions {
   baseUrl: string;
   token: string;
   fetchImpl?: typeof fetch;
+  protocolTimeoutMs?: number;
 }
 
 const MAX_FUNCTION_SCAN_DEPTH = 100;
+const DEFAULT_EXTENSION_HOST_PROTOCOL_TIMEOUT_MS = 30_000;
 
 export function hasFunction(value: unknown, seen = new WeakSet<object>(), depth = 0): boolean {
   if (typeof value === 'function') return true;
@@ -90,6 +92,35 @@ function stripActionUpdateCallback(input: ExtensionHostInvokeActionInput): Exten
   delete request.toolContext;
   delete request.signal;
   return request;
+}
+
+async function withProtocolTimeout<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+  signal: AbortSignal,
+  timeoutMs: number,
+): Promise<T> {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) {
+    throw new Error('Extension host protocol timeoutMs must be a positive integer.');
+  }
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  timeout.unref?.();
+  const onAbort = () => controller.abort();
+  signal.addEventListener('abort', onAbort, { once: true });
+  try {
+    return await operation(controller.signal);
+  } catch (error) {
+    if (timedOut) throw new Error(`Extension host protocol entrypoint timed out after ${String(timeoutMs)}ms.`);
+    if (signal.aborted) throw new Error('Extension protocol entrypoint aborted.');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    signal.removeEventListener('abort', onAbort);
+  }
 }
 
 function decodeRouteResponse(route: ExtensionHostRouteResponse): ExtensionHostRouteResponse {
@@ -237,77 +268,83 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
 
   async function sendProtocolEntrypoint(input: Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>): Promise<void> {
     const { signal, stdio, ...request } = input;
-    const response = await fetchImpl(`${baseUrl}/protocol/start`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${options.token}`,
-        'Content-Type': 'application/json',
+    await withProtocolTimeout(
+      async (protocolSignal) => {
+        const response = await fetchImpl(`${baseUrl}/protocol/start`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${options.token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ request }),
+          signal: protocolSignal,
+        });
+        const body = (await response.json()) as { ok?: boolean; channel?: { port?: unknown; token?: unknown }; error?: string };
+        if (!response.ok || !body.ok) throw new Error(body.error ?? `Extension host protocol start failed: ${String(response.status)}`);
+        const port = body.channel?.port;
+        const token = body.channel?.token;
+        if (typeof port !== 'number' || typeof token !== 'string') throw new Error('Extension host returned an invalid protocol channel.');
+
+        await new Promise<void>((resolve, reject) => {
+          const socket = createConnection({ host: base.hostname, port });
+          let settled = false;
+          let buffer = '';
+          const finish = (error?: Error) => {
+            if (settled) return;
+            settled = true;
+            stdio.stdin.off('data', onStdinData);
+            stdio.stdin.off('end', onStdinEnd);
+            protocolSignal.removeEventListener('abort', onAbort);
+            socket.destroy();
+            if (error) reject(error);
+            else resolve();
+          };
+          const sendFrame = (frame: Parameters<typeof encodeExtensionHostProtocolFrame>[0]) => {
+            if (!socket.destroyed) socket.write(encodeExtensionHostProtocolFrame(frame));
+          };
+          const onStdinData = (chunk: Buffer | string) => {
+            sendFrame({ type: 'stdin', data: Buffer.from(chunk).toString('base64') });
+          };
+          const onStdinEnd = () => sendFrame({ type: 'stdinEnd' });
+          const onAbort = () => {
+            sendFrame({ type: 'abort' });
+            finish(new Error('Extension protocol entrypoint aborted.'));
+          };
+
+          socket.setEncoding('utf8');
+          socket.on('connect', () => {
+            sendFrame({ type: 'stdin', data: Buffer.from(token).toString('base64') });
+            stdio.stdin.on('data', onStdinData);
+            stdio.stdin.once('end', onStdinEnd);
+            if (protocolSignal.aborted) onAbort();
+            else protocolSignal.addEventListener('abort', onAbort, { once: true });
+          });
+          socket.on('data', (chunk) => {
+            try {
+              buffer += chunk;
+              for (;;) {
+                const newline = buffer.indexOf('\n');
+                if (newline < 0) break;
+                const line = buffer.slice(0, newline);
+                buffer = buffer.slice(newline + 1);
+                if (!line.trim()) continue;
+                const frame = decodeExtensionHostProtocolFrame(line);
+                if (frame.type === 'stdout') stdio.stdout.write(Buffer.from(frame.data, 'base64'));
+                else if (frame.type === 'stderr') stdio.stderr.write(Buffer.from(frame.data, 'base64'));
+                else if (frame.type === 'result') finish();
+                else if (frame.type === 'error') finish(new Error(frame.error));
+              }
+            } catch (error) {
+              finish(error instanceof Error ? error : new Error(String(error)));
+            }
+          });
+          socket.on('error', (error) => finish(error));
+          socket.on('close', () => finish(new Error('Extension host protocol channel closed before completion.')));
+        });
       },
-      body: JSON.stringify({ request }),
       signal,
-    });
-    const body = (await response.json()) as { ok?: boolean; channel?: { port?: unknown; token?: unknown }; error?: string };
-    if (!response.ok || !body.ok) throw new Error(body.error ?? `Extension host protocol start failed: ${String(response.status)}`);
-    const port = body.channel?.port;
-    const token = body.channel?.token;
-    if (typeof port !== 'number' || typeof token !== 'string') throw new Error('Extension host returned an invalid protocol channel.');
-
-    await new Promise<void>((resolve, reject) => {
-      const socket = createConnection({ host: base.hostname, port });
-      let settled = false;
-      let buffer = '';
-      const finish = (error?: Error) => {
-        if (settled) return;
-        settled = true;
-        stdio.stdin.off('data', onStdinData);
-        stdio.stdin.off('end', onStdinEnd);
-        signal.removeEventListener('abort', onAbort);
-        socket.destroy();
-        if (error) reject(error);
-        else resolve();
-      };
-      const sendFrame = (frame: Parameters<typeof encodeExtensionHostProtocolFrame>[0]) => {
-        if (!socket.destroyed) socket.write(encodeExtensionHostProtocolFrame(frame));
-      };
-      const onStdinData = (chunk: Buffer | string) => {
-        sendFrame({ type: 'stdin', data: Buffer.from(chunk).toString('base64') });
-      };
-      const onStdinEnd = () => sendFrame({ type: 'stdinEnd' });
-      const onAbort = () => {
-        sendFrame({ type: 'abort' });
-        finish(new Error('Extension protocol entrypoint aborted.'));
-      };
-
-      socket.setEncoding('utf8');
-      socket.on('connect', () => {
-        sendFrame({ type: 'stdin', data: Buffer.from(token).toString('base64') });
-        stdio.stdin.on('data', onStdinData);
-        stdio.stdin.once('end', onStdinEnd);
-        if (signal.aborted) onAbort();
-        else signal.addEventListener('abort', onAbort, { once: true });
-      });
-      socket.on('data', (chunk) => {
-        try {
-          buffer += chunk;
-          for (;;) {
-            const newline = buffer.indexOf('\n');
-            if (newline < 0) break;
-            const line = buffer.slice(0, newline);
-            buffer = buffer.slice(newline + 1);
-            if (!line.trim()) continue;
-            const frame = decodeExtensionHostProtocolFrame(line);
-            if (frame.type === 'stdout') stdio.stdout.write(Buffer.from(frame.data, 'base64'));
-            else if (frame.type === 'stderr') stdio.stderr.write(Buffer.from(frame.data, 'base64'));
-            else if (frame.type === 'result') finish();
-            else if (frame.type === 'error') finish(new Error(frame.error));
-          }
-        } catch (error) {
-          finish(error instanceof Error ? error : new Error(String(error)));
-        }
-      });
-      socket.on('error', (error) => finish(error));
-      socket.on('close', () => finish(new Error('Extension host protocol channel closed before completion.')));
-    });
+      options.protocolTimeoutMs ?? DEFAULT_EXTENSION_HOST_PROTOCOL_TIMEOUT_MS,
+    );
   }
 
   return {
