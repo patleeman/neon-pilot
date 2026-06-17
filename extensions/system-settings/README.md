@@ -91,10 +91,9 @@ expanded by default.
 ### Accessing settings from a backend action
 
 ```typescript
-import { createSettingsStore } from '@neon-pilot/desktop/server/settings/settingsStore.js';
+import { readExtensionSettings } from '@neon-pilot/extensions/backend/settings';
 
-const store = createSettingsStore();
-const allSettings = store.read();
+const allSettings = await readExtensionSettings();
 const timeout = allSettings['myExt.timeout'] ?? 30;
 ```
 
