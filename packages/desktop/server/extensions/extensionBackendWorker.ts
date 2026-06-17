@@ -33,6 +33,7 @@ let nextCapabilityRequestId = 0;
 let nextShellHandleId = 0;
 let nextConversationRunTurnHandleId = 0;
 let nextRouteStreamHandleId = 0;
+const routeStreamIterators = new Map<string, AsyncIterator<unknown>>();
 const extensionCapabilityScope = new AsyncLocalStorage<{
   extensionId: string;
   contextOptions?: ExtensionBackendWorkerBackendContextOptions;
@@ -460,6 +461,13 @@ function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
   return Boolean(value && typeof value === 'object' && Symbol.asyncIterator in value);
 }
 
+async function cancelRouteStream(handleId: string): Promise<void> {
+  const iterator = routeStreamIterators.get(handleId);
+  if (!iterator) return;
+  routeStreamIterators.delete(handleId);
+  await iterator.return?.();
+}
+
 function serializeRouteStreamResult(result: unknown): unknown {
   if (!result || typeof result !== 'object' || Array.isArray(result)) return result;
   const candidate = result as { stream?: unknown; events?: unknown };
@@ -467,10 +475,14 @@ function serializeRouteStreamResult(result: unknown): unknown {
 
   const handleId = `route-sse-${++nextRouteStreamHandleId}`;
   const { events, ...serializable } = candidate as Record<string, unknown>;
+  const iterator = (events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
+  routeStreamIterators.set(handleId, iterator);
   void (async () => {
     try {
-      for await (const event of events as AsyncIterable<unknown>) {
-        parentPort!.postMessage({ kind: 'routeStreamEvent', handleId, event });
+      for (;;) {
+        const next = await iterator.next();
+        if (next.done) break;
+        parentPort!.postMessage({ kind: 'routeStreamEvent', handleId, event: next.value });
       }
       parentPort!.postMessage({ kind: 'routeStreamEvent', handleId, done: true });
     } catch (error) {
@@ -479,6 +491,8 @@ function serializeRouteStreamResult(result: unknown): unknown {
         handleId,
         error: error instanceof Error ? error.message : String(error),
       });
+    } finally {
+      routeStreamIterators.delete(handleId);
     }
   })();
 
@@ -574,6 +588,10 @@ parentPort.on('message', (message: ExtensionBackendWorkerParentMessage) => {
   }
   if ('kind' in message && message.kind === 'capabilityEvent') {
     handleCapabilityEvent(message);
+    return;
+  }
+  if ('kind' in message && message.kind === 'routeStreamCancel') {
+    void cancelRouteStream(message.handleId);
     return;
   }
 

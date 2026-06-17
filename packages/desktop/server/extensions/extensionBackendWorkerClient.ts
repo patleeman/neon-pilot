@@ -223,6 +223,14 @@ export class ExtensionBackendWorkerClient {
   private createRouteStreamIterable(handleId: string): AsyncIterable<unknown> {
     const stream: RouteStreamState = { queue: [] };
     this.routeStreams.set(handleId, stream);
+    const close = () => {
+      if (stream.closed) return;
+      stream.closed = true;
+      stream.done = true;
+      this.routeStreams.delete(handleId);
+      this.worker?.postMessage({ kind: 'routeStreamCancel', handleId });
+      stream.resolve?.();
+    };
     return {
       [Symbol.asyncIterator]: () => ({
         next: async () => {
@@ -238,6 +246,10 @@ export class ExtensionBackendWorkerClient {
             });
             stream.resolve = undefined;
           }
+        },
+        return: async () => {
+          close();
+          return { value: undefined, done: true };
         },
       }),
     };
@@ -261,6 +273,7 @@ interface RouteStreamState {
   queue: unknown[];
   done?: boolean;
   error?: Error;
+  closed?: boolean;
   resolve?: () => void;
 }
 

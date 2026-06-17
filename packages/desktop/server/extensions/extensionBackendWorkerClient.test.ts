@@ -119,6 +119,30 @@ describe('ExtensionBackendWorkerClient', () => {
     await expect(run).resolves.toEqual({ ran: true });
   });
 
+  it('cancels worker route streams when the host iterator is closed', async () => {
+    const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js') });
+    const run = client.runExport('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' }, 'stream', []);
+    const worker = workerThreads.instances[0]!;
+
+    worker.emit('message', {
+      id: 1,
+      ok: true,
+      result: {
+        stream: 'sse',
+        events: { __extensionWorkerRouteStream: true, handleId: 'route-sse-1' },
+      },
+    });
+    const result = (await run) as { events: AsyncIterable<unknown> };
+    const iterator = result.events[Symbol.asyncIterator]();
+
+    const next = iterator.next();
+    worker.emit('message', { kind: 'routeStreamEvent', handleId: 'route-sse-1', event: { type: 'tick' } });
+    await expect(next).resolves.toEqual({ value: { type: 'tick' }, done: false });
+
+    await expect(iterator.return?.()).resolves.toEqual({ value: undefined, done: true });
+    expect(worker.postMessage).toHaveBeenLastCalledWith({ kind: 'routeStreamCancel', handleId: 'route-sse-1' });
+  });
+
   it('routes backend export execution through the extension worker pool', async () => {
     const pool = new ExtensionBackendWorkerPool({ workerUrl: new URL('file:///worker.js') });
     const run = pool.runExport('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' }, 'doThing', []);

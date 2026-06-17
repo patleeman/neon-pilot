@@ -93,6 +93,11 @@ export interface ExtensionBackendWorkerCapabilityEvent {
   input?: unknown;
 }
 
+export interface ExtensionBackendWorkerRouteStreamCancel {
+  kind: 'routeStreamCancel';
+  handleId: string;
+}
+
 export type ExtensionBackendWorkerRouteStreamEvent =
   | {
       kind: 'routeStreamEvent';
@@ -118,4 +123,5 @@ export type ExtensionBackendWorkerMessage =
 export type ExtensionBackendWorkerParentMessage =
   | ExtensionBackendWorkerRequest
   | ExtensionBackendWorkerCapabilityResponse
-  | ExtensionBackendWorkerCapabilityEvent;
+  | ExtensionBackendWorkerCapabilityEvent
+  | ExtensionBackendWorkerRouteStreamCancel;
