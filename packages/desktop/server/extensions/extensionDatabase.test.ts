@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { rmSync } from 'node:fs';
+import { chmodSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -46,6 +46,24 @@ describe('extensionDatabase', () => {
     await manager.close('main');
     const reopened = await manager.open('main');
     expect(reopened.prepare('SELECT title FROM todos WHERE id = ?').get('one')).toEqual({ title: 'Write tests' });
+  });
+
+  it('creates and repairs private sqlite database file permissions', async () => {
+    const manager = createExtensionDatabaseManager('ext');
+    const db = await manager.open('main');
+    db.exec('CREATE TABLE IF NOT EXISTS marker (value TEXT)');
+    await manager.close('main');
+
+    const dbDir = join(stateRoot, 'extension-data', 'ext', 'databases');
+    const dbPath = join(dbDir, 'main.sqlite');
+    chmodSync(dbDir, 0o755);
+    chmodSync(dbPath, 0o644);
+
+    await manager.open('main');
+    await manager.close('main');
+
+    expect(statSync(dbDir).mode & 0o777).toBe(0o700);
+    expect(statSync(dbPath).mode & 0o777).toBe(0o600);
   });
 
   it('isolates databases by extension id and rejects unsafe names', async () => {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { rmSync } from 'node:fs';
+import { chmodSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -36,6 +36,23 @@ describe('extensionStorage', () => {
     expect(written).toEqual({ key: 'settings', value: { theme: 'dark' }, version: 1, createdAt: 1_000, updatedAt: 1_000 });
     expect(readExtensionState('ext', 'settings')).toEqual(written);
     expect(readExtensionState('other', 'settings')).toBeNull();
+  });
+
+  it('creates and repairs private sqlite storage file permissions', () => {
+    const dbDir = join(stateRoot, 'app-state');
+    const dbPath = join(dbDir, 'app-state.sqlite');
+
+    writeExtensionState('ext', 'seed', { ok: true });
+    closeExtensionStateDbs();
+
+    chmodSync(dbDir, 0o755);
+    chmodSync(dbPath, 0o644);
+
+    writeExtensionState('ext', 'settings', { theme: 'dark' });
+    closeExtensionStateDbs();
+
+    expect(statSync(dbDir).mode & 0o777).toBe(0o700);
+    expect(statSync(dbPath).mode & 0o777).toBe(0o600);
   });
 
   it('increments versions, preserves createdAt, and enforces expected versions', () => {

@@ -1,5 +1,4 @@
-import { mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
 import {
   applyMigrations,
@@ -9,6 +8,8 @@ import {
   type SqliteDatabase,
   type SqliteStatement,
 } from '@neon-pilot/core';
+
+import { preparePrivateExtensionSqlitePath, repairPrivateExtensionSqliteFiles } from './extensionSqliteSecurity.js';
 
 export interface ExtensionDatabaseMigration {
   version: number;
@@ -82,9 +83,10 @@ export function createExtensionDatabaseManager(extensionId: string): ExtensionDa
         return cached;
       }
 
-      mkdirSync(dirname(dbPath), { recursive: true });
+      preparePrivateExtensionSqlitePath(dbPath);
       const db = openSqliteDatabase(dbPath);
       db.pragma('journal_mode = WAL');
+      repairPrivateExtensionSqliteFiles(dbPath);
       if (options.migrations?.length) {
         applyMigrations(
           db,
@@ -92,6 +94,7 @@ export function createExtensionDatabaseManager(extensionId: string): ExtensionDa
           toCoreMigrations(extensionId, normalizedName, options.migrations),
         );
       }
+      repairPrivateExtensionSqliteFiles(dbPath);
       dbCache.set(dbPath, db);
       return db;
     },

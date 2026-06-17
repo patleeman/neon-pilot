@@ -1,7 +1,8 @@
-import { mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
 import { getStateRoot, openSqliteDatabase, type SqliteDatabase } from '@neon-pilot/core';
+
+import { preparePrivateExtensionSqlitePath, repairPrivateExtensionSqliteFiles } from './extensionSqliteSecurity.js';
 
 export interface ExtensionStateDocument<T = unknown> {
   key: string;
@@ -37,9 +38,10 @@ function openExtensionStateDb(dbPath: string = getExtensionStateDbPath()): Sqlit
   const cached = dbCache.get(resolved);
   if (cached) return cached;
 
-  mkdirSync(dirname(resolved), { recursive: true });
+  preparePrivateExtensionSqlitePath(resolved);
   const db = openSqliteDatabase(resolved);
   db.pragma('journal_mode = WAL');
+  repairPrivateExtensionSqliteFiles(resolved);
   db.exec(`
     CREATE TABLE IF NOT EXISTS extension_state (
       extension_id TEXT NOT NULL,
@@ -51,6 +53,7 @@ function openExtensionStateDb(dbPath: string = getExtensionStateDbPath()): Sqlit
       PRIMARY KEY (extension_id, key)
     );
   `);
+  repairPrivateExtensionSqliteFiles(resolved);
   dbCache.set(resolved, db);
   return db;
 }
