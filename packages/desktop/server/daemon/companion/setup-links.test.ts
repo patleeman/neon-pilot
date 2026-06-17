@@ -25,6 +25,13 @@ describe('companion setup links', () => {
     });
   });
 
+  it('defaults omitted companion hosts to loopback-only access', () => {
+    expect(buildCompanionSetupState({ ...baseInput, config: { companion: {} } as never })).toMatchObject({
+      links: [],
+      warnings: ['Companion access is still bound to loopback only. Enable local-network phone access before pairing from your phone.'],
+    });
+  });
+
   it('prefers tailnet URLs and encodes setup parameters', () => {
     tailscale.resolveCompanionTailscaleUrl.mockReturnValueOnce('https://machine.tailnet.ts.net');
     const state = buildCompanionSetupState({ ...baseInput, config: { companion: { host: '127.0.0.1', port: 4444 } } as never });

@@ -79,7 +79,7 @@ describe('daemon client transport paths', () => {
     await expect(getCompanionUrl({ ipc: { socketPath: '/sock' }, companion: { host: '::1', port: 9999 } } as never)).resolves.toBe(
       'http://[::1]:9999',
     );
-    await expect(getCompanionUrl({ ipc: { socketPath: '/sock' }, companion: {} } as never)).resolves.toBe('http://0.0.0.0:4567');
+    await expect(getCompanionUrl({ ipc: { socketPath: '/sock' }, companion: {} } as never)).resolves.toBe('http://127.0.0.1:4567');
   });
 
   it('emits non-fatal warnings and notifications when daemon events are dropped or unavailable', async () => {
