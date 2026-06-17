@@ -1,5 +1,5 @@
 import { readFileSync, statSync } from 'node:fs';
-import { dirname, extname, join as joinPath } from 'node:path';
+import { dirname, extname, join as joinPath, resolve as resolvePath, sep } from 'node:path';
 
 import type { Express, Request, Response } from 'express';
 import type { NextFunction } from 'express';
@@ -189,6 +189,12 @@ function resolveStaticExtensionWebappRelativePath(webapp: ExtensionWebappSummary
   return joinPath(dirname(webapp.entry ?? ''), assetPath);
 }
 
+function isInsidePath(root: string, candidate: string): boolean {
+  const resolvedRoot = resolvePath(root);
+  const resolvedCandidate = resolvePath(candidate);
+  return resolvedCandidate === resolvedRoot || resolvedCandidate.startsWith(`${resolvedRoot}${sep}`);
+}
+
 async function serveStaticExtensionWebapp(webapp: ExtensionWebappSummary, requestPath: string, res: Response): Promise<void> {
   if (!webapp.entry) {
     res.status(404).json({ error: 'Extension webapp has no static entry.' });
@@ -199,10 +205,16 @@ async function serveStaticExtensionWebapp(webapp: ExtensionWebappSummary, reques
     res.status(400).json({ error: 'Extension webapp asset path escapes entry directory.' });
     return;
   }
+  const entryFilePath = await getExtensionHostClient().resolveFilePath({ extensionId: webapp.extensionId, relativePath: webapp.entry });
+  const entryDirectory = dirname(entryFilePath);
   let filePath = await getExtensionHostClient().resolveFilePath({ extensionId: webapp.extensionId, relativePath });
+  if (!isInsidePath(entryDirectory, filePath)) {
+    res.status(400).json({ error: 'Extension webapp asset path escapes resolved entry directory.' });
+    return;
+  }
   let stats = statSync(filePath, { throwIfNoEntry: false });
   if (!stats?.isFile() && webapp.spaFallback !== false) {
-    filePath = await getExtensionHostClient().resolveFilePath({ extensionId: webapp.extensionId, relativePath: webapp.entry });
+    filePath = entryFilePath;
     stats = statSync(filePath, { throwIfNoEntry: false });
   }
   if (!stats?.isFile()) {

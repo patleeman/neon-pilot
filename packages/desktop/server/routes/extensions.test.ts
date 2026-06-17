@@ -315,6 +315,25 @@ describe('registerExtensionRoutes', () => {
     expect(traversalRes.json).toHaveBeenCalledWith({ error: 'Extension webapp asset path escapes entry directory.' });
     expect(traversalRes.sendFile).not.toHaveBeenCalled();
 
+    const baseClient = createInProcessExtensionHostClient();
+    setExtensionHostClient({
+      ...baseClient,
+      resolveFilePath: vi.fn(async (input) =>
+        input.relativePath === 'dist/webapp/app.js'
+          ? join(extensionRoot, 'dist', 'private.txt')
+          : baseClient.resolveFilePath(input),
+      ),
+    });
+    const compromisedHostRes = createResponse();
+    await harness.getHandler('/webapps/:id/:webappId/*')(
+      { method: 'GET', params: { id: 'agent-board', webappId: 'board', 0: 'app.js' }, query: {} },
+      compromisedHostRes,
+    );
+    expect(compromisedHostRes.status).toHaveBeenCalledWith(400);
+    expect(compromisedHostRes.json).toHaveBeenCalledWith({ error: 'Extension webapp asset path escapes resolved entry directory.' });
+    expect(compromisedHostRes.sendFile).not.toHaveBeenCalled();
+    setExtensionHostClient(createInProcessExtensionHostClient());
+
     const hostRes = createResponse();
     await harness.getHandler('*')(
       {
