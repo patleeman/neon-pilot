@@ -5,7 +5,19 @@ import { createExtensionBackendCapabilityDispatcher } from './extensionBackendCa
 const findExtensionEntry = vi.hoisted(() =>
   vi.fn(() => ({
     manifest: {
-      permissions: ['filesystem:readwrite', 'settings:readwrite', 'shell:execute', 'storage:readwrite', 'workspace:readwrite'],
+      permissions: [
+        'commands:execute',
+        'commands:read',
+        'conversations:readwrite',
+        'filesystem:readwrite',
+        'git:read',
+        'secrets:read',
+        'settings:readwrite',
+        'shell:execute',
+        'storage:readwrite',
+        'ui:notify',
+        'workspace:readwrite',
+      ],
     },
   })),
 );
@@ -22,7 +34,19 @@ describe('extension backend capability dispatcher', () => {
   beforeEach(() => {
     findExtensionEntry.mockReturnValue({
       manifest: {
-        permissions: ['filesystem:readwrite', 'settings:readwrite', 'shell:execute', 'storage:readwrite', 'workspace:readwrite'],
+        permissions: [
+          'commands:execute',
+          'commands:read',
+          'conversations:readwrite',
+          'filesystem:readwrite',
+          'git:read',
+          'secrets:read',
+          'settings:readwrite',
+          'shell:execute',
+          'storage:readwrite',
+          'ui:notify',
+          'workspace:readwrite',
+        ],
       },
     });
   });
@@ -583,6 +607,45 @@ describe('extension backend capability dispatcher', () => {
         input: { cwd: '/repo', staged: 'yes' },
       }),
     ).rejects.toThrow('Git staged must be a boolean when provided.');
+  });
+
+  it('requires declared permissions for sensitive backend capabilities', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const commands = { list: vi.fn(), execute: vi.fn() };
+    const conversations = { get: vi.fn() };
+    const git = { status: vi.fn(), diff: vi.fn(), log: vi.fn() };
+    const notify = { toast: vi.fn(), system: vi.fn(), setBadge: vi.fn(), clearBadge: vi.fn(), isSystemAvailable: vi.fn() };
+    const secrets = { get: vi.fn() };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ commands, conversations, git, notify, secrets });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'conversations',
+        operation: 'get',
+        input: { conversationId: 'conv-1' },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission conversations:read to use conversations.get.');
+    await expect(async () =>
+      dispatch({ id: 2, kind: 'capabilityRequest', extensionId: 'ext', capability: 'secrets', operation: 'get', input: { secretId: 'apiKey' } }),
+    ).rejects.toThrow('Extension "ext" requires permission secrets:read to use secrets.get.');
+    await expect(async () =>
+      dispatch({ id: 3, kind: 'capabilityRequest', extensionId: 'ext', capability: 'commands', operation: 'execute', input: { commandId: 'app.open' } }),
+    ).rejects.toThrow('Extension "ext" requires permission commands:execute to use commands.execute.');
+    await expect(async () =>
+      dispatch({ id: 4, kind: 'capabilityRequest', extensionId: 'ext', capability: 'git', operation: 'status', input: { cwd: '/repo' } }),
+    ).rejects.toThrow('Extension "ext" requires permission git:read to use git.status.');
+    await expect(async () =>
+      dispatch({ id: 5, kind: 'capabilityRequest', extensionId: 'ext', capability: 'notify', operation: 'toast', input: { message: 'Saved' } }),
+    ).rejects.toThrow('Extension "ext" requires permission ui:notify to use notify.toast.');
+
+    expect(commands.execute).not.toHaveBeenCalled();
+    expect(conversations.get).not.toHaveBeenCalled();
+    expect(git.status).not.toHaveBeenCalled();
+    expect(notify.toast).not.toHaveBeenCalled();
+    expect(secrets.get).not.toHaveBeenCalled();
   });
 
   it('dispatches extension-scoped workspace capability calls', async () => {

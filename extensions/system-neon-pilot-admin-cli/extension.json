@@ -780,5 +780,15 @@
     "entry": "dist/frontend.js",
     "styles": []
   },
-  "permissions": ["agent:run", "agent:conversations", "executions:read", "executions:start", "settings:read", "settings:write"]
+  "permissions": [
+    "agent:run",
+    "agent:conversations",
+    "commands:execute",
+    "commands:read",
+    "conversations:readwrite",
+    "executions:read",
+    "executions:start",
+    "settings:read",
+    "settings:write"
+  ]
 }

@@ -401,6 +401,32 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
     return permissionForReadWriteOperation('settings:read', 'settings:write', 'settings:readwrite', request.operation, ['update', 'reset']);
   }
 
+  if (request.capability === 'commands') {
+    return request.operation === 'execute' ? ['commands:execute'] : ['commands:read'];
+  }
+
+  if (request.capability === 'conversations') {
+    return permissionForReadWriteOperation('conversations:read', 'conversations:write', 'conversations:readwrite', request.operation, [
+      'activity',
+      'create',
+      'setActiveTools',
+      'appendCustomEntry',
+      'appendTranscriptBlock',
+      'updateTranscriptBlock',
+      'updateWorkspace',
+      'rollback',
+      'ensureLive',
+      'sendMessage',
+      'runTurn',
+      'abort',
+      'compact',
+      'fork',
+      'setTitle',
+      'prune',
+      'metadataSet',
+    ]);
+  }
+
   if (request.capability === 'workspace') {
     return permissionForReadWriteOperation('workspace:read', 'workspace:write', 'workspace:readwrite', request.operation, ['writeText']);
   }
@@ -424,6 +450,18 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
       'remove',
       'createTempWorkspace',
     ]);
+  }
+
+  if (request.capability === 'git') {
+    return ['git:read'];
+  }
+
+  if (request.capability === 'notify') {
+    return ['ui:notify'];
+  }
+
+  if (request.capability === 'secrets') {
+    return ['secrets:read'];
   }
 
   return [];
