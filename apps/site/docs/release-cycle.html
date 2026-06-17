@@ -62,30 +62,24 @@
           produce a release — release is a manual local process.
         </p>
         <h2 id="current-release">Current release</h2>
-        <p><strong>v0.11.22-rc.0</strong> — release candidate.</p>
-        <p>Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.22-rc.0</p>
+        <p><strong>v0.11.22</strong> — stable release.</p>
+        <p>Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.22</p>
         <p>Highlights in this train:</p>
         <ul>
           <li>
-            Makes conversation workspace state backend-owned so sidebar hydration, route recovery, and quick reloads converge on the same
-            open/archive state instead of drifting between renderer snapshots.
+            Promotes the 0.11.22 RC conversation and navigation hardening to the stable channel, including backend-owned workspace state,
+            route recovery, sidebar hydration, and empty-conversation reuse fixes.
           </li>
           <li>
-            Hardens conversation startup and reuse flows, including reserved conversation persistence, empty-conversation reuse by cwd,
-            first-message route handoff, and stale workspace event filtering.
+            Ships the redesigned public site refresh with stronger first-screen product context, updated feature coverage, and
+            release-aligned internal documentation.
           </li>
           <li>
-            Improves app navigation coverage across chat, settings, extension routes, command palette actions, sidebar reopen flows, and
-            layout width restoration.
+            Adds the site visual evaluation loop so screenshot capture, visual judgments, and refinement work can be repeated against the
+            public site with the same workflow used for app surfaces.
           </li>
-          <li>
-            Tightens recovery behavior for missing conversation metadata and stale layout/session reads so conversation routes reopen with
-            the expected catalog-backed state.
-          </li>
-          <li>
-            Keeps extension settings work checkpointed for the RC train while preserving the current Pi runtime package set at
-            <code>^0.79.4</code>.
-          </li>
+          <li>Refreshes Pi runtime packages to <code>^0.79.5</code> for the stable 0.11.22 train.</li>
+          <li>Keeps the stable app release aligned with the matching first-party extension catalog and installable extension artifacts.</li>
           <li>Keep this section aligned with <code>package.json</code>, <code>CHANGELOG.md</code>, and the tag being prepared.</li>
         </ul>
         <h2 id="rc-release-operating-instructions">RC release operating instructions</h2>

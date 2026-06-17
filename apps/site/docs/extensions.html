@@ -318,6 +318,11 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
               <td>See <code>docs/views.md</code></td>
             </tr>
             <tr>
+              <td><code>webapps</code></td>
+              <td>Locally hosted sidecar webpages exposed through <code>.localhost</code> names</td>
+              <td><a href="#webapps">See below</a></td>
+            </tr>
+            <tr>
               <td><code>nav</code></td>
               <td>Left sidebar navigation items; can reference a sidebar view with <code>sidebarView</code></td>
               <td></td>
@@ -718,6 +723,55 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           <li><code>&quot;workspace&quot;</code> — one per workspace/cwd.</li>
           <li><code>&quot;global&quot;</code> — single instance.</li>
         </ul>
+        <h3 id="webapps">Webapps</h3>
+        <p>
+          Use <code>contributes.webapps</code> when an extension needs a locally hosted webpage sidecar instead of a native React view
+          inside the Neon Pilot shell. Webapps are for browser-grade app surfaces that must be reachable as <code>.localhost</code> URLs,
+          for example a Codex Desktop sidecar page. They are still extension contributions: the manifest declares the surface and the host
+          validates package paths, loopback targets, and route names.
+        </p>
+        <p>
+          Static webapps serve files from the extension package. <code>entry</code> points at the HTML entrypoint, and non-root requests
+          resolve relative to the entrypoint directory. Missing static routes fall back to <code>entry</code> by default for SPA routing;
+          set <code>spaFallback: false</code> for asset-only packages.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;webapps&quot;: [
+      {
+        &quot;id&quot;: &quot;board&quot;,
+        &quot;title&quot;: &quot;Agent Board&quot;,
+        &quot;description&quot;: &quot;Sidecar task board&quot;,
+        &quot;entry&quot;: &quot;dist/webapp/index.html&quot;,
+        &quot;portlessName&quot;: &quot;board.agent-board&quot;
+      }
+    ]
+  }
+}</code></pre>
+        <p>
+          Proxy webapps forward requests to an extension-managed loopback HTTP service. <code>target</code> must use <code>http</code> or
+          <code>https</code> and must point at <code>localhost</code>, <code>127.0.0.1</code>, or <code>::1</code>.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;webapps&quot;: [
+      {
+        &quot;id&quot;: &quot;dev&quot;,
+        &quot;title&quot;: &quot;Local Dev App&quot;,
+        &quot;target&quot;: &quot;http://127.0.0.1:5173&quot;,
+        &quot;portlessName&quot;: &quot;dev.agent-board&quot;
+      }
+    ]
+  }
+}</code></pre>
+        <p>
+          The default Portless name is <code>{webappId}.{extensionId}</code>. The host exposes <code>GET /api/extensions/webapps</code> for
+          discovery, <code>GET /webapps/{extensionId}/{webappId}/...</code> as a direct debug route, and
+          <code>POST /api/extensions/webapps/{extensionId}/{webappId}/portless</code> with
+          <code>{ &quot;enabled&quot;: true | false }</code> to register or remove the Portless alias. Portless is an optional local CLI
+          integration; install it separately when using alias registration. Current Portless releases require Node 24 or newer, so Neon
+          Pilot does not bundle it in the desktop dependency graph.
+        </p>
         <h3 id="message-actions-messageactions">Message Actions (<code>messageActions</code>)</h3>
         <p>Add hover-reveal text buttons on messages, inline with copy/fork/rewind. Action-based — no frontend entry needed.</p>
         <pre><code>{
