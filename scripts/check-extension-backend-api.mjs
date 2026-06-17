@@ -76,6 +76,28 @@ const allowedHostOnlyBackendValueExports = new Map([
     ]),
   ],
 ]);
+const backendApiModulesWithoutDedicatedTests = new Map([
+  [
+    'artifacts',
+    'direct core artifact resolver seam currently covered by backendApi re-export smoke tests; add dedicated routing tests before removing this allowlist',
+  ],
+  [
+    'browser',
+    'worker bridge plus in-process fallback seam needs focused behavior coverage; add dedicated bridge tests before removing this allowlist',
+  ],
+  [
+    'checkpoints',
+    'direct core checkpoint resolver seam currently covered by backendApi re-export smoke tests; add dedicated routing tests before removing this allowlist',
+  ],
+  [
+    'images',
+    'image host bridge plus probe-store resolver seam needs focused behavior coverage; add dedicated bridge tests before removing this allowlist',
+  ],
+  [
+    'terminal',
+    'worker bridge plus in-process fallback seam needs focused behavior coverage; add dedicated bridge tests before removing this allowlist',
+  ],
+]);
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -304,6 +326,11 @@ for (const moduleName of hostModules) {
     size < 64 * 1024,
     failures,
     `backendApi/${moduleName}.ts is ${size} bytes; backend API seams should stay narrow, split or lazy-load implementation code`,
+  );
+  assert(
+    existsSync(join(hostBackendApiRoot, `${moduleName}.test.ts`)) || backendApiModulesWithoutDedicatedTests.has(moduleName),
+    failures,
+    `backendApi/${moduleName}.ts has no dedicated test file; add packages/desktop/server/extensions/backendApi/${moduleName}.test.ts or a documented allowlist reason`,
   );
 }
 
