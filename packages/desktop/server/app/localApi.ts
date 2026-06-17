@@ -1488,9 +1488,12 @@ export async function dispatchDesktopLocalApiRequest(input: {
   const startedAtMs = performance.now();
   process.stderr.write(`[perf] dispatch ${input.method} ${input.path}\n`);
   const url = new URL(input.path, 'http://desktop.local');
+  const isWebappHostRequest = shouldPrioritizeWebappHostRoute(input.headers);
   let productResponse: DesktopLocalApiDispatchResult | null;
   try {
-    productResponse = await dispatchDesktopLocalProductApiRequest({ method: input.method, url, body: input.body, signal: input.signal });
+    productResponse = isWebappHostRequest
+      ? null
+      : await dispatchDesktopLocalProductApiRequest({ method: input.method, url, body: input.body, signal: input.signal });
   } catch (error) {
     const statusCode = getDesktopLocalApiErrorStatus(error);
     const message = error instanceof Error ? error.message : String(error);

@@ -277,6 +277,34 @@ describe('desktop local API extension routes', () => {
     expect(Buffer.from(response.body).toString('utf-8')).toContain('Board Webapp');
   }, 30000);
 
+  it('does not dispatch webapp localhost hosts through product fast-path APIs', async () => {
+    process.env.NEON_PILOT_STATE_ROOT = tempStateRoot;
+    const extensionRoot = join(tempStateRoot, 'extensions', 'agent-webapp-fast-path');
+    mkdirSync(join(extensionRoot, 'dist', 'webapp'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-webapp-fast-path',
+        name: 'Agent Webapp Fast Path',
+        contributes: {
+          webapps: [{ id: 'board', title: 'Board', entry: 'dist/webapp/index.html' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'webapp', 'index.html'), '<h1>Board Webapp Fast Path</h1>');
+
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/status',
+      headers: { host: 'board-agent-webapp-fast-path.localhost' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('text/html');
+    expect(Buffer.from(response.body).toString('utf-8')).toContain('Board Webapp Fast Path');
+  }, 30000);
+
   it('serves localhost webapp proxy status through the desktop local API fast path', async () => {
     process.env.NEON_PILOT_STATE_ROOT = tempStateRoot;
 
