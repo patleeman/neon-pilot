@@ -89,6 +89,42 @@ describe('extensionShell', () => {
     );
   });
 
+  it('does not pass extension host bearer credentials to extension subprocesses', async () => {
+    const previousBaseUrl = process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL;
+    const previousToken = process.env.NEON_PILOT_EXTENSION_HOST_TOKEN;
+    process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL = 'http://127.0.0.1:1234';
+    process.env.NEON_PILOT_EXTENSION_HOST_TOKEN = 'secret-token';
+    try {
+      await createExtensionShellCapability().exec({
+        command: 'env',
+        env: {
+          NEON_PILOT_EXTENSION_HOST_BASE_URL: 'http://127.0.0.1:9999',
+          NEON_PILOT_EXTENSION_HOST_TOKEN: 'override-token',
+        },
+      });
+
+      expect(execFileProcess).toHaveBeenCalledWith(
+        expect.objectContaining({
+          env: expect.not.objectContaining({
+            NEON_PILOT_EXTENSION_HOST_BASE_URL: expect.any(String),
+            NEON_PILOT_EXTENSION_HOST_TOKEN: expect.any(String),
+          }),
+        }),
+      );
+    } finally {
+      if (previousBaseUrl === undefined) {
+        delete process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL;
+      } else {
+        process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL = previousBaseUrl;
+      }
+      if (previousToken === undefined) {
+        delete process.env.NEON_PILOT_EXTENSION_HOST_TOKEN;
+      } else {
+        process.env.NEON_PILOT_EXTENSION_HOST_TOKEN = previousToken;
+      }
+    }
+  });
+
   it('prepends configured extension bin directories to exec and spawn env', async () => {
     const tempRoot = path.join(tmpdir(), `neon-pilot-shell-path-${process.pid}`);
     const binDir = path.join(tempRoot, 'bin');

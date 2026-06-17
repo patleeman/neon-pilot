@@ -19,8 +19,18 @@ const UNSAFE_CAPTURED_ENV_KEYS = new Set([
   'NODE_OPTIONS',
 ]);
 
+const INTERNAL_SECRET_ENV_KEYS = new Set(['NEON_PILOT_EXTENSION_HOST_BASE_URL', 'NEON_PILOT_EXTENSION_HOST_TOKEN']);
+
 let cachedShellEnvSignature: string | null = null;
 let cachedShellEnv: NodeJS.ProcessEnv | null = null;
+
+export function stripInternalSecretEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const sanitized: NodeJS.ProcessEnv = { ...env };
+  for (const key of INTERNAL_SECRET_ENV_KEYS) {
+    delete sanitized[key];
+  }
+  return sanitized;
+}
 
 function normalizeEnvValue(value: string | undefined): string {
   return typeof value === 'string' ? value : '';
@@ -231,7 +241,7 @@ export function resolveChildProcessEnv(overrides: NodeJS.ProcessEnv = {}, baseEn
     setNormalizedPathValue(resolvedEnv, pathKey, resolvedPath);
   }
 
-  return resolvedEnv;
+  return stripInternalSecretEnv(resolvedEnv);
 }
 
 export function hydrateProcessEnvFromShell(targetEnv: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {

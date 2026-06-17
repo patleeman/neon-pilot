@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { clearResolvedChildProcessEnvCache, hydrateProcessEnvFromShell, resolveChildProcessEnv } from './shell-env.js';
+import { clearResolvedChildProcessEnvCache, hydrateProcessEnvFromShell, resolveChildProcessEnv, stripInternalSecretEnv } from './shell-env.js';
 
 const START = '__NEON_PILOT_ENV_START__';
 const END = '__NEON_PILOT_ENV_END__';
@@ -125,6 +125,38 @@ describe('resolveChildProcessEnv', () => {
     expect(resolved.DYLD_INSERT_LIBRARIES).toBeUndefined();
     expect(resolved.DYLD_LIBRARY_PATH).toBeUndefined();
     expect(resolved.ELECTRON_RUN_AS_NODE).toBeUndefined();
+  });
+
+  it('strips internal extension host credentials from resolved child environments', () => {
+    const shellPath = createFakeInteractiveShell({
+      entries: [
+        'PATH=/opt/homebrew/bin:/usr/bin',
+        'NEON_PILOT_EXTENSION_HOST_BASE_URL=http://127.0.0.1:1234',
+        'NEON_PILOT_EXTENSION_HOST_TOKEN=from-shell',
+      ],
+    });
+    const baseEnv = {
+      SHELL: shellPath,
+      HOME: '/tmp/patrick',
+      PATH: '/usr/bin:/base/bin',
+      NEON_PILOT_EXTENSION_HOST_BASE_URL: 'http://127.0.0.1:4321',
+      NEON_PILOT_EXTENSION_HOST_TOKEN: 'from-base',
+    };
+
+    const resolved = resolveChildProcessEnv({ NEON_PILOT_EXTENSION_HOST_TOKEN: 'from-override' }, baseEnv);
+
+    expect(resolved.NEON_PILOT_EXTENSION_HOST_BASE_URL).toBeUndefined();
+    expect(resolved.NEON_PILOT_EXTENSION_HOST_TOKEN).toBeUndefined();
+  });
+
+  it('strips internal extension host credentials from explicit env objects', () => {
+    expect(
+      stripInternalSecretEnv({
+        KEEP: '1',
+        NEON_PILOT_EXTENSION_HOST_BASE_URL: 'http://127.0.0.1:1234',
+        NEON_PILOT_EXTENSION_HOST_TOKEN: 'secret',
+      }),
+    ).toEqual({ KEEP: '1' });
   });
 
   it('uses the login + interactive zsh env so login PATH entries are available', () => {

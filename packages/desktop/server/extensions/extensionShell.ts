@@ -2,6 +2,8 @@ import { type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
+import { stripInternalSecretEnv } from '@neon-pilot/core';
+
 import { execFileProcess, spawnProcess, terminateProcessGroup } from '../shared/processLauncher.js';
 import { createPtyProcess, type PtySpawnOptions } from '../shared/ptyLauncher.js';
 
@@ -77,7 +79,7 @@ function createPipeBackedSpawnHandle(
 
 export function createExtensionShellCapability(options: { pathDirs?: string[] } = {}) {
   const resolveEnv = (inputEnv?: Record<string, string>): NodeJS.ProcessEnv =>
-    prependPathDirs(inputEnv ? { ...process.env, ...inputEnv } : process.env, options.pathDirs ?? []);
+    stripInternalSecretEnv(prependPathDirs(inputEnv ? { ...process.env, ...inputEnv } : process.env, options.pathDirs ?? []));
 
   return {
     async exec(input: {
