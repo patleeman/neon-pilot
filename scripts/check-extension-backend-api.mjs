@@ -76,16 +76,7 @@ const allowedHostOnlyBackendValueExports = new Map([
     ]),
   ],
 ]);
-const backendApiModulesWithoutDedicatedTests = new Map([
-  [
-    'browser',
-    'worker bridge plus in-process fallback seam needs focused behavior coverage; add dedicated bridge tests before removing this allowlist',
-  ],
-  [
-    'images',
-    'image host bridge plus probe-store resolver seam needs focused behavior coverage; add dedicated bridge tests before removing this allowlist',
-  ],
-]);
+const backendApiModulesWithoutDedicatedTests = new Map();
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
