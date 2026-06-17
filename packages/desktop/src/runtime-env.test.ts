@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -121,9 +121,12 @@ describe('desktop runtime environment overrides', () => {
 
     seedTestingRuntimeState(env);
 
-    expect(JSON.parse(readFileSync(join(testingAgentDir, 'auth.json'), 'utf-8'))).toEqual({
+    const testingAuthFile = join(testingAgentDir, 'auth.json');
+    expect(JSON.parse(readFileSync(testingAuthFile, 'utf-8'))).toEqual({
       'openai-codex': { accessToken: 'token' },
     });
+    expect(statSync(testingAgentDir).mode & 0o777).toBe(0o700);
+    expect(statSync(testingAuthFile).mode & 0o777).toBe(0o600);
   });
 
   it('seeds missing stable credentials without overwriting testing auth', () => {
@@ -140,13 +143,16 @@ describe('desktop runtime environment overrides', () => {
         openrouter: { type: 'api_key', key: 'stable-openrouter-token' },
       }),
     );
+    const testingAuthFile = join(testingAgentDir, 'auth.json');
     writeFileSync(
-      join(testingAgentDir, 'auth.json'),
+      testingAuthFile,
       JSON.stringify({
         'openai-codex': { accessToken: 'testing-token' },
         telegram: { type: 'api_key', key: 'telegram-token' },
       }),
     );
+    chmodSync(testingAgentDir, 0o755);
+    chmodSync(testingAuthFile, 0o644);
 
     const env: NodeJS.ProcessEnv = {
       NEON_PILOT_DESKTOP_VARIANT: 'testing',
@@ -156,10 +162,12 @@ describe('desktop runtime environment overrides', () => {
 
     seedTestingRuntimeState(env);
 
-    expect(JSON.parse(readFileSync(join(testingAgentDir, 'auth.json'), 'utf-8'))).toEqual({
+    expect(JSON.parse(readFileSync(testingAuthFile, 'utf-8'))).toEqual({
       'openai-codex': { accessToken: 'testing-token' },
       openrouter: { type: 'api_key', key: 'stable-openrouter-token' },
       telegram: { type: 'api_key', key: 'telegram-token' },
     });
+    expect(statSync(testingAgentDir).mode & 0o777).toBe(0o700);
+    expect(statSync(testingAuthFile).mode & 0o777).toBe(0o600);
   });
 });

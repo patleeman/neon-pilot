@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 
 import {
@@ -9,6 +9,9 @@ import {
   resolveNeonPilotRuntimeChannel,
   resolveNeonPilotRuntimeChannelConfig,
 } from '@neon-pilot/core';
+
+const PRIVATE_RUNTIME_DIR_MODE = 0o700;
+const PRIVATE_AUTH_FILE_MODE = 0o600;
 
 function resolveDefaultStateRootForEnv(env: NodeJS.ProcessEnv): string {
   const xdgStateHome = env.XDG_STATE_HOME?.trim();
@@ -93,8 +96,11 @@ function seedTestingAuthFile(sourceFile: string, targetFile: string): void {
 }
 
 function writeJsonRecord(filePath: string, record: Record<string, unknown>): void {
-  mkdirSync(dirname(filePath), { recursive: true });
-  writeFileSync(filePath, `${JSON.stringify(record, null, 2)}\n`);
+  const dir = dirname(filePath);
+  mkdirSync(dir, { recursive: true, mode: PRIVATE_RUNTIME_DIR_MODE });
+  chmodSync(dir, PRIVATE_RUNTIME_DIR_MODE);
+  writeFileSync(filePath, `${JSON.stringify(record, null, 2)}\n`, { mode: PRIVATE_AUTH_FILE_MODE });
+  chmodSync(filePath, PRIVATE_AUTH_FILE_MODE);
 }
 
 export function seedTestingRuntimeState(env: NodeJS.ProcessEnv = process.env, options: DesktopRuntimeEnvironmentOptions = {}): void {
