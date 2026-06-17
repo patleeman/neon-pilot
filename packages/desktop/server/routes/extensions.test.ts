@@ -438,7 +438,13 @@ describe('registerExtensionRoutes', () => {
         method: 'POST',
         path: '/api/refresh',
         originalUrl: '/api/refresh?force=1',
-        headers: { host: 'board-agent-board.localhost', 'content-type': 'application/json' },
+        headers: {
+          host: 'board-agent-board.localhost',
+          'content-type': 'application/json',
+          authorization: 'Bearer secret',
+          cookie: 'session=secret',
+          'x-forwarded-for': '192.0.2.20',
+        },
         body: undefined,
         get: (name: string) => (name.toLowerCase() === 'host' ? 'board-agent-board.localhost' : undefined),
       } as never,
@@ -449,6 +455,12 @@ describe('registerExtensionRoutes', () => {
       new URL('http://127.0.0.1:5173/api/refresh?force=1'),
       expect.objectContaining({ method: 'POST', body: undefined }),
     );
+    const [, emptyPostInit] = fetchMock.mock.calls.at(-1) ?? [];
+    const emptyPostHeaders = emptyPostInit instanceof Object && 'headers' in emptyPostInit ? (emptyPostInit.headers as Headers) : new Headers();
+    expect(emptyPostHeaders.get('content-type')).toBe('application/json');
+    expect(emptyPostHeaders.get('authorization')).toBeNull();
+    expect(emptyPostHeaders.get('cookie')).toBeNull();
+    expect(emptyPostHeaders.get('x-forwarded-for')).toBeNull();
     expect(emptyPostRes.status).toHaveBeenCalledWith(202);
 
     const jsonPostRes = createResponse();
@@ -468,6 +480,53 @@ describe('registerExtensionRoutes', () => {
       new URL('http://127.0.0.1:5173/api/refresh'),
       expect.objectContaining({ method: 'POST', body: JSON.stringify({ mode: 'full' }) }),
     );
+  });
+
+  it('rejects forged extension webapp proxy targets from host snapshots', async () => {
+    const baseClient = createInProcessExtensionHostClient();
+    setExtensionHostClient({
+      ...baseClient,
+      async readRegistryPresentation() {
+        return {
+          installSummaries: [],
+          snapshot: {
+            extensions: [],
+            routes: [],
+            surfaces: [],
+            views: [],
+            webapps: [
+              {
+                id: 'board',
+                title: 'Board Webapp',
+                extensionId: 'agent-board',
+                packageType: 'user',
+                localhostName: 'board-agent-board',
+                target: 'https://example.com/internal',
+              },
+            ],
+          },
+        };
+      },
+    });
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+    fetchMock.mockClear();
+    const harness = createHarness();
+
+    const res = createResponse();
+    await harness.getHandler('*')(
+      {
+        method: 'GET',
+        path: '/api/refresh',
+        originalUrl: '/api/refresh',
+        headers: { host: 'board-agent-board.localhost' },
+        get: (name: string) => (name.toLowerCase() === 'host' ? 'board-agent-board.localhost' : undefined),
+      } as never,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(502);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Extension webapp proxy target must be a loopback HTTP URL.' });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('serves per-extension manifest and surfaces', async () => {

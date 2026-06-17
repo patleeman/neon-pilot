@@ -108,6 +108,18 @@ function webappDirectUrl(webapp: Pick<ExtensionWebappSummary, 'localhostName'>, 
   return typeof port === 'number' && Number.isFinite(port) && port > 0 ? `http://${webapp.localhostName}.localhost:${port}` : null;
 }
 
+function parseLoopbackWebappTarget(target: string): URL | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(target);
+  } catch {
+    return null;
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+  const hostname = parsed.hostname.replace(/^\[/, '').replace(/\]$/, '');
+  return ['localhost', '127.0.0.1', '::1'].includes(hostname) ? parsed : null;
+}
+
 function enrichWebappSummary(webapp: ExtensionWebappSummary, context?: { getServerPort?: () => number }) {
   return {
     ...webapp,
@@ -207,12 +219,33 @@ async function proxyExtensionWebapp(webapp: ExtensionWebappSummary, req: Request
     res.status(404).json({ error: 'Extension webapp has no proxy target.' });
     return;
   }
-  const upstream = new URL(normalizeRequestPath(requestPath), webapp.target.endsWith('/') ? webapp.target : `${webapp.target}/`);
+  const target = parseLoopbackWebappTarget(webapp.target);
+  if (!target) {
+    res.status(502).json({ error: 'Extension webapp proxy target must be a loopback HTTP URL.' });
+    return;
+  }
+  const upstream = new URL(normalizeRequestPath(requestPath), target.href.endsWith('/') ? target.href : `${target.href}/`);
   const query = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
   upstream.search = query.startsWith('?') ? query.slice(1) : '';
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
-    if (!value || ['host', 'connection', 'content-length'].includes(key.toLowerCase())) continue;
+    const header = key.toLowerCase();
+    if (
+      !value ||
+      [
+        'host',
+        'connection',
+        'content-length',
+        'authorization',
+        'cookie',
+        'proxy-authorization',
+        'x-forwarded-for',
+        'x-forwarded-host',
+        'x-forwarded-proto',
+      ].includes(header) ||
+      header.startsWith('sec-')
+    )
+      continue;
     headers.set(key, Array.isArray(value) ? value.join(', ') : value);
   }
   const body = buildProxyRequestBody(req);
