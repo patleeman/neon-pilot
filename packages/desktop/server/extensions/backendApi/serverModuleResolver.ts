@@ -171,3 +171,10 @@ export async function callServerModuleExport<T>(relativeSpecifier: string, name:
   if (typeof fn !== 'function') throw new Error(`Backend API export ${name} is unavailable.`);
   return (fn as (...callArgs: unknown[]) => Promise<T> | T)(...args);
 }
+
+export async function callServerExtensionModuleExport<T>(relativeSpecifier: string, name: string, ...args: unknown[]): Promise<T> {
+  const module = await importServerExtensionModule<Record<string, unknown>>(relativeSpecifier);
+  const fn = module[name];
+  if (typeof fn !== 'function') throw new Error(`Backend API export ${name} is unavailable.`);
+  return (fn as (...callArgs: unknown[]) => Promise<T> | T)(...args);
+}

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const resolver = vi.hoisted(() => ({ callServerModuleExport: vi.fn() }));
+const resolver = vi.hoisted(() => ({ callServerExtensionModuleExport: vi.fn(), callServerModuleExport: vi.fn() }));
 
 vi.mock('./serverModuleResolver.js', () => resolver);
 
@@ -93,7 +93,7 @@ describe('backendApi/conversations', () => {
       appendTranscriptBlock: vi.fn().mockResolvedValue({ id: 'block-1' }),
       updateTranscriptBlock: vi.fn().mockResolvedValue({ id: 'block-1', updated: true }),
     };
-    resolver.callServerModuleExport.mockResolvedValue(capability);
+    resolver.callServerExtensionModuleExport.mockResolvedValue(capability);
 
     await expect(conversations.createConversation({ title: 'New' })).resolves.toEqual({ id: 'created' });
     await expect(conversations.forkConversation('conv-1')).resolves.toEqual({ id: 'forked' });
@@ -103,10 +103,36 @@ describe('backendApi/conversations', () => {
       updated: true,
     });
 
-    expect(resolver.callServerModuleExport).toHaveBeenCalledWith('../extensionConversations.js', 'createExtensionConversationsCapability');
+    expect(resolver.callServerExtensionModuleExport).toHaveBeenCalledWith(
+      '../extensionConversations.js',
+      'createExtensionConversationsCapability',
+    );
+    expect(resolver.callServerModuleExport).not.toHaveBeenCalledWith(
+      '../extensionConversations.js',
+      'createExtensionConversationsCapability',
+    );
     expect(capability.create).toHaveBeenCalledWith({ title: 'New' });
     expect(capability.fork).toHaveBeenCalledWith('conv-1');
     expect(capability.appendTranscriptBlock).toHaveBeenCalledWith('conv-1', { role: 'assistant' });
     expect(capability.updateTranscriptBlock).toHaveBeenCalledWith('conv-1', 'block-1', { text: 'updated' });
+  });
+
+  it('routes extension metadata and runtime helpers through the extension module resolver', async () => {
+    const conversations = await import('./conversations.js');
+    resolver.callServerExtensionModuleExport.mockResolvedValueOnce({ ok: true });
+    await expect(conversations.writeConversationMetadata({ conversationId: 'conv-1' })).resolves.toEqual({ ok: true });
+    expect(resolver.callServerExtensionModuleExport).toHaveBeenLastCalledWith(
+      '../extensionConversationMetadata.js',
+      'writeConversationMetadata',
+      { conversationId: 'conv-1' },
+    );
+
+    resolver.callServerExtensionModuleExport.mockResolvedValueOnce(['factory']);
+    await expect(conversations.buildLiveSessionExtensionFactoriesForRuntime('shared')).resolves.toEqual(['factory']);
+    expect(resolver.callServerExtensionModuleExport).toHaveBeenLastCalledWith(
+      '../runtimeAgentHooks.js',
+      'buildLiveSessionExtensionFactoriesForRuntime',
+      'shared',
+    );
   });
 });

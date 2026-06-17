@@ -97,11 +97,19 @@ function collectHostBackendRuntimeSpecifiers(filePath) {
   const source = readFileSync(filePath, 'utf8');
   const serverRelativeMatches = [...source.matchAll(/['"](\.\.\/\.\.\/[^'"]+\.js)['"]/g)].map((match) => match[1]);
   const extensionRelativeMatches = [
-    ...source.matchAll(/\b(?:callModuleExport|callServerModuleExport|importServerExtensionModule|importServerModule)\s*\(\s*['"](\.\.\/[^'"]+\.js)['"]/g),
+    ...source.matchAll(/\b(?:callServerExtensionModuleExport|importServerExtensionModule)\s*\(\s*['"](\.\.\/[^'"]+\.js)['"]/g),
   ].map((match) => match[1]);
   return [...new Set([...serverRelativeMatches, ...extensionRelativeMatches].map(normalizeHostBackendRuntimeSpecifier))]
     .filter(Boolean)
     .sort();
+}
+
+function collectAmbiguousExtensionRelativeServerResolverCalls(filePath) {
+  const source = readFileSync(filePath, 'utf8');
+  const matches = source.matchAll(
+    /\b(?:callModuleExport|callServerModuleExport|importServerModule)\s*\(\s*['"](\.\.\/(?!\.\.\/)[^'"]+\.js)['"]/g,
+  );
+  return [...new Set([...matches].map((match) => match[1]))].sort();
 }
 
 function normalizeHostBackendRuntimeSpecifier(specifier) {
@@ -197,6 +205,12 @@ for (const fileName of readdirSync(hostBackendApiRoot)) {
       rawDynamicImportUsages.length === 0,
       failures,
       `backendApi/${fileName} defines raw dynamic import helpers (${rawDynamicImportUsages.join(', ')}); use serverModuleResolver instead`,
+    );
+    const ambiguousExtensionRelativeServerResolverCalls = collectAmbiguousExtensionRelativeServerResolverCalls(filePath);
+    assert(
+      ambiguousExtensionRelativeServerResolverCalls.length === 0,
+      failures,
+      `backendApi/${fileName} passes extension-relative specifiers to server-module resolvers (${ambiguousExtensionRelativeServerResolverCalls.join(', ')}); use callServerExtensionModuleExport or importServerExtensionModule instead`,
     );
   }
   const stringHostApiGlobals = collectStringHostApiGlobals(filePath);

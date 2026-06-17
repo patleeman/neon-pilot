@@ -1,6 +1,6 @@
 import { existsSync, statSync } from 'node:fs';
 
-import { callServerModuleExport } from './serverModuleResolver.js';
+import { callServerExtensionModuleExport, callServerModuleExport } from './serverModuleResolver.js';
 
 export const CONVERSATION_INSPECT_SCOPE_VALUES = ['all', 'live', 'running', 'archived'] as const;
 export const CONVERSATION_INSPECT_ACTION_VALUES = ['list', 'search', 'query', 'diff', 'outline', 'read_window'] as const;
@@ -45,6 +45,17 @@ export async function querySessionSuggestedPointerIds(...args: unknown[]) {
 async function callModuleExport<T>(specifier: string, name: string, ...args: unknown[]): Promise<T> {
   try {
     return await callServerModuleExport<T>(specifier, name, ...args);
+  } catch (error) {
+    if (error instanceof Error && error.message === `Backend API export ${name} is unavailable.`) {
+      throw new Error(`Conversation backend API export ${name} is unavailable.`);
+    }
+    throw error;
+  }
+}
+
+async function callExtensionModuleExport<T>(specifier: string, name: string, ...args: unknown[]): Promise<T> {
+  try {
+    return await callServerExtensionModuleExport<T>(specifier, name, ...args);
   } catch (error) {
     if (error instanceof Error && error.message === `Backend API export ${name} is unavailable.`) {
       throw new Error(`Conversation backend API export ${name} is unavailable.`);
@@ -112,7 +123,7 @@ export async function createSession(...args: unknown[]) {
 }
 
 export async function createConversation(...args: unknown[]) {
-  const capability = await callModuleExport<Record<string, (...methodArgs: unknown[]) => Promise<unknown>>>(
+  const capability = await callExtensionModuleExport<Record<string, (...methodArgs: unknown[]) => Promise<unknown>>>(
     '../extensionConversations.js',
     'createExtensionConversationsCapability',
   );
@@ -120,7 +131,7 @@ export async function createConversation(...args: unknown[]) {
 }
 
 export async function forkConversation(...args: unknown[]) {
-  const capability = await callModuleExport<Record<string, (...methodArgs: unknown[]) => Promise<unknown>>>(
+  const capability = await callExtensionModuleExport<Record<string, (...methodArgs: unknown[]) => Promise<unknown>>>(
     '../extensionConversations.js',
     'createExtensionConversationsCapability',
   );
@@ -128,7 +139,7 @@ export async function forkConversation(...args: unknown[]) {
 }
 
 export async function appendTranscriptBlock(...args: unknown[]) {
-  const capability = await callModuleExport<Record<string, (...methodArgs: unknown[]) => Promise<unknown>>>(
+  const capability = await callExtensionModuleExport<Record<string, (...methodArgs: unknown[]) => Promise<unknown>>>(
     '../extensionConversations.js',
     'createExtensionConversationsCapability',
   );
@@ -136,7 +147,7 @@ export async function appendTranscriptBlock(...args: unknown[]) {
 }
 
 export async function updateTranscriptBlock(...args: unknown[]) {
-  const capability = await callModuleExport<Record<string, (...methodArgs: unknown[]) => Promise<unknown>>>(
+  const capability = await callExtensionModuleExport<Record<string, (...methodArgs: unknown[]) => Promise<unknown>>>(
     '../extensionConversations.js',
     'createExtensionConversationsCapability',
   );
@@ -193,21 +204,21 @@ export async function persistTraceSuggestedContext(...args: unknown[]) {
 }
 
 export async function readConversationMetadata(...args: unknown[]) {
-  return callModuleExport('../extensionConversationMetadata.js', 'readConversationMetadata', ...args);
+  return callExtensionModuleExport('../extensionConversationMetadata.js', 'readConversationMetadata', ...args);
 }
 
 export async function writeConversationMetadata(...args: unknown[]) {
-  return callModuleExport('../extensionConversationMetadata.js', 'writeConversationMetadata', ...args);
+  return callExtensionModuleExport('../extensionConversationMetadata.js', 'writeConversationMetadata', ...args);
 }
 
 export async function queryConversationMetadata(...args: unknown[]) {
-  return callModuleExport('../extensionConversationMetadata.js', 'queryConversationMetadata', ...args);
+  return callExtensionModuleExport('../extensionConversationMetadata.js', 'queryConversationMetadata', ...args);
 }
 
 export async function buildLiveSessionExtensionFactoriesForRuntime(...args: unknown[]) {
-  return callModuleExport('../runtimeAgentHooks.js', 'buildLiveSessionExtensionFactoriesForRuntime', ...args);
+  return callExtensionModuleExport('../runtimeAgentHooks.js', 'buildLiveSessionExtensionFactoriesForRuntime', ...args);
 }
 
 export async function buildLiveSessionResourceOptionsForRuntime(...args: unknown[]) {
-  return callModuleExport('../runtimeAgentHooks.js', 'buildLiveSessionResourceOptionsForRuntime', ...args);
+  return callExtensionModuleExport('../runtimeAgentHooks.js', 'buildLiveSessionResourceOptionsForRuntime', ...args);
 }
