@@ -183,11 +183,17 @@ function resolveNodePath(root: FileRootDescriptor, path?: string | null): string
   const normalized = assertRelativePath(path ?? '');
   const rootPath = resolve(root.path);
   const absolute = resolve(rootPath, normalized);
+  assertNodePathContained(rootPath, absolute);
+  return absolute;
+}
+
+function assertNodePathContained(rootPathInput: string, absolutePathInput: string): void {
+  const rootPath = resolve(rootPathInput);
+  const absolutePath = resolve(absolutePathInput);
   const rootWithSep = rootPath.endsWith(sep) ? rootPath : `${rootPath}${sep}`;
-  if (absolute !== rootPath && !absolute.startsWith(rootWithSep)) {
+  if (absolutePath !== rootPath && !absolutePath.startsWith(rootWithSep)) {
     throw new FileSystemAuthorityError('Path escapes filesystem root', 'PATH_ESCAPE');
   }
-  return absolute;
 }
 
 class NodeFileSystemBackend implements FileSystemBackend {
@@ -284,7 +290,9 @@ class NodeFileSystemBackend implements FileSystemBackend {
   }
 
   async copyIn(root: FileRootDescriptor, to: string, absoluteSource: string): Promise<void> {
-    await this.writeBytes(root, to, await readFile(absoluteSource));
+    const source = resolve(absoluteSource);
+    assertNodePathContained(root.path, source);
+    await this.writeBytes(root, to, await readFile(source));
   }
 
   async remove(root: FileRootDescriptor, path: string, options?: { recursive?: boolean; force?: boolean }): Promise<void> {

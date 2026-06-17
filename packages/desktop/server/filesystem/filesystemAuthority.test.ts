@@ -48,6 +48,24 @@ describe('FileSystemAuthority', () => {
     await expect(root.writeText('file.txt', 'nope')).rejects.toMatchObject({ code: 'MISSING_ACCESS' });
   });
 
+  it('contains copy-in sources to the granted root', async () => {
+    const cwd = tempDir();
+    const outside = tempDir();
+    writeFileSync(join(cwd, 'source.txt'), 'inside');
+    writeFileSync(join(outside, 'secret.txt'), 'outside');
+    const root = await new FileSystemAuthority().requestRoot({
+      subject: { type: 'core', id: 'test' },
+      root: { kind: 'workspace', id: cwd, path: cwd },
+      access: ['read', 'write'],
+      reason: 'test',
+    });
+
+    await root.copyIn('copied.txt', join(cwd, 'source.txt'));
+
+    expect(readFileSync(join(cwd, 'copied.txt'), 'utf-8')).toBe('inside');
+    await expect(root.copyIn('leaked.txt', join(outside, 'secret.txt'))).rejects.toMatchObject({ code: 'PATH_ESCAPE' });
+  });
+
   it('applies policy and hooks around operations', async () => {
     const cwd = tempDir();
     writeFileSync(join(cwd, 'allowed.txt'), 'ok');
