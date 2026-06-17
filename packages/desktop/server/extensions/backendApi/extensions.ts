@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 
 import type { ExtensionDoctorReport } from '@neon-pilot/extensions/backend/extensions';
@@ -45,6 +45,12 @@ const ADDITIONAL_EXTENSION_PATHS_SETTING = 'extensions.additionalPaths';
 const EXTENSION_SOURCES_SETTING = 'extensions.sources';
 const IMPORTED_PACKAGE_SKIP_DIRS = new Set(['.git', 'dist', 'node_modules', 'target']);
 const MARKETPLACE_BEHAVIOR_PACKAGE_TYPES = new Set(['skill', 'instruction-pack', 'agent', 'template']);
+
+function assertNoImportedPackageSymlink(path: string): void {
+  if (lstatSync(path).isSymbolicLink()) {
+    throw new Error(`Imported package source cannot contain symlinks: ${path}`);
+  }
+}
 
 interface ExtensionDoctorModule {
   validateExtensionPackage(input: ValidateExtensionPackageOptions): Promise<ExtensionDoctorReport>;
@@ -265,10 +271,15 @@ function createImportedPackageExtension(input: { ecosystem: string; packageType:
 
   mkdirSync(packageRoot, { recursive: true });
   if (sourceIsLocalDirectory) {
+    assertNoImportedPackageSymlink(input.source);
     cpSync(input.source, packageDir, {
       recursive: true,
       force: true,
-      filter: (sourcePath) => !IMPORTED_PACKAGE_SKIP_DIRS.has(basename(sourcePath)),
+      filter: (sourcePath) => {
+        if (IMPORTED_PACKAGE_SKIP_DIRS.has(basename(sourcePath))) return false;
+        assertNoImportedPackageSymlink(sourcePath);
+        return true;
+      },
     });
   }
 

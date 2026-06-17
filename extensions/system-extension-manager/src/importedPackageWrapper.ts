@@ -1,8 +1,14 @@
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, sep } from 'node:path';
 
 const IMPORTED_PACKAGE_SKIP_DIRS = new Set(['.git', 'dist', 'node_modules', 'target']);
+
+function assertNoImportedPackageSymlink(path: string): void {
+  if (lstatSync(path).isSymbolicLink()) {
+    throw new Error(`Imported package source cannot contain symlinks: ${path}`);
+  }
+}
 
 export function createImportedPackageExtension(input: { ecosystem: string; packageType: string; source: string; runtimeDir: string }): {
   id: string;
@@ -18,10 +24,15 @@ export function createImportedPackageExtension(input: { ecosystem: string; packa
 
   mkdirSync(packageRoot, { recursive: true });
   if (sourceIsLocalDirectory) {
+    assertNoImportedPackageSymlink(input.source);
     cpSync(input.source, packageDir, {
       recursive: true,
       force: true,
-      filter: (sourcePath) => !IMPORTED_PACKAGE_SKIP_DIRS.has(basename(sourcePath)),
+      filter: (sourcePath) => {
+        if (IMPORTED_PACKAGE_SKIP_DIRS.has(basename(sourcePath))) return false;
+        assertNoImportedPackageSymlink(sourcePath);
+        return true;
+      },
     });
   }
 

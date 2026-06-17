@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -70,5 +70,17 @@ describe('imported package extension wrappers', () => {
     };
     expect(manifest.importedPackage).toMatchObject({ source: 'https://example.com/package.git', copiedSource: false });
     expect(manifest.contributes?.skills).toBeUndefined();
+  });
+
+  it('rejects symlinks in copied local package sources', async () => {
+    const sourceRoot = mkdtempSync(join(tmpdir(), 'np-import-source-symlink-'));
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'np-import-runtime-'));
+    const targetRoot = mkdtempSync(join(tmpdir(), 'np-import-target-'));
+    tempDirs.push(sourceRoot, runtimeDir, targetRoot);
+    symlinkSync(targetRoot, join(sourceRoot, 'linked-target'));
+
+    expect(() => createImportedPackageExtension({ source: sourceRoot, ecosystem: 'codex', packageType: 'skill', runtimeDir })).toThrow(
+      'Imported package source cannot contain symlinks',
+    );
   });
 });

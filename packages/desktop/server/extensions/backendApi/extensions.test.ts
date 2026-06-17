@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -183,6 +183,30 @@ describe('backendApi/extensions', () => {
       sourceBaseDir: undefined,
       target: 'local',
     });
+  });
+
+  it('rejects symlinks when wrapping local marketplace packages as extensions', async () => {
+    const { installMarketplacePackageAsExtension } = await import('./extensions.js');
+    const sourceRoot = mkdtempSync(join(tmpdir(), 'np-marketplace-source-symlink-'));
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'np-marketplace-runtime-'));
+    const targetRoot = mkdtempSync(join(tmpdir(), 'np-marketplace-target-'));
+    symlinkSync(targetRoot, join(sourceRoot, 'linked-target'));
+    resolverMocks.installPackageSource.mockReturnValueOnce({
+      installed: true,
+      alreadyPresent: false,
+      source: sourceRoot,
+      target: 'local',
+      settingsPath: '/profile/settings.json',
+    });
+
+    await expect(
+      installMarketplacePackageAsExtension({
+        ecosystem: 'codex',
+        packageType: 'skill',
+        source: sourceRoot,
+        runtimeDir,
+      }),
+    ).rejects.toThrow('Imported package source cannot contain symlinks');
   });
 
   it('writes additional extension search paths to profile and state-root settings files', async () => {
