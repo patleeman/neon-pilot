@@ -3612,6 +3612,100 @@ describe('extension backend action invocation', () => {
     expect(workerRunner.runWorkerExport).not.toHaveBeenCalled();
   });
 
+  it('requires secrets permission for host-run SSE backend route secret access', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    process.env.SSE_ROUTE_SECRET = 'secret-value';
+    writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'env-only' } }));
+    const extensionRoot = join(stateRoot, 'extensions', 'sse-secret-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'sse-secret-ext',
+        name: 'SSE Secret Ext',
+        contributes: {
+          secrets: {
+            apiKey: {
+              label: 'API key',
+              env: 'SSE_ROUTE_SECRET',
+            },
+          },
+        },
+        backend: {
+          entry: 'dist/backend.mjs',
+          routes: [{ method: 'GET', path: '/stream', handler: 'stream', stream: 'sse', worker: { enabled: true } }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
+    const stream = vi.fn((_request, context) => ({ stream: 'sse', events: [], body: { secret: context.secrets.get('apiKey') } }));
+    const loadModule = vi.fn(async () => ({ stream }));
+    const runExport = vi.fn(
+      async (
+        extensionId: string,
+        compiled: { path: string; hash: string },
+        exportName: string,
+        _operation: unknown,
+        invoke: (handler: (...args: unknown[]) => unknown) => unknown,
+      ) => {
+        const backend = await loadModule(extensionId, compiled);
+        return invoke(backend[exportName] as (...args: unknown[]) => unknown);
+      },
+    );
+    setExtensionBackendRunnerForTests({
+      loadModule,
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport,
+      run: vi.fn(),
+    });
+    setWorkerImportBackendRunnerForTests({
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(),
+      run: vi.fn(),
+    });
+
+    await expect(
+      invokeExtensionRoute('sse-secret-ext', 'GET', '/stream', { method: 'GET', path: '/stream', query: {}, params: {} }),
+    ).rejects.toThrow('Extension "sse-secret-ext" requires permission secrets:read to use secrets.get.');
+
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'sse-secret-ext',
+        name: 'SSE Secret Ext',
+        permissions: ['secrets:read'],
+        contributes: {
+          secrets: {
+            apiKey: {
+              label: 'API key',
+              env: 'SSE_ROUTE_SECRET',
+            },
+          },
+        },
+        backend: {
+          entry: 'dist/backend.mjs',
+          routes: [{ method: 'GET', path: '/stream', handler: 'stream', stream: 'sse', worker: { enabled: true } }],
+        },
+      }),
+    );
+    invalidateExtensionRegistryReadCaches(stateRoot);
+
+    await expect(
+      invokeExtensionRoute('sse-secret-ext', 'GET', '/stream', { method: 'GET', path: '/stream', query: {}, params: {} }),
+    ).resolves.toMatchObject({ stream: 'sse', body: { secret: 'secret-value' } });
+
+    delete process.env.SSE_ROUTE_SECRET;
+  });
+
   it('returns HTTP 500 when a backend route export is missing', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

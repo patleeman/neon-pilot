@@ -31,6 +31,7 @@ import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
 import { createExtensionKnowledgeCapability } from './extensionKnowledge.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import { isSystemNotificationAvailable, sendNotifyAsSystemNotification, setExtensionBadge } from './extensionNotifications.js';
+import { assertExtensionPermission } from './extensionPermissions.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
   clearBuildError,
@@ -503,7 +504,10 @@ export function createBackendContext(
       setEnabled: (targetExtensionId, enabled) => setExtensionEnabled(targetExtensionId, enabled),
     },
     secrets: {
-      get: (secretId) => resolveSecret(extensionId, secretId),
+      get: (secretId) => {
+        assertExtensionPermission(extensionId, 'secrets:read', 'secrets.get');
+        return resolveSecret(extensionId, secretId);
+      },
     },
     ui: {
       invalidate: (topics) => {
