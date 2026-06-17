@@ -42,6 +42,7 @@ const allowedStringHostApiGlobals = new Map([
     ]),
   ],
 ]);
+const allowedBackendApiLocalStaticSpecifiers = new Set(['./daemonBridge.js', './serverModuleResolver.js']);
 const allowedHostOnlyBackendValueExports = new Map([
   [
     'agent',
@@ -119,6 +120,15 @@ function collectStaticExportSpecifiers(filePath) {
   const source = readFileSync(filePath, 'utf8');
   const matches = source.matchAll(/\bexport\s+(?:type\s+)?(?:\{[^}]*\}|\*)\s+from\s+['"]([^'"]+)['"]/g);
   return [...new Set([...matches].map((match) => match[1]))].sort();
+}
+
+function collectLocalBackendApiStaticSpecifiers(filePath) {
+  return [
+    ...collectImportSpecifiers(filePath, { staticOnly: true }),
+    ...collectStaticExportSpecifiers(filePath),
+  ]
+    .filter((specifier) => specifier.startsWith('./'))
+    .sort();
 }
 
 function collectTypeImportSpecifiers(filePath) {
@@ -239,6 +249,16 @@ for (const moduleName of hostModules) {
 for (const fileName of readdirSync(hostBackendApiRoot)) {
   if (!fileName.endsWith('.ts')) continue;
   const filePath = join(hostBackendApiRoot, fileName);
+  const localStaticSpecifiers = collectLocalBackendApiStaticSpecifiers(filePath);
+  const disallowedLocalStaticSpecifiers =
+    fileName === 'index.ts' || fileName.endsWith('.test.ts')
+      ? []
+      : localStaticSpecifiers.filter((specifier) => !allowedBackendApiLocalStaticSpecifiers.has(specifier));
+  assert(
+    disallowedLocalStaticSpecifiers.length === 0,
+    failures,
+    `backendApi/${fileName} statically imports or re-exports local backend API siblings (${disallowedLocalStaticSpecifiers.join(', ')}); use only ${[...allowedBackendApiLocalStaticSpecifiers].sort().join(' or ')} helper seams, or add public barrel exports from backendApi/index.ts`,
+  );
   const forbidden = [
     ...collectImportSpecifiers(filePath, { staticOnly: true }),
     ...collectStaticExportSpecifiers(filePath),
