@@ -32,6 +32,16 @@ const forbiddenStaticImportPrefixes = [
   '../../gateways/',
   '../../shared/',
 ];
+const allowedStringHostApiGlobals = new Map([
+  [
+    'gateways.ts',
+    new Set([
+      // Legacy seam published by routes/gateways.ts. New backend API host access
+      // should use serverModuleResolver or the extension host capability bridge.
+      'TELEGRAM_GATEWAY_HOST_API_GLOBAL',
+    ]),
+  ],
+]);
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -104,6 +114,12 @@ function collectRawDynamicImportUsages(filePath) {
   const source = readFileSync(filePath, 'utf8');
   const matches = source.matchAll(/new\s+Function\s*\([^)]*\bimport\s*\(/g);
   return [...matches].map((match) => match[0]);
+}
+
+function collectStringHostApiGlobals(filePath) {
+  const source = readFileSync(filePath, 'utf8');
+  const matches = source.matchAll(/\b(?:export\s+)?const\s+([A-Z][A-Z0-9_]*HOST_API_GLOBAL)\b/g);
+  return [...new Set([...matches].map((match) => match[1]))].sort();
 }
 
 function collectLiteralExportConstants(filePath) {
@@ -183,6 +199,14 @@ for (const fileName of readdirSync(hostBackendApiRoot)) {
       `backendApi/${fileName} defines raw dynamic import helpers (${rawDynamicImportUsages.join(', ')}); use serverModuleResolver instead`,
     );
   }
+  const stringHostApiGlobals = collectStringHostApiGlobals(filePath);
+  const allowedStringHostApiGlobalsForFile = allowedStringHostApiGlobals.get(fileName) ?? new Set();
+  const disallowedStringHostApiGlobals = stringHostApiGlobals.filter((name) => !allowedStringHostApiGlobalsForFile.has(name));
+  assert(
+    disallowedStringHostApiGlobals.length === 0,
+    failures,
+    `backendApi/${fileName} defines string-key host API globals (${disallowedStringHostApiGlobals.join(', ')}); use serverModuleResolver or the extension host capability bridge instead`,
+  );
 }
 
 const buildScript = readFileSync(buildScriptPath, 'utf8');
