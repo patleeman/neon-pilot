@@ -78,24 +78,12 @@ const allowedHostOnlyBackendValueExports = new Map([
 ]);
 const backendApiModulesWithoutDedicatedTests = new Map([
   [
-    'artifacts',
-    'direct core artifact resolver seam currently covered by backendApi re-export smoke tests; add dedicated routing tests before removing this allowlist',
-  ],
-  [
     'browser',
     'worker bridge plus in-process fallback seam needs focused behavior coverage; add dedicated bridge tests before removing this allowlist',
   ],
   [
-    'checkpoints',
-    'direct core checkpoint resolver seam currently covered by backendApi re-export smoke tests; add dedicated routing tests before removing this allowlist',
-  ],
-  [
     'images',
     'image host bridge plus probe-store resolver seam needs focused behavior coverage; add dedicated bridge tests before removing this allowlist',
-  ],
-  [
-    'terminal',
-    'worker bridge plus in-process fallback seam needs focused behavior coverage; add dedicated bridge tests before removing this allowlist',
   ],
 ]);
 
