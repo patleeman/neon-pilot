@@ -282,6 +282,7 @@ describe('registerExtensionRoutes', () => {
     );
     writeFileSync(join(extensionRoot, 'dist', 'webapp', 'index.html'), '<h1>Board</h1>');
     writeFileSync(join(extensionRoot, 'dist', 'webapp', 'app.js'), 'globalThis.loaded = true;');
+    writeFileSync(join(extensionRoot, 'dist', 'private.txt'), 'private build artifact');
     const harness = createHarness();
 
     const listRes = createResponse();
@@ -304,6 +305,15 @@ describe('registerExtensionRoutes', () => {
     );
     expect(assetRes.type).toHaveBeenCalledWith('text/javascript; charset=utf-8');
     expect(assetRes.sendFile).toHaveBeenCalledWith(join(extensionRoot, 'dist', 'webapp', 'app.js'));
+
+    const traversalRes = createResponse();
+    await harness.getHandler('/webapps/:id/:webappId/*')(
+      { method: 'GET', params: { id: 'agent-board', webappId: 'board', 0: '../private.txt' }, query: {} },
+      traversalRes,
+    );
+    expect(traversalRes.status).toHaveBeenCalledWith(400);
+    expect(traversalRes.json).toHaveBeenCalledWith({ error: 'Extension webapp asset path escapes entry directory.' });
+    expect(traversalRes.sendFile).not.toHaveBeenCalled();
 
     const hostRes = createResponse();
     await harness.getHandler('*')(

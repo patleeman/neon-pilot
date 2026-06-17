@@ -150,16 +150,25 @@ function contentTypeForExtensionWebappPath(path: string): string | null {
   }
 }
 
+function resolveStaticExtensionWebappRelativePath(webapp: ExtensionWebappSummary, requestPath: string): string | null {
+  const normalizedPath = normalizeRequestPath(requestPath);
+  if (normalizedPath === '/') return webapp.entry ?? null;
+  const assetPath = normalizedPath.replace(/^\/+/, '');
+  const segments = assetPath.split(/[\\/]+/);
+  if (segments.some((segment) => segment === '..')) return null;
+  return joinPath(dirname(webapp.entry ?? ''), assetPath);
+}
+
 async function serveStaticExtensionWebapp(webapp: ExtensionWebappSummary, requestPath: string, res: Response): Promise<void> {
   if (!webapp.entry) {
     res.status(404).json({ error: 'Extension webapp has no static entry.' });
     return;
   }
-  const normalizedPath = normalizeRequestPath(requestPath);
-  const relativePath =
-    normalizedPath === '/'
-      ? webapp.entry
-      : joinPath(dirname(webapp.entry), normalizedPath.replace(/^\/+/, ''));
+  const relativePath = resolveStaticExtensionWebappRelativePath(webapp, requestPath);
+  if (!relativePath) {
+    res.status(400).json({ error: 'Extension webapp asset path escapes entry directory.' });
+    return;
+  }
   let filePath = await getExtensionHostClient().resolveFilePath({ extensionId: webapp.extensionId, relativePath });
   let stats = statSync(filePath, { throwIfNoEntry: false });
   if (!stats?.isFile() && webapp.spaFallback !== false) {
@@ -206,7 +215,12 @@ async function proxyExtensionWebapp(webapp: ExtensionWebappSummary, req: Request
 
 function buildProxyRequestBody(req: Request): BodyInit | undefined {
   if (['GET', 'HEAD'].includes(req.method.toUpperCase()) || req.body === undefined || req.body === null) return undefined;
-  if (typeof req.body === 'string' || req.body instanceof Uint8Array) return req.body;
+  if (typeof req.body === 'string') return req.body;
+  if (req.body instanceof Uint8Array) {
+    const body = new ArrayBuffer(req.body.byteLength);
+    new Uint8Array(body).set(req.body);
+    return new Blob([body]);
+  }
   return JSON.stringify(req.body);
 }
 
