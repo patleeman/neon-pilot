@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { dirname, extname, join as joinPath } from 'node:path';
 
@@ -24,6 +23,7 @@ import { getAggregatedBadgeCount } from '../extensions/extensionNotifications.js
 import { createExtensionRunsCapability } from '../extensions/extensionRuns.js';
 import { logError } from '../middleware/index.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
+import { getLocalhostWebappProxyStatus, trustLocalhostWebappProxyCertificate } from '../shared/localhostWebappProxy.js';
 import type { ServerRouteContext } from './context.js';
 
 async function readExtensionInstallSummariesWithRuntimeState() {
@@ -82,7 +82,17 @@ function normalizeRequestPath(path: string | undefined): string {
 }
 
 function webappPortlessUrl(webapp: Pick<ExtensionWebappSummary, 'portlessName'>): string {
-  return `https://${webapp.portlessName}.localhost`;
+  const proxy = getLocalhostWebappProxyStatus();
+  const scheme = proxy?.urls.scheme ?? 'https';
+  const port =
+    scheme === 'https'
+      ? proxy?.https.enabled && proxy.https.port !== 443
+        ? proxy.https.port
+        : null
+      : proxy?.http.enabled && proxy.http.port !== 80
+        ? proxy.http.port
+        : null;
+  return `${scheme}://${webapp.portlessName}.localhost${port ? `:${String(port)}` : ''}`;
 }
 
 function webappDirectUrl(webapp: Pick<ExtensionWebappSummary, 'portlessName'>, context?: { getServerPort?: () => number }): string | null {
@@ -230,35 +240,6 @@ async function dispatchExtensionWebappRequest(webapp: ExtensionWebappSummary, re
     return;
   }
   await serveStaticExtensionWebapp(webapp, requestPath, res);
-}
-
-function runPortlessAlias(args: string[]): { ok: true; stdout: string; stderr: string } | { ok: false; error: string } {
-  const result = spawnSync('portless', args, { encoding: 'utf-8' });
-  if (result.error) {
-    const error = result.error as NodeJS.ErrnoException;
-    if (error.code === 'ENOENT') return { ok: false, error: 'Portless CLI is not installed. Install it with `npm install -g portless`.' };
-    return { ok: false, error: error.message };
-  }
-  if ((result.status ?? 1) !== 0) {
-    return { ok: false, error: (result.stderr || result.stdout || `portless exited with code ${result.status ?? 1}`).trim() };
-  }
-  return { ok: true, stdout: result.stdout.trim(), stderr: result.stderr.trim() };
-}
-
-function syncPortlessAlias(webapp: ExtensionWebappSummary, context?: { getServerPort?: () => number }, enabled = true) {
-  const port = context?.getServerPort?.();
-  if (typeof port !== 'number' || !Number.isFinite(port) || port <= 0) {
-    return { ok: false, error: 'Neon Pilot server port is unavailable for Portless registration.' };
-  }
-  const result = enabled
-    ? runPortlessAlias(['alias', webapp.portlessName, String(port), '--force'])
-    : runPortlessAlias(['alias', '--remove', webapp.portlessName]);
-  return {
-    ...result,
-    portlessName: webapp.portlessName,
-    portlessUrl: webappPortlessUrl(webapp),
-    port,
-  };
 }
 
 async function readExtensionActionTargetFromHost(
@@ -512,12 +493,30 @@ export function registerExtensionRoutes(
         res.status(404).json({ error: 'Extension webapp not found.' });
         return;
       }
-      const enabled = req.body?.enabled !== false;
-      const result = syncPortlessAlias(webapp, context, enabled);
-      res.status(result.ok ? 200 : 503).json(result);
+      res.json({
+        ok: true,
+        message: 'Neon Pilot manages .localhost webapp routing through the built-in localhost proxy.',
+        enabled: req.body?.enabled !== false,
+        portlessName: webapp.portlessName,
+        portlessUrl: webappPortlessUrl(webapp),
+        proxy: getLocalhostWebappProxyStatus(),
+      });
     } catch (err) {
-      sendRouteError(res, 'extension webapp portless error', err);
+      sendRouteError(res, 'extension webapp localhost proxy error', err);
     }
+  });
+
+  router.get('/api/extensions/webapps/localhost-proxy', async (_req, res) => {
+    res.json(getLocalhostWebappProxyStatus() ?? { running: false });
+  });
+
+  router.post('/api/extensions/webapps/localhost-proxy/trust', async (_req, res) => {
+    const result = trustLocalhostWebappProxyCertificate();
+    if (!result) {
+      res.status(503).json({ ok: false, error: 'Neon Pilot localhost webapp proxy is not running.' });
+      return;
+    }
+    res.status(result.ok ? 200 : 503).json(result);
   });
 
   router.get('/api/extensions/registry/critical', async (_req, res) => {

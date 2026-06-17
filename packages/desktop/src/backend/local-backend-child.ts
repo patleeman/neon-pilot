@@ -9,6 +9,7 @@ import { bindInProcessDaemonClient, NeonPilotDaemon } from '@neon-pilot/daemon';
 import { setLocalBackendBaseUrl } from '../../server/app/localBackendBaseUrl.js';
 import { setExtensionHostClient } from '../../server/extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from '../../server/extensions/extensionHostRpcClient.js';
+import { startLocalhostWebappProxy, type LocalhostWebappProxy } from '../../server/shared/localhostWebappProxy.js';
 import { proxyDesktopLocalApiStream } from './local-backend-stream-proxy.js';
 import { loadRawLocalApiModule, type LocalApiModule } from '../local-api-module.js';
 
@@ -62,6 +63,7 @@ interface LocalApiRpcResponse {
 let daemon: NeonPilotDaemon | undefined;
 let clearDaemonBinding: (() => void) | undefined;
 let daemonLogStream: WriteStream | undefined;
+let localhostWebappProxy: LocalhostWebappProxy | undefined;
 let shuttingDown = false;
 const nativeWorkbenchBrowserResponses = new Map<string, (message: NativeWorkbenchBrowserResponse) => void>();
 
@@ -239,6 +241,8 @@ async function shutdown(server: ReturnType<typeof createServer>): Promise<void> 
   }
   shuttingDown = true;
   await new Promise<void>((resolve) => server.close(() => resolve()));
+  await localhostWebappProxy?.close().catch(() => undefined);
+  localhostWebappProxy = undefined;
   await stopDaemon();
   process.exit(0);
 }
@@ -263,6 +267,14 @@ async function main(): Promise<void> {
     localApi = await loadRawLocalApiModule();
     installNativeWorkbenchBrowserBridge(localApi);
     localApiReady = true;
+    localhostWebappProxy = await startLocalhostWebappProxy({
+      stateRoot: getStateRoot(),
+      dispatch: localApi.dispatchDesktopLocalApiRequest,
+      logger: {
+        info: (message, fields) => process.stderr.write(`[desktop-backend] ${message} ${JSON.stringify(fields ?? {})}\n`),
+        warn: (message, fields) => process.stderr.write(`[desktop-backend] ${message} ${JSON.stringify(fields ?? {})}\n`),
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(`[desktop-backend] failed to load local API module: ${message}\n`);

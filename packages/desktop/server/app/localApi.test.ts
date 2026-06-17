@@ -248,4 +248,32 @@ describe('desktop local API extension routes', () => {
     );
     expect(agentBoard?.manifest.contributes).not.toHaveProperty('tools');
   }, 30000);
+
+  it('prioritizes extension webapp host routing over product API routes', async () => {
+    process.env.NEON_PILOT_STATE_ROOT = tempStateRoot;
+    const extensionRoot = join(tempStateRoot, 'extensions', 'agent-webapp');
+    mkdirSync(join(extensionRoot, 'dist', 'webapp'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-webapp',
+        name: 'Agent Webapp',
+        contributes: {
+          webapps: [{ id: 'board', title: 'Board', entry: 'dist/webapp/index.html' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'webapp', 'index.html'), '<h1>Board Webapp</h1>');
+
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/extensions',
+      headers: { host: 'board.agent-webapp.localhost' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('text/html');
+    expect(Buffer.from(response.body).toString('utf-8')).toContain('Board Webapp');
+  }, 30000);
 });

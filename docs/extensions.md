@@ -390,7 +390,15 @@ Proxy webapps forward requests to an extension-managed loopback HTTP service. `t
 }
 ```
 
-The default Portless name is `{webappId}.{extensionId}`. The host exposes `GET /api/extensions/webapps` for discovery, `GET /webapps/{extensionId}/{webappId}/...` as a direct debug route, and `POST /api/extensions/webapps/{extensionId}/{webappId}/portless` with `{ "enabled": true | false }` to register or remove the Portless alias. Portless is an optional local CLI integration; install it separately when using alias registration. Current Portless releases require Node 24 or newer, so Neon Pilot does not bundle it in the desktop dependency graph.
+The default `portlessName` is `{webappId}.{extensionId}` and maps to `https://{portlessName}.localhost` through Neon Pilot's built-in localhost webapp proxy. The backend starts that proxy automatically, tries to bind HTTPS on port `443` and HTTP on port `80`, and redirects HTTP to HTTPS when the HTTPS listener is available. If privileged ports are unavailable, discovery responses include the actual fallback port.
+
+The host exposes:
+
+- `GET /api/extensions/webapps` for discovery.
+- `GET /api/extensions/webapps/localhost-proxy` for proxy/certificate status.
+- `POST /api/extensions/webapps/localhost-proxy/trust` to trust the generated local certificate on supported platforms.
+- `GET /webapps/{extensionId}/{webappId}/...` as a direct debug route.
+- `POST /api/extensions/webapps/{extensionId}/{webappId}/portless` as a compatibility no-op that reports built-in proxy status.
 
 ### Message Actions (`messageActions`)
 

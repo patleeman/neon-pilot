@@ -387,6 +387,7 @@ let localProviderDesktopCapabilityContext: ProviderDesktopCapabilityContext | nu
 
 const LOCAL_API_DEFERRED_RESUME_POLL_MS = 3_000;
 const EXTENSION_STARTUP_ACTIONS_DELAY_MS = 10_000;
+const WEBAPP_LOCALHOST_SUFFIX = '.localhost';
 function resolveRepoRoot(): string {
   const defaultRepoRoot = fileURLToPath(new URL('../../..', import.meta.url));
   return resolveLocalApiRepoRoot({
@@ -422,6 +423,19 @@ function createLocalApiRequest(input: {
   request.socket = buildLocalApiRequestSocket();
   request.get = (name: string) => readLocalApiRequestHeader(normalizedHeaders, name);
   return request;
+}
+
+function shouldPrioritizeWebappHostRoute(headers?: Record<string, string>): boolean {
+  const host = readLocalApiRequestHeader(normalizeLocalApiRequestHeaders(headers), 'host')?.split(':')[0]?.trim().toLowerCase() ?? '';
+  return host.endsWith(WEBAPP_LOCALHOST_SUFFIX) && host.length > WEBAPP_LOCALHOST_SUFFIX.length;
+}
+
+function findLocalApiRouteForRequest(routes: RegisteredRoute[], method: string, pathname: string, headers?: Record<string, string>) {
+  if (shouldPrioritizeWebappHostRoute(headers)) {
+    const hostRoute = routes.find((candidate) => candidate.method === method && candidate.path === '*');
+    if (hostRoute) return hostRoute;
+  }
+  return findMatchingLocalApiRoute(routes, method, pathname);
 }
 
 function createRouteCollector(
@@ -1497,7 +1511,7 @@ export async function dispatchDesktopLocalApiRequest(input: {
 
   const routes = await getLocalRoutes();
   const routesReadyAtMs = performance.now();
-  const route = findMatchingLocalApiRoute(routes, input.method, url.pathname);
+  const route = findLocalApiRouteForRequest(routes, input.method, url.pathname, input.headers);
 
   if (!route) {
     return createDesktopLocalApiErrorResponse(404, `No local API route for ${input.method} ${url.pathname}`);

@@ -202,7 +202,9 @@ Use `contributes.webapps` when an extension needs to expose a local webpage as a
 }
 ```
 
-`portlessName` defaults to `{webappId}.{extensionId}` and maps to `https://{portlessName}.localhost` when the local Portless CLI alias is registered. Neon Pilot exposes `GET /api/extensions/webapps` for discovery, `POST /api/extensions/webapps/{extensionId}/{webappId}/portless` for alias sync, and `/webapps/{extensionId}/{webappId}/...` as a direct debug route.
+`portlessName` defaults to `{webappId}.{extensionId}` and maps to `https://{portlessName}.localhost` through Neon Pilot's built-in localhost webapp proxy. The desktop backend starts that proxy automatically, tries HTTPS on `443` plus HTTP on `80`, and redirects HTTP to HTTPS when the HTTPS listener is available. If privileged ports are unavailable, discovery responses include the actual fallback port.
+
+Neon Pilot exposes `GET /api/extensions/webapps` for discovery, `GET /api/extensions/webapps/localhost-proxy` for proxy/certificate status, `POST /api/extensions/webapps/localhost-proxy/trust` to trust the generated local certificate on supported platforms, and `/webapps/{extensionId}/{webappId}/...` as a direct debug route.
 
 Static `entry` paths must be package-relative. Proxy `target` URLs must be loopback HTTP(S): `localhost`, `127.0.0.1`, or `::1`.
 
