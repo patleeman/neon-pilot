@@ -90,7 +90,7 @@ interface ExtensionWebappContribution {
   description?: string;
   entry?: string;
   target?: string;
-  portlessName?: string;
+  localhostName?: string;
   spaFallback?: boolean;
 }
 

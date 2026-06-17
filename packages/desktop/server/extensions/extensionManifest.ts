@@ -204,9 +204,9 @@ export interface ExtensionWebappContribution {
    */
   target?: string;
   /**
-   * Stable Portless route name. Defaults to "{webappId}.{extensionId}".
+   * Stable localhost route name. Defaults to "{webappId}.{extensionId}".
    */
-  portlessName?: string;
+  localhostName?: string;
   /** Fall back to the entrypoint for missing static routes. Default true. */
   spaFallback?: boolean;
 }

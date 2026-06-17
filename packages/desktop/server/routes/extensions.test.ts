@@ -292,8 +292,8 @@ describe('registerExtensionRoutes', () => {
         expect.objectContaining({
           id: 'board',
           extensionId: 'agent-board',
-          portlessName: 'board.agent-board',
-          portlessUrl: 'https://board.agent-board.localhost',
+          localhostName: 'board.agent-board',
+          localhostUrl: 'https://board.agent-board.localhost',
         }),
       ]),
     );

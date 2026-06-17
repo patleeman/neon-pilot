@@ -44,8 +44,8 @@ describe('extensionViewContributionValidation', () => {
       'Extension manifest contributes.webapps[0].target must target localhost, 127.0.0.1, or ::1.',
     );
     expect(() =>
-      validateWebappContributions([{ id: 'app', title: 'App', entry: 'dist/index.html', portlessName: 'Bad_Name' }]),
-    ).toThrow('Extension manifest contributes.webapps[0].portlessName must be a lowercase DNS-safe Portless name.');
+      validateWebappContributions([{ id: 'app', title: 'App', entry: 'dist/index.html', localhostName: 'Bad_Name' }]),
+    ).toThrow('Extension manifest contributes.webapps[0].localhostName must be a lowercase DNS-safe localhost name.');
     expect(() => validatePromptReferenceContributions([{ id: 'ref' }])).toThrow(
       'Extension manifest contributes.promptReferences[0].handler must be a non-empty string.',
     );

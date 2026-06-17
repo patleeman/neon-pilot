@@ -53,9 +53,9 @@ function validateWebappId(value: string, path: string): void {
   }
 }
 
-function validatePortlessName(value: string, path: string): void {
+function validateLocalhostName(value: string, path: string): void {
   if (!isDnsSafeName(value)) {
-    throw new Error(`Extension manifest ${path} must be a lowercase DNS-safe Portless name.`);
+    throw new Error(`Extension manifest ${path} must be a lowercase DNS-safe localhost name.`);
   }
 }
 
@@ -93,11 +93,11 @@ export function validateWebappContributions(value: unknown): void {
     validateOptionalString(webapp.description, `contributes.webapps[${index}].description`);
     validateOptionalString(webapp.entry, `contributes.webapps[${index}].entry`);
     validateOptionalString(webapp.target, `contributes.webapps[${index}].target`);
-    validateOptionalString(webapp.portlessName, `contributes.webapps[${index}].portlessName`);
+    validateOptionalString(webapp.localhostName, `contributes.webapps[${index}].localhostName`);
     validateOptionalBoolean(webapp.spaFallback, `contributes.webapps[${index}].spaFallback`);
     if (webapp.entry !== undefined) validateWebappPath(webapp.entry as string, `contributes.webapps[${index}].entry`);
     if (webapp.target !== undefined) validateLoopbackHttpTarget(webapp.target as string, `contributes.webapps[${index}].target`);
-    if (webapp.portlessName !== undefined) validatePortlessName(webapp.portlessName as string, `contributes.webapps[${index}].portlessName`);
+    if (webapp.localhostName !== undefined) validateLocalhostName(webapp.localhostName as string, `contributes.webapps[${index}].localhostName`);
     if (webapp.entry !== undefined && webapp.target !== undefined) {
       throw new Error(`Extension manifest contributes.webapps[${index}] must declare either entry or target, not both.`);
     }

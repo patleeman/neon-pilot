@@ -305,7 +305,7 @@ export interface ExtensionRegistrySnapshot {
     ExtensionWebappContribution & {
       extensionId: string;
       packageType: ExtensionPackageType;
-      portlessName: string;
+      localhostName: string;
     }
   >;
 }
@@ -1384,7 +1384,7 @@ export function readExtensionRegistrySnapshot(): ExtensionRegistrySnapshot {
       ...webapp,
       extensionId: extension.id,
       packageType: extension.packageType ?? 'user',
-      portlessName: webapp.portlessName?.trim() || `${webapp.id}.${extension.id}`,
+      localhostName: webapp.localhostName?.trim() || `${webapp.id}.${extension.id}`,
     })),
   );
   const routes = [

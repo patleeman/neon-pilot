@@ -63,7 +63,7 @@ type ExtensionWebappSummary = {
   spaFallback?: boolean;
   extensionId: string;
   packageType: 'system' | 'user';
-  portlessName: string;
+  localhostName: string;
 };
 
 function normalizeHostHeader(value: string | undefined): string {
@@ -81,7 +81,7 @@ function normalizeRequestPath(path: string | undefined): string {
   return value.startsWith('/') ? value : `/${value}`;
 }
 
-function webappPortlessUrl(webapp: Pick<ExtensionWebappSummary, 'portlessName'>): string {
+function webappLocalhostUrl(webapp: Pick<ExtensionWebappSummary, 'localhostName'>): string {
   const proxy = getLocalhostWebappProxyStatus();
   const scheme = proxy?.urls.scheme ?? 'https';
   const port =
@@ -92,18 +92,18 @@ function webappPortlessUrl(webapp: Pick<ExtensionWebappSummary, 'portlessName'>)
       : proxy?.http.enabled && proxy.http.port !== 80
         ? proxy.http.port
         : null;
-  return `${scheme}://${webapp.portlessName}.localhost${port ? `:${String(port)}` : ''}`;
+  return `${scheme}://${webapp.localhostName}.localhost${port ? `:${String(port)}` : ''}`;
 }
 
-function webappDirectUrl(webapp: Pick<ExtensionWebappSummary, 'portlessName'>, context?: { getServerPort?: () => number }): string | null {
+function webappDirectUrl(webapp: Pick<ExtensionWebappSummary, 'localhostName'>, context?: { getServerPort?: () => number }): string | null {
   const port = context?.getServerPort?.();
-  return typeof port === 'number' && Number.isFinite(port) && port > 0 ? `http://${webapp.portlessName}.localhost:${port}` : null;
+  return typeof port === 'number' && Number.isFinite(port) && port > 0 ? `http://${webapp.localhostName}.localhost:${port}` : null;
 }
 
 function enrichWebappSummary(webapp: ExtensionWebappSummary, context?: { getServerPort?: () => number }) {
   return {
     ...webapp,
-    portlessUrl: webappPortlessUrl(webapp),
+    localhostUrl: webappLocalhostUrl(webapp),
     directUrl: webappDirectUrl(webapp, context),
   };
 }
@@ -116,7 +116,7 @@ async function listWebappsFromHost(): Promise<ExtensionWebappSummary[]> {
       typeof webapp === 'object' &&
       typeof (webapp as { id?: unknown }).id === 'string' &&
       typeof (webapp as { extensionId?: unknown }).extensionId === 'string' &&
-      typeof (webapp as { portlessName?: unknown }).portlessName === 'string',
+      typeof (webapp as { localhostName?: unknown }).localhostName === 'string',
   );
 }
 
@@ -130,7 +130,7 @@ async function findWebappByHost(hostname: string): Promise<ExtensionWebappSummar
   const name = hostname.slice(0, -'.localhost'.length);
   if (!name) return null;
   const webapps = await listWebappsFromHost();
-  return webapps.find((webapp) => webapp.portlessName === name) ?? null;
+  return webapps.find((webapp) => webapp.localhostName === name) ?? null;
 }
 
 function contentTypeForExtensionWebappPath(path: string): string | null {
@@ -483,26 +483,6 @@ export function registerExtensionRoutes(
       res.json(webapps.map((webapp) => enrichWebappSummary(webapp, context)));
     } catch (err) {
       sendRouteError(res, 'extensions webapps error', err);
-    }
-  });
-
-  router.post('/api/extensions/webapps/:id/:webappId/portless', async (req, res) => {
-    try {
-      const webapp = await findWebappFromHost(req.params.id, req.params.webappId);
-      if (!webapp) {
-        res.status(404).json({ error: 'Extension webapp not found.' });
-        return;
-      }
-      res.json({
-        ok: true,
-        message: 'Neon Pilot manages .localhost webapp routing through the built-in localhost proxy.',
-        enabled: req.body?.enabled !== false,
-        portlessName: webapp.portlessName,
-        portlessUrl: webappPortlessUrl(webapp),
-        proxy: getLocalhostWebappProxyStatus(),
-      });
-    } catch (err) {
-      sendRouteError(res, 'extension webapp localhost proxy error', err);
     }
   });
 
