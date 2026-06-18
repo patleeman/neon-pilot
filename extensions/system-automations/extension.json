@@ -31,6 +31,19 @@
     ]
   },
   "contributes": {
+    "commands": [
+      {
+        "id": "new",
+        "title": "New Automation",
+        "category": "Automations",
+        "description": "Open the automation creation flow.",
+        "action": "app.navigate",
+        "args": {
+          "to": "/automations?action=new"
+        },
+        "icon": "automation"
+      }
+    ],
     "tools": [
       {
         "id": "scheduled-task",

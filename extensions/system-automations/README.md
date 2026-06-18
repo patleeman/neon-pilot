@@ -56,7 +56,7 @@ A chronological log of every execution:
 
 ## Creating an Automation
 
-From the list view, click "New Automation". The editor uses the Settings page layout with a right-side "On this page" rail and five sections:
+From the list view, click "New Automation" or run **New Automation** from the command palette. The editor uses the Settings page layout with a right-side "On this page" rail and five sections:
 
 - **General** — automation name, recurring instruction, and enabled state
 - **Schedule** — recurring vs one-time scheduling, human-readable schedule presets, and a preview

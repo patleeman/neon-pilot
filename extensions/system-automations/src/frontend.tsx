@@ -97,6 +97,7 @@ type AutomationTaskForEditor = ScheduledTaskSummary & {
 
 type AutomationFilter = 'all' | 'current' | 'past-due' | 'failed' | 'disabled';
 type EditorSectionId = 'automation-general' | 'automation-schedule' | 'automation-policies' | 'automation-delivery' | 'automation-runtime';
+type AutomationsPageContext = { search?: string };
 
 const EDITOR_TOC_ITEMS: Array<{ id: EditorSectionId; label: string; summary: string }> = [
   { id: 'automation-general', label: 'General', summary: 'Name and instruction' },
@@ -203,6 +204,11 @@ const emptyForm: AutomationFormState = {
   ],
   enabled: true,
 };
+
+export function shouldOpenNewAutomationFromSearch(search: string | undefined): boolean {
+  const params = new URLSearchParams(search?.startsWith('?') ? search.slice(1) : search);
+  return params.get('action') === 'new' || params.get('new') === '1';
+}
 
 function clampInteger(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
@@ -1038,14 +1044,15 @@ function PolicyRuleRow({
   );
 }
 
-export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
+export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; context?: AutomationsPageContext }) {
+  const openNewFromRoute = shouldOpenNewAutomationFromSearch(context?.search);
   const [tasks, setTasks] = useState<ScheduledTaskSummary[]>([]);
   const [health, setHealth] = useState<ScheduledTaskSchedulerHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(openNewFromRoute);
   const [form, setForm] = useState<AutomationFormState>(emptyForm);
   const [logById, setLogById] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);

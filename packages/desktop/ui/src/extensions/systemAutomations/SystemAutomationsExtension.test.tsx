@@ -3,7 +3,7 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { AutomationsPage } from '../../../../../../extensions/system-automations/src/frontend';
+import { AutomationsPage, shouldOpenNewAutomationFromSearch } from '../../../../../../extensions/system-automations/src/frontend';
 import type { NativeExtensionClient } from '../nativePaClient';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -58,14 +58,14 @@ function createPa(
   } as unknown as NativeExtensionClient;
 }
 
-async function renderPage(pa = createPa()) {
+async function renderPage(pa = createPa(), context: { search?: string } = {}) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
   mountedRoots.push(root);
 
   await act(async () => {
-    root.render(<AutomationsPage pa={pa} />);
+    root.render(<AutomationsPage pa={pa} context={context} />);
   });
   await act(async () => {
     await Promise.resolve();
@@ -75,6 +75,18 @@ async function renderPage(pa = createPa()) {
 }
 
 describe('AutomationsPage', () => {
+  it('opens the creation editor from the command-backed route query', async () => {
+    expect(shouldOpenNewAutomationFromSearch('?action=new')).toBe(true);
+    expect(shouldOpenNewAutomationFromSearch('?new=1')).toBe(true);
+    expect(shouldOpenNewAutomationFromSearch('?filter=current')).toBe(false);
+
+    const { container } = await renderPage(createPa(), { search: '?action=new' });
+
+    expect(container.textContent).toContain('New automation');
+    expect(container.textContent).toContain('Create with chat');
+    expect(container.querySelector('input[name="automation-title"]')).not.toBeNull();
+  });
+
   it('renders scheduler health and automation rows', async () => {
     const { container } = await renderPage();
 
