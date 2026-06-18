@@ -17,6 +17,18 @@ const emojiListEntry: UnifiedSettingsEntry = {
   order: 10,
 };
 
+const agentToolListEntry: UnifiedSettingsEntry = {
+  extensionId: 'system-dynamic-workflows',
+  key: 'dynamicWorkflows.defaultAgentAllowedTools',
+  type: 'string',
+  control: 'agent-tool-list',
+  default: 'bash,read,edit,write',
+  description: 'Default tool names for workflow subagents.',
+  group: 'Dynamic Workflows',
+  placeholder: 'Custom tool name',
+  order: 20,
+};
+
 describe('SettingsField', () => {
   it('separates setting labels from inline descriptions in text content', () => {
     const onChange = vi.fn();
@@ -54,5 +66,33 @@ describe('SettingsField', () => {
     fireEvent.click(getByLabelText('Remove reply action 1'));
 
     expect(onChange).toHaveBeenCalledWith('systemReplyActions.emojiPickerItems', '');
+  });
+
+  it('renders agent tool lists as common tool checkboxes and custom rows', () => {
+    const onChange = vi.fn();
+    const { getByLabelText } = render(
+      <SettingsField entry={agentToolListEntry} value="bash,read,custom_tool" onChange={onChange} />,
+    );
+
+    expect((getByLabelText('bash') as HTMLInputElement).checked).toBe(true);
+    expect((getByLabelText('read') as HTMLInputElement).checked).toBe(true);
+    expect((getByLabelText('edit') as HTMLInputElement).checked).toBe(false);
+    expect((getByLabelText('Additional agent tool 1') as HTMLInputElement).value).toBe('custom_tool');
+  });
+
+  it('serializes edited agent tool lists back to the setting string', () => {
+    const onChange = vi.fn();
+    const { getByLabelText } = render(
+      <SettingsField entry={agentToolListEntry} value="bash,read,custom_tool" onChange={onChange} />,
+    );
+
+    fireEvent.click(getByLabelText('edit'));
+    expect(onChange).toHaveBeenLastCalledWith('dynamicWorkflows.defaultAgentAllowedTools', 'bash,read,edit,custom_tool');
+
+    fireEvent.change(getByLabelText('Additional agent tool 1'), { target: { value: 'browser_snapshot' } });
+    expect(onChange).toHaveBeenLastCalledWith('dynamicWorkflows.defaultAgentAllowedTools', 'bash,read,browser_snapshot');
+
+    fireEvent.click(getByLabelText('Remove additional agent tool 1'));
+    expect(onChange).toHaveBeenLastCalledWith('dynamicWorkflows.defaultAgentAllowedTools', 'bash,read');
   });
 });

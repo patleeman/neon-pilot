@@ -115,9 +115,11 @@
       },
       "dynamicWorkflows.defaultAgentAllowedTools": {
         "type": "string",
+        "control": "agent-tool-list",
         "default": "bash,read,edit,write",
         "group": "Dynamic Workflows",
-        "description": "Comma-separated default tool names for workflow subagents.",
+        "description": "Default tool names for workflow subagents.",
+        "placeholder": "Custom tool name",
         "order": 20
       },
       "dynamicWorkflows.maxConcurrentAgents": {

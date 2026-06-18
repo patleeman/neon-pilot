@@ -4,6 +4,7 @@ import { cx, IconButton, Select, Switch, TextInput } from '../components/ui';
 import type { UnifiedSettingsEntry } from '../shared/types';
 
 const EMOJI_OPTIONS = ['👍', '👎', '✅', '❓', '💡', '📋', '❤️', '🚀', '👀', '🙌', '🙏', '⚠️'];
+const COMMON_AGENT_TOOLS = ['bash', 'read', 'edit', 'write', 'artifact', 'checkpoint', 'mcp', 'subagent'];
 
 interface SettingsFieldProps {
   entry: UnifiedSettingsEntry;
@@ -50,6 +51,9 @@ function formatSettingsFieldLabel(key: string): string {
 function renderControl(entry: UnifiedSettingsEntry, currentValue: unknown, onChange: (value: unknown) => void): ReactNode {
   if (entry.control === 'emoji-label-list') {
     return <EmojiLabelListControl value={currentValue} placeholder={entry.placeholder} onChange={onChange} />;
+  }
+  if (entry.control === 'agent-tool-list') {
+    return <AgentToolListControl value={currentValue} placeholder={entry.placeholder} onChange={onChange} />;
   }
 
   switch (entry.type) {
@@ -178,7 +182,7 @@ function EmojiLabelListControl({
   );
 }
 
-function replaceAt(items: EmojiLabelItem[], index: number, item: EmojiLabelItem): EmojiLabelItem[] {
+function replaceAt<T>(items: T[], index: number, item: T): T[] {
   return items.map((current, itemIndex) => (itemIndex === index ? item : current));
 }
 
@@ -198,4 +202,96 @@ function serializeEmojiLabelItems(items: EmojiLabelItem[]): string {
     .map((item) => `${item.emoji.trim()} ${item.label.trim()}`.trim())
     .filter(Boolean)
     .join(', ');
+}
+
+function AgentToolListControl({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: unknown;
+  placeholder?: string;
+  onChange: (value: unknown) => void;
+}) {
+  const tools = parseToolNames(value);
+  const selectedCommonTools = tools.filter((tool) => COMMON_AGENT_TOOLS.includes(tool));
+  const customTools = tools.filter((tool) => !COMMON_AGENT_TOOLS.includes(tool));
+  const rows = customTools.length ? customTools : [''];
+
+  const emit = (commonTools: string[], customToolRows: string[]) => {
+    onChange(serializeToolNames([...commonTools, ...customToolRows]));
+  };
+
+  const toggleCommonTool = (tool: string) => {
+    const nextCommonTools = selectedCommonTools.includes(tool)
+      ? selectedCommonTools.filter((current) => current !== tool)
+      : [...selectedCommonTools, tool];
+    emit(nextCommonTools, customTools);
+  };
+
+  const updateCustomTool = (index: number, tool: string) => {
+    emit(selectedCommonTools, replaceAt(rows, index, tool));
+  };
+
+  const removeCustomTool = (index: number) => {
+    emit(
+      selectedCommonTools,
+      rows.filter((_, itemIndex) => itemIndex !== index),
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-1.5 text-[12px] text-secondary sm:grid-cols-4">
+        {COMMON_AGENT_TOOLS.map((tool) => (
+          <label key={tool} className="flex min-w-0 items-center gap-1.5 rounded border border-border-subtle/70 bg-surface/70 px-2 py-1.5">
+            <input
+              type="checkbox"
+              checked={selectedCommonTools.includes(tool)}
+              onChange={() => toggleCommonTool(tool)}
+              className="size-3.5 shrink-0 accent-accent"
+            />
+            <span className="truncate font-mono text-[11px] text-primary">{tool}</span>
+          </label>
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        {rows.map((tool, index) => (
+          <div key={index} className="grid max-w-[640px] grid-cols-[minmax(0,1fr)_28px] items-center gap-1.5">
+            <TextInput
+              type="text"
+              aria-label={`Additional agent tool ${index + 1}`}
+              value={tool}
+              placeholder={placeholder ?? 'Custom tool name'}
+              onChange={(e) => updateCustomTool(index, e.target.value)}
+              className={cx('min-w-0 bg-surface/70 font-mono')}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <IconButton compact aria-label={`Remove additional agent tool ${index + 1}`} title="Remove" onClick={() => removeCustomTool(index)}>
+              ×
+            </IconButton>
+          </div>
+        ))}
+      </div>
+      <IconButton compact aria-label="Add additional agent tool" title="Add" onClick={() => emit(selectedCommonTools, [...rows, ''])}>
+        +
+      </IconButton>
+    </div>
+  );
+}
+
+function parseToolNames(value: unknown): string[] {
+  return Array.from(
+    new Set(
+      String(value ?? '')
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function serializeToolNames(tools: string[]): string {
+  return Array.from(new Set(tools.map((tool) => tool.trim()).filter(Boolean))).join(',');
 }
