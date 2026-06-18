@@ -1020,27 +1020,34 @@ export function CommandsSettingsSection() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const loadSequenceRef = useRef(0);
 
   const load = useCallback(async () => {
+    const sequence = ++loadSequenceRef.current;
     setLoading(true);
     try {
       const [nextCommands, nextKeybindings] = await Promise.all([api.extensionCommands(), api.extensionKeybindings()]);
+      if (loadSequenceRef.current !== sequence) return;
       setCommands(nextCommands as CommandSettingsEntry[]);
       setKeybindings(nextKeybindings as CommandKeybindingSettingsEntry[]);
       const bridge = getDesktopBridge();
       if (bridge) {
         try {
           const state = await bridge.readDesktopAppPreferences();
+          if (loadSequenceRef.current !== sequence) return;
           setDesktopShortcuts(state.keyboardShortcuts);
         } catch {
+          if (loadSequenceRef.current !== sequence) return;
           setDesktopShortcuts(null);
         }
       } else {
         setDesktopShortcuts(null);
       }
     } catch (nextError) {
+      if (loadSequenceRef.current !== sequence) return;
       setError(nextError instanceof Error ? nextError.message : String(nextError));
     } finally {
+      if (loadSequenceRef.current !== sequence) return;
       setLoading(false);
     }
   }, []);

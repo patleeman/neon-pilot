@@ -55,6 +55,16 @@ async function flushAsyncWork() {
   });
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('DesktopConnectionsSettingsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -553,5 +563,91 @@ describe('CommandsSettingsSection', () => {
     const focusComposerRow = rows.find((row) => row.textContent?.includes('Focus composer'));
     expect(focusComposerRow).toBeUndefined();
     expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  it('ignores stale overlapping command shortcut loads', async () => {
+    const staleCommands = deferred<Awaited<ReturnType<typeof api.extensionCommands>>>();
+    const freshCommands = deferred<Awaited<ReturnType<typeof api.extensionCommands>>>();
+    const staleKeybindings = deferred<Awaited<ReturnType<typeof api.extensionKeybindings>>>();
+    const freshKeybindings = deferred<Awaited<ReturnType<typeof api.extensionKeybindings>>>();
+
+    vi.spyOn(api, 'extensionCommands')
+      .mockReturnValueOnce(staleCommands.promise)
+      .mockReturnValueOnce(freshCommands.promise);
+    vi.spyOn(api, 'extensionKeybindings')
+      .mockReturnValueOnce(staleKeybindings.promise)
+      .mockReturnValueOnce(freshKeybindings.promise);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(
+        <React.StrictMode>
+          <CommandsSettingsSection />
+        </React.StrictMode>,
+      );
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(api.extensionCommands).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      freshCommands.resolve([
+        {
+          extensionId: 'system-fresh',
+          id: 'fresh-command',
+          title: 'Fresh command',
+          action: 'fresh.run',
+        },
+      ]);
+      freshKeybindings.resolve([
+        {
+          extensionId: 'system-fresh',
+          surfaceId: 'fresh-command',
+          title: 'Fresh command',
+          keys: ['mod+f'],
+          command: 'fresh.run',
+          scope: 'global',
+          enabled: true,
+        },
+      ]);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain('Fresh command');
+    expect(container.textContent).toContain('⌘/Ctrl + f');
+
+    await act(async () => {
+      staleCommands.resolve([
+        {
+          extensionId: 'system-stale',
+          id: 'stale-command',
+          title: 'Stale command',
+          action: 'stale.run',
+        },
+      ]);
+      staleKeybindings.resolve([
+        {
+          extensionId: 'system-stale',
+          surfaceId: 'stale-command',
+          title: 'Stale command',
+          keys: ['mod+s'],
+          command: 'stale.run',
+          scope: 'global',
+          enabled: true,
+        },
+      ]);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain('Fresh command');
+    expect(container.textContent).not.toContain('Stale command');
   });
 });
