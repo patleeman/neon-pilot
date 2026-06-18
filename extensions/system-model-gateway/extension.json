@@ -69,7 +69,20 @@
       "label": "AI Gateway",
       "description": "Local OpenAI Responses-compatible endpoint for external coding agents.",
       "order": 45
-    }
+    },
+    "commands": [
+      {
+        "id": "open-settings",
+        "title": "Open AI Gateway Settings",
+        "category": "Settings",
+        "description": "Open the AI Gateway setup panel.",
+        "action": "app.navigate",
+        "args": {
+          "to": "/settings#settings-model-gateway"
+        },
+        "icon": "plug"
+      }
+    ]
   },
   "permissions": ["storage:readwrite", "network:listen"]
 }

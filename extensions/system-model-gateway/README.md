@@ -9,7 +9,7 @@ dedicated nav page:
 1. Open Settings → Extensions → AI Gateway.
 2. Confirm the endpoint, defaulting to `http://127.0.0.1:8766/v1`.
 3. Change the port if needed; saving the port restarts the listener.
-4. Copy the client config values for external clients that support OpenAI Responses-compatible endpoints.
+4. Use the Codex client setup rows to inspect endpoint/token/model/catalog values, then copy the generated config for external clients that support OpenAI Responses-compatible endpoints.
 5. Check Recent activity for loopback requests and errors.
 
 The gateway uses Neon Pilot's normal app default model when clients send `model = "auto"`. Clients may also request any concrete model listed

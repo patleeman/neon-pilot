@@ -43,6 +43,12 @@ interface GatewayStatus {
   logs: GatewayLogEntry[];
 }
 
+interface GatewayConfigRow {
+  label: string;
+  value: string;
+  secret?: boolean;
+}
+
 const DEFAULT_STATUS: GatewayStatus = {
   running: false,
   host: '127.0.0.1',
@@ -64,6 +70,31 @@ function formatTime(value: string): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
+export function formatGatewayConfigRows(status: GatewayStatus): GatewayConfigRow[] {
+  return [
+    { label: 'Base URL', value: status.baseUrl },
+    { label: 'Auth token', value: status.authToken, secret: true },
+    { label: 'Default model', value: status.defaultModel },
+    ...(status.catalogPath ? [{ label: 'Model catalog', value: status.catalogPath }] : []),
+  ];
+}
+
+export function formatGatewayClientConfig(status: GatewayStatus): string {
+  return formatGatewayConfigRows(status)
+    .map((row) => {
+      const key =
+        row.label === 'Base URL'
+          ? 'base_url'
+          : row.label === 'Auth token'
+            ? 'auth_token'
+            : row.label === 'Default model'
+              ? 'default_model'
+              : 'model_catalog';
+      return `${key}=${JSON.stringify(row.value)}`;
+    })
+    .join('\n');
+}
+
 export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient }) {
   const [status, setStatus] = useState<GatewayStatus>(DEFAULT_STATUS);
   const [port, setPort] = useState(String(DEFAULT_STATUS.port));
@@ -74,16 +105,8 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
   const [copied, setCopied] = useState(false);
   const copyResetTimeoutRef = React.useRef<number | null>(null);
 
-  const gatewayConfig = useMemo(
-    () =>
-      [
-        `base_url=${JSON.stringify(status.baseUrl)}`,
-        `auth_token=${JSON.stringify(status.authToken)}`,
-        `default_model=${JSON.stringify(status.defaultModel)}`,
-        ...(status.catalogPath ? [`model_catalog=${JSON.stringify(status.catalogPath)}`] : []),
-      ].join('\n'),
-    [status.authToken, status.baseUrl, status.catalogPath, status.defaultModel],
-  );
+  const gatewayConfigRows = useMemo(() => formatGatewayConfigRows(status), [status]);
+  const gatewayConfig = useMemo(() => formatGatewayClientConfig(status), [status]);
 
   const load = useCallback(async () => {
     const next = (await pa.extension.invoke('status', {})) as GatewayStatus;
@@ -172,21 +195,21 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
 
       {!loading ? (
         <div className="space-y-5">
-          <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_8rem_10rem]">
-            <div className="min-w-0">
-              <div className="ui-card-meta">Endpoint</div>
-              <div className="mt-1 truncate font-mono text-[13px] text-primary">{status.baseUrl}</div>
-            </div>
-            <div>
-              <div className="ui-card-meta">Status</div>
-              <div className="mt-1">
-                <Pill tone={status.running ? 'success' : 'danger'}>{status.running ? 'Running' : 'Unavailable'}</Pill>
+          <div className="model-gateway-status-grid">
+            {[
+              ['Status', status.running ? 'Running' : 'Unavailable'],
+              ['Endpoint', status.baseUrl],
+              ['Models', String(status.models)],
+              ['Default model', status.defaultModel],
+              ['Port', String(status.port)],
+            ].map(([label, value]) => (
+              <div key={label} className="model-gateway-status-row">
+                <span className="text-dim">{label}</span>
+                <span className="min-w-0 truncate text-primary">
+                  {label === 'Status' ? <Pill tone={status.running ? 'success' : 'danger'}>{value}</Pill> : value}
+                </span>
               </div>
-            </div>
-            <div>
-              <div className="ui-card-meta">Models</div>
-              <div className="mt-1 text-[13px] text-primary">{status.models}</div>
-            </div>
+            ))}
           </div>
 
           {status.lastError ? <Notice tone="danger">{status.lastError}</Notice> : null}
@@ -215,14 +238,23 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-[13px] font-semibold text-primary">Client config</div>
-                <SupportingText>Use these values in external clients that support OpenAI Responses-compatible endpoints.</SupportingText>
+                <div className="text-[13px] font-semibold text-primary">Codex client setup</div>
+                <SupportingText>Copy these values into an OpenAI Responses-compatible client profile.</SupportingText>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <ToolbarButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy'}</ToolbarButton>
+                <ToolbarButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy Codex config'}</ToolbarButton>
               </div>
             </div>
-            <pre className="model-gateway-code">{gatewayConfig}</pre>
+            <div className="model-gateway-config-rows">
+              {gatewayConfigRows.map((row) => (
+                <div key={row.label} className="model-gateway-config-row">
+                  <span className="text-dim">{row.label}</span>
+                  <span className="min-w-0 truncate font-mono text-[12px] text-primary">
+                    {row.secret && row.value ? '••••••••••••••••' : row.value || 'not set'}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-2">
