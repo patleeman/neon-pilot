@@ -116,7 +116,20 @@ export function DictationButton({
   const captureRef = useRef<ComposerDictationCapture | null>(null);
   const pendingStartRef = useRef<Promise<void> | null>(null);
   const pointerRef = useRef<{ pointerId: number; startedAt: number; startedExistingRecording: boolean } | null>(null);
+  const mountedRef = useRef(true);
   const toggleAvailable = !controlContext.composerDisabled && state !== 'transcribing';
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      pointerRef.current = null;
+      const capture = captureRef.current;
+      captureRef.current = null;
+      if (capture) {
+        void capture.stop().catch(() => {});
+      }
+    };
+  }, []);
 
   useEffect(() => {
     pa.commands.setContext('toggleAvailable', toggleAvailable);
@@ -130,14 +143,18 @@ export function DictationButton({
     const capture = captureRef.current;
     if (!capture) return;
     captureRef.current = null;
-    setStartedAt(null);
-    setState('transcribing');
+    if (mountedRef.current) {
+      setStartedAt(null);
+      setState('transcribing');
+    }
     try {
       const { audio, durationMs, mimeType, fileName } = await capture.stop();
+      if (!mountedRef.current) return;
       if (audio.byteLength === 0 || durationMs < 150) return;
       const result = (await pa.extension.invoke('transcribeFile', { dataBase64: bytesToBase64(audio), mimeType, fileName })) as {
         text?: string;
       };
+      if (!mountedRef.current) return;
       const text = result.text?.trim();
       if (!text) {
         pa.ui.toast('Dictation did not detect any speech.');
@@ -146,10 +163,13 @@ export function DictationButton({
       window.dispatchEvent(new CustomEvent('neon-pilot:composer-append-text', { detail: { text } }));
       pa.ui.toast('Dictation inserted.');
     } catch (error) {
+      if (!mountedRef.current) return;
       const message = error instanceof Error ? error.message : String(error);
       pa.ui.toast(message.toLowerCase().includes('empty transcript') ? 'Dictation did not detect any speech.' : message);
     } finally {
-      setState('idle');
+      if (mountedRef.current) {
+        setState('idle');
+      }
     }
   }, [pa]);
 
@@ -160,13 +180,24 @@ export function DictationButton({
         setSamples([]);
         setStartedAt(performance.now());
         setState('recording');
-        captureRef.current = await startComposerDictationCapture({
-          onLevel: (level) => setSamples((current) => [...current.slice(-71), level]),
+        const capture = await startComposerDictationCapture({
+          onLevel: (level) => {
+            if (mountedRef.current) {
+              setSamples((current) => [...current.slice(-71), level]);
+            }
+          },
         });
+        if (!mountedRef.current) {
+          await capture.stop().catch(() => {});
+          return;
+        }
+        captureRef.current = capture;
       } catch (error) {
-        setStartedAt(null);
-        setState('idle');
-        pa.ui.toast(error instanceof Error ? error.message : String(error));
+        if (mountedRef.current) {
+          setStartedAt(null);
+          setState('idle');
+          pa.ui.toast(error instanceof Error ? error.message : String(error));
+        }
       } finally {
         pendingStartRef.current = null;
       }
