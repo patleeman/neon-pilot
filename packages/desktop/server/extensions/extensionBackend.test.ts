@@ -301,6 +301,27 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires execution permissions for host-run execution helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'execution-helper-ext');
+    const context = createBackendContext('execution-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    await expect(context.executions.list()).rejects.toThrow(
+      'Extension "execution-helper-ext" requires permission executions:read to use executions.list.',
+    );
+    await expect(context.executions.start({ prompt: 'go' })).rejects.toThrow(
+      'Extension "execution-helper-ext" requires permission executions:start to use executions.start.',
+    );
+    await expect(context.executions.cancel('run-1')).rejects.toThrow(
+      'Extension "execution-helper-ext" requires permission executions:cancel to use executions.cancel.',
+    );
+  });
+
   it('passes the server route settings file into worker action contexts', async () => {
     const workerRunner = {
       loadModule: vi.fn(async () => ({})),

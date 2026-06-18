@@ -423,7 +423,7 @@ export function createBackendContext(
     database: createExtensionDatabaseManager(extensionId),
     attention: createExtensionAttentionCapability(extensionId, toolContext),
     automations: createExtensionAutomationsCapability(serverContext),
-    executions: createExtensionExecutionsCapability(extensionId),
+    executions: createExtensionExecutionsCapability(extensionId, { enforceManifestPermissions: true }),
     models: createExtensionModelsCapability(serverContext, extensionId),
     knowledge: createExtensionKnowledgeCapability(),
     conversations: createExtensionConversationsCapability(serverContext, extensionId),

@@ -16,6 +16,11 @@ vi.mock('@neon-pilot/daemon', () => ({ pingDaemon, startBackgroundRun }));
 vi.mock('../automation/durableRuns.js', () => ({ cancelDurableRun, getDurableRun, getDurableRunLog, listDurableRuns }));
 vi.mock('../executions/executionService.js', () => ({ getExecution, getExecutionLog, listConversationExecutions, listExecutions }));
 vi.mock('../middleware/index.js', () => ({ invalidateAppTopics }));
+vi.mock('./extensionPermissions.js', () => ({
+  assertExtensionPermission: vi.fn((extensionId: string, permission: string, capability: string) => {
+    throw new Error(`Extension "${extensionId}" requires permission ${permission} to use ${capability}.`);
+  }),
+}));
 
 const { createExtensionExecutionsCapability, createExtensionRunsCapability } = await import('./extensionRuns.js');
 
@@ -110,5 +115,19 @@ describe('extensionRuns', () => {
     await expect(executions.readLog('missing')).rejects.toThrow('Execution not found');
     cancelDurableRun.mockResolvedValue({ cancelled: false });
     await expect(executions.cancel('e1')).rejects.toThrow('Could not cancel execution');
+  });
+
+  it('requires execution permissions when manifest enforcement is enabled', async () => {
+    const executions = createExtensionExecutionsCapability('execution-helper-ext', { enforceManifestPermissions: true });
+
+    await expect(executions.list()).rejects.toThrow(
+      'Extension "execution-helper-ext" requires permission executions:read to use executions.list.',
+    );
+    await expect(executions.start({ prompt: 'go' })).rejects.toThrow(
+      'Extension "execution-helper-ext" requires permission executions:start to use executions.start.',
+    );
+    await expect(executions.cancel('run-1')).rejects.toThrow(
+      'Extension "execution-helper-ext" requires permission executions:cancel to use executions.cancel.',
+    );
   });
 });
