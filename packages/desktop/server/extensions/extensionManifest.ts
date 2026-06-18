@@ -75,6 +75,8 @@ export const EXTENSION_PERMISSIONS = [
   'shell:execute',
   'commands:read',
   'commands:execute',
+  'browser:read',
+  'browser:control',
   'git:read',
   'secrets:read',
   'extensions:read',

@@ -116,7 +116,7 @@ function readJsonObjectFile(path: string, label: string): Record<string, unknown
   }
 }
 
-function writeRestrictedJsonFile(path: string, value: Record<string, unknown>): void {
+function writeRestrictedJsonFile(path: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, { mode: MACHINE_CONFIG_FILE_MODE });
   chmodSync(path, MACHINE_CONFIG_FILE_MODE);
 }

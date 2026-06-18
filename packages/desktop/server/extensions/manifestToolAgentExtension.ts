@@ -81,7 +81,7 @@ export function createManifestToolAgentExtensions(options: ManifestToolFactoryOp
   const registrations = listExtensionToolRegistrations();
   const registerableToolIds = new Set(
     buildToolInjectionPlanFromRegistrations(registrations, {
-      profile: options.getRuntimeScope(),
+      runtimeScope: options.getRuntimeScope(),
       repoRoot: options.repoRoot,
       modelRef: currentModelRef,
     })

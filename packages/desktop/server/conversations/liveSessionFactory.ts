@@ -216,7 +216,7 @@ export async function warmLiveSessionToolSelection(settingsFile: string, modelRe
       ? cachedToolSelection.activeToolNames
       : null;
   if (!extensionToolNames) {
-    const plan = await buildToolInjectionPlanAsync({ profile, repoRoot, modelRef });
+    const plan = await buildToolInjectionPlanAsync({ runtimeScope: profile, repoRoot, modelRef });
     extensionToolNames = plan.activeToolNames;
     cachedToolSelection = { key: cacheKey, activeToolNames: extensionToolNames, cachedAtMs: nowMs };
   }

@@ -52,7 +52,7 @@ function buildTaskDetailResponse(
     ...(runtime ?? {}),
     id: metadata.id,
     title: metadata.title,
-    filePath: task.legacyFilePath,
+    filePath: task.filePath,
     scheduleType: metadata.scheduleType,
     targetType: metadata.targetType,
     running: runtime?.running ?? false,
@@ -109,7 +109,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
         return {
           id: taskWithThread.id,
           title: taskWithThread.title,
-          filePath: taskWithThread.legacyFilePath,
+          filePath: taskWithThread.filePath,
           scheduleType: taskWithThread.schedule.type,
           targetType: taskWithThread.targetType,
           running: runtime?.running ?? false,

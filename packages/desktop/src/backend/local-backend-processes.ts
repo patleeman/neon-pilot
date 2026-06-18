@@ -677,14 +677,16 @@ export class LocalBackendProcesses {
         }),
       });
 
-      this.child = child;
+      const backendChild = child;
 
-      child.stderr?.on('data', (chunk) => {
+      this.child = backendChild;
+
+      backendChild.stderr?.on('data', (chunk) => {
         process.stderr.write(`[desktop-backend] ${String(chunk)}`);
       });
-      child.on('message', (message) => {
+      backendChild.on('message', (message) => {
         if (this.isNativeWorkbenchBrowserRequest(message)) {
-          void this.handleNativeWorkbenchBrowserRequest(child, message);
+          void this.handleNativeWorkbenchBrowserRequest(backendChild, message);
           return;
         }
         if (this.isLocalApiRpcResponse(message)) {
@@ -695,9 +697,9 @@ export class LocalBackendProcesses {
       const readyWaitStartedAt = Date.now();
       const ready = await new Promise<BackendReadyMessage>((resolveReady, rejectReady) => {
         const cleanup = () => {
-          child?.off('message', onMessage);
-          child?.off('exit', onExit);
-          child?.off('error', onError);
+          backendChild.off('message', onMessage);
+          backendChild.off('exit', onExit);
+          backendChild.off('error', onError);
         };
         const onMessage = (message: unknown) => {
           if (!isBackendChildMessage(message)) return;
@@ -717,9 +719,9 @@ export class LocalBackendProcesses {
           cleanup();
           rejectReady(error);
         };
-        child.on('message', onMessage);
-        child.once('exit', onExit);
-        child.once('error', onError);
+        backendChild.on('message', onMessage);
+        backendChild.once('exit', onExit);
+        backendChild.once('error', onError);
       });
 
       if (this.disposed) {

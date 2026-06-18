@@ -90,7 +90,7 @@ export async function readConversationBootstrapState(
   const liveSessionLookupMs = performance.now() - liveSessionLookupStartedAt;
   const extensionMetadataNamespaces = listConversationMetadataNamespaces({
     conversationId: input.conversationId,
-    profile: input.profile,
+    runtimeScope: input.profile,
   });
 
   return {

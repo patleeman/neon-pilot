@@ -271,7 +271,9 @@ async function readLatestAssistantReply(conversationId: string): Promise<{ text:
   const text = block.text.trim();
   if (!text) return null;
   const candidate = block as typeof block & { id?: unknown; blockId?: unknown; entryId?: unknown };
-  const identity = [candidate.id, candidate.blockId, candidate.entryId].find((value): value is string => typeof value === 'string' && value);
+  const identity = [candidate.id, candidate.blockId, candidate.entryId].find(
+    (value): value is string => typeof value === 'string' && value.length > 0,
+  );
   return { text, deliveryKey: identity ? `block:${identity}` : `text:${text}` };
 }
 

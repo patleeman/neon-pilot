@@ -690,8 +690,9 @@ export async function createAgentConversation(
     assistantTexts: [],
   };
   record.unsubscribe = direct.session.subscribe((event) => {
-    if (event.type === 'message_end' && event.message.role === 'assistant') {
-      const text = extractTextContent(event.message.content).trim();
+    const message = event.message;
+    if (event.type === 'message_end' && message?.role === 'assistant') {
+      const text = extractTextContent(message.content).trim();
       if (text) record.assistantTexts.push(text);
     }
   });
@@ -1070,8 +1071,9 @@ export async function runAgentTask(
     assistantTexts: [],
   };
   record.unsubscribe = created.session.subscribe((event) => {
-    if (event.type === 'message_end' && event.message.role === 'assistant') {
-      const text = extractTextContent(event.message.content).trim();
+    const message = event.message;
+    if (event.type === 'message_end' && message?.role === 'assistant') {
+      const text = extractTextContent(message.content).trim();
       if (text) record.assistantTexts.push(text);
     }
   });

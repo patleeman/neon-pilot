@@ -629,7 +629,7 @@ export async function readDesktopConversationState(input: {
   const sessionMetaAtMs = performance.now();
   const extensionMetadataNamespaces = listConversationMetadataNamespaces({
     conversationId,
-    profile: input.profile,
+    runtimeScope: input.profile,
   });
   const metadataNamespacesAtMs = performance.now();
   const liveSession = sessionMeta?.isLive ? await readLiveSessionStateSnapshot(conversationId, tailBlocks) : null;

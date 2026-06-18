@@ -33,7 +33,15 @@ interface ExtensionCatalogModule {
 }
 
 interface CoreModule {
-  installPackageSource(input: { source: string; target: 'local'; sourceBaseDir?: string }): unknown;
+  installPackageSource(input: { source: string; target: 'local'; sourceBaseDir?: string }): MarketplacePackageInstallResult;
+}
+
+interface MarketplacePackageInstallResult {
+  installed: boolean;
+  alreadyPresent: boolean;
+  source: string;
+  target: string;
+  settingsPath: string;
 }
 
 type RuntimeExtensionCreateOptions = Record<string, unknown>;

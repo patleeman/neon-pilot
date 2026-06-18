@@ -584,7 +584,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
         return {
           id: taskWithThread.id,
           title: taskWithThread.title,
-          filePath: taskWithThread.legacyFilePath,
+          filePath: taskWithThread.filePath,
           scheduleType: taskWithThread.schedule.type,
           running: runtime?.running ?? false,
           enabled: taskWithThread.enabled,
