@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const modelGatewayMock = vi.hoisted(() => ({
   streamSignals: [] as Array<AbortSignal | undefined>,
+  createResponseCalls: [] as Array<{ model?: unknown; input?: unknown }>,
 }));
 
 vi.mock(
@@ -25,6 +26,7 @@ vi.mock(
       return '/tmp/model-gateway/model-catalog.json';
     },
     async createModelGatewayResponse(_ctx: unknown, body: { model?: unknown; input?: unknown }) {
+      modelGatewayMock.createResponseCalls.push(body);
       return {
         id: 'resp_test',
         object: 'response',
@@ -101,6 +103,7 @@ describe('system-model-gateway backend', () => {
   afterEach(async () => {
     await stopGatewayService({}, ctx());
     modelGatewayMock.streamSignals.splice(0);
+    modelGatewayMock.createResponseCalls.splice(0);
   });
 
   it('serves health with the default loopback target', async () => {
@@ -210,6 +213,23 @@ describe('system-model-gateway backend', () => {
       body: JSON.stringify({ model: 'neon-pilot-fake', input: 'hello' }),
     });
     expect(authorizedResponse.status).toBe(200);
+  });
+
+  it('rejects oversized loopback response request bodies before model dispatch', async () => {
+    const port = await getFreePort();
+    const context = ctx(undefined, { settings: { port } });
+    const state = await startGatewayService({}, context);
+    const token = (state as { authToken: string }).authToken;
+
+    const response = await fetch(`http://127.0.0.1:${port}/v1/responses`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'neon-pilot-fake', input: 'x'.repeat(1024 * 1024) }),
+    });
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({ error: { message: expect.stringContaining('Request body exceeds') } });
+    expect(modelGatewayMock.createResponseCalls).toHaveLength(0);
   });
 
   it('aborts loopback streaming responses when the client disconnects', async () => {

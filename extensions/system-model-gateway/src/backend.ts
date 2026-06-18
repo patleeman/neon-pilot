@@ -35,6 +35,14 @@ interface GatewayState extends ModelGatewayStatus {
 
 const logs: GatewayLogEntry[] = [];
 const MAX_LOGS = 80;
+const MAX_LOOPBACK_REQUEST_BODY_BYTES = 1024 * 1024;
+
+class RequestBodyTooLargeError extends Error {
+  constructor() {
+    super(`Request body exceeds ${MAX_LOOPBACK_REQUEST_BODY_BYTES} bytes.`);
+    this.name = 'RequestBodyTooLargeError';
+  }
+}
 
 async function readSettings(ctx: ExtensionBackendContext): Promise<ModelGatewaySettings> {
   const settings = await modelGatewaySettingsFrom(await ctx.storage.get('settings'));
@@ -230,7 +238,15 @@ async function stopLoopbackServer(): Promise<void> {
 
 async function readBody(request: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
-  for await (const chunk of request) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  let totalBytes = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    totalBytes += buffer.byteLength;
+    if (totalBytes > MAX_LOOPBACK_REQUEST_BODY_BYTES) {
+      throw new RequestBodyTooLargeError();
+    }
+    chunks.push(buffer);
+  }
   const text = Buffer.concat(chunks).toString('utf-8').trim();
   if (!text) return {};
   return JSON.parse(text);
@@ -342,6 +358,11 @@ async function handleHttpRequest(
     sendJson(response, 404, { error: { message: 'Route not found.' } });
   } catch (error) {
     lastError = error instanceof Error ? error.message : String(error);
+    if (error instanceof RequestBodyTooLargeError) {
+      statusCode = 413;
+      if (!response.headersSent) sendJson(response, 413, { error: { message: lastError } });
+      return;
+    }
     statusCode = 500;
     if (!response.headersSent) {
       sendJson(response, 500, { error: { message: lastError } });
