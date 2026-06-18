@@ -197,6 +197,7 @@ export type ExtensionPermission =
   | 'automations:write'
   | 'automations:readwrite'
   | 'automations:run'
+  | 'runtimes:read'
   | 'attention:read'
   | 'attention:write'
   | 'storage:read'

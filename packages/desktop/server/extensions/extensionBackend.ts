@@ -574,13 +574,18 @@ export function createBackendContext(
       },
     },
     runtimes: {
-      list: async () => listExtensionRuntimes(serverContext, toolContext, agentToolContext),
+      list: async () => {
+        assertExtensionPermission(extensionId, 'runtimes:read', 'runtimes.list');
+        return listExtensionRuntimes(serverContext, toolContext, agentToolContext);
+      },
       get: async (runtimeId) => {
+        assertExtensionPermission(extensionId, 'runtimes:read', 'runtimes.get');
         const runtime = (await listExtensionRuntimes(serverContext, toolContext, agentToolContext)).find((item) => item.id === runtimeId);
         if (!runtime) throw new Error(`Runtime "${runtimeId}" not found.`);
         return runtime;
       },
       healthCheck: async (runtimeId) => {
+        assertExtensionPermission(extensionId, 'runtimes:read', 'runtimes.healthCheck');
         const runtime = (await listExtensionRuntimes(serverContext, toolContext, agentToolContext)).find((item) => item.id === runtimeId);
         if (!runtime) throw new Error(`Runtime "${runtimeId}" not found.`);
         return { runtimeId, status: runtime.status, checkedAt: new Date().toISOString() };

@@ -394,6 +394,27 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires runtime read permission for host-run runtime provider helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'runtime-provider-helper-ext');
+    const context = createBackendContext('runtime-provider-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    await expect(context.runtimes.list()).rejects.toThrow(
+      'Extension "runtime-provider-helper-ext" requires permission runtimes:read to use runtimes.list.',
+    );
+    await expect(context.runtimes.get('runtime-1')).rejects.toThrow(
+      'Extension "runtime-provider-helper-ext" requires permission runtimes:read to use runtimes.get.',
+    );
+    await expect(context.runtimes.healthCheck('runtime-1')).rejects.toThrow(
+      'Extension "runtime-provider-helper-ext" requires permission runtimes:read to use runtimes.healthCheck.',
+    );
+  });
+
   it('requires conversation permissions for host-run conversation helpers', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
