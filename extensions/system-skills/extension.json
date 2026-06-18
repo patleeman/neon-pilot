@@ -31,5 +31,5 @@
     ]
   },
   "contributes": {},
-  "permissions": ["extensions:read"]
+  "permissions": ["extensions:read", "mcp:write"]
 }

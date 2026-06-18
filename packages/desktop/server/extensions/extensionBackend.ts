@@ -409,12 +409,14 @@ export function createBackendContext(
     runtime: {
       getLiveSessionResourceOptions: liveSessionResourceOptions,
       getRepoRoot: () => serverContext?.getRepoRoot?.() ?? process.cwd(),
-      refreshSkillMcpConfig: () =>
-        refreshHostSkillMcpConfig({
+      refreshSkillMcpConfig: () => {
+        assertExtensionPermission(extensionId, 'mcp:write', 'runtime.refreshSkillMcpConfig');
+        return refreshHostSkillMcpConfig({
           runtimeScope,
           repoRoot: serverContext?.getRepoRoot?.() ?? process.cwd(),
           runtimeDir: resolvedPiAgentRuntimeDir,
-        }),
+        });
+      },
     },
     storage: createStorage(extensionId),
     database: createExtensionDatabaseManager(extensionId),

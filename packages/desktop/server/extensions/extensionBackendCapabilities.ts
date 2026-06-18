@@ -489,6 +489,10 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
     return request.operation === 'generate' ? ['images:write'] : [];
   }
 
+  if (request.capability === 'runtime') {
+    return request.operation === 'refreshSkillMcpConfig' ? ['mcp:write'] : [];
+  }
+
   return [];
 }
 

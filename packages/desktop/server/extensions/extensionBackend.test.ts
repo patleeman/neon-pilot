@@ -155,6 +155,21 @@ describe('extension backend action invocation', () => {
     expect(context.runtimeSettingsFilePath).toBe('/runtime/from-route/settings.json');
   });
 
+  it('requires mcp write permission for host-run runtime MCP refresh', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'runtime-refresh-ext');
+    const context = createBackendContext('runtime-refresh-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    expect(() => context.runtime.refreshSkillMcpConfig()).toThrow(
+      'Extension "runtime-refresh-ext" requires permission mcp:write to use runtime.refreshSkillMcpConfig.',
+    );
+  });
+
   it('passes the server route settings file into worker action contexts', async () => {
     const workerRunner = {
       loadModule: vi.fn(async () => ({})),

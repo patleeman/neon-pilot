@@ -1831,6 +1831,7 @@ describe('extension backend capability dispatcher', () => {
   });
 
   it('dispatches host-owned runtime refresh capability calls', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['mcp:write'] } });
     const runtime = { refreshSkillMcpConfig: vi.fn(async () => ({ mcpConfigPath: '/runtime/mcp_servers.json' })) };
     const dispatch = createExtensionBackendCapabilityDispatcher({ runtime });
 
@@ -1852,5 +1853,23 @@ describe('extension backend capability dispatcher', () => {
       repoRoot: '/repo',
       runtimeDir: '/runtime',
     });
+  });
+
+  it('denies host-owned runtime refresh capability calls without mcp:write permission', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const runtime = { refreshSkillMcpConfig: vi.fn() };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ runtime });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'system-skills',
+        capability: 'runtime',
+        operation: 'refreshSkillMcpConfig',
+        input: { runtimeScope: 'shared', repoRoot: '/repo', runtimeDir: '/runtime' },
+      }),
+    ).rejects.toThrow('requires permission mcp:write');
+    expect(runtime.refreshSkillMcpConfig).not.toHaveBeenCalled();
   });
 });
