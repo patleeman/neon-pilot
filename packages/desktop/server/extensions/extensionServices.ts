@@ -4,6 +4,7 @@ import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { runExtensionBackendExportInWorker } from './extensionBackend.js';
 import { extensionBackendOperation } from './extensionBackendRunner.js';
 import { isLockedExtensionId } from './extensionEnabledConfig.js';
+import { assertExtensionPermission } from './extensionPermissions.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
   clearExtensionFailureRecordsForOperation,
@@ -80,6 +81,7 @@ async function startOneExtensionService(
   const key = serviceKey(extensionId, service.id);
   if (runningServices.has(key)) return { extensionId, serviceId: service.id, ok: true };
   try {
+    assertExtensionPermission(extensionId, 'network:listen', `service ${service.id}`);
     const SERVICE_STARTUP_TIMEOUT_MS = 30_000;
     const operation = extensionBackendOperation('service-startup', `service ${service.id} startup`, { target: service.id });
     markExtensionStartupActive(extensionId);

@@ -71,5 +71,5 @@
       "order": 45
     }
   },
-  "permissions": ["storage:readwrite"]
+  "permissions": ["storage:readwrite", "network:listen"]
 }
