@@ -487,6 +487,11 @@ describe('extension backend capability dispatcher', () => {
   });
 
   it('dispatches extension registry capability calls', async () => {
+    findExtensionEntry.mockReturnValue({
+      manifest: {
+        permissions: ['extensions:read', 'extensions:write'],
+      },
+    });
     const extensions = {
       listActions: vi.fn(() => [{ extensionId: 'ext-a', extensionName: 'Ext A', actions: [{ id: 'run' }] }]),
       getStatus: vi.fn(() => ({ enabled: true, healthy: true })),
@@ -535,7 +540,43 @@ describe('extension backend capability dispatcher', () => {
     expect(extensions.setEnabled).toHaveBeenCalledWith('ext-a', false);
   });
 
+  it('denies extension registry reads without extensions:read permission', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const extensions = { listActions: vi.fn(), getStatus: vi.fn(), setEnabled: vi.fn() };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ extensions });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'extensions',
+        operation: 'listActions',
+      }),
+    ).rejects.toThrow('requires permission extensions:read');
+    expect(extensions.listActions).not.toHaveBeenCalled();
+  });
+
+  it('denies extension registry writes without extensions:write permission', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['extensions:read'] } });
+    const extensions = { listActions: vi.fn(), getStatus: vi.fn(), setEnabled: vi.fn() };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ extensions });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'extensions',
+        operation: 'setEnabled',
+        input: { extensionId: 'ext-a', enabled: false },
+      }),
+    ).rejects.toThrow('requires permission extensions:write');
+    expect(extensions.setEnabled).not.toHaveBeenCalled();
+  });
+
   it('rejects malformed extension registry capability inputs', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['extensions:write'] } });
     const extensions = { listActions: vi.fn(), getStatus: vi.fn(), setEnabled: vi.fn() };
     const dispatch = createExtensionBackendCapabilityDispatcher({ extensions });
 
