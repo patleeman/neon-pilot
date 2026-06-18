@@ -7,6 +7,15 @@ function validateOptionalInteger(value: unknown, path: string): void {
   }
 }
 
+function validateContributionKey(key: string, path: string): void {
+  if (key.trim().length === 0) {
+    throw new Error(`Extension manifest ${path} must be a non-empty key.`);
+  }
+  if (key.includes(':')) {
+    throw new Error(`Extension manifest ${path} must not contain ":".`);
+  }
+}
+
 export function validateSettingsComponentContribution(value: unknown): void {
   if (!isRecord(value)) {
     throw new Error('Extension manifest contributes.settingsComponent must be an object.');
@@ -43,6 +52,7 @@ export function validateSecretContributions(value: unknown): void {
     throw new Error('Extension manifest contributes.secrets must be an object.');
   }
   for (const [key, secret] of Object.entries(value)) {
+    validateContributionKey(key, `contributes.secrets.${key}`);
     if (!isRecord(secret)) {
       throw new Error(`Extension manifest contributes.secrets.${key} must be an object.`);
     }

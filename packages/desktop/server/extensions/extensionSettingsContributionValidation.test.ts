@@ -34,5 +34,11 @@ describe('extensionSettingsContributionValidation', () => {
     expect(() => validateSecretContributions({ token: { label: 'Token', order: 1.5 } })).toThrow(
       'Extension manifest contributes.secrets.token.order must be an integer.',
     );
+    expect(() => validateSecretContributions({ ' ': { label: 'Token' } })).toThrow(
+      'Extension manifest contributes.secrets.  must be a non-empty key.',
+    );
+    expect(() => validateSecretContributions({ 'team:token': { label: 'Token' } })).toThrow(
+      'Extension manifest contributes.secrets.team:token must not contain ":".',
+    );
   });
 });
