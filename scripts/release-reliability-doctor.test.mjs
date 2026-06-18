@@ -4,8 +4,11 @@ import {
   checkConversationAdminFlows,
   checkDeferredResumeLifecycle,
   checkExtensionStateSanity,
+  checkInstallableCatalogCompatibility,
   checkHeartbeatConfig,
   checkUnifiedAdminSurface,
+  collectInstallableCatalogCompatibility,
+  satisfiesVersionRange,
 } from './release-reliability-doctor.mjs';
 
 const manifest = (id, contributes = {}) => ({ path: `${id}/extension.json`, manifest: { id, contributes } });
@@ -59,5 +62,33 @@ describe('release reliability doctor', () => {
     ]);
 
     expect(result.ok).toBe(true);
+  });
+
+  it('validates baked installable catalog compatibility against the app version', () => {
+    const result = checkInstallableCatalogCompatibility('0.11.22', [
+      { id: 'system-knowledge', name: 'Knowledge', neonPilot: '>=0.10.0' },
+      { id: 'system-writing-studio', name: 'Writing Studio', neonPilot: '>=0.10.0 <0.11.0' },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.failures.join('\n')).toContain('system-writing-studio');
+    expect(result.failures.join('\n')).toContain('package.json is 0.11.22');
+  });
+
+  it('parses installable catalog compatibility metadata', () => {
+    expect(
+      collectInstallableCatalogCompatibility(`
+        export const INSTALLABLE_EXTENSION_CATALOG = [
+          { id: 'system-knowledge', name: 'Knowledge', compatibility: { neonPilot: '>=0.10.0' } },
+        ];
+      `),
+    ).toEqual([{ id: 'system-knowledge', name: 'Knowledge', neonPilot: '>=0.10.0' }]);
+  });
+
+  it('checks semver ranges used by catalog compatibility metadata', () => {
+    expect(satisfiesVersionRange('0.11.22', '>=0.10.0')).toBe(true);
+    expect(satisfiesVersionRange('0.11.22', '>=0.10.0 <0.11.0')).toBe(false);
+    expect(satisfiesVersionRange('0.11.0-rc.1', '>=0.11.0-rc.1 <0.11.0')).toBe(true);
+    expect(satisfiesVersionRange('0.11.22', '^0.11.0')).toBe(null);
   });
 });

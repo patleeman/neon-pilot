@@ -114,7 +114,7 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     version: '0.1.2',
     tag: 'v0.10.2',
     compatibility: {
-      neonPilot: '>=0.10.0 <0.11.0',
+      neonPilot: '>=0.10.0',
       extensionApi: '^2',
     },
   },

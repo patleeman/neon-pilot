@@ -7,9 +7,81 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const packageJsonPath = join(repoRoot, 'package.json');
+const installableExtensionCatalogPath = join(repoRoot, 'packages/desktop/server/extensions/installableExtensionCatalog.generated.ts');
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+function parseVersion(value) {
+  const match = String(value ?? '')
+    .trim()
+    .match(/^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?/);
+  if (!match) return null;
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
+    prerelease: match[4]?.split('.').filter(Boolean) ?? [],
+  };
+}
+
+function compareIdentifier(left, right) {
+  const leftNumber = /^\d+$/.test(left) ? Number(left) : null;
+  const rightNumber = /^\d+$/.test(right) ? Number(right) : null;
+  if (leftNumber !== null && rightNumber !== null) return Math.sign(leftNumber - rightNumber);
+  if (leftNumber !== null) return -1;
+  if (rightNumber !== null) return 1;
+  return left.localeCompare(right);
+}
+
+function compareVersions(left, right) {
+  if (left.major !== right.major) return Math.sign(left.major - right.major);
+  if (left.minor !== right.minor) return Math.sign(left.minor - right.minor);
+  if (left.patch !== right.patch) return Math.sign(left.patch - right.patch);
+  if (left.prerelease.length === 0 && right.prerelease.length === 0) return 0;
+  if (left.prerelease.length === 0) return 1;
+  if (right.prerelease.length === 0) return -1;
+  const length = Math.max(left.prerelease.length, right.prerelease.length);
+  for (let index = 0; index < length; index += 1) {
+    const leftPart = left.prerelease[index];
+    const rightPart = right.prerelease[index];
+    if (leftPart === undefined) return -1;
+    if (rightPart === undefined) return 1;
+    const compared = compareIdentifier(leftPart, rightPart);
+    if (compared !== 0) return compared;
+  }
+  return 0;
+}
+
+function satisfiesComparator(version, comparator) {
+  const match = comparator.match(/^(>=|<=|>|<|=)?\s*v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/);
+  if (!match) return null;
+  const target = parseVersion(match[2]);
+  if (!target) return null;
+  const compared = compareVersions(version, target);
+  const operator = match[1] ?? '=';
+  if (operator === '>=') return compared >= 0;
+  if (operator === '<=') return compared <= 0;
+  if (operator === '>') return compared > 0;
+  if (operator === '<') return compared < 0;
+  return compared === 0;
+}
+
+export function satisfiesVersionRange(versionValue, rangeValue) {
+  const version = parseVersion(versionValue);
+  if (!version) return null;
+  const tokens = String(rangeValue ?? '').trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0 || tokens.some((token) => token === '*' || token.toLowerCase() === 'x')) return true;
+  let sawComparableToken = false;
+  for (const token of tokens) {
+    const result = satisfiesComparator(version, token);
+    if (result === null) return null;
+    sawComparableToken = true;
+    if (!result) return false;
+  }
+  return sawComparableToken ? true : null;
 }
 
 function listExtensionManifests(root = join(repoRoot, 'extensions')) {
@@ -172,6 +244,36 @@ export function checkHeartbeatConfig(manifests) {
   return { ok: failures.length === 0, failures };
 }
 
+export function collectInstallableCatalogCompatibility(source = readFileSync(installableExtensionCatalogPath, 'utf8')) {
+  return [
+    ...source.matchAll(
+      /\{\s*id:\s*'([^']+)'[\s\S]*?name:\s*'([^']+)'[\s\S]*?compatibility:\s*\{[\s\S]*?neonPilot:\s*'([^']+)'[\s\S]*?\}\s*,?\s*\}/g,
+    ),
+  ].map((match) => ({
+      id: match[1],
+      name: match[2],
+      neonPilot: match[3],
+    }));
+}
+
+export function checkInstallableCatalogCompatibility(
+  appVersion = readJson(packageJsonPath).version,
+  entries = collectInstallableCatalogCompatibility(),
+) {
+  const failures = [];
+  for (const entry of entries) {
+    const compatible = satisfiesVersionRange(appVersion, entry.neonPilot);
+    if (compatible === false) {
+      failures.push(
+        `Installable catalog entry ${entry.id} (${entry.name}) requires Neon Pilot ${entry.neonPilot}, but package.json is ${appVersion}.`,
+      );
+    } else if (compatible === null) {
+      failures.push(`Installable catalog entry ${entry.id} (${entry.name}) has unsupported Neon Pilot compatibility range: ${entry.neonPilot}.`);
+    }
+  }
+  return { ok: failures.length === 0, failures };
+}
+
 function runCheck(name, command, args) {
   const result = spawnSync(command, args, { cwd: repoRoot, stdio: 'pipe', encoding: 'utf8' });
   return {
@@ -190,6 +292,7 @@ export function runStaticDoctor() {
     { name: 'deferred-resume-lifecycle', ...checkDeferredResumeLifecycle(manifests) },
     { name: 'extension-state-sanity', ...checkExtensionStateSanity(manifests) },
     { name: 'heartbeat-config', ...checkHeartbeatConfig(manifests) },
+    { name: 'installable-catalog-compatibility', ...checkInstallableCatalogCompatibility() },
     runCheck('packaged-extension-validity', process.execPath, ['scripts/check-packaged-extensions.mjs']),
   ];
   return { ok: checks.every((check) => check.ok), checks };
