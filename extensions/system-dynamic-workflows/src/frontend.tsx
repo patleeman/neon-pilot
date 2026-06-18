@@ -2,6 +2,7 @@ import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
   AppPageIntro,
   AppPageLayout,
+  Checkbox,
   CodeBlock,
   Disclosure,
   Field,
@@ -79,8 +80,12 @@ type SavedWorkflowDraft = {
   cwd: string;
   model: string;
   agentModel: string;
-  allowedToolsText: string;
+  selectedAllowedTools: string[];
+  additionalAllowedToolsText: string;
 };
+
+export const KNOWN_WORKFLOW_TOOLS = ['read', 'bash', 'edit', 'write'] as const;
+const KNOWN_WORKFLOW_TOOL_SET = new Set<string>(KNOWN_WORKFLOW_TOOLS);
 
 const EMPTY_DRAFT: SavedWorkflowDraft = {
   name: '',
@@ -90,7 +95,8 @@ const EMPTY_DRAFT: SavedWorkflowDraft = {
   cwd: '',
   model: '',
   agentModel: '',
-  allowedToolsText: '',
+  selectedAllowedTools: [],
+  additionalAllowedToolsText: '',
 };
 
 function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
@@ -110,11 +116,31 @@ function formatJson(value: unknown): string {
   return JSON.stringify(value ?? {}, null, 2);
 }
 
+function parseToolText(value: string): string[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+export function splitWorkflowTools(tools: unknown): Pick<SavedWorkflowDraft, 'selectedAllowedTools' | 'additionalAllowedToolsText'> {
+  const values = Array.isArray(tools) ? tools.filter((item): item is string => typeof item === 'string') : [];
+  const selectedAllowedTools = values.filter((tool) => KNOWN_WORKFLOW_TOOL_SET.has(tool));
+  const additionalAllowedToolsText = values.filter((tool) => !KNOWN_WORKFLOW_TOOL_SET.has(tool)).join(', ');
+  return { selectedAllowedTools, additionalAllowedToolsText };
+}
+
+export function resolveWorkflowTools(draft: Pick<SavedWorkflowDraft, 'selectedAllowedTools' | 'additionalAllowedToolsText'>): string[] {
+  const tools = [...draft.selectedAllowedTools, ...parseToolText(draft.additionalAllowedToolsText)];
+  return Array.from(new Set(tools));
+}
+
 function templateToDraft(template: WorkflowTemplate): SavedWorkflowDraft {
   const agentDefaults =
     template.agentDefaults && typeof template.agentDefaults === 'object'
       ? (template.agentDefaults as { model?: unknown; allowedTools?: unknown })
       : {};
+  const allowedToolsDraft = splitWorkflowTools(agentDefaults.allowedTools);
   return {
     id: template.id,
     name: template.name,
@@ -124,9 +150,7 @@ function templateToDraft(template: WorkflowTemplate): SavedWorkflowDraft {
     cwd: template.cwd ?? '',
     model: template.model ?? '',
     agentModel: typeof agentDefaults.model === 'string' ? agentDefaults.model : '',
-    allowedToolsText: Array.isArray(agentDefaults.allowedTools)
-      ? agentDefaults.allowedTools.filter((item): item is string => typeof item === 'string').join(',')
-      : '',
+    ...allowedToolsDraft,
   };
 }
 
@@ -137,13 +161,10 @@ function parseDraft(draft: SavedWorkflowDraft) {
   } catch {
     throw new Error('Args must be valid JSON.');
   }
-  const allowedTools = draft.allowedToolsText
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const allowedTools = resolveWorkflowTools(draft);
   const agentDefaults: { model?: string; allowedTools?: string[] } = {};
   if (draft.agentModel.trim()) agentDefaults.model = draft.agentModel.trim();
-  if (draft.allowedToolsText.trim()) agentDefaults.allowedTools = allowedTools;
+  if (allowedTools.length > 0) agentDefaults.allowedTools = allowedTools;
   return {
     ...(draft.id ? { id: draft.id } : {}),
     name: draft.name.trim(),
@@ -263,6 +284,13 @@ export function DynamicWorkflowTranscriptBlock({ block }: { block: { details?: u
       </div>
     </SurfacePanel>
   );
+}
+
+function toggleDraftAllowedTool(draft: SavedWorkflowDraft, tool: string): SavedWorkflowDraft {
+  const selectedAllowedTools = draft.selectedAllowedTools.includes(tool)
+    ? draft.selectedAllowedTools.filter((item) => item !== tool)
+    : [...draft.selectedAllowedTools, tool];
+  return { ...draft, selectedAllowedTools };
 }
 
 export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
@@ -522,11 +550,25 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                   />
                 </Field>
                 <Field label="Allowed tools">
-                  <TextInput
-                    placeholder="read,bash"
-                    value={draft.allowedToolsText}
-                    onChange={(event) => setDraft((current) => ({ ...current, allowedToolsText: event.target.value }))}
-                  />
+                  <div className="grid gap-2">
+                    <div className="grid grid-cols-2 gap-2 text-[12px] text-secondary">
+                      {KNOWN_WORKFLOW_TOOLS.map((tool) => (
+                        <label key={tool} className="flex items-center gap-2 rounded border border-border-subtle px-2 py-1.5">
+                          <Checkbox
+                            checked={draft.selectedAllowedTools.includes(tool)}
+                            onChange={() => setDraft((current) => toggleDraftAllowedTool(current, tool))}
+                          />
+                          <span>{tool}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <TextInput
+                      aria-label="Additional allowed tools"
+                      placeholder="Additional tools"
+                      value={draft.additionalAllowedToolsText}
+                      onChange={(event) => setDraft((current) => ({ ...current, additionalAllowedToolsText: event.target.value }))}
+                    />
+                  </div>
                 </Field>
                 <Field label="Args JSON">
                   <Textarea
