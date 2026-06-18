@@ -169,6 +169,7 @@ describe('scheduledTaskTool', () => {
     expect(automations.startScheduledTaskRun).toHaveBeenCalledWith('task-1');
     expect(telemetry.recordTelemetryEvent).toHaveBeenCalledWith(
       expect.objectContaining({ category: 'scheduled_task', name: 'run_tool_run', runId: 'run-1', status: 202 }),
+      { extensionId: 'system-automations' },
     );
     expect(result.details).toMatchObject({ action: 'run', taskId: 'task-1', runId: 'run-1' });
   });

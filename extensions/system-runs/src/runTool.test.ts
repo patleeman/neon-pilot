@@ -102,7 +102,10 @@ describe('runTool', () => {
       }),
     );
     expect(result.details).toMatchObject({ action: 'start', runId: 'run-1', deliverResultToConversation: true });
-    expect(telemetry.recordTelemetryEvent).toHaveBeenCalledWith(expect.objectContaining({ name: 'start', status: 202 }));
+    expect(telemetry.recordTelemetryEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'start', status: 202 }),
+      { extensionId: 'system-runs' },
+    );
   });
 
   it('validates scheduled subagent trigger combinations and loop iteration counts', async () => {

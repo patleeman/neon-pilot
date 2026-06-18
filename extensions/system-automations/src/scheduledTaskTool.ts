@@ -22,7 +22,7 @@ import {
   type TaskRuntimeEntry,
   updateStoredAutomation,
 } from '@neon-pilot/extensions/backend/automations';
-import { recordTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
+import { recordTelemetryEvent as recordBackendTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
 
 const SCHEDULED_TASK_ACTION_VALUES = ['list', 'get', 'save', 'delete', 'validate', 'run'] as const;
 const SCHEDULED_TASK_TARGET_VALUES = ['background-agent', 'conversation'] as const;
@@ -30,6 +30,10 @@ const SCHEDULED_TASK_THREAD_MODE_VALUES = ['dedicated', 'existing', 'none'] as c
 const SCHEDULED_TASK_DELIVER_AS_VALUES = ['steer', 'followUp'] as const;
 
 type ScheduledTaskAction = (typeof SCHEDULED_TASK_ACTION_VALUES)[number];
+
+function recordTelemetryEvent(event: Parameters<typeof recordBackendTelemetryEvent>[0]): void {
+  recordBackendTelemetryEvent(event, { extensionId: 'system-automations' });
+}
 
 const ScheduledTaskToolParams = {
   type: 'object',

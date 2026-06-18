@@ -14,13 +14,17 @@ import {
   setTaskCallbackBinding,
   startBackgroundRun,
 } from '@neon-pilot/extensions/backend/runs';
-import { recordTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
+import { recordTelemetryEvent as recordBackendTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
 
 import { ALLOWED_TOOLS_DESCRIPTION, COMMON_AGENT_TOOL_NAMES, normalizeAllowedTools } from './allowedTools.js';
 
 const RUN_ACTION_VALUES = ['list', 'get', 'logs', 'start', 'start_agent', 'rerun', 'follow_up', 'cancel'] as const;
 
 type RunAction = (typeof RUN_ACTION_VALUES)[number];
+
+function recordTelemetryEvent(event: Parameters<typeof recordBackendTelemetryEvent>[0]): void {
+  recordBackendTelemetryEvent(event, { extensionId: 'system-runs' });
+}
 
 type RunToolExecutionParams = {
   action?: unknown;
