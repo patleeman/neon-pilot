@@ -241,6 +241,24 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires shell execute permission for host-run shell helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'shell-helper-ext');
+    const context = createBackendContext('shell-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    await expect(context.shell.exec({ command: 'echo', args: ['hello'] })).rejects.toThrow(
+      'Extension "shell-helper-ext" requires permission shell:execute to use shell.exec.',
+    );
+    await expect(context.shell.spawn({ command: 'echo', args: ['hello'] })).rejects.toThrow(
+      'Extension "shell-helper-ext" requires permission shell:execute to use shell.spawn.',
+    );
+  });
+
   it('passes the server route settings file into worker action contexts', async () => {
     const workerRunner = {
       loadModule: vi.fn(async () => ({})),

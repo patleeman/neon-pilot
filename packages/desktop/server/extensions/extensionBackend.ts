@@ -399,6 +399,7 @@ export function createBackendContext(
   };
   const extensionBinDirs = () =>
     liveSessionResourceOptions().additionalExtensionPaths.map((extensionPath) => resolve(extensionPath, 'bin'));
+  const shell = createExtensionShellCapability({ pathDirs: extensionBinDirs() });
   return {
     extensionId,
     runtimeScope,
@@ -429,7 +430,16 @@ export function createBackendContext(
     filesystem: createExtensionFilesystemCapability(extensionId, toolContext),
     workspace: createExtensionWorkspaceCapability(extensionId, toolContext),
     git: createExtensionGitCapability(),
-    shell: createExtensionShellCapability({ pathDirs: extensionBinDirs() }),
+    shell: {
+      exec: async (input) => {
+        assertExtensionPermission(extensionId, 'shell:execute', 'shell.exec');
+        return shell.exec(input);
+      },
+      spawn: async (input) => {
+        assertExtensionPermission(extensionId, 'shell:execute', 'shell.spawn');
+        return shell.spawn(input);
+      },
+    },
     commands: {
       execute: async (commandId, args) => {
         assertExtensionPermission(extensionId, 'commands:execute', 'commands.execute');

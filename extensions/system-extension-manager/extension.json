@@ -1025,6 +1025,7 @@
   },
   "permissions": [
     "extensions:read",
-    "extensions:write"
+    "extensions:write",
+    "shell:execute"
   ]
 }

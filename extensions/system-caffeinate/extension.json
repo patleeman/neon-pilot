@@ -56,5 +56,5 @@
       }
     ]
   },
-  "permissions": ["settings:read"]
+  "permissions": ["settings:read", "shell:execute"]
 }

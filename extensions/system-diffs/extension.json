@@ -68,5 +68,5 @@
       }
     ]
   },
-  "permissions": ["conversations:read", "storage:read"]
+  "permissions": ["conversations:read", "storage:read", "shell:execute"]
 }

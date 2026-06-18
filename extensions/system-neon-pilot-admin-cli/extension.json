@@ -789,6 +789,7 @@
     "executions:read",
     "executions:start",
     "settings:read",
-    "settings:write"
+    "settings:write",
+    "shell:execute"
   ]
 }

@@ -507,6 +507,7 @@
   "permissions": [
     "executions:read",
     "executions:start",
-    "executions:cancel"
+    "executions:cancel",
+    "shell:execute"
   ]
 }
