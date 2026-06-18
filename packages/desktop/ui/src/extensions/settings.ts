@@ -83,12 +83,16 @@ export { CORE_KEYBOARD_SHORTCUT_REGISTRATIONS, DEFAULT_DESKTOP_KEYBOARD_SHORTCUT
 export {
   createModelEditorDraft,
   createProviderEditorDraft,
+  type JsonObjectDraftEntry,
   type ModelEditorDraft,
   parseOptionalJsonObject,
   parseOptionalNonNegativeNumber,
   parseOptionalPositiveInteger,
   parseOptionalStringRecord,
+  readJsonObjectDraftEntries,
   type ProviderEditorDraft,
+  writeJsonObjectDraftEntries,
+  writeStringRecordDraftEntries,
 } from '../model/modelProviderEditorDrafts';
 export type {
   AppTelemetryLogBundleExport,

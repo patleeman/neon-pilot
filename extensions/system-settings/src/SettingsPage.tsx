@@ -22,6 +22,7 @@ import {
   groupModelsByProvider,
   IconButton,
   isDesktopShell,
+  type JsonObjectDraftEntry,
   KeyboardShortcutCaptureInput,
   listHostCommands,
   type ModelEditorDraft,
@@ -33,6 +34,7 @@ import {
   parseOptionalNonNegativeNumber,
   parseOptionalPositiveInteger,
   parseOptionalStringRecord,
+  readJsonObjectDraftEntries,
   type ProviderAuthSummary,
   type ProviderEditorDraft,
   type ProviderOAuthLoginState,
@@ -63,6 +65,8 @@ import {
   useApi,
   useExtensionRegistry,
   useTheme,
+  writeJsonObjectDraftEntries,
+  writeStringRecordDraftEntries,
   formatKeyboardShortcutLabel,
 } from '@neon-pilot/extensions/settings';
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
@@ -155,6 +159,97 @@ function SettingsIcon({ name }: { name: SettingsIconName }) {
     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
       {paths[name]}
     </svg>
+  );
+}
+
+interface JsonObjectRowsProps {
+  label: string;
+  value: string;
+  valueMode: 'string' | 'json';
+  disabled?: boolean;
+  valuePlaceholder?: string;
+  onChange: (value: string) => void;
+}
+
+function JsonObjectRows({ label, value, valueMode, disabled, valuePlaceholder = 'value', onChange }: JsonObjectRowsProps) {
+  let entries: JsonObjectDraftEntry[];
+  let parseError: string | null = null;
+  try {
+    entries = readJsonObjectDraftEntries(value, label);
+  } catch (error) {
+    entries = [];
+    parseError = error instanceof Error ? error.message : String(error);
+  }
+
+  const writeEntries = (nextEntries: JsonObjectDraftEntry[]) => {
+    onChange(valueMode === 'string' ? writeStringRecordDraftEntries(nextEntries) : writeJsonObjectDraftEntries(nextEntries));
+  };
+
+  return (
+    <div className="space-y-2 min-w-0">
+      <div className="flex items-center justify-between gap-3">
+        <span className="ui-card-meta">{label}</span>
+        <ToolbarButton
+          type="button"
+          disabled={disabled || parseError !== null}
+          onClick={() => {
+            writeEntries([...entries, { key: '', valueText: '' }]);
+          }}
+        >
+          Add row
+        </ToolbarButton>
+      </div>
+      {parseError ? <p className="text-[12px] text-danger">{parseError}</p> : null}
+      <div className="rounded border border-border-subtle">
+        {entries.length === 0 ? (
+          <div className="px-3 py-2 text-[12px] text-dim">No entries</div>
+        ) : (
+          entries.map((entry, index) => (
+            <div
+              key={index}
+              className="grid gap-2 border-b border-border-subtle p-2 last:border-b-0 sm:grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)_auto]"
+            >
+              <TextInput
+                aria-label={`${label} key ${index + 1}`}
+                value={entry.key}
+                placeholder="key"
+                className="font-mono text-[12px]"
+                autoComplete="off"
+                spellCheck={false}
+                disabled={disabled}
+                onChange={(event) => {
+                  writeEntries(entries.map((item, itemIndex) => (itemIndex === index ? { ...item, key: event.target.value } : item)));
+                }}
+              />
+              <TextInput
+                aria-label={`${label} value ${index + 1}`}
+                value={entry.valueText}
+                placeholder={valuePlaceholder}
+                className="font-mono text-[12px]"
+                autoComplete="off"
+                spellCheck={false}
+                disabled={disabled}
+                onChange={(event) => {
+                  writeEntries(entries.map((item, itemIndex) => (itemIndex === index ? { ...item, valueText: event.target.value } : item)));
+                }}
+              />
+              <IconButton
+                compact
+                type="button"
+                aria-label={`Remove ${label} row ${index + 1}`}
+                title={`Remove ${label} row ${index + 1}`}
+                disabled={disabled}
+                onClick={() => {
+                  writeEntries(entries.filter((_, itemIndex) => itemIndex !== index));
+                }}
+              >
+                <SettingsIcon name="trash" />
+              </IconButton>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -3708,54 +3803,38 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       </label>
 
                                       <div className="grid gap-4 xl:grid-cols-2">
-                                        <div className="space-y-2 min-w-0">
-                                          <label className="ui-card-meta" htmlFor="settings-model-provider-headers">
-                                            Headers (JSON)
-                                          </label>
-                                          <Textarea
-                                            id="settings-model-provider-headers"
-                                            value={modelProviderDraft.headersText}
-                                            onChange={(event) => {
-                                              setModelProviderDraft((current) => ({ ...current, headersText: event.target.value }));
-                                            }}
-                                            className="min-h-[88px] font-mono text-[11px] leading-5"
-                                            placeholder={'{\n  "x-app": "neon-pilot"\n}'}
-                                            spellCheck={false}
-                                            disabled={modelProviderAction !== null}
-                                          />
-                                        </div>
+                                        <JsonObjectRows
+                                          label="Headers"
+                                          value={modelProviderDraft.headersText}
+                                          valueMode="string"
+                                          valuePlaceholder="HEADER_VALUE"
+                                          disabled={modelProviderAction !== null}
+                                          onChange={(nextValue) => {
+                                            setModelProviderDraft((current) => ({ ...current, headersText: nextValue }));
+                                          }}
+                                        />
 
-                                        <div className="space-y-2 min-w-0">
-                                          <label className="ui-card-meta" htmlFor="settings-model-provider-compat">
-                                            Compat (JSON)
-                                          </label>
-                                          <Textarea
-                                            id="settings-model-provider-compat"
-                                            value={modelProviderDraft.compatText}
-                                            onChange={(event) => {
-                                              setModelProviderDraft((current) => ({ ...current, compatText: event.target.value }));
-                                            }}
-                                            className="min-h-[88px] font-mono text-[11px] leading-5"
-                                            placeholder={'{\n  "supportsDeveloperRole": false\n}'}
-                                            spellCheck={false}
-                                            disabled={modelProviderAction !== null}
-                                          />
-                                        </div>
+                                        <JsonObjectRows
+                                          label="Compat"
+                                          value={modelProviderDraft.compatText}
+                                          valueMode="json"
+                                          valuePlaceholder="false"
+                                          disabled={modelProviderAction !== null}
+                                          onChange={(nextValue) => {
+                                            setModelProviderDraft((current) => ({ ...current, compatText: nextValue }));
+                                          }}
+                                        />
 
-                                        <div className="space-y-2 min-w-0 xl:col-span-2">
-                                          <label className="ui-card-meta" htmlFor="settings-model-provider-overrides">
-                                            Model overrides (JSON)
-                                          </label>
-                                          <Textarea
-                                            id="settings-model-provider-overrides"
+                                        <div className="xl:col-span-2">
+                                          <JsonObjectRows
+                                            label="Model overrides"
                                             value={modelProviderDraft.modelOverridesText}
-                                            onChange={(event) => {
-                                              setModelProviderDraft((current) => ({ ...current, modelOverridesText: event.target.value }));
-                                            }}
-                                            className="min-h-[88px] font-mono text-[11px] leading-5"
-                                            placeholder={'{\n  "claude-sonnet-4-6": {\n    "name": "Claude Sonnet 4.6 (Proxy)"\n  }\n}'}
-                                            spellCheck={false}
+                                            valueMode="json"
+                                            valuePlaceholder='{"name":"Claude Sonnet 4.6 (Proxy)"}'
                                             disabled={modelProviderAction !== null}
+                                            onChange={(nextValue) => {
+                                              setModelProviderDraft((current) => ({ ...current, modelOverridesText: nextValue }));
+                                            }}
                                           />
                                         </div>
                                       </div>
@@ -4205,39 +4284,27 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         </div>
 
                                         <div className="grid gap-4 lg:grid-cols-2">
-                                          <div className="space-y-2 min-w-0">
-                                            <label className="ui-card-meta" htmlFor="settings-provider-model-headers">
-                                              Headers (JSON)
-                                            </label>
-                                            <Textarea
-                                              id="settings-provider-model-headers"
-                                              value={modelDraft.headersText}
-                                              onChange={(event) => {
-                                                setModelDraft((current) => ({ ...current, headersText: event.target.value }));
-                                              }}
-                                              className="min-h-[88px] font-mono text-[11px] leading-5"
-                                              placeholder={'{\n  "x-provider-key": "HEADER_VALUE"\n}'}
-                                              spellCheck={false}
-                                              disabled={modelDraftAction !== null}
-                                            />
-                                          </div>
+                                          <JsonObjectRows
+                                            label="Headers"
+                                            value={modelDraft.headersText}
+                                            valueMode="string"
+                                            valuePlaceholder="HEADER_VALUE"
+                                            disabled={modelDraftAction !== null}
+                                            onChange={(nextValue) => {
+                                              setModelDraft((current) => ({ ...current, headersText: nextValue }));
+                                            }}
+                                          />
 
-                                          <div className="space-y-2 min-w-0">
-                                            <label className="ui-card-meta" htmlFor="settings-provider-model-compat">
-                                              Compat (JSON)
-                                            </label>
-                                            <Textarea
-                                              id="settings-provider-model-compat"
-                                              value={modelDraft.compatText}
-                                              onChange={(event) => {
-                                                setModelDraft((current) => ({ ...current, compatText: event.target.value }));
-                                              }}
-                                              className="min-h-[88px] font-mono text-[11px] leading-5"
-                                              placeholder={'{\n  "supportsReasoningEffort": false\n}'}
-                                              spellCheck={false}
-                                              disabled={modelDraftAction !== null}
-                                            />
-                                          </div>
+                                          <JsonObjectRows
+                                            label="Compat"
+                                            value={modelDraft.compatText}
+                                            valueMode="json"
+                                            valuePlaceholder="false"
+                                            disabled={modelDraftAction !== null}
+                                            onChange={(nextValue) => {
+                                              setModelDraft((current) => ({ ...current, compatText: nextValue }));
+                                            }}
+                                          />
                                         </div>
 
                                         <div className="flex flex-wrap gap-2">

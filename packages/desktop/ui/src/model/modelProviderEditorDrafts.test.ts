@@ -9,6 +9,9 @@ import {
   parseOptionalNonNegativeNumber,
   parseOptionalPositiveInteger,
   parseOptionalStringRecord,
+  readJsonObjectDraftEntries,
+  writeJsonObjectDraftEntries,
+  writeStringRecordDraftEntries,
 } from './modelProviderEditorDrafts.js';
 
 describe('modelProviderEditorDrafts', () => {
@@ -94,5 +97,27 @@ describe('modelProviderEditorDrafts', () => {
     expect(() => parseOptionalNonNegativeNumber(String(Number.MAX_SAFE_INTEGER + 1), 'Input cost')).toThrow(
       'Input cost must be a non-negative number.',
     );
+  });
+
+  it('round-trips provider object drafts as structured rows', () => {
+    expect(readJsonObjectDraftEntries('{"x-test":"1","supportsReasoningEffort":false}', 'Compat')).toEqual([
+      { key: 'x-test', valueText: '1' },
+      { key: 'supportsReasoningEffort', valueText: 'false' },
+    ]);
+
+    expect(
+      writeStringRecordDraftEntries([
+        { key: 'x-test', valueText: '1' },
+        { key: 'x-empty', valueText: '' },
+      ]),
+    ).toBe('{\n  "x-test": "1",\n  "x-empty": ""\n}');
+
+    expect(
+      writeJsonObjectDraftEntries([
+        { key: 'supportsReasoningEffort', valueText: 'false' },
+        { key: 'plain', valueText: 'fallback' },
+        { key: 'override', valueText: '{"contextWindow":400000}' },
+      ]),
+    ).toBe('{\n  "supportsReasoningEffort": false,\n  "plain": "fallback",\n  "override": {\n    "contextWindow": 400000\n  }\n}');
   });
 });

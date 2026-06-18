@@ -30,12 +30,59 @@ export interface ModelEditorDraft {
   compatText: string;
 }
 
+export interface JsonObjectDraftEntry {
+  key: string;
+  valueText: string;
+}
+
 export function formatJsonObject(value: Record<string, unknown> | Record<string, string> | undefined): string {
   if (!value || Object.keys(value).length === 0) {
     return '';
   }
 
   return JSON.stringify(value, null, 2);
+}
+
+function formatDraftEntryValue(value: unknown): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+  return JSON.stringify(value);
+}
+
+function parseDraftEntryValue(valueText: string): unknown {
+  const trimmed = valueText.trim();
+  if (!trimmed) {
+    return '';
+  }
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return valueText;
+  }
+}
+
+export function readJsonObjectDraftEntries(text: string, label: string): JsonObjectDraftEntry[] {
+  const object = parseOptionalJsonObject(text, label) ?? {};
+  return Object.entries(object).map(([key, value]) => ({ key, valueText: formatDraftEntryValue(value) }));
+}
+
+export function writeStringRecordDraftEntries(entries: JsonObjectDraftEntry[]): string {
+  const object = Object.fromEntries(
+    entries
+      .map((entry) => [entry.key.trim(), entry.valueText] as const)
+      .filter(([key]) => key.length > 0),
+  );
+  return formatJsonObject(object);
+}
+
+export function writeJsonObjectDraftEntries(entries: JsonObjectDraftEntry[]): string {
+  const object = Object.fromEntries(
+    entries
+      .map((entry) => [entry.key.trim(), parseDraftEntryValue(entry.valueText)] as const)
+      .filter(([key]) => key.length > 0),
+  );
+  return formatJsonObject(object);
 }
 
 export function createProviderEditorDraft(provider: ModelProviderConfig | null): ProviderEditorDraft {

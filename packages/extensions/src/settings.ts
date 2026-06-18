@@ -4,6 +4,10 @@ export type AppTelemetryLogDiagnostics = unknown;
 export type DesktopAppPreferencesState = unknown;
 export type DesktopEnvironmentState = unknown;
 export type ModelEditorDraft = unknown;
+export interface JsonObjectDraftEntry {
+  key: string;
+  valueText: string;
+}
 export type ModelProviderApi = unknown;
 export type ModelProviderConfig = unknown;
 export type ModelProviderModelConfig = unknown;
@@ -86,6 +90,9 @@ export declare function parseOptionalJsonObject(...args: never[]): unknown;
 export declare function parseOptionalNonNegativeNumber(...args: never[]): unknown;
 export declare function parseOptionalPositiveInteger(...args: never[]): unknown;
 export declare function parseOptionalStringRecord(...args: never[]): unknown;
+export declare function readJsonObjectDraftEntries(text: string, label: string): JsonObjectDraftEntry[];
+export declare function writeJsonObjectDraftEntries(entries: JsonObjectDraftEntry[]): string;
+export declare function writeStringRecordDraftEntries(entries: JsonObjectDraftEntry[]): string;
 export declare function readDesktopEnvironment(...args: never[]): unknown;
 export declare function resetStoredConversationUiState(...args: never[]): unknown;
 export declare function resetStoredLayoutPreferences(...args: never[]): unknown;

@@ -152,6 +152,8 @@ The Providers section lists all configured API providers:
 
 Add a new provider by selecting a known provider and adding credentials. Built-in providers (for example `anthropic`, `openai`, `opencode-go`) will auto-load known model rows after the key is saved; use custom model rows only for overrides and extras.
 
+Advanced provider and model metadata is edited as structured rows. Headers use string key/value rows; compat flags and model overrides use key/value rows whose values may be JSON literals or objects.
+
 ## Model Configuration
 
 Set defaults for:
