@@ -4,7 +4,7 @@
  * Shows notification history with type filtering, expandable details, and
  * bulk actions (dismiss all, mark all read).
  */
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { writeClipboardText } from '../../desktop/clipboard';
 import { cx, IconButton, MetaLabel, StatusDot, type StatusDotTone, TextButton } from '../ui';
@@ -62,12 +62,26 @@ function NotificationRow({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const copyResetTimeoutRef = useRef<number | null>(null);
+
+  const clearCopyResetTimeout = useCallback(() => {
+    if (copyResetTimeoutRef.current !== null) {
+      window.clearTimeout(copyResetTimeoutRef.current);
+      copyResetTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearCopyResetTimeout, [clearCopyResetTimeout]);
 
   const copyNotification = async () => {
     try {
       await writeClipboardText(formatNotificationForCopy(item));
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
+      clearCopyResetTimeout();
+      copyResetTimeoutRef.current = window.setTimeout(() => {
+        copyResetTimeoutRef.current = null;
+        setCopied(false);
+      }, 1200);
     } catch {
       // Silently fail — clipboard access denied.
     }

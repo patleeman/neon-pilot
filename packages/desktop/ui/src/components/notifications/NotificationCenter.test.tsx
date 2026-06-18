@@ -2,7 +2,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   useNotificationStore: vi.fn(),
@@ -43,6 +43,12 @@ describe('NotificationCenter', () => {
     markAllRead: vi.fn(),
   };
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
   it('renders unread notifications without throwing', () => {
     mocks.useNotificationStore.mockReturnValue(storeValue);
 
@@ -65,6 +71,23 @@ describe('NotificationCenter', () => {
     expect(mocks.writeClipboardText).toHaveBeenCalledWith(expect.stringContaining('Build failed'));
     expect(mocks.writeClipboardText).toHaveBeenCalledWith(expect.stringContaining('Details:\nReferenceError: boom'));
     await waitFor(() => expect(screen.getByLabelText('Copy notification').getAttribute('title')).toBe('Copied'));
+  });
+
+  it('clears pending copy feedback timers on unmount', async () => {
+    const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout');
+    mocks.writeClipboardText.mockResolvedValue(undefined);
+    mocks.useNotificationStore.mockReturnValue(storeValue);
+
+    const view = render(<NotificationCenter onClose={() => undefined} />);
+
+    fireEvent.click(screen.getByLabelText('Copy notification'));
+
+    await waitFor(() => expect(screen.getByLabelText('Copy notification').getAttribute('title')).toBe('Copied'));
+    const callsBeforeUnmount = clearTimeoutSpy.mock.calls.length;
+
+    view.unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(callsBeforeUnmount + 1);
   });
 
   it('closes from button, backdrop, and Escape interactions', () => {
