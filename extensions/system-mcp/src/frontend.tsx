@@ -7,7 +7,6 @@ import {
   Select,
   SettingsRow,
   SupportingText,
-  Textarea,
   TextInput,
   ToolbarButton,
   useApi,
@@ -53,13 +52,13 @@ type ServerDraft = {
   name: string;
   transport: 'stdio' | 'remote';
   command: string;
-  args: string;
+  args: string[];
   cwd: string;
   url: string;
 };
 type OperationResult = { ok: boolean; message: string; toolCount?: number };
 
-const emptyDraft: ServerDraft = { name: '', transport: 'stdio', command: '', args: '', cwd: '', url: '' };
+const emptyDraft: ServerDraft = { name: '', transport: 'stdio', command: '', args: [''], cwd: '', url: '' };
 
 async function inspectMcpSettings(): Promise<McpSettingsState> {
   const response = await api.invokeExtensionAction('system-mcp', 'inspectSettings', {});
@@ -89,7 +88,7 @@ function draftFromServer(server: McpServerConfig): ServerDraft {
     name: server.name,
     transport: server.transport,
     command: server.command ?? '',
-    args: server.args.join('\n'),
+    args: server.args.length > 0 ? server.args : [''],
     cwd: server.cwd ?? '',
     url: server.url ?? '',
   };
@@ -97,13 +96,13 @@ function draftFromServer(server: McpServerConfig): ServerDraft {
 
 function draftFromRawServer(name: string, raw: Record<string, unknown>): ServerDraft {
   const transport = raw.type === 'remote' || (typeof raw.url === 'string' && typeof raw.command !== 'string') ? 'remote' : 'stdio';
-  const args = Array.isArray(raw.args) ? raw.args.filter((arg): arg is string => typeof arg === 'string').join('\n') : '';
+  const args = Array.isArray(raw.args) ? raw.args.filter((arg): arg is string => typeof arg === 'string') : [];
   return {
     originalName: name,
     name,
     transport,
     command: typeof raw.command === 'string' ? raw.command : '',
-    args,
+    args: args.length > 0 ? args : [''],
     cwd: typeof raw.cwd === 'string' ? raw.cwd : '',
     url: typeof raw.url === 'string' ? raw.url : '',
   };
@@ -125,7 +124,6 @@ function configFromDraft(draft: ServerDraft, existing?: Record<string, unknown>)
   }
 
   const args = draft.args
-    .split('\n')
     .map((arg) => arg.trim())
     .filter(Boolean);
   return {
@@ -148,6 +146,24 @@ function formatMcpServerCommand(server: McpServerConfig): string {
   if (server.transport === 'remote') return server.url ?? 'Remote endpoint';
   const commandLine = [server.command, ...server.args].filter((value): value is string => Boolean(value?.trim()));
   return commandLine.length > 0 ? commandLine.join(' ') : 'Local stdio wrapper';
+}
+
+function updateDraftArg(draft: ServerDraft, index: number, value: string): ServerDraft {
+  return { ...draft, args: draft.args.map((arg, argIndex) => (argIndex === index ? value : arg)) };
+}
+
+function removeDraftArg(draft: ServerDraft, index: number): ServerDraft {
+  const args = draft.args.filter((_, argIndex) => argIndex !== index);
+  return { ...draft, args: args.length > 0 ? args : [''] };
+}
+
+function moveDraftArg(draft: ServerDraft, index: number, direction: -1 | 1): ServerDraft {
+  const targetIndex = index + direction;
+  if (targetIndex < 0 || targetIndex >= draft.args.length) return draft;
+  const args = [...draft.args];
+  const [arg] = args.splice(index, 1);
+  args.splice(targetIndex, 0, arg);
+  return { ...draft, args };
 }
 
 export function McpSettingsPanel() {
@@ -366,13 +382,43 @@ export function McpSettingsPanel() {
                           spellCheck={false}
                         />
                       </Field>
-                      <Field label="Args, one per line">
-                        <Textarea
-                          className="min-h-24 font-mono"
-                          value={draft.args}
-                          onChange={(event) => setDraft({ ...draft, args: event.target.value })}
-                        />
-                      </Field>
+                      <div className="space-y-2 sm:col-span-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[12px] font-medium text-secondary">Arguments</span>
+                          <ToolbarButton type="button" onClick={() => setDraft({ ...draft, args: [...draft.args, ''] })}>
+                            Add argument
+                          </ToolbarButton>
+                        </div>
+                        <div className="space-y-1.5">
+                          {draft.args.map((arg, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <span className="w-6 shrink-0 text-right font-mono text-[11px] text-tertiary">{index + 1}</span>
+                              <TextInput
+                                className="font-mono"
+                                aria-label={`Argument ${index + 1}`}
+                                value={arg}
+                                onChange={(event) => setDraft(updateDraftArg(draft, index, event.target.value))}
+                                placeholder={index === 0 ? '--flag or value' : undefined}
+                                autoComplete="off"
+                                spellCheck={false}
+                              />
+                              <ToolbarButton type="button" onClick={() => setDraft(moveDraftArg(draft, index, -1))} disabled={index === 0}>
+                                Up
+                              </ToolbarButton>
+                              <ToolbarButton
+                                type="button"
+                                onClick={() => setDraft(moveDraftArg(draft, index, 1))}
+                                disabled={index === draft.args.length - 1}
+                              >
+                                Down
+                              </ToolbarButton>
+                              <ToolbarButton type="button" onClick={() => setDraft(removeDraftArg(draft, index))}>
+                                Remove
+                              </ToolbarButton>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </>
                   )}
                 </div>

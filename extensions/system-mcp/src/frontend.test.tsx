@@ -186,6 +186,11 @@ describe('McpSettingsPanel', () => {
     await waitFor(() => expect(screen.getByDisplayValue('node')).toBeTruthy());
 
     fireEvent.change(screen.getByDisplayValue('node'), { target: { value: 'bunx' } });
+    fireEvent.change(screen.getByDisplayValue('server.js'), { target: { value: 'serve.js' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add argument' }));
+    fireEvent.change(screen.getByLabelText('Argument 2'), { target: { value: '--stdio' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Up' }).at(-1)!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[1]!);
     fireEvent.click(screen.getByRole('button', { name: 'Save server' }));
 
     await waitFor(() => expect(mocks.api.invokeExtensionAction).toHaveBeenCalledWith('system-mcp', 'saveExplicitConfig', expect.any(Object)));
@@ -198,7 +203,7 @@ describe('McpSettingsPanel', () => {
         },
         zap: {
           command: 'bunx',
-          args: ['server.js'],
+          args: ['--stdio'],
         },
       },
     });

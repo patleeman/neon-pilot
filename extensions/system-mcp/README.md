@@ -1,6 +1,6 @@
 # MCP Extension
 
-This extension owns the agent MCP tool and the Settings → Tools MCP panel. The panel manages explicit MCP servers from a selected-row detail editor with add/edit/remove/test/auth controls, while showing skill-bundled servers as read-only effective configuration. Keep extension-specific user and agent docs here so the implementation and documentation move together.
+This extension owns the agent MCP tool and the Settings → Tools MCP panel. The panel manages explicit MCP servers from a selected-row detail editor with add/edit/remove/test/auth controls and structured local command argument rows, while showing skill-bundled servers as read-only effective configuration. Keep extension-specific user and agent docs here so the implementation and documentation move together.
 
 ---
 
