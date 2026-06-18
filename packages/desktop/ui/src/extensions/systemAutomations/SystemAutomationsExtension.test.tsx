@@ -10,6 +10,16 @@ Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
 const mountedRoots: Root[] = [];
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, resolve, reject };
+}
+
 afterEach(() => {
   vi.useRealTimers();
   for (const root of mountedRoots) {
@@ -94,6 +104,75 @@ describe('AutomationsPage', () => {
     expect(container.innerHTML).toContain('aria-label="Scheduler healthy.');
     expect(container.textContent).toContain('Daily check');
     expect(container.textContent).toContain('Workday start');
+  });
+
+  it('ignores stale load completions when automation refreshes overlap', async () => {
+    const staleTasks = deferred<unknown[]>();
+    const freshTasks = deferred<unknown[]>();
+    const pa = createPa({
+      list: vi
+        .fn()
+        .mockResolvedValueOnce([
+          {
+            id: 'initial-check',
+            title: 'Initial check',
+            scheduleType: 'cron',
+            targetType: 'background-agent',
+            running: false,
+            enabled: true,
+            cron: '0 9 * * 1-5',
+            prompt: 'Initial',
+          },
+        ])
+        .mockReturnValueOnce(staleTasks.promise)
+        .mockReturnValueOnce(freshTasks.promise),
+    });
+    const { container } = await renderPage(pa);
+    const reloadButton = container.querySelector('button[aria-label="Reload automations"]');
+    if (!reloadButton) throw new Error('Reload button not found');
+
+    await act(async () => {
+      reloadButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      reloadButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      freshTasks.resolve([
+        {
+          id: 'fresh-check',
+          title: 'Fresh check',
+          scheduleType: 'cron',
+          targetType: 'background-agent',
+          running: false,
+          enabled: true,
+          cron: '0 10 * * 1-5',
+          prompt: 'Fresh',
+        },
+      ]);
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain('Fresh check');
+
+    await act(async () => {
+      staleTasks.resolve([
+        {
+          id: 'stale-check',
+          title: 'Stale check',
+          scheduleType: 'cron',
+          targetType: 'background-agent',
+          running: false,
+          enabled: true,
+          cron: '0 8 * * 1-5',
+          prompt: 'Stale',
+        },
+      ]);
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain('Fresh check');
+    expect(container.textContent).not.toContain('Stale check');
   });
 
   it('preserves the automation table shell when no automations exist', async () => {

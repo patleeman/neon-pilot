@@ -1062,19 +1062,32 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const [conversationOptions, setConversationOptions] = useState<ConversationOption[]>([]);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const createWithChatInFlightRef = useRef(false);
+  const loadSequenceRef = useRef(0);
 
   const load = useCallback(async () => {
+    const loadSequence = loadSequenceRef.current + 1;
+    loadSequenceRef.current = loadSequence;
     setError(null);
     const extensionClient = pa as NativeExtensionClient & {
       conversations?: { list(): Promise<unknown> };
       models?: () => Promise<unknown>;
     };
-    const [nextTasks, nextHealth, nextConversations, nextModels] = await Promise.all([
-      pa.automations.list(),
-      pa.automations.readSchedulerHealth(),
-      extensionClient.conversations?.list?.() ?? Promise.resolve([]),
-      extensionClient.models?.() ?? Promise.resolve({ models: [] }),
-    ]);
+    let nextTasks: unknown;
+    let nextHealth: unknown;
+    let nextConversations: unknown;
+    let nextModels: unknown;
+    try {
+      [nextTasks, nextHealth, nextConversations, nextModels] = await Promise.all([
+        pa.automations.list(),
+        pa.automations.readSchedulerHealth(),
+        extensionClient.conversations?.list?.() ?? Promise.resolve([]),
+        extensionClient.models?.() ?? Promise.resolve({ models: [] }),
+      ]);
+    } catch (error) {
+      if (loadSequence !== loadSequenceRef.current) return;
+      throw error;
+    }
+    if (loadSequence !== loadSequenceRef.current) return;
     setTasks(sortTasks(Array.isArray(nextTasks) ? nextTasks : []));
     setHealth(nextHealth as ScheduledTaskSchedulerHealth);
     setConversationOptions(readConversationOptions(nextConversations));
