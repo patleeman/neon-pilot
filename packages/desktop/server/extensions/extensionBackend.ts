@@ -432,6 +432,7 @@ export function createBackendContext(
     shell: createExtensionShellCapability({ pathDirs: extensionBinDirs() }),
     commands: {
       execute: async (commandId, args) => {
+        assertExtensionPermission(extensionId, 'commands:execute', 'commands.execute');
         const command = findExtensionCommandRegistration(commandId);
         if (command) {
           if (isHostCommandAction(command.action)) {
@@ -450,7 +451,10 @@ export function createBackendContext(
         }
         return executeHostCommandInRenderer({ command: commandId, args, sourceExtensionId: extensionId });
       },
-      list: async () => listExtensionCommandRegistrations(),
+      list: async () => {
+        assertExtensionPermission(extensionId, 'commands:read', 'commands.list');
+        return listExtensionCommandRegistrations();
+      },
     },
     notify: {
       toast: (message, type = 'info') => {

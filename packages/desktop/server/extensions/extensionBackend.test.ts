@@ -223,6 +223,24 @@ describe('extension backend action invocation', () => {
     expect(isExtensionEnabled('registry-writer-ext', stateRoot)).toBe(false);
   });
 
+  it('requires command permissions for host-run command helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'command-helper-ext');
+    const context = createBackendContext('command-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    await expect(context.commands.list()).rejects.toThrow(
+      'Extension "command-helper-ext" requires permission commands:read to use commands.list.',
+    );
+    await expect(context.commands.execute('app.test')).rejects.toThrow(
+      'Extension "command-helper-ext" requires permission commands:execute to use commands.execute.',
+    );
+  });
+
   it('passes the server route settings file into worker action contexts', async () => {
     const workerRunner = {
       loadModule: vi.fn(async () => ({})),
