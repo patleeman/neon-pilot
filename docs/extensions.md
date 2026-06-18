@@ -1219,7 +1219,7 @@ See `packages/extensions/src/index.ts` for the full API.
 
 Backend-only host APIs that should stay narrow can also be exposed through focused SDK subpaths such as `@neon-pilot/extensions/backend/artifacts`, `/automations`, `/browser`, `/compaction`, `/conversations`, `/images`, `/mcp`, `/runs`, `/runtime`, `/telemetry`, `/terminal`, and `/webContent`. Prefer a focused subpath over the broad backend barrel when bundling a system extension that only needs one backend service. Feature-specific data planes such as Knowledge should live inside their owning extension and use generic host capabilities (`ctx.storage`, `ctx.filesystem`, `ctx.shell`, `ctx.git`, events, and UI invalidation) rather than dedicated host subpaths. For daemon-backed shell work in a packaged system extension, keep the foreground path free of daemon imports and lazy-load background-run support only when the action actually starts or inspects background work.
 
-The backend API is deliberately two-layered: public stubs under `packages/extensions/src/backend/*.ts`, and host implementations under `packages/desktop/server/extensions/backendApi/*.ts`. Extension source imports only `@neon-pilot/extensions/backend/{name}`. It must not import desktop server files, `@neon-pilot/core`, `@neon-pilot/daemon`, or agent-runtime internals directly. System extension source may use type-only Pi imports for extension hook types, but runtime value imports from Pi must go through a focused host seam. Host backend API modules should be thin adapters; lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in half the app. If a backend API wraps process-local host state and may run in the backend worker, it must use the worker capability bridge instead of importing that state directly in the worker. `pnpm run check:extensions` enforces this with `scripts/check-extension-backend-api.mjs` and packaged source/bundle checks before packaged bundle checks run.
+The backend API is deliberately two-layered: public stubs under `packages/extensions/src/backend/*.ts`, and host implementations under `packages/desktop/server/extensions/backendApi/*.ts`. Extension source imports only `@neon-pilot/extensions` and `@neon-pilot/extensions/backend/{name}`. It must not import desktop server files, `@neon-pilot/core`, `@neon-pilot/daemon`, or agent-runtime internals directly. System extension source should use the public `ExtensionAPI` type from `@neon-pilot/extensions` for agent lifecycle hooks, and any missing host capability should become a focused SDK/backend seam. Host backend API modules should be thin adapters; lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in half the app. If a backend API wraps process-local host state and may run in the backend worker, it must use the worker capability bridge instead of importing that state directly in the worker. `pnpm run check:extensions` enforces this with `scripts/check-extension-backend-api.mjs` and packaged source/bundle checks before packaged bundle checks run.
 
 Backend seam permission model: seams that run user-visible privileged workflows still require explicit extension permissions (`agent:run`, `agent:conversations`, etc.). Narrow host helpers such as `/compaction`, `/runtime`, and `/webContent` are trusted system-extension internals; they do not create standalone user-facing authority and should stay scoped to active hook/action context rather than growing into broad service APIs.
 
@@ -1700,7 +1700,7 @@ exporting an `ExtensionFactory` function via the `backend.agentExtension` field.
 
 ```typescript
 // backend.ts — exported as the value referenced by agentExtension
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI } from '@neon-pilot/extensions';
 
 export default function (pi: ExtensionAPI) {
   // Subscribe to agent lifecycle events
@@ -1784,8 +1784,7 @@ the `ExtensionAPI`. If set to `"default"`, the default export is used.
 | `turn_start/end`           | Turn lifecycle                      | Track progress                       |
 | `agent_start/end`          | Agent cycle lifecycle               | Track agent activity                 |
 
-For the full list of Pi lifecycle events and signatures, inspect the installed
-`@earendil-works/pi-coding-agent` package docs that match the pinned dependency version.
+For the public hook type surface, use `ExtensionAPI` from `@neon-pilot/extensions`.
 
 ## Development Workflow
 
@@ -1835,8 +1834,7 @@ exports, smoke-calls known safe tool surfaces such as `scheduled_task`, and runs
 product-critical smoke calls for Knowledge, Automations, and Diffs extension
 actions. It fails on forbidden bare imports
 that are not available inside the packaged desktop app, such as
-`@earendil-works/pi-coding-agent`, `@neon-pilot/core`,
-`@neon-pilot/daemon`, `jsdom`, and `@sinclair/typebox`. It also rejects
+`@neon-pilot/core`, `@neon-pilot/daemon`, `jsdom`, and `@sinclair/typebox`. It also rejects
 absolute or `file:` imports, forbidden bundled runtime path fragments, and backend
 bundles over their explicit byte budget. The packaged-extension hardening knobs
 live in `scripts/extension-hardening-config.mjs`, so smoke inputs and size budgets

@@ -540,7 +540,7 @@ Declare the exported factory in the backend manifest:
 The backend module exports a normal pi extension factory:
 
 ```ts
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI } from '@neon-pilot/extensions';
 
 export default function agentLifecycleExtension(pi: ExtensionAPI): void {
   pi.on('session_before_compact', async (event, ctx) => {

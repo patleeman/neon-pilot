@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 const repoRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const coreSearchRoots = ['packages/desktop/src', 'packages/desktop/server', 'packages/desktop/ui/src'];
 const extensionSearchRoots = ['extensions'];
+const extensionMarkdownSearchRoots = ['extensions', 'packages/extensions/README.md', 'docs/extensions.md'];
 
 const allowedFiles = new Set(['packages/desktop/ui/src/extensions/systemExtensionModules.ts']);
 
@@ -106,7 +107,7 @@ for (const file of extensionFiles) {
   });
 }
 
-const extensionMarkdownFiles = listFiles(extensionSearchRoots)
+const extensionMarkdownFiles = listFiles(extensionMarkdownSearchRoots)
   .filter((file) => markdownFilePattern.test(file))
   .filter((file) => !file.includes('/dist/'))
   .filter((file) => existsSync(resolve(repoRoot, file)));
