@@ -48,6 +48,9 @@ describe('release smoke perf budgets', () => {
     expect(releaseCreateIndex).toBeGreaterThan(qaGateIndex);
     expect(source).toContain('NEON_PILOT_RELEASE_QA_ACK');
     expect(source).toContain('NEON_PILOT_RELEASE_QA_NOTES');
+    expect(source).toContain('Release QA notes must include the tested commit SHA');
+    expect(source).toContain('Release QA notes must include the tested app build');
+    expect(source).toContain('Release QA notes must include pass/fail results');
   });
 
   it('requires first-party extension release assets before pushing release artifacts', () => {

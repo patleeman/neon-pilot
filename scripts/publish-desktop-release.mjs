@@ -605,8 +605,18 @@ function requireReleaseQaAcknowledgement(env) {
   if (!existsSync(notesPath)) {
     fail(`Release QA notes file not found: ${notesPath}`);
   }
-  if (!readFileSync(notesPath, 'utf8').trim()) {
+  const notes = readFileSync(notesPath, 'utf8').trim();
+  if (!notes) {
     fail(`Release QA notes file is empty: ${notesPath}`);
+  }
+  if (!/\b[0-9a-f]{7,40}\b/iu.test(notes)) {
+    fail(`Release QA notes must include the tested commit SHA: ${notesPath}`);
+  }
+  if (!/\bapp\s+build\b|\bbuild\b/iu.test(notes)) {
+    fail(`Release QA notes must include the tested app build: ${notesPath}`);
+  }
+  if (!/\bpass(?:ed|es)?\b|\bfail(?:ed|s|ure)?\b/iu.test(notes)) {
+    fail(`Release QA notes must include pass/fail results: ${notesPath}`);
   }
 
   console.log(`Release QA gate acknowledged with notes: ${notesPath}`);
