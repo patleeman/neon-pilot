@@ -1,7 +1,8 @@
 import type { ExtensionDesktopBridge } from './desktopBridge.js';
+import type { BrowserTabItem, BrowserTabsState } from './workbenchBrowserTabs.js';
 
 export type HostComponent = (...args: never[]) => unknown;
-export type BrowserTabsState = unknown;
+export type { BrowserTabItem, BrowserTabsState };
 
 export declare const TerminalToolBlock: HostComponent;
 export declare const ConversationArtifactRailContent: HostComponent;
@@ -25,8 +26,8 @@ export declare function useConversationArtifactSummaries(...args: never[]): unkn
 export declare function useConversationCheckpointSummaries(...args: never[]): unknown;
 export declare function getDesktopBridge(...args: never[]): ExtensionDesktopBridge | null;
 export declare function cx(...values: Array<unknown>): string;
-export declare function createNewTab(...args: never[]): unknown;
-export declare function getAdjacentTabId(...args: never[]): unknown;
-export declare function getTabSessionKey(...args: never[]): unknown;
-export declare function readBrowserTabsState(...args: never[]): unknown;
-export declare function writeBrowserTabsState(...args: never[]): unknown;
+export declare function createNewTab(): BrowserTabItem;
+export declare function getAdjacentTabId(state: BrowserTabsState, closedTabId: string): string | null;
+export declare function getTabSessionKey(tabId: string): string;
+export declare function readBrowserTabsState(): BrowserTabsState;
+export declare function writeBrowserTabsState(state: BrowserTabsState): void;
