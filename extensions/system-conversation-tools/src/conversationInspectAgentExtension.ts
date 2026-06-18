@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI } from '@neon-pilot/extensions';
 import {
   CONVERSATION_INSPECT_ACTION_VALUES,
   CONVERSATION_INSPECT_BLOCK_TYPE_VALUES,

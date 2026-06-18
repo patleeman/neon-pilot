@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI } from '@neon-pilot/extensions';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createConversationAutoModeAgentExtension, handleSlashGoal } from './backend.js';

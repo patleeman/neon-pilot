@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI } from '@neon-pilot/extensions';
 
 const ASK_USER_MAX_QUESTIONS = 8;
 const ASK_USER_MAX_OPTIONS_PER_QUESTION = 12;

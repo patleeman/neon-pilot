@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI } from '@neon-pilot/extensions';
 
 export const TOOL_RESULT_TEXT_MAX_CHARS = 64 * 1024;
 const MARKER = '[Neon Pilot truncated oversized tool output';

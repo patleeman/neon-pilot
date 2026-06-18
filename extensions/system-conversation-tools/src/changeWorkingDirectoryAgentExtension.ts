@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI } from '@neon-pilot/extensions';
 import { resolveExistingConversationDirectory } from '@neon-pilot/extensions/backend/conversations';
 
 export const ChangeWorkingDirectoryToolParams = {

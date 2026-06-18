@@ -2,7 +2,7 @@ import { arch, platform } from 'node:os';
 
 import type { AgentMessage } from '@earendil-works/pi-agent-core';
 import type { Api, ImageContent, Model } from '@earendil-works/pi-ai';
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI } from '@neon-pilot/extensions';
 import { buildSessionContextForRuntime } from '@neon-pilot/extensions/backend/runtime';
 
 const IMAGE_QUALITY_VALUES = ['auto', 'low', 'medium', 'high'] as const;

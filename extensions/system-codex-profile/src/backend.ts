@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve, sep } from 'node:path';
 
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI } from '@neon-pilot/extensions';
 import type { ExtensionBackendContext } from '@neon-pilot/extensions/backend';
 
 import codexCompactionExtension from './compaction.js';

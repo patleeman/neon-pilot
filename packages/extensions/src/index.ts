@@ -167,6 +167,22 @@ export type ExtensionTranscriptSpotlightTarget =
   | { kind: 'background_run'; runId: string }
   | { kind: 'extension'; extensionId: string; targetId: string };
 
+export interface ExtensionAgentTool {
+  name?: string;
+  description?: string;
+  parameters?: unknown;
+  execute?: (...args: any[]) => unknown;
+  [key: string]: unknown;
+}
+
+export interface ExtensionAPI {
+  registerTool(tool: ExtensionAgentTool): void;
+  on(eventName: string, handler: (event: any, context: any) => unknown): void;
+  appendEntry(customType: string, data: unknown): void;
+  sendMessage(message: string): void;
+  setSessionName(name: string): void;
+}
+
 export const EXTENSION_MANIFEST_VERSION = 2;
 
 export type ExtensionPackageType = 'user' | 'system';

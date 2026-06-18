@@ -1,7 +1,7 @@
 import { arch, platform } from 'node:os';
 
 import type { AgentMessage } from '@earendil-works/pi-agent-core';
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI } from '@neon-pilot/extensions';
 import { compactConversation } from '@neon-pilot/extensions/backend/compaction';
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };

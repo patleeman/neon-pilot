@@ -72,13 +72,13 @@ const forbiddenExtensionImportPatterns = [
   /import\(\s*['"]@neon-pilot\/desktop(?:\/[^'"]*)?['"]/,
   /from\s+['"]@neon-pilot\/daemon(?:\/[^'"]*)?['"]/,
   /import\(\s*['"]@neon-pilot\/daemon(?:\/[^'"]*)?['"]/,
+  /from\s+['"]@earendil-works\/pi-coding-agent(?:\/[^'"]*)?['"]/,
+  /import\(\s*['"]@earendil-works\/pi-coding-agent(?:\/[^'"]*)?['"]/,
   /from\s+['"][^'"]*packages\/(?:desktop|core|daemon)\//,
   /import\(\s*['"][^'"]*packages\/(?:desktop|core|daemon)\//,
 ];
 const forbiddenExtensionMarkdownPatterns = [
   ...forbiddenExtensionImportPatterns,
-  /from\s+['"]@earendil-works\/pi-coding-agent(?:\/[^'"]*)?['"]/,
-  /import\(\s*['"]@earendil-works\/pi-coding-agent(?:\/[^'"]*)?['"]/,
 ];
 
 function collectMarkdownFencedCodeLines(markdown) {
