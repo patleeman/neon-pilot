@@ -95,6 +95,7 @@ export const EXTENSION_PERMISSIONS = [
   'conversations:readwrite',
   'network:listen',
   'telemetry:read',
+  'telemetry:write',
   'ui:notify',
 ] as const;
 export type ExtensionPermission = (typeof EXTENSION_PERMISSIONS)[number];

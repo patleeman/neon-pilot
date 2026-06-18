@@ -15,6 +15,7 @@ const findExtensionEntry = vi.hoisted(() =>
         'settings:readwrite',
         'shell:execute',
         'storage:readwrite',
+        'telemetry:write',
         'ui:notify',
         'workspace:readwrite',
       ],
@@ -63,6 +64,7 @@ describe('extension backend capability dispatcher', () => {
           'settings:readwrite',
           'shell:execute',
           'storage:readwrite',
+          'telemetry:write',
           'ui:notify',
           'workspace:readwrite',
         ],
@@ -1499,6 +1501,26 @@ describe('extension backend capability dispatcher', () => {
       durationMs: 12,
       metadata: { ok: true },
     });
+  });
+
+  it('requires telemetry write permission before dispatching telemetry capability calls', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const telemetry = {
+      record: vi.fn(),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ telemetry });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'telemetry',
+        operation: 'record',
+        input: { category: 'extension', name: 'done' },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission telemetry:write to use telemetry.record.');
+    expect(telemetry.record).not.toHaveBeenCalled();
   });
 
   it('rejects malformed telemetry capability inputs', async () => {

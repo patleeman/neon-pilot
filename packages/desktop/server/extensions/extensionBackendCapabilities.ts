@@ -476,6 +476,10 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
     return ['secrets:read'];
   }
 
+  if (request.capability === 'telemetry') {
+    return ['telemetry:write'];
+  }
+
   if (request.capability === 'models') {
     return permissionForReadWriteOperation('models:read', 'models:write', 'models:readwrite', request.operation, [
       'saveProvider',

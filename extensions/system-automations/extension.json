@@ -462,6 +462,7 @@
     "executions:read",
     "executions:start",
     "conversations:readwrite",
+    "telemetry:write",
     "ui:notify"
   ]
 }

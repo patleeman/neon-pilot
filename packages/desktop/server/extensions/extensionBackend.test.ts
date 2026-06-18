@@ -415,6 +415,21 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires telemetry write permission for host-run telemetry helpers', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'telemetry-helper-ext');
+    const context = createBackendContext('telemetry-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    expect(() => context.telemetry.record({ category: 'extension', name: 'done' })).toThrow(
+      'Extension "telemetry-helper-ext" requires permission telemetry:write to use telemetry.record.',
+    );
+  });
+
   it('requires conversation permissions for host-run conversation helpers', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

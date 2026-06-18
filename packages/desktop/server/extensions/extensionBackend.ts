@@ -566,6 +566,7 @@ export function createBackendContext(
     },
     telemetry: {
       record: (event) => {
+        assertExtensionPermission(extensionId, 'telemetry:write', 'telemetry.record');
         persistAppTelemetryEvent({
           ...event,
           source: event.source ?? 'server',

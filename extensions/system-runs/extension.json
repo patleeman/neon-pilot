@@ -508,6 +508,7 @@
     "executions:read",
     "executions:start",
     "executions:cancel",
-    "shell:execute"
+    "shell:execute",
+    "telemetry:write"
   ]
 }
