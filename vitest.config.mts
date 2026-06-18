@@ -28,6 +28,7 @@ export default defineConfig({
       '@neon-pilot/extensions/backend/compaction': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/compaction.ts'),
       '@neon-pilot/extensions/backend/conversations': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/conversations.ts'),
       '@neon-pilot/extensions/backend/events': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/events.ts'),
+      '@neon-pilot/extensions/backend/extensions': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/extensions.ts'),
       '@neon-pilot/extensions/backend/images': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/images.ts'),
       '@neon-pilot/extensions/backend/knowledge': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/knowledge.ts'),
       '@neon-pilot/extensions/backend/mcp': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/mcp.ts'),
