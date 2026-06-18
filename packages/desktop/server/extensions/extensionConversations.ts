@@ -31,6 +31,7 @@ import {
   buildLiveSessionResourceOptionsForRuntime,
 } from './runtimeAgentHooks.js';
 import { publishExtensionHostEvent } from './extensionSubscriptions.js';
+import { assertExtensionAnyPermission } from './extensionPermissions.js';
 
 const reservedConversationFiles = new Map<string, string>();
 
@@ -89,6 +90,10 @@ export interface ExtensionConversationSubscriptionOptions {
   tailBlocks?: number;
 }
 
+interface ExtensionConversationsCapabilityOptions {
+  enforceManifestPermissions?: boolean;
+}
+
 /**
  * Conversation capability factory.
  *
@@ -112,7 +117,17 @@ export function createExtensionConversationsCapability(
       >
     >,
   extensionId = 'extension',
+  options: ExtensionConversationsCapabilityOptions = {},
 ) {
+  const assertConversationPermission = (kind: 'read' | 'write', capability: string) => {
+    if (!options.enforceManifestPermissions) return;
+    assertExtensionAnyPermission(
+      extensionId,
+      kind === 'write' ? ['conversations:write', 'conversations:readwrite'] : ['conversations:read', 'conversations:readwrite'],
+      capability,
+    );
+  };
+
   const findLiveEntry = (conversationId: string) => {
     const entry = liveSessionRegistry.get(conversationId);
     if (!entry) throw new Error(`Conversation "${conversationId}" is not live.`);
@@ -222,6 +237,7 @@ export function createExtensionConversationsCapability(
     // ── Read operations ──────────────────────────────────────────────────
 
     async list(): Promise<unknown> {
+      assertConversationPermission('read', 'conversations.list');
       return readConversationSessionsCapability({ profile: serverContext?.getRuntimeScope?.() ?? 'shared' });
     },
 
@@ -229,6 +245,7 @@ export function createExtensionConversationsCapability(
       conversationId: string,
       options?: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' },
     ): Promise<unknown> {
+      assertConversationPermission('read', 'conversations.activity');
       const { listConversationActivity } = await import('../conversations/conversationActivity.js');
       return listConversationActivity(conversationId, {
         ...options,
@@ -246,6 +263,7 @@ export function createExtensionConversationsCapability(
         visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all';
       },
     ): Promise<unknown> {
+      assertConversationPermission('read', 'conversations.connections');
       const { listConversationConnections } = await import('../conversations/conversationConnections.js');
       return listConversationConnections(conversationId, {
         ...options,
@@ -255,6 +273,7 @@ export function createExtensionConversationsCapability(
     },
 
     async getMeta(conversationId: string): Promise<unknown> {
+      assertConversationPermission('read', 'conversations.getMeta');
       const entry = liveSessionRegistry.get(conversationId);
       if (!entry) {
         // Fall back to persisted meta
@@ -273,6 +292,7 @@ export function createExtensionConversationsCapability(
     },
 
     async get(conversationId: string, _options?: ExtensionConversationDetailOptions): Promise<unknown> {
+      assertConversationPermission('read', 'conversations.get');
       const entry = findLiveEntry(conversationId);
       return {
         id: conversationId,
@@ -286,6 +306,7 @@ export function createExtensionConversationsCapability(
     },
 
     async setActiveTools(conversationId: string, toolNames: string[]): Promise<{ conversationId: string; toolNames: string[] }> {
+      assertConversationPermission('write', 'conversations.setActiveTools');
       const entry = findLiveEntry(conversationId);
       const patchable = entry.session as unknown as { setActiveTools?: (toolNames: string[]) => void; getActiveToolNames?: () => string[] };
       if (typeof patchable.setActiveTools !== 'function') {
@@ -299,6 +320,7 @@ export function createExtensionConversationsCapability(
     },
 
     async appendCustomEntry(conversationId: string, customType: string, data?: unknown): Promise<{ ok: true }> {
+      assertConversationPermission('write', 'conversations.appendCustomEntry');
       const entry = findLiveEntry(conversationId);
       const sessionManager = entry.session.sessionManager as unknown as {
         appendCustomEntry?: (type: string, entryData?: unknown) => void;
@@ -323,6 +345,7 @@ export function createExtensionConversationsCapability(
      * Works for both live and persisted sessions.
      */
     async getBlocks(conversationId: string, options?: ExtensionConversationBlocksOptions): Promise<unknown> {
+      assertConversationPermission('read', 'conversations.getBlocks');
       const profile = serverContext?.getRuntimeScope?.() ?? 'shared';
       const { readSessionDetailForRoute } = await import('../conversations/conversationService.js');
       const { sessionRead } = await readSessionDetailForRoute({
@@ -334,12 +357,14 @@ export function createExtensionConversationsCapability(
     },
 
     async searchIndex(sessionIds: string[]): Promise<unknown> {
+      assertConversationPermission('read', 'conversations.searchIndex');
       const { readConversationSessionSearchIndexCapability } = await import('../conversations/conversationSessionCapability.js');
       return readConversationSessionSearchIndexCapability({ sessionIds });
     },
 
     metadata: {
       async get(input: { conversationId: string; namespace?: string }): Promise<Record<string, unknown>> {
+        assertConversationPermission('read', 'conversations.metadata.get');
         return readConversationMetadata({
           conversationId: input.conversationId,
           namespace: input.namespace,
@@ -348,6 +373,7 @@ export function createExtensionConversationsCapability(
         });
       },
       async set(input: { conversationId: string; namespace?: string; values: Record<string, unknown> }): Promise<Record<string, unknown>> {
+        assertConversationPermission('write', 'conversations.metadata.set');
         return writeConversationMetadata({
           conversationId: input.conversationId,
           namespace: input.namespace,
@@ -361,6 +387,7 @@ export function createExtensionConversationsCapability(
         where?: Array<{ key: string; op?: 'eq' | 'neq' | 'in' | 'exists'; value?: unknown }>;
         limit?: number;
       }): Promise<Array<{ conversationId: string; metadata: Record<string, unknown> }>> {
+        assertConversationPermission('read', 'conversations.metadata.query');
         return queryConversationMetadata({
           namespace: input.namespace?.trim() || extensionId,
           where: input.where,
@@ -371,6 +398,7 @@ export function createExtensionConversationsCapability(
     },
 
     async getWorkspace(): Promise<unknown> {
+      assertConversationPermission('read', 'conversations.getWorkspace');
       if (!serverContext?.getSettingsFile) {
         throw new Error('Conversation workspace is unavailable.');
       }
@@ -392,6 +420,7 @@ export function createExtensionConversationsCapability(
     // ── Write operations ─────────────────────────────────────────────────
 
     async delete(input: { conversationIds: string[] }): Promise<unknown> {
+      assertConversationPermission('write', 'conversations.delete');
       const conversationIds = [...new Set((input.conversationIds ?? []).map((id) => id.trim()).filter(Boolean))];
       if (conversationIds.length === 0) throw new Error('At least one conversation id is required.');
       const { deleteSessions } = await import('../conversations/sessions.js');
@@ -406,6 +435,7 @@ export function createExtensionConversationsCapability(
     },
 
     async prune(input: { olderThanMs: number; archivedOnly?: boolean | null; dryRun?: boolean | null }): Promise<unknown> {
+      assertConversationPermission('write', 'conversations.prune');
       const olderThanMs = Number(input.olderThanMs);
       if (!Number.isFinite(olderThanMs) || olderThanMs <= 0) throw new Error('olderThanMs must be a positive number.');
       const { pruneSessionsByRetention } = await import('../conversations/sessions.js');
@@ -440,6 +470,7 @@ export function createExtensionConversationsCapability(
       remoteControlledConversationIds?: string[] | null;
       conversationWorkspaceMigrated?: boolean | null;
     }): Promise<unknown> {
+      assertConversationPermission('write', 'conversations.updateWorkspace');
       if (!serverContext?.getSettingsFile) {
         throw new Error('Conversation workspace is unavailable.');
       }
@@ -507,6 +538,7 @@ export function createExtensionConversationsCapability(
     async create(
       input?: ExtensionConversationCreateOptions & { title?: string; initialPrompt?: string },
     ): Promise<{ id: string; conversationId: string }> {
+      assertConversationPermission('write', 'conversations.create');
       const cwd = input?.cwd?.trim() || process.cwd();
       if (input?.live === false) {
         if (input.prompt?.trim() || input.initialPrompt?.trim()) {
@@ -560,6 +592,7 @@ export function createExtensionConversationsCapability(
      * Resume an existing session from its session file.
      */
     async resume(sessionFile: string, cwd?: string): Promise<{ id: string }> {
+      assertConversationPermission('write', 'conversations.resume');
       const result = await resumeSession(sessionFile, cwd ? { cwdOverride: cwd } : undefined);
       invalidateAppTopics('sessions');
       await publishExtensionHostEvent('conversationSessions', { type: 'session.resumed', conversationId: result.id, sessionFile });
@@ -570,6 +603,7 @@ export function createExtensionConversationsCapability(
      * Ensure a persisted conversation is resumed into the live registry.
      */
     async ensureLive(conversationId: string, options?: { cwd?: string }): Promise<{ id: string; conversationId: string }> {
+      assertConversationPermission('write', 'conversations.ensureLive');
       const existing = liveSessionRegistry.get(conversationId);
       if (existing) {
         return { id: conversationId, conversationId };
@@ -599,6 +633,7 @@ export function createExtensionConversationsCapability(
       text: string,
       options?: ExtensionConversationSendOptions,
     ): Promise<ExtensionConversationSendResult> {
+      assertConversationPermission('write', 'conversations.sendMessage');
       try {
         const result = await submitLiveSessionPromptCapability(
           {
@@ -619,6 +654,7 @@ export function createExtensionConversationsCapability(
      * Atomically resume, subscribe, send, and wait for a terminal turn event.
      */
     async runTurn(conversationId: string, text: string, options?: ExtensionConversationRunTurnOptions): Promise<{ accepted: boolean }> {
+      assertConversationPermission('write', 'conversations.runTurn');
       await this.ensureLive(conversationId, options?.cwd ? { cwd: options.cwd } : undefined);
 
       let settled = false;
@@ -639,7 +675,7 @@ export function createExtensionConversationsCapability(
         }, timeoutMs);
         timeout.unref?.();
 
-        unsubscribe = this.subscribe(conversationId, (event: unknown) => {
+        unsubscribe = subscribeLiveSession(conversationId, (event: unknown) => {
           options?.onEvent?.(event);
           const ev = event as Record<string, unknown> | null;
           if (!ev || typeof ev.type !== 'string') return;
@@ -679,6 +715,7 @@ export function createExtensionConversationsCapability(
      * Abort a live conversation turn.
      */
     async abort(conversationId: string): Promise<{ ok: true }> {
+      assertConversationPermission('write', 'conversations.abort');
       await abortLiveSession(conversationId);
       invalidateAppTopics('sessions');
       return { ok: true };
@@ -693,6 +730,7 @@ export function createExtensionConversationsCapability(
       content: string,
       details?: unknown,
     ): Promise<{ ok: true }> {
+      assertConversationPermission('write', 'conversations.appendVisibleCustomMessage');
       await appendVisibleLiveSessionCustomMessage(conversationId, customType, content, details);
       invalidateAppTopics('sessions');
       return { ok: true };
@@ -702,6 +740,7 @@ export function createExtensionConversationsCapability(
      * Update the title of a live conversation.
      */
     async setTitle(conversationId: string, title: string): Promise<{ ok: true }> {
+      assertConversationPermission('write', 'conversations.setTitle');
       const entry = findLiveEntry(conversationId);
       try {
         entry.session.setSessionName(title);
@@ -722,6 +761,7 @@ export function createExtensionConversationsCapability(
      * Trigger compaction on a live conversation.
      */
     async compact(conversationId: string, customInstructions?: string): Promise<{ ok: true }> {
+      assertConversationPermission('write', 'conversations.compact');
       const entry = findLiveEntry(conversationId);
       await entry.session.compact(customInstructions);
       invalidateAppTopics('sessions');
@@ -736,6 +776,7 @@ export function createExtensionConversationsCapability(
     async fork(
       input: string | { conversationId: string; targetCwd?: string; cwd?: string; title?: string },
     ): Promise<{ id: string; conversationId: string }> {
+      assertConversationPermission('write', 'conversations.fork');
       const conversationId = typeof input === 'string' ? input : input.conversationId;
       const entry = findLiveEntry(conversationId);
       const sessionManager = (entry.session as unknown as { sessionManager: { getSessionFile(): string | undefined } }).sessionManager;
@@ -769,6 +810,7 @@ export function createExtensionConversationsCapability(
       title?: string;
       blockId?: string;
     }): Promise<{ blockId: string }> {
+      assertConversationPermission('write', 'conversations.appendTranscriptBlock');
       const content = input.title ?? input.blockType;
       if (!liveSessionRegistry.has(input.conversationId)) {
         const sessionFile = resolveConversationSessionFile(input.conversationId) ?? reservedConversationFiles.get(input.conversationId);
@@ -800,6 +842,7 @@ export function createExtensionConversationsCapability(
       title?: string;
       blockId: string;
     }): Promise<{ blockId: string }> {
+      assertConversationPermission('write', 'conversations.updateTranscriptBlock');
       const updated = updateVisibleLiveSessionCustomMessage(
         input.conversationId,
         input.blockId,
@@ -818,6 +861,7 @@ export function createExtensionConversationsCapability(
      * before the Nth user message counted from the end.
      */
     async rollback(conversationId: string, count: number): Promise<{ rolledBackTo: string | null }> {
+      assertConversationPermission('write', 'conversations.rollback');
       if (count < 1) throw new Error('count must be >= 1');
 
       const entry = findLiveEntry(conversationId);
@@ -872,6 +916,7 @@ export function createExtensionConversationsCapability(
       handler: ExtensionConversationSubscriptionHandler,
       options?: ExtensionConversationSubscriptionOptions,
     ): (() => void) | null {
+      assertConversationPermission('read', 'conversations.subscribe');
       const unsubscribe = subscribeLiveSession(conversationId, handler, {
         ...(options?.tailBlocks ? { tailBlocks: options.tailBlocks } : {}),
       });

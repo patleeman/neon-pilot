@@ -322,6 +322,31 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires conversation permissions for host-run conversation helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'conversation-helper-ext');
+    const context = createBackendContext('conversation-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+      getSettingsFile: () => join(stateRoot, 'settings.json'),
+    });
+
+    await expect(context.conversations.list()).rejects.toThrow(
+      'Extension "conversation-helper-ext" requires permission conversations:read to use conversations.list.',
+    );
+    await expect(context.conversations.getWorkspace()).rejects.toThrow(
+      'Extension "conversation-helper-ext" requires permission conversations:read to use conversations.getWorkspace.',
+    );
+    await expect(context.conversations.create({ cwd: '/repo', live: false })).rejects.toThrow(
+      'Extension "conversation-helper-ext" requires permission conversations:write to use conversations.create.',
+    );
+    await expect(context.conversations.metadata.set({ conversationId: 'conv-1', values: { ok: true } })).rejects.toThrow(
+      'Extension "conversation-helper-ext" requires permission conversations:write to use conversations.metadata.set.',
+    );
+  });
+
   it('passes the server route settings file into worker action contexts', async () => {
     const workerRunner = {
       loadModule: vi.fn(async () => ({})),
