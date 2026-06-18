@@ -238,6 +238,7 @@ export type ExtensionPermission =
   | 'network:listen'
   | 'telemetry:read'
   | 'telemetry:write'
+  | 'ui:invalidate'
   | 'ui:notify';
 
 export type ExtensionFileChangeStatus = 'added' | 'modified' | 'deleted' | 'renamed' | 'copied' | 'typechange' | 'unmerged' | 'changed';

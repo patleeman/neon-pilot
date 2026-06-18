@@ -560,6 +560,7 @@ export function createBackendContext(
     },
     ui: {
       invalidate: (topics) => {
+        assertExtensionPermission(extensionId, 'ui:invalidate', 'ui.invalidate');
         const items = Array.isArray(topics) ? topics : [topics];
         invalidateAppTopics(...(items as import('../shared/appEvents.js').AppEventTopic[]));
       },

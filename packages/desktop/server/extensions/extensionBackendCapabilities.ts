@@ -480,6 +480,10 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
     return ['telemetry:write'];
   }
 
+  if (request.capability === 'ui') {
+    return ['ui:invalidate'];
+  }
+
   if (request.capability === 'models') {
     return permissionForReadWriteOperation('models:read', 'models:write', 'models:readwrite', request.operation, [
       'saveProvider',

@@ -16,6 +16,7 @@ const findExtensionEntry = vi.hoisted(() =>
         'shell:execute',
         'storage:readwrite',
         'telemetry:write',
+        'ui:invalidate',
         'ui:notify',
         'workspace:readwrite',
       ],
@@ -65,6 +66,7 @@ describe('extension backend capability dispatcher', () => {
           'shell:execute',
           'storage:readwrite',
           'telemetry:write',
+          'ui:invalidate',
           'ui:notify',
           'workspace:readwrite',
         ],
@@ -1786,6 +1788,25 @@ describe('extension backend capability dispatcher', () => {
     ).resolves.toBeUndefined();
 
     expect(ui.invalidate).toHaveBeenCalledWith(['sessions', 'checkpoints']);
+  });
+
+  it('requires UI invalidate permission before dispatching UI invalidation capability calls', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const ui = { invalidate: vi.fn() };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ ui });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'ui',
+        operation: 'invalidate',
+        input: { topics: ['sessions'] },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission ui:invalidate to use ui.invalidate.');
+
+    expect(ui.invalidate).not.toHaveBeenCalled();
   });
 
   it('dispatches host-owned image generation capability calls', async () => {

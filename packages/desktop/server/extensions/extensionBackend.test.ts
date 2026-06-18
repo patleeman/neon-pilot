@@ -430,6 +430,21 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires UI invalidate permission for host-run UI invalidation helpers', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'ui-helper-ext');
+    const context = createBackendContext('ui-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    expect(() => context.ui.invalidate(['sessions'])).toThrow(
+      'Extension "ui-helper-ext" requires permission ui:invalidate to use ui.invalidate.',
+    );
+  });
+
   it('requires conversation permissions for host-run conversation helpers', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

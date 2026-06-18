@@ -44,5 +44,5 @@
     ]
   },
   "contributes": {},
-  "permissions": ["extensions:read", "extensions:write"]
+  "permissions": ["extensions:read", "extensions:write", "ui:invalidate"]
 }
