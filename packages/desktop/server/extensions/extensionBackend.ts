@@ -481,14 +481,27 @@ export function createBackendContext(
     },
     notify: {
       toast: (message, type = 'info') => {
+        assertExtensionPermission(extensionId, 'ui:notify', 'notify.toast');
         logInfo('extension notification', { extensionId, type, message });
         invalidateAppTopics('notifications');
         publishAppEvent({ type: 'notification', extensionId, message, severity: type });
       },
-      system: (input) => sendNotifyAsSystemNotification(extensionId, input),
-      setBadge: (count) => setExtensionBadge(extensionId, count),
-      clearBadge: () => setExtensionBadge(extensionId, 0),
-      isSystemAvailable: () => isSystemNotificationAvailable(),
+      system: (input) => {
+        assertExtensionPermission(extensionId, 'ui:notify', 'notify.system');
+        return sendNotifyAsSystemNotification(extensionId, input);
+      },
+      setBadge: (count) => {
+        assertExtensionPermission(extensionId, 'ui:notify', 'notify.setBadge');
+        return setExtensionBadge(extensionId, count);
+      },
+      clearBadge: () => {
+        assertExtensionPermission(extensionId, 'ui:notify', 'notify.clearBadge');
+        return setExtensionBadge(extensionId, 0);
+      },
+      isSystemAvailable: () => {
+        assertExtensionPermission(extensionId, 'ui:notify', 'notify.isSystemAvailable');
+        return isSystemNotificationAvailable();
+      },
     },
     events: {
       publish: async (input) => {

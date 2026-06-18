@@ -367,6 +367,33 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires notify permission for host-run notification helpers', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'notify-helper-ext');
+    const context = createBackendContext('notify-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    expect(() => context.notify.toast('Saved')).toThrow(
+      'Extension "notify-helper-ext" requires permission ui:notify to use notify.toast.',
+    );
+    expect(() => context.notify.system({ title: 'Title', message: 'Body' })).toThrow(
+      'Extension "notify-helper-ext" requires permission ui:notify to use notify.system.',
+    );
+    expect(() => context.notify.setBadge(1)).toThrow(
+      'Extension "notify-helper-ext" requires permission ui:notify to use notify.setBadge.',
+    );
+    expect(() => context.notify.clearBadge()).toThrow(
+      'Extension "notify-helper-ext" requires permission ui:notify to use notify.clearBadge.',
+    );
+    expect(() => context.notify.isSystemAvailable()).toThrow(
+      'Extension "notify-helper-ext" requires permission ui:notify to use notify.isSystemAvailable.',
+    );
+  });
+
   it('requires conversation permissions for host-run conversation helpers', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
