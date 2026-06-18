@@ -2,15 +2,31 @@ import { createHash } from 'node:crypto';
 
 import type { FileAccess } from '../filesystem/filesystemAuthority.js';
 import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
+import { assertExtensionAnyPermission } from './extensionPermissions.js';
 
 function normalizeWorkspacePath(path: string): string {
   return path.replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+$/, '').trim();
 }
 
-export function createExtensionWorkspaceCapability(extensionId = 'unknown-extension', toolContext?: { cwd?: string }) {
+function hasWriteAccess(access: FileAccess[]): boolean {
+  return access.includes('write');
+}
+
+export function createExtensionWorkspaceCapability(
+  extensionId = 'unknown-extension',
+  toolContext?: { cwd?: string },
+  options: { enforceManifestPermissions?: boolean } = {},
+) {
   const filesystem = createExtensionFilesystemCapability(extensionId, toolContext);
 
   async function workspace(cwd: string, access: FileAccess[], reason: string) {
+    if (options.enforceManifestPermissions) {
+      assertExtensionAnyPermission(
+        extensionId,
+        hasWriteAccess(access) ? ['workspace:write', 'workspace:readwrite'] : ['workspace:read', 'workspace:readwrite'],
+        `workspace.${reason.replace(/^extension workspace /, '')}`,
+      );
+    }
     return filesystem.workspace({ cwd, access, reason });
   }
 

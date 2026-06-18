@@ -427,8 +427,8 @@ export function createBackendContext(
     models: createExtensionModelsCapability(serverContext, extensionId),
     knowledge: createExtensionKnowledgeCapability(),
     conversations: createExtensionConversationsCapability(serverContext, extensionId),
-    filesystem: createExtensionFilesystemCapability(extensionId, toolContext),
-    workspace: createExtensionWorkspaceCapability(extensionId, toolContext),
+    filesystem: createExtensionFilesystemCapability(extensionId, toolContext, { enforceManifestPermissions: true }),
+    workspace: createExtensionWorkspaceCapability(extensionId, toolContext, { enforceManifestPermissions: true }),
     git: createExtensionGitCapability(),
     shell: {
       exec: async (input) => {

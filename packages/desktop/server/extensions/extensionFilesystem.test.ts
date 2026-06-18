@@ -9,6 +9,9 @@ vi.mock('../filesystem/filesystemAuthority.js', () => ({
 }));
 
 vi.mock('@neon-pilot/core', () => ({ getStateRoot }));
+vi.mock('./extensionPermissions.js', () => ({
+  assertExtensionAnyPermission: vi.fn(),
+}));
 
 const { createExtensionFilesystemCapability } = await import('./extensionFilesystem.js');
 

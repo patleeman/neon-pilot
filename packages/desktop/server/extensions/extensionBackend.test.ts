@@ -277,6 +277,30 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires workspace and filesystem permissions for host-run file helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'file-helper-ext');
+    const context = createBackendContext('file-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    await expect(context.workspace.readText({ cwd: '/repo', path: 'README.md' })).rejects.toThrow(
+      'Extension "file-helper-ext" requires permission workspace:read to use workspace.readText.',
+    );
+    await expect(context.workspace.writeText({ cwd: '/repo', path: 'README.md', content: 'hello' })).rejects.toThrow(
+      'Extension "file-helper-ext" requires permission workspace:write to use workspace.writeText.',
+    );
+    await expect(context.filesystem.app({ access: ['read'] })).rejects.toThrow(
+      'Extension "file-helper-ext" requires permission filesystem:read to use filesystem.app.',
+    );
+    await expect(context.filesystem.temp({ access: ['write'] })).rejects.toThrow(
+      'Extension "file-helper-ext" requires permission filesystem:write to use filesystem.temp.',
+    );
+  });
+
   it('passes the server route settings file into worker action contexts', async () => {
     const workerRunner = {
       loadModule: vi.fn(async () => ({})),
