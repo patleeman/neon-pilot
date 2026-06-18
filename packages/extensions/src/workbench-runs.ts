@@ -1,2 +1,2 @@
-export declare function getConversationRunIdFromSearch(...args: never[]): unknown;
-export declare function setConversationRunIdInSearch(...args: never[]): unknown;
+export declare function getConversationRunIdFromSearch(search: string): string | null;
+export declare function setConversationRunIdInSearch(search: string, runId: string | null): string;
