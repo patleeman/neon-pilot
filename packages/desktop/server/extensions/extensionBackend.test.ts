@@ -170,6 +170,59 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires extension registry permissions for host-run extension helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'registry-helper-ext');
+    const context = createBackendContext('registry-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    expect(() => context.extensions.listActions()).toThrow(
+      'Extension "registry-helper-ext" requires permission extensions:read to use extensions.listActions.',
+    );
+    expect(() => context.extensions.getStatus('registry-helper-ext')).toThrow(
+      'Extension "registry-helper-ext" requires permission extensions:read to use extensions.getStatus.',
+    );
+    expect(() => context.extensions.setEnabled('registry-helper-ext', false)).toThrow(
+      'Extension "registry-helper-ext" requires permission extensions:write to use extensions.setEnabled.',
+    );
+    await expect(context.extensions.callAction('registry-helper-ext', 'ensure', {})).rejects.toThrow(
+      'Extension "registry-helper-ext" requires permission extensions:read to use extensions.callAction.',
+    );
+  });
+
+  it('allows declared host-run extension registry writes', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'registry-writer-ext');
+    const extensionRoot = join(stateRoot, 'extensions', 'registry-writer-ext');
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'registry-writer-ext',
+        name: 'Registry Writer Ext',
+        permissions: ['extensions:write'],
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [{ id: 'ensure', handler: 'ensure', worker: { enabled: true } }],
+        },
+      }),
+    );
+    invalidateExtensionRegistryReadCaches(stateRoot);
+    const context = createBackendContext('registry-writer-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    expect(() => context.extensions.setEnabled('registry-writer-ext', false)).not.toThrow();
+    expect(isExtensionEnabled('registry-writer-ext', stateRoot)).toBe(false);
+  });
+
   it('passes the server route settings file into worker action contexts', async () => {
     const workerRunner = {
       loadModule: vi.fn(async () => ({})),

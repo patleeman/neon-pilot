@@ -32,7 +32,7 @@
       }
     ]
   },
-  "permissions": ["storage:readwrite", "conversations:readwrite"],
+  "permissions": ["storage:readwrite", "conversations:readwrite", "extensions:write"],
   "compatibility": {
     "neonPilot": ">=0.10.0",
     "extensionApi": "^2"

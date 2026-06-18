@@ -473,6 +473,7 @@ export function createBackendContext(
     },
     extensions: {
       callAction: async (targetExtensionId, actionId, input) => {
+        assertExtensionPermission(extensionId, 'extensions:read', 'extensions.callAction');
         const entry = findExtensionEntry(targetExtensionId);
         if (!entry) throw new Error(`Extension "${targetExtensionId}" not found.`);
         const action = entry.manifest.backend?.actions?.find((candidate) => candidate.id === actionId);
@@ -481,8 +482,9 @@ export function createBackendContext(
         if (!actionResult.ok) throw new Error(actionResult.error);
         return actionResult.result;
       },
-      listActions: () =>
-        listExtensionInstallSummaries()
+      listActions: () => {
+        assertExtensionPermission(extensionId, 'extensions:read', 'extensions.listActions');
+        return listExtensionInstallSummaries()
           .filter((summary) => summary.status === 'enabled' && (summary.backendActions?.length ?? 0) > 0)
           .map((summary) => ({
             extensionId: summary.id,
@@ -492,8 +494,10 @@ export function createBackendContext(
               title: action.title,
               description: action.description,
             })),
-          })),
+          }));
+      },
       getStatus: (targetExtensionId) => {
+        assertExtensionPermission(extensionId, 'extensions:read', 'extensions.getStatus');
         const summary = listExtensionInstallSummaries().find((e) => e.id === targetExtensionId);
         if (!summary) return { enabled: false, healthy: false };
         const enabled = summary.status === 'enabled';
@@ -503,7 +507,10 @@ export function createBackendContext(
           ...(summary.errors?.length ? { errors: summary.errors } : {}),
         };
       },
-      setEnabled: (targetExtensionId, enabled) => setExtensionEnabled(targetExtensionId, enabled),
+      setEnabled: (targetExtensionId, enabled) => {
+        assertExtensionPermission(extensionId, 'extensions:write', 'extensions.setEnabled');
+        return setExtensionEnabled(targetExtensionId, enabled);
+      },
     },
     secrets: {
       get: (secretId) => {
