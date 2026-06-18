@@ -214,6 +214,10 @@ function buildGatewayRouteActivityId(binding: GatewayThreadBinding): string {
   return `gateway-route:${binding.provider}:${binding.conversationId}`;
 }
 
+function buildGatewayBindingKey(binding: Pick<GatewayThreadBinding, 'provider' | 'conversationId'>): string {
+  return `${binding.provider}:${binding.conversationId}`;
+}
+
 function selectedConversationIdFromPath(pathname: string): string | null {
   const match = /^\/conversations\/([^/?#]+)/.exec(pathname);
   if (!match) return null;
@@ -363,6 +367,8 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
     ...emptyForm,
     conversationId: selectedContextConversationId,
   }));
+  const [selectedBindingKey, setSelectedBindingKey] = useState<string | null>(null);
+  const [selectedBindingForm, setSelectedBindingForm] = useState<GatewayFormState>(emptyForm);
   const previousContextConversationIdRef = useRef(selectedContextConversationId);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -433,6 +439,10 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
 
   const telegramConnection = useMemo(() => findProviderConnection(state, 'telegram'), [state]);
   const telegramBindings = useMemo(() => state.bindings.filter((binding) => binding.provider === 'telegram'), [state.bindings]);
+  const selectedBinding = useMemo(
+    () => telegramBindings.find((binding) => buildGatewayBindingKey(binding) === selectedBindingKey) ?? telegramBindings[0] ?? null,
+    [selectedBindingKey, telegramBindings],
+  );
   const unassignedTelegramTargets = useMemo(
     () =>
       state.chatTargets.filter(
@@ -503,6 +513,31 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
     }));
   }
 
+  function selectRoute(binding: GatewayThreadBinding) {
+    setSelectedBindingKey(buildGatewayBindingKey(binding));
+    setSelectedBindingForm({
+      conversationId: binding.conversationId,
+      conversationTitle: binding.conversationTitle || '',
+      externalChatId: binding.externalChatId || '',
+      externalChatLabel: binding.externalChatLabel || '',
+    });
+  }
+
+  useEffect(() => {
+    if (!selectedBinding) {
+      setSelectedBindingKey(null);
+      setSelectedBindingForm(emptyForm);
+      return;
+    }
+    setSelectedBindingKey(buildGatewayBindingKey(selectedBinding));
+    setSelectedBindingForm({
+      conversationId: selectedBinding.conversationId,
+      conversationTitle: selectedBinding.conversationTitle || '',
+      externalChatId: selectedBinding.externalChatId || '',
+      externalChatLabel: selectedBinding.externalChatLabel || '',
+    });
+  }, [selectedBinding]);
+
   async function attachConversation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const next = normalizeForm(form);
@@ -528,6 +563,30 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
     });
   }
 
+  async function saveSelectedRoute(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const next = normalizeForm(selectedBindingForm);
+    if (!selectedBinding || !next.conversationId) {
+      setError('Select a Telegram route first.');
+      return;
+    }
+    await runOperation(`save-route-${selectedBinding.provider}-${selectedBinding.conversationId}`, async () => {
+      const nextState = await fetchJson<GatewayState>('/api/gateways/bindings', {
+        method: 'POST',
+        body: JSON.stringify({
+          provider: selectedBinding.provider,
+          conversationId: next.conversationId,
+          conversationTitle: next.conversationTitle || undefined,
+          externalChatId: next.externalChatId || undefined,
+          externalChatLabel: next.externalChatLabel || undefined,
+        }),
+      });
+      setState(nextState);
+      setSelectedBindingKey(`${selectedBinding.provider}:${next.conversationId}`);
+      setMessage('Telegram route saved.');
+    });
+  }
+
   async function detachConversation(provider: GatewayProviderId, conversationId: string) {
     await runOperation(`detach-${provider}-${conversationId}`, async () => {
       setState(
@@ -539,6 +598,9 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
         ),
       );
       setMessage(`${providerLabel(provider, state.providers)} route removed.`);
+      if (selectedBindingKey === `${provider}:${conversationId}`) {
+        setSelectedBindingKey(null);
+      }
     });
   }
 
@@ -697,41 +759,115 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
 
         <AppPageSection layout="stacked" bodyClassName="space-y-2">
           <SectionLabel tone="muted">Active Routes</SectionLabel>
-          <DataTable>
-            <DataTableHead>
-              <DataTableRow>
-                <DataTableHeaderCell>Conversation</DataTableHeaderCell>
-                <DataTableHeaderCell>Telegram Chat</DataTableHeaderCell>
-                <DataTableHeaderCell>Replies</DataTableHeaderCell>
-                <DataTableHeaderCell>Updated</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
-              </DataTableRow>
-            </DataTableHead>
-            <DataTableBody>
-              {telegramBindings.length === 0 ? <DataTableEmptyRow colSpan={5}>No Telegram routes yet.</DataTableEmptyRow> : null}
-              {telegramBindings.map((binding) => (
-                <DataTableRow key={binding.id}>
-                  <DataTableCell>
-                    <div className="min-w-0">
-                      <div className="truncate font-medium text-primary">{binding.conversationTitle || binding.conversationId}</div>
-                      <div className="truncate text-[11px] text-muted">{binding.conversationId}</div>
-                    </div>
-                  </DataTableCell>
-                  <DataTableCell>{binding.externalChatLabel || binding.externalChatId || 'Unassigned'}</DataTableCell>
-                  <DataTableCell>{binding.repliesEnabled ? 'On' : 'Off'}</DataTableCell>
-                  <DataTableCell>{formatDate(binding.updatedAt)}</DataTableCell>
-                  <DataTableCell align="right">
-                    <ToolbarButton
-                      disabled={busy === `detach-${binding.provider}-${binding.conversationId}`}
-                      onClick={() => detachConversation(binding.provider, binding.conversationId)}
-                    >
-                      Detach
-                    </ToolbarButton>
-                  </DataTableCell>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.55fr)]">
+            <DataTable>
+              <DataTableHead>
+                <DataTableRow>
+                  <DataTableHeaderCell>Conversation</DataTableHeaderCell>
+                  <DataTableHeaderCell>Telegram Chat</DataTableHeaderCell>
+                  <DataTableHeaderCell>Replies</DataTableHeaderCell>
+                  <DataTableHeaderCell>Updated</DataTableHeaderCell>
                 </DataTableRow>
-              ))}
-            </DataTableBody>
-          </DataTable>
+              </DataTableHead>
+              <DataTableBody>
+                {telegramBindings.length === 0 ? <DataTableEmptyRow colSpan={4}>No Telegram routes yet.</DataTableEmptyRow> : null}
+                {telegramBindings.map((binding) => {
+                  const selected = selectedBinding ? buildGatewayBindingKey(binding) === buildGatewayBindingKey(selectedBinding) : false;
+                  return (
+                    <DataTableRow
+                      key={binding.id}
+                      className={selected ? 'bg-surface-subtle/60' : undefined}
+                      aria-selected={selected}
+                      onClick={() => selectRoute(binding)}
+                    >
+                      <DataTableCell>
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-primary">{binding.conversationTitle || binding.conversationId}</div>
+                          <div className="truncate text-[11px] text-muted">{binding.conversationId}</div>
+                        </div>
+                      </DataTableCell>
+                      <DataTableCell>{binding.externalChatLabel || binding.externalChatId || 'Unassigned'}</DataTableCell>
+                      <DataTableCell>{binding.repliesEnabled ? 'On' : 'Off'}</DataTableCell>
+                      <DataTableCell>{formatDate(binding.updatedAt)}</DataTableCell>
+                    </DataTableRow>
+                  );
+                })}
+              </DataTableBody>
+            </DataTable>
+
+            {selectedBinding ? (
+              <form className="space-y-3 rounded-md border border-border-subtle p-3" onSubmit={saveSelectedRoute}>
+                <div>
+                  <div className="text-[13px] font-medium text-primary">Route Details</div>
+                  <div className="mt-1 truncate text-[12px] text-muted">{selectedBinding.conversationTitle || selectedBinding.conversationId}</div>
+                </div>
+                <Field label="Conversation">
+                  <Select
+                    value={selectedBindingForm.conversationId}
+                    onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                      const conversation = conversations.find((candidate) => candidate.id === event.target.value);
+                      setSelectedBindingForm((current) => ({
+                        ...current,
+                        conversationId: event.target.value,
+                        conversationTitle: conversation ? conversationLabel(conversation) : '',
+                      }));
+                    }}
+                  >
+                    {conversations.map((conversation) => (
+                      <option key={conversation.id} value={conversation.id}>
+                        {conversationLabel(conversation)}
+                      </option>
+                    ))}
+                    {selectedBindingForm.conversationId &&
+                    !conversations.some((conversation) => conversation.id === selectedBindingForm.conversationId) ? (
+                      <option value={selectedBindingForm.conversationId}>
+                        {selectedBindingForm.conversationTitle || selectedBindingForm.conversationId}
+                      </option>
+                    ) : null}
+                  </Select>
+                </Field>
+                <Field label="Telegram Chat ID">
+                  <TextInput
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={selectedBindingForm.externalChatId}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setSelectedBindingForm((current) => ({ ...current, externalChatId: event.target.value }))
+                    }
+                  />
+                </Field>
+                <Field label="Telegram Chat Label">
+                  <TextInput
+                    autoComplete="off"
+                    value={selectedBindingForm.externalChatLabel}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setSelectedBindingForm((current) => ({ ...current, externalChatLabel: event.target.value }))
+                    }
+                  />
+                </Field>
+                <div className="flex flex-wrap gap-2">
+                  <ToolbarButton type="submit" disabled={busy === `save-route-${selectedBinding.provider}-${selectedBinding.conversationId}`}>
+                    Save Changes
+                  </ToolbarButton>
+                  <ToolbarButton
+                    type="button"
+                    onClick={() => void navigateTo(pa, buildConversationRoute(selectedBinding.conversationId))}
+                  >
+                    Open Conversation
+                  </ToolbarButton>
+                  <ToolbarButton
+                    type="button"
+                    disabled={busy === `detach-${selectedBinding.provider}-${selectedBinding.conversationId}`}
+                    onClick={() => detachConversation(selectedBinding.provider, selectedBinding.conversationId)}
+                  >
+                    Detach
+                  </ToolbarButton>
+                </div>
+              </form>
+            ) : (
+              <PanelMessage>Select a route to edit its Telegram chat mapping.</PanelMessage>
+            )}
+          </div>
         </AppPageSection>
 
         {unassignedTelegramTargets.length > 0 ? (

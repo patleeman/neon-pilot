@@ -44,7 +44,7 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
   DataTableCell: ({ children, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) => <td {...props}>{children}</td>,
   DataTableHead: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
   DataTableHeaderCell: ({ children, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) => <th {...props}>{children}</th>,
-  DataTableRow: ({ children }: { children: React.ReactNode }) => <tr>{children}</tr>,
+  DataTableRow: ({ children, ...props }: React.HTMLAttributes<HTMLTableRowElement>) => <tr {...props}>{children}</tr>,
   EmptyState: ({ title }: { title: React.ReactNode }) => <p>{title}</p>,
   ErrorState: ({ message }: { message: React.ReactNode }) => <p>{message}</p>,
   Field: ({ label, children }: { label: React.ReactNode; children: React.ReactNode }) => (
@@ -270,9 +270,9 @@ describe('GatewaysPage', () => {
     renderPage();
     await screen.findAllByText('Chief of Threads');
 
-    fireEvent.change(screen.getByLabelText(/^Conversation$/), { target: { value: 'conv-2' } });
-    fireEvent.change(screen.getByLabelText(/Telegram Chat ID/), { target: { value: '43' } });
-    fireEvent.change(screen.getByLabelText(/Telegram Chat Label/), { target: { value: 'Test Chat' } });
+    fireEvent.change(screen.getAllByLabelText(/^Conversation$/)[0], { target: { value: 'conv-2' } });
+    fireEvent.change(screen.getAllByLabelText(/Telegram Chat ID/)[0], { target: { value: '43' } });
+    fireEvent.change(screen.getAllByLabelText(/Telegram Chat Label/)[0], { target: { value: 'Test Chat' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save Route' }));
 
     await waitFor(() =>
@@ -293,18 +293,43 @@ describe('GatewaysPage', () => {
     expect(await screen.findByText('Telegram route saved.')).toBeTruthy();
   });
 
+  it('edits a selected Telegram route from the route detail panel', async () => {
+    renderPage();
+    await screen.findAllByText('Chief of Threads');
+
+    fireEvent.click(screen.getByText('Patrick'));
+    fireEvent.change(screen.getAllByLabelText(/Telegram Chat Label/)[1], { target: { value: 'Patrick DM' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/gateways/bindings',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            provider: 'telegram',
+            conversationId: 'conv-1',
+            conversationTitle: 'Chief of Threads',
+            externalChatId: '42',
+            externalChatLabel: 'Patrick DM',
+          }),
+        }),
+      ),
+    );
+  });
+
   it('preselects the conversation from the route query when opened from a conversation menu', async () => {
     renderPage({ search: '?conversationId=conv-2', conversationId: undefined });
     await screen.findAllByText('Chief of Threads');
 
-    expect((screen.getByLabelText(/^Conversation$/) as HTMLSelectElement).value).toBe('conv-2');
+    expect((screen.getAllByLabelText(/^Conversation$/)[0] as HTMLSelectElement).value).toBe('conv-2');
   });
 
   it('clears the route-selected conversation when the query selection is removed', async () => {
     const view = renderPage({ search: '?conversationId=conv-2', conversationId: undefined });
     await screen.findAllByText('Chief of Threads');
 
-    expect((screen.getByLabelText(/^Conversation$/) as HTMLSelectElement).value).toBe('conv-2');
+    expect((screen.getAllByLabelText(/^Conversation$/)[0] as HTMLSelectElement).value).toBe('conv-2');
 
     view.rerender(
       <GatewaysPage
@@ -321,14 +346,14 @@ describe('GatewaysPage', () => {
       />,
     );
 
-    await waitFor(() => expect((screen.getByLabelText(/^Conversation$/) as HTMLSelectElement).value).toBe(''));
+    await waitFor(() => expect((screen.getAllByLabelText(/^Conversation$/)[0] as HTMLSelectElement).value).toBe(''));
   });
 
   it('does not overwrite a manual conversation choice after route preselection', async () => {
     renderPage({ search: '?conversationId=conv-2', conversationId: undefined });
     await screen.findAllByText('Chief of Threads');
 
-    const select = screen.getByLabelText(/^Conversation$/) as HTMLSelectElement;
+    const select = screen.getAllByLabelText(/^Conversation$/)[0] as HTMLSelectElement;
     fireEvent.change(select, { target: { value: 'conv-1' } });
 
     await waitFor(() => expect(select.value).toBe('conv-1'));

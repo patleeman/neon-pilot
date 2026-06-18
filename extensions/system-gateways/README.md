@@ -6,7 +6,7 @@ Telegram Gateway owns the user-facing page for connecting Telegram chats to Neon
 
 - The extension contributes the primary **Telegram Gateway** route at `/gateways`.
 - The **Telegram Gateway** nav item also owns the left sidebar body through `gateways-sidebar`, which lists active Telegram routes as conversation rows.
-- The page should lead with the Telegram setup flow, not host implementation terms: configure credentials, route a Telegram chat to a conversation, then inspect active routes and recent activity.
+- The page should lead with the Telegram setup flow, not host implementation terms: configure credentials, route a Telegram chat to a conversation, then select active routes to inspect, edit, detach, or open their conversation.
 - Bound conversations should be treated as the main working object. The sidebar is the quick route picker; the main page is for setup, route editing, and recent activity.
 - The extension declares only the built-in `telegram` provider. Do not add other channel setup UI here; create a separate extension for a separate messaging channel.
 - The desktop gateway routes under `/api/gateways` own shared host infrastructure, runtime startup, Telegram delivery, and gateway state persistence. This infrastructure can remain available even when the Telegram Gateway UI extension is disabled.
