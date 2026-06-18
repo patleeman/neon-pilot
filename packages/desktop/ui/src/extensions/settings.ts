@@ -105,6 +105,7 @@ export type {
   ModelProviderState,
   ModelState,
   ProviderAuthSummary,
+  ProviderConnectionTestResult,
   ProviderOAuthLoginState,
   ProviderOAuthLoginStreamEvent,
   TelemetryDbMaintenanceResult,

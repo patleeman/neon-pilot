@@ -6,12 +6,14 @@ const {
   prewarmModelDefinitionsMock,
   readSavedModelRefMock,
   readModelStateMock,
+  refreshModelDefinitionsMock,
 } = vi.hoisted(() => ({
   modelPreferencesImportedMock: vi.fn(),
   providerDesktopCapabilityImportedMock: vi.fn(),
   prewarmModelDefinitionsMock: vi.fn(),
   readSavedModelRefMock: vi.fn(),
   readModelStateMock: vi.fn(),
+  refreshModelDefinitionsMock: vi.fn(),
 }));
 
 vi.mock('../models/modelPreferences.js', () => {
@@ -23,7 +25,9 @@ vi.mock('../models/modelPreferences.js', () => {
   };
 });
 
-vi.mock('../models/modelState.js', () => ({}));
+vi.mock('../models/modelState.js', () => ({
+  refreshModelDefinitions: refreshModelDefinitionsMock,
+}));
 
 vi.mock('../models/providerAuth.js', () => ({}));
 
@@ -52,5 +56,17 @@ describe('localApi model provider loading', () => {
     expect(modelPreferencesImportedMock).toHaveBeenCalledTimes(1);
     expect(providerDesktopCapabilityImportedMock).not.toHaveBeenCalled();
     expect(prewarmModelDefinitionsMock).not.toHaveBeenCalled();
+  });
+
+  it('refreshes model definitions before returning model state', async () => {
+    readModelStateMock.mockResolvedValue({ models: [{ id: 'fresh-model' }] });
+    refreshModelDefinitionsMock.mockResolvedValue([{ id: 'fresh-model' }]);
+
+    const { refreshDesktopModels } = await import('./localApi.js');
+
+    await expect(refreshDesktopModels()).resolves.toEqual({ models: [{ id: 'fresh-model' }] });
+    expect(refreshModelDefinitionsMock).toHaveBeenCalledTimes(1);
+    expect(readModelStateMock).toHaveBeenCalledTimes(1);
+    expect(providerDesktopCapabilityImportedMock).not.toHaveBeenCalled();
   });
 });

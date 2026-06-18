@@ -57,6 +57,7 @@ import {
   setProviderApiKeyCapability,
   startProviderOAuthLoginCapability,
   submitProviderOAuthLoginInputCapability,
+  testModelProviderCapability,
 } from './providerDesktopCapability.js';
 
 function createContext(overrides?: Partial<ProviderDesktopCapabilityContext>): ProviderDesktopCapabilityContext {
@@ -80,6 +81,64 @@ describe('readModelProvidersCapability', () => {
     const result = readModelProvidersCapability(context);
     expect(modelProviders.readModelProvidersState).toHaveBeenCalledWith('test-profile');
     expect(result).toEqual({ providers: {} });
+  });
+});
+
+describe('testModelProviderCapability', () => {
+  it('calls an OpenAI-compatible model list endpoint and returns model samples', async () => {
+    vi.mocked(modelProviders.readModelProvidersState).mockReturnValue({
+      providers: [
+        {
+          id: 'openrouter',
+          baseUrl: 'https://openrouter.example/api/v1',
+          api: 'openai-completions',
+          apiKey: 'sk-test',
+          authHeader: true,
+          headers: { 'HTTP-Referer': 'https://neonpilot.test' },
+          models: [],
+        },
+      ],
+    } as never);
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ data: [{ id: 'model-a' }, { id: 'model-b' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const result = await testModelProviderCapability(createContext(), 'openrouter');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://openrouter.example/api/v1/models',
+      expect.objectContaining({
+        method: 'GET',
+        headers: expect.any(Headers),
+      }),
+    );
+    const headers = fetchMock.mock.calls[0]?.[1]?.headers as Headers;
+    expect(headers.get('authorization')).toBe('Bearer sk-test');
+    expect(headers.get('HTTP-Referer')).toBe('https://neonpilot.test');
+    expect(result).toMatchObject({
+      provider: 'openrouter',
+      ok: true,
+      status: 'ok',
+      modelCount: 2,
+      sampleModels: ['model-a', 'model-b'],
+    });
+
+    fetchMock.mockRestore();
+  });
+
+  it('returns actionable errors when a provider is not ready to test', async () => {
+    vi.mocked(modelProviders.readModelProvidersState).mockReturnValue({
+      providers: [{ id: 'custom', api: 'openai-completions', authHeader: true, models: [] }],
+    } as never);
+
+    await expect(testModelProviderCapability(createContext(), 'custom')).resolves.toMatchObject({
+      ok: false,
+      status: 'error',
+      message: 'Provider custom needs a base URL before it can be tested.',
+    });
   });
 });
 

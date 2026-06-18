@@ -168,6 +168,8 @@ function updateSelectValue(select: HTMLSelectElement, value: string) {
 describe('SettingsPage provider model editor', () => {
   let saveModelProviderModelMock: ReturnType<typeof vi.spyOn>;
   let updateModelPreferencesMock: ReturnType<typeof vi.spyOn>;
+  let refreshModelsMock: ReturnType<typeof vi.spyOn>;
+  let testModelProviderMock: ReturnType<typeof vi.spyOn>;
   let startProviderOAuthLoginMock: ReturnType<typeof vi.spyOn>;
   let removeProviderCredentialMock: ReturnType<typeof vi.spyOn>;
   let maintainTelemetryDbMock: ReturnType<typeof vi.spyOn>;
@@ -179,6 +181,8 @@ describe('SettingsPage provider model editor', () => {
   beforeEach(() => {
     saveModelProviderModelMock = vi.spyOn(api, 'saveModelProviderModel');
     updateModelPreferencesMock = vi.spyOn(api, 'updateModelPreferences');
+    refreshModelsMock = vi.spyOn(api, 'refreshModels');
+    testModelProviderMock = vi.spyOn(api, 'testModelProvider');
     startProviderOAuthLoginMock = vi.spyOn(api, 'startProviderOAuthLogin');
     removeProviderCredentialMock = vi.spyOn(api, 'removeProviderCredential');
     maintainTelemetryDbMock = vi.spyOn(api, 'maintainTelemetryDb');
@@ -462,11 +466,31 @@ describe('SettingsPage provider model editor', () => {
         },
       ],
     });
+    refreshModelsMock.mockResolvedValue({
+      currentModel: 'gpt-5.4',
+      currentVisionModel: '',
+      currentThinkingLevel: 'medium',
+      currentServiceTier: '',
+      models: [
+        { id: 'gpt-5.4', provider: 'openai-codex', name: 'GPT-5.4', context: 200000 },
+        { id: 'qwen-reap', provider: 'desktop', name: 'Qwen REAP', context: 262144 },
+      ],
+    });
+    testModelProviderMock.mockResolvedValue({
+      provider: 'desktop',
+      ok: true,
+      status: 'ok',
+      message: 'Connected. Provider returned 1 models.',
+      modelCount: 1,
+      sampleModels: ['qwen-reap'],
+    });
   });
 
   afterEach(() => {
     saveModelProviderModelMock.mockRestore();
     updateModelPreferencesMock.mockRestore();
+    refreshModelsMock.mockRestore();
+    testModelProviderMock.mockRestore();
     startProviderOAuthLoginMock.mockRestore();
     removeProviderCredentialMock.mockRestore();
     maintainTelemetryDbMock.mockRestore();
@@ -567,7 +591,28 @@ describe('SettingsPage provider model editor', () => {
     click(queryButtonByLabel(container, 'Refresh models'));
     await flushAsyncWork();
 
+    expect(refreshModelsMock).toHaveBeenCalled();
     expect(modelsRefetchMock).toHaveBeenCalledWith({ resetLoading: false });
+    expect(container.textContent).toContain('Refreshed 2 models.');
+  });
+
+  it('tests a saved provider from the provider editor', async () => {
+    const { container } = renderPage('settings-providers');
+    await flushAsyncWork();
+
+    const desktopRow = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('desktop'));
+    if (!(desktopRow instanceof HTMLButtonElement)) {
+      throw new Error('Expected configured desktop provider row');
+    }
+    click(desktopRow);
+    await flushAsyncWork();
+
+    click(queryButton(container, 'Test'));
+    await flushAsyncWork();
+
+    expect(testModelProviderMock).toHaveBeenCalledWith('desktop');
+    expect(container.textContent).toContain('Connected. Provider returned 1 models.');
+    expect(container.textContent).toContain('Sample: qwen-reap.');
   });
 
   it('opens OAuth login URLs through the desktop shell bridge', async () => {

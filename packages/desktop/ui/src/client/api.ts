@@ -31,6 +31,7 @@ import type {
   ConversationContentSearchResult,
   ConversationContextDocRef,
   ConversationSummaryRecord,
+  DefaultCwdState,
   DesktopConversationState,
   FilePickerResult,
   GatewayProviderId,
@@ -43,8 +44,12 @@ import type {
   LiveSessionMeta,
   LiveSessionPresenceState,
   MemoryData,
+  ModelProviderState,
+  ModelState,
   PromptAttachmentRefInput,
   PromptImageInput,
+  ProviderAuthState,
+  ProviderConnectionTestResult,
   SecretsState,
   SkillFoldersState,
   SystemPromptAggregate,
@@ -491,9 +496,12 @@ export const api = {
 
   // ── Models ────────────────────────────────────────────────────────────────
   models: async () => get<ModelState>('/models'),
+  refreshModels: async () => post<ModelState>('/models/refresh'),
   modelPreferences: async () =>
     get<Pick<ModelState, 'currentModel' | 'currentVisionModel' | 'currentThinkingLevel' | 'currentServiceTier'>>('/model-preferences'),
   modelProviders: async () => get<ModelProviderState>('/model-providers'),
+  testModelProvider: async (provider: string) =>
+    post<ProviderConnectionTestResult>(`/model-providers/${encodeURIComponent(provider)}/test`),
   saveModelProvider: async (
     provider: string,
     input: {

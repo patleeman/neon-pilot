@@ -1032,6 +1032,7 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   }
 
   if (method === 'GET' && path === '/api/models') return createDesktopLocalApiJsonResponse(await readDesktopModels());
+  if (method === 'POST' && path === '/api/models/refresh') return createDesktopLocalApiJsonResponse(await refreshDesktopModels());
   if (method === 'GET' && path === '/api/model-preferences') return createDesktopLocalApiJsonResponse(await readDesktopModelPreferences());
   if (method === 'GET' && path === '/api/extensions/slash-commands') {
     return createDesktopLocalApiJsonResponse((await getExtensionHostClient().readRegistryPresentation()).slashCommandRegistrations);
@@ -1089,6 +1090,10 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       await updateDesktopModelPreferences(input.body as Parameters<typeof updateDesktopModelPreferences>[0]),
     );
   if (method === 'GET' && path === '/api/model-providers') return createDesktopLocalApiJsonResponse(await readDesktopModelProviders());
+  const modelProviderTestMatch = /^\/api\/model-providers\/([^/]+)\/test$/.exec(path);
+  if (method === 'POST' && modelProviderTestMatch) {
+    return createDesktopLocalApiJsonResponse(await testDesktopModelProvider(decodeURIComponent(modelProviderTestMatch[1] ?? '')));
+  }
   const modelProviderModelMatch = /^\/api\/model-providers\/([^/]+)\/models\/([^/]+)$/.exec(path);
   if (modelProviderModelMatch) {
     const provider = decodeURIComponent(modelProviderModelMatch[1] ?? '');
@@ -1711,6 +1716,13 @@ export async function readDesktopModels() {
   return await m.readModelState(context.getSettingsFile());
 }
 
+export async function refreshDesktopModels() {
+  const context = await getLocalServerRouteContext();
+  const m = await modelState();
+  await m.refreshModelDefinitions();
+  return await m.readModelState(context.getSettingsFile());
+}
+
 export async function readDesktopModelPreferences() {
   const context = await getLocalServerRouteContext();
   const m = await modelState();
@@ -1867,6 +1879,10 @@ function publishConversationWorkspaceChanged(input: ReturnType<typeof buildDeskt
 
 export async function readDesktopModelProviders() {
   return (await models()).readModelProvidersCapability(await getLocalProviderDesktopCapabilityContext());
+}
+
+export async function testDesktopModelProvider(provider: string) {
+  return (await models()).testModelProviderCapability(await getLocalProviderDesktopCapabilityContext(), provider);
 }
 
 export async function readDesktopProviderAuth() {

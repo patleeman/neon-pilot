@@ -36,6 +36,7 @@ import {
   parseOptionalStringRecord,
   readJsonObjectDraftEntries,
   type ProviderAuthSummary,
+  type ProviderConnectionTestResult,
   type ProviderEditorDraft,
   type ProviderOAuthLoginState,
   type ProviderOAuthLoginStreamEvent,
@@ -2261,6 +2262,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   const [modelProviderAction, setModelProviderAction] = useState<'save' | 'delete' | null>(null);
   const [modelProviderMessage, setModelProviderMessage] = useState<string | null>(null);
   const [modelProviderEditorError, setModelProviderEditorError] = useState<string | null>(null);
+  const [modelRefreshAction, setModelRefreshAction] = useState(false);
+  const [modelRefreshMessage, setModelRefreshMessage] = useState<string | null>(null);
+  const [modelRefreshError, setModelRefreshError] = useState<string | null>(null);
+  const [providerTestAction, setProviderTestAction] = useState(false);
+  const [providerTestResult, setProviderTestResult] = useState<ProviderConnectionTestResult | null>(null);
+  const [providerTestError, setProviderTestError] = useState<string | null>(null);
   const [editingModelId, setEditingModelId] = useState<string | null>(null);
   const [modelDraft, setModelDraft] = useState<ModelEditorDraft>(() => createModelEditorDraft(null));
   const [modelDraftAction, setModelDraftAction] = useState<'save' | 'delete' | null>(null);
@@ -2594,6 +2601,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setModelProviderMessage(null);
     setModelDraftError(null);
     setModelDraftMessage(null);
+    setProviderTestResult(null);
+    setProviderTestError(null);
     setProviderCredentialError(null);
     setProviderCredentialNotice(null);
     setProviderEditorMode('custom');
@@ -2762,6 +2771,52 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     }
   }
 
+  async function handleRefreshModels() {
+    if (modelRefreshAction) {
+      return;
+    }
+
+    setModelRefreshAction(true);
+    setModelRefreshMessage(null);
+    setModelRefreshError(null);
+
+    try {
+      const state = await api.refreshModels();
+      await refetchModels({ resetLoading: false });
+      setModelRefreshMessage(`Refreshed ${state.models.length} models.`);
+    } catch (error) {
+      setModelRefreshError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setModelRefreshAction(false);
+    }
+  }
+
+  async function handleTestModelProvider() {
+    const providerId = editableModelProviderId;
+    if (!providerId || providerTestAction || selectedModelProviderId === NEW_MODEL_PROVIDER_ID) {
+      if (selectedModelProviderId === NEW_MODEL_PROVIDER_ID) {
+        setProviderTestError('Save the provider before testing it.');
+      }
+      return;
+    }
+
+    setProviderTestAction(true);
+    setProviderTestResult(null);
+    setProviderTestError(null);
+
+    try {
+      const result = await api.testModelProvider(providerId);
+      setProviderTestResult(result);
+      if (result.ok) {
+        await refetchModels({ resetLoading: false });
+      }
+    } catch (error) {
+      setProviderTestError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setProviderTestAction(false);
+    }
+  }
+
   async function handleDefaultCwdSave(nextCwd: string | null = defaultCwdDraft) {
     if (!defaultCwdState || savingDefaultCwd) {
       return;
@@ -2841,6 +2896,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setModelProviderMessage(null);
     setModelDraftError(null);
     setModelDraftMessage(null);
+    setProviderTestResult(null);
+    setProviderTestError(null);
     setProviderCredentialError(null);
     setProviderCredentialNotice(null);
     setProviderEditorMode(mode);
@@ -2864,6 +2921,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setModelProviderMessage(null);
     setModelDraftError(null);
     setModelDraftMessage(null);
+    setProviderTestResult(null);
+    setProviderTestError(null);
     setProviderCredentialError(null);
     setProviderCredentialNotice(null);
     setProviderEditorMode('custom');
@@ -3644,6 +3703,22 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   )}
                                 </Button>
                               )}
+                              <Button
+                                variant="action"
+                                type="button"
+                                onClick={() => {
+                                  void handleTestModelProvider();
+                                }}
+                                disabled={
+                                  providerTestAction ||
+                                  selectedModelProviderId === NEW_MODEL_PROVIDER_ID ||
+                                  !editableModelProviderId ||
+                                  modelProviderAction !== null
+                                }
+                                title="Test provider connection"
+                              >
+                                {providerTestAction ? 'Testing…' : 'Test'}
+                              </Button>
                               <IconButton
                                 type="button"
                                 onClick={closeProviderEditor}
@@ -3882,8 +3957,45 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
                                   {modelProviderMessage && <p className="text-[12px] text-success">{modelProviderMessage}</p>}
                                   {modelProviderEditorError && <p className="text-[12px] text-danger">{modelProviderEditorError}</p>}
+                                  {providerTestResult && (
+                                    <p
+                                      className={cx(
+                                        'text-[12px]',
+                                        providerTestResult.status === 'error'
+                                          ? 'text-danger'
+                                          : providerTestResult.status === 'warning'
+                                            ? 'text-warning'
+                                            : 'text-success',
+                                      )}
+                                    >
+                                      {providerTestResult.message}
+                                      {providerTestResult.sampleModels.length > 0
+                                        ? ` Sample: ${providerTestResult.sampleModels.join(', ')}.`
+                                        : ''}
+                                    </p>
+                                  )}
+                                  {providerTestError && <p className="text-[12px] text-danger">{providerTestError}</p>}
                                 </form>
                               </div>
+                            )}
+
+                            {providerEditorMode !== 'custom' && providerTestResult && (
+                              <p
+                                className={cx(
+                                  'text-[12px]',
+                                  providerTestResult.status === 'error'
+                                    ? 'text-danger'
+                                    : providerTestResult.status === 'warning'
+                                      ? 'text-warning'
+                                      : 'text-success',
+                                )}
+                              >
+                                {providerTestResult.message}
+                                {providerTestResult.sampleModels.length > 0 ? ` Sample: ${providerTestResult.sampleModels.join(', ')}.` : ''}
+                              </p>
+                            )}
+                            {providerEditorMode !== 'custom' && providerTestError && (
+                              <p className="text-[12px] text-danger">{providerTestError}</p>
                             )}
 
                             <Disclosure
@@ -3917,15 +4029,17 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   <IconButton
                                     type="button"
                                     onClick={() => {
-                                      void refetchModels({ resetLoading: false });
+                                      void handleRefreshModels();
                                     }}
-                                    disabled={modelsRefreshing}
+                                    disabled={modelsRefreshing || modelRefreshAction}
                                     aria-label="Refresh models"
-                                    title={modelsRefreshing ? 'Refreshing models' : 'Refresh models'}
+                                    title={modelsRefreshing || modelRefreshAction ? 'Refreshing models' : 'Refresh models'}
                                   >
                                     <SettingsIcon name="refresh" />
                                   </IconButton>
                                 </div>
+                                {modelRefreshMessage && <p className="text-[12px] text-success">{modelRefreshMessage}</p>}
+                                {modelRefreshError && <p className="text-[12px] text-danger">{modelRefreshError}</p>}
 
                                 {editableModelProviderId ? (
                                   <>

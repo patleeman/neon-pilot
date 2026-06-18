@@ -1355,6 +1355,16 @@ export interface ModelProviderState {
   providers: ModelProviderConfig[];
 }
 
+export interface ProviderConnectionTestResult {
+  provider: string;
+  ok: boolean;
+  status: 'ok' | 'warning' | 'error';
+  message: string;
+  modelCount: number;
+  sampleModels: string[];
+  url?: string;
+}
+
 export interface DefaultCwdState {
   currentCwd: string;
   effectiveCwd: string;

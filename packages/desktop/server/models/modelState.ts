@@ -201,6 +201,14 @@ export async function listModelDefinitions(): Promise<readonly ModelDefinition[]
   return registryModels;
 }
 
+export async function refreshModelDefinitions(): Promise<readonly ModelDefinition[]> {
+  invalidateModelDefinitionsCache();
+  const models = await loadModelDefinitions();
+  modelDefinitionsCache = { models, expiresAt: Date.now() + MODEL_DEFINITIONS_CACHE_TTL_MS };
+  invalidateModelTopicInBackground();
+  return models;
+}
+
 export async function readModelState(settingsFile: string): Promise<ModelState> {
   const models = await listModelDefinitions();
   const saved = normalizeSavedModelPreferences(settingsFile, models);

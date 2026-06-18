@@ -27,7 +27,17 @@ export interface ProviderDesktopCapabilityContext {
   getStateRoot?: () => string;
 }
 
-class ProviderDesktopCapabilityInputError extends Error {}
+export class ProviderDesktopCapabilityInputError extends Error {}
+
+export interface ProviderConnectionTestResult {
+  provider: string;
+  ok: boolean;
+  status: 'ok' | 'warning' | 'error';
+  message: string;
+  modelCount: number;
+  sampleModels: string[];
+  url?: string;
+}
 
 function runtimeScope(context: ProviderDesktopCapabilityContext): string {
   return context.getRuntimeScope();
@@ -241,8 +251,164 @@ function refreshProviderRuntimeAfterOAuthLogin(context: ProviderDesktopCapabilit
   });
 }
 
+function joinProviderUrl(baseUrl: string, path: string): string {
+  const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  const normalizedPath = path.replace(/^\//, '');
+  return new URL(normalizedPath, normalizedBase).toString();
+}
+
+async function resolveProviderCredential(
+  provider: string,
+  config: { apiKey?: string },
+  context: ProviderDesktopCapabilityContext,
+): Promise<string | null> {
+  const inlineKey = config.apiKey?.trim();
+  if (inlineKey) {
+    return inlineKey;
+  }
+
+  const registry = createModelRegistryForAuthFile(context.getAuthFile());
+  const model = registry.getAll().find((candidate) => candidate.provider === provider);
+  if (!model) {
+    return null;
+  }
+
+  const resolved = await registry.getApiKeyAndHeaders(model);
+  return resolved?.ok && resolved.apiKey ? resolved.apiKey : null;
+}
+
+async function fetchOpenAiCompatibleModels(input: {
+  provider: string;
+  baseUrl: string;
+  apiKey: string;
+  headers?: Record<string, string>;
+  authHeader?: boolean;
+}): Promise<ProviderConnectionTestResult> {
+  const url = joinProviderUrl(input.baseUrl, 'models');
+  const headers = new Headers(input.headers);
+  headers.set('accept', 'application/json');
+  if (input.authHeader !== false) {
+    headers.set('authorization', `Bearer ${input.apiKey}`);
+  }
+
+  const response = await fetch(url, { method: 'GET', headers });
+  const text = await response.text();
+  let body: unknown = null;
+  try {
+    body = text ? (JSON.parse(text) as unknown) : null;
+  } catch {
+    body = null;
+  }
+
+  if (!response.ok) {
+    const error = isRecord(body) && typeof body.error === 'string' ? body.error : text.slice(0, 240);
+    return {
+      provider: input.provider,
+      ok: false,
+      status: 'error',
+      message: `Model list request failed with HTTP ${response.status}${error ? `: ${error}` : ''}.`,
+      modelCount: 0,
+      sampleModels: [],
+      url,
+    };
+  }
+
+  const rows = isRecord(body) && Array.isArray(body.data) ? body.data : [];
+  const modelIds = rows
+    .map((entry) => (isRecord(entry) && typeof entry.id === 'string' ? entry.id : null))
+    .filter((entry): entry is string => Boolean(entry));
+
+  return {
+    provider: input.provider,
+    ok: true,
+    status: 'ok',
+    message: modelIds.length > 0 ? `Connected. Provider returned ${modelIds.length} models.` : 'Connected, but no model IDs were returned.',
+    modelCount: modelIds.length,
+    sampleModels: modelIds.slice(0, 5),
+    url,
+  };
+}
+
 export function readModelProvidersCapability(context: ProviderDesktopCapabilityContext): ModelProviderState {
   return readModelProvidersState(runtimeScope(context));
+}
+
+export async function testModelProviderCapability(
+  context: ProviderDesktopCapabilityContext,
+  providerInput: string,
+): Promise<ProviderConnectionTestResult> {
+  const provider = providerInput.trim();
+  if (!provider) {
+    throw new ProviderDesktopCapabilityInputError('provider required');
+  }
+
+  const providerConfig = readModelProvidersState(runtimeScope(context)).providers.find((candidate) => candidate.id === provider);
+  if (!providerConfig) {
+    return {
+      provider,
+      ok: false,
+      status: 'error',
+      message: `Provider ${provider} is not saved yet.`,
+      modelCount: 0,
+      sampleModels: [],
+    };
+  }
+
+  const api = providerConfig.api ?? 'openai-completions';
+  const baseUrl = providerConfig.baseUrl?.trim();
+  if (!baseUrl) {
+    return {
+      provider,
+      ok: false,
+      status: 'error',
+      message: `Provider ${provider} needs a base URL before it can be tested.`,
+      modelCount: 0,
+      sampleModels: [],
+    };
+  }
+
+  const apiKey = await resolveProviderCredential(provider, providerConfig, context);
+  if (!apiKey) {
+    return {
+      provider,
+      ok: false,
+      status: 'error',
+      message: `Provider ${provider} needs a saved API key before it can be tested.`,
+      modelCount: 0,
+      sampleModels: [],
+    };
+  }
+
+  if (api !== 'openai-completions' && api !== 'openai-responses') {
+    return {
+      provider,
+      ok: true,
+      status: 'warning',
+      message: `Saved provider ${provider}, but ${api} does not expose a generic model-list test here yet.`,
+      modelCount: providerConfig.models.length,
+      sampleModels: providerConfig.models.slice(0, 5).map((model) => model.id),
+    };
+  }
+
+  try {
+    return await fetchOpenAiCompatibleModels({
+      provider,
+      baseUrl,
+      apiKey,
+      authHeader: providerConfig.authHeader,
+      headers: providerConfig.headers,
+    });
+  } catch (error) {
+    return {
+      provider,
+      ok: false,
+      status: 'error',
+      message: error instanceof Error ? error.message : String(error),
+      modelCount: 0,
+      sampleModels: [],
+      url: joinProviderUrl(baseUrl, 'models'),
+    };
+  }
 }
 
 export function saveModelProviderCapability(

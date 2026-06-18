@@ -16,6 +16,7 @@ export type ModelProviderModelConfig = unknown;
 export type ModelProviderState = unknown;
 export type ModelState = unknown;
 export type ProviderAuthSummary = unknown;
+export type ProviderConnectionTestResult = unknown;
 export type ProviderEditorDraft = unknown;
 export type ProviderOAuthLoginState = unknown;
 export type ProviderOAuthLoginStreamEvent = unknown;
