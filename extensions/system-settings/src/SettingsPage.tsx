@@ -1302,7 +1302,7 @@ function TelemetryLogsSettingsPanel() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const openPath = useCallback(async (path: string) => {
-    const bridge = getDesktopBridge() as { openPath?: (targetPath: string) => Promise<{ ok?: boolean; error?: string }> } | null;
+    const bridge = getDesktopBridge();
     if (!bridge?.openPath) {
       setNotice(`Path: ${path}`);
       return;

@@ -1,3 +1,5 @@
+import type { ExtensionDesktopBridge } from './desktopBridge.js';
+
 export type HostComponent = (...args: never[]) => unknown;
 export type BrowserTabsState = unknown;
 
@@ -21,7 +23,7 @@ export declare function getConversationRunIdFromSearch(...args: never[]): unknow
 export declare function setConversationRunIdInSearch(...args: never[]): unknown;
 export declare function useConversationArtifactSummaries(...args: never[]): unknown;
 export declare function useConversationCheckpointSummaries(...args: never[]): unknown;
-export declare function getDesktopBridge(...args: never[]): unknown;
+export declare function getDesktopBridge(...args: never[]): ExtensionDesktopBridge | null;
 export declare function cx(...values: Array<unknown>): string;
 export declare function createNewTab(...args: never[]): unknown;
 export declare function getAdjacentTabId(...args: never[]): unknown;
