@@ -29,6 +29,13 @@ const terminalSessions = vi.hoisted(() => ({
   streamTerminalSession: vi.fn(),
   writeTerminalSession: vi.fn(),
 }));
+const workbenchBrowserToolHost = vi.hoisted(() => ({
+  cdp: vi.fn(async () => ({ ok: true })),
+  isActive: vi.fn(async () => true),
+  listTabs: vi.fn(async () => [{ id: 'tab-1', title: 'Docs' }]),
+  screenshot: vi.fn(async () => ({ data: 'png' })),
+  snapshot: vi.fn(async () => ({ title: 'Docs' })),
+}));
 
 vi.mock('./extensionRegistry.js', () => ({
   findExtensionCommandRegistration: vi.fn(),
@@ -38,6 +45,9 @@ vi.mock('./extensionRegistry.js', () => ({
   setExtensionEnabled: vi.fn(),
 }));
 vi.mock('./terminalSessions.js', () => terminalSessions);
+vi.mock('./workbenchBrowserToolHost.js', () => ({
+  getWorkbenchBrowserToolHost: vi.fn(() => workbenchBrowserToolHost),
+}));
 
 describe('extension backend capability dispatcher', () => {
   beforeEach(() => {
@@ -590,6 +600,90 @@ describe('extension backend capability dispatcher', () => {
         input: { extensionId: 'ext-a', enabled: 'false' },
       }),
     ).rejects.toThrow('Extension enabled must be a boolean.');
+  });
+
+  it('dispatches browser capability calls with declared browser permissions', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['browser:read', 'browser:control'] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'browser',
+          operation: 'listTabs',
+        }),
+      ),
+    ).resolves.toEqual([{ id: 'tab-1', title: 'Docs' }]);
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'browser',
+          operation: 'snapshot',
+          input: { conversationId: 'conv-1', tabId: 'tab-1' },
+        }),
+      ),
+    ).resolves.toEqual({ title: 'Docs' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 3,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'browser',
+          operation: 'cdp',
+          input: { conversationId: 'conv-1', tabId: 'tab-1', command: { method: 'Runtime.evaluate' } },
+        }),
+      ),
+    ).resolves.toEqual({ ok: true });
+
+    expect(workbenchBrowserToolHost.listTabs).toHaveBeenCalled();
+    expect(workbenchBrowserToolHost.snapshot).toHaveBeenCalledWith('conv-1', 'tab-1');
+    expect(workbenchBrowserToolHost.cdp).toHaveBeenCalledWith({
+      conversationId: 'conv-1',
+      tabId: 'tab-1',
+      command: { method: 'Runtime.evaluate' },
+    });
+  });
+
+  it('denies browser reads without browser:read permission', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    workbenchBrowserToolHost.listTabs.mockClear();
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'browser',
+        operation: 'listTabs',
+      }),
+    ).rejects.toThrow('requires permission browser:read');
+    expect(workbenchBrowserToolHost.listTabs).not.toHaveBeenCalled();
+  });
+
+  it('denies browser CDP without browser:control permission', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['browser:read'] } });
+    workbenchBrowserToolHost.cdp.mockClear();
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'browser',
+        operation: 'cdp',
+        input: { conversationId: 'conv-1', command: { method: 'Runtime.evaluate' } },
+      }),
+    ).rejects.toThrow('requires permission browser:control');
+    expect(workbenchBrowserToolHost.cdp).not.toHaveBeenCalled();
   });
 
   it('dispatches extension-scoped git capability calls', async () => {

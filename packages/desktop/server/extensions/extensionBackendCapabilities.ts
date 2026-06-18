@@ -413,6 +413,10 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
     return request.operation === 'setEnabled' ? ['extensions:write'] : ['extensions:read'];
   }
 
+  if (request.capability === 'browser') {
+    return request.operation === 'cdp' ? ['browser:control'] : ['browser:read'];
+  }
+
   if (request.capability === 'conversations') {
     return permissionForReadWriteOperation('conversations:read', 'conversations:write', 'conversations:readwrite', request.operation, [
       'activity',
