@@ -1,6 +1,8 @@
+// @vitest-environment jsdom
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { McpSettingsPanel } from './frontend';
 
@@ -12,7 +14,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@neon-pilot/extensions/settings', () => ({
   api: mocks.api,
   cx: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
-  Field: ({ children }: { children: React.ReactNode }) => <label>{children}</label>,
+  Field: ({ label, children }: { label?: React.ReactNode; children: React.ReactNode }) => (
+    <label>
+      {label}
+      {children}
+    </label>
+  ),
   Notice: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Pill: ({ children }: { children: React.ReactNode }) => children,
   RailSubsection: ({ title, children }: { title: React.ReactNode; children: React.ReactNode }) => (
@@ -70,6 +77,11 @@ function buildUseApiResult<T>(data: T) {
   };
 }
 
+beforeEach(() => {
+  mocks.api.invokeExtensionAction.mockReset();
+  mocks.useApi.mockReset();
+});
+
 describe('McpSettingsPanel', () => {
   it('renders MCP wrapper and effective server state', () => {
     mocks.useApi.mockReturnValue(
@@ -126,8 +138,70 @@ describe('McpSettingsPanel', () => {
     expect(html).toContain('Explicit servers');
     expect(html).toContain('Skill-bundled servers');
     expect(html).toContain('dd-atlassian-mcp');
-    expect(html).toContain('Test');
-    expect(html).toContain('Remove');
+    expect(html).toContain('Server details');
+    expect(html).toContain('Select a server or add one to edit managed MCP configuration.');
     expect(html).toContain('npx @mcp/github');
+  });
+
+  it('edits the selected explicit server from the detail panel', async () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    mocks.useApi.mockReturnValue({
+      ...buildUseApiResult({
+        configPath: '/tmp/mcp_servers.json',
+        configExists: true,
+        searchedPaths: ['/tmp/mcp_servers.json'],
+        explicitConfigJson:
+          '{\n  "mcpServers": {\n    "github": {\n      "command": "npx",\n      "args": ["@mcp/github"]\n    },\n    "zap": {\n      "command": "node",\n      "args": ["server.js"]\n    }\n  }\n}\n',
+        servers: [
+          {
+            name: 'github',
+            transport: 'stdio',
+            command: 'npx',
+            args: ['@mcp/github'],
+            source: 'config',
+            sourcePath: '/tmp/mcp_servers.json',
+            hasOAuth: false,
+            raw: {},
+          },
+          {
+            name: 'zap',
+            transport: 'stdio',
+            command: 'node',
+            args: ['server.js'],
+            source: 'config',
+            sourcePath: '/tmp/mcp_servers.json',
+            hasOAuth: false,
+            raw: {},
+          },
+        ],
+        bundledSkills: [],
+      }),
+      refetch,
+    });
+    mocks.api.invokeExtensionAction.mockResolvedValue({ result: {} });
+
+    render(<McpSettingsPanel />);
+
+    fireEvent.click(screen.getByRole('button', { name: /zap/ }));
+    await waitFor(() => expect(screen.getByDisplayValue('node')).toBeTruthy());
+
+    fireEvent.change(screen.getByDisplayValue('node'), { target: { value: 'bunx' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save server' }));
+
+    await waitFor(() => expect(mocks.api.invokeExtensionAction).toHaveBeenCalledWith('system-mcp', 'saveExplicitConfig', expect.any(Object)));
+    const payload = mocks.api.invokeExtensionAction.mock.calls[0]?.[2] as { json: string };
+    expect(JSON.parse(payload.json)).toEqual({
+      mcpServers: {
+        github: {
+          command: 'npx',
+          args: ['@mcp/github'],
+        },
+        zap: {
+          command: 'bunx',
+          args: ['server.js'],
+        },
+      },
+    });
+    expect(refetch).toHaveBeenCalled();
   });
 });

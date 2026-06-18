@@ -153,6 +153,7 @@ function formatMcpServerCommand(server: McpServerConfig): string {
 export function McpSettingsPanel() {
   const { data: mcpState, loading: mcpLoading, error: mcpError, refetch } = useApi(inspectMcpSettings, 'system-mcp-settings');
   const [explicitConfig, setExplicitConfig] = useState<ExplicitMcpConfig>({ mcpServers: {} });
+  const [selectedServerName, setSelectedServerName] = useState<string | null>(null);
   const [draft, setDraft] = useState<ServerDraft | null>(null);
   const [saveState, setSaveState] = useState<{ busy: boolean; error: string | null; message: string | null }>({
     busy: false,
@@ -163,8 +164,13 @@ export function McpSettingsPanel() {
 
   useEffect(() => {
     if (mcpState) {
-      setExplicitConfig(parseExplicitConfig(mcpState.explicitConfigJson));
-      setDraft(null);
+      const nextConfig = parseExplicitConfig(mcpState.explicitConfigJson);
+      const nextServerNames = Object.keys(nextConfig.mcpServers).sort((a, b) => a.localeCompare(b));
+      const nextSelectedName =
+        selectedServerName && nextServerNames.includes(selectedServerName) ? selectedServerName : nextServerNames[0] ?? null;
+      setExplicitConfig(nextConfig);
+      setSelectedServerName(nextSelectedName);
+      setDraft(nextSelectedName ? draftFromRawServer(nextSelectedName, nextConfig.mcpServers[nextSelectedName] ?? {}) : null);
       setSaveState({ busy: false, error: null, message: null });
     }
   }, [mcpState?.explicitConfigJson]);
@@ -177,11 +183,16 @@ export function McpSettingsPanel() {
     () => Object.keys(visibleExplicitConfig.mcpServers).sort((a, b) => a.localeCompare(b)),
     [visibleExplicitConfig],
   );
+  const selectedRawServer = selectedServerName ? visibleExplicitConfig.mcpServers[selectedServerName] ?? null : null;
+  const selectedEffectiveServer = selectedServerName ? mcpState?.servers.find((entry) => entry.name === selectedServerName) ?? null : null;
+  const selectedDisabled = Boolean(selectedRawServer && (selectedRawServer.disabled === true || selectedRawServer.enabled === false));
+  const selectedStatus = selectedServerName ? operation[selectedServerName] : undefined;
 
   async function persist(nextConfig: ExplicitMcpConfig, message: string) {
     setSaveState({ busy: true, error: null, message: null });
     try {
       await saveExplicitMcpConfig(nextConfig);
+      setExplicitConfig(nextConfig);
       await refetch();
       setSaveState({ busy: false, error: null, message });
     } catch (error) {
@@ -203,12 +214,17 @@ export function McpSettingsPanel() {
     if (draft.originalName && draft.originalName !== name) delete nextServers[draft.originalName];
     const existingServer = draft.originalName ? explicitConfig.mcpServers[draft.originalName] : undefined;
     nextServers[name] = configFromDraft(draft, existingServer as Record<string, unknown> | undefined);
+    setSelectedServerName(name);
     await persist({ mcpServers: nextServers }, `${name} saved.`);
   }
 
   async function removeServer(name: string) {
     const nextServers = { ...explicitConfig.mcpServers };
     delete nextServers[name];
+    const nextServerNames = Object.keys(nextServers).sort((a, b) => a.localeCompare(b));
+    const nextSelectedName = nextServerNames[0] ?? null;
+    setSelectedServerName(nextSelectedName);
+    setDraft(nextSelectedName ? draftFromRawServer(nextSelectedName, nextServers[nextSelectedName] ?? {}) : null);
     await persist({ mcpServers: nextServers }, `${name} removed.`);
   }
 
@@ -230,6 +246,18 @@ export function McpSettingsPanel() {
     setOperation((current) => ({ ...current, [server]: result.ok ? { message: result.message } : { error: result.message } }));
   }
 
+  function selectServer(name: string, rawServer: Record<string, unknown>, server?: McpServerConfig) {
+    setSelectedServerName(name);
+    setDraft(server ? draftFromServer(server) : draftFromRawServer(name, rawServer));
+    setSaveState({ busy: false, error: null, message: null });
+  }
+
+  function startNewServerDraft() {
+    setSelectedServerName(null);
+    setDraft({ ...emptyDraft });
+    setSaveState({ busy: false, error: null, message: null });
+  }
+
   return (
     <div className="space-y-5">
       {mcpLoading && !mcpState ? (
@@ -247,7 +275,7 @@ export function McpSettingsPanel() {
               <ToolbarButton type="button" disabled={mcpLoading} onClick={() => void refetch()}>
                 Refresh
               </ToolbarButton>
-              <ToolbarButton type="button" onClick={() => setDraft({ ...emptyDraft })}>
+              <ToolbarButton type="button" onClick={startNewServerDraft}>
                 Add server
               </ToolbarButton>
             </div>
@@ -256,132 +284,155 @@ export function McpSettingsPanel() {
           {saveState.error ? <Notice tone="danger">{saveState.error}</Notice> : null}
           {saveState.message ? <Notice tone="success">{saveState.message}</Notice> : null}
 
-          {draft ? (
-            <form className="space-y-3 border-t border-border-subtle/60 pt-3" onSubmit={handleSubmitDraft}>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Name">
-                  <TextInput value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} autoComplete="off" />
-                </Field>
-                <Field label="Transport">
-                  <Select
-                    value={draft.transport}
-                    onChange={(event) => setDraft({ ...draft, transport: event.target.value as 'stdio' | 'remote' })}
-                  >
-                    <option value="stdio">Local command</option>
-                    <option value="remote">Remote URL</option>
-                  </Select>
-                </Field>
-                {draft.transport === 'remote' ? (
-                  <Field label="URL">
-                    <TextInput
-                      value={draft.url}
-                      onChange={(event) => setDraft({ ...draft, url: event.target.value })}
-                      placeholder="https://example.com/mcp…"
-                      autoComplete="off"
-                    />
-                  </Field>
-                ) : (
-                  <>
-                    <Field label="Command">
-                      <TextInput
-                        value={draft.command}
-                        onChange={(event) => setDraft({ ...draft, command: event.target.value })}
-                        placeholder="node, npx, uvx…"
-                        autoComplete="off"
-                        spellCheck={false}
-                      />
-                    </Field>
-                    <Field label="Working directory">
-                      <TextInput
-                        value={draft.cwd}
-                        onChange={(event) => setDraft({ ...draft, cwd: event.target.value })}
-                        placeholder="Optional…"
-                        autoComplete="off"
-                        spellCheck={false}
-                      />
-                    </Field>
-                    <Field label="Args, one per line">
-                      <Textarea
-                        className="min-h-24 font-mono"
-                        value={draft.args}
-                        onChange={(event) => setDraft({ ...draft, args: event.target.value })}
-                      />
-                    </Field>
-                  </>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <ToolbarButton type="submit" disabled={saveState.busy || Boolean(validateDraft(draft))}>
-                  {saveState.busy ? 'Saving…' : 'Save server'}
-                </ToolbarButton>
-                <ToolbarButton type="button" onClick={() => setDraft(null)}>
-                  Cancel
-                </ToolbarButton>
-              </div>
-            </form>
-          ) : null}
-
           <RailSubsection title="Explicit servers">
             {explicitServers.length > 0 ? (
               explicitServers.map((name) => {
                 const server = mcpState.servers.find((entry) => entry.name === name);
                 const rawServer = visibleExplicitConfig.mcpServers[name] ?? {};
                 const disabled = rawServer.disabled === true || rawServer.enabled === false;
-                const status = operation[name];
+                const selected = selectedServerName === name;
                 return (
                   <div key={name} className="space-y-2 border-t border-border-subtle/60 pt-3 first:border-t-0 first:pt-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-[12px] text-primary">{name}</span>
-                      <Pill tone={server?.transport === 'remote' ? 'teal' : 'muted'}>{server?.transport ?? 'config'}</Pill>
-                      {disabled ? <Pill tone="muted">disabled</Pill> : null}
-                      {server?.hasOAuth ? <Pill tone="accent">oauth</Pill> : null}
-                      <span className="ui-supporting-text break-all">
+                    <button
+                      type="button"
+                      aria-pressed={selected}
+                      className={`w-full rounded-md border px-3 py-2 text-left transition ${
+                        selected
+                          ? 'border-accent/60 bg-accent/10'
+                          : 'border-border-subtle/70 bg-surface-muted/20 hover:border-border-subtle'
+                      }`}
+                      onClick={() => selectServer(name, rawServer, server)}
+                    >
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-[12px] text-primary">{name}</span>
+                        <Pill tone={server?.transport === 'remote' ? 'teal' : 'muted'}>{server?.transport ?? 'config'}</Pill>
+                        {disabled ? <Pill tone="muted">disabled</Pill> : null}
+                        {server?.hasOAuth ? <Pill tone="accent">oauth</Pill> : null}
+                      </span>
+                      <span className="ui-supporting-text mt-1 block break-all">
                         {server ? formatMcpServerCommand(server) : disabled ? 'Disabled server' : 'Unparsed server config'}
                       </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
+                    </button>
+                  </div>
+                );
+              })
+            ) : (
+              <SupportingText>No explicit servers. Add one to create a managed MCP configuration.</SupportingText>
+            )}
+          </RailSubsection>
+
+          <RailSubsection title={draft?.originalName ? `Server details: ${draft.originalName}` : 'Server details'}>
+            {draft ? (
+              <form className="space-y-3" onSubmit={handleSubmitDraft}>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Name">
+                    <TextInput value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} autoComplete="off" />
+                  </Field>
+                  <Field label="Transport">
+                    <Select
+                      value={draft.transport}
+                      onChange={(event) => setDraft({ ...draft, transport: event.target.value as 'stdio' | 'remote' })}
+                    >
+                      <option value="stdio">Local command</option>
+                      <option value="remote">Remote URL</option>
+                    </Select>
+                  </Field>
+                  {draft.transport === 'remote' ? (
+                    <Field label="URL">
+                      <TextInput
+                        value={draft.url}
+                        onChange={(event) => setDraft({ ...draft, url: event.target.value })}
+                        placeholder="https://example.com/mcp…"
+                        autoComplete="off"
+                      />
+                    </Field>
+                  ) : (
+                    <>
+                      <Field label="Command">
+                        <TextInput
+                          value={draft.command}
+                          onChange={(event) => setDraft({ ...draft, command: event.target.value })}
+                          placeholder="node, npx, uvx…"
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                      </Field>
+                      <Field label="Working directory">
+                        <TextInput
+                          value={draft.cwd}
+                          onChange={(event) => setDraft({ ...draft, cwd: event.target.value })}
+                          placeholder="Optional…"
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                      </Field>
+                      <Field label="Args, one per line">
+                        <Textarea
+                          className="min-h-24 font-mono"
+                          value={draft.args}
+                          onChange={(event) => setDraft({ ...draft, args: event.target.value })}
+                        />
+                      </Field>
+                    </>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <ToolbarButton type="submit" disabled={saveState.busy || Boolean(validateDraft(draft))}>
+                    {saveState.busy ? 'Saving…' : 'Save server'}
+                  </ToolbarButton>
+                  {draft.originalName ? (
+                    <>
+                      <ToolbarButton type="button" onClick={() => void toggleServer(draft.originalName!)} disabled={saveState.busy}>
+                        {selectedDisabled ? 'Enable' : 'Disable'}
+                      </ToolbarButton>
                       <ToolbarButton
                         type="button"
-                        onClick={() => setDraft(server ? draftFromServer(server) : draftFromRawServer(name, rawServer))}
-                      >
-                        Edit
-                      </ToolbarButton>
-                      <ToolbarButton type="button" onClick={() => void toggleServer(name)} disabled={saveState.busy}>
-                        {disabled ? 'Enable' : 'Disable'}
-                      </ToolbarButton>
-                      <ToolbarButton
-                        type="button"
-                        onClick={() => void handleServerAction('testServer', name)}
-                        disabled={status?.busy || disabled}
+                        onClick={() => void handleServerAction('testServer', draft.originalName!)}
+                        disabled={selectedStatus?.busy || selectedDisabled}
                       >
                         Test
                       </ToolbarButton>
-                      {server?.hasOAuth ? (
-                        <ToolbarButton type="button" onClick={() => void handleServerAction('authServer', name)} disabled={status?.busy}>
+                      {selectedEffectiveServer?.hasOAuth ? (
+                        <ToolbarButton
+                          type="button"
+                          onClick={() => void handleServerAction('authServer', draft.originalName!)}
+                          disabled={selectedStatus?.busy}
+                        >
                           Auth
                         </ToolbarButton>
                       ) : null}
-                      {server?.hasOAuth ? (
-                        <ToolbarButton type="button" onClick={() => void handleServerAction('logoutServer', name)} disabled={status?.busy}>
+                      {selectedEffectiveServer?.hasOAuth ? (
+                        <ToolbarButton
+                          type="button"
+                          onClick={() => void handleServerAction('logoutServer', draft.originalName!)}
+                          disabled={selectedStatus?.busy}
+                        >
                           Logout
                         </ToolbarButton>
                       ) : null}
                       <ToolbarButton
                         type="button"
                         className="text-danger hover:text-danger"
-                        onClick={() => void removeServer(name)}
+                        onClick={() => void removeServer(draft.originalName!)}
                         disabled={saveState.busy}
                       >
                         Remove
                       </ToolbarButton>
-                    </div>
-                    {status?.message ? <Notice tone="success">{status.message}</Notice> : null}
-                    {status?.error ? <Notice tone="danger">{status.error}</Notice> : null}
-                  </div>
-                );
-              })
+                    </>
+                  ) : (
+                    <ToolbarButton
+                      type="button"
+                      onClick={() => setDraft(selectedServerName && selectedRawServer ? draftFromRawServer(selectedServerName, selectedRawServer) : null)}
+                    >
+                      Cancel
+                    </ToolbarButton>
+                  )}
+                </div>
+                {selectedStatus?.message ? <Notice tone="success">{selectedStatus.message}</Notice> : null}
+                {selectedStatus?.error ? <Notice tone="danger">{selectedStatus.error}</Notice> : null}
+              </form>
             ) : (
-              <SupportingText>No explicit servers. Add one above to create a managed MCP configuration.</SupportingText>
+              <SupportingText>Select a server or add one to edit managed MCP configuration.</SupportingText>
             )}
           </RailSubsection>
 
