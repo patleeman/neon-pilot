@@ -5,6 +5,14 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ScratchpadPanel } from './frontend';
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return { promise, resolve };
+}
+
 function renderPanel({
   conversationId = 'conv-1',
   invoke = vi.fn().mockResolvedValue({ conversationId, content: 'Initial note', updatedAt: '2026-06-11T12:00:00.000Z' }),
@@ -46,5 +54,45 @@ describe('ScratchpadPanel', () => {
     renderPanel({ conversationId: '' });
 
     expect(screen.getByText('Open a conversation')).toBeTruthy();
+  });
+
+  it('ignores stale scratchpad loads after switching conversations', async () => {
+    const firstLoad = deferred<{ conversationId: string; content: string; updatedAt: string }>();
+    const secondLoad = deferred<{ conversationId: string; content: string; updatedAt: string }>();
+    const invoke = vi.fn().mockReturnValueOnce(firstLoad.promise).mockReturnValueOnce(secondLoad.promise);
+    const notify = vi.fn();
+    const surface = {
+      id: 'scratchpad',
+      extensionId: 'system-scratchpad',
+      title: 'Scratchpad',
+      location: 'rightRail',
+      component: 'ScratchpadPanel',
+    } as never;
+    const { rerender } = render(
+      <ScratchpadPanel
+        pa={{ extension: { invoke }, ui: { notify } } as never}
+        context={{ conversationId: 'conv-1', cwd: '/repo', pathname: '', search: '', hash: '' }}
+        surface={surface}
+        params={{}}
+      />,
+    );
+
+    rerender(
+      <ScratchpadPanel
+        pa={{ extension: { invoke }, ui: { notify } } as never}
+        context={{ conversationId: 'conv-2', cwd: '/repo', pathname: '', search: '', hash: '' }}
+        surface={surface}
+        params={{}}
+      />,
+    );
+
+    secondLoad.resolve({ conversationId: 'conv-2', content: 'Second note', updatedAt: '2026-06-11T12:02:00.000Z' });
+    const editor = await screen.findByLabelText('Conversation scratchpad');
+    await waitFor(() => expect((editor as HTMLTextAreaElement).value).toBe('Second note'));
+
+    firstLoad.resolve({ conversationId: 'conv-1', content: 'Stale first note', updatedAt: '2026-06-11T12:01:00.000Z' });
+    await Promise.resolve();
+
+    expect((editor as HTMLTextAreaElement).value).toBe('Second note');
   });
 });

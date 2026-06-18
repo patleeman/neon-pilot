@@ -26,22 +26,29 @@ export function ScratchpadPanel({ pa, context }: ExtensionSurfaceProps) {
   const [error, setError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const paRef = useRef(pa);
+  const loadRequestIdRef = useRef(0);
   paRef.current = pa;
 
   const dirty = draft !== state.content;
 
   const load = useCallback(async () => {
-    if (!conversationId) return;
+    const requestId = (loadRequestIdRef.current += 1);
+    if (!conversationId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const next = normalizeState(await paRef.current.extension.invoke('getScratchpad', { conversationId }), conversationId);
+      if (loadRequestIdRef.current !== requestId) return;
       setState(next);
       setDraft(next.content);
     } catch (err) {
+      if (loadRequestIdRef.current !== requestId) return;
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      if (loadRequestIdRef.current === requestId) setLoading(false);
     }
   }, [conversationId]);
 
