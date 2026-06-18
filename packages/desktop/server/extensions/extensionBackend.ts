@@ -442,7 +442,7 @@ export function createBackendContext(
     conversations: createExtensionConversationsCapability(serverContext, extensionId, { enforceManifestPermissions: true }),
     filesystem: createExtensionFilesystemCapability(extensionId, toolContext, { enforceManifestPermissions: true }),
     workspace: createExtensionWorkspaceCapability(extensionId, toolContext, { enforceManifestPermissions: true }),
-    git: createExtensionGitCapability(),
+    git: createExtensionGitCapability(extensionId, { enforceManifestPermissions: true }),
     shell: {
       exec: async (input) => {
         assertExtensionPermission(extensionId, 'shell:execute', 'shell.exec');

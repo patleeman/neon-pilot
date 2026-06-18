@@ -346,6 +346,27 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires git read permission for host-run git helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'git-helper-ext');
+    const context = createBackendContext('git-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    await expect(context.git.status({ cwd: '/repo' })).rejects.toThrow(
+      'Extension "git-helper-ext" requires permission git:read to use git.status.',
+    );
+    await expect(context.git.diff({ cwd: '/repo' })).rejects.toThrow(
+      'Extension "git-helper-ext" requires permission git:read to use git.diff.',
+    );
+    await expect(context.git.log({ cwd: '/repo' })).rejects.toThrow(
+      'Extension "git-helper-ext" requires permission git:read to use git.log.',
+    );
+  });
+
   it('requires conversation permissions for host-run conversation helpers', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

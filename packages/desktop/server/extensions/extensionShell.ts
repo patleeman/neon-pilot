@@ -6,6 +6,7 @@ import { stripInternalSecretEnv } from '@neon-pilot/core';
 
 import { execFileProcess, spawnProcess, terminateProcessGroup } from '../shared/processLauncher.js';
 import { createPtyProcess, type PtySpawnOptions } from '../shared/ptyLauncher.js';
+import { assertExtensionPermission } from './extensionPermissions.js';
 
 const spawnedExtensionProcesses = new Set<ChildProcess>();
 let shutdownHooksInstalled = false;
@@ -180,14 +181,21 @@ export function createExtensionShellCapability(options: { pathDirs?: string[] } 
   };
 }
 
-export function createExtensionGitCapability() {
+export function createExtensionGitCapability(extensionId?: string, options: { enforceManifestPermissions?: boolean } = {}) {
   const shell = createExtensionShellCapability();
+  const assertPermission = (capability: string) => {
+    if (options.enforceManifestPermissions && extensionId) {
+      assertExtensionPermission(extensionId, 'git:read', capability);
+    }
+  };
   return {
     async status(input: { cwd: string }): Promise<{ porcelain: string }> {
+      assertPermission('git.status');
       const result = await shell.exec({ command: 'git', args: ['status', '--porcelain=v1', '--branch'], cwd: input.cwd });
       return { porcelain: result.stdout };
     },
     async diff(input: { cwd: string; path?: string; staged?: boolean }): Promise<{ diff: string }> {
+      assertPermission('git.diff');
       const args = ['diff'];
       if (input.staged) args.push('--staged');
       if (input.path) args.push('--', input.path);
@@ -195,6 +203,7 @@ export function createExtensionGitCapability() {
       return { diff: result.stdout };
     },
     async log(input: { cwd: string; maxCount?: number }): Promise<{ log: string }> {
+      assertPermission('git.log');
       const result = await shell.exec({
         command: 'git',
         args: ['log', `--max-count=${input.maxCount ?? 20}`, '--oneline', '--decorate'],
