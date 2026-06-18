@@ -299,10 +299,11 @@ export interface ExtensionSettingsPanelRegistration {
   order?: number;
   frontendEntry?: string;
 }
+export type ExtensionStorageLike = Pick<Storage, 'getItem' | 'removeItem' | 'setItem'>;
 export declare const SettingsPanelHost: HostComponent;
 export declare const KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY: string;
 export declare const KNOWLEDGE_TREE_EXPANDED_FOLDERS_STORAGE_KEY: string;
-export declare function addOpenFileId(...args: never[]): unknown;
+export declare function addOpenFileId(openFileIds: readonly string[], fileId: string, maxOpenFileIds?: number): string[];
 export declare function buildApiPath(...args: never[]): string;
 export declare function buildDesktopWebSocketUrl(...args: never[]): string;
 export declare function createDesktopAwareEventSource(...args: never[]): unknown;
@@ -312,24 +313,28 @@ export declare function streamExtensionRouteSse<T = unknown>(
   options?: { eventNames?: string[]; signal?: AbortSignal },
 ): AsyncIterable<T>;
 export declare function canDropAllPaths(...args: never[]): unknown;
-export declare function collapseExpandedFolderIds(...args: never[]): unknown;
+export declare function collapseExpandedFolderIds(folderIds: ReadonlySet<string>, folderId: string): Set<string>;
 export declare function cx(...values: Array<unknown>): string;
 export declare const Keycap: HostComponent;
 export declare function getDesktopBridge(...args: never[]): ExtensionDesktopBridge | null;
 export declare function getTopLevelDraggedPaths(...args: never[]): unknown;
 export declare function lazyRouteWithRecovery(...args: never[]): unknown;
-export declare function normalizeOpenFileIds(...args: never[]): unknown;
-export declare function readStoredExpandedFolderIds(...args: never[]): unknown;
-export declare function readStoredOpenFileIds(...args: never[]): unknown;
-export declare function readStoredRecentlyClosedFileIds(...args: never[]): unknown;
-export declare function recordRecentlyClosedFileId(...args: never[]): unknown;
-export declare function removeOpenFileId(...args: never[]): unknown;
-export declare function renameExpandedFolderIds(...args: never[]): unknown;
-export declare function renameOpenFileIds(...args: never[]): unknown;
+export declare function normalizeOpenFileIds(values: Iterable<unknown>): string[];
+export declare function readStoredExpandedFolderIds(storage?: ExtensionStorageLike): Set<string>;
+export declare function readStoredOpenFileIds(storage?: ExtensionStorageLike): string[];
+export declare function readStoredRecentlyClosedFileIds(storage?: ExtensionStorageLike): string[];
+export declare function recordRecentlyClosedFileId(
+  recentlyClosedFileIds: readonly string[],
+  fileId: string,
+  maxRecentlyClosedFileIds?: number,
+): string[];
+export declare function removeOpenFileId(openFileIds: readonly string[], id: string): string[];
+export declare function renameExpandedFolderIds(folderIds: ReadonlySet<string>, oldFolderId: string, newFolderId: string): Set<string>;
+export declare function renameOpenFileIds(openFileIds: readonly string[], oldId: string, newId: string): string[];
 export declare function shouldUseNativeAppContextMenus(...args: never[]): unknown;
 export declare function useApi(...args: never[]): unknown;
 export declare function useFileTreeModel(...args: never[]): unknown;
 export declare function useInvalidateOnTopics(...args: never[]): unknown;
-export declare function writeStoredExpandedFolderIds(...args: never[]): unknown;
-export declare function writeStoredOpenFileIds(...args: never[]): unknown;
-export declare function writeStoredRecentlyClosedFileIds(...args: never[]): unknown;
+export declare function writeStoredExpandedFolderIds(folderIds: ReadonlySet<string>, storage?: ExtensionStorageLike): void;
+export declare function writeStoredOpenFileIds(openFileIds: readonly string[], storage?: ExtensionStorageLike): void;
+export declare function writeStoredRecentlyClosedFileIds(fileIds: readonly string[], storage?: ExtensionStorageLike): void;
