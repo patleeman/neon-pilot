@@ -22,6 +22,14 @@ const payload = {
   sessionIntegrity: [{ id: 'event-1' }],
 };
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
 function createPa(invoke = vi.fn(async () => payload)): NativeExtensionClient {
   return { extension: { invoke } } as unknown as NativeExtensionClient;
 }
@@ -85,5 +93,28 @@ describe('useTracesData', () => {
 
     rerender({ range: '30d' });
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('getTelemetryData', { range: '30d' }));
+  });
+
+  it('ignores stale telemetry responses after the range changes', async () => {
+    const first = createDeferred<typeof payload>();
+    const second = createDeferred<typeof payload>();
+    const invoke = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const pa = createPa(invoke);
+    const { result, rerender } = renderHook(({ range }) => useTracesData(range, pa), { initialProps: { range: '1h' as const } });
+
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('getTelemetryData', { range: '1h' }));
+    rerender({ range: '30d' });
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('getTelemetryData', { range: '30d' }));
+
+    await act(async () => {
+      second.resolve({ ...payload, summary: { totalTraces: 30 } });
+    });
+    await waitFor(() => expect(result.current.summary).toEqual({ totalTraces: 30 }));
+
+    await act(async () => {
+      first.resolve({ ...payload, summary: { totalTraces: 1 } });
+    });
+
+    expect(result.current.summary).toEqual({ totalTraces: 30 });
   });
 });

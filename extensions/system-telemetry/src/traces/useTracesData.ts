@@ -22,7 +22,7 @@ import type {
   TraceTokenDaily,
   TraceToolHealth,
 } from '@neon-pilot/extensions/data';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 function notifyError(message: string) {
   window.dispatchEvent(new CustomEvent('neon-pilot-notification', { detail: { type: 'error', message, source: 'system-telemetry' } }));
@@ -90,11 +90,17 @@ const EMPTY: TracesData = {
 
 export function useTracesData(range: TraceRange, pa: NativeExtensionClient): TracesData & { refetch: () => void } {
   const [data, setData] = useState<TracesData>(EMPTY);
+  const fetchSequenceRef = useRef(0);
 
   const fetch = useCallback(async () => {
+    const sequence = fetchSequenceRef.current + 1;
+    fetchSequenceRef.current = sequence;
     setData((prev) => ({ ...prev, loading: true, error: null }));
     try {
       const result = (await pa.extension.invoke('getTelemetryData', { range })) as TelemetryActionData;
+      if (fetchSequenceRef.current !== sequence) {
+        return;
+      }
 
       setData({
         summary: result.summary,
@@ -117,6 +123,9 @@ export function useTracesData(range: TraceRange, pa: NativeExtensionClient): Tra
         error: null,
       });
     } catch (err) {
+      if (fetchSequenceRef.current !== sequence) {
+        return;
+      }
       setData((prev) => ({
         ...prev,
         loading: false,
