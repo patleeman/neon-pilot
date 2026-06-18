@@ -83,14 +83,14 @@ describe('registerCompanionProxyRoutes', () => {
     await handlers['POST /api/companion/v1/*']!(
       {
         method: 'POST',
-        originalUrl: '/api/companion/v1/admin/setup?refresh=1',
+        originalUrl: '/api/companion/v1/messages?refresh=1',
         body: { create: true },
         get: (name) => (name.toLowerCase() === 'content-type' ? 'application/json' : undefined),
       },
       res,
     );
 
-    expect(fetchMock).toHaveBeenCalledWith(new URL('http://127.0.0.1:3843/companion/v1/admin/setup?refresh=1'), {
+    expect(fetchMock).toHaveBeenCalledWith(new URL('http://127.0.0.1:3843/companion/v1/messages?refresh=1'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ create: true }),
@@ -98,6 +98,27 @@ describe('registerCompanionProxyRoutes', () => {
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.setHeader).toHaveBeenCalledWith('content-type', 'application/json; charset=utf-8');
     expect(res.send).toHaveBeenCalledWith(expect.any(ArrayBuffer));
+  });
+
+  it('does not proxy companion admin routes through desktop loopback privilege', async () => {
+    const handlers = createHarness();
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+
+    const res = createResponse();
+    await handlers['POST /api/companion/v1/*']!(
+      {
+        method: 'POST',
+        originalUrl: '/api/companion/v1/admin/setup?refresh=1',
+        body: { create: true },
+        get: (name) => (name.toLowerCase() === 'content-type' ? 'application/json' : undefined),
+      },
+      res,
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(getCompanionUrlMock).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Companion admin routes are not available through the desktop proxy.' });
   });
 
   it('returns JSON instead of falling through to the SPA when companion is unavailable', async () => {

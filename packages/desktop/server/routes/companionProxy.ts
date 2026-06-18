@@ -7,6 +7,11 @@ const COMPANION_PROXY_ROUTE = '/api/companion/v1/*';
 const COMPANION_UNAVAILABLE_ERROR = 'Companion server is not available.';
 const COMPANION_FETCH_RETRY_DELAYS_MS = [100, 250, 500, 1000, 1500, 2500] as const;
 
+function isCompanionAdminProxyPath(originalUrl: string): boolean {
+  const path = originalUrl.split('?')[0] ?? originalUrl;
+  return /^\/api\/companion\/v1\/admin(?:\/|$)/.test(path);
+}
+
 function buildProxyHeaders(req: Request): HeadersInit {
   const headers: Record<string, string> = {};
   const contentType = req.get('content-type');
@@ -40,6 +45,11 @@ async function fetchCompanionWithStartupRetry(url: URL, init: RequestInit): Prom
 
 async function handleCompanionProxyRequest(req: Request, res: Response): Promise<void> {
   try {
+    if (isCompanionAdminProxyPath(req.originalUrl)) {
+      res.status(403).json({ error: 'Companion admin routes are not available through the desktop proxy.' });
+      return;
+    }
+
     const companionUrl = await getCompanionUrl();
     if (!companionUrl) {
       res.status(503).json({ error: COMPANION_UNAVAILABLE_ERROR });
