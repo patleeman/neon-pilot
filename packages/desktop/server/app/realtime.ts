@@ -4,6 +4,7 @@ import type { Socket } from 'node:net';
 import { type WebSocket, WebSocketServer } from 'ws';
 
 import { type AppEvent, subscribeAppEvents } from '../shared/appEvents.js';
+import { isTrustedOrigin, resolveRequestOrigin } from '../shared/webSecurity.js';
 import {
   closeTerminalSession,
   resizeTerminalSession,
@@ -45,6 +46,32 @@ function writeRealtimeMessage(socket: WebSocket, message: RealtimeServerMessage)
     return;
   }
   socket.send(payload);
+}
+
+function readHeaderValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function isTrustedRealtimeUpgrade(request: IncomingMessage): boolean {
+  const headers = request.headers ?? {};
+  const origin = readHeaderValue(headers.origin);
+  if (typeof origin !== 'string' || origin.trim().length === 0) {
+    return true;
+  }
+
+  const host = readHeaderValue(headers.host);
+  const forwardedHost = readHeaderValue(headers['x-forwarded-host']);
+  const forwardedProto = readHeaderValue(headers['x-forwarded-proto']);
+  const protocol = (request.socket as Socket & { encrypted?: boolean }).encrypted ? 'https' : 'http';
+  return isTrustedOrigin(
+    origin,
+    resolveRequestOrigin({
+      host,
+      forwardedHost,
+      protocol,
+      forwardedProto,
+    }),
+  );
 }
 
 export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage, socket: Socket, head: Buffer) => void {
@@ -188,6 +215,11 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
   return (request, socket, head) => {
     const url = new URL(request.url ?? '/', 'http://desktop.local');
     if (url.pathname !== DESKTOP_REALTIME_PATH) {
+      socket.destroy();
+      return;
+    }
+    if (!isTrustedRealtimeUpgrade(request)) {
+      socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
       socket.destroy();
       return;
     }

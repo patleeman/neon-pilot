@@ -71,6 +71,52 @@ describe('createDesktopRealtimeUpgradeHandler', () => {
     handleUpgrade.mockRestore();
   });
 
+  it('rejects realtime WebSocket upgrades from untrusted browser origins', async () => {
+    const fakeSocket = { destroy: vi.fn(), write: vi.fn() };
+    const { createDesktopRealtimeUpgradeHandler } = await import('./realtime.js');
+    const handler = createDesktopRealtimeUpgradeHandler();
+    const server = (await import('ws')).WebSocketServer;
+    const handleUpgrade = vi.spyOn(server.prototype, 'handleUpgrade');
+
+    handler(
+      {
+        url: '/api/realtime',
+        headers: { host: '127.0.0.1:4123', origin: 'https://evil.example' },
+        socket: {},
+      } as never,
+      fakeSocket as never,
+      Buffer.alloc(0),
+    );
+
+    expect(handleUpgrade).not.toHaveBeenCalled();
+    expect(fakeSocket.write).toHaveBeenCalledWith('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+    expect(fakeSocket.destroy).toHaveBeenCalledTimes(1);
+    handleUpgrade.mockRestore();
+  });
+
+  it('accepts realtime WebSocket upgrades from same-origin browsers and missing-origin clients', async () => {
+    const { createDesktopRealtimeUpgradeHandler } = await import('./realtime.js');
+    const handler = createDesktopRealtimeUpgradeHandler();
+    const server = (await import('ws')).WebSocketServer;
+    const handleUpgrade = vi.spyOn(server.prototype, 'handleUpgrade').mockImplementation((_request, _socket, _head, cb) => {
+      cb(new FakeWebSocket() as never);
+    });
+
+    handler(
+      {
+        url: '/api/realtime',
+        headers: { host: '127.0.0.1:4123', origin: 'http://127.0.0.1:4123' },
+        socket: {},
+      } as never,
+      { destroy: vi.fn() } as never,
+      Buffer.alloc(0),
+    );
+    handler({ url: '/api/realtime', headers: { host: '127.0.0.1:4123' }, socket: {} } as never, { destroy: vi.fn() } as never, Buffer.alloc(0));
+
+    expect(handleUpgrade).toHaveBeenCalledTimes(2);
+    handleUpgrade.mockRestore();
+  });
+
   it('ignores late app events after realtime cleanup', async () => {
     const unsubscribe = vi.fn();
     let listener: ((event: { type: 'invalidate'; topics: string[] }) => void) | undefined;
