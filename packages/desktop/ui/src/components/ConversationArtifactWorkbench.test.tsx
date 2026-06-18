@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppEventsContext, INITIAL_APP_EVENT_VERSIONS } from '../app/contexts.js';
 import { api } from '../client/api';
 import { INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS } from '../conversation/conversationEventVersions.js';
+import { writeClipboardText } from '../desktop/clipboard';
 import type { ConversationArtifactRecord } from '../shared/types.js';
 import { ConversationArtifactWorkbenchPane } from './ConversationArtifactWorkbench.js';
 
@@ -13,6 +14,10 @@ vi.mock('../client/api', () => ({
   api: {
     conversationArtifact: vi.fn(),
   },
+}));
+
+vi.mock('../desktop/clipboard', () => ({
+  writeClipboardText: vi.fn(),
 }));
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
@@ -43,6 +48,12 @@ function renderPane(artifactId: string) {
 describe('ConversationArtifactWorkbenchPane', () => {
   beforeEach(() => {
     vi.mocked(api.conversationArtifact).mockReset();
+    vi.mocked(writeClipboardText).mockReset().mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it('clears the previous artifact while a newly selected artifact loads', async () => {
@@ -73,5 +84,22 @@ describe('ConversationArtifactWorkbenchPane', () => {
 
     resolveSecondArtifact?.({ artifact: artifact('artifact-b', 'Artifact B', 'graph TD; B-->C;') });
     await waitFor(() => expect(screen.getByText('Artifact B')).toBeTruthy());
+  });
+
+  it('clears pending copy feedback timers on unmount', async () => {
+    const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout');
+    vi.mocked(api.conversationArtifact).mockResolvedValue({ artifact: artifact('artifact-a', 'Artifact A', 'graph TD; A-->B;') });
+
+    const view = renderPane('artifact-a');
+    const copyButton = await screen.findByRole('button', { name: /copy source/i });
+
+    fireEvent.click(copyButton);
+
+    await waitFor(() => expect(writeClipboardText).toHaveBeenCalledWith('graph TD; A-->B;'));
+    const callsBeforeUnmount = clearTimeoutSpy.mock.calls.length;
+
+    view.unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(callsBeforeUnmount + 1);
   });
 });

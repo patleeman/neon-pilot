@@ -57,6 +57,21 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
   const [showSource, setShowSource] = useState(false);
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const copyResetTimeoutRef = useRef<number | null>(null);
+
+  const clearCopyResetTimeout = useCallback(() => {
+    if (copyResetTimeoutRef.current !== null) {
+      window.clearTimeout(copyResetTimeoutRef.current);
+      copyResetTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearCopyResetTimeout, [clearCopyResetTimeout]);
+
+  useEffect(() => {
+    clearCopyResetTimeout();
+    setCopied(false);
+  }, [artifactId, clearCopyResetTimeout]);
 
   const artifactFetcher = useCallback(() => api.conversationArtifact(conversationId, artifactId), [artifactId, conversationId]);
   const listFetcher = useCallback(() => api.conversationArtifacts(conversationId), [conversationId]);
@@ -138,8 +153,12 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
     }
 
     setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
-  }, [artifact]);
+    clearCopyResetTimeout();
+    copyResetTimeoutRef.current = window.setTimeout(() => {
+      copyResetTimeoutRef.current = null;
+      setCopied(false);
+    }, 1200);
+  }, [artifact, clearCopyResetTimeout]);
 
   useEffect(() => {
     setExtensionCommandContext('artifact.active', Boolean(artifact));

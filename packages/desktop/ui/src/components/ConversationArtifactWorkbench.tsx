@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
@@ -82,9 +82,20 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const copyResetTimeoutRef = useRef<number | null>(null);
+
+  const clearCopyResetTimeout = useCallback(() => {
+    if (copyResetTimeoutRef.current !== null) {
+      window.clearTimeout(copyResetTimeoutRef.current);
+      copyResetTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearCopyResetTimeout, [clearCopyResetTimeout]);
 
   useEffect(() => {
     let cancelled = false;
+    clearCopyResetTimeout();
     setLoading(true);
     setArtifact(null);
     setError(null);
@@ -136,8 +147,12 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
     }
 
     setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
-  }, [artifact]);
+    clearCopyResetTimeout();
+    copyResetTimeoutRef.current = window.setTimeout(() => {
+      copyResetTimeoutRef.current = null;
+      setCopied(false);
+    }, 1200);
+  }, [artifact, clearCopyResetTimeout]);
 
   const artifactTitle = artifact
     ? `${artifact.title} · ${artifact.id} · rev ${artifact.revision} · updated ${formatDate(artifact.updatedAt)}`

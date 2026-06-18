@@ -129,7 +129,9 @@ describe('ConversationArtifactModal', () => {
 
   afterEach(() => {
     consoleErrorSpy.mockRestore();
+    vi.restoreAllMocks();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it('renders a modal artifact viewer with navigation for sibling artifacts', () => {
@@ -177,6 +179,30 @@ describe('ConversationArtifactModal', () => {
     await waitFor(() => {
       expect(writeClipboardText).toHaveBeenCalledWith('<section><h1>Draft</h1><p>Hello from desktop.</p></section>');
     });
+  });
+
+  it('clears pending copy feedback timers on unmount', async () => {
+    const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout');
+    vi.mocked(writeClipboardText).mockResolvedValue(undefined);
+    mockLoadedArtifact();
+
+    const view = renderModalClient();
+
+    fireEvent(
+      window,
+      new CustomEvent(ARTIFACT_MODAL_COMMAND_EVENT, {
+        detail: { command: 'copySource' },
+      }),
+    );
+
+    await waitFor(() => {
+      expect(writeClipboardText).toHaveBeenCalledWith('<section><h1>Draft</h1><p>Hello from desktop.</p></section>');
+    });
+    const callsBeforeUnmount = clearTimeoutSpy.mock.calls.length;
+
+    view.unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(callsBeforeUnmount + 1);
   });
 
   it('renders an error state when the artifact cannot be loaded', () => {
