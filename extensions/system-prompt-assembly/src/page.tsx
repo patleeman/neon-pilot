@@ -24,7 +24,7 @@ import {
   Textarea,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type CapabilityKind = 'extension' | 'instruction' | 'skill' | 'tool' | 'mcp-server' | 'prompt-template' | 'context';
 type RuntimeSectionId = 'system-prompt' | 'instructions' | 'skills' | 'tools' | 'mcp' | 'issues';
@@ -74,6 +74,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   const [query, setQuery] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const runtimeScrollRef = useRef<HTMLDivElement | null>(null);
+  const loadRequestIdRef = useRef(0);
   const [activeSectionId, setActiveSectionId] = useState<RuntimeSectionId>('system-prompt');
   const {
     data: systemPromptTemplateState,
@@ -89,11 +90,14 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   const [systemPromptTemplateSaveError, setSystemPromptTemplateSaveError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    const requestId = (loadRequestIdRef.current += 1);
     setError(null);
     try {
       const result = await pa.extension.invoke('inspectAgentRuntime', { cwd: context.cwd ?? undefined });
+      if (loadRequestIdRef.current !== requestId) return;
       setData(result as AgentRuntimeResult);
     } catch (err) {
+      if (loadRequestIdRef.current !== requestId) return;
       setError(err instanceof Error ? err.message : String(err));
     }
   }, [context.cwd, pa]);
