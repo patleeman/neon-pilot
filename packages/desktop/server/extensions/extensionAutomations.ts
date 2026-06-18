@@ -22,6 +22,8 @@ import {
 import { findTaskForProfile } from '../automation/taskService.js';
 import { invalidateAppTopics } from '../middleware/index.js';
 import type { ServerRouteContext } from '../routes/context.js';
+import type { ExtensionPermission } from './extensionManifest.js';
+import { assertExtensionAnyPermission, assertExtensionPermission } from './extensionPermissions.js';
 
 interface AutomationMutationInput {
   title?: string;
@@ -78,9 +80,25 @@ function getProfile(context?: Pick<ServerRouteContext, 'getRuntimeScope'>): stri
   return context.getRuntimeScope();
 }
 
-export function createExtensionAutomationsCapability(context?: Pick<ServerRouteContext, 'getRuntimeScope'>) {
+function assertAutomationReadPermission(extensionId: string | undefined, capability: string): void {
+  if (!extensionId) return;
+  assertExtensionAnyPermission(extensionId, ['automations:read', 'automations:readwrite'], capability);
+}
+
+function assertAutomationWritePermission(extensionId: string | undefined, capability: string): void {
+  if (!extensionId) return;
+  assertExtensionAnyPermission(extensionId, ['automations:write', 'automations:readwrite'], capability);
+}
+
+function assertAutomationPermission(extensionId: string | undefined, permission: ExtensionPermission, capability: string): void {
+  if (!extensionId) return;
+  assertExtensionPermission(extensionId, permission, capability);
+}
+
+export function createExtensionAutomationsCapability(context?: Pick<ServerRouteContext, 'getRuntimeScope'>, extensionId?: string) {
   return {
     async list() {
+      assertAutomationReadPermission(extensionId, 'automations.list');
       const profile = getProfile(context);
       const loaded = loadScheduledTasksForProfile(profile);
       const runtimeById = new Map(loaded.runtimeEntries.flatMap((task) => (task.id ? [[task.id, task] as const] : [])));
@@ -113,6 +131,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       });
     },
     async get(taskId: string) {
+      assertAutomationReadPermission(extensionId, 'automations.get');
       const resolvedTask = findTaskForProfile(getProfile(context), taskId);
       if (!resolvedTask) throw new Error('Task not found');
       const task =
@@ -122,6 +141,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       return buildTaskDetailResponse(task, resolvedTask.runtime, listAutomationActivityEntries(task.id));
     },
     async create(input: AutomationMutationInput) {
+      assertAutomationWritePermission(extensionId, 'automations.create');
       const profile = getProfile(context);
       const targetType = normalizeAutomationTargetTypeForSelection(input.targetType);
       const threadSelection = resolveScheduledTaskThreadBinding({
@@ -159,6 +179,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       };
     },
     async update(taskId: string, input: AutomationMutationInput) {
+      assertAutomationWritePermission(extensionId, 'automations.update');
       const profile = getProfile(context);
       const resolvedTask = findTaskForProfile(profile, taskId);
       if (!resolvedTask) throw new Error('Task not found');
@@ -200,6 +221,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       };
     },
     async delete(taskId: string) {
+      assertAutomationWritePermission(extensionId, 'automations.delete');
       const profile = getProfile(context);
       const resolvedTask = findTaskForProfile(profile, taskId);
       if (!resolvedTask) throw new Error('Task not found');
@@ -210,6 +232,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       return { ok: true, deleted: true };
     },
     async run(taskId: string) {
+      assertAutomationPermission(extensionId, 'automations:run', 'automations.run');
       const resolvedTask = findTaskForProfile(getProfile(context), taskId);
       if (!resolvedTask) throw new Error('Task not found');
       if (!resolvedTask.task.prompt.trim()) throw new Error('Task has no prompt body');
@@ -218,6 +241,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       return { ok: true, accepted: result.accepted, runId: result.runId };
     },
     async readLog(taskId: string) {
+      assertAutomationReadPermission(extensionId, 'automations.readLog');
       const resolvedTask = findTaskForProfile(getProfile(context), taskId);
       if (!resolvedTask?.runtime?.lastLogPath || !existsSync(resolvedTask.runtime.lastLogPath)) {
         throw new Error('No log available');
@@ -225,6 +249,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       return { log: readFileSync(resolvedTask.runtime.lastLogPath, 'utf-8'), path: resolvedTask.runtime.lastLogPath };
     },
     async readSchedulerHealth() {
+      assertAutomationReadPermission(extensionId, 'automations.readSchedulerHealth');
       return readScheduledTaskSchedulerHealth(getProfile(context));
     },
   };

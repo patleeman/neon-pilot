@@ -456,6 +456,9 @@
     ]
   },
   "permissions": [
+    "automations:read",
+    "automations:write",
+    "automations:run",
     "executions:read",
     "executions:start",
     "conversations:readwrite",

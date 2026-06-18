@@ -783,6 +783,9 @@
   "permissions": [
     "agent:run",
     "agent:conversations",
+    "automations:read",
+    "automations:write",
+    "automations:run",
     "commands:execute",
     "commands:read",
     "conversations:readwrite",

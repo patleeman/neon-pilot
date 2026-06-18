@@ -435,7 +435,7 @@ export function createBackendContext(
     storage: createStorage(extensionId, { enforceManifestPermissions: true }),
     database: createExtensionDatabaseManager(extensionId),
     attention: createExtensionAttentionCapability(extensionId, toolContext),
-    automations: createExtensionAutomationsCapability(serverContext),
+    automations: createExtensionAutomationsCapability(serverContext, extensionId),
     executions: createExtensionExecutionsCapability(extensionId, { enforceManifestPermissions: true }),
     models: createExtensionModelsCapability(serverContext, extensionId),
     knowledge: createExtensionKnowledgeCapability(extensionId, { enforceManifestPermissions: true }),
