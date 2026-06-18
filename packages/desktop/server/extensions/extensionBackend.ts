@@ -425,7 +425,7 @@ export function createBackendContext(
     automations: createExtensionAutomationsCapability(serverContext),
     executions: createExtensionExecutionsCapability(extensionId, { enforceManifestPermissions: true }),
     models: createExtensionModelsCapability(serverContext, extensionId),
-    knowledge: createExtensionKnowledgeCapability(),
+    knowledge: createExtensionKnowledgeCapability(extensionId, { enforceManifestPermissions: true }),
     conversations: createExtensionConversationsCapability(serverContext, extensionId, { enforceManifestPermissions: true }),
     filesystem: createExtensionFilesystemCapability(extensionId, toolContext, { enforceManifestPermissions: true }),
     workspace: createExtensionWorkspaceCapability(extensionId, toolContext, { enforceManifestPermissions: true }),

@@ -3,6 +3,8 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 
 import { getKnowledgeRoot } from '@neon-pilot/core';
 
+import { assertExtensionAnyPermission } from './extensionPermissions.js';
+
 interface KnowledgeEntry {
   id: string;
   kind: 'file' | 'folder';
@@ -31,6 +33,10 @@ function safePath(id = ''): string {
   return abs;
 }
 
+interface ExtensionKnowledgeCapabilityOptions {
+  enforceManifestPermissions?: boolean;
+}
+
 function entryFromPath(root: string, abs: string): KnowledgeEntry {
   const stats = statSync(abs);
   const rel = relative(root, abs).replace(/\\/g, '/');
@@ -44,14 +50,25 @@ function entryFromPath(root: string, abs: string): KnowledgeEntry {
   };
 }
 
-export function createExtensionKnowledgeCapability() {
+export function createExtensionKnowledgeCapability(extensionId = 'extension', options: ExtensionKnowledgeCapabilityOptions = {}) {
+  const assertKnowledgePermission = (kind: 'read' | 'write', capability: string) => {
+    if (!options.enforceManifestPermissions) return;
+    assertExtensionAnyPermission(
+      extensionId,
+      kind === 'write' ? ['knowledge:write', 'knowledge:readwrite'] : ['knowledge:read', 'knowledge:readwrite'],
+      capability,
+    );
+  };
+
   return {
     async read(path: string) {
+      assertKnowledgePermission('read', 'knowledge.read');
       const abs = safePath(path);
       if (!existsSync(abs) || !statSync(abs).isFile()) throw new Error('Knowledge file not found.');
       return { id: path, content: readFileSync(abs, 'utf-8'), updatedAt: new Date(statSync(abs).mtimeMs).toISOString() };
     },
     async write(path: string, content: string) {
+      assertKnowledgePermission('write', 'knowledge.write');
       if (typeof content !== 'string') throw new Error('content must be a string.');
       const abs = safePath(path);
       mkdirSync(dirname(abs), { recursive: true });
@@ -59,6 +76,7 @@ export function createExtensionKnowledgeCapability() {
       return entryFromPath(getRoot(), abs);
     },
     async list(path = '') {
+      assertKnowledgePermission('read', 'knowledge.list');
       const root = getRoot();
       const abs = safePath(path);
       if (!existsSync(abs) || !statSync(abs).isDirectory()) throw new Error('Knowledge directory not found.');
@@ -72,6 +90,7 @@ export function createExtensionKnowledgeCapability() {
         .sort((left, right) => left.id.localeCompare(right.id));
     },
     async search(query: string) {
+      assertKnowledgePermission('read', 'knowledge.search');
       const needle = query.trim().toLowerCase();
       if (!needle) return [];
       const root = getRoot();

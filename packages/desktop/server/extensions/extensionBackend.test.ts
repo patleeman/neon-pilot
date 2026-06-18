@@ -347,6 +347,27 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires knowledge permissions for host-run knowledge helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'knowledge-helper-ext');
+    const context = createBackendContext('knowledge-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    await expect(context.knowledge.list()).rejects.toThrow(
+      'Extension "knowledge-helper-ext" requires permission knowledge:read to use knowledge.list.',
+    );
+    await expect(context.knowledge.search('note')).rejects.toThrow(
+      'Extension "knowledge-helper-ext" requires permission knowledge:read to use knowledge.search.',
+    );
+    await expect(context.knowledge.write('notes/today.md', 'hello')).rejects.toThrow(
+      'Extension "knowledge-helper-ext" requires permission knowledge:write to use knowledge.write.',
+    );
+  });
+
   it('passes the server route settings file into worker action contexts', async () => {
     const workerRunner = {
       loadModule: vi.fn(async () => ({})),

@@ -6,7 +6,10 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getKnowledgeRoot = vi.fn();
-vi.mock('@neon-pilot/core', () => ({ getKnowledgeRoot }));
+vi.mock('@neon-pilot/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@neon-pilot/core')>()),
+  getKnowledgeRoot,
+}));
 
 const { createExtensionKnowledgeCapability } = await import('./extensionKnowledge.js');
 
