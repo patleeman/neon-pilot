@@ -790,6 +790,8 @@
     "executions:start",
     "settings:read",
     "settings:write",
-    "shell:execute"
+    "shell:execute",
+    "models:read",
+    "models:write"
   ]
 }

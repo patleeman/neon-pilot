@@ -424,7 +424,7 @@ export function createBackendContext(
     attention: createExtensionAttentionCapability(extensionId, toolContext),
     automations: createExtensionAutomationsCapability(serverContext),
     executions: createExtensionExecutionsCapability(extensionId),
-    models: createExtensionModelsCapability(serverContext),
+    models: createExtensionModelsCapability(serverContext, extensionId),
     knowledge: createExtensionKnowledgeCapability(),
     conversations: createExtensionConversationsCapability(serverContext, extensionId),
     filesystem: createExtensionFilesystemCapability(extensionId, toolContext),

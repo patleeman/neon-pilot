@@ -259,6 +259,24 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires model permissions for host-run model helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'model-helper-ext');
+    const context = createBackendContext('model-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    await expect(context.models.list()).rejects.toThrow(
+      'Extension "model-helper-ext" requires permission models:read to use models.list.',
+    );
+    await expect(context.models.saveProvider({ provider: 'ds4' })).rejects.toThrow(
+      'Extension "model-helper-ext" requires permission models:write to use models.saveProvider.',
+    );
+  });
+
   it('passes the server route settings file into worker action contexts', async () => {
     const workerRunner = {
       loadModule: vi.fn(async () => ({})),

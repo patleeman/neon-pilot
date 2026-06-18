@@ -2,6 +2,7 @@ import { readModelState } from '../models/modelState.js';
 import { invalidateModelDefinitionsCache } from '../models/modelState.js';
 import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
+import { assertExtensionPermission } from './extensionPermissions.js';
 
 type ProviderDesktopCapabilityModule = typeof import('../models/providerDesktopCapability.js');
 
@@ -37,12 +38,16 @@ async function afterProviderWrite(): Promise<void> {
 /**
  * Models capability for extensions.
  */
-export function createExtensionModelsCapability(serverContext?: ExtensionBackendServerContext) {
+export function createExtensionModelsCapability(serverContext?: ExtensionBackendServerContext, extensionId?: string) {
+  const assertPermission = (permission: 'models:read' | 'models:write', capability: string) => {
+    if (extensionId) assertExtensionPermission(extensionId, permission, capability);
+  };
   return {
     /**
      * List available models and their capabilities.
      */
     async list(): Promise<unknown[]> {
+      assertPermission('models:read', 'models.list');
       try {
         const settingsFile = serverContext?.getSettingsFile?.() ?? getRuntimeSettingsFilePath(serverContext?.getStateRoot?.());
         if (!settingsFile) return [];
@@ -70,24 +75,28 @@ export function createExtensionModelsCapability(serverContext?: ExtensionBackend
       }
     },
     async saveProvider(input: Parameters<ProviderDesktopCapabilityModule['saveModelProviderCapability']>[1]) {
+      assertPermission('models:write', 'models.saveProvider');
       const module = await importProviderDesktopCapability();
       const result = module.saveModelProviderCapability(providerCapabilityContext(serverContext), input);
       await afterProviderWrite();
       return result;
     },
     async saveProviderModel(input: Parameters<ProviderDesktopCapabilityModule['saveModelProviderModelCapability']>[1]) {
+      assertPermission('models:write', 'models.saveProviderModel');
       const module = await importProviderDesktopCapability();
       const result = module.saveModelProviderModelCapability(providerCapabilityContext(serverContext), input);
       await afterProviderWrite();
       return result;
     },
     async deleteProvider(provider: string) {
+      assertPermission('models:write', 'models.deleteProvider');
       const module = await importProviderDesktopCapability();
       const result = module.deleteModelProviderCapability(providerCapabilityContext(serverContext), provider);
       await afterProviderWrite();
       return result;
     },
     async deleteProviderModel(input: { provider: string; modelId: string }) {
+      assertPermission('models:write', 'models.deleteProviderModel');
       const module = await importProviderDesktopCapability();
       const result = module.deleteModelProviderModelCapability(providerCapabilityContext(serverContext), input.provider, input.modelId);
       await afterProviderWrite();
