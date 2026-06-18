@@ -49,9 +49,16 @@ const {
   createRuntimeExtension,
   deleteRuntimeExtension,
   exportRuntimeExtension,
+  inspectRuntimeExtensionBundle,
   importRuntimeExtensionBundle,
   snapshotRuntimeExtension,
 } = await import('./extensionLifecycle.js');
+
+const safeBundleZipInfo = [
+  '-rw-r--r--  3.0 unx      123 tx      100 defN 26-Jun-01 00:00 bundle/extension.json',
+  '-rw-r--r--  3.0 unx      123 tx      100 defN 26-Jun-01 00:00 bundle/dist/backend.mjs',
+  '-rw-r--r--  3.0 unx      123 tx      100 defN 26-Jun-01 00:00 bundle/dist/build-manifest.json',
+].join('\n');
 
 describe('extensionLifecycle', () => {
   const stateRoot = join(tmpdir(), `extension-lifecycle-${randomUUID()}`);
@@ -72,7 +79,7 @@ describe('extensionLifecycle', () => {
     parseExtensionManifest.mockClear();
     execFileSync.mockReset();
     execFileSync.mockImplementation((command, args) => {
-      if (command === 'zipinfo') return 'bundle/extension.json\n' as ReturnType<ExecFileSync>;
+      if (command === 'zipinfo') return safeBundleZipInfo as ReturnType<ExecFileSync>;
       if (command === 'unzip') {
         const extractRoot = String(args?.[3]);
         mkdirSync(join(extractRoot, 'bundle', 'dist'), { recursive: true });
@@ -168,6 +175,16 @@ describe('extensionLifecycle', () => {
     expect(existsSync(join(runtimeRoot, 'imported-ext', 'extension.json'))).toBe(true);
   });
 
+  it('inspects safe extension bundles without copying them into the runtime extension root', () => {
+    const zipPath = join(stateRoot, 'bundle.neon-extension.zip');
+    mkdirSync(stateRoot, { recursive: true });
+    writeFileSync(zipPath, 'zip');
+
+    expect(inspectRuntimeExtensionBundle({ zipPath })).toMatchObject({ id: 'imported-ext', name: 'Imported' });
+    expect(existsSync(join(runtimeRoot, 'imported-ext'))).toBe(false);
+    expect(invalidateExtensionRegistryReadCaches).not.toHaveBeenCalled();
+  });
+
   it('rejects imported bundles whose id already exists in the target state root', () => {
     const zipPath = join(stateRoot, 'duplicate.neon-extension.zip');
     mkdirSync(stateRoot, { recursive: true });
@@ -185,7 +202,7 @@ describe('extensionLifecycle', () => {
     writeFileSync(zipPath, 'zip');
     execFileSync.mockImplementation((command, args) => {
       if (command === 'zipinfo')
-        return 'bundle/extension.json\nbundle/dist/backend.mjs\nbundle/dist/build-manifest.json\n' as ReturnType<ExecFileSync>;
+        return safeBundleZipInfo as ReturnType<ExecFileSync>;
       if (command === 'unzip') {
         const extractRoot = String(args?.[3]);
         mkdirSync(join(extractRoot, 'bundle', 'dist'), { recursive: true });
@@ -218,7 +235,11 @@ describe('extensionLifecycle', () => {
     mkdirSync(stateRoot, { recursive: true });
     writeFileSync(zipPath, 'zip');
     execFileSync.mockImplementation((command, args) => {
-      if (command === 'zipinfo') return 'bundle/extension.json\nbundle/src/backend.ts\n' as ReturnType<ExecFileSync>;
+      if (command === 'zipinfo')
+        return [
+          '-rw-r--r--  3.0 unx      123 tx      100 defN 26-Jun-01 00:00 bundle/extension.json',
+          '-rw-r--r--  3.0 unx      123 tx      100 defN 26-Jun-01 00:00 bundle/src/backend.ts',
+        ].join('\n') as ReturnType<ExecFileSync>;
       if (command === 'unzip') {
         const extractRoot = String(args?.[3]);
         mkdirSync(join(extractRoot, 'bundle', 'src'), { recursive: true });
@@ -366,7 +387,9 @@ describe('extensionLifecycle', () => {
     const zipPath = join(stateRoot, 'bad.zip');
     mkdirSync(stateRoot, { recursive: true });
     writeFileSync(zipPath, 'zip');
-    execFileSync.mockImplementationOnce(() => '../evil/extension.json\n' as ReturnType<ExecFileSync>);
+    execFileSync.mockImplementationOnce(
+      () => '-rw-r--r--  3.0 unx      123 tx      100 defN 26-Jun-01 00:00 ../evil/extension.json\n' as ReturnType<ExecFileSync>,
+    );
     expect(() => importRuntimeExtensionBundle({ zipPath }, stateRoot)).toThrow('unsafe paths');
   });
 });

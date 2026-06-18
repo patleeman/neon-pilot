@@ -5,7 +5,7 @@ import { basename, join, resolve } from 'node:path';
 import { getStateRoot } from '@neon-pilot/core';
 
 import { getExtensionCompatibilityError, resolveInstalledAppVersion } from './extensionCompatibility.js';
-import { deleteRuntimeExtension, importRuntimeExtensionBundle } from './extensionLifecycle.js';
+import { deleteRuntimeExtension, importRuntimeExtensionBundle, inspectRuntimeExtensionBundle } from './extensionLifecycle.js';
 import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
 import { INSTALLABLE_EXTENSION_CATALOG } from './installableExtensionCatalog.generated.js';
 
@@ -452,6 +452,24 @@ async function downloadBundle(url: URL, destination: string): Promise<void> {
   writeFileSync(destination, body);
 }
 
+function assertBundleExpectedId(zipPath: string, expectedId: string | undefined, label = 'Extension'): void {
+  if (!expectedId) return;
+  const bundle = inspectRuntimeExtensionBundle({ zipPath });
+  if (bundle.id !== expectedId) {
+    throw new Error(`${label} id ${bundle.id ?? 'unknown'} did not match expected id ${expectedId}.`);
+  }
+}
+
+function importAndDisableExtensionBundle(zipPath: string, stateRoot?: string) {
+  const result = importRuntimeExtensionBundle({ zipPath }, stateRoot);
+  if (result.extension?.id) {
+    setExtensionEnabled(result.extension.id, false, stateRoot);
+    const disabled = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === result.extension?.id);
+    return { ...result, extension: disabled ?? result.extension };
+  }
+  return result;
+}
+
 export async function installExtensionBundleFromUrl(input: { url?: unknown; expectedId?: unknown }, stateRoot?: string) {
   const rawUrl = typeof input.url === 'string' ? input.url.trim() : '';
   if (!rawUrl) throw new Error('url is required.');
@@ -461,16 +479,8 @@ export async function installExtensionBundleFromUrl(input: { url?: unknown; expe
   const zipPath = join(tempRoot, basename(url.pathname));
   try {
     await downloadBundle(url, zipPath);
-    const result = importRuntimeExtensionBundle({ zipPath }, stateRoot);
-    if (expectedId && result.extension?.id !== expectedId) {
-      throw new Error(`Downloaded extension id ${result.extension?.id ?? 'unknown'} did not match expected id ${expectedId}.`);
-    }
-    if (result.extension?.id) {
-      setExtensionEnabled(result.extension.id, false, stateRoot);
-      const disabled = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === result.extension?.id);
-      return { ...result, extension: disabled ?? result.extension };
-    }
-    return result;
+    assertBundleExpectedId(zipPath, expectedId, 'Downloaded extension');
+    return importAndDisableExtensionBundle(zipPath, stateRoot);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -483,16 +493,8 @@ export function installExtensionBundleFromPath(input: { path?: unknown; expected
   const zipPath = resolve(rawPath);
   if (!existsSync(zipPath)) throw new Error(`Extension bundle not found: ${zipPath}`);
   if (!zipPath.endsWith('.neon-extension.zip')) throw new Error('Extension bundle path must end with .neon-extension.zip.');
-  const result = importRuntimeExtensionBundle({ zipPath }, stateRoot);
-  if (expectedId && result.extension?.id !== expectedId) {
-    throw new Error(`Extension id ${result.extension?.id ?? 'unknown'} did not match expected id ${expectedId}.`);
-  }
-  if (result.extension?.id) {
-    setExtensionEnabled(result.extension.id, false, stateRoot);
-    const disabled = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === result.extension?.id);
-    return { ...result, extension: disabled ?? result.extension };
-  }
-  return result;
+  assertBundleExpectedId(zipPath, expectedId);
+  return importAndDisableExtensionBundle(zipPath, stateRoot);
 }
 
 export async function installCatalogExtension(input: { id?: unknown }, stateRoot?: string) {
@@ -522,14 +524,30 @@ export async function updateCatalogExtension(input: { id?: unknown }, stateRoot?
   const localBundlePath = localFallbackBundlePathFor(item);
   if (!localBundlePath && item.unavailableReason) throw new Error(`Extension ${id} is not installable: ${item.unavailableReason}`);
 
-  await deleteRuntimeExtension(id, stateRoot);
-  const result = localBundlePath
-    ? installExtensionBundleFromPath({ path: localBundlePath, expectedId: id }, stateRoot)
-    : await installExtensionBundleFromUrl({ url: item.bundleUrl, expectedId: id }, stateRoot);
-  if (result.extension?.id) {
-    setExtensionEnabled(result.extension.id, wasEnabled, stateRoot);
-    const updated = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === result.extension?.id);
-    return { ...result, updated: true as const, extension: updated ?? result.extension };
+  const finalizeUpdate = async (zipPath: string) => {
+    await deleteRuntimeExtension(id, stateRoot);
+    const result = importAndDisableExtensionBundle(zipPath, stateRoot);
+    if (result.extension?.id) {
+      setExtensionEnabled(result.extension.id, wasEnabled, stateRoot);
+      const updated = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === result.extension?.id);
+      return { ...result, updated: true as const, extension: updated ?? result.extension };
+    }
+    return { ...result, updated: true as const };
+  };
+
+  if (localBundlePath) {
+    assertBundleExpectedId(localBundlePath, id);
+    return finalizeUpdate(localBundlePath);
   }
-  return { ...result, updated: true as const };
+
+  const url = assertSafeExtensionBundleUrl(item.bundleUrl);
+  const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-extension-update-'));
+  const zipPath = join(tempRoot, basename(url.pathname));
+  try {
+    await downloadBundle(url, zipPath);
+    assertBundleExpectedId(zipPath, id, 'Downloaded extension');
+    return await finalizeUpdate(zipPath);
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
 }

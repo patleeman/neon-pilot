@@ -8,6 +8,7 @@ const summaries = vi.fn(() => []);
 const findExtensionEntry = vi.fn(() => undefined);
 const setExtensionEnabled = vi.fn();
 const importRuntimeExtensionBundle = vi.fn();
+const inspectRuntimeExtensionBundle = vi.fn();
 const deleteRuntimeExtension = vi.fn();
 
 vi.mock('./extensionRegistry.js', () => ({
@@ -17,6 +18,7 @@ vi.mock('./extensionRegistry.js', () => ({
 }));
 vi.mock('./extensionLifecycle.js', () => ({
   importRuntimeExtensionBundle,
+  inspectRuntimeExtensionBundle,
   deleteRuntimeExtension,
 }));
 
@@ -28,6 +30,7 @@ describe('extension catalog', () => {
     findExtensionEntry.mockReset().mockReturnValue(undefined);
     setExtensionEnabled.mockReset();
     importRuntimeExtensionBundle.mockReset();
+    inspectRuntimeExtensionBundle.mockReset().mockReturnValue({ id: 'system-browser', name: 'Browser' });
     deleteRuntimeExtension.mockReset();
     vi.unstubAllGlobals();
     if (originalRepoRoot === undefined) delete process.env.NEON_PILOT_REPO_ROOT;
@@ -241,6 +244,7 @@ describe('extension catalog', () => {
       extension: { id: 'system-dynamic-workflows', enabled: true },
       packageRoot: '/tmp/ext',
     });
+    inspectRuntimeExtensionBundle.mockReturnValue({ id: 'system-dynamic-workflows', name: 'Dynamic Workflows' });
     summaries.mockReturnValue([{ id: 'system-dynamic-workflows', name: 'Dynamic Workflows', enabled: false, version: '0.1.0' }]);
 
     const { installCatalogExtension } = await import('./extensionCatalog.js');
@@ -249,6 +253,33 @@ describe('extension catalog', () => {
     expect(importRuntimeExtensionBundle).toHaveBeenCalledWith({ zipPath: bundlePath }, undefined);
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(result.extension).toMatchObject({ id: 'system-dynamic-workflows', enabled: false });
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  it('rejects local catalog bundles with mismatched ids before importing', async () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), 'np-local-mismatched-bundles-'));
+    const bundleDir = join(repoRoot, 'dist', 'installable-extensions');
+    const bundlePath = join(bundleDir, 'system-dynamic-workflows.neon-extension.zip');
+    mkdirSync(bundleDir, { recursive: true });
+    writeFileSync(bundlePath, new Uint8Array([1, 2, 3, 4]));
+    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 404,
+      })),
+    );
+    inspectRuntimeExtensionBundle.mockReturnValue({ id: 'wrong-extension', name: 'Wrong Extension' });
+
+    const { installCatalogExtension } = await import('./extensionCatalog.js');
+    await expect(installCatalogExtension({ id: 'system-dynamic-workflows' })).rejects.toThrow(
+      'Extension id wrong-extension did not match expected id system-dynamic-workflows.',
+    );
+
+    expect(inspectRuntimeExtensionBundle).toHaveBeenCalledWith({ zipPath: bundlePath });
+    expect(importRuntimeExtensionBundle).not.toHaveBeenCalled();
+    expect(setExtensionEnabled).not.toHaveBeenCalled();
     rmSync(repoRoot, { recursive: true, force: true });
   });
 
@@ -376,6 +407,7 @@ describe('extension catalog', () => {
       extension: { id: 'system-alleycat', enabled: true },
       packageRoot: '/tmp/ext',
     });
+    inspectRuntimeExtensionBundle.mockReturnValue({ id: 'system-alleycat', name: 'Alleycat' });
     summaries.mockReturnValue([{ id: 'system-alleycat', name: 'Alleycat', enabled: false, version: '0.1.0' }]);
 
     const { installCatalogExtension } = await import('./extensionCatalog.js');
@@ -420,6 +452,37 @@ describe('extension catalog', () => {
     expect(importRuntimeExtensionBundle).not.toHaveBeenCalled();
   });
 
+  it('refuses catalog updates with mismatched bundle ids before deleting the installed extension', async () => {
+    summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.0.1', packageType: 'user' }]);
+    inspectRuntimeExtensionBundle.mockReturnValue({ id: 'wrong-extension', name: 'Wrong Extension' });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string | URL) =>
+        String(url).endsWith('/neon-extension-catalog.json')
+          ? {
+              ok: true,
+              json: async () => ({
+                packages: [{ id: 'system-browser', tag: 'v0.10.2', artifact: 'system-browser.neon-extension.zip' }],
+              }),
+            }
+          : {
+              ok: true,
+              headers: new Headers({ 'content-length': '4' }),
+              arrayBuffer: async () => new Uint8Array([1, 2, 3, 4]).buffer,
+            },
+      ),
+    );
+
+    const { updateCatalogExtension } = await import('./extensionCatalog.js');
+    await expect(updateCatalogExtension({ id: 'system-browser' })).rejects.toThrow(
+      'Downloaded extension id wrong-extension did not match expected id system-browser.',
+    );
+
+    expect(deleteRuntimeExtension).not.toHaveBeenCalled();
+    expect(importRuntimeExtensionBundle).not.toHaveBeenCalled();
+    expect(setExtensionEnabled).not.toHaveBeenCalled();
+  });
+
   it('warns about stale compatibility without blocking catalog updates', async () => {
     summaries.mockReturnValue([
       { id: 'system-writing-studio', name: 'Writing Studio', enabled: true, version: '0.1.1', packageType: 'user' },
@@ -430,6 +493,7 @@ describe('extension catalog', () => {
       extension: { id: 'system-writing-studio', enabled: false },
       packageRoot: '/tmp/ext',
     });
+    inspectRuntimeExtensionBundle.mockReturnValue({ id: 'system-writing-studio', name: 'Writing Studio' });
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string | URL) =>
@@ -489,6 +553,7 @@ describe('extension catalog', () => {
       extension: { id: 'system-browser', enabled: false },
       packageRoot: '/tmp/ext',
     });
+    inspectRuntimeExtensionBundle.mockReturnValue({ id: 'system-browser', name: 'Browser' });
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string | URL) =>

@@ -410,6 +410,38 @@ function assertImportableRuntimeArtifacts(packageRoot: string, manifest: Extensi
   }
 }
 
+function inspectExtractedExtensionBundle(zipPath: string): { id: string; manifest: ExtensionManifest } {
+  assertSafeZipEntries(readZipEntries(zipPath));
+  const extractRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-extension-inspect-'));
+  try {
+    execFileSync('unzip', ['-q', zipPath, '-d', extractRoot]);
+    const packageRoot = findExtractedManifestRoot(extractRoot);
+    assertInside(extractRoot, packageRoot);
+    const manifest = parseExtensionManifest(JSON.parse(readFileSync(join(packageRoot, 'extension.json'), 'utf-8')));
+    assertImportableRuntimeArtifacts(packageRoot, manifest);
+    return { id: normalizeExtensionId(manifest.id), manifest };
+  } finally {
+    rmSync(extractRoot, { recursive: true, force: true });
+  }
+}
+
+export function inspectRuntimeExtensionBundle(input: { zipPath?: unknown }) {
+  const zipPath = normalizeOptionalString(input.zipPath);
+  if (!zipPath) {
+    throw new Error('zipPath is required.');
+  }
+  if (!existsSync(zipPath) || !statSync(zipPath).isFile()) {
+    throw new Error('Extension bundle not found.');
+  }
+
+  const { id, manifest } = inspectExtractedExtensionBundle(zipPath);
+  return {
+    id,
+    name: manifest.name,
+    version: manifest.version,
+  };
+}
+
 export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, stateRoot: string = getStateRoot()) {
   const zipPath = normalizeOptionalString(input.zipPath);
   if (!zipPath) {
