@@ -915,17 +915,27 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const [marketplaceSource, setMarketplaceSource] = useState('');
   const [marketplacePackageType, setMarketplacePackageType] = useState<MarketplaceBehaviorPackageType>('skill');
   const marketplaceEcosystem: MarketplaceBehaviorEcosystem = 'codex';
+  const loadSequenceRef = useRef(0);
+  const catalogLoadSequenceRef = useRef(0);
 
   const load = useCallback(async (options: { showLoading?: boolean } = {}) => {
+    const sequence = loadSequenceRef.current + 1;
+    loadSequenceRef.current = sequence;
     if (options.showLoading) {
       setLoading(true);
     }
     setError(null);
     try {
       const items = await api.extensionInstallations();
+      if (loadSequenceRef.current !== sequence) {
+        return;
+      }
       setExtensions(items);
       setLoading(false);
     } catch (err) {
+      if (loadSequenceRef.current !== sequence) {
+        return;
+      }
       setError(err instanceof Error ? err.message : String(err));
       setLoading(false);
     }
@@ -940,6 +950,8 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   );
 
   const loadCatalog = useCallback(() => {
+    const sequence = catalogLoadSequenceRef.current + 1;
+    catalogLoadSequenceRef.current = sequence;
     setCatalogError(null);
     if (!pa.extensions?.callAction) {
       setCatalog({ ok: true, version: '', tag: '', extensions: [] });
@@ -948,11 +960,27 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     }
     void pa.extensions
       .callAction('system-extension-manager', 'listInstallableExtensions', {})
-      .then((result) => setCatalog(result as InstallableExtensionCatalogResponse))
-      .catch((err) => setCatalogError(err instanceof Error ? err.message : String(err)));
+      .then((result) => {
+        if (catalogLoadSequenceRef.current === sequence) {
+          setCatalog(result as InstallableExtensionCatalogResponse);
+        }
+      })
+      .catch((err) => {
+        if (catalogLoadSequenceRef.current === sequence) {
+          setCatalogError(err instanceof Error ? err.message : String(err));
+        }
+      });
     void readExtensionSources(pa.extensions)
-      .then((sources) => setCatalogSources(sources))
-      .catch(() => setCatalogSources([]));
+      .then((sources) => {
+        if (catalogLoadSequenceRef.current === sequence) {
+          setCatalogSources(sources);
+        }
+      })
+      .catch(() => {
+        if (catalogLoadSequenceRef.current === sequence) {
+          setCatalogSources([]);
+        }
+      });
   }, [pa]);
 
   useEffect(() => {

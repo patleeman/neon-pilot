@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -47,6 +47,14 @@ vi.mock('@neon-pilot/extensions/workbench-browser', () => ({
 import { ExtensionManagerPage, ExtensionRepositoriesSettingsPanel } from './frontend';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
 
 function createExtension() {
   return {
@@ -759,6 +767,30 @@ describe('ExtensionManagerPage', () => {
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'listInstallableExtensions', {});
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'readExtensionSources', {});
     expect(setIntervalSpy.mock.calls.some((call) => call[1] === 5_000)).toBe(false);
+  });
+
+  it('ignores stale installed extension refreshes after a newer registry event', async () => {
+    const first = createDeferred<ReturnType<typeof createExtension>[]>();
+    const second = createDeferred<ReturnType<typeof createExtension>[]>();
+    mocks.extensionInstallations.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+
+    renderPage();
+    act(() => {
+      window.dispatchEvent(new Event('neon-pilot-extension-registry-changed'));
+    });
+
+    await act(async () => {
+      second.resolve([{ ...createExtension(), id: 'fresh-extension', name: 'Fresh Extension' } as never]);
+      await second.promise;
+    });
+    expect(await screen.findByText('Fresh Extension')).toBeTruthy();
+
+    await act(async () => {
+      first.resolve([{ ...createExtension(), id: 'stale-extension', name: 'Stale Extension' } as never]);
+      await first.promise;
+    });
+    await waitFor(() => expect(screen.queryByText('Stale Extension')).toBeNull());
+    expect(screen.getByText('Fresh Extension')).toBeTruthy();
   });
 
   it('renders extension repositories as a settings panel', async () => {
