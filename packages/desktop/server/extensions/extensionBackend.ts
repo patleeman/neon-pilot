@@ -31,7 +31,7 @@ import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
 import { createExtensionKnowledgeCapability } from './extensionKnowledge.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import { isSystemNotificationAvailable, sendNotifyAsSystemNotification, setExtensionBadge } from './extensionNotifications.js';
-import { assertExtensionPermission } from './extensionPermissions.js';
+import { assertExtensionAnyPermission, assertExtensionPermission } from './extensionPermissions.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
   clearBuildError,
@@ -348,19 +348,32 @@ function isHostCommandAction(action: string): boolean {
   return isKnownHostCommand(action);
 }
 
-function createStorage(extensionId: string): ExtensionBackendContext['storage'] {
+function createStorage(extensionId: string, options: { enforceManifestPermissions?: boolean } = {}): ExtensionBackendContext['storage'] {
+  const assertStoragePermission = (kind: 'read' | 'write', capability: string) => {
+    if (!options.enforceManifestPermissions) return;
+    assertExtensionAnyPermission(
+      extensionId,
+      kind === 'write' ? ['storage:write', 'storage:readwrite'] : ['storage:read', 'storage:readwrite'],
+      capability,
+    );
+  };
+
   return {
     async get<T = unknown>(key: string): Promise<T | null> {
+      assertStoragePermission('read', 'storage.get');
       return readExtensionState<T>(extensionId, key)?.value ?? null;
     },
     async put(key: string, value: unknown, opts?: { expectedVersion?: number }): Promise<{ ok: true }> {
+      assertStoragePermission('write', 'storage.put');
       writeExtensionState(extensionId, key, value, opts ? { expectedVersion: opts.expectedVersion } : {});
       return { ok: true };
     },
     async delete(key: string): Promise<{ ok: true; deleted: boolean }> {
+      assertStoragePermission('write', 'storage.delete');
       return deleteExtensionState(extensionId, key);
     },
     async list<T = unknown>(prefix = ''): Promise<Array<{ key: string; value: T }>> {
+      assertStoragePermission('read', 'storage.list');
       return listExtensionState<T>(extensionId, prefix).map((document) => ({ key: document.key, value: document.value }));
     },
   };
@@ -419,7 +432,7 @@ export function createBackendContext(
         });
       },
     },
-    storage: createStorage(extensionId),
+    storage: createStorage(extensionId, { enforceManifestPermissions: true }),
     database: createExtensionDatabaseManager(extensionId),
     attention: createExtensionAttentionCapability(extensionId, toolContext),
     automations: createExtensionAutomationsCapability(serverContext),

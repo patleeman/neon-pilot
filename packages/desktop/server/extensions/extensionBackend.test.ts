@@ -322,6 +322,30 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires storage permissions for host-run storage helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'storage-helper-ext');
+    const context = createBackendContext('storage-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    await expect(context.storage.get('settings')).rejects.toThrow(
+      'Extension "storage-helper-ext" requires permission storage:read to use storage.get.',
+    );
+    await expect(context.storage.list()).rejects.toThrow(
+      'Extension "storage-helper-ext" requires permission storage:read to use storage.list.',
+    );
+    await expect(context.storage.put('settings', { ok: true })).rejects.toThrow(
+      'Extension "storage-helper-ext" requires permission storage:write to use storage.put.',
+    );
+    await expect(context.storage.delete('settings')).rejects.toThrow(
+      'Extension "storage-helper-ext" requires permission storage:write to use storage.delete.',
+    );
+  });
+
   it('requires conversation permissions for host-run conversation helpers', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
