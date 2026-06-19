@@ -1,4 +1,4 @@
-import type { SessionMeta } from '../conversations/sessions.js';
+import type { SessionMeta } from '../conversations/conversationTypes.js';
 import type { SavedUiPreferences } from '../ui/uiPreferences.js';
 import { buildDesktopConversationWorkspaceResponse } from './localApiConversationWorkspacePresentation.js';
 

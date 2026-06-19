@@ -4,3 +4,9 @@ function hostResolved(): never {
 
 export const invalidateAppTopics = (..._args: unknown[]): unknown => hostResolved();
 export const publishAppEvent = (..._args: unknown[]): unknown => hostResolved();
+export const emitEvent = (..._args: unknown[]): unknown => hostResolved();
+export const replayEvent = (..._args: unknown[]): unknown => hostResolved();
+export const listEvents = (..._args: unknown[]): unknown => hostResolved();
+export const listSubscriptions = (..._args: unknown[]): unknown => hostResolved();
+export const saveSubscription = (..._args: unknown[]): unknown => hostResolved();
+export const deleteSubscription = (..._args: unknown[]): unknown => hostResolved();

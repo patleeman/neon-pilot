@@ -33,7 +33,16 @@ function createPa(
   uiOverrides: Partial<NativeExtensionClient['ui']> = {},
 ): NativeExtensionClient {
   return {
-    extension: { invoke: vi.fn(), getManifest: vi.fn(), listSurfaces: vi.fn() },
+    extension: {
+      invoke: vi.fn(async (_actionId: string, input?: unknown) => {
+        const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
+        if (action === 'list') return { events: [] };
+        if (action === 'replay') return { event: { id: 'evt-replay' }, reactions: [] };
+        return {};
+      }),
+      getManifest: vi.fn(),
+      listSurfaces: vi.fn(),
+    },
     executions: { start: vi.fn(), get: vi.fn(), list: vi.fn(), readLog: vi.fn(), cancel: vi.fn() },
     storage: { get: vi.fn(), put: vi.fn(), delete: vi.fn(), list: vi.fn() },
     commands: { execute: vi.fn(async () => true), list: vi.fn(async () => []), setContext: vi.fn() },
@@ -176,11 +185,16 @@ describe('AutomationsPage', () => {
   });
 
   it('preserves the activity shell when no automations exist', async () => {
-    const { container } = await renderPage(
-      createPa({
-        list: vi.fn(async () => []),
-      }),
-    );
+    const pa = createPa({
+      list: vi.fn(async () => []),
+    });
+    vi.mocked(pa.extension.invoke).mockImplementation(async (_actionId: string, input?: unknown) => {
+      const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
+      if (action === 'list') return { events: [] };
+      if (action === 'replay') return { event: { id: 'evt-replay' }, reactions: [] };
+      return {};
+    });
+    const { container } = await renderPage(pa);
 
     expect(container.textContent).toContain('No matching event activity.');
     expect(container.textContent).toContain('No event selected');
@@ -192,7 +206,48 @@ describe('AutomationsPage', () => {
     expect(container.textContent).toContain('Published Event');
   });
 
-  it('re-emits the selected event from the inspector action', async () => {
+  it('replays the selected durable event bus event from the inspector action', async () => {
+    const pa = createPa();
+    vi.mocked(pa.extension.invoke).mockImplementation(async (_actionId: string, input?: unknown) => {
+      const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
+      if (action === 'list') {
+        return {
+          events: [
+            {
+              id: 'evt-daily-check',
+              type: 'schedule.due',
+              source: 'scheduler',
+              occurredAt: '2026-05-08T00:00:00.000Z',
+              metadata: { taskId: 'daily-check' },
+              reactions: [
+                {
+                  id: 'reaction-daily-check',
+                  subscriptionId: 'sub-daily-check',
+                  subscriptionName: 'Daily check',
+                  actionType: 'run_task',
+                  status: 'completed',
+                },
+              ],
+            },
+          ],
+        };
+      }
+      if (action === 'replay') return { event: { id: 'evt-replay' }, reactions: [] };
+      return {};
+    });
+    const { container } = await renderPage(pa);
+    const runButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Re-emit Event');
+    if (!runButton) throw new Error('Re-emit button not found');
+
+    await act(async () => {
+      runButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(pa.extension.invoke).toHaveBeenCalledWith('eventBus', { action: 'replay', eventId: 'evt-daily-check' });
+    expect(pa.automations.run).not.toHaveBeenCalled();
+  });
+
+  it('starts the selected publisher when re-emitting a synthetic task activity event', async () => {
     const pa = createPa();
     const { container } = await renderPage(pa);
     const runButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Re-emit Event');
@@ -203,6 +258,48 @@ describe('AutomationsPage', () => {
     });
 
     expect(pa.automations.run).toHaveBeenCalledWith('daily-check');
+    expect(pa.extension.invoke).not.toHaveBeenCalledWith('eventBus', expect.objectContaining({ action: 'replay' }));
+  });
+
+  it('renders custom event bus events from the inspector action', async () => {
+    const pa = createPa();
+    vi.mocked(pa.extension.invoke).mockImplementation(async (_actionId: string, input?: unknown) => {
+      const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
+      if (action === 'list') {
+        return {
+          events: [
+            {
+              id: 'evt-1',
+              type: 'schedule.due',
+              source: 'scheduler',
+              occurredAt: '2026-05-08T00:00:00.000Z',
+              metadata: { taskId: 'daily-check' },
+              reactions: [
+                {
+                  id: 'reaction-1',
+                  subscriptionId: 'sub-1',
+                  subscriptionName: 'Daily check',
+                  actionType: 'run_task',
+                  status: 'completed',
+                },
+              ],
+            },
+          ],
+        };
+      }
+      if (action === 'replay') return { event: { id: 'evt-replay' }, reactions: [] };
+      return {};
+    });
+    const { container } = await renderPage(pa);
+    const runButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Re-emit Event');
+    if (!runButton) throw new Error('Re-emit button not found');
+
+    await act(async () => {
+      runButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(pa.extension.invoke).toHaveBeenCalledWith('eventBus', { action: 'replay', eventId: 'evt-1' });
+    expect(pa.automations.run).not.toHaveBeenCalled();
   });
 
   it('pauses the selected publisher from the inspector action', async () => {

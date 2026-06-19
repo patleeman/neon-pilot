@@ -87,7 +87,8 @@ type ReactionKind = 'agent' | 'thread' | 'script' | 'event';
 
 export interface AutomationActivityEvent {
   id: string;
-  taskId: string;
+  taskId?: string;
+  replayMode: 'event-bus' | 'task-run';
   eventName: string;
   source: string;
   title: string;
@@ -102,6 +103,28 @@ export interface AutomationActivityEvent {
   reactionMeta: string;
   emittedEvent?: string;
   trace: Array<{ label: string; meta: string; tone: ActivityTone }>;
+}
+
+interface EventBusReactionSummary {
+  id: string;
+  subscriptionId: string;
+  subscriptionName: string;
+  actionType: ReactionKind | 'run_task' | 'start_agent' | 'start_thread' | 'run_script' | 'publish_event';
+  status: string;
+  output?: Record<string, unknown>;
+  error?: string;
+}
+
+interface EventBusEventSummary {
+  id: string;
+  type: string;
+  source: string;
+  payload?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  occurredAt: string;
+  recordedAt?: string;
+  replayOfEventId?: string;
+  reactions?: EventBusReactionSummary[];
 }
 
 const EDITOR_TOC_ITEMS: Array<{ id: EditorSectionId; label: string; summary: string }> = [
@@ -417,41 +440,6 @@ function isPastDueOneTimeTask(task: ScheduledTaskSummary, nowMs = Date.now()) {
   return atMs !== null && atMs <= nowMs;
 }
 
-function scheduleText(task: ScheduledTaskSummary) {
-  if (task.cron) return `Cron ${task.cron}`;
-  if (task.at) return `Once ${task.at}`;
-  return 'Manual';
-}
-
-function taskScopeText(task: ScheduledTaskSummary) {
-  return task.cwd?.split('/').filter(Boolean).at(-1) ?? task.threadTitle ?? task.threadConversationId ?? '';
-}
-
-function taskScheduleSummary(task: ScheduledTaskSummary) {
-  const preset = CRON_PRESETS.find((candidate) => candidate.cron === task.cron);
-  if (preset) return preset.label;
-  if (task.cron === '0 2 * * *') return 'Daily at 02:00';
-  if (task.cron === '0 * * * *') return 'Hourly';
-  if (task.cron?.startsWith('0 */')) {
-    const hours = task.cron.match(/^0 \*\/(\d+) \* \* \*$/)?.[1];
-    if (hours) return `Every ${hours} hours`;
-  }
-  return scheduleText(task);
-}
-
-function taskLastRunText(task: ScheduledTaskSummary, nowMs = Date.now()) {
-  if (isPastDueOneTimeTask(task, nowMs)) return 'Scheduled time passed';
-  return task.lastRunAt ? `Last run ${timeAgo(task.lastRunAt)}` : 'Not run yet';
-}
-
-function taskTargetLabel(task: ScheduledTaskSummary) {
-  return task.targetType === 'conversation' ? 'Thread' : 'Job';
-}
-
-function taskReactionKind(task: ScheduledTaskSummary): ReactionKind {
-  return task.targetType === 'conversation' ? 'thread' : 'agent';
-}
-
 function reactionLaneLabel(kind: ReactionKind) {
   switch (kind) {
     case 'agent':
@@ -556,9 +544,146 @@ function activitySearchText(event: AutomationActivityEvent) {
     .toLowerCase();
 }
 
-export function buildAutomationActivityEvents(tasks: ScheduledTaskSummary[], nowMs = Date.now()): AutomationActivityEvent[] {
-  const sorted = sortTasks(tasks);
-  return sorted.map((task) => {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readEventBusEvents(input: unknown): EventBusEventSummary[] {
+  const events = isRecord(input) && Array.isArray(input.events) ? input.events : [];
+  return events
+    .map((event): EventBusEventSummary | null => {
+      if (!isRecord(event) || typeof event.id !== 'string' || typeof event.type !== 'string' || typeof event.source !== 'string') {
+        return null;
+      }
+      const reactions = Array.isArray(event.reactions)
+        ? event.reactions
+            .map((reaction): EventBusReactionSummary | null => {
+              if (!isRecord(reaction) || typeof reaction.id !== 'string') return null;
+              return {
+                id: reaction.id,
+                subscriptionId: typeof reaction.subscriptionId === 'string' ? reaction.subscriptionId : '',
+                subscriptionName: typeof reaction.subscriptionName === 'string' ? reaction.subscriptionName : 'Reaction',
+                actionType:
+                  typeof reaction.actionType === 'string' ? (reaction.actionType as EventBusReactionSummary['actionType']) : 'event',
+                status: typeof reaction.status === 'string' ? reaction.status : 'pending',
+                output: isRecord(reaction.output) ? reaction.output : undefined,
+                error: typeof reaction.error === 'string' ? reaction.error : undefined,
+              };
+            })
+            .filter((reaction): reaction is EventBusReactionSummary => Boolean(reaction))
+        : [];
+      return {
+        id: event.id,
+        type: event.type,
+        source: event.source,
+        payload: isRecord(event.payload) ? event.payload : {},
+        metadata: isRecord(event.metadata) ? event.metadata : {},
+        occurredAt: typeof event.occurredAt === 'string' ? event.occurredAt : new Date().toISOString(),
+        recordedAt: typeof event.recordedAt === 'string' ? event.recordedAt : undefined,
+        replayOfEventId: typeof event.replayOfEventId === 'string' ? event.replayOfEventId : undefined,
+        reactions,
+      };
+    })
+    .filter((event): event is EventBusEventSummary => Boolean(event));
+}
+
+function reactionKindFromAction(actionType: EventBusReactionSummary['actionType']): ReactionKind {
+  if (actionType === 'start_thread') return 'thread';
+  if (actionType === 'run_script') return 'script';
+  if (actionType === 'publish_event') return 'event';
+  return 'agent';
+}
+
+function toneFromReactionStatus(status: string): ActivityTone {
+  if (status === 'failed') return 'danger';
+  if (status === 'pending') return 'warning';
+  return 'success';
+}
+
+function buildEventBusActivityEvents(events: EventBusEventSummary[]): AutomationActivityEvent[] {
+  return events.map((event) => {
+    const firstReaction = event.reactions?.[0];
+    const tone = firstReaction ? toneFromReactionStatus(firstReaction.status) : 'muted';
+    const reactionKind = firstReaction ? reactionKindFromAction(firstReaction.actionType) : 'event';
+    const relativeTime = timeAgo(event.occurredAt);
+    const reactionStatus = firstReaction
+      ? firstReaction.status === 'completed'
+        ? 'Completed'
+        : firstReaction.status === 'failed'
+          ? 'Failed'
+          : 'Pending'
+      : 'No match';
+    const emittedEvent =
+      firstReaction?.actionType === 'publish_event' && typeof firstReaction.output?.eventId === 'string'
+        ? String(firstReaction.output.eventId)
+        : undefined;
+    return {
+      id: event.id,
+      taskId: typeof event.metadata?.taskId === 'string' ? event.metadata.taskId : undefined,
+      replayMode: 'event-bus',
+      eventName: event.type,
+      source: event.source,
+      title: event.type,
+      relativeTime,
+      absoluteTime: event.occurredAt,
+      status: firstReaction ? (firstReaction.status === 'failed' ? 'Failed' : 'Processed') : 'Unmatched',
+      tone,
+      matches: event.reactions?.length ?? 0,
+      reactionKind,
+      reactionTitle: firstReaction?.subscriptionName ?? 'No consumer',
+      reactionStatus,
+      reactionMeta: firstReaction?.actionType ?? 'Event recorded',
+      emittedEvent,
+      trace: [
+        { label: event.source, meta: event.occurredAt, tone: 'accent' },
+        { label: event.type, meta: relativeTime, tone },
+        {
+          label: firstReaction?.subscriptionName ?? 'No matching subscription',
+          meta: reactionStatus,
+          tone,
+        },
+      ],
+    };
+  });
+}
+
+function scheduleText(task: ScheduledTaskSummary) {
+  if (task.cron) return `Cron ${task.cron}`;
+  if (task.at) return `Once ${task.at}`;
+  return 'Manual';
+}
+
+function taskScopeText(task: ScheduledTaskSummary) {
+  return task.cwd?.split('/').filter(Boolean).at(-1) ?? task.threadTitle ?? task.threadConversationId ?? '';
+}
+
+function taskScheduleSummary(task: ScheduledTaskSummary) {
+  const preset = CRON_PRESETS.find((candidate) => candidate.cron === task.cron);
+  if (preset) return preset.label;
+  if (task.cron === '0 2 * * *') return 'Daily at 02:00';
+  if (task.cron === '0 * * * *') return 'Hourly';
+  if (task.cron?.startsWith('0 */')) {
+    const hours = task.cron.match(/^0 \*\/(\d+) \* \* \*$/)?.[1];
+    if (hours) return `Every ${hours} hours`;
+  }
+  return scheduleText(task);
+}
+
+function taskLastRunText(task: ScheduledTaskSummary, nowMs = Date.now()) {
+  if (isPastDueOneTimeTask(task, nowMs)) return 'Scheduled time passed';
+  return task.lastRunAt ? `Last run ${timeAgo(task.lastRunAt)}` : 'Not run yet';
+}
+
+function taskTargetLabel(task: ScheduledTaskSummary) {
+  return task.targetType === 'conversation' ? 'Thread' : 'Job';
+}
+
+function taskReactionKind(task: ScheduledTaskSummary): ReactionKind {
+  return task.targetType === 'conversation' ? 'thread' : 'agent';
+}
+
+function buildFallbackActivityEvents(tasks: ScheduledTaskSummary[], nowMs = Date.now()): AutomationActivityEvent[] {
+  return sortTasks(tasks).map((task) => {
     const name = taskName(task);
     const reactionKind = taskReactionKind(task);
     const target = taskTargetLabel(task);
@@ -635,6 +760,7 @@ export function buildAutomationActivityEvents(tasks: ScheduledTaskSummary[], now
     return {
       id: `${task.id}:${eventName}`,
       taskId: task.id,
+      replayMode: 'task-run',
       eventName,
       source,
       title: name,
@@ -1008,7 +1134,9 @@ function ActivityTimeline({
                   selected ? 'bg-accent/10' : 'hover:bg-surface/25',
                 )}
                 onClick={() => onSelect(event.id)}
-                onDoubleClick={() => onOpenEditor(event.taskId)}
+                onDoubleClick={() => {
+                  if (event.taskId) onOpenEditor(event.taskId);
+                }}
               >
                 <div className="text-[12px] leading-5 text-secondary">
                   <div className="font-mono text-primary">
@@ -1070,7 +1198,7 @@ function ActivityInspector({
 }: {
   event: AutomationActivityEvent | null;
   busy: string | null;
-  onReemit: (taskId: string) => void;
+  onReemit: (event: AutomationActivityEvent) => void;
   onCreateReaction: (taskId: string) => void;
   onPausePublisher: (taskId: string) => void;
   onOpenThread: (taskId: string) => void;
@@ -1115,7 +1243,8 @@ function ActivityInspector({
     );
   }
 
-  const actionBusy = busy === `run:${event.taskId}` || busy === `pause:${event.taskId}`;
+  const replayBusyKey = event.replayMode === 'event-bus' ? `replay:${event.id}` : event.taskId ? `run:${event.taskId}` : null;
+  const actionBusy = busy === replayBusyKey || (event.taskId ? busy === `pause:${event.taskId}` : false);
   return (
     <aside className="flex h-full min-h-0 w-[22rem] shrink-0 flex-col border-l border-border-subtle/70 bg-background/55">
       <div className="border-b border-border-subtle/70 px-5 py-5">
@@ -1155,14 +1284,18 @@ function ActivityInspector({
 
       <div className="border-t border-border-subtle/70 px-5 py-4">
         <div className="grid gap-2">
-          <ToolbarButton disabled={actionBusy || event.status === 'Disabled'} onClick={() => onReemit(event.taskId)}>
-            {busy === `run:${event.taskId}` ? 'Starting…' : 'Re-emit Event'}
+          <ToolbarButton disabled={actionBusy || event.status === 'Disabled'} onClick={() => onReemit(event)}>
+            {busy === replayBusyKey ? (event.replayMode === 'event-bus' ? 'Replaying…' : 'Starting…') : 'Re-emit Event'}
           </ToolbarButton>
-          <ToolbarButton onClick={() => onCreateReaction(event.taskId)}>Create Reaction</ToolbarButton>
-          {event.reactionKind === 'thread' ? <ToolbarButton onClick={() => onOpenThread(event.taskId)}>Open Thread</ToolbarButton> : null}
-          <ToolbarButton disabled={actionBusy || event.status === 'Disabled'} onClick={() => onPausePublisher(event.taskId)}>
-            {busy === `pause:${event.taskId}` ? 'Pausing…' : 'Pause Publisher'}
-          </ToolbarButton>
+          {event.taskId ? <ToolbarButton onClick={() => onCreateReaction(event.taskId)}>Create Reaction</ToolbarButton> : null}
+          {event.reactionKind === 'thread' && event.taskId ? (
+            <ToolbarButton onClick={() => onOpenThread(event.taskId)}>Open Thread</ToolbarButton>
+          ) : null}
+          {event.taskId ? (
+            <ToolbarButton disabled={actionBusy || event.status === 'Disabled'} onClick={() => onPausePublisher(event.taskId as string)}>
+              {busy === `pause:${event.taskId}` ? 'Pausing…' : 'Pause Publisher'}
+            </ToolbarButton>
+          ) : null}
         </div>
       </div>
     </aside>
@@ -1236,6 +1369,7 @@ function PolicyRuleRow({
 export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; context?: AutomationsPageContext }) {
   const openNewFromRoute = shouldOpenNewAutomationFromSearch(context?.search);
   const [tasks, setTasks] = useState<ScheduledTaskSummary[]>([]);
+  const [eventBusEvents, setEventBusEvents] = useState<EventBusEventSummary[]>([]);
   const [health, setHealth] = useState<ScheduledTaskSchedulerHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1263,12 +1397,14 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     };
     let nextTasks: unknown;
     let nextHealth: unknown;
+    let nextEventBusEvents: unknown;
     let nextConversations: unknown;
     let nextModels: unknown;
     try {
-      [nextTasks, nextHealth, nextConversations, nextModels] = await Promise.all([
+      [nextTasks, nextHealth, nextEventBusEvents, nextConversations, nextModels] = await Promise.all([
         pa.automations.list(),
         pa.automations.readSchedulerHealth(),
+        pa.extension.invoke('eventBus', { action: 'list', limit: 100 }),
         extensionClient.conversations?.list?.() ?? Promise.resolve([]),
         extensionClient.models?.() ?? Promise.resolve({ models: [] }),
       ]);
@@ -1278,6 +1414,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     }
     if (loadSequence !== loadSequenceRef.current) return;
     setTasks(sortTasks(Array.isArray(nextTasks) ? nextTasks : []));
+    setEventBusEvents(readEventBusEvents(nextEventBusEvents));
     setHealth(nextHealth as ScheduledTaskSchedulerHealth);
     setConversationOptions(readConversationOptions(nextConversations));
     setModelOptions(readModelOptions(nextModels));
@@ -1365,17 +1502,34 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     [closeEditor, editingId, form, load, pa],
   );
 
-  const runTask = useCallback(
-    async (taskId: string) => {
-      setBusy(`run:${taskId}`);
+  const reemitActivityEvent = useCallback(
+    async (event: AutomationActivityEvent) => {
+      if (event.replayMode === 'task-run') {
+        if (!event.taskId) return;
+        setBusy(`run:${event.taskId}`);
+        try {
+          await pa.automations.run(event.taskId);
+          setNotice('Publisher started.');
+          await load();
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setError(msg);
+          pa.ui.notify({ type: 'error', message: `Failed to start publisher: ${msg}`, source: 'system-automations' });
+        } finally {
+          setBusy(null);
+        }
+        return;
+      }
+
+      setBusy(`replay:${event.id}`);
       try {
-        await pa.automations.run(taskId);
-        setNotice('Automation run started.');
+        await pa.extension.invoke('eventBus', { action: 'replay', eventId: event.id });
+        setNotice('Event re-emitted.');
         await load();
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         setError(msg);
-        pa.ui.notify({ type: 'error', message: `Failed to run automation: ${msg}`, source: 'system-automations' });
+        pa.ui.notify({ type: 'error', message: `Failed to re-emit event: ${msg}`, source: 'system-automations' });
       } finally {
         setBusy(null);
       }
@@ -1516,7 +1670,10 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const allPastDueTasks = useMemo(() => sortPastDueTasks(tasks.filter((task) => isPastDueOneTimeTask(task, nowMs))), [tasks, nowMs]);
   const pastDueLabel = allPastDueTasks.length === 1 ? '1 past due' : `${allPastDueTasks.length} past due`;
 
-  const activityEvents = useMemo(() => buildAutomationActivityEvents(tasks, nowMs), [nowMs, tasks]);
+  const activityEvents = useMemo(() => {
+    const realEvents = buildEventBusActivityEvents(eventBusEvents);
+    return realEvents.length > 0 ? realEvents : buildFallbackActivityEvents(tasks, nowMs);
+  }, [eventBusEvents, nowMs, tasks]);
   const filteredActivityEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return activityEvents.filter((event) => {
@@ -2092,7 +2249,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
             <ActivityInspector
               event={selectedActivity}
               busy={busy}
-              onReemit={(taskId) => void runTask(taskId)}
+              onReemit={(event) => void reemitActivityEvent(event)}
               onCreateReaction={(taskId) => {
                 const task = tasks.find((candidate) => candidate.id === taskId);
                 openEditor(task);

@@ -22,4 +22,33 @@ describe('backendApi/events', () => {
     });
     expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(2, '../../shared/appEvents.js', 'invalidateAppTopics', ['extensions']);
   });
+
+  it('routes durable event bus operations through the automation event bus host module', async () => {
+    const events = await import('./events.js');
+    resolver.callServerModuleExport.mockResolvedValue({});
+
+    await events.emitEvent({ type: 'tweet.created' });
+    await events.replayEvent({ eventId: 'evt-1' });
+    await events.listEvents({ limit: 10 });
+    await events.listSubscriptions();
+    await events.saveSubscription({ name: 'Worker' });
+    await events.deleteSubscription({ subscriptionId: 'sub-1' });
+
+    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(1, '../../automation/eventBusHost.js', 'emitEvent', {
+      type: 'tweet.created',
+    });
+    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(2, '../../automation/eventBusHost.js', 'replayEvent', {
+      eventId: 'evt-1',
+    });
+    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(3, '../../automation/eventBusHost.js', 'listEvents', {
+      limit: 10,
+    });
+    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(4, '../../automation/eventBusHost.js', 'listSubscriptions', undefined);
+    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(5, '../../automation/eventBusHost.js', 'saveSubscription', {
+      name: 'Worker',
+    });
+    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(6, '../../automation/eventBusHost.js', 'deleteSubscription', {
+      subscriptionId: 'sub-1',
+    });
+  });
 });

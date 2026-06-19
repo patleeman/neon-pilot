@@ -27,6 +27,14 @@
         "worker": {
           "enabled": true
         }
+      },
+      {
+        "id": "eventBus",
+        "handler": "eventBus",
+        "title": "Event bus",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
@@ -56,14 +64,7 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": [
-                "list",
-                "get",
-                "save",
-                "delete",
-                "validate",
-                "run"
-              ]
+              "enum": ["list", "get", "save", "delete", "validate", "run"]
             },
             "profile": {
               "type": "string"
@@ -85,28 +86,18 @@
             },
             "targetType": {
               "type": "string",
-              "enum": [
-                "background-agent",
-                "conversation"
-              ]
+              "enum": ["background-agent", "conversation"]
             },
             "threadMode": {
               "type": "string",
-              "enum": [
-                "dedicated",
-                "existing",
-                "none"
-              ]
+              "enum": ["dedicated", "existing", "none"]
             },
             "threadConversationId": {
               "type": "string"
             },
             "deliverAs": {
               "type": "string",
-              "enum": [
-                "steer",
-                "followUp"
-              ]
+              "enum": ["steer", "followUp"]
             },
             "model": {
               "type": "string"
@@ -148,10 +139,62 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "action"
-          ],
+          "required": ["action"],
           "additionalProperties": false
+        }
+      },
+      {
+        "id": "event-bus",
+        "name": "event_bus",
+        "title": "Event bus",
+        "description": "Emit inspectable events, replay events, and manage event subscriptions that can start agents, scripts, threads, tasks, or publish follow-on events.",
+        "action": "eventBus",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": ["emit", "replay", "list", "list_subscriptions", "save_subscription", "delete_subscription"]
+            },
+            "type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "payload": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "metadata": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "eventId": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "subscriptionId": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "pattern": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "subscriptionAction": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": ["action"],
+          "additionalProperties": true
         }
       }
     ],
@@ -184,10 +227,7 @@
         "inputAction": "list",
         "jsonDefault": true,
         "usage": "tasks list [--json]",
-        "examples": [
-          "neon-pilot tasks list",
-          "neon-pilot tasks list --json"
-        ],
+        "examples": ["neon-pilot tasks list", "neon-pilot tasks list --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -211,15 +251,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "tasks",
-            "list"
-          ],
+          "argv": ["tasks", "list"],
           "expectJsonFields": []
         }
       },
@@ -231,10 +265,7 @@
         "inputAction": "get",
         "jsonDefault": true,
         "usage": "tasks get <id> [--json]",
-        "examples": [
-          "neon-pilot tasks get example-id",
-          "neon-pilot tasks get example-id --json"
-        ],
+        "examples": ["neon-pilot tasks get example-id", "neon-pilot tasks get example-id --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -260,10 +291,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "tasks-save",
@@ -306,10 +334,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "tasks-delete",
@@ -319,10 +344,7 @@
         "inputAction": "delete",
         "jsonDefault": true,
         "usage": "tasks delete <id> [--json]",
-        "examples": [
-          "neon-pilot tasks delete example-id",
-          "neon-pilot tasks delete example-id --json"
-        ],
+        "examples": ["neon-pilot tasks delete example-id", "neon-pilot tasks delete example-id --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -352,10 +374,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "tasks-validate",
@@ -365,11 +384,7 @@
         "inputAction": "validate",
         "jsonDefault": true,
         "usage": "tasks validate [id] [--json]",
-        "examples": [
-          "neon-pilot tasks validate",
-          "neon-pilot tasks validate daily-check",
-          "neon-pilot tasks validate --json"
-        ],
+        "examples": ["neon-pilot tasks validate", "neon-pilot tasks validate daily-check", "neon-pilot tasks validate --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -394,15 +409,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "tasks",
-            "validate"
-          ],
+          "argv": ["tasks", "validate"],
           "expectJsonFields": []
         }
       },
@@ -414,10 +423,7 @@
         "inputAction": "run",
         "jsonDefault": true,
         "usage": "tasks run <id> [--json]",
-        "examples": [
-          "neon-pilot tasks run daily-check",
-          "neon-pilot tasks run daily-check --json"
-        ],
+        "examples": ["neon-pilot tasks run daily-check", "neon-pilot tasks run daily-check --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -447,10 +453,251 @@
         "idempotent": false,
         "startsBackgroundWork": true,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "events-list",
+        "command": "events list",
+        "description": "List recent event bus events.",
+        "action": "eventBus",
+        "inputAction": "list",
+        "jsonDefault": true,
+        "usage": "events list [--json]",
+        "examples": ["neon-pilot events list", "neon-pilot events list --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 0
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean"
+            },
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": {
+          "argv": ["events", "list"],
+          "expectJsonFields": []
+        }
+      },
+      {
+        "id": "events-emit",
+        "command": "events emit",
+        "description": "Emit an event into the event bus: events emit <type> --source <source> [--payload-json <json>].",
+        "action": "eventBus",
+        "inputAction": "emit",
+        "jsonDefault": true,
+        "usage": "events emit <type> --source <source> [--payload-json <json>] [--json]",
+        "examples": ["neon-pilot events emit tweet.created --source script:twitter --payload-json '{\"tweetId\":\"tw-1\"}' --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean"
+            },
+            "source": {
+              "type": "string"
+            },
+            "payload-json": {
+              "type": "string"
+            },
+            "metadata-json": {
+              "type": "string"
+            },
+            "dry-run": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "background",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "events-replay",
+        "command": "events replay",
+        "description": "Replay an event by re-emitting it against current subscriptions.",
+        "action": "eventBus",
+        "inputAction": "replay",
+        "jsonDefault": true,
+        "usage": "events replay <event-id> [--json]",
+        "examples": ["neon-pilot events replay evt_123 --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean"
+            },
+            "dry-run": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "background",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "events-subscriptions-list",
+        "command": "events subscriptions list",
+        "description": "List event bus subscriptions.",
+        "action": "eventBus",
+        "inputAction": "list_subscriptions",
+        "jsonDefault": true,
+        "usage": "events subscriptions list [--json]",
+        "examples": ["neon-pilot events subscriptions list --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 0
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "events-subscriptions-save",
+        "command": "events subscriptions save",
+        "description": "Create or update an event subscription: events subscriptions save <id> --name <name> --pattern <pattern> --action-json <json>.",
+        "action": "eventBus",
+        "inputAction": "save_subscription",
+        "jsonDefault": true,
+        "usage": "events subscriptions save <id> --name <name> --pattern <pattern> --action-json <json> [--json]",
+        "examples": [
+          "neon-pilot events subscriptions save sub-tweets --name \"Tweet Worker\" --pattern tweet.* --action-json '{\"type\":\"start_agent\",\"prompt\":\"Summarize this tweet\"}' --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            },
+            "pattern": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "action-json": {
+              "type": "string"
+            },
+            "dry-run": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "events-subscriptions-delete",
+        "command": "events subscriptions delete",
+        "description": "Delete an event bus subscription.",
+        "action": "eventBus",
+        "inputAction": "delete_subscription",
+        "jsonDefault": true,
+        "usage": "events subscriptions delete <id> [--json]",
+        "examples": ["neon-pilot events subscriptions delete sub-tweets --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean"
+            },
+            "dry-run": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "destructive",
+        "requiresApp": false,
+        "destructive": true,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
       }
     ],
     "skills": [

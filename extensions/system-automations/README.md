@@ -16,6 +16,12 @@ schedule producer -> event -> reaction -> agent/thread/script/published event
 
 The timeline intentionally does not show every possible emitted event. It focuses on events that caused or attempted work, plus scheduler/publisher states that need user attention.
 
+## Event Bus
+
+The `event_bus` backend action and `events ...` CLI commands are the automation event boundary. Callers emit typed events with payload and metadata, list recent events, replay a recorded event, and manage subscriptions. Subscriptions match event type patterns and can start a scheduled task, background agent, conversation thread, shell script, or publish a follow-on event.
+
+Event bus state is backend-owned in the daemon runtime database. Frontend and extension code should list or mutate it through the `eventBus` backend action or `@neon-pilot/extensions/backend/events`; do not mirror subscriptions or reaction state in renderer storage.
+
 ## Activity Timeline
 
 The Automations page opens on a timeline-first view with two main regions:

@@ -23,6 +23,7 @@ import {
   saveDurableRunStatus,
   scanDurableRun,
 } from '../../runs/store.js';
+import { emitEventBusEvent } from '../eventBus.js';
 import {
   appendAutomationActivityEntry,
   deleteStoredAutomation,
@@ -812,6 +813,23 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
         logPath: finalResult.logPath,
         runId: durableRun.runId,
       });
+      void emitEventBusEvent({
+        dbPath: runtimeDbPath,
+        event: {
+          type: 'automation.completed',
+          source: 'scheduler',
+          payload: {
+            taskId: runnableTask.id,
+            runId: durableRun.runId,
+            logPath: finalResult.logPath,
+          },
+          metadata: {
+            taskId: runnableTask.id,
+            runId: durableRun.runId,
+          },
+          occurredAt: finishedAt,
+        },
+      }).catch((error) => context.logger.warn(`failed to record completion event id=${runnableTask.id}: ${(error as Error).message}`));
       context.logger.info(`task completed id=${runnableTask.id} run=${durableRun.runId} log=${finalResult.logPath}`);
 
       await deliverTaskCallbackWakeup(runnableTask, 'success', context, {
@@ -882,6 +900,24 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
         logPath: finalResult?.logPath,
         runId: durableRun.runId,
       });
+      void emitEventBusEvent({
+        dbPath: runtimeDbPath,
+        event: {
+          type: 'automation.failed',
+          source: 'scheduler',
+          payload: {
+            taskId: runnableTask.id,
+            runId: durableRun.runId,
+            error: record.lastError,
+            logPath: finalResult?.logPath,
+          },
+          metadata: {
+            taskId: runnableTask.id,
+            runId: durableRun.runId,
+          },
+          occurredAt: finishedAt,
+        },
+      }).catch((error) => context.logger.warn(`failed to record failure event id=${runnableTask.id}: ${(error as Error).message}`));
       context.logger.warn(`task failed id=${runnableTask.id} run=${durableRun.runId} error=${record.lastError}`);
 
       await deliverTaskCallbackWakeup(runnableTask, 'failed', context, {
@@ -904,6 +940,22 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
     options: { runIdOverride?: string } = {},
   ): void => {
     const controller = new AbortController();
+    void emitEventBusEvent({
+      dbPath: runtimeDbPath,
+      event: {
+        type: 'schedule.due',
+        source: 'scheduler',
+        payload: {
+          taskId: task.id,
+          title: task.title,
+          schedule: formatTaskSchedule(task),
+        },
+        metadata: {
+          taskId: task.id,
+          targetType: task.targetType,
+        },
+      },
+    }).catch((error) => context.logger.warn(`failed to record schedule event id=${task.id}: ${(error as Error).message}`));
 
     record.running = true;
     record.runningStartedAt = now().toISOString();

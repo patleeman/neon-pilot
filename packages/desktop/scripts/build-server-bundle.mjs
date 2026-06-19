@@ -61,6 +61,7 @@ const backendApiLazyModuleEntries = [
   ['conversations/sessions.js', 'server/conversations/sessions.ts'],
   ['automation/attentionEvents.js', 'server/automation/attentionEvents.ts'],
   ['automation/deferredResumes.js', 'server/automation/deferredResumes.ts'],
+  ['automation/eventBusHost.js', 'server/automation/eventBusHost.ts'],
   ['automation/humanDateTime.js', 'server/automation/humanDateTime.ts'],
   ['automation/scheduledTasks.js', 'server/automation/scheduledTasks.ts'],
   ['automation/scheduledTaskThreads.js', 'server/automation/scheduledTaskThreads.ts'],
