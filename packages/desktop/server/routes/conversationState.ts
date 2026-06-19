@@ -34,6 +34,8 @@ let buildLiveSessionResourceOptionsFn: (profile?: string) => LiveSessionResource
   additionalThemePaths: [],
 });
 
+let buildLiveSessionResourceOptionsAsyncFn: ((profile?: string) => Promise<LiveSessionResourceOptions>) | undefined;
+
 let buildLiveSessionExtensionFactoriesFn: () => ExtensionFactory[] = () => [];
 
 let flushLiveDeferredResumesFn: () => Promise<void> = async () => {};
@@ -41,11 +43,16 @@ let flushLiveDeferredResumesFn: () => Promise<void> = async () => {};
 function initializeConversationStateRoutesContext(
   context: Pick<
     ServerRouteContext,
-    'getRuntimeScope' | 'buildLiveSessionResourceOptions' | 'buildLiveSessionExtensionFactories' | 'flushLiveDeferredResumes'
+    | 'getRuntimeScope'
+    | 'buildLiveSessionResourceOptions'
+    | 'buildLiveSessionResourceOptionsAsync'
+    | 'buildLiveSessionExtensionFactories'
+    | 'flushLiveDeferredResumes'
   >,
 ): void {
   getRuntimeScopeFn = context.getRuntimeScope;
   buildLiveSessionResourceOptionsFn = context.buildLiveSessionResourceOptions;
+  buildLiveSessionResourceOptionsAsyncFn = context.buildLiveSessionResourceOptionsAsync;
   buildLiveSessionExtensionFactoriesFn = context.buildLiveSessionExtensionFactories;
   flushLiveDeferredResumesFn = context.flushLiveDeferredResumes;
 }
@@ -72,7 +79,11 @@ export function registerConversationStateRoutes(
   router: Pick<Express, 'get' | 'post' | 'patch'>,
   context: Pick<
     ServerRouteContext,
-    'getRuntimeScope' | 'buildLiveSessionResourceOptions' | 'buildLiveSessionExtensionFactories' | 'flushLiveDeferredResumes'
+    | 'getRuntimeScope'
+    | 'buildLiveSessionResourceOptions'
+    | 'buildLiveSessionResourceOptionsAsync'
+    | 'buildLiveSessionExtensionFactories'
+    | 'flushLiveDeferredResumes'
   >,
 ): void {
   initializeConversationStateRoutesContext(context);
@@ -143,6 +154,7 @@ export function registerConversationStateRoutes(
       const result = await recoverConversationCapability(req.params.id, {
         getRuntimeScope: getRuntimeScopeFn,
         buildLiveSessionResourceOptions: buildLiveSessionResourceOptionsFn,
+        buildLiveSessionResourceOptionsAsync: buildLiveSessionResourceOptionsAsyncFn,
         buildLiveSessionExtensionFactories: buildLiveSessionExtensionFactoriesFn,
         flushLiveDeferredResumes: flushLiveDeferredResumesFn,
       });

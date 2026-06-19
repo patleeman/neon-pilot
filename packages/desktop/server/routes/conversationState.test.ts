@@ -47,6 +47,7 @@ function setupRouter() {
   const context = {
     getRuntimeScope: vi.fn(() => 'shared'),
     buildLiveSessionResourceOptions: vi.fn(() => ({ resources: true })),
+    buildLiveSessionResourceOptionsAsync: vi.fn(async () => ({ resources: 'async' })),
     buildLiveSessionExtensionFactories: vi.fn(() => ['factory']),
     flushLiveDeferredResumes: vi.fn(),
   };
@@ -141,6 +142,7 @@ describe('conversationState routes', () => {
       expect.objectContaining({
         getRuntimeScope: context.getRuntimeScope,
         buildLiveSessionResourceOptions: context.buildLiveSessionResourceOptions,
+        buildLiveSessionResourceOptionsAsync: context.buildLiveSessionResourceOptionsAsync,
         buildLiveSessionExtensionFactories: context.buildLiveSessionExtensionFactories,
         flushLiveDeferredResumes: context.flushLiveDeferredResumes,
       }),
