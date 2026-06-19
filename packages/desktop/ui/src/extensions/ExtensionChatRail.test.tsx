@@ -11,6 +11,7 @@ Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 const sendMock = vi.hoisted(() => vi.fn());
 const abortMock = vi.hoisted(() => vi.fn());
 const reconnectMock = vi.hoisted(() => vi.fn());
+const refreshMock = vi.hoisted(() => vi.fn());
 const desktopConversationStateMock = vi.hoisted(() => vi.fn());
 const updateConversationModelPreferencesMock = vi.hoisted(() => vi.fn());
 const desktopHookState = vi.hoisted(() => ({
@@ -43,6 +44,7 @@ vi.mock('../hooks/useDesktopConversationState', () => ({
     send: sendMock,
     abort: abortMock,
     reconnect: reconnectMock,
+    refresh: refreshMock,
   })),
 }));
 
@@ -90,6 +92,7 @@ describe('ExtensionChatRail', () => {
     sendMock.mockReset();
     abortMock.mockReset();
     reconnectMock.mockReset();
+    refreshMock.mockReset();
     desktopHookState.loading = false;
     desktopHookState.state = {
       stream: {
@@ -119,46 +122,21 @@ describe('ExtensionChatRail', () => {
 
   it('submits through the shared desktop conversation state with extension context messages', async () => {
     const onTurnComplete = vi.fn();
-    desktopConversationStateMock
-      .mockResolvedValueOnce({
-        conversationId: 'conversation-1',
-        sessionDetail: { meta: { cwd: null } },
-        liveSession: { live: true, id: 'conversation-1', cwd: null, sessionFile: null, isStreaming: false },
-        stream: {
-          blocks: [],
-          isStreaming: false,
-          isCompacting: false,
-          contextUsage: null,
-          tokens: null,
-        },
-      })
-      .mockResolvedValueOnce({
-        conversationId: 'conversation-1',
-        sessionDetail: { meta: { cwd: null } },
-        liveSession: { live: true, id: 'conversation-1', cwd: null, sessionFile: null, isStreaming: true },
-        stream: {
-          blocks: [{ type: 'text', id: 'user-1', text: 'Review this draft', ts: '2026-06-03T00:00:00.000Z' }],
-          isStreaming: true,
-          isCompacting: false,
-          contextUsage: null,
-          tokens: null,
-        },
-      })
-      .mockResolvedValueOnce({
-        conversationId: 'conversation-1',
-        sessionDetail: { meta: { cwd: null } },
-        liveSession: { live: true, id: 'conversation-1', cwd: null, sessionFile: null, isStreaming: false },
-        stream: {
-          blocks: [
-            { type: 'text', id: 'user-1', text: 'Review this draft', ts: '2026-06-03T00:00:00.000Z' },
-            { type: 'text', id: 'assistant-1', text: 'Done.', ts: '2026-06-03T00:00:01.000Z' },
-          ],
-          isStreaming: false,
-          isCompacting: false,
-          contextUsage: null,
-          tokens: null,
-        },
-      });
+    refreshMock.mockResolvedValueOnce({
+      conversationId: 'conversation-1',
+      sessionDetail: { meta: { cwd: null } },
+      liveSession: { live: true, id: 'conversation-1', cwd: null, sessionFile: null, isStreaming: false },
+      stream: {
+        blocks: [
+          { type: 'text', id: 'user-1', text: 'Review this draft', ts: '2026-06-03T00:00:00.000Z' },
+          { type: 'text', id: 'assistant-1', text: 'Done.', ts: '2026-06-03T00:00:01.000Z' },
+        ],
+        isStreaming: false,
+        isCompacting: false,
+        contextUsage: null,
+        tokens: null,
+      },
+    });
     render(
       <ExtensionChatRail
         conversationId="conversation-1"
@@ -176,15 +154,8 @@ describe('ExtensionChatRail', () => {
     });
     expect(reconnectMock).toHaveBeenCalled();
     await waitFor(() => {
-      expect(desktopConversationStateMock).toHaveBeenCalledTimes(2);
+      expect(refreshMock).toHaveBeenCalledTimes(1);
     });
-    expect(onTurnComplete).not.toHaveBeenCalled();
-    await waitFor(
-      () => {
-        expect(desktopConversationStateMock).toHaveBeenCalledTimes(3);
-      },
-      { timeout: 2500 },
-    );
     await waitFor(() => {
       expect(onTurnComplete).toHaveBeenCalled();
     });
@@ -193,18 +164,7 @@ describe('ExtensionChatRail', () => {
 
   it('does not complete a submitted turn until a result block appears', async () => {
     const onTurnComplete = vi.fn();
-    desktopConversationStateMock.mockResolvedValue({
-      conversationId: 'conversation-1',
-      sessionDetail: { meta: { cwd: null } },
-      liveSession: { live: true, id: 'conversation-1', cwd: null, sessionFile: null, isStreaming: false },
-      stream: {
-        blocks: [],
-        isStreaming: false,
-        isCompacting: false,
-        contextUsage: null,
-        tokens: null,
-      },
-    });
+    refreshMock.mockResolvedValue(null);
 
     render(<ExtensionChatRail conversationId="conversation-1" onTurnComplete={onTurnComplete} />);
 
@@ -214,7 +174,7 @@ describe('ExtensionChatRail', () => {
       expect(sendMock).toHaveBeenCalledWith('Review this draft', 'steer', undefined, undefined, undefined);
     });
     await waitFor(() => {
-      expect(desktopConversationStateMock).toHaveBeenCalledTimes(2);
+      expect(refreshMock).toHaveBeenCalledTimes(1);
     });
     expect(onTurnComplete).not.toHaveBeenCalled();
   });
@@ -247,19 +207,17 @@ describe('ExtensionChatRail', () => {
     expect(screen.queryByTestId('chat-view')).toBeNull();
   });
 
-  it('hydrates and renders authoritative host conversation blocks when the hook has no blocks yet', async () => {
-    desktopConversationStateMock.mockResolvedValueOnce({
-      conversationId: 'conversation-1',
-      sessionDetail: { meta: { cwd: null } },
-      liveSession: { live: true, id: 'conversation-1', cwd: null, sessionFile: null, isStreaming: false },
+  it('renders authoritative host conversation blocks from the shared conversation hook', async () => {
+    desktopHookState.state = {
       stream: {
-        blocks: [{ type: 'text', id: 'assistant-1', text: 'Visible assistant response', ts: '2026-06-03T00:00:00.000Z' }],
+        blocks: [{ type: 'text', id: 'assistant-1', text: 'Visible assistant response', ts: '2026-06-03T00:00:00.000Z' }] as never[],
         isStreaming: false,
         isCompacting: false,
         contextUsage: null,
         tokens: null,
       },
-    });
+      sessionDetail: { meta: { cwd: null } },
+    };
 
     render(<ExtensionChatRail conversationId="conversation-1" emptyState={<p>No messages</p>} />);
 
@@ -270,7 +228,7 @@ describe('ExtensionChatRail', () => {
     expect(screen.getByTestId('chat-rail-composer').getAttribute('data-layout')).toBe('compact');
   });
 
-  it('clears delayed refresh timers after unmount', async () => {
+  it('does not schedule delayed refresh timers after unmount', async () => {
     vi.useFakeTimers();
     const view = render(<ExtensionChatRail conversationId="conversation-1" />);
 
@@ -282,7 +240,7 @@ describe('ExtensionChatRail', () => {
     });
 
     expect(sendMock).toHaveBeenCalledWith('Review this draft', 'steer', undefined, undefined, undefined);
-    expect(desktopConversationStateMock).toHaveBeenCalledTimes(2);
+    expect(refreshMock).toHaveBeenCalledTimes(1);
 
     view.unmount();
 
@@ -290,44 +248,19 @@ describe('ExtensionChatRail', () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
 
-    expect(desktopConversationStateMock).toHaveBeenCalledTimes(2);
+    expect(refreshMock).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
 
   it('ignores stale refresh errors after switching conversations', async () => {
     let rejectConversationOneRefresh: ((reason?: unknown) => void) | null = null;
 
-    desktopConversationStateMock
-      .mockResolvedValueOnce({
-        conversationId: 'conversation-1',
-        sessionDetail: { meta: { cwd: null } },
-        liveSession: { live: true, id: 'conversation-1', cwd: null, sessionFile: null, isStreaming: false },
-        stream: {
-          blocks: [],
-          isStreaming: false,
-          isCompacting: false,
-          contextUsage: null,
-          tokens: null,
-        },
-      })
-      .mockImplementationOnce(
-        () =>
-          new Promise((_, reject) => {
-            rejectConversationOneRefresh = reject;
-          }),
-      )
-      .mockResolvedValueOnce({
-        conversationId: 'conversation-2',
-        sessionDetail: { meta: { cwd: '/tmp/next-project' } },
-        liveSession: { live: true, id: 'conversation-2', cwd: '/tmp/next-project', sessionFile: null, isStreaming: false },
-        stream: {
-          blocks: [],
-          isStreaming: false,
-          isCompacting: false,
-          contextUsage: null,
-          tokens: null,
-        },
-      });
+    refreshMock.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectConversationOneRefresh = reject;
+        }),
+    );
 
     const onError = vi.fn();
     const view = render(<ExtensionChatRail conversationId="conversation-1" onError={onError} />);
@@ -338,14 +271,10 @@ describe('ExtensionChatRail', () => {
       expect(sendMock).toHaveBeenCalledWith('Review this draft', 'steer', undefined, undefined, undefined);
     });
     await waitFor(() => {
-      expect(desktopConversationStateMock).toHaveBeenCalledTimes(2);
+      expect(refreshMock).toHaveBeenCalledTimes(1);
     });
 
     view.rerender(<ExtensionChatRail conversationId="conversation-2" onError={onError} />);
-
-    await waitFor(() => {
-      expect(desktopConversationStateMock).toHaveBeenCalledTimes(3);
-    });
 
     rejectConversationOneRefresh?.(new Error('stale conversation-1 refresh failed'));
 

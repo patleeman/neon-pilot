@@ -92,6 +92,7 @@ function createLocalApiModuleMock(overrides: Partial<LocalApiModule> = {}): Loca
     createDesktopLiveSession: vi.fn(),
     resumeDesktopLiveSession: vi.fn(),
     submitDesktopLiveSessionPrompt: vi.fn(),
+    submitDesktopConversationMessage: vi.fn(),
     takeOverDesktopLiveSession: vi.fn(),
     restoreDesktopQueuedLiveSessionMessage: vi.fn(),
     compactDesktopLiveSession: vi.fn(),
@@ -765,6 +766,15 @@ describe('LocalHostController', () => {
       referencedKnowledgeFileIds: [],
       referencedAttachmentIds: [],
     });
+    const submitDesktopConversationMessage = vi.fn().mockResolvedValue({
+      ok: true,
+      accepted: true,
+      delivery: 'queued',
+      referencedTaskIds: [],
+      referencedMemoryDocIds: [],
+      referencedKnowledgeFileIds: [],
+      referencedAttachmentIds: [],
+    });
     const takeOverDesktopLiveSession = vi.fn().mockResolvedValue({ controllerSurfaceId: 'surface-1' });
     const restoreDesktopQueuedLiveSessionMessage = vi.fn().mockResolvedValue({ ok: true, text: 'queued hello', images: [] });
     const compactDesktopLiveSession = vi.fn().mockResolvedValue({ ok: true, result: { compacted: true } });
@@ -796,6 +806,7 @@ describe('LocalHostController', () => {
         createDesktopLiveSession,
         resumeDesktopLiveSession,
         submitDesktopLiveSessionPrompt,
+        submitDesktopConversationMessage,
         takeOverDesktopLiveSession,
         restoreDesktopQueuedLiveSessionMessage,
         compactDesktopLiveSession,
@@ -925,6 +936,14 @@ describe('LocalHostController', () => {
       }),
     ).resolves.toEqual(expect.objectContaining({ ok: true, delivery: 'started' }));
     await expect(
+      controller.sendConversationMessage?.({
+        conversationId: 'conversation-1',
+        text: 'hello from transcript',
+        behavior: 'followUp',
+        surfaceId: 'surface-2',
+      }),
+    ).resolves.toEqual(expect.objectContaining({ ok: true, delivery: 'queued' }));
+    await expect(
       controller.restoreQueuedLiveSessionMessage?.({ conversationId: 'live-1', behavior: 'followUp', index: 0 }),
     ).resolves.toEqual({ ok: true, text: 'queued hello', images: [] });
     await expect(controller.compactLiveSession?.({ conversationId: 'live-1', customInstructions: 'be shorter' })).resolves.toEqual({
@@ -979,6 +998,12 @@ describe('LocalHostController', () => {
       conversationId: 'live-1',
       text: 'hello',
       surfaceId: 'surface-1',
+    });
+    expect(submitDesktopConversationMessage).toHaveBeenCalledWith({
+      conversationId: 'conversation-1',
+      text: 'hello from transcript',
+      behavior: 'followUp',
+      surfaceId: 'surface-2',
     });
     expect(restoreDesktopQueuedLiveSessionMessage).toHaveBeenCalledWith({ conversationId: 'live-1', behavior: 'followUp', index: 0 });
     expect(compactDesktopLiveSession).toHaveBeenCalledWith({ conversationId: 'live-1', customInstructions: 'be shorter' });

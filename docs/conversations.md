@@ -54,6 +54,13 @@ Opening a conversation is a read. The frontend asks for conversation state/boots
 
 Sending or explicitly resuming a saved conversation is semantic from the frontend's perspective. The UI calls the conversation message/resume API; the backend may hydrate a live session from the transcript internally when needed. Frontend code should not call recovery/hydration endpoints or branch on recovery details.
 
+Conversation-adjacent UI should keep this same split:
+
+- Conversation content state is read through the shared conversation-state hooks or backend projections. Extension chat rails should not perform their own delayed hydration loops after sending; the hook owns refresh/reconnect behavior.
+- Sidebar presentation preferences such as grouping, sorting, collapsed groups, manual group order, custom labels, and locks are local presentation state. They are separate from the backend-owned conversation workspace projection.
+- App-wide event handling should derive snapshot refreshes from event topics before touching stores. A `runs` or `executions` invalidation refreshes both projections because the visible execution list is derived from run state.
+- Workspace/file-tree request lifecycles should invalidate stale async responses by generation or request id when the workspace, selected file, or directory expansion changes.
+
 Runtime code should not import `conversations/sessions.js` directly. Normal callers use `conversationService.ts` and extension-facing capabilities. The only allowed direct transcript seams are:
 
 - `conversationService.ts` — read-model service boundary with targeted transcript fallback and cache writes.

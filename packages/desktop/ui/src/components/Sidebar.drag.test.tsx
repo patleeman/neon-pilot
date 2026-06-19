@@ -11,7 +11,7 @@ import {
   PINNED_SESSION_IDS_STORAGE_KEY,
   SAVED_WORKSPACE_PATHS_STORAGE_KEY,
 } from '../local/localSettings.js';
-import { readConversationLayout, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
+import { readConversationLayout, resetLocalWriteGrace, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
 import type { SessionMeta } from '../shared/types.js';
 import { sessionStore } from '../store';
 import { Sidebar } from './Sidebar.js';
@@ -24,8 +24,12 @@ const apiMocks = vi.hoisted(() => ({
   updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
   changeConversationCwd: vi.fn(),
+  pickFolder: vi.fn(),
+  createLiveSession: vi.fn(),
+  markConversationAttentionRead: vi.fn(),
   gateways: vi.fn(),
   sessions: vi.fn(),
+  sidebarConversations: vi.fn(),
   sessionMeta: vi.fn(),
 }));
 
@@ -182,8 +186,12 @@ describe('Sidebar group drag reordering', () => {
     apiMocks.updateConversationWorkspace.mockReset();
     apiMocks.setSavedWorkspacePaths.mockReset();
     apiMocks.changeConversationCwd.mockReset();
+    apiMocks.pickFolder.mockReset();
+    apiMocks.createLiveSession.mockReset();
+    apiMocks.markConversationAttentionRead.mockReset();
     apiMocks.gateways.mockReset();
     apiMocks.sessions.mockReset();
+    apiMocks.sidebarConversations.mockReset();
     apiMocks.setOpenConversationTabs.mockImplementation(
       async (
         sessionIds: string[] = [],
@@ -202,10 +210,21 @@ describe('Sidebar group drag reordering', () => {
     );
     apiMocks.updateConversationWorkspace.mockResolvedValue({ ok: true });
     apiMocks.setSavedWorkspacePaths.mockResolvedValue([]);
+    apiMocks.pickFolder.mockResolvedValue({ cancelled: true, path: null });
+    apiMocks.createLiveSession.mockResolvedValue({ id: 'created-conversation', sessionFile: '/tmp/created-conversation.jsonl' });
+    apiMocks.markConversationAttentionRead.mockResolvedValue({ ok: true });
     apiMocks.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });
     apiMocks.sessions.mockResolvedValue([]);
+    apiMocks.sidebarConversations.mockImplementation(async () => ({
+      sessionIds: JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]') as string[],
+      pinnedSessionIds: JSON.parse(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY) ?? '[]') as string[],
+      archivedSessionIds: [],
+      workspacePaths: JSON.parse(localStorage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY) ?? '[]') as string[],
+      sessions: sessionStore.getAll(),
+    }));
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+    resetLocalWriteGrace();
     resetRemoteConversationLayoutCache();
   });
 
@@ -310,7 +329,7 @@ describe('Sidebar group drag reordering', () => {
     await flushAsyncWork();
 
     expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-alpha', betaPath, expect.any(String), undefined);
-    expect(apiMocks.sessions).toHaveBeenCalled();
+    expect(apiMocks.sidebarConversations).toHaveBeenCalled();
     expect(readConversationLayout().sessionIds).toEqual(['conv-alpha-moved', 'conv-beta']);
     expect(container.textContent).toContain('Moved conversation to beta-worktree.');
   });
@@ -361,7 +380,7 @@ describe('Sidebar group drag reordering', () => {
     await flushAsyncWork();
 
     expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-alpha', betaPath, expect.any(String), undefined);
-    expect(apiMocks.sessions).toHaveBeenCalled();
+    expect(apiMocks.sidebarConversations).toHaveBeenCalled();
     expect(container.textContent).toContain('Moved conversation to beta-worktree.');
   });
 
@@ -425,12 +444,6 @@ describe('Sidebar group drag reordering', () => {
       archivedSessionIds: string[];
       workspacePaths: string[];
     }>();
-    const pickerRefresh = createDeferredPromise<{
-      sessionIds: string[];
-      pinnedSessionIds: string[];
-      archivedSessionIds: string[];
-      workspacePaths: string[];
-    }>();
 
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-123']));
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
@@ -442,8 +455,9 @@ describe('Sidebar group drag reordering', () => {
         archivedSessionIds: [],
         workspacePaths: [initialWorkspace],
       })
-      .mockReturnValueOnce(initialLoad.promise)
-      .mockReturnValueOnce(pickerRefresh.promise);
+      .mockReturnValueOnce(initialLoad.promise);
+    apiMocks.pickFolder.mockResolvedValue({ cancelled: false, path: newerWorkspace });
+    apiMocks.setSavedWorkspacePaths.mockResolvedValue([newerWorkspace]);
 
     const container = renderSidebar([createSession({ cwd: initialWorkspace, cwdSlug: 'initial-worktree' })]);
     await flushAsyncWork();
@@ -458,19 +472,20 @@ describe('Sidebar group drag reordering', () => {
     });
     await flushAsyncWork();
 
+    const chooseNewFolderButton = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+      button.textContent?.includes('Choose a new folder'),
+    );
+    if (!chooseNewFolderButton) {
+      throw new Error('Missing choose-new-folder option');
+    }
+
     await act(async () => {
-      pickerRefresh.resolve({
-        sessionIds: ['conv-123'],
-        pinnedSessionIds: [],
-        archivedSessionIds: [],
-        workspacePaths: [newerWorkspace],
-      });
-      await pickerRefresh.promise;
+      chooseNewFolderButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     await flushAsyncWork();
 
     expect(localStorage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY)).toContain(newerWorkspace);
-    expect(container.textContent).toContain(newerWorkspace);
+    expect(container.textContent).toContain('newer-worktree');
 
     await act(async () => {
       initialLoad.resolve({
@@ -485,7 +500,7 @@ describe('Sidebar group drag reordering', () => {
 
     expect(localStorage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY)).toContain(newerWorkspace);
     expect(localStorage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY)).not.toContain(olderWorkspace);
-    expect(container.textContent).toContain(newerWorkspace);
+    expect(container.textContent).toContain('newer-worktree');
     expect(container.textContent).not.toContain(olderWorkspace);
   });
 

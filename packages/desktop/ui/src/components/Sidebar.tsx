@@ -21,11 +21,6 @@ import { useAppEvents, useLiveTitles } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents';
 import {
-  DESKTOP_CONVERSATION_SHORTCUT_EVENT,
-  isSidebarConversationShortcutAction,
-  sidebarConversationShortcutCommandAction,
-} from '../conversation/desktopConversationShortcutActions';
-import {
   buildConversationGroupLabels,
   getConversationGroupLabel,
   groupConversationItemsByCwd,
@@ -45,6 +40,11 @@ import {
   resolveConversationCloseRedirect,
 } from '../conversation/conversationRoutes';
 import {
+  DESKTOP_CONVERSATION_SHORTCUT_EVENT,
+  isSidebarConversationShortcutAction,
+  sidebarConversationShortcutCommandAction,
+} from '../conversation/desktopConversationShortcutActions';
+import {
   clearDraftConversationAttachments,
   clearDraftConversationComposer,
   clearDraftConversationCwd,
@@ -56,6 +56,26 @@ import {
 } from '../conversation/draftConversation';
 import { persistForkPromptDraft } from '../conversation/forking';
 import { startNewConversation } from '../conversation/newConversationNavigation';
+import {
+  normalizeStoredThreadStringList,
+  readCollapsedConversationGroupKeys,
+  readConversationGroupLabelOverrides,
+  readLockedConversationIds,
+  readManualConversationGroupOrder,
+  readThreadsFilterMode,
+  readThreadsOrganizeMode,
+  readThreadsSortMode,
+  type ThreadsFilterMode,
+  type ThreadsOrganizeMode,
+  type ThreadsSortMode,
+  writeCollapsedConversationGroupKeys,
+  writeConversationGroupLabelOverrides,
+  writeLockedConversationIds,
+  writeManualConversationGroupOrder,
+  writeThreadsFilterMode,
+  writeThreadsOrganizeMode,
+  writeThreadsSortMode,
+} from '../conversation/threadPresentationPreferences';
 import { writeClipboardText } from '../desktop/clipboard';
 import { getDesktopBridge, shouldUseNativeAppContextMenus } from '../desktop/desktopBridge';
 import { ConversationDecoratorHost } from '../extensions/ConversationDecoratorHost';
@@ -69,7 +89,6 @@ import { getOrCreateConversationSurfaceId } from '../hooks/sessionStream';
 import { buildConversationBootstrapVersionKey, fetchConversationBootstrapCached } from '../hooks/useConversationBootstrap';
 import { useConversations } from '../hooks/useConversations';
 import { prefetchDesktopConversationState } from '../hooks/useDesktopConversationState';
-import { buildSidebarNavSectionStorageKey } from '../local/localSettings';
 import { normalizeWorkspacePaths, readStoredWorkspacePaths, writeStoredWorkspacePaths } from '../local/savedWorkspacePaths';
 import { routeIsKnowledge, routeMatchesPrefix } from '../navigation/routeRegistry';
 import { sessionNeedsAttention } from '../session/sessionIndicators';
@@ -180,8 +199,7 @@ const PATH = {
   list: 'M8.25 6.75h9m-9 5.25h9m-9 5.25h9M5.25 6.75h.01M5.25 12h.01M5.25 17.25h.01',
   grip: 'M9 6.75h.01M9 12h.01M9 17.25h.01M15 6.75h.01M15 12h.01M15 17.25h.01',
   clock: 'M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
-  lock:
-    'M7.5 10.5V8.25a4.5 4.5 0 0 1 9 0v2.25M6.75 10.5h10.5A1.5 1.5 0 0 1 18.75 12v6A1.5 1.5 0 0 1 17.25 19.5H6.75A1.5 1.5 0 0 1 5.25 18v-6a1.5 1.5 0 0 1 1.5-1.5Z',
+  lock: 'M7.5 10.5V8.25a4.5 4.5 0 0 1 9 0v2.25M6.75 10.5h10.5A1.5 1.5 0 0 1 18.75 12v6A1.5 1.5 0 0 1 17.25 19.5H6.75A1.5 1.5 0 0 1 5.25 18v-6a1.5 1.5 0 0 1 1.5-1.5Z',
   sparkles:
     'M12 3.75l1.07 3.43a1.5 1.5 0 0 0 .93.94l3.43 1.07-3.43 1.07a1.5 1.5 0 0 0-.93.93L12 15.62l-1.07-3.43a1.5 1.5 0 0 0-.93-.93L6.57 10.19 10 9.12a1.5 1.5 0 0 0 .93-.94L12 3.75Zm6 10.5.54 1.71a.75.75 0 0 0 .47.47l1.71.54-1.71.54a.75.75 0 0 0-.47.47L18 20.69l-.54-1.71a.75.75 0 0 0-.47-.47l-1.71-.54 1.71-.54a.75.75 0 0 0 .47-.47L18 14.25Z',
   chatBubble:
@@ -196,13 +214,6 @@ const PATH = {
   tag: 'M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01',
 };
 
-const THREADS_COLLAPSED_CWD_GROUPS_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-collapsed-cwd-groups');
-const THREADS_CWD_GROUP_LABEL_OVERRIDES_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-cwd-group-label-overrides');
-const THREADS_ORGANIZE_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-organize');
-const THREADS_FILTER_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-filter');
-const THREADS_SORT_BY_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-sort-by');
-const THREADS_MANUAL_GROUP_ORDER_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-manual-group-order');
-const THREADS_LOCKED_CONVERSATIONS_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-locked-conversations');
 const LEGACY_THREAD_LIST_ENABLED = false;
 
 const SIDEBAR_BROWSER_NEW_CHAT_HOTKEY = 'Ctrl+Shift+N';
@@ -257,10 +268,6 @@ function getExtensionNavIcon(icon: string | undefined): string {
       return PATH.grid;
   }
 }
-
-type ThreadsOrganizeMode = 'project' | 'chronological';
-type ThreadsFilterMode = 'all' | 'human' | 'automation';
-type ThreadsSortMode = 'created' | 'updated' | 'manual';
 
 type SidebarConversationItem = {
   session: SessionMeta;
@@ -373,227 +380,8 @@ function sameStringLists(left: readonly string[], right: readonly string[]): boo
   return left.every((value, index) => value === right[index]);
 }
 
-function normalizeStoredStringList(values: Iterable<unknown>): string[] {
-  const normalized: string[] = [];
-  const seen = new Set<string>();
-
-  for (const value of values) {
-    const key = typeof value === 'string' ? value.trim() : '';
-    if (!key || seen.has(key)) {
-      continue;
-    }
-
-    seen.add(key);
-    normalized.push(key);
-  }
-
-  return normalized;
-}
-
-function readCollapsedConversationGroupKeys(): string[] {
-  try {
-    const raw = localStorage.getItem(THREADS_COLLAPSED_CWD_GROUPS_STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    const seen = new Set<string>();
-    const keys: string[] = [];
-    for (const value of parsed) {
-      if (typeof value !== 'string') {
-        continue;
-      }
-
-      const normalized = value.trim();
-      if (!normalized || seen.has(normalized)) {
-        continue;
-      }
-
-      seen.add(normalized);
-      keys.push(normalized);
-    }
-
-    return keys;
-  } catch {
-    return [];
-  }
-}
-
-function writeCollapsedConversationGroupKeys(keys: readonly string[]): void {
-  try {
-    if (keys.length > 0) {
-      localStorage.setItem(THREADS_COLLAPSED_CWD_GROUPS_STORAGE_KEY, JSON.stringify(keys));
-      return;
-    }
-
-    localStorage.removeItem(THREADS_COLLAPSED_CWD_GROUPS_STORAGE_KEY);
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
-function readConversationGroupLabelOverrides(): Record<string, string> {
-  try {
-    const raw = localStorage.getItem(THREADS_CWD_GROUP_LABEL_OVERRIDES_STORAGE_KEY);
-    if (!raw) {
-      return {};
-    }
-
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return {};
-    }
-
-    const overrides: Record<string, string> = {};
-    for (const [rawKey, rawValue] of Object.entries(parsed)) {
-      const key = rawKey.trim();
-      const value = typeof rawValue === 'string' ? rawValue.trim() : '';
-      if (!key || !value) {
-        continue;
-      }
-
-      overrides[key] = value;
-    }
-
-    return overrides;
-  } catch {
-    return {};
-  }
-}
-
-function writeConversationGroupLabelOverrides(overrides: Record<string, string>): void {
-  try {
-    const entries = Object.entries(overrides)
-      .map(([rawKey, rawValue]) => [rawKey.trim(), rawValue.trim()] as const)
-      .filter(([key, value]) => key.length > 0 && value.length > 0);
-
-    if (entries.length > 0) {
-      localStorage.setItem(THREADS_CWD_GROUP_LABEL_OVERRIDES_STORAGE_KEY, JSON.stringify(Object.fromEntries(entries)));
-      return;
-    }
-
-    localStorage.removeItem(THREADS_CWD_GROUP_LABEL_OVERRIDES_STORAGE_KEY);
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
-function readThreadsOrganizeMode(): ThreadsOrganizeMode {
-  try {
-    const raw = localStorage.getItem(THREADS_ORGANIZE_STORAGE_KEY);
-    return raw === 'chronological' || raw === 'manual' ? 'chronological' : 'project';
-  } catch {
-    return 'project';
-  }
-}
-
-function writeThreadsOrganizeMode(value: ThreadsOrganizeMode): void {
-  try {
-    localStorage.setItem(THREADS_ORGANIZE_STORAGE_KEY, value);
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
-function readThreadsFilterMode(): ThreadsFilterMode {
-  try {
-    const raw = localStorage.getItem(THREADS_FILTER_STORAGE_KEY);
-    return raw === 'human' || raw === 'automation' ? raw : 'all';
-  } catch {
-    return 'all';
-  }
-}
-
-function writeThreadsFilterMode(value: ThreadsFilterMode): void {
-  try {
-    localStorage.setItem(THREADS_FILTER_STORAGE_KEY, value);
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
-function readThreadsSortMode(): ThreadsSortMode {
-  try {
-    if (localStorage.getItem(THREADS_ORGANIZE_STORAGE_KEY) === 'manual') {
-      return 'manual';
-    }
-
-    const raw = localStorage.getItem(THREADS_SORT_BY_STORAGE_KEY);
-    return raw === 'updated' || raw === 'manual' ? raw : 'created';
-  } catch {
-    return 'created';
-  }
-}
-
-function writeThreadsSortMode(value: ThreadsSortMode): void {
-  try {
-    localStorage.setItem(THREADS_SORT_BY_STORAGE_KEY, value);
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
 function buildActivityTreeGroupId(groupKey: string): string {
   return `group:${groupKey || 'chats'}`;
-}
-
-function readManualConversationGroupOrder(): string[] {
-  try {
-    const raw = localStorage.getItem(THREADS_MANUAL_GROUP_ORDER_STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? normalizeStoredStringList(parsed) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeManualConversationGroupOrder(groupKeys: readonly string[]): void {
-  try {
-    if (groupKeys.length > 0) {
-      localStorage.setItem(THREADS_MANUAL_GROUP_ORDER_STORAGE_KEY, JSON.stringify(groupKeys));
-      return;
-    }
-
-    localStorage.removeItem(THREADS_MANUAL_GROUP_ORDER_STORAGE_KEY);
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
-function readLockedConversationIds(): string[] {
-  try {
-    const raw = localStorage.getItem(THREADS_LOCKED_CONVERSATIONS_STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? normalizeStoredStringList(parsed) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeLockedConversationIds(conversationIds: readonly string[]): void {
-  try {
-    if (conversationIds.length > 0) {
-      localStorage.setItem(THREADS_LOCKED_CONVERSATIONS_STORAGE_KEY, JSON.stringify(conversationIds));
-      return;
-    }
-
-    localStorage.removeItem(THREADS_LOCKED_CONVERSATIONS_STORAGE_KEY);
-  } catch {
-    // Ignore storage failures.
-  }
 }
 
 function getConversationItemSortTimestamp(session: SessionMeta, sortMode: ThreadsSortMode): number {
@@ -2086,11 +1874,7 @@ export function Sidebar() {
   }, [versions.sessions]);
 
   useEffect(() => {
-    try {
-      if (localStorage.getItem(THREADS_ORGANIZE_STORAGE_KEY) !== 'manual') {
-        return;
-      }
-    } catch {
+    if (readThreadsSortMode() !== 'manual') {
       return;
     }
 
@@ -2166,8 +1950,11 @@ export function Sidebar() {
     [draftCwd, pinnedSessions, visibleConversationTabs],
   );
 
-  const persistSavedWorkspacePathsState = useCallback((workspacePaths: string[]) => {
+  const persistSavedWorkspacePathsState = useCallback((workspacePaths: string[], options: { invalidateLoads?: boolean } = {}) => {
     const normalized = normalizeWorkspacePaths(workspacePaths);
+    if (options.invalidateLoads) {
+      workspaceLoadLifecycleRef.current.latestRequestId += 1;
+    }
     writeStoredWorkspacePaths(normalized);
     setSavedWorkspacePaths(normalized);
     return normalized;
@@ -2179,7 +1966,7 @@ export function Sidebar() {
         return;
       }
 
-      const nextWorkspacePaths = persistSavedWorkspacePathsState([...savedWorkspacePaths, normalizedCwd]);
+      const nextWorkspacePaths = persistSavedWorkspacePathsState([...savedWorkspacePaths, normalizedCwd], { invalidateLoads: true });
       void api.setSavedWorkspacePaths(nextWorkspacePaths).catch(() => {
         // Ignore best-effort sync failures.
       });
@@ -2187,7 +1974,7 @@ export function Sidebar() {
     [persistSavedWorkspacePathsState, savedWorkspacePaths],
   );
   const persistManualConversationGroupOrder = useCallback((groupKeys: string[]) => {
-    const normalized = normalizeStoredStringList(groupKeys);
+    const normalized = normalizeStoredThreadStringList(groupKeys);
     writeManualConversationGroupOrder(normalized);
     setManualConversationGroupOrder(normalized);
     return normalized;
@@ -2207,10 +1994,7 @@ export function Sidebar() {
         conversationWorkspaceUpdatedAt,
         conversationWorkspaceMigratedAt,
       } = await api.openConversationTabs();
-      if (
-        workspaceLoadLifecycleRef.current.disposed ||
-        workspaceLoadLifecycleRef.current.latestRequestId !== requestId
-      ) {
+      if (workspaceLoadLifecycleRef.current.disposed || workspaceLoadLifecycleRef.current.latestRequestId !== requestId) {
         return false;
       }
       if (!isWithinLocalWriteGrace()) {
@@ -2230,18 +2014,12 @@ export function Sidebar() {
       setWorkspaceBootstrapHasOpenConversations(sessionIds.length > 0 || pinnedSessionIds.length > 0);
       return true;
     } catch (error) {
-      if (
-        workspaceLoadLifecycleRef.current.disposed ||
-        workspaceLoadLifecycleRef.current.latestRequestId !== requestId
-      ) {
+      if (workspaceLoadLifecycleRef.current.disposed || workspaceLoadLifecycleRef.current.latestRequestId !== requestId) {
         return false;
       }
       throw error;
     } finally {
-      if (
-        !workspaceLoadLifecycleRef.current.disposed &&
-        workspaceLoadLifecycleRef.current.latestRequestId === requestId
-      ) {
+      if (!workspaceLoadLifecycleRef.current.disposed && workspaceLoadLifecycleRef.current.latestRequestId === requestId) {
         setSavedWorkspacePathsLoaded(true);
       }
     }
@@ -2303,7 +2081,7 @@ export function Sidebar() {
       return;
     }
 
-    persistSavedWorkspacePathsState(nextWorkspacePaths);
+    persistSavedWorkspacePathsState(nextWorkspacePaths, { invalidateLoads: true });
     void api.setSavedWorkspacePaths(nextWorkspacePaths).catch(() => {
       // Ignore best-effort sync failures.
     });
@@ -2694,7 +2472,7 @@ export function Sidebar() {
   }, []);
 
   const persistLockedConversationIds = useCallback((conversationIds: readonly string[]) => {
-    const normalized = normalizeStoredStringList(conversationIds);
+    const normalized = normalizeStoredThreadStringList(conversationIds);
     writeLockedConversationIds(normalized);
     setLockedConversationIds(normalized);
     return normalized;
@@ -3107,7 +2885,7 @@ export function Sidebar() {
 
     const nextLocalWorkspacePaths = normalizeWorkspacePaths(nextGroupedRows.flatMap((group) => (group.cwd ? [group.cwd] : [])));
     if (!sameStringLists(savedWorkspacePaths, nextLocalWorkspacePaths)) {
-      persistSavedWorkspacePathsState(nextLocalWorkspacePaths);
+      persistSavedWorkspacePathsState(nextLocalWorkspacePaths, { invalidateLoads: true });
       void api.setSavedWorkspacePaths(nextLocalWorkspacePaths).catch(() => {
         // Ignore best-effort sync failures.
       });
@@ -3358,7 +3136,7 @@ export function Sidebar() {
       }
 
       const nextWorkspacePaths = normalizeWorkspacePaths([...savedWorkspacePaths, result.path]);
-      persistSavedWorkspacePathsState(nextWorkspacePaths);
+      persistSavedWorkspacePathsState(nextWorkspacePaths, { invalidateLoads: true });
       void api.setSavedWorkspacePaths(nextWorkspacePaths).catch(() => {
         // Ignore best-effort sync failures.
       });
@@ -3644,7 +3422,7 @@ export function Sidebar() {
       if (normalizedCwd) {
         const nextWorkspacePaths = savedWorkspacePaths.filter((workspacePath) => workspacePath !== normalizedCwd);
         if (!sameStringLists(savedWorkspacePaths, nextWorkspacePaths)) {
-          persistSavedWorkspacePathsState(nextWorkspacePaths);
+          persistSavedWorkspacePathsState(nextWorkspacePaths, { invalidateLoads: true });
           void api.setSavedWorkspacePaths(nextWorkspacePaths).catch(() => {
             // Ignore best-effort sync failures.
           });

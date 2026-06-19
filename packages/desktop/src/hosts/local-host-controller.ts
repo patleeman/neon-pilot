@@ -563,6 +563,11 @@ export class LocalHostController implements HostController {
     return module.resumeDesktopConversation(conversationId);
   }
 
+  async sendConversationMessage(input: DesktopLiveSessionPromptRequest): Promise<DesktopLiveSessionPromptResult> {
+    const module = await this.loadLocalApi();
+    return module.submitDesktopConversationMessage(input);
+  }
+
   async readConversationModelPreferences(input: DesktopConversationModelPreferencesRequest): Promise<unknown> {
     const module = await this.loadLocalApi();
     return module.readDesktopConversationModelPreferences(input.conversationId);

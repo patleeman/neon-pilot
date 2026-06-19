@@ -204,6 +204,7 @@ export interface DesktopLiveSessionCreateRequest {
   attachmentRefs?: unknown;
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;
+  surfaceId?: string;
   reservedSessionFile?: string;
 }
 
@@ -393,6 +394,7 @@ export interface HostController {
   cancelConversationDeferredResume?(input: DesktopConversationDeferredResumeMutationRequest): Promise<unknown>;
   fireConversationDeferredResume?(input: DesktopConversationDeferredResumeMutationRequest): Promise<unknown>;
   resumeConversation?(conversationId: string): Promise<unknown>;
+  sendConversationMessage?(input: DesktopLiveSessionPromptRequest): Promise<DesktopLiveSessionPromptResult>;
   readConversationModelPreferences?(input: DesktopConversationModelPreferencesRequest): Promise<unknown>;
   updateConversationModelPreferences?(input: DesktopConversationModelPreferencesUpdateRequest): Promise<unknown>;
   readConversationArtifacts?(conversationId: string): Promise<unknown>;

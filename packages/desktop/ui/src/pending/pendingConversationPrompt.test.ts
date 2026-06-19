@@ -197,6 +197,30 @@ describe('pendingConversationPrompt helpers', () => {
     expect(readPendingConversationPrompt('session-123', storage)).toBeNull();
   });
 
+  it('consumes pending prompts from the provided storage after reload', () => {
+    const storage = createStorage();
+    const storageKey = 'pa:reload:conversation:session-storage-only:pending-prompt';
+    storage.setItem(
+      storageKey,
+      JSON.stringify({
+        text: 'restore me',
+        behavior: 'followUp',
+        images: [],
+        attachmentRefs: [],
+      }),
+    );
+
+    expect(consumePendingConversationPrompt('session-storage-only', storage)).toEqual({
+      text: 'restore me',
+      behavior: 'followUp',
+      images: [],
+      attachmentRefs: [],
+      contextMessages: [],
+      relatedConversationIds: [],
+    });
+    expect(storage.getItem(storageKey)).toBeNull();
+  });
+
   it('clears pending prompts explicitly', () => {
     const storage = createStorage();
 

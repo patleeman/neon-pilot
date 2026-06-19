@@ -94,6 +94,7 @@ export interface CreateLiveSessionCapabilityInput {
   attachmentRefs?: unknown;
   contextMessages?: unknown;
   relatedConversationIds?: unknown;
+  surfaceId?: string;
   allowedToolNames?: string[];
   reservedSessionFile?: string;
 }
@@ -237,6 +238,7 @@ async function submitInitialPromptForCreatedSession(
       attachmentRefs: input.attachmentRefs,
       contextMessages: input.contextMessages,
       relatedConversationIds: input.relatedConversationIds,
+      surfaceId: input.surfaceId,
     },
     context,
   );

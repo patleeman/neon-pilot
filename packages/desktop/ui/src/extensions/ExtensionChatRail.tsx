@@ -7,7 +7,7 @@ import { ChatView } from '../components/chat/ChatView';
 import { CenteredLoadingState } from '../components/ui';
 import { useDesktopConversationState } from '../hooks/useDesktopConversationState';
 import { getModelSelectionValue } from '../model/modelPreferences';
-import type { DesktopConversationState, MessageBlock, ModelInfo, PromptAttachmentRefInput, PromptImageInput } from '../shared/types';
+import type { MessageBlock, ModelInfo, PromptAttachmentRefInput, PromptImageInput } from '../shared/types';
 
 export interface ExtensionChatContextMessage {
   customType: string;
@@ -54,11 +54,7 @@ export function ExtensionChatRail({
   onTurnComplete,
 }: ExtensionChatRailProps) {
   const desktopState = useDesktopConversationState(conversationId, { tailBlocks });
-  const [hydratedState, setHydratedState] = useState<DesktopConversationState | null>(null);
-  const activeState =
-    hydratedState && (!desktopState.state || hydratedState.stream.blocks.length > desktopState.state.stream.blocks.length)
-      ? hydratedState
-      : desktopState.state;
+  const activeState = desktopState.state;
   const stream = activeState?.stream ?? null;
   const messages: MessageBlock[] = stream?.blocks ?? [];
   const isStreaming = stream?.isStreaming ?? false;
@@ -73,32 +69,13 @@ export function ExtensionChatRail({
   const currentConversationIdRef = useRef<string | null>(conversationId);
   const pendingTurnRefreshRef = useRef(false);
   const submittedBlockCountRef = useRef(0);
-  const pendingRefreshTimersRef = useRef<number[]>([]);
 
   useEffect(() => {
     currentConversationIdRef.current = conversationId;
   }, [conversationId, onModelChange]);
 
-  const hydrateConversationState = useCallback(async () => {
-    if (!conversationId) {
-      setHydratedState(null);
-      return null;
-    }
-
-    try {
-      const nextState = await api.desktopConversationState(conversationId, { tailBlocks });
-      if (currentConversationIdRef.current === conversationId) setHydratedState(nextState);
-      return nextState;
-    } catch (error) {
-      if (currentConversationIdRef.current === conversationId) {
-        onError?.(error instanceof Error ? error.message : String(error));
-      }
-      return null;
-    }
-  }, [conversationId, onError, tailBlocks]);
-
   const maybeCompleteTurn = useCallback(
-    async (nextState: DesktopConversationState | null) => {
+    async (nextState: typeof desktopState.state) => {
       if (!pendingTurnRefreshRef.current || !nextState || nextState.stream.isStreaming) return;
       if (!hasTurnResultBlock(nextState.stream.blocks, submittedBlockCountRef.current)) return;
       pendingTurnRefreshRef.current = false;
@@ -108,50 +85,25 @@ export function ExtensionChatRail({
   );
 
   const refreshConversationState = useCallback(async () => {
-    const nextState = await hydrateConversationState();
-    await maybeCompleteTurn(nextState);
-    return nextState;
-  }, [hydrateConversationState, maybeCompleteTurn]);
-
-  const refreshExtensionState = useCallback(async () => {
-    await refreshConversationState();
-  }, [refreshConversationState]);
-
-  const clearPendingRefreshTimers = useCallback(() => {
-    for (const timer of pendingRefreshTimersRef.current) {
-      window.clearTimeout(timer);
+    try {
+      const nextState = await desktopState.refresh();
+      if (currentConversationIdRef.current === conversationId) {
+        await maybeCompleteTurn(nextState);
+      }
+      return nextState;
+    } catch (error) {
+      if (currentConversationIdRef.current === conversationId) {
+        onError?.(error instanceof Error ? error.message : String(error));
+      }
+      return null;
     }
-    pendingRefreshTimersRef.current = [];
-  }, []);
+  }, [conversationId, desktopState, maybeCompleteTurn, onError]);
 
   useEffect(() => {
     if (!pendingTurnRefreshRef.current || isStreaming || !hasTurnResultBlock(messages, submittedBlockCountRef.current)) return;
     pendingTurnRefreshRef.current = false;
     void onTurnComplete?.();
   }, [isStreaming, messages.length, onTurnComplete]);
-
-  useEffect(() => clearPendingRefreshTimers, [clearPendingRefreshTimers, conversationId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!conversationId) {
-      setHydratedState(null);
-      return;
-    }
-
-    api
-      .desktopConversationState(conversationId, { tailBlocks })
-      .then((nextState) => {
-        if (!cancelled) setHydratedState(nextState);
-      })
-      .catch((error) => {
-        if (!cancelled) onError?.(error instanceof Error ? error.message : String(error));
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [conversationId, onError, tailBlocks]);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -207,11 +159,7 @@ export function ExtensionChatRail({
         pendingTurnRefreshRef.current = true;
         submittedBlockCountRef.current = messages.length;
         await desktopState.send(text, behavior, images, attachmentRefs, contextMessages);
-        void refreshExtensionState();
-        clearPendingRefreshTimers();
-        pendingRefreshTimersRef.current = [1500, 5000, 15_000, 30_000].map((delayMs) =>
-          window.setTimeout(() => void refreshExtensionState(), delayMs),
-        );
+        void refreshConversationState();
         desktopState.reconnect();
       } catch (error) {
         pendingTurnRefreshRef.current = false;
@@ -220,7 +168,7 @@ export function ExtensionChatRail({
         throw error;
       }
     },
-    [clearPendingRefreshTimers, conversationId, desktopState, getContextMessages, messages.length, onError, refreshExtensionState],
+    [conversationId, desktopState, getContextMessages, messages.length, onError, refreshConversationState],
   );
 
   const handleAbort = useCallback(async () => {

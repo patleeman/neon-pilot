@@ -23,6 +23,7 @@ import { applyRemoteConversationLayout, forgetConversationTab, openConversationT
 import type { AppEventTopic, DaemonState, DesktopAppEvent, DurableRunListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
 import { executionStore, runStore, sessionStore, taskStore, titleStore } from '../store';
 import { ThemeProvider } from '../ui-state/theme';
+import { buildAppSnapshotRefreshPlan, incrementAppEventVersionsForTopics, incrementRunProjectionEventVersions } from './appEventProjection';
 import {
   AppDataContext,
   AppEventsContext,
@@ -434,18 +435,21 @@ export function App() {
         refreshInvalidationTimerRef.current = null;
         const pendingTopics = pendingInvalidationTopicsRef.current;
         pendingInvalidationTopicsRef.current = new Set<AppEventTopic>();
+        const plan = buildAppSnapshotRefreshPlan(pendingTopics);
 
-        if (pendingTopics.has('sessions')) {
+        if (plan.sessions) {
           loadSessionsSnapshot();
         }
-        if (pendingTopics.has('tasks')) {
+        if (plan.tasks) {
           loadTasksSnapshot();
         }
-        if (pendingTopics.has('runs') || pendingTopics.has('executions')) {
+        if (plan.runs) {
           loadRunsSnapshot();
+        }
+        if (plan.executions) {
           loadExecutionsSnapshot();
         }
-        if (pendingTopics.has('daemon')) {
+        if (plan.daemon) {
           loadDaemonSnapshot();
         }
       }, 150);
@@ -509,11 +513,7 @@ export function App() {
             .catch(() => {
               // Keep the last known projection until the next app event or manual refresh.
             });
-          setEventVersions((prev) => ({
-            ...prev,
-            runs: prev.runs + 1,
-            executions: prev.executions + 1,
-          }));
+          setEventVersions(incrementRunProjectionEventVersions);
           return;
         case 'daemon_snapshot':
         case 'daemon':
@@ -545,16 +545,7 @@ export function App() {
           return;
         case 'invalidate':
           refreshInvalidatedSnapshots(payload.topics);
-          setEventVersions((prev) => {
-            const next = { ...prev };
-            for (const topic of payload.topics) {
-              if (topic in next) {
-                const trackedTopic = topic as keyof typeof next;
-                next[trackedTopic] += 1;
-              }
-            }
-            return next;
-          });
+          setEventVersions((prev) => incrementAppEventVersionsForTopics(prev, payload.topics));
           return;
         default:
           return;

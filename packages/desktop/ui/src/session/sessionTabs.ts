@@ -357,6 +357,10 @@ function acceptConversationLayoutSnapshot(layout: ConversationLayout): Conversat
 }
 
 function dispatchConversationLayoutChanged(layout: ConversationLayout): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
   window.dispatchEvent(
     new CustomEvent(CONVERSATION_LAYOUT_CHANGED_EVENT, {
       detail: layout,

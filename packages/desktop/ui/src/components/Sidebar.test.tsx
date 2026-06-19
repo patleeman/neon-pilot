@@ -11,9 +11,18 @@ import {
   PINNED_SESSION_IDS_STORAGE_KEY,
   SAVED_WORKSPACE_PATHS_STORAGE_KEY,
 } from '../local/localSettings.js';
+import { applyRemoteConversationLayout, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
 import type { DurableRunListResult, ExecutionListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
 import { executionStore, runStore, sessionStore, taskStore } from '../store';
 import { buildGatewayConversationAttachRoute, Sidebar } from './Sidebar.js';
+
+const apiMocks = vi.hoisted(() => ({
+  sidebarConversations: vi.fn(),
+}));
+
+vi.mock('../client/api', () => ({
+  api: apiMocks,
+}));
 
 const extensionRegistryMock = vi.hoisted(() => ({
   state: {
@@ -113,6 +122,7 @@ describe('Sidebar', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-16T10:00:02.000Z'));
     storage.clear();
+    resetRemoteConversationLayoutCache();
     storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-123']));
     storage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
     extensionRegistryMock.state.extensions = [];
@@ -121,6 +131,14 @@ describe('Sidebar', () => {
     extensionRegistryMock.state.contextMenus = [];
     extensionRegistryMock.state.activityTreeItemActions = [];
     extensionRegistryMock.state.activityTreeItemStyles = [];
+    apiMocks.sidebarConversations.mockReset();
+    apiMocks.sidebarConversations.mockImplementation(async () => ({
+      sessionIds: JSON.parse(storage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]') as string[],
+      pinnedSessionIds: JSON.parse(storage.getItem(PINNED_SESSION_IDS_STORAGE_KEY) ?? '[]') as string[],
+      archivedSessionIds: JSON.parse(storage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY) ?? '[]') as string[],
+      workspacePaths: JSON.parse(storage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY) ?? '[]') as string[],
+      sessions: sessionStore.getAll(),
+    }));
     Object.defineProperty(globalThis, 'localStorage', {
       configurable: true,
       value: storage,
@@ -157,6 +175,12 @@ describe('Sidebar', () => {
       sessionStore.replaceAll(testSessions);
       sessionStore.markReady?.();
     }
+    applyRemoteConversationLayout({
+      sessionIds: JSON.parse(storage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]') as string[],
+      pinnedSessionIds: JSON.parse(storage.getItem(PINNED_SESSION_IDS_STORAGE_KEY) ?? '[]') as string[],
+      archivedSessionIds: JSON.parse(storage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY) ?? '[]') as string[],
+      workspacePaths: JSON.parse(storage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY) ?? '[]') as string[],
+    });
     if (options?.tasks) taskStore.replaceAll(options.tasks);
     if (options?.runs?.runs) runStore.replaceAll(options.runs.runs);
     if (options?.executions?.executions) executionStore.replaceAll(options.executions.executions);

@@ -842,6 +842,33 @@ export function useDesktopConversationState(conversationId: string | null, optio
     setConnectVersion((current) => current + 1);
   }, [mode]);
 
+  const refresh = useCallback(async (): Promise<DesktopConversationState | null> => {
+    if (!conversationId || mode !== 'local') {
+      return null;
+    }
+
+    const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
+    const requestOptions = {
+      ...(tailBlocks !== undefined ? { tailBlocks } : {}),
+      ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+    } satisfies DesktopConversationStateOptions;
+    const nextState = await fetchDesktopConversationStateCached(conversationId, requestOptions);
+    let refreshedState: DesktopConversationState | null = null;
+    setState((previous) => {
+      if (activeConversationIdRef.current !== conversationId || (previous?.conversationId && previous.conversationId !== conversationId)) {
+        refreshedState = null;
+        return previous;
+      }
+      const mergedState = mergeDesktopConversationState(previous, nextState);
+      const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
+      rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
+      refreshedState = mergedState;
+      return mergedState;
+    });
+    setError(null);
+    return refreshedState ?? nextState;
+  }, [conversationId, mode, options?.includeToolBlocks, options?.tailBlocks]);
+
   const send = useCallback(
     async (
       text: string,
@@ -884,19 +911,8 @@ export function useDesktopConversationState(conversationId: string | null, optio
         contextMessages,
         relatedConversationIds,
       );
-      void api.desktopConversationState(conversationId, requestOptions).then((nextState) => {
-        setState((previous) => {
-          if (
-            activeConversationIdRef.current !== conversationId ||
-            (previous?.conversationId && previous.conversationId !== conversationId)
-          ) {
-            return previous;
-          }
-          const mergedState = mergeDesktopConversationState(previous, nextState);
-          const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
-          rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
-          return mergedState;
-        });
+      void refresh().catch((nextError) => {
+        setError(nextError instanceof Error ? nextError.message : String(nextError));
       });
       setSubscriptionVersion((current) => current + 1);
       return result;
@@ -908,6 +924,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       matchedState?.sessionDetail?.meta?.file,
       options?.includeToolBlocks,
       options?.tailBlocks,
+      refresh,
       surfaceId,
     ],
   );
@@ -936,6 +953,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
     error,
     surfaceId,
     reconnect,
+    refresh,
     send,
     abort,
     takeover,

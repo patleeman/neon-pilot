@@ -1,7 +1,8 @@
 import { api } from '../client/api';
-import { type DesktopWorkbenchBrowserState, getDesktopBridge } from '../desktop/desktopBridge';
+import type { DesktopWorkbenchBrowserState } from '../desktop/desktopBridge';
 import { dispatchTranscriptSpotlight, type TranscriptSpotlightTarget, transcriptTargetAttributes } from '../transcript/spotlight';
 import { listHostCommands, setExtensionCommandContext } from './commands';
+import { createNativeBrowserClient, createNativeWorkbenchClient } from './nativeClientWorkbench';
 import { type ExtensionSelectionState, readExtensionSelection, setExtensionSelection, subscribeExtensionSelection } from './selection';
 
 function matchExtensionEventPattern(pattern: string, eventName: string): boolean {
@@ -134,22 +135,6 @@ export interface NativeExtensionClient {
   };
 }
 
-function browserSessionKey(tabId?: string | null): string | null {
-  return tabId ? `workbench-browser:${tabId}` : null;
-}
-
-function requireDesktopBridge() {
-  const bridge = getDesktopBridge();
-  if (!bridge) throw new Error('Browser primitives are only available in the Electron desktop app.');
-  return bridge;
-}
-
-const detailStateByExtensionSurface = new Map<string, unknown>();
-
-function detailStateKey(extensionId: string, surfaceId: string): string {
-  return `${extensionId}:${surfaceId}`;
-}
-
 function unwrapExtensionActionResult(response: Awaited<ReturnType<typeof api.invokeExtensionAction>>): unknown {
   if (!response.ok) {
     throw new Error(response.error);
@@ -267,44 +252,8 @@ export function createNativeExtensionClient(extensionId: string): NativeExtensio
         return api.workspaceUncommittedDiff(cwd);
       },
     },
-    workbench: {
-      getDetailState<T = unknown>(surfaceId: string): T | null {
-        return (detailStateByExtensionSurface.get(detailStateKey(extensionId, surfaceId)) as T | undefined) ?? null;
-      },
-      setDetailState(surfaceId, state) {
-        detailStateByExtensionSurface.set(detailStateKey(extensionId, surfaceId), state);
-        window.dispatchEvent(new CustomEvent('neon-pilot-extension-workbench-detail-state', { detail: { extensionId, surfaceId, state } }));
-      },
-      closeTab(tabId) {
-        window.dispatchEvent(new CustomEvent('pa:workbench-close-tab', { detail: { tabId } }));
-      },
-    },
-    browser: {
-      isAvailable() {
-        return getDesktopBridge() !== null;
-      },
-      getState(input) {
-        return requireDesktopBridge().getWorkbenchBrowserState({ sessionKey: browserSessionKey(input?.tabId) });
-      },
-      open(input) {
-        return requireDesktopBridge().navigateWorkbenchBrowser({ url: input.url, sessionKey: browserSessionKey(input.tabId) });
-      },
-      goBack(input) {
-        return requireDesktopBridge().goBackWorkbenchBrowser({ sessionKey: browserSessionKey(input?.tabId) });
-      },
-      goForward(input) {
-        return requireDesktopBridge().goForwardWorkbenchBrowser({ sessionKey: browserSessionKey(input?.tabId) });
-      },
-      reload(input) {
-        return requireDesktopBridge().reloadWorkbenchBrowser({ sessionKey: browserSessionKey(input?.tabId) });
-      },
-      stop(input) {
-        return requireDesktopBridge().stopWorkbenchBrowser({ sessionKey: browserSessionKey(input?.tabId) });
-      },
-      snapshot(input) {
-        return requireDesktopBridge().snapshotWorkbenchBrowser({ sessionKey: browserSessionKey(input?.tabId) });
-      },
-    },
+    workbench: createNativeWorkbenchClient(extensionId),
+    browser: createNativeBrowserClient(),
     commands: {
       execute(command, args) {
         return new Promise<boolean>((resolve) => {

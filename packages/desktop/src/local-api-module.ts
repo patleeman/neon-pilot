@@ -257,11 +257,37 @@ export interface LocalApiModule {
     model?: string | null;
     thinkingLevel?: string | null;
     serviceTier?: string | null;
+    prompt?: string;
+    behavior?: 'steer' | 'followUp';
+    images?: Array<{ data: string; mimeType: string; name?: string }>;
+    attachmentRefs?: unknown;
+    contextMessages?: Array<{ customType: string; content: string }>;
+    relatedConversationIds?: unknown;
+    surfaceId?: string;
     reservedSessionFile?: string;
   }): Promise<{ id: string; sessionFile: string; bootstrap?: unknown }>;
   reserveDesktopConversation?(input: { cwd?: string }): Promise<{ id: string; sessionFile: string; cwd: string }>;
   resumeDesktopLiveSession(input: { sessionFile: string; cwd?: string }): Promise<{ id: string }>;
   submitDesktopLiveSessionPrompt(input: {
+    conversationId: string;
+    text?: string;
+    behavior?: 'steer' | 'followUp';
+    images?: Array<{ data: string; mimeType: string; name?: string }>;
+    attachmentRefs?: unknown;
+    contextMessages?: Array<{ customType: string; content: string }>;
+    relatedConversationIds?: string[];
+    surfaceId?: string;
+  }): Promise<{
+    ok: true;
+    accepted: true;
+    delivery: 'started' | 'queued';
+    referencedTaskIds: string[];
+    referencedMemoryDocIds: string[];
+    referencedKnowledgeFileIds: string[];
+    referencedAttachmentIds: string[];
+    relatedConversationPointerWarnings?: string[];
+  }>;
+  submitDesktopConversationMessage(input: {
     conversationId: string;
     text?: string;
     behavior?: 'steer' | 'followUp';

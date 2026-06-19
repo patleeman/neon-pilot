@@ -105,7 +105,10 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   const [activeId, setActiveId] = useState(() => initialLayout.activeSessionId);
   const [layoutHydrating, setLayoutHydrating] = useState(
     () =>
-      initialLayout.sessionIds.length === 0 && initialLayout.pinnedSessionIds.length === 0 && initialLayout.archivedSessionIds.length === 0,
+      typeof window !== 'undefined' &&
+      initialLayout.sessionIds.length === 0 &&
+      initialLayout.pinnedSessionIds.length === 0 &&
+      initialLayout.archivedSessionIds.length === 0,
   );
   const { titles: liveTitles } = useContext(LiveTitlesContext);
   const sessions = useAllSessions();

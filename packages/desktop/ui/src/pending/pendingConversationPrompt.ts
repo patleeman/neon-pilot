@@ -299,7 +299,7 @@ export function consumePendingConversationPrompt(
   sessionId: string,
   storage: StorageLike | null = getSessionStorage(),
 ): PendingConversationPrompt | null {
-  const prompt = readPendingConversationPrompt(sessionId);
+  const prompt = readPendingConversationPrompt(sessionId, storage);
   if (!prompt) {
     return null;
   }

@@ -282,21 +282,32 @@ function buildExecutionTargets(_hostManager: HostManager) {
 }
 
 async function buildConversationListState(hostManager: HostManager) {
-  const localController = hostManager.getHostController('local');
-  const [sessions, ordering] = await Promise.all([
-    localController.readSessions?.() ?? Promise.resolve([]),
-    localController.readOpenConversationTabs?.() ??
-      Promise.resolve({
-        sessionIds: [],
-        pinnedSessionIds: [],
-        archivedSessionIds: [],
-        workspacePaths: [],
-      }),
-  ]);
+  const projection = await invokeDesktopApi<{
+    sessions: unknown[];
+    sessionIds: string[];
+    pinnedSessionIds: string[];
+    archivedSessionIds: string[];
+    workspacePaths: string[];
+    activeConversationId?: string | null;
+    remoteControlledConversationIds?: string[];
+    conversationWorkspaceRevision?: number;
+    conversationWorkspaceUpdatedAt?: string | null;
+    conversationWorkspaceMigratedAt?: string | null;
+  }>(hostManager, { method: 'GET', path: '/api/sidebar/conversations' });
 
   return {
-    sessions,
-    ordering,
+    sessions: projection.sessions,
+    ordering: {
+      sessionIds: projection.sessionIds,
+      pinnedSessionIds: projection.pinnedSessionIds,
+      archivedSessionIds: projection.archivedSessionIds,
+      workspacePaths: projection.workspacePaths,
+      activeConversationId: projection.activeConversationId,
+      remoteControlledConversationIds: projection.remoteControlledConversationIds,
+      conversationWorkspaceRevision: projection.conversationWorkspaceRevision,
+      conversationWorkspaceUpdatedAt: projection.conversationWorkspaceUpdatedAt,
+      conversationWorkspaceMigratedAt: projection.conversationWorkspaceMigratedAt,
+    },
     executionTargets: buildExecutionTargets(hostManager),
   };
 }
@@ -431,23 +442,17 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
         ...(input.model !== undefined ? { model: input.model } : {}),
         ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
         ...(input.serviceTier !== undefined ? { serviceTier: input.serviceTier } : {}),
+        ...(input.prompt?.text !== undefined ? { prompt: input.prompt.text } : {}),
+        ...(input.prompt?.behavior !== undefined ? { behavior: input.prompt.behavior } : {}),
+        ...(input.prompt?.images !== undefined ? { images: input.prompt.images } : {}),
+        ...(input.prompt?.attachmentRefs !== undefined ? { attachmentRefs: input.prompt.attachmentRefs } : {}),
+        ...(input.prompt?.contextMessages !== undefined ? { contextMessages: input.prompt.contextMessages } : {}),
+        ...(input.prompt?.surfaceId !== undefined ? { surfaceId: input.prompt.surfaceId } : {}),
       });
 
       const conversationId = created.id;
       if (input.executionTargetId && input.executionTargetId !== 'local') {
         throw new Error('Only the local execution target is available.');
-      }
-
-      if (input.prompt && (input.prompt.text?.trim() || (input.prompt.images?.length ?? 0) > 0)) {
-        await this.promptConversation({
-          conversationId,
-          text: input.prompt.text,
-          behavior: input.prompt.behavior,
-          images: input.prompt.images,
-          attachmentRefs: input.prompt.attachmentRefs,
-          contextMessages: input.prompt.contextMessages,
-          surfaceId: input.prompt.surfaceId,
-        });
       }
 
       await restoreConversationToSharedLayout(localController, conversationId);
@@ -477,10 +482,10 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
 
     async promptConversation(input: CompanionConversationPromptInput) {
       const localController = hostManager.getHostController('local');
-      if (!localController.submitLiveSessionPrompt) {
-        throw new Error('Local live-session prompt capability is unavailable.');
+      if (!localController.sendConversationMessage) {
+        throw new Error('Local conversation message capability is unavailable.');
       }
-      return localController.submitLiveSessionPrompt(input);
+      return localController.sendConversationMessage(input);
     },
 
     async restoreConversationQueuePrompt(input: CompanionConversationQueueRestoreInput) {
