@@ -325,7 +325,7 @@ describe('api desktop transport', () => {
       cwd: '/next-repo',
       changed: true,
     });
-    const recoverConversation = vi.fn().mockResolvedValue({
+    const resumeConversation = vi.fn().mockResolvedValue({
       conversationId: 'live-1',
       live: true,
       recovered: true,
@@ -449,7 +449,7 @@ describe('api desktop transport', () => {
         readConversationBootstrap,
         renameConversation,
         changeConversationCwd,
-        recoverConversation,
+        resumeConversation,
         readConversationModelPreferences,
         updateConversationModelPreferences,
         readLiveSession,
@@ -538,7 +538,7 @@ describe('api desktop transport', () => {
         return createJsonResponse(await renameConversation({ conversationId: 'conversation-1', ...JSON.parse(String(init?.body)) }));
       if (path === '/api/conversations/live-1/cwd')
         return createJsonResponse(await changeConversationCwd({ conversationId: 'live-1', ...JSON.parse(String(init?.body)) }));
-      if (path === '/api/conversations/conversation-1/recover') return createJsonResponse(await recoverConversation('conversation-1'));
+      if (path === '/api/conversations/conversation-1/resume') return createJsonResponse(await resumeConversation('conversation-1'));
       if (path === '/api/conversations/live-1/model-preferences') {
         if (init?.method === 'PATCH')
           return createJsonResponse(
@@ -627,7 +627,7 @@ describe('api desktop transport', () => {
     });
     const renamed = await api.renameConversation('conversation-1', 'Renamed conversation', 'surface-1');
     const changedCwd = await api.changeConversationCwd('live-1', '/next-repo', 'surface-1');
-    const recovered = await api.recoverConversation('conversation-1');
+    const recovered = await api.resumeConversation('conversation-1');
     const modelPreferences = await api.conversationModelPreferences('live-1');
     const updatedModelPreferences = await api.updateConversationModelPreferences('live-1', { thinkingLevel: 'medium' }, 'surface-1');
     const live = await api.liveSession('live-1');
@@ -704,7 +704,7 @@ describe('api desktop transport', () => {
       cwd: '/next-repo',
       surfaceId: 'surface-1',
     });
-    expect(recoverConversation).toHaveBeenCalledWith('conversation-1');
+    expect(resumeConversation).toHaveBeenCalledWith('conversation-1');
     expect(readConversationModelPreferences).toHaveBeenCalledWith({ conversationId: 'live-1' });
     expect(updateConversationModelPreferences).toHaveBeenCalledWith({
       conversationId: 'live-1',

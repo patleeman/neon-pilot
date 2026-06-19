@@ -22,8 +22,8 @@ import type {
   CacheEfficiencyAggregate,
   CacheEfficiencyPoint,
   ContextPointerUsageResult,
-  ConversationAttachmentAssetData,
   ConversationActivityResult,
+  ConversationAttachmentAssetData,
   ConversationBootstrapState,
   ConversationCheckpointReviewContext,
   ConversationCommitCheckpointRecord,
@@ -573,6 +573,19 @@ export const api = {
       conversationWorkspaceUpdatedAt?: string | null;
       conversationWorkspaceMigratedAt?: string | null;
     }>('/ui/open-conversations'),
+  sidebarConversations: async () =>
+    get<{
+      sessionIds: string[];
+      pinnedSessionIds: string[];
+      archivedSessionIds: string[];
+      workspacePaths: string[];
+      activeConversationId?: string | null;
+      remoteControlledConversationIds?: string[];
+      conversationWorkspaceRevision?: number;
+      conversationWorkspaceUpdatedAt?: string | null;
+      conversationWorkspaceMigratedAt?: string | null;
+      sessions: SessionMeta[];
+    }>('/sidebar/conversations'),
   setOpenConversationTabs: async (
     sessionIds?: string[] | null,
     pinnedSessionIds?: string[] | null,
@@ -1033,7 +1046,7 @@ export const api = {
       ...(surfaceId ? { surfaceId } : {}),
     });
   },
-  recoverConversation: async (id: string) => {
+  resumeConversation: async (id: string) => {
     const startedAtMs = performance.now();
     const result = await post<{
       conversationId: string;
@@ -1042,11 +1055,11 @@ export const api = {
       replayedPendingOperation?: boolean;
       usedFallbackPrompt?: boolean;
       perf?: Record<string, number>;
-    }>(`/conversations/${encodeURIComponent(id)}/recover`);
+    }>(`/conversations/${encodeURIComponent(id)}/resume`);
     recordClientPerfTiming({
-      name: 'desktop.recoverConversation',
+      name: 'desktop.resumeConversation',
       startedAtMs,
-      meta: { conversationId: id, recoveredConversationId: result.conversationId, serverPerf: result.perf ?? null },
+      meta: { conversationId: id, resumedConversationId: result.conversationId, serverPerf: result.perf ?? null },
     });
     return result;
   },
@@ -1142,6 +1155,51 @@ export const api = {
     });
     recordClientPerfTiming({
       name: 'desktop.promptSession',
+      startedAtMs,
+      meta: {
+        conversationId: id,
+        promptLength: text.length,
+        imageCount: images?.length ?? 0,
+        contextMessageCount: contextMessages?.length ?? 0,
+        relatedConversationCount: relatedConversationIds?.length ?? 0,
+        serverPerf: result.perf ?? null,
+      },
+    });
+    return result;
+  },
+
+  sendConversationMessage: async (
+    id: string,
+    text: string,
+    behavior?: 'steer' | 'followUp',
+    images?: PromptImageInput[],
+    attachmentRefs?: PromptAttachmentRefInput[],
+    surfaceId?: string,
+    contextMessages?: Array<Pick<InjectedPromptMessage, 'customType' | 'content'>>,
+    relatedConversationIds?: string[],
+  ) => {
+    const startedAtMs = performance.now();
+    const result = await post<{
+      ok: true;
+      accepted: true;
+      delivery: 'started' | 'queued';
+      referencedTaskIds: string[];
+      referencedMemoryDocIds: string[];
+      referencedKnowledgeFileIds: string[];
+      referencedAttachmentIds: string[];
+      relatedConversationPointerWarnings?: string[];
+      perf?: Record<string, number>;
+    }>(`/conversations/${encodeURIComponent(id)}/messages`, {
+      text,
+      behavior,
+      ...(surfaceId ? { surfaceId } : {}),
+      images,
+      attachmentRefs,
+      contextMessages,
+      relatedConversationIds,
+    });
+    recordClientPerfTiming({
+      name: 'desktop.sendConversationMessage',
       startedAtMs,
       meta: {
         conversationId: id,

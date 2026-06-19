@@ -454,6 +454,26 @@ export function closeConversationTab(sessionId: string): string[] {
   ).sessionIds;
 }
 
+export function forgetConversationTab(sessionId: string | null | undefined): ConversationLayout {
+  const normalizedSessionId = normalizeSessionId(sessionId);
+  const current = readConversationLayout();
+  if (!normalizedSessionId) {
+    return current;
+  }
+
+  const next = normalizeConversationLayout({
+    sessionIds: current.sessionIds.filter((id) => id !== normalizedSessionId),
+    pinnedSessionIds: current.pinnedSessionIds.filter((id) => id !== normalizedSessionId),
+    archivedSessionIds: current.archivedSessionIds.filter((id) => id !== normalizedSessionId),
+    activeSessionId: current.activeSessionId === normalizedSessionId ? null : current.activeSessionId,
+  });
+  if (sameConversationLayout(current, next)) {
+    return current;
+  }
+
+  return writeConversationLayout(next, { local: true });
+}
+
 export function setConversationArchivedState(sessionId: string, archived: boolean): ConversationLayout {
   const normalizedSessionId = normalizeSessionId(sessionId);
   const current = readConversationLayout();

@@ -160,7 +160,7 @@ export interface LocalApiModule {
   }): Promise<unknown>;
   cancelDesktopConversationDeferredResume(input: { conversationId: string; resumeId: string }): Promise<unknown>;
   fireDesktopConversationDeferredResume(input: { conversationId: string; resumeId: string }): Promise<unknown>;
-  recoverDesktopConversation(conversationId: string): Promise<unknown>;
+  resumeDesktopConversation(conversationId: string): Promise<unknown>;
   readDesktopConversationModelPreferences(conversationId: string): Promise<unknown>;
   updateDesktopConversationModelPreferences(input: {
     conversationId: string;

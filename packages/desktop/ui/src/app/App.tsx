@@ -19,7 +19,7 @@ import { ExtensionRegistryProvider } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import { ConversationPage } from '../pages/ConversationPage';
 import { fetchSessionsSnapshot } from '../session/sessionSnapshot';
-import { applyRemoteConversationLayout, openConversationTab } from '../session/sessionTabs';
+import { applyRemoteConversationLayout, forgetConversationTab, openConversationTab } from '../session/sessionTabs';
 import type { AppEventTopic, DaemonState, DesktopAppEvent, DurableRunListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
 import { executionStore, runStore, sessionStore, taskStore, titleStore } from '../store';
 import { ThemeProvider } from '../ui-state/theme';
@@ -228,6 +228,7 @@ export function App() {
       if (!nextSession) {
         sessionRunningOverridesRef.current.delete(sessionId);
         sessionStore.remove(sessionId);
+        forgetConversationTab(sessionId);
         return;
       }
       sessionStore.upsert(applySessionRunningOverride(nextSession));
@@ -327,31 +328,34 @@ export function App() {
     return !snapshotRequestLifecycleRef.current.disposed && snapshotRequestLifecycleRef.current.seqByKey.get(key) === seq;
   }, []);
 
-  const loadSessionsSnapshot = useCallback((retryAttempt = 0) => {
-    if (sessionsSnapshotRetryTimerRef.current !== null) {
-      window.clearTimeout(sessionsSnapshotRetryTimerRef.current);
-      sessionsSnapshotRetryTimerRef.current = null;
-    }
-    const requestSeq = beginSnapshotRequest('sessions');
-    void fetchSessionsSnapshot()
-      .then((items) => {
-        if (!isLatestSnapshotRequest('sessions', requestSeq)) {
-          return;
-        }
-        setSessions(items);
-      })
-      .catch(() => {
-        if (!isLatestSnapshotRequest('sessions', requestSeq)) {
-          return;
-        }
-        const retryDelay =
-          SESSIONS_SNAPSHOT_RETRY_DELAYS_MS[Math.min(retryAttempt, SESSIONS_SNAPSHOT_RETRY_DELAYS_MS.length - 1)] ?? 8_000;
-        sessionsSnapshotRetryTimerRef.current = window.setTimeout(() => {
-          sessionsSnapshotRetryTimerRef.current = null;
-          loadSessionsSnapshot(retryAttempt + 1);
-        }, retryDelay);
-      });
-  }, [beginSnapshotRequest, isLatestSnapshotRequest, setSessions]);
+  const loadSessionsSnapshot = useCallback(
+    (retryAttempt = 0) => {
+      if (sessionsSnapshotRetryTimerRef.current !== null) {
+        window.clearTimeout(sessionsSnapshotRetryTimerRef.current);
+        sessionsSnapshotRetryTimerRef.current = null;
+      }
+      const requestSeq = beginSnapshotRequest('sessions');
+      void fetchSessionsSnapshot()
+        .then((items) => {
+          if (!isLatestSnapshotRequest('sessions', requestSeq)) {
+            return;
+          }
+          setSessions(items);
+        })
+        .catch(() => {
+          if (!isLatestSnapshotRequest('sessions', requestSeq)) {
+            return;
+          }
+          const retryDelay =
+            SESSIONS_SNAPSHOT_RETRY_DELAYS_MS[Math.min(retryAttempt, SESSIONS_SNAPSHOT_RETRY_DELAYS_MS.length - 1)] ?? 8_000;
+          sessionsSnapshotRetryTimerRef.current = window.setTimeout(() => {
+            sessionsSnapshotRetryTimerRef.current = null;
+            loadSessionsSnapshot(retryAttempt + 1);
+          }, retryDelay);
+        });
+    },
+    [beginSnapshotRequest, isLatestSnapshotRequest, setSessions],
+  );
 
   const loadTasksSnapshot = useCallback(() => {
     const requestSeq = beginSnapshotRequest('tasks');

@@ -14,14 +14,12 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'r
 import { LiveTitlesContext, useSseConnection } from '../app/contexts';
 import { api } from '../client/api';
 import { NEW_CONVERSATION_TITLE, normalizeConversationTitle } from '../conversation/conversationTitle';
-import { fetchSessionsSnapshot } from '../session/sessionSnapshot';
 import {
   applyRemoteConversationLayout,
   closeConversationTab,
   CONVERSATION_LAYOUT_CHANGED_EVENT,
   type ConversationLayout,
   type ConversationShelf,
-  fetchRemoteConversationLayout,
   isWithinLocalWriteGrace,
   moveConversationTab,
   type OpenConversationDropPosition,
@@ -31,7 +29,6 @@ import {
   readConversationLayout,
   readPinnedSessionIds,
   reopenMostRecentlyArchivedConversation,
-  replaceConversationLayout,
   setConversationArchivedState,
   shiftConversationTab,
   unpinConversationTab,
@@ -72,6 +69,32 @@ function buildPlaceholderSessionMeta(id: string, title?: string): SessionMeta {
     messageCount: 0,
     isRunning: false,
   };
+}
+
+function applySidebarConversationSnapshot(
+  snapshot: Awaited<ReturnType<typeof api.sidebarConversations>>,
+  setters: {
+    setOpenIds: (ids: string[]) => void;
+    setPinnedIds: (ids: string[]) => void;
+    setArchivedConversationIds: (ids: string[]) => void;
+    setActiveId: (id: string | null) => void;
+  },
+): SessionMeta[] {
+  sessionStore.replaceAll(snapshot.sessions);
+  sessionStore.markReady?.();
+  const nextLayout = applyRemoteConversationLayout({
+    sessionIds: snapshot.sessionIds,
+    pinnedSessionIds: snapshot.pinnedSessionIds,
+    archivedSessionIds: snapshot.archivedSessionIds,
+    activeSessionId: snapshot.activeConversationId,
+    workspacePaths: snapshot.workspacePaths,
+    remoteControlledConversationIds: snapshot.remoteControlledConversationIds,
+    conversationWorkspaceRevision: snapshot.conversationWorkspaceRevision,
+    conversationWorkspaceUpdatedAt: snapshot.conversationWorkspaceUpdatedAt,
+    conversationWorkspaceMigratedAt: snapshot.conversationWorkspaceMigratedAt,
+  });
+  applyLayoutState(nextLayout, setters);
+  return snapshot.sessions;
 }
 
 export function useConversations(options: { includeArchivedSessions?: boolean } = {}) {
@@ -120,30 +143,22 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
     let retryTimer: ReturnType<typeof window.setTimeout> | null = null;
 
     function syncLayout(attempt = 0): void {
-      void fetchRemoteConversationLayout({ refresh: true, reason: 'use-conversations-bootstrap' })
-        .then((remote) => {
+      void api
+        .sidebarConversations()
+        .then((snapshot) => {
           if (cancelled) {
             return;
           }
 
           if (isWithinLocalWriteGrace()) {
+            sessionStore.replaceAll(snapshot.sessions);
+            sessionStore.markReady?.();
             applyLayoutState(readConversationLayout(), { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
             setLayoutHydrating(false);
             return;
           }
 
-          const nextLayout = applyRemoteConversationLayout({
-            sessionIds: remote.sessionIds,
-            pinnedSessionIds: remote.pinnedSessionIds,
-            archivedSessionIds: remote.archivedSessionIds,
-            activeSessionId: remote.activeSessionId,
-            workspacePaths: remote.workspacePaths,
-            remoteControlledConversationIds: remote.remoteControlledConversationIds,
-            conversationWorkspaceRevision: remote.conversationWorkspaceRevision,
-            conversationWorkspaceUpdatedAt: remote.conversationWorkspaceUpdatedAt,
-            conversationWorkspaceMigratedAt: remote.conversationWorkspaceMigratedAt,
-          });
-          applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+          applySidebarConversationSnapshot(snapshot, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
           setLayoutHydrating(false);
         })
         .catch(() => {
@@ -151,9 +166,8 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
             return;
           }
           const retryDelay =
-            CONVERSATION_LAYOUT_BOOTSTRAP_RETRY_DELAYS_MS[
-              Math.min(attempt, CONVERSATION_LAYOUT_BOOTSTRAP_RETRY_DELAYS_MS.length - 1)
-            ] ?? 8_000;
+            CONVERSATION_LAYOUT_BOOTSTRAP_RETRY_DELAYS_MS[Math.min(attempt, CONVERSATION_LAYOUT_BOOTSTRAP_RETRY_DELAYS_MS.length - 1)] ??
+            8_000;
           retryTimer = window.setTimeout(() => {
             retryTimer = null;
             syncLayout(attempt + 1);
@@ -174,13 +188,11 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   const refetch = useCallback(async () => {
     const requestId = latestRefetchRequestIdRef.current + 1;
     latestRefetchRequestIdRef.current = requestId;
-    const next = await fetchSessionsSnapshot();
+    const snapshot = await api.sidebarConversations();
     if (latestRefetchRequestIdRef.current !== requestId) {
-      return next;
+      return snapshot.sessions;
     }
-    sessionStore.replaceAll(next);
-    sessionStore.markReady?.();
-    return next;
+    return applySidebarConversationSnapshot(snapshot, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
   }, []);
 
   useEffect(() => {

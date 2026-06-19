@@ -72,7 +72,7 @@ function createLocalApiModuleMock(overrides: Partial<LocalApiModule> = {}): Loca
     scheduleDesktopConversationDeferredResume: vi.fn(),
     cancelDesktopConversationDeferredResume: vi.fn(),
     fireDesktopConversationDeferredResume: vi.fn(),
-    recoverDesktopConversation: vi.fn(),
+    resumeDesktopConversation: vi.fn(),
     readDesktopConversationModelPreferences: vi.fn(),
     updateDesktopConversationModelPreferences: vi.fn(),
     readDesktopConversationArtifacts: vi.fn(),
@@ -706,7 +706,7 @@ describe('LocalHostController', () => {
       resume: { id: 'resume-1', dueAt: '2026-04-24T10:05:00.000Z', prompt: 'Resume now.' },
       resumes: [],
     });
-    const recoverDesktopConversation = vi.fn().mockResolvedValue({
+    const resumeDesktopConversation = vi.fn().mockResolvedValue({
       conversationId: 'live-1',
       live: true,
       recovered: true,
@@ -787,7 +787,7 @@ describe('LocalHostController', () => {
         scheduleDesktopConversationDeferredResume,
         cancelDesktopConversationDeferredResume,
         fireDesktopConversationDeferredResume,
-        recoverDesktopConversation,
+        resumeDesktopConversation,
         readDesktopLiveSession,
         readDesktopLiveSessionForkEntries,
         readDesktopLiveSessionContext,
@@ -858,7 +858,7 @@ describe('LocalHostController', () => {
       resume: { id: 'resume-1', dueAt: '2026-04-24T10:05:00.000Z', prompt: 'Resume now.' },
       resumes: [],
     });
-    await expect(controller.recoverConversation?.('conversation-1')).resolves.toEqual({
+    await expect(controller.resumeConversation?.('conversation-1')).resolves.toEqual({
       conversationId: 'live-1',
       live: true,
       recovered: true,
@@ -966,7 +966,7 @@ describe('LocalHostController', () => {
     });
     expect(cancelDesktopConversationDeferredResume).toHaveBeenCalledWith({ conversationId: 'conversation-1', resumeId: 'resume-2' });
     expect(fireDesktopConversationDeferredResume).toHaveBeenCalledWith({ conversationId: 'conversation-1', resumeId: 'resume-1' });
-    expect(recoverDesktopConversation).toHaveBeenCalledWith('conversation-1');
+    expect(resumeDesktopConversation).toHaveBeenCalledWith('conversation-1');
     expect(readDesktopLiveSession).toHaveBeenCalledWith('live-1');
     expect(readDesktopLiveSessionForkEntries).toHaveBeenCalledWith('live-1');
     expect(readDesktopLiveSessionContext).toHaveBeenCalledWith('live-1');

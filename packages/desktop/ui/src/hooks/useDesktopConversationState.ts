@@ -864,55 +864,18 @@ export function useDesktopConversationState(conversationId: string | null, optio
       if (!stateForSend) {
         stateForSend = await api.desktopConversationState(conversationId, requestOptions);
         setState((previous) => {
-          if (activeConversationIdRef.current !== conversationId || (previous?.conversationId && previous.conversationId !== conversationId)) {
+          if (
+            activeConversationIdRef.current !== conversationId ||
+            (previous?.conversationId && previous.conversationId !== conversationId)
+          ) {
             return previous;
           }
           return mergeDesktopConversationState(previous, stateForSend);
         });
       }
 
-      let targetConversationId = conversationId;
-      const liveState = stateForSend?.liveSession;
-      if (!liveState?.live) {
-        const sessionFile = stateForSend?.sessionDetail?.meta?.file?.trim();
-        if (sessionFile) {
-          const resumed = await api.resumeSession(sessionFile, stateForSend?.sessionDetail?.meta?.cwd);
-          targetConversationId = resumed.id || conversationId;
-          if (targetConversationId === conversationId && activeConversationIdRef.current === conversationId) {
-            setState((previous) => {
-              if (previous?.conversationId !== conversationId) return previous;
-              return {
-                ...previous,
-                liveSession: {
-                  live: true,
-                  id: conversationId,
-                  cwd: previous.sessionDetail?.meta?.cwd ?? '',
-                  sessionFile,
-                  isStreaming: previous.stream.isStreaming,
-                },
-              };
-            });
-            void api.desktopConversationState(conversationId, requestOptions).then((nextState) => {
-              setState((previous) => {
-                if (
-                  activeConversationIdRef.current !== conversationId ||
-                  (previous?.conversationId && previous.conversationId !== conversationId)
-                ) {
-                  return previous;
-                }
-                const mergedState = mergeDesktopConversationState(previous, nextState);
-                const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
-                rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
-                return mergedState;
-              });
-            });
-            setSubscriptionVersion((current) => current + 1);
-          }
-        }
-      }
-
-      return await api.promptSession(
-        targetConversationId,
+      const result = await api.sendConversationMessage(
+        conversationId,
         text,
         behavior,
         images,
@@ -921,6 +884,22 @@ export function useDesktopConversationState(conversationId: string | null, optio
         contextMessages,
         relatedConversationIds,
       );
+      void api.desktopConversationState(conversationId, requestOptions).then((nextState) => {
+        setState((previous) => {
+          if (
+            activeConversationIdRef.current !== conversationId ||
+            (previous?.conversationId && previous.conversationId !== conversationId)
+          ) {
+            return previous;
+          }
+          const mergedState = mergeDesktopConversationState(previous, nextState);
+          const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
+          rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
+          return mergedState;
+        });
+      });
+      setSubscriptionVersion((current) => current + 1);
+      return result;
     },
     [
       conversationId,

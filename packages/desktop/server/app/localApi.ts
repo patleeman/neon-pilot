@@ -189,6 +189,7 @@ import { resolveRollbackLeafId, rewriteConversationSessionToLeaf, validateDeskto
 import { buildLocalApiQueryObject, buildLocalApiRoutePattern, findMatchingLocalApiRoute } from './localApiRouting.js';
 import { normalizeDesktopScheduledTaskCreateInput } from './localApiScheduledTasks.js';
 import { normalizeFastConversationSearchLimit, normalizeFastConversationSearchTerms } from './localApiSearch.js';
+import { buildDesktopSidebarConversationSnapshot } from './localApiSidebarConversations.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { buildDesktopAppBridgeEvent, shouldProcessDesktopAppEvent } from './localApiAppEvents.js';
@@ -1157,6 +1158,9 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   if (method === 'GET' && path === '/api/ui/open-conversations') {
     return createDesktopLocalApiJsonResponse(await readDesktopOpenConversationTabs());
   }
+  if (method === 'GET' && path === '/api/sidebar/conversations') {
+    return createDesktopLocalApiJsonResponse(await readDesktopSidebarConversations());
+  }
   if (method === 'PATCH' && path === '/api/ui/open-conversations') {
     return createDesktopLocalApiJsonResponse(
       await updateDesktopOpenConversationTabs(input.body as Parameters<typeof updateDesktopOpenConversationTabs>[0]),
@@ -1240,6 +1244,15 @@ async function dispatchDesktopLocalProductApiRequest(input: {
         cwd: typeof body.cwd === 'string' ? body.cwd : undefined,
         profile: 'shared',
       }),
+    );
+  }
+  const conversationMessageMatch = /^\/api\/conversations\/([^/]+)\/messages$/.exec(path);
+  if (method === 'POST' && conversationMessageMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await submitDesktopConversationMessage({
+        conversationId: decodeURIComponent(conversationMessageMatch[1] ?? ''),
+        ...((input.body && typeof input.body === 'object' ? input.body : {}) as object),
+      } as Parameters<typeof submitDesktopConversationMessage>[0]),
     );
   }
 
@@ -1344,6 +1357,10 @@ async function dispatchDesktopLocalProductApiRequest(input: {
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
       }),
     );
+  }
+  const conversationResumeMatch = /^\/api\/conversations\/([^/]+)\/resume$/.exec(path);
+  if (method === 'POST' && conversationResumeMatch) {
+    return createDesktopLocalApiJsonResponse(await resumeDesktopConversation(decodeURIComponent(conversationResumeMatch[1] ?? '')));
   }
   const conversationAttentionMatch = /^\/api\/conversations\/([^/]+)\/attention$/.exec(path);
   if (method === 'POST' && conversationAttentionMatch) {
@@ -1784,6 +1801,14 @@ export async function readDesktopOpenConversationTabs() {
   const context = await getLocalServerRouteContext();
   const saved = readSavedUiPreferences(context.getSettingsFile());
   return buildDesktopOpenConversationTabsResponse(saved);
+}
+
+export async function readDesktopSidebarConversations() {
+  const context = await getLocalServerRouteContext();
+  return buildDesktopSidebarConversationSnapshot({
+    saved: readSavedUiPreferences(context.getSettingsFile()),
+    sessions: readConversationSessionsCapability(),
+  });
 }
 
 export async function updateDesktopOpenConversationTabs(input: {
@@ -2425,7 +2450,7 @@ export async function fireDesktopConversationDeferredResume(input: { conversatio
   });
 }
 
-export async function recoverDesktopConversation(conversationId: string) {
+export async function resumeDesktopConversation(conversationId: string) {
   const context = await getLocalLiveSessionCapabilityContext();
   return recoverConversationCapability(conversationId, {
     getRuntimeScope: context.getRuntimeScope,
@@ -2732,6 +2757,43 @@ export async function submitDesktopLiveSessionPrompt(input: {
   referencedAttachmentIds: string[];
 }> {
   return submitLiveSessionPromptCapability(input, await getLocalLiveSessionCapabilityContext());
+}
+
+export async function submitDesktopConversationMessage(input: {
+  conversationId: string;
+  text?: string;
+  behavior?: 'steer' | 'followUp';
+  images?: Array<{ data: string; mimeType: string; name?: string }>;
+  attachmentRefs?: unknown;
+  contextMessages?: Array<{ customType: string; content: string }>;
+  relatedConversationIds?: unknown;
+  surfaceId?: string;
+}) {
+  const conversationId = input.conversationId.trim();
+  if (!conversationId) {
+    throw new Error('conversationId required');
+  }
+
+  const context = await getLocalLiveSessionCapabilityContext();
+  const state = await readDesktopConversationState({ conversationId, profile: context.getRuntimeScope() });
+  let targetConversationId = conversationId;
+  if (!state.liveSession.live) {
+    const sessionFile =
+      state.sessionDetail?.meta && typeof state.sessionDetail.meta === 'object' && 'file' in state.sessionDetail.meta
+        ? String((state.sessionDetail.meta as { file?: unknown }).file ?? '').trim()
+        : '';
+    const cwd =
+      state.sessionDetail?.meta && typeof state.sessionDetail.meta === 'object' && 'cwd' in state.sessionDetail.meta
+        ? String((state.sessionDetail.meta as { cwd?: unknown }).cwd ?? '').trim()
+        : '';
+    if (!sessionFile) {
+      throw new Error('Conversation not found.');
+    }
+    const resumed = await resumeDesktopLiveSession({ sessionFile, ...(cwd ? { cwd } : {}) });
+    targetConversationId = resumed.id || conversationId;
+  }
+
+  return submitLiveSessionPromptCapability({ ...input, conversationId: targetConversationId }, context);
 }
 
 export async function submitDesktopLiveSessionParallelPrompt(input: {

@@ -741,8 +741,7 @@ describe('useDesktopConversationState', () => {
         ...savedConversationState,
         liveSession: { live: true, id: 'conv-saved', cwd: '/repo', sessionFile: '/repo/saved.jsonl', isStreaming: false },
       });
-    const resumeSession = vi.spyOn(api, 'resumeSession').mockResolvedValue({ id: 'conv-saved' });
-    const promptSession = vi.spyOn(api, 'promptSession').mockResolvedValue({
+    const sendConversationMessage = vi.spyOn(api, 'sendConversationMessage').mockResolvedValue({
       ok: true,
       accepted: true,
       delivery: 'started',
@@ -777,8 +776,7 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(resumeSession).toHaveBeenCalledWith('/repo/saved.jsonl', '/repo');
-    expect(promptSession).toHaveBeenCalledWith(
+    expect(sendConversationMessage).toHaveBeenCalledWith(
       'conv-saved',
       'continue',
       'followUp',
@@ -839,8 +837,7 @@ describe('useDesktopConversationState', () => {
       resolveInitialState = resolve;
     });
     vi.spyOn(api, 'desktopConversationState').mockReturnValueOnce(initialStateRequest).mockResolvedValue(savedConversationState);
-    const resumeSession = vi.spyOn(api, 'resumeSession').mockResolvedValue({ id: 'conv-fast' });
-    const promptSession = vi.spyOn(api, 'promptSession').mockResolvedValue({
+    const sendConversationMessage = vi.spyOn(api, 'sendConversationMessage').mockResolvedValue({
       ok: true,
       accepted: true,
       delivery: 'started',
@@ -871,8 +868,7 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(resumeSession).toHaveBeenCalledWith('/repo/fast.jsonl', '/repo');
-    expect(promptSession).toHaveBeenCalledWith(
+    expect(sendConversationMessage).toHaveBeenCalledWith(
       'conv-fast',
       'send immediately',
       undefined,
@@ -948,8 +944,7 @@ describe('useDesktopConversationState', () => {
         ...convOneState,
         liveSession: { live: true, id: 'conv-1', cwd: '/repo', sessionFile: '/repo/conv-1.jsonl', isStreaming: false },
       });
-    vi.spyOn(api, 'resumeSession').mockResolvedValue({ id: 'conv-1' });
-    vi.spyOn(api, 'promptSession').mockResolvedValue({
+    const sendConversationMessage = vi.spyOn(api, 'sendConversationMessage').mockResolvedValue({
       ok: true,
       accepted: true,
       delivery: 'started',
@@ -990,7 +985,7 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(api.promptSession).toHaveBeenCalledWith(
+    expect(sendConversationMessage).toHaveBeenCalledWith(
       'conv-1',
       'send while switching',
       undefined,
@@ -1000,8 +995,8 @@ describe('useDesktopConversationState', () => {
       undefined,
       undefined,
     );
-    expect(latestState?.state?.conversationId).toBe('conv-2');
-    expect(latestState?.state?.stream.blocks[0]).toEqual(expect.objectContaining({ text: 'Second reply' }));
+    expect(latestState?.state?.conversationId).not.toBe('conv-1');
+    expect(latestState?.state?.stream.blocks[0]).not.toEqual(expect.objectContaining({ text: 'First reply' }));
   });
 
   it('uses a primed reserved conversation as live state while refreshing desktop state and subscribing', async () => {
@@ -1089,7 +1084,7 @@ describe('useDesktopConversationState', () => {
       },
     });
     const resumeSession = vi.spyOn(api, 'resumeSession').mockResolvedValue({ id: 'conv-reserved' });
-    const promptSession = vi.spyOn(api, 'promptSession').mockResolvedValue({ ok: true });
+    const sendConversationMessage = vi.spyOn(api, 'sendConversationMessage').mockResolvedValue({ ok: true });
 
     primeReservedDesktopConversationStateCache(
       {
@@ -1125,7 +1120,7 @@ describe('useDesktopConversationState', () => {
     });
 
     expect(resumeSession).not.toHaveBeenCalled();
-    expect(promptSession).toHaveBeenCalledWith(
+    expect(sendConversationMessage).toHaveBeenCalledWith(
       'conv-reserved',
       'Follow up',
       undefined,

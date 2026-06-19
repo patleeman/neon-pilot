@@ -22,6 +22,7 @@ import {
   DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS,
 } from '../components/conversation/ConversationDraftEmptyAction';
 import { ConversationGoalPanel } from '../components/conversation/ConversationGoalPanel';
+import { DRAWING_PICKER_OPEN_COMMAND_EVENT } from '../components/conversation/drawingPickerCommands';
 import { addNotification } from '../components/notifications/notificationStore';
 import {
   AppPageEmptyState,
@@ -37,7 +38,6 @@ import {
 } from '../components/ui';
 import type { ExcalidrawSceneData } from '../content/excalidrawUtils';
 import { parseExcalidrawSceneFromSourceData } from '../content/excalidrawUtils';
-import { setExtensionCommandContext } from '../extensions/commands';
 import {
   buildBrowserCommentContextMessages,
   buildBrowserCommentsStorageKey,
@@ -48,6 +48,12 @@ import {
   readBrowserChangedContextMessage,
 } from '../conversation/browserContextMessages';
 import { appendComposerHistory, readComposerHistory } from '../conversation/composerHistory';
+import {
+  activityDeferredResumes,
+  activityExecutions,
+  activityQueuedPrompts,
+  activityScheduledTasks,
+} from '../conversation/conversationActivityPresentation';
 import { getConversationArtifactIdFromSearch, readArtifactPresentation } from '../conversation/conversationArtifacts';
 import { appendIfPresent } from '../conversation/conversationAttachments';
 import { parseWholeLineBashCommand } from '../conversation/conversationBashCommand';
@@ -87,12 +93,6 @@ import {
   nextDragOverStateForDragOver,
   shouldHandleDroppedComposerFiles,
 } from '../conversation/conversationDragDrop';
-import {
-  activityDeferredResumes,
-  activityExecutions,
-  activityQueuedPrompts,
-  activityScheduledTasks,
-} from '../conversation/conversationActivityPresentation';
 import { buildBackgroundExecutionIndicatorText, buildScheduledTaskIndicatorText } from '../conversation/conversationExecutionActivity';
 import { buildComposerShelfContext, buildNewConversationPanelContext } from '../conversation/conversationExtensionContexts';
 import { buildMissionAutoModeInputFromDraft, createDraftMissionTask } from '../conversation/conversationGoalMode';
@@ -274,6 +274,7 @@ import { shouldAutoResumeDeferredResumes } from '../deferred-resume/deferredResu
 import { describeDeferredResumeStatus, resolveDeferredResumePresentationState } from '../deferred-resume/deferredResumeIndicator';
 import { parseDeferredResumeSlashCommand } from '../deferred-resume/deferredResumeSlashCommand';
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, getDesktopBridge } from '../desktop/desktopBridge';
+import { setExtensionCommandContext } from '../extensions/commands';
 import { ComposerShelfHost } from '../extensions/ComposerShelfHost';
 import { ConversationHeaderHost } from '../extensions/ConversationHeaderHost';
 import { ConversationLifecycleHost } from '../extensions/ConversationLifecycleHost';
@@ -314,7 +315,6 @@ import {
   fetchRemoteConversationLayout,
   setActiveConversationTab,
 } from '../session/sessionTabs';
-import { DRAWING_PICKER_OPEN_COMMAND_EVENT } from '../components/conversation/drawingPickerCommands';
 import type {
   ConversationAttachmentSummary,
   ConversationContextDocRef,
@@ -635,15 +635,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     setAppLayoutMode('workbench');
     writeAppLayoutMode('workbench');
   }, [appLayoutMode, selectedRunId]);
-
-  useEffect(() => {
-    if (draft || !id) {
-      return;
-    }
-
-    ensureConversationTabOpen(id);
-    setActiveConversationTab(id);
-  }, [draft, id]);
 
   // ── Live session detection ─────────────────────────────────────────────────
   const sessionSnapshot = useSession(id);
@@ -1012,6 +1003,22 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     : sessionDetail?.meta.id === id
       ? sessionDetail
       : bootstrapSessionDetail;
+
+  useEffect(() => {
+    if (draft || !id) {
+      return;
+    }
+
+    const hasConfirmedConversation =
+      Boolean(sessionSnapshot) || Boolean(visibleSessionDetail) || visibleConversationBootstrap?.liveSession?.live === true;
+    if (!hasConfirmedConversation) {
+      return;
+    }
+
+    ensureConversationTabOpen(id);
+    setActiveConversationTab(id);
+  }, [draft, id, sessionSnapshot, visibleConversationBootstrap?.liveSession?.live, visibleSessionDetail]);
+
   const [hydratedHistoricalBlocks, setHydratedHistoricalBlocks] = useState<Record<string, MessageBlock>>({});
   const [hydratedHistoricalEntryClusters, setHydratedHistoricalEntryClusters] = useState<Record<string, MessageBlock[]>>({});
   const [hydratingHistoricalBlockIds, setHydratingHistoricalBlockIds] = useState<string[]>([]);
@@ -1968,11 +1975,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       return;
     }
 
-    const initialPromptAlreadySubmitted = hasConversationInitialPromptAlreadySubmitted({
-      draft,
-      conversationId: id,
-      locationState: location.state,
-    }) || consumeConversationInitialPromptAlreadySubmitted(id);
+    const initialPromptAlreadySubmitted =
+      hasConversationInitialPromptAlreadySubmitted({
+        draft,
+        conversationId: id,
+        locationState: location.state,
+      }) || consumeConversationInitialPromptAlreadySubmitted(id);
     setPendingInitialPrompt(
       initialPromptAlreadySubmitted
         ? null
@@ -2772,17 +2780,22 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     [deferredResumeNowMs, isLiveSession, savedConversationSessionFile, visibleDeferredResumes],
   );
   const orderedDeferredResumes = deferredResumePresentation.orderedResumes;
-  const visibleActiveConversationBackgroundExecutions = activityBackgroundExecutions.filter((execution) => execution.id !== conversationRunId);
+  const visibleActiveConversationBackgroundExecutions = activityBackgroundExecutions.filter(
+    (execution) => execution.id !== conversationRunId,
+  );
   const backgroundExecutionIndicatorText = buildBackgroundExecutionIndicatorText(visibleActiveConversationBackgroundExecutions);
   const showActiveBackgroundRunDetails = showBackgroundRunDetails;
   const conversationScheduledTasks = activityScheduledTaskItems;
   const scheduledTaskIndicatorText = buildScheduledTaskIndicatorText(conversationScheduledTasks);
-  const runScheduledTaskFromShelf = useCallback(async (taskId: string) => {
-    await api.runTaskNow(taskId);
-    const nextTasks = await api.tasks();
-    taskStore.replaceAll(nextTasks);
-    await refreshConversationActivity().catch(() => {});
-  }, [refreshConversationActivity]);
+  const runScheduledTaskFromShelf = useCallback(
+    async (taskId: string) => {
+      await api.runTaskNow(taskId);
+      const nextTasks = await api.tasks();
+      taskStore.replaceAll(nextTasks);
+      await refreshConversationActivity().catch(() => {});
+    },
+    [refreshConversationActivity],
+  );
 
   const hasReadyDeferredResumes = deferredResumePresentation.hasReadyResumes;
   const deferredResumeAutoResumeKey = deferredResumePresentation.autoResumeKey;
@@ -3008,7 +3021,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       throw new Error('Open the saved conversation before continuing deferred work.');
     }
 
-    const recovered = await api.recoverConversation(id);
+    const recovered = await api.resumeConversation(id);
     if (recovered.conversationId && recovered.conversationId !== id) {
       ensureConversationTabOpen(recovered.conversationId);
       navigate(`/conversations/${recovered.conversationId}`);
@@ -4010,7 +4023,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         return id;
       }
 
-      const recovered = await api.recoverConversation(id);
+      const recovered = await api.resumeConversation(id);
       if (!recovered.live) {
         throw new Error(`This conversation could not ${actionDescription}.`);
       }
@@ -4690,7 +4703,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
     setResumeConversationBusy(true);
     try {
-      const result = await api.recoverConversation(id);
+      const result = await api.resumeConversation(id);
       if (result.conversationId && result.conversationId !== id) {
         ensureConversationTabOpen(result.conversationId);
         navigate(`/conversations/${result.conversationId}`);
@@ -5442,25 +5455,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           }
 
           setConfirmedLive(false);
-          const recoverStartedAtMs = performance.now();
-          const recovered = await api.recoverConversation(id);
-          recordSubmitPhase('recoverConversationAfterNotLive', recoverStartedAtMs, {
-            conversationId: id,
-            recoveredConversationId: recovered.conversationId,
-            serverPerf: recovered.perf ?? null,
-          });
-          if (recovered.conversationId !== id) {
-            ensureConversationTabOpen(recovered.conversationId);
-            navigate(`/conversations/${recovered.conversationId}`);
-            return;
-          }
-
-          setConfirmedLive(true);
           stream.reconnect();
           setPendingAssistantStatusLabel('Resuming…');
           const recoveredStreamSendStartedAtMs = performance.now();
           await stream.send(textToSend, queuedBehavior, promptImages, attachmentRefs, browserContextMessages);
-          recordSubmitPhase('streamSendAfterRecover', recoveredStreamSendStartedAtMs, { conversationId: id, behavior: queuedBehavior });
+          recordSubmitPhase('streamSendAfterReconnect', recoveredStreamSendStartedAtMs, { conversationId: id, behavior: queuedBehavior });
         }
 
         const refetchAttachmentsStartedAtMs = performance.now();
@@ -5479,24 +5478,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
               hasVisibleSessionDetail: true,
             }),
           );
-          const recoverStartedAtMs = performance.now();
-          const recovered = await api.recoverConversation(id);
-          recordSubmitPhase('recoverConversationBeforeResume', recoverStartedAtMs, {
-            conversationId: id,
-            recoveredConversationId: recovered.conversationId,
-            serverPerf: recovered.perf ?? null,
-          });
-          if (recovered.conversationId !== id) {
-            ensureConversationTabOpen(recovered.conversationId);
-            navigate(`/conversations/${recovered.conversationId}`);
-            return;
-          }
-          setConfirmedLive(true);
-          stream.reconnect();
           setPendingAssistantStatusLabel('Working…');
           const resumedStreamSendStartedAtMs = performance.now();
           await stream.send(textToSend, queuedBehavior, promptImages, attachmentRefs, browserContextMessages);
-          recordSubmitPhase('streamSendAfterResume', resumedStreamSendStartedAtMs, { conversationId: id, behavior: queuedBehavior });
+          recordSubmitPhase('streamSendSavedConversation', resumedStreamSendStartedAtMs, { conversationId: id, behavior: queuedBehavior });
           const refetchAttachmentsStartedAtMs = performance.now();
           await refetchConversationAttachments();
           recordSubmitPhase('refetchConversationAttachments', refetchAttachmentsStartedAtMs, { conversationId: id });
@@ -5844,8 +5829,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     composerRunState.streamControlsActive,
   );
   const composerCanSubmit =
-    !composerDisabled &&
-    (composerHasContent || (composerShowsQuestionSubmit && composerQuestionCanSubmit && !composerQuestionSubmitting));
+    !composerDisabled && (composerHasContent || (composerShowsQuestionSubmit && composerQuestionCanSubmit && !composerQuestionSubmitting));
   useEffect(() => {
     setExtensionCommandContext('composer.canSubmit', composerCanSubmit);
     return () => setExtensionCommandContext('composer.canSubmit', null);
@@ -5910,7 +5894,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   );
   const showScrollToBottomControl = shouldShowScrollToBottomControl(messageCount, atBottom);
   const renameConversationDisabled =
-    conversationNeedsTakeover || isEditingTitle || titleSaving || conversationCwdEditorOpen || conversationCwdBusy || conversationCwdPickBusy;
+    conversationNeedsTakeover ||
+    isEditingTitle ||
+    titleSaving ||
+    conversationCwdEditorOpen ||
+    conversationCwdBusy ||
+    conversationCwdPickBusy;
   const { composerShelves, conversationHeaderElements, newConversationPanels } = extensionRegistry;
   const lifecycleEvent = resolveConversationLifecycleEvent({
     hasSessionError: Boolean(sessionError),
@@ -6351,11 +6340,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                       {title}
                     </h1>
                   ) : (
-                    <Suspense fallback={<h1 className="ui-conversation-title-clamp text-[38px] font-semibold leading-[1.05] sm:text-[42px]">{title}</h1>}>
-                      <ConversationSavedHeader
-                        title={title}
-                        onTitleClick={!renameConversationDisabled ? beginTitleEdit : undefined}
-                      />
+                    <Suspense
+                      fallback={
+                        <h1 className="ui-conversation-title-clamp text-[38px] font-semibold leading-[1.05] sm:text-[42px]">{title}</h1>
+                      }
+                    >
+                      <ConversationSavedHeader title={title} onTitleClick={!renameConversationDisabled ? beginTitleEdit : undefined} />
                     </Suspense>
                   )}
                 </div>

@@ -392,7 +392,7 @@ export interface HostController {
   scheduleConversationDeferredResume?(input: DesktopConversationDeferredResumeScheduleRequest): Promise<unknown>;
   cancelConversationDeferredResume?(input: DesktopConversationDeferredResumeMutationRequest): Promise<unknown>;
   fireConversationDeferredResume?(input: DesktopConversationDeferredResumeMutationRequest): Promise<unknown>;
-  recoverConversation?(conversationId: string): Promise<unknown>;
+  resumeConversation?(conversationId: string): Promise<unknown>;
   readConversationModelPreferences?(input: DesktopConversationModelPreferencesRequest): Promise<unknown>;
   updateConversationModelPreferences?(input: DesktopConversationModelPreferencesUpdateRequest): Promise<unknown>;
   readConversationArtifacts?(conversationId: string): Promise<unknown>;

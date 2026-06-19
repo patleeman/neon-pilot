@@ -57,7 +57,7 @@ function createMockController() {
     forkLiveSession: vi.fn(),
     abortLiveSession: vi.fn(),
     renameConversation: vi.fn(),
-    recoverConversation: vi.fn(),
+    resumeConversation: vi.fn(),
     markConversationAttention: vi.fn(),
     markDurableRunAttention: vi.fn(),
     openNewConversation: vi.fn(),

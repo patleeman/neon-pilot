@@ -20,6 +20,7 @@ Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
 const apiMocks = vi.hoisted(() => ({
   openConversationTabs: vi.fn(),
+  sidebarConversations: vi.fn(),
   sessionMeta: vi.fn(),
   setOpenConversationTabs: vi.fn(),
   updateConversationWorkspace: vi.fn(),
@@ -316,6 +317,7 @@ describe('useConversations', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', createStorage());
     apiMocks.openConversationTabs.mockReset();
+    apiMocks.sidebarConversations.mockReset();
     apiMocks.sessionMeta.mockReset();
     apiMocks.setOpenConversationTabs.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
@@ -331,6 +333,11 @@ describe('useConversations', () => {
       conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
       conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
     });
+    fetchSessionsSnapshotMock.mockImplementation(async () => [...sessionStore.getAll()]);
+    apiMocks.sidebarConversations.mockImplementation(async () => ({
+      ...(await apiMocks.openConversationTabs()),
+      sessions: await fetchSessionsSnapshotMock(),
+    }));
     apiMocks.setOpenConversationTabs.mockResolvedValue({
       ok: true,
       sessionIds: ['conv-auto'],
@@ -434,14 +441,9 @@ describe('useConversations', () => {
     await flushAsyncWork();
 
     expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['existing-thread', 'new-thread']);
-    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledWith(
-      ['existing-thread', 'new-thread'],
-      [],
-      [],
-      undefined,
-      'new-thread',
-      { conversationWorkspaceMigrated: true },
-    );
+    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledWith(['existing-thread', 'new-thread'], [], [], undefined, 'new-thread', {
+      conversationWorkspaceMigrated: true,
+    });
   });
 
   it('sorts archived conversations by latest activity', async () => {
@@ -459,30 +461,31 @@ describe('useConversations', () => {
     expect(latestHookResult?.archivedSessions.map((session) => session.id)).toEqual(['newest', 'middle', 'older']);
   });
 
-  it('preserves backend workspace ids that are not in the loaded session snapshot', async () => {
-    apiMocks.openConversationTabs.mockResolvedValue({
-      sessionIds: ['real-open', 'stale-open'],
-      pinnedSessionIds: ['stale-pinned'],
-      archivedSessionIds: ['stale-archived'],
-      activeConversationId: 'stale-open',
+  it('trusts the backend sidebar projection instead of inventing ghost rows for stale ids', async () => {
+    apiMocks.sidebarConversations.mockResolvedValueOnce({
+      sessionIds: ['real-open'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: null,
       workspacePaths: [],
       remoteControlledConversationIds: [],
       conversationWorkspaceRevision: 1,
       conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
       conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+      sessions: [createSession({ id: 'real-open', title: 'Real conversation' })],
     });
 
     renderProbe({
-      sessions: [createSession({ id: 'real-open', title: 'Real conversation' })],
+      sessions: [],
       tasks: null,
     });
 
     await flushAsyncWork();
 
-    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['real-open', 'stale-open']);
-    expect(latestHookResult?.pinnedSessions.map((session) => session.id)).toEqual(['stale-pinned']);
-    expect(latestHookResult?.archivedConversationIds).toEqual(['stale-archived']);
-    expect(latestHookResult?.activeId).toBe('stale-open');
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['real-open']);
+    expect(latestHookResult?.pinnedSessions.map((session) => session.id)).toEqual([]);
+    expect(latestHookResult?.archivedConversationIds).toEqual([]);
+    expect(latestHookResult?.activeId).toBeNull();
     expect(apiMocks.setOpenConversationTabs).not.toHaveBeenCalled();
     expect(apiMocks.updateConversationWorkspace).not.toHaveBeenCalled();
   });
@@ -510,16 +513,37 @@ describe('useConversations', () => {
     expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
   });
 
+  it('uses backend sidebar projection as the source of truth for stale workspace ids', async () => {
+    apiMocks.sidebarConversations.mockResolvedValueOnce({
+      sessionIds: ['real-open'],
+      pinnedSessionIds: ['real-pinned'],
+      archivedSessionIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 2,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:01.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+      sessions: [createSession({ id: 'real-open', title: 'Real open' }), createSession({ id: 'real-pinned', title: 'Real pinned' })],
+    });
+
+    renderProbe({ sessions: [], tasks: null });
+    await flushAsyncWork();
+
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['real-open']);
+    expect(latestHookResult?.pinnedSessions.map((session) => session.id)).toEqual(['real-pinned']);
+    expect(latestHookResult?.activeId).toBeNull();
+    expect(latestHookResult?.tabs.some((session) => session.title === 'Connecting…')).toBe(false);
+  });
+
   it('retries remote layout hydration without declaring an empty workspace', async () => {
-    apiMocks.openConversationTabs
-      .mockRejectedValueOnce(new Error('backend warming'))
-      .mockResolvedValueOnce({
-        sessionIds: ['remote-after-retry'],
-        pinnedSessionIds: [],
-        archivedSessionIds: [],
-        activeConversationId: 'remote-after-retry',
-        workspacePaths: [],
-      });
+    apiMocks.openConversationTabs.mockRejectedValueOnce(new Error('backend warming')).mockResolvedValueOnce({
+      sessionIds: ['remote-after-retry'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'remote-after-retry',
+      workspacePaths: [],
+    });
 
     renderProbe({
       sessions: [createSession({ id: 'remote-after-retry', title: 'Remote after retry' })],
@@ -541,7 +565,7 @@ describe('useConversations', () => {
     expect(latestHookResult?.activeId).toBe('remote-after-retry');
   });
 
-  it('migrates browser-local open conversations when cold-start backend layout is unmigrated', async () => {
+  it('ignores stale browser-local conversations when cold-start backend layout is empty', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['local-open']));
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['local-pinned']));
     localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, 'local-open');
@@ -556,18 +580,6 @@ describe('useConversations', () => {
       conversationWorkspaceUpdatedAt: null,
       conversationWorkspaceMigratedAt: null,
     });
-    apiMocks.setOpenConversationTabs.mockResolvedValueOnce({
-      ok: true,
-      sessionIds: ['local-open'],
-      pinnedSessionIds: ['local-pinned'],
-      archivedSessionIds: [],
-      activeConversationId: 'local-open',
-      workspacePaths: [],
-      remoteControlledConversationIds: [],
-      conversationWorkspaceRevision: 1,
-      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
-      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
-    });
 
     renderProbe({
       sessions: [
@@ -580,12 +592,13 @@ describe('useConversations', () => {
     await flushAsyncWork();
 
     expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
-    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['local-open']);
-    expect(latestHookResult?.pinnedSessions.map((session) => session.id)).toEqual(['local-pinned']);
-    expect(latestHookResult?.activeId).toBe('local-open');
-    expect(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
+    expect(apiMocks.setOpenConversationTabs).not.toHaveBeenCalled();
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual([]);
+    expect(latestHookResult?.pinnedSessions.map((session) => session.id)).toEqual([]);
+    expect(latestHookResult?.activeId).toBeNull();
+    expect(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY)).toBe(JSON.stringify(['local-open']));
+    expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBe(JSON.stringify(['local-pinned']));
+    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('local-open');
   });
 
   it('loads row metadata for backend-open ids before the full sessions snapshot arrives', async () => {
@@ -707,15 +720,29 @@ describe('useConversations', () => {
   });
 
   it('does not let an older manual refetch overwrite a newer snapshot', async () => {
-    let resolveFirst!: (sessions: SessionMeta[]) => void;
-    let resolveSecond!: (sessions: SessionMeta[]) => void;
-    const first = new Promise<SessionMeta[]>((resolve) => {
+    let resolveFirst!: (snapshot: Awaited<ReturnType<typeof apiMocks.sidebarConversations>>) => void;
+    let resolveSecond!: (snapshot: Awaited<ReturnType<typeof apiMocks.sidebarConversations>>) => void;
+    const first = new Promise<Awaited<ReturnType<typeof apiMocks.sidebarConversations>>>((resolve) => {
       resolveFirst = resolve;
     });
-    const second = new Promise<SessionMeta[]>((resolve) => {
+    const second = new Promise<Awaited<ReturnType<typeof apiMocks.sidebarConversations>>>((resolve) => {
       resolveSecond = resolve;
     });
-    fetchSessionsSnapshotMock.mockReturnValueOnce(first).mockReturnValueOnce(second);
+    apiMocks.sidebarConversations
+      .mockResolvedValueOnce({
+        sessionIds: ['initial'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        activeConversationId: null,
+        workspacePaths: [],
+        remoteControlledConversationIds: [],
+        conversationWorkspaceRevision: 1,
+        conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+        conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+        sessions: [createSession({ id: 'initial', title: 'Initial session' })],
+      })
+      .mockReturnValueOnce(first)
+      .mockReturnValueOnce(second);
 
     renderProbe({
       sessions: [createSession({ id: 'initial', title: 'Initial session' })],
@@ -728,7 +755,18 @@ describe('useConversations', () => {
     const secondRefetch = latestHookResult?.refetch();
 
     await act(async () => {
-      resolveSecond([createSession({ id: 'newer', title: 'Newer snapshot' })]);
+      resolveSecond({
+        sessionIds: ['newer'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        activeConversationId: null,
+        workspacePaths: [],
+        remoteControlledConversationIds: [],
+        conversationWorkspaceRevision: 3,
+        conversationWorkspaceUpdatedAt: '2026-04-01T00:00:02.000Z',
+        conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+        sessions: [createSession({ id: 'newer', title: 'Newer snapshot' })],
+      });
       await secondRefetch;
     });
 
@@ -736,7 +774,18 @@ describe('useConversations', () => {
     expect(sessionStore.get('initial')).toBeUndefined();
 
     await act(async () => {
-      resolveFirst([createSession({ id: 'older', title: 'Older snapshot' })]);
+      resolveFirst({
+        sessionIds: ['older'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        activeConversationId: null,
+        workspacePaths: [],
+        remoteControlledConversationIds: [],
+        conversationWorkspaceRevision: 2,
+        conversationWorkspaceUpdatedAt: '2026-04-01T00:00:01.000Z',
+        conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+        sessions: [createSession({ id: 'older', title: 'Older snapshot' })],
+      });
       await firstRefetch;
     });
 

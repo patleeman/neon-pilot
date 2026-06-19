@@ -558,9 +558,9 @@ export class LocalHostController implements HostController {
     return module.fireDesktopConversationDeferredResume(input);
   }
 
-  async recoverConversation(conversationId: string): Promise<unknown> {
+  async resumeConversation(conversationId: string): Promise<unknown> {
     const module = await this.loadLocalApi();
-    return module.recoverDesktopConversation(conversationId);
+    return module.resumeDesktopConversation(conversationId);
   }
 
   async readConversationModelPreferences(input: DesktopConversationModelPreferencesRequest): Promise<unknown> {

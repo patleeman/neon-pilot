@@ -46,6 +46,14 @@ Saved-conversation summaries are cache-first. UI and suggested-context reads onl
 
 Conversation read models live in `<state-root>/sync/pi-agent/conversations.db`. JSONL transcript files remain the append-only source of truth for recovery/export, but list/search/summary/detail request paths should use the SQLite read models instead of scanning transcript files.
 
+### Sidebar and Hydration
+
+The backend is the source of truth for sidebar conversation state. The desktop UI hydrates the sidebar from `GET /api/sidebar/conversations`, which returns one coherent projection: open IDs, pinned IDs, archived IDs, active ID, workspace metadata, and the session rows needed to render them. The projection filters stale workspace IDs that no longer resolve to known conversations, so the frontend must not create durable ghost rows for unknown IDs. Temporary optimistic UI is allowed only while a new conversation is being reserved or sent.
+
+Opening a conversation is a read. The frontend asks for conversation state/bootstrap by ID and the backend decides whether the conversation is already live, can be read from transcript state, or is missing. If a requested conversation ID is unknown, the UI should show the conversation error state instead of redirecting to `/conversations/new`.
+
+Sending or explicitly resuming a saved conversation is semantic from the frontend's perspective. The UI calls the conversation message/resume API; the backend may hydrate a live session from the transcript internally when needed. Frontend code should not call recovery/hydration endpoints or branch on recovery details.
+
 Runtime code should not import `conversations/sessions.js` directly. Normal callers use `conversationService.ts` and extension-facing capabilities. The only allowed direct transcript seams are:
 
 - `conversationService.ts` — read-model service boundary with targeted transcript fallback and cache writes.
