@@ -1149,7 +1149,6 @@ function ActivityInspector({
   subscriptions,
   onReemit,
   onCreateReaction,
-  onNewSubscription,
   onToggleSubscription,
   onDeleteSubscription,
   onPausePublisher,
@@ -1160,7 +1159,6 @@ function ActivityInspector({
   subscriptions: EventBusSubscriptionSummary[];
   onReemit: (event: AutomationActivityEvent) => void;
   onCreateReaction: (taskId: string) => void;
-  onNewSubscription: (pattern?: string) => void;
   onToggleSubscription: (subscription: EventBusSubscriptionSummary) => void;
   onDeleteSubscription: (subscription: EventBusSubscriptionSummary) => void;
   onPausePublisher: (taskId: string) => void;
@@ -1218,12 +1216,7 @@ function ActivityInspector({
           <span className="text-secondary">Matching reaction</span>
         </div>
         <div className="mt-5 border-t border-border-subtle/70 pt-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-[12px] font-medium uppercase text-dim">Subscriptions</div>
-            <ToolbarButton className="h-7 px-2 text-[12px]" onClick={() => onNewSubscription()}>
-              New
-            </ToolbarButton>
-          </div>
+          <div className="text-[12px] font-medium uppercase text-dim">Subscriptions</div>
           <div className="mt-3">{subscriptionList}</div>
         </div>
       </aside>
@@ -1250,12 +1243,7 @@ function ActivityInspector({
           <span className="truncate text-secondary">{event.reactionTitle}</span>
         </div>
         <div className="mt-4 border-t border-border-subtle/70 pt-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-[12px] font-medium uppercase text-dim">Subscriptions</div>
-            <ToolbarButton className="h-7 px-2 text-[12px]" onClick={() => onNewSubscription(event.eventName)}>
-              New
-            </ToolbarButton>
-          </div>
+          <div className="text-[12px] font-medium uppercase text-dim">Subscriptions</div>
           <div className="mt-3">{subscriptionList}</div>
         </div>
       </div>
@@ -1283,7 +1271,6 @@ function ActivityInspector({
           <ToolbarButton disabled={actionBusy || event.status === 'Disabled'} onClick={() => onReemit(event)}>
             {busy === replayBusyKey ? (event.replayMode === 'event-bus' ? 'Replaying…' : 'Starting…') : 'Re-emit Event'}
           </ToolbarButton>
-          <ToolbarButton onClick={() => onNewSubscription(event.eventName)}>New Subscription</ToolbarButton>
           {event.taskId ? <ToolbarButton onClick={() => onCreateReaction(event.taskId)}>Edit Scheduled Publisher</ToolbarButton> : null}
           {event.reactionKind === 'thread' && event.taskId ? (
             <ToolbarButton onClick={() => onOpenThread(event.taskId)}>Open Thread</ToolbarButton>
@@ -1558,35 +1545,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     [load, pa, tasks],
   );
 
-  const createSubscription = useCallback(
-    async (pattern?: string) => {
-      const eventPattern = pattern?.trim() || '*';
-      setBusy('subscription:create');
-      try {
-        await pa.extension.invoke('eventBus', {
-          action: 'save_subscription',
-          id: `sub_${eventPattern.replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 48)}_${Date.now().toString(36)}`,
-          name: `Handle ${eventPattern}`,
-          pattern: eventPattern,
-          enabled: false,
-          subscriptionAction: {
-            type: 'start_agent',
-            prompt: `Handle event ${eventPattern}. Inspect the event context and take the appropriate next step.`,
-          },
-        });
-        setNotice('Subscription created disabled.');
-        await load();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(msg);
-        pa.ui.notify({ type: 'error', message: `Failed to create subscription: ${msg}`, source: 'system-automations' });
-      } finally {
-        setBusy(null);
-      }
-    },
-    [load, pa],
-  );
-
   const toggleSubscription = useCallback(
     async (subscription: EventBusSubscriptionSummary) => {
       setBusy(`subscription:${subscription.id}`);
@@ -1831,8 +1789,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                   placeholder="Search events…"
                   className="w-56 bg-surface/40 text-[13px]"
                 />
-                <ToolbarButton onClick={() => void createSubscription()}>New Subscription</ToolbarButton>
-                <ToolbarButton onClick={() => openEditor()}>New Scheduled Publisher</ToolbarButton>
                 <IconButton title="Reload automations" aria-label="Reload automations" onClick={() => void reload()}>
                   <RefreshIcon />
                 </IconButton>
@@ -2338,7 +2294,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 const task = tasks.find((candidate) => candidate.id === taskId);
                 openEditor(task);
               }}
-              onNewSubscription={(pattern) => void createSubscription(pattern)}
               onToggleSubscription={(subscription) => void toggleSubscription(subscription)}
               onDeleteSubscription={(subscription) => void deleteSubscription(subscription)}
               onPausePublisher={(taskId) => void pausePublisher(taskId)}

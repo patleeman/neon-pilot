@@ -377,27 +377,6 @@ describe('AutomationsPage', () => {
     expect(update).toHaveBeenCalledWith('daily-check', expect.objectContaining({ enabled: false }));
   });
 
-  it('creates a disabled subscription from the toolbar', async () => {
-    const pa = createPa();
-    const { container } = await renderPage(pa);
-    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New Subscription');
-    if (!newButton) throw new Error('New Subscription button not found');
-
-    await act(async () => {
-      newButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-
-    expect(pa.extension.invoke).toHaveBeenCalledWith(
-      'eventBus',
-      expect.objectContaining({
-        action: 'save_subscription',
-        pattern: expect.any(String),
-        enabled: false,
-        subscriptionAction: expect.objectContaining({ type: 'start_agent' }),
-      }),
-    );
-  });
-
   it('toggles and deletes subscriptions from the inspector list', async () => {
     const pa = createPa({
       list: vi.fn(async () => []),
@@ -523,13 +502,7 @@ describe('AutomationsPage', () => {
     );
     const pa = createPa();
     pa.commands.execute = execute as never;
-    const { container } = await renderPage(pa);
-    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New Scheduled Publisher');
-    if (!newButton) throw new Error('New automation button not found');
-
-    await act(async () => {
-      newButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    const { container } = await renderPage(pa, { search: '?action=new' });
 
     expect(container.textContent).toContain('Create with chat');
     expect(container.textContent).not.toContain('Create automation');
@@ -571,13 +544,7 @@ describe('AutomationsPage', () => {
   it('keeps the editor open when chat creation cannot be opened', async () => {
     const pa = createPa();
     pa.commands.execute = vi.fn(async () => false) as never;
-    const { container } = await renderPage(pa);
-    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New Scheduled Publisher');
-    if (!newButton) throw new Error('New automation button not found');
-
-    await act(async () => {
-      newButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    const { container } = await renderPage(pa, { search: '?action=new' });
 
     const chatButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create with chat');
     if (!chatButton) throw new Error('Create with chat button not found');
@@ -598,13 +565,7 @@ describe('AutomationsPage', () => {
 
   it('lets recurring schedules be composed from controls', async () => {
     const pa = createPa();
-    const { container } = await renderPage(pa);
-    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New Scheduled Publisher');
-    if (!newButton) throw new Error('New automation button not found');
-
-    await act(async () => {
-      newButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    const { container } = await renderPage(pa, { search: '?action=new' });
 
     const cadence = container.querySelector<HTMLSelectElement>('select[name="automation-recurring-cadence"]');
     const time = container.querySelector<HTMLInputElement>('input[name="automation-recurring-time"]');
