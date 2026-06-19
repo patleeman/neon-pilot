@@ -307,7 +307,10 @@ export class LocalHostController implements HostController {
     sessionIds?: string[];
     pinnedSessionIds?: string[];
     archivedSessionIds?: string[];
+    lockedConversationIds?: string[];
+    activeConversationId?: string | null;
     workspacePaths?: string[];
+    conversationWorkspaceMigrated?: boolean | null;
   }): Promise<unknown> {
     const module = await this.loadLocalApi();
     return module.saveDesktopConversationWorkspace(input);

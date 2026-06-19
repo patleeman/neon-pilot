@@ -452,6 +452,7 @@ describe('useConversations', () => {
       'new-thread',
       {
         conversationWorkspaceMigrated: true,
+        lockedConversationIds: [],
       },
     );
   });

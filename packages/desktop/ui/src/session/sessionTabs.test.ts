@@ -106,6 +106,7 @@ describe('sessionTabs', () => {
       sessionIds: [],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(readOpenSessionIds()).toEqual([]);
@@ -118,6 +119,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       workspacePaths: ['/repo'],
       activeConversationId: 'session-1',
       remoteControlledConversationIds: ['session-2'],
@@ -131,6 +133,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       workspacePaths: ['/repo'],
       activeSessionId: 'session-1',
       remoteControlledConversationIds: ['session-2'],
@@ -200,6 +203,7 @@ describe('sessionTabs', () => {
       sessionIds: ['newer-open'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: 'newer-open',
     });
     expect(readConversationLayout()).toEqual(staleLayout);
@@ -253,6 +257,7 @@ describe('sessionTabs', () => {
       sessionIds: ['newer-open'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: 'newer-open',
     });
 
@@ -296,6 +301,7 @@ describe('sessionTabs', () => {
       sessionIds: [],
       pinnedSessionIds: [],
       archivedSessionIds: ['open-a'],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(readConversationLayout()).toEqual(staleLayout);
@@ -383,6 +389,7 @@ describe('sessionTabs', () => {
       sessionIds: ['cached-session', 'local-session'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: 'local-session',
       workspacePaths: ['/cached'],
       remoteControlledConversationIds: ['remote-controlled-session'],
@@ -450,7 +457,13 @@ describe('sessionTabs', () => {
 
     const layout = applyRemoteConversationLayout({ sessionIds: ['session-2'], pinnedSessionIds: [], archivedSessionIds: [] });
 
-    expect(layout).toEqual({ sessionIds: ['session-2'], pinnedSessionIds: [], archivedSessionIds: [], activeSessionId: null });
+    expect(layout).toEqual({
+      sessionIds: ['session-2'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      lockedConversationIds: [],
+      activeSessionId: null,
+    });
     expect(readArchivedSessionIds()).toEqual([]);
     expect(apiMocks.saveConversationWorkspaceLayout).toHaveBeenCalledTimes(1);
     expect(apiMocks.updateConversationWorkspace).not.toHaveBeenCalled();
@@ -482,6 +495,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: ['session-2'],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
   });
@@ -491,6 +505,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-2'],
       pinnedSessionIds: ['session-3'],
       archivedSessionIds: ['session-4'],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     dispatchEvent.mockReset();
@@ -499,6 +514,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: ['session-2', 'session-3'],
       archivedSessionIds: ['session-4'],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -508,6 +524,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-2'],
       pinnedSessionIds: ['session-3'],
       archivedSessionIds: ['session-4'],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -521,6 +538,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-2', 'session-1', 'session-3'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -530,6 +548,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-2', 'session-3'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -543,6 +562,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-3'],
       pinnedSessionIds: ['session-2', 'session-1'],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -552,6 +572,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-3'],
       pinnedSessionIds: ['session-2', 'session-1'],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).not.toHaveBeenCalled();
@@ -565,6 +586,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-2'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).not.toHaveBeenCalled();
@@ -578,6 +600,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: ['session-2'],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -591,6 +614,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: ['session-2', 'session-3'],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -604,6 +628,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-2'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -617,6 +642,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: [],
       archivedSessionIds: ['session-2'],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -635,6 +661,7 @@ describe('sessionTabs', () => {
       sessionIds: [],
       pinnedSessionIds: [],
       archivedSessionIds: ['session-1'],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
   });
@@ -649,6 +676,7 @@ describe('sessionTabs', () => {
       sessionIds: ['parent'],
       pinnedSessionIds: [],
       archivedSessionIds: ['child'],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
 
@@ -660,6 +688,7 @@ describe('sessionTabs', () => {
       sessionIds: ['parent'],
       pinnedSessionIds: [],
       archivedSessionIds: ['child'],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
   });
@@ -672,6 +701,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: [],
       archivedSessionIds: ['session-2'],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -681,6 +711,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-2'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -694,6 +725,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: [],
       archivedSessionIds: ['session-3'],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -704,6 +736,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: [],
       archivedSessionIds: ['session-2', 'session-3'],
+      lockedConversationIds: [],
       activeSessionId: null,
     });
     dispatchEvent.mockReset();
@@ -714,6 +747,7 @@ describe('sessionTabs', () => {
         sessionIds: ['session-1', 'session-3'],
         pinnedSessionIds: [],
         archivedSessionIds: ['session-2'],
+        lockedConversationIds: [],
         activeSessionId: null,
       },
     });
@@ -726,6 +760,7 @@ describe('sessionTabs', () => {
         sessionIds: ['session-1', 'session-3', 'session-2'],
         pinnedSessionIds: [],
         archivedSessionIds: [],
+        lockedConversationIds: [],
         activeSessionId: null,
       },
     });
@@ -742,6 +777,7 @@ describe('sessionTabs', () => {
         sessionIds: ['session-1'],
         pinnedSessionIds: [],
         archivedSessionIds: [],
+        lockedConversationIds: [],
         activeSessionId: null,
       },
     });

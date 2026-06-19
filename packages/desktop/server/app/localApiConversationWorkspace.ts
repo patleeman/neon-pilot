@@ -4,6 +4,7 @@ export interface DesktopConversationWorkspaceUpdateInput {
   sessionIds?: string[];
   pinnedSessionIds?: string[];
   archivedSessionIds?: string[];
+  lockedConversationIds?: string[];
   activeConversationId?: string | null;
   workspacePaths?: string[];
   conversationWorkspaceMigrated?: boolean | null;
@@ -16,6 +17,8 @@ export type DesktopConversationWorkspaceOperationInput =
   | { operation: 'unpin'; sessionId: string; open?: boolean | null }
   | { operation: 'archive'; sessionId: string; archived?: boolean | null }
   | { operation: 'restore'; sessionId: string }
+  | { operation: 'lock'; sessionId: string; locked?: boolean | null }
+  | { operation: 'unlock'; sessionId: string }
   | { operation: 'setActive'; sessionId?: string | null }
   | {
       operation: 'move';
@@ -29,6 +32,7 @@ export interface DesktopConversationWorkspaceLayout {
   sessionIds: string[];
   pinnedSessionIds: string[];
   archivedSessionIds: string[];
+  lockedConversationIds: string[];
   activeConversationId: string | null;
 }
 
@@ -37,7 +41,15 @@ export function validateDesktopConversationWorkspaceUpdate(input: unknown): asse
     throw new Error('conversation workspace update must be an object');
   }
   const update = input as DesktopConversationWorkspaceUpdateInput;
-  const { sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, workspacePaths, conversationWorkspaceMigrated } = update;
+  const {
+    sessionIds,
+    pinnedSessionIds,
+    archivedSessionIds,
+    lockedConversationIds,
+    activeConversationId,
+    workspacePaths,
+    conversationWorkspaceMigrated,
+  } = update;
 
   if (sessionIds !== undefined && !Array.isArray(sessionIds)) {
     throw new Error('sessionIds must be an array when provided');
@@ -49,6 +61,10 @@ export function validateDesktopConversationWorkspaceUpdate(input: unknown): asse
 
   if (archivedSessionIds !== undefined && !Array.isArray(archivedSessionIds)) {
     throw new Error('archivedSessionIds must be an array when provided');
+  }
+
+  if (lockedConversationIds !== undefined && !Array.isArray(lockedConversationIds)) {
+    throw new Error('lockedConversationIds must be an array when provided');
   }
 
   if (activeConversationId !== undefined && activeConversationId !== null && typeof activeConversationId !== 'string') {
@@ -71,12 +87,13 @@ export function validateDesktopConversationWorkspaceUpdate(input: unknown): asse
     sessionIds === undefined &&
     pinnedSessionIds === undefined &&
     archivedSessionIds === undefined &&
+    lockedConversationIds === undefined &&
     activeConversationId === undefined &&
     workspacePaths === undefined &&
     conversationWorkspaceMigrated === undefined
   ) {
     throw new Error(
-      'sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, workspacePaths, or conversationWorkspaceMigrated required',
+      'sessionIds, pinnedSessionIds, archivedSessionIds, lockedConversationIds, activeConversationId, workspacePaths, or conversationWorkspaceMigrated required',
     );
   }
 }
@@ -87,6 +104,7 @@ export function desktopConversationWorkspaceInvalidationTopics(input: DesktopCon
     input.sessionIds !== undefined ||
     input.pinnedSessionIds !== undefined ||
     input.archivedSessionIds !== undefined ||
+    input.lockedConversationIds !== undefined ||
     input.activeConversationId !== undefined
   ) {
     topics.push('sessions');
@@ -120,6 +138,7 @@ export function normalizeDesktopConversationWorkspaceLayout(input: {
   sessionIds?: Iterable<unknown>;
   pinnedSessionIds?: Iterable<unknown>;
   archivedSessionIds?: Iterable<unknown>;
+  lockedConversationIds?: Iterable<unknown>;
   activeConversationId?: unknown;
 }): DesktopConversationWorkspaceLayout {
   const pinnedSessionIds = normalizeSessionIds(input.pinnedSessionIds ?? []);
@@ -132,6 +151,7 @@ export function normalizeDesktopConversationWorkspaceLayout(input: {
     sessionIds,
     pinnedSessionIds,
     archivedSessionIds,
+    lockedConversationIds: normalizeSessionIds(input.lockedConversationIds ?? []),
     activeConversationId: activeConversationId && workspaceIdSet.has(activeConversationId) ? activeConversationId : null,
   };
 }
@@ -161,6 +181,7 @@ function applyArchiveTransitions(
     sessionIds: next.sessionIds,
     pinnedSessionIds: next.pinnedSessionIds,
     archivedSessionIds,
+    lockedConversationIds: next.lockedConversationIds,
     activeConversationId: next.activeConversationId,
   });
 }
@@ -193,6 +214,7 @@ function moveConversationToSection(
     sessionIds: nextSessionIds,
     pinnedSessionIds: nextPinnedSessionIds,
     archivedSessionIds: layout.archivedSessionIds,
+    lockedConversationIds: layout.lockedConversationIds,
     activeConversationId: layout.activeConversationId,
   });
 }
@@ -211,6 +233,7 @@ export function applyDesktopConversationWorkspaceOperation(
         ...layout,
         sessionIds: [...layout.sessionIds, sessionId],
         archivedSessionIds: layout.archivedSessionIds.filter((id) => id !== sessionId),
+        lockedConversationIds: layout.lockedConversationIds,
         activeConversationId: input.active === false ? layout.activeConversationId : sessionId,
       });
     }
@@ -221,6 +244,7 @@ export function applyDesktopConversationWorkspaceOperation(
         normalizeDesktopConversationWorkspaceLayout({
           ...layout,
           sessionIds: layout.sessionIds.filter((id) => id !== sessionId),
+          lockedConversationIds: layout.lockedConversationIds,
         }),
       );
     case 'pin': {
@@ -239,6 +263,7 @@ export function applyDesktopConversationWorkspaceOperation(
           ...layout,
           sessionIds: nextSessionIds,
           pinnedSessionIds: nextPinnedSessionIds,
+          lockedConversationIds: layout.lockedConversationIds,
         }),
       );
     }
@@ -252,12 +277,25 @@ export function applyDesktopConversationWorkspaceOperation(
         sessionIds: archived ? openWithoutSession : [...openWithoutSession, sessionId],
         pinnedSessionIds: nextPinnedSessionIds,
         archivedSessionIds: archived ? [...archivedWithoutSession, sessionId] : archivedWithoutSession,
+        lockedConversationIds: layout.lockedConversationIds,
         activeConversationId: layout.activeConversationId,
       });
     }
     case 'restore':
       if (!sessionId) return layout;
       return applyDesktopConversationWorkspaceOperation(layout, { operation: 'archive', sessionId, archived: false });
+    case 'lock': {
+      if (!sessionId) return layout;
+      const locked = input.locked ?? true;
+      const lockedWithoutSession = layout.lockedConversationIds.filter((id) => id !== sessionId);
+      return normalizeDesktopConversationWorkspaceLayout({
+        ...layout,
+        lockedConversationIds: locked ? [...lockedWithoutSession, sessionId] : lockedWithoutSession,
+      });
+    }
+    case 'unlock':
+      if (!sessionId) return layout;
+      return applyDesktopConversationWorkspaceOperation(layout, { operation: 'lock', sessionId, locked: false });
     case 'setActive':
       return normalizeDesktopConversationWorkspaceLayout({
         ...layout,
@@ -280,6 +318,8 @@ export function validateDesktopConversationWorkspaceOperation(input: unknown): a
     operation !== 'unpin' &&
     operation !== 'archive' &&
     operation !== 'restore' &&
+    operation !== 'lock' &&
+    operation !== 'unlock' &&
     operation !== 'setActive' &&
     operation !== 'move'
   ) {

@@ -14,6 +14,7 @@ describe('localApiConversationWorkspace', () => {
         sessionIds: ['one'],
         pinnedSessionIds: [],
         archivedSessionIds: ['old'],
+        lockedConversationIds: ['one'],
         activeConversationId: null,
         workspacePaths: ['/repo'],
         conversationWorkspaceMigrated: true,
@@ -31,6 +32,9 @@ describe('localApiConversationWorkspace', () => {
     expect(() => validateDesktopConversationWorkspaceUpdate({ archivedSessionIds: 'bad' as unknown as string[] })).toThrow(
       'archivedSessionIds must be an array when provided',
     );
+    expect(() => validateDesktopConversationWorkspaceUpdate({ lockedConversationIds: 'bad' as unknown as string[] })).toThrow(
+      'lockedConversationIds must be an array when provided',
+    );
     expect(() => validateDesktopConversationWorkspaceUpdate({ activeConversationId: 1 as unknown as string })).toThrow(
       'activeConversationId must be a string or null when provided',
     );
@@ -41,7 +45,7 @@ describe('localApiConversationWorkspace', () => {
       'conversationWorkspaceMigrated must be a boolean when provided',
     );
     expect(() => validateDesktopConversationWorkspaceUpdate({})).toThrow(
-      'sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, workspacePaths, or conversationWorkspaceMigrated required',
+      'sessionIds, pinnedSessionIds, archivedSessionIds, lockedConversationIds, activeConversationId, workspacePaths, or conversationWorkspaceMigrated required',
     );
   });
 
@@ -59,6 +63,7 @@ describe('localApiConversationWorkspace', () => {
       sessionIds: ['open-a', 'open-b'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      lockedConversationIds: [],
       activeConversationId: 'open-a',
     };
 
@@ -73,12 +78,15 @@ describe('localApiConversationWorkspace', () => {
       targetSessionId: 'open-c',
       position: 'before',
     });
+    layout = applyDesktopConversationWorkspaceOperation(layout, { operation: 'lock', sessionId: 'open-a' });
     layout = applyDesktopConversationWorkspaceOperation(layout, { operation: 'close', sessionId: 'open-c' });
+    layout = applyDesktopConversationWorkspaceOperation(layout, { operation: 'unlock', sessionId: 'open-a' });
 
     expect(layout).toEqual({
       sessionIds: ['open-a'],
       pinnedSessionIds: ['open-b'],
       archivedSessionIds: ['open-c'],
+      lockedConversationIds: [],
       activeConversationId: null,
     });
   });
@@ -88,6 +96,7 @@ describe('localApiConversationWorkspace', () => {
     expect(() =>
       validateDesktopConversationWorkspaceOperation({ operation: 'move', sessionId: 'one', targetSection: 'pinned' }),
     ).not.toThrow();
+    expect(() => validateDesktopConversationWorkspaceOperation({ operation: 'lock', sessionId: 'one' })).not.toThrow();
     expect(() => validateDesktopConversationWorkspaceOperation({ operation: 'move', sessionId: 'one', targetSection: 'bad' })).toThrow(
       'targetSection must be open or pinned',
     );

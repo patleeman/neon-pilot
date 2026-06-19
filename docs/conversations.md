@@ -48,7 +48,7 @@ Conversation read models live in `<state-root>/sync/pi-agent/conversations.db`. 
 
 ### Sidebar and Hydration
 
-The backend is the source of truth for sidebar conversation state. The desktop UI hydrates the sidebar from `GET /api/sidebar/conversations`, which returns one coherent projection: open IDs, pinned IDs, archived IDs, active ID, workspace metadata, and the session rows needed to render them. The projection filters stale workspace IDs that no longer resolve to known conversations, so the frontend must not create durable ghost rows for unknown IDs. Temporary optimistic UI is allowed only while a new conversation is being reserved or sent.
+The backend is the source of truth for sidebar conversation state. The desktop UI hydrates the sidebar from `GET /api/sidebar/conversations`, which returns one coherent projection: open IDs, pinned IDs, archived IDs, locked IDs, active ID, workspace metadata, and the session rows needed to render them. The projection filters stale workspace IDs that no longer resolve to known conversations, so the frontend must not create durable ghost rows for unknown IDs. Temporary optimistic UI is allowed only while a new conversation is being reserved or sent.
 
 Conversation workspace writes go through `/api/conversation-workspace` and `/api/conversation-workspace/operation`. The older `/api/ui/open-conversations` route has been removed; new code must use the semantic workspace routes.
 
@@ -61,7 +61,7 @@ Sending or explicitly resuming a saved conversation is semantic from the fronten
 Conversation-adjacent UI should keep this same split:
 
 - Conversation content state is read through the shared conversation-state hooks or backend projections. Extension chat rails should not perform their own delayed hydration loops after sending; the hook owns refresh/reconnect behavior.
-- Sidebar presentation preferences such as grouping, sorting, collapsed groups, manual group order, custom labels, and locks are local presentation state. They are separate from the backend-owned conversation workspace projection.
+- Sidebar presentation preferences such as grouping, sorting, collapsed groups, manual group order, and custom labels are local presentation state. Locks are backend-owned workspace state because they change whether a conversation can be closed or archived.
 - App-wide event handling should derive snapshot refreshes from event topics before touching stores. A `runs` or `executions` invalidation refreshes both projections because the visible execution list is derived from run state.
 - Workspace/file-tree request lifecycles should invalidate stale async responses by generation or request id when the workspace, selected file, or directory expansion changes.
 

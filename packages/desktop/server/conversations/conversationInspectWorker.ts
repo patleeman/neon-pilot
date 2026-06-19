@@ -27,6 +27,7 @@ setConversationServiceContext({
       openConversationIds: [],
       pinnedConversationIds: [],
       archivedConversationIds: [],
+      lockedConversationIds: [],
       activeConversationId: null,
       workspacePaths: [],
       remoteControlledConversationIds: [],

@@ -2,6 +2,7 @@ export interface SavedConversationWorkspaceLike {
   openConversationIds: string[];
   pinnedConversationIds: string[];
   archivedConversationIds: string[];
+  lockedConversationIds: string[];
   activeConversationId?: string | null;
   workspacePaths: string[];
   remoteControlledConversationIds: string[];
@@ -14,6 +15,7 @@ export function buildDesktopConversationWorkspaceResponse(saved: SavedConversati
   sessionIds: string[];
   pinnedSessionIds: string[];
   archivedSessionIds: string[];
+  lockedConversationIds: string[];
   activeConversationId: string | null;
   workspacePaths: string[];
   remoteControlledConversationIds: string[];
@@ -25,6 +27,7 @@ export function buildDesktopConversationWorkspaceResponse(saved: SavedConversati
     sessionIds: saved.openConversationIds,
     pinnedSessionIds: saved.pinnedConversationIds,
     archivedSessionIds: saved.archivedConversationIds,
+    lockedConversationIds: saved.lockedConversationIds,
     activeConversationId: saved.activeConversationId ?? null,
     workspacePaths: saved.workspacePaths,
     remoteControlledConversationIds: saved.remoteControlledConversationIds,

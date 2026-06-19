@@ -558,6 +558,7 @@ export const api = {
       sessionIds: string[];
       pinnedSessionIds: string[];
       archivedSessionIds: string[];
+      lockedConversationIds: string[];
       workspacePaths: string[];
       activeConversationId?: string | null;
       remoteControlledConversationIds?: string[];
@@ -570,6 +571,7 @@ export const api = {
       sessionIds: string[];
       pinnedSessionIds: string[];
       archivedSessionIds: string[];
+      lockedConversationIds: string[];
       workspacePaths: string[];
       activeConversationId?: string | null;
       remoteControlledConversationIds?: string[];
@@ -584,12 +586,13 @@ export const api = {
     archivedSessionIds?: string[] | null,
     workspacePaths?: string[] | null,
     activeConversationId?: string | null,
-    options: { conversationWorkspaceMigrated?: boolean | null } = {},
+    options: { conversationWorkspaceMigrated?: boolean | null; lockedConversationIds?: string[] | null } = {},
   ) => {
     const request = {
       ...(sessionIds !== undefined ? { sessionIds } : {}),
       ...(pinnedSessionIds !== undefined ? { pinnedSessionIds } : {}),
       ...(archivedSessionIds !== undefined ? { archivedSessionIds } : {}),
+      ...(options.lockedConversationIds !== undefined ? { lockedConversationIds: options.lockedConversationIds } : {}),
       ...(workspacePaths !== undefined ? { workspacePaths } : {}),
       ...(activeConversationId !== undefined ? { activeConversationId } : {}),
       ...(options.conversationWorkspaceMigrated !== undefined
@@ -601,6 +604,7 @@ export const api = {
       sessionIds: string[];
       pinnedSessionIds: string[];
       archivedSessionIds: string[];
+      lockedConversationIds: string[];
       workspacePaths: string[];
       activeConversationId?: string | null;
       remoteControlledConversationIds?: string[];
@@ -617,6 +621,8 @@ export const api = {
       | { operation: 'unpin'; sessionId: string; open?: boolean | null }
       | { operation: 'archive'; sessionId: string; archived?: boolean | null }
       | { operation: 'restore'; sessionId: string }
+      | { operation: 'lock'; sessionId: string; locked?: boolean | null }
+      | { operation: 'unlock'; sessionId: string }
       | { operation: 'setActive'; sessionId?: string | null }
       | {
           operation: 'move';
@@ -631,6 +637,7 @@ export const api = {
       sessionIds: string[];
       pinnedSessionIds: string[];
       archivedSessionIds: string[];
+      lockedConversationIds: string[];
       workspacePaths: string[];
       activeConversationId?: string | null;
       remoteControlledConversationIds?: string[];

@@ -10,7 +10,6 @@ const THREADS_ORGANIZE_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-o
 const THREADS_FILTER_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-filter');
 const THREADS_SORT_BY_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-sort-by');
 const THREADS_MANUAL_GROUP_ORDER_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-manual-group-order');
-const THREADS_LOCKED_CONVERSATIONS_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-locked-conversations');
 
 export function normalizeStoredThreadStringList(values: Iterable<unknown>): string[] {
   const normalized: string[] = [];
@@ -167,31 +166,6 @@ export function writeManualConversationGroupOrder(groupKeys: readonly string[]):
     }
 
     localStorage.removeItem(THREADS_MANUAL_GROUP_ORDER_STORAGE_KEY);
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
-export function readLockedConversationIds(): string[] {
-  try {
-    const raw = localStorage.getItem(THREADS_LOCKED_CONVERSATIONS_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? normalizeStoredThreadStringList(parsed) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function writeLockedConversationIds(conversationIds: readonly string[]): void {
-  try {
-    if (conversationIds.length > 0) {
-      localStorage.setItem(THREADS_LOCKED_CONVERSATIONS_STORAGE_KEY, JSON.stringify(conversationIds));
-      return;
-    }
-
-    localStorage.removeItem(THREADS_LOCKED_CONVERSATIONS_STORAGE_KEY);
   } catch {
     // Ignore storage failures.
   }

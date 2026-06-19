@@ -153,6 +153,7 @@ async function saveConversationWorkspaceFastPath(input: unknown): Promise<unknow
     sessionIds?: string[];
     pinnedSessionIds?: string[];
     archivedSessionIds?: string[];
+    lockedConversationIds?: string[];
     activeConversationId?: string | null;
     workspacePaths?: string[];
     conversationWorkspaceMigrated?: boolean | null;
@@ -164,6 +165,7 @@ async function saveConversationWorkspaceFastPath(input: unknown): Promise<unknow
           openConversationIds: update.sessionIds,
           pinnedConversationIds: update.pinnedSessionIds,
           archivedConversationIds: update.archivedSessionIds,
+          lockedConversationIds: update.lockedConversationIds,
           activeConversationId: update.activeConversationId,
           workspacePaths: update.workspacePaths,
           conversationWorkspaceMigrated: update.conversationWorkspaceMigrated,
@@ -192,6 +194,7 @@ async function updateConversationWorkspaceByOperationFastPath(input: unknown): P
       sessionIds: current.openConversationIds,
       pinnedSessionIds: current.pinnedConversationIds,
       archivedSessionIds: current.archivedConversationIds,
+      lockedConversationIds: current.lockedConversationIds,
       activeConversationId: current.activeConversationId,
     },
     input,
@@ -203,6 +206,7 @@ async function updateConversationWorkspaceByOperationFastPath(input: unknown): P
           openConversationIds: next.sessionIds,
           pinnedConversationIds: next.pinnedSessionIds,
           archivedConversationIds: next.archivedSessionIds,
+          lockedConversationIds: next.lockedConversationIds,
           activeConversationId: next.activeConversationId,
           conversationWorkspaceMigrated: true,
         },
@@ -513,6 +517,7 @@ export class LocalBackendProcesses {
           openConversationIds: [],
           pinnedConversationIds: [],
           archivedConversationIds: [],
+          lockedConversationIds: [],
           activeConversationId: null,
           workspacePaths: [],
           remoteControlledConversationIds: [],
@@ -590,6 +595,7 @@ export class LocalBackendProcesses {
           openConversationIds: [],
           pinnedConversationIds: [],
           archivedConversationIds: [],
+          lockedConversationIds: [],
           activeConversationId: null,
           workspacePaths: [],
           remoteControlledConversationIds: [],

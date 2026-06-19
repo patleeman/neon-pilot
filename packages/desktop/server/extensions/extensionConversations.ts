@@ -2,16 +2,13 @@ import type { SessionEntry } from '@earendil-works/pi-coding-agent';
 
 import { reserveConversationSession } from '../conversations/conversationReservation.js';
 import {
-  type LiveSessionCapabilityContext,
-  submitLiveSessionPromptCapability,
-} from '../conversations/liveSessionCapability.js';
-import {
   appendStoredVisibleCustomMessage,
   renameStoredConversation,
   resolveConversationSessionFile,
 } from '../conversations/conversationService.js';
 import { readConversationSessionsCapability } from '../conversations/conversationSessionCapability.js';
 import { broadcastTitle } from '../conversations/liveSessionBroadcasts.js';
+import { type LiveSessionCapabilityContext, submitLiveSessionPromptCapability } from '../conversations/liveSessionCapability.js';
 import {
   abortSession as abortLiveSession,
   appendVisibleCustomMessage as appendVisibleLiveSessionCustomMessage,
@@ -26,12 +23,9 @@ import { resolveStableSessionTitle } from '../conversations/liveSessionTitle.js'
 import type { ServerRouteContext } from '../routes/context.js';
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
-import {
-  buildLiveSessionExtensionFactoriesForRuntime,
-  buildLiveSessionResourceOptionsForRuntime,
-} from './runtimeAgentHooks.js';
-import { publishExtensionHostEvent } from './extensionSubscriptions.js';
 import { assertExtensionAnyPermission } from './extensionPermissions.js';
+import { publishExtensionHostEvent } from './extensionSubscriptions.js';
+import { buildLiveSessionExtensionFactoriesForRuntime, buildLiveSessionResourceOptionsForRuntime } from './runtimeAgentHooks.js';
 
 const reservedConversationFiles = new Map<string, string>();
 
@@ -172,6 +166,7 @@ export function createExtensionConversationsCapability(
             openConversationIds: before.openConversationIds.filter((id) => !deletedIds.has(id)),
             pinnedConversationIds: before.pinnedConversationIds.filter((id) => !deletedIds.has(id)),
             archivedConversationIds: before.archivedConversationIds.filter((id) => !deletedIds.has(id)),
+            lockedConversationIds: before.lockedConversationIds.filter((id) => !deletedIds.has(id)),
             activeConversationId:
               before.activeConversationId && deletedIds.has(before.activeConversationId) ? null : before.activeConversationId,
             remoteControlledConversationIds: before.remoteControlledConversationIds.filter((id) => !deletedIds.has(id)),
@@ -221,7 +216,8 @@ export function createExtensionConversationsCapability(
       getRuntimeScope: runtimeScope,
       getRepoRoot: serverContext?.getRepoRoot ?? (() => process.env.NEON_PILOT_REPO_ROOT || process.cwd()),
       getDefaultWebCwd: serverContext?.getDefaultWebCwd ?? (() => process.env.NEON_PILOT_REPO_ROOT || process.cwd()),
-      buildLiveSessionResourceOptions: serverContext?.buildLiveSessionResourceOptions ?? (() => buildLiveSessionResourceOptionsForRuntime()),
+      buildLiveSessionResourceOptions:
+        serverContext?.buildLiveSessionResourceOptions ?? (() => buildLiveSessionResourceOptionsForRuntime()),
       ...(serverContext?.buildLiveSessionResourceOptionsAsync
         ? { buildLiveSessionResourceOptionsAsync: serverContext.buildLiveSessionResourceOptionsAsync }
         : {}),
@@ -465,6 +461,7 @@ export function createExtensionConversationsCapability(
       openConversationIds?: string[] | null;
       pinnedConversationIds?: string[] | null;
       archivedConversationIds?: string[] | null;
+      lockedConversationIds?: string[] | null;
       activeConversationId?: string | null;
       workspacePaths?: string[] | null;
       remoteControlledConversationIds?: string[] | null;
@@ -484,6 +481,7 @@ export function createExtensionConversationsCapability(
               openConversationIds: input.openConversationIds,
               pinnedConversationIds: input.pinnedConversationIds,
               archivedConversationIds: input.archivedConversationIds,
+              lockedConversationIds: input.lockedConversationIds,
               activeConversationId: input.activeConversationId,
               workspacePaths: input.workspacePaths,
               remoteControlledConversationIds: input.remoteControlledConversationIds,

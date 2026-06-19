@@ -1801,11 +1801,20 @@ export async function saveDesktopConversationWorkspace(input: {
   sessionIds?: string[];
   pinnedSessionIds?: string[];
   archivedSessionIds?: string[];
+  lockedConversationIds?: string[];
   activeConversationId?: string | null;
   workspacePaths?: string[];
   conversationWorkspaceMigrated?: boolean | null;
 }) {
-  const { sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, workspacePaths, conversationWorkspaceMigrated } = input;
+  const {
+    sessionIds,
+    pinnedSessionIds,
+    archivedSessionIds,
+    lockedConversationIds,
+    activeConversationId,
+    workspacePaths,
+    conversationWorkspaceMigrated,
+  } = input;
   validateDesktopConversationWorkspaceUpdate(input);
 
   const context = await getLocalServerRouteContext();
@@ -1816,6 +1825,7 @@ export async function saveDesktopConversationWorkspace(input: {
           openConversationIds: sessionIds,
           pinnedConversationIds: pinnedSessionIds,
           archivedConversationIds: archivedSessionIds,
+          lockedConversationIds,
           activeConversationId,
           workspacePaths,
           conversationWorkspaceMigrated,
@@ -1848,6 +1858,7 @@ export async function updateDesktopConversationWorkspaceByOperation(
       sessionIds: current.openConversationIds,
       pinnedSessionIds: current.pinnedConversationIds,
       archivedSessionIds: current.archivedConversationIds,
+      lockedConversationIds: current.lockedConversationIds,
       activeConversationId: current.activeConversationId,
     },
     input,
@@ -1859,6 +1870,7 @@ export async function updateDesktopConversationWorkspaceByOperation(
           openConversationIds: next.sessionIds,
           pinnedConversationIds: next.pinnedSessionIds,
           archivedConversationIds: next.archivedSessionIds,
+          lockedConversationIds: next.lockedConversationIds,
           activeConversationId: next.activeConversationId,
           conversationWorkspaceMigrated: true,
         },

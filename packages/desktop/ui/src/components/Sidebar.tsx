@@ -60,7 +60,6 @@ import {
   normalizeStoredThreadStringList,
   readCollapsedConversationGroupKeys,
   readConversationGroupLabelOverrides,
-  readLockedConversationIds,
   readManualConversationGroupOrder,
   readThreadsFilterMode,
   readThreadsOrganizeMode,
@@ -70,7 +69,6 @@ import {
   type ThreadsSortMode,
   writeCollapsedConversationGroupKeys,
   writeConversationGroupLabelOverrides,
-  writeLockedConversationIds,
   writeManualConversationGroupOrder,
   writeThreadsFilterMode,
   writeThreadsOrganizeMode,
@@ -1804,6 +1802,8 @@ export function Sidebar() {
     unpinSession,
     archiveSession,
     restoreSession,
+    lockedConversationIds,
+    setSessionLocked,
     reopenMostRecentlyClosedSession,
     moveSession,
     shiftSession,
@@ -1823,7 +1823,6 @@ export function Sidebar() {
   const [manualConversationGroupOrder, setManualConversationGroupOrder] = useState(() => readManualConversationGroupOrder());
   const [collapsedConversationGroupKeys, setCollapsedConversationGroupKeys] = useState(() => readCollapsedConversationGroupKeys());
   const [conversationGroupLabelOverrides, setConversationGroupLabelOverrides] = useState(() => readConversationGroupLabelOverrides());
-  const [lockedConversationIds, setLockedConversationIds] = useState(() => readLockedConversationIds());
   const [draggingSessionId, setDraggingSessionId] = useState<string | null>(null);
   const [draggingSection, setDraggingSection] = useState<ConversationShelf | null>(null);
   const [draggingGroupKey, setDraggingGroupKey] = useState<string | null>(null);
@@ -2471,13 +2470,6 @@ export function Sidebar() {
     });
   }, []);
 
-  const persistLockedConversationIds = useCallback((conversationIds: readonly string[]) => {
-    const normalized = normalizeStoredThreadStringList(conversationIds);
-    writeLockedConversationIds(normalized);
-    setLockedConversationIds(normalized);
-    return normalized;
-  }, []);
-
   const isConversationLocked = useCallback(
     (conversationId: string | null | undefined) => {
       const normalizedConversationId = conversationId?.trim() ?? '';
@@ -2494,16 +2486,16 @@ export function Sidebar() {
       }
 
       if (lockedConversationIdSet.has(normalizedConversationId)) {
-        persistLockedConversationIds(lockedConversationIds.filter((id) => id !== normalizedConversationId));
+        setSessionLocked(normalizedConversationId, false);
         showSidebarNotice('accent', 'Thread unlocked.');
         return true;
       }
 
-      persistLockedConversationIds([...lockedConversationIds, normalizedConversationId]);
+      setSessionLocked(normalizedConversationId, true);
       showSidebarNotice('accent', 'Thread locked.');
       return true;
     },
-    [lockedConversationIdSet, lockedConversationIds, persistLockedConversationIds, showSidebarNotice],
+    [lockedConversationIdSet, setSessionLocked, showSidebarNotice],
   );
 
   const guardUnlockedConversationAction = useCallback(

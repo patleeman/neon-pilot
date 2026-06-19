@@ -30,6 +30,7 @@ import {
   readPinnedSessionIds,
   reopenMostRecentlyArchivedConversation,
   setConversationArchivedState,
+  setConversationLockedState,
   shiftConversationTab,
   unpinConversationTab,
 } from '../session/sessionTabs';
@@ -48,12 +49,14 @@ function applyLayoutState(
     setOpenIds: (ids: string[]) => void;
     setPinnedIds: (ids: string[]) => void;
     setArchivedConversationIds: (ids: string[]) => void;
+    setLockedConversationIds: (ids: string[]) => void;
     setActiveId: (id: string | null) => void;
   },
 ) {
   setters.setOpenIds(layout.sessionIds);
   setters.setPinnedIds(layout.pinnedSessionIds);
   setters.setArchivedConversationIds(layout.archivedSessionIds);
+  setters.setLockedConversationIds(layout.lockedConversationIds);
   setters.setActiveId(layout.activeSessionId);
 }
 
@@ -77,6 +80,7 @@ function applySidebarConversationSnapshot(
     setOpenIds: (ids: string[]) => void;
     setPinnedIds: (ids: string[]) => void;
     setArchivedConversationIds: (ids: string[]) => void;
+    setLockedConversationIds: (ids: string[]) => void;
     setActiveId: (id: string | null) => void;
   },
 ): SessionMeta[] {
@@ -89,6 +93,7 @@ function applySidebarConversationSnapshot(
     sessionIds: snapshot.sessionIds,
     pinnedSessionIds: snapshot.pinnedSessionIds,
     archivedSessionIds: snapshot.archivedSessionIds,
+    lockedConversationIds: snapshot.lockedConversationIds,
     activeSessionId: snapshot.activeConversationId,
     workspacePaths: snapshot.workspacePaths,
     remoteControlledConversationIds: snapshot.remoteControlledConversationIds,
@@ -105,6 +110,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   const [openIds, setOpenIds] = useState(() => initialLayout.sessionIds);
   const [pinnedIds, setPinnedIds] = useState(() => initialLayout.pinnedSessionIds);
   const [archivedConversationIds, setArchivedConversationIds] = useState(() => initialLayout.archivedSessionIds);
+  const [lockedConversationIds, setLockedConversationIds] = useState(() => initialLayout.lockedConversationIds);
   const [activeId, setActiveId] = useState(() => initialLayout.activeSessionId);
   const [layoutHydrating, setLayoutHydrating] = useState(
     () =>
@@ -137,7 +143,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   useEffect(() => {
     function handleConversationLayoutChanged() {
       const layout = readConversationLayout();
-      applyLayoutState(layout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+      applyLayoutState(layout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setLockedConversationIds, setActiveId });
     }
 
     window.addEventListener(CONVERSATION_LAYOUT_CHANGED_EVENT, handleConversationLayoutChanged);
@@ -161,12 +167,24 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
               sessionStore.replaceAll(snapshot.sessions);
               sessionStore.markReady?.();
             }
-            applyLayoutState(readConversationLayout(), { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+            applyLayoutState(readConversationLayout(), {
+              setOpenIds,
+              setPinnedIds,
+              setArchivedConversationIds,
+              setLockedConversationIds,
+              setActiveId,
+            });
             setLayoutHydrating(false);
             return;
           }
 
-          applySidebarConversationSnapshot(snapshot, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+          applySidebarConversationSnapshot(snapshot, {
+            setOpenIds,
+            setPinnedIds,
+            setArchivedConversationIds,
+            setLockedConversationIds,
+            setActiveId,
+          });
           setLayoutHydrating(false);
         })
         .catch(() => {
@@ -200,7 +218,13 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
     if (latestRefetchRequestIdRef.current !== requestId) {
       return Array.isArray(snapshot.sessions) ? snapshot.sessions : [];
     }
-    return applySidebarConversationSnapshot(snapshot, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+    return applySidebarConversationSnapshot(snapshot, {
+      setOpenIds,
+      setPinnedIds,
+      setArchivedConversationIds,
+      setLockedConversationIds,
+      setActiveId,
+    });
   }, []);
 
   useEffect(() => {
@@ -219,7 +243,13 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
       for (const threadId of newlyRunningThreadIds) {
         openConversationTab(threadId, { active: false });
       }
-      applyLayoutState(readConversationLayout(), { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+      applyLayoutState(readConversationLayout(), {
+        setOpenIds,
+        setPinnedIds,
+        setArchivedConversationIds,
+        setLockedConversationIds,
+        setActiveId,
+      });
     }
 
     seenRunningAutomationIdsRef.current = nextRunningAutomationIds;
@@ -239,41 +269,46 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
 
   const pinSession = useCallback((id: string) => {
     const nextLayout = pinConversationTab(id);
-    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setLockedConversationIds, setActiveId });
   }, []);
 
   const unpinSession = useCallback((id: string, options: { open?: boolean } = {}) => {
     const nextLayout = unpinConversationTab(id, options);
-    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setLockedConversationIds, setActiveId });
   }, []);
 
   const archiveSession = useCallback((id: string) => {
     const nextLayout = setConversationArchivedState(id, true);
-    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setLockedConversationIds, setActiveId });
   }, []);
 
   const restoreSession = useCallback((id: string) => {
     const nextLayout = setConversationArchivedState(id, false);
-    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setLockedConversationIds, setActiveId });
+  }, []);
+
+  const setSessionLocked = useCallback((id: string, locked: boolean) => {
+    const nextLayout = setConversationLockedState(id, locked);
+    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setLockedConversationIds, setActiveId });
   }, []);
 
   const reopenMostRecentlyClosedSession = useCallback(() => {
     const { reopenedSessionId, layout } = reopenMostRecentlyArchivedConversation();
-    applyLayoutState(layout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+    applyLayoutState(layout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setLockedConversationIds, setActiveId });
     return reopenedSessionId;
   }, []);
 
   const moveSession = useCallback(
     (sessionId: string, targetSection: ConversationShelf, targetSessionId?: string | null, position?: OpenConversationDropPosition) => {
       const nextLayout = moveConversationTab(sessionId, targetSection, targetSessionId, position);
-      applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+      applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setLockedConversationIds, setActiveId });
     },
     [],
   );
 
   const shiftSession = useCallback((sessionId: string, direction: -1 | 1) => {
     const nextLayout = shiftConversationTab(sessionId, direction);
-    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setLockedConversationIds, setActiveId });
   }, []);
 
   const openIdSet = useMemo(() => new Set(openIds), [openIds]);
@@ -384,6 +419,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
     pinnedIds,
     openIds,
     archivedConversationIds,
+    lockedConversationIds,
     activeId,
     pinnedSessions,
     tabs,
@@ -394,6 +430,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
     unpinSession,
     archiveSession,
     restoreSession,
+    setSessionLocked,
     reopenMostRecentlyClosedSession,
     moveSession,
     shiftSession,

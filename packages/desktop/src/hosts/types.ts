@@ -329,7 +329,10 @@ export interface HostController {
     sessionIds?: string[];
     pinnedSessionIds?: string[];
     archivedSessionIds?: string[];
+    lockedConversationIds?: string[];
+    activeConversationId?: string | null;
     workspacePaths?: string[];
+    conversationWorkspaceMigrated?: boolean | null;
   }): Promise<unknown>;
   readModelProviders?(): Promise<unknown>;
   saveModelProvider?(input: {

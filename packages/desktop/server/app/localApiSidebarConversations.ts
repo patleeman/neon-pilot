@@ -6,6 +6,7 @@ export interface DesktopSidebarConversationSnapshot {
   sessionIds: string[];
   pinnedSessionIds: string[];
   archivedSessionIds: string[];
+  lockedConversationIds: string[];
   activeConversationId: string | null;
   workspacePaths: string[];
   remoteControlledConversationIds: string[];
@@ -15,8 +16,8 @@ export interface DesktopSidebarConversationSnapshot {
   sessions: SessionMeta[];
 }
 
-function filterKnownIds(ids: readonly string[], knownSessionIds: Set<string>): string[] {
-  return ids.filter((id) => knownSessionIds.has(id));
+function filterKnownIds(ids: readonly string[] | undefined, knownSessionIds: Set<string>): string[] {
+  return (ids ?? []).filter((id) => knownSessionIds.has(id));
 }
 
 export function buildDesktopSidebarConversationSnapshot(input: {
@@ -30,6 +31,8 @@ export function buildDesktopSidebarConversationSnapshot(input: {
   const sessionIds = filterKnownIds(layout.sessionIds, knownSessionIds).filter((id) => !pinnedIdSet.has(id));
   const workspaceIdSet = new Set([...pinnedSessionIds, ...sessionIds]);
   const archivedSessionIds = filterKnownIds(layout.archivedSessionIds, knownSessionIds).filter((id) => !workspaceIdSet.has(id));
+  const knownConversationIds = new Set([...knownSessionIds, ...workspaceIdSet, ...archivedSessionIds]);
+  const lockedConversationIds = filterKnownIds(layout.lockedConversationIds, knownConversationIds);
   const activeConversationId =
     layout.activeConversationId && workspaceIdSet.has(layout.activeConversationId) ? layout.activeConversationId : null;
 
@@ -38,6 +41,7 @@ export function buildDesktopSidebarConversationSnapshot(input: {
     sessionIds,
     pinnedSessionIds,
     archivedSessionIds,
+    lockedConversationIds,
     activeConversationId,
     sessions: input.sessions,
   };

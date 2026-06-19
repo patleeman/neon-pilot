@@ -23,6 +23,7 @@ export interface ConversationLayout {
   sessionIds: string[];
   pinnedSessionIds: string[];
   archivedSessionIds: string[];
+  lockedConversationIds: string[];
   activeSessionId: string | null;
 }
 
@@ -40,6 +41,7 @@ interface ConversationLayoutInput {
   sessionIds?: Iterable<unknown>;
   pinnedSessionIds?: Iterable<unknown>;
   archivedSessionIds?: Iterable<unknown>;
+  lockedConversationIds?: Iterable<unknown>;
   activeSessionId?: unknown;
 }
 
@@ -86,6 +88,7 @@ function normalizeConversationLayout(input: ConversationLayoutInput): Conversati
     sessionIds,
     pinnedSessionIds,
     archivedSessionIds,
+    lockedConversationIds: normalizeSessionIds(input.lockedConversationIds ?? []),
     activeSessionId: activeSessionId && workspaceIdSet.has(activeSessionId) ? activeSessionId : null,
   };
 }
@@ -95,6 +98,7 @@ function mergeConversationLayout(current: ConversationLayout, input: Conversatio
     sessionIds: input.sessionIds ?? current.sessionIds,
     pinnedSessionIds: input.pinnedSessionIds ?? current.pinnedSessionIds,
     archivedSessionIds: input.archivedSessionIds ?? current.archivedSessionIds,
+    lockedConversationIds: input.lockedConversationIds ?? current.lockedConversationIds,
     activeSessionId: input.activeSessionId !== undefined ? input.activeSessionId : current.activeSessionId,
   });
 }
@@ -122,6 +126,7 @@ function applyArchiveTransitions(current: ConversationLayout, next: Conversation
     sessionIds: next.sessionIds,
     pinnedSessionIds: next.pinnedSessionIds,
     archivedSessionIds: [...archivedSessionIds],
+    lockedConversationIds: next.lockedConversationIds,
     activeSessionId: next.activeSessionId,
   });
 }
@@ -139,6 +144,7 @@ function sameConversationLayout(left: ConversationLayout, right: ConversationLay
     sameSessionIds(left.sessionIds, right.sessionIds) &&
     sameSessionIds(left.pinnedSessionIds, right.pinnedSessionIds) &&
     sameSessionIds(left.archivedSessionIds, right.archivedSessionIds) &&
+    sameSessionIds(left.lockedConversationIds, right.lockedConversationIds) &&
     left.activeSessionId === right.activeSessionId
   );
 }
@@ -153,6 +159,7 @@ function normalizeRemoteConversationLayout(input: RemoteConversationLayoutInput)
     sessionIds: input.sessionIds,
     pinnedSessionIds: input.pinnedSessionIds,
     archivedSessionIds: input.archivedSessionIds,
+    lockedConversationIds: input.lockedConversationIds,
     activeSessionId: input.activeSessionId ?? input.activeConversationId,
   });
   return {
@@ -252,6 +259,7 @@ function persistConversationLayoutToServer(layout: ConversationLayout): void {
       layout.activeSessionId,
       {
         conversationWorkspaceMigrated: true,
+        lockedConversationIds: layout.lockedConversationIds,
       },
     )
     .then((saved) => {
@@ -327,6 +335,10 @@ export function readPinnedSessionIds(): string[] {
 
 export function readArchivedSessionIds(): string[] {
   return readConversationLayout().archivedSessionIds;
+}
+
+export function readLockedConversationIds(): string[] {
+  return readConversationLayout().lockedConversationIds;
 }
 
 function writeConversationLayout(layout: ConversationLayout, options: { local?: boolean } = {}): ConversationLayout {
@@ -476,6 +488,7 @@ export function forgetConversationTab(sessionId: string | null | undefined): Con
     sessionIds: current.sessionIds.filter((id) => id !== normalizedSessionId),
     pinnedSessionIds: current.pinnedSessionIds.filter((id) => id !== normalizedSessionId),
     archivedSessionIds: current.archivedSessionIds.filter((id) => id !== normalizedSessionId),
+    lockedConversationIds: current.lockedConversationIds.filter((id) => id !== normalizedSessionId),
     activeSessionId: current.activeSessionId === normalizedSessionId ? null : current.activeSessionId,
   });
   if (sameConversationLayout(current, next)) {
@@ -503,10 +516,34 @@ export function setConversationArchivedState(sessionId: string, archived: boolea
       sessionIds: nextSessionIds,
       pinnedSessionIds: nextPinnedSessionIds,
       archivedSessionIds: nextArchivedSessionIds,
+      lockedConversationIds: current.lockedConversationIds,
       activeSessionId:
         current.activeSessionId && archived && current.activeSessionId === normalizedSessionId ? null : current.activeSessionId,
     },
     { operation: archived ? 'archive' : 'restore', sessionId: normalizedSessionId },
+    { local: true },
+  );
+}
+
+export function setConversationLockedState(sessionId: string, locked: boolean): ConversationLayout {
+  const normalizedSessionId = normalizeSessionId(sessionId);
+  const current = readConversationLayout();
+  if (!normalizedSessionId) {
+    return current;
+  }
+
+  const lockedWithoutSession = current.lockedConversationIds.filter((id) => id !== normalizedSessionId);
+  const nextLockedConversationIds = locked ? [...lockedWithoutSession, normalizedSessionId] : lockedWithoutSession;
+  if (sameSessionIds(current.lockedConversationIds, nextLockedConversationIds)) {
+    return current;
+  }
+
+  return writeConversationLayoutFromOperation(
+    {
+      ...current,
+      lockedConversationIds: nextLockedConversationIds,
+    },
+    { operation: locked ? 'lock' : 'unlock', sessionId: normalizedSessionId },
     { local: true },
   );
 }
@@ -591,6 +628,7 @@ function moveConversationToSection(
       sessionIds: nextSessionIds,
       pinnedSessionIds: nextPinnedSessionIds,
       archivedSessionIds: normalizedLayout.archivedSessionIds,
+      lockedConversationIds: normalizedLayout.lockedConversationIds,
       activeSessionId: normalizedLayout.activeSessionId,
     });
   }
@@ -602,6 +640,7 @@ function moveConversationToSection(
       sessionIds: nextSessionIds,
       pinnedSessionIds: nextPinnedSessionIds,
       archivedSessionIds: normalizedLayout.archivedSessionIds,
+      lockedConversationIds: normalizedLayout.lockedConversationIds,
       activeSessionId: normalizedLayout.activeSessionId,
     });
   }
@@ -612,6 +651,7 @@ function moveConversationToSection(
     sessionIds: nextSessionIds,
     pinnedSessionIds: nextPinnedSessionIds,
     archivedSessionIds: normalizedLayout.archivedSessionIds,
+    lockedConversationIds: normalizedLayout.lockedConversationIds,
     activeSessionId: normalizedLayout.activeSessionId,
   });
 }

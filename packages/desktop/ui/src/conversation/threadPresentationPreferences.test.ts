@@ -4,13 +4,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   normalizeStoredThreadStringList,
   readConversationGroupLabelOverrides,
-  readLockedConversationIds,
   readManualConversationGroupOrder,
   readThreadsFilterMode,
   readThreadsOrganizeMode,
   readThreadsSortMode,
   writeConversationGroupLabelOverrides,
-  writeLockedConversationIds,
   writeManualConversationGroupOrder,
   writeThreadsFilterMode,
   writeThreadsOrganizeMode,
@@ -48,13 +46,11 @@ describe('threadPresentationPreferences', () => {
     expect(readThreadsSortMode()).toBe('manual');
   });
 
-  it('persists group ordering, labels, and locked conversations', () => {
+  it('persists group ordering and labels', () => {
     writeManualConversationGroupOrder(['repo', 'repo', 'chats']);
     writeConversationGroupLabelOverrides({ repo: ' Repo ', empty: ' ' });
-    writeLockedConversationIds(['conv-1', 'conv-1', 'conv-2']);
 
     expect(readManualConversationGroupOrder()).toEqual(['repo', 'chats']);
     expect(readConversationGroupLabelOverrides()).toEqual({ repo: 'Repo' });
-    expect(readLockedConversationIds()).toEqual(['conv-1', 'conv-2']);
   });
 });

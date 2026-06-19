@@ -13,6 +13,7 @@ export interface SavedUiPreferences {
   openConversationIds: string[];
   pinnedConversationIds: string[];
   archivedConversationIds: string[];
+  lockedConversationIds: string[];
   activeConversationId: string | null;
   workspacePaths: string[];
   remoteControlledConversationIds: string[];
@@ -182,6 +183,7 @@ function normalizeSavedUiPreferences(input: {
   openConversationIds?: unknown;
   pinnedConversationIds?: unknown;
   archivedConversationIds?: unknown;
+  lockedConversationIds?: unknown;
   activeConversationId?: unknown;
   workspacePaths?: unknown;
   remoteControlledConversationIds?: unknown;
@@ -200,6 +202,7 @@ function normalizeSavedUiPreferences(input: {
     openConversationIds,
     pinnedConversationIds,
     archivedConversationIds: normalizeConversationIds(input.archivedConversationIds).filter((id) => !workspaceIdSet.has(id)),
+    lockedConversationIds: normalizeConversationIds(input.lockedConversationIds),
     activeConversationId: activeConversationId && workspaceIdSet.has(activeConversationId) ? activeConversationId : null,
     workspacePaths: normalizeWorkspacePaths(input.workspacePaths),
     remoteControlledConversationIds: normalizeConversationIds(input.remoteControlledConversationIds),
@@ -225,6 +228,7 @@ export function readSavedUiPreferences(settingsFile: string): SavedUiPreferences
     openConversationIds: ui.openConversationIds,
     pinnedConversationIds: ui.pinnedConversationIds,
     archivedConversationIds: ui.archivedConversationIds,
+    lockedConversationIds: ui.lockedConversationIds,
     activeConversationId: ui.activeConversationId,
     workspacePaths: ui.workspacePaths,
     remoteControlledConversationIds: ui.remoteControlledConversationIds,
@@ -240,6 +244,7 @@ export function writeSavedUiPreferences(
     openConversationIds?: string[] | null;
     pinnedConversationIds?: string[] | null;
     archivedConversationIds?: string[] | null;
+    lockedConversationIds?: string[] | null;
     activeConversationId?: string | null;
     workspacePaths?: string[] | null;
     remoteControlledConversationIds?: string[] | null;
@@ -254,6 +259,7 @@ export function writeSavedUiPreferences(
     openConversationIds: ui.openConversationIds,
     pinnedConversationIds: ui.pinnedConversationIds,
     archivedConversationIds: ui.archivedConversationIds,
+    lockedConversationIds: ui.lockedConversationIds,
     activeConversationId: ui.activeConversationId,
     workspacePaths: ui.workspacePaths,
     remoteControlledConversationIds: ui.remoteControlledConversationIds,
@@ -267,6 +273,7 @@ export function writeSavedUiPreferences(
     input.openConversationIds !== undefined ||
     input.pinnedConversationIds !== undefined ||
     input.archivedConversationIds !== undefined ||
+    input.lockedConversationIds !== undefined ||
     input.activeConversationId !== undefined ||
     input.workspacePaths !== undefined ||
     input.remoteControlledConversationIds !== undefined;
@@ -276,6 +283,7 @@ export function writeSavedUiPreferences(
     pinnedConversationIds: input.pinnedConversationIds !== undefined ? (input.pinnedConversationIds ?? []) : current.pinnedConversationIds,
     archivedConversationIds:
       input.archivedConversationIds !== undefined ? (input.archivedConversationIds ?? []) : current.archivedConversationIds,
+    lockedConversationIds: input.lockedConversationIds !== undefined ? (input.lockedConversationIds ?? []) : current.lockedConversationIds,
     activeConversationId: input.activeConversationId !== undefined ? input.activeConversationId : current.activeConversationId,
     workspacePaths: input.workspacePaths !== undefined ? (input.workspacePaths ?? []) : current.workspacePaths,
     remoteControlledConversationIds:
@@ -293,7 +301,9 @@ export function writeSavedUiPreferences(
     next.conversationWorkspaceRevision = current.conversationWorkspaceRevision + 1;
     next.conversationWorkspaceUpdatedAt = now;
     next.conversationWorkspaceMigratedAt =
-      input.conversationWorkspaceMigrated || current.conversationWorkspaceMigratedAt ? current.conversationWorkspaceMigratedAt ?? now : null;
+      input.conversationWorkspaceMigrated || current.conversationWorkspaceMigratedAt
+        ? (current.conversationWorkspaceMigratedAt ?? now)
+        : null;
   }
 
   if (next.openConversationIds.length > 0) {
@@ -312,6 +322,12 @@ export function writeSavedUiPreferences(
     ui.archivedConversationIds = next.archivedConversationIds;
   } else {
     delete ui.archivedConversationIds;
+  }
+
+  if (next.lockedConversationIds.length > 0) {
+    ui.lockedConversationIds = next.lockedConversationIds;
+  } else {
+    delete ui.lockedConversationIds;
   }
 
   if (next.activeConversationId) {

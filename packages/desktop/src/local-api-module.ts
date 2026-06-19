@@ -58,7 +58,10 @@ export interface LocalApiModule {
     sessionIds?: string[];
     pinnedSessionIds?: string[];
     archivedSessionIds?: string[];
+    lockedConversationIds?: string[];
+    activeConversationId?: string | null;
     workspacePaths?: string[];
+    conversationWorkspaceMigrated?: boolean | null;
   }): Promise<unknown>;
   readDesktopModelProviders(): Promise<unknown>;
   saveDesktopModelProvider(input: {
