@@ -1,14 +1,13 @@
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import {
   createRuntimeExtension,
   deleteRuntimeExtension,
-  invalidateExtensionRegistryReadCaches,
   installCatalogExtension as installCatalogExtensionFromHost,
   installExtensionBundleFromUrl,
-  installMarketplacePackageAsExtension,
+  invalidateExtensionRegistryReadCaches,
   listExtensionInstallSummaries,
   listInstallableExtensionCatalog as listInstallableExtensionCatalogFromHost,
   readExtensionCatalogSources,
@@ -32,8 +31,6 @@ interface ExtensionIdInput {
 interface SettingsRecord {
   [key: string]: unknown;
 }
-
-const MARKETPLACE_BEHAVIOR_PACKAGE_TYPES = new Set(['skill', 'instruction-pack', 'agent', 'template']);
 
 export async function listExtensions(_input: unknown, _ctx: ExtensionBackendContext) {
   return { ok: true, extensions: await listExtensionInstallSummaries() };
@@ -60,35 +57,6 @@ export async function updateCatalogExtension(input: unknown, _ctx: ExtensionBack
 export async function installExtensionFromUrl(input: unknown, _ctx: ExtensionBackendContext) {
   const result = await installExtensionBundleFromUrl(asRecord(input));
   return { ok: true, ...result };
-}
-
-export async function installMarketplacePackage(input: unknown, ctx: ExtensionBackendContext) {
-  const body = asRecord(input);
-  const packageType = typeof body.packageType === 'string' ? body.packageType : '';
-  if (!MARKETPLACE_BEHAVIOR_PACKAGE_TYPES.has(packageType)) {
-    throw new Error('marketplace package install only supports skill, instruction-pack, agent, and template packages.');
-  }
-  const source = typeof body.source === 'string' ? body.source.trim() : '';
-  if (!source) throw new Error('marketplace package source is required.');
-
-  const prepared = await prepareMarketplacePackageSource(source, ctx);
-  const ecosystem = detectMarketplaceEcosystem(prepared.source, body.ecosystem);
-  const packageTypeForInstall = detectMarketplacePackageType(prepared.source, packageType);
-  const result = await installMarketplacePackageAsExtension({
-    ecosystem,
-    packageType: packageTypeForInstall,
-    source: prepared.source,
-    target: body.target === 'local' || body.target === undefined ? 'local' : body.target,
-    sourceBaseDir: body.sourceBaseDir,
-    runtimeDir: ctx.runtimeDir,
-  });
-
-  return {
-    ok: true,
-    packageType,
-    ecosystem,
-    ...result,
-  };
 }
 
 export async function createExtension(input: unknown, _ctx: ExtensionBackendContext) {
@@ -187,7 +155,6 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   if (action === 'installCatalog') return installCatalogExtension(body, ctx);
   if (action === 'updateCatalog') return updateCatalogExtension(body, ctx);
   if (action === 'installFromUrl') return installExtensionFromUrl(body, ctx);
-  if (action === 'installMarketplacePackage') return installMarketplacePackage(body, ctx);
   if (action === 'readSearchPaths') return readSearchPaths(body, ctx);
   if (action === 'updateSearchPaths') return updateSearchPaths(body, ctx);
   if (action === 'readExtensionSources') return readExtensionSources(body, ctx);
@@ -199,48 +166,6 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
     return { ok: true, extensionId, enabled: action === 'enable', text: `${action === 'enable' ? 'Enabled' : 'Disabled'} ${extensionId}.` };
   }
   throw new Error(`Unsupported extension manager action: ${action}`);
-}
-
-async function prepareMarketplacePackageSource(source: string, ctx: ExtensionBackendContext): Promise<{ source: string; cloned: boolean }> {
-  if (!isGitSource(source)) return { source, cloned: false };
-  const importedSourcesRoot = join(ctx.runtimeDir, 'imported-plugin-sources');
-  mkdirSync(importedSourcesRoot, { recursive: true });
-  const target = join(importedSourcesRoot, `${slugifySourceLabel(source)}-${hashSource(source)}`);
-  if (existsSync(target)) rmSync(target, { recursive: true, force: true });
-  const result = await ctx.shell.exec({
-    command: 'git',
-    args: ['clone', '--depth', '1', source, target],
-    timeoutMs: 120_000,
-    maxBuffer: 1024 * 1024,
-  });
-  if (result.stderr && !existsSync(target)) throw new Error(result.stderr.trim());
-  return { source: target, cloned: true };
-}
-
-function isGitSource(source: string): boolean {
-  return /^(git@github\.com:|https:\/\/github\.com\/|ssh:\/\/git@github\.com\/)/i.test(source) || source.endsWith('.git');
-}
-
-function detectMarketplaceEcosystem(source: string, requested: unknown): string {
-  if (existsSync(join(source, '.codex-plugin', 'plugin.json'))) return 'codex';
-  if (existsSync(join(source, '.claude-plugin', 'plugin.json')) || existsSync(join(source, '.claude-plugin'))) return 'claude';
-  return typeof requested === 'string' && requested.trim() ? requested.trim() : 'external';
-}
-
-function detectMarketplacePackageType(source: string, requested: MarketplaceBehaviorPackageType): MarketplaceBehaviorPackageType {
-  if (existsSync(join(source, '.codex-plugin', 'plugin.json')) || existsSync(join(source, '.claude-plugin'))) return 'agent';
-  return requested;
-}
-
-function slugifySourceLabel(source: string): string {
-  const label = basename(source.replace(/\.git$/, '').replace(/\/$/, '')) || 'plugin';
-  return label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'plugin';
-}
-
-function hashSource(source: string): string {
-  let hash = 0;
-  for (let index = 0; index < source.length; index += 1) hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
-  return hash.toString(16).padStart(8, '0');
 }
 
 function normalizeManagerInput(input: unknown): Record<string, unknown> {
@@ -273,16 +198,6 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
   if (command === 'extensions update') return { ...body, action: 'updateCatalog', id: args[0] };
   if (command === 'extensions install-url')
     return { ...body, action: 'installFromUrl', url: args[0] ?? flags.url, expectedId: flags['expected-id'] ?? flags.expectedId };
-  if (command === 'extensions install-marketplace')
-    return {
-      ...body,
-      action: 'installMarketplacePackage',
-      packageType: flags.type ?? flags['package-type'],
-      source: args[0] ?? flags.source,
-      ecosystem: flags.ecosystem,
-      target: flags.target,
-      sourceBaseDir: flags['source-base-dir'],
-    };
   if (command === 'extensions validate') return { ...body, action: 'validate', extensionId: args[0], packageRoot };
   if (command === 'extensions reload')
     return args[0] ? { ...body, action: 'reload', extensionId: args[0] } : { ...body, action: 'reloadExtensions' };

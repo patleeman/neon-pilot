@@ -98,6 +98,7 @@ Bundled system extensions:
 - [Diffs](../extensions/system-diffs/README.md) — checkpoint and workspace diff inspection
 - [Dynamic Workflows](../extensions/system-dynamic-workflows/README.md) — model-authored workflow coordinators that fan out daemon-backed subagents
 - [Excalidraw Input](../extensions/system-excalidraw-input/README.md) — composer drawing input
+- [Agent Plugins](../extensions/system-agent-plugins/README.md) — Codex and Claude plugin import, update tracking, and compatibility reports
 - [Extension Manager](../extensions/system-extension-manager/README.md) — extension registry, validation, import/export, and diagnostics
 - [File Explorer](../extensions/system-files/README.md) — workspace file browsing
 - [Telegram Gateway](../extensions/system-gateways/README.md) — Telegram chat connections

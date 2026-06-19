@@ -269,9 +269,7 @@ describe('extension backend action invocation', () => {
       getStateRoot: () => stateRoot,
     });
 
-    await expect(context.models.list()).rejects.toThrow(
-      'Extension "model-helper-ext" requires permission models:read to use models.list.',
-    );
+    await expect(context.models.list()).rejects.toThrow('Extension "model-helper-ext" requires permission models:read to use models.list.');
     await expect(context.models.saveProvider({ provider: 'ds4' })).rejects.toThrow(
       'Extension "model-helper-ext" requires permission models:write to use models.saveProvider.',
     );
@@ -377,15 +375,11 @@ describe('extension backend action invocation', () => {
       getStateRoot: () => stateRoot,
     });
 
-    expect(() => context.notify.toast('Saved')).toThrow(
-      'Extension "notify-helper-ext" requires permission ui:notify to use notify.toast.',
-    );
+    expect(() => context.notify.toast('Saved')).toThrow('Extension "notify-helper-ext" requires permission ui:notify to use notify.toast.');
     expect(() => context.notify.system({ title: 'Title', message: 'Body' })).toThrow(
       'Extension "notify-helper-ext" requires permission ui:notify to use notify.system.',
     );
-    expect(() => context.notify.setBadge(1)).toThrow(
-      'Extension "notify-helper-ext" requires permission ui:notify to use notify.setBadge.',
-    );
+    expect(() => context.notify.setBadge(1)).toThrow('Extension "notify-helper-ext" requires permission ui:notify to use notify.setBadge.');
     expect(() => context.notify.clearBadge()).toThrow(
       'Extension "notify-helper-ext" requires permission ui:notify to use notify.clearBadge.',
     );
@@ -2879,9 +2873,6 @@ describe('extension backend action invocation', () => {
         if (exportName === 'validateExtension') return { ok: true, valid: true, findings: [] };
         if (exportName === 'installCatalogExtension') return { ok: true, id: 'system-browser', installed: true };
         if (exportName === 'installExtensionFromUrl') return { ok: true, id: 'remote-extension', installed: true };
-        if (exportName === 'installMarketplacePackage') {
-          return { ok: true, packageType: 'skill', ecosystem: 'codex', extension: { id: 'imported-skill' }, installed: true };
-        }
         if (exportName === 'updateSearchPaths') return { ok: true, configuredPaths: ['/extensions/one'] };
         if (exportName === 'manageExtension') {
           const action = (args[0] as { action?: string }).action;
@@ -2891,15 +2882,13 @@ describe('extension backend action invocation', () => {
               ? { ok: true, extensionId: 'system-todo', rebuilt: false }
               : action === 'smoke'
                 ? { ok: true, extensionId: 'system-todo', checks: [] }
-                : action === 'installMarketplacePackage'
-                  ? { ok: true, packageType: 'skill', ecosystem: 'codex', extension: { id: 'managed-imported-skill' }, installed: true }
-                  : action === 'updateSearchPaths'
-                    ? { ok: true, configuredPaths: ['/extensions/one'] }
-                    : {
-                        ok: true,
-                        reloaded: true,
-                        message: 'Extension registry caches were invalidated; reopen contributed routes if needed.',
-                      };
+                : action === 'updateSearchPaths'
+                  ? { ok: true, configuredPaths: ['/extensions/one'] }
+                  : {
+                      ok: true,
+                      reloaded: true,
+                      message: 'Extension registry caches were invalidated; reopen contributed routes if needed.',
+                    };
         }
         return { ok: true, extensions: [{ id: 'system-todo' }] };
       }),
@@ -2954,16 +2943,6 @@ describe('extension backend action invocation', () => {
       result: { ok: true, id: 'remote-extension', installed: true },
     });
     await expect(
-      invokeExtensionAction('system-extension-manager', 'installMarketplacePackage', {
-        ecosystem: 'codex',
-        packageType: 'skill',
-        source: '/packages/review',
-      }),
-    ).resolves.toEqual({
-      ok: true,
-      result: { ok: true, packageType: 'skill', ecosystem: 'codex', extension: { id: 'imported-skill' }, installed: true },
-    });
-    await expect(
       invokeExtensionAction('system-extension-manager', 'manageExtension', {
         action: 'create',
         id: 'managed-extension',
@@ -2989,17 +2968,6 @@ describe('extension backend action invocation', () => {
     ).resolves.toEqual({
       ok: true,
       result: { ok: true, extensionId: 'system-todo', checks: [] },
-    });
-    await expect(
-      invokeExtensionAction('system-extension-manager', 'manageExtension', {
-        action: 'installMarketplacePackage',
-        ecosystem: 'codex',
-        packageType: 'skill',
-        source: '/packages/review',
-      }),
-    ).resolves.toEqual({
-      ok: true,
-      result: { ok: true, packageType: 'skill', ecosystem: 'codex', extension: { id: 'managed-imported-skill' }, installed: true },
     });
     await expect(invokeExtensionAction('system-extension-manager', 'updateSearchPaths', { paths: ['/extensions/one'] })).resolves.toEqual({
       ok: true,
@@ -3115,40 +3083,6 @@ describe('extension backend action invocation', () => {
       'manageExtension',
       { type: 'action', label: 'action manageExtension', target: 'manageExtension' },
       [{ action: 'reload', id: 'system-todo' }],
-      {
-        context: expect.objectContaining({
-          type: 'backend',
-          runtimeScope: 'shared',
-          runtimeDir: expect.any(String),
-          runtimeSettingsFilePath: expect.any(String),
-        }),
-      },
-    );
-    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
-      'system-extension-manager',
-      expect.objectContaining({
-        path: expect.stringContaining(join('extensions', 'system-extension-manager', 'dist', 'backend.mjs')),
-      }),
-      'installMarketplacePackage',
-      { type: 'action', label: 'action installMarketplacePackage', target: 'installMarketplacePackage' },
-      [{ ecosystem: 'codex', packageType: 'skill', source: '/packages/review' }],
-      {
-        context: expect.objectContaining({
-          type: 'backend',
-          runtimeScope: 'shared',
-          runtimeDir: expect.any(String),
-          runtimeSettingsFilePath: expect.any(String),
-        }),
-      },
-    );
-    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
-      'system-extension-manager',
-      expect.objectContaining({
-        path: expect.stringContaining(join('extensions', 'system-extension-manager', 'dist', 'backend.mjs')),
-      }),
-      'manageExtension',
-      { type: 'action', label: 'action manageExtension', target: 'manageExtension' },
-      [{ action: 'installMarketplacePackage', ecosystem: 'codex', packageType: 'skill', source: '/packages/review' }],
       {
         context: expect.objectContaining({
           type: 'backend',

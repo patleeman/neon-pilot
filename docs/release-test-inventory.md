@@ -420,14 +420,19 @@ Bundled system-extension entries are derived from local `extensions/*/extension.
 - keybindings: excalidraw.createDrawing [mod+shift+x]
 - views: drawings, drawing-detail
 
+### system-agent-plugins — Agent Plugins
+
+- settingsComponent: agent-plugins (settings-capabilities)
+- backend actions: listPlugins, addPlugin, setPluginEnabled, setPluginAutoUpdate, checkPluginUpdates, updatePlugin, removePlugin
+
 ### system-extension-manager — Extension Manager
 
-- cliCommands: extensions-list, extensions-create, extensions-snapshot, extensions-delete, extensions-catalog, extensions-install, extensions-update, extensions-install-url, extensions-install-marketplace, extensions-validate, extensions-reload, extensions-smoke, extensions-enable, extensions-disable, extensions-paths, extensions-sources
+- cliCommands: extensions-list, extensions-create, extensions-snapshot, extensions-delete, extensions-catalog, extensions-install, extensions-update, extensions-install-url, extensions-validate, extensions-reload, extensions-smoke, extensions-enable, extensions-disable, extensions-paths, extensions-sources
 - nav: extensions-nav (/extensions)
 - settingsComponent: extension-repositories (settings-extension-repositories)
 - skills: skills-and-capabilities, local-extension-development
 - views: extensions-page (/extensions)
-- backend actions: listExtensions, createExtension, snapshotExtension, reloadExtension, smokeExtension, validateExtension, listInstallableExtensions, installCatalogExtension, installExtensionFromUrl, updateCatalogExtension, installMarketplacePackage, listHostViewComponents, readSearchPaths, updateSearchPaths, readExtensionSources, updateExtensionSources, reloadExtensions, manageExtension
+- backend actions: listExtensions, createExtension, snapshotExtension, reloadExtension, smokeExtension, validateExtension, listInstallableExtensions, installCatalogExtension, installExtensionFromUrl, updateCatalogExtension, listHostViewComponents, readSearchPaths, updateSearchPaths, readExtensionSources, updateExtensionSources, reloadExtensions, manageExtension
 
 ### system-files — File Explorer
 

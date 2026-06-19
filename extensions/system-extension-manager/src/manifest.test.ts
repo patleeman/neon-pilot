@@ -91,14 +91,7 @@ describe('system-extension-manager manifest', () => {
       argsSchema: { minItems: 1, maxItems: 1, description: 'Positional args: url.' },
       flagsSchema: { properties: { 'expected-id': { type: 'string' } } },
     });
-    expect(commands.get('extensions install-marketplace')).toMatchObject({
-      usage: 'extensions install-marketplace <source> --type <skill|instruction-pack|agent|template> [--json]',
-      argsSchema: { minItems: 1, maxItems: 1, description: 'Positional args: source.' },
-      flagsSchema: {
-        required: ['type'],
-        properties: { type: { enum: ['skill', 'instruction-pack', 'agent', 'template'] } },
-      },
-    });
+    expect(commands.has('extensions install-marketplace')).toBe(false);
   });
 
   it('keeps read and reload CLI positional schemas explicit', () => {

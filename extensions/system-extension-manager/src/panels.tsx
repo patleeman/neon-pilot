@@ -6,6 +6,7 @@ import {
   AppPageLayout,
   Button,
   CardBody,
+  CodeBlock,
   CompactCard,
   cx,
   DataTable,
@@ -18,12 +19,13 @@ import {
   Dialog,
   DialogBody,
   DialogHeader,
-  CodeBlock,
   Disclosure,
   EmptyState,
   ErrorState,
   IconButton,
   IconLink,
+  KeyValueItem,
+  KeyValueList,
   LoadingState,
   MenuItem,
   MenuShell,
@@ -33,9 +35,6 @@ import {
   ResourceListRow,
   SearchInput,
   SectionLabel,
-  Select,
-  KeyValueItem,
-  KeyValueList,
   Stat,
   StatGrid,
   Switch,
@@ -112,8 +111,6 @@ interface ExtensionCatalogSource {
   name?: string;
 }
 
-type MarketplaceBehaviorPackageType = 'skill' | 'instruction-pack' | 'agent' | 'template';
-type MarketplaceBehaviorEcosystem = 'codex' | 'claude';
 type ExtensionFilter = 'all' | 'platform' | 'attention';
 type ExtensionActionBridge = ExtensionSurfaceProps['pa']['extensions'];
 type ExtensionManagerNotice = { type: 'info' | 'success' | 'error'; message: string; details?: string };
@@ -584,7 +581,7 @@ function hasExtensionSettings(extension: ExtensionInstallSummary): boolean {
   return hasSchemaSettings || Boolean(extension.manifest?.contributes?.settingsComponent);
 }
 
-function extensionSettingsSectionId(extension: ExtensionInstallSummary): string {
+function extensionSettingsSectionId(_extension: ExtensionInstallSummary): string {
   return 'settings-extensions';
 }
 
@@ -627,12 +624,6 @@ function formatLabeledSummary(parts: Array<[string, string]>): string {
     .filter(([, value]) => Boolean(value))
     .map(([label, value]) => `${label}: ${value}`)
     .join(' · ');
-}
-
-function packageKindLabel(item: InstallableExtensionCatalogItem): string {
-  if (!item.packageType || item.packageType === 'extension') return 'Extension';
-  if (item.ecosystem === 'codex' || item.ecosystem === 'claude') return `Agent plugin ${item.packageType}`;
-  return item.packageType;
 }
 
 function parseGithubCatalogSource(value: string): ExtensionCatalogSource | null {
@@ -912,9 +903,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogSources, setCatalogSources] = useState<ExtensionCatalogSource[]>([]);
   const [catalogSourceInput, setCatalogSourceInput] = useState('');
-  const [marketplaceSource, setMarketplaceSource] = useState('');
-  const [marketplacePackageType, setMarketplacePackageType] = useState<MarketplaceBehaviorPackageType>('skill');
-  const marketplaceEcosystem: MarketplaceBehaviorEcosystem = 'codex';
   const loadSequenceRef = useRef(0);
   const catalogLoadSequenceRef = useRef(0);
 
@@ -1015,16 +1003,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       setNotice({ type: 'info', message: `Installing ${item.name} from ${item.marketplaceSourceId ?? item.tag}...` });
       try {
         if (item.packageType && item.packageType !== 'extension') {
-          await pa.extensions.callAction('system-extension-manager', 'installMarketplacePackage', {
-            source: item.packageSource,
-            ecosystem: item.ecosystem,
-            packageType: item.packageType,
-          });
-          setNotice({ type: 'success', message: `Installed ${item.name} as an extension-backed package.` });
-        } else {
-          await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: item.id });
-          setNotice({ type: 'success', message: `Installed ${item.name}. Enable it from the extensions list when you're ready.` });
+          throw new Error('Agent plugins are installed from Settings -> Agent Plugins.');
         }
+        await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: item.id });
+        setNotice({ type: 'success', message: `Installed ${item.name}. Enable it from the extensions list when you're ready.` });
         notifyExtensionRegistryChanged();
         await load();
         loadCatalog();
@@ -1036,32 +1018,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     },
     [load, loadCatalog, pa, showActionError],
   );
-
-  const installMarketplaceSource = useCallback(async () => {
-    const source = marketplaceSource.trim();
-    if (!source) {
-      showActionError('Marketplace package source is required');
-      return;
-    }
-    setBusyId('marketplace-source');
-    setNotice({ type: 'info', message: 'Importing agent plugin package as a Neon Pilot extension...' });
-    try {
-      await pa.extensions.callAction('system-extension-manager', 'installMarketplacePackage', {
-        source,
-        ecosystem: marketplaceEcosystem,
-        packageType: marketplacePackageType,
-      });
-      setNotice({ type: 'success', message: 'Installed agent plugin package as a Neon Pilot extension.' });
-      setMarketplaceSource('');
-      notifyExtensionRegistryChanged();
-      await load();
-      loadCatalog();
-    } catch (err) {
-      showActionError('Failed to install marketplace package', err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusyId(null);
-    }
-  }, [load, loadCatalog, marketplaceEcosystem, marketplacePackageType, marketplaceSource, pa, showActionError]);
 
   const addCatalogSource = useCallback(async () => {
     const parsed = parseGithubCatalogSource(catalogSourceInput);
@@ -1367,13 +1323,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const visibleCatalogExtensions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     const installedIds = new Set(extensions.map((extension) => extension.id));
-    const items = catalog?.packages ?? catalog?.extensions ?? [];
+    const items = catalog?.extensions ?? [];
     return items.filter((item) => {
       if (installedIds.has(item.id) || item.installed) return false;
+      if (item.packageType && item.packageType !== 'extension') return false;
       if (!normalizedQuery) return true;
-      return `${item.name} ${item.id} ${item.description ?? ''} ${item.ecosystem ?? ''} ${item.packageType ?? ''}`
-        .toLowerCase()
-        .includes(normalizedQuery);
+      return `${item.name} ${item.id} ${item.description ?? ''}`.toLowerCase().includes(normalizedQuery);
     });
   }, [catalog, extensions, query]);
 
@@ -1777,18 +1732,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
       {installModalOpen ? (
         <InstallExtensionModal
-          source={marketplaceSource}
-          packageType={marketplacePackageType}
-          busy={busyId === 'marketplace-source'}
           catalogItems={visibleCatalogExtensions}
           catalogSources={catalogSources}
           catalogSourceInput={catalogSourceInput}
           catalogSourceErrors={catalog?.sourceErrors ?? []}
           catalogBusyId={busyId}
-          onSourceChange={setMarketplaceSource}
           onCatalogSourceInputChange={setCatalogSourceInput}
-          onPackageTypeChange={setMarketplacePackageType}
-          onInstall={() => void installMarketplaceSource()}
           onInstallCatalog={(item) => void installCatalogExtension(item)}
           onAddCatalogSource={() => void addCatalogSource()}
           onRemoveCatalogSource={(source) => void removeCatalogSource(source)}
@@ -1801,35 +1750,23 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 }
 
 function InstallExtensionModal({
-  source,
-  packageType,
-  busy,
   catalogItems,
   catalogSources,
   catalogSourceInput,
   catalogSourceErrors,
   catalogBusyId,
-  onSourceChange,
   onCatalogSourceInputChange,
-  onPackageTypeChange,
-  onInstall,
   onInstallCatalog,
   onAddCatalogSource,
   onRemoveCatalogSource,
   onClose,
 }: {
-  source: string;
-  packageType: MarketplaceBehaviorPackageType;
-  busy: boolean;
   catalogItems: InstallableExtensionCatalogItem[];
   catalogSources: ExtensionCatalogSource[];
   catalogSourceInput: string;
   catalogSourceErrors: Array<{ sourceId: string; message: string }>;
   catalogBusyId: string | null;
-  onSourceChange: (source: string) => void;
   onCatalogSourceInputChange: (source: string) => void;
-  onPackageTypeChange: (packageType: MarketplaceBehaviorPackageType) => void;
-  onInstall: () => void;
   onInstallCatalog: (item: InstallableExtensionCatalogItem) => void;
   onAddCatalogSource: () => void;
   onRemoveCatalogSource: (source: ExtensionCatalogSource) => void;
@@ -1861,7 +1798,7 @@ function InstallExtensionModal({
     >
       <DialogHeader
         title="Install Extension"
-        description="Install Neon Pilot extensions, or import Codex/Claude agent plugins as managed compatibility packages."
+        description="Install native Neon Pilot extensions from configured extension repositories."
         className="px-6 py-4"
         actions={
           <IconButton type="button" onClick={onClose} aria-label="Close install dialog" title="Close">
@@ -1871,34 +1808,6 @@ function InstallExtensionModal({
       />
 
       <DialogBody className="space-y-5 px-6 py-5">
-        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_10rem_auto]">
-          <TextInput
-            className="min-w-0 bg-base"
-            value={source}
-            onChange={(event) => onSourceChange(event.currentTarget.value)}
-            placeholder="Extension, agent plugin, marketplace package, URL, or local path"
-          />
-          <Select
-            className="bg-base"
-            value={packageType}
-            onChange={(event) => onPackageTypeChange(event.currentTarget.value as MarketplaceBehaviorPackageType)}
-            aria-label="Package type"
-          >
-            <option value="skill">Plugin</option>
-            <option value="instruction-pack">Instructions</option>
-            <option value="agent">Agent</option>
-            <option value="template">Template</option>
-          </Select>
-          <Button variant="action" className="px-3 py-2 text-[13px]" disabled={busy} onClick={onInstall}>
-            {busy ? 'Installing...' : 'Install'}
-          </Button>
-        </div>
-        <p className="text-[12px] leading-5 text-dim">
-          Extensions are Neon Pilot app packages that can add UI, tools, settings, and backend actions. Agent plugins are portable
-          Codex/Claude-style instruction packages; Neon Pilot imports compatible content as a managed wrapper, not as a native app
-          extension.
-        </p>
-
         <section className="space-y-2">
           <SectionLabel>Extension repositories</SectionLabel>
           <ExtensionRepositoriesControl
@@ -1915,12 +1824,12 @@ function InstallExtensionModal({
         {catalogItems.length ? (
           <section className="space-y-2">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <SectionLabel>Marketplace</SectionLabel>
+              <SectionLabel>Available extensions</SectionLabel>
               <SearchInput
                 className="h-8 min-w-0 bg-base text-[12px] sm:w-72"
                 value={marketplaceQuery}
                 onChange={(event) => setMarketplaceQuery(event.currentTarget.value)}
-                placeholder="Search marketplace"
+                placeholder="Search extensions"
               />
             </div>
             <ResourceList>
@@ -1934,7 +1843,7 @@ function InstallExtensionModal({
                     title={item.name}
                     detail={
                       <>
-                        {item.description || packageKindLabel(item)}
+                        {item.description || 'Neon Pilot extension'}
                         {item.compatibilityWarning ? <span className="block text-warning">{item.compatibilityWarning}</span> : null}
                         {item.unavailableReason ? <span className="block text-warning">{item.unavailableReason}</span> : null}
                       </>
@@ -1963,7 +1872,7 @@ function InstallExtensionModal({
                 );
               })}
             </ResourceList>
-            {visibleCatalogItems.length === 0 ? <PanelMessage className="py-2">No marketplace matches.</PanelMessage> : null}
+            {visibleCatalogItems.length === 0 ? <PanelMessage className="py-2">No extension matches.</PanelMessage> : null}
           </section>
         ) : null}
       </DialogBody>

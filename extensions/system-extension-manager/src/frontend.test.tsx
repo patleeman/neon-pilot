@@ -856,10 +856,24 @@ describe('ExtensionManagerPage', () => {
     });
   });
 
-  it('installs marketplace behavior package sources from the marketplace form', async () => {
+  it('keeps agent plugin installs out of the extension install modal', async () => {
     const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
-      if (action === 'listInstallableExtensions') return { ok: true, version: '0.9.1-rc.6', tag: 'v0.9.1-rc.6', extensions: [] };
-      if (action === 'installMarketplacePackage') return { ok: true, installed: true };
+      if (action === 'listInstallableExtensions')
+        return {
+          ok: true,
+          version: '0.9.1-rc.6',
+          tag: 'v0.9.1-rc.6',
+          extensions: [
+            {
+              id: 'native-extension',
+              name: 'Native Extension',
+              description: 'A native Neon Pilot extension.',
+              version: '1.0.0',
+              tag: 'v1.0.0',
+              packageType: 'extension',
+            },
+          ],
+        };
       return { ok: true };
     });
 
@@ -871,18 +885,9 @@ describe('ExtensionManagerPage', () => {
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
-    fireEvent.change(screen.getByPlaceholderText('Extension, agent plugin, marketplace package, URL, or local path'), {
-      target: { value: 'https://example.com/claude-instructions.git' },
-    });
-    const selectors = screen.getAllByRole('combobox');
-    fireEvent.change(selectors[0] as HTMLSelectElement, { target: { value: 'instruction-pack' } });
-    fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
-
-    await screen.findByText('Installed agent plugin package as a Neon Pilot extension.');
-    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'installMarketplacePackage', {
-      source: 'https://example.com/claude-instructions.git',
-      ecosystem: 'codex',
-      packageType: 'instruction-pack',
-    });
+    expect(screen.queryByPlaceholderText('Extension, agent plugin, marketplace package, URL, or local path')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Package type' })).toBeNull();
+    expect(screen.getByText('Available extensions')).toBeTruthy();
+    expect(callAction).not.toHaveBeenCalledWith('system-extension-manager', 'installMarketplacePackage', expect.anything());
   });
 });

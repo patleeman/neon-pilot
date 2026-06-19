@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 2,
+  "id": "system-agent-plugins",
+  "name": "Agent Plugins",
+  "packageType": "system",
+  "description": "Import Codex and Claude plugin repositories as managed agent capability packages.",
+  "version": "0.1.0",
+  "defaultEnabled": true,
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      {
+        "id": "listPlugins",
+        "handler": "listPlugins",
+        "title": "List agent plugins",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "addPlugin",
+        "handler": "addPlugin",
+        "title": "Add agent plugin",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "setPluginEnabled",
+        "handler": "setPluginEnabled",
+        "title": "Enable or disable agent plugin",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "setPluginAutoUpdate",
+        "handler": "setPluginAutoUpdate",
+        "title": "Configure agent plugin auto update",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "checkPluginUpdates",
+        "handler": "checkPluginUpdates",
+        "title": "Check agent plugin updates",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "updatePlugin",
+        "handler": "updatePlugin",
+        "title": "Update agent plugin",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "removePlugin",
+        "handler": "removePlugin",
+        "title": "Remove agent plugin",
+        "worker": {
+          "enabled": true
+        }
+      }
+    ]
+  },
+  "contributes": {
+    "settingsComponent": {
+      "id": "agent-plugins",
+      "component": "AgentPluginsSettingsPanel",
+      "sectionId": "settings-capabilities",
+      "label": "Agent Plugins",
+      "description": "Import Codex and Claude plugin repositories as skills, hooks, MCP declarations, and related agent instructions.",
+      "order": 35
+    },
+    "commands": [
+      {
+        "id": "open-agent-plugins",
+        "title": "Open Agent Plugins",
+        "category": "Agent Plugins",
+        "description": "Open Agent Plugins settings.",
+        "action": "app.navigate",
+        "args": {
+          "to": "/settings#agent-plugins"
+        },
+        "icon": "plug"
+      },
+      {
+        "id": "check-agent-plugin-updates",
+        "title": "Check Agent Plugin Updates",
+        "category": "Agent Plugins",
+        "description": "Check installed agent plugins for source updates.",
+        "action": "checkPluginUpdates"
+      }
+    ]
+  },
+  "permissions": ["shell:execute", "filesystem:read", "filesystem:write"]
+}

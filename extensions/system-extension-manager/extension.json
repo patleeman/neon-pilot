@@ -93,14 +93,6 @@
         }
       },
       {
-        "id": "installMarketplacePackage",
-        "handler": "installMarketplacePackage",
-        "title": "Install marketplace package source",
-        "worker": {
-          "enabled": true
-        }
-      },
-      {
         "id": "listHostViewComponents",
         "handler": "listHostViewComponents",
         "title": "List host view components",
@@ -167,7 +159,6 @@
             "installCatalog",
             "updateCatalog",
             "installFromUrl",
-            "installMarketplacePackage",
             "readSearchPaths",
             "updateSearchPaths",
             "readExtensionSources",
@@ -281,10 +272,7 @@
         "action": "manageExtension",
         "jsonDefault": true,
         "usage": "extensions list [--json]",
-        "examples": [
-          "neon-pilot extensions list",
-          "neon-pilot extensions list --json"
-        ],
+        "examples": ["neon-pilot extensions list", "neon-pilot extensions list --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -308,15 +296,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "extensions",
-            "list"
-          ],
+          "argv": ["extensions", "list"],
           "expectJsonFields": []
         }
       },
@@ -328,10 +310,7 @@
         "jsonDefault": true,
         "inputAction": "create",
         "usage": "extensions create <extensionId> [--json]",
-        "examples": [
-          "neon-pilot extensions create system-settings",
-          "neon-pilot extensions create system-settings --json"
-        ],
+        "examples": ["neon-pilot extensions create system-settings", "neon-pilot extensions create system-settings --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -360,10 +339,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "extensions-snapshot",
@@ -373,10 +349,7 @@
         "jsonDefault": true,
         "inputAction": "snapshot",
         "usage": "extensions snapshot <extensionId> [--json]",
-        "examples": [
-          "neon-pilot extensions snapshot system-settings",
-          "neon-pilot extensions snapshot system-settings --json"
-        ],
+        "examples": ["neon-pilot extensions snapshot system-settings", "neon-pilot extensions snapshot system-settings --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -405,10 +378,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "extensions-delete",
@@ -417,14 +387,9 @@
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "delete",
-        "aliases": [
-          "extensions uninstall"
-        ],
+        "aliases": ["extensions uninstall"],
         "usage": "extensions delete <id> [--json]",
-        "examples": [
-          "neon-pilot extensions delete example-id",
-          "neon-pilot extensions delete example-id --json"
-        ],
+        "examples": ["neon-pilot extensions delete example-id", "neon-pilot extensions delete example-id --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -453,10 +418,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "extensions-catalog",
@@ -466,10 +428,7 @@
         "jsonDefault": true,
         "inputAction": "listInstallable",
         "usage": "extensions catalog [--json]",
-        "examples": [
-          "neon-pilot extensions catalog",
-          "neon-pilot extensions catalog --json"
-        ],
+        "examples": ["neon-pilot extensions catalog", "neon-pilot extensions catalog --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -493,15 +452,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "extensions",
-            "catalog"
-          ],
+          "argv": ["extensions", "catalog"],
           "expectJsonFields": []
         }
       },
@@ -513,10 +466,7 @@
         "jsonDefault": true,
         "inputAction": "installCatalog",
         "usage": "extensions install <extensionId> [--json]",
-        "examples": [
-          "neon-pilot extensions install system-settings",
-          "neon-pilot extensions install system-settings --json"
-        ],
+        "examples": ["neon-pilot extensions install system-settings", "neon-pilot extensions install system-settings --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -545,10 +495,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "extensions-update",
@@ -558,10 +505,7 @@
         "jsonDefault": true,
         "inputAction": "updateCatalog",
         "usage": "extensions update <extensionId> [--json]",
-        "examples": [
-          "neon-pilot extensions update system-settings",
-          "neon-pilot extensions update system-settings --json"
-        ],
+        "examples": ["neon-pilot extensions update system-settings", "neon-pilot extensions update system-settings --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -590,10 +534,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "extensions-install-url",
@@ -640,61 +581,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
-      },
-      {
-        "id": "extensions-install-marketplace",
-        "command": "extensions install-marketplace",
-        "description": "Install a marketplace behavior package as an extension: extensions install-marketplace <source> --type skill|instruction-pack|agent|template",
-        "action": "manageExtension",
-        "jsonDefault": true,
-        "inputAction": "installMarketplacePackage",
-        "usage": "extensions install-marketplace <source> --type <skill|instruction-pack|agent|template> [--json]",
-        "examples": [
-          "neon-pilot extensions install-marketplace /path/to/skill --type skill",
-          "neon-pilot extensions install-marketplace /path/to/skill --type skill --json"
-        ],
-        "argsSchema": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1,
-          "maxItems": 1,
-          "description": "Positional args: source."
-        },
-        "flagsSchema": {
-          "type": "object",
-          "properties": {
-            "json": {
-              "type": "boolean",
-              "description": "Print structured JSON output."
-            },
-            "dry-run": {
-              "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
-            },
-            "type": {
-              "enum": ["skill", "instruction-pack", "agent", "template"],
-              "description": "Marketplace behavior package type."
-            }
-          },
-          "required": ["type"],
-          "additionalProperties": true
-        },
-        "mode": "write",
-        "requiresApp": false,
-        "destructive": false,
-        "idempotent": false,
-        "startsBackgroundWork": false,
-        "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "extensions-validate",
@@ -703,10 +590,7 @@
         "action": "manageExtension",
         "inputAction": "validate",
         "usage": "extensions validate <extensionId> [--json]",
-        "examples": [
-          "neon-pilot extensions validate system-settings",
-          "neon-pilot extensions validate system-settings --json"
-        ],
+        "examples": ["neon-pilot extensions validate system-settings", "neon-pilot extensions validate system-settings --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -731,10 +615,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "extensions-reload",
@@ -743,11 +624,7 @@
         "action": "manageExtension",
         "inputAction": "reload",
         "usage": "extensions reload [extensionId] [--json]",
-        "examples": [
-          "neon-pilot extensions reload",
-          "neon-pilot extensions reload system-settings",
-          "neon-pilot extensions reload --json"
-        ],
+        "examples": ["neon-pilot extensions reload", "neon-pilot extensions reload system-settings", "neon-pilot extensions reload --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -776,10 +653,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "extensions-smoke",
@@ -788,10 +662,7 @@
         "action": "manageExtension",
         "inputAction": "smoke",
         "usage": "extensions smoke <extensionId> [--json]",
-        "examples": [
-          "neon-pilot extensions smoke system-settings",
-          "neon-pilot extensions smoke system-settings --json"
-        ],
+        "examples": ["neon-pilot extensions smoke system-settings", "neon-pilot extensions smoke system-settings --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -820,10 +691,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "extensions-enable",
@@ -832,10 +700,7 @@
         "action": "manageExtension",
         "inputAction": "enable",
         "usage": "extensions enable <extensionId> [--json]",
-        "examples": [
-          "neon-pilot extensions enable system-settings",
-          "neon-pilot extensions enable system-settings --json"
-        ],
+        "examples": ["neon-pilot extensions enable system-settings", "neon-pilot extensions enable system-settings --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -864,10 +729,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "extensions-disable",
@@ -876,10 +738,7 @@
         "action": "manageExtension",
         "inputAction": "disable",
         "usage": "extensions disable <extensionId> [--json]",
-        "examples": [
-          "neon-pilot extensions disable system-settings",
-          "neon-pilot extensions disable system-settings --json"
-        ],
+        "examples": ["neon-pilot extensions disable system-settings", "neon-pilot extensions disable system-settings --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -908,10 +767,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "extensions-paths",
@@ -921,10 +777,7 @@
         "inputAction": "readSearchPaths",
         "jsonDefault": true,
         "usage": "extensions paths [--json]",
-        "examples": [
-          "neon-pilot extensions paths",
-          "neon-pilot extensions paths --json"
-        ],
+        "examples": ["neon-pilot extensions paths", "neon-pilot extensions paths --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -948,15 +801,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "extensions",
-            "paths"
-          ],
+          "argv": ["extensions", "paths"],
           "expectJsonFields": []
         }
       },
@@ -968,10 +815,7 @@
         "inputAction": "readExtensionSources",
         "jsonDefault": true,
         "usage": "extensions sources [--json]",
-        "examples": [
-          "neon-pilot extensions sources",
-          "neon-pilot extensions sources --json"
-        ],
+        "examples": ["neon-pilot extensions sources", "neon-pilot extensions sources --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -995,15 +839,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "extensions",
-            "sources"
-          ],
+          "argv": ["extensions", "sources"],
           "expectJsonFields": []
         }
       }
@@ -1023,9 +861,5 @@
       }
     ]
   },
-  "permissions": [
-    "extensions:read",
-    "extensions:write",
-    "shell:execute"
-  ]
+  "permissions": ["extensions:read", "extensions:write", "shell:execute"]
 }
