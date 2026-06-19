@@ -268,6 +268,11 @@ function persistConversationLayoutToServer(layout: ConversationLayout): void {
     });
 }
 
+function layoutContainsWorkspaceIds(layout: ConversationLayout, requiredLayout: ConversationLayout): boolean {
+  const layoutIds = new Set(listWorkspaceSessionIds(layout));
+  return listWorkspaceSessionIds(requiredLayout).every((id) => layoutIds.has(id));
+}
+
 function persistConversationOperationToServer(operation: ConversationWorkspaceOperation): void {
   void api
     .updateConversationWorkspace(operation)
@@ -276,6 +281,11 @@ function persistConversationOperationToServer(operation: ConversationWorkspaceOp
         return;
       }
       const normalized = normalizeRemoteConversationLayout(saved);
+      const projected = conversationLayoutProjection;
+      if (projected && isWithinLocalWriteGrace() && !layoutContainsWorkspaceIds(normalized, projected)) {
+        persistConversationLayoutToServer(projected);
+        return;
+      }
       remoteLayoutCache = normalized;
       remoteLayoutCacheAt = Date.now();
       conversationLayoutProjection = normalized;

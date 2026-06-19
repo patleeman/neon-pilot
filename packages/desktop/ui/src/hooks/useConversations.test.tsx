@@ -11,7 +11,7 @@ import {
   PINNED_SESSION_IDS_STORAGE_KEY,
 } from '../local/localSettings.js';
 import { mergeSessionSnapshotPreservingOrder } from '../session/sessionListState.js';
-import { resetLocalWriteGrace, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
+import { openConversationTab, resetLocalWriteGrace, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
 import type { ScheduledTaskSummary, SessionMeta } from '../shared/types.js';
 import { sessionStore, taskStore } from '../store';
 import { useConversations } from './useConversations.js';
@@ -385,6 +385,63 @@ describe('useConversations', () => {
     expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['conv-auto']);
     expect(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY)).toBeNull();
     expect(apiMocks.updateConversationWorkspace).toHaveBeenCalledWith({ operation: 'open', sessionId: 'conv-auto', active: false });
+  });
+
+  it('does not accept a stale open operation response that drops existing threads', async () => {
+    apiMocks.openConversationTabs.mockResolvedValueOnce({
+      sessionIds: ['existing-thread'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'existing-thread',
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+    });
+    apiMocks.updateConversationWorkspace.mockResolvedValueOnce({
+      sessionIds: ['new-thread'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'new-thread',
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 2,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:01.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+    });
+    apiMocks.setOpenConversationTabs.mockResolvedValueOnce({
+      sessionIds: ['existing-thread', 'new-thread'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'new-thread',
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 3,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:02.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+    });
+
+    renderProbe({
+      sessions: [createSession({ id: 'existing-thread' }), createSession({ id: 'new-thread' })],
+      tasks: null,
+    });
+    await flushAsyncWork();
+
+    act(() => {
+      openConversationTab('new-thread');
+    });
+    await flushAsyncWork();
+
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['existing-thread', 'new-thread']);
+    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledWith(
+      ['existing-thread', 'new-thread'],
+      [],
+      [],
+      undefined,
+      'new-thread',
+      { conversationWorkspaceMigrated: true },
+    );
   });
 
   it('sorts archived conversations by latest activity', async () => {
