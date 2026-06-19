@@ -61,13 +61,13 @@ import {
 } from './extensionEnabledConfig.js';
 import { normalizeExtensionFailureRecords } from './extensionFailureRecords.js';
 import { buildExtensionFailureResponse, shouldQuarantineExtensionFailure } from './extensionFailureResponse.js';
-import { buildExtensionInstallRoutes } from './extensionInstallRoutes.js';
-import { buildExtensionQuarantineDiagnostic, mergeExtensionInstallDiagnostics } from './extensionInstallSummaryDiagnostics.js';
 import {
   buildExtensionGatewayProviderRegistrations as buildExtensionGatewayProviderRegistrationsValue,
   type ExtensionGatewayProviderRegistration,
   validateGatewayProviderContributions,
 } from './extensionGatewayContributions.js';
+import { buildExtensionInstallRoutes } from './extensionInstallRoutes.js';
+import { buildExtensionQuarantineDiagnostic, mergeExtensionInstallDiagnostics } from './extensionInstallSummaryDiagnostics.js';
 import {
   validateContextMenuContributions,
   validateSelectionActionContributions,
@@ -1126,14 +1126,22 @@ function validateExtensionSurfaces(surfaces: unknown): void {
 }
 
 const KNOWN_EXTENSION_PERMISSIONS = new Set<string>(EXTENSION_PERMISSIONS);
+const LEGACY_EXTENSION_PERMISSION_ALIASES = new Map<string, (typeof EXTENSION_PERMISSIONS)[number]>([
+  ['shell:exec', 'shell:execute'],
+  ['browser:write', 'browser:control'],
+]);
 
-function validateExtensionPermissions(permissions: unknown): void {
+function normalizeExtensionPermissions(permissions: unknown): (typeof EXTENSION_PERMISSIONS)[number][] {
   const values = requireStringArray(permissions, 'permissions');
-  for (const permission of values) {
+  return values.map((permission) => {
+    const normalized = LEGACY_EXTENSION_PERMISSION_ALIASES.get(permission) ?? permission;
     if (!KNOWN_EXTENSION_PERMISSIONS.has(permission)) {
-      throw new Error(`Extension manifest permissions contains unknown permission: ${permission}.`);
+      if (!KNOWN_EXTENSION_PERMISSIONS.has(normalized)) {
+        throw new Error(`Extension manifest permissions contains unknown permission: ${permission}.`);
+      }
     }
-  }
+    return normalized as (typeof EXTENSION_PERMISSIONS)[number];
+  });
 }
 
 export function parseExtensionManifest(value: unknown): ExtensionManifest {
@@ -1154,7 +1162,7 @@ export function parseExtensionManifest(value: unknown): ExtensionManifest {
     validateExtensionBackend(value.backend);
   }
   if (value.surfaces !== undefined) validateExtensionSurfaces(value.surfaces);
-  if (value.permissions !== undefined) validateExtensionPermissions(value.permissions);
+  if (value.permissions !== undefined) value.permissions = normalizeExtensionPermissions(value.permissions);
 
   return value as unknown as ExtensionManifest;
 }

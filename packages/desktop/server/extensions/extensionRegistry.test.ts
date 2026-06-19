@@ -405,6 +405,15 @@ describe('extension registry', () => {
       }),
     ).toThrow('Extension manifest permissions contains unknown permission: unknown:permission.');
 
+    expect(
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'legacy-ext',
+        name: 'Legacy Ext',
+        permissions: ['shell:exec', 'browser:write'],
+      }).permissions,
+    ).toEqual(['shell:execute', 'browser:control']);
+
     expect(() =>
       parseExtensionManifest({
         schemaVersion: 2,
@@ -630,7 +639,9 @@ describe('extension registry', () => {
       enabled: true,
       required: true,
     });
-    expect(summary?.diagnostics ?? []).not.toEqual(expect.arrayContaining([expect.stringContaining('Extension disabled by circuit breaker')]));
+    expect(summary?.diagnostics ?? []).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('Extension disabled by circuit breaker')]),
+    );
     expect(appEvents.invalidateAppTopics).not.toHaveBeenCalledWith('extensions', 'notifications');
     expect(appEvents.publishAppEvent).not.toHaveBeenCalledWith(expect.objectContaining({ extensionId: 'system-extension-manager' }));
   });
@@ -784,7 +795,9 @@ describe('extension registry', () => {
     setExtensionEnabled('old-extension', true, stateRoot);
 
     expect(isExtensionEnabled('old-extension', stateRoot)).toBe(true);
-    expect(readExtensionRegistrySnapshot().routes).toEqual(expect.arrayContaining([expect.objectContaining({ extensionId: 'old-extension' })]));
+    expect(readExtensionRegistrySnapshot().routes).toEqual(
+      expect.arrayContaining([expect.objectContaining({ extensionId: 'old-extension' })]),
+    );
     expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'old-extension')).toMatchObject({
       enabled: true,
       status: 'enabled',
