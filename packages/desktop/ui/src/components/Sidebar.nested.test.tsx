@@ -221,7 +221,8 @@ describe('Sidebar branch conversation interactions', () => {
     await flush();
 
     expect(row(container, 'parent').textContent).toContain('Parent thread');
-    expect(row(container, 'subagent-child').textContent).toContain('subagent: Smoke test subagent');
+    expect(row(container, 'subagent-child').textContent).toContain('Smoke test subagent');
+    expect(row(container, 'subagent-child').textContent).not.toContain('subagent: Smoke test subagent');
   });
 
   it('closes an active parent that is only visible as lineage while a running child stays open', async () => {

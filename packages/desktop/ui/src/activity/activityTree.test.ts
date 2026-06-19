@@ -145,7 +145,7 @@ describe('buildActivityTreeItems', () => {
       ],
     });
 
-    expect(items.find((item) => item.id === buildConversationActivityId('subagent-conv'))?.title).toBe('subagent: Smoke test');
+    expect(items.find((item) => item.id === buildConversationActivityId('subagent-conv'))?.title).toBe('Smoke test');
     expect(items.find((item) => item.id === buildConversationActivityId('fork-conv'))?.title).toBe('Alternate path');
     expect(items.find((item) => item.id === buildConversationActivityId('rewind-conv'))?.title).toBe('Earlier path');
   });

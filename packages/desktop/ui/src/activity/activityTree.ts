@@ -43,11 +43,10 @@ export function buildExecutionActivityId(executionId: string): string {
 function formatConversationActivityTitle(session: SessionMeta): string {
   const title = session.title || 'Untitled thread';
   switch (session.offshootKind) {
-    case 'subagent':
-      return `subagent: ${title}`;
     case 'fork':
     case 'rewind':
     case 'duplicate':
+    case 'subagent':
       return title;
     case 'side':
       return `side: ${title}`;
