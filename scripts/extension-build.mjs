@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /* eslint-env node */
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -488,12 +489,45 @@ function recordBuildOutputs(buildOutputs, metafile) {
   }
 }
 
+function listFilesRecursively(root) {
+  if (!existsSync(root)) return [];
+  const result = [];
+  const visit = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) visit(path);
+      else if (entry.isFile()) result.push(path);
+    }
+  };
+  visit(root);
+  return result;
+}
+
+function sha256File(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex');
+}
+
+function collectSourceHashes() {
+  return [
+    manifestPath,
+    ...listFilesRecursively(join(packageRoot, 'src')).filter((sourcePath) => !/\.test\.[cm]?[tj]sx?$/u.test(sourcePath)),
+    ...listFilesRecursively(join(packageRoot, 'webapp')),
+  ]
+    .filter((sourcePath) => sourcePath && existsSync(sourcePath))
+    .map((sourcePath) => ({
+      path: relativeToPackage(sourcePath),
+      sha256: sha256File(sourcePath),
+    }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+}
+
 function writeBuildManifest(buildOutputs) {
   writeJson(join(tempDistPath, 'build-manifest.json'), {
     extensionId: manifest.id,
     builtAt: new Date().toISOString(),
     frontendEntry: manifest.frontend?.entry ?? null,
     backendEntry: manifest.backend?.entry ?? null,
+    sourceHashes: collectSourceHashes(),
     outputs: buildOutputs.sort((left, right) => left.path.localeCompare(right.path)),
   });
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /* eslint-env node */
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { builtinModules } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -291,8 +292,7 @@ function sourceEntryPath(extensionDir, relativePath) {
   return join(extensionDir, relativePath);
 }
 
-function listWebappSourcePaths(extensionDir) {
-  const root = join(extensionDir, 'webapp');
+function listFilesRecursively(root) {
   if (!existsSync(root)) return [];
   const result = [];
   const visit = (dir) => {
@@ -307,6 +307,28 @@ function listWebappSourcePaths(extensionDir) {
   };
   visit(root);
   return result;
+}
+
+function listSourceHashPaths(extensionDir, manifestPath) {
+  return [
+    manifestPath,
+    ...listFilesRecursively(join(extensionDir, 'src')).filter((sourcePath) => !/\.test\.[cm]?[tj]sx?$/u.test(sourcePath)),
+    ...listFilesRecursively(join(extensionDir, 'webapp')),
+  ];
+}
+
+function sha256File(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex');
+}
+
+function sourceHashEntries(extensionDir, sourcePaths) {
+  return sourcePaths
+    .filter((sourcePath) => sourcePath && existsSync(sourcePath))
+    .map((sourcePath) => ({
+      path: sourcePath.startsWith(`${extensionDir}/`) ? sourcePath.slice(extensionDir.length + 1) : sourcePath,
+      sha256: sha256File(sourcePath),
+    }))
+    .sort((left, right) => left.path.localeCompare(right.path));
 }
 
 function assertPackagedAppContainsEveryExtensionBundle() {
@@ -351,6 +373,21 @@ function assertPackagedAppContainsEveryExtensionBundle() {
 function isBuildManifestStale(buildManifestPath, sourcePaths) {
   if (!existsSync(buildManifestPath)) return true;
   if (packagedAppResourcesRoot) return false;
+  const buildManifest = readJson(buildManifestPath);
+  if (Array.isArray(buildManifest.sourceHashes)) {
+    const extensionDir = dirname(dirname(buildManifestPath));
+    const expected = new Map(sourceHashEntries(extensionDir, sourcePaths).map((entry) => [entry.path, entry.sha256]));
+    const actual = new Map(
+      buildManifest.sourceHashes
+        .filter((entry) => entry && typeof entry.path === 'string' && typeof entry.sha256 === 'string')
+        .map((entry) => [entry.path, entry.sha256]),
+    );
+    if (actual.size !== expected.size) return true;
+    for (const [path, sha256] of expected) {
+      if (actual.get(path) !== sha256) return true;
+    }
+    return false;
+  }
   const buildManifestMtime = statSync(buildManifestPath).mtimeMs;
   return sourcePaths.filter(Boolean).some((sourcePath) => existsSync(sourcePath) && statSync(sourcePath).mtimeMs > buildManifestMtime);
 }
@@ -499,10 +536,9 @@ for (const extensionDir of listPackagedExtensionDirs()) {
   const row = { id, backend: 'none', frontend: 'none', actions: manifest.backend?.actions?.length ?? 0, manifest: 'missing' };
   const hasBuildManifest = existsSync(buildManifestPath);
   const sourcePaths = [
-    manifestPath,
+    ...listSourceHashPaths(extensionDir, manifestPath),
     sourceEntryPath(extensionDir, manifest.frontend?.entry ? 'src/frontend.tsx' : null),
     sourceEntryPath(extensionDir, manifest.backend?.entry),
-    ...listWebappSourcePaths(extensionDir),
   ];
 
   if (hasBuildManifest) row.manifest = isBuildManifestStale(buildManifestPath, sourcePaths) ? 'stale' : 'ok';
