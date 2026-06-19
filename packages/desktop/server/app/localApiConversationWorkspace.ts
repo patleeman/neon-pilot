@@ -1,6 +1,6 @@
 import type { AppEventTopic } from '../shared/appEvents.js';
 
-export interface DesktopOpenConversationTabsUpdateInput {
+export interface DesktopConversationWorkspaceUpdateInput {
   sessionIds?: string[];
   pinnedSessionIds?: string[];
   archivedSessionIds?: string[];
@@ -9,7 +9,7 @@ export interface DesktopOpenConversationTabsUpdateInput {
   conversationWorkspaceMigrated?: boolean | null;
 }
 
-export type DesktopOpenConversationOperationInput =
+export type DesktopConversationWorkspaceOperationInput =
   | { operation: 'open'; sessionId: string; active?: boolean | null }
   | { operation: 'close'; sessionId: string }
   | { operation: 'pin'; sessionId: string }
@@ -32,11 +32,11 @@ export interface DesktopConversationWorkspaceLayout {
   activeConversationId: string | null;
 }
 
-export function validateDesktopOpenConversationTabsUpdate(input: unknown): asserts input is DesktopOpenConversationTabsUpdateInput {
+export function validateDesktopConversationWorkspaceUpdate(input: unknown): asserts input is DesktopConversationWorkspaceUpdateInput {
   if (!input || typeof input !== 'object') {
-    throw new Error('open conversation tabs update must be an object');
+    throw new Error('conversation workspace update must be an object');
   }
-  const update = input as DesktopOpenConversationTabsUpdateInput;
+  const update = input as DesktopConversationWorkspaceUpdateInput;
   const { sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, workspacePaths, conversationWorkspaceMigrated } = update;
 
   if (sessionIds !== undefined && !Array.isArray(sessionIds)) {
@@ -81,7 +81,7 @@ export function validateDesktopOpenConversationTabsUpdate(input: unknown): asser
   }
 }
 
-export function desktopOpenConversationTabsInvalidationTopics(input: DesktopOpenConversationTabsUpdateInput): AppEventTopic[] {
+export function desktopConversationWorkspaceInvalidationTopics(input: DesktopConversationWorkspaceUpdateInput): AppEventTopic[] {
   const topics: AppEventTopic[] = [];
   if (
     input.sessionIds !== undefined ||
@@ -197,9 +197,9 @@ function moveConversationToSection(
   });
 }
 
-export function applyDesktopOpenConversationOperation(
+export function applyDesktopConversationWorkspaceOperation(
   current: DesktopConversationWorkspaceLayout,
-  input: DesktopOpenConversationOperationInput,
+  input: DesktopConversationWorkspaceOperationInput,
 ): DesktopConversationWorkspaceLayout {
   const layout = normalizeDesktopConversationWorkspaceLayout(current);
   const sessionId = 'sessionId' in input ? normalizeSessionId(input.sessionId) : '';
@@ -257,7 +257,7 @@ export function applyDesktopOpenConversationOperation(
     }
     case 'restore':
       if (!sessionId) return layout;
-      return applyDesktopOpenConversationOperation(layout, { operation: 'archive', sessionId, archived: false });
+      return applyDesktopConversationWorkspaceOperation(layout, { operation: 'archive', sessionId, archived: false });
     case 'setActive':
       return normalizeDesktopConversationWorkspaceLayout({
         ...layout,
@@ -268,7 +268,7 @@ export function applyDesktopOpenConversationOperation(
   }
 }
 
-export function validateDesktopOpenConversationOperation(input: unknown): asserts input is DesktopOpenConversationOperationInput {
+export function validateDesktopConversationWorkspaceOperation(input: unknown): asserts input is DesktopConversationWorkspaceOperationInput {
   if (!input || typeof input !== 'object') {
     throw new Error('open conversation operation must be an object');
   }

@@ -1,4 +1,4 @@
-export interface SavedOpenConversationTabsLike {
+export interface SavedConversationWorkspaceLike {
   openConversationIds: string[];
   pinnedConversationIds: string[];
   archivedConversationIds: string[];
@@ -10,7 +10,7 @@ export interface SavedOpenConversationTabsLike {
   conversationWorkspaceMigratedAt: string | null;
 }
 
-export function buildDesktopOpenConversationTabsResponse(saved: SavedOpenConversationTabsLike): {
+export function buildDesktopConversationWorkspaceResponse(saved: SavedConversationWorkspaceLike): {
   sessionIds: string[];
   pinnedSessionIds: string[];
   archivedSessionIds: string[];

@@ -20,7 +20,7 @@ import { Sidebar } from './Sidebar.js';
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
 const apiMocks = vi.hoisted(() => ({
-  openConversationTabs: vi.fn(),
+  readConversationWorkspace: vi.fn(),
   sidebarConversations: vi.fn(),
   saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
@@ -150,13 +150,18 @@ function readJsonList(key: string): string[] {
 describe('Sidebar branch conversation interactions', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', createStorage());
-    apiMocks.openConversationTabs.mockReset();
+    apiMocks.readConversationWorkspace.mockReset();
     apiMocks.sidebarConversations.mockReset();
     apiMocks.saveConversationWorkspaceLayout.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
     apiMocks.setSavedWorkspacePaths.mockReset();
     apiMocks.gateways.mockReset();
-    apiMocks.openConversationTabs.mockResolvedValue({ sessionIds: [], pinnedSessionIds: [], archivedSessionIds: [], workspacePaths: [] });
+    apiMocks.readConversationWorkspace.mockResolvedValue({
+      sessionIds: [],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: [],
+    });
     apiMocks.sidebarConversations.mockResolvedValue({
       sessionIds: [],
       pinnedSessionIds: [],

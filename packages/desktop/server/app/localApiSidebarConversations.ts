@@ -1,6 +1,6 @@
 import type { SessionMeta } from '../conversations/sessions.js';
 import type { SavedUiPreferences } from '../ui/uiPreferences.js';
-import { buildDesktopOpenConversationTabsResponse } from './localApiOpenTabsPresentation.js';
+import { buildDesktopConversationWorkspaceResponse } from './localApiConversationWorkspacePresentation.js';
 
 export interface DesktopSidebarConversationSnapshot {
   sessionIds: string[];
@@ -23,7 +23,7 @@ export function buildDesktopSidebarConversationSnapshot(input: {
   saved: SavedUiPreferences;
   sessions: SessionMeta[];
 }): DesktopSidebarConversationSnapshot {
-  const layout = buildDesktopOpenConversationTabsResponse(input.saved);
+  const layout = buildDesktopConversationWorkspaceResponse(input.saved);
   const knownSessionIds = new Set(input.sessions.map((session) => session.id));
   const pinnedSessionIds = filterKnownIds(layout.pinnedSessionIds, knownSessionIds);
   const pinnedIdSet = new Set(pinnedSessionIds);

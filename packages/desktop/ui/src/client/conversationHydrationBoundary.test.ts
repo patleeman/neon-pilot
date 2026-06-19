@@ -29,10 +29,10 @@ describe('conversation hydration boundary', () => {
       const source = readFileSync(path, 'utf8');
       const fileViolations: string[] = [];
 
-      if (rel !== 'client/api.ts' && /\bopenConversationTabs\b/.test(source)) {
+      if (/\bopenConversationTabs\b/.test(source)) {
         fileViolations.push(`${rel}: openConversationTabs`);
       }
-      if (rel !== 'client/api.ts' && /\bsetOpenConversationTabs\b/.test(source)) {
+      if (/\bsetOpenConversationTabs\b/.test(source)) {
         fileViolations.push(`${rel}: setOpenConversationTabs`);
       }
       if (rel !== 'client/api.ts' && /\/recover\b/.test(source)) {

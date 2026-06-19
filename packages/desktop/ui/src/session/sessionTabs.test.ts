@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const apiMocks = vi.hoisted(() => ({
-  openConversationTabs: vi.fn(),
+  readConversationWorkspace: vi.fn(),
   sidebarConversations: vi.fn(),
   saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
@@ -66,7 +66,7 @@ describe('sessionTabs', () => {
     vi.stubGlobal('localStorage', createStorage());
     vi.stubGlobal('window', { dispatchEvent });
     apiMocks.sidebarConversations.mockReset();
-    apiMocks.openConversationTabs.mockReset();
+    apiMocks.readConversationWorkspace.mockReset();
     apiMocks.saveConversationWorkspaceLayout.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
     apiMocks.saveConversationWorkspaceLayout.mockResolvedValue({ ok: true });

@@ -324,8 +324,8 @@ export interface HostController {
   readConversationTitleSettings?(): Promise<unknown>;
   updateConversationTitleSettings?(input: { enabled?: boolean; model?: string | null }): Promise<unknown>;
   readConversationPlansWorkspace?(): Promise<unknown>;
-  readOpenConversationTabs?(): Promise<unknown>;
-  updateOpenConversationTabs?(input: {
+  readConversationWorkspace?(): Promise<unknown>;
+  updateConversationWorkspace?(input: {
     sessionIds?: string[];
     pinnedSessionIds?: string[];
     archivedSessionIds?: string[];

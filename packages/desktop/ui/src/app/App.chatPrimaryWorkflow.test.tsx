@@ -18,7 +18,7 @@ const apiMock = vi.hoisted(() => ({
   tasks: vi.fn(),
   daemon: vi.fn(),
   sessionMeta: vi.fn(),
-  openConversationTabs: vi.fn(),
+  readConversationWorkspace: vi.fn(),
   sidebarConversations: vi.fn(),
   saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
@@ -186,7 +186,7 @@ describe('App chat primary live workflow', () => {
     apiMock.tasks.mockResolvedValue([]);
     apiMock.daemon.mockResolvedValue(null);
     apiMock.sessionMeta.mockResolvedValue(liveSession);
-    apiMock.openConversationTabs.mockResolvedValue({
+    apiMock.readConversationWorkspace.mockResolvedValue({
       sessionIds: ['conv-live'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -194,7 +194,7 @@ describe('App chat primary live workflow', () => {
       workspacePaths: [],
     });
     apiMock.sidebarConversations.mockImplementation(async () => ({
-      ...(await apiMock.openConversationTabs()),
+      ...(await apiMock.readConversationWorkspace()),
       sessions: [liveSession],
     }));
     apiMock.saveConversationWorkspaceLayout.mockResolvedValue({ ok: true });

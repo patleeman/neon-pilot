@@ -298,19 +298,19 @@ export class LocalHostController implements HostController {
     return module.readDesktopConversationPlansWorkspace();
   }
 
-  async readOpenConversationTabs(): Promise<unknown> {
+  async readConversationWorkspace(): Promise<unknown> {
     const module = await this.loadLocalApi();
-    return module.readDesktopOpenConversationTabs();
+    return module.readDesktopConversationWorkspace();
   }
 
-  async updateOpenConversationTabs(input: {
+  async updateConversationWorkspace(input: {
     sessionIds?: string[];
     pinnedSessionIds?: string[];
     archivedSessionIds?: string[];
     workspacePaths?: string[];
   }): Promise<unknown> {
     const module = await this.loadLocalApi();
-    return module.updateDesktopOpenConversationTabs(input);
+    return module.saveDesktopConversationWorkspace(input);
   }
 
   async readModelProviders(): Promise<unknown> {

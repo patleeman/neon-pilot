@@ -53,8 +53,8 @@ export interface LocalApiModule {
   readDesktopConversationTitleSettings(): Promise<unknown>;
   updateDesktopConversationTitleSettings(input: { enabled?: boolean; model?: string | null }): Promise<unknown>;
   readDesktopConversationPlansWorkspace(): Promise<unknown>;
-  readDesktopOpenConversationTabs(): Promise<unknown>;
-  updateDesktopOpenConversationTabs(input: {
+  readDesktopConversationWorkspace(): Promise<unknown>;
+  saveDesktopConversationWorkspace(input: {
     sessionIds?: string[];
     pinnedSessionIds?: string[];
     archivedSessionIds?: string[];
@@ -348,7 +348,7 @@ const WORKER_LOCAL_API_METHODS = new Set<keyof LocalApiModule>([
   'pickDesktopFolder',
   'readDesktopConversationTitleSettings',
   'readDesktopConversationPlansWorkspace',
-  'readDesktopOpenConversationTabs',
+  'readDesktopConversationWorkspace',
   'readDesktopModelProviders',
   'readDesktopProviderAuth',
   'readDesktopScheduledTasks',

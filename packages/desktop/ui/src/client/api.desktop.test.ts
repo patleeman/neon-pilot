@@ -1229,10 +1229,10 @@ describe('api desktop transport', () => {
     });
   });
 
-  it('uses HTTP for open-conversation layout product state', async () => {
+  it('uses HTTP for conversation workspace layout product state', async () => {
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const path = String(input);
-      if (path === '/api/ui/open-conversations' && init?.method === 'PATCH') {
+      if (path === '/api/conversation-workspace' && init?.method === 'PATCH') {
         return createJsonResponse({
           ok: true,
           sessionIds: ['conversation-4'],
@@ -1241,7 +1241,7 @@ describe('api desktop transport', () => {
           workspacePaths: ['/tmp/beta'],
         });
       }
-      if (path === '/api/ui/open-conversations/operation' && init?.method === 'POST') {
+      if (path === '/api/conversation-workspace/operation' && init?.method === 'POST') {
         return createJsonResponse({
           ok: true,
           sessionIds: ['conversation-7'],
@@ -1250,7 +1250,7 @@ describe('api desktop transport', () => {
           workspacePaths: ['/tmp/beta'],
         });
       }
-      if (path === '/api/ui/open-conversations') {
+      if (path === '/api/conversation-workspace') {
         return createJsonResponse({
           sessionIds: ['conversation-1'],
           pinnedSessionIds: ['conversation-2'],
@@ -1261,13 +1261,13 @@ describe('api desktop transport', () => {
       return createJsonResponse({});
     });
     vi.stubGlobal('fetch', fetchMock);
-    const readOpenConversationTabs = vi.fn().mockResolvedValue({
+    const readConversationWorkspace = vi.fn().mockResolvedValue({
       sessionIds: ['conversation-1'],
       pinnedSessionIds: ['conversation-2'],
       archivedSessionIds: ['conversation-3'],
       workspacePaths: ['/tmp/alpha'],
     });
-    const updateOpenConversationTabs = vi.fn().mockResolvedValue({
+    const updateConversationWorkspace = vi.fn().mockResolvedValue({
       ok: true,
       sessionIds: ['conversation-4'],
       pinnedSessionIds: ['conversation-5'],
@@ -1283,19 +1283,19 @@ describe('api desktop transport', () => {
           activeHostKind: 'local',
           activeHostSummary: 'Local backend is healthy.',
         }),
-        readOpenConversationTabs,
-        updateOpenConversationTabs,
+        readConversationWorkspace,
+        updateConversationWorkspace,
       },
     });
 
     const { api } = await import('./api');
-    const layout = await api.openConversationTabs();
+    const layout = await api.readConversationWorkspace();
     const savedLayout = await api.saveConversationWorkspaceLayout(['conversation-4'], ['conversation-5'], ['conversation-6']);
     const operationLayout = await api.updateConversationWorkspace({ operation: 'pin', sessionId: 'conversation-7' });
 
-    expect(readOpenConversationTabs).not.toHaveBeenCalled();
-    expect(updateOpenConversationTabs).not.toHaveBeenCalled();
-    expect(fetchMock).toHaveBeenCalledWith('/api/ui/open-conversations', { method: 'GET', cache: 'no-store' });
+    expect(readConversationWorkspace).not.toHaveBeenCalled();
+    expect(updateConversationWorkspace).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith('/api/conversation-workspace', { method: 'GET', cache: 'no-store' });
     expect(layout).toEqual({
       sessionIds: ['conversation-1'],
       pinnedSessionIds: ['conversation-2'],
@@ -1316,7 +1316,7 @@ describe('api desktop transport', () => {
       archivedSessionIds: [],
       workspacePaths: ['/tmp/beta'],
     });
-    expect(fetchMock).toHaveBeenCalledWith('/api/ui/open-conversations/operation', {
+    expect(fetchMock).toHaveBeenCalledWith('/api/conversation-workspace/operation', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ operation: 'pin', sessionId: 'conversation-7' }),

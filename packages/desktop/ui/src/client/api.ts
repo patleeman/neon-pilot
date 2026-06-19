@@ -561,8 +561,7 @@ export const api = {
     post<ProviderOAuthLoginState>(`/provider-auth/oauth/${encodeURIComponent(loginId)}/input`, { value }),
   cancelProviderOAuthLogin: async (loginId: string) =>
     post<ProviderOAuthLoginState>(`/provider-auth/oauth/${encodeURIComponent(loginId)}/cancel`),
-  /** @deprecated Production UI should read sidebarConversations() instead. */
-  openConversationTabs: async () =>
+  readConversationWorkspace: async () =>
     get<{
       sessionIds: string[];
       pinnedSessionIds: string[];
@@ -573,7 +572,7 @@ export const api = {
       conversationWorkspaceRevision?: number;
       conversationWorkspaceUpdatedAt?: string | null;
       conversationWorkspaceMigratedAt?: string | null;
-    }>('/ui/open-conversations'),
+    }>('/conversation-workspace'),
   sidebarConversations: async () =>
     get<{
       sessionIds: string[];
@@ -616,17 +615,8 @@ export const api = {
       conversationWorkspaceRevision?: number;
       conversationWorkspaceUpdatedAt?: string | null;
       conversationWorkspaceMigratedAt?: string | null;
-    }>('/ui/open-conversations', request);
+    }>('/conversation-workspace', request);
   },
-  /** @deprecated Production UI should call saveConversationWorkspaceLayout(). */
-  setOpenConversationTabs: async (
-    sessionIds?: string[] | null,
-    pinnedSessionIds?: string[] | null,
-    archivedSessionIds?: string[] | null,
-    workspacePaths?: string[] | null,
-    activeConversationId?: string | null,
-    options: { conversationWorkspaceMigrated?: boolean | null } = {},
-  ) => api.saveConversationWorkspaceLayout(sessionIds, pinnedSessionIds, archivedSessionIds, workspacePaths, activeConversationId, options),
   updateConversationWorkspace: async (
     input:
       | { operation: 'open'; sessionId: string; active?: boolean | null }
@@ -655,7 +645,7 @@ export const api = {
       conversationWorkspaceRevision?: number;
       conversationWorkspaceUpdatedAt?: string | null;
       conversationWorkspaceMigratedAt?: string | null;
-    }>('/ui/open-conversations/operation', input),
+    }>('/conversation-workspace/operation', input),
   savedWorkspacePaths: async () => {
     const { workspacePaths } = await api.sidebarConversations();
     return workspacePaths;

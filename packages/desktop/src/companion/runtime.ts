@@ -313,11 +313,11 @@ async function buildConversationListState(hostManager: HostManager) {
 }
 
 async function restoreConversationToSharedLayout(
-  localController: Pick<ReturnType<HostManager['getHostController']>, 'readOpenConversationTabs' | 'updateOpenConversationTabs'>,
+  localController: Pick<ReturnType<HostManager['getHostController']>, 'readConversationWorkspace' | 'updateConversationWorkspace'>,
   conversationId: string,
 ): Promise<void> {
-  const currentLayout = await localController.readOpenConversationTabs?.().catch(() => null);
-  if (!localController.updateOpenConversationTabs || !isRecord(currentLayout)) {
+  const currentLayout = await localController.readConversationWorkspace?.().catch(() => null);
+  if (!localController.updateConversationWorkspace || !isRecord(currentLayout)) {
     return;
   }
 
@@ -335,7 +335,7 @@ async function restoreConversationToSharedLayout(
     : [];
 
   await localController
-    .updateOpenConversationTabs({
+    .updateConversationWorkspace({
       sessionIds: [conversationId, ...sessionIds.filter((id) => id !== conversationId)],
       pinnedSessionIds,
       archivedSessionIds,
@@ -352,11 +352,11 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
 
     async updateConversationTabs(input: CompanionConversationTabsUpdateInput) {
       const localController = hostManager.getHostController('local');
-      if (!localController.updateOpenConversationTabs) {
+      if (!localController.updateConversationWorkspace) {
         throw new Error('Conversation layout updates are unavailable.');
       }
 
-      return localController.updateOpenConversationTabs(input);
+      return localController.updateConversationWorkspace(input);
     },
 
     async duplicateConversation(input: CompanionConversationDuplicateInput) {

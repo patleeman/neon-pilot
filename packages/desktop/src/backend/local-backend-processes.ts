@@ -123,12 +123,12 @@ function renderBackendChildExit(code: number | null, signal: NodeJS.Signals | nu
   return new Error(`Local backend exited before it was ready (code=${String(code)} signal=${String(signal)})`);
 }
 
-async function readOpenConversationTabsFastPath(): Promise<unknown> {
+async function readConversationWorkspaceFastPath(): Promise<unknown> {
   const { readSavedUiPreferences } = await import('../../server/ui/uiPreferences.js');
-  const { buildDesktopOpenConversationTabsResponse } = await import('../../server/app/localApiOpenTabsPresentation.js');
+  const { buildDesktopConversationWorkspaceResponse } = await import('../../server/app/localApiConversationWorkspacePresentation.js');
   const { getRuntimeSettingsFilePath } = await import('../../server/ui/settingsPersistence.js');
   const saved = readSavedUiPreferences(getRuntimeSettingsFilePath(getStateRoot()));
-  return buildDesktopOpenConversationTabsResponse(saved);
+  return buildDesktopConversationWorkspaceResponse(saved);
 }
 
 async function readSidebarConversationsFastPath(): Promise<unknown> {
@@ -142,12 +142,13 @@ async function readSidebarConversationsFastPath(): Promise<unknown> {
   });
 }
 
-async function updateOpenConversationTabsFastPath(input: unknown): Promise<unknown> {
-  const { buildDesktopOpenConversationTabsResponse } = await import('../../server/app/localApiOpenTabsPresentation.js');
-  const openTabsModule: typeof import('../../server/app/localApiOpenTabs.js') = await import('../../server/app/localApiOpenTabs.js');
+async function saveConversationWorkspaceFastPath(input: unknown): Promise<unknown> {
+  const { buildDesktopConversationWorkspaceResponse } = await import('../../server/app/localApiConversationWorkspacePresentation.js');
+  const conversationWorkspaceModule: typeof import('../../server/app/localApiConversationWorkspace.js') =
+    await import('../../server/app/localApiConversationWorkspace.js');
   const { writeSavedUiPreferences } = await import('../../server/ui/uiPreferences.js');
   const { getRuntimeSettingsFilePath, persistSettingsWrite } = await import('../../server/ui/settingsPersistence.js');
-  openTabsModule.validateDesktopOpenConversationTabsUpdate(input);
+  conversationWorkspaceModule.validateDesktopConversationWorkspaceUpdate(input);
   const update = input as {
     sessionIds?: string[];
     pinnedSessionIds?: string[];
@@ -173,19 +174,20 @@ async function updateOpenConversationTabsFastPath(input: unknown): Promise<unkno
   );
   return {
     ok: true,
-    ...buildDesktopOpenConversationTabsResponse(saved),
+    ...buildDesktopConversationWorkspaceResponse(saved),
   };
 }
 
-async function updateOpenConversationTabsByOperationFastPath(input: unknown): Promise<unknown> {
-  const { buildDesktopOpenConversationTabsResponse } = await import('../../server/app/localApiOpenTabsPresentation.js');
-  const openTabsModule: typeof import('../../server/app/localApiOpenTabs.js') = await import('../../server/app/localApiOpenTabs.js');
+async function updateConversationWorkspaceByOperationFastPath(input: unknown): Promise<unknown> {
+  const { buildDesktopConversationWorkspaceResponse } = await import('../../server/app/localApiConversationWorkspacePresentation.js');
+  const conversationWorkspaceModule: typeof import('../../server/app/localApiConversationWorkspace.js') =
+    await import('../../server/app/localApiConversationWorkspace.js');
   const { readSavedUiPreferences, writeSavedUiPreferences } = await import('../../server/ui/uiPreferences.js');
   const { getRuntimeSettingsFilePath, persistSettingsWrite } = await import('../../server/ui/settingsPersistence.js');
-  openTabsModule.validateDesktopOpenConversationOperation(input);
+  conversationWorkspaceModule.validateDesktopConversationWorkspaceOperation(input);
   const settingsFile = getRuntimeSettingsFilePath(getStateRoot());
   const current = readSavedUiPreferences(settingsFile);
-  const next = openTabsModule.applyDesktopOpenConversationOperation(
+  const next = conversationWorkspaceModule.applyDesktopConversationWorkspaceOperation(
     {
       sessionIds: current.openConversationIds,
       pinnedSessionIds: current.pinnedConversationIds,
@@ -210,7 +212,7 @@ async function updateOpenConversationTabsByOperationFastPath(input: unknown): Pr
   );
   return {
     ok: true,
-    ...buildDesktopOpenConversationTabsResponse(saved),
+    ...buildDesktopConversationWorkspaceResponse(saved),
   };
 }
 
@@ -534,23 +536,23 @@ export class LocalBackendProcesses {
       const ids = Array.isArray(jsonBody.sessionIds) ? jsonBody.sessionIds.filter((id): id is string => typeof id === 'string') : [];
       return this.makeJsonResponse({ index: Object.fromEntries(ids.map((id) => [id, ''])) }, 'main-process');
     }
-    if (input.method === 'GET' && path === '/api/ui/open-conversations') {
+    if (input.method === 'GET' && (path === '/api/conversation-workspace' || path === '/api/ui/open-conversations')) {
       this.warmBackendChild();
       this.warmCriticalExtensionRegistryModule();
-      return this.makeJsonResponse(await readOpenConversationTabsFastPath(), 'main-process');
+      return this.makeJsonResponse(await readConversationWorkspaceFastPath(), 'main-process');
     }
     if (input.method === 'GET' && path === '/api/sidebar/conversations') {
       this.warmBackendChild();
       this.warmCriticalExtensionRegistryModule();
       return this.makeJsonResponse(await readSidebarConversationsFastPath(), 'main-process');
     }
-    if (input.method === 'PATCH' && path === '/api/ui/open-conversations') {
+    if (input.method === 'PATCH' && (path === '/api/conversation-workspace' || path === '/api/ui/open-conversations')) {
       this.warmBackendChild();
-      return this.makeJsonResponse(await updateOpenConversationTabsFastPath(jsonBody), 'main-process');
+      return this.makeJsonResponse(await saveConversationWorkspaceFastPath(jsonBody), 'main-process');
     }
-    if (input.method === 'POST' && path === '/api/ui/open-conversations/operation') {
+    if (input.method === 'POST' && (path === '/api/conversation-workspace/operation' || path === '/api/ui/open-conversations/operation')) {
       this.warmBackendChild();
-      return this.makeJsonResponse(await updateOpenConversationTabsByOperationFastPath(jsonBody), 'main-process');
+      return this.makeJsonResponse(await updateConversationWorkspaceByOperationFastPath(jsonBody), 'main-process');
     }
     if (input.method === 'GET' && path === '/api/extensions/registry/critical') {
       const registry = await this.warmCriticalExtensionRegistryModule();

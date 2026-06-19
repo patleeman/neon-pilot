@@ -249,13 +249,13 @@ describe('LocalHostController', () => {
   });
 
   it('routes desktop layout settings through the local API module without loopback proxying', async () => {
-    const readDesktopOpenConversationTabs = vi.fn().mockResolvedValue({
+    const readDesktopConversationWorkspace = vi.fn().mockResolvedValue({
       sessionIds: ['conversation-1'],
       pinnedSessionIds: ['conversation-2'],
       archivedSessionIds: ['conversation-3'],
       workspacePaths: ['/tmp/alpha'],
     });
-    const updateDesktopOpenConversationTabs = vi.fn().mockResolvedValue({
+    const saveDesktopConversationWorkspace = vi.fn().mockResolvedValue({
       ok: true,
       sessionIds: ['conversation-4'],
       pinnedSessionIds: ['conversation-5'],
@@ -264,21 +264,21 @@ describe('LocalHostController', () => {
     });
     const loadLocalApi = vi.fn().mockResolvedValue(
       createLocalApiModuleMock({
-        readDesktopOpenConversationTabs,
-        updateDesktopOpenConversationTabs,
+        readDesktopConversationWorkspace,
+        saveDesktopConversationWorkspace,
       }),
     );
     const backend = createBackendMock();
     const controller = new LocalHostController({ id: 'local', label: 'Local', kind: 'local' }, backend, loadLocalApi);
 
-    await expect(controller.readOpenConversationTabs?.()).resolves.toEqual({
+    await expect(controller.readConversationWorkspace?.()).resolves.toEqual({
       sessionIds: ['conversation-1'],
       pinnedSessionIds: ['conversation-2'],
       archivedSessionIds: ['conversation-3'],
       workspacePaths: ['/tmp/alpha'],
     });
     await expect(
-      controller.updateOpenConversationTabs?.({
+      controller.updateConversationWorkspace?.({
         sessionIds: ['conversation-4'],
         pinnedSessionIds: ['conversation-5'],
         archivedSessionIds: ['conversation-6'],
@@ -292,8 +292,8 @@ describe('LocalHostController', () => {
       workspacePaths: ['/tmp/beta'],
     });
 
-    expect(readDesktopOpenConversationTabs).toHaveBeenCalledTimes(1);
-    expect(updateDesktopOpenConversationTabs).toHaveBeenCalledWith({
+    expect(readDesktopConversationWorkspace).toHaveBeenCalledTimes(1);
+    expect(saveDesktopConversationWorkspace).toHaveBeenCalledWith({
       sessionIds: ['conversation-4'],
       pinnedSessionIds: ['conversation-5'],
       archivedSessionIds: ['conversation-6'],

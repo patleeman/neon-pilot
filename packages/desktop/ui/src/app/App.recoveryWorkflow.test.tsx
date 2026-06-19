@@ -17,7 +17,7 @@ const apiMock = vi.hoisted(() => ({
   tasks: vi.fn(),
   daemon: vi.fn(),
   sessionMeta: vi.fn(),
-  openConversationTabs: vi.fn(),
+  readConversationWorkspace: vi.fn(),
   sidebarConversations: vi.fn(),
   saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
@@ -176,7 +176,7 @@ describe('App recovery workflow', () => {
     apiMock.tasks.mockResolvedValue([]);
     apiMock.daemon.mockResolvedValue(null);
     apiMock.sessionMeta.mockResolvedValue(recoverySession);
-    apiMock.openConversationTabs.mockResolvedValue({
+    apiMock.readConversationWorkspace.mockResolvedValue({
       sessionIds: ['conv-recovery'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -184,7 +184,7 @@ describe('App recovery workflow', () => {
       workspacePaths: [],
     });
     apiMock.sidebarConversations.mockImplementation(async () => ({
-      ...(await apiMock.openConversationTabs()),
+      ...(await apiMock.readConversationWorkspace()),
       sessions: [recoverySession],
     }));
     apiMock.saveConversationWorkspaceLayout.mockResolvedValue({ ok: true });

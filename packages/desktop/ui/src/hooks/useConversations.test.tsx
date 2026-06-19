@@ -19,7 +19,7 @@ import { useConversations } from './useConversations.js';
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
 const apiMocks = vi.hoisted(() => ({
-  openConversationTabs: vi.fn(),
+  readConversationWorkspace: vi.fn(),
   sidebarConversations: vi.fn(),
   sessionMeta: vi.fn(),
   saveConversationWorkspaceLayout: vi.fn(),
@@ -316,13 +316,13 @@ async function flushAsyncWork() {
 describe('useConversations', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', createStorage());
-    apiMocks.openConversationTabs.mockReset();
+    apiMocks.readConversationWorkspace.mockReset();
     apiMocks.sidebarConversations.mockReset();
     apiMocks.sessionMeta.mockReset();
     apiMocks.saveConversationWorkspaceLayout.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
     fetchSessionsSnapshotMock.mockReset();
-    apiMocks.openConversationTabs.mockResolvedValue({
+    apiMocks.readConversationWorkspace.mockResolvedValue({
       sessionIds: [],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -335,7 +335,7 @@ describe('useConversations', () => {
     });
     fetchSessionsSnapshotMock.mockImplementation(async () => [...sessionStore.getAll()]);
     apiMocks.sidebarConversations.mockImplementation(async () => ({
-      ...(await apiMocks.openConversationTabs()),
+      ...(await apiMocks.readConversationWorkspace()),
       sessions: await fetchSessionsSnapshotMock(),
     }));
     apiMocks.saveConversationWorkspaceLayout.mockResolvedValue({

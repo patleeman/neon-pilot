@@ -27,7 +27,7 @@ const apiMock = vi.hoisted(() => ({
   tasks: vi.fn(),
   daemon: vi.fn(),
   sessionMeta: vi.fn(),
-  openConversationTabs: vi.fn(),
+  readConversationWorkspace: vi.fn(),
   sidebarConversations: vi.fn(),
   saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
@@ -256,7 +256,7 @@ describe('App sidebar conversation navigation workflow', () => {
       activeConversationId: 'conv-first',
       workspacePaths: [],
     };
-    apiMock.openConversationTabs.mockImplementation(async () => ({
+    apiMock.readConversationWorkspace.mockImplementation(async () => ({
       ...workspaceLayout,
       remoteControlledConversationIds: [],
       conversationWorkspaceRevision: 1,
@@ -264,7 +264,7 @@ describe('App sidebar conversation navigation workflow', () => {
       conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
     }));
     apiMock.sidebarConversations.mockImplementation(async () => ({
-      ...(await apiMock.openConversationTabs()),
+      ...(await apiMock.readConversationWorkspace()),
       sessions,
     }));
     apiMock.saveConversationWorkspaceLayout.mockImplementation(
@@ -372,7 +372,7 @@ describe('App sidebar conversation navigation workflow', () => {
 
   it('hydrates persisted conversation rows from the sidebar workspace bootstrap when the initial layout read misses', async () => {
     fetchSessionsSnapshotMock.mockImplementation(() => new Promise<SessionMeta[]>(() => {}));
-    apiMock.openConversationTabs.mockRejectedValueOnce(new Error('initial layout bootstrap failed')).mockImplementation(async () => ({
+    apiMock.readConversationWorkspace.mockRejectedValueOnce(new Error('initial layout bootstrap failed')).mockImplementation(async () => ({
       ...workspaceLayout,
       remoteControlledConversationIds: [],
       conversationWorkspaceRevision: 1,
@@ -463,12 +463,12 @@ describe('App sidebar conversation navigation workflow', () => {
       expect(apiMock.saveConversationWorkspaceLayout).not.toHaveBeenCalled();
     });
 
-    const openConversationTabsCalls = apiMock.openConversationTabs.mock.calls.length;
+    const readConversationWorkspaceCalls = apiMock.readConversationWorkspace.mock.calls.length;
     await expect(fetchRemoteConversationLayout()).resolves.toMatchObject({
       workspacePaths: ['/tmp/event-workspace'],
       conversationWorkspaceRevision: 2,
     });
-    expect(apiMock.openConversationTabs).toHaveBeenCalledTimes(openConversationTabsCalls);
+    expect(apiMock.readConversationWorkspace).toHaveBeenCalledTimes(readConversationWorkspaceCalls);
   });
 
   it('refreshes saved workspace groups when the backend invalidates workspace state', async () => {

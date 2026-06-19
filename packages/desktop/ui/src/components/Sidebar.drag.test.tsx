@@ -19,7 +19,7 @@ import { Sidebar } from './Sidebar.js';
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
 const apiMocks = vi.hoisted(() => ({
-  openConversationTabs: vi.fn(),
+  readConversationWorkspace: vi.fn(),
   saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
@@ -181,7 +181,7 @@ function getGroup(container: HTMLElement, groupKey: string): HTMLElement {
 describe('Sidebar group drag reordering', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', createStorage());
-    apiMocks.openConversationTabs.mockReset();
+    apiMocks.readConversationWorkspace.mockReset();
     apiMocks.saveConversationWorkspaceLayout.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
     apiMocks.setSavedWorkspacePaths.mockReset();
@@ -245,7 +245,7 @@ describe('Sidebar group drag reordering', () => {
     const betaPath = '/tmp/beta-worktree';
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-alpha', 'conv-beta']));
     localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify([alphaPath, betaPath]));
-    apiMocks.openConversationTabs.mockResolvedValue({
+    apiMocks.readConversationWorkspace.mockResolvedValue({
       sessionIds: ['conv-alpha', 'conv-beta'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -288,7 +288,7 @@ describe('Sidebar group drag reordering', () => {
     const betaPath = '/tmp/beta-worktree';
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-alpha', 'conv-beta']));
     localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify([alphaPath, betaPath]));
-    apiMocks.openConversationTabs.mockResolvedValue({
+    apiMocks.readConversationWorkspace.mockResolvedValue({
       sessionIds: ['conv-alpha', 'conv-beta'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -339,7 +339,7 @@ describe('Sidebar group drag reordering', () => {
     const betaPath = '/tmp/beta-worktree';
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-alpha', 'conv-beta']));
     localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify([alphaPath, betaPath]));
-    apiMocks.openConversationTabs.mockResolvedValue({
+    apiMocks.readConversationWorkspace.mockResolvedValue({
       sessionIds: ['conv-alpha', 'conv-beta'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -389,7 +389,7 @@ describe('Sidebar group drag reordering', () => {
     const neutralPath = '/tmp/neon-pilot-runtime/chat-workspaces/shared';
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-project', 'conv-chat']));
     localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify([projectPath]));
-    apiMocks.openConversationTabs.mockResolvedValue({
+    apiMocks.readConversationWorkspace.mockResolvedValue({
       sessionIds: ['conv-project', 'conv-chat'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -448,7 +448,7 @@ describe('Sidebar group drag reordering', () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-123']));
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
     localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify([initialWorkspace]));
-    apiMocks.openConversationTabs
+    apiMocks.readConversationWorkspace
       .mockResolvedValueOnce({
         sessionIds: ['conv-123'],
         pinnedSessionIds: [],
@@ -508,7 +508,7 @@ describe('Sidebar group drag reordering', () => {
     const projectPath = '/tmp/project-worktree';
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['parent', 'sibling', 'child']));
     localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify([projectPath]));
-    apiMocks.openConversationTabs.mockResolvedValue({
+    apiMocks.readConversationWorkspace.mockResolvedValue({
       sessionIds: ['parent', 'sibling', 'child'],
       pinnedSessionIds: [],
       archivedSessionIds: [],

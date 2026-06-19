@@ -174,15 +174,15 @@ import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPrefere
 import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability } from '../workspace/workspaceDesktopCapability.js';
 import { buildDesktopConversationGoalState, validateDesktopConversationGoalInput } from './localApiConversationGoal.js';
+import {
+  applyDesktopConversationWorkspaceOperation,
+  desktopConversationWorkspaceInvalidationTopics,
+  validateDesktopConversationWorkspaceOperation,
+  validateDesktopConversationWorkspaceUpdate,
+} from './localApiConversationWorkspace.js';
+import { buildDesktopConversationWorkspaceResponse } from './localApiConversationWorkspacePresentation.js';
 import { buildCriticalExtensionRegistryResponse } from './localApiExtensionRegistryPresentation.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
-import {
-  applyDesktopOpenConversationOperation,
-  desktopOpenConversationTabsInvalidationTopics,
-  validateDesktopOpenConversationOperation,
-  validateDesktopOpenConversationTabsUpdate,
-} from './localApiOpenTabs.js';
-import { buildDesktopOpenConversationTabsResponse } from './localApiOpenTabsPresentation.js';
 import { buildRelatedConversationResults } from './localApiRelatedConversations.js';
 import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing.js';
 import { resolveRollbackLeafId, rewriteConversationSessionToLeaf, validateDesktopRollbackTurns } from './localApiRollback.js';
@@ -1155,20 +1155,22 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   if (method === 'GET' && providerOAuthMatch) {
     return createDesktopLocalApiJsonResponse(await readDesktopProviderOAuthLogin(decodeURIComponent(providerOAuthMatch[1] ?? '')));
   }
-  if (method === 'GET' && path === '/api/ui/open-conversations') {
-    return createDesktopLocalApiJsonResponse(await readDesktopOpenConversationTabs());
+  if (method === 'GET' && (path === '/api/conversation-workspace' || path === '/api/ui/open-conversations')) {
+    return createDesktopLocalApiJsonResponse(await readDesktopConversationWorkspace());
   }
   if (method === 'GET' && path === '/api/sidebar/conversations') {
     return createDesktopLocalApiJsonResponse(await readDesktopSidebarConversations());
   }
-  if (method === 'PATCH' && path === '/api/ui/open-conversations') {
+  if (method === 'PATCH' && (path === '/api/conversation-workspace' || path === '/api/ui/open-conversations')) {
     return createDesktopLocalApiJsonResponse(
-      await updateDesktopOpenConversationTabs(input.body as Parameters<typeof updateDesktopOpenConversationTabs>[0]),
+      await saveDesktopConversationWorkspace(input.body as Parameters<typeof saveDesktopConversationWorkspace>[0]),
     );
   }
-  if (method === 'POST' && path === '/api/ui/open-conversations/operation') {
+  if (method === 'POST' && (path === '/api/conversation-workspace/operation' || path === '/api/ui/open-conversations/operation')) {
     return createDesktopLocalApiJsonResponse(
-      await updateDesktopOpenConversationTabsByOperation(input.body as Parameters<typeof updateDesktopOpenConversationTabsByOperation>[0]),
+      await updateDesktopConversationWorkspaceByOperation(
+        input.body as Parameters<typeof updateDesktopConversationWorkspaceByOperation>[0],
+      ),
     );
   }
 
@@ -1797,10 +1799,10 @@ export async function readDesktopConversationPlansWorkspace() {
   return readConversationPlansWorkspace(context.getSettingsFile());
 }
 
-export async function readDesktopOpenConversationTabs() {
+export async function readDesktopConversationWorkspace() {
   const context = await getLocalServerRouteContext();
   const saved = readSavedUiPreferences(context.getSettingsFile());
-  return buildDesktopOpenConversationTabsResponse(saved);
+  return buildDesktopConversationWorkspaceResponse(saved);
 }
 
 export async function readDesktopSidebarConversations() {
@@ -1811,7 +1813,7 @@ export async function readDesktopSidebarConversations() {
   });
 }
 
-export async function updateDesktopOpenConversationTabs(input: {
+export async function saveDesktopConversationWorkspace(input: {
   sessionIds?: string[];
   pinnedSessionIds?: string[];
   archivedSessionIds?: string[];
@@ -1820,7 +1822,7 @@ export async function updateDesktopOpenConversationTabs(input: {
   conversationWorkspaceMigrated?: boolean | null;
 }) {
   const { sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, workspacePaths, conversationWorkspaceMigrated } = input;
-  validateDesktopOpenConversationTabsUpdate(input);
+  validateDesktopConversationWorkspaceUpdate(input);
 
   const context = await getLocalServerRouteContext();
   const saved = persistSettingsWrite(
@@ -1839,23 +1841,25 @@ export async function updateDesktopOpenConversationTabs(input: {
     { runtimeSettingsFile: context.getSettingsFile() },
   );
 
-  for (const topic of desktopOpenConversationTabsInvalidationTopics(input)) {
+  for (const topic of desktopConversationWorkspaceInvalidationTopics(input)) {
     invalidateAppTopics(topic);
   }
   const response = {
     ok: true as const,
-    ...buildDesktopOpenConversationTabsResponse(saved),
+    ...buildDesktopConversationWorkspaceResponse(saved),
   };
   publishConversationWorkspaceChanged(response);
   return response;
 }
 
-export async function updateDesktopOpenConversationTabsByOperation(input: Parameters<typeof applyDesktopOpenConversationOperation>[1]) {
-  validateDesktopOpenConversationOperation(input);
+export async function updateDesktopConversationWorkspaceByOperation(
+  input: Parameters<typeof applyDesktopConversationWorkspaceOperation>[1],
+) {
+  validateDesktopConversationWorkspaceOperation(input);
 
   const context = await getLocalServerRouteContext();
   const current = readSavedUiPreferences(context.getSettingsFile());
-  const next = applyDesktopOpenConversationOperation(
+  const next = applyDesktopConversationWorkspaceOperation(
     {
       sessionIds: current.openConversationIds,
       pinnedSessionIds: current.pinnedConversationIds,
@@ -1881,13 +1885,13 @@ export async function updateDesktopOpenConversationTabsByOperation(input: Parame
   invalidateAppTopics('sessions');
   const response = {
     ok: true as const,
-    ...buildDesktopOpenConversationTabsResponse(saved),
+    ...buildDesktopConversationWorkspaceResponse(saved),
   };
   publishConversationWorkspaceChanged(response);
   return response;
 }
 
-function publishConversationWorkspaceChanged(input: ReturnType<typeof buildDesktopOpenConversationTabsResponse> & { ok?: true }): void {
+function publishConversationWorkspaceChanged(input: ReturnType<typeof buildDesktopConversationWorkspaceResponse> & { ok?: true }): void {
   publishAppEvent({
     type: 'conversation_workspace_changed',
     sessionIds: input.sessionIds,

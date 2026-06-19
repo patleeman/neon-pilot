@@ -50,6 +50,8 @@ Conversation read models live in `<state-root>/sync/pi-agent/conversations.db`. 
 
 The backend is the source of truth for sidebar conversation state. The desktop UI hydrates the sidebar from `GET /api/sidebar/conversations`, which returns one coherent projection: open IDs, pinned IDs, archived IDs, active ID, workspace metadata, and the session rows needed to render them. The projection filters stale workspace IDs that no longer resolve to known conversations, so the frontend must not create durable ghost rows for unknown IDs. Temporary optimistic UI is allowed only while a new conversation is being reserved or sent.
 
+Conversation workspace writes go through `/api/conversation-workspace` and `/api/conversation-workspace/operation`. The older `/api/ui/open-conversations` route is compatibility-only and should not be used by new code.
+
 The renderer may keep presentation-only seeds such as saved workspace path labels for first paint, but those seeds must be refreshed from the sidebar projection and must not decide whether a conversation exists or is open.
 
 Opening a conversation is a read. The frontend asks for conversation state/bootstrap by ID and the backend decides whether the conversation is already live, can be read from transcript state, or is missing. If a requested conversation ID is unknown, the UI should show the conversation error state instead of redirecting to `/conversations/new`.

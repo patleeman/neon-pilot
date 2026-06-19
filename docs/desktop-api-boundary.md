@@ -15,7 +15,7 @@ Examples:
 - sessions, session metadata, transcript/detail/bootstrap reads, blocks, search, and summaries
 - conversation assets: artifacts, checkpoints, attachments, attachment downloads, review context, and diffs
 - scheduled tasks, durable runs, execution projections, task/run logs, cancel/rerun/attention mutations
-- models, providers, provider auth, default cwd, open conversation tabs, title settings, conversation model preferences
+- models, providers, provider auth, default cwd, conversation workspace layout, title settings, conversation model preferences
 - knowledge/workspace trees, files, searches, diffs, and explicit file mutations
 - extension routes, extension manager operations, OAuth callbacks, downloads, webhooks, and companion APIs
 

@@ -736,9 +736,9 @@ describe('LocalBackendProcesses', () => {
     ]);
   });
 
-  it('serves open conversation tabs in the main process and warms the backend child', async () => {
+  it('serves conversation workspaces in the main process and warms the backend child', async () => {
     const originalStateRoot = process.env.NEON_PILOT_STATE_ROOT;
-    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-open-tabs-read-'));
+    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-conversation-workspace-read-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     class MainProcessLayoutBackend extends LocalBackendProcesses {
       readonly calls: string[] = [];
@@ -774,7 +774,7 @@ describe('LocalBackendProcesses', () => {
       const backend = new MainProcessLayoutBackend();
       const response = await backend.dispatchApiRequest({
         method: 'GET',
-        path: '/api/ui/open-conversations',
+        path: '/api/conversation-workspace',
       });
 
       expect(response.statusCode).toBe(200);
@@ -892,7 +892,7 @@ describe('LocalBackendProcesses', () => {
 
     await backend.dispatchApiRequest({
       method: 'GET',
-      path: '/api/ui/open-conversations',
+      path: '/api/conversation-workspace',
     });
     await vi.waitFor(() =>
       expect(
@@ -935,7 +935,7 @@ describe('LocalBackendProcesses', () => {
     const backend = new FailingWarmupBackend();
     const response = await backend.dispatchApiRequest({
       method: 'GET',
-      path: '/api/ui/open-conversations',
+      path: '/api/conversation-workspace',
     });
 
     expect(response.statusCode).toBe(200);
@@ -946,9 +946,34 @@ describe('LocalBackendProcesses', () => {
     await vi.waitFor(() => expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('backend warmup failed')));
   });
 
-  it('persists full open conversation tab updates in the main process', async () => {
+  it('keeps the legacy open-conversations route as a compatibility alias', async () => {
+    class AliasBackend extends LocalBackendProcesses {
+      override async ensureStarted(): Promise<void> {
+        // The alias should resolve through the same main-process fast path.
+      }
+    }
+
+    const backend = new AliasBackend();
+    const response = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/ui/open-conversations',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'main-process',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+      sessionIds: expect.any(Array),
+      workspacePaths: expect.any(Array),
+    });
+  });
+
+  it('persists full conversation workspace updates in the main process', async () => {
     const originalStateRoot = process.env.NEON_PILOT_STATE_ROOT;
-    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-open-tabs-'));
+    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-conversation-workspace-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     try {
       class MainProcessLayoutBackend extends LocalBackendProcesses {
@@ -960,7 +985,7 @@ describe('LocalBackendProcesses', () => {
       const backend = new MainProcessLayoutBackend();
       const response = await backend.dispatchApiRequest({
         method: 'PATCH',
-        path: '/api/ui/open-conversations',
+        path: '/api/conversation-workspace',
         body: {
           sessionIds: ['conv-open'],
           pinnedSessionIds: ['conv-pinned'],
@@ -1019,11 +1044,11 @@ describe('LocalBackendProcesses', () => {
     }
   });
 
-  it('persists open conversation tab operations when backend warmup fails', async () => {
+  it('persists conversation workspace operations when backend warmup fails', async () => {
     const stderrWrite = vi.fn();
     process.stderr.write = stderrWrite as unknown as typeof process.stderr.write;
     const originalStateRoot = process.env.NEON_PILOT_STATE_ROOT;
-    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-open-tab-operation-'));
+    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-conversation-workspace-operation-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     try {
       class FailingWarmupBackend extends LocalBackendProcesses {
@@ -1035,7 +1060,7 @@ describe('LocalBackendProcesses', () => {
       const backend = new FailingWarmupBackend();
       const response = await backend.dispatchApiRequest({
         method: 'POST',
-        path: '/api/ui/open-conversations/operation',
+        path: '/api/conversation-workspace/operation',
         body: { operation: 'open', sessionId: 'conv-fast', active: true },
       });
 

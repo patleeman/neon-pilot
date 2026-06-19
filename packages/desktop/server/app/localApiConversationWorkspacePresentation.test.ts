@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildDesktopOpenConversationTabsResponse } from './localApiOpenTabsPresentation';
+import { buildDesktopConversationWorkspaceResponse } from './localApiConversationWorkspacePresentation';
 
-describe('localApiOpenTabsPresentation', () => {
-  it('maps saved UI preferences to the desktop open tabs response', () => {
+describe('localApiConversationWorkspacePresentation', () => {
+  it('maps saved UI preferences to the desktop conversation workspace response', () => {
     expect(
-      buildDesktopOpenConversationTabsResponse({
+      buildDesktopConversationWorkspaceResponse({
         openConversationIds: ['a'],
         pinnedConversationIds: ['b'],
         archivedConversationIds: ['c'],
@@ -31,7 +31,7 @@ describe('localApiOpenTabsPresentation', () => {
 
   it('normalizes missing active conversation to null', () => {
     expect(
-      buildDesktopOpenConversationTabsResponse({
+      buildDesktopConversationWorkspaceResponse({
         openConversationIds: [],
         pinnedConversationIds: [],
         archivedConversationIds: [],
