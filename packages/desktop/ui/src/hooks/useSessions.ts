@@ -3,7 +3,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
 import type { SessionDetail, SessionDetailResult } from '../shared/types';
-import { buildSessionDetailKnownParams, mergeAppendOnlySessionDetail, readSessionDetailSignature } from './sessionDetailCacheReuse';
 
 interface CachedSessionDetailEntry {
   detail: SessionDetail;
@@ -18,26 +17,9 @@ const sessionDetailCache = new Map<string, CachedSessionDetailEntry>();
 const sessionDetailInflight = new Map<string, Promise<SessionDetail>>();
 const MAX_CACHED_SESSION_DETAILS = 24;
 
-function mergeSessionDetailResultWithCachedDetail(cached: SessionDetail | null, result: SessionDetailResult): SessionDetail | null {
-  if ('unchanged' in result) {
-    if (!cached) {
-      return null;
-    }
-
-    const cachedSignature = readSessionDetailSignature(cached) ?? null;
-    if (result.signature && cachedSignature && result.signature !== cachedSignature) {
-      return null;
-    }
-
-    return cached;
-  }
-
-  if ('appendOnly' in result) {
-    if (!cached) {
-      return null;
-    }
-
-    return mergeAppendOnlySessionDetail(cached, result);
+function readFreshSessionDetailResult(result: SessionDetailResult): SessionDetail {
+  if ('unchanged' in result || 'appendOnly' in result) {
+    throw new Error('Session detail response did not include an authoritative transcript payload.');
   }
 
   return result;
@@ -88,20 +70,9 @@ export function fetchSessionDetailCached(sessionId: string, options?: SessionDet
   }
 
   const request = api
-    .sessionDetail(sessionId, {
-      ...options,
-      ...buildSessionDetailKnownParams(cached?.detail),
-    })
-    .then(async (result) => {
-      let detail = mergeSessionDetailResultWithCachedDetail(cached?.detail ?? null, result);
-      if (!detail) {
-        const fallback = await api.sessionDetail(sessionId, options);
-        detail = mergeSessionDetailResultWithCachedDetail(null, fallback);
-      }
-      if (!detail) {
-        throw new Error('Session detail cache reuse failed without a fresh transcript payload.');
-      }
-
+    .sessionDetail(sessionId, options)
+    .then((result) => {
+      const detail = readFreshSessionDetailResult(result);
       sessionDetailCache.set(cacheKey, { detail, version });
       trimSessionDetailCache();
       return detail;
