@@ -241,8 +241,8 @@ export function execFileProcessSync(input: {
     maxBuffer: input.maxBuffer ?? 1024 * 1024,
   });
 
-  const stdout = typeof result.stdout === 'string' ? result.stdout : Buffer.isBuffer(result.stdout) ? result.stdout.toString('utf-8') : '';
-  const stderr = typeof result.stderr === 'string' ? result.stderr : Buffer.isBuffer(result.stderr) ? result.stderr.toString('utf-8') : '';
+  const stdout = result.stdout ?? '';
+  const stderr = result.stderr ?? '';
 
   if (result.error) {
     Object.assign(result.error, {
