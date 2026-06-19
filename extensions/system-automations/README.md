@@ -6,7 +6,7 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 # Automations
 
-Automations is the desktop UI for inspecting and managing event-driven background work. Navigate to `/automations` to see meaningful automation events flowing through the activity stream, inspect the selected event's causal trace, and administer the publisher or reaction that caused work.
+Automations is the desktop UI for inspecting and managing event-driven background work. Navigate to `/automations` to see meaningful automation events flowing through the activity stream, inspect the selected event's causal trace, and administer the publisher or subscription that caused work.
 
 Scheduled tasks are still backed by the daemon scheduler, but the default UI presents them as event-native activity:
 
@@ -18,9 +18,11 @@ The timeline intentionally does not show every possible emitted event. It focuse
 
 ## Event Bus
 
-The `event_bus` backend action and `events ...` CLI commands are the automation event boundary. Callers emit typed events with payload and metadata, list recent events, replay a recorded event, and manage subscriptions. Subscriptions match event type patterns and can start a scheduled task, background agent, conversation thread, shell script, or publish a follow-on event.
+The `event_bus` backend action and `events ...` CLI commands are the automation event boundary. Callers emit typed events with payload and metadata, schedule delayed event emission, list recent events, replay a recorded event, prune retained history, and manage subscriptions. Subscriptions match event type patterns and can start a scheduled task, background agent, conversation thread, shell script, or publish a follow-on event.
 
 Event bus state is backend-owned in the daemon runtime database. Frontend and extension code should list or mutate it through the `eventBus` backend action or `@neon-pilot/extensions/backend/events`; do not mirror subscriptions or reaction state in renderer storage.
+
+Recorded events are inspectable and replayable. Ephemeral events can still dispatch matching subscriptions, but they are not written to the durable stream. Delayed events are persisted until processed or cancelled; processing emits the configured event against the subscriptions available at processing time.
 
 ## Activity Timeline
 
@@ -39,11 +41,14 @@ Reaction lanes show the kind of consumer an event flowed into:
 The default actions are:
 
 - **Re-emit Event** — replay the selected recorded event against the subscriptions that exist now.
-- **Create Reaction** — open the automation editor for a new or selected reaction.
+- **New Subscription** — create a disabled subscription from the selected event type so it can be reviewed before enabling.
+- **Edit Scheduled Publisher** — open the scheduled publisher editor when the event is tied to a scheduler-backed publisher.
 - **Open Thread** — jump to the bound conversation when the selected reaction targets a thread.
 - **Pause Publisher** — disable the selected scheduled publisher without deleting it.
 
 Past-due, failed, running, disabled, and scheduled automations appear as event activity rather than separate table sections.
+
+When no event is selected, the inspector shows standing subscriptions with enable/disable and delete controls. Subscription rows show the matched event pattern, action summary, and per-minute reaction limit when configured.
 
 ## Detail View
 
@@ -79,7 +84,7 @@ A chronological log of every execution:
 
 ## Creating an Automation
 
-From the list view, click "New Automation" or run **New Automation** from the command palette. The editor uses the Settings page layout with a right-side "On this page" rail and five sections:
+From the event stream, click **New Scheduled Publisher** or run **New Automation** from the command palette. The editor uses the Settings page layout with a right-side "On this page" rail and five sections:
 
 - **General** — automation name, recurring instruction, and enabled state
 - **Schedule** — recurring vs one-time scheduling, human-readable schedule presets, and a preview
@@ -100,7 +105,10 @@ The event bus CLI mirrors the backend action:
 ```sh
 neon-pilot events list --json
 neon-pilot events emit tweet.created --source script:twitter --payload-json '{"tweetId":"tw-1"}' --json
+neon-pilot events delay agent.resume.requested --delay-ms 900000 --source agent:current --payload-json '{"reason":"follow-up"}' --json
+neon-pilot events process-due --json
 neon-pilot events replay evt_123 --json
+neon-pilot events prune --keep-latest 5000 --json
 neon-pilot events subscriptions list --json
 neon-pilot events subscriptions save sub-tweets --name "Tweet Worker" --pattern tweet.* --action-json '{"type":"start_agent","prompt":"Summarize the tweet event"}' --json
 ```

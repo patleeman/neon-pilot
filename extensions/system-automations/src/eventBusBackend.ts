@@ -1,8 +1,12 @@
 import {
   deleteSubscription,
+  cancelDelayedEvent,
+  delayEvent,
   emitEvent,
   listEvents,
   listSubscriptions,
+  processDueEvents,
+  pruneEvents,
   replayEvent,
   saveSubscription,
 } from '@neon-pilot/extensions/backend/events';
@@ -30,7 +34,10 @@ function details(result: unknown): Record<string, unknown> {
 export async function eventBus(input: unknown, ctx: EventBusBackendContext = {}) {
   const params = isRecord(input) ? input : {};
   const action = readString(params.action) ?? 'list';
-  if (params.dryRun === true && ['emit', 'replay', 'save_subscription', 'delete_subscription'].includes(action)) {
+  if (
+    params.dryRun === true &&
+    ['emit', 'delay', 'replay', 'process_due', 'save_subscription', 'delete_subscription', 'cancel_delayed', 'prune'].includes(action)
+  ) {
     return {
       text: formatJson({ ok: true, dryRun: true, action, input: params }),
       details: { ok: true, dryRun: true, action, input: params },
@@ -42,8 +49,19 @@ export async function eventBus(input: unknown, ctx: EventBusBackendContext = {})
     case 'emit':
       result = await emitEvent(params);
       break;
+    case 'delay':
+    case 'schedule':
+    case 'schedule_emit':
+      result = await delayEvent(params);
+      break;
     case 'replay':
       result = await replayEvent(params);
+      break;
+    case 'process_due':
+      result = await processDueEvents(params);
+      break;
+    case 'prune':
+      result = await pruneEvents(params);
       break;
     case 'list':
     case 'events':
@@ -61,6 +79,9 @@ export async function eventBus(input: unknown, ctx: EventBusBackendContext = {})
       break;
     case 'delete_subscription':
       result = await deleteSubscription(params);
+      break;
+    case 'cancel_delayed':
+      result = await cancelDelayedEvent(params);
       break;
     default:
       throw new Error(`Unsupported event bus action: ${action}`);

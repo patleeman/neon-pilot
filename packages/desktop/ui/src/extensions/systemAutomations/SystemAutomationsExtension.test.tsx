@@ -60,6 +60,21 @@ function createPa(
       invoke: vi.fn(async (_actionId: string, input?: unknown) => {
         const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
         if (action === 'list') return { details: eventBusList };
+        if (action === 'list_subscriptions') {
+          return {
+            details: {
+              subscriptions: [
+                {
+                  id: 'sub-daily-check',
+                  name: 'Daily check',
+                  pattern: 'schedule.due',
+                  enabled: true,
+                  action: { type: 'run_task', taskId: 'daily-check' },
+                },
+              ],
+            },
+          };
+        }
         if (action === 'replay') return { event: { id: 'evt-replay' }, reactions: [] };
         return {};
       }),
@@ -157,7 +172,7 @@ describe('AutomationsPage', () => {
 
     const { container } = await renderPage(createPa(), { search: '?action=new' });
 
-    expect(container.textContent).toContain('New automation');
+    expect(container.textContent).toContain('New scheduled publisher');
     expect(container.textContent).toContain('Create with chat');
     expect(container.querySelector('input[name="automation-title"]')).not.toBeNull();
   });
@@ -218,7 +233,7 @@ describe('AutomationsPage', () => {
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain('1 automation');
+    expect(container.textContent).toContain('1 scheduled publisher');
 
     await act(async () => {
       staleTasks.resolve([
@@ -246,6 +261,7 @@ describe('AutomationsPage', () => {
     vi.mocked(pa.extension.invoke).mockImplementation(async (_actionId: string, input?: unknown) => {
       const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
       if (action === 'list') return { events: [] };
+      if (action === 'list_subscriptions') return { subscriptions: [] };
       if (action === 'replay') return { event: { id: 'evt-replay' }, reactions: [] };
       return {};
     });
@@ -253,8 +269,8 @@ describe('AutomationsPage', () => {
 
     expect(container.textContent).toContain('No matching event activity.');
     expect(container.textContent).toContain('No event selected');
-    expect(container.textContent).toContain('Publisher emits');
-    expect(container.textContent).toContain('Reaction matches');
+    expect(container.textContent).toContain('Subscriptions');
+    expect(container.textContent).toContain('No subscriptions yet.');
     expect(container.textContent).toContain('All');
     expect(container.querySelector('input[placeholder="Search events…"]')).not.toBeNull();
     expect(container.textContent).toContain('Event Stream');
@@ -361,6 +377,82 @@ describe('AutomationsPage', () => {
     expect(update).toHaveBeenCalledWith('daily-check', expect.objectContaining({ enabled: false }));
   });
 
+  it('creates a disabled subscription from the toolbar', async () => {
+    const pa = createPa();
+    const { container } = await renderPage(pa);
+    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New Subscription');
+    if (!newButton) throw new Error('New Subscription button not found');
+
+    await act(async () => {
+      newButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(pa.extension.invoke).toHaveBeenCalledWith(
+      'eventBus',
+      expect.objectContaining({
+        action: 'save_subscription',
+        pattern: expect.any(String),
+        enabled: false,
+        subscriptionAction: expect.objectContaining({ type: 'start_agent' }),
+      }),
+    );
+  });
+
+  it('toggles and deletes subscriptions from the inspector list', async () => {
+    const pa = createPa({
+      list: vi.fn(async () => []),
+    });
+    vi.mocked(pa.extension.invoke).mockImplementation(async (_actionId: string, input?: unknown) => {
+      const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
+      if (action === 'list') return { details: { events: [] } };
+      if (action === 'list_subscriptions') {
+        return {
+          details: {
+            subscriptions: [
+              {
+                id: 'sub-agent',
+                name: 'Agent Worker',
+                pattern: 'tweet.*',
+                enabled: true,
+                action: { type: 'start_agent', prompt: 'Handle tweet' },
+                maxReactionsPerMinute: 4,
+              },
+            ],
+          },
+        };
+      }
+      return {};
+    });
+    const { container } = await renderPage(pa);
+
+    expect(container.textContent).toContain('Agent Worker');
+    expect(container.textContent).toContain('tweet.*');
+    expect(container.textContent).toContain('4/min');
+
+    const toggle = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'On');
+    if (!toggle) throw new Error('Subscription toggle not found');
+    await act(async () => {
+      toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(pa.extension.invoke).toHaveBeenCalledWith(
+      'eventBus',
+      expect.objectContaining({
+        action: 'save_subscription',
+        subscriptionId: 'sub-agent',
+        enabled: false,
+        subscriptionAction: expect.objectContaining({ type: 'start_agent' }),
+      }),
+    );
+
+    vi.mocked(pa.ui.confirm).mockResolvedValueOnce(true);
+    const deleteButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Delete');
+    if (!deleteButton) throw new Error('Subscription delete not found');
+    await act(async () => {
+      deleteButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(pa.extension.invoke).toHaveBeenCalledWith('eventBus', { action: 'delete_subscription', subscriptionId: 'sub-agent' });
+  });
+
   it('moves overdue one-time automations into a past-due section', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-13T12:00:00.000Z'));
@@ -432,7 +524,7 @@ describe('AutomationsPage', () => {
     const pa = createPa();
     pa.commands.execute = execute as never;
     const { container } = await renderPage(pa);
-    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create Reaction');
+    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New Scheduled Publisher');
     if (!newButton) throw new Error('New automation button not found');
 
     await act(async () => {
@@ -480,7 +572,7 @@ describe('AutomationsPage', () => {
     const pa = createPa();
     pa.commands.execute = vi.fn(async () => false) as never;
     const { container } = await renderPage(pa);
-    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create Reaction');
+    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New Scheduled Publisher');
     if (!newButton) throw new Error('New automation button not found');
 
     await act(async () => {
@@ -507,7 +599,7 @@ describe('AutomationsPage', () => {
   it('lets recurring schedules be composed from controls', async () => {
     const pa = createPa();
     const { container } = await renderPage(pa);
-    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create Reaction');
+    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New Scheduled Publisher');
     if (!newButton) throw new Error('New automation button not found');
 
     await act(async () => {
@@ -562,9 +654,9 @@ describe('AutomationsPage', () => {
     mockEventBusList(pa, 'policy-check', 'Policy check');
     const { container } = await renderPage(pa);
     const editButton = Array.from(container.querySelectorAll('button'))
-      .filter((button) => button.textContent === 'Create Reaction')
+      .filter((button) => button.textContent === 'Edit Scheduled Publisher')
       .at(-1);
-    if (!editButton) throw new Error('Create Reaction button not found');
+    if (!editButton) throw new Error('Edit Scheduled Publisher button not found');
 
     await act(async () => {
       editButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));

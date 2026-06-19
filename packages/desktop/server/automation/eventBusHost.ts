@@ -2,14 +2,19 @@ import { startBackgroundRun, startScheduledTaskRun } from '../daemon/client.js';
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import {
   createEventBusSubscription,
+  cancelEventBusDelayedEvent,
   deleteEventBusSubscription,
   emitEventBusEvent,
   type EventBusAction,
   type EventBusDispatchInput,
   type EventBusDispatchResult,
   getEventBusDbPath,
+  listEventBusDelayedEvents,
   listEventBusEvents,
   listEventBusSubscriptions,
+  processDueEventBusEvents,
+  pruneEventBusEvents,
+  scheduleEventBusEvent,
   updateEventBusSubscription,
 } from './eventBus.js';
 
@@ -19,6 +24,10 @@ function readString(value: unknown): string | undefined {
 
 function readRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function readNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
 function runResultOutput(result: { accepted: boolean; runId: string; reason?: string; logPath?: string }): Record<string, unknown> {
@@ -108,7 +117,9 @@ async function dispatchEventBusReaction(input: EventBusDispatchInput): Promise<E
           subscriptionId: input.subscription.id,
           parentEventType: input.event.type,
         },
+        recorded: action.recorded !== false,
       },
+      dispatchDepth: Number(input.event.metadata.dispatchDepth ?? 0) + 1,
       dispatch: dispatchEventBusReaction,
     });
     return { status: 'completed', output: { eventId: emitted.event.id, reactionCount: emitted.reactions.length } };
@@ -138,6 +149,28 @@ export async function emitEvent(input: unknown) {
   return emitted;
 }
 
+export async function delayEvent(input: unknown) {
+  const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  const delayMs = readNumber(record.delayMs);
+  const dueAt =
+    readString(record.dueAt) ??
+    readString(record.emitAt) ??
+    (delayMs !== undefined ? new Date(Date.now() + Math.max(0, delayMs)).toISOString() : undefined);
+  if (!dueAt) throw new Error('dueAt, emitAt, or delayMs is required.');
+  const delayed = scheduleEventBusEvent({
+    dueAt,
+    event: {
+      type: readString(record.type) ?? readString(record.eventType) ?? '',
+      source: readString(record.source) ?? 'manual',
+      payload: readRecord(record.payload),
+      metadata: readRecord(record.metadata),
+      recorded: record.recorded !== false,
+    },
+  });
+  await notifyEventBusChanged();
+  return { delayedEvent: delayed };
+}
+
 export async function replayEvent(input: unknown) {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
   const eventId = readString(record.eventId);
@@ -163,16 +196,29 @@ export async function replayEvent(input: unknown) {
 
 export async function listEvents(input: unknown = {}) {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  await processDueEventBusEvents({ dispatch: dispatchEventBusReaction });
   return {
     events: listEventBusEvents({
       limit: typeof record.limit === 'number' ? record.limit : undefined,
       type: readString(record.type),
     }),
+    delayedEvents: listEventBusDelayedEvents({
+      includeCompleted: record.includeCompletedDelayed === true,
+      limit: typeof record.delayedLimit === 'number' ? record.delayedLimit : undefined,
+    }),
   };
 }
 
 export async function listSubscriptions() {
-  return { subscriptions: listEventBusSubscriptions() };
+  const subscriptions = listEventBusSubscriptions();
+  return {
+    subscriptions,
+    summary: {
+      total: subscriptions.length,
+      enabled: subscriptions.filter((subscription) => subscription.enabled).length,
+      disabled: subscriptions.filter((subscription) => !subscription.enabled).length,
+    },
+  };
 }
 
 export async function saveSubscription(input: unknown) {
@@ -194,4 +240,34 @@ export async function deleteSubscription(input: unknown) {
   const deleted = deleteEventBusSubscription({ subscriptionId });
   await notifyEventBusChanged();
   return { ok: true, deleted };
+}
+
+export async function cancelDelayedEvent(input: unknown) {
+  const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  const delayedEventId = readString(record.delayedEventId) ?? readString(record.id);
+  if (!delayedEventId) throw new Error('delayedEventId is required.');
+  const cancelled = cancelEventBusDelayedEvent({ delayedEventId });
+  await notifyEventBusChanged();
+  return { ok: true, cancelled };
+}
+
+export async function pruneEvents(input: unknown) {
+  const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  const result = pruneEventBusEvents({
+    olderThan: readString(record.olderThan),
+    keepLatest: typeof record.keepLatest === 'number' ? record.keepLatest : undefined,
+  });
+  await notifyEventBusChanged();
+  return result;
+}
+
+export async function processDueEvents(input: unknown = {}) {
+  const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  const result = await processDueEventBusEvents({
+    now: readString(record.now),
+    limit: typeof record.limit === 'number' ? record.limit : undefined,
+    dispatch: dispatchEventBusReaction,
+  });
+  await notifyEventBusChanged();
+  return result;
 }

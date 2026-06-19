@@ -269,6 +269,12 @@ A typed message on the event bus with source, payload, metadata, occurrence time
 
 Use **event** for the message itself; use **reaction** for the work triggered by a subscription.
 
+### Delayed event
+
+A persisted request to emit an event at or after a due time. Processing a delayed event emits a normal event against the subscriptions available at processing time.
+
+Use **delayed event** for deferred event emission, not **cron** or **schedule** unless the publisher is actually recurring.
+
 ### Publisher
 
 A schedule, script, agent, service, or user action that emits events into the event bus.
@@ -284,6 +290,12 @@ Use **subscription** for the standing rule and **reaction** for an individual di
 ### Reaction
 
 The per-event result of a subscription match, including the consumer type, status, timing, output, and error when present.
+
+### Event retention
+
+The policy for pruning recorded event history while leaving the event bus able to dispatch new events.
+
+Use **retention** for history cleanup; do not use it to describe whether an event dispatches reactions.
 
 Use **reaction** for event-bus dispatch records, not for the subscription definition.
 

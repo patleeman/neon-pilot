@@ -13,7 +13,7 @@ export type EventBusAction =
   | { type: 'start_agent'; prompt: string; cwd?: string; model?: string }
   | { type: 'start_thread'; prompt: string; conversationId?: string; cwd?: string; model?: string }
   | { type: 'run_script'; command: string; cwd?: string }
-  | { type: 'publish_event'; eventType: string; payload?: Record<string, unknown> };
+  | { type: 'publish_event'; eventType: string; payload?: Record<string, unknown>; recorded?: boolean };
 
 export interface EventBusEvent {
   id: string;
@@ -34,6 +34,7 @@ export interface EventBusSubscription {
   pattern: string;
   enabled: boolean;
   action: EventBusAction;
+  maxReactionsPerMinute?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -64,7 +65,7 @@ export interface EventBusDispatchResult {
   error?: string;
 }
 
-interface EventBusEventInput {
+export interface EventBusEventInput {
   id?: string;
   type: string;
   source: string;
@@ -81,6 +82,27 @@ interface EventBusSubscriptionInput {
   pattern: string;
   enabled?: boolean;
   action: EventBusAction;
+  maxReactionsPerMinute?: number;
+}
+
+export interface EventBusDelayedEvent {
+  id: string;
+  dueAt: string;
+  status: 'pending' | 'emitted' | 'failed' | 'cancelled';
+  event: EventBusEventInput;
+  createdAt: string;
+  emittedEventId?: string;
+  error?: string;
+}
+
+interface EventBusDelayedEventRow {
+  id: string;
+  due_at: string;
+  status: string;
+  event_json: string;
+  created_at: string;
+  emitted_event_id: string | null;
+  error: string | null;
 }
 
 interface EventBusEventRow {
@@ -101,6 +123,7 @@ interface EventBusSubscriptionRow {
   pattern: string;
   enabled: number;
   action_json: string;
+  max_reactions_per_minute: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -185,10 +208,16 @@ function normalizeAction(value: unknown): EventBusAction {
         type: 'publish_event',
         eventType: normalizeString(action.eventType, 'eventType'),
         payload: normalizeRecord(action.payload),
+        ...(typeof action.recorded === 'boolean' ? { recorded: action.recorded } : {}),
       };
     default:
       throw new Error('Unsupported event bus action type.');
   }
+}
+
+function normalizePositiveInteger(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) return undefined;
+  return value;
 }
 
 function assertSubscriptionDoesNotSelfPublish(pattern: string, action: EventBusAction): void {
@@ -226,9 +255,23 @@ function openEventBusDb(dbPath: string): SqliteDatabase {
       pattern TEXT NOT NULL,
       enabled INTEGER NOT NULL DEFAULT 1,
       action_json TEXT NOT NULL,
+      max_reactions_per_minute INTEGER,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS event_bus_delayed_events (
+      id TEXT PRIMARY KEY,
+      due_at TEXT NOT NULL,
+      status TEXT NOT NULL,
+      event_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      emitted_event_id TEXT,
+      error TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_event_bus_delayed_due
+      ON event_bus_delayed_events(status, due_at ASC, id ASC);
 
     CREATE INDEX IF NOT EXISTS idx_event_bus_subscriptions_enabled
       ON event_bus_subscriptions(enabled, pattern);
@@ -250,6 +293,10 @@ function openEventBusDb(dbPath: string): SqliteDatabase {
     CREATE INDEX IF NOT EXISTS idx_event_bus_reactions_event
       ON event_bus_reactions(event_id, started_at ASC, id ASC);
   `);
+  const subscriptionColumns = db.prepare('PRAGMA table_info(event_bus_subscriptions)').all() as Array<{ name: string }>;
+  if (!subscriptionColumns.some((column) => column.name === 'max_reactions_per_minute')) {
+    db.exec('ALTER TABLE event_bus_subscriptions ADD COLUMN max_reactions_per_minute INTEGER');
+  }
   dbCache.set(resolved, db);
   return db;
 }
@@ -277,8 +324,23 @@ function rowToSubscription(row: EventBusSubscriptionRow): EventBusSubscription {
     pattern: row.pattern,
     enabled: row.enabled === 1,
     action: readActionJson(row.action_json),
+    maxReactionsPerMinute: row.max_reactions_per_minute ?? undefined,
     createdAt: normalizeTimestamp(row.created_at),
     updatedAt: normalizeTimestamp(row.updated_at),
+  };
+}
+
+function rowToDelayedEvent(row: EventBusDelayedEventRow): EventBusDelayedEvent {
+  const parsed = JSON.parse(row.event_json) as EventBusEventInput;
+  const status = row.status === 'emitted' || row.status === 'failed' || row.status === 'cancelled' ? row.status : 'pending';
+  return {
+    id: row.id,
+    dueAt: normalizeTimestamp(row.due_at),
+    status,
+    event: parsed,
+    createdAt: normalizeTimestamp(row.created_at),
+    emittedEventId: row.emitted_event_id ?? undefined,
+    error: row.error ?? undefined,
   };
 }
 
@@ -337,12 +399,12 @@ export function listEventBusSubscriptions(input: { dbPath?: string; enabledOnly?
     input.enabledOnly
       ? db
           .prepare(
-            'SELECT id, name, pattern, enabled, action_json, created_at, updated_at FROM event_bus_subscriptions WHERE enabled = 1 ORDER BY name COLLATE NOCASE ASC, id ASC',
+            'SELECT id, name, pattern, enabled, action_json, max_reactions_per_minute, created_at, updated_at FROM event_bus_subscriptions WHERE enabled = 1 ORDER BY name COLLATE NOCASE ASC, id ASC',
           )
           .all()
       : db
           .prepare(
-            'SELECT id, name, pattern, enabled, action_json, created_at, updated_at FROM event_bus_subscriptions ORDER BY name COLLATE NOCASE ASC, id ASC',
+            'SELECT id, name, pattern, enabled, action_json, max_reactions_per_minute, created_at, updated_at FROM event_bus_subscriptions ORDER BY name COLLATE NOCASE ASC, id ASC',
           )
           .all()
   ) as EventBusSubscriptionRow[];
@@ -356,14 +418,17 @@ export function createEventBusSubscription(input: { dbPath?: string; subscriptio
   const id = input.subscription.id?.trim() || `sub_${randomUUID()}`;
   const name = normalizeString(input.subscription.name, 'name');
   const pattern = normalizeString(input.subscription.pattern, 'pattern');
+  const maxReactionsPerMinute = normalizePositiveInteger(input.subscription.maxReactionsPerMinute);
   assertSubscriptionDoesNotSelfPublish(pattern, action);
   db.prepare(
-    `INSERT INTO event_bus_subscriptions (id, name, pattern, enabled, action_json, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(id, name, pattern, input.subscription.enabled === false ? 0 : 1, JSON.stringify(action), now, now);
+    `INSERT INTO event_bus_subscriptions (id, name, pattern, enabled, action_json, max_reactions_per_minute, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(id, name, pattern, input.subscription.enabled === false ? 0 : 1, JSON.stringify(action), maxReactionsPerMinute ?? null, now, now);
   return rowToSubscription(
     db
-      .prepare('SELECT id, name, pattern, enabled, action_json, created_at, updated_at FROM event_bus_subscriptions WHERE id = ?')
+      .prepare(
+        'SELECT id, name, pattern, enabled, action_json, max_reactions_per_minute, created_at, updated_at FROM event_bus_subscriptions WHERE id = ?',
+      )
       .get(id) as EventBusSubscriptionRow,
   );
 }
@@ -375,7 +440,9 @@ export function updateEventBusSubscription(input: {
 }): EventBusSubscription {
   const db = openEventBusDb(input.dbPath ?? getEventBusDbPath());
   const existing = db
-    .prepare('SELECT id, name, pattern, enabled, action_json, created_at, updated_at FROM event_bus_subscriptions WHERE id = ?')
+    .prepare(
+      'SELECT id, name, pattern, enabled, action_json, max_reactions_per_minute, created_at, updated_at FROM event_bus_subscriptions WHERE id = ?',
+    )
     .get(input.subscriptionId) as EventBusSubscriptionRow | undefined;
   if (!existing) throw new Error(`Subscription not found: ${input.subscriptionId}`);
   const current = rowToSubscription(existing);
@@ -384,15 +451,21 @@ export function updateEventBusSubscription(input: {
   const pattern = input.patch.pattern === undefined ? current.pattern : normalizeString(input.patch.pattern, 'pattern');
   assertSubscriptionDoesNotSelfPublish(pattern, action);
   const enabled = input.patch.enabled ?? current.enabled;
+  const maxReactionsPerMinute =
+    input.patch.maxReactionsPerMinute === undefined
+      ? current.maxReactionsPerMinute
+      : normalizePositiveInteger(input.patch.maxReactionsPerMinute);
   const updatedAt = new Date().toISOString();
   db.prepare(
     `UPDATE event_bus_subscriptions
-     SET name = ?, pattern = ?, enabled = ?, action_json = ?, updated_at = ?
+     SET name = ?, pattern = ?, enabled = ?, action_json = ?, max_reactions_per_minute = ?, updated_at = ?
      WHERE id = ?`,
-  ).run(name, pattern, enabled ? 1 : 0, JSON.stringify(action), updatedAt, input.subscriptionId);
+  ).run(name, pattern, enabled ? 1 : 0, JSON.stringify(action), maxReactionsPerMinute ?? null, updatedAt, input.subscriptionId);
   return rowToSubscription(
     db
-      .prepare('SELECT id, name, pattern, enabled, action_json, created_at, updated_at FROM event_bus_subscriptions WHERE id = ?')
+      .prepare(
+        'SELECT id, name, pattern, enabled, action_json, max_reactions_per_minute, created_at, updated_at FROM event_bus_subscriptions WHERE id = ?',
+      )
       .get(input.subscriptionId) as EventBusSubscriptionRow,
   );
 }
@@ -427,6 +500,99 @@ export function listEventBusEvents(input: { dbPath?: string; limit?: number; typ
           .all(limit)
   ) as EventBusEventRow[];
   return rows.map((row) => rowToEvent(db, row));
+}
+
+export function scheduleEventBusEvent(input: {
+  dbPath?: string;
+  id?: string;
+  dueAt: string;
+  event: EventBusEventInput;
+}): EventBusDelayedEvent {
+  const db = openEventBusDb(input.dbPath ?? getEventBusDbPath());
+  const id = input.id?.trim() || `delay_${randomUUID()}`;
+  const dueAt = normalizeTimestamp(input.dueAt);
+  const event: EventBusEventInput = {
+    type: normalizeString(input.event.type, 'event type'),
+    source: normalizeString(input.event.source, 'event source'),
+    payload: normalizeRecord(input.event.payload),
+    metadata: normalizeRecord(input.event.metadata),
+    recorded: input.event.recorded !== false,
+  };
+  const createdAt = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO event_bus_delayed_events (id, due_at, status, event_json, created_at)
+     VALUES (?, ?, 'pending', ?, ?)`,
+  ).run(id, dueAt, JSON.stringify(event), createdAt);
+  return rowToDelayedEvent(
+    db
+      .prepare('SELECT id, due_at, status, event_json, created_at, emitted_event_id, error FROM event_bus_delayed_events WHERE id = ?')
+      .get(id) as EventBusDelayedEventRow,
+  );
+}
+
+export function listEventBusDelayedEvents(
+  input: { dbPath?: string; includeCompleted?: boolean; limit?: number } = {},
+): EventBusDelayedEvent[] {
+  const db = openEventBusDb(input.dbPath ?? getEventBusDbPath());
+  const limit = Math.max(1, Math.min(input.limit ?? 100, 500));
+  const rows = (
+    input.includeCompleted
+      ? db
+          .prepare(
+            `SELECT id, due_at, status, event_json, created_at, emitted_event_id, error
+             FROM event_bus_delayed_events
+             ORDER BY due_at ASC, id ASC
+             LIMIT ?`,
+          )
+          .all(limit)
+      : db
+          .prepare(
+            `SELECT id, due_at, status, event_json, created_at, emitted_event_id, error
+             FROM event_bus_delayed_events
+             WHERE status = 'pending'
+             ORDER BY due_at ASC, id ASC
+             LIMIT ?`,
+          )
+          .all(limit)
+  ) as EventBusDelayedEventRow[];
+  return rows.map(rowToDelayedEvent);
+}
+
+export function cancelEventBusDelayedEvent(input: { dbPath?: string; delayedEventId: string }): boolean {
+  const db = openEventBusDb(input.dbPath ?? getEventBusDbPath());
+  const result = db
+    .prepare("UPDATE event_bus_delayed_events SET status = 'cancelled' WHERE id = ? AND status = 'pending'")
+    .run(input.delayedEventId);
+  return result.changes > 0;
+}
+
+export function pruneEventBusEvents(input: { dbPath?: string; olderThan?: string; keepLatest?: number } = {}): { deleted: number } {
+  const db = openEventBusDb(input.dbPath ?? getEventBusDbPath());
+  let deleted = 0;
+  if (input.olderThan) {
+    const cutoff = normalizeTimestamp(input.olderThan);
+    deleted += db.prepare('DELETE FROM event_bus_events WHERE recorded_at < ?').run(cutoff).changes;
+  }
+  if (typeof input.keepLatest === 'number' && Number.isSafeInteger(input.keepLatest) && input.keepLatest >= 0) {
+    deleted += db
+      .prepare(
+        `DELETE FROM event_bus_events
+         WHERE id NOT IN (
+           SELECT id FROM event_bus_events ORDER BY occurred_at DESC, recorded_at DESC, id DESC LIMIT ?
+         )`,
+      )
+      .run(input.keepLatest).changes;
+  }
+  return { deleted };
+}
+
+function subscriptionRateLimited(db: SqliteDatabase, subscription: EventBusSubscription): boolean {
+  if (!subscription.maxReactionsPerMinute) return false;
+  const since = new Date(Date.now() - 60_000).toISOString();
+  const row = db
+    .prepare('SELECT COUNT(*) AS count FROM event_bus_reactions WHERE subscription_id = ? AND started_at >= ?')
+    .get(subscription.id, since) as { count?: number } | undefined;
+  return (row?.count ?? 0) >= subscription.maxReactionsPerMinute;
 }
 
 function insertReaction(db: SqliteDatabase, event: EventBusEvent, subscription: EventBusSubscription): EventBusReaction {
@@ -510,9 +676,16 @@ export async function emitEventBusEvent(input: {
   dbPath?: string;
   event: EventBusEventInput;
   replayOfEventId?: string;
+  dispatchDepth?: number;
+  maxDispatchDepth?: number;
   dispatch?: (input: EventBusDispatchInput) => Promise<EventBusDispatchResult> | EventBusDispatchResult;
 }): Promise<{ event: EventBusEvent; reactions: EventBusReaction[] }> {
   const db = openEventBusDb(input.dbPath ?? getEventBusDbPath());
+  const dispatchDepth = input.dispatchDepth ?? 0;
+  const maxDispatchDepth = input.maxDispatchDepth ?? 8;
+  if (dispatchDepth > maxDispatchDepth) {
+    throw new Error(`Event bus dispatch depth exceeded ${maxDispatchDepth}.`);
+  }
   const recordedAt = new Date().toISOString();
   const eventId = `evt_${randomUUID()}`;
   const type = normalizeString(input.event.type, 'event type');
@@ -521,7 +694,7 @@ export async function emitEventBusEvent(input: {
     type,
     source: normalizeString(input.event.source, 'event source'),
     payload: normalizeRecord(input.event.payload),
-    metadata: normalizeRecord(input.event.metadata),
+    metadata: { ...normalizeRecord(input.event.metadata), dispatchDepth },
     occurredAt: normalizeTimestamp(input.event.occurredAt, recordedAt),
     recordedAt,
     recorded: input.event.recorded !== false,
@@ -536,6 +709,21 @@ export async function emitEventBusEvent(input: {
   if (!event.recorded) {
     const ephemeralReactions: EventBusReaction[] = [];
     for (const subscription of subscriptions) {
+      if (subscriptionRateLimited(db, subscription)) {
+        ephemeralReactions.push({
+          id: `rxn_${randomUUID()}`,
+          eventId: event.id,
+          subscriptionId: subscription.id,
+          subscriptionName: subscription.name,
+          actionType: subscription.action.type,
+          status: 'failed',
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          error: `Subscription rate limit exceeded: ${subscription.maxReactionsPerMinute}/minute.`,
+          output: {},
+        });
+        continue;
+      }
       ephemeralReactions.push(await dispatchEphemeralReaction(event, subscription, input.dispatch));
     }
     return {
@@ -561,6 +749,16 @@ export async function emitEventBusEvent(input: {
 
   const reactions: EventBusReaction[] = [];
   for (const subscription of subscriptions) {
+    if (subscriptionRateLimited(db, subscription)) {
+      const pending = insertReaction(db, event, subscription);
+      reactions.push(
+        finishReaction(db, pending, {
+          status: 'failed',
+          error: `Subscription rate limit exceeded: ${subscription.maxReactionsPerMinute}/minute.`,
+        }),
+      );
+      continue;
+    }
     const pending = insertReaction(db, event, subscription);
     try {
       const result = input.dispatch
@@ -576,4 +774,58 @@ export async function emitEventBusEvent(input: {
     event: { ...event, reactions },
     reactions,
   };
+}
+
+export async function processDueEventBusEvents(
+  input: {
+    dbPath?: string;
+    now?: string;
+    limit?: number;
+    dispatch?: (input: EventBusDispatchInput) => Promise<EventBusDispatchResult> | EventBusDispatchResult;
+  } = {},
+): Promise<{ processed: number; emitted: EventBusEvent[]; failed: EventBusDelayedEvent[] }> {
+  const dbPath = input.dbPath ?? getEventBusDbPath();
+  const db = openEventBusDb(dbPath);
+  const now = normalizeTimestamp(input.now);
+  const limit = Math.max(1, Math.min(input.limit ?? 100, 500));
+  const rows = db
+    .prepare(
+      `SELECT id, due_at, status, event_json, created_at, emitted_event_id, error
+       FROM event_bus_delayed_events
+       WHERE status = 'pending' AND due_at <= ?
+       ORDER BY due_at ASC, id ASC
+       LIMIT ?`,
+    )
+    .all(now, limit) as EventBusDelayedEventRow[];
+
+  const emitted: EventBusEvent[] = [];
+  const failed: EventBusDelayedEvent[] = [];
+  for (const row of rows) {
+    const delayed = rowToDelayedEvent(row);
+    try {
+      const result = await emitEventBusEvent({
+        dbPath,
+        event: {
+          ...delayed.event,
+          metadata: {
+            ...normalizeRecord(delayed.event.metadata),
+            delayedEventId: delayed.id,
+            scheduledFor: delayed.dueAt,
+          },
+        },
+        dispatch: input.dispatch,
+      });
+      db.prepare("UPDATE event_bus_delayed_events SET status = 'emitted', emitted_event_id = ?, error = NULL WHERE id = ?").run(
+        result.event.id,
+        delayed.id,
+      );
+      emitted.push(result.event);
+    } catch (error) {
+      const message = (error as Error).message;
+      db.prepare("UPDATE event_bus_delayed_events SET status = 'failed', error = ? WHERE id = ?").run(message, delayed.id);
+      failed.push({ ...delayed, status: 'failed', error: message });
+    }
+  }
+
+  return { processed: rows.length, emitted, failed };
 }

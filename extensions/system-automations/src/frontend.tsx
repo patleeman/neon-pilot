@@ -127,6 +127,23 @@ interface EventBusEventSummary {
   reactions?: EventBusReactionSummary[];
 }
 
+type EventBusActionSummary =
+  | { type: 'run_task'; taskId: string }
+  | { type: 'start_agent'; prompt: string; cwd?: string; model?: string }
+  | { type: 'start_thread'; prompt: string; conversationId?: string; cwd?: string; model?: string }
+  | { type: 'run_script'; command: string; cwd?: string }
+  | { type: 'publish_event'; eventType: string; payload?: Record<string, unknown>; recorded?: boolean };
+
+interface EventBusSubscriptionSummary {
+  id: string;
+  name: string;
+  pattern: string;
+  enabled: boolean;
+  action: EventBusActionSummary;
+  maxReactionsPerMinute?: number;
+  updatedAt?: string;
+}
+
 const EDITOR_TOC_ITEMS: Array<{ id: EditorSectionId; label: string; summary: string }> = [
   { id: 'automation-general', label: 'General', summary: 'Name and instruction' },
   { id: 'automation-schedule', label: 'Schedule', summary: 'When it runs' },
@@ -587,6 +604,74 @@ function readEventBusEvents(input: unknown): EventBusEventSummary[] {
       };
     })
     .filter((event): event is EventBusEventSummary => Boolean(event));
+}
+
+function normalizeEventBusAction(input: unknown): EventBusActionSummary | null {
+  if (!isRecord(input) || typeof input.type !== 'string') return null;
+  if (input.type === 'run_task' && typeof input.taskId === 'string') return { type: 'run_task', taskId: input.taskId };
+  if (input.type === 'start_agent' && typeof input.prompt === 'string') {
+    return {
+      type: 'start_agent',
+      prompt: input.prompt,
+      ...(typeof input.cwd === 'string' ? { cwd: input.cwd } : {}),
+      ...(typeof input.model === 'string' ? { model: input.model } : {}),
+    };
+  }
+  if (input.type === 'start_thread' && typeof input.prompt === 'string') {
+    return {
+      type: 'start_thread',
+      prompt: input.prompt,
+      ...(typeof input.conversationId === 'string' ? { conversationId: input.conversationId } : {}),
+      ...(typeof input.cwd === 'string' ? { cwd: input.cwd } : {}),
+      ...(typeof input.model === 'string' ? { model: input.model } : {}),
+    };
+  }
+  if (input.type === 'run_script' && typeof input.command === 'string') {
+    return { type: 'run_script', command: input.command, ...(typeof input.cwd === 'string' ? { cwd: input.cwd } : {}) };
+  }
+  if (input.type === 'publish_event' && typeof input.eventType === 'string') {
+    return {
+      type: 'publish_event',
+      eventType: input.eventType,
+      payload: isRecord(input.payload) ? input.payload : undefined,
+      ...(typeof input.recorded === 'boolean' ? { recorded: input.recorded } : {}),
+    };
+  }
+  return null;
+}
+
+function readEventBusSubscriptions(input: unknown): EventBusSubscriptionSummary[] {
+  const details = isRecord(input) && isRecord(input.details) ? input.details : undefined;
+  const subscriptions =
+    isRecord(input) && Array.isArray(input.subscriptions)
+      ? input.subscriptions
+      : details && Array.isArray(details.subscriptions)
+        ? details.subscriptions
+        : [];
+  return subscriptions
+    .map((subscription): EventBusSubscriptionSummary | null => {
+      if (!isRecord(subscription) || typeof subscription.id !== 'string') return null;
+      const action = normalizeEventBusAction(subscription.action);
+      if (!action) return null;
+      return {
+        id: subscription.id,
+        name: typeof subscription.name === 'string' ? subscription.name : subscription.id,
+        pattern: typeof subscription.pattern === 'string' ? subscription.pattern : '*',
+        enabled: subscription.enabled !== false,
+        action,
+        maxReactionsPerMinute: typeof subscription.maxReactionsPerMinute === 'number' ? subscription.maxReactionsPerMinute : undefined,
+        updatedAt: typeof subscription.updatedAt === 'string' ? subscription.updatedAt : undefined,
+      };
+    })
+    .filter((subscription): subscription is EventBusSubscriptionSummary => Boolean(subscription));
+}
+
+function actionSummary(action: EventBusActionSummary) {
+  if (action.type === 'run_task') return `Run scheduled publisher ${action.taskId}`;
+  if (action.type === 'start_agent') return 'Start agent';
+  if (action.type === 'start_thread') return action.conversationId ? `Resume thread ${action.conversationId}` : 'Start thread';
+  if (action.type === 'run_script') return `Run script: ${action.command}`;
+  return `Publish ${action.eventType}`;
 }
 
 function reactionKindFromAction(actionType: EventBusReactionSummary['actionType']): ReactionKind {
@@ -1061,18 +1146,61 @@ function ActivityTimeline({
 function ActivityInspector({
   event,
   busy,
+  subscriptions,
   onReemit,
   onCreateReaction,
+  onNewSubscription,
+  onToggleSubscription,
+  onDeleteSubscription,
   onPausePublisher,
   onOpenThread,
 }: {
   event: AutomationActivityEvent | null;
   busy: string | null;
+  subscriptions: EventBusSubscriptionSummary[];
   onReemit: (event: AutomationActivityEvent) => void;
   onCreateReaction: (taskId: string) => void;
+  onNewSubscription: (pattern?: string) => void;
+  onToggleSubscription: (subscription: EventBusSubscriptionSummary) => void;
+  onDeleteSubscription: (subscription: EventBusSubscriptionSummary) => void;
   onPausePublisher: (taskId: string) => void;
   onOpenThread: (taskId: string) => void;
 }) {
+  const subscriptionList = (
+    <div className="grid gap-2">
+      {subscriptions.length === 0 ? (
+        <div className="rounded-md border border-border-subtle/70 bg-surface/20 px-3 py-3 text-[12px] leading-5 text-secondary">
+          No subscriptions yet.
+        </div>
+      ) : (
+        subscriptions.slice(0, 8).map((subscription) => (
+          <div key={subscription.id} className="rounded-md border border-border-subtle/70 bg-surface/20 px-3 py-2">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="truncate text-[13px] font-medium text-primary">{subscription.name}</div>
+                <div className="mt-0.5 truncate text-[11px] text-secondary">{subscription.pattern}</div>
+              </div>
+              <Switch
+                checked={subscription.enabled}
+                label={subscription.enabled ? 'On' : 'Off'}
+                onClick={() => onToggleSubscription(subscription)}
+              />
+            </div>
+            <div className="mt-2 truncate text-[11px] text-dim">{actionSummary(subscription.action)}</div>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span className="text-[11px] text-dim">
+                {subscription.maxReactionsPerMinute ? `${subscription.maxReactionsPerMinute}/min` : 'No rate limit'}
+              </span>
+              <TextButton className="text-[12px] text-danger" onClick={() => onDeleteSubscription(subscription)}>
+                Delete
+              </TextButton>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+
   if (!event) {
     return (
       <aside className="flex h-full min-h-0 w-[22rem] shrink-0 flex-col border-l border-border-subtle/70 bg-background/55 px-5 py-5">
@@ -1090,24 +1218,13 @@ function ActivityInspector({
           <span className="text-secondary">Matching reaction</span>
         </div>
         <div className="mt-5 border-t border-border-subtle/70 pt-4">
-          <div className="text-[12px] font-medium uppercase text-dim">Causal Trace</div>
-          <div className="mt-4 space-y-3">
-            {['Publisher emits', 'Reaction matches', 'Agent, script, or thread runs'].map((label, index) => (
-              <div key={label} className="grid grid-cols-[1.75rem_minmax(0,1fr)] text-[12px] text-secondary">
-                <div className="relative flex justify-center">
-                  {index < 2 ? <span className="absolute bottom-[-0.85rem] top-4 w-px bg-border-subtle/70" /> : null}
-                  <span className="mt-1 h-3 w-3 rounded-full border border-border-subtle bg-surface" />
-                </div>
-                <div>
-                  <div className={cx('font-medium', index === 0 ? 'text-primary' : 'text-secondary')}>{label}</div>
-                  <div className="mt-1 h-1.5 w-28 rounded-sm bg-surface/45" />
-                </div>
-              </div>
-            ))}
-            <div className="pt-1 text-[12px] leading-5 text-dim">
-              Live events will replace this scaffold with IDs, timing, and downstream results.
-            </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-[12px] font-medium uppercase text-dim">Subscriptions</div>
+            <ToolbarButton className="h-7 px-2 text-[12px]" onClick={() => onNewSubscription()}>
+              New
+            </ToolbarButton>
           </div>
+          <div className="mt-3">{subscriptionList}</div>
         </div>
       </aside>
     );
@@ -1131,6 +1248,15 @@ function ActivityInspector({
           <span className="truncate text-secondary">{event.source}</span>
           <span className="text-dim">Consumer</span>
           <span className="truncate text-secondary">{event.reactionTitle}</span>
+        </div>
+        <div className="mt-4 border-t border-border-subtle/70 pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-[12px] font-medium uppercase text-dim">Subscriptions</div>
+            <ToolbarButton className="h-7 px-2 text-[12px]" onClick={() => onNewSubscription(event.eventName)}>
+              New
+            </ToolbarButton>
+          </div>
+          <div className="mt-3">{subscriptionList}</div>
         </div>
       </div>
 
@@ -1157,7 +1283,8 @@ function ActivityInspector({
           <ToolbarButton disabled={actionBusy || event.status === 'Disabled'} onClick={() => onReemit(event)}>
             {busy === replayBusyKey ? (event.replayMode === 'event-bus' ? 'Replaying…' : 'Starting…') : 'Re-emit Event'}
           </ToolbarButton>
-          {event.taskId ? <ToolbarButton onClick={() => onCreateReaction(event.taskId)}>Create Reaction</ToolbarButton> : null}
+          <ToolbarButton onClick={() => onNewSubscription(event.eventName)}>New Subscription</ToolbarButton>
+          {event.taskId ? <ToolbarButton onClick={() => onCreateReaction(event.taskId)}>Edit Scheduled Publisher</ToolbarButton> : null}
           {event.reactionKind === 'thread' && event.taskId ? (
             <ToolbarButton onClick={() => onOpenThread(event.taskId)}>Open Thread</ToolbarButton>
           ) : null}
@@ -1240,6 +1367,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const openNewFromRoute = shouldOpenNewAutomationFromSearch(context?.search);
   const [tasks, setTasks] = useState<ScheduledTaskSummary[]>([]);
   const [eventBusEvents, setEventBusEvents] = useState<EventBusEventSummary[]>([]);
+  const [eventBusSubscriptions, setEventBusSubscriptions] = useState<EventBusSubscriptionSummary[]>([]);
   const [health, setHealth] = useState<ScheduledTaskSchedulerHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1268,13 +1396,15 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     let nextTasks: unknown;
     let nextHealth: unknown;
     let nextEventBusEvents: unknown;
+    let nextEventBusSubscriptions: unknown;
     let nextConversations: unknown;
     let nextModels: unknown;
     try {
-      [nextTasks, nextHealth, nextEventBusEvents, nextConversations, nextModels] = await Promise.all([
+      [nextTasks, nextHealth, nextEventBusEvents, nextEventBusSubscriptions, nextConversations, nextModels] = await Promise.all([
         pa.automations.list(),
         pa.automations.readSchedulerHealth(),
         pa.extension.invoke('eventBus', { action: 'list', limit: 100 }),
+        pa.extension.invoke('eventBus', { action: 'list_subscriptions' }),
         extensionClient.conversations?.list?.() ?? Promise.resolve([]),
         extensionClient.models?.() ?? Promise.resolve({ models: [] }),
       ]);
@@ -1285,6 +1415,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     if (loadSequence !== loadSequenceRef.current) return;
     setTasks(sortTasks(Array.isArray(nextTasks) ? nextTasks : []));
     setEventBusEvents(readEventBusEvents(nextEventBusEvents));
+    setEventBusSubscriptions(readEventBusSubscriptions(nextEventBusSubscriptions));
     setHealth(nextHealth as ScheduledTaskSchedulerHealth);
     setConversationOptions(readConversationOptions(nextConversations));
     setModelOptions(readModelOptions(nextModels));
@@ -1427,6 +1558,84 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     [load, pa, tasks],
   );
 
+  const createSubscription = useCallback(
+    async (pattern?: string) => {
+      const eventPattern = pattern?.trim() || '*';
+      setBusy('subscription:create');
+      try {
+        await pa.extension.invoke('eventBus', {
+          action: 'save_subscription',
+          id: `sub_${eventPattern.replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 48)}_${Date.now().toString(36)}`,
+          name: `Handle ${eventPattern}`,
+          pattern: eventPattern,
+          enabled: false,
+          subscriptionAction: {
+            type: 'start_agent',
+            prompt: `Handle event ${eventPattern}. Inspect the event context and take the appropriate next step.`,
+          },
+        });
+        setNotice('Subscription created disabled.');
+        await load();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+        pa.ui.notify({ type: 'error', message: `Failed to create subscription: ${msg}`, source: 'system-automations' });
+      } finally {
+        setBusy(null);
+      }
+    },
+    [load, pa],
+  );
+
+  const toggleSubscription = useCallback(
+    async (subscription: EventBusSubscriptionSummary) => {
+      setBusy(`subscription:${subscription.id}`);
+      try {
+        await pa.extension.invoke('eventBus', {
+          action: 'save_subscription',
+          subscriptionId: subscription.id,
+          name: subscription.name,
+          pattern: subscription.pattern,
+          enabled: !subscription.enabled,
+          maxReactionsPerMinute: subscription.maxReactionsPerMinute,
+          subscriptionAction: subscription.action,
+        });
+        setNotice(!subscription.enabled ? 'Subscription enabled.' : 'Subscription disabled.');
+        await load();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+        pa.ui.notify({ type: 'error', message: `Failed to update subscription: ${msg}`, source: 'system-automations' });
+      } finally {
+        setBusy(null);
+      }
+    },
+    [load, pa],
+  );
+
+  const deleteSubscription = useCallback(
+    async (subscription: EventBusSubscriptionSummary) => {
+      const confirmed = await pa.ui.confirm({
+        title: 'Delete subscription',
+        message: `Delete ${subscription.name}? This cannot be undone.`,
+      });
+      if (!confirmed) return;
+      setBusy(`subscription:${subscription.id}`);
+      try {
+        await pa.extension.invoke('eventBus', { action: 'delete_subscription', subscriptionId: subscription.id });
+        setNotice('Subscription deleted.');
+        await load();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+        pa.ui.notify({ type: 'error', message: `Failed to delete subscription: ${msg}`, source: 'system-automations' });
+      } finally {
+        setBusy(null);
+      }
+    },
+    [load, pa],
+  );
+
   const openThreadForTask = useCallback(
     (taskId: string) => {
       const task = tasks.find((candidate) => candidate.id === taskId);
@@ -1535,7 +1744,13 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
 
   const enabledCount = useMemo(() => tasks.filter((task) => task.enabled !== false).length, [tasks]);
   const enabledLabel = useMemo(() => (enabledCount === 1 ? '1 enabled' : `${enabledCount} enabled`), [enabledCount]);
-  const countLabel = useMemo(() => (tasks.length === 1 ? '1 automation' : `${tasks.length} automations`), [tasks.length]);
+  const countLabel = useMemo(
+    () =>
+      `${tasks.length === 1 ? '1 scheduled publisher' : `${tasks.length} scheduled publishers`} · ${
+        eventBusSubscriptions.length === 1 ? '1 subscription' : `${eventBusSubscriptions.length} subscriptions`
+      }`,
+    [eventBusSubscriptions.length, tasks.length],
+  );
   const nowMs = Date.now();
   const allPastDueTasks = useMemo(() => sortPastDueTasks(tasks.filter((task) => isPastDueOneTimeTask(task, nowMs))), [tasks, nowMs]);
   const pastDueLabel = allPastDueTasks.length === 1 ? '1 past due' : `${allPastDueTasks.length} past due`;
@@ -1616,7 +1831,8 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                   placeholder="Search events…"
                   className="w-56 bg-surface/40 text-[13px]"
                 />
-                <ToolbarButton onClick={() => openEditor()}>Create Reaction</ToolbarButton>
+                <ToolbarButton onClick={() => void createSubscription()}>New Subscription</ToolbarButton>
+                <ToolbarButton onClick={() => openEditor()}>New Scheduled Publisher</ToolbarButton>
                 <IconButton title="Reload automations" aria-label="Reload automations" onClick={() => void reload()}>
                   <RefreshIcon />
                 </IconButton>
@@ -1656,10 +1872,10 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
               <div className="flex flex-col items-start justify-between gap-4 pb-10 sm:flex-row">
                 <div className="min-w-0">
                   <TextButton className="text-[13px]" onClick={closeEditor}>
-                    ← Automations
+                    ← Event Stream
                   </TextButton>
                   <h2 className="mt-6 text-[30px] font-semibold leading-[1.06] tracking-normal text-primary">
-                    {editingId ? 'Edit automation' : 'New automation'}
+                    {editingId ? 'Edit scheduled publisher' : 'New scheduled publisher'}
                   </h2>
                   <p className="mt-2 text-[13px] text-secondary">
                     Define what the agent should do, when it should run, and where results should appear.
@@ -2116,11 +2332,15 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
             <ActivityInspector
               event={selectedActivity}
               busy={busy}
+              subscriptions={eventBusSubscriptions}
               onReemit={(event) => void reemitActivityEvent(event)}
               onCreateReaction={(taskId) => {
                 const task = tasks.find((candidate) => candidate.id === taskId);
                 openEditor(task);
               }}
+              onNewSubscription={(pattern) => void createSubscription(pattern)}
+              onToggleSubscription={(subscription) => void toggleSubscription(subscription)}
+              onDeleteSubscription={(subscription) => void deleteSubscription(subscription)}
               onPausePublisher={(taskId) => void pausePublisher(taskId)}
               onOpenThread={openThreadForTask}
             />

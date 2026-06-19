@@ -4,7 +4,17 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { closeEventBusDbs, createEventBusSubscription, emitEventBusEvent, listEventBusEvents } from './eventBus.js';
+import {
+  cancelEventBusDelayedEvent,
+  closeEventBusDbs,
+  createEventBusSubscription,
+  emitEventBusEvent,
+  listEventBusDelayedEvents,
+  listEventBusEvents,
+  processDueEventBusEvents,
+  pruneEventBusEvents,
+  scheduleEventBusEvent,
+} from './eventBus.js';
 
 const tempDirs: string[] = [];
 
@@ -158,5 +168,81 @@ describe('event bus store', () => {
         },
       }),
     ).toThrow('Subscription cannot publish an event type that matches its own pattern.');
+  });
+
+  it('schedules, cancels, and processes delayed events', async () => {
+    const dbPath = tempDbPath();
+    const cancelled = scheduleEventBusEvent({
+      dbPath,
+      id: 'delay-cancel',
+      dueAt: '2026-06-19T10:00:00.000Z',
+      event: { type: 'tick.cancelled', source: 'test' },
+    });
+    const due = scheduleEventBusEvent({
+      dbPath,
+      id: 'delay-due',
+      dueAt: '2026-06-19T10:00:00.000Z',
+      event: { type: 'tick.due', source: 'test', payload: { ok: true } },
+    });
+
+    expect(cancelled.status).toBe('pending');
+    expect(due.status).toBe('pending');
+    expect(cancelEventBusDelayedEvent({ dbPath, delayedEventId: 'delay-cancel' })).toBe(true);
+
+    const processed = await processDueEventBusEvents({ dbPath, now: '2026-06-19T10:00:01.000Z' });
+
+    expect(processed.processed).toBe(1);
+    expect(processed.emitted).toEqual([expect.objectContaining({ type: 'tick.due', payload: { ok: true } })]);
+    expect(listEventBusEvents({ dbPath })).toEqual([expect.objectContaining({ type: 'tick.due' })]);
+    expect(listEventBusDelayedEvents({ dbPath })).toEqual([]);
+    expect(listEventBusDelayedEvents({ dbPath, includeCompleted: true })).toEqual([
+      expect.objectContaining({ id: 'delay-cancel', status: 'cancelled' }),
+      expect.objectContaining({ id: 'delay-due', status: 'emitted', emittedEventId: processed.emitted[0]?.id }),
+    ]);
+  });
+
+  it('allows the first rate-limited recorded reaction and rejects the second in the same minute', async () => {
+    const dbPath = tempDbPath();
+    await createEventBusSubscription({
+      dbPath,
+      subscription: {
+        id: 'sub-limited',
+        name: 'Limited',
+        pattern: 'limited.*',
+        maxReactionsPerMinute: 1,
+        action: { type: 'run_script', command: 'echo ok' },
+      },
+    });
+
+    const first = await emitEventBusEvent({
+      dbPath,
+      event: { type: 'limited.one', source: 'test' },
+      dispatch: async () => ({ status: 'completed', output: { ok: true } }),
+    });
+    const second = await emitEventBusEvent({
+      dbPath,
+      event: { type: 'limited.two', source: 'test' },
+      dispatch: async () => ({ status: 'completed', output: { ok: true } }),
+    });
+
+    expect(first.reactions[0]).toEqual(expect.objectContaining({ status: 'completed' }));
+    expect(second.reactions[0]).toEqual(
+      expect.objectContaining({ status: 'failed', error: 'Subscription rate limit exceeded: 1/minute.' }),
+    );
+  });
+
+  it('prunes recorded events by keep-latest retention', async () => {
+    const dbPath = tempDbPath();
+    await emitEventBusEvent({
+      dbPath,
+      event: { type: 'retention.old', source: 'test', occurredAt: '2026-06-19T09:00:00.000Z' },
+    });
+    await emitEventBusEvent({
+      dbPath,
+      event: { type: 'retention.new', source: 'test', occurredAt: '2026-06-19T10:00:00.000Z' },
+    });
+
+    expect(pruneEventBusEvents({ dbPath, keepLatest: 1 })).toEqual({ deleted: 1 });
+    expect(listEventBusEvents({ dbPath })).toEqual([expect.objectContaining({ type: 'retention.new' })]);
   });
 });

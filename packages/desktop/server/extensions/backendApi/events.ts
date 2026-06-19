@@ -20,6 +20,10 @@ export async function emitEvent(input: unknown) {
   return callServerModuleExport<Record<string, unknown>>(EVENT_BUS_MODULE, 'emitEvent', input);
 }
 
+export async function delayEvent(input: unknown) {
+  return callServerModuleExport<Record<string, unknown>>(EVENT_BUS_MODULE, 'delayEvent', input);
+}
+
 export async function replayEvent(input: unknown) {
   return callServerModuleExport<Record<string, unknown>>(EVENT_BUS_MODULE, 'replayEvent', input);
 }
@@ -38,4 +42,16 @@ export async function saveSubscription(input: unknown) {
 
 export async function deleteSubscription(input: unknown) {
   return callServerModuleExport<Record<string, unknown>>(EVENT_BUS_MODULE, 'deleteSubscription', input);
+}
+
+export async function cancelDelayedEvent(input: unknown) {
+  return callServerModuleExport<Record<string, unknown>>(EVENT_BUS_MODULE, 'cancelDelayedEvent', input);
+}
+
+export async function pruneEvents(input: unknown) {
+  return callServerModuleExport<Record<string, unknown>>(EVENT_BUS_MODULE, 'pruneEvents', input);
+}
+
+export async function processDueEvents(input?: unknown) {
+  return callServerModuleExport<Record<string, unknown>>(EVENT_BUS_MODULE, 'processDueEvents', input);
 }

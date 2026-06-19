@@ -579,6 +579,178 @@
         "outputModes": ["text", "json"]
       },
       {
+        "id": "events-delay",
+        "command": "events delay",
+        "description": "Schedule an event to be emitted later: events delay <type> --due-at <iso> --source <source>.",
+        "action": "eventBus",
+        "inputAction": "delay",
+        "jsonDefault": true,
+        "usage": "events delay <type> (--due-at <iso> | --delay-ms <ms>) --source <source> [--payload-json <json>] [--json]",
+        "examples": [
+          "neon-pilot events delay agent.resume.requested --delay-ms 900000 --source agent:current --payload-json '{\"reason\":\"follow-up\"}' --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean"
+            },
+            "source": {
+              "type": "string"
+            },
+            "due-at": {
+              "type": "string"
+            },
+            "delay-ms": {
+              "type": "string"
+            },
+            "payload-json": {
+              "type": "string"
+            },
+            "metadata-json": {
+              "type": "string"
+            },
+            "dry-run": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "background",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "events-process-due",
+        "command": "events process-due",
+        "description": "Process due delayed event bus events now.",
+        "action": "eventBus",
+        "inputAction": "process_due",
+        "jsonDefault": true,
+        "usage": "events process-due [--limit <count>] [--json]",
+        "examples": ["neon-pilot events process-due --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 0
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean"
+            },
+            "limit": {
+              "type": "string"
+            },
+            "dry-run": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "background",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "events-prune",
+        "command": "events prune",
+        "description": "Prune recorded event bus events by retention policy.",
+        "action": "eventBus",
+        "inputAction": "prune",
+        "jsonDefault": true,
+        "usage": "events prune [--older-than <iso>] [--keep-latest <count>] [--json]",
+        "examples": ["neon-pilot events prune --keep-latest 5000 --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 0
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean"
+            },
+            "older-than": {
+              "type": "string"
+            },
+            "keep-latest": {
+              "type": "string"
+            },
+            "dry-run": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "destructive",
+        "requiresApp": false,
+        "destructive": true,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "events-delayed-cancel",
+        "command": "events delayed cancel",
+        "description": "Cancel a pending delayed event bus event.",
+        "action": "eventBus",
+        "inputAction": "cancel_delayed",
+        "jsonDefault": true,
+        "usage": "events delayed cancel <delayed-event-id> [--json]",
+        "examples": ["neon-pilot events delayed cancel delay_123 --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean"
+            },
+            "dry-run": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "destructive",
+        "requiresApp": false,
+        "destructive": true,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
         "id": "events-subscriptions-list",
         "command": "events subscriptions list",
         "description": "List event bus subscriptions.",
@@ -643,6 +815,9 @@
               "type": "string"
             },
             "enabled": {
+              "type": "boolean"
+            },
+            "disabled": {
               "type": "boolean"
             },
             "action-json": {
@@ -723,6 +898,7 @@
     "executions:start",
     "conversations:readwrite",
     "telemetry:write",
+    "ui:invalidate",
     "ui:notify"
   ]
 }

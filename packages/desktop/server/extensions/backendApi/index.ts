@@ -5,7 +5,19 @@ export * from './browser.js';
 export * from './checkpoints.js';
 export * from './cli.js';
 export * from './conversations.js';
-export { deleteSubscription, emitEvent, listEvents, listSubscriptions, publishAppEvent, replayEvent, saveSubscription } from './events.js';
+export {
+  cancelDelayedEvent,
+  deleteSubscription,
+  delayEvent,
+  emitEvent,
+  listEvents,
+  listSubscriptions,
+  processDueEvents,
+  pruneEvents,
+  publishAppEvent,
+  replayEvent,
+  saveSubscription,
+} from './events.js';
 export * from './extensions.js';
 export * from './gateways.js';
 export * from './images.js';
