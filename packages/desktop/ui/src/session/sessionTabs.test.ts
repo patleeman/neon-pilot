@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const apiMocks = vi.hoisted(() => ({
   openConversationTabs: vi.fn(),
   sidebarConversations: vi.fn(),
-  setOpenConversationTabs: vi.fn(),
+  saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
 }));
 
@@ -67,9 +67,9 @@ describe('sessionTabs', () => {
     vi.stubGlobal('window', { dispatchEvent });
     apiMocks.sidebarConversations.mockReset();
     apiMocks.openConversationTabs.mockReset();
-    apiMocks.setOpenConversationTabs.mockReset();
+    apiMocks.saveConversationWorkspaceLayout.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
-    apiMocks.setOpenConversationTabs.mockResolvedValue({ ok: true });
+    apiMocks.saveConversationWorkspaceLayout.mockResolvedValue({ ok: true });
     apiMocks.updateConversationWorkspace.mockResolvedValue({ ok: true });
     resetRemoteConversationLayoutCache();
 
@@ -408,7 +408,7 @@ describe('sessionTabs', () => {
       conversationWorkspaceUpdatedAt: null,
       conversationWorkspaceMigratedAt: null,
     });
-    apiMocks.setOpenConversationTabs.mockResolvedValueOnce({
+    apiMocks.saveConversationWorkspaceLayout.mockResolvedValueOnce({
       sessionIds: ['legacy-open'],
       pinnedSessionIds: ['legacy-pin'],
       archivedSessionIds: ['legacy-archived'],
@@ -422,7 +422,7 @@ describe('sessionTabs', () => {
 
     const layout = await fetchRemoteConversationLayout();
 
-    expect(apiMocks.setOpenConversationTabs).not.toHaveBeenCalled();
+    expect(apiMocks.saveConversationWorkspaceLayout).not.toHaveBeenCalled();
     expect(layout.sessionIds).toEqual([]);
     expect(layout.pinnedSessionIds).toEqual([]);
     expect(layout.archivedSessionIds).toEqual([]);
@@ -442,7 +442,7 @@ describe('sessionTabs', () => {
     expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
     expect(apiMocks.updateConversationWorkspace).toHaveBeenCalled();
-    expect(apiMocks.setOpenConversationTabs).not.toHaveBeenCalled();
+    expect(apiMocks.saveConversationWorkspaceLayout).not.toHaveBeenCalled();
   });
 
   it('applies remote conversation layout exactly without archiving closed tabs', () => {
@@ -452,7 +452,7 @@ describe('sessionTabs', () => {
 
     expect(layout).toEqual({ sessionIds: ['session-2'], pinnedSessionIds: [], archivedSessionIds: [], activeSessionId: null });
     expect(readArchivedSessionIds()).toEqual([]);
-    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledTimes(1);
+    expect(apiMocks.saveConversationWorkspaceLayout).toHaveBeenCalledTimes(1);
     expect(apiMocks.updateConversationWorkspace).not.toHaveBeenCalled();
   });
 

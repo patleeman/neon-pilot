@@ -244,9 +244,16 @@ export async function fetchRemoteConversationLayout(
 
 function persistConversationLayoutToServer(layout: ConversationLayout): void {
   void api
-    .setOpenConversationTabs(layout.sessionIds, layout.pinnedSessionIds, layout.archivedSessionIds, undefined, layout.activeSessionId, {
-      conversationWorkspaceMigrated: true,
-    })
+    .saveConversationWorkspaceLayout(
+      layout.sessionIds,
+      layout.pinnedSessionIds,
+      layout.archivedSessionIds,
+      undefined,
+      layout.activeSessionId,
+      {
+        conversationWorkspaceMigrated: true,
+      },
+    )
     .then((saved) => {
       if (!isRemoteConversationLayoutPayload(saved)) {
         return;

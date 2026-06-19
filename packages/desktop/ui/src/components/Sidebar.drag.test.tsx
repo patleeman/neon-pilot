@@ -20,7 +20,7 @@ Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
 const apiMocks = vi.hoisted(() => ({
   openConversationTabs: vi.fn(),
-  setOpenConversationTabs: vi.fn(),
+  saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
   changeConversationCwd: vi.fn(),
@@ -182,7 +182,7 @@ describe('Sidebar group drag reordering', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', createStorage());
     apiMocks.openConversationTabs.mockReset();
-    apiMocks.setOpenConversationTabs.mockReset();
+    apiMocks.saveConversationWorkspaceLayout.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
     apiMocks.setSavedWorkspacePaths.mockReset();
     apiMocks.changeConversationCwd.mockReset();
@@ -192,7 +192,7 @@ describe('Sidebar group drag reordering', () => {
     apiMocks.gateways.mockReset();
     apiMocks.sessions.mockReset();
     apiMocks.sidebarConversations.mockReset();
-    apiMocks.setOpenConversationTabs.mockImplementation(
+    apiMocks.saveConversationWorkspaceLayout.mockImplementation(
       async (
         sessionIds: string[] = [],
         pinnedSessionIds: string[] = [],
@@ -277,7 +277,7 @@ describe('Sidebar group drag reordering', () => {
     expect(localStorage.getItem(THREADS_SORT_BY_STORAGE_KEY)).toBe('manual');
     expect(JSON.parse(localStorage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY) ?? '[]')).toEqual([betaPath, alphaPath]);
     expect(readConversationLayout().sessionIds).toEqual(['conv-beta', 'conv-alpha']);
-    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledWith(['conv-beta', 'conv-alpha'], [], [], undefined, null, {
+    expect(apiMocks.saveConversationWorkspaceLayout).toHaveBeenCalledWith(['conv-beta', 'conv-alpha'], [], [], undefined, null, {
       conversationWorkspaceMigrated: true,
     });
     expect(apiMocks.setSavedWorkspacePaths).toHaveBeenCalledWith([betaPath, alphaPath]);

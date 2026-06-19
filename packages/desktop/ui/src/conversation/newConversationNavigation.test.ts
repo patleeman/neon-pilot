@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const apiMocks = vi.hoisted(() => ({
   createLiveSession: vi.fn(),
-  setOpenConversationTabs: vi.fn(),
+  saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
 }));
 
@@ -10,7 +10,6 @@ vi.mock('../client/api', () => ({
   api: apiMocks,
 }));
 
-import { ACTIVE_SESSION_ID_STORAGE_KEY, OPEN_SESSION_IDS_STORAGE_KEY } from '../local/localSettings';
 import { readConversationLayout, resetRemoteConversationLayoutCache } from '../session/sessionTabs';
 import type { SessionMeta } from '../shared/types';
 import { readDraftConversationComposer, readDraftConversationCwd } from './draftConversation';
@@ -51,7 +50,7 @@ describe('startNewLiveConversation', () => {
     vi.stubGlobal('localStorage', createStorage());
     vi.stubGlobal('window', { dispatchEvent: vi.fn() });
     apiMocks.createLiveSession.mockReset();
-    apiMocks.setOpenConversationTabs.mockReset();
+    apiMocks.saveConversationWorkspaceLayout.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
     if (typeof CustomEvent === 'undefined') {
       vi.stubGlobal(
@@ -78,7 +77,7 @@ describe('startNewLiveConversation', () => {
       messageCount: 0,
       isRunning: false,
     });
-    apiMocks.setOpenConversationTabs.mockResolvedValue({ ok: true });
+    apiMocks.saveConversationWorkspaceLayout.mockResolvedValue({ ok: true });
     apiMocks.updateConversationWorkspace.mockResolvedValue({ ok: true });
     resetRemoteConversationLayoutCache();
   });

@@ -34,8 +34,6 @@ let buildLiveSessionResourceOptionsFn: (profile?: string) => LiveSessionResource
   additionalThemePaths: [],
 });
 
-let buildLiveSessionResourceOptionsAsyncFn: ((profile?: string) => Promise<LiveSessionResourceOptions>) | undefined;
-
 let buildLiveSessionExtensionFactoriesFn: () => ExtensionFactory[] = () => [];
 
 let flushLiveDeferredResumesFn: () => Promise<void> = async () => {};
@@ -43,16 +41,11 @@ let flushLiveDeferredResumesFn: () => Promise<void> = async () => {};
 function initializeConversationStateRoutesContext(
   context: Pick<
     ServerRouteContext,
-    | 'getRuntimeScope'
-    | 'buildLiveSessionResourceOptions'
-    | 'buildLiveSessionResourceOptionsAsync'
-    | 'buildLiveSessionExtensionFactories'
-    | 'flushLiveDeferredResumes'
+    'getRuntimeScope' | 'buildLiveSessionResourceOptions' | 'buildLiveSessionExtensionFactories' | 'flushLiveDeferredResumes'
   >,
 ): void {
   getRuntimeScopeFn = context.getRuntimeScope;
   buildLiveSessionResourceOptionsFn = context.buildLiveSessionResourceOptions;
-  buildLiveSessionResourceOptionsAsyncFn = context.buildLiveSessionResourceOptionsAsync;
   buildLiveSessionExtensionFactoriesFn = context.buildLiveSessionExtensionFactories;
   flushLiveDeferredResumesFn = context.flushLiveDeferredResumes;
 }
@@ -79,11 +72,7 @@ export function registerConversationStateRoutes(
   router: Pick<Express, 'get' | 'post' | 'patch'>,
   context: Pick<
     ServerRouteContext,
-    | 'getRuntimeScope'
-    | 'buildLiveSessionResourceOptions'
-    | 'buildLiveSessionResourceOptionsAsync'
-    | 'buildLiveSessionExtensionFactories'
-    | 'flushLiveDeferredResumes'
+    'getRuntimeScope' | 'buildLiveSessionResourceOptions' | 'buildLiveSessionExtensionFactories' | 'flushLiveDeferredResumes'
   >,
 ): void {
   initializeConversationStateRoutesContext(context);
@@ -141,23 +130,6 @@ export function registerConversationStateRoutes(
       }
       const result = writeConversationAutoModeState(SessionManager.open(sessionFile), input);
       publishAppEvent({ type: 'session_file_changed', sessionId: req.params.id });
-      res.json(result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      logError('request handler error', { message, stack: err instanceof Error ? err.stack : undefined });
-      res.status(500).json({ error: message });
-    }
-  });
-
-  router.post('/api/conversations/:id/recover', async (req, res) => {
-    try {
-      const result = await recoverConversationCapability(req.params.id, {
-        getRuntimeScope: getRuntimeScopeFn,
-        buildLiveSessionResourceOptions: buildLiveSessionResourceOptionsFn,
-        buildLiveSessionResourceOptionsAsync: buildLiveSessionResourceOptionsAsyncFn,
-        buildLiveSessionExtensionFactories: buildLiveSessionExtensionFactoriesFn,
-        flushLiveDeferredResumes: flushLiveDeferredResumesFn,
-      });
       res.json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

@@ -22,7 +22,7 @@ const apiMocks = vi.hoisted(() => ({
   openConversationTabs: vi.fn(),
   sidebarConversations: vi.fn(),
   sessionMeta: vi.fn(),
-  setOpenConversationTabs: vi.fn(),
+  saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
 }));
 
@@ -319,7 +319,7 @@ describe('useConversations', () => {
     apiMocks.openConversationTabs.mockReset();
     apiMocks.sidebarConversations.mockReset();
     apiMocks.sessionMeta.mockReset();
-    apiMocks.setOpenConversationTabs.mockReset();
+    apiMocks.saveConversationWorkspaceLayout.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
     fetchSessionsSnapshotMock.mockReset();
     apiMocks.openConversationTabs.mockResolvedValue({
@@ -338,7 +338,7 @@ describe('useConversations', () => {
       ...(await apiMocks.openConversationTabs()),
       sessions: await fetchSessionsSnapshotMock(),
     }));
-    apiMocks.setOpenConversationTabs.mockResolvedValue({
+    apiMocks.saveConversationWorkspaceLayout.mockResolvedValue({
       ok: true,
       sessionIds: ['conv-auto'],
       pinnedSessionIds: [],
@@ -420,7 +420,7 @@ describe('useConversations', () => {
       conversationWorkspaceUpdatedAt: '2026-04-01T00:00:01.000Z',
       conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
     });
-    apiMocks.setOpenConversationTabs.mockResolvedValueOnce({
+    apiMocks.saveConversationWorkspaceLayout.mockResolvedValueOnce({
       sessionIds: ['existing-thread', 'new-thread'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -444,9 +444,16 @@ describe('useConversations', () => {
     await flushAsyncWork();
 
     expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['existing-thread', 'new-thread']);
-    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledWith(['existing-thread', 'new-thread'], [], [], undefined, 'new-thread', {
-      conversationWorkspaceMigrated: true,
-    });
+    expect(apiMocks.saveConversationWorkspaceLayout).toHaveBeenCalledWith(
+      ['existing-thread', 'new-thread'],
+      [],
+      [],
+      undefined,
+      'new-thread',
+      {
+        conversationWorkspaceMigrated: true,
+      },
+    );
   });
 
   it('sorts archived conversations by latest activity', async () => {
@@ -489,7 +496,7 @@ describe('useConversations', () => {
     expect(latestHookResult?.pinnedSessions.map((session) => session.id)).toEqual([]);
     expect(latestHookResult?.archivedConversationIds).toEqual([]);
     expect(latestHookResult?.activeId).toBeNull();
-    expect(apiMocks.setOpenConversationTabs).not.toHaveBeenCalled();
+    expect(apiMocks.saveConversationWorkspaceLayout).not.toHaveBeenCalled();
     expect(apiMocks.updateConversationWorkspace).not.toHaveBeenCalled();
   });
 
@@ -595,7 +602,7 @@ describe('useConversations', () => {
     await flushAsyncWork();
 
     expect(apiMocks.sidebarConversations).toHaveBeenCalledTimes(1);
-    expect(apiMocks.setOpenConversationTabs).not.toHaveBeenCalled();
+    expect(apiMocks.saveConversationWorkspaceLayout).not.toHaveBeenCalled();
     expect(latestHookResult?.tabs.map((session) => session.id)).toEqual([]);
     expect(latestHookResult?.pinnedSessions.map((session) => session.id)).toEqual([]);
     expect(latestHookResult?.activeId).toBeNull();
@@ -716,7 +723,7 @@ describe('useConversations', () => {
       position: 'before',
     });
     expect(apiMocks.updateConversationWorkspace).toHaveBeenLastCalledWith({ operation: 'close', sessionId: 'open-c' });
-    expect(apiMocks.setOpenConversationTabs).not.toHaveBeenCalled();
+    expect(apiMocks.saveConversationWorkspaceLayout).not.toHaveBeenCalled();
     expect(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBeNull();

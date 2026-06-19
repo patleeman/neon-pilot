@@ -29,7 +29,7 @@ const apiMock = vi.hoisted(() => ({
   sessionMeta: vi.fn(),
   openConversationTabs: vi.fn(),
   sidebarConversations: vi.fn(),
-  setOpenConversationTabs: vi.fn(),
+  saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
   gateways: vi.fn(),
@@ -267,7 +267,7 @@ describe('App sidebar conversation navigation workflow', () => {
       ...(await apiMock.openConversationTabs()),
       sessions,
     }));
-    apiMock.setOpenConversationTabs.mockImplementation(
+    apiMock.saveConversationWorkspaceLayout.mockImplementation(
       async (
         sessionIds?: string[] | null,
         pinnedSessionIds?: string[] | null,
@@ -460,7 +460,7 @@ describe('App sidebar conversation navigation workflow', () => {
 
     await findSidebarRow('conv-second');
     await waitFor(() => {
-      expect(apiMock.setOpenConversationTabs).not.toHaveBeenCalled();
+      expect(apiMock.saveConversationWorkspaceLayout).not.toHaveBeenCalled();
     });
 
     const openConversationTabsCalls = apiMock.openConversationTabs.mock.calls.length;

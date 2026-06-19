@@ -19,7 +19,7 @@ const apiMock = vi.hoisted(() => ({
   sessionMeta: vi.fn(),
   openConversationTabs: vi.fn(),
   sidebarConversations: vi.fn(),
-  setOpenConversationTabs: vi.fn(),
+  saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
   gateways: vi.fn(),
@@ -187,7 +187,7 @@ describe('App recovery workflow', () => {
       ...(await apiMock.openConversationTabs()),
       sessions: [recoverySession],
     }));
-    apiMock.setOpenConversationTabs.mockResolvedValue({ ok: true });
+    apiMock.saveConversationWorkspaceLayout.mockResolvedValue({ ok: true });
     apiMock.updateConversationWorkspace.mockResolvedValue({ ok: true });
     apiMock.setSavedWorkspacePaths.mockResolvedValue([]);
     apiMock.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });

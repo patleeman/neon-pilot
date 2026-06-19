@@ -3021,10 +3021,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       throw new Error('Open the saved conversation before continuing deferred work.');
     }
 
-    const recovered = await api.resumeConversation(id);
-    if (recovered.conversationId && recovered.conversationId !== id) {
-      ensureConversationTabOpen(recovered.conversationId);
-      navigate(`/conversations/${recovered.conversationId}`);
+    const resumeResult = await api.resumeConversation(id);
+    if (resumeResult.conversationId && resumeResult.conversationId !== id) {
+      ensureConversationTabOpen(resumeResult.conversationId);
+      navigate(`/conversations/${resumeResult.conversationId}`);
       return;
     }
 
@@ -4023,17 +4023,17 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         return id;
       }
 
-      const recovered = await api.resumeConversation(id);
-      if (!recovered.live) {
+      const resumeResult = await api.resumeConversation(id);
+      if (!resumeResult.live) {
         throw new Error(`This conversation could not ${actionDescription}.`);
       }
 
-      if (recovered.conversationId === id) {
+      if (resumeResult.conversationId === id) {
         setConfirmedLive(true);
         streamReconnect();
       }
 
-      return recovered.conversationId;
+      return resumeResult.conversationId;
     },
     [id, isLiveSession, streamReconnect, streamTakeover],
   );

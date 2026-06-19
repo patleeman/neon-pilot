@@ -561,6 +561,7 @@ export const api = {
     post<ProviderOAuthLoginState>(`/provider-auth/oauth/${encodeURIComponent(loginId)}/input`, { value }),
   cancelProviderOAuthLogin: async (loginId: string) =>
     post<ProviderOAuthLoginState>(`/provider-auth/oauth/${encodeURIComponent(loginId)}/cancel`),
+  /** @deprecated Production UI should read sidebarConversations() instead. */
   openConversationTabs: async () =>
     get<{
       sessionIds: string[];
@@ -586,7 +587,7 @@ export const api = {
       conversationWorkspaceMigratedAt?: string | null;
       sessions: SessionMeta[];
     }>('/sidebar/conversations'),
-  setOpenConversationTabs: async (
+  saveConversationWorkspaceLayout: async (
     sessionIds?: string[] | null,
     pinnedSessionIds?: string[] | null,
     archivedSessionIds?: string[] | null,
@@ -617,6 +618,15 @@ export const api = {
       conversationWorkspaceMigratedAt?: string | null;
     }>('/ui/open-conversations', request);
   },
+  /** @deprecated Production UI should call saveConversationWorkspaceLayout(). */
+  setOpenConversationTabs: async (
+    sessionIds?: string[] | null,
+    pinnedSessionIds?: string[] | null,
+    archivedSessionIds?: string[] | null,
+    workspacePaths?: string[] | null,
+    activeConversationId?: string | null,
+    options: { conversationWorkspaceMigrated?: boolean | null } = {},
+  ) => api.saveConversationWorkspaceLayout(sessionIds, pinnedSessionIds, archivedSessionIds, workspacePaths, activeConversationId, options),
   updateConversationWorkspace: async (
     input:
       | { operation: 'open'; sessionId: string; active?: boolean | null }
@@ -651,7 +661,7 @@ export const api = {
     return workspacePaths;
   },
   setSavedWorkspacePaths: async (workspacePaths: string[]) => {
-    const { workspacePaths: savedPaths } = await api.setOpenConversationTabs(undefined, undefined, undefined, workspacePaths);
+    const { workspacePaths: savedPaths } = await api.saveConversationWorkspaceLayout(undefined, undefined, undefined, workspacePaths);
     return savedPaths;
   },
 
@@ -1061,7 +1071,14 @@ export const api = {
       startedAtMs,
       meta: { conversationId: id, resumedConversationId: result.conversationId, serverPerf: result.perf ?? null },
     });
-    return result;
+    return {
+      conversationId: result.conversationId,
+      live: result.live,
+      resumed: result.recovered,
+      replayedPendingOperation: result.replayedPendingOperation,
+      usedFallbackPrompt: result.usedFallbackPrompt,
+      perf: result.perf,
+    };
   },
   prewarmLiveSession: async (cwd?: string) => post<{ ok: true }>('/live-sessions/prewarm', { cwd }),
 

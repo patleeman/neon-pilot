@@ -22,7 +22,7 @@ Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 const apiMocks = vi.hoisted(() => ({
   openConversationTabs: vi.fn(),
   sidebarConversations: vi.fn(),
-  setOpenConversationTabs: vi.fn(),
+  saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
   gateways: vi.fn(),
@@ -152,7 +152,7 @@ describe('Sidebar branch conversation interactions', () => {
     vi.stubGlobal('localStorage', createStorage());
     apiMocks.openConversationTabs.mockReset();
     apiMocks.sidebarConversations.mockReset();
-    apiMocks.setOpenConversationTabs.mockReset();
+    apiMocks.saveConversationWorkspaceLayout.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
     apiMocks.setSavedWorkspacePaths.mockReset();
     apiMocks.gateways.mockReset();
@@ -164,7 +164,7 @@ describe('Sidebar branch conversation interactions', () => {
       workspacePaths: [],
       sessions: [],
     });
-    apiMocks.setOpenConversationTabs.mockResolvedValue({ ok: true });
+    apiMocks.saveConversationWorkspaceLayout.mockResolvedValue({ ok: true });
     apiMocks.updateConversationWorkspace.mockResolvedValue({ ok: true });
     apiMocks.setSavedWorkspacePaths.mockResolvedValue([]);
     apiMocks.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });

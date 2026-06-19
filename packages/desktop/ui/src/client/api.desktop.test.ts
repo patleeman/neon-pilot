@@ -627,7 +627,7 @@ describe('api desktop transport', () => {
     });
     const renamed = await api.renameConversation('conversation-1', 'Renamed conversation', 'surface-1');
     const changedCwd = await api.changeConversationCwd('live-1', '/next-repo', 'surface-1');
-    const recovered = await api.resumeConversation('conversation-1');
+    const resumeResult = await api.resumeConversation('conversation-1');
     const modelPreferences = await api.conversationModelPreferences('live-1');
     const updatedModelPreferences = await api.updateConversationModelPreferences('live-1', { thinkingLevel: 'medium' }, 'surface-1');
     const live = await api.liveSession('live-1');
@@ -821,10 +821,10 @@ describe('api desktop transport', () => {
     expect(bootstrap).toEqual(createBootstrapState());
     expect(renamed).toEqual({ ok: true, title: 'Renamed conversation' });
     expect(changedCwd).toEqual({ id: 'live-1', sessionFile: '/tmp/live-1.jsonl', cwd: '/next-repo', changed: true });
-    expect(recovered).toEqual({
+    expect(resumeResult).toEqual({
       conversationId: 'live-1',
       live: true,
-      recovered: true,
+      resumed: true,
       replayedPendingOperation: false,
       usedFallbackPrompt: true,
     });
@@ -1290,7 +1290,7 @@ describe('api desktop transport', () => {
 
     const { api } = await import('./api');
     const layout = await api.openConversationTabs();
-    const savedLayout = await api.setOpenConversationTabs(['conversation-4'], ['conversation-5'], ['conversation-6']);
+    const savedLayout = await api.saveConversationWorkspaceLayout(['conversation-4'], ['conversation-5'], ['conversation-6']);
     const operationLayout = await api.updateConversationWorkspace({ operation: 'pin', sessionId: 'conversation-7' });
 
     expect(readOpenConversationTabs).not.toHaveBeenCalled();

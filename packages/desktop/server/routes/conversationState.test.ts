@@ -129,27 +129,6 @@ describe('conversationState routes', () => {
     expect(appEvents.publishAppEvent).toHaveBeenCalledWith({ type: 'session_file_changed', sessionId: 'conv-1' });
   });
 
-  it('recovers conversations through the HTTP route', async () => {
-    const { routes, context } = setupRouter();
-    const handler = routes.get('POST /api/conversations/:id/recover')!;
-    recovery.recoverConversationCapability.mockResolvedValue({ conversationId: 'conv-1', live: true, recovered: true });
-    const response = res();
-
-    await handler({ params: { id: 'conv-1' } }, response);
-
-    expect(recovery.recoverConversationCapability).toHaveBeenCalledWith(
-      'conv-1',
-      expect.objectContaining({
-        getRuntimeScope: context.getRuntimeScope,
-        buildLiveSessionResourceOptions: context.buildLiveSessionResourceOptions,
-        buildLiveSessionResourceOptionsAsync: context.buildLiveSessionResourceOptionsAsync,
-        buildLiveSessionExtensionFactories: context.buildLiveSessionExtensionFactories,
-        flushLiveDeferredResumes: context.flushLiveDeferredResumes,
-      }),
-    );
-    expect(response.json).toHaveBeenCalledWith({ conversationId: 'conv-1', live: true, recovered: true });
-  });
-
   it('duplicates live or persisted conversations and records offshoot metadata', async () => {
     const { routes, context } = setupRouter();
     const handler = routes.get('POST /api/conversations/:id/duplicate')!;
