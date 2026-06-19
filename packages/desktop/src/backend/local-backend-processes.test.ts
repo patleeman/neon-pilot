@@ -952,29 +952,20 @@ describe('LocalBackendProcesses', () => {
     await vi.waitFor(() => expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('backend warmup failed')));
   });
 
-  it('keeps the legacy open-conversations route as a compatibility alias', async () => {
-    class AliasBackend extends LocalBackendProcesses {
+  it('does not keep the legacy open-conversations route as a product API alias', async () => {
+    class NoAliasBackend extends LocalBackendProcesses {
       override async ensureStarted(): Promise<void> {
-        // The alias should resolve through the same main-process fast path.
+        throw new Error('legacy route should not resolve through a main-process product API fast path');
       }
     }
 
-    const backend = new AliasBackend();
-    const response = await backend.dispatchApiRequest({
-      method: 'GET',
-      path: '/api/ui/open-conversations',
-    });
-
-    expect(response.statusCode).toBe(200);
-    expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
-      localApi: {
-        fastPath: 'main-process',
-      },
-    });
-    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
-      sessionIds: expect.any(Array),
-      workspacePaths: expect.any(Array),
-    });
+    const backend = new NoAliasBackend();
+    await expect(
+      backend.dispatchApiRequest({
+        method: 'GET',
+        path: '/api/ui/open-conversations',
+      }),
+    ).rejects.toThrow('legacy route should not resolve through a main-process product API fast path');
   });
 
   it('persists full conversation workspace updates in the main process', async () => {

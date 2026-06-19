@@ -536,7 +536,7 @@ export class LocalBackendProcesses {
       const ids = Array.isArray(jsonBody.sessionIds) ? jsonBody.sessionIds.filter((id): id is string => typeof id === 'string') : [];
       return this.makeJsonResponse({ index: Object.fromEntries(ids.map((id) => [id, ''])) }, 'main-process');
     }
-    if (input.method === 'GET' && (path === '/api/conversation-workspace' || path === '/api/ui/open-conversations')) {
+    if (input.method === 'GET' && path === '/api/conversation-workspace') {
       this.warmBackendChild();
       this.warmCriticalExtensionRegistryModule();
       return this.makeJsonResponse(await readConversationWorkspaceFastPath(), 'main-process');
@@ -546,11 +546,11 @@ export class LocalBackendProcesses {
       this.warmCriticalExtensionRegistryModule();
       return this.makeJsonResponse(await readSidebarConversationsFastPath(), 'main-process');
     }
-    if (input.method === 'PATCH' && (path === '/api/conversation-workspace' || path === '/api/ui/open-conversations')) {
+    if (input.method === 'PATCH' && path === '/api/conversation-workspace') {
       this.warmBackendChild();
       return this.makeJsonResponse(await saveConversationWorkspaceFastPath(jsonBody), 'main-process');
     }
-    if (input.method === 'POST' && (path === '/api/conversation-workspace/operation' || path === '/api/ui/open-conversations/operation')) {
+    if (input.method === 'POST' && path === '/api/conversation-workspace/operation') {
       this.warmBackendChild();
       return this.makeJsonResponse(await updateConversationWorkspaceByOperationFastPath(jsonBody), 'main-process');
     }

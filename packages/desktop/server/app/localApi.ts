@@ -1147,18 +1147,18 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   if (method === 'GET' && providerOAuthMatch) {
     return createDesktopLocalApiJsonResponse(await readDesktopProviderOAuthLogin(decodeURIComponent(providerOAuthMatch[1] ?? '')));
   }
-  if (method === 'GET' && (path === '/api/conversation-workspace' || path === '/api/ui/open-conversations')) {
+  if (method === 'GET' && path === '/api/conversation-workspace') {
     return createDesktopLocalApiJsonResponse(await readDesktopConversationWorkspace());
   }
   if (method === 'GET' && path === '/api/sidebar/conversations') {
     return createDesktopLocalApiJsonResponse(await readDesktopSidebarConversations());
   }
-  if (method === 'PATCH' && (path === '/api/conversation-workspace' || path === '/api/ui/open-conversations')) {
+  if (method === 'PATCH' && path === '/api/conversation-workspace') {
     return createDesktopLocalApiJsonResponse(
       await saveDesktopConversationWorkspace(input.body as Parameters<typeof saveDesktopConversationWorkspace>[0]),
     );
   }
-  if (method === 'POST' && (path === '/api/conversation-workspace/operation' || path === '/api/ui/open-conversations/operation')) {
+  if (method === 'POST' && path === '/api/conversation-workspace/operation') {
     return createDesktopLocalApiJsonResponse(
       await updateDesktopConversationWorkspaceByOperation(
         input.body as Parameters<typeof updateDesktopConversationWorkspaceByOperation>[0],
