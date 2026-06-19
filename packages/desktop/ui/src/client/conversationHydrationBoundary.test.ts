@@ -44,4 +44,29 @@ describe('conversation hydration boundary', () => {
 
     expect(violations).toEqual([]);
   });
+
+  it('keeps backend transcript delta negotiation out of production UI callers', () => {
+    const bannedPatterns: Array<[RegExp, string]> = [
+      [/\bknownSessionSignature\b/, 'knownSessionSignature'],
+      [/\bknownBlockOffset\b/, 'knownBlockOffset'],
+      [/\bknownTotalBlocks\b/, 'knownTotalBlocks'],
+      [/\bknownLastBlockId\b/, 'knownLastBlockId'],
+      [/\bbuildSessionDetailKnownParams\b/, 'buildSessionDetailKnownParams'],
+      [/\bmergeAppendOnlySessionDetail\b/, 'mergeAppendOnlySessionDetail'],
+      [/\bmergeAppendOnlyConversationSessionDetail\b/, 'mergeAppendOnlyConversationSessionDetail'],
+      [/\breadPersistedConversationBootstrapEntry\b/, 'readPersistedConversationBootstrapEntry'],
+      [/\bwritePersistedConversationBootstrapEntry\b/, 'writePersistedConversationBootstrapEntry'],
+    ];
+    const violations = collectSourceFiles(uiSrcRoot).flatMap((path) => {
+      const rel = relative(uiSrcRoot, path);
+      if (rel === 'shared/types.ts') {
+        return [];
+      }
+
+      const source = readFileSync(path, 'utf8');
+      return bannedPatterns.flatMap(([pattern, label]) => (pattern.test(source) ? [`${rel}: ${label}`] : []));
+    });
+
+    expect(violations).toEqual([]);
+  });
 });
