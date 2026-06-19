@@ -4,7 +4,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 
 import { type LocalCheckpointCommitFile, parseCheckpointDiffSections } from '../conversations/conversationCheckpointCommit.js';
 import { createCoreWorkspaceRoot } from '../filesystem/filesystemAuthority.js';
-import { execFileProcess } from '../shared/processLauncher.js';
+import { execGitProcess, execGitProcessSync } from '../shared/processLauncher.js';
 import {
   type GitRepoInfo,
   type GitStatusChangeKind,
@@ -82,13 +82,12 @@ const UNCOMMITTED_DIFF_MAX_UNTRACKED_FILE_BYTES = 256 * 1024;
 const UNCOMMITTED_DIFF_TIMEOUT_MS = 5_000;
 
 function runGit(args: string[], cwd: string): string {
-  return execFileSync('git', ['-c', 'core.fsmonitor=false', ...args], {
+  return execGitProcessSync({
+    args,
     cwd,
-    stdio: ['ignore', 'pipe', 'ignore'],
-    encoding: 'utf-8',
-    timeout: 2_500,
+    timeoutMs: 2_500,
     maxBuffer: 8 * 1024 * 1024,
-  });
+  }).stdout;
 }
 
 function normalizeRelativePath(input: string | null | undefined): string {
@@ -557,8 +556,7 @@ function readChildProcessExitCode(error: unknown): number {
 
 async function runGitAllowFailureAsync(args: string[], cwd: string): Promise<{ stdout: string; exitCode: number }> {
   try {
-    const result = await execFileProcess({
-      command: 'git',
+    const result = await execGitProcess({
       args,
       cwd,
       timeoutMs: UNCOMMITTED_DIFF_TIMEOUT_MS,

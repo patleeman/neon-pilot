@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { clearProcessWrappers, execFileProcess, execGitProcessSync, registerProcessWrapper } from './processLauncher.js';
+import { clearProcessWrappers, execFileProcess, execGitProcess, execGitProcessSync, registerProcessWrapper } from './processLauncher.js';
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -36,6 +36,23 @@ describe('processLauncher', () => {
     }));
 
     const result = execGitProcessSync({
+      args: ['rev-parse', '--show-prefix', '--'],
+      cwd: process.cwd(),
+    });
+
+    expect(result.launch.command).toBe('git');
+    expect(result.launch.args).toEqual(['-c', 'core.fsmonitor=false', 'rev-parse', '--show-prefix', '--', 'wrapped-value']);
+    expect(result.launch.wrappers).toEqual([{ id: 'git-wrapper-test', label: undefined }]);
+    expect(result.stdout).toContain('wrapped-value');
+  });
+
+  it('applies registered wrappers to async git commands', async () => {
+    registerProcessWrapper('git-wrapper-test', (context) => ({
+      ...context,
+      args: [...context.args, 'wrapped-value'],
+    }));
+
+    const result = await execGitProcess({
       args: ['rev-parse', '--show-prefix', '--'],
       cwd: process.cwd(),
     });

@@ -203,6 +203,25 @@ export async function execFileProcess(input: {
   });
 }
 
+export async function execGitProcess(input: {
+  args: string[];
+  cwd: string;
+  env?: NodeJS.ProcessEnv;
+  timeoutMs?: number;
+  maxBuffer?: number;
+  signal?: AbortSignal;
+}): Promise<{ launch: ProcessLaunchResult; stdout: string; stderr: string }> {
+  return execFileProcess({
+    command: 'git',
+    args: ['-c', 'core.fsmonitor=false', ...input.args],
+    cwd: input.cwd,
+    env: input.env,
+    timeoutMs: input.timeoutMs,
+    maxBuffer: input.maxBuffer,
+    signal: input.signal,
+  });
+}
+
 export function execFileProcessSync(input: {
   command: string;
   args?: string[];
