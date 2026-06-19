@@ -1,7 +1,5 @@
 # neon-pilot repo instructions
 
-neon-pilot is Patrick's personal AI agent runtime. Keep core small and build user-facing features as extensions by default.
-
 ## Always-on rules
 
 - Prefer correct, complete implementations over compatibility shims or narrow safe cuts.
