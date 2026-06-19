@@ -1,5 +1,3 @@
-import { spawnSync } from 'node:child_process';
-
 import {
   type ConversationCommitCheckpointFile,
   type ConversationCommitCheckpointRecord,
@@ -7,6 +5,7 @@ import {
   listConversationCommitCheckpoints,
 } from '@neon-pilot/core';
 
+import { execGitProcessSync } from '../shared/processLauncher.js';
 import { readConversationSessionMeta } from './conversationService.js';
 
 interface GitHubRepoRef {
@@ -51,16 +50,17 @@ export interface ReviewableConversationCommitCheckpointRecord extends Conversati
 }
 
 function runGit(cwd: string, args: string[], options?: { encoding?: BufferEncoding | 'buffer'; timeout?: number }): string | Buffer | null {
-  const result = spawnSync('git', ['-c', 'core.fsmonitor=false', ...args], {
-    cwd,
-    encoding: options?.encoding ?? 'utf-8',
-    timeout: options?.timeout ?? 4_000,
+  try {
+    const result = execGitProcessSync({
+      args,
+      cwd,
+      timeoutMs: options?.timeout ?? 4_000,
   });
-  if (result.error || result.status !== 0) {
+    if (options?.encoding === 'buffer') return Buffer.from(result.stdout, 'utf-8');
+    return result.stdout;
+  } catch {
     return null;
   }
-
-  return result.stdout as string | Buffer;
 }
 
 function normalizeCommitHashInput(value: string): string | null {
