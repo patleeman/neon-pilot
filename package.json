@@ -35,6 +35,7 @@
     "release:desktop:major": "pnpm run release:major && pnpm run release:publish",
     "version": "pnpm run release:sync-pi && node scripts/sync-workspace-versions.mjs && node scripts/update-changelog-for-release.mjs && pnpm install --lockfile-only --ignore-scripts && git add package.json pnpm-lock.yaml packages/*/package.json CHANGELOG.md",
     "setup:hooks": "git config core.hooksPath .githooks",
+    "prepare": "pnpm run setup:hooks",
     "lint": "eslint packages --ext .ts,.tsx",
     "lint:fix": "eslint packages --ext .ts,.tsx --fix",
     "fmt": "prettier --check .",

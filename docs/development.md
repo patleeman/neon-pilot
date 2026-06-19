@@ -6,12 +6,11 @@ Use this page for day-to-day repo development, validation, UI QA, and targeted c
 
 ```bash
 pnpm install
-pnpm run setup:hooks   # optional: enable tracked git hooks
 pnpm run build
 pnpm run desktop:start
 ```
 
-The repo intentionally avoids a root `postinstall`. Third-party build scripts are allowlisted in `pnpm-workspace.yaml`; new blocked scripts appear in `pnpm ignored-builds`.
+`pnpm install` runs the root `prepare` script, which configures Git to use the tracked hooks in `.githooks`. The repo intentionally avoids a root `postinstall`. Third-party build scripts are allowlisted in `pnpm-workspace.yaml`; new blocked scripts appear in `pnpm ignored-builds`.
 
 For the desktop dev app:
 
@@ -128,9 +127,9 @@ Rules:
 - If unrelated work is mixed into a file and cannot be safely separated, stop and tell Patrick.
 - Do not manually `git add`, `git commit`, or `git push`; use the checkpoint tool.
 
-## Secret scanning
+## Pre-commit checks
 
-The tracked pre-commit hook lives at `.githooks/pre-commit` and runs gitleaks, typecheck, prettier, and eslint on staged files. Enable it with:
+The tracked pre-commit hook lives at `.githooks/pre-commit` and runs gitleaks, typecheck, prettier, and eslint on staged files. `pnpm install` enables it automatically; if a checkout is missing the hook config, restore it with:
 
 ```bash
 pnpm run setup:hooks
