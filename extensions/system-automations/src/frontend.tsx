@@ -2,45 +2,29 @@ import type { NativeExtensionClient } from '@neon-pilot/extensions';
 import type { ScheduledTaskSchedulerHealth, ScheduledTaskSummary } from '@neon-pilot/extensions/data';
 import { timeAgo } from '@neon-pilot/extensions/data';
 import {
-  AppPageIntro,
   AppPageLayout,
-  AppPageSection,
   AppPageToc,
   Button,
-  CardBody,
-  CardMeta,
   cx,
-  DataTable,
-  DataTableActionGroup,
-  DataTableBody,
-  DataTableCell,
-  DataTableEmptyRow,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
   ErrorState,
   Field,
-  FilterToolbar,
   IconButton,
-  IconLink,
   KeyValueTable,
   LoadingState,
-  MenuItem,
   Notice,
-  PositionedMenu,
   SearchInput,
-  Select,
   SegmentedControl,
+  Select,
   SettingsSection,
   StatusDot,
   type StatusDotTone,
   Switch,
-  TextButton,
   Textarea,
+  TextButton,
   TextInput,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
-import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface ConversationOption {
   id: string;
@@ -95,9 +79,30 @@ type AutomationTaskForEditor = ScheduledTaskSummary & {
   policies?: AutomationPolicy[];
 };
 
-type AutomationFilter = 'all' | 'current' | 'past-due' | 'failed' | 'disabled';
 type EditorSectionId = 'automation-general' | 'automation-schedule' | 'automation-policies' | 'automation-delivery' | 'automation-runtime';
 type AutomationsPageContext = { search?: string };
+type ActivityFilter = 'all' | 'running' | 'needs-attention' | 'scheduled' | 'disabled';
+type ActivityTone = 'success' | 'accent' | 'warning' | 'danger' | 'muted';
+type ReactionKind = 'agent' | 'thread' | 'script' | 'event';
+
+export interface AutomationActivityEvent {
+  id: string;
+  taskId: string;
+  eventName: string;
+  source: string;
+  title: string;
+  relativeTime: string;
+  absoluteTime?: string;
+  status: string;
+  tone: ActivityTone;
+  matches: number;
+  reactionKind: ReactionKind;
+  reactionTitle: string;
+  reactionStatus: string;
+  reactionMeta: string;
+  emittedEvent?: string;
+  trace: Array<{ label: string; meta: string; tone: ActivityTone }>;
+}
 
 const EDITOR_TOC_ITEMS: Array<{ id: EditorSectionId; label: string; summary: string }> = [
   { id: 'automation-general', label: 'General', summary: 'Name and instruction' },
@@ -149,32 +154,18 @@ const CRON_PRESETS = [
   },
 ];
 
-const FILTER_LABELS: Record<AutomationFilter, string> = {
-  all: 'All',
-  current: 'Current',
-  'past-due': 'Past due',
-  failed: 'Failed',
-  disabled: 'Disabled',
-};
-
 const SCHEDULE_TYPE_OPTIONS = [
   { value: 'cron', label: 'Recurring' },
   { value: 'at', label: 'Once' },
 ] as const;
 
-const AUTOMATION_FILTER_OPTIONS = (Object.keys(FILTER_LABELS) as AutomationFilter[]).map((value) => ({
-  value,
-  label: FILTER_LABELS[value],
-}));
-
-const MAX_RENDERED_LOG_CHARS = 20_000;
-
-function truncateLogForRender(value: string | undefined | null): string {
-  if (!value) return 'No log yet.';
-  return value.length > MAX_RENDERED_LOG_CHARS
-    ? `… truncated to latest ${MAX_RENDERED_LOG_CHARS} chars …\n${value.slice(-MAX_RENDERED_LOG_CHARS)}`
-    : value;
-}
+const ACTIVITY_FILTER_LABELS: Record<ActivityFilter, string> = {
+  all: 'All',
+  running: 'Running',
+  'needs-attention': 'Needs attention',
+  scheduled: 'Scheduled',
+  disabled: 'Disabled',
+};
 
 const emptyForm: AutomationFormState = {
   title: '',
@@ -426,32 +417,6 @@ function isPastDueOneTimeTask(task: ScheduledTaskSummary, nowMs = Date.now()) {
   return atMs !== null && atMs <= nowMs;
 }
 
-function statusText(task: ScheduledTaskSummary, nowMs = Date.now()) {
-  if (task.running) return 'Running';
-  if (isPastDueOneTimeTask(task, nowMs)) return 'Past due';
-  if (!task.enabled) return 'Disabled';
-  if (isFailedTask(task)) return 'Needs attention';
-  if (task.lastStatus === 'success') return 'Active';
-  return task.cron || task.at ? 'Active' : 'Manual';
-}
-
-function statusClass(task: ScheduledTaskSummary, nowMs = Date.now()) {
-  if (task.running) return 'bg-accent border-accent';
-  if (isPastDueOneTimeTask(task, nowMs)) return 'bg-warning border-warning';
-  if (!task.enabled) return 'opacity-40';
-  if (isFailedTask(task)) return 'bg-danger border-danger';
-  if (task.lastStatus === 'success') return 'bg-success border-success';
-  return 'border-secondary';
-}
-
-function statusTextClass(task: ScheduledTaskSummary, nowMs = Date.now()) {
-  if (task.running) return 'text-accent';
-  if (isPastDueOneTimeTask(task, nowMs)) return 'text-warning';
-  if (!task.enabled) return 'text-dim';
-  if (isFailedTask(task)) return 'text-danger';
-  return 'text-success';
-}
-
 function scheduleText(task: ScheduledTaskSummary) {
   if (task.cron) return `Cron ${task.cron}`;
   if (task.at) return `Once ${task.at}`;
@@ -483,40 +448,209 @@ function taskTargetLabel(task: ScheduledTaskSummary) {
   return task.targetType === 'conversation' ? 'Thread' : 'Job';
 }
 
-function taskSearchText(task: ScheduledTaskSummary) {
+function taskReactionKind(task: ScheduledTaskSummary): ReactionKind {
+  return task.targetType === 'conversation' ? 'thread' : 'agent';
+}
+
+function reactionLaneLabel(kind: ReactionKind) {
+  switch (kind) {
+    case 'agent':
+      return 'Agent';
+    case 'thread':
+      return 'Thread';
+    case 'script':
+      return 'Script';
+    case 'event':
+      return 'Published Event';
+  }
+}
+
+function reactionIcon(kind: ReactionKind) {
+  switch (kind) {
+    case 'agent':
+      return '⌁';
+    case 'thread':
+      return '↳';
+    case 'script':
+      return '✳';
+    case 'event':
+      return '◇';
+  }
+}
+
+function toneDotClass(tone: ActivityTone) {
+  switch (tone) {
+    case 'success':
+      return 'border-success bg-success shadow-[0_0_10px_rgb(var(--color-success)/0.38)]';
+    case 'accent':
+      return 'border-accent bg-accent shadow-[0_0_10px_rgb(var(--color-accent)/0.42)]';
+    case 'warning':
+      return 'border-warning bg-warning shadow-[0_0_10px_rgb(var(--color-warning)/0.35)]';
+    case 'danger':
+      return 'border-danger bg-danger shadow-[0_0_10px_rgb(var(--color-danger)/0.36)]';
+    case 'muted':
+      return 'border-border-default bg-surface';
+  }
+}
+
+function toneTextClass(tone: ActivityTone) {
+  switch (tone) {
+    case 'success':
+      return 'text-success';
+    case 'accent':
+      return 'text-accent';
+    case 'warning':
+      return 'text-warning';
+    case 'danger':
+      return 'text-danger';
+    case 'muted':
+      return 'text-dim';
+  }
+}
+
+function toneBorderClass(tone: ActivityTone) {
+  switch (tone) {
+    case 'success':
+      return 'border-success/45 bg-success/10';
+    case 'accent':
+      return 'border-accent/45 bg-accent/10';
+    case 'warning':
+      return 'border-warning/45 bg-warning/10';
+    case 'danger':
+      return 'border-danger/45 bg-danger/10';
+    case 'muted':
+      return 'border-border-subtle/80 bg-surface/25';
+  }
+}
+
+function activityFilterMatches(event: AutomationActivityEvent, filter: ActivityFilter) {
+  switch (filter) {
+    case 'all':
+      return true;
+    case 'running':
+      return event.status === 'Running';
+    case 'needs-attention':
+      return event.tone === 'danger' || event.tone === 'warning';
+    case 'scheduled':
+      return event.eventName === 'schedule.armed' || event.eventName === 'schedule.due';
+    case 'disabled':
+      return event.status === 'Disabled';
+  }
+}
+
+function activitySearchText(event: AutomationActivityEvent) {
   return [
-    task.id,
-    task.title,
-    task.prompt,
-    task.cron,
-    task.at,
-    task.cwd,
-    task.threadConversationId,
-    task.threadTitle,
-    task.targetType,
-    taskScheduleSummary(task),
-    taskLastRunText(task),
+    event.id,
+    event.taskId,
+    event.eventName,
+    event.source,
+    event.title,
+    event.status,
+    event.reactionTitle,
+    event.reactionStatus,
+    event.reactionMeta,
+    event.emittedEvent,
   ]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
 }
 
-function matchesAutomationFilter(task: ScheduledTaskSummary, filter: AutomationFilter, nowMs: number) {
-  switch (filter) {
-    case 'all':
-      return true;
-    case 'current':
-      return !isPastDueOneTimeTask(task, nowMs);
-    case 'past-due':
-      return isPastDueOneTimeTask(task, nowMs);
-    case 'failed':
-      return isFailedTask(task);
-    case 'disabled':
-      return task.enabled === false;
-    default:
-      return true;
-  }
+export function buildAutomationActivityEvents(tasks: ScheduledTaskSummary[], nowMs = Date.now()): AutomationActivityEvent[] {
+  const sorted = sortTasks(tasks);
+  return sorted.map((task) => {
+    const name = taskName(task);
+    const reactionKind = taskReactionKind(task);
+    const target = taskTargetLabel(task);
+    const schedule = taskScheduleSummary(task);
+    const scope = taskScopeText(task);
+    const source = task.cron || task.at ? 'Scheduler' : 'Manual';
+    const lastRunText = taskLastRunText(task, nowMs);
+    const isPastDue = isPastDueOneTimeTask(task, nowMs);
+    const failed = isFailedTask(task);
+    const running = Boolean(task.running);
+    const disabled = task.enabled === false;
+
+    let eventName = 'schedule.armed';
+    let status = 'Scheduled';
+    let tone: ActivityTone = 'success';
+    let relativeTime = lastRunText;
+    const absoluteTime = task.lastRunAt ?? task.at ?? undefined;
+    let reactionStatus = 'Waiting';
+    let reactionMeta = schedule;
+    let emittedEvent: string | undefined;
+
+    if (disabled) {
+      eventName = 'automation.disabled';
+      status = 'Disabled';
+      tone = 'muted';
+      relativeTime = 'Paused';
+      reactionStatus = 'Paused';
+      reactionMeta = schedule;
+    } else if (running) {
+      eventName = 'schedule.due';
+      status = 'Running';
+      tone = 'accent';
+      relativeTime = 'Now';
+      reactionStatus = 'Running';
+      reactionMeta = target === 'Thread' ? 'Resuming thread' : 'Agent active';
+    } else if (failed) {
+      eventName = 'automation.failed';
+      status = 'Failed';
+      tone = 'danger';
+      relativeTime = task.lastRunAt ? timeAgo(task.lastRunAt) : 'Needs attention';
+      reactionStatus = 'Failed';
+      reactionMeta = 'Last run failed';
+      emittedEvent = 'automation.alerted';
+    } else if (isPastDue) {
+      eventName = 'schedule.due';
+      status = 'Past due';
+      tone = 'warning';
+      relativeTime = task.at ? timeAgo(task.at) : 'Past due';
+      reactionStatus = 'Waiting';
+      reactionMeta = 'Due event not consumed yet';
+    } else if (task.lastStatus === 'success') {
+      eventName = 'automation.completed';
+      status = 'Processed';
+      tone = 'success';
+      relativeTime = task.lastRunAt ? timeAgo(task.lastRunAt) : lastRunText;
+      reactionStatus = 'Completed';
+      reactionMeta = target === 'Thread' ? 'Thread updated' : 'Agent completed';
+      emittedEvent = target === 'Thread' ? 'thread.message.created' : 'agent.run.completed';
+    }
+
+    const trace: AutomationActivityEvent['trace'] = [
+      {
+        label: source === 'Scheduler' ? 'schedule.ready' : 'manual.triggered',
+        meta: schedule,
+        tone: source === 'Scheduler' ? 'success' : 'accent',
+      },
+      { label: eventName, meta: relativeTime, tone },
+      { label: `${reactionLaneLabel(reactionKind).toLowerCase()}.reaction`, meta: reactionStatus, tone },
+    ];
+    if (emittedEvent) {
+      trace.push({ label: emittedEvent, meta: 'Published', tone: 'success' });
+    }
+
+    return {
+      id: `${task.id}:${eventName}`,
+      taskId: task.id,
+      eventName,
+      source,
+      title: name,
+      relativeTime,
+      absoluteTime,
+      status,
+      tone,
+      matches: disabled ? 0 : 1,
+      reactionKind,
+      reactionTitle: name,
+      reactionStatus,
+      reactionMeta: reactionMeta || scope || schedule,
+      emittedEvent,
+      trace,
+    };
+  });
 }
 
 function numberOrNull(value: string) {
@@ -694,44 +828,6 @@ function buildCreateWithChatPrompt(form: AutomationFormState) {
   return lines.join('\n');
 }
 
-function MoreIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="currentColor">
-      <circle cx="3" cy="8" r="1.2" />
-      <circle cx="8" cy="8" r="1.2" />
-      <circle cx="13" cy="8" r="1.2" />
-    </svg>
-  );
-}
-
-function OpenIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
-      <path d="M6 4h6v6" />
-      <path d="M12 4 5 11" />
-      <path d="M3.5 6.5v6h6" />
-    </svg>
-  );
-}
-
-function EditIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
-      <path d="M3.5 11.8 4 9.5 10.8 2.7a1.4 1.4 0 0 1 2 2L6 11.5l-2.5.3Z" />
-      <path d="M9.6 4 12 6.4" />
-      <path d="M3 13h10" />
-    </svg>
-  );
-}
-
-function RunIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="currentColor">
-      <path d="M5 3.2v9.6L12.6 8 5 3.2Z" />
-    </svg>
-  );
-}
-
 function RefreshIcon() {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -741,242 +837,335 @@ function RefreshIcon() {
   );
 }
 
-function TaskActionsMenu({
-  task,
-  busy,
-  logOpen,
-  onToggleLog,
-  onDelete,
-}: {
-  task: ScheduledTaskSummary;
-  busy: boolean;
-  logOpen: boolean;
-  onToggleLog: () => void;
-  onDelete: () => void;
-}) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const [open, setOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
-
-  const positionMenu = useCallback(() => {
-    const rect = rootRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setMenuPosition({ top: rect.bottom + 8, right: Math.max(12, window.innerWidth - rect.right) });
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    positionMenu();
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-      if (target instanceof Node && rootRef.current?.contains(target)) return;
-      setOpen(false);
-    }
-
-    function handleReposition() {
-      positionMenu();
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('resize', handleReposition);
-    window.addEventListener('scroll', handleReposition, true);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('resize', handleReposition);
-      window.removeEventListener('scroll', handleReposition, true);
-    };
-  }, [open, positionMenu]);
-
+function ActivityLaneHeader() {
   return (
-    <div ref={rootRef} className="relative" onClick={(event) => event.stopPropagation()}>
-      <IconButton
-        compact
-        disabled={busy}
-        title={`More actions for ${taskName(task)}`}
-        aria-label={`More actions for ${taskName(task)}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen((current) => !current);
-        }}
+    <div className="grid grid-cols-4 border-b border-border-subtle/70 text-[11px] font-medium uppercase tracking-normal text-dim">
+      {(['agent', 'script', 'thread', 'event'] as ReactionKind[]).map((kind) => (
+        <div key={kind} className="flex h-9 items-center gap-1.5 px-3">
+          <span
+            className={cx(
+              'text-[13px]',
+              kind === 'agent' ? 'text-success' : kind === 'script' ? 'text-warning' : kind === 'thread' ? 'text-accent' : 'text-secondary',
+            )}
+          >
+            {reactionIcon(kind)}
+          </span>
+          <span>{reactionLaneLabel(kind)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActivityReactionCard({ event, selected }: { event: AutomationActivityEvent; selected: boolean }) {
+  const laneIndex = event.reactionKind === 'agent' ? 0 : event.reactionKind === 'script' ? 1 : event.reactionKind === 'thread' ? 2 : 3;
+  return (
+    <div className="grid min-w-[34rem] grid-cols-4 items-center">
+      <div className="col-span-4 grid grid-cols-4">
+        <div className={cx('col-start-1 h-px self-center bg-border-subtle/80', laneIndex === 0 ? 'w-10' : 'w-full')} />
+        {laneIndex > 0 ? <div className="col-start-2 h-px self-center bg-border-subtle/80" /> : null}
+        {laneIndex > 1 ? <div className="col-start-3 h-px self-center bg-border-subtle/80" /> : null}
+        {laneIndex > 2 ? <div className="col-start-4 h-px self-center bg-border-subtle/80" /> : null}
+      </div>
+      <div
+        className={cx(
+          'relative z-10 col-span-1 min-w-0 rounded-md border px-3 py-2 shadow-sm',
+          toneBorderClass(event.tone),
+          selected ? 'shadow-[0_0_0_1px_rgb(var(--color-accent)/0.28),0_10px_28px_rgb(0_0_0/0.2)]' : '',
+        )}
+        style={{ gridColumnStart: laneIndex + 1 }}
       >
-        <MoreIcon />
-      </IconButton>
-      {open ? (
-        <PositionedMenu className="w-40" position={menuPosition ?? undefined}>
-          <MenuItem
-            onClick={(event) => {
-              event.stopPropagation();
-              setOpen(false);
-              onToggleLog();
-            }}
-          >
-            {logOpen ? 'Hide log' : 'Show log'}
-          </MenuItem>
-          <MenuItem
-            tone="danger"
-            disabled={busy}
-            onClick={(event) => {
-              event.stopPropagation();
-              setOpen(false);
-              onDelete();
-            }}
-          >
-            Delete
-          </MenuItem>
-        </PositionedMenu>
+        <div className="flex min-w-0 items-center gap-2">
+          <span aria-hidden="true" className={cx('text-[13px]', toneTextClass(event.tone))}>
+            {reactionIcon(event.reactionKind)}
+          </span>
+          <span className="min-w-0 truncate text-[13px] font-medium text-primary">{event.reactionTitle}</span>
+        </div>
+        <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-secondary">
+          <span className={toneTextClass(event.tone)}>{event.reactionStatus}</span>
+          <span className="text-dim">·</span>
+          <span className="truncate">{event.reactionMeta}</span>
+        </div>
+      </div>
+      {event.emittedEvent ? (
+        <div className="col-span-1 flex min-w-0 items-center gap-2 pl-3">
+          <div className="h-px w-8 bg-border-subtle/80" />
+          <div className="min-w-0 rounded-md border border-warning/45 bg-warning/10 px-3 py-2">
+            <div className="truncate text-[12px] font-medium text-primary">{event.emittedEvent}</div>
+            <div className="mt-0.5 text-[11px] text-warning">Published</div>
+          </div>
+        </div>
       ) : null}
     </div>
   );
 }
 
-function AutomationTable({
-  tasks,
-  empty,
-  logById,
-  busy,
-  nowMs,
-  onRunTask,
+function ActivityTimeline({
+  events,
+  selectedId,
+  onSelect,
   onOpenEditor,
-  onToggleLog,
-  onDeleteTask,
 }: {
-  tasks: ScheduledTaskSummary[];
-  empty?: ReactNode;
-  logById: Record<string, string>;
-  busy: string | null;
-  nowMs: number;
-  onRunTask: (taskId: string) => void;
-  onOpenEditor: (task: ScheduledTaskSummary) => void;
-  onToggleLog: (taskId: string) => void;
-  onDeleteTask: (task: ScheduledTaskSummary) => void;
+  events: AutomationActivityEvent[];
+  selectedId: string | null;
+  onSelect: (eventId: string) => void;
+  onOpenEditor: (taskId: string) => void;
 }) {
+  if (events.length === 0) {
+    const idleRows = [
+      { time: '10:24', name: 'schedule.due', source: 'Scheduled publisher', lane: 0, width: 'w-40' },
+      { time: '10:22', name: 'script.event.emitted', source: 'Script publisher', lane: 1, width: 'w-44' },
+      { time: '10:20', name: 'agent.run.completed', source: 'Agent publisher', lane: 2, width: 'w-36' },
+      { time: '10:18', name: 'thread.resume.requested', source: 'Thread publisher', lane: 3, width: 'w-40' },
+    ];
+    return (
+      <div className="min-h-0 overflow-auto">
+        <div className="grid min-w-[58rem] grid-cols-[22rem_minmax(34rem,1fr)]">
+          <div className="border-b border-border-subtle/70 bg-background/95 px-5 py-3 text-[11px] font-medium uppercase text-dim">
+            Event Stream
+          </div>
+          <ActivityLaneHeader />
+          <div className="relative min-h-[28rem] border-r border-border-subtle/70 text-[13px] text-secondary">
+            <div className="absolute bottom-6 left-[6.45rem] top-0 w-px bg-border-subtle/80" />
+            <div className="border-b border-border-subtle/60 bg-surface/10 px-5 py-4">
+              <div className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3">
+                <div className="font-mono text-[12px] text-dim">Idle</div>
+                <div className="relative min-w-0 pl-5">
+                  <span className="absolute left-[-0.43rem] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-accent/70 bg-background ring-4 ring-background" />
+                  <div className="max-w-sm">
+                    <div className="text-[13px] font-medium text-primary">No matching event activity.</div>
+                    <div className="mt-1 text-[12px] leading-5 text-secondary">
+                      Publishers are quiet. When schedules, scripts, threads, or agents emit events, they flow down this stream.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {idleRows.map((row, index) => (
+              <div
+                key={row.name}
+                className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3 border-b border-border-subtle/50 px-5 py-4 opacity-55"
+              >
+                <div className="font-mono text-[12px] text-dim">{row.time}</div>
+                <div className="relative min-w-0 pl-5">
+                  <span className="absolute left-[-0.34rem] top-1.5 h-2.5 w-2.5 rounded-full border border-border-subtle bg-background ring-4 ring-background" />
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-28 rounded-sm bg-surface/80" />
+                    <div className="h-2 w-12 rounded-sm bg-surface/45" />
+                  </div>
+                  <div className={cx('mt-2 h-2 rounded-sm bg-surface/50', index === 1 ? 'w-24' : 'w-28')} />
+                  <span className="sr-only">
+                    Example event shape: {row.name} from {row.source}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="min-h-[28rem] bg-surface/5">
+            {idleRows.map((row) => (
+              <div
+                key={`${row.name}:reaction`}
+                className="flex min-h-[4.55rem] items-center border-b border-border-subtle/50 px-5 py-4 opacity-55"
+              >
+                <div className="grid min-w-[34rem] grid-cols-4 items-center">
+                  <div className="col-span-4 grid grid-cols-4">
+                    <div className={cx('h-px self-center bg-border-subtle/80', row.lane === 0 ? 'w-10' : 'w-full')} />
+                    {row.lane > 0 ? <div className="col-start-2 h-px self-center bg-border-subtle/80" /> : null}
+                    {row.lane > 1 ? <div className="col-start-3 h-px self-center bg-border-subtle/80" /> : null}
+                  </div>
+                  <div
+                    className={cx('relative z-10 h-9 rounded-sm border border-border-subtle/35 bg-surface/35', row.width)}
+                    style={{ gridColumnStart: row.lane + 1 }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <section>
-      <DataTable
-        className="overflow-x-auto overflow-y-visible"
-        tableClassName="min-w-[54rem] table-fixed"
-        columns={
-          <colgroup>
-            <col className="w-[46%]" />
-            <col className="w-[22%]" />
-            <col className="w-[18%]" />
-            <col className="w-[14%]" />
-          </colgroup>
-        }
-      >
-        <DataTableHead>
-          <DataTableRow className="hover:bg-transparent">
-            <DataTableHeaderCell className="pl-0">Name</DataTableHeaderCell>
-            <DataTableHeaderCell>Schedule</DataTableHeaderCell>
-            <DataTableHeaderCell>Status</DataTableHeaderCell>
-            <DataTableHeaderCell className="text-right">Actions</DataTableHeaderCell>
-          </DataTableRow>
-        </DataTableHead>
-        <DataTableBody>
-          {tasks.length === 0 ? (
-            <DataTableEmptyRow colSpan={4} cellClassName="px-6 py-10 text-left">
-              {empty ?? 'No automations.'}
-            </DataTableEmptyRow>
-          ) : null}
-          {tasks.map((task) => {
-            const scope = taskScopeText(task);
-            const taskBusy = busy === `run:${task.id}` || busy === `delete:${task.id}`;
+    <div className="min-h-0 overflow-auto">
+      <div className="grid min-w-[58rem] grid-cols-[22rem_minmax(34rem,1fr)]">
+        <div className="sticky top-0 z-20 border-b border-border-subtle/70 bg-background/95 px-5 py-3 text-[11px] font-medium uppercase text-dim">
+          Event Stream
+        </div>
+        <div className="sticky top-0 z-20 bg-background/95">
+          <ActivityLaneHeader />
+        </div>
+        <div className="relative border-r border-border-subtle/70">
+          <div className="absolute bottom-6 left-[6.45rem] top-0 w-px bg-border-subtle/80" />
+          {events.map((event) => {
+            const selected = event.id === selectedId;
             return (
-              <Fragment key={task.id}>
-                <DataTableRow className="group">
-                  <DataTableCell className="min-w-0 pl-0 pr-4">
-                    <div className="min-w-0">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className={cx('h-2.5 w-2.5 shrink-0 rounded-full border', statusClass(task, nowMs))} />
-                        <div className="truncate text-[14px] font-semibold text-primary">{taskName(task)}</div>
+              <button
+                key={event.id}
+                type="button"
+                className={cx(
+                  'group grid w-full grid-cols-[6.5rem_minmax(0,1fr)] gap-3 border-b border-border-subtle/60 px-5 py-4 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/60',
+                  selected ? 'bg-accent/10' : 'hover:bg-surface/25',
+                )}
+                onClick={() => onSelect(event.id)}
+                onDoubleClick={() => onOpenEditor(event.taskId)}
+              >
+                <div className="text-[12px] leading-5 text-secondary">
+                  <div className="font-mono text-primary">
+                    {event.absoluteTime
+                      ? new Date(event.absoluteTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : 'Pending'}
+                  </div>
+                  <div className="text-dim">{event.relativeTime}</div>
+                </div>
+                <div className="relative min-w-0 pl-5">
+                  <span
+                    className={cx(
+                      'absolute left-[-0.43rem] top-1.5 h-3.5 w-3.5 rounded-full border-2 ring-4 ring-background',
+                      toneDotClass(event.tone),
+                    )}
+                  />
+                  <div
+                    className={cx(
+                      'rounded-md border px-3 py-2.5 transition-colors',
+                      selected
+                        ? 'border-accent/70 bg-surface/45 shadow-[0_0_0_1px_rgb(var(--color-accent)/0.22)]'
+                        : 'border-transparent bg-transparent group-hover:border-border-subtle/70 group-hover:bg-surface/25',
+                    )}
+                  >
+                    <div className="flex min-w-0 items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-[13px] font-semibold text-primary">{event.eventName}</div>
+                        <div className="mt-0.5 truncate text-[12px] text-secondary">{event.source}</div>
                       </div>
-                      <CardBody as="div" className="mt-0.5 max-w-[44rem] whitespace-normal break-words">
-                        {task.prompt || 'No prompt summary.'}
-                      </CardBody>
-                      <div className="mt-1 text-[11px] text-dim">
-                        {task.id} · {taskTargetLabel(task)}
-                        {scope ? ` · ${scope}` : ''}
+                      <div className="shrink-0 text-right text-[11px] text-dim">
+                        {event.matches === 1 ? '1 match' : `${event.matches} matches`}
                       </div>
                     </div>
-                  </DataTableCell>
-                  <DataTableCell>
-                    <div className="text-[13px] text-primary">{taskScheduleSummary(task)}</div>
-                    <div className="mt-0.5 break-all font-mono text-[11px] text-dim">{task.cron ?? task.at ?? 'Manual'}</div>
-                  </DataTableCell>
-                  <DataTableCell className="whitespace-nowrap">
-                    <div className={cx('text-[12px]', statusTextClass(task, nowMs))}>{statusText(task, nowMs)}</div>
-                    <CardMeta as="div" className="mt-0.5">
-                      {taskLastRunText(task, nowMs)}
-                    </CardMeta>
-                  </DataTableCell>
-                  <DataTableCell>
-                    <DataTableActionGroup>
-                      {taskBusy ? <span className="text-[11px] text-dim">Working…</span> : null}
-                      {task.threadConversationId ? (
-                        <IconLink
-                          compact
-                          href={`/conversations/${encodeURIComponent(task.threadConversationId)}`}
-                          title={`Open thread for ${taskName(task)}`}
-                          aria-label={`Open thread for ${taskName(task)}`}
-                        >
-                          <OpenIcon />
-                        </IconLink>
-                      ) : null}
-                      <IconButton
-                        compact
-                        disabled={taskBusy}
-                        title={`Run ${taskName(task)} now`}
-                        aria-label={`Run ${taskName(task)} now`}
-                        onClick={() => onRunTask(task.id)}
-                      >
-                        <RunIcon />
-                      </IconButton>
-                      <IconButton
-                        compact
-                        disabled={taskBusy}
-                        title={`Edit ${taskName(task)}`}
-                        aria-label={`Edit ${taskName(task)}`}
-                        onClick={() => onOpenEditor(task)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <TaskActionsMenu
-                        task={task}
-                        busy={taskBusy}
-                        logOpen={Boolean(logById[task.id])}
-                        onToggleLog={() => onToggleLog(task.id)}
-                        onDelete={() => onDeleteTask(task)}
-                      />
-                    </DataTableActionGroup>
-                  </DataTableCell>
-                </DataTableRow>
-                {logById[task.id] ? (
-                  <DataTableRow className="bg-surface/20 hover:bg-surface/20">
-                    <DataTableCell colSpan={4} className="px-4 py-3">
-                      <pre className="max-h-56 overflow-auto whitespace-pre-wrap border-l-2 border-border-subtle pl-3 text-[12px] leading-5 text-secondary">
-                        {logById[task.id]}
-                      </pre>
-                    </DataTableCell>
-                  </DataTableRow>
-                ) : null}
-              </Fragment>
+                  </div>
+                </div>
+              </button>
             );
           })}
-        </DataTableBody>
-      </DataTable>
-    </section>
+        </div>
+        <div>
+          {events.map((event) => (
+            <div key={event.id} className="flex min-h-[5.85rem] items-center border-b border-border-subtle/60 px-5 py-4">
+              <ActivityReactionCard event={event} selected={event.id === selectedId} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
-function AutomationTableEmptyContent({ title, body }: { title: string; body: string }) {
+function ActivityInspector({
+  event,
+  busy,
+  onReemit,
+  onCreateReaction,
+  onPausePublisher,
+  onOpenThread,
+}: {
+  event: AutomationActivityEvent | null;
+  busy: string | null;
+  onReemit: (taskId: string) => void;
+  onCreateReaction: (taskId: string) => void;
+  onPausePublisher: (taskId: string) => void;
+  onOpenThread: (taskId: string) => void;
+}) {
+  if (!event) {
+    return (
+      <aside className="flex h-full min-h-0 w-[22rem] shrink-0 flex-col border-l border-border-subtle/70 bg-background/55 px-5 py-5">
+        <div className="text-[11px] uppercase text-dim">Event</div>
+        <h2 className="mt-2 text-[18px] font-semibold leading-tight text-primary">No event selected</h2>
+        <p className="mt-3 text-[13px] leading-5 text-secondary">
+          Select a timeline event to inspect its causal trace, replay it, or pause the publisher.
+        </p>
+        <div className="mt-5 grid grid-cols-[5rem_minmax(0,1fr)] gap-y-1 border-t border-border-subtle/70 pt-4 text-[12px]">
+          <span className="text-dim">Status</span>
+          <span className="text-secondary">Waiting</span>
+          <span className="text-dim">Source</span>
+          <span className="text-secondary">Any publisher</span>
+          <span className="text-dim">Consumer</span>
+          <span className="text-secondary">Matching reaction</span>
+        </div>
+        <div className="mt-5 border-t border-border-subtle/70 pt-4">
+          <div className="text-[12px] font-medium uppercase text-dim">Causal Trace</div>
+          <div className="mt-4 space-y-3">
+            {['Publisher emits', 'Reaction matches', 'Agent, script, or thread runs'].map((label, index) => (
+              <div key={label} className="grid grid-cols-[1.75rem_minmax(0,1fr)] text-[12px] text-secondary">
+                <div className="relative flex justify-center">
+                  {index < 2 ? <span className="absolute bottom-[-0.85rem] top-4 w-px bg-border-subtle/70" /> : null}
+                  <span className="mt-1 h-3 w-3 rounded-full border border-border-subtle bg-surface" />
+                </div>
+                <div>
+                  <div className={cx('font-medium', index === 0 ? 'text-primary' : 'text-secondary')}>{label}</div>
+                  <div className="mt-1 h-1.5 w-28 rounded-sm bg-surface/45" />
+                </div>
+              </div>
+            ))}
+            <div className="pt-1 text-[12px] leading-5 text-dim">
+              Live events will replace this scaffold with IDs, timing, and downstream results.
+            </div>
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
+  const actionBusy = busy === `run:${event.taskId}` || busy === `pause:${event.taskId}`;
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-left">
-      <span className="text-[12px] font-medium text-primary">{title}</span>
-      <span className="text-[12px] text-secondary">{body}</span>
-    </div>
+    <aside className="flex h-full min-h-0 w-[22rem] shrink-0 flex-col border-l border-border-subtle/70 bg-background/55">
+      <div className="border-b border-border-subtle/70 px-5 py-5">
+        <div className="text-[11px] uppercase text-dim">Event</div>
+        <h2 className="mt-2 truncate text-[20px] font-semibold leading-tight text-primary">{event.eventName}</h2>
+        <div className="mt-3 flex items-center gap-2 text-[13px]">
+          <span className={cx('h-2.5 w-2.5 rounded-full border', toneDotClass(event.tone))} />
+          <span className={toneTextClass(event.tone)}>{event.status}</span>
+          <span className="text-dim">·</span>
+          <span className="text-secondary">{event.relativeTime}</span>
+        </div>
+        <div className="mt-3 grid grid-cols-[5rem_minmax(0,1fr)] gap-y-1 text-[12px]">
+          <span className="text-dim">Source</span>
+          <span className="truncate text-secondary">{event.source}</span>
+          <span className="text-dim">Consumer</span>
+          <span className="truncate text-secondary">{event.reactionTitle}</span>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-auto px-5 py-5">
+        <div className="text-[12px] font-medium uppercase text-dim">Causal Trace</div>
+        <div className="mt-4 space-y-0">
+          {event.trace.map((step, index) => (
+            <div key={`${step.label}:${index}`} className="grid grid-cols-[1.75rem_minmax(0,1fr)]">
+              <div className="relative flex justify-center">
+                <span className={cx('mt-1 h-4 w-4 rounded-full border-2 ring-4 ring-background', toneDotClass(step.tone))} />
+                {index < event.trace.length - 1 ? <span className="absolute bottom-0 top-5 w-px bg-border-subtle/80" /> : null}
+              </div>
+              <div className="min-w-0 pb-5">
+                <div className={cx('truncate text-[13px] font-medium', index === 1 ? 'text-accent' : 'text-primary')}>{step.label}</div>
+                <div className="mt-0.5 truncate text-[12px] text-secondary">{step.meta}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-t border-border-subtle/70 px-5 py-4">
+        <div className="grid gap-2">
+          <ToolbarButton disabled={actionBusy || event.status === 'Disabled'} onClick={() => onReemit(event.taskId)}>
+            {busy === `run:${event.taskId}` ? 'Starting…' : 'Re-emit Event'}
+          </ToolbarButton>
+          <ToolbarButton onClick={() => onCreateReaction(event.taskId)}>Create Reaction</ToolbarButton>
+          {event.reactionKind === 'thread' ? <ToolbarButton onClick={() => onOpenThread(event.taskId)}>Open Thread</ToolbarButton> : null}
+          <ToolbarButton disabled={actionBusy || event.status === 'Disabled'} onClick={() => onPausePublisher(event.taskId)}>
+            {busy === `pause:${event.taskId}` ? 'Pausing…' : 'Pause Publisher'}
+          </ToolbarButton>
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -1054,10 +1243,10 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(openNewFromRoute);
   const [form, setForm] = useState<AutomationFormState>(emptyForm);
-  const [logById, setLogById] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
-  const [filter, setFilter] = useState<AutomationFilter>('all');
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
   const [query, setQuery] = useState('');
+  const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const [activeEditorSection, setActiveEditorSection] = useState<EditorSectionId>('automation-general');
   const [conversationOptions, setConversationOptions] = useState<ConversationOption[]>([]);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
@@ -1194,6 +1383,35 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     [load, pa],
   );
 
+  const pausePublisher = useCallback(
+    async (taskId: string) => {
+      const task = tasks.find((candidate) => candidate.id === taskId);
+      if (!task) return;
+      setBusy(`pause:${taskId}`);
+      try {
+        await pa.automations.update(taskId, { ...task, enabled: false });
+        setNotice('Publisher paused.');
+        await load();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+        pa.ui.notify({ type: 'error', message: `Failed to pause publisher: ${msg}`, source: 'system-automations' });
+      } finally {
+        setBusy(null);
+      }
+    },
+    [load, pa, tasks],
+  );
+
+  const openThreadForTask = useCallback(
+    (taskId: string) => {
+      const task = tasks.find((candidate) => candidate.id === taskId);
+      if (!task?.threadConversationId) return;
+      window.location.href = `/conversations/${encodeURIComponent(task.threadConversationId)}`;
+    },
+    [tasks],
+  );
+
   const pickCwd = useCallback(async () => {
     try {
       const result = await (
@@ -1291,31 +1509,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     [closeEditor, editingId, load, pa],
   );
 
-  const toggleLog = useCallback(
-    async (taskId: string) => {
-      if (logById[taskId]) {
-        setLogById((prev) => {
-          const next = { ...prev };
-          delete next[taskId];
-          return next;
-        });
-        return;
-      }
-      setLogById((prev) => ({ ...prev, [taskId]: 'Loading log…' }));
-      try {
-        const result = (await pa.automations.readLog(taskId)) as { log?: string };
-        setLogById((prev) => ({ ...prev, [taskId]: truncateLogForRender(result.log) }));
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        setLogById((prev) => ({
-          ...prev,
-          [taskId]: message.includes('No log available') ? 'No log yet.' : `Could not read log: ${message}`,
-        }));
-      }
-    },
-    [logById, pa],
-  );
-
   const enabledCount = useMemo(() => tasks.filter((task) => task.enabled !== false).length, [tasks]);
   const enabledLabel = useMemo(() => (enabledCount === 1 ? '1 enabled' : `${enabledCount} enabled`), [enabledCount]);
   const countLabel = useMemo(() => (tasks.length === 1 ? '1 automation' : `${tasks.length} automations`), [tasks.length]);
@@ -1323,25 +1516,26 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const allPastDueTasks = useMemo(() => sortPastDueTasks(tasks.filter((task) => isPastDueOneTimeTask(task, nowMs))), [tasks, nowMs]);
   const pastDueLabel = allPastDueTasks.length === 1 ? '1 past due' : `${allPastDueTasks.length} past due`;
 
-  const filteredTasks = useMemo(() => {
+  const activityEvents = useMemo(() => buildAutomationActivityEvents(tasks, nowMs), [nowMs, tasks]);
+  const filteredActivityEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return tasks.filter((task) => {
-      if (!matchesAutomationFilter(task, filter, nowMs)) {
-        return false;
-      }
-      if (!normalizedQuery) {
-        return true;
-      }
-      return taskSearchText(task).includes(normalizedQuery);
+    return activityEvents.filter((event) => {
+      if (!activityFilterMatches(event, activityFilter)) return false;
+      return normalizedQuery ? activitySearchText(event).includes(normalizedQuery) : true;
     });
-  }, [filter, nowMs, query, tasks]);
+  }, [activityEvents, activityFilter, query]);
+  const selectedActivity =
+    filteredActivityEvents.find((event) => event.id === selectedActivityId) ?? filteredActivityEvents[0] ?? activityEvents[0] ?? null;
 
-  const visibleCurrentTasks = useMemo(() => filteredTasks.filter((task) => !isPastDueOneTimeTask(task, nowMs)), [filteredTasks, nowMs]);
-  const visiblePastDueTasks = useMemo(
-    () => sortPastDueTasks(filteredTasks.filter((task) => isPastDueOneTimeTask(task, nowMs))),
-    [filteredTasks, nowMs],
-  );
-  const shouldSplitSections = filter === 'all';
+  useEffect(() => {
+    if (!selectedActivity && selectedActivityId !== null) {
+      setSelectedActivityId(null);
+      return;
+    }
+    if (selectedActivity && selectedActivity.id !== selectedActivityId) {
+      setSelectedActivityId(selectedActivity.id);
+    }
+  }, [selectedActivity, selectedActivityId]);
 
   if (loading) {
     return (
@@ -1360,29 +1554,50 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   }
 
   return (
-    <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
+    <div className="h-full min-h-0 overflow-hidden">
+      <AppPageLayout
+        shellClassName={editorOpen ? 'max-w-[72rem]' : 'h-full max-w-none'}
+        contentClassName={editorOpen ? 'space-y-10' : 'h-full min-h-0 space-y-0'}
+      >
         {!editorOpen && (
           <>
-            <AppPageIntro
-              title="Automations"
-              summary={
-                <>
-                  Scheduled prompts and background jobs that run without babysitting. {enabledLabel} · {countLabel}
-                  {allPastDueTasks.length > 0 ? ` · ${pastDueLabel}` : ''}
-                </>
-              }
-              actions={
-                <div className="flex flex-wrap items-center gap-2">
-                  <ToolbarButton onClick={() => openEditor()}>New automation</ToolbarButton>
-                  <IconButton title="Reload automations" aria-label="Reload automations" onClick={() => void reload()}>
-                    <RefreshIcon />
-                  </IconButton>
-                  <SchedulerHealthDot health={health} />
+            <div className="flex h-14 shrink-0 items-center justify-between border-b border-border-subtle/70 px-5">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="min-w-0">
+                  <h1 className="truncate text-[15px] font-semibold text-primary">Automations</h1>
+                  <div className="mt-0.5 truncate text-[12px] text-secondary">
+                    {enabledLabel} · {countLabel}
+                    {allPastDueTasks.length > 0 ? ` · ${pastDueLabel}` : ''}
+                  </div>
                 </div>
-              }
-            />
-
+                <SchedulerHealthDot health={health} />
+              </div>
+              <div className="flex min-w-0 items-center gap-2">
+                <Select
+                  name="automation-activity-filter"
+                  aria-label="Filter automation activity"
+                  className="h-8 w-40 bg-surface/40 text-[13px]"
+                  value={activityFilter}
+                  onChange={(event) => setActivityFilter(event.target.value as ActivityFilter)}
+                >
+                  {(Object.keys(ACTIVITY_FILTER_LABELS) as ActivityFilter[]).map((value) => (
+                    <option key={value} value={value}>
+                      {ACTIVITY_FILTER_LABELS[value]}
+                    </option>
+                  ))}
+                </Select>
+                <SearchInput
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search events…"
+                  className="w-56 bg-surface/40 text-[13px]"
+                />
+                <ToolbarButton onClick={() => openEditor()}>Create Reaction</ToolbarButton>
+                <IconButton title="Reload automations" aria-label="Reload automations" onClick={() => void reload()}>
+                  <RefreshIcon />
+                </IconButton>
+              </div>
+            </div>
             {notice ? <Notice>{notice}</Notice> : null}
           </>
         )}
@@ -1862,97 +2077,29 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
         )}
 
         {!editorOpen && (
-          <div className="space-y-4">
-            <FilterToolbar
-              filters={
-                <SegmentedControl
-                  value={filter}
-                  options={AUTOMATION_FILTER_OPTIONS}
-                  ariaLabel="Filter automations"
-                  className="flex-wrap"
-                  onChange={setFilter}
-                />
-              }
-              search={
-                <SearchInput
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search automations…"
-                  className="w-72 bg-surface/40 text-[13px]"
-                />
-              }
+          <div className="flex min-h-0 flex-1">
+            <main className="min-w-0 flex-1">
+              <ActivityTimeline
+                events={filteredActivityEvents}
+                selectedId={selectedActivity?.id ?? null}
+                onSelect={setSelectedActivityId}
+                onOpenEditor={(taskId) => {
+                  const task = tasks.find((candidate) => candidate.id === taskId);
+                  if (task) openEditor(task);
+                }}
+              />
+            </main>
+            <ActivityInspector
+              event={selectedActivity}
+              busy={busy}
+              onReemit={(taskId) => void runTask(taskId)}
+              onCreateReaction={(taskId) => {
+                const task = tasks.find((candidate) => candidate.id === taskId);
+                openEditor(task);
+              }}
+              onPausePublisher={(taskId) => void pausePublisher(taskId)}
+              onOpenThread={openThreadForTask}
             />
-
-            {filteredTasks.length === 0 ? (
-              <AutomationTable
-                tasks={[]}
-                empty={
-                  tasks.length === 0 ? (
-                    <AutomationTableEmptyContent
-                      title="No automations yet"
-                      body="Use New automation for scheduled or conversation-bound agent work."
-                    />
-                  ) : (
-                    <AutomationTableEmptyContent title="No matching automations" body="Adjust the filter or search query." />
-                  )
-                }
-                logById={logById}
-                busy={busy}
-                nowMs={nowMs}
-                onRunTask={(taskId) => void runTask(taskId)}
-                onOpenEditor={openEditor}
-                onToggleLog={(taskId) => void toggleLog(taskId)}
-                onDeleteTask={(task) => void deleteTask(task)}
-              />
-            ) : shouldSplitSections ? (
-              <div className="space-y-6">
-                {visibleCurrentTasks.length > 0 ? (
-                  <AutomationTable
-                    tasks={visibleCurrentTasks}
-                    logById={logById}
-                    busy={busy}
-                    nowMs={nowMs}
-                    onRunTask={(taskId) => void runTask(taskId)}
-                    onOpenEditor={openEditor}
-                    onToggleLog={(taskId) => void toggleLog(taskId)}
-                    onDeleteTask={(task) => void deleteTask(task)}
-                  />
-                ) : (
-                  <div className="py-2 text-[13px] text-secondary">No current automations.</div>
-                )}
-
-                {visiblePastDueTasks.length > 0 ? (
-                  <AppPageSection
-                    title="Past due"
-                    meta={<span className="text-warning">{visiblePastDueTasks.length} shown</span>}
-                    className="border-t border-border-subtle/70 pt-4"
-                    titleClassName="text-[18px]"
-                  >
-                    <AutomationTable
-                      tasks={visiblePastDueTasks}
-                      logById={logById}
-                      busy={busy}
-                      nowMs={nowMs}
-                      onRunTask={(taskId) => void runTask(taskId)}
-                      onOpenEditor={openEditor}
-                      onToggleLog={(taskId) => void toggleLog(taskId)}
-                      onDeleteTask={(task) => void deleteTask(task)}
-                    />
-                  </AppPageSection>
-                ) : null}
-              </div>
-            ) : (
-              <AutomationTable
-                tasks={filter === 'past-due' ? visiblePastDueTasks : filteredTasks}
-                logById={logById}
-                busy={busy}
-                nowMs={nowMs}
-                onRunTask={(taskId) => void runTask(taskId)}
-                onOpenEditor={openEditor}
-                onToggleLog={(taskId) => void toggleLog(taskId)}
-                onDeleteTask={(task) => void deleteTask(task)}
-              />
-            )}
           </div>
         )}
       </AppPageLayout>

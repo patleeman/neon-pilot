@@ -175,26 +175,28 @@ describe('AutomationsPage', () => {
     expect(container.textContent).not.toContain('Stale check');
   });
 
-  it('preserves the automation table shell when no automations exist', async () => {
+  it('preserves the activity shell when no automations exist', async () => {
     const { container } = await renderPage(
       createPa({
         list: vi.fn(async () => []),
       }),
     );
 
-    expect(container.textContent).toContain('No automations yet');
-    expect(container.textContent).toContain('Use New automation for scheduled or conversation-bound agent work.');
+    expect(container.textContent).toContain('No matching event activity.');
+    expect(container.textContent).toContain('No event selected');
+    expect(container.textContent).toContain('Publisher emits');
+    expect(container.textContent).toContain('Reaction matches');
     expect(container.textContent).toContain('All');
-    expect(container.querySelector('input[placeholder="Search automations…"]')).not.toBeNull();
-    expect(Array.from(container.querySelectorAll('th')).map((cell) => cell.textContent)).toEqual(['Name', 'Schedule', 'Status', 'Actions']);
-    expect(container.querySelector('td[colspan="4"]')).not.toBeNull();
+    expect(container.querySelector('input[placeholder="Search events…"]')).not.toBeNull();
+    expect(container.textContent).toContain('Event Stream');
+    expect(container.textContent).toContain('Published Event');
   });
 
-  it('starts an automation run from the row action', async () => {
+  it('re-emits the selected event from the inspector action', async () => {
     const pa = createPa();
     const { container } = await renderPage(pa);
-    const runButton = container.querySelector('button[aria-label="Run Daily check now"]');
-    if (!runButton) throw new Error('Run button not found');
+    const runButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Re-emit Event');
+    if (!runButton) throw new Error('Re-emit button not found');
 
     await act(async () => {
       runButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -203,26 +205,18 @@ describe('AutomationsPage', () => {
     expect(pa.automations.run).toHaveBeenCalledWith('daily-check');
   });
 
-  it('deletes an automation from the row actions menu', async () => {
-    const confirm = vi.fn(async () => true);
-    const pa = createPa({}, { confirm });
+  it('pauses the selected publisher from the inspector action', async () => {
+    const update = vi.fn(async () => ({ ok: true }));
+    const pa = createPa({ update });
     const { container } = await renderPage(pa);
-    const moreButton = container.querySelector('button[aria-label="More actions for Daily check"]');
-    if (!moreButton) throw new Error('More actions button not found');
+    const pauseButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Pause Publisher');
+    if (!pauseButton) throw new Error('Pause Publisher button not found');
 
     await act(async () => {
-      moreButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      pauseButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    const deleteButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Delete');
-    if (!deleteButton) throw new Error('Delete button not found');
-
-    await act(async () => {
-      deleteButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-
-    expect(confirm).toHaveBeenCalledWith({ title: 'Delete automation', message: 'Delete Daily check? This cannot be undone.' });
-    expect(pa.automations.delete).toHaveBeenCalledWith('daily-check');
+    expect(update).toHaveBeenCalledWith('daily-check', expect.objectContaining({ enabled: false }));
   });
 
   it('moves overdue one-time automations into a past-due section', async () => {
@@ -257,9 +251,9 @@ describe('AutomationsPage', () => {
     );
 
     expect(container.textContent).toContain('1 past due');
-    expect(container.textContent).toContain('Past due');
+    expect(container.textContent).toContain('past due');
     expect(container.textContent).toContain('Missed check');
-    expect(container.textContent).toContain('Scheduled time passed');
+    expect(container.textContent).toContain('schedule.due');
     expect(container.textContent).toContain('Later check');
   });
 
@@ -282,20 +276,23 @@ describe('AutomationsPage', () => {
       }),
     );
 
-    const openThreadLink = container.querySelector('a[aria-label="Open thread for Thread check"]');
+    const openThreadButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Open Thread');
 
-    expect(openThreadLink?.getAttribute('href')).toBe('/conversations/conv-123');
+    expect(openThreadButton).not.toBeUndefined();
   });
 
   it('opens a chat draft instead of directly creating a new automation', async () => {
     let resolveCommand: ((value: boolean) => void) | undefined;
-    const execute = vi.fn(() => new Promise<boolean>((resolve) => {
-      resolveCommand = resolve;
-    }));
+    const execute = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveCommand = resolve;
+        }),
+    );
     const pa = createPa();
     pa.commands.execute = execute as never;
     const { container } = await renderPage(pa);
-    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New automation');
+    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create Reaction');
     if (!newButton) throw new Error('New automation button not found');
 
     await act(async () => {
@@ -343,7 +340,7 @@ describe('AutomationsPage', () => {
     const pa = createPa();
     pa.commands.execute = vi.fn(async () => false) as never;
     const { container } = await renderPage(pa);
-    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New automation');
+    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create Reaction');
     if (!newButton) throw new Error('New automation button not found');
 
     await act(async () => {
@@ -370,7 +367,7 @@ describe('AutomationsPage', () => {
   it('lets recurring schedules be composed from controls', async () => {
     const pa = createPa();
     const { container } = await renderPage(pa);
-    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New automation');
+    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create Reaction');
     if (!newButton) throw new Error('New automation button not found');
 
     await act(async () => {
@@ -423,8 +420,10 @@ describe('AutomationsPage', () => {
       ]),
     });
     const { container } = await renderPage(pa);
-    const editButton = container.querySelector('button[aria-label="Edit Policy check"]');
-    if (!editButton) throw new Error('Edit button not found');
+    const editButton = Array.from(container.querySelectorAll('button'))
+      .filter((button) => button.textContent === 'Create Reaction')
+      .at(-1);
+    if (!editButton) throw new Error('Create Reaction button not found');
 
     await act(async () => {
       editButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));

@@ -6,21 +6,38 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 # Automations
 
-Automations is the desktop UI for managing scheduled background tasks. Navigate to `/automations` to view, create, edit, and manage automations. Scheduled tasks are managed in this page and attention surfaces, not in every conversation composer.
+Automations is the desktop UI for inspecting and managing event-driven background work. Navigate to `/automations` to see meaningful automation events flowing through the activity stream, inspect the selected event's causal trace, and administer the publisher or reaction that caused work.
 
-## List View
+Scheduled tasks are still backed by the daemon scheduler, but the default UI presents them as event-native activity:
 
-The automations list uses the same table-first layout pattern as the Extensions page: filter chips, search, compact row actions, a dense multi-column table, and a compact scheduler-health dot instead of a full-width banner.
+```
+schedule producer -> event -> reaction -> agent/thread/script/published event
+```
 
-Enabled one-time automations whose scheduled time has already passed without a recorded run move into a **Past due** section so they stay visible without looking like upcoming work.
+The timeline intentionally does not show every possible emitted event. It focuses on events that caused or attempted work, plus scheduler/publisher states that need user attention.
 
-Each row shows:
+## Activity Timeline
 
-- automation name, prompt summary, and scope
-- schedule summary plus raw cron or timestamp
-- current status and last-run state
-- compact icon actions for run, edit, open thread, and more actions
-- delete from the row actions menu or the editor view
+The Automations page opens on a timeline-first view with two main regions:
+
+- **Event Stream** — compact chronological events with event name, source, relative time, status, and match count.
+- **Inspector** — selected event status, source, consumer, causal trace, and direct actions.
+
+Reaction lanes show the kind of consumer an event flowed into:
+
+- Agent
+- Script
+- Thread
+- Published Event
+
+The default actions are:
+
+- **Re-emit Event** — trigger the selected automation now using the current runtime rules.
+- **Create Reaction** — open the automation editor for a new or selected reaction.
+- **Open Thread** — jump to the bound conversation when the selected reaction targets a thread.
+- **Pause Publisher** — disable the selected scheduled publisher without deleting it.
+
+Past-due, failed, running, disabled, and scheduled automations appear as event activity rather than separate table sections.
 
 ## Detail View
 
@@ -68,7 +85,7 @@ The UI avoids raw cron entry for common creation/editing paths; selected presets
 
 ## Inspecting Runs
 
-From the activity history, click a run ID to view the run details and logs. See [Runs](../system-runs/README.md) for run reference.
+The timeline shows the automation-level trace. Durable background run logs still live in the Runs extension. See [Runs](../system-runs/README.md) for run reference.
 
 ## Relationship to the Daemon
 
