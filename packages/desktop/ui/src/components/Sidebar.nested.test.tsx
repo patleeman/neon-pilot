@@ -173,21 +173,24 @@ describe('Sidebar branch conversation interactions', () => {
   });
 
   it('archiving a parent removes only that row while open child branches stay flat and closable', async () => {
-    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['parent', 'child']));
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['parent', 'child', 'side-child']));
     const container = renderSidebar('/conversations/child', [
       session({ id: 'parent', title: 'Parent thread' }),
       session({ id: 'child', title: 'Child branch', parentSessionId: 'parent', offshootKind: 'fork' }),
+      session({ id: 'side-child', title: 'Side branch', parentSessionId: 'parent', offshootKind: 'side' }),
     ]);
     await flush();
 
     clickArchive(container, 'parent');
     await flush();
 
-    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['child']);
+    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['child', 'side-child']);
     expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
     expect(() => row(container, 'parent')).toThrow();
     expect(row(container, 'child').textContent).toContain('Child branch');
     expect(row(container, 'child').textContent).not.toContain('fork:');
+    expect(row(container, 'side-child').textContent).toContain('Side branch');
+    expect(row(container, 'side-child').textContent).not.toContain('side:');
     expect(row(container, 'child').querySelector('[aria-label="Archive thread"]')).not.toBeNull();
   });
 

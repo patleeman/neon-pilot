@@ -135,19 +135,23 @@ describe('buildActivityTreeItems', () => {
     );
   });
 
-  it('keeps fork and rewind conversation rows titled like normal threads', () => {
+  it('keeps offshoot conversation rows titled like normal threads without prefixes', () => {
     const items = buildActivityTreeItems({
       conversations: [
         session({ id: 'conv-1', title: 'Build the thing' }),
         session({ id: 'subagent-conv', title: 'Smoke test', parentSessionId: 'conv-1', offshootKind: 'subagent' }),
         session({ id: 'fork-conv', title: 'Alternate path', parentSessionId: 'conv-1', offshootKind: 'fork' }),
         session({ id: 'rewind-conv', title: 'Earlier path', parentSessionId: 'conv-1', offshootKind: 'rewind' }),
+        session({ id: 'duplicate-conv', title: 'Copy path', parentSessionId: 'conv-1', offshootKind: 'duplicate' }),
+        session({ id: 'side-conv', title: 'Side quest', parentSessionId: 'conv-1', offshootKind: 'side' }),
       ],
     });
 
     expect(items.find((item) => item.id === buildConversationActivityId('subagent-conv'))?.title).toBe('Smoke test');
     expect(items.find((item) => item.id === buildConversationActivityId('fork-conv'))?.title).toBe('Alternate path');
     expect(items.find((item) => item.id === buildConversationActivityId('rewind-conv'))?.title).toBe('Earlier path');
+    expect(items.find((item) => item.id === buildConversationActivityId('duplicate-conv'))?.title).toBe('Copy path');
+    expect(items.find((item) => item.id === buildConversationActivityId('side-conv'))?.title).toBe('Side quest');
   });
 
   it('skips hidden and unlinked executions', () => {

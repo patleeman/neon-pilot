@@ -41,18 +41,7 @@ export function buildExecutionActivityId(executionId: string): string {
 }
 
 function formatConversationActivityTitle(session: SessionMeta): string {
-  const title = session.title || 'Untitled thread';
-  switch (session.offshootKind) {
-    case 'fork':
-    case 'rewind':
-    case 'duplicate':
-    case 'subagent':
-      return title;
-    case 'side':
-      return `side: ${title}`;
-    default:
-      return title;
-  }
+  return session.title || 'Untitled thread';
 }
 
 export function buildActivityTreeItems({ conversations, executions = [] }: BuildActivityTreeInput): ActivityTreeItem[] {
