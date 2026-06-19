@@ -28,6 +28,7 @@ const apiMock = vi.hoisted(() => ({
   daemon: vi.fn(),
   sessionMeta: vi.fn(),
   openConversationTabs: vi.fn(),
+  sidebarConversations: vi.fn(),
   setOpenConversationTabs: vi.fn(),
   updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
@@ -262,6 +263,10 @@ describe('App sidebar conversation navigation workflow', () => {
       conversationWorkspaceUpdatedAt: '2026-06-15T12:00:00.000Z',
       conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
     }));
+    apiMock.sidebarConversations.mockImplementation(async () => ({
+      ...(await apiMock.openConversationTabs()),
+      sessions,
+    }));
     apiMock.setOpenConversationTabs.mockImplementation(
       async (
         sessionIds?: string[] | null,
@@ -300,7 +305,9 @@ describe('App sidebar conversation navigation workflow', () => {
       } else if (input.operation === 'restore' && sessionId) {
         workspaceLayout = {
           ...workspaceLayout,
-          sessionIds: workspaceLayout.sessionIds.includes(sessionId) ? workspaceLayout.sessionIds : [...workspaceLayout.sessionIds, sessionId],
+          sessionIds: workspaceLayout.sessionIds.includes(sessionId)
+            ? workspaceLayout.sessionIds
+            : [...workspaceLayout.sessionIds, sessionId],
           archivedSessionIds: workspaceLayout.archivedSessionIds.filter((id) => id !== sessionId),
         };
       } else if (input.operation === 'setActive') {
@@ -365,15 +372,13 @@ describe('App sidebar conversation navigation workflow', () => {
 
   it('hydrates persisted conversation rows from the sidebar workspace bootstrap when the initial layout read misses', async () => {
     fetchSessionsSnapshotMock.mockImplementation(() => new Promise<SessionMeta[]>(() => {}));
-    apiMock.openConversationTabs
-      .mockRejectedValueOnce(new Error('initial layout bootstrap failed'))
-      .mockImplementation(async () => ({
-        ...workspaceLayout,
-        remoteControlledConversationIds: [],
-        conversationWorkspaceRevision: 1,
-        conversationWorkspaceUpdatedAt: '2026-06-15T12:00:00.000Z',
-        conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
-      }));
+    apiMock.openConversationTabs.mockRejectedValueOnce(new Error('initial layout bootstrap failed')).mockImplementation(async () => ({
+      ...workspaceLayout,
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-06-15T12:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-06-15T12:00:00.000Z',
+    }));
 
     ({ root } = await renderAppAt('/conversations/new'));
 
@@ -386,7 +391,7 @@ describe('App sidebar conversation navigation workflow', () => {
     expect(apiMock.sessionMeta).toHaveBeenCalledWith('conv-second');
   });
 
-  it('retries the cold-start sessions snapshot without showing a false empty thread state', async () => {
+  it('uses the backend sidebar projection even while the broader sessions snapshot retries', async () => {
     workspaceLayout = {
       sessionIds: [],
       pinnedSessionIds: [],
@@ -400,11 +405,9 @@ describe('App sidebar conversation navigation workflow', () => {
 
     await screen.findByText('Draft conversation route');
     expect(document.querySelector('[data-sidebar-session-id="conv-first"]')).toBeNull();
-    expect(screen.queryByText('No threads yet.')).toBeNull();
+    expect(screen.getByText('No threads yet.')).toBeTruthy();
 
-    expect(screen.getByText('Loading threads…')).toBeTruthy();
     await waitFor(() => expect(fetchSessionsSnapshotMock).toHaveBeenCalledTimes(2), { timeout: 2_000 });
-    await waitFor(() => expect(screen.queryByText('Loading threads…')).toBeNull());
     expect(fetchSessionsSnapshotMock).toHaveBeenCalledTimes(2);
   });
 

@@ -647,7 +647,7 @@ export const api = {
       conversationWorkspaceMigratedAt?: string | null;
     }>('/ui/open-conversations/operation', input),
   savedWorkspacePaths: async () => {
-    const { workspacePaths } = await api.openConversationTabs();
+    const { workspacePaths } = await api.sidebarConversations();
     return workspacePaths;
   },
   setSavedWorkspacePaths: async (workspacePaths: string[]) => {

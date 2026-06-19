@@ -1,11 +1,12 @@
+import { EventEmitter } from 'node:events';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { EventEmitter } from 'node:events';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { bootstrapMocks, childProcessMocks, criticalRegistryMocks, readConversationSessionsCapabilityMock, reserveConversationSessionMock } = vi.hoisted(
-  () => ({
+const { bootstrapMocks, childProcessMocks, criticalRegistryMocks, readConversationSessionsCapabilityMock, reserveConversationSessionMock } =
+  vi.hoisted(() => ({
     bootstrapMocks: {
       inlineConversationBootstrapAssetsCapability: vi.fn((state: unknown) => state),
       inlineConversationSessionDetailAppendOnlyAssetsCapability: vi.fn((_sessionId: string, detail: unknown) => detail),
@@ -69,8 +70,7 @@ const { bootstrapMocks, childProcessMocks, criticalRegistryMocks, readConversati
     },
     readConversationSessionsCapabilityMock: vi.fn(() => [{ id: 'limited' }]),
     reserveConversationSessionMock: vi.fn(() => ({ id: 'reserved-1', sessionFile: '/tmp/reserved-1.jsonl', cwd: '/repo' })),
-  }),
-);
+  }));
 
 vi.mock('node:child_process', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:child_process')>();
@@ -791,6 +791,79 @@ describe('LocalBackendProcesses', () => {
         workspacePaths: [],
         remoteControlledConversationIds: [],
       });
+      await vi.waitFor(() => expect(backend.calls).toEqual(['ensureStarted']));
+      await vi.waitFor(() =>
+        expect(
+          (backend as unknown as { criticalExtensionRegistryModulePromise?: Promise<unknown> }).criticalExtensionRegistryModulePromise,
+        ).toBeTruthy(),
+      );
+    } finally {
+      if (originalStateRoot === undefined) {
+        delete process.env.NEON_PILOT_STATE_ROOT;
+      } else {
+        process.env.NEON_PILOT_STATE_ROOT = originalStateRoot;
+      }
+      rmSync(stateRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('serves sidebar conversations from the main process with backend-confirmed sessions', async () => {
+    const originalStateRoot = process.env.NEON_PILOT_STATE_ROOT;
+    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-sidebar-conversations-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    class MainProcessSidebarBackend extends LocalBackendProcesses {
+      readonly calls: string[] = [];
+
+      override async ensureStarted(): Promise<void> {
+        this.calls.push('ensureStarted');
+      }
+    }
+
+    try {
+      const runtimeSettingsFile = join(stateRoot, 'neon-pilot-runtime', 'settings.json');
+      mkdirSync(join(stateRoot, 'neon-pilot-runtime'), { recursive: true });
+      writeFileSync(
+        runtimeSettingsFile,
+        JSON.stringify({
+          ui: {
+            openConversationIds: ['known-open', 'missing-open', 'known-pinned'],
+            pinnedConversationIds: ['known-pinned', 'missing-pinned'],
+            archivedConversationIds: ['known-archived', 'known-open'],
+            activeConversationId: 'missing-open',
+            workspacePaths: ['/repo'],
+            conversationWorkspaceRevision: 4,
+            conversationWorkspaceUpdatedAt: '2026-06-19T12:00:00.000Z',
+          },
+        }),
+      );
+      readConversationSessionsCapabilityMock.mockReturnValueOnce([
+        { id: 'known-archived', timestamp: '2026-06-19T12:00:02.000Z' },
+        { id: 'known-open', timestamp: '2026-06-19T12:00:01.000Z' },
+        { id: 'known-pinned', timestamp: '2026-06-19T12:00:00.000Z' },
+      ]);
+
+      const backend = new MainProcessSidebarBackend();
+      const response = await backend.dispatchApiRequest({
+        method: 'GET',
+        path: '/api/sidebar/conversations',
+      });
+      const body = JSON.parse(new TextDecoder().decode(response.body));
+
+      expect(response.statusCode).toBe(200);
+      expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+        localApi: {
+          fastPath: 'main-process',
+        },
+      });
+      expect(body).toMatchObject({
+        sessionIds: ['known-open'],
+        pinnedSessionIds: ['known-pinned'],
+        archivedSessionIds: ['known-archived'],
+        activeConversationId: null,
+        workspacePaths: ['/repo'],
+        conversationWorkspaceRevision: 4,
+      });
+      expect(body.sessions.map((session: { id: string }) => session.id)).toEqual(['known-archived', 'known-open', 'known-pinned']);
       await vi.waitFor(() => expect(backend.calls).toEqual(['ensureStarted']));
       await vi.waitFor(() =>
         expect(

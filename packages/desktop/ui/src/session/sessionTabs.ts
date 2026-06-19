@@ -222,7 +222,7 @@ export async function fetchRemoteConversationLayout(
     return remoteLayoutPromise;
   }
 
-  const promise = api.openConversationTabs().then(async (layout) => {
+  const promise = api.sidebarConversations().then(async (layout) => {
     const normalized = normalizeRemoteConversationLayout(layout);
     if (isStaleRemoteConversationLayout(normalized) && remoteLayoutCache) {
       return remoteLayoutCache;

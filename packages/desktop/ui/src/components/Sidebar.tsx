@@ -1993,7 +1993,7 @@ export function Sidebar() {
         conversationWorkspaceRevision,
         conversationWorkspaceUpdatedAt,
         conversationWorkspaceMigratedAt,
-      } = await api.openConversationTabs();
+      } = await api.sidebarConversations();
       if (workspaceLoadLifecycleRef.current.disposed || workspaceLoadLifecycleRef.current.latestRequestId !== requestId) {
         return false;
       }

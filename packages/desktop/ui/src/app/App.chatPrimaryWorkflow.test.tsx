@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-import React, { useEffect } from 'react';
 import { act, screen, waitFor } from '@testing-library/react';
+import React, { useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Outlet, useParams } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useLiveTitles } from './contexts';
 import type { DesktopAppEvent, SessionMeta } from '../shared/types';
+import { useLiveTitles } from './contexts';
 
 (globalThis as typeof globalThis & { React?: typeof React; IS_REACT_ACT_ENVIRONMENT?: boolean }).React = React;
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -19,6 +19,7 @@ const apiMock = vi.hoisted(() => ({
   daemon: vi.fn(),
   sessionMeta: vi.fn(),
   openConversationTabs: vi.fn(),
+  sidebarConversations: vi.fn(),
   setOpenConversationTabs: vi.fn(),
   updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
@@ -192,6 +193,10 @@ describe('App chat primary live workflow', () => {
       activeConversationId: 'conv-live',
       workspacePaths: [],
     });
+    apiMock.sidebarConversations.mockImplementation(async () => ({
+      ...(await apiMock.openConversationTabs()),
+      sessions: [liveSession],
+    }));
     apiMock.setOpenConversationTabs.mockResolvedValue({ ok: true });
     apiMock.updateConversationWorkspace.mockResolvedValue({ ok: true });
     apiMock.setSavedWorkspacePaths.mockResolvedValue([]);

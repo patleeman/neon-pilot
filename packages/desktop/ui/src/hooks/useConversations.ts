@@ -80,8 +80,11 @@ function applySidebarConversationSnapshot(
     setActiveId: (id: string | null) => void;
   },
 ): SessionMeta[] {
-  sessionStore.replaceAll(snapshot.sessions);
-  sessionStore.markReady?.();
+  const sessions = Array.isArray(snapshot.sessions) ? snapshot.sessions : null;
+  if (sessions) {
+    sessionStore.replaceAll(sessions);
+    sessionStore.markReady?.();
+  }
   const nextLayout = applyRemoteConversationLayout({
     sessionIds: snapshot.sessionIds,
     pinnedSessionIds: snapshot.pinnedSessionIds,
@@ -94,7 +97,7 @@ function applySidebarConversationSnapshot(
     conversationWorkspaceMigratedAt: snapshot.conversationWorkspaceMigratedAt,
   });
   applyLayoutState(nextLayout, setters);
-  return snapshot.sessions;
+  return sessions ?? [];
 }
 
 export function useConversations(options: { includeArchivedSessions?: boolean } = {}) {
@@ -154,8 +157,10 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
           }
 
           if (isWithinLocalWriteGrace()) {
-            sessionStore.replaceAll(snapshot.sessions);
-            sessionStore.markReady?.();
+            if (Array.isArray(snapshot.sessions)) {
+              sessionStore.replaceAll(snapshot.sessions);
+              sessionStore.markReady?.();
+            }
             applyLayoutState(readConversationLayout(), { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
             setLayoutHydrating(false);
             return;
@@ -193,7 +198,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
     latestRefetchRequestIdRef.current = requestId;
     const snapshot = await api.sidebarConversations();
     if (latestRefetchRequestIdRef.current !== requestId) {
-      return snapshot.sessions;
+      return Array.isArray(snapshot.sessions) ? snapshot.sessions : [];
     }
     return applySidebarConversationSnapshot(snapshot, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
   }, []);

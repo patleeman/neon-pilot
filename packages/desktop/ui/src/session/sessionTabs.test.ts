@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const apiMocks = vi.hoisted(() => ({
   openConversationTabs: vi.fn(),
+  sidebarConversations: vi.fn(),
   setOpenConversationTabs: vi.fn(),
   updateConversationWorkspace: vi.fn(),
 }));
@@ -28,8 +29,8 @@ import {
   readOpenSessionIds,
   readPinnedSessionIds,
   reopenMostRecentlyArchivedConversation,
-  resetLocalWriteGrace,
   replaceConversationLayout,
+  resetLocalWriteGrace,
   resetRemoteConversationLayoutCache,
   setConversationArchivedState,
   shiftConversationTab,
@@ -64,6 +65,7 @@ describe('sessionTabs', () => {
     vi.useRealTimers();
     vi.stubGlobal('localStorage', createStorage());
     vi.stubGlobal('window', { dispatchEvent });
+    apiMocks.sidebarConversations.mockReset();
     apiMocks.openConversationTabs.mockReset();
     apiMocks.setOpenConversationTabs.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
@@ -112,7 +114,7 @@ describe('sessionTabs', () => {
   });
 
   it('coalesces concurrent remote layout reads', async () => {
-    apiMocks.openConversationTabs.mockResolvedValueOnce({
+    apiMocks.sidebarConversations.mockResolvedValueOnce({
       sessionIds: ['session-1'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -123,7 +125,7 @@ describe('sessionTabs', () => {
 
     const [left, right] = await Promise.all([fetchRemoteConversationLayout(), fetchRemoteConversationLayout()]);
 
-    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(apiMocks.sidebarConversations).toHaveBeenCalledTimes(1);
     expect(left).toBe(right);
     expect(left).toEqual({
       sessionIds: ['session-1'],
@@ -139,7 +141,7 @@ describe('sessionTabs', () => {
   });
 
   it('updates the remote workspace cache from backend workspace events', async () => {
-    apiMocks.openConversationTabs.mockResolvedValueOnce({
+    apiMocks.sidebarConversations.mockResolvedValueOnce({
       sessionIds: ['session-1'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -164,7 +166,7 @@ describe('sessionTabs', () => {
 
     const layout = await fetchRemoteConversationLayout();
 
-    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(apiMocks.sidebarConversations).toHaveBeenCalledTimes(1);
     expect(layout.workspacePaths).toEqual(['/fresh']);
     expect(layout.conversationWorkspaceRevision).toBe(2);
   });
@@ -203,14 +205,14 @@ describe('sessionTabs', () => {
     expect(readConversationLayout()).toEqual(staleLayout);
 
     const cachedLayout = await fetchRemoteConversationLayout();
-    expect(apiMocks.openConversationTabs).not.toHaveBeenCalled();
+    expect(apiMocks.sidebarConversations).not.toHaveBeenCalled();
     expect(cachedLayout.workspacePaths).toEqual(['/newer']);
     expect(cachedLayout.conversationWorkspaceRevision).toBe(3);
   });
 
   it('ignores stale remote fetches after newer backend workspace events apply', async () => {
     let resolveFetch: (layout: unknown) => void = () => undefined;
-    apiMocks.openConversationTabs.mockReturnValueOnce(
+    apiMocks.sidebarConversations.mockReturnValueOnce(
       new Promise((resolve) => {
         resolveFetch = resolve;
       }),
@@ -255,7 +257,7 @@ describe('sessionTabs', () => {
     });
 
     const cachedLayout = await fetchRemoteConversationLayout();
-    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(apiMocks.sidebarConversations).toHaveBeenCalledTimes(1);
     expect(cachedLayout.workspacePaths).toEqual(['/newer']);
     expect(cachedLayout.conversationWorkspaceRevision).toBe(4);
   });
@@ -304,7 +306,7 @@ describe('sessionTabs', () => {
   it('coalesces concurrent remote layout refreshes without reusing the cache', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-27T00:00:00.000Z'));
-    apiMocks.openConversationTabs
+    apiMocks.sidebarConversations
       .mockResolvedValueOnce({
         sessionIds: ['cached-session'],
         pinnedSessionIds: [],
@@ -329,14 +331,14 @@ describe('sessionTabs', () => {
       fetchRemoteConversationLayout({ refresh: true }),
     ]);
 
-    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(2);
+    expect(apiMocks.sidebarConversations).toHaveBeenCalledTimes(2);
     expect(left).toBe(right);
     expect(left.sessionIds).toEqual(['fresh-session']);
     expect(left.workspacePaths).toEqual(['/fresh']);
   });
 
   it('reuses a fresh remote layout cache even when refresh is requested', async () => {
-    apiMocks.openConversationTabs.mockResolvedValueOnce({
+    apiMocks.sidebarConversations.mockResolvedValueOnce({
       sessionIds: ['cached-session'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -348,13 +350,13 @@ describe('sessionTabs', () => {
     await fetchRemoteConversationLayout();
     const layout = await fetchRemoteConversationLayout({ refresh: true });
 
-    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(apiMocks.sidebarConversations).toHaveBeenCalledTimes(1);
     expect(layout.sessionIds).toEqual(['cached-session']);
     expect(layout.workspacePaths).toEqual(['/cached']);
   });
 
   it('uses the optimistic local layout cache for refreshes during local write grace', async () => {
-    apiMocks.openConversationTabs.mockResolvedValueOnce({
+    apiMocks.sidebarConversations.mockResolvedValueOnce({
       sessionIds: ['cached-session'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
@@ -376,7 +378,7 @@ describe('sessionTabs', () => {
 
     const layout = await fetchRemoteConversationLayout({ refresh: true });
 
-    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(apiMocks.sidebarConversations).toHaveBeenCalledTimes(1);
     expect(layout).toEqual({
       sessionIds: ['cached-session', 'local-session'],
       pinnedSessionIds: [],
@@ -395,7 +397,7 @@ describe('sessionTabs', () => {
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['legacy-pin']));
     localStorage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['legacy-archived']));
     localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, 'legacy-open');
-    apiMocks.openConversationTabs.mockResolvedValueOnce({
+    apiMocks.sidebarConversations.mockResolvedValueOnce({
       sessionIds: [],
       pinnedSessionIds: [],
       archivedSessionIds: [],

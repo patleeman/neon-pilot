@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import React from 'react';
 import { act, screen, waitFor } from '@testing-library/react';
+import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Outlet } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,6 +18,7 @@ const apiMock = vi.hoisted(() => ({
   daemon: vi.fn(),
   sessionMeta: vi.fn(),
   openConversationTabs: vi.fn(),
+  sidebarConversations: vi.fn(),
   setOpenConversationTabs: vi.fn(),
   updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
@@ -182,6 +183,10 @@ describe('App recovery workflow', () => {
       activeConversationId: 'conv-recovery',
       workspacePaths: [],
     });
+    apiMock.sidebarConversations.mockImplementation(async () => ({
+      ...(await apiMock.openConversationTabs()),
+      sessions: [recoverySession],
+    }));
     apiMock.setOpenConversationTabs.mockResolvedValue({ ok: true });
     apiMock.updateConversationWorkspace.mockResolvedValue({ ok: true });
     apiMock.setSavedWorkspacePaths.mockResolvedValue([]);

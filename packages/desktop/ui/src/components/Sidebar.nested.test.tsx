@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext, LiveTitlesContext, SseConnectionContext } from '../app/contexts.js';
 import {
-  ACTIVE_SESSION_ID_STORAGE_KEY,
   ARCHIVED_SESSION_IDS_STORAGE_KEY,
   buildSidebarNavSectionStorageKey,
   OPEN_SESSION_IDS_STORAGE_KEY,
@@ -22,6 +21,7 @@ Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
 const apiMocks = vi.hoisted(() => ({
   openConversationTabs: vi.fn(),
+  sidebarConversations: vi.fn(),
   setOpenConversationTabs: vi.fn(),
   updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
@@ -71,15 +71,16 @@ function renderSidebar(pathname: string, sessions: SessionMeta[], remoteLayout?:
   // Seed the store so useConversations finds the sessions it needs
   sessionStore.replaceAll(sessions);
   sessionStore.markReady?.();
-  apiMocks.openConversationTabs.mockResolvedValue(
-    remoteLayout ?? {
+  apiMocks.sidebarConversations.mockResolvedValue({
+    ...(remoteLayout ?? {
       sessionIds: readStoredIds(OPEN_SESSION_IDS_STORAGE_KEY),
       pinnedSessionIds: readStoredIds(PINNED_SESSION_IDS_STORAGE_KEY),
       archivedSessionIds: readStoredIds(ARCHIVED_SESSION_IDS_STORAGE_KEY),
       activeConversationId: pathname.startsWith('/conversations/') ? pathname.slice('/conversations/'.length) : undefined,
       workspacePaths: [],
-    },
-  );
+    }),
+    sessions,
+  });
 
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -150,11 +151,19 @@ describe('Sidebar branch conversation interactions', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', createStorage());
     apiMocks.openConversationTabs.mockReset();
+    apiMocks.sidebarConversations.mockReset();
     apiMocks.setOpenConversationTabs.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
     apiMocks.setSavedWorkspacePaths.mockReset();
     apiMocks.gateways.mockReset();
     apiMocks.openConversationTabs.mockResolvedValue({ sessionIds: [], pinnedSessionIds: [], archivedSessionIds: [], workspacePaths: [] });
+    apiMocks.sidebarConversations.mockResolvedValue({
+      sessionIds: [],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: [],
+      sessions: [],
+    });
     apiMocks.setOpenConversationTabs.mockResolvedValue({ ok: true });
     apiMocks.updateConversationWorkspace.mockResolvedValue({ ok: true });
     apiMocks.setSavedWorkspacePaths.mockResolvedValue([]);
@@ -281,7 +290,10 @@ describe('Sidebar branch conversation interactions', () => {
 
   it('reopens the most recently archived conversation through the desktop shortcut workflow', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['first', 'second']));
-    renderSidebar('/conversations/second', [session({ id: 'first', title: 'First thread' }), session({ id: 'second', title: 'Second thread' })]);
+    renderSidebar('/conversations/second', [
+      session({ id: 'first', title: 'First thread' }),
+      session({ id: 'second', title: 'Second thread' }),
+    ]);
     await flush();
 
     dispatchDesktopShortcutCommand('conversation.toggleArchived');
@@ -301,17 +313,13 @@ describe('Sidebar branch conversation interactions', () => {
 
   it('hydrates an existing active conversation from the remote layout after reload', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
-    const container = renderSidebar(
-      '/conversations/existing',
-      [session({ id: 'existing', title: 'Persisted thread' })],
-      {
-        sessionIds: ['existing'],
-        pinnedSessionIds: [],
-        archivedSessionIds: [],
-        activeConversationId: 'existing',
-        workspacePaths: [],
-      },
-    );
+    const container = renderSidebar('/conversations/existing', [session({ id: 'existing', title: 'Persisted thread' })], {
+      sessionIds: ['existing'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'existing',
+      workspacePaths: [],
+    });
     await flush();
 
     const existingRow = row(container, 'existing');

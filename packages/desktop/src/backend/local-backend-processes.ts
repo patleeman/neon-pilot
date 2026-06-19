@@ -131,6 +131,17 @@ async function readOpenConversationTabsFastPath(): Promise<unknown> {
   return buildDesktopOpenConversationTabsResponse(saved);
 }
 
+async function readSidebarConversationsFastPath(): Promise<unknown> {
+  const { readSavedUiPreferences } = await import('../../server/ui/uiPreferences.js');
+  const { buildDesktopSidebarConversationSnapshot } = await import('../../server/app/localApiSidebarConversations.js');
+  const { getRuntimeSettingsFilePath } = await import('../../server/ui/settingsPersistence.js');
+  const { readConversationSessionsCapability } = await import('../../server/conversations/conversationSessionCapability.js');
+  return buildDesktopSidebarConversationSnapshot({
+    saved: readSavedUiPreferences(getRuntimeSettingsFilePath(getStateRoot())),
+    sessions: readConversationSessionsCapability(),
+  });
+}
+
 async function updateOpenConversationTabsFastPath(input: unknown): Promise<unknown> {
   const { buildDesktopOpenConversationTabsResponse } = await import('../../server/app/localApiOpenTabsPresentation.js');
   const openTabsModule: typeof import('../../server/app/localApiOpenTabs.js') = await import('../../server/app/localApiOpenTabs.js');
@@ -528,6 +539,11 @@ export class LocalBackendProcesses {
       this.warmCriticalExtensionRegistryModule();
       return this.makeJsonResponse(await readOpenConversationTabsFastPath(), 'main-process');
     }
+    if (input.method === 'GET' && path === '/api/sidebar/conversations') {
+      this.warmBackendChild();
+      this.warmCriticalExtensionRegistryModule();
+      return this.makeJsonResponse(await readSidebarConversationsFastPath(), 'main-process');
+    }
     if (input.method === 'PATCH' && path === '/api/ui/open-conversations') {
       this.warmBackendChild();
       return this.makeJsonResponse(await updateOpenConversationTabsFastPath(jsonBody), 'main-process');
@@ -655,7 +671,9 @@ export class LocalBackendProcesses {
 
   private async startInternal(): Promise<void> {
     const startedAt = Date.now();
-    const extensionHostAlreadyRunning = Boolean(this.extensionHostChild && !this.extensionHostChild.killed && this.extensionHostBaseUrl && this.extensionHostToken);
+    const extensionHostAlreadyRunning = Boolean(
+      this.extensionHostChild && !this.extensionHostChild.killed && this.extensionHostBaseUrl && this.extensionHostToken,
+    );
     const token = randomUUID();
     let child: ChildProcess | undefined;
 
