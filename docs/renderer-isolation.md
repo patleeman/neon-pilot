@@ -41,7 +41,7 @@ The renderer should not shape long raw transcripts. Backend transcript responses
 - `blockOffset`/`totalBlocks`: window position.
 - deferred heavy-content markers and explicit block hydration endpoints.
 
-The renderer may fall back to local shaping only when the transcript is locally mutated after load, such as stream deltas, explicit hydration, pending prompts, or append-only merges.
+The renderer may fall back to local shaping only when the transcript is locally mutated after load, such as stream deltas, explicit block hydration, or pending prompts. Backend transcript/bootstrap refreshes should return authoritative snapshots instead of requiring the renderer to merge cached transcript windows.
 
 ## Banned critical-path operations
 

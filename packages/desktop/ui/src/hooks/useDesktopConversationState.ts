@@ -14,7 +14,7 @@ import type {
 } from '../shared/types';
 import { recordRendererTelemetry } from '../telemetry/appTelemetry';
 import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from './sessionStream';
-import { readCachedConversationBootstrap, readCachedOrPersistedConversationBootstrap } from './useConversationBootstrap';
+import { readCachedConversationBootstrap, readCachedConversationBootstrapSeed } from './useConversationBootstrap';
 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
 const MAX_CACHED_DESKTOP_CONVERSATION_STATES = 8;
@@ -589,19 +589,12 @@ export function useDesktopConversationState(conversationId: string | null, optio
     setError(null);
 
     if (!cachedState && !bootstrapState) {
-      void readCachedOrPersistedConversationBootstrap(conversationId, requestOptions)
-        .then((persistedBootstrap) => {
-          if (closed || !persistedBootstrap) {
-            return;
-          }
-
-          const persistedState = createDesktopConversationStateFromBootstrap(conversationId, persistedBootstrap);
-          rememberDesktopConversationState(desktopConversationStateCache, cacheKey, persistedState);
-          setState((current) => (current?.conversationId === conversationId ? current : persistedState));
-        })
-        .catch(() => {
-          // Ignore persisted bootstrap misses; the authoritative desktop state request owns freshness.
-        });
+      const seededBootstrap = readCachedConversationBootstrapSeed(conversationId, requestOptions);
+      if (seededBootstrap) {
+        const seededState = createDesktopConversationStateFromBootstrap(conversationId, seededBootstrap);
+        rememberDesktopConversationState(desktopConversationStateCache, cacheKey, seededState);
+        setState((current) => (current?.conversationId === conversationId ? current : seededState));
+      }
     }
 
     void fetchDesktopConversationStateCached(conversationId, requestOptions)

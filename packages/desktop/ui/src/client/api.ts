@@ -850,20 +850,12 @@ export const api = {
     options?: {
       tailBlocks?: number;
       includeToolBlocks?: boolean;
-      knownSessionSignature?: string;
-      knownBlockOffset?: number;
-      knownTotalBlocks?: number;
-      knownLastBlockId?: string;
     },
   ) => {
     const startedAtMs = performance.now();
     const params = new URLSearchParams();
     if (options?.tailBlocks !== undefined) params.set('tailBlocks', String(options.tailBlocks));
     if (options?.includeToolBlocks === false) params.set('includeToolBlocks', 'false');
-    if (options?.knownSessionSignature) params.set('knownSessionSignature', options.knownSessionSignature);
-    if (options?.knownBlockOffset !== undefined) params.set('knownBlockOffset', String(options.knownBlockOffset));
-    if (options?.knownTotalBlocks !== undefined) params.set('knownTotalBlocks', String(options.knownTotalBlocks));
-    if (options?.knownLastBlockId) params.set('knownLastBlockId', options.knownLastBlockId);
     const query = params.toString();
     const result = await get<ConversationBootstrapState>(`/conversations/${encodeURIComponent(id)}/bootstrap${query ? `?${query}` : ''}`);
     recordClientPerfTiming({
@@ -872,7 +864,6 @@ export const api = {
       meta: {
         conversationId: id,
         tailBlocks: options?.tailBlocks,
-        hasKnownSessionSignature: Boolean(options?.knownSessionSignature),
         serverPerf: result.perf,
       },
     });

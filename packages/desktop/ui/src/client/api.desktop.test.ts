@@ -530,10 +530,8 @@ describe('api desktop transport', () => {
       if (path === '/api/runs/run-1/cancel') return createJsonResponse(await cancelDurableRun('run-1'));
       if (path === '/api/conversations/conversation-1/attention')
         return createJsonResponse(await markConversationAttention({ conversationId: 'conversation-1', ...JSON.parse(String(init?.body)) }));
-      if (path === '/api/conversations/conversation-1/bootstrap?tailBlocks=12&knownSessionSignature=sig-1')
-        return createJsonResponse(
-          await readConversationBootstrap({ conversationId: 'conversation-1', tailBlocks: 12, knownSessionSignature: 'sig-1' }),
-        );
+      if (path === '/api/conversations/conversation-1/bootstrap?tailBlocks=12')
+        return createJsonResponse(await readConversationBootstrap({ conversationId: 'conversation-1', tailBlocks: 12 }));
       if (path === '/api/conversations/conversation-1/title')
         return createJsonResponse(await renameConversation({ conversationId: 'conversation-1', ...JSON.parse(String(init?.body)) }));
       if (path === '/api/conversations/live-1/cwd')
@@ -621,10 +619,7 @@ describe('api desktop transport', () => {
     const durableRunLog = await api.durableRunLog('run-1', 25);
     const durableRunAttention = await api.markDurableRunAttentionRead('run-1', false);
     const cancelledRun = await api.cancelDurableRun('run-1');
-    const bootstrap = await api.conversationBootstrap('conversation-1', {
-      knownSessionSignature: 'sig-1',
-      tailBlocks: 12,
-    });
+    const bootstrap = await api.conversationBootstrap('conversation-1', { tailBlocks: 12 });
     const renamed = await api.renameConversation('conversation-1', 'Renamed conversation', 'surface-1');
     const changedCwd = await api.changeConversationCwd('live-1', '/next-repo', 'surface-1');
     const resumeResult = await api.resumeConversation('conversation-1');
@@ -692,7 +687,6 @@ describe('api desktop transport', () => {
     expect(readConversationBootstrap).toHaveBeenCalledWith({
       conversationId: 'conversation-1',
       tailBlocks: 12,
-      knownSessionSignature: 'sig-1',
     });
     expect(renameConversation).toHaveBeenCalledWith({
       conversationId: 'conversation-1',

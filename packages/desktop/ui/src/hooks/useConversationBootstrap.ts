@@ -2,11 +2,7 @@ import { useEffect, useLayoutEffect, useState } from 'react';
 
 import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
-import {
-  readPersistedConversationBootstrapEntry,
-  writePersistedConversationBootstrapEntry,
-} from '../conversation/conversationBootstrapPersistence';
-import type { ConversationBootstrapState, SessionDetail } from '../shared/types';
+import type { ConversationBootstrapState } from '../shared/types';
 
 interface CachedConversationBootstrapEntry {
   data: ConversationBootstrapState;
@@ -26,35 +22,6 @@ function readConversationBootstrapSessionSignature(data: ConversationBootstrapSt
 
   const bootstrapSignature = data?.sessionDetailSignature?.trim();
   return bootstrapSignature || undefined;
-}
-
-function readConversationBootstrapLastBlockId(data: ConversationBootstrapState | null | undefined): string | undefined {
-  const blockId = data?.sessionDetail?.blocks.at(-1)?.id?.trim();
-  return blockId && blockId.length > 0 ? blockId : undefined;
-}
-
-function mergeAppendOnlyConversationSessionDetail(cached: SessionDetail, nextData: ConversationBootstrapState): SessionDetail | null {
-  const appendOnly = nextData.sessionDetailAppendOnly;
-  if (!appendOnly) {
-    return nextData.sessionDetail;
-  }
-
-  const dropCount = Math.max(0, appendOnly.blockOffset - cached.blockOffset);
-  const retainedBlocks = cached.blocks.slice(dropCount);
-  const nextVisibleLength = Math.max(0, appendOnly.totalBlocks - appendOnly.blockOffset);
-  const retainedCount = Math.max(0, nextVisibleLength - appendOnly.blocks.length);
-  if (retainedCount > retainedBlocks.length) {
-    return null;
-  }
-
-  return {
-    meta: appendOnly.meta,
-    blocks: [...retainedBlocks.slice(retainedBlocks.length - retainedCount), ...appendOnly.blocks],
-    blockOffset: appendOnly.blockOffset,
-    totalBlocks: appendOnly.totalBlocks,
-    contextUsage: appendOnly.contextUsage,
-    signature: appendOnly.signature ?? cached.signature,
-  };
 }
 
 function normalizeConversationBootstrapState(data: ConversationBootstrapState): ConversationBootstrapState {
@@ -97,44 +64,6 @@ function stripConversationBootstrapTransientFlags(data: ConversationBootstrapSta
   delete rest.sessionDetailUnchanged;
   delete rest.sessionDetailAppendOnly;
   return rest;
-}
-
-function mergeConversationBootstrapWithCachedSessionDetail(
-  cached: ConversationBootstrapState | null,
-  nextData: ConversationBootstrapState,
-): ConversationBootstrapState {
-  const normalized = normalizeConversationBootstrapState(nextData);
-  if (!normalized.sessionDetailUnchanged && !normalized.sessionDetailAppendOnly) {
-    return normalized;
-  }
-
-  const cachedDetail = cached?.conversationId === normalized.conversationId ? cached.sessionDetail : null;
-  if (!cachedDetail) {
-    return normalized;
-  }
-
-  const nextSignature = readConversationBootstrapSessionSignature(normalized) ?? null;
-  const cachedSignature = cachedDetail.signature?.trim() || readConversationBootstrapSessionSignature(cached) || null;
-  if (nextSignature && cachedSignature && nextSignature !== cachedSignature && !normalized.sessionDetailAppendOnly) {
-    return normalized;
-  }
-
-  const mergedDetail = normalized.sessionDetailAppendOnly
-    ? mergeAppendOnlyConversationSessionDetail(cachedDetail, normalized)
-    : cachedDetail;
-  if (!mergedDetail) {
-    return normalized;
-  }
-
-  const rest = { ...normalized };
-  delete rest.sessionDetailUnchanged;
-  delete rest.sessionDetailAppendOnly;
-  return {
-    ...rest,
-    sessionDetail: mergedDetail,
-    sessionDetailSignature:
-      readConversationBootstrapSessionSignature({ ...rest, sessionDetail: mergedDetail }) ?? cachedSignature ?? nextSignature,
-  };
 }
 
 const conversationBootstrapCache = new Map<string, CachedConversationBootstrapEntry>();
@@ -199,32 +128,21 @@ function writeConversationBootstrapCacheEntry(
   } satisfies CachedConversationBootstrapEntry;
   conversationBootstrapCache.set(cacheKey, entry);
   trimConversationBootstrapCache();
-  void writePersistedConversationBootstrapEntry(conversationId, entry.data, options, versionKey);
   return entry;
 }
 
-async function readConversationBootstrapEntry(
+function readConversationBootstrapEntry(
   conversationId: string,
   options?: ConversationBootstrapOptions,
-): Promise<CachedConversationBootstrapEntry | null> {
-  const cached = readCachedConversationBootstrapEntry(conversationId, options);
-  if (cached) {
-    return cached;
-  }
-
-  const persisted = await readPersistedConversationBootstrapEntry(conversationId, options);
-  if (!persisted) {
-    return null;
-  }
-
-  return writeConversationBootstrapCacheEntry(conversationId, persisted.data, options, persisted.versionKey);
+): CachedConversationBootstrapEntry | null {
+  return readCachedConversationBootstrapEntry(conversationId, options);
 }
 
-export async function readCachedOrPersistedConversationBootstrap(
+export function readCachedConversationBootstrapSeed(
   conversationId: string,
   options?: ConversationBootstrapOptions,
-): Promise<ConversationBootstrapState | null> {
-  return (await readConversationBootstrapEntry(conversationId, options))?.data ?? null;
+): ConversationBootstrapState | null {
+  return readConversationBootstrapEntry(conversationId, options)?.data ?? null;
 }
 
 export function primeConversationBootstrapCache(
@@ -254,22 +172,7 @@ export function fetchConversationBootstrapCached(
       return cached.data;
     }
 
-    const knownSessionSignature = readConversationBootstrapSessionSignature(cached?.data);
-    const cachedSessionDetail = cached?.data.sessionDetail;
-    const data = await api.conversationBootstrap(conversationId, {
-      ...options,
-      ...(knownSessionSignature ? { knownSessionSignature } : {}),
-      ...(typeof cachedSessionDetail?.blockOffset === 'number' ? { knownBlockOffset: cachedSessionDetail.blockOffset } : {}),
-      ...(typeof cachedSessionDetail?.totalBlocks === 'number' ? { knownTotalBlocks: cachedSessionDetail.totalBlocks } : {}),
-      ...(readConversationBootstrapLastBlockId(cached?.data)
-        ? { knownLastBlockId: readConversationBootstrapLastBlockId(cached?.data) }
-        : {}),
-    });
-    let nextData = mergeConversationBootstrapWithCachedSessionDetail(cached?.data ?? null, data);
-    if ((nextData.sessionDetailUnchanged || nextData.sessionDetailAppendOnly) && !nextData.sessionDetail && !nextData.liveSession?.live) {
-      const fallback = await api.conversationBootstrap(conversationId, options);
-      nextData = mergeConversationBootstrapWithCachedSessionDetail(cached?.data ?? null, fallback);
-    }
+    const nextData = await api.conversationBootstrap(conversationId, options);
     return writeConversationBootstrapCacheEntry(conversationId, nextData, options, versionKey).data;
   })().finally(() => {
     conversationBootstrapInflight.delete(inflightKey);
@@ -342,18 +245,11 @@ export function useConversationBootstrap(
     const cached = readCachedConversationBootstrapEntry(conversationId, options);
 
     if (!cached) {
-      void readConversationBootstrapEntry(conversationId, options)
-        .then((persisted) => {
-          if (cancelled || !persisted) {
-            return;
-          }
-
-          setData((current) => current ?? persisted.data);
-          setLoading(false);
-        })
-        .catch(() => {
-          // Ignore persisted bootstrap misses; the network request owns freshness.
-        });
+      const seeded = readConversationBootstrapEntry(conversationId, options);
+      if (seeded && !cancelled) {
+        setData((current) => current ?? seeded.data);
+        setLoading(false);
+      }
     }
 
     if (cached?.versionKey === versionKey) {
