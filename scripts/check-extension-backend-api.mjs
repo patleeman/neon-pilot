@@ -131,6 +131,15 @@ function collectLocalBackendApiStaticSpecifiers(filePath) {
     .sort();
 }
 
+function collectParentStaticSpecifiers(filePath) {
+  return [
+    ...collectImportSpecifiers(filePath, { staticOnly: true }),
+    ...collectStaticExportSpecifiers(filePath),
+  ]
+    .filter((specifier) => specifier.startsWith('../'))
+    .sort();
+}
+
 function collectTypeImportSpecifiers(filePath) {
   const source = readFileSync(filePath, 'utf8');
   const importTypeMatches = source.matchAll(/\bimport\s+type\s+(?:[^'"]+\s+from\s+)?['"]([^'"]+)['"]/g);
@@ -258,6 +267,13 @@ for (const fileName of readdirSync(hostBackendApiRoot)) {
     disallowedLocalStaticSpecifiers.length === 0,
     failures,
     `backendApi/${fileName} statically imports or re-exports local backend API siblings (${disallowedLocalStaticSpecifiers.join(', ')}); use only ${[...allowedBackendApiLocalStaticSpecifiers].sort().join(' or ')} helper seams, or add public barrel exports from backendApi/index.ts`,
+  );
+  const parentStaticSpecifiers =
+    fileName === 'index.ts' || fileName.endsWith('.test.ts') ? [] : collectParentStaticSpecifiers(filePath);
+  assert(
+    parentStaticSpecifiers.length === 0,
+    failures,
+    `backendApi/${fileName} statically imports or re-exports parent host modules (${parentStaticSpecifiers.join(', ')}); use serverModuleResolver or the extension host capability bridge instead`,
   );
   const forbidden = [
     ...collectImportSpecifiers(filePath, { staticOnly: true }),
