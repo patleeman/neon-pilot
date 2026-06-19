@@ -670,7 +670,7 @@ describe('LocalBackendProcesses', () => {
     expect(bootstrapMocks.readConversationBootstrapState).not.toHaveBeenCalled();
   });
 
-  it('checks session detail signatures only when the caller provides a known signature', async () => {
+  it('ignores renderer transcript delta hints on the session detail route', async () => {
     class MainProcessSessionDetailBackend extends LocalBackendProcesses {
       override async ensureStarted(): Promise<void> {
         throw new Error('session detail should not start the backend child');
@@ -688,12 +688,18 @@ describe('LocalBackendProcesses', () => {
 
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(new TextDecoder().decode(response.body))).toEqual({
-      unchanged: true,
-      sessionId: 'conversation 1',
+      id: 'conversation 1',
+      blocks: [],
+      blockOffset: 0,
+      totalBlocks: 0,
       signature: 'signature-1',
     });
-    expect(bootstrapMocks.readConversationSessionSignature).toHaveBeenCalledWith('conversation 1');
-    expect(bootstrapMocks.readSessionDetailForRoute).not.toHaveBeenCalled();
+    expect(bootstrapMocks.readConversationSessionSignature).not.toHaveBeenCalled();
+    expect(bootstrapMocks.readSessionDetailForRoute).toHaveBeenCalledWith({
+      conversationId: 'conversation 1',
+      profile: 'shared',
+      tailBlocks: 40,
+    });
   });
 
   it('routes backend-owned live session detail through the backend child', async () => {

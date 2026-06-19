@@ -612,15 +612,7 @@ export class LocalBackendProcesses {
           'backend-rpc',
         );
       }
-      const { readConversationSessionSignature, readSessionDetailForRoute } =
-        await import('../../server/conversations/conversationService.js');
-      const knownSessionSignature = url.searchParams.get('knownSessionSignature');
-      if (knownSessionSignature) {
-        const signature = readConversationSessionSignature(sessionId);
-        if (signature === knownSessionSignature) {
-          return this.makeJsonResponse({ unchanged: true, sessionId, signature }, 'main-process');
-        }
-      }
+      const { readSessionDetailForRoute } = await import('../../server/conversations/conversationService.js');
       const result = await readSessionDetailForRoute({ conversationId: sessionId, profile: 'shared', tailBlocks });
       return this.makeJsonResponse(result.sessionRead.detail, 'main-process');
     }

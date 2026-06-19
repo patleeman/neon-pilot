@@ -1020,14 +1020,6 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       await readDesktopSessionDetail({
         sessionId: decodeURIComponent(sessionDetailMatch[1] ?? ''),
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
-        knownSessionSignature: input.url.searchParams.get('knownSessionSignature') ?? undefined,
-        knownBlockOffset: input.url.searchParams.has('knownBlockOffset')
-          ? Number(input.url.searchParams.get('knownBlockOffset'))
-          : undefined,
-        knownTotalBlocks: input.url.searchParams.has('knownTotalBlocks')
-          ? Number(input.url.searchParams.get('knownTotalBlocks'))
-          : undefined,
-        knownLastBlockId: input.url.searchParams.get('knownLastBlockId') ?? undefined,
       }),
     );
   }
@@ -1338,14 +1330,6 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       await readDesktopConversationBootstrap({
         conversationId: decodeURIComponent(conversationBootstrapMatch[1] ?? ''),
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
-        knownSessionSignature: input.url.searchParams.get('knownSessionSignature') ?? undefined,
-        knownBlockOffset: input.url.searchParams.has('knownBlockOffset')
-          ? Number(input.url.searchParams.get('knownBlockOffset'))
-          : undefined,
-        knownTotalBlocks: input.url.searchParams.has('knownTotalBlocks')
-          ? Number(input.url.searchParams.get('knownTotalBlocks'))
-          : undefined,
-        knownLastBlockId: input.url.searchParams.get('knownLastBlockId') ?? undefined,
       }),
     );
   }
