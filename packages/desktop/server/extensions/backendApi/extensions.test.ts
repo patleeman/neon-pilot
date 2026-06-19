@@ -185,6 +185,35 @@ describe('backendApi/extensions', () => {
     });
   });
 
+  it('records remote marketplace packages as managed extension wrappers without copied skills', async () => {
+    const { installMarketplacePackageAsExtension } = await import('./extensions.js');
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'np-marketplace-runtime-remote-'));
+    resolverMocks.installPackageSource.mockReturnValueOnce({
+      installed: true,
+      alreadyPresent: false,
+      source: 'https://example.com/package.git',
+      target: 'local',
+      settingsPath: '/profile/settings.json',
+    });
+
+    const result = await installMarketplacePackageAsExtension({
+      ecosystem: 'claude',
+      packageType: 'instruction-pack',
+      source: 'https://example.com/package.git',
+      runtimeDir,
+    });
+
+    expect(result).toMatchObject({
+      extension: { skillCount: 0, copiedSource: false },
+    });
+    const manifest = JSON.parse(readFileSync(join(result.extension.packageRoot, 'extension.json'), 'utf-8')) as {
+      importedPackage?: { source: string; copiedSource: boolean };
+      contributes?: { skills?: unknown[] };
+    };
+    expect(manifest.importedPackage).toMatchObject({ source: 'https://example.com/package.git', copiedSource: false });
+    expect(manifest.contributes?.skills).toBeUndefined();
+  });
+
   it('rejects symlinks when wrapping local marketplace packages as extensions', async () => {
     const { installMarketplacePackageAsExtension } = await import('./extensions.js');
     const sourceRoot = mkdtempSync(join(tmpdir(), 'np-marketplace-source-symlink-'));
