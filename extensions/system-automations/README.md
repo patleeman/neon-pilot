@@ -38,7 +38,7 @@ Reaction lanes show the kind of consumer an event flowed into:
 
 The default actions are:
 
-- **Re-emit Event** — trigger the selected automation now using the current runtime rules.
+- **Re-emit Event** — replay the selected recorded event against the subscriptions that exist now.
 - **Create Reaction** — open the automation editor for a new or selected reaction.
 - **Open Thread** — jump to the bound conversation when the selected reaction targets a thread.
 - **Pause Publisher** — disable the selected scheduled publisher without deleting it.
@@ -93,9 +93,23 @@ The UI avoids raw cron entry for common creation/editing paths; selected presets
 
 The timeline shows the automation-level trace. Durable background run logs still live in the Runs extension. See [Runs](../system-runs/README.md) for run reference.
 
+## CLI
+
+The event bus CLI mirrors the backend action:
+
+```sh
+neon-pilot events list --json
+neon-pilot events emit tweet.created --source script:twitter --payload-json '{"tweetId":"tw-1"}' --json
+neon-pilot events replay evt_123 --json
+neon-pilot events subscriptions list --json
+neon-pilot events subscriptions save sub-tweets --name "Tweet Worker" --pattern tweet.* --action-json '{"type":"start_agent","prompt":"Summarize the tweet event"}' --json
+```
+
+Use `--dry-run` on mutating commands to preview writes without emitting, replaying, saving, or deleting.
+
 ## Relationship to the Daemon
 
-Automations are stored in the daemon's automation store (SQLite database at `<state-root>/daemon/`). The daemon scheduler checks for due automations and executes them. The UI communicates with the daemon through the tasks API.
+Automations are stored in daemon-owned runtime storage. The daemon scheduler emits schedule events when tasks become due, and event bus subscriptions dispatch the resulting reactions. The UI communicates with the daemon through the event bus backend action for stream/reaction state and through the tasks API for scheduled publisher administration.
 
 ---
 

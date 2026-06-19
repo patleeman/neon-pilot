@@ -178,9 +178,11 @@ export async function listSubscriptions() {
 export async function saveSubscription(input: unknown) {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
   const subscriptionId = readString(record.id) ?? readString(record.subscriptionId);
-  const saved = subscriptionId
-    ? updateEventBusSubscription({ subscriptionId, patch: record })
-    : createEventBusSubscription({ subscription: record as never });
+  const existing = subscriptionId ? listEventBusSubscriptions().some((subscription) => subscription.id === subscriptionId) : false;
+  const saved =
+    subscriptionId && existing
+      ? updateEventBusSubscription({ subscriptionId, patch: record })
+      : createEventBusSubscription({ subscription: { ...record, ...(subscriptionId ? { id: subscriptionId } : {}) } as never });
   await notifyEventBusChanged();
   return { subscription: saved };
 }

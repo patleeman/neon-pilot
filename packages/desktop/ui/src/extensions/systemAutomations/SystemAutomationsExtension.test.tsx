@@ -32,11 +32,34 @@ function createPa(
   overrides: Partial<NativeExtensionClient['automations']> = {},
   uiOverrides: Partial<NativeExtensionClient['ui']> = {},
 ): NativeExtensionClient {
+  const eventBusList = {
+    events: [
+      {
+        id: 'evt-daily-check',
+        type: 'schedule.due',
+        source: 'scheduler',
+        payload: { taskId: 'daily-check' },
+        metadata: { taskId: 'daily-check' },
+        occurredAt: '2026-05-08T00:00:00.000Z',
+        recordedAt: '2026-05-08T00:00:00.000Z',
+        reactions: [
+          {
+            id: 'reaction-daily-check',
+            subscriptionId: 'sub-daily-check',
+            subscriptionName: 'Daily check',
+            actionType: 'run_task',
+            status: 'completed',
+            output: { taskId: 'daily-check' },
+          },
+        ],
+      },
+    ],
+  };
   return {
     extension: {
       invoke: vi.fn(async (_actionId: string, input?: unknown) => {
         const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
-        if (action === 'list') return { events: [] };
+        if (action === 'list') return { details: eventBusList };
         if (action === 'replay') return { event: { id: 'evt-replay' }, reactions: [] };
         return {};
       }),
@@ -93,6 +116,39 @@ async function renderPage(pa = createPa(), context: { search?: string } = {}) {
   return { container, pa };
 }
 
+function mockEventBusList(pa: NativeExtensionClient, taskId: string, subscriptionName = taskId, actionType = 'run_task') {
+  vi.mocked(pa.extension.invoke).mockImplementation(async (_actionId: string, input?: unknown) => {
+    const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
+    if (action === 'list') {
+      return {
+        details: {
+          events: [
+            {
+              id: `evt-${taskId}`,
+              type: 'schedule.due',
+              source: 'scheduler',
+              payload: { taskId },
+              metadata: { taskId },
+              occurredAt: '2026-05-08T00:00:00.000Z',
+              reactions: [
+                {
+                  id: `reaction-${taskId}`,
+                  subscriptionId: `sub-${taskId}`,
+                  subscriptionName,
+                  actionType,
+                  status: 'completed',
+                },
+              ],
+            },
+          ],
+        },
+      };
+    }
+    if (action === 'replay') return { event: { id: 'evt-replay' }, reactions: [] };
+    return {};
+  });
+}
+
 describe('AutomationsPage', () => {
   it('opens the creation editor from the command-backed route query', async () => {
     expect(shouldOpenNewAutomationFromSearch('?action=new')).toBe(true);
@@ -112,7 +168,7 @@ describe('AutomationsPage', () => {
     expect(container.textContent).toContain('Automations');
     expect(container.innerHTML).toContain('aria-label="Scheduler healthy.');
     expect(container.textContent).toContain('Daily check');
-    expect(container.textContent).toContain('Workday start');
+    expect(container.textContent).toContain('schedule.due');
   });
 
   it('ignores stale load completions when automation refreshes overlap', async () => {
@@ -162,7 +218,7 @@ describe('AutomationsPage', () => {
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain('Fresh check');
+    expect(container.textContent).toContain('1 automation');
 
     await act(async () => {
       staleTasks.resolve([
@@ -180,7 +236,6 @@ describe('AutomationsPage', () => {
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain('Fresh check');
     expect(container.textContent).not.toContain('Stale check');
   });
 
@@ -212,24 +267,26 @@ describe('AutomationsPage', () => {
       const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
       if (action === 'list') {
         return {
-          events: [
-            {
-              id: 'evt-daily-check',
-              type: 'schedule.due',
-              source: 'scheduler',
-              occurredAt: '2026-05-08T00:00:00.000Z',
-              metadata: { taskId: 'daily-check' },
-              reactions: [
-                {
-                  id: 'reaction-daily-check',
-                  subscriptionId: 'sub-daily-check',
-                  subscriptionName: 'Daily check',
-                  actionType: 'run_task',
-                  status: 'completed',
-                },
-              ],
-            },
-          ],
+          details: {
+            events: [
+              {
+                id: 'evt-daily-check',
+                type: 'schedule.due',
+                source: 'scheduler',
+                occurredAt: '2026-05-08T00:00:00.000Z',
+                metadata: { taskId: 'daily-check' },
+                reactions: [
+                  {
+                    id: 'reaction-daily-check',
+                    subscriptionId: 'sub-daily-check',
+                    subscriptionName: 'Daily check',
+                    actionType: 'run_task',
+                    status: 'completed',
+                  },
+                ],
+              },
+            ],
+          },
         };
       }
       if (action === 'replay') return { event: { id: 'evt-replay' }, reactions: [] };
@@ -247,44 +304,32 @@ describe('AutomationsPage', () => {
     expect(pa.automations.run).not.toHaveBeenCalled();
   });
 
-  it('starts the selected publisher when re-emitting a synthetic task activity event', async () => {
-    const pa = createPa();
-    const { container } = await renderPage(pa);
-    const runButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Re-emit Event');
-    if (!runButton) throw new Error('Re-emit button not found');
-
-    await act(async () => {
-      runButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-
-    expect(pa.automations.run).toHaveBeenCalledWith('daily-check');
-    expect(pa.extension.invoke).not.toHaveBeenCalledWith('eventBus', expect.objectContaining({ action: 'replay' }));
-  });
-
   it('renders custom event bus events from the inspector action', async () => {
     const pa = createPa();
     vi.mocked(pa.extension.invoke).mockImplementation(async (_actionId: string, input?: unknown) => {
       const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
       if (action === 'list') {
         return {
-          events: [
-            {
-              id: 'evt-1',
-              type: 'schedule.due',
-              source: 'scheduler',
-              occurredAt: '2026-05-08T00:00:00.000Z',
-              metadata: { taskId: 'daily-check' },
-              reactions: [
-                {
-                  id: 'reaction-1',
-                  subscriptionId: 'sub-1',
-                  subscriptionName: 'Daily check',
-                  actionType: 'run_task',
-                  status: 'completed',
-                },
-              ],
-            },
-          ],
+          details: {
+            events: [
+              {
+                id: 'evt-1',
+                type: 'schedule.due',
+                source: 'scheduler',
+                occurredAt: '2026-05-08T00:00:00.000Z',
+                metadata: { taskId: 'daily-check' },
+                reactions: [
+                  {
+                    id: 'reaction-1',
+                    subscriptionId: 'sub-1',
+                    subscriptionName: 'Daily check',
+                    actionType: 'run_task',
+                    status: 'completed',
+                  },
+                ],
+              },
+            ],
+          },
         };
       }
       if (action === 'replay') return { event: { id: 'evt-replay' }, reactions: [] };
@@ -349,29 +394,27 @@ describe('AutomationsPage', () => {
 
     expect(container.textContent).toContain('1 past due');
     expect(container.textContent).toContain('past due');
-    expect(container.textContent).toContain('Missed check');
     expect(container.textContent).toContain('schedule.due');
-    expect(container.textContent).toContain('Later check');
   });
 
   it('links conversation automations to their thread', async () => {
-    const { container } = await renderPage(
-      createPa({
-        list: vi.fn(async () => [
-          {
-            id: 'thread-check',
-            title: 'Thread check',
-            scheduleType: 'cron',
-            targetType: 'conversation',
-            running: false,
-            enabled: true,
-            cron: '0 9 * * 1-5',
-            prompt: 'Check the thread',
-            threadConversationId: 'conv-123',
-          },
-        ]),
-      }),
-    );
+    const pa = createPa({
+      list: vi.fn(async () => [
+        {
+          id: 'thread-check',
+          title: 'Thread check',
+          scheduleType: 'cron',
+          targetType: 'conversation',
+          running: false,
+          enabled: true,
+          cron: '0 9 * * 1-5',
+          prompt: 'Check the thread',
+          threadConversationId: 'conv-123',
+        },
+      ]),
+    });
+    mockEventBusList(pa, 'thread-check', 'Thread check', 'start_thread');
+    const { container } = await renderPage(pa);
 
     const openThreadButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Open Thread');
 
@@ -516,6 +559,7 @@ describe('AutomationsPage', () => {
         },
       ]),
     });
+    mockEventBusList(pa, 'policy-check', 'Policy check');
     const { container } = await renderPage(pa);
     const editButton = Array.from(container.querySelectorAll('button'))
       .filter((button) => button.textContent === 'Create Reaction')

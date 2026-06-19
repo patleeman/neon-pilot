@@ -549,7 +549,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function readEventBusEvents(input: unknown): EventBusEventSummary[] {
-  const events = isRecord(input) && Array.isArray(input.events) ? input.events : [];
+  const details = isRecord(input) && isRecord(input.details) ? input.details : undefined;
+  const events =
+    isRecord(input) && Array.isArray(input.events) ? input.events : details && Array.isArray(details.events) ? details.events : [];
   return events
     .map((event): EventBusEventSummary | null => {
       if (!isRecord(event) || typeof event.id !== 'string' || typeof event.type !== 'string' || typeof event.source !== 'string') {
@@ -643,138 +645,6 @@ function buildEventBusActivityEvents(events: EventBusEventSummary[]): Automation
           tone,
         },
       ],
-    };
-  });
-}
-
-function scheduleText(task: ScheduledTaskSummary) {
-  if (task.cron) return `Cron ${task.cron}`;
-  if (task.at) return `Once ${task.at}`;
-  return 'Manual';
-}
-
-function taskScopeText(task: ScheduledTaskSummary) {
-  return task.cwd?.split('/').filter(Boolean).at(-1) ?? task.threadTitle ?? task.threadConversationId ?? '';
-}
-
-function taskScheduleSummary(task: ScheduledTaskSummary) {
-  const preset = CRON_PRESETS.find((candidate) => candidate.cron === task.cron);
-  if (preset) return preset.label;
-  if (task.cron === '0 2 * * *') return 'Daily at 02:00';
-  if (task.cron === '0 * * * *') return 'Hourly';
-  if (task.cron?.startsWith('0 */')) {
-    const hours = task.cron.match(/^0 \*\/(\d+) \* \* \*$/)?.[1];
-    if (hours) return `Every ${hours} hours`;
-  }
-  return scheduleText(task);
-}
-
-function taskLastRunText(task: ScheduledTaskSummary, nowMs = Date.now()) {
-  if (isPastDueOneTimeTask(task, nowMs)) return 'Scheduled time passed';
-  return task.lastRunAt ? `Last run ${timeAgo(task.lastRunAt)}` : 'Not run yet';
-}
-
-function taskTargetLabel(task: ScheduledTaskSummary) {
-  return task.targetType === 'conversation' ? 'Thread' : 'Job';
-}
-
-function taskReactionKind(task: ScheduledTaskSummary): ReactionKind {
-  return task.targetType === 'conversation' ? 'thread' : 'agent';
-}
-
-function buildFallbackActivityEvents(tasks: ScheduledTaskSummary[], nowMs = Date.now()): AutomationActivityEvent[] {
-  return sortTasks(tasks).map((task) => {
-    const name = taskName(task);
-    const reactionKind = taskReactionKind(task);
-    const target = taskTargetLabel(task);
-    const schedule = taskScheduleSummary(task);
-    const scope = taskScopeText(task);
-    const source = task.cron || task.at ? 'Scheduler' : 'Manual';
-    const lastRunText = taskLastRunText(task, nowMs);
-    const isPastDue = isPastDueOneTimeTask(task, nowMs);
-    const failed = isFailedTask(task);
-    const running = Boolean(task.running);
-    const disabled = task.enabled === false;
-
-    let eventName = 'schedule.armed';
-    let status = 'Scheduled';
-    let tone: ActivityTone = 'success';
-    let relativeTime = lastRunText;
-    const absoluteTime = task.lastRunAt ?? task.at ?? undefined;
-    let reactionStatus = 'Waiting';
-    let reactionMeta = schedule;
-    let emittedEvent: string | undefined;
-
-    if (disabled) {
-      eventName = 'automation.disabled';
-      status = 'Disabled';
-      tone = 'muted';
-      relativeTime = 'Paused';
-      reactionStatus = 'Paused';
-      reactionMeta = schedule;
-    } else if (running) {
-      eventName = 'schedule.due';
-      status = 'Running';
-      tone = 'accent';
-      relativeTime = 'Now';
-      reactionStatus = 'Running';
-      reactionMeta = target === 'Thread' ? 'Resuming thread' : 'Agent active';
-    } else if (failed) {
-      eventName = 'automation.failed';
-      status = 'Failed';
-      tone = 'danger';
-      relativeTime = task.lastRunAt ? timeAgo(task.lastRunAt) : 'Needs attention';
-      reactionStatus = 'Failed';
-      reactionMeta = 'Last run failed';
-      emittedEvent = 'automation.alerted';
-    } else if (isPastDue) {
-      eventName = 'schedule.due';
-      status = 'Past due';
-      tone = 'warning';
-      relativeTime = task.at ? timeAgo(task.at) : 'Past due';
-      reactionStatus = 'Waiting';
-      reactionMeta = 'Due event not consumed yet';
-    } else if (task.lastStatus === 'success') {
-      eventName = 'automation.completed';
-      status = 'Processed';
-      tone = 'success';
-      relativeTime = task.lastRunAt ? timeAgo(task.lastRunAt) : lastRunText;
-      reactionStatus = 'Completed';
-      reactionMeta = target === 'Thread' ? 'Thread updated' : 'Agent completed';
-      emittedEvent = target === 'Thread' ? 'thread.message.created' : 'agent.run.completed';
-    }
-
-    const trace: AutomationActivityEvent['trace'] = [
-      {
-        label: source === 'Scheduler' ? 'schedule.ready' : 'manual.triggered',
-        meta: schedule,
-        tone: source === 'Scheduler' ? 'success' : 'accent',
-      },
-      { label: eventName, meta: relativeTime, tone },
-      { label: `${reactionLaneLabel(reactionKind).toLowerCase()}.reaction`, meta: reactionStatus, tone },
-    ];
-    if (emittedEvent) {
-      trace.push({ label: emittedEvent, meta: 'Published', tone: 'success' });
-    }
-
-    return {
-      id: `${task.id}:${eventName}`,
-      taskId: task.id,
-      replayMode: 'task-run',
-      eventName,
-      source,
-      title: name,
-      relativeTime,
-      absoluteTime,
-      status,
-      tone,
-      matches: disabled ? 0 : 1,
-      reactionKind,
-      reactionTitle: name,
-      reactionStatus,
-      reactionMeta: reactionMeta || scope || schedule,
-      emittedEvent,
-      trace,
     };
   });
 }
@@ -1670,10 +1540,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const allPastDueTasks = useMemo(() => sortPastDueTasks(tasks.filter((task) => isPastDueOneTimeTask(task, nowMs))), [tasks, nowMs]);
   const pastDueLabel = allPastDueTasks.length === 1 ? '1 past due' : `${allPastDueTasks.length} past due`;
 
-  const activityEvents = useMemo(() => {
-    const realEvents = buildEventBusActivityEvents(eventBusEvents);
-    return realEvents.length > 0 ? realEvents : buildFallbackActivityEvents(tasks, nowMs);
-  }, [eventBusEvents, nowMs, tasks]);
+  const activityEvents = useMemo(() => buildEventBusActivityEvents(eventBusEvents), [eventBusEvents]);
   const filteredActivityEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return activityEvents.filter((event) => {

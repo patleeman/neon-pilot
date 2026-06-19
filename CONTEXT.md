@@ -253,9 +253,39 @@ Use **subagent** only for delegated agent work, not for shell commands.
 
 ### Automation
 
-A user-managed scheduled behavior shown in the Automations UI. Automations may run background agents or post to conversation threads.
+A user-managed event-driven behavior shown in the Automations UI. Automations may be scheduled, script-created, agent-emitted, or subscription-driven, and may run background agents, scripts, threads, scheduled tasks, or publish follow-on events.
 
 Use **automation** in product copy.
+
+### Event bus
+
+The automation backbone that accepts typed events from schedules, scripts, agents, and runtime services, matches subscriptions, records durable events when requested, and dispatches reactions.
+
+Use **event bus** for the shared automation stream, not separate cron/script buses.
+
+### Event
+
+A typed message on the event bus with source, payload, metadata, occurrence time, and optional durable recording.
+
+Use **event** for the message itself; use **reaction** for the work triggered by a subscription.
+
+### Publisher
+
+A schedule, script, agent, service, or user action that emits events into the event bus.
+
+Use **publisher** for the event source that can be paused, inspected, or administered.
+
+### Subscription
+
+A durable event bus rule that matches event types and dispatches one reaction: run a scheduled task, start an agent, start a thread, run a script, or publish another event.
+
+Use **subscription** for the standing rule and **reaction** for an individual dispatch caused by an event.
+
+### Reaction
+
+The per-event result of a subscription match, including the consumer type, status, timing, output, and error when present.
+
+Use **reaction** for event-bus dispatch records, not for the subscription definition.
 
 ### Scheduled task
 
