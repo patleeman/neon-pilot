@@ -1,5 +1,6 @@
-import { execFileSync } from 'node:child_process';
 import { basename, resolve } from 'node:path';
+
+import { execGitProcessSync } from '../shared/processLauncher.js';
 
 export interface GitRepoInfo {
   root: string;
@@ -62,12 +63,7 @@ interface GitCommandResult {
 }
 
 function runGitCommand(args: string[], cwd: string, timeoutMs = GIT_STATUS_COMMAND_TIMEOUT_MS): string {
-  return execFileSync('git', ['-c', 'core.fsmonitor=false', ...args], {
-    cwd,
-    stdio: ['ignore', 'pipe', 'ignore'],
-    encoding: 'utf-8',
-    timeout: timeoutMs,
-  });
+  return execGitProcessSync({ args, cwd, timeoutMs }).stdout;
 }
 
 function runGitCommandAllowFailure(args: string[], cwd: string, timeoutMs = GIT_STATUS_COMMAND_TIMEOUT_MS): GitCommandResult {

@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn, type SpawnOptions } from 'node:child_process';
+import { type ChildProcess, spawn, spawnSync, type SpawnOptions } from 'node:child_process';
 
 import { resolveChildProcessEnv } from '@neon-pilot/core';
 
@@ -200,5 +200,79 @@ export async function execFileProcess(input: {
         terminateProcessGroup(child);
       }, input.timeoutMs);
     }
+  });
+}
+
+export function execFileProcessSync(input: {
+  command: string;
+  args?: string[];
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+  timeoutMs?: number;
+  maxBuffer?: number;
+}): { launch: ProcessLaunchResult; stdout: string; stderr: string } {
+  const launch = resolveProcessLaunch({ command: input.command, args: input.args, cwd: input.cwd, env: input.env });
+  const result = spawnSync(launch.command, launch.args, {
+    cwd: launch.cwd,
+    env: launch.env,
+    shell: launch.shell,
+    encoding: 'utf-8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: input.timeoutMs,
+    maxBuffer: input.maxBuffer ?? 1024 * 1024,
+  });
+
+  const stdout = typeof result.stdout === 'string' ? result.stdout : Buffer.isBuffer(result.stdout) ? result.stdout.toString('utf-8') : '';
+  const stderr = typeof result.stderr === 'string' ? result.stderr : Buffer.isBuffer(result.stderr) ? result.stderr.toString('utf-8') : '';
+
+  if (result.error) {
+    Object.assign(result.error, {
+      stdout,
+      stderr,
+      status: result.status,
+      signal: result.signal,
+    });
+    throw result.error;
+  }
+
+  if (result.status && result.status !== 0) {
+    const error = new Error(stderr || `Command failed with exit code ${result.status}.`);
+    Object.assign(error, {
+      stdout,
+      stderr,
+      status: result.status,
+      signal: result.signal,
+    });
+    throw error;
+  }
+
+  if (result.signal) {
+    const error = new Error(`Command terminated by signal ${result.signal}.`);
+    Object.assign(error, {
+      stdout,
+      stderr,
+      status: result.status,
+      signal: result.signal,
+    });
+    throw error;
+  }
+
+  return { launch, stdout, stderr };
+}
+
+export function execGitProcessSync(input: {
+  args: string[];
+  cwd: string;
+  env?: NodeJS.ProcessEnv;
+  timeoutMs?: number;
+  maxBuffer?: number;
+}): { launch: ProcessLaunchResult; stdout: string; stderr: string } {
+  return execFileProcessSync({
+    command: 'git',
+    args: ['-c', 'core.fsmonitor=false', ...input.args],
+    cwd: input.cwd,
+    env: input.env,
+    timeoutMs: input.timeoutMs,
+    maxBuffer: input.maxBuffer,
   });
 }

@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const execFileSyncMock = vi.hoisted(() => vi.fn());
 
-vi.mock('node:child_process', () => ({
-  execFileSync: execFileSyncMock,
+vi.mock('../shared/processLauncher.js', () => ({
+  execGitProcessSync: execFileSyncMock,
 }));
 
 import { readGitRepoInfo, readGitStatusSummaryWithTelemetry } from './gitStatus.js';
@@ -14,6 +14,14 @@ function normalizeGitArgs(args: readonly string[]): string[] {
     return gitArgs.slice(2);
   }
   return gitArgs;
+}
+
+function gitArgsFromMockInput(input: { args: string[] }): string[] {
+  return normalizeGitArgs(input.args);
+}
+
+function gitOutput(stdout: string): { stdout: string; stderr: string } {
+  return { stdout, stderr: '' };
 }
 
 function createGitTimeoutError(stdout = ''): Error & { stdout?: string; status?: number | null; code?: string } {
@@ -36,20 +44,20 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
   it('returns a degraded summary instead of throwing when tracked diff times out', () => {
     const cwd = '/mock/repo-timeout';
 
-    execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const gitArgs = normalizeGitArgs(args);
+    execFileSyncMock.mockImplementation((input: { args: string[] }) => {
+      const gitArgs = gitArgsFromMockInput(input);
       const joined = gitArgs.join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
-        return 'true\n';
+        return gitOutput('true\n');
       }
       if (joined === 'rev-parse --show-toplevel') {
-        return `${cwd}\n`;
+        return gitOutput(`${cwd}\n`);
       }
       if (gitArgs[0] === 'status') {
-        return '## master...origin/master\n M tracked.txt\n?? big.tmp\n';
+        return gitOutput('## master...origin/master\n M tracked.txt\n?? big.tmp\n');
       }
       if (joined === 'rev-parse --verify HEAD') {
-        return 'abcd123\n';
+        return gitOutput('abcd123\n');
       }
       if (joined === 'diff --numstat HEAD') {
         throw createGitTimeoutError();
@@ -90,14 +98,14 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
   it('returns null git details instead of throwing when git status times out', () => {
     const cwd = '/mock/repo-status-timeout';
 
-    execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const gitArgs = normalizeGitArgs(args);
+    execFileSyncMock.mockImplementation((input: { args: string[] }) => {
+      const gitArgs = gitArgsFromMockInput(input);
       const joined = gitArgs.join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
-        return 'true\n';
+        return gitOutput('true\n');
       }
       if (joined === 'rev-parse --show-toplevel') {
-        return `${cwd}\n`;
+        return gitOutput(`${cwd}\n`);
       }
       if (gitArgs[0] === 'status') {
         throw createGitTimeoutError();
@@ -118,17 +126,17 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
   it('keeps reading other untracked files when one no-index diff fails without timing out', () => {
     const cwd = '/mock/repo-untracked-failure';
 
-    execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const gitArgs = normalizeGitArgs(args);
+    execFileSyncMock.mockImplementation((input: { args: string[] }) => {
+      const gitArgs = gitArgsFromMockInput(input);
       const joined = gitArgs.join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
-        return 'true\n';
+        return gitOutput('true\n');
       }
       if (joined === 'rev-parse --show-toplevel') {
-        return `${cwd}\n`;
+        return gitOutput(`${cwd}\n`);
       }
       if (gitArgs[0] === 'status') {
-        return '## main\n?? notes.txt\n?? broken.tmp\n';
+        return gitOutput('## main\n?? notes.txt\n?? broken.tmp\n');
       }
       if (joined === 'diff --no-index --numstat -- /dev/null broken.tmp') {
         const error = new Error('git diff failed') as Error & { stdout?: string; status?: number | null; code?: string };
@@ -167,17 +175,17 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
   it('summarizes staged and unstaged tracked changes before the first commit exists', () => {
     const cwd = '/mock/repo-no-head';
 
-    execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const gitArgs = normalizeGitArgs(args);
+    execFileSyncMock.mockImplementation((input: { args: string[] }) => {
+      const gitArgs = gitArgsFromMockInput(input);
       const joined = gitArgs.join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
-        return 'true\n';
+        return gitOutput('true\n');
       }
       if (joined === 'rev-parse --show-toplevel') {
-        return `${cwd}\n`;
+        return gitOutput(`${cwd}\n`);
       }
       if (gitArgs[0] === 'status') {
-        return '## No commits yet on main\nA  staged.txt\nAM staged-and-unstaged.txt\n';
+        return gitOutput('## No commits yet on main\nA  staged.txt\nAM staged-and-unstaged.txt\n');
       }
       if (joined === 'rev-parse --verify HEAD') {
         const error = new Error('missing HEAD') as Error & { stdout?: string; status?: number | null; code?: string };
@@ -186,10 +194,10 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
         throw error;
       }
       if (joined === 'diff --cached --numstat') {
-        return '3\t1\tstaged.txt\n';
+        return gitOutput('3\t1\tstaged.txt\n');
       }
       if (joined === 'diff --numstat') {
-        return '2\t0\tstaged-and-unstaged.txt\n';
+        return gitOutput('2\t0\tstaged-and-unstaged.txt\n');
       }
 
       throw new Error(`unexpected git args: ${joined}`);
@@ -216,9 +224,9 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
   it('caches null repo info when git reports the cwd is outside a work tree', () => {
     const cwd = '/mock/not-a-repo';
 
-    execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      expect(normalizeGitArgs(args).join(' ')).toBe('rev-parse --is-inside-work-tree');
-      return 'false\n';
+    execFileSyncMock.mockImplementation((input: { args: string[] }) => {
+      expect(gitArgsFromMockInput(input).join(' ')).toBe('rev-parse --is-inside-work-tree');
+      return gitOutput('false\n');
     });
 
     expect(readGitRepoInfo(cwd)).toBeNull();
@@ -231,13 +239,13 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
   it('returns null repo info when git resolves to a root path without a basename', () => {
     const cwd = '/mock/repo-root-slash';
 
-    execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const joined = normalizeGitArgs(args).join(' ');
+    execFileSyncMock.mockImplementation((input: { args: string[] }) => {
+      const joined = gitArgsFromMockInput(input).join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
-        return 'true\n';
+        return gitOutput('true\n');
       }
       if (joined === 'rev-parse --show-toplevel') {
-        return '/\n';
+        return gitOutput('/\n');
       }
 
       throw new Error(`unexpected git args: ${joined}`);
@@ -251,13 +259,13 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
     const nowValues = [1_000, 1_001, 6_000];
     vi.spyOn(Date, 'now').mockImplementation(() => nowValues.shift() ?? 6_000);
 
-    execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const joined = normalizeGitArgs(args).join(' ');
+    execFileSyncMock.mockImplementation((input: { args: string[] }) => {
+      const joined = gitArgsFromMockInput(input).join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
-        return 'true\n';
+        return gitOutput('true\n');
       }
       if (joined === 'rev-parse --show-toplevel') {
-        return `${cwd}\n`;
+        return gitOutput(`${cwd}\n`);
       }
 
       throw new Error(`unexpected git args: ${joined}`);
@@ -270,7 +278,7 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
       hasRepo: true,
       degraded: true,
     });
-    expect(execFileSyncMock.mock.calls.map(([, args]) => normalizeGitArgs(args as string[]).join(' '))).toEqual([
+    expect(execFileSyncMock.mock.calls.map(([input]) => gitArgsFromMockInput(input as { args: string[] }).join(' '))).toEqual([
       'rev-parse --is-inside-work-tree',
       'rev-parse --show-toplevel',
     ]);
@@ -279,17 +287,17 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
   it('returns a partial untracked summary when a no-index diff times out mid-scan', () => {
     const cwd = '/mock/repo-untracked-timeout';
 
-    execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const gitArgs = normalizeGitArgs(args);
+    execFileSyncMock.mockImplementation((input: { args: string[] }) => {
+      const gitArgs = gitArgsFromMockInput(input);
       const joined = gitArgs.join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
-        return 'true\n';
+        return gitOutput('true\n');
       }
       if (joined === 'rev-parse --show-toplevel') {
-        return `${cwd}\n`;
+        return gitOutput(`${cwd}\n`);
       }
       if (gitArgs[0] === 'status') {
-        return '## main\n?? alpha.tmp\n?? beta.tmp\n';
+        return gitOutput('## main\n?? alpha.tmp\n?? beta.tmp\n');
       }
       if (joined === 'diff --no-index --numstat -- /dev/null alpha.tmp') {
         const error = new Error('git diff mismatch') as Error & { stdout?: string; status?: number | null; code?: string };
