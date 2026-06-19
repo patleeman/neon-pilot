@@ -57,6 +57,7 @@ function getDefaultExtensionBackendWorkerUrl(): URL {
 export class ExtensionBackendWorkerClient {
   private worker: Worker | undefined;
   private workerError: Error | undefined;
+  private boundExtensionId: string | undefined;
   private nextRequestId = 0;
   private readonly pending = new Map<number, PendingRequest>();
   private readonly routeStreams = new Map<string, RouteStreamState>();
@@ -113,6 +114,7 @@ export class ExtensionBackendWorkerClient {
 
   private send(request: ExtensionBackendWorkerRequest): Promise<ExtensionBackendWorkerResponse & { ok: true }> {
     const worker = this.ensureWorker();
+    this.bindExtensionId(request.extensionId);
     const id = ++this.nextRequestId;
     const outbound = { ...request, id };
 
@@ -166,6 +168,9 @@ export class ExtensionBackendWorkerClient {
     request: ExtensionBackendWorkerCapabilityRequest,
   ): Promise<ExtensionBackendWorkerCapabilityResponse> {
     try {
+      if (this.boundExtensionId !== request.extensionId) {
+        throw new Error(`Extension backend capability request identity mismatch: expected ${this.boundExtensionId ?? 'none'}.`);
+      }
       if (!this.options.capabilityDispatcher) {
         throw new Error('No extension backend capability dispatcher configured.');
       }
@@ -178,6 +183,16 @@ export class ExtensionBackendWorkerClient {
         ok: false,
         error: error instanceof Error ? error.message : String(error),
       };
+    }
+  }
+
+  private bindExtensionId(extensionId: string): void {
+    if (!this.boundExtensionId) {
+      this.boundExtensionId = extensionId;
+      return;
+    }
+    if (this.boundExtensionId !== extensionId) {
+      throw new Error(`Extension backend worker client is bound to ${this.boundExtensionId}, not ${extensionId}.`);
     }
   }
 

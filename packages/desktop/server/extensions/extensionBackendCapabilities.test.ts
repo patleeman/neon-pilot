@@ -1470,6 +1470,8 @@ describe('extension backend capability dispatcher', () => {
   it('dispatches extension-scoped telemetry capability calls', async () => {
     const telemetry = {
       record: vi.fn(),
+      readTrace: vi.fn(async () => [{ id: 'trace-1' }]),
+      queryApp: vi.fn(async () => [{ id: 'app-1' }]),
     };
     const dispatch = createExtensionBackendCapabilityDispatcher({ telemetry });
 
@@ -1503,12 +1505,44 @@ describe('extension backend capability dispatcher', () => {
       durationMs: 12,
       metadata: { ok: true },
     });
+
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['telemetry:read'] } });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'telemetry',
+          operation: 'readTrace',
+          input: { since: '2026-05-22T00:00:00.000Z', limit: 1_000_000 },
+        }),
+      ),
+    ).resolves.toEqual([{ id: 'trace-1' }]);
+    expect(telemetry.readTrace).toHaveBeenCalledWith({ since: '2026-05-22T00:00:00.000Z', limit: 100_000 });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 3,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'telemetry',
+          operation: 'queryApp',
+          input: { since: '2026-05-22T00:00:00.000Z', limit: Number.NaN },
+        }),
+      ),
+    ).resolves.toEqual([{ id: 'app-1' }]);
+    expect(telemetry.queryApp).toHaveBeenCalledWith({ since: '2026-05-22T00:00:00.000Z', limit: 200 });
   });
 
   it('requires telemetry write permission before dispatching telemetry capability calls', async () => {
     findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
     const telemetry = {
       record: vi.fn(),
+      readTrace: vi.fn(),
+      queryApp: vi.fn(),
     };
     const dispatch = createExtensionBackendCapabilityDispatcher({ telemetry });
 
@@ -1525,8 +1559,30 @@ describe('extension backend capability dispatcher', () => {
     expect(telemetry.record).not.toHaveBeenCalled();
   });
 
+  it('requires telemetry read permission before dispatching telemetry read capability calls', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['telemetry:write'] } });
+    const telemetry = {
+      record: vi.fn(),
+      readTrace: vi.fn(),
+      queryApp: vi.fn(),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ telemetry });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'telemetry',
+        operation: 'readTrace',
+        input: { since: '2026-05-22T00:00:00.000Z' },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission telemetry:read to use telemetry.readTrace.');
+    expect(telemetry.readTrace).not.toHaveBeenCalled();
+  });
+
   it('rejects malformed telemetry capability inputs', async () => {
-    const dispatch = createExtensionBackendCapabilityDispatcher({ telemetry: { record: vi.fn() } });
+    const dispatch = createExtensionBackendCapabilityDispatcher({ telemetry: { record: vi.fn(), readTrace: vi.fn(), queryApp: vi.fn() } });
 
     await expect(async () =>
       dispatch({

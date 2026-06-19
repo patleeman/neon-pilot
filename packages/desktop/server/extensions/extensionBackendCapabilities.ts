@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { SessionManager } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir } from '@neon-pilot/core';
+import { getPiAgentRuntimeDir, queryAppTelemetryEvents, readTraceTelemetryLogEvents } from '@neon-pilot/core';
 
 import type { FileAccess, ScopedFileSystem } from '../filesystem/filesystemAuthority.js';
 import { createModelRegistryForAuthFile } from '../models/modelRegistry.js';
@@ -272,6 +272,8 @@ interface ExtensionBackendCapabilityTelemetryEvent {
 
 interface ExtensionBackendCapabilityTelemetry {
   record(extensionId: string, event: ExtensionBackendCapabilityTelemetryEvent): unknown;
+  readTrace(input: { since: string; limit: number }): unknown;
+  queryApp(input: { since: string; limit: number }): unknown;
 }
 
 interface ExtensionBackendShellSpawnHandle {
@@ -477,7 +479,7 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
   }
 
   if (request.capability === 'telemetry') {
-    return ['telemetry:write'];
+    return request.operation === 'record' ? ['telemetry:write'] : ['telemetry:read'];
   }
 
   if (request.capability === 'ui') {
@@ -1222,6 +1224,19 @@ function normalizeTelemetryEvent(input: unknown): ExtensionBackendCapabilityTele
   };
 }
 
+function clampTelemetryLimit(limit: unknown, fallback: number, max: number): number {
+  if (typeof limit !== 'number' || !Number.isFinite(limit)) return fallback;
+  return Math.max(1, Math.min(Math.trunc(limit), max));
+}
+
+function normalizeTelemetryReadInput(input: unknown, fallbackLimit: number, maxLimit: number): { since: string; limit: number } {
+  const record = normalizeRecordInput(input, 'Telemetry read');
+  return {
+    since: requireString(record.since, 'Telemetry read since'),
+    limit: clampTelemetryLimit(record.limit, fallbackLimit, maxLimit),
+  };
+}
+
 function normalizeRuntimeRefreshSkillMcpConfigInput(input: unknown): ExtensionRuntimeRefreshSkillMcpConfigInput {
   const record = normalizeRecordInput(input, 'Runtime');
   return {
@@ -1242,10 +1257,16 @@ function dispatchTelemetryCapability(
   telemetry: ExtensionBackendCapabilityTelemetry,
   request: ExtensionBackendWorkerCapabilityRequest,
 ): unknown {
-  if (request.operation !== 'record') {
-    throw new Error(`Unsupported telemetry capability operation: ${request.operation}`);
+  if (request.operation === 'record') {
+    return telemetry.record(request.extensionId, normalizeTelemetryEvent(request.input));
   }
-  return telemetry.record(request.extensionId, normalizeTelemetryEvent(request.input));
+  if (request.operation === 'readTrace') {
+    return telemetry.readTrace(normalizeTelemetryReadInput(request.input, 50_000, 100_000));
+  }
+  if (request.operation === 'queryApp') {
+    return telemetry.queryApp(normalizeTelemetryReadInput(request.input, 200, 1000));
+  }
+  throw new Error(`Unsupported telemetry capability operation: ${request.operation}`);
 }
 
 function dispatchSecretsCapability(secrets: ExtensionBackendCapabilitySecrets, request: ExtensionBackendWorkerCapabilityRequest): unknown {
@@ -2009,6 +2030,8 @@ export function createExtensionBackendCapabilityDispatcher(
         metadata: { ...(event.metadata ?? {}), extensionId },
       });
     },
+    readTrace: (input: { since: string; limit: number }) => readTraceTelemetryLogEvents(input),
+    queryApp: (input: { since: string; limit: number }) => queryAppTelemetryEvents(input),
   };
   const ui = options.ui ?? {
     invalidate: (topics: string | string[]) => {

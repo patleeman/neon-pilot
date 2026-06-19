@@ -209,6 +209,34 @@ describe('ExtensionBackendWorkerClient', () => {
     });
   });
 
+  it('rejects worker capability requests with forged extension identities', async () => {
+    const capabilityDispatcher = vi.fn(async () => ({ ok: true }));
+    const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js'), capabilityDispatcher });
+
+    const load = client.loadModule('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' });
+    const worker = workerThreads.instances[0]!;
+    worker.emit('message', { id: 1, ok: true });
+    await load;
+
+    worker.emit('message', {
+      id: 99,
+      kind: 'capabilityRequest',
+      extensionId: 'system-telemetry',
+      capability: 'telemetry',
+      operation: 'readTrace',
+      input: { since: '2026-05-22T00:00:00.000Z' },
+    });
+    await flushPromises();
+
+    expect(capabilityDispatcher).not.toHaveBeenCalled();
+    expect(worker.postMessage).toHaveBeenLastCalledWith({
+      id: 99,
+      kind: 'capabilityResponse',
+      ok: false,
+      error: 'Extension backend capability request identity mismatch: expected ext.',
+    });
+  });
+
   it('lets capability dispatchers emit host capability events back to the worker', async () => {
     const capabilityDispatcher = vi.fn(async (_request, emit) => {
       emit({

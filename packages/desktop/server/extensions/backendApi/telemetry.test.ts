@@ -6,12 +6,18 @@ const resolver = vi.hoisted(() => ({
 
 vi.mock('./serverModuleResolver.js', () => resolver);
 
-import { recordTelemetryEvent } from './telemetry.js';
+import { queryAppTelemetryEvents, readTraceTelemetryEvents, recordTelemetryEvent } from './telemetry.js';
+
+const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
 
 describe('backendApi/telemetry', () => {
+  const bridge = vi.fn();
+
   beforeEach(() => {
     resolver.callServerModuleExport.mockClear();
     resolver.callServerModuleExport.mockResolvedValue(undefined);
+    bridge.mockReset();
+    delete (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE];
   });
 
   it('does not throw when telemetry persistence is unavailable', () => {
@@ -63,5 +69,58 @@ describe('backendApi/telemetry', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(unhandled).not.toHaveBeenCalled();
     process.removeListener('unhandledRejection', unhandled);
+  });
+
+  it('reads trace telemetry through the trusted host capability bridge', async () => {
+    bridge.mockResolvedValue([{ id: 'trace-1' }]);
+    (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
+
+    await expect(readTraceTelemetryEvents({ since: '2026-05-22T00:00:00.000Z', limit: 10 })).resolves.toEqual([{ id: 'trace-1' }]);
+
+    expect(bridge).toHaveBeenCalledWith('telemetry', 'readTrace', {
+      since: '2026-05-22T00:00:00.000Z',
+      limit: 10,
+    });
+    expect(resolver.callServerModuleExport).not.toHaveBeenCalled();
+  });
+
+  it('reads app telemetry through the trusted host capability bridge', async () => {
+    bridge.mockResolvedValue([{ id: 'app-1' }]);
+    (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
+
+    await expect(queryAppTelemetryEvents({ since: '2026-05-22T00:00:00.000Z', limit: 20 })).resolves.toEqual([{ id: 'app-1' }]);
+
+    expect(bridge).toHaveBeenCalledWith('telemetry', 'queryApp', {
+      since: '2026-05-22T00:00:00.000Z',
+      limit: 20,
+    });
+    expect(resolver.callServerModuleExport).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when no trusted host capability bridge is active', async () => {
+    await expect(readTraceTelemetryEvents({ since: '2026-05-22T00:00:00.000Z', limit: 10 })).rejects.toThrow(
+      'Telemetry reads require an active extension host capability bridge.',
+    );
+    await expect(queryAppTelemetryEvents({ since: '2026-05-22T00:00:00.000Z', limit: 10 })).rejects.toThrow(
+      'Telemetry reads require an active extension host capability bridge.',
+    );
+    expect(resolver.callServerModuleExport).not.toHaveBeenCalled();
+  });
+
+  it('clamps telemetry read limits before bridge dispatch', async () => {
+    bridge.mockResolvedValue([]);
+    (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
+
+    await readTraceTelemetryEvents({ since: '2026-05-22T00:00:00.000Z', limit: 1_000_000 });
+    await queryAppTelemetryEvents({ since: '2026-05-22T00:00:00.000Z', limit: Number.NaN });
+
+    expect(bridge).toHaveBeenNthCalledWith(1, 'telemetry', 'readTrace', {
+      since: '2026-05-22T00:00:00.000Z',
+      limit: 100_000,
+    });
+    expect(bridge).toHaveBeenNthCalledWith(2, 'telemetry', 'queryApp', {
+      since: '2026-05-22T00:00:00.000Z',
+      limit: 200,
+    });
   });
 });

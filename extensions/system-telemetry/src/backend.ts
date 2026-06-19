@@ -5,8 +5,13 @@
  * handlers calculate dashboard view models from recent trace events on demand.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import {
+  queryAppTelemetryEvents,
+  readTraceTelemetryEvents,
+  type AppTelemetryEventRow,
+  type TraceTelemetryLogEvent,
+  type TraceTelemetryLogEventType,
+} from '@neon-pilot/extensions/backend/telemetry';
 
 interface ExtensionRouteRequest {
   query: Record<string, string | string[]>;
@@ -18,42 +23,6 @@ interface ExtensionRouteResponse {
 
 interface TelemetryDataInput {
   range?: unknown;
-}
-
-type TraceTelemetryLogEventType =
-  | 'stats'
-  | 'tool_call'
-  | 'context'
-  | 'compaction'
-  | 'auto_mode'
-  | 'suggested_context'
-  | 'context_pointer_inspect';
-
-interface TraceTelemetryLogEvent {
-  schemaVersion: 1;
-  id: string;
-  ts: string;
-  type: TraceTelemetryLogEventType;
-  sessionId: string;
-  runId: string | null;
-  profile: string;
-  payload: Record<string, unknown>;
-}
-
-interface AppTelemetryEventRow {
-  id: string;
-  ts: string;
-  source: string;
-  category: string;
-  name: string;
-  sessionId: string | null;
-  runId: string | null;
-  route: string | null;
-  status: number | null;
-  durationMs: number | null;
-  count: number | null;
-  value: number | null;
-  metadataJson: string | null;
 }
 
 function parseRangeParam(range: unknown): string {
@@ -71,128 +40,19 @@ function parseRangeParam(range: unknown): string {
   return new Date(now - ms[selected]).toISOString();
 }
 
-function telemetryLogDir(stateRoot = process.env.NEON_PILOT_STATE_ROOT): string {
-  return join(stateRoot ?? join(process.env.HOME ?? '.', '.local', 'state', 'neon-pilot'), 'logs', 'telemetry');
-}
-
-function parseTraceTelemetryLogEvent(line: string): TraceTelemetryLogEvent | null {
-  try {
-    const parsed = JSON.parse(line) as Partial<TraceTelemetryLogEvent>;
-    if (parsed.schemaVersion !== 1 || !parsed.id || !parsed.ts || !parsed.type || !parsed.sessionId) return null;
-    return {
-      schemaVersion: 1,
-      id: String(parsed.id),
-      ts: String(parsed.ts),
-      type: parsed.type as TraceTelemetryLogEventType,
-      sessionId: String(parsed.sessionId),
-      runId: parsed.runId == null ? null : String(parsed.runId),
-      profile: parsed.profile == null ? '' : String(parsed.profile),
-      payload: parsed.payload && typeof parsed.payload === 'object' && !Array.isArray(parsed.payload) ? parsed.payload : {},
-    };
-  } catch {
-    return null;
-  }
-}
-
-function readTraceTelemetryLogEvents(input: { since: string; limit?: number }): TraceTelemetryLogEvent[] {
-  const dir = telemetryLogDir();
-  if (!existsSync(dir)) return [];
-  const limit = input.limit ?? 50_000;
-  const events: TraceTelemetryLogEvent[] = [];
-  try {
-    const files = readdirSync(dir)
-      .filter((fileName) => fileName.startsWith('trace-telemetry-') && fileName.endsWith('.jsonl'))
-      .sort((left, right) => right.localeCompare(left));
-    for (const fileName of files) {
-      const lines = readFileSync(join(dir, fileName), 'utf-8').split('\n').filter(Boolean).reverse();
-      for (const line of lines) {
-        const event = parseTraceTelemetryLogEvent(line);
-        if (!event || event.ts < input.since) continue;
-        events.push(event);
-        if (events.length >= limit) return events.sort((a, b) => a.ts.localeCompare(b.ts));
-      }
-    }
-  } catch {
-    return events.sort((a, b) => a.ts.localeCompare(b.ts));
-  }
-  return events.sort((a, b) => a.ts.localeCompare(b.ts));
-}
-
-function parseAppTelemetryLogEvent(line: string): AppTelemetryEventRow | null {
-  try {
-    const parsed = JSON.parse(line) as Record<string, unknown>;
-    if (parsed.schemaVersion !== 1 || !parsed.id || !parsed.ts || !parsed.source || !parsed.category || !parsed.name) return null;
-    return {
-      id: String(parsed.id),
-      ts: String(parsed.ts),
-      source: String(parsed.source),
-      category: String(parsed.category),
-      name: String(parsed.name),
-      sessionId: parsed.sessionId == null ? null : String(parsed.sessionId),
-      runId: parsed.runId == null ? null : String(parsed.runId),
-      route: parsed.route == null ? null : String(parsed.route),
-      status: typeof parsed.status === 'number' && Number.isFinite(parsed.status) ? parsed.status : null,
-      durationMs: typeof parsed.durationMs === 'number' && Number.isFinite(parsed.durationMs) ? parsed.durationMs : null,
-      count: typeof parsed.count === 'number' && Number.isFinite(parsed.count) ? parsed.count : null,
-      value: typeof parsed.value === 'number' && Number.isFinite(parsed.value) ? parsed.value : null,
-      metadataJson: parsed.metadata && typeof parsed.metadata === 'object' ? JSON.stringify(parsed.metadata) : null,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function queryAppTelemetryEvents(input: { since: string; limit?: number }): AppTelemetryEventRow[] {
-  const dir = telemetryLogDir();
-  if (!existsSync(dir)) return [];
-  const events: AppTelemetryEventRow[] = [];
-  const limit = Math.max(1, Math.min(input.limit ?? 200, 1000));
-  try {
-    const files = readdirSync(dir)
-      .filter((fileName) => fileName.startsWith('app-telemetry-') && fileName.endsWith('.jsonl'))
-      .sort((left, right) => right.localeCompare(left));
-    for (const fileName of files) {
-      const lines = readFileSync(join(dir, fileName), 'utf-8').split('\n').filter(Boolean).reverse();
-      for (const line of lines) {
-        const event = parseAppTelemetryLogEvent(line);
-        if (!event || event.ts < input.since) continue;
-        events.push(event);
-        if (events.length >= limit) return events.sort((a, b) => b.ts.localeCompare(a.ts));
-      }
-    }
-  } catch {
-    return events.sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, limit);
-  }
-  return events.sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, limit);
-}
-
-// Per-request cache for eventsSince — the telemetry dashboard calls this
-// 7+ times with the same range per page load.  Keyed by since + dir + file
-// mtime so stale reads are automatically invalidated when logs roll.
+// Short-lived cache for eventsSince: the telemetry dashboard calls this 7+
+// times with the same range per page load. Host-owned telemetry readers hide
+// storage layout from this extension, so keep the cache deliberately brief.
 const eventsSinceCache = new Map<string, { events: TraceTelemetryLogEvent[]; cachedAt: number }>();
 const EVENTS_CACHE_TTL_MS = 5_000;
 
-function eventsSince(since: string): TraceTelemetryLogEvent[] {
-  const dir = telemetryLogDir();
-  const dirState = [since, dir];
-  try {
-    if (existsSync(dir)) {
-      for (const name of readdirSync(dir)
-        .filter((f) => f.startsWith('trace-telemetry-') && f.endsWith('.jsonl'))
-        .sort()) {
-        const mtime = statSync(join(dir, name)).mtimeMs;
-        dirState.push(name, String(mtime));
-      }
-    }
-  } catch {
-    // Best-effort cache key
-  }
-  const key = dirState.join('|');
+async function eventsSince(since: string): Promise<TraceTelemetryLogEvent[]> {
+  const key = since;
   const cached = eventsSinceCache.get(key);
   if (cached && Date.now() - cached.cachedAt < EVENTS_CACHE_TTL_MS) {
     return cached.events;
   }
-  const events = readTraceTelemetryLogEvents({ since, limit: 100_000 });
+  const events = await readTraceTelemetryEvents({ since, limit: 100_000 });
   eventsSinceCache.set(key, { events, cachedAt: Date.now() });
   return events;
 }
@@ -567,24 +427,24 @@ function ok(body: unknown): ExtensionRouteResponse {
   return { status: 200, body };
 }
 
-export function summary(req: ExtensionRouteRequest): ExtensionRouteResponse {
-  return ok(querySummaryFromEvents(eventsSince(parseRangeParam(req.query.range))));
+export async function summary(req: ExtensionRouteRequest): Promise<ExtensionRouteResponse> {
+  return ok(querySummaryFromEvents(await eventsSince(parseRangeParam(req.query.range))));
 }
 
-export function modelUsage(req: ExtensionRouteRequest): ExtensionRouteResponse {
-  return ok(queryModelUsageFromEvents(eventsSince(parseRangeParam(req.query.range))));
+export async function modelUsage(req: ExtensionRouteRequest): Promise<ExtensionRouteResponse> {
+  return ok(queryModelUsageFromEvents(await eventsSince(parseRangeParam(req.query.range))));
 }
 
 export function costByConversation(): ExtensionRouteResponse {
   return ok([]);
 }
 
-export function toolHealth(req: ExtensionRouteRequest): ExtensionRouteResponse {
-  return ok(queryToolHealthFromEvents(eventsSince(parseRangeParam(req.query.range))));
+export async function toolHealth(req: ExtensionRouteRequest): Promise<ExtensionRouteResponse> {
+  return ok(queryToolHealthFromEvents(await eventsSince(parseRangeParam(req.query.range))));
 }
 
-export function context(req: ExtensionRouteRequest): ExtensionRouteResponse {
-  const events = eventsSince(parseRangeParam(req.query.range));
+export async function context(req: ExtensionRouteRequest): Promise<ExtensionRouteResponse> {
+  const events = await eventsSince(parseRangeParam(req.query.range));
   const sessions = contextEvents(events)
     .map((event) => ({
       sessionId: event.sessionId,
@@ -625,11 +485,11 @@ export function context(req: ExtensionRouteRequest): ExtensionRouteResponse {
   });
 }
 
-export function agentLoop(req: ExtensionRouteRequest): ExtensionRouteResponse {
-  return ok(queryAgentLoopFromEvents(eventsSince(parseRangeParam(req.query.range))));
+export async function agentLoop(req: ExtensionRouteRequest): Promise<ExtensionRouteResponse> {
+  return ok(queryAgentLoopFromEvents(await eventsSince(parseRangeParam(req.query.range))));
 }
 
-export function tokensDaily(req: ExtensionRouteRequest): ExtensionRouteResponse {
+export async function tokensDaily(req: ExtensionRouteRequest): Promise<ExtensionRouteResponse> {
   const buckets = new Map<
     string,
     {
@@ -659,7 +519,7 @@ export function tokensDaily(req: ExtensionRouteRequest): ExtensionRouteResponse 
   // daily aggregates, not the currently selected dashboard range. Tying this
   // to `24h` turns the chart into two sad squares. Nobody asked for pixel art.
   void req;
-  const events = eventsSince('1970-01-01T00:00:00.000Z');
+  const events = await eventsSince('1970-01-01T00:00:00.000Z');
   const stats = statsEvents(events);
   const sourceEvents = stats.length > 0 ? stats : latestContextBySession(events);
   for (const event of sourceEvents) {
@@ -689,12 +549,12 @@ export function tokensDaily(req: ExtensionRouteRequest): ExtensionRouteResponse 
   return ok([...buckets.values()].sort((a, b) => a.date.localeCompare(b.date)));
 }
 
-export function toolFlow(req: ExtensionRouteRequest): ExtensionRouteResponse {
-  return ok(queryToolFlowFromEvents(eventsSince(parseRangeParam(req.query.range))));
+export async function toolFlow(req: ExtensionRouteRequest): Promise<ExtensionRouteResponse> {
+  return ok(queryToolFlowFromEvents(await eventsSince(parseRangeParam(req.query.range))));
 }
 
-export function cacheEfficiency(req: ExtensionRouteRequest): ExtensionRouteResponse {
-  const stats = statsEvents(eventsSince(parseRangeParam(req.query.range)));
+export async function cacheEfficiency(req: ExtensionRouteRequest): Promise<ExtensionRouteResponse> {
+  const stats = statsEvents(await eventsSince(parseRangeParam(req.query.range)));
   const series = stats.map((event) => {
     const totalInput =
       numberValue(event.payload.tokensInput) + numberValue(event.payload.tokensCachedInput) + numberValue(event.payload.tokensCachedWrite);
@@ -749,8 +609,8 @@ export function cacheEfficiency(req: ExtensionRouteRequest): ExtensionRouteRespo
   });
 }
 
-export function systemPrompt(req: ExtensionRouteRequest): ExtensionRouteResponse {
-  const series = contextEvents(eventsSince(parseRangeParam(req.query.range)))
+export async function systemPrompt(req: ExtensionRouteRequest): Promise<ExtensionRouteResponse> {
+  const series = contextEvents(await eventsSince(parseRangeParam(req.query.range)))
     .map((event) => {
       const systemPromptTokens = numberValue(event.payload.systemPromptTokens);
       const totalTokens = numberValue(event.payload.totalTokens);
@@ -789,8 +649,8 @@ export function systemPrompt(req: ExtensionRouteRequest): ExtensionRouteResponse
   });
 }
 
-export function autoMode(req: ExtensionRouteRequest): ExtensionRouteResponse {
-  const events = eventsSince(parseRangeParam(req.query.range)).filter((event) => event.type === 'auto_mode');
+export async function autoMode(req: ExtensionRouteRequest): Promise<ExtensionRouteResponse> {
+  const events = (await eventsSince(parseRangeParam(req.query.range))).filter((event) => event.type === 'auto_mode');
   const allEvents = events.map((event) => ({
     ts: event.ts,
     sessionId: event.sessionId,
@@ -816,8 +676,8 @@ export function autoMode(req: ExtensionRouteRequest): ExtensionRouteResponse {
   });
 }
 
-export function contextPointers(req: ExtensionRouteRequest): ExtensionRouteResponse {
-  const events = eventsSince(parseRangeParam(req.query.range));
+export async function contextPointers(req: ExtensionRouteRequest): Promise<ExtensionRouteResponse> {
+  const events = await eventsSince(parseRangeParam(req.query.range));
   const suggested = events.filter((event) => event.type === 'suggested_context');
   const inspected = events.filter((event) => event.type === 'context_pointer_inspect');
   const totalSuggested = suggested.reduce((total, event) => total + numberValue(event.payload.pointerCount), 0);
@@ -848,27 +708,27 @@ export function contextPointers(req: ExtensionRouteRequest): ExtensionRouteRespo
   });
 }
 
-export function sessionIntegrity(req: ExtensionRouteRequest): ExtensionRouteResponse {
+export async function sessionIntegrity(req: ExtensionRouteRequest): Promise<ExtensionRouteResponse> {
   const since = parseRangeParam(req.query.range);
-  return ok(queryAppTelemetryEvents({ since, limit: 200 }).filter((event) => event.category === 'session_integrity'));
+  return ok((await queryAppTelemetryEvents({ since, limit: 200 })).filter((event) => event.category === 'session_integrity'));
 }
 
-export function getTelemetryData(input: TelemetryDataInput = {}) {
+export async function getTelemetryData(input: TelemetryDataInput = {}) {
   const req = { query: { range: typeof input.range === 'string' ? input.range : '24h' } };
   return {
     ok: true,
-    summary: summary(req).body,
-    modelUsage: modelUsage(req).body,
+    summary: (await summary(req)).body,
+    modelUsage: (await modelUsage(req)).body,
     costByConversation: costByConversation().body,
-    toolHealth: toolHealth(req).body,
-    context: context(req).body,
-    agentLoop: agentLoop(req).body,
-    tokensDaily: tokensDaily(req).body,
-    toolFlow: toolFlow(req).body,
-    autoMode: autoMode(req).body,
-    cacheEfficiency: cacheEfficiency(req).body,
-    systemPrompt: systemPrompt(req).body,
-    contextPointers: contextPointers(req).body,
-    sessionIntegrity: sessionIntegrity(req).body,
+    toolHealth: (await toolHealth(req)).body,
+    context: (await context(req)).body,
+    agentLoop: (await agentLoop(req)).body,
+    tokensDaily: (await tokensDaily(req)).body,
+    toolFlow: (await toolFlow(req)).body,
+    autoMode: (await autoMode(req)).body,
+    cacheEfficiency: (await cacheEfficiency(req)).body,
+    systemPrompt: (await systemPrompt(req)).body,
+    contextPointers: (await contextPointers(req)).body,
+    sessionIntegrity: (await sessionIntegrity(req)).body,
   };
 }

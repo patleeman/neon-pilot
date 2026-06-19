@@ -126,6 +126,10 @@ globalThis[Symbol.for('neon-pilot.extensionHostClient')] = {
 const terminalSessions = new Map();
 globalThis[Symbol.for('neon-pilot.extensionHostCapabilityBridge')] = async (capability, operation, input) => {
   if (capability === 'image') throw new Error('Image generation requires an active agent tool context.');
+  if (capability === 'telemetry') {
+    if (operation === 'readTrace' || operation === 'queryApp') return [];
+    throw new Error('Unsupported smoke telemetry operation: ' + operation);
+  }
   if (capability !== 'terminal') throw new Error('Unsupported smoke capability: ' + capability);
   if (operation === 'create') {
     const id = 'terminal-smoke-' + (terminalSessions.size + 1);
