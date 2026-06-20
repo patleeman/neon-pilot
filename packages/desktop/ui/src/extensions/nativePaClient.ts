@@ -126,6 +126,7 @@ export interface NativeExtensionClient {
     toast(message: string, type?: 'info' | 'warning' | 'error'): void;
     notify(options: { message: string; type?: 'info' | 'warning' | 'error'; details?: string; source?: string }): void;
     confirm(options: { title?: string; message: string }): Promise<boolean>;
+    subscribeInvalidations(handler: (event: { topics: string[] }) => void): { unsubscribe: () => void };
     openModal(options: {
       title?: string;
       component: string;
@@ -329,6 +330,16 @@ export function createNativeExtensionClient(extensionId: string): NativeExtensio
         return new Promise<boolean>((resolve) => {
           window.dispatchEvent(new CustomEvent('neon-pilot-extension-confirm', { detail: { ...options, resolve } }));
         });
+      },
+      subscribeInvalidations(handler) {
+        function listener(raw: CustomEvent) {
+          const detail = raw.detail as { topics?: unknown };
+          handler({
+            topics: Array.isArray(detail?.topics) ? detail.topics.filter((topic): topic is string => typeof topic === 'string') : [],
+          });
+        }
+        window.addEventListener('neon-pilot-app-invalidate', listener as EventListener);
+        return { unsubscribe: () => window.removeEventListener('neon-pilot-app-invalidate', listener as EventListener) };
       },
       openModal(options) {
         return new Promise((resolve, reject) => {

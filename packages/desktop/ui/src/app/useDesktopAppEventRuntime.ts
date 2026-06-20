@@ -348,6 +348,7 @@ export function useDesktopAppEventRuntime() {
         case 'invalidate':
           refreshInvalidatedSnapshots(payload.topics);
           setEventVersions((prev) => incrementAppEventVersionsForTopics(prev, payload.topics));
+          window.dispatchEvent(new CustomEvent('neon-pilot-app-invalidate', { detail: { topics: payload.topics } }));
           return;
         default:
           return;

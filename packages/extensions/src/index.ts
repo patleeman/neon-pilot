@@ -151,6 +151,8 @@ export interface NativeExtensionClient {
     /** Post a richer notification with optional details and source attribution. */
     notify(options: { message: string; type?: 'info' | 'warning' | 'error'; details?: string; source?: string }): void;
     confirm(options: { title?: string; message: string }): Promise<boolean>;
+    /** Subscribe to host app data invalidations such as tasks, runs, automation, or workspace. */
+    subscribeInvalidations(handler: (event: { topics: string[] }) => void): { unsubscribe: () => void };
     openModal(options: {
       title?: string;
       component: string;
@@ -171,13 +173,13 @@ export interface ExtensionAgentTool {
   name?: string;
   description?: string;
   parameters?: unknown;
-  execute?: (...args: any[]) => unknown;
+  execute?: (...args: unknown[]) => unknown;
   [key: string]: unknown;
 }
 
 export interface ExtensionAPI {
   registerTool(tool: ExtensionAgentTool): void;
-  on(eventName: string, handler: (event: any, context: any) => unknown): void;
+  on(eventName: string, handler: (event: unknown, context: unknown) => unknown): void;
   appendEntry(customType: string, data: unknown): void;
   sendMessage(message: string): void;
   setSessionName(name: string): void;
@@ -1267,6 +1269,8 @@ export interface NeonPilotClient {
     /** Post a richer notification with optional details and source attribution. */
     notify(options: { message: string; type?: 'info' | 'warning' | 'error'; details?: string; source?: string }): void;
     confirm(options: { title?: string; message: string }): Promise<boolean>;
+    /** Subscribe to host app data invalidations such as tasks, runs, automation, or workspace. */
+    subscribeInvalidations(handler: (event: { topics: string[] }) => void): { unsubscribe: () => void };
     openModal(options: {
       title?: string;
       component: string;

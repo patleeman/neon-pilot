@@ -1,7 +1,7 @@
 import {
-  deleteSubscription,
   cancelDelayedEvent,
   delayEvent,
+  deleteSubscription,
   emitEvent,
   listEvents,
   listSubscriptions,
@@ -87,7 +87,7 @@ export async function eventBus(input: unknown, ctx: EventBusBackendContext = {})
       throw new Error(`Unsupported event bus action: ${action}`);
   }
 
-  ctx.ui?.invalidate?.(['events', 'tasks', 'runs']);
+  ctx.ui?.invalidate?.(['automation', 'events', 'tasks', 'runs']);
   return {
     text: formatJson(result),
     details: {

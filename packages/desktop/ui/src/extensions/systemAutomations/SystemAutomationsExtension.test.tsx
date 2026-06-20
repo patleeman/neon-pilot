@@ -84,7 +84,13 @@ function createPa(
     executions: { start: vi.fn(), get: vi.fn(), list: vi.fn(), readLog: vi.fn(), cancel: vi.fn() },
     storage: { get: vi.fn(), put: vi.fn(), delete: vi.fn(), list: vi.fn() },
     commands: { execute: vi.fn(async () => true), list: vi.fn(async () => []), setContext: vi.fn() },
-    ui: { toast: vi.fn(), notify: vi.fn(), confirm: vi.fn(async () => true), ...uiOverrides },
+    ui: {
+      toast: vi.fn(),
+      notify: vi.fn(),
+      confirm: vi.fn(async () => true),
+      subscribeInvalidations: vi.fn(() => ({ unsubscribe: vi.fn() })),
+      ...uiOverrides,
+    },
     automations: {
       list: vi.fn(async () => [
         {
@@ -253,6 +259,94 @@ describe('AutomationsPage', () => {
     });
 
     expect(container.textContent).not.toContain('Stale check');
+  });
+
+  it('refreshes when automation event topics are invalidated', async () => {
+    vi.useFakeTimers();
+    let invalidateHandler: ((event: { topics: string[] }) => void) | undefined;
+    const subscribeInvalidations = vi.fn((handler: (event: { topics: string[] }) => void) => {
+      invalidateHandler = handler;
+      return { unsubscribe: vi.fn() };
+    });
+    const pa = createPa(
+      {
+        list: vi.fn(async () => []),
+      },
+      { subscribeInvalidations },
+    );
+    const invoke = vi.mocked(pa.extension.invoke);
+    invoke.mockImplementation(async (_actionId: string, input?: unknown) => {
+      const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
+      if (action === 'list') {
+        const callCount = invoke.mock.calls.filter(([, callInput]) => {
+          return callInput && typeof callInput === 'object' && (callInput as { action?: unknown }).action === 'list';
+        }).length;
+        return {
+          details: {
+            events: [
+              {
+                id: callCount > 1 ? 'evt-refreshed' : 'evt-initial',
+                type: callCount > 1 ? 'demo.refreshed' : 'demo.initial',
+                source: 'script:checkout',
+                occurredAt: '2026-05-08T00:00:00.000Z',
+                reactions: [],
+              },
+            ],
+          },
+        };
+      }
+      if (action === 'list_subscriptions') return { details: { subscriptions: [] } };
+      return {};
+    });
+
+    const { container } = await renderPage(pa);
+    expect(container.textContent).toContain('Initial');
+    expect(subscribeInvalidations).toHaveBeenCalled();
+
+    await act(async () => {
+      invalidateHandler?.({ topics: ['automation'] });
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    expect(container.textContent).toContain('Refreshed');
+  });
+
+  it('auto-refreshes event activity while the page is open', async () => {
+    vi.useFakeTimers();
+    const pa = createPa({ list: vi.fn(async () => []) });
+    const invoke = vi.mocked(pa.extension.invoke);
+    invoke.mockImplementation(async (_actionId: string, input?: unknown) => {
+      const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
+      if (action === 'list') {
+        const callCount = invoke.mock.calls.filter(([, callInput]) => {
+          return callInput && typeof callInput === 'object' && (callInput as { action?: unknown }).action === 'list';
+        }).length;
+        return {
+          details: {
+            events: [
+              {
+                id: callCount > 1 ? 'evt-auto-refresh' : 'evt-initial',
+                type: callCount > 1 ? 'demo.auto_refreshed' : 'demo.initial',
+                source: 'script:checkout',
+                occurredAt: '2026-05-08T00:00:00.000Z',
+                reactions: [],
+              },
+            ],
+          },
+        };
+      }
+      if (action === 'list_subscriptions') return { details: { subscriptions: [] } };
+      return {};
+    });
+
+    const { container } = await renderPage(pa);
+    expect(container.textContent).toContain('Initial');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2500);
+    });
+
+    expect(container.textContent).toContain('Auto Refreshed');
   });
 
   it('preserves the activity shell when no automations exist', async () => {

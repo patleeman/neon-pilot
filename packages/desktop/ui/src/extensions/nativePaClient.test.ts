@@ -24,4 +24,17 @@ describe('native extension transcript client', () => {
     expect(listener).toHaveBeenCalledWith(expect.objectContaining({ detail: { target: { kind: 'background_run', runId: 'run-demo' } } }));
     window.removeEventListener('pa:transcript-spotlight', listener);
   });
+
+  it('subscribes to host app invalidations', () => {
+    const handler = vi.fn();
+    const pa = createNativeExtensionClient('demo');
+    const subscription = pa.ui.subscribeInvalidations(handler);
+
+    window.dispatchEvent(new CustomEvent('neon-pilot-app-invalidate', { detail: { topics: ['automation', 'runs', 123] } }));
+
+    expect(handler).toHaveBeenCalledWith({ topics: ['automation', 'runs'] });
+    subscription.unsubscribe();
+    window.dispatchEvent(new CustomEvent('neon-pilot-app-invalidate', { detail: { topics: ['tasks'] } }));
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
 });

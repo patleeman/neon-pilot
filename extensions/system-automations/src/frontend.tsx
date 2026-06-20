@@ -224,6 +224,8 @@ const ACTIVITY_SORT_LABELS: Record<ActivitySort, string> = {
   status: 'Status',
 };
 
+const ACTIVITY_AUTO_REFRESH_MS = 2_500;
+
 const emptyForm: AutomationFormState = {
   title: '',
   prompt: '',
@@ -1241,6 +1243,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const createWithChatInFlightRef = useRef(false);
   const loadSequenceRef = useRef(0);
+  const backgroundReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     const loadSequence = loadSequenceRef.current + 1;
@@ -1286,6 +1289,37 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
       pa.ui.notify({ type: 'error', message: `Failed to load automations: ${err.message}`, source: 'system-automations' });
     });
   }, [load, pa]);
+
+  useEffect(() => {
+    const subscription = pa.ui.subscribeInvalidations?.(({ topics }) => {
+      if (!topics.some((topic) => topic === 'automation' || topic === 'events' || topic === 'tasks' || topic === 'runs')) return;
+      if (backgroundReloadTimerRef.current) clearTimeout(backgroundReloadTimerRef.current);
+      backgroundReloadTimerRef.current = setTimeout(() => {
+        backgroundReloadTimerRef.current = null;
+        void load().catch((err: Error) => {
+          setError(err.message);
+          pa.ui.notify({ type: 'error', message: `Failed to refresh automations: ${err.message}`, source: 'system-automations' });
+        });
+      }, 100);
+    });
+    return () => {
+      subscription?.unsubscribe();
+      if (backgroundReloadTimerRef.current) {
+        clearTimeout(backgroundReloadTimerRef.current);
+        backgroundReloadTimerRef.current = null;
+      }
+    };
+  }, [load, pa]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      void load().catch((err: Error) => {
+        setError(err.message);
+      });
+    }, ACTIVITY_AUTO_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [load]);
 
   const reload = useCallback(async () => {
     setBusy('reload');
