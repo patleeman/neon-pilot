@@ -160,6 +160,90 @@ describe('scheduledTaskTool', () => {
     expect(result.content[0].text).toBe('Saved scheduled task @task-1 for tomorrow at 6pm.');
   });
 
+  it('saves a background-agent automation with callback delivery to the current conversation', async () => {
+    automations.loadScheduledTasksForProfile.mockResolvedValue({ tasks: [], parseErrors: [], runtimeState: {} });
+    automations.readSessionConversationId.mockResolvedValue('conv-1');
+    automations.createStoredAutomation.mockResolvedValue(
+      task({ id: 'agent-check', schedule: { type: 'cron', expression: '*/15 * * * *' }, targetType: 'background-agent' }),
+    );
+    automations.applyScheduledTaskThreadBinding.mockResolvedValue(
+      task({ id: 'agent-check', targetType: 'background-agent', threadMode: 'existing', threadConversationId: 'conv-1' }),
+    );
+
+    const result = await registerTool().execute(
+      'call-1',
+      {
+        action: 'save',
+        taskId: 'agent-check',
+        cron: '*/15 * * * *',
+        targetType: 'background-agent',
+        threadMode: 'existing',
+        deliverResultToConversation: true,
+        prompt: 'Check the order feed',
+      },
+      undefined,
+      undefined,
+      { sessionManager: { getSessionFile: () => '/session.json' } },
+    );
+
+    expect(automations.createStoredAutomation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'agent-check',
+        cron: '*/15 * * * *',
+        targetType: 'background-agent',
+        prompt: 'Check the order feed',
+      }),
+    );
+    expect(automations.applyScheduledTaskThreadBinding).toHaveBeenCalledWith(
+      'agent-check',
+      expect.objectContaining({ threadMode: 'existing', threadConversationId: 'conv-1', threadSessionFile: '/session.json' }),
+    );
+    expect(automations.setTaskCallbackBinding).toHaveBeenCalledWith({
+      profile: 'runtime',
+      taskId: 'agent-check',
+      conversationId: 'conv-1',
+      sessionFile: '/session.json',
+      deliverOnSuccess: true,
+      deliverOnFailure: true,
+      notifyOnSuccess: 'disruptive',
+      notifyOnFailure: 'disruptive',
+      requireAck: true,
+      autoResumeIfOpen: true,
+    });
+    expect(result.details).toMatchObject({ action: 'save', taskId: 'agent-check', targetType: 'background-agent' });
+  });
+
+  it('rejects conversation automations that also request background-agent callback delivery', async () => {
+    automations.loadScheduledTasksForProfile.mockResolvedValue({ tasks: [], parseErrors: [], runtimeState: {} });
+    automations.parseFutureHumanDateTime.mockResolvedValue({
+      dueAt: '2026-05-23T01:00:00.000Z',
+      interpretation: 'tomorrow at 6pm',
+      input: 'tomorrow 6pm',
+    });
+
+    await expect(
+      registerTool().execute(
+        'call-1',
+        {
+          action: 'save',
+          taskId: 'conversation-check',
+          at: 'tomorrow 6pm',
+          targetType: 'conversation',
+          deliverResultToConversation: true,
+          prompt: 'Follow up in this thread',
+        },
+        undefined,
+        undefined,
+        { sessionManager: { getSessionFile: () => '/session.json' } },
+      ),
+    ).resolves.toMatchObject({
+      isError: true,
+      content: [{ text: 'deliverResultToConversation is only supported for background-agent automations.' }],
+    });
+    expect(automations.createStoredAutomation).not.toHaveBeenCalled();
+    expect(automations.setTaskCallbackBinding).not.toHaveBeenCalled();
+  });
+
   it('runs a task through the daemon and records telemetry', async () => {
     automations.resolveScheduledTaskForProfile.mockResolvedValue({ task: task(), runtime: undefined });
     automations.startScheduledTaskRun.mockResolvedValue({ accepted: true, runId: 'run-1' });

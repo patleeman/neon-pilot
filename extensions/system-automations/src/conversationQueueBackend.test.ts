@@ -117,7 +117,11 @@ describe('conversationQueueBackend deferredResume', () => {
   it('adds time-based deferred resumes and blocks redundant background run polling without a reason', async () => {
     vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-05-22T10:00:00.000Z').getTime());
     parseDeferredResumeDelayMs.mockReturnValue(60_000);
-    scheduleDeferredResumeForSessionFile.mockResolvedValue({ id: 'resume-1', prompt: 'Check later', dueAt: '2026-05-22T10:01:00.000Z' });
+    scheduleDeferredResumeForSessionFile.mockResolvedValue({
+      id: 'resume-1',
+      prompt: 'Check run-abc later',
+      dueAt: '2026-05-22T10:01:00.000Z',
+    });
     getDurableRun.mockResolvedValue({
       run: { status: { status: 'running' }, manifest: { spec: { metadata: { callbackConversation: {}, resumeParentOnExit: true } } } },
     });
@@ -128,13 +132,72 @@ describe('conversationQueueBackend deferredResume', () => {
         { profile: 'shared', toolContext: { sessionId: 'c1', sessionFile: '/s.json' } },
       ),
     ).rejects.toThrow('already delivers completion/failure');
+    expect(scheduleDeferredResumeForSessionFile).not.toHaveBeenCalled();
 
     await expect(
       deferredResume(
-        { action: 'add', trigger: 'delay', delay: '1m', prompt: 'Check run-abc later', reason: 'separate timed check' },
+        {
+          action: 'add',
+          trigger: 'delay',
+          delay: '1m',
+          prompt: 'Check run-abc later',
+          deliverAs: 'followUp',
+          reason: 'separate timed check',
+        },
+        { profile: 'shared', toolContext: { sessionId: 'c1', sessionFile: '/s.json' }, ui: { invalidate: vi.fn() } },
+      ),
+    ).resolves.toMatchObject({ id: 'resume-1', dueAt: '2026-05-22T10:01:00.000Z', deliverAs: 'followUp' });
+    expect(scheduleDeferredResumeForSessionFile).toHaveBeenCalledWith({
+      sessionFile: '/s.json',
+      conversationId: 'c1',
+      delay: '1m',
+      at: undefined,
+      prompt: 'Check run-abc later',
+      title: 'Check run-abc later',
+      kind: 'continue',
+      behavior: 'followUp',
+      notify: 'passive',
+      requireAck: false,
+      autoResumeIfOpen: true,
+      source: { kind: 'queue-followup-tool' },
+    });
+  });
+
+  it('adds absolute-time deferred resumes through the persisted resume scheduler', async () => {
+    parseFutureHumanDateTime.mockResolvedValue({
+      dueAt: '2026-05-22T18:00:00.000Z',
+      interpretation: 'today at 6:00 PM',
+      input: 'today 6pm',
+    });
+    scheduleDeferredResumeForSessionFile.mockResolvedValue({
+      id: 'resume-2',
+      prompt: 'Send the summary',
+      dueAt: '2026-05-22T18:00:00.000Z',
+    });
+
+    await expect(
+      deferredResume(
+        { action: 'add', trigger: 'at', at: 'today 6pm', prompt: 'Send the summary', title: 'Summary follow-up', deliverAs: 'steer' },
         { profile: 'shared', toolContext: { sessionId: 'c1', sessionFile: '/s.json' } },
       ),
-    ).resolves.toMatchObject({ id: 'resume-1', dueAt: '2026-05-22T10:01:00.000Z' });
+    ).resolves.toMatchObject({
+      id: 'resume-2',
+      dueAt: '2026-05-22T18:00:00.000Z',
+      localDueAt: 'today at 6:00 PM',
+      timeExpression: 'today 6pm',
+      deliverAs: 'steer',
+    });
+    expect(scheduleDeferredResumeForSessionFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionFile: '/s.json',
+        conversationId: 'c1',
+        delay: undefined,
+        at: '2026-05-22T18:00:00.000Z',
+        prompt: 'Send the summary',
+        title: 'Summary follow-up',
+        behavior: 'steer',
+      }),
+    );
   });
 
   it('cancels live queue, automation, and deferred-resume items', async () => {
