@@ -556,7 +556,7 @@ describe('SettingsPage provider model editor', () => {
     click(queryButton(container, 'Continue'));
 
     expect(container.textContent).toContain('Provider · anthropic');
-    expect(container.textContent).toContain('Additional models');
+    expect(container.textContent).toContain('Saved overrides and custom models');
 
     click(queryButtonByLabel(container, 'Add model'));
     const modelIdInput = queryInput(container, '#settings-provider-model-id');
@@ -843,7 +843,7 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderPage('settings-providers');
     await flushAsyncWork();
 
-    expect(container.textContent).toContain('Add provider');
+    expect(container.textContent).toContain('Choose provider');
 
     updateSelectValue(queryProviderPicker(container), 'anthropic');
     click(queryButton(container, 'Continue'));

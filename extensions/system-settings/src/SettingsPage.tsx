@@ -3,12 +3,12 @@ import {
   AppPageLayout,
   type AppTelemetryLogBundleExport,
   type AppTelemetryLogDiagnostics,
+  Button,
   Checkbox,
+  CORE_KEYBOARD_SHORTCUT_REGISTRATIONS,
   createDesktopAwareEventSource,
   createModelEditorDraft,
   createProviderEditorDraft,
-  Button,
-  CORE_KEYBOARD_SHORTCUT_REGISTRATIONS,
   cx,
   DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS,
   type DesktopAppPreferencesState,
@@ -17,6 +17,7 @@ import {
   EXTENSION_REGISTRY_CHANGED_EVENT,
   type ExtensionKeybindingRegistration,
   formatContextWindowLabel,
+  formatKeyboardShortcutLabel,
   formatThinkingLevelLabel,
   getDesktopBridge,
   groupModelsByProvider,
@@ -34,17 +35,17 @@ import {
   parseOptionalNonNegativeNumber,
   parseOptionalPositiveInteger,
   parseOptionalStringRecord,
-  readJsonObjectDraftEntries,
   type ProviderAuthSummary,
   type ProviderConnectionTestResult,
   type ProviderEditorDraft,
   type ProviderOAuthLoginState,
   type ProviderOAuthLoginStreamEvent,
   readDesktopEnvironment,
+  readJsonObjectDraftEntries,
   RowButton,
+  SearchInput,
   type SecretsState,
   type SecretStatusEntry,
-  SearchInput,
   SectionLabel,
   SegmentedControl,
   Select,
@@ -56,10 +57,8 @@ import {
   Switch,
   type TelemetryDbMaintenanceResult,
   TextButton,
-  Textarea,
   TextInput,
   type ThemeAccent,
-  type ThemePreference,
   THINKING_LEVEL_OPTIONS,
   ToolbarButton,
   UnifiedSettingsEntry,
@@ -68,7 +67,6 @@ import {
   useTheme,
   writeJsonObjectDraftEntries,
   writeStringRecordDraftEntries,
-  formatKeyboardShortcutLabel,
 } from '@neon-pilot/extensions/settings';
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -1048,8 +1046,9 @@ export function CommandsSettingsSection() {
       if (loadSequenceRef.current !== sequence) return;
       setError(nextError instanceof Error ? nextError.message : String(nextError));
     } finally {
-      if (loadSequenceRef.current !== sequence) return;
-      setLoading(false);
+      if (loadSequenceRef.current === sequence) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -3612,10 +3611,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               <SettingsSection
                 id="settings-providers"
                 label="Providers"
-                description="Provider definitions, model overrides, and credential management."
+                description="Connect model providers, save credentials, and add model overrides."
               >
                 <div className="settings-page-section-stack">
-                  <SettingsGroup title="Provider definitions">
+                  <SettingsGroup title="Model providers">
                     <>
                       {modelProviderLoading && !modelProviderState ? (
                         <p className="ui-card-meta">Loading provider definitions…</p>
@@ -3627,7 +3626,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                           {providerAuthError && !providerAuthState && (
                             <p className="text-[12px] text-danger">Failed to load provider credentials: {providerAuthError}</p>
                           )}
-                          <SettingsControlRow title="Add provider" actionsClassName="settings-page-provider-add-actions">
+                          <SettingsControlRow title="Choose provider" actionsClassName="settings-page-provider-add-actions">
                             <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                               <Select
                                 id="settings-model-provider-picker"
@@ -3747,8 +3746,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       : (selectedModelProvider?.id ?? 'Provider')}
                                   </h3>
                                   <p className="ui-card-meta max-w-3xl">
-                                    Start with a known provider ID to auto-load defaults. Save a key here or in Credentials to enable secure
-                                    auth.
+                                    Use a known provider ID to load curated defaults. Save credentials here, then add or override models
+                                    below.
                                   </p>
                                   {selectedModelProviderId === NEW_MODEL_PROVIDER_ID ? (
                                     <div className="flex flex-wrap gap-2 text-[12px]">
@@ -3924,9 +3923,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   </Disclosure>
 
                                   <p className="ui-card-meta max-w-3xl">
-                                    Provider API keys here use <span className="font-mono text-[11px]">models.json</span> value resolution.
-                                    Leave the field blank if you prefer <span className="font-mono text-[11px]">auth.json</span>, OAuth, or
-                                    environment-only auth.
+                                    Prefer the Credentials panel for API keys. This field is for advanced models.json value resolution, such
+                                    as environment variables or commands.
                                   </p>
 
                                   <div className="flex flex-wrap gap-2">
@@ -3991,7 +3989,9 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 )}
                               >
                                 {providerTestResult.message}
-                                {providerTestResult.sampleModels.length > 0 ? ` Sample: ${providerTestResult.sampleModels.join(', ')}.` : ''}
+                                {providerTestResult.sampleModels.length > 0
+                                  ? ` Sample: ${providerTestResult.sampleModels.join(', ')}.`
+                                  : ''}
                               </p>
                             )}
                             {providerEditorMode !== 'custom' && providerTestError && (
@@ -4004,15 +4004,15 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 setShowProviderModelManagement((event.currentTarget as HTMLDetailsElement).open);
                               }}
                               className="order-2 min-w-0"
-                              summary={<span className="text-[14px] font-medium text-primary">Advanced config</span>}
+                              summary={<span className="text-[14px] font-medium text-primary">Models</span>}
                             >
                               <div className="space-y-2 pt-3">
                                 <p className="ui-card-meta">
                                   {providerModelCount > 0
-                                    ? `${providerModelCount} model ${providerModelCount === 1 ? 'row' : 'rows'} loaded from defaults.`
+                                    ? `${providerModelCount} curated ${providerModelCount === 1 ? 'model' : 'models'} available for this provider.`
                                     : selectedModelProviderId === NEW_MODEL_PROVIDER_ID
-                                      ? 'Save this provider to auto-load model defaults for this provider ID, when available.'
-                                      : 'No model rows yet for this provider.'}
+                                      ? 'Save this provider to load curated models when available.'
+                                      : 'No curated models for this provider yet.'}
                                 </p>
                                 <div className="flex flex-wrap items-center gap-2">
                                   <IconButton
@@ -4033,7 +4033,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     }}
                                     disabled={modelsRefreshing || modelRefreshAction}
                                     aria-label="Refresh models"
-                                    title={modelsRefreshing || modelRefreshAction ? 'Refreshing models' : 'Refresh models'}
+                                    title={modelsRefreshing || modelRefreshAction ? 'Refreshing curated models' : 'Refresh curated models'}
                                   >
                                     <SettingsIcon name="refresh" />
                                   </IconButton>
@@ -4045,7 +4045,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   <>
                                     {builtInProviderModels.length > 0 && (
                                       <div className="space-y-1.5">
-                                        <h4 className="text-[12px] font-medium text-secondary">Models</h4>
+                                        <h4 className="text-[12px] font-medium text-secondary">Curated models</h4>
                                         <div className="space-y-1">
                                           {builtInProviderModels.map((model) => {
                                             const hasOverride = selectedModelProvider?.models.some(
@@ -4077,7 +4077,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     )}
 
                                     <div className="space-y-1.5">
-                                      <h4 className="text-[12px] font-medium text-secondary">Additional models</h4>
+                                      <h4 className="text-[12px] font-medium text-secondary">Saved overrides and custom models</h4>
                                       {selectedModelProvider && selectedModelProvider.models.length > 0 ? (
                                         <div className="space-y-1">
                                           {selectedModelProvider.models.map((model) => (
@@ -4114,7 +4114,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           ))}
                                         </div>
                                       ) : (
-                                        <p className="text-[12px] text-dim">None yet.</p>
+                                        <p className="text-[12px] text-dim">No saved overrides or custom models.</p>
                                       )}
                                     </div>
 
