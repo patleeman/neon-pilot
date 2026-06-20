@@ -234,6 +234,7 @@ export class LocalBackendProcesses {
   private backendLiveConversationIds = new Set<string>();
   private pendingLocalApiRpcResponses = new Map<string, (message: LocalApiRpcResponseMessage) => void>();
   private lastStartPerf?: { totalMs: number; spawnMs: number; readyWaitMs: number; assignMs: number };
+  private backendStartedWithExtensionHost = false;
   private criticalExtensionRegistryModulePromise?: Promise<
     typeof import('../../server/extensions/extensionCriticalRegistryPresentation.js')
   >;
@@ -246,6 +247,10 @@ export class LocalBackendProcesses {
 
     if (this.hasOwnedRuntime()) {
       return;
+    }
+
+    if (this.hasPartialRuntime()) {
+      await this.clearOwnedRuntime();
     }
 
     await this.start();
@@ -287,6 +292,7 @@ export class LocalBackendProcesses {
     this.token = undefined;
     this.extensionHostBaseUrl = undefined;
     this.extensionHostToken = undefined;
+    this.backendStartedWithExtensionHost = false;
     removeNeonPilotCliControlPlaneRecord();
 
     if (this.startPromise) {
@@ -432,7 +438,34 @@ export class LocalBackendProcesses {
   }
 
   private hasOwnedRuntime(): boolean {
-    return Boolean(this.child && !this.child.killed && this.baseUrl && this.token);
+    return Boolean(
+      this.child &&
+      !this.child.killed &&
+      this.baseUrl &&
+      this.token &&
+      (!this.backendStartedWithExtensionHost ||
+        Boolean(this.extensionHostChild && !this.extensionHostChild.killed && this.extensionHostBaseUrl && this.extensionHostToken)),
+    );
+  }
+
+  private hasPartialRuntime(): boolean {
+    return Boolean(
+      this.child || this.extensionHostChild || this.baseUrl || this.token || this.extensionHostBaseUrl || this.extensionHostToken,
+    );
+  }
+
+  private async clearOwnedRuntime(): Promise<void> {
+    const child = this.child;
+    const extensionHostChild = this.extensionHostChild;
+    this.child = undefined;
+    this.extensionHostChild = undefined;
+    this.baseUrl = undefined;
+    this.token = undefined;
+    this.extensionHostBaseUrl = undefined;
+    this.extensionHostToken = undefined;
+    this.backendStartedWithExtensionHost = false;
+    removeNeonPilotCliControlPlaneRecord();
+    await Promise.all([this.stopChild(child), this.stopChild(extensionHostChild)]);
   }
 
   private makeJsonResponse(
@@ -750,6 +783,7 @@ export class LocalBackendProcesses {
       const assignStartedAt = Date.now();
       this.token = ready.token || token;
       this.baseUrl = `http://127.0.0.1:${String(ready.port)}`;
+      this.backendStartedWithExtensionHost = Boolean(this.extensionHostBaseUrl && this.extensionHostToken);
       this.writeCliControlPlaneRecord();
       const assignedAt = Date.now();
       this.lastStartPerf = {
@@ -763,6 +797,7 @@ export class LocalBackendProcesses {
           this.child = undefined;
           this.baseUrl = undefined;
           this.token = undefined;
+          this.backendStartedWithExtensionHost = false;
           this.writeCliControlPlaneRecord();
         }
       });
@@ -772,6 +807,7 @@ export class LocalBackendProcesses {
       }
       this.baseUrl = undefined;
       this.token = undefined;
+      this.backendStartedWithExtensionHost = false;
       if (!extensionHostAlreadyRunning) {
         const extensionHostChild = this.extensionHostChild;
         this.clearExtensionHostRuntime();

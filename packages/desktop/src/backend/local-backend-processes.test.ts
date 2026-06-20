@@ -233,6 +233,68 @@ describe('LocalBackendProcesses', () => {
     expect(backend.lastStartPerf?.totalMs).toBeGreaterThanOrEqual(0);
   });
 
+  it('restarts stale backend runtime when the extension host exits before a conversation message dispatch', async () => {
+    const firstExtensionHost = new FakeChildProcess();
+    const firstBackend = new FakeChildProcess();
+    const secondExtensionHost = new FakeChildProcess();
+    const secondBackend = new FakeChildProcess();
+    childProcessMocks.spawn
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => firstExtensionHost.emit('message', { type: 'ready', port: 4101, token: 'extension-host-token-1' }));
+        return firstExtensionHost;
+      })
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => firstBackend.emit('message', { type: 'ready', port: 5101, token: 'backend-token-1' }));
+        return firstBackend;
+      })
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => secondExtensionHost.emit('message', { type: 'ready', port: 4102, token: 'extension-host-token-2' }));
+        return secondExtensionHost;
+      })
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => secondBackend.emit('message', { type: 'ready', port: 5102, token: 'backend-token-2' }));
+        return secondBackend;
+      });
+
+    const backend = new LocalBackendProcesses() as LocalBackendProcesses & {
+      child?: unknown;
+      extensionHostChild?: unknown;
+      extensionHostBaseUrl?: string;
+      baseUrl?: string;
+      token?: string;
+      fetch(path: string, init: RequestInit): Promise<Response>;
+    };
+    const fetchSpy = vi.spyOn(backend, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await backend.ensureStarted();
+    expect(backend.baseUrl).toBe('http://127.0.0.1:5101');
+
+    firstExtensionHost.emit('exit', 1, null);
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+
+    const response = await backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/conversations/conv-1/messages',
+      body: { text: 'Hi' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(firstBackend.send).toHaveBeenCalledWith({ type: 'shutdown' });
+    expect(backend.extensionHostBaseUrl).toBe('http://127.0.0.1:4102');
+    expect(backend.baseUrl).toBe('http://127.0.0.1:5102');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/dispatch',
+      expect.objectContaining({
+        body: JSON.stringify({ request: { method: 'POST', path: '/api/conversations/conv-1/messages', body: { text: 'Hi' } } }),
+      }),
+    );
+  });
+
   it('preserves packaged app roots without synthesizing a repo root for child processes', () => {
     const originalEnv = { ...process.env };
     try {

@@ -94,11 +94,7 @@ function stripActionUpdateCallback(input: ExtensionHostInvokeActionInput): Exten
   return request;
 }
 
-async function withProtocolTimeout<T>(
-  operation: (signal: AbortSignal) => Promise<T>,
-  signal: AbortSignal,
-  timeoutMs: number,
-): Promise<T> {
+async function withProtocolTimeout<T>(operation: (signal: AbortSignal) => Promise<T>, signal: AbortSignal, timeoutMs: number): Promise<T> {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) {
     throw new Error('Extension host protocol timeoutMs must be a positive integer.');
   }
@@ -186,8 +182,17 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
   const base = new URL(baseUrl);
   const fetchImpl = options.fetchImpl ?? fetch;
 
+  async function fetchExtensionHost(path: string, requestName: string, init: RequestInit): Promise<Response> {
+    try {
+      return await fetchImpl(`${baseUrl}${path}`, init);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Extension host RPC request ${requestName} failed at ${baseUrl}${path}: ${message}`);
+    }
+  }
+
   async function send(request: ExtensionHostWireRequest, signal?: AbortSignal): Promise<ExtensionHostResponse> {
-    const response = await fetchImpl(`${baseUrl}/rpc`, {
+    const response = await fetchExtensionHost('/rpc', request.type, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.token}`,
@@ -204,7 +209,7 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
   }
 
   async function sendRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse> {
-    const response = await fetchImpl(`${baseUrl}/route`, {
+    const response = await fetchExtensionHost('/route', `route:${input.extensionId}/${input.routeId}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.token}`,
@@ -232,7 +237,7 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
   }
 
   async function sendStreamingAction(input: ExtensionHostInvokeActionInput): Promise<ExtensionHostActionInvokeResult> {
-    const response = await fetchImpl(`${baseUrl}/action`, {
+    const response = await fetchExtensionHost('/action', `action:${input.extensionId}/${input.actionId}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.token}`,
@@ -270,7 +275,7 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
     const { signal, stdio, ...request } = input;
     await withProtocolTimeout(
       async (protocolSignal) => {
-        const response = await fetchImpl(`${baseUrl}/protocol/start`, {
+        const response = await fetchExtensionHost('/protocol/start', `protocol:${input.extensionId}/${input.entrypointId}`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${options.token}`,

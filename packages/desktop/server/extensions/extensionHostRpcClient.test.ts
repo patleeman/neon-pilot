@@ -27,6 +27,15 @@ describe('extension host RPC client', () => {
     );
   });
 
+  it('names extension host RPC fetch failures', async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(new TypeError('fetch failed'));
+    const client = createExtensionHostRpcClient({ baseUrl: 'http://127.0.0.1:1234/', token: 'secret', fetchImpl });
+
+    await expect(client.resolveModelProfile({ provider: 'ds4', model: 'deepseek-v4-flash' })).rejects.toThrow(
+      'Extension host RPC request resolveModelProfile failed at http://127.0.0.1:1234/rpc: fetch failed',
+    );
+  });
+
   it('invokes wireable action requests', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ ok: true, result: { ok: true, result: { done: true } } }));
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
