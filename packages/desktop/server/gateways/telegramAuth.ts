@@ -3,8 +3,8 @@ import { AuthStorage } from '@earendil-works/pi-coding-agent';
 import { deleteSecret, resolveSecret, setSecret } from '../secrets/secretStore.js';
 
 const TELEGRAM_AUTH_PROVIDER = 'telegram';
-const TELEGRAM_SECRET_EXTENSION = 'system-gateways';
-const TELEGRAM_SECRET_ID = 'telegramBotToken';
+export const TELEGRAM_SECRET_EXTENSION = 'system-gateways';
+export const TELEGRAM_SECRET_ID = 'telegramBotToken';
 
 function readLegacyTelegramBotToken(authFile: string): string | null {
   const storage = AuthStorage.create(authFile);

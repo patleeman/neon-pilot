@@ -12,7 +12,7 @@ describe('extensionEnabledConfig', () => {
     expect(() => assertCanSetExtensionEnabled({ extensionId: 'system-settings', enabled: true })).not.toThrow();
   });
 
-  it('allows disabling the Telegram Gateway system extension', () => {
+  it('does not lock the externally distributed Telegram Gateway extension', () => {
     expect(LOCKED_EXTENSION_IDS).not.toContain('system-gateways');
     expect(() => assertCanSetExtensionEnabled({ extensionId: 'system-gateways', enabled: false })).not.toThrow();
   });

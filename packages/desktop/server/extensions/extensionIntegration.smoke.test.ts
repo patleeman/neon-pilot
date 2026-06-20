@@ -8,8 +8,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { ExtensionRegistrySnapshot } from './extensionRegistry.js';
 import {
-  listExtensionCommandRegistrations,
   listExtensionCliCommandRegistrations,
+  listExtensionCommandRegistrations,
   listExtensionComposerControlRegistrations,
   listExtensionComposerInputToolRegistrations,
   listExtensionComposerShelfRegistrations,
@@ -667,10 +667,7 @@ describe('extension manifests - structural validation', () => {
       for (const nav of navItems) {
         if (!nav.badgeAction) continue;
         if (backendActionIds.has(nav.badgeAction)) continue;
-        expect(
-          false,
-          `${ext.id}: nav "${nav.id}" badgeAction "${nav.badgeAction}" is not a known backend action`,
-        ).toBe(true);
+        expect(false, `${ext.id}: nav "${nav.id}" badgeAction "${nav.badgeAction}" is not a known backend action`).toBe(true);
       }
     }
   });
@@ -938,17 +935,6 @@ describe('extension manifests - cross-extension conflict detection', () => {
     ).toEqual([]);
   });
 
-  it('registers the Telegram Gateway token secret', () => {
-    expect(listExtensionSecretRegistrations()).toContainEqual(
-      expect.objectContaining({
-        extensionId: 'system-gateways',
-        id: 'telegramBotToken',
-        label: 'Telegram bot token',
-        env: 'TELEGRAM_BOT_TOKEN',
-      }),
-    );
-  });
-
   it('no duplicate secret backend ids', () => {
     const backends = listExtensionSecretBackendRegistrations();
     const conflicts = findAllStringConflicts(backends.map((b) => [b.id, b.extensionId]));
@@ -1061,8 +1047,8 @@ describe('extension registry - integration sanity', () => {
     expect(systemCount).toBeLessThanOrEqual(35);
   });
 
-  it('has at least 7 routes registered', () => {
-    expect(snapshot.routes.length).toBeGreaterThanOrEqual(7);
+  it('has at least 6 routes registered', () => {
+    expect(snapshot.routes.length).toBeGreaterThanOrEqual(6);
   });
 
   it('has at least 14 views registered', () => {

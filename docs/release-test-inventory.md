@@ -109,7 +109,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Test workflow template list, run/cancel, saved workflow create/delete/run, transcript block rendering, concurrent subagent limits, invalid JavaScript, timeout, and persisted run history.
 - Skill: `dynamic-workflows`.
 
-### `/gateways` — Telegram Gateway (`system-gateways`)
+### `/gateways` — Telegram Gateway (`system-gateways`, external first-party extension)
 
 - Nav item: Gateways.
 - Gateway provider: `telegram`.
@@ -439,7 +439,7 @@ Bundled system-extension entries are derived from local `extensions/*/extension.
 - settings: systemFiles.transcriptPathLinkTarget
 - views: workspace-files, workspace-file-detail
 
-### system-gateways — Telegram Gateway
+### system-gateways — Telegram Gateway (external first-party extension)
 
 - gatewayProviders: telegram
 - nav: gateways-nav (/gateways)

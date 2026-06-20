@@ -101,7 +101,6 @@ Bundled system extensions:
 - [Agent Plugins](../extensions/system-agent-plugins/README.md) — Codex and Claude plugin import, update tracking, and compatibility reports
 - [Extension Manager](../extensions/system-extension-manager/README.md) — extension registry, validation, import/export, and diagnostics
 - [File Explorer](../extensions/system-files/README.md) — workspace file browsing
-- [Telegram Gateway](../extensions/system-gateways/README.md) — Telegram chat connections
 - [Git Status](../extensions/system-git-status/README.md) — branch and diff status in the composer
 - [Goal Mode](../extensions/system-auto-mode/README.md) — persisted goal tracking and automatic continuation
 - [Host view components](host-view-components.md) — host-owned UI components reusable by extensions
