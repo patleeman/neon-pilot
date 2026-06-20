@@ -31,6 +31,7 @@ vi.mock('../desktop/desktopEventSource', () => ({
 }));
 
 import { api } from '../client/api.js';
+import { sessionStore } from '../store';
 import { primeConversationBootstrapCache } from './useConversationBootstrap.js';
 import {
   applyDesktopConversationStreamEvent,
@@ -431,6 +432,7 @@ describe('useDesktopConversationState', () => {
     latestReconnect = null;
     latestState = null;
     clearDesktopConversationStateCacheForTests();
+    sessionStore.reset?.();
     vi.restoreAllMocks();
     Reflect.deleteProperty(window, 'neonPilotDesktop');
   });
@@ -643,6 +645,60 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.loading).toBe(false);
     expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ live: true, isStreaming: true }));
     expect(latestState?.state?.stream.isStreaming).toBe(true);
+  });
+
+  it('mirrors active desktop stream running state into the sidebar session store', async () => {
+    const liveState = {
+      conversationId: 'conv-sidebar-running',
+      sessionDetail: null,
+      liveSession: { live: true, id: 'conv-sidebar-running', cwd: '/repo', sessionFile: '/repo/session.jsonl', isStreaming: true },
+      stream: {
+        blocks: [],
+        blockOffset: 0,
+        totalBlocks: 0,
+        hasSnapshot: true,
+        isStreaming: true,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    } satisfies Awaited<ReturnType<typeof api.desktopConversationState>>;
+    vi.spyOn(api, 'desktopConversationState').mockResolvedValue(liveState);
+    sessionStore.upsert({
+      id: 'conv-sidebar-running',
+      title: 'Sidebar row',
+      cwd: '/repo',
+      timestamp: '2026-06-15T00:00:00.000Z',
+      isRunning: false,
+    });
+    sessionStore.markReady?.();
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-sidebar-running" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(sessionStore.get('conv-sidebar-running')?.isRunning).toBe(true);
   });
 
   it('flushes terminal stream events immediately so the composer cannot stay stuck in stop mode', async () => {
