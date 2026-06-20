@@ -95,6 +95,8 @@ describe('AgentPluginsSettingsPanel', () => {
 
     expect(screen.getByText('Plugin storage')).toBeTruthy();
     expect(screen.getAllByText('Review Pack').length).toBeGreaterThan(0);
+    expect(screen.getByText('Available to agents')).toBeTruthy();
+    expect(screen.getByText('Skills and agent instructions are discovered but not available.')).toBeTruthy();
     expect(screen.getByText('review - skills/review/SKILL.md')).toBeTruthy();
     expect(screen.getByText('skills/review/mcp.json')).toBeTruthy();
     expect(screen.getByText('hooks - hooks/before_agent_start.md')).toBeTruthy();

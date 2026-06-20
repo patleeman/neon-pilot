@@ -311,8 +311,12 @@ export function AgentPluginsSettingsPanel() {
               <div className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <SettingsRow
-                    title="Enabled"
-                    description={selectedPlugin.enabled ? 'Capabilities are active.' : 'Capabilities are indexed only.'}
+                    title="Available to agents"
+                    description={
+                      selectedPlugin.enabled
+                        ? 'Skills and agent instructions from this plugin are available.'
+                        : 'Skills and agent instructions are discovered but not available.'
+                    }
                   >
                     <Switch checked={selectedPlugin.enabled} onCheckedChange={() => void togglePlugin(selectedPlugin)} />
                   </SettingsRow>
