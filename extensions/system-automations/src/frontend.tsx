@@ -228,7 +228,7 @@ const ACTIVITY_SORT_LABELS: Record<ActivitySort, string> = {
   oldest: 'Oldest',
   event: 'Event A-Z',
   from: 'Emitter A-Z',
-  'used-by': 'Handler A-Z',
+  'used-by': 'Used by A-Z',
   status: 'Status',
 };
 
@@ -518,7 +518,7 @@ function statusTone(status: string, fallback: ActivityTone): ActivityTone {
   if (status === 'Done') return 'success';
   if (status === 'Failed') return 'danger';
   if (status === 'Waiting') return 'warning';
-  if (status === 'No handler' || status === 'Off') return 'muted';
+  if (status === 'Unused' || status === 'Off') return 'muted';
   return fallback;
 }
 
@@ -582,7 +582,7 @@ function resolveActivityActor(source: string, metadata: Record<string, unknown> 
   if (subscriptionId) {
     return {
       name: lookup.subscriptions.get(subscriptionId)?.name ?? humanizeActorName(subscriptionId),
-      kind: 'Handler',
+      kind: 'Automation',
       conversationId: undefined,
       subscriptionId,
     };
@@ -598,7 +598,7 @@ function resolveActivityActor(source: string, metadata: Record<string, unknown> 
 function actorKindFromSource(value: string) {
   if (!value) return 'Unknown';
   if (value === 'scheduler') return 'Schedule';
-  if (value.startsWith('subscription:')) return 'Handler';
+  if (value.startsWith('subscription:')) return 'Automation';
   if (value.startsWith('script:')) return 'Script';
   if (value.startsWith('agent:')) return 'Agent';
   if (value.startsWith('thread:')) return 'Thread';
@@ -614,8 +614,8 @@ function actorKindFromAction(actionType: EventBusReactionSummary['actionType']) 
   if (actionType === 'start_thread') return 'Thread';
   if (actionType === 'run_script') return 'Script';
   if (actionType === 'run_task') return 'Scheduled task';
-  if (actionType === 'publish_event') return 'Handler';
-  return 'Handler';
+  if (actionType === 'publish_event') return 'Automation';
+  return 'Automation';
 }
 
 function statusFilterMatches(event: AutomationActivityEvent, filter: ActivityStatusFilter) {
@@ -809,7 +809,7 @@ function buildEventBusActivityEvents(events: EventBusEventSummary[], lookup: Act
         : firstReaction.status === 'failed'
           ? 'Failed'
           : 'Pending'
-      : 'No handler';
+      : 'Unused';
     const matchingSubscriptionIds = reactions.map((reaction) => reaction.subscriptionId).filter(Boolean);
     const usedByNames = reactions.map((reaction) => humanizeActorName(reaction.subscriptionName)).filter(Boolean);
     const usedByKinds = reactions.map((reaction) => actorKindFromAction(reaction.actionType)).filter(Boolean);
@@ -818,7 +818,7 @@ function buildEventBusActivityEvents(events: EventBusEventSummary[], lookup: Act
     const primaryUsedByName =
       usedByNames.length === 0 ? '-' : usedByNames.length === 1 ? usedByNames[0] : `${usedByNames[0]} +${usedByNames.length - 1}`;
     const primaryUsedByKind =
-      usedByKinds.length === 0 ? 'No handler' : usedByKinds.length === 1 ? usedByKinds[0] : `${usedByKinds[0]} +${usedByKinds.length - 1}`;
+      usedByKinds.length === 0 ? 'Unused' : usedByKinds.length === 1 ? usedByKinds[0] : `${usedByKinds[0]} +${usedByKinds.length - 1}`;
     const failed = reactions.some((reaction) => reaction.status === 'failed');
     const pending = reactions.some((reaction) => reaction.status === 'pending');
     return {
@@ -830,7 +830,7 @@ function buildEventBusActivityEvents(events: EventBusEventSummary[], lookup: Act
       title: event.type,
       relativeTime,
       absoluteTime: event.occurredAt,
-      status: reactions.length === 0 ? 'No handler' : failed ? 'Failed' : pending ? 'Waiting' : 'Done',
+      status: reactions.length === 0 ? 'Unused' : failed ? 'Failed' : pending ? 'Waiting' : 'Done',
       tone: failed ? 'danger' : pending ? 'warning' : tone,
       matches: reactions.length,
       reactionKind,
@@ -1072,7 +1072,7 @@ function ActivityTimeline({
           <div>Time</div>
           <div>Event</div>
           <div>Emitted by</div>
-          <div>Handled by</div>
+          <div>Used by</div>
           <div>Status</div>
         </div>
         {events.map((event) => {
@@ -1111,7 +1111,7 @@ function ActivityTimeline({
                   <button
                     type="button"
                     className="block max-w-full truncate text-left text-[12px] text-secondary underline-offset-2 hover:text-primary hover:underline"
-                    title={event.fromConversationId ? 'Open session' : 'Inspect handler'}
+                    title={event.fromConversationId ? 'Open session' : 'Inspect automation'}
                     onClick={(clickEvent) => {
                       clickEvent.stopPropagation();
                       if (event.fromConversationId) {
@@ -1133,7 +1133,7 @@ function ActivityTimeline({
                   <button
                     type="button"
                     className="block max-w-full truncate text-left text-[12px] text-secondary underline-offset-2 hover:text-primary hover:underline"
-                    title="Inspect handler"
+                    title="Inspect automation"
                     onClick={(clickEvent) => {
                       clickEvent.stopPropagation();
                       onInspectHandler(event.id);
@@ -1196,7 +1196,7 @@ function ActivityInspector({
       <aside className="flex h-full min-h-0 w-[20rem] shrink-0 flex-col border-l border-border-subtle/70 bg-background/55 px-4 py-4">
         <div className="text-[11px] uppercase text-dim">Event</div>
         <h2 className="mt-2 text-[16px] font-semibold leading-tight text-primary">No event selected</h2>
-        <p className="mt-2 text-[12px] leading-5 text-secondary">Select a row to inspect what emitted it and what handled it.</p>
+        <p className="mt-2 text-[12px] leading-5 text-secondary">Select a row to inspect what emitted it and what used it.</p>
       </aside>
     );
   }
@@ -1232,7 +1232,7 @@ function ActivityInspector({
             )}
             <span className="block text-[10px] uppercase tracking-wide text-dim">{event.fromKind}</span>
           </span>
-          <span className="text-dim">Handled by</span>
+          <span className="text-dim">Used by</span>
           <span className="min-w-0">
             <span className="block break-words text-secondary">{event.primaryUsedByName}</span>
             <span className="block text-[10px] uppercase tracking-wide text-dim">{event.primaryUsedByKind}</span>
@@ -1267,7 +1267,7 @@ function ActivityInspector({
             ) : null}
             {primarySubscription ? (
               <div>
-                <div className="text-[11px] font-medium uppercase text-dim">Handler</div>
+                <div className="text-[11px] font-medium uppercase text-dim">Automation</div>
                 <div className="mt-2 grid gap-1.5 text-[12px]">
                   <div className="font-medium text-primary">{primarySubscription.name}</div>
                   <div className="text-secondary">{describeEventBusAction(primarySubscription.action, conversations)}</div>
@@ -1618,7 +1618,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         setError(msg);
-        pa.ui.notify({ type: 'error', message: `Failed to update event handler: ${msg}`, source: 'system-automations' });
+        pa.ui.notify({ type: 'error', message: `Failed to update automation: ${msg}`, source: 'system-automations' });
       } finally {
         setBusy(null);
       }
@@ -1741,7 +1741,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const countLabel = useMemo(
     () =>
       `${tasks.length === 1 ? '1 scheduled publisher' : `${tasks.length} scheduled publishers`} · ${
-        eventBusSubscriptions.length === 1 ? '1 event handler' : `${eventBusSubscriptions.length} event handlers`
+        eventBusSubscriptions.length === 1 ? '1 event rule' : `${eventBusSubscriptions.length} event rules`
       }`,
     [eventBusSubscriptions.length, tasks.length],
   );
@@ -1861,12 +1861,12 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 </Select>
                 <Select
                   name="automation-used-by-filter"
-                  aria-label="Filter by handler"
+                  aria-label="Filter by automation"
                   className="h-8 w-36 bg-surface/40 text-[13px]"
                   value={usedByFilter}
                   onChange={(event) => setUsedByFilter(event.target.value)}
                 >
-                  <option value="all">Handler: All</option>
+                  <option value="all">Used by: All</option>
                   {usedByFilterOptions.map((value) => (
                     <option key={value} value={value}>
                       {value}

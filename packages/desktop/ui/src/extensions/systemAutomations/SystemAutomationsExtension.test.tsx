@@ -190,7 +190,7 @@ describe('AutomationsPage', () => {
     expect(container.innerHTML).toContain('aria-label="Scheduler healthy.');
     expect(container.textContent).toContain('Daily check');
     expect(container.textContent).toContain('schedule.due');
-    expect(container.textContent).toContain('TimeEventEmitted byHandled byStatus');
+    expect(container.textContent).toContain('TimeEventEmitted byUsed byStatus');
     expect(container.querySelector('[data-automation-activity-shell="true"]')?.className).toContain('overflow-hidden');
     expect(container.querySelector('[data-automation-activity-main="true"]')?.className).toContain('min-h-0');
     expect(container.querySelector('[data-automation-activity-scroll="true"]')?.className).toContain('overflow-auto');
@@ -370,7 +370,7 @@ describe('AutomationsPage', () => {
     expect(container.textContent).toContain('All');
     expect(container.querySelector('input[placeholder="Search events…"]')).not.toBeNull();
     expect(container.textContent).toContain('Emitter: All');
-    expect(container.textContent).toContain('Handler: All');
+    expect(container.textContent).toContain('Used by: All');
   });
 
   it('replays the selected durable event bus event from the inspector action', async () => {
@@ -459,7 +459,7 @@ describe('AutomationsPage', () => {
     expect(pa.automations.run).not.toHaveBeenCalled();
   });
 
-  it('renders handler names instead of source ids and shows handler details', async () => {
+  it('renders automation names instead of source ids and shows automation details', async () => {
     const pa = createPa();
     vi.mocked(pa.extension.invoke).mockImplementation(async (_actionId: string, input?: unknown) => {
       const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
@@ -567,7 +567,7 @@ describe('AutomationsPage', () => {
     expect(update).toHaveBeenCalledWith('daily-check', expect.objectContaining({ enabled: false }));
   });
 
-  it('turns off the selected event handler from the inspector', async () => {
+  it('turns off the selected event automation from the inspector', async () => {
     const pa = createPa({
       list: vi.fn(async () => []),
     });
