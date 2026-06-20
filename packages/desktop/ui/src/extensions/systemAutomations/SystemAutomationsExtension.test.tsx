@@ -191,6 +191,9 @@ describe('AutomationsPage', () => {
     expect(container.textContent).toContain('Daily check');
     expect(container.textContent).toContain('schedule.due');
     expect(container.textContent).toContain('TimeEventEmitted byHandled byStatus');
+    expect(container.querySelector('[data-automation-activity-shell="true"]')?.className).toContain('overflow-hidden');
+    expect(container.querySelector('[data-automation-activity-main="true"]')?.className).toContain('min-h-0');
+    expect(container.querySelector('[data-automation-activity-scroll="true"]')?.className).toContain('overflow-auto');
   });
 
   it('ignores stale load completions when automation refreshes overlap', async () => {

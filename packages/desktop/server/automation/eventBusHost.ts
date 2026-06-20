@@ -1,8 +1,8 @@
 import { startBackgroundRun, startScheduledTaskRun } from '../daemon/client.js';
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import {
-  createEventBusSubscription,
   cancelEventBusDelayedEvent,
+  createEventBusSubscription,
   deleteEventBusSubscription,
   emitEventBusEvent,
   type EventBusAction,
@@ -71,7 +71,7 @@ function eventContextPrompt(prompt: string, input: EventBusDispatchInput): strin
   ].join('\n');
 }
 
-async function dispatchEventBusReaction(input: EventBusDispatchInput): Promise<EventBusDispatchResult> {
+export async function dispatchEventBusReaction(input: EventBusDispatchInput): Promise<EventBusDispatchResult> {
   const { action } = input.subscription;
   if (action.type === 'run_task') {
     const result = await startScheduledTaskRun(action.taskId);
@@ -106,6 +106,7 @@ async function dispatchEventBusReaction(input: EventBusDispatchInput): Promise<E
 
   if (action.type === 'publish_event') {
     const emitted = await emitEventBusEvent({
+      dbPath: readString(input.event.dbPath),
       event: {
         type: action.eventType,
         source: `subscription:${input.subscription.id}`,
@@ -135,6 +136,7 @@ async function notifyEventBusChanged(): Promise<void> {
 export async function emitEvent(input: unknown) {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
   const emitted = await emitEventBusEvent({
+    dbPath: readString(record.dbPath),
     event: {
       type: readString(record.type) ?? readString(record.eventType) ?? '',
       source: readString(record.source) ?? 'manual',
@@ -158,6 +160,7 @@ export async function delayEvent(input: unknown) {
     (delayMs !== undefined ? new Date(Date.now() + Math.max(0, delayMs)).toISOString() : undefined);
   if (!dueAt) throw new Error('dueAt, emitAt, or delayMs is required.');
   const delayed = scheduleEventBusEvent({
+    dbPath: readString(record.dbPath),
     dueAt,
     event: {
       type: readString(record.type) ?? readString(record.eventType) ?? '',
@@ -175,7 +178,7 @@ export async function replayEvent(input: unknown) {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
   const eventId = readString(record.eventId);
   if (!eventId) throw new Error('eventId is required.');
-  const dbPath = getEventBusDbPath();
+  const dbPath = readString(record.dbPath) ?? getEventBusDbPath();
   const event = listEventBusEvents({ dbPath, limit: 500 }).find((candidate) => candidate.id === eventId);
   if (!event) throw new Error(`Event not found: ${eventId}`);
   const emitted = await emitEventBusEvent({
@@ -196,21 +199,24 @@ export async function replayEvent(input: unknown) {
 
 export async function listEvents(input: unknown = {}) {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
-  await processDueEventBusEvents({ dispatch: dispatchEventBusReaction });
+  await processDueEventBusEvents({ dbPath: readString(record.dbPath), dispatch: dispatchEventBusReaction });
   return {
     events: listEventBusEvents({
+      dbPath: readString(record.dbPath),
       limit: typeof record.limit === 'number' ? record.limit : undefined,
       type: readString(record.type),
     }),
     delayedEvents: listEventBusDelayedEvents({
+      dbPath: readString(record.dbPath),
       includeCompleted: record.includeCompletedDelayed === true,
       limit: typeof record.delayedLimit === 'number' ? record.delayedLimit : undefined,
     }),
   };
 }
 
-export async function listSubscriptions() {
-  const subscriptions = listEventBusSubscriptions();
+export async function listSubscriptions(input: unknown = {}) {
+  const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  const subscriptions = listEventBusSubscriptions({ dbPath: readString(record.dbPath) });
   return {
     subscriptions,
     summary: {
@@ -224,11 +230,17 @@ export async function listSubscriptions() {
 export async function saveSubscription(input: unknown) {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
   const subscriptionId = readString(record.id) ?? readString(record.subscriptionId);
-  const existing = subscriptionId ? listEventBusSubscriptions().some((subscription) => subscription.id === subscriptionId) : false;
+  const dbPath = readString(record.dbPath);
+  const existing = subscriptionId
+    ? listEventBusSubscriptions({ dbPath }).some((subscription) => subscription.id === subscriptionId)
+    : false;
   const saved =
     subscriptionId && existing
-      ? updateEventBusSubscription({ subscriptionId, patch: record })
-      : createEventBusSubscription({ subscription: { ...record, ...(subscriptionId ? { id: subscriptionId } : {}) } as never });
+      ? updateEventBusSubscription({ dbPath, subscriptionId, patch: record })
+      : createEventBusSubscription({
+          dbPath,
+          subscription: { ...record, ...(subscriptionId ? { id: subscriptionId } : {}) } as never,
+        });
   await notifyEventBusChanged();
   return { subscription: saved };
 }
@@ -237,7 +249,7 @@ export async function deleteSubscription(input: unknown) {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
   const subscriptionId = readString(record.subscriptionId) ?? readString(record.id);
   if (!subscriptionId) throw new Error('subscriptionId is required.');
-  const deleted = deleteEventBusSubscription({ subscriptionId });
+  const deleted = deleteEventBusSubscription({ dbPath: readString(record.dbPath), subscriptionId });
   await notifyEventBusChanged();
   return { ok: true, deleted };
 }
@@ -246,7 +258,7 @@ export async function cancelDelayedEvent(input: unknown) {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
   const delayedEventId = readString(record.delayedEventId) ?? readString(record.id);
   if (!delayedEventId) throw new Error('delayedEventId is required.');
-  const cancelled = cancelEventBusDelayedEvent({ delayedEventId });
+  const cancelled = cancelEventBusDelayedEvent({ dbPath: readString(record.dbPath), delayedEventId });
   await notifyEventBusChanged();
   return { ok: true, cancelled };
 }
@@ -254,6 +266,7 @@ export async function cancelDelayedEvent(input: unknown) {
 export async function pruneEvents(input: unknown) {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
   const result = pruneEventBusEvents({
+    dbPath: readString(record.dbPath),
     olderThan: readString(record.olderThan),
     keepLatest: typeof record.keepLatest === 'number' ? record.keepLatest : undefined,
   });
@@ -264,6 +277,7 @@ export async function pruneEvents(input: unknown) {
 export async function processDueEvents(input: unknown = {}) {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
   const result = await processDueEventBusEvents({
+    dbPath: readString(record.dbPath),
     now: readString(record.now),
     limit: typeof record.limit === 'number' ? record.limit : undefined,
     dispatch: dispatchEventBusReaction,

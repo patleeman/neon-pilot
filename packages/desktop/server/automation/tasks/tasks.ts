@@ -24,6 +24,7 @@ import {
   scanDurableRun,
 } from '../../runs/store.js';
 import { emitEventBusEvent } from '../eventBus.js';
+import { dispatchEventBusReaction } from '../eventBusHost.js';
 import {
   appendAutomationActivityEntry,
   deleteStoredAutomation,
@@ -829,6 +830,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
           },
           occurredAt: finishedAt,
         },
+        dispatch: dispatchEventBusReaction,
       }).catch((error) => context.logger.warn(`failed to record completion event id=${runnableTask.id}: ${(error as Error).message}`));
       context.logger.info(`task completed id=${runnableTask.id} run=${durableRun.runId} log=${finalResult.logPath}`);
 
@@ -917,6 +919,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
           },
           occurredAt: finishedAt,
         },
+        dispatch: dispatchEventBusReaction,
       }).catch((error) => context.logger.warn(`failed to record failure event id=${runnableTask.id}: ${(error as Error).message}`));
       context.logger.warn(`task failed id=${runnableTask.id} run=${durableRun.runId} error=${record.lastError}`);
 
@@ -955,6 +958,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
           targetType: task.targetType,
         },
       },
+      dispatch: dispatchEventBusReaction,
     }).catch((error) => context.logger.warn(`failed to record schedule event id=${task.id}: ${(error as Error).message}`));
 
     record.running = true;

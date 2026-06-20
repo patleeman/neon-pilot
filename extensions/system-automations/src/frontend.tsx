@@ -1066,7 +1066,7 @@ function ActivityTimeline({
   }
 
   return (
-    <div className="h-full min-h-0 overflow-auto">
+    <div data-automation-activity-scroll="true" className="h-full min-h-0 overflow-auto">
       <div className="min-w-[58rem]">
         <div className="sticky top-0 z-20 grid h-8 grid-cols-[5.5rem_minmax(13rem,1.4fr)_minmax(10rem,0.95fr)_minmax(11rem,1fr)_6rem] items-center border-b border-border-subtle/70 bg-background/95 px-3 text-[11px] font-medium uppercase text-dim">
           <div>Time</div>
@@ -1816,7 +1816,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     <div className="h-full min-h-0 overflow-hidden">
       <AppPageLayout
         shellClassName={editorOpen ? 'max-w-[72rem]' : 'h-full max-w-none'}
-        contentClassName={editorOpen ? 'space-y-10' : 'h-full min-h-0 space-y-0'}
+        contentClassName={editorOpen ? 'space-y-10' : 'flex h-full min-h-0 flex-col overflow-hidden space-y-0'}
       >
         {!editorOpen && (
           <>
@@ -2376,8 +2376,8 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
         )}
 
         {!editorOpen && (
-          <div className="flex min-h-0 flex-1">
-            <main className="min-w-0 flex-1">
+          <div data-automation-activity-shell="true" className="flex min-h-0 flex-1 overflow-hidden">
+            <main data-automation-activity-main="true" className="min-h-0 min-w-0 flex-1 overflow-hidden">
               <ActivityTimeline
                 events={filteredActivityEvents}
                 selectedId={selectedActivity?.id ?? null}

@@ -56,7 +56,7 @@ export interface EventBusReaction {
 }
 
 export interface EventBusDispatchInput {
-  event: EventBusEvent;
+  event: EventBusEvent & { dbPath?: string };
   subscription: EventBusSubscription;
 }
 
@@ -641,6 +641,7 @@ function finishReaction(db: SqliteDatabase, reaction: EventBusReaction, result: 
 async function dispatchEphemeralReaction(
   event: EventBusEvent,
   subscription: EventBusSubscription,
+  dbPath?: string,
   dispatch?: (input: EventBusDispatchInput) => Promise<EventBusDispatchResult> | EventBusDispatchResult,
 ): Promise<EventBusReaction> {
   const reaction: EventBusReaction = {
@@ -653,7 +654,9 @@ async function dispatchEphemeralReaction(
     startedAt: new Date().toISOString(),
   };
   try {
-    const result = dispatch ? await dispatch({ event, subscription }) : ({ status: 'pending' } satisfies EventBusDispatchResult);
+    const result = dispatch
+      ? await dispatch({ event: { ...event, dbPath }, subscription })
+      : ({ status: 'pending' } satisfies EventBusDispatchResult);
     const status = result.status === 'failed' ? 'failed' : result.status === 'pending' ? 'pending' : 'completed';
     return {
       ...reaction,
@@ -725,7 +728,7 @@ export async function emitEventBusEvent(input: {
         });
         continue;
       }
-      ephemeralReactions.push(await dispatchEphemeralReaction(event, subscription, input.dispatch));
+      ephemeralReactions.push(await dispatchEphemeralReaction(event, subscription, input.dbPath, input.dispatch));
     }
     return {
       event: { ...event, reactions: ephemeralReactions },
@@ -763,7 +766,7 @@ export async function emitEventBusEvent(input: {
     const pending = insertReaction(db, event, subscription);
     try {
       const result = input.dispatch
-        ? await input.dispatch({ event, subscription })
+        ? await input.dispatch({ event: { ...event, dbPath: input.dbPath }, subscription })
         : ({ status: 'pending' } satisfies EventBusDispatchResult);
       reactions.push(finishReaction(db, pending, result));
     } catch (error) {

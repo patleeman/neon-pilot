@@ -11,6 +11,16 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const { startBackgroundRunMock, startScheduledTaskRunMock } = vi.hoisted(() => ({
+  startBackgroundRunMock: vi.fn(),
+  startScheduledTaskRunMock: vi.fn(),
+}));
+
+vi.mock('../../daemon/client.js', () => ({
+  startBackgroundRun: startBackgroundRunMock,
+  startScheduledTaskRun: startScheduledTaskRunMock,
+}));
+
 import type { DaemonEvent, DaemonPaths, EventPayload } from '../../daemon/types.js';
 import {
   createDurableRunManifest,
@@ -24,6 +34,7 @@ import {
   saveDurableRunStatus,
 } from '../../runs/store.js';
 import type { DaemonConfig } from '../config.js';
+import { closeEventBusDbs, createEventBusSubscription, listEventBusEvents } from '../eventBus.js';
 import {
   appendAutomationActivityEntry,
   closeAutomationDbs,
@@ -199,6 +210,9 @@ function createRunResult(request: TaskRunRequest, success: boolean, nowIso: stri
 
 describe('tasks module scheduling', () => {
   afterEach(async () => {
+    startBackgroundRunMock.mockReset();
+    startScheduledTaskRunMock.mockReset();
+    closeEventBusDbs();
     closeAutomationDbs();
     await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
   });
@@ -995,7 +1009,12 @@ describe('tasks module scheduling', () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');
     const requestedRunId = 'task-run-now-requested';
-    seedAutomation(stateRoot, { id: 'run-now', title: 'Run now', at: '2026-03-03T10:00:00.000Z', prompt: 'Run immediately when requested' });
+    seedAutomation(stateRoot, {
+      id: 'run-now',
+      title: 'Run now',
+      at: '2026-03-03T10:00:00.000Z',
+      prompt: 'Run immediately when requested',
+    });
 
     const currentTime = new Date('2026-03-02T10:00:00.000Z');
     const runTask = vi.fn(async (request: TaskRunRequest) => {
@@ -1054,7 +1073,12 @@ describe('tasks module scheduling', () => {
     const stateRoot = createTempDir('tasks-module-state-');
     const firstRunId = 'task-run-now-first';
     const secondRunId = 'task-run-now-second';
-    seedAutomation(stateRoot, { id: 'run-now', title: 'Run now', at: '2026-03-03T10:00:00.000Z', prompt: 'Run immediately when requested' });
+    seedAutomation(stateRoot, {
+      id: 'run-now',
+      title: 'Run now',
+      at: '2026-03-03T10:00:00.000Z',
+      prompt: 'Run immediately when requested',
+    });
 
     const currentTime = new Date('2026-03-02T10:00:00.000Z');
     let releaseRun: (() => void) | undefined;
@@ -1105,7 +1129,12 @@ describe('tasks module scheduling', () => {
   it('runs all due tasks as direct daemon subprocesses', async () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');
-    seedAutomation(stateRoot, { id: 'default-mode', title: 'Default mode', at: '2026-03-02T10:00:00.000Z', prompt: 'Run using default execution' });
+    seedAutomation(stateRoot, {
+      id: 'default-mode',
+      title: 'Default mode',
+      at: '2026-03-02T10:00:00.000Z',
+      prompt: 'Run using default execution',
+    });
     seedAutomation(stateRoot, { id: 'second-run', title: 'Second run', at: '2026-03-02T10:00:00.000Z', prompt: 'Run the second task' });
 
     let currentTime = new Date('2026-03-02T09:59:00.000Z');
@@ -1252,6 +1281,64 @@ describe('tasks module scheduling', () => {
 
     expect(listProfileActivityEntries({ stateRoot, profile: 'datadog' })).toHaveLength(0);
     expect(listProfileActivityEntries({ stateRoot: daemonRoot, profile: 'datadog' })).toHaveLength(0);
+
+    await module.stop?.(context);
+  });
+
+  it('dispatches event-bus subscriptions when scheduled tasks become due', async () => {
+    const taskDir = createTempDir('tasks-module-definitions-');
+    const stateRoot = createTempDir('tasks-module-state-');
+    const dbPath = resolveRuntimeDbPath(stateRoot);
+    seedAutomation(stateRoot, {
+      id: 'checkout-poller',
+      title: 'Checkout poller',
+      cron: '* * * * *',
+      prompt: 'Poll checkout events',
+    });
+    createEventBusSubscription({
+      dbPath,
+      subscription: {
+        id: 'sub-score-orders',
+        name: 'Score scheduled orders',
+        pattern: 'schedule.due',
+        action: { type: 'run_task', taskId: 'score-orders' },
+      },
+    });
+    startScheduledTaskRunMock.mockResolvedValue({ accepted: true, runId: 'run-score-orders' });
+
+    const currentTime = new Date('2026-03-02T10:10:00.000Z');
+    const runTask = vi.fn(async (request: TaskRunRequest) =>
+      createRunResult(request, true, currentTime.toISOString(), undefined, 'Checkout poll complete.'),
+    );
+    const module = createTasksModule(
+      {
+        enabled: true,
+        taskDir,
+        tickIntervalSeconds: 30,
+        maxRetries: 3,
+        reapAfterDays: 7,
+        defaultTimeoutSeconds: 1800,
+      },
+      {
+        now: () => currentTime,
+        runTask,
+      },
+    );
+    const { context } = createContext(taskDir, stateRoot);
+
+    await module.start(context);
+    await module.handleEvent(createTimerEvent(), context);
+
+    await waitForCondition(() => startScheduledTaskRunMock.mock.calls.length === 1);
+    expect(startScheduledTaskRunMock).toHaveBeenCalledWith('score-orders');
+    await waitForCondition(() =>
+      listEventBusEvents({ dbPath }).some(
+        (event) =>
+          event.type === 'schedule.due' &&
+          event.metadata.taskId === 'checkout-poller' &&
+          event.reactions.some((reaction) => reaction.subscriptionId === 'sub-score-orders' && reaction.status === 'completed'),
+      ),
+    );
 
     await module.stop?.(context);
   });
