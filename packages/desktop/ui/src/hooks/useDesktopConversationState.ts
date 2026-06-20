@@ -737,7 +737,10 @@ export function useDesktopConversationState(conversationId: string | null, optio
     };
 
     const shouldFlushStreamEventImmediately = (streamEvent: SseEvent): boolean =>
-      streamEvent.type === 'error' || streamEvent.type === 'cwd_changed';
+      streamEvent.type === 'error' ||
+      streamEvent.type === 'cwd_changed' ||
+      streamEvent.type === 'agent_end' ||
+      streamEvent.type === 'turn_end';
 
     const shouldFlushStreamEventOnFrame = (streamEvent: SseEvent): boolean =>
       streamEvent.type === 'text_delta' || streamEvent.type === 'thinking_delta' || streamEvent.type === 'tool_update';

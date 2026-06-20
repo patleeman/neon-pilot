@@ -645,6 +645,61 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.state?.stream.isStreaming).toBe(true);
   });
 
+  it('flushes terminal stream events immediately so the composer cannot stay stuck in stop mode', async () => {
+    const liveState = {
+      conversationId: 'conv-terminal',
+      sessionDetail: null,
+      liveSession: { live: true, id: 'conv-terminal', cwd: '/repo', sessionFile: '/repo/session.jsonl', isStreaming: true },
+      stream: {
+        blocks: [{ type: 'text', id: 'text-1', text: 'Done.', ts: '2026-06-15T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        hasSnapshot: true,
+        isStreaming: true,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    } satisfies Awaited<ReturnType<typeof api.desktopConversationState>>;
+    vi.spyOn(api, 'desktopConversationState').mockResolvedValue(liveState);
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-terminal" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    const source = eventSources.at(-1);
+    expect(source).toBeTruthy();
+    expect(latestState?.state?.stream.isStreaming).toBe(true);
+
+    await act(async () => {
+      source?.send({ type: 'agent_end' });
+    });
+
+    expect(latestState?.state?.stream.isStreaming).toBe(false);
+    expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ isStreaming: false }));
+  });
+
   it('seeds saved desktop conversations from the bootstrap cache while refreshing desktop state', async () => {
     const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
 
