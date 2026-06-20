@@ -75,7 +75,7 @@
     "settingsComponent": {
       "id": "agent-plugins",
       "component": "AgentPluginsSettingsPanel",
-      "sectionId": "settings-capabilities",
+      "sectionId": "settings-agent-plugins",
       "label": "Agent Plugins",
       "description": "Import Codex and Claude plugin repositories as skills, hooks, MCP declarations, and related agent instructions.",
       "order": 35
@@ -90,7 +90,7 @@
         "args": {
           "to": "/settings#agent-plugins"
         },
-        "icon": "plug"
+        "icon": "sparkle"
       },
       {
         "id": "check-agent-plugin-updates",

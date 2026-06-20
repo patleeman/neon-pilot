@@ -25,6 +25,13 @@ function createTempDir(prefix: string): string {
   return dir;
 }
 
+function createTestStateRoot(): string {
+  const stateRoot = createTempDir('neon-pilot-web-alerts-');
+  process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+  process.env.NEON_PILOT_DAEMON_SOCKET_PATH = join(stateRoot, 'daemon', 'daemon.sock');
+  return stateRoot;
+}
+
 beforeEach(() => {
   process.env = { ...originalEnv };
 });
@@ -40,7 +47,7 @@ describe('alerts server helpers', () => {
     return {
       id: overrides.id,
       profile: overrides.profile ?? 'shared',
-      kind: overrides.kind ?? 'continue',
+      kind: overrides.kind ?? 'deferred-resume',
       severity: overrides.severity ?? 'disruptive',
       status: overrides.status ?? 'active',
       title: overrides.title ?? 'Watch the prod gates',
@@ -56,8 +63,7 @@ describe('alerts server helpers', () => {
   }
 
   it('lists, snapshots, acknowledges, and dismisses alerts for a profile', () => {
-    const stateRoot = createTempDir('neon-pilot-web-alerts-');
-    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const stateRoot = createTestStateRoot();
 
     upsertAlert({ stateRoot, profile: 'shared', alert: createAlert({ id: 'alert-1' }) });
 
@@ -76,8 +82,7 @@ describe('alerts server helpers', () => {
   });
 
   it('returns undefined for missing alerts and validates snooze inputs before loading wakeup state', async () => {
-    const stateRoot = createTempDir('neon-pilot-web-alerts-');
-    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const stateRoot = createTestStateRoot();
 
     expect(await snoozeAlertForProfile('shared', 'missing', { delay: '15m' })).toBeUndefined();
 
@@ -121,8 +126,7 @@ describe('alerts server helpers', () => {
   });
 
   it('rejects snoozes for alerts without wakeup state', async () => {
-    const stateRoot = createTempDir('neon-pilot-web-alerts-');
-    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const stateRoot = createTestStateRoot();
 
     upsertAlert({
       stateRoot,
@@ -144,8 +148,7 @@ describe('alerts server helpers', () => {
   });
 
   it('snoozes wakeup alerts by rescheduling the underlying deferred resume', async () => {
-    const stateRoot = createTempDir('neon-pilot-web-alerts-');
-    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const stateRoot = createTestStateRoot();
 
     const wakeup = createReadyDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/conv-123.jsonl',
@@ -207,8 +210,7 @@ describe('alerts server helpers', () => {
   it('falls back to the current clock for invalid snooze Date inputs', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-26T14:00:00.000Z'));
-    const stateRoot = createTempDir('neon-pilot-web-alerts-');
-    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const stateRoot = createTestStateRoot();
 
     const wakeup = createReadyDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/conv-invalid-now.jsonl',
@@ -251,8 +253,7 @@ describe('alerts server helpers', () => {
   });
 
   it('supports explicit snooze timestamps', async () => {
-    const stateRoot = createTempDir('neon-pilot-web-alerts-');
-    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const stateRoot = createTestStateRoot();
 
     const wakeup = createReadyDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/conv-456.jsonl',

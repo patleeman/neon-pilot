@@ -1,3 +1,8 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { clearProcessWrappers, execFileProcess, execGitProcess, execGitProcessSync, registerProcessWrapper } from './processLauncher.js';
@@ -7,9 +12,21 @@ function sleep(ms: number): Promise<void> {
 }
 
 describe('processLauncher', () => {
+  const tempDirs: string[] = [];
+
   afterEach(() => {
     clearProcessWrappers();
+    for (const dir of tempDirs.splice(0)) {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
+
+  function createGitRepo(): string {
+    const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-process-launcher-git-'));
+    tempDirs.push(dir);
+    execFileSync('git', ['init'], { cwd: dir, stdio: 'ignore' });
+    return dir;
+  }
 
   it('terminates shell command descendants on abort', async () => {
     const controller = new AbortController();
@@ -37,7 +54,7 @@ describe('processLauncher', () => {
 
     const result = execGitProcessSync({
       args: ['rev-parse', '--show-prefix', '--'],
-      cwd: process.cwd(),
+      cwd: createGitRepo(),
     });
 
     expect(result.launch.command).toBe('git');
@@ -54,7 +71,7 @@ describe('processLauncher', () => {
 
     const result = await execGitProcess({
       args: ['rev-parse', '--show-prefix', '--'],
-      cwd: process.cwd(),
+      cwd: createGitRepo(),
     });
 
     expect(result.launch.command).toBe('git');

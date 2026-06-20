@@ -9,9 +9,20 @@ import type { NativeExtensionViewSummary } from './types';
 const apiMocks = vi.hoisted(() => ({
   automations: {
     list: vi.fn(async () => []),
-    readSchedulerHealth: vi.fn(async () => ({ status: 'healthy', staleAfterSeconds: 60, checkedAt: '2026-05-08T00:00:00.000Z' })),
+    readSchedulerHealth: vi.fn(async () => ({
+      status: 'healthy',
+      staleAfterSeconds: 60,
+      lastEvaluatedAt: '2026-05-08T00:00:00.000Z',
+    })),
   },
-  invokeExtensionAction: vi.fn(),
+  invokeExtensionAction: vi.fn(async (_extensionId: string, actionId: string, input?: unknown) => {
+    if (actionId === 'eventBus' && typeof input === 'object' && input !== null && 'action' in input) {
+      const action = (input as { action?: unknown }).action;
+      if (action === 'list') return { ok: true, result: { events: [] } };
+      if (action === 'list_subscriptions') return { ok: true, result: { subscriptions: [] } };
+    }
+    return { ok: true, result: null };
+  }),
   extensionManifest: vi.fn(),
   extensionSurfacesForExtension: vi.fn(),
   startExtensionRun: vi.fn(),
@@ -21,6 +32,9 @@ const apiMocks = vi.hoisted(() => ({
   cancelDurableRun: vi.fn(),
   sessions: vi.fn(async () => []),
   models: vi.fn(async () => []),
+  conversations: {
+    list: vi.fn(async () => []),
+  },
   extensionState: vi.fn(),
   putExtensionState: vi.fn(),
   deleteExtensionState: vi.fn(),
@@ -95,8 +109,8 @@ describe('NativeExtensionSurfaceHost', () => {
     });
 
     await vi.waitFor(() => expect(container.textContent).toContain('Automations'));
-    expect(container.textContent).toContain('Event Stream');
-    expect(container.textContent).toContain('No matching event activity');
+    expect(container.textContent).toContain('No events match this view');
+    expect(container.textContent).toContain('No event selected');
     expect(apiMocks.automations.list).toHaveBeenCalled();
   });
 });

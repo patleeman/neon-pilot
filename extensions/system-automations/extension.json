@@ -462,7 +462,7 @@
         "action": "eventBus",
         "inputAction": "list",
         "jsonDefault": true,
-        "usage": "events list [--json]",
+        "usage": "events list [--type <type>] [--json]",
         "examples": ["neon-pilot events list", "neon-pilot events list --json"],
         "argsSchema": {
           "type": "array",
@@ -502,7 +502,7 @@
         "action": "eventBus",
         "inputAction": "emit",
         "jsonDefault": true,
-        "usage": "events emit <type> --source <source> [--payload-json <json>] [--json]",
+        "usage": "events emit <type> --source <source> [--payload-json <json>] [--metadata-json <json>] [--json]",
         "examples": ["neon-pilot events emit tweet.created --source script:twitter --payload-json '{\"tweetId\":\"tw-1\"}' --json"],
         "argsSchema": {
           "type": "array",
@@ -585,7 +585,7 @@
         "action": "eventBus",
         "inputAction": "delay",
         "jsonDefault": true,
-        "usage": "events delay <type> (--due-at <iso> | --delay-ms <ms>) --source <source> [--payload-json <json>] [--json]",
+        "usage": "events delay <type> (--due-at <iso> | --delay-ms <ms>) --source <source> [--payload-json <json>] [--metadata-json <json>] [--json]",
         "examples": [
           "neon-pilot events delay agent.resume.requested --delay-ms 900000 --source agent:current --payload-json '{\"reason\":\"follow-up\"}' --json"
         ],
@@ -790,7 +790,7 @@
         "action": "eventBus",
         "inputAction": "save_subscription",
         "jsonDefault": true,
-        "usage": "events subscriptions save <id> --name <name> --pattern <pattern> --action-json <json> [--json]",
+        "usage": "events subscriptions save <id> --name <name> --pattern <pattern> --action-json <json> [--enabled | --disabled] [--json]",
         "examples": [
           "neon-pilot events subscriptions save sub-tweets --name \"Tweet Worker\" --pattern tweet.* --action-json '{\"type\":\"start_agent\",\"prompt\":\"Summarize this tweet\"}' --json"
         ],

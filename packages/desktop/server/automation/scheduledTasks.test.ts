@@ -1,12 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { mkdtempSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { closeAutomationDbs } from '@neon-pilot/daemon';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createStoredAutomation } from './store.js';
 import {
   getScheduledTaskStateFilePath,
   loadScheduledTaskRuntimeState,
@@ -15,25 +14,28 @@ import {
   taskDirForProfile,
   toScheduledTaskMetadata,
 } from './scheduledTasks.js';
+import { createStoredAutomation } from './store.js';
 
 const tempDirs: string[] = [];
 const originalEnv = process.env;
 
 beforeEach(() => {
+  const stateRoot = createTempDir('neon-pilot-web-scheduled-tasks-state-');
   process.env = {
     ...originalEnv,
-    NEON_PILOT_STATE_ROOT: createTempDir('neon-pilot-web-scheduled-tasks-state-'),
-    NEON_PILOT_DAEMON_SOCKET_PATH: join(tmpdir(), `npd-${randomUUID()}.sock`),
+    NEON_PILOT_STATE_ROOT: stateRoot,
+    NEON_PILOT_DAEMON_SOCKET_PATH: join(stateRoot, 'd.sock'),
   };
 });
 
 afterEach(async () => {
+  closeAutomationDbs();
   process.env = originalEnv;
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
 function createTempDir(prefix = 'neon-pilot-web-scheduled-tasks-'): string {
-  const dir = mkdtempSync(join(tmpdir(), prefix));
+  const dir = mkdtempSync(join('/tmp', prefix));
   tempDirs.push(dir);
   return dir;
 }

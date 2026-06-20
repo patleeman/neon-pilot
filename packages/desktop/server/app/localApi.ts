@@ -158,6 +158,7 @@ function models(): Promise<ModelProviderModules> {
 }
 import type { ServerRouteContext } from '../routes/context.js';
 import { registerServerRoutes } from '../routes/registerAll.js';
+import { buildToolsRouteState } from '../routes/tools.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
 import { invalidateAppTopics, publishAppEvent, subscribeAppEvents } from '../shared/appEvents.js';
 import {
@@ -945,6 +946,10 @@ async function dispatchDesktopLocalProductApiRequest(input: {
 
   if (method === 'GET' && path === '/api/status') return createDesktopLocalApiJsonResponse(await readDesktopAppStatus());
   if (method === 'GET' && path === '/api/daemon') return createDesktopLocalApiJsonResponse(await readDesktopDaemonState());
+  if (method === 'GET' && path === '/api/tools') {
+    const { context } = await getLocalContexts();
+    return createDesktopLocalApiJsonResponse(await buildToolsRouteState(context));
+  }
   if (method === 'POST' && path === '/api/tools/invoke') {
     return createDesktopLocalApiJsonResponse(await invokeDesktopTool((input.body ?? {}) as Parameters<typeof invokeDesktopTool>[0]));
   }
@@ -1347,6 +1352,10 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   const conversationResumeMatch = /^\/api\/conversations\/([^/]+)\/resume$/.exec(path);
   if (method === 'POST' && conversationResumeMatch) {
     return createDesktopLocalApiJsonResponse(await resumeDesktopConversation(decodeURIComponent(conversationResumeMatch[1] ?? '')));
+  }
+  const conversationRecoverMatch = /^\/api\/conversations\/([^/]+)\/recover$/.exec(path);
+  if (method === 'POST' && conversationRecoverMatch) {
+    return createDesktopLocalApiJsonResponse(await resumeDesktopConversation(decodeURIComponent(conversationRecoverMatch[1] ?? '')));
   }
   const conversationAttentionMatch = /^\/api\/conversations\/([^/]+)\/attention$/.exec(path);
   if (method === 'POST' && conversationAttentionMatch) {

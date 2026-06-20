@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.22** — stable release.
+**v0.11.23** — stable release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.22
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.23
 
 Highlights in this train:
 
-- Promotes the 0.11.22 RC conversation and navigation hardening to the stable channel, including backend-owned workspace state, route recovery, sidebar hydration, and empty-conversation reuse fixes.
-- Ships the redesigned public site refresh with stronger first-screen product context, updated feature coverage, and release-aligned internal documentation.
-- Adds the site visual evaluation loop so screenshot capture, visual judgments, and refinement work can be repeated against the public site with the same workflow used for app surfaces.
-- Refreshes Pi runtime packages to `^0.79.5` for the stable 0.11.22 train.
-- Keeps the stable app release aligned with the matching first-party extension catalog and installable extension artifacts.
+- Recovers cleanly when a conversation starts after the extension host has exited while the local backend is still alive, restarting the runtime instead of surfacing raw `fetch failed` errors.
+- Improves extension-host RPC failure reporting so transport failures include the request and endpoint context needed to diagnose stale runtime state.
+- Adds regression coverage for stale backend/extension-host process combinations and extension-host fetch failures.
+- Confirms the release with a broad hands-on app QA pass across chat, tool execution, settings, extensions, automations, telemetry, notifications, attachments, workbench tabs, terminal, browser, scratchpad, and recovery states.
+- Refreshes Pi runtime packages to `^0.79.8` for the stable 0.11.23 patch train.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

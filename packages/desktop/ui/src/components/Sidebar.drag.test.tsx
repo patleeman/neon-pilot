@@ -279,6 +279,7 @@ describe('Sidebar group drag reordering', () => {
     expect(readConversationLayout().sessionIds).toEqual(['conv-beta', 'conv-alpha']);
     expect(apiMocks.saveConversationWorkspaceLayout).toHaveBeenCalledWith(['conv-beta', 'conv-alpha'], [], [], undefined, null, {
       conversationWorkspaceMigrated: true,
+      lockedConversationIds: [],
     });
     expect(apiMocks.setSavedWorkspacePaths).toHaveBeenCalledWith([betaPath, alphaPath]);
   });

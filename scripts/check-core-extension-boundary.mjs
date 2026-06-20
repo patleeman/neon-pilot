@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -22,6 +22,9 @@ const forbiddenPatterns = [
 function walkTrackedFallback(dir) {
   const absoluteDir = resolve(repoRoot, dir);
   if (!existsSync(absoluteDir)) return [];
+  if (statSync(absoluteDir).isFile()) {
+    return filePattern.test(dir) || markdownFilePattern.test(dir) ? [dir] : [];
+  }
   return readdirSync(absoluteDir, { withFileTypes: true }).flatMap((entry) => {
     const child = `${dir}/${entry.name}`;
     if (entry.isDirectory()) {
@@ -78,9 +81,7 @@ const forbiddenExtensionImportPatterns = [
   /from\s+['"][^'"]*packages\/(?:desktop|core|daemon)\//,
   /import\(\s*['"][^'"]*packages\/(?:desktop|core|daemon)\//,
 ];
-const forbiddenExtensionMarkdownPatterns = [
-  ...forbiddenExtensionImportPatterns,
-];
+const forbiddenExtensionMarkdownPatterns = [...forbiddenExtensionImportPatterns];
 
 function collectMarkdownFencedCodeLines(markdown) {
   const codeLines = [];

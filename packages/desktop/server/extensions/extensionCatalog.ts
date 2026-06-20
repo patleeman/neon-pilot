@@ -31,6 +31,7 @@ export interface CatalogSeed {
   packageType?: MarketplacePackageType;
   ecosystem?: MarketplaceEcosystem;
   marketplaceSourceId?: string;
+  packageSource?: string;
   sourceRepo?: GithubExtensionSourceRepo;
 }
 
@@ -150,7 +151,21 @@ function localBundlePathFor(id: string): string | null {
 }
 
 function localFallbackBundlePathFor(item: InstallableExtensionCatalogItem): string | null {
-  return item.unavailableReason ? localBundlePathFor(item.id) : null;
+  return item.packageSource === 'local-bundled' || item.unavailableReason ? localBundlePathFor(item.id) : null;
+}
+
+function mergeLocalPackagedFirstPartySeeds(seeds: CatalogSeed[]): CatalogSeed[] {
+  const byId = new Map(seeds.map((item) => [item.id, item]));
+  for (const item of INSTALLABLE_EXTENSION_CATALOG) {
+    if (byId.has(item.id) || !localBundlePathFor(item.id)) continue;
+    byId.set(item.id, {
+      ...item,
+      packageSource: 'local-bundled',
+      sourceRepo: FIRST_PARTY_REPO,
+      marketplaceSourceId: 'neon-pilot-release',
+    });
+  }
+  return [...byId.values()];
 }
 
 export async function listInstallableExtensionCatalog(stateRoot: string = getStateRoot()): Promise<{
@@ -170,13 +185,15 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
   const enabledConfigured = configured.filter((source) => source.enabled);
   const sourceErrors: Array<{ sourceId: string; message: string }> = [];
   let usingBakedFirstPartyFallback = false;
-  const firstPartySeeds = await fetchFirstPartyReleaseCatalog(tag).catch((error) => {
-    usingBakedFirstPartyFallback = true;
-    if (!(error instanceof FirstPartyReleaseCatalogFetchError && error.status === 404)) {
-      sourceErrors.push({ sourceId: FIRST_PARTY_SOURCE_ID, message: error instanceof Error ? error.message : String(error) });
-    }
-    return INSTALLABLE_EXTENSION_CATALOG;
-  });
+  const firstPartySeeds = mergeLocalPackagedFirstPartySeeds(
+    await fetchFirstPartyReleaseCatalog(tag).catch((error) => {
+      usingBakedFirstPartyFallback = true;
+      if (!(error instanceof FirstPartyReleaseCatalogFetchError && error.status === 404)) {
+        sourceErrors.push({ sourceId: FIRST_PARTY_SOURCE_ID, message: error instanceof Error ? error.message : String(error) });
+      }
+      return INSTALLABLE_EXTENSION_CATALOG;
+    }),
+  );
   const remoteSeeds = (
     await Promise.all(
       enabledConfigured

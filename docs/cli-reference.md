@@ -18,6 +18,7 @@ Update the packaged Neon Pilot app from the signed GitHub release installer.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot app update --json`
 - `neon-pilot app update --channel rc --json`
 - `neon-pilot app update --dry-run --json`
@@ -36,6 +37,7 @@ List command-palette/app commands available to extensions. Advanced escape hatch
 - Output: text, json
 
 Examples:
+
 - `neon-pilot app-commands list`
 - `neon-pilot app-commands list --json`
 
@@ -53,6 +55,7 @@ Run a command-palette/app command by id. Advanced escape hatch; prefer first-cla
 - Output: text, json
 
 Examples:
+
 - `neon-pilot app-commands run cmd-1`
 - `neon-pilot app-commands run cmd-1 --args '{"value":1}' --json`
 
@@ -70,6 +73,7 @@ Create a conversation, run one turn, and print the result.
 - Output: text, json, jsonl
 
 Examples:
+
 - `neon-pilot ask --model opencode-go/deepseek-v4-flash --cwd /repo "Summarize the diff"`
 - `neon-pilot ask --text "Reply with ready" --json`
 
@@ -87,6 +91,7 @@ Cancel a background command: background-commands cancel <run-id>.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot background-commands cancel example-id`
 - `neon-pilot background-commands cancel example-id --json`
 
@@ -104,6 +109,7 @@ Inspect a background command: background-commands get <run-id>.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot background-commands get example-id`
 - `neon-pilot background-commands get example-id --json`
 
@@ -121,6 +127,7 @@ List durable background commands.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot background-commands list`
 - `neon-pilot background-commands list --json`
 
@@ -138,6 +145,7 @@ Read background command logs: background-commands logs <run-id> [--tail <n>]
 - Output: text, json
 
 Examples:
+
 - `neon-pilot background-commands logs example-id`
 - `neon-pilot background-commands logs example-id --tail 200`
 - `neon-pilot background-commands logs example-id --json`
@@ -156,6 +164,7 @@ Rerun a background command: background-commands rerun <run-id>.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot background-commands rerun example-id`
 - `neon-pilot background-commands rerun example-id --json`
 
@@ -173,6 +182,7 @@ Start a durable background command: background-commands start --command <shell> 
 - Output: text, json
 
 Examples:
+
 - `neon-pilot background-commands start --command echo ok`
 - `neon-pilot background-commands start --command echo ok --json`
 
@@ -190,6 +200,7 @@ Configure Neon Pilot defaults and external-agent entrypoints.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot bootstrap configure`
 - `neon-pilot bootstrap configure --json`
 
@@ -207,6 +218,7 @@ Set default provider, model, cwd, thinking level, and service tier.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot bootstrap defaults set`
 - `neon-pilot bootstrap defaults set --json`
 
@@ -224,6 +236,7 @@ Check whether Neon Pilot is ready for external agent control.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot bootstrap doctor`
 - `neon-pilot bootstrap doctor --json`
 
@@ -241,6 +254,7 @@ Create or update a provider model definition.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot bootstrap provider model openai gpt-5.4 --context-window 200000`
 - `neon-pilot bootstrap provider model openai gpt-5.4 --context-window 200000 --json`
 
@@ -258,6 +272,7 @@ Create or update a model provider definition.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot bootstrap provider save openai --api openai`
 - `neon-pilot bootstrap provider save openai --api openai --json`
 
@@ -275,6 +290,7 @@ Store a provider API key through the configured secrets backend. Use --stdin.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot bootstrap provider set-key openai --stdin`
 - `neon-pilot bootstrap provider set-key openai --stdin --json`
 
@@ -292,6 +308,7 @@ Install the optional user-shell neon-pilot symlink.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot cli install`
 
 ### cli status
@@ -309,6 +326,7 @@ Show the channel-local launcher and optional user-shell link status.
 - Aliases: `cli`
 
 Examples:
+
 - `neon-pilot cli status`
 - `neon-pilot cli status --json`
 
@@ -326,6 +344,7 @@ Remove the optional Neon Pilot-owned user-shell symlink.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot cli uninstall`
 
 ### commands
@@ -343,6 +362,7 @@ List core and enabled extension CLI commands.
 - Aliases: `ls`
 
 Examples:
+
 - `neon-pilot commands`
 - `neon-pilot commands --brief`
 - `neon-pilot commands --verbose`
@@ -361,6 +381,7 @@ Run control-plane smoke checks for commands, conversations, retention dry-run, r
 - Output: text, json
 
 Examples:
+
 - `neon-pilot control-plane doctor`
 - `neon-pilot control-plane doctor --json`
 
@@ -378,6 +399,7 @@ Abort a live conversation turn.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations abort conversation-example`
 - `neon-pilot conversations abort conversation-example --json`
 
@@ -395,6 +417,7 @@ List backend conversation activity shelf items for a thread.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations activity conversation-example --json`
 - `neon-pilot conversations activity conversation-example --active --visibility primary --json`
 
@@ -412,6 +435,7 @@ Archive conversations by hiding them from normal sidebar/history views: conversa
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations archive conversation-example`
 - `neon-pilot conversations archive conversation-example --json`
 
@@ -429,6 +453,7 @@ Compact a conversation transcript.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations compact conversation-example`
 - `neon-pilot conversations compact conversation-example --json`
 
@@ -446,6 +471,7 @@ List meaningful things connected to a conversation.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations connections conversation-example --json`
 - `neon-pilot conversations connections conversation-example --kind state --json`
 
@@ -463,6 +489,7 @@ Create a conversation with optional title, cwd, model, and startup settings.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations create Planning Thread`
 - `neon-pilot conversations create --title "Planning Thread" --cwd /repo --model opencode-go/deepseek-v4-flash --json`
 
@@ -480,6 +507,7 @@ Change a conversation working directory: conversations cwd <id> <path>.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations cwd conversation-example`
 - `neon-pilot conversations cwd conversation-example --json`
 
@@ -497,6 +525,7 @@ Permanently delete persisted conversations and remove workspace/sidebar referenc
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations delete example-id`
 - `neon-pilot conversations delete example-id --json`
 
@@ -514,6 +543,7 @@ Ensure a conversation has a live runtime: conversations ensure-live <id> [--cwd 
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations ensure-live conversation-example`
 - `neon-pilot conversations ensure-live conversation-example --json`
 
@@ -531,6 +561,7 @@ Fork a conversation: conversations fork <id> [--title <title>] [--target-cwd <pa
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations fork conversation-example`
 - `neon-pilot conversations fork conversation-example --json`
 
@@ -548,6 +579,7 @@ Inspect a conversation by id; optional second arg is outline, query, diff, or re
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations inspect conversation-example`
 - `neon-pilot conversations inspect conversation-example transcript --limit 20`
 - `neon-pilot conversations inspect conversation-example --json`
@@ -566,6 +598,7 @@ List conversations, optionally filtered by query.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations list`
 - `neon-pilot conversations list planning`
 - `neon-pilot conversations list --json`
@@ -584,6 +617,7 @@ Set or clear the active sidebar conversation: conversations open active [id]
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations open active`
 - `neon-pilot conversations open active conversation-example`
 - `neon-pilot conversations open active conversation-example --json`
@@ -602,6 +636,7 @@ Add conversations to the open/sidebar list: conversations open add <id...>
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations open add conversation-example`
 - `neon-pilot conversations open add conversation-example --json`
 
@@ -619,6 +654,7 @@ List conversations currently open in the sidebar.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations open list`
 - `neon-pilot conversations open list --json`
 
@@ -636,6 +672,7 @@ Pin conversations in the sidebar: conversations open pin <id...>
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations open pin conversation-example`
 - `neon-pilot conversations open pin conversation-example --json`
 
@@ -653,6 +690,7 @@ Remove conversations from open/sidebar state: conversations open remove <id...>
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations open remove conversation-example`
 - `neon-pilot conversations open remove conversation-example --json`
 
@@ -670,6 +708,7 @@ Unpin conversations in the sidebar: conversations open unpin <id...>
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations open unpin conversation-example`
 - `neon-pilot conversations open unpin conversation-example --json`
 
@@ -687,6 +726,7 @@ Prune old persisted conversations: conversations retention prune --older-than 90
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations retention prune 90d --dry-run`
 - `neon-pilot conversations retention prune --older-than 90d --archived-only --json`
 
@@ -704,6 +744,7 @@ Rollback recent conversation transcript blocks: conversations rollback <id> [cou
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations rollback conversation-example`
 - `neon-pilot conversations rollback conversation-example --json`
 
@@ -721,6 +762,7 @@ Run a conversation turn and wait for completion: conversations run-turn <id> --t
 - Output: text, json, jsonl
 
 Examples:
+
 - `neon-pilot conversations run-turn conversation-example --text Hello`
 - `neon-pilot conversations run-turn conversation-example --text Hello --json`
 
@@ -738,6 +780,7 @@ Get a conversation scratchpad: conversations scratchpad get <id>
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations scratchpad get example-id`
 - `neon-pilot conversations scratchpad get example-id --json`
 
@@ -755,6 +798,7 @@ Append/prepend to a scratchpad: conversations scratchpad patch <id> --operation 
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations scratchpad patch conversation-example --operation append --content "Validation passed"`
 - `neon-pilot conversations scratchpad patch conversation-example --json`
 
@@ -772,6 +816,7 @@ Replace a conversation scratchpad: conversations scratchpad set <id> --content <
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations scratchpad set conversation-example --content "## Plan"`
 - `neon-pilot conversations scratchpad set conversation-example --json`
 
@@ -789,6 +834,7 @@ Search visible conversation transcript text.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations search planning notes`
 - `neon-pilot conversations search --json`
 
@@ -806,6 +852,7 @@ Send a message to a conversation: conversations send <id> --text <message> [--st
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations send conversation-example`
 - `neon-pilot conversations send conversation-example --json`
 
@@ -823,6 +870,7 @@ Set a conversation title: conversations title <id> <title>.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations title conversation-example`
 - `neon-pilot conversations title conversation-example --json`
 
@@ -840,6 +888,7 @@ Set active tools for a conversation: conversations tools <id> <tool...>
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations tools conversation-example`
 - `neon-pilot conversations tools conversation-example --json`
 
@@ -857,6 +906,7 @@ Append a transcript block. Advanced recovery/admin command; prefer normal conver
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations transcript append conversation-example note --data '{"text":"Note"}'`
 - `neon-pilot conversations transcript append conversation-example --type note --data '{"text":"Note"}' --json`
 
@@ -874,6 +924,7 @@ Read visible transcript blocks for a conversation.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations transcript read conversation-example`
 - `neon-pilot conversations transcript read conversation-example --limit 20 --json`
 
@@ -891,6 +942,7 @@ Update a transcript block. Advanced recovery/admin command; inspect first and pr
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations transcript update conversation-example block-1 note --data '{"text":"Updated"}'`
 - `neon-pilot conversations transcript update conversation-example block-1 --type note --data '{"text":"Updated"}' --json`
 
@@ -908,6 +960,7 @@ Unarchive conversations: conversations unarchive <id...>
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations unarchive conversation-example`
 - `neon-pilot conversations unarchive conversation-example --json`
 
@@ -925,6 +978,7 @@ Read conversation workspace state.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations workspace`
 - `neon-pilot conversations workspace --json`
 
@@ -942,6 +996,7 @@ Update open/sidebar workspace state with --open, --pinned, --archived, --active,
 - Output: text, json
 
 Examples:
+
 - `neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b`
 - `neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b --json`
 
@@ -960,6 +1015,7 @@ Check CLI launcher, app connection, and runtime path readiness.
 - Aliases: `runtime doctor`
 
 Examples:
+
 - `neon-pilot doctor`
 - `neon-pilot doctor --json`
 
@@ -968,7 +1024,7 @@ Examples:
 Schedule an event to be emitted later: events delay <type> --due-at <iso> --source <source>.
 
 - Source: extension (system-automations)
-- Usage: `neon-pilot events delay <type> (--due-at <iso> | --delay-ms <ms>) --source <source> [--payload-json <json>] [--json]`
+- Usage: `neon-pilot events delay <type> (--due-at <iso> | --delay-ms <ms>) --source <source> [--payload-json <json>] [--metadata-json <json>] [--json]`
 - Mode: background
 - Requires app: no
 - Idempotent: no
@@ -977,6 +1033,7 @@ Schedule an event to be emitted later: events delay <type> --due-at <iso> --sour
 - Output: text, json
 
 Examples:
+
 - `neon-pilot events delay agent.resume.requested --delay-ms 900000 --source agent:current --payload-json '{"reason":"follow-up"}' --json`
 
 ### events delayed cancel
@@ -993,6 +1050,7 @@ Cancel a pending delayed event bus event.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot events delayed cancel delay_123 --json`
 
 ### events emit
@@ -1000,7 +1058,7 @@ Examples:
 Emit an event into the event bus: events emit <type> --source <source> [--payload-json <json>].
 
 - Source: extension (system-automations)
-- Usage: `neon-pilot events emit <type> --source <source> [--payload-json <json>] [--json]`
+- Usage: `neon-pilot events emit <type> --source <source> [--payload-json <json>] [--metadata-json <json>] [--json]`
 - Mode: background
 - Requires app: no
 - Idempotent: no
@@ -1009,6 +1067,7 @@ Emit an event into the event bus: events emit <type> --source <source> [--payloa
 - Output: text, json
 
 Examples:
+
 - `neon-pilot events emit tweet.created --source script:twitter --payload-json '{"tweetId":"tw-1"}' --json`
 
 ### events list
@@ -1016,7 +1075,7 @@ Examples:
 List recent event bus events.
 
 - Source: extension (system-automations)
-- Usage: `neon-pilot events list [--json]`
+- Usage: `neon-pilot events list [--type <type>] [--json]`
 - Mode: read
 - Requires app: no
 - Idempotent: yes
@@ -1025,6 +1084,7 @@ List recent event bus events.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot events list`
 - `neon-pilot events list --json`
 
@@ -1042,6 +1102,7 @@ Process due delayed event bus events now.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot events process-due --json`
 
 ### events prune
@@ -1058,6 +1119,7 @@ Prune recorded event bus events by retention policy.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot events prune --keep-latest 5000 --json`
 
 ### events replay
@@ -1074,6 +1136,7 @@ Replay an event by re-emitting it against current subscriptions.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot events replay evt_123 --json`
 
 ### events subscriptions delete
@@ -1090,6 +1153,7 @@ Delete an event bus subscription.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot events subscriptions delete sub-tweets --json`
 
 ### events subscriptions list
@@ -1106,6 +1170,7 @@ List event bus subscriptions.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot events subscriptions list --json`
 
 ### events subscriptions save
@@ -1113,7 +1178,7 @@ Examples:
 Create or update an event subscription: events subscriptions save <id> --name <name> --pattern <pattern> --action-json <json>.
 
 - Source: extension (system-automations)
-- Usage: `neon-pilot events subscriptions save <id> --name <name> --pattern <pattern> --action-json <json> [--json]`
+- Usage: `neon-pilot events subscriptions save <id> --name <name> --pattern <pattern> --action-json <json> [--enabled | --disabled] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: yes
@@ -1122,6 +1187,7 @@ Create or update an event subscription: events subscriptions save <id> --name <n
 - Output: text, json
 
 Examples:
+
 - `neon-pilot events subscriptions save sub-tweets --name "Tweet Worker" --pattern tweet.* --action-json '{"type":"start_agent","prompt":"Summarize this tweet"}' --json`
 
 ### extensions catalog
@@ -1138,6 +1204,7 @@ List installable extension catalog entries.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions catalog`
 - `neon-pilot extensions catalog --json`
 
@@ -1155,6 +1222,7 @@ Create a runtime extension: extensions create <id> --name <name> [--template <te
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions create system-settings`
 - `neon-pilot extensions create system-settings --json`
 
@@ -1173,6 +1241,7 @@ Delete a runtime extension by id. System extensions cannot be deleted.
 - Aliases: `extensions uninstall`
 
 Examples:
+
 - `neon-pilot extensions delete example-id`
 - `neon-pilot extensions delete example-id --json`
 
@@ -1190,6 +1259,7 @@ Disable an installed extension.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions disable system-settings`
 - `neon-pilot extensions disable system-settings --json`
 
@@ -1207,6 +1277,7 @@ Enable an installed extension.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions enable system-settings`
 - `neon-pilot extensions enable system-settings --json`
 
@@ -1224,6 +1295,7 @@ Install an extension from the catalog: extensions install <id>
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions install system-settings`
 - `neon-pilot extensions install system-settings --json`
 
@@ -1241,6 +1313,7 @@ Install an extension bundle from URL: extensions install-url <url> [--expected-i
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions install-url https://example.com/system-example.neon-extension.zip`
 - `neon-pilot extensions install-url https://example.com/system-example.neon-extension.zip --expected-id system-example --json`
 
@@ -1258,6 +1331,7 @@ List installed Neon Pilot extensions.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions list`
 - `neon-pilot extensions list --json`
 
@@ -1275,6 +1349,7 @@ Read extension search paths.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions paths`
 - `neon-pilot extensions paths --json`
 
@@ -1292,6 +1367,7 @@ Reload an extension backend by id, or refresh registry state.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions reload`
 - `neon-pilot extensions reload system-settings`
 - `neon-pilot extensions reload --json`
@@ -1310,6 +1386,7 @@ Run backend smoke checks for an installed extension.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions smoke system-settings`
 - `neon-pilot extensions smoke system-settings --json`
 
@@ -1327,6 +1404,7 @@ Snapshot a runtime extension by id.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions snapshot system-settings`
 - `neon-pilot extensions snapshot system-settings --json`
 
@@ -1344,6 +1422,7 @@ Read extension catalog sources.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions sources`
 - `neon-pilot extensions sources --json`
 
@@ -1361,6 +1440,7 @@ Update a catalog-installed extension: extensions update <id>
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions update system-settings`
 - `neon-pilot extensions update system-settings --json`
 
@@ -1378,6 +1458,7 @@ Validate an installed extension by id.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot extensions validate system-settings`
 - `neon-pilot extensions validate system-settings --json`
 
@@ -1395,6 +1476,7 @@ List recurring conversation heartbeats.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot heartbeats list`
 - `neon-pilot heartbeats list --json`
 
@@ -1412,6 +1494,7 @@ Start a recurring conversation heartbeat: heartbeats start <id> --interval-minut
 - Output: text, json
 
 Examples:
+
 - `neon-pilot heartbeats start hb-1 --interval-minutes 5 --conversation-id conv-1 --prompt "Check work."`
 - `neon-pilot heartbeats start hb-1 --interval-minutes 5 --conversation-id conv-1 --prompt "Check work." --json`
 
@@ -1429,6 +1512,7 @@ Stop a recurring conversation heartbeat: heartbeats stop <id>.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot heartbeats stop example-id`
 - `neon-pilot heartbeats stop example-id --json`
 
@@ -1447,6 +1531,7 @@ Show general help or help for a specific command.
 - Aliases: `--help`, `-h`, `?`
 
 Examples:
+
 - `neon-pilot help`
 - `neon-pilot help settings list`
 
@@ -1465,6 +1550,7 @@ Show local Neon Pilot runtime paths used by the CLI.
 - Aliases: `runtime paths`
 
 Examples:
+
 - `neon-pilot paths`
 - `neon-pilot paths --json`
 
@@ -1482,6 +1568,7 @@ Invoke a raw extension protocol entrypoint. Advanced integration surface; prefer
 - Output: text
 
 Examples:
+
 - `neon-pilot protocol acp`
 - `neon-pilot protocol ds4-tools tools`
 
@@ -1500,6 +1587,7 @@ Export machine-readable CLI command contracts.
 - Aliases: `commands schema`
 
 Examples:
+
 - `neon-pilot schema --json`
 
 ### settings get
@@ -1516,6 +1604,7 @@ Read a single setting by key.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot settings get conversation.pinnedToolCalls`
 - `neon-pilot settings get conversation.pinnedToolCalls --json`
 
@@ -1533,6 +1622,7 @@ List merged Neon Pilot settings, optionally filtered by key prefix.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot settings list`
 - `neon-pilot settings list conversation`
 - `neon-pilot settings list --json`
@@ -1551,6 +1641,7 @@ Reset one or more settings to manifest defaults: settings reset <key...>
 - Output: text, json
 
 Examples:
+
 - `neon-pilot settings reset conversation.pinnedToolCalls`
 - `neon-pilot settings reset conversation.pinnedToolCalls --json`
 
@@ -1568,6 +1659,7 @@ List manifest-declared settings schema.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot settings schema`
 - `neon-pilot settings schema --json`
 
@@ -1585,6 +1677,7 @@ Update a manifest-declared non-secret setting by key and JSON value.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot settings set conversation.pinnedToolCalls false`
 - `neon-pilot settings set conversation.pinnedToolCalls false --json`
 
@@ -1602,6 +1695,7 @@ Delete a scheduled task: tasks delete <task-id>.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot tasks delete example-id`
 - `neon-pilot tasks delete example-id --json`
 
@@ -1619,6 +1713,7 @@ Inspect a scheduled task: tasks get <task-id>.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot tasks get example-id`
 - `neon-pilot tasks get example-id --json`
 
@@ -1636,6 +1731,7 @@ List scheduled tasks.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot tasks list`
 - `neon-pilot tasks list --json`
 
@@ -1653,6 +1749,7 @@ Run a scheduled task immediately: tasks run <task-id>.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot tasks run daily-check`
 - `neon-pilot tasks run daily-check --json`
 
@@ -1670,6 +1767,7 @@ Create or update a scheduled task: tasks save <task-id> --title <title> --prompt
 - Output: text, json
 
 Examples:
+
 - `neon-pilot tasks save daily-check --prompt "Check status" --cron "0 9 * * *"`
 - `neon-pilot tasks save daily-check --prompt "Check status" --cron "0 9 * * *" --json`
 
@@ -1687,6 +1785,7 @@ Validate scheduled tasks, or one scheduled task by id.
 - Output: text, json
 
 Examples:
+
 - `neon-pilot tasks validate`
 - `neon-pilot tasks validate daily-check`
 - `neon-pilot tasks validate --json`
@@ -1706,5 +1805,6 @@ Show Neon Pilot CLI package and runtime channel version information.
 - Aliases: `--version`, `-v`
 
 Examples:
+
 - `neon-pilot version`
 - `neon-pilot version --json`

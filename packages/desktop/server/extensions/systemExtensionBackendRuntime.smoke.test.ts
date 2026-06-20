@@ -463,6 +463,10 @@ const smokes = {
     assert(typeof module.deferredResume === 'function', 'deferred resume action missing');
     assert(typeof module.scheduledTask === 'function', 'scheduled task action missing');
   },
+  async 'system-agent-plugins'() {
+    const result = await module.listPlugins({}, ctx);
+    assert(result.ok === true && Array.isArray(result.plugins), 'agent plugins list failed');
+  },
   async 'system-codex-profile'() {
     await smokeAgentFactory('default');
     assert(registeredEvents.some((event) => event.eventName === 'session_before_compact'), 'codex profile compaction hooks missing');

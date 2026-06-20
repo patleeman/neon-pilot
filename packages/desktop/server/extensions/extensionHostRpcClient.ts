@@ -209,7 +209,7 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
   }
 
   async function sendRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse> {
-    const response = await fetchExtensionHost('/route', `route:${input.extensionId}/${input.routeId}`, {
+    const response = await fetchExtensionHost('/route', `route:${input.extensionId} ${input.method} ${input.routePath}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.token}`,
@@ -275,7 +275,7 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
     const { signal, stdio, ...request } = input;
     await withProtocolTimeout(
       async (protocolSignal) => {
-        const response = await fetchExtensionHost('/protocol/start', `protocol:${input.extensionId}/${input.entrypointId}`, {
+        const response = await fetchExtensionHost('/protocol/start', `protocol:${input.protocolId}`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${options.token}`,

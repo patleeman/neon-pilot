@@ -71,7 +71,7 @@ function renderCommand(command) {
   lines.push(`- Output: ${(command.outputModes ?? ['text']).join(', ')}`);
   if (command.aliases?.length) lines.push(`- Aliases: ${command.aliases.map((alias) => `\`${alias}\``).join(', ')}`);
   if (command.examples?.length) {
-    lines.push('', 'Examples:');
+    lines.push('', 'Examples:', '');
     for (const example of command.examples) lines.push(`- \`${example}\``);
   }
   return `${lines.join('\n')}\n`;

@@ -90,6 +90,17 @@ describe('desktop local API conversation actions', () => {
       }),
     ).rejects.toThrow('numTurns must be a positive integer.');
   });
+
+  it('serves conversation recover through the desktop product fast path', async () => {
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'POST',
+      path: '/api/conversations/missing-conversation/recover',
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(Buffer.from(response.body).toString('utf-8')).toBe('Conversation not found.');
+    expect(response.headers['X-PA-Perf']).toContain('"fastPath":"product"');
+  });
 });
 
 describe('desktop local API conversation rename route', () => {

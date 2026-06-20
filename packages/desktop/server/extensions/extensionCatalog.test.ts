@@ -139,6 +139,41 @@ describe('extension catalog', () => {
     );
   });
 
+  it('keeps locally packaged installable bundles when the release catalog omits them', async () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), 'np-local-release-bundles-'));
+    const bundleDir = join(repoRoot, 'dist', 'installable-extensions');
+    const bundlePath = join(bundleDir, 'system-dynamic-workflows.neon-extension.zip');
+    mkdirSync(bundleDir, { recursive: true });
+    writeFileSync(bundlePath, new Uint8Array([1, 2, 3, 4]));
+    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          packages: [{ id: 'system-browser', tag: 'v0.10.2', artifact: 'system-browser.neon-extension.zip' }],
+        }),
+      })),
+    );
+    inspectRuntimeExtensionBundle.mockReturnValue({ id: 'system-dynamic-workflows', name: 'Dynamic Workflows' });
+    importRuntimeExtensionBundle.mockReturnValue({
+      ok: true,
+      extension: { id: 'system-dynamic-workflows', enabled: false },
+      packageRoot: '/tmp/ext',
+    });
+
+    const { installCatalogExtension, listInstallableExtensionCatalog } = await import('./extensionCatalog.js');
+    const catalog = await listInstallableExtensionCatalog();
+    expect(catalog.extensions).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'system-dynamic-workflows' })]));
+
+    await expect(installCatalogExtension({ id: 'system-dynamic-workflows' })).resolves.toMatchObject({
+      extension: { id: 'system-dynamic-workflows', enabled: false },
+    });
+
+    expect(importRuntimeExtensionBundle).toHaveBeenCalledWith({ zipPath: bundlePath }, undefined);
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
   it('uses remote first-party release catalog version metadata for update detection', async () => {
     summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.1.0' }]);
     vi.stubGlobal(

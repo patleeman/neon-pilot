@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.23 — 2026-06-20
+
+### Highlights
+
+- Recovers cleanly when a conversation starts after the extension host has exited while the local backend is still alive, restarting the runtime instead of surfacing raw `fetch failed` errors.
+- Improves extension-host RPC failure reporting so transport failures include the request and endpoint context needed to diagnose stale runtime state.
+- Adds regression coverage for stale backend/extension-host process combinations and extension-host fetch failures.
+- Confirms the release with a broad hands-on app QA pass across chat, tool execution, settings, extensions, automations, telemetry, notifications, attachments, workbench tabs, terminal, browser, scratchpad, and recovery states.
+- Refreshes Pi runtime packages to `^0.79.8` for the stable 0.11.23 patch train.
+
+### Notes
+
+- 212 commits since the previous release.
+
 ## 0.11.22 — 2026-06-16
 
 ### Highlights

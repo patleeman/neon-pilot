@@ -80,7 +80,7 @@
         "args": {
           "to": "/settings#settings-model-gateway"
         },
-        "icon": "plug"
+        "icon": "graph"
       }
     ]
   },

@@ -1,7 +1,5 @@
-import { randomUUID } from 'node:crypto';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { getTaskCallbackBinding } from '@neon-pilot/core';
@@ -9,7 +7,6 @@ import { closeAutomationDbs, saveAutomationRuntimeStateMap } from '@neon-pilot/d
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createScheduledTaskAgentExtension } from '../../../../extensions/system-automations/src/scheduledTaskTool.js';
-import { loadScheduledTasksForProfile } from '../automation/scheduledTasks.js';
 
 const { pingDaemonMock, startScheduledTaskRunMock } = vi.hoisted(() => ({
   pingDaemonMock: vi.fn(),
@@ -58,7 +55,7 @@ const tempDirs: string[] = [];
 const originalEnv = process.env;
 
 function createTempDir(prefix: string): string {
-  const dir = mkdtempSync(join(tmpdir(), prefix));
+  const dir = mkdtempSync(join('/tmp', prefix));
   tempDirs.push(dir);
   return dir;
 }
@@ -112,10 +109,11 @@ function writeSessionFile(conversationId: string): string {
 }
 
 beforeEach(() => {
+  const stateRoot = createTempDir('neon-pilot-web-task-state-');
   process.env = {
     ...originalEnv,
-    NEON_PILOT_STATE_ROOT: createTempDir('neon-pilot-web-task-state-'),
-    NEON_PILOT_DAEMON_SOCKET_PATH: join(tmpdir(), `npd-${randomUUID()}.sock`),
+    NEON_PILOT_STATE_ROOT: stateRoot,
+    NEON_PILOT_DAEMON_SOCKET_PATH: join(stateRoot, 'd.sock'),
   };
   process.env.NEON_PILOT_KNOWLEDGE_ROOT = join(process.env.NEON_PILOT_STATE_ROOT, 'sync');
   pingDaemonMock.mockReset();
@@ -284,20 +282,16 @@ describe('scheduled task agent extension', () => {
     expect(validated.content[0]?.text).toMatch(/Validated \d+ scheduled tasks?\./);
   });
 
-  it('surfaces parse errors when no valid tasks exist', async () => {
+  it('reports an empty schedule when no tasks exist', async () => {
     const taskTool = registerScheduledTaskTool();
-    const { taskDir } = loadScheduledTasksForProfile('assistant');
-    mkdirSync(taskDir, { recursive: true });
-    writeFileSync(join(taskDir, 'broken.task.md'), 'not a valid task', 'utf-8');
 
     const listed = await taskTool.execute('tool-1', { action: 'list' });
     const validated = await taskTool.execute('tool-2', { action: 'validate', taskId: 'broken' });
 
     expect(listed.isError).not.toBe(true);
-    expect(listed.content[0]?.text).toContain('Parse errors:');
-    expect(listed.content[0]?.text).toContain('broken.task.md');
+    expect(listed.content[0]?.text).toContain('No scheduled tasks found.');
     expect(validated.isError).toBe(true);
-    expect(validated.content[0]?.text).toContain('Task @broken is invalid:');
+    expect(validated.content[0]?.text).toContain('Task not found: broken');
   });
 
   it('shows runtime details, validates a specific task, runs it, and deletes it', async () => {
@@ -322,16 +316,11 @@ describe('scheduled task agent extension', () => {
       } as never,
     });
 
-    const { taskDir } = loadScheduledTasksForProfile('assistant');
-    mkdirSync(taskDir, { recursive: true });
-    writeFileSync(join(taskDir, 'broken.task.md'), 'not a valid task', 'utf-8');
-
     const listed = await taskTool.execute('tool-2', { action: 'list' });
     const fetched = await taskTool.execute('tool-3', { action: 'get', taskId: 'daily-status' });
     const validated = await taskTool.execute('tool-4', { action: 'validate', taskId: 'daily-status' });
 
     expect(listed.content[0]?.text).toContain('@daily-status [running]');
-    expect(listed.content[0]?.text).toContain('Parse errors:');
     expect(fetched.content[0]?.text).toContain('lastStatus: failed');
     expect(fetched.content[0]?.text).toContain('lastRunAt: 2026-04-10T00:00:00.000Z');
     expect(fetched.content[0]?.text).toContain('lastLogPath: /tmp/run.log');

@@ -15,7 +15,7 @@ let getRepoRootFn: () => string = () => {
   throw new Error('getRepoRoot not initialized for tools routes');
 };
 
-let buildLiveSessionResourceOptionsFn: (profile: string) => LiveSessionResourceOptions = () => {
+let buildLiveSessionResourceOptionsFn: (profile?: string) => LiveSessionResourceOptions = () => {
   throw new Error('buildLiveSessionResourceOptions not initialized for tools routes');
 };
 
@@ -44,40 +44,58 @@ function initializeToolsRoutesContext(
   withTemporaryRuntimeAgentDirFn = context.withTemporaryRuntimeAgentDir;
 }
 
-function buildPackageInstallState() {
+export async function buildToolsRouteState(
+  context: Pick<
+    ServerRouteContext,
+    | 'getRuntimeScope'
+    | 'getRepoRoot'
+    | 'buildLiveSessionResourceOptions'
+    | 'buildLiveSessionExtensionFactories'
+    | 'withTemporaryRuntimeAgentDir'
+  >,
+) {
+  const runtimeName = context.getRuntimeScope();
+  const resourceOptions = context.buildLiveSessionResourceOptions(runtimeName);
+  const details = await context.withTemporaryRuntimeAgentDir(runtimeName, (agentDir) =>
+    inspectAvailableTools(context.getRepoRoot(), {
+      ...resourceOptions,
+      agentDir,
+      extensionFactories: context.buildLiveSessionExtensionFactories(),
+    }),
+  );
+  const onePasswordCommand = process.env.NEON_PILOT_OP_BIN?.trim() || 'op';
+  const repoRoot = context.getRepoRoot();
+  const dependentCliTools = [
+    {
+      id: '1password-cli',
+      name: '1Password CLI',
+      description: 'Resolves op:// secret references used by Neon Pilot features and extensions.',
+      configuredBy: 'NEON_PILOT_OP_BIN',
+      usedBy: ['op:// secret references', 'web-tools extension'],
+      binary: inspectCliBinary({ command: onePasswordCommand, cwd: repoRoot }),
+    },
+  ];
+
   return {
-    localTarget: readPackageSourceTargetState('local', { repoRoot: getRepoRootFn() }),
+    ...details,
+    dependentCliTools,
+    packageInstall: {
+      localTarget: readPackageSourceTargetState('local', { repoRoot }),
+    },
   };
 }
 
 async function handleToolsRequest(_req: unknown, res: Response): Promise<void> {
   try {
-    const runtimeName = getRuntimeScopeFn();
-    const resourceOptions = buildLiveSessionResourceOptionsFn(runtimeName);
-    const details = await withTemporaryRuntimeAgentDirFn(runtimeName, (agentDir) =>
-      inspectAvailableTools(getRepoRootFn(), {
-        ...resourceOptions,
-        agentDir,
-        extensionFactories: buildLiveSessionExtensionFactoriesFn(),
+    res.json(
+      await buildToolsRouteState({
+        getRuntimeScope: getRuntimeScopeFn,
+        getRepoRoot: getRepoRootFn,
+        buildLiveSessionResourceOptions: buildLiveSessionResourceOptionsFn,
+        buildLiveSessionExtensionFactories: buildLiveSessionExtensionFactoriesFn,
+        withTemporaryRuntimeAgentDir: withTemporaryRuntimeAgentDirFn,
       }),
     );
-    const onePasswordCommand = process.env.NEON_PILOT_OP_BIN?.trim() || 'op';
-    const dependentCliTools = [
-      {
-        id: '1password-cli',
-        name: '1Password CLI',
-        description: 'Resolves op:// secret references used by Neon Pilot features and extensions.',
-        configuredBy: 'NEON_PILOT_OP_BIN',
-        usedBy: ['op:// secret references', 'web-tools extension'],
-        binary: inspectCliBinary({ command: onePasswordCommand, cwd: getRepoRootFn() }),
-      },
-    ];
-
-    res.json({
-      ...details,
-      dependentCliTools,
-      packageInstall: buildPackageInstallState(),
-    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logError('request handler error', {
