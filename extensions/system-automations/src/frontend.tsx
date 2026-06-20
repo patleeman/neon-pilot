@@ -81,7 +81,8 @@ type AutomationTaskForEditor = ScheduledTaskSummary & {
 
 type EditorSectionId = 'automation-general' | 'automation-schedule' | 'automation-policies' | 'automation-delivery' | 'automation-runtime';
 type AutomationsPageContext = { search?: string };
-type ActivityFilter = 'all' | 'running' | 'needs-attention' | 'scheduled' | 'disabled';
+type ActivityStatusFilter = 'all' | 'done' | 'waiting' | 'failed' | 'off';
+type ActivitySort = 'newest' | 'oldest' | 'event' | 'from' | 'used-by' | 'status';
 type ActivityTone = 'success' | 'accent' | 'warning' | 'danger' | 'muted';
 type ReactionKind = 'agent' | 'thread' | 'script' | 'event';
 
@@ -98,11 +99,18 @@ export interface AutomationActivityEvent {
   tone: ActivityTone;
   matches: number;
   reactionKind: ReactionKind;
-  reactionTitle: string;
+  displayName: string;
+  fromName: string;
+  fromKind: string;
+  usedByNames: string[];
+  usedByKinds: string[];
+  primaryUsedByName: string;
+  primaryUsedByKind: string;
+  technicalName: string;
+  payload?: Record<string, unknown>;
   reactionStatus: string;
   reactionMeta: string;
-  emittedEvent?: string;
-  trace: Array<{ label: string; meta: string; tone: ActivityTone }>;
+  matchingSubscriptionIds: string[];
 }
 
 interface EventBusReactionSummary {
@@ -199,12 +207,21 @@ const SCHEDULE_TYPE_OPTIONS = [
   { value: 'at', label: 'Once' },
 ] as const;
 
-const ACTIVITY_FILTER_LABELS: Record<ActivityFilter, string> = {
+const ACTIVITY_STATUS_FILTER_LABELS: Record<ActivityStatusFilter, string> = {
   all: 'All',
-  running: 'Running',
-  'needs-attention': 'Needs attention',
-  scheduled: 'Scheduled',
-  disabled: 'Disabled',
+  done: 'Done',
+  waiting: 'Waiting',
+  failed: 'Failed',
+  off: 'Off',
+};
+
+const ACTIVITY_SORT_LABELS: Record<ActivitySort, string> = {
+  newest: 'Newest',
+  oldest: 'Oldest',
+  event: 'Event A-Z',
+  from: 'Emitter A-Z',
+  'used-by': 'Handler A-Z',
+  status: 'Status',
 };
 
 const emptyForm: AutomationFormState = {
@@ -457,32 +474,6 @@ function isPastDueOneTimeTask(task: ScheduledTaskSummary, nowMs = Date.now()) {
   return atMs !== null && atMs <= nowMs;
 }
 
-function reactionLaneLabel(kind: ReactionKind) {
-  switch (kind) {
-    case 'agent':
-      return 'Agent';
-    case 'thread':
-      return 'Thread';
-    case 'script':
-      return 'Script';
-    case 'event':
-      return 'Published Event';
-  }
-}
-
-function reactionIcon(kind: ReactionKind) {
-  switch (kind) {
-    case 'agent':
-      return '⌁';
-    case 'thread':
-      return '↳';
-    case 'script':
-      return '✳';
-    case 'event':
-      return '◇';
-  }
-}
-
 function toneDotClass(tone: ActivityTone) {
   switch (tone) {
     case 'success':
@@ -513,34 +504,79 @@ function toneTextClass(tone: ActivityTone) {
   }
 }
 
-function toneBorderClass(tone: ActivityTone) {
-  switch (tone) {
-    case 'success':
-      return 'border-success/45 bg-success/10';
-    case 'accent':
-      return 'border-accent/45 bg-accent/10';
-    case 'warning':
-      return 'border-warning/45 bg-warning/10';
-    case 'danger':
-      return 'border-danger/45 bg-danger/10';
-    case 'muted':
-      return 'border-border-subtle/80 bg-surface/25';
-  }
+function humanizeToken(value: string) {
+  const cleaned = value
+    .replace(/^subscription:/, '')
+    .replace(/^(demo|event|agent|script|thread|schedule|webhook|cli|system)[._:-]/, '')
+    .replace(/[_:.-]+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    .trim();
+  return cleaned || value;
 }
 
-function activityFilterMatches(event: AutomationActivityEvent, filter: ActivityFilter) {
+function humanizeEventName(type: string) {
+  const parts = type.split(/[.:_-]+/).filter(Boolean);
+  const meaningful = parts.length > 1 ? parts.slice(1) : parts;
+  return humanizeToken(meaningful.join(' '));
+}
+
+function humanizeActorName(value: string) {
+  if (!value) return '-';
+  if (value === 'scheduler') return 'Schedule';
+  if (/\s/.test(value.trim())) return value.trim();
+  if (value.startsWith('subscription:')) return humanizeToken(value.slice('subscription:'.length).replace(/^sub[-_]/u, ''));
+  return humanizeToken(value);
+}
+
+function actorKindFromSource(value: string) {
+  if (!value) return 'Unknown';
+  if (value === 'scheduler') return 'Schedule';
+  if (value.startsWith('subscription:')) return 'Handler';
+  if (value.startsWith('script:')) return 'Script';
+  if (value.startsWith('agent:')) return 'Agent';
+  if (value.startsWith('thread:')) return 'Thread';
+  if (value.startsWith('tool:')) return 'Tool';
+  if (value.startsWith('webhook:')) return 'Webhook';
+  if (value.startsWith('cli:')) return 'CLI';
+  if (value.startsWith('system:')) return 'System';
+  return 'Source';
+}
+
+function actorKindFromAction(actionType: EventBusReactionSummary['actionType']) {
+  if (actionType === 'start_agent') return 'Agent';
+  if (actionType === 'start_thread') return 'Thread';
+  if (actionType === 'run_script') return 'Script';
+  if (actionType === 'run_task') return 'Scheduled task';
+  if (actionType === 'publish_event') return 'Handler';
+  return 'Handler';
+}
+
+function statusFilterMatches(event: AutomationActivityEvent, filter: ActivityStatusFilter) {
   switch (filter) {
     case 'all':
       return true;
-    case 'running':
-      return event.status === 'Running';
-    case 'needs-attention':
-      return event.tone === 'danger' || event.tone === 'warning';
-    case 'scheduled':
-      return event.eventName === 'schedule.armed' || event.eventName === 'schedule.due';
-    case 'disabled':
-      return event.status === 'Disabled';
+    case 'done':
+      return event.status === 'Done';
+    case 'waiting':
+      return event.status === 'Waiting';
+    case 'failed':
+      return event.status === 'Failed';
+    case 'off':
+      return event.status === 'Off';
   }
+}
+
+function optionValues(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean))).sort((left, right) => left.localeCompare(right));
+}
+
+function compareActivityEvents(left: AutomationActivityEvent, right: AutomationActivityEvent, sort: ActivitySort) {
+  if (sort === 'oldest') return Date.parse(left.absoluteTime ?? '') - Date.parse(right.absoluteTime ?? '');
+  if (sort === 'event') return left.displayName.localeCompare(right.displayName);
+  if (sort === 'from') return left.fromName.localeCompare(right.fromName);
+  if (sort === 'used-by') return left.primaryUsedByName.localeCompare(right.primaryUsedByName);
+  if (sort === 'status') return left.status.localeCompare(right.status);
+  return Date.parse(right.absoluteTime ?? '') - Date.parse(left.absoluteTime ?? '');
 }
 
 function activitySearchText(event: AutomationActivityEvent) {
@@ -551,10 +587,12 @@ function activitySearchText(event: AutomationActivityEvent) {
     event.source,
     event.title,
     event.status,
-    event.reactionTitle,
+    event.displayName,
+    event.fromName,
+    event.primaryUsedByName,
+    ...event.usedByNames,
     event.reactionStatus,
     event.reactionMeta,
-    event.emittedEvent,
   ]
     .filter(Boolean)
     .join(' ')
@@ -666,14 +704,6 @@ function readEventBusSubscriptions(input: unknown): EventBusSubscriptionSummary[
     .filter((subscription): subscription is EventBusSubscriptionSummary => Boolean(subscription));
 }
 
-function actionSummary(action: EventBusActionSummary) {
-  if (action.type === 'run_task') return `Run scheduled publisher ${action.taskId}`;
-  if (action.type === 'start_agent') return 'Start agent';
-  if (action.type === 'start_thread') return action.conversationId ? `Resume thread ${action.conversationId}` : 'Start thread';
-  if (action.type === 'run_script') return `Run script: ${action.command}`;
-  return `Publish ${action.eventType}`;
-}
-
 function reactionKindFromAction(actionType: EventBusReactionSummary['actionType']): ReactionKind {
   if (actionType === 'start_thread') return 'thread';
   if (actionType === 'run_script') return 'script';
@@ -690,6 +720,7 @@ function toneFromReactionStatus(status: string): ActivityTone {
 function buildEventBusActivityEvents(events: EventBusEventSummary[]): AutomationActivityEvent[] {
   return events.map((event) => {
     const firstReaction = event.reactions?.[0];
+    const reactions = event.reactions ?? [];
     const tone = firstReaction ? toneFromReactionStatus(firstReaction.status) : 'muted';
     const reactionKind = firstReaction ? reactionKindFromAction(firstReaction.actionType) : 'event';
     const relativeTime = timeAgo(event.occurredAt);
@@ -699,11 +730,16 @@ function buildEventBusActivityEvents(events: EventBusEventSummary[]): Automation
         : firstReaction.status === 'failed'
           ? 'Failed'
           : 'Pending'
-      : 'No match';
-    const emittedEvent =
-      firstReaction?.actionType === 'publish_event' && typeof firstReaction.output?.eventId === 'string'
-        ? String(firstReaction.output.eventId)
-        : undefined;
+      : 'No handler';
+    const matchingSubscriptionIds = reactions.map((reaction) => reaction.subscriptionId).filter(Boolean);
+    const usedByNames = reactions.map((reaction) => humanizeActorName(reaction.subscriptionName)).filter(Boolean);
+    const usedByKinds = reactions.map((reaction) => actorKindFromAction(reaction.actionType)).filter(Boolean);
+    const primaryUsedByName =
+      usedByNames.length === 0 ? '-' : usedByNames.length === 1 ? usedByNames[0] : `${usedByNames[0]} +${usedByNames.length - 1}`;
+    const primaryUsedByKind =
+      usedByKinds.length === 0 ? 'No handler' : usedByKinds.length === 1 ? usedByKinds[0] : `${usedByKinds[0]} +${usedByKinds.length - 1}`;
+    const failed = reactions.some((reaction) => reaction.status === 'failed');
+    const pending = reactions.some((reaction) => reaction.status === 'pending');
     return {
       id: event.id,
       taskId: typeof event.metadata?.taskId === 'string' ? event.metadata.taskId : undefined,
@@ -713,23 +749,22 @@ function buildEventBusActivityEvents(events: EventBusEventSummary[]): Automation
       title: event.type,
       relativeTime,
       absoluteTime: event.occurredAt,
-      status: firstReaction ? (firstReaction.status === 'failed' ? 'Failed' : 'Processed') : 'Unmatched',
-      tone,
-      matches: event.reactions?.length ?? 0,
+      status: reactions.length === 0 ? 'No handler' : failed ? 'Failed' : pending ? 'Waiting' : 'Done',
+      tone: failed ? 'danger' : pending ? 'warning' : tone,
+      matches: reactions.length,
       reactionKind,
-      reactionTitle: firstReaction?.subscriptionName ?? 'No consumer',
+      displayName: humanizeEventName(event.type),
+      fromName: humanizeActorName(event.source),
+      fromKind: actorKindFromSource(event.source),
+      usedByNames,
+      usedByKinds,
+      primaryUsedByName,
+      primaryUsedByKind,
+      technicalName: event.type,
+      payload: event.payload,
       reactionStatus,
       reactionMeta: firstReaction?.actionType ?? 'Event recorded',
-      emittedEvent,
-      trace: [
-        { label: event.source, meta: event.occurredAt, tone: 'accent' },
-        { label: event.type, meta: relativeTime, tone },
-        {
-          label: firstReaction?.subscriptionName ?? 'No matching subscription',
-          meta: reactionStatus,
-          tone,
-        },
-      ],
+      matchingSubscriptionIds,
     };
   });
 }
@@ -918,69 +953,6 @@ function RefreshIcon() {
   );
 }
 
-function ActivityLaneHeader() {
-  return (
-    <div className="grid grid-cols-4 border-b border-border-subtle/70 text-[11px] font-medium uppercase tracking-normal text-dim">
-      {(['agent', 'script', 'thread', 'event'] as ReactionKind[]).map((kind) => (
-        <div key={kind} className="flex h-9 items-center gap-1.5 px-3">
-          <span
-            className={cx(
-              'text-[13px]',
-              kind === 'agent' ? 'text-success' : kind === 'script' ? 'text-warning' : kind === 'thread' ? 'text-accent' : 'text-secondary',
-            )}
-          >
-            {reactionIcon(kind)}
-          </span>
-          <span>{reactionLaneLabel(kind)}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ActivityReactionCard({ event, selected }: { event: AutomationActivityEvent; selected: boolean }) {
-  const laneIndex = event.reactionKind === 'agent' ? 0 : event.reactionKind === 'script' ? 1 : event.reactionKind === 'thread' ? 2 : 3;
-  return (
-    <div className="grid min-w-[34rem] grid-cols-4 items-center">
-      <div className="col-span-4 grid grid-cols-4">
-        <div className={cx('col-start-1 h-px self-center bg-border-subtle/80', laneIndex === 0 ? 'w-10' : 'w-full')} />
-        {laneIndex > 0 ? <div className="col-start-2 h-px self-center bg-border-subtle/80" /> : null}
-        {laneIndex > 1 ? <div className="col-start-3 h-px self-center bg-border-subtle/80" /> : null}
-        {laneIndex > 2 ? <div className="col-start-4 h-px self-center bg-border-subtle/80" /> : null}
-      </div>
-      <div
-        className={cx(
-          'relative z-10 col-span-1 min-w-0 rounded-md border px-3 py-2 shadow-sm',
-          toneBorderClass(event.tone),
-          selected ? 'shadow-[0_0_0_1px_rgb(var(--color-accent)/0.28),0_10px_28px_rgb(0_0_0/0.2)]' : '',
-        )}
-        style={{ gridColumnStart: laneIndex + 1 }}
-      >
-        <div className="flex min-w-0 items-center gap-2">
-          <span aria-hidden="true" className={cx('text-[13px]', toneTextClass(event.tone))}>
-            {reactionIcon(event.reactionKind)}
-          </span>
-          <span className="min-w-0 truncate text-[13px] font-medium text-primary">{event.reactionTitle}</span>
-        </div>
-        <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-secondary">
-          <span className={toneTextClass(event.tone)}>{event.reactionStatus}</span>
-          <span className="text-dim">·</span>
-          <span className="truncate">{event.reactionMeta}</span>
-        </div>
-      </div>
-      {event.emittedEvent ? (
-        <div className="col-span-1 flex min-w-0 items-center gap-2 pl-3">
-          <div className="h-px w-8 bg-border-subtle/80" />
-          <div className="min-w-0 rounded-md border border-warning/45 bg-warning/10 px-3 py-2">
-            <div className="truncate text-[12px] font-medium text-primary">{event.emittedEvent}</div>
-            <div className="mt-0.5 text-[11px] text-warning">Published</div>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function ActivityTimeline({
   events,
   selectedId,
@@ -993,74 +965,12 @@ function ActivityTimeline({
   onOpenEditor: (taskId: string) => void;
 }) {
   if (events.length === 0) {
-    const idleRows = [
-      { time: '10:24', name: 'schedule.due', source: 'Scheduled publisher', lane: 0, width: 'w-40' },
-      { time: '10:22', name: 'script.event.emitted', source: 'Script publisher', lane: 1, width: 'w-44' },
-      { time: '10:20', name: 'agent.run.completed', source: 'Agent publisher', lane: 2, width: 'w-36' },
-      { time: '10:18', name: 'thread.resume.requested', source: 'Thread publisher', lane: 3, width: 'w-40' },
-    ];
     return (
-      <div className="min-h-0 overflow-auto">
-        <div className="grid min-w-[58rem] grid-cols-[22rem_minmax(34rem,1fr)]">
-          <div className="border-b border-border-subtle/70 bg-background/95 px-5 py-3 text-[11px] font-medium uppercase text-dim">
-            Event Stream
-          </div>
-          <ActivityLaneHeader />
-          <div className="relative min-h-[28rem] border-r border-border-subtle/70 text-[13px] text-secondary">
-            <div className="absolute bottom-6 left-[6.45rem] top-0 w-px bg-border-subtle/80" />
-            <div className="border-b border-border-subtle/60 bg-surface/10 px-5 py-4">
-              <div className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3">
-                <div className="font-mono text-[12px] text-dim">Idle</div>
-                <div className="relative min-w-0 pl-5">
-                  <span className="absolute left-[-0.43rem] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-accent/70 bg-background ring-4 ring-background" />
-                  <div className="max-w-sm">
-                    <div className="text-[13px] font-medium text-primary">No matching event activity.</div>
-                    <div className="mt-1 text-[12px] leading-5 text-secondary">
-                      Publishers are quiet. When schedules, scripts, threads, or agents emit events, they flow down this stream.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {idleRows.map((row, index) => (
-              <div
-                key={row.name}
-                className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3 border-b border-border-subtle/50 px-5 py-4 opacity-55"
-              >
-                <div className="font-mono text-[12px] text-dim">{row.time}</div>
-                <div className="relative min-w-0 pl-5">
-                  <span className="absolute left-[-0.34rem] top-1.5 h-2.5 w-2.5 rounded-full border border-border-subtle bg-background ring-4 ring-background" />
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-28 rounded-sm bg-surface/80" />
-                    <div className="h-2 w-12 rounded-sm bg-surface/45" />
-                  </div>
-                  <div className={cx('mt-2 h-2 rounded-sm bg-surface/50', index === 1 ? 'w-24' : 'w-28')} />
-                  <span className="sr-only">
-                    Example event shape: {row.name} from {row.source}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="min-h-[28rem] bg-surface/5">
-            {idleRows.map((row) => (
-              <div
-                key={`${row.name}:reaction`}
-                className="flex min-h-[4.55rem] items-center border-b border-border-subtle/50 px-5 py-4 opacity-55"
-              >
-                <div className="grid min-w-[34rem] grid-cols-4 items-center">
-                  <div className="col-span-4 grid grid-cols-4">
-                    <div className={cx('h-px self-center bg-border-subtle/80', row.lane === 0 ? 'w-10' : 'w-full')} />
-                    {row.lane > 0 ? <div className="col-start-2 h-px self-center bg-border-subtle/80" /> : null}
-                    {row.lane > 1 ? <div className="col-start-3 h-px self-center bg-border-subtle/80" /> : null}
-                  </div>
-                  <div
-                    className={cx('relative z-10 h-9 rounded-sm border border-border-subtle/35 bg-surface/35', row.width)}
-                    style={{ gridColumnStart: row.lane + 1 }}
-                  />
-                </div>
-              </div>
-            ))}
+      <div className="flex h-full min-h-[26rem] items-center justify-center border-t border-border-subtle/70 px-6 text-center">
+        <div className="max-w-sm">
+          <div className="text-[14px] font-medium text-primary">No events match this view.</div>
+          <div className="mt-1 text-[12px] leading-5 text-secondary">
+            Change the filters or wait for agents, scripts, schedules, or tools to create events.
           </div>
         </div>
       </div>
@@ -1068,76 +978,62 @@ function ActivityTimeline({
   }
 
   return (
-    <div className="min-h-0 overflow-auto">
-      <div className="grid min-w-[58rem] grid-cols-[22rem_minmax(34rem,1fr)]">
-        <div className="sticky top-0 z-20 border-b border-border-subtle/70 bg-background/95 px-5 py-3 text-[11px] font-medium uppercase text-dim">
-          Event Stream
+    <div className="h-full min-h-0 overflow-auto">
+      <div className="min-w-[58rem]">
+        <div className="sticky top-0 z-20 grid h-8 grid-cols-[5.5rem_minmax(13rem,1.4fr)_minmax(10rem,0.95fr)_minmax(11rem,1fr)_6rem] items-center border-b border-border-subtle/70 bg-background/95 px-3 text-[11px] font-medium uppercase text-dim">
+          <div>Time</div>
+          <div>Event</div>
+          <div>Emitted by</div>
+          <div>Handled by</div>
+          <div>Status</div>
         </div>
-        <div className="sticky top-0 z-20 bg-background/95">
-          <ActivityLaneHeader />
-        </div>
-        <div className="relative border-r border-border-subtle/70">
-          <div className="absolute bottom-6 left-[6.45rem] top-0 w-px bg-border-subtle/80" />
-          {events.map((event) => {
-            const selected = event.id === selectedId;
-            return (
-              <button
-                key={event.id}
-                type="button"
-                className={cx(
-                  'group grid w-full grid-cols-[6.5rem_minmax(0,1fr)] gap-3 border-b border-border-subtle/60 px-5 py-4 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/60',
-                  selected ? 'bg-accent/10' : 'hover:bg-surface/25',
-                )}
-                onClick={() => onSelect(event.id)}
-                onDoubleClick={() => {
-                  if (event.taskId) onOpenEditor(event.taskId);
-                }}
-              >
-                <div className="text-[12px] leading-5 text-secondary">
-                  <div className="font-mono text-primary">
-                    {event.absoluteTime
-                      ? new Date(event.absoluteTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      : 'Pending'}
-                  </div>
-                  <div className="text-dim">{event.relativeTime}</div>
+        {events.map((event) => {
+          const selected = event.id === selectedId;
+          const exactTime = event.absoluteTime ? new Date(event.absoluteTime).toLocaleString() : 'Pending';
+          return (
+            <div
+              key={event.id}
+              role="button"
+              tabIndex={0}
+              className={cx(
+                'grid min-h-10 w-full grid-cols-[5.5rem_minmax(13rem,1.4fr)_minmax(10rem,0.95fr)_minmax(11rem,1fr)_6rem] items-center gap-3 border-b border-border-subtle/55 px-3 py-1.5 text-left text-[12px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/60',
+                selected ? 'bg-accent/10 shadow-[inset_2px_0_0_rgb(var(--color-accent))]' : 'hover:bg-surface/25',
+              )}
+              onClick={() => onSelect(event.id)}
+              onKeyDown={(keyEvent) => {
+                if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+                  keyEvent.preventDefault();
+                  onSelect(event.id);
+                }
+              }}
+              onDoubleClick={() => {
+                if (event.taskId) onOpenEditor(event.taskId);
+              }}
+            >
+              <div className="truncate whitespace-nowrap font-mono text-[11px] text-secondary" title={exactTime}>
+                {event.relativeTime}
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-[13px] font-medium text-primary">{event.displayName}</div>
+                <div className="truncate font-mono text-[10px] text-dim">{event.technicalName}</div>
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-[12px] text-secondary">{event.fromName}</div>
+                <div className="truncate text-[10px] uppercase tracking-wide text-dim">{event.fromKind}</div>
+              </div>
+              <div className="min-w-0">
+                <div className={cx('truncate text-[12px]', event.primaryUsedByName === '-' ? 'text-dim' : 'text-secondary')}>
+                  {event.primaryUsedByName}
                 </div>
-                <div className="relative min-w-0 pl-5">
-                  <span
-                    className={cx(
-                      'absolute left-[-0.43rem] top-1.5 h-3.5 w-3.5 rounded-full border-2 ring-4 ring-background',
-                      toneDotClass(event.tone),
-                    )}
-                  />
-                  <div
-                    className={cx(
-                      'rounded-md border px-3 py-2.5 transition-colors',
-                      selected
-                        ? 'border-accent/70 bg-surface/45 shadow-[0_0_0_1px_rgb(var(--color-accent)/0.22)]'
-                        : 'border-transparent bg-transparent group-hover:border-border-subtle/70 group-hover:bg-surface/25',
-                    )}
-                  >
-                    <div className="flex min-w-0 items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-[13px] font-semibold text-primary">{event.eventName}</div>
-                        <div className="mt-0.5 truncate text-[12px] text-secondary">{event.source}</div>
-                      </div>
-                      <div className="shrink-0 text-right text-[11px] text-dim">
-                        {event.matches === 1 ? '1 match' : `${event.matches} matches`}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        <div>
-          {events.map((event) => (
-            <div key={event.id} className="flex min-h-[5.85rem] items-center border-b border-border-subtle/60 px-5 py-4">
-              <ActivityReactionCard event={event} selected={event.id === selectedId} />
+                <div className="truncate text-[10px] uppercase tracking-wide text-dim">{event.primaryUsedByKind}</div>
+              </div>
+              <div className="flex items-center gap-1.5 text-[12px]">
+                <span className={cx('h-2 w-2 rounded-full border', toneDotClass(event.tone))} />
+                <span className={toneTextClass(event.tone)}>{event.status}</span>
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1150,7 +1046,6 @@ function ActivityInspector({
   onReemit,
   onCreateReaction,
   onToggleSubscription,
-  onDeleteSubscription,
   onPausePublisher,
   onOpenThread,
 }: {
@@ -1160,65 +1055,20 @@ function ActivityInspector({
   onReemit: (event: AutomationActivityEvent) => void;
   onCreateReaction: (taskId: string) => void;
   onToggleSubscription: (subscription: EventBusSubscriptionSummary) => void;
-  onDeleteSubscription: (subscription: EventBusSubscriptionSummary) => void;
   onPausePublisher: (taskId: string) => void;
   onOpenThread: (taskId: string) => void;
 }) {
-  const subscriptionList = (
-    <div className="grid gap-2">
-      {subscriptions.length === 0 ? (
-        <div className="rounded-md border border-border-subtle/70 bg-surface/20 px-3 py-3 text-[12px] leading-5 text-secondary">
-          No subscriptions yet.
-        </div>
-      ) : (
-        subscriptions.slice(0, 8).map((subscription) => (
-          <div key={subscription.id} className="rounded-md border border-border-subtle/70 bg-surface/20 px-3 py-2">
-            <div className="flex min-w-0 items-center justify-between gap-2">
-              <div className="min-w-0">
-                <div className="truncate text-[13px] font-medium text-primary">{subscription.name}</div>
-                <div className="mt-0.5 truncate text-[11px] text-secondary">{subscription.pattern}</div>
-              </div>
-              <Switch
-                checked={subscription.enabled}
-                label={subscription.enabled ? 'On' : 'Off'}
-                onClick={() => onToggleSubscription(subscription)}
-              />
-            </div>
-            <div className="mt-2 truncate text-[11px] text-dim">{actionSummary(subscription.action)}</div>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <span className="text-[11px] text-dim">
-                {subscription.maxReactionsPerMinute ? `${subscription.maxReactionsPerMinute}/min` : 'No rate limit'}
-              </span>
-              <TextButton className="text-[12px] text-danger" onClick={() => onDeleteSubscription(subscription)}>
-                Delete
-              </TextButton>
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
+  const matchingSubscriptions = event
+    ? subscriptions.filter((subscription) => event.matchingSubscriptionIds.includes(subscription.id))
+    : [];
+  const primarySubscription = matchingSubscriptions[0];
 
   if (!event) {
     return (
-      <aside className="flex h-full min-h-0 w-[22rem] shrink-0 flex-col border-l border-border-subtle/70 bg-background/55 px-5 py-5">
+      <aside className="flex h-full min-h-0 w-[20rem] shrink-0 flex-col border-l border-border-subtle/70 bg-background/55 px-4 py-4">
         <div className="text-[11px] uppercase text-dim">Event</div>
-        <h2 className="mt-2 text-[18px] font-semibold leading-tight text-primary">No event selected</h2>
-        <p className="mt-3 text-[13px] leading-5 text-secondary">
-          Select a timeline event to inspect its causal trace, replay it, or pause the publisher.
-        </p>
-        <div className="mt-5 grid grid-cols-[5rem_minmax(0,1fr)] gap-y-1 border-t border-border-subtle/70 pt-4 text-[12px]">
-          <span className="text-dim">Status</span>
-          <span className="text-secondary">Waiting</span>
-          <span className="text-dim">Source</span>
-          <span className="text-secondary">Any publisher</span>
-          <span className="text-dim">Consumer</span>
-          <span className="text-secondary">Matching reaction</span>
-        </div>
-        <div className="mt-5 border-t border-border-subtle/70 pt-4">
-          <div className="text-[12px] font-medium uppercase text-dim">Subscriptions</div>
-          <div className="mt-3">{subscriptionList}</div>
-        </div>
+        <h2 className="mt-2 text-[16px] font-semibold leading-tight text-primary">No event selected</h2>
+        <p className="mt-2 text-[12px] leading-5 text-secondary">Select a row to inspect what emitted it and what handled it.</p>
       </aside>
     );
   }
@@ -1226,51 +1076,58 @@ function ActivityInspector({
   const replayBusyKey = event.replayMode === 'event-bus' ? `replay:${event.id}` : event.taskId ? `run:${event.taskId}` : null;
   const actionBusy = busy === replayBusyKey || (event.taskId ? busy === `pause:${event.taskId}` : false);
   return (
-    <aside className="flex h-full min-h-0 w-[22rem] shrink-0 flex-col border-l border-border-subtle/70 bg-background/55">
-      <div className="border-b border-border-subtle/70 px-5 py-5">
+    <aside className="flex h-full min-h-0 w-[20rem] shrink-0 flex-col border-l border-border-subtle/70 bg-background/55">
+      <div className="border-b border-border-subtle/70 px-4 py-4">
         <div className="text-[11px] uppercase text-dim">Event</div>
-        <h2 className="mt-2 truncate text-[20px] font-semibold leading-tight text-primary">{event.eventName}</h2>
-        <div className="mt-3 flex items-center gap-2 text-[13px]">
+        <h2 className="mt-1 break-words text-[18px] font-semibold leading-tight text-primary">{event.displayName}</h2>
+        <div className="mt-1 truncate font-mono text-[11px] text-dim">{event.technicalName}</div>
+        <div className="mt-3 flex items-center gap-2 text-[12px]">
           <span className={cx('h-2.5 w-2.5 rounded-full border', toneDotClass(event.tone))} />
           <span className={toneTextClass(event.tone)}>{event.status}</span>
           <span className="text-dim">·</span>
           <span className="text-secondary">{event.relativeTime}</span>
         </div>
-        <div className="mt-3 grid grid-cols-[5rem_minmax(0,1fr)] gap-y-1 text-[12px]">
-          <span className="text-dim">Source</span>
-          <span className="truncate text-secondary">{event.source}</span>
-          <span className="text-dim">Consumer</span>
-          <span className="truncate text-secondary">{event.reactionTitle}</span>
-        </div>
-        <div className="mt-4 border-t border-border-subtle/70 pt-4">
-          <div className="text-[12px] font-medium uppercase text-dim">Subscriptions</div>
-          <div className="mt-3">{subscriptionList}</div>
-        </div>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-auto px-5 py-5">
-        <div className="text-[12px] font-medium uppercase text-dim">Causal Trace</div>
-        <div className="mt-4 space-y-0">
-          {event.trace.map((step, index) => (
-            <div key={`${step.label}:${index}`} className="grid grid-cols-[1.75rem_minmax(0,1fr)]">
-              <div className="relative flex justify-center">
-                <span className={cx('mt-1 h-4 w-4 rounded-full border-2 ring-4 ring-background', toneDotClass(step.tone))} />
-                {index < event.trace.length - 1 ? <span className="absolute bottom-0 top-5 w-px bg-border-subtle/80" /> : null}
-              </div>
-              <div className="min-w-0 pb-5">
-                <div className={cx('truncate text-[13px] font-medium', index === 1 ? 'text-accent' : 'text-primary')}>{step.label}</div>
-                <div className="mt-0.5 truncate text-[12px] text-secondary">{step.meta}</div>
-              </div>
-            </div>
-          ))}
+        <div className="mt-4 grid grid-cols-[5.5rem_minmax(0,1fr)] gap-y-2 text-[12px]">
+          <span className="text-dim">Emitted by</span>
+          <span className="min-w-0">
+            <span className="block break-words text-secondary">{event.fromName}</span>
+            <span className="block text-[10px] uppercase tracking-wide text-dim">{event.fromKind}</span>
+          </span>
+          <span className="text-dim">Handled by</span>
+          <span className="min-w-0">
+            <span className="block break-words text-secondary">{event.primaryUsedByName}</span>
+            <span className="block text-[10px] uppercase tracking-wide text-dim">{event.primaryUsedByKind}</span>
+          </span>
         </div>
       </div>
 
-      <div className="border-t border-border-subtle/70 px-5 py-4">
+      <div className="min-h-0 flex-1 overflow-auto px-4 py-4">
+        <div className="text-[11px] font-medium uppercase text-dim">Details</div>
+        <div className="mt-3 grid gap-1.5 text-[12px]">
+          {Object.entries(event.payload ?? {})
+            .slice(0, 8)
+            .map(([key, value]) => (
+              <div key={key} className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2">
+                <span className="truncate text-dim">{humanizeToken(key)}</span>
+                <span className="truncate font-mono text-secondary">{typeof value === 'string' ? value : JSON.stringify(value)}</span>
+              </div>
+            ))}
+          {Object.keys(event.payload ?? {}).length === 0 ? <div className="text-[12px] text-secondary">No details.</div> : null}
+        </div>
+      </div>
+
+      <div className="border-t border-border-subtle/70 px-4 py-3">
         <div className="grid gap-2">
           <ToolbarButton disabled={actionBusy || event.status === 'Disabled'} onClick={() => onReemit(event)}>
-            {busy === replayBusyKey ? (event.replayMode === 'event-bus' ? 'Replaying…' : 'Starting…') : 'Re-emit Event'}
+            {busy === replayBusyKey ? (event.replayMode === 'event-bus' ? 'Running…' : 'Starting…') : 'Run again'}
           </ToolbarButton>
+          {primarySubscription ? (
+            <ToolbarButton disabled={actionBusy} onClick={() => onToggleSubscription(primarySubscription)}>
+              {busy === `subscription:${primarySubscription.id}`
+                ? 'Updating…'
+                : `Turn ${primarySubscription.enabled ? 'off' : 'on'} ${event.primaryUsedByName}`}
+            </ToolbarButton>
+          ) : null}
           {event.taskId ? <ToolbarButton onClick={() => onCreateReaction(event.taskId)}>Edit Scheduled Publisher</ToolbarButton> : null}
           {event.reactionKind === 'thread' && event.taskId ? (
             <ToolbarButton onClick={() => onOpenThread(event.taskId)}>Open Thread</ToolbarButton>
@@ -1363,7 +1220,10 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const [editorOpen, setEditorOpen] = useState(openNewFromRoute);
   const [form, setForm] = useState<AutomationFormState>(emptyForm);
   const [busy, setBusy] = useState<string | null>(null);
-  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<ActivityStatusFilter>('all');
+  const [fromFilter, setFromFilter] = useState('all');
+  const [usedByFilter, setUsedByFilter] = useState('all');
+  const [activitySort, setActivitySort] = useState<ActivitySort>('newest');
   const [query, setQuery] = useState('');
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const [activeEditorSection, setActiveEditorSection] = useState<EditorSectionId>('automation-general');
@@ -1558,35 +1418,12 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
           maxReactionsPerMinute: subscription.maxReactionsPerMinute,
           subscriptionAction: subscription.action,
         });
-        setNotice(!subscription.enabled ? 'Subscription enabled.' : 'Subscription disabled.');
+        setNotice(!subscription.enabled ? `${subscription.name} turned on.` : `${subscription.name} turned off.`);
         await load();
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         setError(msg);
-        pa.ui.notify({ type: 'error', message: `Failed to update subscription: ${msg}`, source: 'system-automations' });
-      } finally {
-        setBusy(null);
-      }
-    },
-    [load, pa],
-  );
-
-  const deleteSubscription = useCallback(
-    async (subscription: EventBusSubscriptionSummary) => {
-      const confirmed = await pa.ui.confirm({
-        title: 'Delete subscription',
-        message: `Delete ${subscription.name}? This cannot be undone.`,
-      });
-      if (!confirmed) return;
-      setBusy(`subscription:${subscription.id}`);
-      try {
-        await pa.extension.invoke('eventBus', { action: 'delete_subscription', subscriptionId: subscription.id });
-        setNotice('Subscription deleted.');
-        await load();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(msg);
-        pa.ui.notify({ type: 'error', message: `Failed to delete subscription: ${msg}`, source: 'system-automations' });
+        pa.ui.notify({ type: 'error', message: `Failed to update event handler: ${msg}`, source: 'system-automations' });
       } finally {
         setBusy(null);
       }
@@ -1705,7 +1542,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const countLabel = useMemo(
     () =>
       `${tasks.length === 1 ? '1 scheduled publisher' : `${tasks.length} scheduled publishers`} · ${
-        eventBusSubscriptions.length === 1 ? '1 subscription' : `${eventBusSubscriptions.length} subscriptions`
+        eventBusSubscriptions.length === 1 ? '1 event handler' : `${eventBusSubscriptions.length} event handlers`
       }`,
     [eventBusSubscriptions.length, tasks.length],
   );
@@ -1714,13 +1551,28 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const pastDueLabel = allPastDueTasks.length === 1 ? '1 past due' : `${allPastDueTasks.length} past due`;
 
   const activityEvents = useMemo(() => buildEventBusActivityEvents(eventBusEvents), [eventBusEvents]);
+  const fromFilterOptions = useMemo(() => optionValues(activityEvents.map((event) => event.fromName)), [activityEvents]);
+  const usedByFilterOptions = useMemo(
+    () => optionValues(activityEvents.flatMap((event) => (event.usedByNames.length > 0 ? event.usedByNames : ['-']))),
+    [activityEvents],
+  );
   const filteredActivityEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return activityEvents.filter((event) => {
-      if (!activityFilterMatches(event, activityFilter)) return false;
-      return normalizedQuery ? activitySearchText(event).includes(normalizedQuery) : true;
-    });
-  }, [activityEvents, activityFilter, query]);
+    return activityEvents
+      .filter((event) => {
+        if (!statusFilterMatches(event, statusFilter)) return false;
+        if (fromFilter !== 'all' && event.fromName !== fromFilter) return false;
+        if (
+          usedByFilter !== 'all' &&
+          !event.usedByNames.includes(usedByFilter) &&
+          !(usedByFilter === '-' && event.usedByNames.length === 0)
+        ) {
+          return false;
+        }
+        return normalizedQuery ? activitySearchText(event).includes(normalizedQuery) : true;
+      })
+      .sort((left, right) => compareActivityEvents(left, right, activitySort));
+  }, [activityEvents, activitySort, fromFilter, query, statusFilter, usedByFilter]);
   const selectedActivity =
     filteredActivityEvents.find((event) => event.id === selectedActivityId) ?? filteredActivityEvents[0] ?? activityEvents[0] ?? null;
 
@@ -1771,15 +1623,43 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
               </div>
               <div className="flex min-w-0 items-center gap-2">
                 <Select
-                  name="automation-activity-filter"
-                  aria-label="Filter automation activity"
-                  className="h-8 w-40 bg-surface/40 text-[13px]"
-                  value={activityFilter}
-                  onChange={(event) => setActivityFilter(event.target.value as ActivityFilter)}
+                  name="automation-status-filter"
+                  aria-label="Filter by status"
+                  className="h-8 w-28 bg-surface/40 text-[13px]"
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value as ActivityStatusFilter)}
                 >
-                  {(Object.keys(ACTIVITY_FILTER_LABELS) as ActivityFilter[]).map((value) => (
+                  {(Object.keys(ACTIVITY_STATUS_FILTER_LABELS) as ActivityStatusFilter[]).map((value) => (
                     <option key={value} value={value}>
-                      {ACTIVITY_FILTER_LABELS[value]}
+                      {ACTIVITY_STATUS_FILTER_LABELS[value]}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  name="automation-from-filter"
+                  aria-label="Filter by emitter"
+                  className="h-8 w-32 bg-surface/40 text-[13px]"
+                  value={fromFilter}
+                  onChange={(event) => setFromFilter(event.target.value)}
+                >
+                  <option value="all">Emitter: All</option>
+                  {fromFilterOptions.map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  name="automation-used-by-filter"
+                  aria-label="Filter by handler"
+                  className="h-8 w-36 bg-surface/40 text-[13px]"
+                  value={usedByFilter}
+                  onChange={(event) => setUsedByFilter(event.target.value)}
+                >
+                  <option value="all">Handler: All</option>
+                  {usedByFilterOptions.map((value) => (
+                    <option key={value} value={value}>
+                      {value}
                     </option>
                   ))}
                 </Select>
@@ -1787,8 +1667,21 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search events…"
-                  className="w-56 bg-surface/40 text-[13px]"
+                  className="w-48 bg-surface/40 text-[13px]"
                 />
+                <Select
+                  name="automation-sort"
+                  aria-label="Sort events"
+                  className="h-8 w-32 bg-surface/40 text-[13px]"
+                  value={activitySort}
+                  onChange={(event) => setActivitySort(event.target.value as ActivitySort)}
+                >
+                  {(Object.keys(ACTIVITY_SORT_LABELS) as ActivitySort[]).map((value) => (
+                    <option key={value} value={value}>
+                      {ACTIVITY_SORT_LABELS[value]}
+                    </option>
+                  ))}
+                </Select>
                 <IconButton title="Reload automations" aria-label="Reload automations" onClick={() => void reload()}>
                   <RefreshIcon />
                 </IconButton>
@@ -1828,7 +1721,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
               <div className="flex flex-col items-start justify-between gap-4 pb-10 sm:flex-row">
                 <div className="min-w-0">
                   <TextButton className="text-[13px]" onClick={closeEditor}>
-                    ← Event Stream
+                    ← Live events
                   </TextButton>
                   <h2 className="mt-6 text-[30px] font-semibold leading-[1.06] tracking-normal text-primary">
                     {editingId ? 'Edit scheduled publisher' : 'New scheduled publisher'}
@@ -2295,7 +2188,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 openEditor(task);
               }}
               onToggleSubscription={(subscription) => void toggleSubscription(subscription)}
-              onDeleteSubscription={(subscription) => void deleteSubscription(subscription)}
               onPausePublisher={(taskId) => void pausePublisher(taskId)}
               onOpenThread={openThreadForTask}
             />

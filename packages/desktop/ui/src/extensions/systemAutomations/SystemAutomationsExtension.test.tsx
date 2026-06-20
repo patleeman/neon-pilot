@@ -184,6 +184,7 @@ describe('AutomationsPage', () => {
     expect(container.innerHTML).toContain('aria-label="Scheduler healthy.');
     expect(container.textContent).toContain('Daily check');
     expect(container.textContent).toContain('schedule.due');
+    expect(container.textContent).toContain('TimeEventEmitted byHandled byStatus');
   });
 
   it('ignores stale load completions when automation refreshes overlap', async () => {
@@ -267,14 +268,12 @@ describe('AutomationsPage', () => {
     });
     const { container } = await renderPage(pa);
 
-    expect(container.textContent).toContain('No matching event activity.');
+    expect(container.textContent).toContain('No events match this view.');
     expect(container.textContent).toContain('No event selected');
-    expect(container.textContent).toContain('Subscriptions');
-    expect(container.textContent).toContain('No subscriptions yet.');
     expect(container.textContent).toContain('All');
     expect(container.querySelector('input[placeholder="Search events…"]')).not.toBeNull();
-    expect(container.textContent).toContain('Event Stream');
-    expect(container.textContent).toContain('Published Event');
+    expect(container.textContent).toContain('Emitter: All');
+    expect(container.textContent).toContain('Handler: All');
   });
 
   it('replays the selected durable event bus event from the inspector action', async () => {
@@ -309,8 +308,8 @@ describe('AutomationsPage', () => {
       return {};
     });
     const { container } = await renderPage(pa);
-    const runButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Re-emit Event');
-    if (!runButton) throw new Error('Re-emit button not found');
+    const runButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Run again');
+    if (!runButton) throw new Error('Run again button not found');
 
     await act(async () => {
       runButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -352,8 +351,8 @@ describe('AutomationsPage', () => {
       return {};
     });
     const { container } = await renderPage(pa);
-    const runButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Re-emit Event');
-    if (!runButton) throw new Error('Re-emit button not found');
+    const runButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Run again');
+    if (!runButton) throw new Error('Run again button not found');
 
     await act(async () => {
       runButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -377,13 +376,35 @@ describe('AutomationsPage', () => {
     expect(update).toHaveBeenCalledWith('daily-check', expect.objectContaining({ enabled: false }));
   });
 
-  it('toggles and deletes subscriptions from the inspector list', async () => {
+  it('turns off the selected event handler from the inspector', async () => {
     const pa = createPa({
       list: vi.fn(async () => []),
     });
     vi.mocked(pa.extension.invoke).mockImplementation(async (_actionId: string, input?: unknown) => {
       const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
-      if (action === 'list') return { details: { events: [] } };
+      if (action === 'list') {
+        return {
+          details: {
+            events: [
+              {
+                id: 'evt-agent',
+                type: 'tweet.found',
+                source: 'webhook',
+                occurredAt: '2026-05-08T00:00:00.000Z',
+                reactions: [
+                  {
+                    id: 'reaction-agent',
+                    subscriptionId: 'sub-agent',
+                    subscriptionName: 'Agent Worker',
+                    actionType: 'start_agent',
+                    status: 'completed',
+                  },
+                ],
+              },
+            ],
+          },
+        };
+      }
       if (action === 'list_subscriptions') {
         return {
           details: {
@@ -405,11 +426,9 @@ describe('AutomationsPage', () => {
     const { container } = await renderPage(pa);
 
     expect(container.textContent).toContain('Agent Worker');
-    expect(container.textContent).toContain('tweet.*');
-    expect(container.textContent).toContain('4/min');
 
-    const toggle = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'On');
-    if (!toggle) throw new Error('Subscription toggle not found');
+    const toggle = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Turn off Agent Worker');
+    if (!toggle) throw new Error('Turn off button not found');
     await act(async () => {
       toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
@@ -422,14 +441,6 @@ describe('AutomationsPage', () => {
         subscriptionAction: expect.objectContaining({ type: 'start_agent' }),
       }),
     );
-
-    vi.mocked(pa.ui.confirm).mockResolvedValueOnce(true);
-    const deleteButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Delete');
-    if (!deleteButton) throw new Error('Subscription delete not found');
-    await act(async () => {
-      deleteButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    expect(pa.extension.invoke).toHaveBeenCalledWith('eventBus', { action: 'delete_subscription', subscriptionId: 'sub-agent' });
   });
 
   it('moves overdue one-time automations into a past-due section', async () => {

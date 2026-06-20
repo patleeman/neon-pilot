@@ -5,6 +5,18 @@ import { pathToFileURL } from 'node:url';
 import { SessionManager } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir, queryAppTelemetryEvents, readTraceTelemetryLogEvents } from '@neon-pilot/core';
 
+import {
+  cancelDelayedEvent,
+  delayEvent,
+  deleteSubscription,
+  emitEvent,
+  listEvents,
+  listSubscriptions,
+  processDueEvents,
+  pruneEvents,
+  replayEvent,
+  saveSubscription,
+} from '../automation/eventBusHost.js';
 import type { FileAccess, ScopedFileSystem } from '../filesystem/filesystemAuthority.js';
 import { createModelRegistryForAuthFile } from '../models/modelRegistry.js';
 import { resolveSecret } from '../secrets/secretStore.js';
@@ -31,8 +43,10 @@ import { createExtensionConversationsCapability } from './extensionConversations
 import { publishExtensionEvent } from './extensionEventBus.js';
 import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
 import { createExtensionBackendServerContextFromSnapshot } from './extensionHostServerContext.js';
+import type { ExtensionPermission } from './extensionManifest.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import { isSystemNotificationAvailable, sendNotifyAsSystemNotification, setExtensionBadge } from './extensionNotifications.js';
+import { assertExtensionAnyPermission } from './extensionPermissions.js';
 import {
   findExtensionCommandRegistration,
   findExtensionEntry,
@@ -54,8 +68,6 @@ import {
   writeTerminalSession,
 } from './terminalSessions.js';
 import { getWorkbenchBrowserToolHost } from './workbenchBrowserToolHost.js';
-import { assertExtensionAnyPermission } from './extensionPermissions.js';
-import type { ExtensionPermission } from './extensionManifest.js';
 
 type ExtensionLogLevel = 'info' | 'warn' | 'error';
 type ExtensionTelemetrySource = 'server' | 'renderer' | 'agent' | 'system';
@@ -85,6 +97,16 @@ interface ExtensionBackendCapabilitySettings {
 
 interface ExtensionBackendCapabilityEvents {
   publish(extensionId: string, event: string, payload: unknown): Promise<unknown> | unknown;
+  emit(input: unknown): Promise<unknown> | unknown;
+  delay(input: unknown): Promise<unknown> | unknown;
+  replay(input: unknown): Promise<unknown> | unknown;
+  list(input?: unknown): Promise<unknown> | unknown;
+  listSubscriptions(input?: unknown): Promise<unknown> | unknown;
+  saveSubscription(input: unknown): Promise<unknown> | unknown;
+  deleteSubscription(input: unknown): Promise<unknown> | unknown;
+  cancelDelayed(input: unknown): Promise<unknown> | unknown;
+  prune(input: unknown): Promise<unknown> | unknown;
+  processDue(input?: unknown): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendCapabilityImage {
@@ -411,6 +433,19 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
     return request.operation === 'execute' ? ['commands:execute'] : ['commands:read'];
   }
 
+  if (request.capability === 'events') {
+    return permissionForReadWriteOperation('automations:read', 'automations:write', 'automations:readwrite', request.operation, [
+      'emit',
+      'delay',
+      'replay',
+      'saveSubscription',
+      'deleteSubscription',
+      'cancelDelayed',
+      'prune',
+      'processDue',
+    ]);
+  }
+
   if (request.capability === 'extensions') {
     return request.operation === 'setEnabled' ? ['extensions:write'] : ['extensions:read'];
   }
@@ -523,11 +558,41 @@ function dispatchLogCapability(logger: ExtensionBackendCapabilityLogger, request
 }
 
 function dispatchEventsCapability(events: ExtensionBackendCapabilityEvents, request: ExtensionBackendWorkerCapabilityRequest): unknown {
-  if (request.operation !== 'publish') {
-    throw new Error(`Unsupported events capability operation: ${request.operation}`);
+  if (request.operation === 'publish') {
+    const input = normalizeRecordInput(request.input, 'Events');
+    return events.publish(request.extensionId, requireString(input.event, 'Event name'), input.payload);
   }
-  const input = normalizeRecordInput(request.input, 'Events');
-  return events.publish(request.extensionId, requireString(input.event, 'Event name'), input.payload);
+  if (request.operation === 'emit') {
+    return events.emit(request.input);
+  }
+  if (request.operation === 'delay') {
+    return events.delay(request.input);
+  }
+  if (request.operation === 'replay') {
+    return events.replay(request.input);
+  }
+  if (request.operation === 'list') {
+    return events.list(request.input);
+  }
+  if (request.operation === 'listSubscriptions') {
+    return events.listSubscriptions(request.input);
+  }
+  if (request.operation === 'saveSubscription') {
+    return events.saveSubscription(request.input);
+  }
+  if (request.operation === 'deleteSubscription') {
+    return events.deleteSubscription(request.input);
+  }
+  if (request.operation === 'cancelDelayed') {
+    return events.cancelDelayed(request.input);
+  }
+  if (request.operation === 'prune') {
+    return events.prune(request.input);
+  }
+  if (request.operation === 'processDue') {
+    return events.processDue(request.input);
+  }
+  throw new Error(`Unsupported events capability operation: ${request.operation}`);
 }
 
 function dispatchCommandsCapability(
@@ -1959,7 +2024,19 @@ export function createExtensionBackendCapabilityDispatcher(
       ) => queryConversationMetadata({ ...input, namespace: input.namespace?.trim() || extensionId }),
     },
   };
-  const events = options.events ?? { publish: publishExtensionEvent };
+  const events = options.events ?? {
+    publish: publishExtensionEvent,
+    emit: emitEvent,
+    delay: delayEvent,
+    replay: replayEvent,
+    list: listEvents,
+    listSubscriptions,
+    saveSubscription,
+    deleteSubscription,
+    cancelDelayed: cancelDelayedEvent,
+    prune: pruneEvents,
+    processDue: processDueEvents,
+  };
   const extensions = options.extensions ?? {
     listActions: () =>
       listExtensionInstallSummaries()

@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 
 import type { SqliteDatabase } from '@neon-pilot/core';
 
+import { loadDaemonConfig } from '../config.js';
 import { resolveDaemonPaths } from '../paths.js';
 import { resolveRuntimeDbPath } from '../runs/store.js';
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
@@ -314,7 +315,7 @@ export function closeEventBusDbs(): void {
 }
 
 export function getEventBusDbPath(stateRoot?: string): string {
-  return resolveRuntimeDbPath(stateRoot ?? resolveDaemonPaths().root);
+  return resolveRuntimeDbPath(stateRoot ?? resolveDaemonPaths(loadDaemonConfig().ipc.socketPath).root);
 }
 
 function rowToSubscription(row: EventBusSubscriptionRow): EventBusSubscription {
