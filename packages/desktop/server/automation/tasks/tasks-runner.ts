@@ -1,7 +1,9 @@
+import { spawn } from 'child_process';
 import { createWriteStream, mkdirSync, type WriteStream } from 'fs';
 import { join } from 'path';
 
 import { loadDaemonConfig } from '../../config.js';
+import { buildBackgroundAgentArgv } from '../../daemon/background-run-agent.js';
 import { resolveCompanionRuntime } from '../../daemon/companion/runtime.js';
 import type { CompanionRuntime } from '../../daemon/companion/types.js';
 import type { ParsedTaskDefinition } from './tasks-parser.js';
@@ -360,6 +362,122 @@ async function waitForConversationCompletion(input: {
   };
 }
 
+async function runTaskWithStandaloneAgent(input: {
+  task: RunnableTaskDefinition;
+  startedAt: string;
+  logPath: string;
+  stream: WriteStream;
+  capture: CapturedOutputBuffer;
+  signal?: AbortSignal;
+}): Promise<TaskRunResult> {
+  const { task, startedAt, logPath, stream, capture, signal } = input;
+  const argv = buildBackgroundAgentArgv({
+    prompt: task.prompt,
+    ...(task.modelRef ? { model: task.modelRef } : {}),
+    ...(task.threadMode === 'none' || !task.threadSessionFile ? { noSession: true } : {}),
+  });
+  argv.push('--cwd', task.cwd ?? process.cwd());
+  if (task.threadSessionFile && task.threadMode !== 'none') {
+    argv.push('--session-file', task.threadSessionFile);
+  }
+
+  writeLine(stream, '# mode=standalone-agent-runner');
+  if (task.threadSessionFile && task.threadMode !== 'none') {
+    writeLine(stream, `# sessionFile=${task.threadSessionFile}`);
+  }
+  writeLine(stream, `# command=${argv.map((part) => JSON.stringify(part)).join(' ')}`);
+  writeLine(stream, '');
+
+  if (signal?.aborted) {
+    const endedAt = new Date().toISOString();
+    return {
+      success: false,
+      startedAt,
+      endedAt,
+      exitCode: 1,
+      signal: null,
+      timedOut: false,
+      cancelled: true,
+      logPath,
+      error: 'Task run cancelled before dispatch',
+      outputText: capture.value(),
+    };
+  }
+
+  return await new Promise<TaskRunResult>((resolve) => {
+    let settled = false;
+    let timedOut = false;
+    let cancelled = false;
+    const timers: { timeout?: NodeJS.Timeout } = {};
+
+    const finish = (details: { exitCode: number | null; signal: NodeJS.Signals | null; error?: string }) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timers.timeout) clearTimeout(timers.timeout);
+      signal?.removeEventListener('abort', onAbort);
+      const endedAt = new Date().toISOString();
+      const exitCode = details.exitCode ?? (details.signal ? 1 : 0);
+      const error = details.error ?? (exitCode === 0 ? undefined : `Standalone agent exited with code ${exitCode}.`);
+      resolve({
+        success: exitCode === 0 && !cancelled && !timedOut,
+        startedAt,
+        endedAt,
+        exitCode,
+        signal: details.signal,
+        timedOut,
+        cancelled,
+        logPath,
+        ...(error ? { error } : {}),
+        outputText: capture.value(),
+      });
+    };
+
+    const child = spawn(argv[0] as string, argv.slice(1), {
+      cwd: task.cwd ?? process.cwd(),
+      env: {
+        ...process.env,
+        ELECTRON_RUN_AS_NODE: '1',
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    const onAbort = () => {
+      cancelled = true;
+      child.kill('SIGTERM');
+    };
+
+    signal?.addEventListener('abort', onAbort, { once: true });
+    timers.timeout = setTimeout(() => {
+      timedOut = true;
+      child.kill('SIGTERM');
+    }, task.timeoutSeconds * 1000);
+
+    child.stdout?.on('data', (chunk: Buffer | string) => {
+      const text = chunk.toString();
+      stream.write(text);
+      capture.append(text);
+    });
+    child.stderr?.on('data', (chunk: Buffer | string) => {
+      const text = chunk.toString();
+      stream.write(text);
+      capture.append(text);
+    });
+    child.once('error', (error) => finish({ exitCode: 1, signal: null, error: error.message }));
+    child.once('close', (code, closeSignal) => {
+      const error = cancelled
+        ? 'Task run cancelled'
+        : timedOut
+          ? `Task timed out after ${task.timeoutSeconds}s`
+          : code === 0
+            ? undefined
+            : `Standalone agent exited with code ${code ?? 1}.`;
+      finish({ exitCode: code, signal: closeSignal, error });
+    });
+  });
+}
+
 export async function runTaskInIsolatedPi(request: TaskRunRequest): Promise<TaskRunResult> {
   const startedAt = new Date().toISOString();
   const logDir = join(request.runsRoot, sanitizePathSegment(request.task.id));
@@ -381,7 +499,6 @@ export async function runTaskInIsolatedPi(request: TaskRunRequest): Promise<Task
   writeLine(stream, `# profile=${request.task.profile}`);
   writeLine(stream, `# attempt=${request.attempt}`);
   writeLine(stream, `# startedAt=${startedAt}`);
-  writeLine(stream, '# mode=conversation-runtime');
   writeLine(stream, '');
 
   try {
@@ -405,9 +522,18 @@ export async function runTaskInIsolatedPi(request: TaskRunRequest): Promise<Task
 
     const runtime = await resolveCompanionRuntime(loadDaemonConfig());
     if (!runtime) {
-      throw new Error('Conversation runtime unavailable; scheduled automations require the Neon Pilot backend runtime.');
+      result = await runTaskWithStandaloneAgent({
+        task: request.task,
+        startedAt,
+        logPath,
+        stream,
+        capture,
+        signal: request.signal,
+      });
+      return result;
     }
 
+    writeLine(stream, '# mode=conversation-runtime');
     const conversationId = await resolveTaskConversation(runtime, request.task);
     writeLine(stream, `# conversation=${conversationId}`);
 

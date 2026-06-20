@@ -20,6 +20,7 @@ import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 interface RunnerArgs {
   prompt: string;
   cwd: string;
+  sessionFile?: string;
   sessionDir?: string;
   continueSession?: boolean;
   noSession?: boolean;
@@ -52,6 +53,10 @@ function parseArgs(argv: string[]): RunnerArgs {
         break;
       case '--session-dir':
         parsed.sessionDir = readFlagValue(argv, index, arg);
+        index += 1;
+        break;
+      case '--session-file':
+        parsed.sessionFile = readFlagValue(argv, index, arg);
         index += 1;
         break;
       case '--continue':
@@ -87,6 +92,7 @@ function parseArgs(argv: string[]): RunnerArgs {
   return {
     prompt: parsed.prompt.trim(),
     cwd: parsed.cwd?.trim() || process.cwd(),
+    ...(parsed.sessionFile?.trim() ? { sessionFile: parsed.sessionFile.trim() } : {}),
     ...(parsed.sessionDir?.trim() ? { sessionDir: parsed.sessionDir.trim() } : {}),
     ...(parsed.continueSession === true ? { continueSession: true } : {}),
     ...(parsed.noSession === true ? { noSession: true } : {}),
@@ -188,9 +194,11 @@ export async function main(): Promise<void> {
 
   const sessionManager = args.noSession
     ? SessionManager.inMemory(args.cwd)
-    : args.continueSession && args.sessionDir
-      ? SessionManager.continueRecent(args.cwd, args.sessionDir)
-      : SessionManager.create(args.cwd, args.sessionDir);
+    : args.sessionFile
+      ? SessionManager.open(args.sessionFile, args.sessionDir, args.cwd)
+      : args.continueSession && args.sessionDir
+        ? SessionManager.continueRecent(args.cwd, args.sessionDir)
+        : SessionManager.create(args.cwd, args.sessionDir);
 
   const parentSessionFile = args.noSession || args.continueSession ? undefined : readParentSessionFile();
   if (parentSessionFile) {

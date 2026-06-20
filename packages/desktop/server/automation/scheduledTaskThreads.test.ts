@@ -6,7 +6,11 @@ const daemon = vi.hoisted(() => ({
   resolveAutomationThreadTitle: vi.fn(),
   setStoredAutomationThreadBinding: vi.fn(),
 }));
-const conversationService = vi.hoisted(() => ({ readConversationSessionMeta: vi.fn(), resolveConversationSessionFile: vi.fn() }));
+const conversationService = vi.hoisted(() => ({
+  readConversationSessionMeta: vi.fn(),
+  readConversationSessionMetaByFile: vi.fn(),
+  resolveConversationSessionFile: vi.fn(),
+}));
 
 vi.mock('@neon-pilot/daemon', () => daemon);
 vi.mock('../conversations/conversationService.js', () => conversationService);
@@ -22,6 +26,7 @@ describe('scheduledTaskThreads', () => {
     vi.clearAllMocks();
     conversationService.resolveConversationSessionFile.mockReturnValue('/session.json');
     conversationService.readConversationSessionMeta.mockReturnValue({ title: 'Planning', cwd: '/repo' });
+    conversationService.readConversationSessionMetaByFile.mockReturnValue({ title: 'Explicit thread', cwd: '/repo' });
     daemon.resolveAutomationThreadTitle.mockReturnValue('Dedicated thread');
   });
 
@@ -41,6 +46,29 @@ describe('scheduledTaskThreads', () => {
 
     expect(
       resolveScheduledTaskThreadBinding({ threadMode: 'existing', threadConversationId: 'conv-1', threadSessionFile: ' /explicit.json ' }),
+    ).toEqual({
+      mode: 'existing',
+      conversationId: 'conv-1',
+      sessionFile: '/explicit.json',
+    });
+    expect(conversationService.readConversationSessionMetaByFile).toHaveBeenCalledWith('/explicit.json');
+  });
+
+  it('uses explicit session files without requiring conversation service lookup', () => {
+    conversationService.resolveConversationSessionFile.mockImplementation(() => {
+      throw new Error('conversation lookup should not be used');
+    });
+    conversationService.readConversationSessionMeta.mockImplementation(() => {
+      throw new Error('conversation metadata should not be used');
+    });
+
+    expect(
+      resolveScheduledTaskThreadBinding({
+        threadMode: 'existing',
+        threadConversationId: 'conv-1',
+        threadSessionFile: ' /explicit.json ',
+        cwd: '/repo',
+      }),
     ).toEqual({
       mode: 'existing',
       conversationId: 'conv-1',

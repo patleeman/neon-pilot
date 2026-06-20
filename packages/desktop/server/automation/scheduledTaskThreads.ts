@@ -7,7 +7,11 @@ import {
   type StoredAutomation,
 } from '@neon-pilot/daemon';
 
-import { readConversationSessionMeta, resolveConversationSessionFile } from '../conversations/conversationService.js';
+import {
+  readConversationSessionMeta,
+  readConversationSessionMetaByFile,
+  resolveConversationSessionFile,
+} from '../conversations/conversationService.js';
 
 export interface ScheduledTaskThreadInput {
   threadMode?: string | null;
@@ -51,7 +55,7 @@ export function resolveScheduledTaskThreadBinding(input: ScheduledTaskThreadInpu
     throw new Error('Selected thread was not found.');
   }
 
-  const sessionMeta = readConversationSessionMeta(conversationId);
+  const sessionMeta = sessionFile ? readConversationSessionMetaByFile(sessionFile) : readConversationSessionMeta(conversationId);
   const expectedCwd = readOptionalString(input.cwd ?? undefined);
   if (expectedCwd && sessionMeta?.cwd && sessionMeta.cwd !== expectedCwd) {
     throw new Error('Selected thread must use the same working directory as the automation.');

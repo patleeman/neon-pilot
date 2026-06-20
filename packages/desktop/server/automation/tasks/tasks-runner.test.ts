@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events';
 import { existsSync, mkdtempSync, readFileSync, statSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -10,6 +11,11 @@ import type { RunnableTaskDefinition } from './tasks-runner.js';
 const mocks = vi.hoisted(() => ({
   resolveCompanionRuntime: vi.fn(),
   loadDaemonConfig: vi.fn(),
+  spawn: vi.fn(),
+}));
+
+vi.mock('child_process', () => ({
+  spawn: mocks.spawn,
 }));
 
 vi.mock('../../daemon/companion/runtime.js', () => ({
@@ -135,6 +141,7 @@ beforeEach(() => {
   vi.useRealTimers();
   vi.clearAllMocks();
   mocks.loadDaemonConfig.mockReturnValue({});
+  mocks.spawn.mockReset();
 });
 
 afterEach(async () => {
@@ -235,7 +242,7 @@ describe('runTaskInIsolatedPi', () => {
     mocks.resolveCompanionRuntime.mockResolvedValue(runtime);
 
     const result = await runTaskInIsolatedPi({
-      task: createTask(),
+      task: createTask({ cwd: '/repo' }),
       attempt: 1,
       runsRoot,
     });
@@ -276,21 +283,44 @@ describe('runTaskInIsolatedPi', () => {
     );
   });
 
-  it('fails clearly when the backend conversation runtime is unavailable', async () => {
+  it('falls back to the standalone agent runner when the backend conversation runtime is unavailable', async () => {
     const runsRoot = createTempDir('tasks-runner-runs-');
     mocks.resolveCompanionRuntime.mockResolvedValue(null);
+    mocks.spawn.mockImplementation(() => {
+      const child = new EventEmitter() as EventEmitter & {
+        stdout: EventEmitter;
+        stderr: EventEmitter;
+        kill: ReturnType<typeof vi.fn>;
+      };
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      child.kill = vi.fn();
+      queueMicrotask(() => {
+        child.stdout.emit('data', 'standalone done\n');
+        child.emit('close', 0, null);
+      });
+      return child;
+    });
 
     const result = await runTaskInIsolatedPi({
-      task: createTask(),
+      task: createTask({ cwd: '/repo' }),
       attempt: 1,
       runsRoot,
     });
 
     expect(result).toMatchObject({
-      success: false,
-      exitCode: 1,
-      error: 'Conversation runtime unavailable; scheduled automations require the Neon Pilot backend runtime.',
+      success: true,
+      exitCode: 0,
+      outputText: 'standalone done',
     });
+    expect(mocks.spawn).toHaveBeenCalledWith(
+      process.execPath,
+      expect.arrayContaining(['--prompt', 'Run nightly checks', '--cwd', '/repo', '--session-file', '/sessions/nightly.jsonl']),
+      expect.objectContaining({ cwd: '/repo', env: expect.objectContaining({ ELECTRON_RUN_AS_NODE: '1' }) }),
+    );
+    const log = readFileSync(result.logPath, 'utf-8');
+    expect(log).toContain('# mode=standalone-agent-runner');
+    expect(log).toContain('# sessionFile=/sessions/nightly.jsonl');
   });
 
   it('returns cancellation result when signal is already aborted before dispatch', async () => {
