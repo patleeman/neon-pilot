@@ -504,6 +504,14 @@ function toneTextClass(tone: ActivityTone) {
   }
 }
 
+function statusTone(status: string, fallback: ActivityTone): ActivityTone {
+  if (status === 'Done') return 'success';
+  if (status === 'Failed') return 'danger';
+  if (status === 'Waiting') return 'warning';
+  if (status === 'No handler' || status === 'Off') return 'muted';
+  return fallback;
+}
+
 function humanizeToken(value: string) {
   const cleaned = value
     .replace(/^subscription:/, '')
@@ -990,6 +998,7 @@ function ActivityTimeline({
         {events.map((event) => {
           const selected = event.id === selectedId;
           const exactTime = event.absoluteTime ? new Date(event.absoluteTime).toLocaleString() : 'Pending';
+          const displayTone = statusTone(event.status, event.tone);
           return (
             <div
               key={event.id}
@@ -1028,8 +1037,8 @@ function ActivityTimeline({
                 <div className="truncate text-[10px] uppercase tracking-wide text-dim">{event.primaryUsedByKind}</div>
               </div>
               <div className="flex items-center gap-1.5 text-[12px]">
-                <span className={cx('h-2 w-2 rounded-full border', toneDotClass(event.tone))} />
-                <span className={toneTextClass(event.tone)}>{event.status}</span>
+                <span className={cx('h-2 w-2 rounded-full border', toneDotClass(displayTone))} />
+                <span className={toneTextClass(displayTone)}>{event.status}</span>
               </div>
             </div>
           );
@@ -1075,6 +1084,7 @@ function ActivityInspector({
 
   const replayBusyKey = event.replayMode === 'event-bus' ? `replay:${event.id}` : event.taskId ? `run:${event.taskId}` : null;
   const actionBusy = busy === replayBusyKey || (event.taskId ? busy === `pause:${event.taskId}` : false);
+  const displayTone = statusTone(event.status, event.tone);
   return (
     <aside className="flex h-full min-h-0 w-[20rem] shrink-0 flex-col border-l border-border-subtle/70 bg-background/55">
       <div className="border-b border-border-subtle/70 px-4 py-4">
@@ -1082,8 +1092,8 @@ function ActivityInspector({
         <h2 className="mt-1 break-words text-[18px] font-semibold leading-tight text-primary">{event.displayName}</h2>
         <div className="mt-1 truncate font-mono text-[11px] text-dim">{event.technicalName}</div>
         <div className="mt-3 flex items-center gap-2 text-[12px]">
-          <span className={cx('h-2.5 w-2.5 rounded-full border', toneDotClass(event.tone))} />
-          <span className={toneTextClass(event.tone)}>{event.status}</span>
+          <span className={cx('h-2.5 w-2.5 rounded-full border', toneDotClass(displayTone))} />
+          <span className={toneTextClass(displayTone)}>{event.status}</span>
           <span className="text-dim">·</span>
           <span className="text-secondary">{event.relativeTime}</span>
         </div>
