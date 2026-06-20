@@ -1129,6 +1129,7 @@ const KNOWN_EXTENSION_PERMISSIONS = new Set<string>(EXTENSION_PERMISSIONS);
 const LEGACY_EXTENSION_PERMISSION_ALIASES = new Map<string, (typeof EXTENSION_PERMISSIONS)[number]>([
   ['shell:exec', 'shell:execute'],
   ['browser:write', 'browser:control'],
+  ['network:write', 'network:read'],
 ]);
 
 function normalizeExtensionPermissions(permissions: unknown): (typeof EXTENSION_PERMISSIONS)[number][] {

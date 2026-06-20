@@ -410,9 +410,9 @@ describe('extension registry', () => {
         schemaVersion: 2,
         id: 'legacy-ext',
         name: 'Legacy Ext',
-        permissions: ['shell:exec', 'browser:write'],
+        permissions: ['shell:exec', 'browser:write', 'network:write'],
       }).permissions,
-    ).toEqual(['shell:execute', 'browser:control']);
+    ).toEqual(['shell:execute', 'browser:control', 'network:read']);
 
     expect(() =>
       parseExtensionManifest({
