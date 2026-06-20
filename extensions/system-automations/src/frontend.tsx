@@ -102,10 +102,13 @@ export interface AutomationActivityEvent {
   displayName: string;
   fromName: string;
   fromKind: string;
+  fromConversationId?: string;
+  fromSubscriptionId?: string;
   usedByNames: string[];
   usedByKinds: string[];
   primaryUsedByName: string;
   primaryUsedByKind: string;
+  primaryUsedBySubscriptionId?: string;
   technicalName: string;
   payload?: Record<string, unknown>;
   reactionStatus: string;
@@ -150,6 +153,11 @@ interface EventBusSubscriptionSummary {
   action: EventBusActionSummary;
   maxReactionsPerMinute?: number;
   updatedAt?: string;
+}
+
+interface ActivityActorLookup {
+  conversations: Map<string, ConversationOption>;
+  subscriptions: Map<string, EventBusSubscriptionSummary>;
 }
 
 const EDITOR_TOC_ITEMS: Array<{ id: EditorSectionId; label: string; summary: string }> = [
@@ -538,6 +546,55 @@ function humanizeActorName(value: string) {
   return humanizeToken(value);
 }
 
+function normalizedActorId(value: string) {
+  return value.replace(/^(subscription|script|agent|thread|conversation|session):/, '').trim();
+}
+
+function stringMetadataValue(metadata: Record<string, unknown> | undefined, keys: string[]) {
+  if (!metadata) return undefined;
+  for (const key of keys) {
+    const value = metadata[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+function resolveActivityActor(source: string, metadata: Record<string, unknown> | undefined, lookup: ActivityActorLookup) {
+  const normalizedSource = normalizedActorId(source);
+  const conversationId =
+    stringMetadataValue(metadata, ['conversationId', 'threadConversationId', 'sessionId', 'threadId']) ??
+    (source.startsWith('thread:') || source.startsWith('conversation:') || source.startsWith('session:')
+      ? normalizedSource
+      : lookup.conversations.has(normalizedSource)
+        ? normalizedSource
+        : undefined);
+  const subscriptionId =
+    stringMetadataValue(metadata, ['subscriptionId', 'handlerId']) ??
+    (source.startsWith('subscription:') ? normalizedSource : lookup.subscriptions.has(normalizedSource) ? normalizedSource : undefined);
+  if (conversationId) {
+    return {
+      name: lookup.conversations.get(conversationId)?.title ?? humanizeActorName(conversationId),
+      kind: 'Session',
+      conversationId,
+      subscriptionId: undefined,
+    };
+  }
+  if (subscriptionId) {
+    return {
+      name: lookup.subscriptions.get(subscriptionId)?.name ?? humanizeActorName(subscriptionId),
+      kind: 'Handler',
+      conversationId: undefined,
+      subscriptionId,
+    };
+  }
+  return {
+    name: humanizeActorName(source),
+    kind: actorKindFromSource(source),
+    conversationId: undefined,
+    subscriptionId: undefined,
+  };
+}
+
 function actorKindFromSource(value: string) {
   if (!value) return 'Unknown';
   if (value === 'scheduler') return 'Schedule';
@@ -607,6 +664,18 @@ function activitySearchText(event: AutomationActivityEvent) {
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
+}
+
+function describeEventBusAction(action: EventBusActionSummary, conversations: Map<string, ConversationOption>) {
+  if (action.type === 'run_task') return `Run scheduled publisher ${action.taskId}`;
+  if (action.type === 'start_agent') return 'Start agent';
+  if (action.type === 'start_thread') {
+    return action.conversationId
+      ? `Open session ${conversations.get(action.conversationId)?.title ?? action.conversationId}`
+      : 'Start session';
+  }
+  if (action.type === 'run_script') return `Run script ${action.command}`;
+  return `Publish ${humanizeEventName(action.eventType)}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -727,7 +796,7 @@ function toneFromReactionStatus(status: string): ActivityTone {
   return 'success';
 }
 
-function buildEventBusActivityEvents(events: EventBusEventSummary[]): AutomationActivityEvent[] {
+function buildEventBusActivityEvents(events: EventBusEventSummary[], lookup: ActivityActorLookup): AutomationActivityEvent[] {
   return events.map((event) => {
     const firstReaction = event.reactions?.[0];
     const reactions = event.reactions ?? [];
@@ -744,6 +813,8 @@ function buildEventBusActivityEvents(events: EventBusEventSummary[]): Automation
     const matchingSubscriptionIds = reactions.map((reaction) => reaction.subscriptionId).filter(Boolean);
     const usedByNames = reactions.map((reaction) => humanizeActorName(reaction.subscriptionName)).filter(Boolean);
     const usedByKinds = reactions.map((reaction) => actorKindFromAction(reaction.actionType)).filter(Boolean);
+    const primaryUsedBySubscriptionId = matchingSubscriptionIds[0];
+    const sourceActor = resolveActivityActor(event.source, event.metadata, lookup);
     const primaryUsedByName =
       usedByNames.length === 0 ? '-' : usedByNames.length === 1 ? usedByNames[0] : `${usedByNames[0]} +${usedByNames.length - 1}`;
     const primaryUsedByKind =
@@ -764,12 +835,15 @@ function buildEventBusActivityEvents(events: EventBusEventSummary[]): Automation
       matches: reactions.length,
       reactionKind,
       displayName: humanizeEventName(event.type),
-      fromName: humanizeActorName(event.source),
-      fromKind: actorKindFromSource(event.source),
+      fromName: sourceActor.name,
+      fromKind: sourceActor.kind,
+      fromConversationId: sourceActor.conversationId,
+      fromSubscriptionId: sourceActor.subscriptionId,
       usedByNames,
       usedByKinds,
       primaryUsedByName,
       primaryUsedByKind,
+      primaryUsedBySubscriptionId,
       technicalName: event.type,
       payload: event.payload,
       reactionStatus,
@@ -968,11 +1042,15 @@ function ActivityTimeline({
   selectedId,
   onSelect,
   onOpenEditor,
+  onOpenConversation,
+  onInspectHandler,
 }: {
   events: AutomationActivityEvent[];
   selectedId: string | null;
   onSelect: (eventId: string) => void;
   onOpenEditor: (taskId: string) => void;
+  onOpenConversation: (conversationId: string) => void;
+  onInspectHandler: (eventId: string) => void;
 }) {
   if (events.length === 0) {
     return (
@@ -1029,13 +1107,45 @@ function ActivityTimeline({
                 <div className="truncate font-mono text-[10px] text-dim">{event.technicalName}</div>
               </div>
               <div className="min-w-0">
-                <div className="truncate text-[12px] text-secondary">{event.fromName}</div>
+                {event.fromConversationId || event.fromSubscriptionId ? (
+                  <button
+                    type="button"
+                    className="block max-w-full truncate text-left text-[12px] text-secondary underline-offset-2 hover:text-primary hover:underline"
+                    title={event.fromConversationId ? 'Open session' : 'Inspect handler'}
+                    onClick={(clickEvent) => {
+                      clickEvent.stopPropagation();
+                      if (event.fromConversationId) {
+                        onOpenConversation(event.fromConversationId);
+                        return;
+                      }
+                      onInspectHandler(event.id);
+                    }}
+                  >
+                    {event.fromName}
+                  </button>
+                ) : (
+                  <div className="truncate text-[12px] text-secondary">{event.fromName}</div>
+                )}
                 <div className="truncate text-[10px] uppercase tracking-wide text-dim">{event.fromKind}</div>
               </div>
               <div className="min-w-0">
-                <div className={cx('truncate text-[12px]', event.primaryUsedByName === '-' ? 'text-dim' : 'text-secondary')}>
-                  {event.primaryUsedByName}
-                </div>
+                {event.primaryUsedBySubscriptionId ? (
+                  <button
+                    type="button"
+                    className="block max-w-full truncate text-left text-[12px] text-secondary underline-offset-2 hover:text-primary hover:underline"
+                    title="Inspect handler"
+                    onClick={(clickEvent) => {
+                      clickEvent.stopPropagation();
+                      onInspectHandler(event.id);
+                    }}
+                  >
+                    {event.primaryUsedByName}
+                  </button>
+                ) : (
+                  <div className={cx('truncate text-[12px]', event.primaryUsedByName === '-' ? 'text-dim' : 'text-secondary')}>
+                    {event.primaryUsedByName}
+                  </div>
+                )}
                 <div className="truncate text-[10px] uppercase tracking-wide text-dim">{event.primaryUsedByKind}</div>
               </div>
               <div className="flex items-center gap-1.5 text-[12px]">
@@ -1054,25 +1164,32 @@ function ActivityInspector({
   event,
   busy,
   subscriptions,
+  conversations,
   onReemit,
   onCreateReaction,
   onToggleSubscription,
   onPausePublisher,
   onOpenThread,
+  onOpenConversation,
 }: {
   event: AutomationActivityEvent | null;
   busy: string | null;
   subscriptions: EventBusSubscriptionSummary[];
+  conversations: Map<string, ConversationOption>;
   onReemit: (event: AutomationActivityEvent) => void;
   onCreateReaction: (taskId: string) => void;
   onToggleSubscription: (subscription: EventBusSubscriptionSummary) => void;
   onPausePublisher: (taskId: string) => void;
   onOpenThread: (taskId: string) => void;
+  onOpenConversation: (conversationId: string) => void;
 }) {
   const matchingSubscriptions = event
     ? subscriptions.filter((subscription) => event.matchingSubscriptionIds.includes(subscription.id))
     : [];
   const primarySubscription = matchingSubscriptions[0];
+  const sourceSubscription = event?.fromSubscriptionId
+    ? subscriptions.find((subscription) => subscription.id === event.fromSubscriptionId)
+    : undefined;
 
   if (!event) {
     return (
@@ -1102,7 +1219,17 @@ function ActivityInspector({
         <div className="mt-4 grid grid-cols-[5.5rem_minmax(0,1fr)] gap-y-2 text-[12px]">
           <span className="text-dim">Emitted by</span>
           <span className="min-w-0">
-            <span className="block break-words text-secondary">{event.fromName}</span>
+            {event.fromConversationId ? (
+              <button
+                type="button"
+                className="block break-words text-left text-secondary underline-offset-2 hover:text-primary hover:underline"
+                onClick={() => onOpenConversation(event.fromConversationId as string)}
+              >
+                {event.fromName}
+              </button>
+            ) : (
+              <span className="block break-words text-secondary">{event.fromName}</span>
+            )}
             <span className="block text-[10px] uppercase tracking-wide text-dim">{event.fromKind}</span>
           </span>
           <span className="text-dim">Handled by</span>
@@ -1126,6 +1253,30 @@ function ActivityInspector({
             ))}
           {Object.keys(event.payload ?? {}).length === 0 ? <div className="text-[12px] text-secondary">No details.</div> : null}
         </div>
+        {sourceSubscription || primarySubscription ? (
+          <div className="mt-5 grid gap-4 border-t border-border-subtle/70 pt-4">
+            {sourceSubscription ? (
+              <div>
+                <div className="text-[11px] font-medium uppercase text-dim">Emitter</div>
+                <div className="mt-2 grid gap-1.5 text-[12px]">
+                  <div className="font-medium text-primary">{sourceSubscription.name}</div>
+                  <div className="text-secondary">{describeEventBusAction(sourceSubscription.action, conversations)}</div>
+                  <div className="font-mono text-[11px] text-dim">{sourceSubscription.pattern}</div>
+                </div>
+              </div>
+            ) : null}
+            {primarySubscription ? (
+              <div>
+                <div className="text-[11px] font-medium uppercase text-dim">Handler</div>
+                <div className="mt-2 grid gap-1.5 text-[12px]">
+                  <div className="font-medium text-primary">{primarySubscription.name}</div>
+                  <div className="text-secondary">{describeEventBusAction(primarySubscription.action, conversations)}</div>
+                  <div className="font-mono text-[11px] text-dim">{primarySubscription.pattern}</div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="border-t border-border-subtle/70 px-4 py-3">
@@ -1484,6 +1635,10 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     [tasks],
   );
 
+  const openConversation = useCallback((conversationId: string) => {
+    window.location.href = `/conversations/${encodeURIComponent(conversationId)}`;
+  }, []);
+
   const pickCwd = useCallback(async () => {
     try {
       const result = await (
@@ -1594,7 +1749,18 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const allPastDueTasks = useMemo(() => sortPastDueTasks(tasks.filter((task) => isPastDueOneTimeTask(task, nowMs))), [tasks, nowMs]);
   const pastDueLabel = allPastDueTasks.length === 1 ? '1 past due' : `${allPastDueTasks.length} past due`;
 
-  const activityEvents = useMemo(() => buildEventBusActivityEvents(eventBusEvents), [eventBusEvents]);
+  const conversationLookup = useMemo(
+    () => new Map(conversationOptions.map((conversation) => [conversation.id, conversation])),
+    [conversationOptions],
+  );
+  const subscriptionLookup = useMemo(
+    () => new Map(eventBusSubscriptions.map((subscription) => [subscription.id, subscription])),
+    [eventBusSubscriptions],
+  );
+  const activityEvents = useMemo(
+    () => buildEventBusActivityEvents(eventBusEvents, { conversations: conversationLookup, subscriptions: subscriptionLookup }),
+    [conversationLookup, eventBusEvents, subscriptionLookup],
+  );
   const fromFilterOptions = useMemo(() => optionValues(activityEvents.map((event) => event.fromName)), [activityEvents]);
   const usedByFilterOptions = useMemo(
     () => optionValues(activityEvents.flatMap((event) => (event.usedByNames.length > 0 ? event.usedByNames : ['-']))),
@@ -2220,12 +2386,15 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                   const task = tasks.find((candidate) => candidate.id === taskId);
                   if (task) openEditor(task);
                 }}
+                onOpenConversation={openConversation}
+                onInspectHandler={setSelectedActivityId}
               />
             </main>
             <ActivityInspector
               event={selectedActivity}
               busy={busy}
               subscriptions={eventBusSubscriptions}
+              conversations={conversationLookup}
               onReemit={(event) => void reemitActivityEvent(event)}
               onCreateReaction={(taskId) => {
                 const task = tasks.find((candidate) => candidate.id === taskId);
@@ -2234,6 +2403,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
               onToggleSubscription={(subscription) => void toggleSubscription(subscription)}
               onPausePublisher={(taskId) => void pausePublisher(taskId)}
               onOpenThread={openThreadForTask}
+              onOpenConversation={openConversation}
             />
           </div>
         )}

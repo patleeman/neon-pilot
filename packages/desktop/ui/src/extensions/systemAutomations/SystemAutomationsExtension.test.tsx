@@ -456,6 +456,100 @@ describe('AutomationsPage', () => {
     expect(pa.automations.run).not.toHaveBeenCalled();
   });
 
+  it('renders handler names instead of source ids and shows handler details', async () => {
+    const pa = createPa();
+    vi.mocked(pa.extension.invoke).mockImplementation(async (_actionId: string, input?: unknown) => {
+      const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
+      if (action === 'list') {
+        return {
+          details: {
+            events: [
+              {
+                id: 'evt-approved',
+                type: 'demo.order.approved',
+                source: 'sub-approve-order',
+                occurredAt: '2026-05-08T00:00:00.000Z',
+                reactions: [
+                  {
+                    id: 'reaction-fulfillment',
+                    subscriptionId: 'sub-request-fulfillment',
+                    subscriptionName: 'Request fulfillment',
+                    actionType: 'publish_event',
+                    status: 'completed',
+                  },
+                ],
+              },
+            ],
+          },
+        };
+      }
+      if (action === 'list_subscriptions') {
+        return {
+          details: {
+            subscriptions: [
+              {
+                id: 'sub-approve-order',
+                name: 'Approve order',
+                pattern: 'demo.order.scored',
+                enabled: true,
+                action: { type: 'publish_event', eventType: 'demo.order.approved' },
+              },
+              {
+                id: 'sub-request-fulfillment',
+                name: 'Request fulfillment',
+                pattern: 'demo.order.approved',
+                enabled: true,
+                action: { type: 'publish_event', eventType: 'demo.fulfillment.requested' },
+              },
+            ],
+          },
+        };
+      }
+      return {};
+    });
+
+    const { container } = await renderPage(pa);
+
+    expect(container.textContent).toContain('Approve order');
+    expect(container.textContent).toContain('Request fulfillment');
+    expect(container.textContent).toContain('Publish Fulfillment Requested');
+    expect(container.textContent).not.toContain('sub-approve-order');
+  });
+
+  it('renders session names instead of session ids for event emitters', async () => {
+    const pa = {
+      ...createPa(),
+      conversations: {
+        list: vi.fn(async () => [{ id: 'conv-order-watch', title: 'Order Watch Session' }]),
+      },
+    } as unknown as NativeExtensionClient;
+    vi.mocked(pa.extension.invoke).mockImplementation(async (_actionId: string, input?: unknown) => {
+      const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
+      if (action === 'list') {
+        return {
+          details: {
+            events: [
+              {
+                id: 'evt-session-emitted',
+                type: 'demo.order.created',
+                source: 'session:conv-order-watch',
+                occurredAt: '2026-05-08T00:00:00.000Z',
+                reactions: [],
+              },
+            ],
+          },
+        };
+      }
+      if (action === 'list_subscriptions') return { details: { subscriptions: [] } };
+      return {};
+    });
+
+    const { container } = await renderPage(pa);
+
+    expect(container.textContent).toContain('Order Watch Session');
+    expect(container.textContent).not.toContain('conv-order-watch');
+  });
+
   it('pauses the selected publisher from the inspector action', async () => {
     const update = vi.fn(async () => ({ ok: true }));
     const pa = createPa({ update });
