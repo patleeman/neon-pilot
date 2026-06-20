@@ -3074,13 +3074,14 @@ export function Sidebar() {
   }, [activeConversationId, sessions]);
 
   const handleNewConversation = useCallback(
-    (cwd?: string | null) => {
+    (cwd?: string | null, options?: { reuseEmptyConversation?: boolean }) => {
       const explicitCwd = normalizeConversationGroupCwd(cwd);
       void startNewConversation({
         navigate,
         cwd: explicitCwd,
         replace: location.pathname === DRAFT_CONVERSATION_ROUTE,
         focusComposer: true,
+        reuseEmptyConversation: options?.reuseEmptyConversation,
         existingSessions: sessions,
       });
       setDraftCwd(explicitCwd);
@@ -4043,7 +4044,7 @@ export function Sidebar() {
                     }}
                     onCreateChildItem={(item) => {
                       const cwd = typeof item.metadata?.cwd === 'string' ? item.metadata.cwd : null;
-                      void handleNewConversation(cwd);
+                      void handleNewConversation(cwd, { reuseEmptyConversation: false });
                     }}
                     onOpenItem={(item) => {
                       if (item.route) {

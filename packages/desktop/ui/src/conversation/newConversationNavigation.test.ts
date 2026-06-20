@@ -195,6 +195,28 @@ describe('startNewConversation', () => {
     expect(readConversationLayout().activeSessionId).toBe('existing-new');
   });
 
+  it('creates a fresh conversation when empty conversation reuse is disabled', async () => {
+    const navigate = vi.fn();
+
+    await startNewConversation({
+      navigate,
+      cwd: '/repo',
+      focusComposer: true,
+      reuseEmptyConversation: false,
+      existingSessions: [createSession({ id: 'existing-new', cwd: '/repo' })],
+    });
+
+    expect(apiMocks.createLiveSession).toHaveBeenCalledWith('/repo', undefined, expect.any(Object));
+    expect(navigate).toHaveBeenCalledWith('/conversations/new-conversation', {
+      replace: undefined,
+      state: {
+        focusComposer: true,
+      },
+    });
+    expect(readConversationLayout().sessionIds).toEqual(['new-conversation']);
+    expect(readConversationLayout().activeSessionId).toBe('new-conversation');
+  });
+
   it('does not reuse a conversation that already has messages', async () => {
     const navigate = vi.fn();
 

@@ -4,9 +4,9 @@ import { api } from '../client/api';
 import { ensureConversationTabOpen } from '../session/sessionTabs';
 import type { SessionMeta } from '../shared/types';
 import { normalizeConversationGroupCwd } from './conversationCwdGroups';
+import { isNeutralChatCwdPath } from './conversationCwdPresentation';
 import { markConversationInitialPromptAlreadySubmitted } from './conversationInitialState';
 import { primeCreatedConversationOpenCaches } from './conversationSessionLifecycle';
-import { isNeutralChatCwdPath } from './conversationCwdPresentation';
 import { NEW_CONVERSATION_TITLE, normalizeConversationTitle } from './conversationTitle';
 import {
   clearDraftConversationAttachments,
@@ -36,6 +36,7 @@ export interface StartDraftConversationInput {
   cwd?: string | null;
   replace?: boolean;
   focusComposer?: boolean;
+  reuseEmptyConversation?: boolean;
   initialComposerText?: string | null;
   initialPromptText?: string | null;
   existingSessions?: readonly SessionMeta[] | null;
@@ -83,7 +84,9 @@ export async function startNewConversation(input: StartDraftConversationInput): 
   const initialPromptText = input.initialPromptText?.trim() ?? input.initialComposerText?.trim() ?? '';
   const shouldFocusComposer = input.focusComposer === true && !initialPromptText;
   const reusableSession =
-    initialPromptText.length === 0 ? findReusableNewConversationForCwd(input.existingSessions, cwd) : null;
+    input.reuseEmptyConversation !== false && initialPromptText.length === 0
+      ? findReusableNewConversationForCwd(input.existingSessions, cwd)
+      : null;
 
   if (reusableSession) {
     clearDraftConversationAttachments();
