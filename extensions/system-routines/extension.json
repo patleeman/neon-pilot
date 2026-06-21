@@ -77,5 +77,5 @@
       }
     ]
   },
-  "permissions": ["storage:read", "storage:write", "agent:run", "extensions:read"]
+  "permissions": ["storage:read", "storage:write", "agent:run", "extensions:read", "ui:invalidate"]
 }
