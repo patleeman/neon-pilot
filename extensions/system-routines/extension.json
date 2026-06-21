@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "id": "system-routines",
+  "name": "Routines",
+  "packageType": "system",
+  "description": "Configure prompt routines around Neon Pilot lifecycle events.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "src/backend.ts",
+    "actions": [
+      { "id": "getState", "handler": "getState", "title": "Get routines", "worker": { "enabled": true } },
+      { "id": "saveRoutine", "handler": "saveRoutine", "title": "Save routine", "worker": { "enabled": true } },
+      { "id": "deleteRoutine", "handler": "deleteRoutine", "title": "Delete routine", "worker": { "enabled": true } },
+      { "id": "reorderRoutines", "handler": "reorderRoutines", "title": "Reorder routines", "worker": { "enabled": true } },
+      { "id": "runHook", "handler": "runHook", "title": "Run routine hook", "worker": { "enabled": true } },
+      { "id": "registerHookPoint", "handler": "registerHookPoint", "title": "Register routine hook point", "worker": { "enabled": true } },
+      { "id": "listSkills", "handler": "listSkills", "title": "List skills for routines", "worker": { "enabled": true } }
+    ]
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "open",
+        "title": "Open Routines",
+        "category": "Routines",
+        "description": "Open the Routines page.",
+        "action": "app.navigate",
+        "args": { "to": "/routines" },
+        "icon": "workflow"
+      },
+      {
+        "id": "new",
+        "title": "New Routine",
+        "category": "Routines",
+        "description": "Open Routines to add a lifecycle routine.",
+        "action": "app.navigate",
+        "args": { "to": "/routines?action=new" },
+        "icon": "workflow"
+      }
+    ],
+    "views": [
+      {
+        "id": "page",
+        "title": "Routines",
+        "location": "main",
+        "route": "/routines",
+        "placement": "primary",
+        "scope": "global",
+        "component": "RoutinesPage",
+        "icon": "workflow",
+        "activation": "on-route"
+      }
+    ],
+    "nav": [{ "id": "routines-nav", "label": "Routines", "route": "/routines", "icon": "workflow", "section": "primary" }]
+  },
+  "permissions": ["storage:read", "storage:write", "agent:run", "extensions:read"]
+}

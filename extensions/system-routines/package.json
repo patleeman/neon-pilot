@@ -1,0 +1,11 @@
+{
+  "name": "@neon-pilot/extension-system-routines",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@neon-pilot/extensions": "workspace:*",
+    "react": "workspace:*"
+  },
+  "devDependencies": {}
+}

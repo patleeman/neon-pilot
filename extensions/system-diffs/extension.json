@@ -68,5 +68,6 @@
       }
     ]
   },
-  "permissions": ["conversations:read", "storage:read", "shell:execute"]
+  "dependsOn": [{ "id": "system-routines", "optional": true }],
+  "permissions": ["conversations:read", "storage:read", "shell:execute", "extensions:read"]
 }

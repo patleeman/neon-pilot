@@ -257,6 +257,18 @@ A user-managed event-driven behavior shown in the Automations UI. Automations ma
 
 Use **automation** in product copy.
 
+### Routine
+
+A user-managed prompt workflow attached to a lifecycle event, such as before checkpointing or after a task failure. A routine contains ordered instruction, decision, or stop blocks and may continue, warn, branch, or block the lifecycle event.
+
+Use **routine** for lifecycle-bound workflows. Use **automation** for event bus and scheduled behaviors.
+
+### Lifecycle event
+
+A named moment in the product workflow where routines can run, such as Checkpoint, Before agent starts, or Scheduled task.
+
+Use **lifecycle event** for the user-visible trigger in the Routines UI. Use **hook** for extension/runtime APIs.
+
 ### Event bus
 
 The automation backbone that accepts typed events from schedules, scripts, agents, and runtime services, matches subscriptions, records durable events when requested, and dispatches reactions.

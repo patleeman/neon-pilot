@@ -124,6 +124,23 @@ describe('system-diffs backend', () => {
   });
 
   describe('save action', () => {
+    it('returns a tool error when a before-checkpoint routine blocks the save', async () => {
+      const shell = { exec: vi.fn() };
+      const extensions = {
+        callAction: vi.fn(async () => ({ blocked: true, status: 'blocked', message: 'Review found blocking issues.' })),
+      };
+
+      const result = await checkpoint({ action: 'save', message: 'msg', paths: ['src/file.ts'] }, createCtx({ shell, extensions }));
+
+      expect(result).toMatchObject({ isError: true, action: 'save', text: 'Review found blocking issues.', routineStatus: 'blocked' });
+      expect(shell.exec).not.toHaveBeenCalled();
+      expect(extensions.callAction).toHaveBeenCalledWith(
+        'system-routines',
+        'runHook',
+        expect.objectContaining({ hookId: 'checkpoint', position: 'before' }),
+      );
+    });
+
     it('does not fail when UI invalidation is unavailable', async () => {
       const shell = {
         exec: vi.fn(async ({ args }: { args: string[] }) => {
