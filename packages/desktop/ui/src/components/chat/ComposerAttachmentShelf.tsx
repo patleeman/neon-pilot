@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { setExtensionCommandContext } from '../../extensions/commands';
-import { AttachmentChip, AttachmentChipButton, IconButton, TextButton } from '../ui';
+import { AttachmentChip, AttachmentChipButton, cx, IconButton, TextButton } from '../ui';
 import {
   COMPOSER_EDIT_FIRST_DRAWING_COMMAND_EVENT,
   COMPOSER_PREVIEW_FIRST_ATTACHMENT_COMMAND_EVENT,
@@ -176,7 +176,8 @@ export function ComposerAttachmentShelf({
   onRemoveDrawingAttachment,
 }: ComposerAttachmentShelfProps) {
   const [previewImage, setPreviewImage] = useState<ComposerPreviewImage | null>(null);
-  const firstPreviewableAttachment = attachments.find((attachment) => attachment.mimeType.startsWith('image/') && Boolean(attachment.previewUrl)) ?? null;
+  const firstPreviewableAttachment =
+    attachments.find((attachment) => attachment.mimeType.startsWith('image/') && Boolean(attachment.previewUrl)) ?? null;
   const firstAttachment = attachments[0] ?? null;
   const firstDrawing = drawingAttachments[0] ?? null;
   const firstAttachmentIndex = firstAttachment ? attachments.indexOf(firstAttachment) : -1;
@@ -276,94 +277,97 @@ export function ComposerAttachmentShelf({
 
   return (
     <>
-      {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 px-1 py-2">
-          {attachments.map((file, index) => {
-            const fileName = file.name || 'Image attachment';
-            const canPreview = file.mimeType.startsWith('image/') && Boolean(file.previewUrl);
-            const summary = (
-              <>
-                <span className="shrink-0">{fileIcon(file.mimeType)}</span>
-                <span className="truncate text-secondary">{fileName}</span>
-                <span className="shrink-0 text-dim">{formatBytes(file.size)}</span>
-              </>
-            );
+      {(attachments.length > 0 || drawingAttachments.length > 0 || drawingsBusy || drawingsError) && (
+        <div className="border-b border-border-subtle/60 bg-base/20 px-4 py-3">
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {attachments.map((file, index) => {
+                const fileName = file.name || 'Image attachment';
+                const canPreview = file.mimeType.startsWith('image/') && Boolean(file.previewUrl);
+                const summary = (
+                  <>
+                    <span className="shrink-0">{fileIcon(file.mimeType)}</span>
+                    <span className="truncate text-secondary">{fileName}</span>
+                    <span className="shrink-0 text-dim">{formatBytes(file.size)}</span>
+                  </>
+                );
 
-            return (
-              <AttachmentChip key={file.localId || `${fileName}-${file.size}-${index}`} className="max-w-[220px]">
-                {canPreview ? (
-                  <AttachmentChipButton
-                    onClick={() => openAttachmentPreview(file)}
-                    className="cursor-zoom-in"
-                    title={`Preview ${fileName}`}
-                    aria-label={`Preview ${fileName}`}
-                  >
-                    {summary}
-                  </AttachmentChipButton>
-                ) : (
-                  <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1">{summary}</div>
-                )}
-                <IconButton
-                  compact
-                  onClick={() => onRemoveAttachment(index)}
-                  className="mr-1 shrink-0 leading-none"
-                  title={`Remove ${fileName}`}
-                >
-                  ×
-                </IconButton>
-              </AttachmentChip>
-            );
-          })}
+                return (
+                  <AttachmentChip key={file.localId || `${fileName}-${file.size}-${index}`} className="max-w-[220px]">
+                    {canPreview ? (
+                      <AttachmentChipButton
+                        onClick={() => openAttachmentPreview(file)}
+                        className="cursor-zoom-in"
+                        title={`Preview ${fileName}`}
+                        aria-label={`Preview ${fileName}`}
+                      >
+                        {summary}
+                      </AttachmentChipButton>
+                    ) : (
+                      <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1">{summary}</div>
+                    )}
+                    <IconButton
+                      compact
+                      onClick={() => onRemoveAttachment(index)}
+                      className="mr-1 shrink-0 leading-none"
+                      title={`Remove ${fileName}`}
+                    >
+                      ×
+                    </IconButton>
+                  </AttachmentChip>
+                );
+              })}
+            </div>
+          )}
+
+          {drawingAttachments.length > 0 && (
+            <div className={cx('flex flex-wrap gap-1.5', attachments.length > 0 && 'mt-2')}>
+              {drawingAttachments.map((attachment) => {
+                const label = buildDrawingPreviewTitle(attachment);
+                return (
+                  <AttachmentChip key={attachment.localId} size="md" className="max-w-[270px]">
+                    <AttachmentChipButton
+                      onClick={() => openDrawingPreview(attachment)}
+                      className="cursor-zoom-in px-1 hover:opacity-95"
+                      title={`Preview ${label}`}
+                      aria-label={`Preview ${label}`}
+                    >
+                      <img src={attachment.previewUrl} alt={label} className="h-7 w-9 rounded object-cover" />
+                      <div className="min-w-0">
+                        <p className="truncate text-secondary">{label}</p>
+                        <p className="text-[10px] text-dim">
+                          {attachment.attachmentId ? `#${attachment.attachmentId}` : 'new drawing'}
+                          {attachment.dirty ? ' · unsaved' : ''}
+                        </p>
+                      </div>
+                    </AttachmentChipButton>
+                    <TextButton
+                      type="button"
+                      onClick={() => onEditDrawing(attachment.localId)}
+                      tone="accent"
+                      className="text-[11px]"
+                      title={`Edit ${attachment.title}`}
+                    >
+                      edit
+                    </TextButton>
+                    <IconButton
+                      compact
+                      onClick={() => onRemoveDrawingAttachment(attachment.localId)}
+                      className="ml-0.5 shrink-0 leading-none"
+                      title={`Remove ${attachment.title}`}
+                    >
+                      ×
+                    </IconButton>
+                  </AttachmentChip>
+                );
+              })}
+            </div>
+          )}
+
+          {drawingsBusy && <div className="text-[11px] text-dim">Syncing drawings…</div>}
+          {drawingsError && <div className="text-[11px] text-danger">{drawingsError}</div>}
         </div>
       )}
-
-      {drawingAttachments.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 px-1 pt-1 pb-2">
-          {drawingAttachments.map((attachment) => {
-            const label = buildDrawingPreviewTitle(attachment);
-            return (
-              <AttachmentChip key={attachment.localId} size="md" className="max-w-[270px]">
-                <AttachmentChipButton
-                  onClick={() => openDrawingPreview(attachment)}
-                  className="cursor-zoom-in px-1 hover:opacity-95"
-                  title={`Preview ${label}`}
-                  aria-label={`Preview ${label}`}
-                >
-                  <img src={attachment.previewUrl} alt={label} className="h-7 w-9 rounded object-cover" />
-                  <div className="min-w-0">
-                    <p className="truncate text-secondary">{label}</p>
-                    <p className="text-[10px] text-dim">
-                      {attachment.attachmentId ? `#${attachment.attachmentId}` : 'new drawing'}
-                      {attachment.dirty ? ' · unsaved' : ''}
-                    </p>
-                  </div>
-                </AttachmentChipButton>
-                <TextButton
-                  type="button"
-                  onClick={() => onEditDrawing(attachment.localId)}
-                  tone="accent"
-                  className="text-[11px]"
-                  title={`Edit ${attachment.title}`}
-                >
-                  edit
-                </TextButton>
-                <IconButton
-                  compact
-                  onClick={() => onRemoveDrawingAttachment(attachment.localId)}
-                  className="ml-0.5 shrink-0 leading-none"
-                  title={`Remove ${attachment.title}`}
-                >
-                  ×
-                </IconButton>
-              </AttachmentChip>
-            );
-          })}
-        </div>
-      )}
-
-      {drawingsBusy && <div className="px-1 pt-2 text-[11px] text-dim">Syncing drawings…</div>}
-
-      {drawingsError && <div className="px-1 pt-2 text-[11px] text-danger">{drawingsError}</div>}
 
       {previewImage ? <ComposerImagePreviewModal image={previewImage} onClose={closePreview} /> : null}
     </>
