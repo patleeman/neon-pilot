@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext } from '../../app/contexts.js';
 import { ChatView } from './ChatView.js';
+import { ErrorBlock } from './TraceBlocks.js';
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
 
@@ -717,6 +718,21 @@ describe('chat view streaming disclosure', () => {
     expect(html).not.toContain('**Investigate the render path first.**');
     expect(html).not.toContain('Then patch the collapsed header.');
     expect(html).toContain('echo done');
+  });
+
+  it('explains a terminated internal step in user-facing language', () => {
+    const html = renderToStaticMarkup(
+      createElement(ErrorBlock, {
+        block: {
+          type: 'error',
+          ts: '2026-03-11T18:00:00.000Z',
+          message: 'terminated',
+        },
+      }),
+    );
+
+    expect(html).toContain('Stopped before finishing. The agent run was interrupted or cancelled.');
+    expect(html).not.toContain('>terminated<');
   });
 
   it('shows only the latest 5 internal-work steps by default and summarizes older ones above', () => {

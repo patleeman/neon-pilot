@@ -625,6 +625,16 @@ function ResumeConversationAction({
 
 // ── ErrorBlock ────────────────────────────────────────────────────────────────
 
+function presentTraceErrorMessage(message: string): string {
+  const normalized = message.trim();
+
+  if (normalized.toLowerCase() === 'terminated') {
+    return 'Stopped before finishing. The agent run was interrupted or cancelled.';
+  }
+
+  return message;
+}
+
 export const ErrorBlock = memo(function ErrorBlock({
   block,
   messageIndex,
@@ -648,13 +658,14 @@ export const ErrorBlock = memo(function ErrorBlock({
 }) {
   const blockId = typeof block.id === 'string' ? block.id.trim() || undefined : undefined;
   const replySelectionScopeProps = buildReplySelectionScopeProps(messageIndex, blockId, onSelectionGesture);
+  const message = presentTraceErrorMessage(block.message);
 
   return (
     <SurfacePanel className="border-danger/30 bg-danger/5 px-3 py-2.5 text-[12px] font-mono">
       <div className="min-w-0 space-y-2">
         <div {...replySelectionScopeProps}>
           {block.tool && <span className="text-danger/70 font-semibold">{block.tool} ·</span>}
-          <span className="text-danger/85 leading-relaxed">{block.message}</span>
+          <span className="text-danger/85 leading-relaxed">{message}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="flex-1" />
