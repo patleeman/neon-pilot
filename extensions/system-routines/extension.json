@@ -16,6 +16,7 @@
       { "id": "saveRoutine", "handler": "saveRoutine", "title": "Save routine", "worker": { "enabled": true } },
       { "id": "deleteRoutine", "handler": "deleteRoutine", "title": "Delete routine", "worker": { "enabled": true } },
       { "id": "reorderRoutines", "handler": "reorderRoutines", "title": "Reorder routines", "worker": { "enabled": true } },
+      { "id": "moveRoutine", "handler": "moveRoutine", "title": "Move routine", "worker": { "enabled": true } },
       { "id": "runHook", "handler": "runHook", "title": "Run routine hook", "worker": { "enabled": true } },
       { "id": "registerHookPoint", "handler": "registerHookPoint", "title": "Register routine hook point", "worker": { "enabled": true } },
       { "id": "listSkills", "handler": "listSkills", "title": "List skills for routines", "worker": { "enabled": true } }

@@ -1,7 +1,7 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import { Button, cx, ErrorState, LoadingState, SearchInput, Select, Textarea, TextInput, ToolbarButton } from '@neon-pilot/extensions/ui';
 import React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Routine, RoutineHookPoint, RoutineOutcome, RoutinePosition, RoutineRunRecord, RoutineType } from './types.js';
 
@@ -198,6 +198,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [showRuns, setShowRuns] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<RoutinePosition | null>(null);
+  const pointerDragIdRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -293,23 +295,79 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     [selectedHook],
   );
 
-  const reorder = useCallback(
-    async (targetId: string) => {
-      if (!dragId || dragId === targetId) return;
-      const current = hookRoutines;
-      const moving = current.find((routine) => routine.id === dragId);
-      const target = current.find((routine) => routine.id === targetId);
-      if (!moving || !target || moving.position !== target.position) return;
-      const lane = current.filter((routine) => routine.position === moving.position);
-      const without = lane.filter((routine) => routine.id !== dragId);
-      const targetIndex = without.findIndex((routine) => routine.id === targetId);
-      without.splice(targetIndex, 0, moving);
-      const result = (await pa.extension.invoke('reorderRoutines', { routineIds: without.map((routine) => routine.id) })) as StateResult;
+  const moveRoutineById = useCallback(
+    async (routineId: string, position: RoutinePosition, targetRoutineId = '') => {
+      if (!routineId || routineId === targetRoutineId) return;
+      const result = (await pa.extension.invoke('moveRoutine', { routineId, position, targetRoutineId })) as StateResult;
       setData(result);
+      const selected = result.routines.find((routine) => routine.id === selectedRoutineId);
+      if (selected) setDraft({ ...selected, outcomes: selected.outcomes.map((outcome) => ({ ...outcome })) });
       setDragId(null);
+      setDragOverPosition(null);
     },
-    [dragId, hookRoutines, pa],
+    [pa, selectedRoutineId],
   );
+
+  const moveRoutine = useCallback(
+    async (position: RoutinePosition, targetRoutineId = '') => {
+      if (!dragId) return;
+      await moveRoutineById(dragId, position, targetRoutineId);
+    },
+    [dragId, moveRoutineById],
+  );
+
+  const startPointerDrag = useCallback(
+    (event: React.PointerEvent<HTMLElement>, routineId: string) => {
+      event.preventDefault();
+      event.stopPropagation();
+      pointerDragIdRef.current = routineId;
+      setDragId(routineId);
+
+      const onPointerMove = (moveEvent: PointerEvent) => {
+        const element = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY) as HTMLElement | null;
+        const lane = element?.closest<HTMLElement>('[data-routine-lane]')?.dataset.routineLane as RoutinePosition | undefined;
+        if (lane === 'before' || lane === 'after') setDragOverPosition(lane);
+      };
+
+      const onPointerUp = (upEvent: PointerEvent) => {
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+        const routineIdToMove = pointerDragIdRef.current;
+        pointerDragIdRef.current = null;
+        const element = document.elementFromPoint(upEvent.clientX, upEvent.clientY) as HTMLElement | null;
+        const targetRoutine = element?.closest<HTMLElement>('[data-routine-id]');
+        const targetLane = element?.closest<HTMLElement>('[data-routine-lane]');
+        const position = (targetRoutine?.dataset.routinePosition ?? targetLane?.dataset.routineLane) as RoutinePosition | undefined;
+        if (routineIdToMove && (position === 'before' || position === 'after')) {
+          void moveRoutineById(routineIdToMove, position, targetRoutine?.dataset.routineId ?? '');
+          return;
+        }
+        setDragId(null);
+        setDragOverPosition(null);
+      };
+
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    },
+    [moveRoutineById],
+  );
+
+  const onDragStartRoutine = useCallback((event: React.DragEvent<HTMLDivElement>, routineId: string) => {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', routineId);
+    setDragId(routineId);
+  }, []);
+
+  const onDragOverLane = useCallback((event: React.DragEvent, position: RoutinePosition) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    setDragOverPosition(position);
+  }, []);
+
+  const onDragEndRoutine = useCallback(() => {
+    setDragId(null);
+    setDragOverPosition(null);
+  }, []);
 
   const onInstructionChange = useCallback((value: string) => {
     setDraft((current) => (current ? { ...current, instruction: value } : current));
@@ -341,18 +399,33 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const renderBlock = (routine: Routine) => (
     <div
       key={routine.id}
+      data-routine-id={routine.id}
+      data-routine-position={routine.position}
       draggable
-      onDragStart={() => setDragId(routine.id)}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={() => void reorder(routine.id)}
+      onDragStart={(event) => onDragStartRoutine(event, routine.id)}
+      onDragEnd={onDragEndRoutine}
+      onDragOver={(event) => onDragOverLane(event, routine.position)}
+      onDrop={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void moveRoutine(routine.position, routine.id);
+      }}
       onClick={() => selectRoutine(routine)}
       className={cx(
-        'overflow-hidden rounded-md border bg-surface-2 text-left',
+        'overflow-hidden rounded-md border bg-surface-2 text-left transition-colors',
+        dragId === routine.id && 'opacity-60',
         selectedRoutineId === routine.id ? 'border-accent/70 bg-accent/10' : 'border-border-subtle',
       )}
     >
       <div className="grid grid-cols-[22px_1fr_auto] gap-2 px-2 py-2">
-        <div className="cursor-grab text-dim">⋮⋮</div>
+        <button
+          type="button"
+          aria-label={`Drag ${routine.name}`}
+          className="cursor-grab text-dim active:cursor-grabbing"
+          onPointerDown={(event) => startPointerDrag(event, routine.id)}
+        >
+          ⋮⋮
+        </button>
         <div className="min-w-0">
           <div className="flex gap-2 text-[11px] text-secondary">
             <span className={routine.type === 'decision' ? 'text-purple-300' : routine.type === 'stop' ? 'text-danger' : 'text-accent'}>
@@ -474,7 +547,19 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     Drag routines within Before or After. Decision routines choose a named outcome and follow that branch.
                   </p>
                 </div>
-                <section className="grid gap-2">
+                <section
+                  data-routine-lane="before"
+                  className={cx(
+                    'grid gap-2 rounded-md transition-colors',
+                    dragOverPosition === 'before' && dragId ? 'bg-accent/5 outline outline-1 outline-accent/30' : '',
+                  )}
+                  onDragOver={(event) => onDragOverLane(event, 'before')}
+                  onDragLeave={() => setDragOverPosition((current) => (current === 'before' ? null : current))}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    void moveRoutine('before');
+                  }}
+                >
                   <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
                     Before
                   </div>
@@ -483,7 +568,19 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     <div className="py-6 text-[12px] text-secondary">No routines before this event.</div>
                   ) : null}
                 </section>
-                <section className="grid gap-2">
+                <section
+                  data-routine-lane="after"
+                  className={cx(
+                    'grid gap-2 rounded-md transition-colors',
+                    dragOverPosition === 'after' && dragId ? 'bg-accent/5 outline outline-1 outline-accent/30' : '',
+                  )}
+                  onDragOver={(event) => onDragOverLane(event, 'after')}
+                  onDragLeave={() => setDragOverPosition((current) => (current === 'after' ? null : current))}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    void moveRoutine('after');
+                  }}
+                >
                   <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
                     After
                   </div>

@@ -341,6 +341,51 @@ export async function reorderRoutines(input: unknown, ctx: ExtensionBackendConte
   );
 }
 
+export async function moveRoutine(input: unknown, ctx: ExtensionBackendContext) {
+  if (!isRecord(input)) throw new Error('routineId and position are required.');
+  const routineId = stringValue(input.routineId).trim();
+  const position = positionValue(input.position);
+  const targetRoutineId = stringValue(input.targetRoutineId).trim();
+  if (!routineId) throw new Error('routineId and position are required.');
+
+  const state = await readState(ctx);
+  const moving = state.routines.find((routine) => routine.id === routineId);
+  if (!moving) throw new Error('Routine not found.');
+
+  const timestamp = now();
+  const targetLane = state.routines
+    .filter((routine) => routine.hookId === moving.hookId && routine.position === position && routine.id !== routineId)
+    .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
+  const insertIndex = targetRoutineId ? targetLane.findIndex((routine) => routine.id === targetRoutineId) : -1;
+  targetLane.splice(insertIndex >= 0 ? insertIndex : targetLane.length, 0, { ...moving, position, updatedAt: timestamp });
+  const targetOrder = new Map(targetLane.map((routine, index) => [routine.id, index]));
+
+  const sourceLane =
+    moving.position === position
+      ? []
+      : state.routines
+          .filter((routine) => routine.hookId === moving.hookId && routine.position === moving.position && routine.id !== routineId)
+          .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
+  const sourceOrder = new Map(sourceLane.map((routine, index) => [routine.id, index]));
+
+  return toStateResult(
+    await writeState(ctx, {
+      ...state,
+      routines: state.routines.map((routine) => {
+        if (routine.id === routineId) return { ...routine, position, order: targetOrder.get(routine.id) ?? 0, updatedAt: timestamp };
+        if (routine.hookId !== moving.hookId) return routine;
+        if (routine.position === position && targetOrder.has(routine.id)) {
+          return { ...routine, order: targetOrder.get(routine.id) ?? routine.order, updatedAt: timestamp };
+        }
+        if (routine.position === moving.position && sourceOrder.has(routine.id)) {
+          return { ...routine, order: sourceOrder.get(routine.id) ?? routine.order, updatedAt: timestamp };
+        }
+        return routine;
+      }),
+    }),
+  );
+}
+
 export async function listSkills(_input: unknown, ctx: ExtensionBackendContext) {
   return ctx.extensions.callAction('system-skills', 'listSkills', {});
 }

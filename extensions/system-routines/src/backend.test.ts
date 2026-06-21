@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { runAgentTaskMock } = vi.hoisted(() => ({ runAgentTaskMock: vi.fn() }));
 vi.mock('@neon-pilot/extensions/backend/agent', () => ({ runAgentTask: runAgentTaskMock }));
 
-import { getState, registerHookPoint, runHook, saveRoutine } from './backend.js';
+import { getState, moveRoutine, registerHookPoint, runHook, saveRoutine } from './backend.js';
 
 function createCtx() {
   const store = new Map<string, unknown>();
@@ -68,5 +68,23 @@ describe('system-routines backend', () => {
     await registerHookPoint({ id: 'example.before', title: 'Example', group: 'Extensions', ownerExtensionId: 'example' }, ctx);
     const state = (await getState({}, ctx)) as { hooks: Array<{ id: string; title: string }> };
     expect(state.hooks).toContainEqual(expect.objectContaining({ id: 'example.before', title: 'Example' }));
+  });
+
+  it('moves routines between lanes and reorders the target lane', async () => {
+    const ctx = createCtx();
+    const initial = (await getState({}, ctx)) as { routines: Array<{ id: string; name: string; position: string; order: number }> };
+    const report = initial.routines.find((routine) => routine.name === 'Report checkpoint');
+    const review = initial.routines.find((routine) => routine.name === 'Review code changes');
+    expect(report).toBeTruthy();
+    expect(review).toBeTruthy();
+
+    const moved = (await moveRoutine({ routineId: report?.id, position: 'before', targetRoutineId: review?.id }, ctx)) as {
+      routines: Array<{ id: string; name: string; position: string; order: number }>;
+    };
+    const before = moved.routines
+      .filter((routine) => routine.position === 'before')
+      .sort((left, right) => left.order - right.order)
+      .map((routine) => routine.name);
+    expect(before.slice(0, 2)).toEqual(['Report checkpoint', 'Review code changes']);
   });
 });
