@@ -553,26 +553,31 @@ function SidebarPrimaryNav({
   newConversationBusy,
   newConversationHotkeyLabel,
   items,
+  onOpenChat,
   onNewConversation,
 }: {
   chatActive: boolean;
   newConversationBusy: boolean;
   newConversationHotkeyLabel: string;
   items: SidebarExtensionNavItem[];
+  onOpenChat: () => void;
   onNewConversation: () => void;
 }) {
   return (
     <nav className="relative z-20 shrink-0 space-y-px bg-panel pb-1 pt-3" aria-label="Primary navigation">
-      <div className="px-1">
+      <div className="grid grid-cols-[minmax(0,1fr)_32px] gap-1 px-1">
+        <SidebarNavButton onClick={onOpenChat} active={chatActive} className="mx-0 flex min-w-0 text-secondary" title="Chat">
+          <Ico d={PATH.chatBubble} size={15} />
+          <span className="flex-1 text-left">Chat</span>
+        </SidebarNavButton>
         <SidebarNavButton
           onClick={onNewConversation}
           disabled={newConversationBusy}
-          active={chatActive}
-          className="mx-0 flex w-full text-secondary"
-          title={newConversationBusy ? 'Creating conversation...' : `Chat (${newConversationHotkeyLabel})`}
+          className="mx-0 flex justify-center text-secondary"
+          title={newConversationBusy ? 'Creating conversation...' : `New chat (${newConversationHotkeyLabel})`}
+          aria-label={newConversationBusy ? 'Creating conversation...' : `New chat (${newConversationHotkeyLabel})`}
         >
           <Ico d={PATH.plus} size={15} />
-          <span className="flex-1 text-left">Chat</span>
         </SidebarNavButton>
       </div>
       {items.map((item) => (
@@ -3099,13 +3104,17 @@ export function Sidebar() {
     [location.pathname, navigate, sessions],
   );
 
+  const handleOpenChat = useCallback(() => {
+    navigate('/conversations');
+  }, [navigate]);
+
   const handleChatButtonClick = useCallback(() => {
     if (routeMatchesPrefix(location.pathname, '/conversations')) {
       void handleNewConversation();
     } else {
-      navigate('/conversations');
+      handleOpenChat();
     }
-  }, [handleNewConversation, location.pathname, navigate]);
+  }, [handleNewConversation, handleOpenChat, location.pathname]);
 
   const handleOpenThreadSwitcher = useCallback(() => {
     window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'threads' } }));
@@ -3950,8 +3959,9 @@ export function Sidebar() {
           newConversationBusy={false}
           newConversationHotkeyLabel={newConversationHotkeyLabel}
           items={primaryNavItems}
+          onOpenChat={handleOpenChat}
           onNewConversation={() => {
-            handleChatButtonClick();
+            handleNewConversation();
           }}
         />
 
