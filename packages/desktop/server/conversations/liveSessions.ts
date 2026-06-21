@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { AgentSession } from '@earendil-works/pi-coding-agent';
 import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
-import { publishAppEvent } from '../shared/appEvents.js';
+import { publishAppEvent, publishConversationRuntimeState } from '../shared/appEvents.js';
 import { persistTraceStats } from '../traces/tracePersistence.js';
 import {
   type ConversationAutoModeState,
@@ -257,6 +257,7 @@ function publishSessionMetaChanged(sessionId: string): void {
       entry.running = running;
     }
     package_.running = running;
+    publishConversationRuntimeState({ conversationId: sessionId, running });
   }
   publishAppEvent(package_);
 }
@@ -266,6 +267,7 @@ function publishOptimisticPromptRunningState(entry: LiveEntry): void {
     return;
   }
   entry.running = true;
+  publishConversationRuntimeState({ conversationId: entry.sessionId, running: true });
   publishAppEvent({ type: 'session_meta_changed', sessionId: entry.sessionId, running: true });
 }
 

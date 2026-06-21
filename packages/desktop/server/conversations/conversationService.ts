@@ -16,7 +16,7 @@ import { loadDaemonConfig, resolveDaemonPaths } from '@neon-pilot/daemon';
 
 import { type DeferredResumeSummary } from '../automation/deferredResumes.js';
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
-import { publishAppEvent } from '../shared/appEvents.js';
+import { publishAppEvent, publishConversationRuntimeState } from '../shared/appEvents.js';
 import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 import { type SavedUiPreferences } from '../ui/uiPreferences.js';
 import {
@@ -54,13 +54,6 @@ import {
   renameStoredSession as renameStoredConversationSession,
   type SessionImageAsset,
 } from './sessions.js';
-
-let conversationRuntimeRevision = 0;
-
-function nextConversationRuntimeRevision(): number {
-  conversationRuntimeRevision += 1;
-  return conversationRuntimeRevision;
-}
 
 let getRuntimeScopeFn: () => string = () => {
   throw new Error('getRuntimeScope not initialized for conversation service');
@@ -321,10 +314,7 @@ export function publishConversationSessionMetaChanged(...conversationIds: Array<
     const liveEntry = readLiveSession(conversationId);
     const running = liveEntry ? isLiveEntryRunning(liveEntry) : undefined;
     if (running !== undefined) {
-      publishAppEvent({
-        type: 'conversation_state_changed',
-        conversation: { id: conversationId, running, revision: nextConversationRuntimeRevision(), updatedAt: new Date().toISOString() },
-      });
+      publishConversationRuntimeState({ conversationId, running });
     }
     publishAppEvent({ type: 'session_meta_changed', sessionId: conversationId, ...(running !== undefined ? { running } : {}) });
   }

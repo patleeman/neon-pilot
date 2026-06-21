@@ -1,6 +1,6 @@
 import { estimateTokens } from '@earendil-works/pi-coding-agent';
 
-import { publishAppEvent } from '../shared/appEvents.js';
+import { publishAppEvent, publishConversationRuntimeState } from '../shared/appEvents.js';
 import { persistTraceContext } from '../traces/tracePersistence.js';
 import type { WebLiveConversationRunState } from './conversationRuns.js';
 import { syncLiveSessionDurableRun } from './liveSessionDurableRun.js';
@@ -72,6 +72,7 @@ export function publishRunningChange(entry: LiveEntry): void {
   const next = computeLiveSessionRunning(entry);
   if (next === entry.running) return;
   entry.running = next;
+  publishConversationRuntimeState({ conversationId: entry.sessionId, running: next });
   publishAppEvent({ type: 'session_meta_changed', sessionId: entry.sessionId, running: next });
 }
 

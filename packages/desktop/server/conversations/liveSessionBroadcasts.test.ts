@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const agent = vi.hoisted(() => ({ estimateTokens: vi.fn(() => 42) }));
-const appEvents = vi.hoisted(() => ({ invalidateAppTopics: vi.fn(), publishAppEvent: vi.fn() }));
+const appEvents = vi.hoisted(() => ({ invalidateAppTopics: vi.fn(), publishAppEvent: vi.fn(), publishConversationRuntimeState: vi.fn() }));
 const trace = vi.hoisted(() => ({ persistTraceContext: vi.fn() }));
 const durableRun = vi.hoisted(() => ({ syncLiveSessionDurableRun: vi.fn() }));
 const presence = vi.hoisted(() => ({ broadcastLiveSessionPresenceState: vi.fn() }));

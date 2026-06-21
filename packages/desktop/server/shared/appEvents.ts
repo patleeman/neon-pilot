@@ -65,6 +65,23 @@ export interface ConversationRuntimeState {
   running: boolean;
 }
 
+let conversationRuntimeRevision = 0;
+
+export function publishConversationRuntimeState(input: { conversationId: string; running: boolean }): void {
+  const conversationId = input.conversationId.trim();
+  if (!conversationId) return;
+  conversationRuntimeRevision += 1;
+  publishAppEvent({
+    type: 'conversation_state_changed',
+    conversation: {
+      id: conversationId,
+      running: input.running,
+      revision: conversationRuntimeRevision,
+      updatedAt: new Date().toISOString(),
+    },
+  });
+}
+
 export interface AppEventMonitorOptions {
   repoRoot: string;
   sessionsDir: string;
