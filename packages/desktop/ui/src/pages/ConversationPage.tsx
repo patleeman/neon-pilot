@@ -6288,7 +6288,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                           }
                         }}
                         placeholder="Name this conversation"
-                        className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-1.5 text-[38px] font-semibold leading-[1.05] tracking-[-0.02em] text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 sm:text-[42px]"
+                        className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-1.5 text-[32px] font-semibold leading-[1.08] tracking-[-0.018em] text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 sm:text-[36px]"
                         disabled={titleSaving}
                       />
                       <IconButton
@@ -6340,13 +6340,13 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                       </IconButton>
                     </form>
                   ) : draft ? (
-                    <h1 className="ui-conversation-title-clamp max-w-4xl break-words pr-4 text-[38px] font-semibold leading-[1.05] tracking-[-0.02em] text-primary sm:text-[42px]">
+                    <h1 className="ui-conversation-title-clamp max-w-4xl break-words pr-4 text-[32px] font-semibold leading-[1.08] tracking-[-0.018em] text-primary sm:text-[36px]">
                       {title}
                     </h1>
                   ) : (
                     <Suspense
                       fallback={
-                        <h1 className="ui-conversation-title-clamp text-[38px] font-semibold leading-[1.05] sm:text-[42px]">{title}</h1>
+                        <h1 className="ui-conversation-title-clamp text-[32px] font-semibold leading-[1.08] sm:text-[36px]">{title}</h1>
                       }
                     >
                       <ConversationSavedHeader title={title} onTitleClick={!renameConversationDisabled ? beginTitleEdit : undefined} />
