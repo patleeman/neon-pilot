@@ -13,6 +13,7 @@ const {
   hasAssistantTitleSourceMessageMock,
   logWarnMock,
   publishAppEventMock,
+  publishConversationRuntimeStateMock,
   readConversationModelPreferenceSnapshotMock,
   readSessionBlocksByFileMock,
   readSessionMetaByFileMock,
@@ -47,6 +48,7 @@ const {
     hasAssistantTitleSourceMessageMock: vi.fn(),
     logWarnMock: vi.fn(),
     publishAppEventMock: vi.fn(),
+    publishConversationRuntimeStateMock: vi.fn(),
     readConversationModelPreferenceSnapshotMock: vi.fn(),
     readSessionBlocksByFileMock: vi.fn(),
     readSessionMetaByFileMock: vi.fn(),
@@ -98,6 +100,7 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
 
 vi.mock('../shared/appEvents.js', () => ({
   publishAppEvent: publishAppEventMock,
+  publishConversationRuntimeState: publishConversationRuntimeStateMock,
   invalidateAppTopics: vi.fn(),
 }));
 

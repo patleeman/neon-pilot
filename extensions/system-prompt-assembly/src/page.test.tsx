@@ -39,7 +39,15 @@ function renderPage({ cwd, invoke }: { cwd: string; invoke: ReturnType<typeof vi
     <PromptAssemblyPage
       pa={{ extension: { invoke } } as never}
       context={{ cwd, pathname: '', search: '', hash: '' }}
-      surface={{ id: 'prompt-assembly', extensionId: 'system-prompt-assembly', title: 'Prompt Assembly', location: 'main', component: 'PromptAssemblyPage' } as never}
+      surface={
+        {
+          id: 'prompt-assembly',
+          extensionId: 'system-prompt-assembly',
+          title: 'Prompt Assembly',
+          location: 'main',
+          component: 'PromptAssemblyPage',
+        } as never
+      }
       params={{}}
     />
   );
@@ -56,12 +64,12 @@ describe('PromptAssemblyPage', () => {
     rerender(renderPage({ cwd: '/repo/two', invoke }));
 
     secondLoad.resolve(runtimeResult('/repo/two'));
-    await waitFor(() => expect(screen.getByText(/CWD \/repo\/two/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Working directory: \/repo\/two/)).toBeTruthy());
 
     firstLoad.resolve(runtimeResult('/repo/one'));
     await Promise.resolve();
 
-    expect(screen.getByText(/CWD \/repo\/two/)).toBeTruthy();
-    expect(screen.queryByText(/CWD \/repo\/one/)).toBeNull();
+    expect(screen.getByText(/Working directory: \/repo\/two/)).toBeTruthy();
+    expect(screen.queryByText(/Working directory: \/repo\/one/)).toBeNull();
   });
 });

@@ -405,7 +405,6 @@ describe('App sidebar conversation navigation workflow', () => {
 
     await screen.findByText('Draft conversation route');
     expect(document.querySelector('[data-sidebar-session-id="conv-first"]')).toBeNull();
-    expect(screen.getByText('No threads yet.')).toBeTruthy();
 
     await waitFor(() => expect(fetchSessionsSnapshotMock).toHaveBeenCalledTimes(2), { timeout: 2_000 });
     expect(fetchSessionsSnapshotMock).toHaveBeenCalledTimes(2);

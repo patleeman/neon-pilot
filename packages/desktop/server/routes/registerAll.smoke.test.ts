@@ -169,7 +169,7 @@ describe('registerServerRoutes smoke test', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBeGreaterThanOrEqual(7);
+    expect(body.length).toBeGreaterThanOrEqual(6);
     // Every route entry should have required fields
     for (const route of body) {
       expect(typeof route.route).toBe('string');

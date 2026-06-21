@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.24 — 2026-06-21
+
+### Highlights
+
+- Makes conversation running state backend-authoritative so sidebar indicators, active streams, automation badges, and stale runtime transitions stay in sync.
+- Improves live transcript rendering with throttled streaming Markdown, automatic tool-block reveal, and more reliable terminal stream flushing.
+- Refines everyday app copy and conversation styling across settings, provider setup, extension sections, checkpoint rows, titles, and composer surfaces.
+- Starts new sessions with the Workbench closed and fixes sidebar context menu clipping for a cleaner default workspace.
+- Moves the Telegram Gateway out of the bundled app extension set while keeping first-party installable extension release flow aligned.
+- Refreshes Pi runtime packages to `^0.79.9` for the stable 0.11.24 patch train.
+
+### Notes
+
+- 31 commits since the previous release.
+
 ## 0.11.23 — 2026-06-20
 
 ### Highlights

@@ -154,6 +154,6 @@ describe('ImageProbeSettings', () => {
     const visionSelect = container.querySelector<HTMLSelectElement>('#settings-image-probe-vision-model');
     expect(visionSelect).toBeInstanceOf(HTMLSelectElement);
     expect(visionSelect!.value).toBe('openai-codex/gpt-5.4');
-    expect(container.textContent).toContain('Image probing uses openai-codex/gpt-5.4.');
+    expect(container.textContent).toContain('Image questions use openai-codex/gpt-5.4.');
   });
 });

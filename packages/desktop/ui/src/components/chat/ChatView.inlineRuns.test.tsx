@@ -109,43 +109,6 @@ function createCompletedShellRunRecord(): DurableRunRecord {
   };
 }
 
-function createMessages(): MessageBlock[] {
-  return [
-    {
-      type: 'tool_use',
-      ts: '2026-03-11T18:00:00.000Z',
-      tool: 'run',
-      input: {
-        action: 'start_agent',
-        prompt: 'Inspect git diff',
-      },
-      output: `Started durable agent run ${RUN_ID} for ui-preview-check.`,
-      status: 'ok',
-      details: {
-        action: 'start_agent',
-        runId: RUN_ID,
-        prompt: 'Inspect git diff',
-        status: 'running',
-      },
-    },
-    {
-      type: 'text',
-      ts: '2026-03-11T18:00:01.000Z',
-      text: 'Keeping an eye on that background run.',
-    },
-    {
-      type: 'tool_use',
-      ts: '2026-03-11T18:00:02.000Z',
-      tool: 'bash',
-      input: {
-        command: `echo ${RUN_ID}`,
-      },
-      output: RUN_ID,
-      status: 'ok',
-    },
-  ];
-}
-
 function renderChatView(messages: MessageBlock[], options?: { listedRuns?: DurableRunRecord[] }) {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -267,7 +230,7 @@ describe('ChatView inline run cards', () => {
     expect(runButtons).toHaveLength(2);
     expect(runButtons[0]?.getAttribute('aria-expanded')).toBe('false');
     expect(runButtons[1]?.getAttribute('aria-expanded')).toBe('false');
-    expect(container.textContent).not.toContain('Polling live log');
+    expect(container.textContent).not.toContain('Live log updating');
 
     await act(async () => {
       runButtons[0]?.click();
@@ -282,7 +245,7 @@ describe('ChatView inline run cards', () => {
     expect(apiMocks.durableRun).toHaveBeenCalledWith(RUN_ID);
     expect(apiMocks.durableRunLog).toHaveBeenCalledTimes(1);
     expect(apiMocks.durableRunLog).toHaveBeenCalledWith(RUN_ID, 240);
-    expect(container.textContent).toContain('Polling live log');
+    expect(container.textContent).toContain('Live log updating');
   });
 
   it('shows a friendly unavailable state when a raw linked run record cannot be loaded', async () => {
@@ -316,8 +279,8 @@ describe('ChatView inline run cards', () => {
     });
 
     expect(apiMocks.durableRun).toHaveBeenCalledWith(RUN_ID);
-    expect(container.textContent).toContain('Run record unavailable');
-    expect(container.textContent).toContain('This linked task may have been cleaned up or belongs to an older dev session.');
+    expect(container.textContent).toContain('Background task unavailable');
+    expect(container.textContent).toContain('It may have been cleaned up or belongs to an older dev session.');
     expect(container.textContent).not.toContain('Error invoking remote method');
   });
 
@@ -355,7 +318,7 @@ describe('ChatView inline run cards', () => {
 
     expect(apiMocks.durableRun).toHaveBeenCalledWith(RUN_ID);
     expect(apiMocks.durableRunLog).toHaveBeenCalledWith(RUN_ID, 240);
-    expect(container.textContent).toContain('Polling live log');
+    expect(container.textContent).toContain('Live log updating');
   });
 
   it('toggles the first inline run card from the shared command event', async () => {
@@ -379,7 +342,7 @@ describe('ChatView inline run cards', () => {
     let runButtons = findInlineRunButtons(container);
     expect(runButtons.length).toBeGreaterThan(0);
     expect(runButtons[0]?.getAttribute('aria-expanded')).toBe('false');
-    expect(container.textContent).not.toContain('Polling live log');
+    expect(container.textContent).not.toContain('Live log updating');
 
     await act(async () => {
       window.dispatchEvent(new CustomEvent<InlineTraceRunCommandDetail>(INLINE_TRACE_RUN_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
@@ -390,7 +353,7 @@ describe('ChatView inline run cards', () => {
     expect(runButtons[0]?.getAttribute('aria-expanded')).toBe('true');
     expect(apiMocks.durableRun).toHaveBeenCalledWith(RUN_ID);
     expect(apiMocks.durableRunLog).toHaveBeenCalledWith(RUN_ID, 240);
-    expect(container.textContent).toContain('Polling live log');
+    expect(container.textContent).toContain('Live log updating');
   });
 
   it('collapses raw run callback user messages into a clickable run card', async () => {

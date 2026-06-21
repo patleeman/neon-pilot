@@ -119,7 +119,9 @@ function queryInput(container: HTMLElement, selector: string): HTMLInputElement 
 }
 
 function queryProviderPicker(container: HTMLElement): HTMLSelectElement {
-  const picker = Array.from(container.querySelectorAll('select')).find((select) => select.textContent?.includes('Choose provider…'));
+  const picker = Array.from(container.querySelectorAll('select')).find((select) =>
+    Array.from(select.options).some((option) => option.value === 'anthropic'),
+  );
   if (!(picker instanceof HTMLSelectElement)) {
     throw new Error('Expected provider picker');
   }
@@ -588,7 +590,7 @@ describe('SettingsPage provider model editor', () => {
     updateSelectValue(queryProviderPicker(container), 'anthropic');
     click(queryButton(container, 'Continue'));
 
-    click(queryButton(container, 'Find models from provider…'));
+    click(queryButton(container, 'Find models from provider...'));
     await flushAsyncWork();
 
     expect(refreshModelsMock).toHaveBeenCalled();

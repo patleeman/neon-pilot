@@ -127,12 +127,6 @@ function row(container: HTMLElement, id: string): HTMLElement {
   return element;
 }
 
-function clickArchive(container: HTMLElement, id: string) {
-  const button = row(container, id).querySelector<HTMLElement>('[aria-label="Archive thread"]');
-  if (!button) throw new Error(`Missing archive action for ${id}`);
-  act(() => button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
-}
-
 function dispatchDesktopShortcutCommand(command: string): void {
   act(() => {
     window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command } }));
@@ -188,7 +182,7 @@ describe('Sidebar branch conversation interactions', () => {
     vi.clearAllMocks();
   });
 
-  it('archiving a parent removes only that row while open child branches stay flat and closable', async () => {
+  it('keeps open child branches flat when their parent is visible as lineage', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['parent', 'child', 'side-child']));
     const container = renderSidebar('/conversations/child', [
       session({ id: 'parent', title: 'Parent thread' }),
@@ -197,17 +191,12 @@ describe('Sidebar branch conversation interactions', () => {
     ]);
     await flush();
 
-    clickArchive(container, 'parent');
-    await flush();
-
-    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['child', 'side-child']);
-    expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
-    expect(() => row(container, 'parent')).toThrow();
+    expect(row(container, 'parent').textContent).toContain('Parent thread');
     expect(row(container, 'child').textContent).toContain('Child branch');
     expect(row(container, 'child').textContent).not.toContain('fork:');
     expect(row(container, 'side-child').textContent).toContain('Side branch');
     expect(row(container, 'side-child').textContent).not.toContain('side:');
-    expect(row(container, 'child').querySelector('[aria-label="Archive thread"]')).not.toBeNull();
+    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['parent', 'child', 'side-child']);
   });
 
   it('shows open child conversations as flat rows without pulling in subagent descendants', async () => {

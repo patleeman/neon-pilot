@@ -335,7 +335,7 @@ describe('extension registry', () => {
     expect(snapshot.extensions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'system-automations', packageType: 'system', name: 'Automations' }),
-        expect.objectContaining({ id: 'system-telemetry', packageType: 'system', name: 'Telemetry' }),
+        expect.objectContaining({ id: 'system-telemetry', packageType: 'system', name: 'Diagnostics' }),
         expect.objectContaining({ id: 'system-files', packageType: 'system', name: 'File Explorer' }),
         expect.objectContaining({ id: 'system-diffs', packageType: 'system', name: 'Diffs' }),
         expect.objectContaining({ id: 'system-context-usage', packageType: 'system', name: 'Context Usage' }),

@@ -813,7 +813,7 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect(await screen.findByText('Neon Pilot Extensions')).toBeTruthy();
-    expect(screen.getByPlaceholderText('GitHub repo URL or owner/repo')).toBeTruthy();
+    expect(screen.getByPlaceholderText('GitHub URL or owner/name')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'readExtensionSources', {});
   });
@@ -842,10 +842,10 @@ describe('ExtensionManagerPage', () => {
       extensions: { callAction },
     });
 
-    fireEvent.change(await screen.findByPlaceholderText('GitHub repo URL or owner/repo'), {
+    fireEvent.change(await screen.findByPlaceholderText('GitHub URL or owner/name'), {
       target: { value: 'https://github.com/example/neon-extensions.git' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Add repo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add source' }));
 
     await screen.findByText('Added example/neon-extensions.');
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateExtensionSources', {

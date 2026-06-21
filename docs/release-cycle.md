@@ -4,17 +4,18 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.23** — stable release.
+**v0.11.24** — stable release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.23
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.24
 
 Highlights in this train:
 
-- Recovers cleanly when a conversation starts after the extension host has exited while the local backend is still alive, restarting the runtime instead of surfacing raw `fetch failed` errors.
-- Improves extension-host RPC failure reporting so transport failures include the request and endpoint context needed to diagnose stale runtime state.
-- Adds regression coverage for stale backend/extension-host process combinations and extension-host fetch failures.
-- Confirms the release with a broad hands-on app QA pass across chat, tool execution, settings, extensions, automations, telemetry, notifications, attachments, workbench tabs, terminal, browser, scratchpad, and recovery states.
-- Refreshes Pi runtime packages to `^0.79.8` for the stable 0.11.23 patch train.
+- Makes conversation running state backend-authoritative so sidebar indicators, active streams, automation badges, and stale runtime transitions stay in sync.
+- Improves live transcript rendering with throttled streaming Markdown, automatic tool-block reveal, and more reliable terminal stream flushing.
+- Refines everyday app copy and conversation styling across settings, provider setup, extension sections, checkpoint rows, titles, and composer surfaces.
+- Starts new sessions with the Workbench closed and fixes sidebar context menu clipping for a cleaner default workspace.
+- Moves the Telegram Gateway out of the bundled app extension set while keeping first-party installable extension release flow aligned.
+- Refreshes Pi runtime packages to `^0.79.9` for the stable 0.11.24 patch train.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

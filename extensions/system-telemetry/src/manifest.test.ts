@@ -11,7 +11,7 @@ describe('system-telemetry manifest', () => {
 
   it('has the expected identity', () => {
     expect(manifest.id).toBe('system-telemetry');
-    expect(manifest.name).toBe('Telemetry');
+    expect(manifest.name).toBe('Diagnostics');
     expect(manifest.packageType).toBe('system');
     expect(manifest.schemaVersion).toBe(2);
   });

@@ -4,6 +4,46 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach } from 'vitest';
 
+function createTestStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear() {
+      values.clear();
+    },
+    getItem(key: string) {
+      return values.get(String(key)) ?? null;
+    },
+    key(index: number) {
+      return Array.from(values.keys())[index] ?? null;
+    },
+    removeItem(key: string) {
+      values.delete(String(key));
+    },
+    setItem(key: string, value: string) {
+      values.set(String(key), String(value));
+    },
+  };
+}
+
+if (typeof globalThis.localStorage === 'undefined') {
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: createTestStorage(),
+    writable: true,
+  });
+}
+
+if (typeof window !== 'undefined' && typeof window.localStorage === 'undefined') {
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: globalThis.localStorage,
+    writable: true,
+  });
+}
+
 import { closeActivityDbs } from './packages/core/src/activity.js';
 import { closeAutomationDbs } from './packages/desktop/server/automation/store.js';
 import { resetAllStores } from './packages/desktop/ui/src/store/stores';
