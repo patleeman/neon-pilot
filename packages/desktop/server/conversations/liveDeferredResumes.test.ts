@@ -218,6 +218,16 @@ describe('createAttentionEventFlusher', () => {
       }),
     );
     expect(promptSessionMock).toHaveBeenCalledWith('conv-1', expect.stringContaining('Continue from here.'), undefined);
+    expect(queuePromptContextMock).toHaveBeenCalledWith(
+      'conv-1',
+      'deferred_auto_resume',
+      expect.stringContaining('This is NOT a new message from the user'),
+    );
+    expect(queuePromptContextMock).toHaveBeenCalledWith(
+      'conv-1',
+      'deferred_auto_resume',
+      expect.stringContaining('Source: deferred resume requested earlier in this conversation'),
+    );
     expect(completeDeferredResumeConversationRunMock).toHaveBeenCalledWith(
       expect.objectContaining({
         daemonRoot: '/daemon',
@@ -313,7 +323,9 @@ describe('createAttentionEventFlusher', () => {
     });
 
     const flushPromise = flush();
-    await vi.waitFor(() => expect(completeDeferredResumeForSessionFileMock).toHaveBeenCalledWith({ sessionFile: '/tmp/session-1.jsonl', id: 'resume-1' }));
+    await vi.waitFor(() =>
+      expect(completeDeferredResumeForSessionFileMock).toHaveBeenCalledWith({ sessionFile: '/tmp/session-1.jsonl', id: 'resume-1' }),
+    );
 
     expect(publishConversationSessionMetaChanged).toHaveBeenCalledWith('conv-1');
     expect(completeDeferredResumeConversationRunMock).not.toHaveBeenCalled();
@@ -525,17 +537,17 @@ describe('createAttentionEventFlusher', () => {
     );
   });
 
-  it('delivers extension attention events without deferred resume records', async () => {
+  it('delivers scheduled task attention events with system wakeup context', async () => {
     const attentionEvent = {
       id: 'attention-1',
       sessionFile: '/tmp/session-1.jsonl',
-      prompt: 'Extension event is ready.',
+      prompt: 'Scheduled task result is ready.',
       dueAt: '2026-04-15T10:00:00.000Z',
       createdAt: '2026-04-15T09:59:00.000Z',
       attempts: 0,
       status: 'ready' as const,
       readyAt: '2026-04-15T10:00:00.000Z',
-      source: { kind: 'extension', id: 'ext-1' },
+      source: { kind: 'scheduled-task', id: 'watch-prod' },
       delivery: {
         mode: 'batchable' as const,
         priority: 'normal' as const,
@@ -574,7 +586,17 @@ describe('createAttentionEventFlusher', () => {
 
     await flush();
 
-    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', expect.stringContaining('Extension event is ready.'), undefined);
+    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', expect.stringContaining('Scheduled task result is ready.'), undefined);
+    expect(queuePromptContextMock).toHaveBeenCalledWith(
+      'conv-1',
+      'deferred_auto_resume',
+      expect.stringContaining('Source: scheduled task watch-prod'),
+    );
+    expect(queuePromptContextMock).toHaveBeenCalledWith(
+      'conv-1',
+      'deferred_auto_resume',
+      expect.stringContaining('This is NOT a new message from the user'),
+    );
     expect(completeAttentionEventsMock).toHaveBeenCalledWith(expect.any(Object), {
       ids: ['attention-1'],
       completedAt: expect.any(String),

@@ -69,17 +69,40 @@ function resolveDeliveryMode(entry: DeferredResumeLike): DeliveryMode {
   return 'batchable';
 }
 
+function describeDeferredAutoResumeSource(entry: DeferredResumeLike): string {
+  if (entry.source?.kind === 'scheduled-task') {
+    return entry.source.id ? `Source: scheduled task ${entry.source.id}` : 'Source: scheduled task';
+  }
+
+  if (entry.source?.kind === 'background-run') {
+    return entry.source.id ? `Source: background task ${entry.source.id}` : 'Source: background task';
+  }
+
+  if (entry.source?.kind === 'deferred-resume' || entry.source?.kind === 'conversation') {
+    return 'Source: deferred resume requested earlier in this conversation';
+  }
+
+  return entry.source?.kind ? `Source: ${entry.source.kind}` : 'Source: deferred resume requested earlier in this conversation';
+}
+
 /**
  * Build the context block content for a deferred auto-resume so the model
  * understands this is a system wakeup, not a human message.
  */
-function buildDeferredAutoResumeContextContent(prompt: string): string {
+function buildDeferredAutoResumeContextContent(entry: DeferredResumeLike): string {
+  const timing = [`Scheduled for: ${entry.dueAt}`];
+  if (entry.createdAt) timing.push(`Created at: ${entry.createdAt}`);
+  if (entry.readyAt) timing.push(`Fired at: ${entry.readyAt}`);
+
   return [
     'Automated wakeup · agent resumed automatically by the system.',
-    'This is NOT a message from the user.',
-    'Execute the task below, then stop. Do not queue additional wakeups unless the task explicitly requires it.',
+    'This is NOT a new message from the user; it may refer to context from an earlier turn.',
+    describeDeferredAutoResumeSource(entry),
+    ...timing,
+    'Execute the task below using the conversation history, then stop. Do not queue additional wakeups unless the task explicitly requires it.',
     '',
-    prompt,
+    'Task:',
+    entry.prompt,
   ].join('\n');
 }
 
@@ -104,7 +127,7 @@ function buildPromptDeliveryForDeferredResume(entry: DeferredResumeLike): {
       contextMessages: [
         {
           customType: 'deferred_auto_resume',
-          content: buildDeferredAutoResumeContextContent(entry.prompt),
+          content: buildDeferredAutoResumeContextContent(entry),
         },
       ],
     };
@@ -165,7 +188,7 @@ function buildPromptDeliveryForDeferredResumeBatch(entries: DeferredResumeLike[]
     lines.push('   Details are available in internal context.');
     contextMessages.push({
       customType: 'deferred_auto_resume',
-      content: buildDeferredAutoResumeContextContent(entry.prompt),
+      content: buildDeferredAutoResumeContextContent(entry),
     });
   });
 
