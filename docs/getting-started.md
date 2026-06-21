@@ -14,19 +14,32 @@ curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install
 
 Use `--channel rc` when you want the release-candidate app.
 
-## Configure and verify
+## Configure a model provider
 
 Open **Neon Pilot.app**. The desktop app manages the local daemon automatically.
 
-If you installed the CLI, configure provider defaults and verify the runtime:
+In the app, open **Settings** and confirm the model provider and default model you want to use. If you installed the CLI, you can do the same setup from a terminal:
 
 ```bash
 neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4
 printf '%s' "$OPENAI_API_KEY" | neon-pilot bootstrap provider set-key openai --stdin
-neon-pilot bootstrap doctor
 ```
 
 Provider keys must not be passed in command arguments. Use stdin, Keychain, OAuth/device login, or another configured secrets backend.
+
+## Verify the install
+
+Use both checks when the CLI is installed:
+
+```bash
+neon-pilot bootstrap doctor
+```
+
+Then open **Neon Pilot.app**, start a new conversation, and send a small first prompt such as:
+
+> Summarize what Neon Pilot is and tell me one useful next step.
+
+The setup is healthy when `doctor` passes, the conversation view loads, and the agent replies. If the app opens but the agent does not reply, recheck the provider and key in **Settings** before debugging extensions or project context.
 
 ## Important paths
 
@@ -34,17 +47,14 @@ Provider keys must not be passed in command arguments. Use stdin, Keychain, OAut
 - `<config-root>` — machine-local config. Default: `$XDG_CONFIG_HOME/neon-pilot` when set, otherwise `<state-root>/config`
 - `<knowledge-root>` — durable knowledge root. See [Configuration](configuration.md) for override order and channel-specific state roots.
 
-## Verify the install
-
-The desktop app starts and loads the conversation view. Create a new conversation and send a message to verify the agent responds.
-
 ## First run checklist
 
 1. Open **Settings** and confirm your model provider and default model.
-2. Start a new conversation.
+2. Start a new conversation and verify the agent replies to a small prompt.
 3. Attach a file or folder when the task needs project context.
-4. Ask for a small first task, such as summarizing a file, explaining a code path, or drafting a plan.
+4. Ask for a bounded first task, such as summarizing a file, explaining a code path, or drafting a plan.
 5. Use the Workbench to inspect files, artifacts, browser views, extensions, and other surfaces beside the conversation.
+6. If you want durable notes or instructions, configure [Knowledge base sync](knowledge-base.md) after the first conversation works.
 
 ## What to try next
 

@@ -20,15 +20,16 @@ See [Getting Started](getting-started.md) for the user setup flow, or [Developme
 
 ## Start here
 
-If you are new to Neon Pilot, read these first:
+Pick the shortest path for what you are doing:
 
-- [Getting Started](getting-started.md) — install the packaged app and verify the runtime
-- [Desktop App](desktop-app.md) — understand the Electron shell, shortcuts, and app chrome
-- [Views](views.md) — learn Conversation and Workbench layouts
-- [Conversations](conversations.md) — work with live threads, branching, follow-ups, and async follow-through
-- [Conversation context](conversation-context.md) — attach files, folders, images, drawings, and generated context
-- [Knowledge base sync](knowledge-base.md) — set up git-backed durable knowledge
-- [Extension distribution](extension-distribution.md) — install optional extensions and understand extension repositories
+| Audience                            | First docs to read                                                                                                  | Success check                                                                            |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **New user**                        | [Getting Started](getting-started.md), then [Views](views.md) and [Conversations](conversations.md)                 | App opens, provider is configured, and a first conversation gets a reply.                |
+| **Power user organizing context**   | [Conversation context](conversation-context.md), [Knowledge base sync](knowledge-base.md), [Projects](projects.md)  | Useful files, folders, notes, and project records are available to conversations.        |
+| **External agent or script author** | [Agent bootstrap](agent-bootstrap.md), [Neon Pilot CLI](cli.md), [CLI reference](cli-reference.md)                  | `neon-pilot bootstrap doctor` passes and reports usable provider setup.                  |
+| **Extension builder**               | [Build an extension with your agent](build-an-extension.md), then [Extension authoring](extensions.md)              | The extension installs, its route/action works through the app, and its build passes.    |
+| **Repo contributor**                | [Development workflow](development.md), then the owning package or extension README                                 | Focused validation passes and the app can still start when touched code affects startup. |
+| **Release operator**                | [Release cycle](release-cycle.md), [Release QA](release-qa.md), [Release test inventory](release-test-inventory.md) | Release doctor, hardening tests, and hands-on smoke notes are complete.                  |
 
 ## Common Tasks
 
@@ -138,6 +139,17 @@ Optional first-party extensions from [`patleeman/neon-pilot-extensions`](https:/
 - [Suggested Context](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context) — related conversation suggestions
 - [Video Probe](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-video-probe) — video analysis via local or remote video-capable models
 - [Writing Studio](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-writing-studio) — document-first collaborative writing surface
+
+## Docs maintenance checklist
+
+When behavior, setup, or workflow changes, update the docs in the same change:
+
+- Update the smallest owning doc first, then this README only if navigation changes.
+- Keep first-run docs accurate: install path, provider setup, first task verification, and recovery hints.
+- Update the owning extension README before changing extension behavior.
+- Add public website coverage by updating [`apps/site/build-docs.mjs`](../apps/site/build-docs.mjs) only when a repo doc should appear on neonpilot.net.
+- Prefer user-facing terms from [`CONTEXT.md`](../CONTEXT.md); keep implementation details in architecture docs, not onboarding docs.
+- For docs-only edits, run formatting checks rather than the full product suite unless examples or generated references changed.
 
 ## Source Docs Scope
 
