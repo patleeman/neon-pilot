@@ -85,6 +85,14 @@ describe('workspace explorer', () => {
     ]);
   });
 
+  it('ignores absolute transcript path candidates that cannot be resolved', async () => {
+    const repo = createRepo();
+
+    await expect(
+      resolveWorkspacePathLinks(repo, ['/app/api_path_links/resolve', '/definitely-missing/transcript/path.txt']),
+    ).resolves.toEqual([]);
+  });
+
   it('builds overlay decorations for additions and virtual deleted blocks', () => {
     const parsed = __workspaceExplorerInternals.parseDiffOverlay(['@@ -1,3 +1,3 @@', ' keep', '-old', '+new', ' tail'].join('\n'));
 

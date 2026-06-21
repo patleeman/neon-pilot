@@ -302,18 +302,25 @@ export async function resolveWorkspacePathLinks(cwd: string, targets: string[]):
         continue;
       }
 
-      const absoluteRootParts = absolutePathRootParts(absolutePath);
-      const absoluteRoot = await createCoreWorkspaceRoot(absoluteRootParts.root, 'resolve absolute workspace path link', ['metadata']);
-      if (await absoluteRoot.exists(absoluteRootParts.relativePath)) {
-        const stats = await absoluteRoot.stat(absoluteRootParts.relativePath);
-        results.push({
-          input: rawTarget,
-          targetPath,
-          openPath: absolutePath,
-          kind: 'absolute',
-          workspacePath: null,
-          entryKind: workspaceEntryKindFromStatType(stats.type),
-        });
+      try {
+        const absoluteRootParts = absolutePathRootParts(absolutePath);
+        const absoluteRoot = await createCoreWorkspaceRoot(absoluteRootParts.root, 'resolve absolute workspace path link', ['metadata']);
+        if (await absoluteRoot.exists(absoluteRootParts.relativePath)) {
+          const stats = await absoluteRoot.stat(absoluteRootParts.relativePath);
+          results.push({
+            input: rawTarget,
+            targetPath,
+            openPath: absolutePath,
+            kind: 'absolute',
+            workspacePath: null,
+            entryKind: workspaceEntryKindFromStatType(stats.type),
+          });
+        }
+      } catch {
+        // Path-link resolution is best-effort. Transcript text can contain
+        // absolute URL fragments or system paths that are outside the allowed
+        // filesystem roots; ignore those candidates instead of failing the
+        // entire batch and spamming the renderer console.
       }
       continue;
     }
