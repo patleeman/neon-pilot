@@ -258,10 +258,9 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       setData(result);
       const initialHookId = hookIdFromHash(context.hash) ?? selectedHookId;
       const nextHookId = result.hooks.some((hook) => hook.id === initialHookId) ? initialHookId : (result.hooks[0]?.id ?? 'checkpoint');
-      const firstRoutine = result.routines.find((routine) => routine.hookId === nextHookId) ?? null;
       setSelectedHookId(nextHookId);
-      setSelectedRoutineId(firstRoutine?.id ?? null);
-      setDraft(firstRoutine ? { ...firstRoutine, outcomes: firstRoutine.outcomes.map((outcome) => ({ ...outcome })) } : null);
+      setSelectedRoutineId(null);
+      setDraft(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -304,12 +303,11 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const routineNameById = useMemo(() => new Map(hookRoutines.map((routine) => [routine.id, routine.name])), [hookRoutines]);
 
   useEffect(() => {
-    if (!data) return;
+    if (!data || !selectedRoutineId) return;
     const currentRoutine = data.routines.find((routine) => routine.id === selectedRoutineId && routine.hookId === selectedHookId);
     if (currentRoutine) return;
-    const next = data.routines.find((routine) => routine.hookId === selectedHookId) ?? null;
-    setSelectedRoutineId(next?.id ?? null);
-    setDraft(next ? { ...next, outcomes: next.outcomes.map((outcome) => ({ ...outcome })) } : null);
+    setSelectedRoutineId(null);
+    setDraft(null);
   }, [data, selectedHookId, selectedRoutineId]);
 
   const selectRoutine = useCallback((routine: Routine) => {
@@ -325,8 +323,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       const result = (await pa.extension.invoke('saveRoutine', draft)) as StateResult;
       const saved = result.routines.find((routine) => routine.id === draft.id) ?? draft;
       setData(result);
-      setSelectedRoutineId(saved.id);
-      setDraft({ ...saved, outcomes: saved.outcomes.map((outcome) => ({ ...outcome })) });
+      setSelectedRoutineId(null);
+      setDraft(null);
       setUnsavedRoutineIds((current) => {
         const next = new Set(current);
         next.delete(saved.id);
@@ -352,17 +350,15 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           next.delete(routine.id);
           return next;
         });
-        const next = data?.routines.find((item) => item.hookId === selectedHookId && item.id !== routine.id) ?? null;
-        setSelectedRoutineId(next?.id ?? null);
-        setDraft(next ? { ...next, outcomes: next.outcomes.map((outcome) => ({ ...outcome })) } : null);
+        setSelectedRoutineId(null);
+        setDraft(null);
         setOpenRoutineMenuId(null);
         return;
       }
       const result = (await pa.extension.invoke('deleteRoutine', { routineId: routine.id })) as StateResult;
       setData(result);
-      const next = result.routines.find((item) => item.hookId === selectedHookId) ?? null;
-      setSelectedRoutineId(next?.id ?? null);
-      setDraft(next ? { ...next, outcomes: next.outcomes.map((outcome) => ({ ...outcome })) } : null);
+      setSelectedRoutineId(null);
+      setDraft(null);
       setOpenRoutineMenuId(null);
     },
     [data?.routines, pa, selectedHookId, unsavedRoutineIds],
@@ -579,12 +575,376 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     [draft],
   );
 
+  const closeEditor = useCallback(() => {
+    setSelectedRoutineId(null);
+    setDraft(null);
+    setActionError(null);
+    setSkillQuery(null);
+  }, []);
+
   if (loading) return <LoadingState label="Loading routines…" />;
   if (error) return <ErrorState title="Failed to load routines" message={error} />;
   if (!data || !selectedHook) return <ErrorState title="No routine hooks" message="No lifecycle hooks are available." />;
 
+  const renderEditor = (routine: Routine) => {
+    if (!draft || draft.id !== routine.id) return null;
+    return (
+      <div className="border-t border-border-subtle bg-app/35 px-9 py-4" onClick={(event) => event.stopPropagation()}>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <div className={cx('text-[12px]', draftIsDirty ? 'text-warning' : 'text-success')}>
+              {saving ? 'Saving…' : draftIsDirty ? 'Unsaved changes' : lastSavedAt ? `Saved at ${lastSavedAt}` : 'Saved'}
+            </div>
+            <p className="m-0 mt-1 text-[12px] text-secondary">Edit this routine inline. Save collapses it back into the timeline.</p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button variant="ghost" onClick={() => void remove()}>
+              Delete
+            </Button>
+            <Button variant="ghost" disabled={saving} onClick={closeEditor}>
+              Done
+            </Button>
+            <Button variant="primary" disabled={!draftIsDirty || saving} onClick={() => void save()}>
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
+        </div>
+        {actionError ? (
+          <div className="mb-4 rounded-md border border-danger/30 bg-danger/10 p-2 text-[12px] text-danger">{actionError}</div>
+        ) : null}
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
+          <div className="grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1">
+                <span className="text-[11px] uppercase tracking-wider text-secondary">Routine type</span>
+                <Select
+                  name="routine-type"
+                  className="w-full"
+                  value={draft.type}
+                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                    setDraft({
+                      ...draft,
+                      type: event.target.value as RoutineType,
+                      outcomes: event.target.value === 'decision' && draft.outcomes.length === 0 ? DEFAULT_OUTCOMES : draft.outcomes,
+                    })
+                  }
+                >
+                  <option value="instruction">Instruction: run a prompt</option>
+                  <option value="decision">Judge: choose a route</option>
+                  <option value="stop">Manual stop: always block</option>
+                </Select>
+              </label>
+              <label className="grid gap-1">
+                <span className="text-[11px] uppercase tracking-wider text-secondary">Position</span>
+                <Select
+                  name="routine-position"
+                  className="w-full"
+                  value={draft.position}
+                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                    setDraft({ ...draft, position: event.target.value as RoutinePosition })
+                  }
+                >
+                  <option value="before">Before</option>
+                  <option value="after">After</option>
+                </Select>
+              </label>
+            </div>
+            {draft.type === 'stop' ? (
+              <div className="rounded-md border border-warning/30 bg-warning/10 p-2 text-[12px] text-secondary">
+                Manual stop never calls a model. It always blocks this event and uses the instruction below as the explanation.
+              </div>
+            ) : null}
+            <label className="grid gap-1">
+              <span className="text-[11px] uppercase tracking-wider text-secondary">Name</span>
+              <TextInput
+                className="w-full"
+                value={draft.name}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, name: event.target.value })}
+              />
+            </label>
+            {draft.type === 'instruction' ? (
+              <label className="grid gap-1">
+                <span className="text-[11px] uppercase tracking-wider text-secondary">Pass / fail behavior</span>
+                <Select
+                  name="routine-failure-behavior"
+                  className="w-full"
+                  value={draft.failureBehavior}
+                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                    setDraft({ ...draft, failureBehavior: event.target.value as Routine['failureBehavior'] })
+                  }
+                >
+                  <option value="continue">Continue if this routine fails</option>
+                  <option value="warn">Warn and continue if this routine fails</option>
+                  <option value="block">Stop this event if the routine fails</option>
+                </Select>
+                <span className="text-[12px] text-secondary">{failureBehaviorDescription(draft.failureBehavior)}</span>
+              </label>
+            ) : null}
+            <label className="grid gap-1">
+              <span className="text-[11px] uppercase tracking-wider text-secondary">Instruction</span>
+              <div className="relative">
+                <Textarea
+                  className="min-h-32 w-full resize-y text-[13px]"
+                  value={draft.instruction}
+                  onFocus={(event) => onInstructionChange(event.currentTarget.value)}
+                  onKeyUp={(event) => onInstructionChange(event.currentTarget.value)}
+                  onInput={(event) => onInstructionChange(event.currentTarget.value)}
+                  onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onInstructionChange(event.target.value)}
+                />
+                {skillMatches.length ? (
+                  <div className="mt-1 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] shadow-2xl">
+                    {skillMatches.map((skill) => (
+                      <button
+                        key={skill.id}
+                        type="button"
+                        className="block w-full border-b border-border-subtle px-2 py-1.5 text-left last:border-b-0 hover:bg-surface-2"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => applySkill(skill)}
+                      >
+                        <b>/skill:{skill.id}</b>
+                        <span className="block truncate text-[11px] text-secondary">{skill.description ?? skill.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <span className="text-[12px] text-secondary">
+                Type <span className="text-accent">/skill:</span> to reference a skill.
+              </span>
+            </label>
+          </div>
+          <div className="grid content-start gap-3">
+            {draft.type !== 'stop' ? (
+              <div className="rounded-md border border-border-subtle bg-surface-2 p-3">
+                <div className="mb-2 text-[11px] uppercase tracking-wider text-secondary">Model for this routine</div>
+                <label className="mb-2 grid gap-1">
+                  <span className="text-[10px] uppercase tracking-wider text-dim">Primary model</span>
+                  <TextInput
+                    className="w-full font-mono text-[12px]"
+                    placeholder="Use app default"
+                    value={draft.modelRef ?? ''}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                      setDraft({ ...draft, modelRef: event.target.value.trim() || undefined })
+                    }
+                  />
+                </label>
+                <label className="grid gap-1">
+                  <span className="text-[10px] uppercase tracking-wider text-dim">Backup model</span>
+                  <TextInput
+                    className="w-full font-mono text-[12px]"
+                    placeholder="Optional provider/model fallback"
+                    value={draft.fallbackModelRef ?? ''}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                      setDraft({ ...draft, fallbackModelRef: event.target.value.trim() || undefined })
+                    }
+                  />
+                </label>
+                <div className="mt-2 text-[11px] text-secondary">
+                  Leave blank to use the current app model. Use <span className="font-mono">provider/model</span> when a provider matters.
+                </div>
+              </div>
+            ) : null}
+            <div>
+              <div className="mb-1 text-[11px] uppercase tracking-wider text-secondary">Available variables</div>
+              {selectedHook.variables.map((variable) => (
+                <div key={variable.name} className="flex justify-between border-b border-border-subtle py-1 text-[12px]">
+                  <span>{`{{${variable.name}}}`}</span>
+                  <span className="text-secondary">{variable.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        {draft.type === 'decision' ? (
+          <div className="mt-5">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div>
+                <div className="text-[11px] uppercase tracking-wider text-secondary">Routes</div>
+                <div className="text-[12px] text-secondary">
+                  The judge must return one enum value. That value selects the matching nested route.
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    outcomes: [
+                      ...draft.outcomes,
+                      { id: 'new_path', label: 'New path', target: 'Describe this path', behavior: 'continue' },
+                    ],
+                  })
+                }
+              >
+                Add route
+              </Button>
+            </div>
+            <div className="grid gap-2">
+              {draft.outcomes.map((outcome, index) => (
+                <div key={index} className="rounded-md border border-border-subtle bg-surface-2 p-3">
+                  <div className="grid gap-2 md:grid-cols-[180px_1fr_220px_auto]">
+                    <label className="grid gap-1">
+                      <span className="text-[10px] uppercase tracking-wider text-dim">Enum value</span>
+                      <TextInput
+                        className="w-full font-mono text-[12px]"
+                        placeholder="needs_review"
+                        value={outcome.id}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                          setDraft({
+                            ...draft,
+                            outcomes: draft.outcomes.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, id: event.target.value } : item,
+                            ),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      <span className="text-[10px] uppercase tracking-wider text-dim">Route meaning</span>
+                      <TextInput
+                        className="w-full text-[12px]"
+                        placeholder="Route to review"
+                        value={outcome.target}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                          setDraft({
+                            ...draft,
+                            outcomes: draft.outcomes.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, target: event.target.value } : item,
+                            ),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      <span className="text-[10px] uppercase tracking-wider text-dim">Fallback action</span>
+                      <Select
+                        className="w-full"
+                        value={outcome.behavior}
+                        onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
+                          const behavior = event.target.value as RoutineOutcome['behavior'];
+                          setDraft({
+                            ...draft,
+                            outcomes: draft.outcomes.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? {
+                                    ...item,
+                                    behavior,
+                                    nextRoutineId: behavior === 'branch' ? item.nextRoutineId || branchRoutineOptions[0]?.id : undefined,
+                                  }
+                                : item,
+                            ),
+                          });
+                        }}
+                      >
+                        <option value="continue">Continue</option>
+                        <option value="warn">Warn and continue</option>
+                        <option value="block">Stop if this route has no next step</option>
+                        <option value="ask">Ask me</option>
+                        <option value="branch">Branch</option>
+                      </Select>
+                      <span className="text-[11px] text-secondary">{outcomeBehaviorDescription(outcome.behavior)}</span>
+                    </label>
+                    <div className="flex items-end justify-end">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setDraft({ ...draft, outcomes: draft.outcomes.filter((_, itemIndex) => itemIndex !== index) })}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                  {outcome.behavior === 'branch' ? (
+                    <label className="mt-2 grid gap-1 rounded-md border border-border-subtle bg-app/40 p-2">
+                      <span className="text-[10px] uppercase tracking-wider text-dim">Then run</span>
+                      <Select
+                        className="w-full"
+                        value={outcome.nextRoutineId ?? ''}
+                        onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                          setDraft({
+                            ...draft,
+                            outcomes: draft.outcomes.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, nextRoutineId: event.target.value || undefined } : item,
+                            ),
+                          })
+                        }
+                      >
+                        <option value="">Choose a routine…</option>
+                        {branchRoutineOptions.map((routineOption) => (
+                          <option key={routineOption.id} value={routineOption.id}>
+                            {routineOption.name} ({routineOption.position})
+                          </option>
+                        ))}
+                      </Select>
+                    </label>
+                  ) : null}
+                  <div
+                    data-routine-route="true"
+                    data-parent-routine-id={routine.id}
+                    data-parent-outcome-id={outcome.id}
+                    className={cx(
+                      'mt-3 border-l border-border-subtle/70 pl-3 transition-colors',
+                      dragTargetRoute?.parentRoutineId === routine.id && dragTargetRoute.parentOutcomeId === outcome.id
+                        ? 'bg-accent/10 outline outline-1 outline-accent/40'
+                        : '',
+                    )}
+                    onDragOver={(event) => onDragOverLane(event, routine.position)}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      if (dragId)
+                        void moveRoutineById(dragId, routine.position, '', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
+                    }}
+                  >
+                    <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-dim">
+                      <span>If judge returns {outcome.id}</span>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          className="rounded px-2 py-1 text-accent hover:bg-surface-3"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            addRoutine('instruction', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
+                          }}
+                        >
+                          Add instruction
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded px-2 py-1 text-accent hover:bg-surface-3"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            addRoutine('decision', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
+                          }}
+                        >
+                          Add judge
+                        </button>
+                      </div>
+                    </div>
+                    {hookRoutines.filter((child) => child.parentRoutineId === routine.id && child.parentOutcomeId === outcome.id).length ? (
+                      <div className="grid gap-2">
+                        {hookRoutines
+                          .filter((child) => child.parentRoutineId === routine.id && child.parentOutcomeId === outcome.id)
+                          .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name))
+                          .map(renderBlock)}
+                      </div>
+                    ) : (
+                      <div className="rounded border border-dashed border-border-subtle/70 px-3 py-2 text-[11px] text-secondary">
+                        Drop a routine here, or add one.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   const renderBlock = (routine: Routine) => {
     const isUnsaved = unsavedRoutineIds.has(routine.id);
+    const isEditing = selectedRoutineId === routine.id && draft?.id === routine.id;
     return (
       <div key={routine.id}>
         {dragTargetRoutineId === routine.id ? (
@@ -603,12 +963,11 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             event.stopPropagation();
             void moveRoutine(routine.position, routine.id);
           }}
-          onClick={() => selectRoutine(routine)}
           className={cx(
             'relative overflow-visible rounded-md border bg-surface-2 text-left transition-colors',
             dragId === routine.id && 'scale-[0.99] border-accent/60 bg-accent/10 opacity-45 ring-1 ring-accent/40',
             dragTargetRoutineId === routine.id && 'border-accent/70',
-            selectedRoutineId === routine.id ? 'border-accent/70 bg-accent/10' : 'border-border-subtle',
+            isEditing ? 'border-accent/70 bg-accent/10' : 'border-border-subtle',
           )}
         >
           <div className="grid grid-cols-[22px_1fr_auto] gap-2 px-2 py-2">
@@ -645,7 +1004,17 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 </div>
               ) : null}
             </div>
-            <div className="relative">
+            <div className="relative flex items-start gap-1">
+              <button
+                type="button"
+                className="rounded px-2 py-1 text-[12px] text-accent hover:bg-surface-3"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  selectRoutine(routine);
+                }}
+              >
+                {isEditing ? 'Editing' : 'Edit'}
+              </button>
               <button
                 type="button"
                 aria-label={`More actions for ${routine.name}`}
@@ -694,7 +1063,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               ) : null}
             </div>
           </div>
-          {routine.type === 'decision' && routine.outcomes.length ? (
+          {isEditing ? renderEditor(routine) : null}
+          {!isEditing && routine.type === 'decision' && routine.outcomes.length ? (
             <div className="border-t border-border-subtle px-9 py-2 text-[12px]">
               <div className="mb-2 text-[11px] uppercase tracking-[0.12em] text-dim">Routes</div>
               <div className="grid gap-2 border-l border-border-subtle pl-3">
@@ -837,394 +1207,94 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 <span className="block text-[11px] text-secondary">Assess a prompt and route to one path.</span>
               </button>
               <button className="block w-full px-3 py-2 text-left hover:bg-surface-3" onClick={() => addRoutine('stop')}>
-                <span className="block text-[13px] font-medium text-primary">Stop</span>
-                <span className="block text-[11px] text-secondary">Stop this event and report why.</span>
+                <span className="block text-[13px] font-medium text-primary">Manual stop</span>
+                <span className="block text-[11px] text-secondary">Advanced: always block this event.</span>
               </button>
             </div>
           ) : null}
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(560px,1fr)_352px] overflow-hidden">
-        <main className="min-w-0 overflow-hidden">
-          <div className="h-full overflow-auto px-9 py-7">
-            {showRuns ? (
-              <div className="grid min-h-full max-w-3xl gap-2">
-                {selectedRuns.length === 0 ? (
-                  <div className="grid min-h-[24rem] place-items-center text-center">
-                    <div>
-                      <div className="text-[14px] font-medium text-primary">No routine runs yet.</div>
-                      <div className="mt-2 max-w-sm text-[12px] text-secondary">
-                        Runs appear here after a lifecycle event executes routines for {selectedHook.title.toLowerCase()}.
+      <main className="min-h-0 flex-1 overflow-hidden">
+        <div className="h-full overflow-auto px-9 py-7">
+          {showRuns ? (
+            <div className="grid min-h-full max-w-5xl gap-2">
+              {selectedRuns.length === 0 ? (
+                <div className="grid min-h-[24rem] place-items-center text-center">
+                  <div>
+                    <div className="text-[14px] font-medium text-primary">No routine runs yet.</div>
+                    <div className="mt-2 max-w-sm text-[12px] text-secondary">
+                      Runs appear here after a lifecycle event executes routines for {selectedHook.title.toLowerCase()}.
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              {selectedRuns.map((run) => (
+                <div key={run.id} className="rounded-md border border-border-subtle bg-surface-2 p-3">
+                  <div className="flex gap-2">
+                    <b>{run.status}</b>
+                    <span className="text-secondary">{new Date(run.startedAt).toLocaleString()}</span>
+                  </div>
+                  <div className="mt-2 grid gap-1 text-[12px] text-secondary">
+                    {run.steps.map((step, index) => (
+                      <div key={`${step.routineId}-${index}`}>
+                        {step.routineName}: {step.outcome ?? step.status} {step.message ? `— ${step.message}` : ''}
                       </div>
-                    </div>
-                  </div>
-                ) : null}
-                {selectedRuns.map((run) => (
-                  <div key={run.id} className="rounded-md border border-border-subtle bg-surface-2 p-3">
-                    <div className="flex gap-2">
-                      <b>{run.status}</b>
-                      <span className="text-secondary">{new Date(run.startedAt).toLocaleString()}</span>
-                    </div>
-                    <div className="mt-2 grid gap-1 text-[12px] text-secondary">
-                      {run.steps.map((step, index) => (
-                        <div key={`${step.routineId}-${index}`}>
-                          {step.routineName}: {step.outcome ?? step.status} {step.message ? `— ${step.message}` : ''}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid max-w-5xl gap-5">
-                <div>
-                  <h2 className="m-0 text-[18px] font-semibold">{selectedHook.title} timeline</h2>
-                  <p className="m-0 mt-1 text-[13px] text-secondary">
-                    Drag routines within Before or After. Judge routines assess a prompt, output one enum, then run the matching nested
-                    route.
-                  </p>
-                </div>
-                <section
-                  data-routine-lane="before"
-                  className={cx(
-                    'grid gap-2 rounded-md transition-colors',
-                    dragOverPosition === 'before' && dragId ? 'bg-accent/5 outline outline-1 outline-accent/30' : '',
-                  )}
-                  onDragOver={(event) => onDragOverLane(event, 'before')}
-                  onDragLeave={() => setDragOverPosition((current) => (current === 'before' ? null : current))}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    void moveRoutine('before');
-                  }}
-                >
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
-                    Before
-                  </div>
-                  {beforeRoutines.map(renderBlock)}
-                  {beforeRoutines.length === 0 ? (
-                    <div className="py-6 text-[12px] text-secondary">No routines before this event.</div>
-                  ) : null}
-                </section>
-                <section
-                  data-routine-lane="after"
-                  className={cx(
-                    'grid gap-2 rounded-md transition-colors',
-                    dragOverPosition === 'after' && dragId ? 'bg-accent/5 outline outline-1 outline-accent/30' : '',
-                  )}
-                  onDragOver={(event) => onDragOverLane(event, 'after')}
-                  onDragLeave={() => setDragOverPosition((current) => (current === 'after' ? null : current))}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    void moveRoutine('after');
-                  }}
-                >
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
-                    After
-                  </div>
-                  {afterRoutines.map(renderBlock)}
-                  {afterRoutines.length === 0 ? <div className="py-6 text-[12px] text-secondary">No routines after this event.</div> : null}
-                </section>
-              </div>
-            )}
-          </div>
-        </main>
-
-        <aside className="flex min-w-0 flex-col overflow-hidden border-l border-border-subtle bg-transparent">
-          {draft ? (
-            <>
-              <div className="shrink-0 border-b border-border-subtle px-4 pb-3 pt-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-dim">Routine</div>
-                    <h2 className="m-0 mt-2 truncate text-[16px] font-semibold">{draft.name}</h2>
-                    <p className="m-0 mt-1 text-[12px] text-secondary">
-                      {routineLabel(draft.type)} · {draft.position === 'before' ? 'Before' : 'After'} {selectedHook.title.toLowerCase()}
-                    </p>
-                    <div className={cx('mt-2 text-[12px]', draftIsDirty ? 'text-warning' : 'text-success')}>
-                      {saving ? 'Saving…' : draftIsDirty ? 'Unsaved changes' : lastSavedAt ? `Saved at ${lastSavedAt}` : 'Saved'}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 gap-2 pt-5">
-                    <Button variant="ghost" onClick={() => void remove()}>
-                      Delete
-                    </Button>
-                    <Button variant="primary" disabled={!draftIsDirty || saving} onClick={() => void save()}>
-                      {saving ? 'Saving…' : 'Save'}
-                    </Button>
+                    ))}
                   </div>
                 </div>
-                {actionError ? (
-                  <div className="mt-3 rounded-md border border-danger/30 bg-danger/10 p-2 text-[12px] text-danger">{actionError}</div>
-                ) : null}
-              </div>
-              <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 pt-3">
-                <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Routine type</label>
-                <Select
-                  name="routine-type"
-                  className="mb-3 w-full"
-                  value={draft.type}
-                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
-                    setDraft({
-                      ...draft,
-                      type: event.target.value as RoutineType,
-                      outcomes: event.target.value === 'decision' && draft.outcomes.length === 0 ? DEFAULT_OUTCOMES : draft.outcomes,
-                    })
-                  }
-                >
-                  <option value="instruction">Instruction: run a prompt</option>
-                  <option value="decision">Judge: choose a route</option>
-                  <option value="stop">Manual stop: always block</option>
-                </Select>
-                {draft.type === 'stop' ? (
-                  <div className="mb-3 rounded-md border border-warning/30 bg-warning/10 p-2 text-[12px] text-secondary">
-                    Manual stop never calls a model. It always blocks this event and uses the instruction below as the explanation.
-                  </div>
-                ) : null}
-                <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Position</label>
-                <Select
-                  name="routine-position"
-                  className="mb-3 w-full"
-                  value={draft.position}
-                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
-                    setDraft({ ...draft, position: event.target.value as RoutinePosition })
-                  }
-                >
-                  <option value="before">Before</option>
-                  <option value="after">After</option>
-                </Select>
-                <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Name</label>
-                <TextInput
-                  className="mb-3 w-full"
-                  value={draft.name}
-                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, name: event.target.value })}
-                />
-                {draft.type === 'instruction' ? (
-                  <>
-                    <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Pass / fail behavior</label>
-                    <Select
-                      name="routine-failure-behavior"
-                      className="w-full"
-                      value={draft.failureBehavior}
-                      onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
-                        setDraft({ ...draft, failureBehavior: event.target.value as Routine['failureBehavior'] })
-                      }
-                    >
-                      <option value="continue">Continue if this routine fails</option>
-                      <option value="warn">Warn and continue if this routine fails</option>
-                      <option value="block">Stop this event if the routine fails</option>
-                    </Select>
-                    <div className="mb-3 mt-1 text-[12px] text-secondary">{failureBehaviorDescription(draft.failureBehavior)}</div>
-                  </>
-                ) : null}
-                {draft.type !== 'stop' ? (
-                  <div className="mb-3 rounded-md border border-border-subtle bg-surface-2 p-2">
-                    <div className="mb-2 text-[11px] uppercase tracking-wider text-secondary">Model for this routine</div>
-                    <label className="mb-2 grid gap-1">
-                      <span className="text-[10px] uppercase tracking-wider text-dim">Primary model</span>
-                      <TextInput
-                        className="w-full font-mono text-[12px]"
-                        placeholder="Use app default"
-                        value={draft.modelRef ?? ''}
-                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                          setDraft({ ...draft, modelRef: event.target.value.trim() || undefined })
-                        }
-                      />
-                    </label>
-                    <label className="grid gap-1">
-                      <span className="text-[10px] uppercase tracking-wider text-dim">Backup model</span>
-                      <TextInput
-                        className="w-full font-mono text-[12px]"
-                        placeholder="Optional provider/model fallback"
-                        value={draft.fallbackModelRef ?? ''}
-                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                          setDraft({ ...draft, fallbackModelRef: event.target.value.trim() || undefined })
-                        }
-                      />
-                    </label>
-                    <div className="mt-2 text-[11px] text-secondary">
-                      Leave blank to use the current app model. Use <span className="font-mono">provider/model</span> when a provider
-                      matters. If the primary model fails, this routine retries once with the backup.
-                    </div>
-                  </div>
-                ) : null}
-                <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Instruction</label>
-                <div className="relative">
-                  <Textarea
-                    className="min-h-40 w-full resize-y text-[13px]"
-                    value={draft.instruction}
-                    onFocus={(event) => onInstructionChange(event.currentTarget.value)}
-                    onKeyUp={(event) => onInstructionChange(event.currentTarget.value)}
-                    onInput={(event) => onInstructionChange(event.currentTarget.value)}
-                    onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onInstructionChange(event.target.value)}
-                  />
-                  {skillMatches.length ? (
-                    <div className="mt-1 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] shadow-2xl">
-                      {skillMatches.map((skill) => (
-                        <button
-                          key={skill.id}
-                          type="button"
-                          className="block w-full border-b border-border-subtle px-2 py-1.5 text-left last:border-b-0 hover:bg-surface-2"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => applySkill(skill)}
-                        >
-                          <b>/skill:{skill.id}</b>
-                          <span className="block truncate text-[11px] text-secondary">{skill.description ?? skill.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="mb-3 mt-1 text-[12px] text-secondary">
-                  Type <span className="text-accent">/skill:</span> to reference a skill.
-                </div>
-                {draft.type === 'decision' ? (
-                  <>
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <label className="block text-[11px] uppercase tracking-wider text-secondary">Routes</label>
-                      <Button
-                        variant="ghost"
-                        onClick={() =>
-                          setDraft({
-                            ...draft,
-                            outcomes: [
-                              ...draft.outcomes,
-                              { id: 'new_path', label: 'New path', target: 'Describe this path', behavior: 'continue' },
-                            ],
-                          })
-                        }
-                      >
-                        Add route
-                      </Button>
-                    </div>
-                    <div className="mb-3 grid gap-2">
-                      {draft.outcomes.map((outcome, index) => (
-                        <div key={index} className="rounded-md border border-border-subtle bg-surface-2 p-2">
-                          <div className="grid gap-2">
-                            <label className="grid gap-1">
-                              <span className="text-[10px] uppercase tracking-wider text-dim">Enum value</span>
-                              <TextInput
-                                className="w-full font-mono text-[12px]"
-                                placeholder="needs_review"
-                                value={outcome.id}
-                                onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                                  setDraft({
-                                    ...draft,
-                                    outcomes: draft.outcomes.map((item, itemIndex) =>
-                                      itemIndex === index ? { ...item, id: event.target.value } : item,
-                                    ),
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="grid gap-1">
-                              <span className="text-[10px] uppercase tracking-wider text-dim">Route meaning</span>
-                              <TextInput
-                                className="w-full text-[12px]"
-                                placeholder="Route to review"
-                                value={outcome.target}
-                                onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                                  setDraft({
-                                    ...draft,
-                                    outcomes: draft.outcomes.map((item, itemIndex) =>
-                                      itemIndex === index ? { ...item, target: event.target.value } : item,
-                                    ),
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="grid gap-1">
-                              <span className="text-[10px] uppercase tracking-wider text-dim">Fallback action</span>
-                              <Select
-                                className="w-full"
-                                value={outcome.behavior}
-                                onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
-                                  const behavior = event.target.value as RoutineOutcome['behavior'];
-                                  setDraft({
-                                    ...draft,
-                                    outcomes: draft.outcomes.map((item, itemIndex) =>
-                                      itemIndex === index
-                                        ? {
-                                            ...item,
-                                            behavior,
-                                            nextRoutineId:
-                                              behavior === 'branch' ? item.nextRoutineId || branchRoutineOptions[0]?.id : undefined,
-                                          }
-                                        : item,
-                                    ),
-                                  });
-                                }}
-                              >
-                                <option value="continue">Continue</option>
-                                <option value="warn">Warn and continue</option>
-                                <option value="block">Stop if this route has no next step</option>
-                                <option value="ask">Ask me</option>
-                                <option value="branch">Branch</option>
-                              </Select>
-                              <span className="text-[11px] text-secondary">{outcomeBehaviorDescription(outcome.behavior)}</span>
-                            </label>
-                            {outcome.behavior === 'branch' ? (
-                              <label className="grid gap-1 rounded-md border border-border-subtle bg-app/40 p-2">
-                                <span className="text-[10px] uppercase tracking-wider text-dim">Then run</span>
-                                <Select
-                                  className="w-full"
-                                  value={outcome.nextRoutineId ?? ''}
-                                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
-                                    setDraft({
-                                      ...draft,
-                                      outcomes: draft.outcomes.map((item, itemIndex) =>
-                                        itemIndex === index ? { ...item, nextRoutineId: event.target.value || undefined } : item,
-                                      ),
-                                    })
-                                  }
-                                >
-                                  <option value="">Choose a routine…</option>
-                                  {branchRoutineOptions.map((routine) => (
-                                    <option key={routine.id} value={routine.id}>
-                                      {routine.name} ({routine.position})
-                                    </option>
-                                  ))}
-                                </Select>
-                                <span className="text-[11px] text-secondary">
-                                  This route can continue into another routine. If no routine is selected, the route records its result and
-                                  stops there.
-                                </span>
-                              </label>
-                            ) : null}
-                            <div className="flex justify-end">
-                              <Button
-                                variant="ghost"
-                                onClick={() =>
-                                  setDraft({ ...draft, outcomes: draft.outcomes.filter((_, itemIndex) => itemIndex !== index) })
-                                }
-                              >
-                                Remove route
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mb-3 text-[12px] text-secondary">
-                      The judge prompt must return one enum value. That value selects the nested route below and runs only the routines
-                      inside it.
-                    </div>
-                  </>
-                ) : null}
-                <label className="mb-1 mt-3 block text-[11px] uppercase tracking-wider text-secondary">Available variables</label>
-                {selectedHook.variables.map((variable) => (
-                  <div key={variable.name} className="flex justify-between border-b border-border-subtle py-1 text-[12px]">
-                    <span>{`{{${variable.name}}}`}</span>
-                    <span className="text-secondary">{variable.label}</span>
-                  </div>
-                ))}
-              </div>
-            </>
+              ))}
+            </div>
           ) : (
-            <div className="p-4 text-secondary">Select a routine to edit it.</div>
+            <div className="grid max-w-6xl gap-5">
+              <div>
+                <h2 className="m-0 text-[18px] font-semibold">{selectedHook.title} timeline</h2>
+                <p className="m-0 mt-1 text-[13px] text-secondary">
+                  Drag routines within Before or After. Judge routines assess a prompt, output one enum, then run the matching nested route.
+                </p>
+              </div>
+              <section
+                data-routine-lane="before"
+                className={cx(
+                  'grid gap-2 rounded-md transition-colors',
+                  dragOverPosition === 'before' && dragId ? 'bg-accent/5 outline outline-1 outline-accent/30' : '',
+                )}
+                onDragOver={(event) => onDragOverLane(event, 'before')}
+                onDragLeave={() => setDragOverPosition((current) => (current === 'before' ? null : current))}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  void moveRoutine('before');
+                }}
+              >
+                <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
+                  Before
+                </div>
+                {beforeRoutines.map(renderBlock)}
+                {beforeRoutines.length === 0 ? <div className="py-6 text-[12px] text-secondary">No routines before this event.</div> : null}
+              </section>
+              <section
+                data-routine-lane="after"
+                className={cx(
+                  'grid gap-2 rounded-md transition-colors',
+                  dragOverPosition === 'after' && dragId ? 'bg-accent/5 outline outline-1 outline-accent/30' : '',
+                )}
+                onDragOver={(event) => onDragOverLane(event, 'after')}
+                onDragLeave={() => setDragOverPosition((current) => (current === 'after' ? null : current))}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  void moveRoutine('after');
+                }}
+              >
+                <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
+                  After
+                </div>
+                {afterRoutines.map(renderBlock)}
+                {afterRoutines.length === 0 ? <div className="py-6 text-[12px] text-secondary">No routines after this event.</div> : null}
+              </section>
+            </div>
           )}
-        </aside>
-      </div>
+        </div>
+      </main>
       {dragPreview ? (
         <div
           className="pointer-events-none fixed z-50 w-72 rounded-md border border-accent/70 bg-[#10141d]/95 px-3 py-2 text-left shadow-2xl ring-1 ring-accent/30"

@@ -150,16 +150,8 @@ async function main() {
           }
           throw new Error('timed out waiting for ' + label);
         };
-        const assertInspectorCanScrollBottom = async () => {
-          const scroller = Array.from(document.querySelectorAll('aside .overflow-auto')).at(-1);
-          if (!scroller) throw new Error('routine inspector scroll region missing');
-          scroller.scrollTop = scroller.scrollHeight;
-          await new Promise((r) => requestAnimationFrame(r));
-          const variableRow = Array.from(document.querySelectorAll('aside *')).find((el) => el.textContent?.trim() === '{{conversationId}}');
-          if (!variableRow) throw new Error('inspector bottom variables missing');
-          const rowRect = variableRow.getBoundingClientRect();
-          const scrollerRect = scroller.getBoundingClientRect();
-          if (rowRect.bottom > scrollerRect.bottom + 2) throw new Error('inspector bottom content is cut off');
+        const assertInlineEditorVisible = () => {
+          if (!bodyIncludes('Edit this routine inline')) throw new Error('inline routine editor missing');
         };
         const assertNoUiErrors = () => {
           const text = document.body?.innerText || '';
@@ -178,7 +170,7 @@ async function main() {
         input(Array.from(document.querySelectorAll('input')).find((el) => el.value === 'New judge'), 'Smoke judge routine');
         input(Array.from(document.querySelectorAll('textarea')).at(-1), 'Return OUTCOME: smoke_branch when this smoke test asks.');
         await waitUntil(() => bodyIncludes('Unsaved changes'), 'new decision unsaved state');
-        await assertInspectorCanScrollBottom();
+        assertInlineEditorVisible();
         for (let index = 1; index <= 10; index += 1) {
           click(byText('button', 'Add route'), 'Add route');
           await new Promise((r) => setTimeout(r, 60));
@@ -191,7 +183,7 @@ async function main() {
         if (!Array.from(document.querySelectorAll('input')).some((el) => el.value === 'smoke_10')) {
           throw new Error('ten added branch paths did not render');
         }
-        const removeButtons = Array.from(document.querySelectorAll('button')).filter((el) => el.textContent?.trim() === 'Remove route');
+        const removeButtons = Array.from(document.querySelectorAll('button')).filter((el) => el.textContent?.trim() === 'Remove');
         click(removeButtons.at(-1), 'Remove route');
         await new Promise((r) => setTimeout(r, 100));
         if (Array.from(document.querySelectorAll('input')).some((el) => el.value === 'smoke_10')) {
