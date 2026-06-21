@@ -139,4 +139,15 @@ describe('computeLiveSessionRunning', () => {
       ),
     ).toBe(false);
   });
+
+  it('returns false when a stopped run is interrupted but pi session has not cleared streaming yet', () => {
+    expect(
+      computeLiveSessionRunning(
+        makeEntry({
+          session: { isStreaming: true } as unknown,
+          lastDurableRunState: 'interrupted',
+        }),
+      ),
+    ).toBe(false);
+  });
 });

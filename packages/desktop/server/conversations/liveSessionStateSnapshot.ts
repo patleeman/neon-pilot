@@ -103,9 +103,13 @@ function isSmallLiveSessionFile(filePath: string): boolean {
   }
 }
 
+function isTerminalDurableRunState(state: string | undefined): boolean {
+  return state === 'waiting' || state === 'interrupted' || state === 'completed' || state === 'failed' || state === 'cancelled';
+}
+
 function isLiveSessionSnapshotStreaming(entry: LiveSessionSnapshotHost): boolean {
   if (entry.isCompacting) return true;
-  if (entry.lastDurableRunState === 'waiting') return false;
+  if (isTerminalDurableRunState(entry.lastDurableRunState)) return false;
   if (entry.lastDurableRunState === 'running' || entry.lastDurableRunState === 'recovering') return true;
   if (!entry.session.isStreaming) return false;
   const sessionManager = entry.session.sessionManager;

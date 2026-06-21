@@ -1054,7 +1054,10 @@ export async function updateLiveSessionModelPreferences(
 /** Abort the current agent run. */
 export async function abortSession(sessionId: string): Promise<void> {
   const entry = registry.get(sessionId);
-  if (entry) await entry.session.abort();
+  if (!entry) return;
+  await entry.session.abort();
+  await syncDurableConversationRun(entry, 'interrupted', { force: true, lastError: 'Stopped by user' });
+  publishRunningChange(entry);
 }
 
 /** Fork a session at a given message entry ID. */
