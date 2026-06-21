@@ -162,6 +162,7 @@ describe('applyDesktopConversationStreamEvent', () => {
         status: 'active' as const,
         tasks: [],
         stopReason: null,
+        startedAt: '2026-05-24T00:00:00.000Z',
         updatedAt: '2026-05-24T00:00:00.000Z',
       },
       systemPrompt: null,
@@ -182,7 +183,15 @@ describe('applyDesktopConversationStreamEvent', () => {
       isError: false,
       durationMs: 0,
       output: 'Goal complete!',
-      details: { state: { objective: '', status: 'complete', stopReason: 'goal achieved', updatedAt: '2026-05-24T00:00:01.000Z' } },
+      details: {
+        state: {
+          objective: '',
+          status: 'complete',
+          stopReason: 'goal achieved',
+          startedAt: null,
+          updatedAt: '2026-05-24T00:00:01.000Z',
+        },
+      },
     });
 
     expect(next.goalState).toBeNull();

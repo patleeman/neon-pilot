@@ -208,6 +208,7 @@ describe('desktopConversationState reducer', () => {
           status: 'active',
           tasks: [],
           stopReason: null,
+          startedAt: '2026-05-11T12:00:00.000Z',
           updatedAt: '2026-05-11T12:00:00.000Z',
         },
       },
@@ -218,6 +219,7 @@ describe('desktopConversationState reducer', () => {
       status: 'active',
       tasks: [],
       stopReason: null,
+      startedAt: '2026-05-11T12:00:00.000Z',
       updatedAt: '2026-05-11T12:00:00.000Z',
     });
 
@@ -234,6 +236,7 @@ describe('desktopConversationState reducer', () => {
           status: 'complete',
           tasks: [],
           stopReason: 'goal achieved',
+          startedAt: null,
           updatedAt: '2026-05-11T12:01:00.000Z',
         },
       },
@@ -253,7 +256,14 @@ describe('desktopConversationState reducer', () => {
       blockOffset: 0,
       totalBlocks: 0,
       isStreaming: false,
-      goalState: { objective: 'Ship it', status: 'active', tasks: [], stopReason: null, updatedAt: '2026-05-11T12:00:00.000Z' },
+      goalState: {
+        objective: 'Ship it',
+        status: 'active',
+        tasks: [],
+        stopReason: null,
+        startedAt: '2026-05-11T12:00:00.000Z',
+        updatedAt: '2026-05-11T12:00:00.000Z',
+      },
     } as never);
     expect(state.goalState?.objective).toBe('Ship it');
 

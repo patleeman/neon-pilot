@@ -108,6 +108,7 @@ function readGoalStateFromToolDetails(toolName: string | undefined, details: unk
     status,
     tasks: [],
     stopReason: typeof state.stopReason === 'string' ? state.stopReason : null,
+    startedAt: typeof state.startedAt === 'string' ? state.startedAt : typeof state.updatedAt === 'string' ? state.updatedAt : null,
     updatedAt: typeof state.updatedAt === 'string' ? state.updatedAt : null,
   };
 }

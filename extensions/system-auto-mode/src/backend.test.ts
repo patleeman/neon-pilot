@@ -22,6 +22,7 @@ function activeGoal(objective = 'ship goal mode', noProgressTurns = 0, updatedAt
     status: 'active',
     tasks: [],
     stopReason: null,
+    startedAt: updatedAt,
     updatedAt,
     noProgressTurns,
   });
@@ -33,6 +34,7 @@ function pausedGoal(objective = 'ship goal mode', updatedAt = '2026-05-09T00:00:
     status: 'paused',
     tasks: [],
     stopReason: 'paused',
+    startedAt: updatedAt,
     updatedAt,
     noProgressTurns: 0,
   });
@@ -44,6 +46,7 @@ function completeGoal(stopReason = 'goal achieved', updatedAt = '2026-05-09T00:0
     status: 'complete',
     tasks: [],
     stopReason,
+    startedAt: null,
     updatedAt,
     noProgressTurns: 0,
   });

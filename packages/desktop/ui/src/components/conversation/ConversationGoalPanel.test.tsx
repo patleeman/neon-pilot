@@ -5,10 +5,19 @@ import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ConversationGoalPanel } from './ConversationGoalPanel';
 import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversationGoalCommands';
+import { ConversationGoalPanel } from './ConversationGoalPanel';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
+
+const baseGoal = {
+  objective: 'Ship goal mode',
+  status: 'active' as const,
+  tasks: [],
+  stopReason: null,
+  startedAt: null,
+  updatedAt: null,
+};
 
 describe('ConversationGoalPanel', () => {
   let root: Root | null = null;
@@ -22,9 +31,7 @@ describe('ConversationGoalPanel', () => {
   });
 
   it('renders goal with spinner on the left and cancel button', () => {
-    const html = renderToStaticMarkup(
-      <ConversationGoalPanel goal={{ objective: 'Ship goal mode', status: 'active', tasks: [], stopReason: null, updatedAt: null }} />,
-    );
+    const html = renderToStaticMarkup(<ConversationGoalPanel goal={baseGoal} />);
 
     expect(html).toContain('Goal');
     expect(html).toContain('Ship goal mode');
@@ -38,17 +45,13 @@ describe('ConversationGoalPanel', () => {
   });
 
   it('does not render completed goals', () => {
-    const html = renderToStaticMarkup(
-      <ConversationGoalPanel goal={{ objective: 'Ship goal mode', status: 'complete', tasks: [], stopReason: null, updatedAt: null }} />,
-    );
+    const html = renderToStaticMarkup(<ConversationGoalPanel goal={{ ...baseGoal, status: 'complete' }} />);
 
     expect(html).toBe('');
   });
 
   it('does not render cancel button for paused goals', () => {
-    const html = renderToStaticMarkup(
-      <ConversationGoalPanel goal={{ objective: 'Ship goal mode', status: 'paused', tasks: [], stopReason: null, updatedAt: null }} />,
-    );
+    const html = renderToStaticMarkup(<ConversationGoalPanel goal={{ ...baseGoal, status: 'paused' }} />);
 
     expect(html).toContain('Goal');
     expect(html).toContain('Paused');
@@ -63,12 +66,7 @@ describe('ConversationGoalPanel', () => {
     root = createRoot(container);
 
     act(() => {
-      root?.render(
-        <ConversationGoalPanel
-          goal={{ objective: 'Ship goal mode', status: 'active', tasks: [], stopReason: null, updatedAt: null }}
-          onCancel={onCancel}
-        />,
-      );
+      root?.render(<ConversationGoalPanel goal={baseGoal} onCancel={onCancel} />);
     });
 
     act(() => {

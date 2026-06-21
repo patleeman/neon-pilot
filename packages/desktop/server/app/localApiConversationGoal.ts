@@ -8,6 +8,7 @@ export interface DesktopConversationGoalState {
   status: 'active' | 'complete';
   tasks: Array<{ id: string; description: string; status: string }>;
   stopReason: string | null;
+  startedAt: string | null;
   updatedAt: string;
   noProgressTurns: number;
 }
@@ -32,6 +33,7 @@ export function buildDesktopConversationGoalState(input: { objective?: string; n
       status: 'active',
       tasks: [],
       stopReason: null,
+      startedAt: updatedAt,
       updatedAt,
       noProgressTurns: 0,
     };
@@ -42,6 +44,7 @@ export function buildDesktopConversationGoalState(input: { objective?: string; n
     status: 'complete',
     tasks: [],
     stopReason: 'cleared',
+    startedAt: null,
     updatedAt,
     noProgressTurns: 0,
   };

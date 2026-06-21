@@ -14,6 +14,7 @@ interface GoalState {
   status: 'active' | 'paused' | 'complete';
   tasks: [];
   stopReason: string | null;
+  startedAt: string | null;
   updatedAt: string | null;
   noProgressTurns: number;
 }
@@ -23,6 +24,7 @@ const DEFAULT_GOAL_STATE: GoalState = {
   status: 'complete',
   tasks: [],
   stopReason: null,
+  startedAt: null,
   updatedAt: null,
   noProgressTurns: 0,
 };
@@ -53,6 +55,7 @@ function readGoalState(sessionManager: { getEntries: () => unknown[] }): GoalSta
       status,
       tasks: [],
       stopReason: typeof data.stopReason === 'string' ? data.stopReason : null,
+      startedAt: typeof data.startedAt === 'string' ? data.startedAt : typeof data.updatedAt === 'string' ? data.updatedAt : null,
       updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : null,
       noProgressTurns: typeof data.noProgressTurns === 'number' && Number.isSafeInteger(data.noProgressTurns) ? data.noProgressTurns : 0,
     };
@@ -65,12 +68,14 @@ function writeGoalState(pi: ExtensionAPI, state: GoalState): void {
 }
 
 function createActiveGoalState(objective: string): GoalState {
+  const now = new Date().toISOString();
   return {
     objective,
     status: 'active',
     tasks: [],
     stopReason: null,
-    updatedAt: new Date().toISOString(),
+    startedAt: now,
+    updatedAt: now,
     noProgressTurns: 0,
   };
 }
@@ -81,6 +86,7 @@ function createCompleteGoalState(stopReason: string): GoalState {
     status: 'complete',
     tasks: [],
     stopReason,
+    startedAt: null,
     updatedAt: new Date().toISOString(),
     noProgressTurns: 0,
   };

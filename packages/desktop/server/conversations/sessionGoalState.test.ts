@@ -26,6 +26,7 @@ describe('sessionGoalState', () => {
               { id: 3, description: 'bad' },
             ],
             stopReason: 'waiting',
+            startedAt: 'then',
             updatedAt: 'now',
           },
         },
@@ -38,6 +39,7 @@ describe('sessionGoalState', () => {
         { id: '2', description: 'two', status: 'pending' },
       ],
       stopReason: 'waiting',
+      startedAt: 'then',
       updatedAt: 'now',
     });
   });

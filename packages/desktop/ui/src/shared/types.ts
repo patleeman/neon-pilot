@@ -974,6 +974,7 @@ export interface ThreadGoal {
   status: 'active' | 'paused' | 'complete';
   tasks: Array<{ id: string; description: string; status: 'pending' | 'in_progress' | 'done' | 'blocked' }>;
   stopReason: string | null;
+  startedAt: string | null;
   updatedAt: string | null;
 }
 
@@ -982,6 +983,7 @@ export interface GoalState {
   status: 'active' | 'paused' | 'complete';
   tasks: TaskState[];
   stopReason: string | null;
+  startedAt: string | null;
   updatedAt: string | null;
 }
 

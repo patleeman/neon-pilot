@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import type { ThreadGoal } from '../../shared/types';
 import { setExtensionCommandContext } from '../../extensions/commands';
+import type { ThreadGoal } from '../../shared/types';
 import { Button, cx, MetaLabel, Spinner } from '../ui';
 import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversationGoalCommands';
 
@@ -16,8 +16,23 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   complete: { label: 'Complete', className: 'text-dim' },
 };
 
+function formatElapsedTime(startedAt: string | null | undefined, nowMs: number): string | null {
+  if (!startedAt) return null;
+  const startedMs = Date.parse(startedAt);
+  if (!Number.isFinite(startedMs) || startedMs > nowMs) return null;
+  const totalSeconds = Math.floor((nowMs - startedMs) / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
 export function ConversationGoalPanel({ goal, onCancel }: GoalPanelProps) {
   const goalActive = Boolean(goal?.objective && goal.status === 'active');
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const elapsedTime = useMemo(() => formatElapsedTime(goal?.startedAt, nowMs), [goal?.startedAt, nowMs]);
 
   useEffect(() => {
     setExtensionCommandContext('conversation.goalActive', goalActive);
@@ -32,6 +47,13 @@ export function ConversationGoalPanel({ goal, onCancel }: GoalPanelProps) {
     window.addEventListener(CONVERSATION_CANCEL_GOAL_COMMAND_EVENT, handleCancelGoalCommand);
     return () => window.removeEventListener(CONVERSATION_CANCEL_GOAL_COMMAND_EVENT, handleCancelGoalCommand);
   }, [goalActive, onCancel]);
+
+  useEffect(() => {
+    if (!goal?.startedAt) return;
+    setNowMs(Date.now());
+    const interval = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [goal?.startedAt]);
 
   if (!goal || !goal.objective || goal.status === 'complete') {
     return null;
@@ -51,7 +73,10 @@ export function ConversationGoalPanel({ goal, onCancel }: GoalPanelProps) {
           Goal
         </MetaLabel>
         <span className="min-w-0 flex-1 truncate text-primary">{goal.objective}</span>
-        <span className={cx('shrink-0 text-[11px] font-medium', statusConfig.className)}>{statusConfig.label}</span>
+        <span className={cx('shrink-0 text-[11px] font-medium', statusConfig.className)}>
+          {statusConfig.label}
+          {elapsedTime ? ` ${elapsedTime}` : ''}
+        </span>
         {goal.status === 'active' ? (
           <Button variant="action" tone="danger" type="button" onClick={onCancel} className="shrink-0 text-[11px]" aria-label="Cancel goal">
             <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">

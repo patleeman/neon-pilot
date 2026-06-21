@@ -17,6 +17,7 @@ describe('localApiConversationGoal', () => {
       status: 'active',
       tasks: [],
       stopReason: null,
+      startedAt: '2026-05-23T12:00:00.000Z',
       updatedAt: '2026-05-23T12:00:00.000Z',
       noProgressTurns: 0,
     });
@@ -28,6 +29,7 @@ describe('localApiConversationGoal', () => {
       status: 'complete',
       tasks: [],
       stopReason: 'cleared',
+      startedAt: null,
       updatedAt: '2026-05-23T12:00:00.000Z',
       noProgressTurns: 0,
     });

@@ -3,6 +3,7 @@ export interface ThreadGoal {
   status: 'active' | 'paused' | 'complete';
   tasks: Array<{ id: string; description: string; status: 'pending' | 'in_progress' | 'done' | 'blocked' }>;
   stopReason: string | null;
+  startedAt: string | null;
   updatedAt: string | null;
 }
 
@@ -58,6 +59,7 @@ export function readGoalFromEntries(entries: unknown[]): ThreadGoal | null {
       status,
       tasks,
       stopReason: typeof data.stopReason === 'string' ? data.stopReason : null,
+      startedAt: typeof data.startedAt === 'string' ? data.startedAt : typeof data.updatedAt === 'string' ? data.updatedAt : null,
       updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : null,
     };
   }
