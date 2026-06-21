@@ -107,12 +107,14 @@ export function resolveConversationBlockAutoOpen(
 }
 
 export function shouldAutoOpenConversationBlock(block: MessageBlock, index: number, total: number, isStreaming: boolean): boolean {
+  const isLatestStreamingBlock = isStreaming && index === total - 1;
+
   if (block.type === 'tool_use') {
-    return block.status === 'running' || !!block.running;
+    return block.status === 'running' || !!block.running || isLatestStreamingBlock;
   }
 
   if (block.type === 'thinking') {
-    return isStreaming && index === total - 1;
+    return isLatestStreamingBlock;
   }
 
   return false;

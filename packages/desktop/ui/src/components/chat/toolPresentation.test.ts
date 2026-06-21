@@ -52,9 +52,19 @@ describe('toolPresentation', () => {
       output: '',
       status: 'running',
     };
+    const streamingToolWithoutRunningStatus: MessageBlock = {
+      type: 'tool_use',
+      ts: '2026-04-26T00:00:01.000Z',
+      tool: 'bash',
+      input: {},
+      output: 'partial output',
+      status: 'done',
+    };
     const thinking: MessageBlock = { type: 'thinking', ts: '2026-04-26T00:00:00.000Z', text: 'thinking' };
 
     expect(shouldAutoOpenConversationBlock(runningTool, 0, 2, false)).toBe(true);
+    expect(shouldAutoOpenConversationBlock(streamingToolWithoutRunningStatus, 1, 2, true)).toBe(true);
+    expect(shouldAutoOpenConversationBlock(streamingToolWithoutRunningStatus, 0, 2, true)).toBe(false);
     expect(shouldAutoOpenConversationBlock(thinking, 1, 2, true)).toBe(true);
     expect(shouldAutoOpenConversationBlock(thinking, 0, 2, true)).toBe(false);
   });
