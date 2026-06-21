@@ -87,8 +87,13 @@ export async function applyScheduledTaskThreadBinding(taskId: string, input: unk
     input,
   );
 }
-export async function buildScheduledTaskThreadDetail(task: unknown) {
-  return callModuleExport<Record<string, unknown>>('../../automation/scheduledTaskThreads.js', 'buildScheduledTaskThreadDetail', task);
+export async function buildScheduledTaskThreadDetail(task: unknown, options?: unknown) {
+  return callModuleExport<Record<string, unknown>>(
+    '../../automation/scheduledTaskThreads.js',
+    'buildScheduledTaskThreadDetail',
+    task,
+    options,
+  );
 }
 export async function createStoredAutomation(input: unknown) {
   return callModuleExport<Record<string, unknown>>('../../automation/store.js', 'createStoredAutomation', input);

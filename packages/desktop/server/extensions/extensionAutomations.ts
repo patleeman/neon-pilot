@@ -69,7 +69,7 @@ function buildTaskDetailResponse(
     lastStatus: runtime?.lastStatus,
     lastRunAt: runtime?.lastRunAt,
     ...(schedulerHealth.lastEvaluatedAt ? { schedulerLastEvaluatedAt: schedulerHealth.lastEvaluatedAt } : {}),
-    ...buildScheduledTaskThreadDetail(task),
+    ...buildScheduledTaskThreadDetail(task, { profile: task.profile }),
   };
 }
 
@@ -105,7 +105,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       return loaded.tasks.map((task) => {
         const taskWithThread = task.threadMode === 'dedicated' && !task.threadConversationId ? ensureAutomationThread(task.id) : task;
         const runtime = loaded.runtimeState[task.id] ?? runtimeById.get(task.id);
-        const threadDetail = buildScheduledTaskThreadDetail(taskWithThread);
+        const threadDetail = buildScheduledTaskThreadDetail(taskWithThread, { profile });
         return {
           id: taskWithThread.id,
           title: taskWithThread.title,

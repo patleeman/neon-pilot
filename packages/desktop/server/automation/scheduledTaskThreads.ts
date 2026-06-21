@@ -17,12 +17,17 @@ export interface ScheduledTaskThreadInput {
   threadMode?: string | null;
   threadConversationId?: string | null;
   threadSessionFile?: string | null;
+  profile?: string | null;
 }
 
 export interface ScheduledTaskThreadDetail {
   threadMode: AutomationThreadMode;
   threadConversationId?: string;
   threadTitle?: string;
+}
+
+export interface ScheduledTaskThreadDetailOptions {
+  profile?: string;
 }
 
 function readOptionalString(value: string | null | undefined): string | undefined {
@@ -55,7 +60,10 @@ export function resolveScheduledTaskThreadBinding(input: ScheduledTaskThreadInpu
     throw new Error('Selected thread was not found.');
   }
 
-  const sessionMeta = sessionFile ? readConversationSessionMetaByFile(sessionFile) : readConversationSessionMeta(conversationId);
+  const profile = readOptionalString(input.profile ?? undefined);
+  const sessionMeta = sessionFile
+    ? readConversationSessionMetaByFile(sessionFile)
+    : readConversationSessionMeta(conversationId, { profile });
   const expectedCwd = readOptionalString(input.cwd ?? undefined);
   if (expectedCwd && sessionMeta?.cwd && sessionMeta.cwd !== expectedCwd) {
     throw new Error('Selected thread must use the same working directory as the automation.');
@@ -90,9 +98,12 @@ export function applyScheduledTaskThreadBinding(
   return ensureAutomationThread(taskId, { dbPath: input.dbPath });
 }
 
-export function buildScheduledTaskThreadDetail(task: StoredAutomation): ScheduledTaskThreadDetail {
+export function buildScheduledTaskThreadDetail(
+  task: StoredAutomation,
+  options: ScheduledTaskThreadDetailOptions = {},
+): ScheduledTaskThreadDetail {
   const title = task.threadConversationId
-    ? readConversationSessionMeta(task.threadConversationId)?.title
+    ? readConversationSessionMeta(task.threadConversationId, { profile: options.profile })?.title
     : resolveAutomationThreadTitle(task);
 
   return {

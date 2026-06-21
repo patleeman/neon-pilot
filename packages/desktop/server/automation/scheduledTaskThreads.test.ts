@@ -110,11 +110,14 @@ describe('scheduledTaskThreads', () => {
   });
 
   it('builds thread details from conversation metadata or daemon title fallback', () => {
-    expect(buildScheduledTaskThreadDetail({ threadMode: 'existing', threadConversationId: 'conv-1' } as never)).toEqual({
+    expect(
+      buildScheduledTaskThreadDetail({ threadMode: 'existing', threadConversationId: 'conv-1' } as never, { profile: 'shared' }),
+    ).toEqual({
       threadMode: 'existing',
       threadConversationId: 'conv-1',
       threadTitle: 'Planning',
     });
+    expect(conversationService.readConversationSessionMeta).toHaveBeenCalledWith('conv-1', { profile: 'shared' });
     conversationService.readConversationSessionMeta.mockReturnValueOnce(undefined);
     expect(buildScheduledTaskThreadDetail({ threadMode: 'dedicated' } as never)).toEqual({
       threadMode: 'dedicated',

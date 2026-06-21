@@ -77,11 +77,12 @@ export interface ScheduledTaskUpdateCapabilityInput extends ScheduledTaskThreadI
 }
 
 function buildScheduledTaskSummary(
+  profile: string,
   task: StoredAutomation,
   runtime?: TaskRuntimeEntry,
   callbackBinding?: ReturnType<typeof getTaskCallbackBinding>,
 ) {
-  const threadDetail = buildScheduledTaskThreadDetail(task);
+  const threadDetail = buildScheduledTaskThreadDetail(task, { profile });
   return {
     id: task.id,
     title: task.title,
@@ -122,6 +123,7 @@ function buildScheduledTaskSummary(
 }
 
 export function buildScheduledTaskDetail(
+  profile: string,
   task: StoredAutomation,
   runtime?: TaskRuntimeEntry,
   callbackBinding?: ReturnType<typeof getTaskCallbackBinding>,
@@ -163,7 +165,7 @@ export function buildScheduledTaskDetail(
     lastStatus: runtime?.lastStatus,
     lastRunAt: runtime?.lastRunAt,
     ...(schedulerState.lastEvaluatedAt ? { schedulerLastEvaluatedAt: schedulerState.lastEvaluatedAt } : {}),
-    ...buildScheduledTaskThreadDetail(task),
+    ...buildScheduledTaskThreadDetail(task, { profile }),
   };
 }
 
@@ -218,7 +220,7 @@ export async function listScheduledTasksCapability(profile: string) {
   return loaded.tasks.map((task) => {
     const taskWithThread = task.threadMode === 'dedicated' && !task.threadConversationId ? ensureAutomationThread(task.id) : task;
     const callbackBinding = getTaskCallbackBinding({ profile, taskId: taskWithThread.id });
-    return buildScheduledTaskSummary(taskWithThread, loaded.runtimeState[task.id] ?? runtimeById.get(task.id), callbackBinding);
+    return buildScheduledTaskSummary(profile, taskWithThread, loaded.runtimeState[task.id] ?? runtimeById.get(task.id), callbackBinding);
   });
 }
 
@@ -235,7 +237,7 @@ export async function readScheduledTaskCapability(profile: string, taskId: strin
   const callbackBinding = getTaskCallbackBinding({ profile, taskId: task.id });
   const activity = listAutomationActivityEntries(task.id);
 
-  return buildScheduledTaskDetail(task, resolvedTask.runtime, callbackBinding, activity);
+  return buildScheduledTaskDetail(profile, task, resolvedTask.runtime, callbackBinding, activity);
 }
 
 function applyScheduledTaskCallbackBinding(
@@ -276,7 +278,7 @@ function applyScheduledTaskCallbackBinding(
     return;
   }
 
-  const sessionMeta = readConversationSessionMeta(callbackConversationId);
+  const sessionMeta = readConversationSessionMeta(callbackConversationId, { profile });
   if (!sessionMeta?.file?.trim()) {
     throw new Error('Callback conversation not found.');
   }
@@ -302,6 +304,7 @@ export async function createScheduledTaskCapability(profile: string, input: Sche
     threadMode: targetType === 'conversation' && input.threadMode === 'none' ? 'dedicated' : input.threadMode,
     threadConversationId: input.threadConversationId,
     cwd: input.cwd,
+    profile,
   });
   if (targetType === 'conversation' && threadSelection.mode === 'none') {
     throw new Error('Conversation automations need a thread.');
@@ -323,12 +326,13 @@ export async function createScheduledTaskCapability(profile: string, input: Sche
     ...(targetType === 'conversation' ? { conversationBehavior: input.conversationBehavior } : {}),
   });
 
-  const task = applyScheduledTaskThreadBinding(createdTask.id, {
-    threadMode: threadSelection.mode,
-    threadConversationId: threadSelection.conversationId,
-    threadSessionFile: threadSelection.sessionFile,
-    cwd: input.cwd,
-  });
+  const task =
+    applyScheduledTaskThreadBinding(createdTask.id, {
+      threadMode: threadSelection.mode,
+      threadConversationId: threadSelection.conversationId,
+      threadSessionFile: threadSelection.sessionFile,
+      cwd: input.cwd,
+    }) ?? createdTask;
 
   applyScheduledTaskCallbackBinding(profile, task.id, input, targetType);
   invalidateAppTopics('tasks');
@@ -345,7 +349,7 @@ export async function createScheduledTaskCapability(profile: string, input: Sche
   });
   return {
     ok: true as const,
-    task: buildScheduledTaskDetail(savedTask?.task ?? task, savedTask?.runtime, callbackBinding, activity),
+    task: buildScheduledTaskDetail(profile, savedTask?.task ?? task, savedTask?.runtime, callbackBinding, activity),
   };
 }
 
@@ -364,6 +368,7 @@ export async function updateScheduledTaskCapability(profile: string, input: Sche
       targetType === 'conversation' && input.threadMode === 'none' ? 'dedicated' : (input.threadMode ?? resolvedTask.task.threadMode),
     threadConversationId: input.threadConversationId,
     cwd: input.cwd ?? resolvedTask.task.cwd,
+    profile,
   });
   if (targetType === 'conversation' && threadSelection.mode === 'none') {
     throw new Error('Conversation automations need a thread.');
@@ -385,12 +390,13 @@ export async function updateScheduledTaskCapability(profile: string, input: Sche
     ...(targetType === 'conversation' ? { conversationBehavior: input.conversationBehavior } : {}),
   });
 
-  const task = applyScheduledTaskThreadBinding(updatedTask.id, {
-    threadMode: threadSelection.mode,
-    threadConversationId: threadSelection.conversationId,
-    threadSessionFile: threadSelection.sessionFile,
-    cwd: input.cwd ?? updatedTask.cwd,
-  });
+  const task =
+    applyScheduledTaskThreadBinding(updatedTask.id, {
+      threadMode: threadSelection.mode,
+      threadConversationId: threadSelection.conversationId,
+      threadSessionFile: threadSelection.sessionFile,
+      cwd: input.cwd ?? updatedTask.cwd,
+    }) ?? updatedTask;
 
   applyScheduledTaskCallbackBinding(profile, task.id, input, targetType);
   invalidateAppTopics('tasks');
@@ -407,7 +413,7 @@ export async function updateScheduledTaskCapability(profile: string, input: Sche
   });
   return {
     ok: true as const,
-    task: buildScheduledTaskDetail(refreshedTask?.task ?? task, refreshedTask?.runtime, callbackBinding, activity),
+    task: buildScheduledTaskDetail(profile, refreshedTask?.task ?? task, refreshedTask?.runtime, callbackBinding, activity),
   };
 }
 

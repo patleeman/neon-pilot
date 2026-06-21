@@ -212,7 +212,7 @@ function resolveThreadBindingInput(params: {
   };
 }
 
-async function formatTaskList(loaded: LoadedScheduledTasksForProfile): Promise<string> {
+async function formatTaskList(loaded: LoadedScheduledTasksForProfile, runtimeScope: string): Promise<string> {
   if (loaded.tasks.length === 0) {
     return loaded.parseErrors.length > 0
       ? `No valid tasks found. Parse errors: ${loaded.parseErrors.map((error) => `${error.filePath}: ${error.error}`).join('; ')}`
@@ -223,7 +223,7 @@ async function formatTaskList(loaded: LoadedScheduledTasksForProfile): Promise<s
     loaded.tasks.map(async (task) => {
       const runtime = loaded.runtimeState[task.key];
       const status = runtime?.running ? 'running' : (runtime?.lastStatus ?? (task.enabled ? 'active' : 'disabled'));
-      const threadDetail = await buildScheduledTaskThreadDetail(task);
+      const threadDetail = await buildScheduledTaskThreadDetail(task, { profile: runtimeScope });
       const threadSummary =
         threadDetail.threadMode === 'none'
           ? undefined
@@ -244,9 +244,10 @@ async function formatTaskList(loaded: LoadedScheduledTasksForProfile): Promise<s
 async function formatTaskDetail(
   task: StoredAutomation,
   runtime: TaskRuntimeEntry | undefined,
-  callbackBinding?: ReturnType<typeof getTaskCallbackBinding>,
+  callbackBinding: ReturnType<typeof getTaskCallbackBinding> | undefined,
+  runtimeScope: string,
 ): Promise<string> {
-  const threadDetail = await buildScheduledTaskThreadDetail(task);
+  const threadDetail = await buildScheduledTaskThreadDetail(task, { profile: runtimeScope });
   const lines = [
     `Task @${task.id}`,
     `title: ${task.title ?? task.id}`,
@@ -329,7 +330,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
             case 'list': {
               const loaded = await loadScheduledTasksForProfile(runtimeScope);
               return {
-                content: [{ type: 'text' as const, text: await formatTaskList(loaded) }],
+                content: [{ type: 'text' as const, text: await formatTaskList(loaded, runtimeScope) }],
                 details: {
                   action: 'list',
                   count: loaded.tasks.length,
@@ -344,7 +345,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
               const { task, runtime } = await resolveScheduledTaskForProfile(runtimeScope, taskId);
               const callbackBinding = await getTaskCallbackBinding({ profile: runtimeScope, taskId });
               return {
-                content: [{ type: 'text' as const, text: await formatTaskDetail(task, runtime, callbackBinding) }],
+                content: [{ type: 'text' as const, text: await formatTaskDetail(task, runtime, callbackBinding, runtimeScope) }],
                 details: {
                   action: 'get',
                   taskId,
@@ -388,7 +389,9 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                     cwd,
                   })
                 : undefined;
-              const validatedThreadBinding = threadBindingInput ? await resolveScheduledTaskThreadBinding(threadBindingInput) : undefined;
+              const validatedThreadBinding = threadBindingInput
+                ? await resolveScheduledTaskThreadBinding({ ...threadBindingInput, profile: runtimeScope })
+                : undefined;
 
               if (!existing && params.cron === undefined && scheduledAt === undefined) {
                 throw new Error('Provide exactly one schedule for a new automation: cron or at.');

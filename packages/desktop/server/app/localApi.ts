@@ -582,7 +582,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
       return loaded.tasks.map((task) => {
         const taskWithThread = task.threadMode === 'dedicated' && !task.threadConversationId ? ensureAutomationThread(task.id) : task;
         const runtime = loaded.runtimeState[task.id] ?? runtimeById.get(task.id);
-        const threadDetail = buildScheduledTaskThreadDetail(taskWithThread);
+        const threadDetail = buildScheduledTaskThreadDetail(taskWithThread, { profile: runtimeState.getRuntimeScope() });
         return {
           id: taskWithThread.id,
           title: taskWithThread.title,

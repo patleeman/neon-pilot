@@ -338,31 +338,33 @@ describe('scheduledTaskCapability', () => {
     const createdTask = createTask({ id: 'task-created', title: 'Created task', prompt: 'Stored prompt' });
     const storedTask = createTask({ id: 'task-created', title: 'Saved task', prompt: 'Saved prompt' });
 
-    expect(buildScheduledTaskDetail(storedTask, createRuntime({ id: 'task-created', running: false }))).toEqual({
-      ...createRuntime({ id: 'task-created', running: false }),
-      id: 'task-created',
-      title: 'Saved task',
-      filePath: '/__automations__/task-created.automation.md',
-      scheduleType: 'cron',
-      running: false,
-      enabled: true,
-      cron: '0 * * * *',
-      at: undefined,
-      model: 'gpt-4o',
-      thinkingLevel: 'high',
-      cwd: '/repo',
-      timeoutSeconds: 120,
-      policies: [],
-      targetType: undefined,
-      conversationBehavior: undefined,
-      prompt: 'Saved prompt',
-      activity: [],
-      lastStatus: 'success',
-      lastRunAt: '2026-04-09T15:00:00.000Z',
-      threadMode: 'dedicated',
-      threadConversationId: 'automation.task-created',
-      threadTitle: 'Automation: Saved task',
-    });
+    expect(buildScheduledTaskDetail('assistant', storedTask, createRuntime({ id: 'task-created', running: false }), undefined, [])).toEqual(
+      {
+        ...createRuntime({ id: 'task-created', running: false }),
+        id: 'task-created',
+        title: 'Saved task',
+        filePath: '/__automations__/task-created.automation.md',
+        scheduleType: 'cron',
+        running: false,
+        enabled: true,
+        cron: '0 * * * *',
+        at: undefined,
+        model: 'gpt-4o',
+        thinkingLevel: 'high',
+        cwd: '/repo',
+        timeoutSeconds: 120,
+        policies: [],
+        targetType: undefined,
+        conversationBehavior: undefined,
+        prompt: 'Saved prompt',
+        activity: [],
+        lastStatus: 'success',
+        lastRunAt: '2026-04-09T15:00:00.000Z',
+        threadMode: 'dedicated',
+        threadConversationId: 'automation.task-created',
+        threadTitle: 'Automation: Saved task',
+      },
+    );
 
     findTaskForProfileMock.mockReturnValueOnce({ task: storedTask, runtime: createRuntime({ id: 'task-created', running: false }) });
     await expect(readScheduledTaskCapability('assistant', 'task-created')).resolves.toEqual({
