@@ -100,7 +100,16 @@ import {
 } from '../session/sessionTabs';
 import type { GatewayState, SessionMeta } from '../shared/types';
 import { timeAgoCompact } from '../shared/utils';
-import { sessionStore, useAllExecutions, useAllSessions, useAllTasks, useSession, useSessionPresence, useSessionsReady } from '../store';
+import {
+  sessionStore,
+  useAllExecutions,
+  useAllSessions,
+  useAllTasks,
+  useConversationRuntime,
+  useSession,
+  useSessionPresence,
+  useSessionsReady,
+} from '../store';
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
@@ -1740,11 +1749,12 @@ const SessionRow = memo(function SessionRow({
   // during initial render before SSE has seeded the store.
   const storeSession = useSession(sessionId);
   const presence = useSessionPresence(sessionId);
+  const conversationRuntime = useConversationRuntime(sessionId);
   const session = storeSession ?? initialSession;
 
   if (!session) return null;
 
-  const isRunning = presence === 'streaming' || presence === 'automation';
+  const isRunning = conversationRuntime?.running ?? session.isRunning ?? false;
   const pending = (hasPendingRuns ?? false) || presence === 'hasRuns';
 
   return (

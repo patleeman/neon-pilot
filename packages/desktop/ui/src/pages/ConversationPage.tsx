@@ -330,7 +330,17 @@ import type {
   SessionMeta,
 } from '../shared/types';
 import type { ConversationSummaryRecord } from '../shared/types';
-import { runStore, sessionStore, taskStore, useAllRuns, useAllSessions, useAllTasks, useSession, useSessionsReady } from '../store';
+import {
+  runStore,
+  sessionStore,
+  taskStore,
+  useAllRuns,
+  useAllSessions,
+  useAllTasks,
+  useConversationRuntime,
+  useSession,
+  useSessionsReady,
+} from '../store';
 import {
   type AskUserQuestionAnswers,
   type AskUserQuestionPresentation,
@@ -639,6 +649,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
   // ── Live session detection ─────────────────────────────────────────────────
   const sessionSnapshot = useSession(id);
+  const conversationRuntime = useConversationRuntime(id);
+  const conversationRuntimeIsRunning = conversationRuntime?.running ?? sessionSnapshot?.isRunning;
   const sessionsLoaded = sessionsReady;
   // We use a confirmed-live flag only for lightweight session-state labeling.
   const [confirmedLive, setConfirmedLive] = useState<boolean | null>(null);
@@ -921,7 +933,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const conversationNeedsTakeover = false;
   const rawComposerRunState = resolveConversationComposerRunState({
     streamIsStreaming: stream.isStreaming,
-    sessionIsRunning: sessionSnapshot?.isRunning,
+    sessionIsRunning: conversationRuntimeIsRunning,
     bootstrapLiveSessionIsStreaming:
       visibleConversationBootstrap?.liveSession?.live === true ? visibleConversationBootstrap.liveSession.isStreaming : false,
     desktopLiveSessionIsStreaming:
@@ -2388,10 +2400,13 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     () => buildSlashMenuItems(input, memoryData?.skills ?? [], extensionSlashCommands),
     [extensionSlashCommands, input, memoryData],
   );
-  const currentSessionMeta = useMemo(
-    () => mergeConversationSessionMeta(visibleSessionDetail?.meta, sessionSnapshot),
-    [sessionSnapshot, visibleSessionDetail?.meta],
-  );
+  const currentSessionMeta = useMemo(() => {
+    const merged = mergeConversationSessionMeta(visibleSessionDetail?.meta, sessionSnapshot);
+    if (!merged || conversationRuntimeIsRunning === undefined || merged.isRunning === conversationRuntimeIsRunning) {
+      return merged;
+    }
+    return { ...merged, isRunning: conversationRuntimeIsRunning };
+  }, [conversationRuntimeIsRunning, sessionSnapshot, visibleSessionDetail?.meta]);
 
   useEffect(() => {
     if (draft) {

@@ -26,6 +26,7 @@ export type RunningState = 'idle' | 'streaming' | 'automation' | 'hasRuns' | 'st
 let presenceStates = new Map<string, RunningState>();
 let conversationRuntimeStates = new Map<string, ConversationRuntimeState>();
 let presenceVersion = 0;
+const conversationRuntimeListeners = new Map<string, Set<() => void>>();
 const presenceListeners = new Map<string, Set<() => void>>();
 const presenceAllListeners = new Set<() => void>();
 
@@ -87,6 +88,14 @@ taskStore.subscribeAll(() => rederivePresenceForAll());
 executionStore.subscribeAll(() => rederivePresenceForAll());
 
 export const conversationRuntimeStore = {
+  subscribe(sessionId: string, callback: () => void): () => void {
+    if (!conversationRuntimeListeners.has(sessionId)) conversationRuntimeListeners.set(sessionId, new Set());
+    conversationRuntimeListeners.get(sessionId)!.add(callback);
+    return () => {
+      conversationRuntimeListeners.get(sessionId)?.delete(callback);
+    };
+  },
+
   apply(runtime: ConversationRuntimeState): void {
     const sessionId = runtime.id.trim();
     if (!sessionId) return;
@@ -101,6 +110,7 @@ export const conversationRuntimeStore = {
       return;
     }
     conversationRuntimeStates = new Map(conversationRuntimeStates).set(sessionId, { ...runtime, id: sessionId });
+    conversationRuntimeListeners.get(sessionId)?.forEach((cb) => cb());
     rederivePresenceForId(sessionId);
   },
 
@@ -108,6 +118,7 @@ export const conversationRuntimeStore = {
     if (!conversationRuntimeStates.has(sessionId)) return;
     conversationRuntimeStates = new Map(conversationRuntimeStates);
     conversationRuntimeStates.delete(sessionId);
+    conversationRuntimeListeners.get(sessionId)?.forEach((cb) => cb());
     rederivePresenceForId(sessionId);
   },
 
@@ -117,6 +128,7 @@ export const conversationRuntimeStore = {
 
   reset(): void {
     conversationRuntimeStates = new Map();
+    conversationRuntimeListeners.clear();
   },
 };
 

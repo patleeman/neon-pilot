@@ -14,6 +14,7 @@ export {
   useAllRuns,
   useAllSessions,
   useAllTasks,
+  useConversationRuntime,
   usePresenceVersion,
   useSession,
   useSessionPresence,

@@ -35,7 +35,7 @@ import {
   unpinConversationTab,
 } from '../session/sessionTabs';
 import type { SessionMeta } from '../shared/types';
-import { presenceStore, sessionStore, useAllSessions, useAllTasks, usePresenceVersion, useSessionsReady } from '../store';
+import { conversationRuntimeStore, sessionStore, useAllSessions, useAllTasks, usePresenceVersion, useSessionsReady } from '../store';
 
 const CONVERSATION_LAYOUT_BOOTSTRAP_RETRY_DELAYS_MS = [500, 1_000, 2_000, 4_000, 8_000];
 
@@ -61,7 +61,7 @@ function applyLayoutState(
 }
 
 function buildPlaceholderSessionMeta(id: string, title?: string): SessionMeta {
-  const presence = presenceStore.get(id);
+  const runtime = conversationRuntimeStore.get(id);
   return {
     id,
     file: '',
@@ -71,7 +71,7 @@ function buildPlaceholderSessionMeta(id: string, title?: string): SessionMeta {
     model: '',
     title: title ?? 'Connecting…',
     messageCount: 0,
-    isRunning: presence === 'streaming' || presence === 'automation',
+    isRunning: runtime?.running ?? false,
   };
 }
 
@@ -329,8 +329,8 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
         const liveTitle = normalizeConversationTitle(liveTitles.get(session.id));
         const sessionTitle = normalizeConversationTitle(session.title) ?? NEW_CONVERSATION_TITLE;
         const title = liveTitle ?? sessionTitle;
-        const presence = presenceStore.get(session.id);
-        const isRunning = presence === 'streaming' || presence === 'automation';
+        const runtime = conversationRuntimeStore.get(session.id);
+        const isRunning = runtime?.running ?? session.isRunning;
 
         return title === session.title && isRunning === session.isRunning ? session : { ...session, title, isRunning };
       }),

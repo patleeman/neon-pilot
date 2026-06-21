@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { ExecutionRecord, ScheduledTaskSummary } from '../shared/types';
-import { executionStore, presenceStore, resetAllStores, sessionStore, taskStore } from './stores';
+import { conversationRuntimeStore, executionStore, presenceStore, resetAllStores, sessionStore, taskStore } from './stores';
 
 function session(id: string, isRunning = false) {
   return {
@@ -95,5 +95,19 @@ describe('presenceStore', () => {
     presenceStore.setBackendRunning('conv-1', false, 1);
 
     expect(presenceStore.get('conv-1')).toBe('streaming');
+  });
+
+  it('notifies conversation runtime subscribers when backend runtime changes', () => {
+    const notifications: Array<boolean | undefined> = [];
+    const unsubscribe = conversationRuntimeStore.subscribe('conv-1', () => {
+      notifications.push(conversationRuntimeStore.get('conv-1')?.running);
+    });
+
+    conversationRuntimeStore.apply({ id: 'conv-1', running: true, revision: 1, updatedAt: '2026-01-01T00:00:00.000Z' });
+    conversationRuntimeStore.apply({ id: 'conv-1', running: false, revision: 2, updatedAt: '2026-01-01T00:00:01.000Z' });
+    conversationRuntimeStore.clear('conv-1');
+    unsubscribe();
+
+    expect(notifications).toEqual([true, false, undefined]);
   });
 });

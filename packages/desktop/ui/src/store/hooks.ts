@@ -6,9 +6,9 @@
  */
 import { useCallback, useSyncExternalStore } from 'react';
 
-import type { DurableRunRecord, ExecutionRecord, ScheduledTaskSummary, SessionMeta } from '../shared/types';
+import type { ConversationRuntimeState, DurableRunRecord, ExecutionRecord, ScheduledTaskSummary, SessionMeta } from '../shared/types';
 import type { EntityStore } from './createEntityStore';
-import { executionStore, presenceStore, type RunningState, runStore, sessionStore, taskStore } from './stores';
+import { conversationRuntimeStore, executionStore, presenceStore, type RunningState, runStore, sessionStore, taskStore } from './stores';
 
 // ── Internal helper ──────────────────────────────────────────────────────────
 
@@ -51,6 +51,23 @@ export function useSessionPresence(id: string | null | undefined): RunningState 
   const getSnapshot = useCallback((): RunningState => {
     if (!id) return 'idle';
     return presenceStore.get(id);
+  }, [id]);
+
+  return useDerivedValue(subscribe, getSnapshot);
+}
+
+export function useConversationRuntime(id: string | null | undefined): ConversationRuntimeState | undefined {
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      if (!id) return () => {};
+      return conversationRuntimeStore.subscribe(id, onStoreChange);
+    },
+    [id],
+  );
+
+  const getSnapshot = useCallback((): ConversationRuntimeState | undefined => {
+    if (!id) return undefined;
+    return conversationRuntimeStore.get(id);
   }, [id]);
 
   return useDerivedValue(subscribe, getSnapshot);

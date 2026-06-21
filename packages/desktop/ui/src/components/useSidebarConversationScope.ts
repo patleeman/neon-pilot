@@ -5,7 +5,7 @@ import { DRAFT_CONVERSATION_ROUTE } from '../conversation/draftConversation';
 import { isPendingConversationShellId } from '../conversation/pendingConversationShell';
 import { normalizeWorkspacePaths } from '../local/savedWorkspacePaths';
 import type { SessionMeta } from '../shared/types';
-import { useSessionPresence } from '../store';
+import { useConversationRuntime } from '../store';
 import { getSessionWorkspaceCwd } from './sidebarThreadModel';
 
 type UseSidebarConversationScopeInput = {
@@ -33,12 +33,12 @@ export function useSidebarConversationScope({
     const conversationId = readConversationIdFromPathname(locationPathname);
     return isPendingConversationShellId(conversationId) ? null : conversationId;
   }, [locationPathname]);
-  const activePresence = useSessionPresence(activeConversationId);
+  const activeRuntime = useConversationRuntime(activeConversationId);
 
   const activeSession = useMemo(() => {
     if (!activeConversationId) return null;
     const session = (sessions ?? []).find((candidate) => candidate.id === activeConversationId);
-    const isRunning = activePresence === 'streaming' || activePresence === 'automation';
+    const isRunning = activeRuntime?.running ?? session?.isRunning ?? false;
     if (session) return session.isRunning === isRunning ? session : { ...session, isRunning };
 
     return {
@@ -53,7 +53,7 @@ export function useSidebarConversationScope({
       isRunning,
       isLive: true,
     } satisfies SessionMeta;
-  }, [activeConversationId, activePresence, liveTitles, sessions]);
+  }, [activeConversationId, activeRuntime?.running, liveTitles, sessions]);
 
   const visibleConversationTabs = useMemo(() => {
     if (!activeSession) return tabs;
