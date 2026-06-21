@@ -36,7 +36,9 @@ export async function eventBus(input: unknown, ctx: EventBusBackendContext = {})
   const action = readString(params.action) ?? 'list';
   if (
     params.dryRun === true &&
-    ['emit', 'delay', 'replay', 'process_due', 'save_subscription', 'delete_subscription', 'cancel_delayed', 'prune'].includes(action)
+    ['emit', 'delay', 'replay', 'process_due', 'save_subscription', 'delete_subscription', 'cancel_delayed', 'prune', 'clear'].includes(
+      action,
+    )
   ) {
     return {
       text: formatJson({ ok: true, dryRun: true, action, input: params }),
@@ -62,6 +64,9 @@ export async function eventBus(input: unknown, ctx: EventBusBackendContext = {})
       break;
     case 'prune':
       result = await pruneEvents(params);
+      break;
+    case 'clear':
+      result = await pruneEvents({ ...params, keepLatest: 0 });
       break;
     case 'list':
     case 'events':

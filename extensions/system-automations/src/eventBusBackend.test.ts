@@ -1,3 +1,4 @@
+import { pruneEvents } from '@neon-pilot/extensions/backend/events';
 import { describe, expect, it, vi } from 'vitest';
 
 import { eventBus } from './eventBusBackend';
@@ -22,5 +23,11 @@ describe('eventBus backend action', () => {
     await eventBus({ action: 'emit', type: 'qa.event', source: 'test' }, { ui: { invalidate } });
 
     expect(invalidate).toHaveBeenCalledWith(['automation', 'events', 'tasks', 'runs']);
+  });
+
+  it('clears recorded events by pruning everything', async () => {
+    await eventBus({ action: 'clear' });
+
+    expect(pruneEvents).toHaveBeenCalledWith({ action: 'clear', keepLatest: 0 });
   });
 });

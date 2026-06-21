@@ -1491,6 +1491,30 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     }
   }, [load, pa]);
 
+  const clearEventLog = useCallback(async () => {
+    if (eventBusEvents.length === 0) return;
+    const confirmed = await pa.ui.confirm({
+      title: 'Clear event log',
+      message: 'Remove all recorded automation events? Scheduled publishers and event rules will stay in place.',
+    });
+    if (!confirmed) return;
+
+    setBusy('clear-events');
+    setNotice(null);
+    try {
+      await pa.extension.invoke('eventBus', { action: 'clear' });
+      setSelectedActivityId(null);
+      setNotice('Event log cleared.');
+      await load();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      pa.ui.notify({ type: 'error', message: `Failed to clear event log: ${msg}`, source: 'system-automations' });
+    } finally {
+      setBusy(null);
+    }
+  }, [eventBusEvents.length, load, pa]);
+
   const openEditor = useCallback((task?: ScheduledTaskSummary) => {
     setEditingId(task?.id ?? null);
     setEditorOpen(true);
@@ -1897,6 +1921,13 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                     </option>
                   ))}
                 </Select>
+                <ToolbarButton
+                  type="button"
+                  disabled={eventBusEvents.length === 0 || busy === 'clear-events'}
+                  onClick={() => void clearEventLog()}
+                >
+                  {busy === 'clear-events' ? 'Clearing…' : 'Clear log'}
+                </ToolbarButton>
                 <IconButton title="Reload automations" aria-label="Reload automations" onClick={() => void reload()}>
                   <RefreshIcon />
                 </IconButton>
