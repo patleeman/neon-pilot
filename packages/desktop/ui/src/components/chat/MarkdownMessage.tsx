@@ -504,7 +504,7 @@ export function renderMarkdownText(
   );
 }
 
-const STREAMING_MARKDOWN_UPDATE_INTERVAL_MS = 250;
+const STREAMING_MARKDOWN_UPDATE_INTERVAL_MS = 100;
 
 function useThrottledStreamingMarkdownText(text: string): string {
   const [renderedText, setRenderedText] = useState(text);
@@ -545,14 +545,8 @@ function StreamingMarkdownText({
   validatedFilePathTargets?: ReadonlySet<string>;
 }) {
   const renderedText = useThrottledStreamingMarkdownText(text);
-  const pendingText = text.startsWith(renderedText) ? text.slice(renderedText.length) : '';
 
-  return (
-    <>
-      {renderMarkdownText(renderedText, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}
-      {pendingText && <span className="whitespace-pre-wrap break-words">{pendingText}</span>}
-    </>
-  );
+  return renderMarkdownText(renderedText, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets });
 }
 
 export function renderStreamingMarkdownText(

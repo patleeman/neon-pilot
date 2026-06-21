@@ -87,7 +87,7 @@ describe('ChatView rendering stability', () => {
     document.body.innerHTML = '';
   });
 
-  it('does not rerender stable transcript rows when only the streaming tail changes', () => {
+  it('does not rerender stable transcript rows when only the streaming tail changes', async () => {
     const userBlock = createUserBlock();
     const assistantBlock = createAssistantBlock();
     const initialTail = createStreamingTail('Tail draft');
@@ -103,6 +103,10 @@ describe('ChatView rendering stability', () => {
 
     act(() => {
       root.render(<ChatView messages={[userBlock, assistantBlock, updatedTail]} isStreaming />);
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 110));
     });
 
     expect(container.textContent).toContain('Tail draft with more output');
