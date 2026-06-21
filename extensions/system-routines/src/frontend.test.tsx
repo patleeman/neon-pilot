@@ -59,7 +59,7 @@ describe('RoutinesPage', () => {
     render(<RoutinesPage {...props()} />);
     expect(await screen.findByText('Checkpoint timeline')).toBeTruthy();
     expect(screen.getAllByText('Review code changes').length).toBeGreaterThan(0);
-    expect(screen.getByText('Add routine')).toBeTruthy();
+    expect(screen.getByText('Add routine ▾')).toBeTruthy();
     expect(screen.getByText('Decision output is constrained to these enum values.')).toBeTruthy();
   });
 });

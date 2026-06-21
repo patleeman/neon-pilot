@@ -58,7 +58,8 @@ describe('system-routines backend', () => {
     const saved = (await saveRoutine(
       { hookId: 'checkpoint', position: 'after', type: 'stop', name: 'Stop always', instruction: 'No', enabled: true },
       ctx,
-    )) as { routines: Array<{ name: string }> };
+    )) as { hooks: Array<{ id: string; summary: string }>; routines: Array<{ name: string }> };
+    expect(saved.hooks.find((hook) => hook.id === 'checkpoint')?.summary).toContain('Stop always');
     expect(saved.routines.some((routine) => routine.name === 'Stop always')).toBe(true);
   });
 

@@ -279,8 +279,7 @@ function summarizeHook(hookId: string, routines: Routine[]): string {
     .join(', ');
 }
 
-export async function getState(_input: unknown, ctx: ExtensionBackendContext) {
-  const state = await readState(ctx);
+function toStateResult(state: RoutinesState) {
   const hooks = mergeHookPoints(state.hookPoints);
   return {
     hooks: hooks.map((hook) => ({ ...hook, summary: summarizeHook(hook.id, state.routines) })),
@@ -289,12 +288,17 @@ export async function getState(_input: unknown, ctx: ExtensionBackendContext) {
   };
 }
 
+export async function getState(_input: unknown, ctx: ExtensionBackendContext) {
+  const state = await readState(ctx);
+  return toStateResult(state);
+}
+
 export async function registerHookPoint(input: unknown, ctx: ExtensionBackendContext) {
   const hookPoint = normalizeHookPoint(input);
   if (!hookPoint) throw new Error('Hook point id and title are required.');
   const state = await readState(ctx);
   const hookPoints = [...state.hookPoints.filter((hook) => hook.id !== hookPoint.id), hookPoint];
-  return writeState(ctx, { ...state, hookPoints });
+  return toStateResult(await writeState(ctx, { ...state, hookPoints }));
 }
 
 export async function saveRoutine(input: unknown, ctx: ExtensionBackendContext) {
@@ -311,7 +315,7 @@ export async function saveRoutine(input: unknown, ctx: ExtensionBackendContext) 
   const routines = existing
     ? state.routines.map((routine) => (routine.id === nextRoutine.id ? nextRoutine : routine))
     : [...state.routines, nextRoutine];
-  return writeState(ctx, { ...state, routines });
+  return toStateResult(await writeState(ctx, { ...state, routines }));
 }
 
 export async function deleteRoutine(input: unknown, ctx: ExtensionBackendContext) {
@@ -319,7 +323,7 @@ export async function deleteRoutine(input: unknown, ctx: ExtensionBackendContext
   const routineId = stringValue(input.routineId).trim();
   if (!routineId) throw new Error('routineId is required.');
   const state = await readState(ctx);
-  return writeState(ctx, { ...state, routines: state.routines.filter((routine) => routine.id !== routineId) });
+  return toStateResult(await writeState(ctx, { ...state, routines: state.routines.filter((routine) => routine.id !== routineId) }));
 }
 
 export async function reorderRoutines(input: unknown, ctx: ExtensionBackendContext) {
@@ -327,12 +331,14 @@ export async function reorderRoutines(input: unknown, ctx: ExtensionBackendConte
   const ids = input.routineIds.filter((id): id is string => typeof id === 'string');
   const state = await readState(ctx);
   const order = new Map(ids.map((id, index) => [id, index]));
-  return writeState(ctx, {
-    ...state,
-    routines: state.routines.map((routine) =>
-      order.has(routine.id) ? { ...routine, order: order.get(routine.id) ?? routine.order, updatedAt: now() } : routine,
-    ),
-  });
+  return toStateResult(
+    await writeState(ctx, {
+      ...state,
+      routines: state.routines.map((routine) =>
+        order.has(routine.id) ? { ...routine, order: order.get(routine.id) ?? routine.order, updatedAt: now() } : routine,
+      ),
+    }),
+  );
 }
 
 export async function listSkills(_input: unknown, ctx: ExtensionBackendContext) {
