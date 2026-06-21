@@ -647,7 +647,7 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.state?.stream.isStreaming).toBe(true);
   });
 
-  it('mirrors active desktop stream running state into canonical conversation presence', async () => {
+  it('does not let active desktop stream state author global conversation presence', async () => {
     const liveState = {
       conversationId: 'conv-sidebar-running',
       sessionDetail: null,
@@ -698,7 +698,8 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(presenceStore.get('conv-sidebar-running')).toBe('streaming');
+    expect(latestState?.state?.stream.isStreaming).toBe(true);
+    expect(presenceStore.get('conv-sidebar-running')).toBe('idle');
     expect(sessionStore.get('conv-sidebar-running')?.isRunning).toBe(false);
   });
 

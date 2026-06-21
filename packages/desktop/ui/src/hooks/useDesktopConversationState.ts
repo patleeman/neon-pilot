@@ -12,7 +12,6 @@ import type {
   SseEvent,
   ThreadGoal,
 } from '../shared/types';
-import { presenceStore } from '../store';
 import { recordRendererTelemetry } from '../telemetry/appTelemetry';
 import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from './sessionStream';
 import { readCachedConversationBootstrap, readCachedConversationBootstrapSeed } from './useConversationBootstrap';
@@ -619,18 +618,6 @@ export function useDesktopConversationState(conversationId: string | null, optio
       closed = true;
     };
   }, [bridge, conversationId, mode, options?.includeToolBlocks, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
-
-  useEffect(() => {
-    if (!conversationId || !matchedState) {
-      return;
-    }
-
-    const nextRunning = matchedState.stream.isStreaming || matchedState.liveSession.isStreaming === true;
-    presenceStore.setLiveStreaming(conversationId, nextRunning, 'activeConversation');
-    return () => {
-      presenceStore.setLiveStreaming(conversationId, null, 'activeConversation');
-    };
-  }, [conversationId, matchedState?.liveSession.isStreaming, matchedState?.stream.isStreaming]);
 
   useEffect(() => {
     if (mode !== 'local' || !conversationId || !matchedState?.liveSession?.live) {

@@ -62,7 +62,7 @@ export function useDesktopAppEventRuntime() {
 
   const applySessionMetaUpdate = useCallback((sessionId: string, nextSession: SessionMeta | null) => {
     if (!nextSession) {
-      presenceStore.setLiveStreaming(sessionId, null);
+      presenceStore.setBackendRunning(sessionId, null);
       sessionStore.remove(sessionId);
       forgetConversationTab(sessionId);
       return;
@@ -255,7 +255,7 @@ export function useDesktopAppEventRuntime() {
           return;
         case 'session_meta_changed':
           if (payload.running !== undefined) {
-            presenceStore.setLiveStreaming(payload.sessionId, payload.running);
+            presenceStore.setBackendRunning(payload.sessionId, payload.running);
           }
           bumpConversationMetadataVersion(payload.sessionId);
           void refreshSessionMeta(payload.sessionId);

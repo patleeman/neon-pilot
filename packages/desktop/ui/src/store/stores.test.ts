@@ -75,15 +75,16 @@ describe('presenceStore', () => {
     expect(presenceStore.get('conv-2')).toBe('automation');
   });
 
-  it('does not let a stale false source clear a true live running source', () => {
+  it('lets backend running state override stale session snapshots', () => {
     sessionStore.replaceAll([session('conv-1', false)]);
 
-    presenceStore.setLiveStreaming('conv-1', true, 'app');
-    presenceStore.setLiveStreaming('conv-1', false, 'activeConversation');
-
+    presenceStore.setBackendRunning('conv-1', true);
     expect(presenceStore.get('conv-1')).toBe('streaming');
 
-    presenceStore.setLiveStreaming('conv-1', false, 'app');
+    sessionStore.replaceAll([session('conv-1', false)]);
+    expect(presenceStore.get('conv-1')).toBe('streaming');
+
+    presenceStore.setBackendRunning('conv-1', false);
     expect(presenceStore.get('conv-1')).toBe('idle');
   });
 });

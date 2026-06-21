@@ -1084,7 +1084,7 @@ describe('useConversations', () => {
     expect(latestHookResult?.tabs[0]?.isRunning).toBe(false);
 
     await act(async () => {
-      presenceStore.setLiveStreaming('conv-running', true);
+      presenceStore.setBackendRunning('conv-running', true);
     });
 
     expect(latestHookResult?.tabs[0]?.isRunning).toBe(true);
