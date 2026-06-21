@@ -197,6 +197,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const [skillQuery, setSkillQuery] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showRuns, setShowRuns] = useState(false);
+  const [openRoutineMenuId, setOpenRoutineMenuId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverPosition, setDragOverPosition] = useState<RoutinePosition | null>(null);
   const pointerDragIdRef = useRef<string | null>(null);
@@ -272,16 +273,24 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     pa.ui.toast('Routine saved', 'info');
   }, [draft, pa]);
 
+  const deleteRoutine = useCallback(
+    async (routine: Routine) => {
+      const confirmed = await pa.ui.confirm({ message: `Delete “${routine.name}”?` });
+      if (!confirmed) return;
+      const result = (await pa.extension.invoke('deleteRoutine', { routineId: routine.id })) as StateResult;
+      setData(result);
+      const next = result.routines.find((item) => item.hookId === selectedHookId) ?? null;
+      setSelectedRoutineId(next?.id ?? null);
+      setDraft(next);
+      setOpenRoutineMenuId(null);
+    },
+    [pa, selectedHookId],
+  );
+
   const remove = useCallback(async () => {
     if (!draft) return;
-    const confirmed = await pa.ui.confirm({ message: `Delete “${draft.name}”?` });
-    if (!confirmed) return;
-    const result = (await pa.extension.invoke('deleteRoutine', { routineId: draft.id })) as StateResult;
-    setData(result);
-    const next = result.routines.find((routine) => routine.hookId === selectedHookId) ?? null;
-    setSelectedRoutineId(next?.id ?? null);
-    setDraft(next);
-  }, [draft, pa, selectedHookId]);
+    await deleteRoutine(draft);
+  }, [deleteRoutine, draft]);
 
   const addRoutine = useCallback(
     (type: RoutineType) => {
@@ -412,7 +421,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       }}
       onClick={() => selectRoutine(routine)}
       className={cx(
-        'overflow-hidden rounded-md border bg-surface-2 text-left transition-colors',
+        'relative overflow-visible rounded-md border bg-surface-2 text-left transition-colors',
         dragId === routine.id && 'opacity-60',
         selectedRoutineId === routine.id ? 'border-accent/70 bg-accent/10' : 'border-border-subtle',
       )}
@@ -444,9 +453,54 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           <div className="mt-0.5 truncate text-[13px] font-semibold">{routine.name}</div>
           <div className="truncate text-[12px] text-secondary">{routine.instruction || 'No instruction yet.'}</div>
         </div>
-        <button type="button" className="text-secondary">
-          …
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            aria-label={`More actions for ${routine.name}`}
+            aria-expanded={openRoutineMenuId === routine.id}
+            className="rounded px-2 py-1 text-xl leading-none text-secondary hover:bg-surface-3 hover:text-primary"
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpenRoutineMenuId((current) => (current === routine.id ? null : routine.id));
+            }}
+          >
+            …
+          </button>
+          {openRoutineMenuId === routine.id ? (
+            <div
+              className="absolute right-0 top-8 z-20 min-w-40 overflow-hidden rounded-md border border-border-subtle bg-surface-1 py-1 text-[12px] shadow-xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="block w-full px-3 py-2 text-left text-primary hover:bg-surface-3"
+                onClick={() => {
+                  selectRoutine(routine);
+                  setOpenRoutineMenuId(null);
+                }}
+              >
+                Edit routine
+              </button>
+              <button
+                type="button"
+                className="block w-full px-3 py-2 text-left text-primary hover:bg-surface-3"
+                onClick={() => {
+                  setOpenRoutineMenuId(null);
+                  void moveRoutineById(routine.id, routine.position === 'before' ? 'after' : 'before');
+                }}
+              >
+                Move to {routine.position === 'before' ? 'After' : 'Before'}
+              </button>
+              <button
+                type="button"
+                className="block w-full px-3 py-2 text-left text-danger hover:bg-surface-3"
+                onClick={() => void deleteRoutine(routine)}
+              >
+                Delete routine
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
       {routine.type === 'decision' && routine.outcomes.length ? (
         <div className="grid gap-1 border-t border-border-subtle px-9 py-2 text-[12px]">

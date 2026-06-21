@@ -112,6 +112,20 @@ describe('RoutinesPage', () => {
     expect(screen.getByDisplayValue('Run QA')).toBeTruthy();
   });
 
+  it('opens routine actions from the larger dots menu', async () => {
+    const { pa, invoke } = createPa();
+    render(<RoutinesPage {...props(pa)} />);
+    await screen.findByText('Checkpoint timeline');
+
+    fireEvent.click(screen.getByLabelText('More actions for Review code changes'));
+    expect(screen.getByText('Edit routine')).toBeTruthy();
+    fireEvent.click(screen.getByText('Move to After'));
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('moveRoutine', expect.objectContaining({ routineId: 'r1', position: 'after' })),
+    );
+  });
+
   it('inserts a skill reference and deletes a temporary routine', async () => {
     const { pa, invoke } = createPa();
     render(<RoutinesPage {...props(pa)} />);
