@@ -64,9 +64,9 @@ const HOOK_POINTS: RoutineHookPoint[] = [
   },
   {
     id: 'tool.bash_failure',
-    title: 'Bash failure',
+    title: 'Shell command failure',
     group: 'Tools',
-    description: 'Routines that run after a shell command fails.',
+    description: 'Routines that run after the Bash tool reports a failed shell command.',
     ownerExtensionId: 'system-runs',
     variables: [
       { name: 'cwd', label: 'Working directory' },
@@ -76,9 +76,9 @@ const HOOK_POINTS: RoutineHookPoint[] = [
   },
   {
     id: 'tool.filesystem_write',
-    title: 'Filesystem write',
+    title: 'File write',
     group: 'Tools',
-    description: 'Routines that run around filesystem writes.',
+    description: 'Routines that run when a file-writing tool updates the workspace.',
     ownerExtensionId: 'core',
     variables: [
       { name: 'cwd', label: 'Working directory' },

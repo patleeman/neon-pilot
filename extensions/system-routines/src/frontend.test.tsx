@@ -93,7 +93,7 @@ describe('RoutinesPage', () => {
     expect(await screen.findByText('Checkpoint timeline')).toBeTruthy();
     expect(screen.getAllByText('Review code changes').length).toBeGreaterThan(0);
     expect(screen.getByText('Add routine ▾')).toBeTruthy();
-    expect(screen.getByText('Decision output is constrained to these enum values.')).toBeTruthy();
+    expect(screen.getByText(/The decision prompt must return one of these output values/)).toBeTruthy();
   });
 
   it('adds outcomes and saves the draft instead of resetting it', async () => {
@@ -104,7 +104,7 @@ describe('RoutinesPage', () => {
     fireEvent.click(screen.getByText('Add outcome'));
     expect(screen.getByDisplayValue('new_outcome')).toBeTruthy();
     fireEvent.change(screen.getByDisplayValue('new_outcome'), { target: { value: 'needs_qa' } });
-    fireEvent.change(screen.getByDisplayValue('Continue'), { target: { value: 'Run QA' } });
+    fireEvent.change(screen.getByDisplayValue('Describe what happens next'), { target: { value: 'Run QA' } });
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('saveRoutine', expect.objectContaining({ name: 'Review code changes' })));

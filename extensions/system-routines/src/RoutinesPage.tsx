@@ -89,6 +89,33 @@ function routineLabel(type: RoutineType): string {
   return 'Instruction routine';
 }
 
+function ownerLabel(ownerExtensionId: string): string {
+  if (ownerExtensionId === 'core') return 'Built in';
+  return ownerExtensionId
+    .replace(/^system-/, '')
+    .split('-')
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function ownerKind(ownerExtensionId: string): string {
+  return ownerExtensionId === 'core' ? 'App event' : 'Extension event';
+}
+
+function failureBehaviorDescription(behavior: Routine['failureBehavior']): string {
+  if (behavior === 'block') return 'Block stops the event and reports this routine as needing attention.';
+  if (behavior === 'warn') return 'Warn records the problem but lets the event continue.';
+  return 'Continue lets the event proceed even if this routine fails.';
+}
+
+function outcomeBehaviorDescription(behavior: RoutineOutcome['behavior']): string {
+  if (behavior === 'block') return 'Block stops the event and reports the outcome.';
+  if (behavior === 'warn') return 'Warn records the outcome and continues.';
+  if (behavior === 'ask') return 'Ask pauses so you can decide what happens next.';
+  if (behavior === 'branch') return 'Branch routes to another named path when supported.';
+  return 'Continue lets the event proceed.';
+}
+
 function statusDot(summary: string) {
   if (summary === 'No routines') return 'bg-[#35445b]';
   if (/fail|block|warn/i.test(summary)) return 'bg-warning';
@@ -110,7 +137,9 @@ function RoutineHookList({
 }) {
   const normalizedQuery = query.trim().toLowerCase();
   const visibleHooks = normalizedQuery
-    ? hooks.filter((hook) => `${hook.title} ${hook.description} ${hook.group}`.toLowerCase().includes(normalizedQuery))
+    ? hooks.filter((hook) =>
+        `${hook.title} ${hook.description} ${hook.group} ${ownerLabel(hook.ownerExtensionId)}`.toLowerCase().includes(normalizedQuery),
+      )
     : hooks;
 
   return (
@@ -141,7 +170,12 @@ function RoutineHookList({
               >
                 <span className={cx('mt-1.5 h-2 w-2 rounded-full', statusDot(hook.summary))} />
                 <span className="min-w-0">
-                  <span className="block truncate font-medium">{hook.title}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium">{hook.title}</span>
+                    <span className="shrink-0 rounded-sm bg-surface-3 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-dim">
+                      {ownerLabel(hook.ownerExtensionId)}
+                    </span>
+                  </span>
                   <span className="block truncate text-[11px] text-dim">{hook.summary}</span>
                 </span>
               </button>
@@ -468,7 +502,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           </button>
           {openRoutineMenuId === routine.id ? (
             <div
-              className="absolute right-0 top-8 z-20 min-w-40 overflow-hidden rounded-md border border-border-subtle bg-surface-1 py-1 text-[12px] shadow-xl"
+              className="absolute right-0 top-8 z-20 min-w-40 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] py-1 text-[12px] shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             >
               <button
@@ -532,7 +566,12 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-app text-[13px] text-primary">
       <div className="flex h-[88px] shrink-0 items-center gap-2 border-b border-border-subtle/70 px-9">
         <div className="min-w-0">
-          <div className="text-[15px] font-semibold">{selectedHook.title}</div>
+          <div className="flex items-center gap-2">
+            <div className="text-[15px] font-semibold">{selectedHook.title}</div>
+            <span className="rounded-sm bg-surface-3 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-dim">
+              {ownerKind(selectedHook.ownerExtensionId)} · {ownerLabel(selectedHook.ownerExtensionId)}
+            </span>
+          </div>
           <div className="mt-0.5 max-w-xl truncate text-[12px] text-secondary">{selectedHook.description}</div>
         </div>
         <div className="flex-1" />
@@ -544,18 +583,24 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             Add routine ▾
           </ToolbarButton>
           {showAdd ? (
-            <div className="absolute right-0 top-9 z-20 w-52 overflow-hidden rounded-md border border-border-subtle bg-surface-1 shadow-xl">
-              <button className="block w-full border-b border-border-subtle px-3 py-2 text-left" onClick={() => addRoutine('instruction')}>
+            <div className="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] shadow-2xl">
+              <button
+                className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
+                onClick={() => addRoutine('instruction')}
+              >
                 <span className="block text-[13px] font-medium text-primary">Instruction</span>
                 <span className="block text-[11px] text-secondary">Run a prompt and continue.</span>
               </button>
-              <button className="block w-full border-b border-border-subtle px-3 py-2 text-left" onClick={() => addRoutine('decision')}>
+              <button
+                className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
+                onClick={() => addRoutine('decision')}
+              >
                 <span className="block text-[13px] font-medium text-primary">Decision</span>
                 <span className="block text-[11px] text-secondary">Choose one named outcome.</span>
               </button>
-              <button className="block w-full px-3 py-2 text-left" onClick={() => addRoutine('stop')}>
+              <button className="block w-full px-3 py-2 text-left hover:bg-surface-3" onClick={() => addRoutine('stop')}>
                 <span className="block text-[13px] font-medium text-primary">Stop</span>
-                <span className="block text-[11px] text-secondary">Block the lifecycle event.</span>
+                <span className="block text-[11px] text-secondary">Stop this event and report why.</span>
               </button>
             </div>
           ) : null}
@@ -649,14 +694,26 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         <aside className="min-w-0 overflow-hidden border-l border-border-subtle bg-transparent">
           {draft ? (
             <>
-              <div className="px-4 pb-3 pt-4">
-                <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-dim">Routine</div>
-                <h2 className="m-0 mt-2 text-[16px] font-semibold">{draft.name}</h2>
-                <p className="m-0 mt-1 text-[12px] text-secondary">
-                  {routineLabel(draft.type)} · {draft.position === 'before' ? 'Before' : 'After'} {selectedHook.title.toLowerCase()}
-                </p>
+              <div className="border-b border-border-subtle px-4 pb-3 pt-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-dim">Routine</div>
+                    <h2 className="m-0 mt-2 truncate text-[16px] font-semibold">{draft.name}</h2>
+                    <p className="m-0 mt-1 text-[12px] text-secondary">
+                      {routineLabel(draft.type)} · {draft.position === 'before' ? 'Before' : 'After'} {selectedHook.title.toLowerCase()}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-2 pt-5">
+                    <Button variant="ghost" onClick={() => void remove()}>
+                      Delete
+                    </Button>
+                    <Button variant="primary" onClick={() => void save()}>
+                      Save
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <div className="h-[calc(100%-8.5rem)] overflow-auto px-4 pb-4">
+              <div className="h-[calc(100%-5.5rem)] overflow-auto px-4 pb-4 pt-3">
                 <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Routine type</label>
                 <Select
                   name="routine-type"
@@ -670,10 +727,15 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     })
                   }
                 >
-                  <option value="instruction">Instruction: run and continue</option>
-                  <option value="decision">Decision: choose one outcome</option>
-                  <option value="stop">Stop: block lifecycle event</option>
+                  <option value="instruction">Instruction: run a prompt</option>
+                  <option value="decision">Decision: choose an outcome</option>
+                  <option value="stop">Stop: block this event</option>
                 </Select>
+                {draft.type === 'stop' ? (
+                  <div className="mb-3 rounded-md border border-warning/30 bg-warning/10 p-2 text-[12px] text-secondary">
+                    Stop routines always block the selected event. Use the instruction field to explain when and why the event should stop.
+                  </div>
+                ) : null}
                 <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Position</label>
                 <Select
                   name="routine-position"
@@ -697,16 +759,17 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Pass / fail behavior</label>
                     <Select
                       name="routine-failure-behavior"
-                      className="mb-3 w-full"
+                      className="w-full"
                       value={draft.failureBehavior}
                       onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
                         setDraft({ ...draft, failureBehavior: event.target.value as Routine['failureBehavior'] })
                       }
                     >
-                      <option value="continue">Continue either way</option>
-                      <option value="warn">Warn if this routine fails</option>
-                      <option value="block">Block if this routine fails</option>
+                      <option value="continue">Continue if this routine fails</option>
+                      <option value="warn">Warn and continue if this routine fails</option>
+                      <option value="block">Block this event if the routine fails</option>
                     </Select>
+                    <div className="mb-3 mt-1 text-[12px] text-secondary">{failureBehaviorDescription(draft.failureBehavior)}</div>
                   </>
                 ) : null}
                 <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Instruction</label>
@@ -720,7 +783,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onInstructionChange(event.target.value)}
                   />
                   {skillMatches.length ? (
-                    <div className="mt-1 overflow-hidden rounded-md border border-border-subtle bg-surface-1 shadow-xl">
+                    <div className="mt-1 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] shadow-2xl">
                       {skillMatches.map((skill) => (
                         <button
                           key={skill.id}
@@ -741,55 +804,99 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 </div>
                 {draft.type === 'decision' ? (
                   <>
-                    <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Outcomes</label>
-                    <div className="mb-3 overflow-hidden rounded-md border border-border-subtle">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <label className="block text-[11px] uppercase tracking-wider text-secondary">Decision outcomes</label>
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            outcomes: [
+                              ...draft.outcomes,
+                              { id: 'new_outcome', label: 'New outcome', target: 'Describe what happens next', behavior: 'continue' },
+                            ],
+                          })
+                        }
+                      >
+                        Add outcome
+                      </Button>
+                    </div>
+                    <div className="mb-3 grid gap-2">
                       {draft.outcomes.map((outcome, index) => (
-                        <div
-                          key={index}
-                          className="grid grid-cols-[118px_minmax(0,1fr)] gap-2 border-b border-border-subtle p-2 last:border-b-0"
-                        >
-                          <input
-                            className="min-w-0 bg-transparent font-mono text-[11px] text-primary outline-none"
-                            value={outcome.id}
-                            onChange={(event) =>
-                              setDraft({
-                                ...draft,
-                                outcomes: draft.outcomes.map((item, itemIndex) =>
-                                  itemIndex === index ? { ...item, id: event.target.value } : item,
-                                ),
-                              })
-                            }
-                          />
-                          <input
-                            className="min-w-0 bg-transparent text-secondary outline-none"
-                            value={outcome.target}
-                            onChange={(event) =>
-                              setDraft({
-                                ...draft,
-                                outcomes: draft.outcomes.map((item, itemIndex) =>
-                                  itemIndex === index ? { ...item, target: event.target.value } : item,
-                                ),
-                              })
-                            }
-                          />
+                        <div key={index} className="rounded-md border border-border-subtle bg-surface-2 p-2">
+                          <div className="grid gap-2">
+                            <label className="grid gap-1">
+                              <span className="text-[10px] uppercase tracking-wider text-dim">Output value</span>
+                              <TextInput
+                                className="w-full font-mono text-[12px]"
+                                placeholder="pass"
+                                value={outcome.id}
+                                onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                                  setDraft({
+                                    ...draft,
+                                    outcomes: draft.outcomes.map((item, itemIndex) =>
+                                      itemIndex === index ? { ...item, id: event.target.value } : item,
+                                    ),
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="grid gap-1">
+                              <span className="text-[10px] uppercase tracking-wider text-dim">What happens</span>
+                              <TextInput
+                                className="w-full text-[12px]"
+                                placeholder="Continue checkpoint"
+                                value={outcome.target}
+                                onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                                  setDraft({
+                                    ...draft,
+                                    outcomes: draft.outcomes.map((item, itemIndex) =>
+                                      itemIndex === index ? { ...item, target: event.target.value } : item,
+                                    ),
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="grid gap-1">
+                              <span className="text-[10px] uppercase tracking-wider text-dim">Effect</span>
+                              <Select
+                                className="w-full"
+                                value={outcome.behavior}
+                                onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                                  setDraft({
+                                    ...draft,
+                                    outcomes: draft.outcomes.map((item, itemIndex) =>
+                                      itemIndex === index ? { ...item, behavior: event.target.value as RoutineOutcome['behavior'] } : item,
+                                    ),
+                                  })
+                                }
+                              >
+                                <option value="continue">Continue</option>
+                                <option value="warn">Warn and continue</option>
+                                <option value="block">Block this event</option>
+                                <option value="ask">Ask me</option>
+                                <option value="branch">Branch</option>
+                              </Select>
+                              <span className="text-[11px] text-secondary">{outcomeBehaviorDescription(outcome.behavior)}</span>
+                            </label>
+                            <div className="flex justify-end">
+                              <Button
+                                variant="ghost"
+                                onClick={() =>
+                                  setDraft({ ...draft, outcomes: draft.outcomes.filter((_, itemIndex) => itemIndex !== index) })
+                                }
+                              >
+                                Remove outcome
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        setDraft({
-                          ...draft,
-                          outcomes: [
-                            ...draft.outcomes,
-                            { id: 'new_outcome', label: 'New outcome', target: 'Continue', behavior: 'continue' },
-                          ],
-                        })
-                      }
-                    >
-                      Add outcome
-                    </Button>
-                    <div className="mb-3 mt-1 text-[12px] text-secondary">Decision output is constrained to these enum values.</div>
+                    <div className="mb-3 text-[12px] text-secondary">
+                      The decision prompt must return one of these output values. Each value controls whether the event continues, warns,
+                      asks you, branches, or blocks.
+                    </div>
                   </>
                 ) : null}
                 <label className="mb-1 mt-3 block text-[11px] uppercase tracking-wider text-secondary">Available variables</label>
@@ -799,14 +906,6 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     <span className="text-secondary">{variable.label}</span>
                   </div>
                 ))}
-              </div>
-              <div className="flex justify-end gap-2 border-t border-border-subtle p-3">
-                <Button variant="ghost" onClick={() => void remove()}>
-                  Delete
-                </Button>
-                <Button variant="primary" onClick={() => void save()}>
-                  Save
-                </Button>
               </div>
             </>
           ) : (
