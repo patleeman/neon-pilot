@@ -1947,4 +1947,14 @@ Each extension has a complete `extension.json` manifest and
 
 Bundled system extensions keep source next to their built output for development. Backend `dist/` output is authoritative by default in both dev and packaged runtimes: if `backend.entry` points at source (`src/backend.ts`), normal app startup loads sibling `dist/backend.mjs`; source recompilation is reserved for explicit extension-authoring mode (`NEON_PILOT_EXTENSION_AUTHORING=1`). If `backend.entry` already points at built output such as `dist/backend.mjs`, both dev and packaged builds load that file directly. System extension frontends are bundled into the desktop renderer from source so they share the app's React singleton; their `dist/frontend.js` bundles are still built and validated as release artifacts.
 
+When changing a bundled system extension in this repo, run the repo workflow rather than stopping at a package build:
+
+1. Build the extension release artifacts with `pnpm run extension:build -- extensions/<id>`.
+2. For frontend, route, nav, sidebar, manifest, or shared UI changes, run `pnpm --dir packages/desktop run build:ui` so the desktop renderer sees the current source and contributions.
+3. Restart the dev app before visual QA; otherwise stale renderer chunks or cached component registrations can make the app show old UI.
+4. Open the exact app route/surface and click through each touched interaction, including create/edit/save/delete, dropdowns/menus, autocomplete, drag/reorder, sidebar navigation/search, empty states, and persistence after refresh or reopen.
+5. Compare the full app frame against the closest existing product surface before calling the UI done. If a feature is modeled on Automations, Settings, Diffs, or Runs, inspect that surface in the app and align shell spacing, toolbar treatment, sidebar behavior, typography, and right-rail density.
+
+Do not treat passing unit tests, `extension:build`, manifest checks, or a cropped screenshot as proof that a user-facing extension surface works. They are required support checks; the app-path interaction pass is the acceptance check.
+
 Optional extension repo packages are not bundled or auto-loaded. Users install released optional extensions from **Settings → Extensions → Install**, which downloads `.neon-extension.zip` artifacts from GitHub releases. After install, check the unified list in Settings → Extensions to enable and inspect the extension. For local development, build with `pnpm run extension:build -- <extension-dir>`, validate with `neon-pilot-extension doctor <extension-dir>`, and import the resulting zip or copy the built package into runtime state.

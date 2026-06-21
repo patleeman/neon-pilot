@@ -31,6 +31,22 @@ Build native extensions: a folder with `extension.json`, optional `src/frontend.
 9. If the extension is being published through a GitHub extension repo, prepare `.neon-extension.zip` release assets; source folders plus `neon.extensions.json` are not enough for normal install.
 10. Check Extension Manager diagnostics before reporting done.
 
+## Source checkout / bundled system extension workflow
+
+When working in the Neon Pilot repo on a bundled system extension under `extensions/system-*`, do **not** rely on the packaged-app Extension Manager loop alone. Use the repo loop and treat app-path QA as mandatory:
+
+1. Read the owning extension `README.md`, `docs/extensions.md`, and any relevant design guidance before changing behavior or UI.
+2. For UI work, compare against the closest existing system surface (for example Automations, Settings, Runs, or Diffs) before inventing local layout. Reuse `@neon-pilot/extensions/ui` primitives first.
+3. Edit source and manifest together. If you add a backend action, declare it in `extension.json`; if you add a nav/sidebar route, declare both the main view and the sidebar view.
+4. Run the focused extension build: `pnpm run extension:build -- extensions/<id>`. This validates release artifacts, but it is not enough for the desktop renderer.
+5. If frontend code, manifest routes/nav/sidebar views, or shared UI imports changed, also run `pnpm --dir packages/desktop run build:ui`. The app renderer can keep stale chunks until this build/restart cycle happens.
+6. Restart the dev app after rebuilding before QA. A renderer reload can still show stale UI or old manifest/component registrations; use the repo launch script or an equivalent full restart.
+7. Open the real route/surface in the app and exercise every user-facing interaction you touched: create, edit, save, delete, reorder/drag, filter/search, empty/error/loading states, dialogs, dropdowns, autocomplete, and persistence after refresh/reopen.
+8. Visually inspect a screenshot of the full app frame, not just an isolated component. Check alignment with neighboring surfaces, sidebar use, typography, overflow/clipping, menu placement, and whether controls stay open or disappear unexpectedly.
+9. Only checkpoint after tests, extension build, desktop UI build when needed, static checks for boundary/manifest work, and app-path QA all pass.
+
+If a user has to point out that a menu is stuck open, a save blanks the page, drag/drop does not work, or the page does not match a nearby product surface, assume the workflow failed at steps 2, 6, or 7. Stop, reproduce it in the app, fix it, and re-QA before reporting done.
+
 Copy-paste user prompt:
 
 ```text
