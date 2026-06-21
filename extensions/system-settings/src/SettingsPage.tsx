@@ -565,9 +565,11 @@ function formatDesktopUpdateSummary(state: DesktopAppPreferencesState | null): s
 
   switch (update.status) {
     case 'checking':
-      return 'Checking for updates…';
+      return 'Checking for updates...';
     case 'downloading':
-      return update.availableVersion ? `Downloading Neon Pilot ${update.availableVersion}…` : 'Downloading the latest Neon Pilot build…';
+      return update.availableVersion
+        ? `Downloading Neon Pilot ${update.availableVersion}...`
+        : 'Downloading the latest Neon Pilot build...';
     case 'ready':
       return update.downloadedVersion
         ? state.autoInstallUpdates
@@ -575,7 +577,7 @@ function formatDesktopUpdateSummary(state: DesktopAppPreferencesState | null): s
           : `Neon Pilot ${update.downloadedVersion} is ready. Quit the app to finish installing it.`
         : `Current version: ${update.currentVersion}.`;
     case 'installing':
-      return update.downloadedVersion ? `Installing Neon Pilot ${update.downloadedVersion}…` : 'Installing the downloaded update…';
+      return update.downloadedVersion ? `Installing Neon Pilot ${update.downloadedVersion}...` : 'Installing the downloaded update...';
     case 'error':
       return update.lastError ? `Update error: ${update.lastError}` : 'The last update action failed.';
     case 'idle':
@@ -869,7 +871,7 @@ export function DesktopKeyboardShortcutsSettingsSection() {
 
   return (
     <SettingsGroup title="Keyboard shortcuts">
-      {loading ? <p className="ui-card-meta">Loading keyboard shortcuts…</p> : null}
+      {loading ? <p className="ui-card-meta">Loading keyboard shortcuts...</p> : null}
       {!loading && !preferencesState ? <p className="ui-card-meta">Keyboard shortcuts are available in the desktop app.</p> : null}
       {preferencesState ? (
         <div className="space-y-4">
@@ -947,7 +949,7 @@ export function DesktopKeyboardShortcutsSettingsSection() {
           {notice ? <p className="text-[12px] text-success">{notice}</p> : null}
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="ui-card-meta">{saving ? 'Saving…' : dirty ? 'Unsaved change pending…' : 'Auto-saved'}</span>
+            <span className="ui-card-meta">{saving ? 'Saving...' : dirty ? 'Unsaved change pending...' : 'Auto-saved'}</span>
             <ToolbarButton
               type="button"
               onClick={() => {
@@ -1104,8 +1106,8 @@ export function CommandsSettingsSection() {
 
   return (
     <div className="space-y-3">
-      <SearchInput value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search commands…" />
-      {loading ? <p className="ui-card-meta">Loading commands…</p> : null}
+      <SearchInput value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search commands..." />
+      {loading ? <p className="ui-card-meta">Loading commands...</p> : null}
       <SettingsGroup title="Command shortcuts" className="settings-page-commands-group">
         {visibleRows.map((command) => (
           <SettingsControlRow
@@ -1327,7 +1329,7 @@ function TelemetryLogsSettingsPanel() {
             onClick={openLogFolder}
             disabled={!data?.logDir || action !== null}
             aria-label="Open diagnostic log folder"
-            title={action === 'open' ? 'Opening…' : 'Open log folder'}
+            title={action === 'open' ? 'Opening...' : 'Open log folder'}
           >
             <SettingsIcon name="external" />
           </IconButton>
@@ -1337,7 +1339,7 @@ function TelemetryLogsSettingsPanel() {
             onClick={exportLogs}
             disabled={action !== null}
             aria-label="Export diagnostic bundle"
-            title={action === 'export' ? 'Exporting…' : 'Export diagnostics bundle'}
+            title={action === 'export' ? 'Exporting...' : 'Export diagnostics bundle'}
           >
             <SettingsIcon name="external" />
           </IconButton>
@@ -1347,14 +1349,14 @@ function TelemetryLogsSettingsPanel() {
             onClick={maintainTelemetryDb}
             disabled={action !== null}
             aria-label="Clean up diagnostics index"
-            title={action === 'maintain' ? 'Cleaning…' : 'Clean up diagnostics index'}
+            title={action === 'maintain' ? 'Cleaning...' : 'Clean up diagnostics index'}
           >
             <SettingsIcon name="trash" />
           </IconButton>
         </>
       }
     >
-      {loading ? <p className="ui-card-meta">Loading diagnostic log details…</p> : null}
+      {loading ? <p className="ui-card-meta">Loading diagnostic log details...</p> : null}
       {error ? <p className="text-[12px] text-danger">{error}</p> : null}
       {data ? (
         <>
@@ -1734,7 +1736,7 @@ export function DesktopConnectionsSettingsPanel() {
             </SettingsControlRow>
           </>
         ) : (
-          <p className="ui-card-meta">Loading desktop app settings…</p>
+          <p className="ui-card-meta">Loading desktop app settings...</p>
         )}
         {appPreferencesError ? <p className="text-[12px] text-danger">{appPreferencesError}</p> : null}
       </SettingsGroup>
@@ -2065,7 +2067,7 @@ function ExtensionSecretsSection() {
     }
   };
 
-  if (loading && !secretsState) return <p className="ui-card-meta">Loading secrets…</p>;
+  if (loading && !secretsState) return <p className="ui-card-meta">Loading secrets...</p>;
   if (error && !secretsState) return <p className="text-[12px] text-danger">Failed to load secrets: {error}</p>;
 
   return (
@@ -2140,7 +2142,7 @@ function ExtensionSecretsSection() {
                       spellCheck={false}
                       disabled={!secret.writable || savingKey === secret.key}
                     />
-                    {savingKey === secret.key ? <span className="ui-card-meta">Saving…</span> : null}
+                    {savingKey === secret.key ? <span className="ui-card-meta">Saving...</span> : null}
                     <ToolbarButton
                       type="button"
                       disabled={!secret.writable || savingKey === secret.key || !secret.configured || secret.source === 'env'}
@@ -3417,7 +3419,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                 <div className="settings-page-section-stack">
                   <SettingsGroup title="Model defaults">
                     {modelsLoading && !modelState ? (
-                      <p className="ui-card-meta">Loading models…</p>
+                      <p className="ui-card-meta">Loading models...</p>
                     ) : modelsError && !modelState ? (
                       <p className="text-[12px] text-danger">Failed to load models: {modelsError}</p>
                     ) : modelState ? (
@@ -3487,7 +3489,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                 <div className="settings-page-section-stack">
                   <SettingsGroup title="Working directory">
                     {defaultCwdLoading && !defaultCwdState ? (
-                      <p className="ui-card-meta">Loading default working directory…</p>
+                      <p className="ui-card-meta">Loading default working directory...</p>
                     ) : defaultCwdLoadError && !defaultCwdState ? (
                       <p className="text-[12px] text-danger">Failed to load default working directory: {defaultCwdLoadError}</p>
                     ) : defaultCwdState ? (
@@ -3499,13 +3501,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         }}
                       >
                         <SettingsControlRow
-                          title="Default working directory"
+                          title="Default project folder"
                           description={
                             savingDefaultCwd
-                              ? 'Saving...'
+                              ? 'Saving…'
                               : defaultCwdState.currentCwd
-                                ? `New conversations and tools start in ${defaultCwdState.effectiveCwd}`
-                                : `No default set. Tools use the app process directory: ${defaultCwdState.effectiveCwd}`
+                                ? `New conversations and tool runs will start in ${defaultCwdState.effectiveCwd}`
+                                : `No default chosen. New conversations and tool runs will start in ${defaultCwdState.effectiveCwd}`
                           }
                           actionsClassName="settings-page-cwd-actions"
                         >
@@ -3535,18 +3537,18 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                               title="Choose default working directory"
                               aria-label="Choose default working directory"
                             >
-                              {pickingDefaultCwd ? 'Choosing…' : 'Choose…'}
+                              {pickingDefaultCwd ? 'Choosing...' : 'Choose...'}
                             </ToolbarButton>
                           </div>
                         </SettingsControlRow>
                         <SettingsControlRow
-                          title="When no default is set"
+                          title="If you do not choose one"
                           description={
                             savingDefaultCwd
                               ? 'Saving…'
                               : defaultCwdDirty
                                 ? 'Auto-save pending…'
-                                : 'Use the app process directory for tools and shell commands.'
+                                : 'Neon Pilot uses the folder it was launched from. Choose a project folder above to make this predictable.'
                           }
                         >
                           <ToolbarButton
@@ -3593,12 +3595,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                   <SettingsGroup title="Model providers">
                     <>
                       {modelProviderLoading && !modelProviderState ? (
-                        <p className="ui-card-meta">Loading provider definitions…</p>
+                        <p className="ui-card-meta">Loading provider definitions...</p>
                       ) : modelProviderError && !modelProviderState ? (
                         <p className="text-[12px] text-danger">Failed to load provider definitions: {modelProviderError}</p>
                       ) : modelProviderState ? (
                         <>
-                          {providerAuthLoading && !providerAuthState && <p className="ui-card-meta">Loading provider credentials…</p>}
+                          {providerAuthLoading && !providerAuthState && <p className="ui-card-meta">Loading provider credentials...</p>}
                           {providerAuthError && !providerAuthState && (
                             <p className="text-[12px] text-danger">Failed to load provider credentials: {providerAuthError}</p>
                           )}
@@ -3612,13 +3614,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 }}
                                 className="h-9 py-1.5 text-[12px]"
                               >
-                                <option value="">Choose provider…</option>
+                                <option value="">Choose provider...</option>
                                 {unconfiguredModelProviderIds.map((providerId) => (
                                   <option key={providerId} value={providerId}>
                                     {providerId}
                                   </option>
                                 ))}
-                                <option value={ADD_CUSTOM_PROVIDER_ID}>Add custom provider…</option>
+                                <option value={ADD_CUSTOM_PROVIDER_ID}>Add custom provider...</option>
                               </Select>
                               <ToolbarButton
                                 type="button"
@@ -3669,7 +3671,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   title="Remove stored credential"
                                 >
                                   {providerCredentialAction === 'remove' ? (
-                                    'Removing…'
+                                    'Removing...'
                                   ) : (
                                     <>
                                       <SettingsIcon name="trash" />
@@ -3692,7 +3694,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 }
                                 title="Test provider connection"
                               >
-                                {providerTestAction ? 'Testing…' : 'Test'}
+                                {providerTestAction ? 'Testing...' : 'Test'}
                               </Button>
                               <IconButton
                                 type="button"
@@ -3878,7 +3880,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       disabled={modelProviderAction !== null || modelProviderDraft.id.trim().length === 0}
                                     >
                                       {modelProviderAction === 'save'
-                                        ? 'Saving provider…'
+                                        ? 'Saving provider...'
                                         : selectedModelProviderId === NEW_MODEL_PROVIDER_ID
                                           ? 'Create provider'
                                           : 'Save provider'}
@@ -3894,7 +3896,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         !selectedModelProvider
                                       }
                                     >
-                                      {modelProviderAction === 'delete' ? 'Removing…' : 'Remove provider'}
+                                      {modelProviderAction === 'delete' ? 'Removing...' : 'Remove provider'}
                                     </ToolbarButton>
                                   </div>
 
@@ -3974,7 +3976,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       }}
                                       disabled={modelsRefreshing || modelRefreshAction}
                                     >
-                                      Find models from provider…
+                                      Find models from provider...
                                     </ToolbarButton>
                                   </div>
                                 </div>
@@ -4139,7 +4141,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                             type="submit"
                                             disabled={modelDraftAction !== null || modelDraft.id.trim().length === 0}
                                           >
-                                            {modelDraftAction === 'save' ? 'Saving…' : editingModelId === NEW_MODEL_ID ? 'Add' : 'Save'}
+                                            {modelDraftAction === 'save' ? 'Saving...' : editingModelId === NEW_MODEL_ID ? 'Add' : 'Save'}
                                           </ToolbarButton>
                                         </div>
                                         <Disclosure summary="More model settings">
@@ -4234,7 +4236,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           onChange={(event) => {
                                             setProviderApiKey(event.target.value);
                                           }}
-                                          placeholder="sk-… or op://Private/API key/password"
+                                          placeholder="sk-... or op://Private/API key/password"
                                           autoComplete="off"
                                           spellCheck={false}
                                           disabled={providerCredentialAction !== null || oauthLoginState?.status === 'running'}
@@ -4252,7 +4254,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           aria-label="Save API key"
                                           title="Save API key"
                                         >
-                                          {providerCredentialAction === 'saveKey' ? '…' : <SettingsIcon name="check" />}
+                                          {providerCredentialAction === 'saveKey' ? '...' : <SettingsIcon name="check" />}
                                         </IconButton>
                                       </div>
                                     </div>
@@ -4275,7 +4277,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         title={`Start OAuth login (${modalProviderAuth.id})`}
                                       >
                                         {oauthAction === 'start' ? (
-                                          'Starting…'
+                                          'Starting...'
                                         ) : (
                                           <>
                                             <SettingsIcon name="external" />
@@ -4315,7 +4317,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         )}
                                       </p>
                                       {selectedProviderLogin.progress.length > 0 && (
-                                        <p className="text-[12px] text-secondary">Waiting for authorization…</p>
+                                        <p className="text-[12px] text-secondary">Waiting for authorization...</p>
                                       )}
                                       {selectedProviderLogin.deviceCode && (
                                         <div className="space-y-3 border-t border-border-subtle pt-3">
@@ -4442,7 +4444,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                                   disabled={oauthAction !== null}
                                                   className="capitalize"
                                                 >
-                                                  {oauthAction === 'submit' ? 'Submitting…' : option.label}
+                                                  {oauthAction === 'submit' ? 'Submitting...' : option.label}
                                                 </ToolbarButton>
                                               ))}
                                             </div>
@@ -4464,7 +4466,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                                   onChange={(event) => {
                                                     setOauthInputValue(event.target.value);
                                                   }}
-                                                  placeholder={selectedProviderLogin.prompt.placeholder || 'Enter code…'}
+                                                  placeholder={selectedProviderLogin.prompt.placeholder || 'Enter code...'}
                                                   autoComplete="off"
                                                   disabled={oauthAction !== null}
                                                 />
@@ -4476,7 +4478,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                                   (!selectedProviderLogin.prompt.allowEmpty && oauthInputValue.trim().length === 0)
                                                 }
                                               >
-                                                {oauthAction === 'submit' ? 'Submitting…' : 'Submit'}
+                                                {oauthAction === 'submit' ? 'Submitting...' : 'Submit'}
                                               </ToolbarButton>
                                             </form>
                                           )}
@@ -4489,7 +4491,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         }}
                                         disabled={oauthAction !== null}
                                       >
-                                        {oauthAction === 'cancel' ? 'Cancelling…' : 'Cancel OAuth login'}
+                                        {oauthAction === 'cancel' ? 'Cancelling...' : 'Cancel OAuth login'}
                                       </ToolbarButton>
                                     </div>
                                   )}
