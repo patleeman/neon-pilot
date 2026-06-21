@@ -691,10 +691,10 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           </div>
         </main>
 
-        <aside className="min-w-0 overflow-hidden border-l border-border-subtle bg-transparent">
+        <aside className="flex min-w-0 flex-col overflow-hidden border-l border-border-subtle bg-transparent">
           {draft ? (
             <>
-              <div className="border-b border-border-subtle px-4 pb-3 pt-4">
+              <div className="shrink-0 border-b border-border-subtle px-4 pb-3 pt-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-dim">Routine</div>
@@ -713,7 +713,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   </div>
                 </div>
               </div>
-              <div className="h-[calc(100%-5.5rem)] overflow-auto px-4 pb-4 pt-3">
+              <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 pt-3">
                 <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Routine type</label>
                 <Select
                   name="routine-type"
