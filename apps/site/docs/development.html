@@ -60,12 +60,12 @@
         <p>Use this page for day-to-day repo development, validation, UI QA, and targeted checkpoints.</p>
         <h2 id="local-development">Local development</h2>
         <pre><code>pnpm install
-pnpm run setup:hooks   # optional: enable tracked git hooks
 pnpm run build
 pnpm run desktop:start</code></pre>
         <p>
-          The repo intentionally avoids a root <code>postinstall</code>. Third-party build scripts are allowlisted in
-          <code>pnpm-workspace.yaml</code>; new blocked scripts appear in <code>pnpm ignored-builds</code>.
+          <code>pnpm install</code> runs the root <code>prepare</code> script, which configures Git to use the tracked hooks in
+          <code>.githooks</code>. The repo intentionally avoids a root <code>postinstall</code>. Third-party build scripts are allowlisted
+          in <code>pnpm-workspace.yaml</code>; new blocked scripts appear in <code>pnpm ignored-builds</code>.
         </p>
         <p>For the desktop dev app:</p>
         <pre><code>cd packages/desktop &amp;&amp; pnpm run dev
@@ -122,8 +122,8 @@ pnpm run check    # types, lint, format, full test suite, extension static check
           </tbody>
         </table>
         <p>
-          <code>check:extensions:static</code> enforces the extension/core boundary. Extension runtime source must use
-          <code>@neon-pilot/extensions</code> public APIs instead of importing <code>@neon-pilot/core</code>,
+          <code>check:extensions:static</code> enforces the extension/core boundary. Extension runtime source and fenced markdown examples
+          in extension docs must use <code>@neon-pilot/extensions</code> public APIs instead of importing <code>@neon-pilot/core</code>,
           <code>@neon-pilot/desktop</code>, or app package internals directly. Host backend API modules must stay narrow and lazy-load host
           implementations rather than statically re-exporting core/desktop modules.
         </p>
@@ -233,10 +233,10 @@ pnpm run ab:cleanup -- --session &lt;name&gt;</code></pre>
           <li>If unrelated work is mixed into a file and cannot be safely separated, stop and tell Patrick.</li>
           <li>Do not manually <code>git add</code>, <code>git commit</code>, or <code>git push</code>; use the checkpoint tool.</li>
         </ul>
-        <h2 id="secret-scanning">Secret scanning</h2>
+        <h2 id="pre-commit-checks">Pre-commit checks</h2>
         <p>
           The tracked pre-commit hook lives at <code>.githooks/pre-commit</code> and runs gitleaks, typecheck, prettier, and eslint on
-          staged files. Enable it with:
+          staged files. <code>pnpm install</code> enables it automatically; if a checkout is missing the hook config, restore it with:
         </p>
         <pre><code>pnpm run setup:hooks
 # or:
@@ -253,7 +253,7 @@ git config core.hooksPath .githooks</code></pre>
         <h2>On this page</h2>
         <a href="#local-development">Local development</a><a href="#validation">Validation</a
         ><a href="#web-ui-and-desktop-qa">Web UI and desktop QA</a><a href="#checkpoints">Checkpoints</a
-        ><a href="#secret-scanning">Secret scanning</a>
+        ><a href="#pre-commit-checks">Pre-commit checks</a>
       </aside>
     </main>
   </body>

@@ -76,23 +76,63 @@
           <a href="./development.html">Development workflow</a> for building from source.
         </p>
         <h2 id="start-here">Start here</h2>
-        <p>If you are new to Neon Pilot, read these first:</p>
-        <ul>
-          <li><a href="./getting-started.html">Getting Started</a> — install the packaged app and verify the runtime</li>
-          <li><a href="./desktop-app.html">Desktop App</a> — understand the Electron shell, shortcuts, and app chrome</li>
-          <li><a href="./views.html">Views</a> — learn Conversation and Workbench layouts</li>
-          <li>
-            <a href="./conversations.html">Conversations</a> — work with live threads, branching, follow-ups, and async follow-through
-          </li>
-          <li>
-            <a href="./conversation-context.html">Conversation context</a> — attach files, folders, images, drawings, and generated context
-          </li>
-          <li><a href="./knowledge-base.html">Knowledge base sync</a> — set up git-backed durable knowledge</li>
-          <li>
-            <a href="./extension-distribution.html">Extension distribution</a> — install optional extensions and understand extension
-            repositories
-          </li>
-        </ul>
+        <p>Pick the shortest path for what you are doing:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Audience</th>
+              <th>First docs to read</th>
+              <th>Success check</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>New user</strong></td>
+              <td>
+                <a href="./getting-started.html">Getting Started</a>, then <a href="./views.html">Views</a> and
+                <a href="./conversations.html">Conversations</a>
+              </td>
+              <td>App opens, provider is configured, and a first conversation gets a reply.</td>
+            </tr>
+            <tr>
+              <td><strong>Power user organizing context</strong></td>
+              <td>
+                <a href="./conversation-context.html">Conversation context</a>, <a href="./knowledge-base.html">Knowledge base sync</a>,
+                <a href="./projects.html">Projects</a>
+              </td>
+              <td>Useful files, folders, notes, and project records are available to conversations.</td>
+            </tr>
+            <tr>
+              <td><strong>External agent or script author</strong></td>
+              <td>
+                <a href="./agent-bootstrap.html">Agent bootstrap</a>, <a href="./cli.html">Neon Pilot CLI</a>,
+                <a href="./cli-reference.html">CLI reference</a>
+              </td>
+              <td><code>neon-pilot bootstrap doctor</code> passes and reports usable provider setup.</td>
+            </tr>
+            <tr>
+              <td><strong>Extension builder</strong></td>
+              <td>
+                <a href="./build-an-extension.html">Build an extension with your agent</a>, then
+                <a href="./extensions.html">Extension authoring</a>
+              </td>
+              <td>The extension installs, its route/action works through the app, and its build passes.</td>
+            </tr>
+            <tr>
+              <td><strong>Repo contributor</strong></td>
+              <td><a href="./development.html">Development workflow</a>, then the owning package or extension README</td>
+              <td>Focused validation passes and the app can still start when touched code affects startup.</td>
+            </tr>
+            <tr>
+              <td><strong>Release operator</strong></td>
+              <td>
+                <a href="./release-cycle.html">Release cycle</a>, <a href="./release-qa.html">Release QA</a>,
+                <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/release-test-inventory.md">Release test inventory</a>
+              </td>
+              <td>Release doctor, hardening tests, and hands-on smoke notes are complete.</td>
+            </tr>
+          </tbody>
+        </table>
         <h2 id="common-tasks">Common Tasks</h2>
         <ul>
           <li>
@@ -305,16 +345,16 @@
             composer drawing input
           </li>
           <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-agent-plugins/README.md">Agent Plugins</a> — Codex
+            and Claude plugin import, update tracking, and compatibility reports
+          </li>
+          <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-extension-manager/README.md">Extension Manager</a>
             — extension registry, validation, import/export, and diagnostics
           </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-files/README.md">File Explorer</a> — workspace file
             browsing
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-gateways/README.md">Telegram Gateway</a> — Telegram
-            chat connections
           </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-git-status/README.md">Git Status</a> — branch and
@@ -454,6 +494,25 @@
             collaborative writing surface
           </li>
         </ul>
+        <h2 id="docs-maintenance-checklist">Docs maintenance checklist</h2>
+        <p>When behavior, setup, or workflow changes, update the docs in the same change:</p>
+        <ul>
+          <li>Update the smallest owning doc first, then this README only if navigation changes.</li>
+          <li>Keep first-run docs accurate: install path, provider setup, first task verification, and recovery hints.</li>
+          <li>Update the owning extension README before changing extension behavior.</li>
+          <li>
+            Add public website coverage by updating
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/apps/site/build-docs.mjs"><code>apps/site/build-docs.mjs</code></a>
+            only when a repo doc should appear on neonpilot.net.
+          </li>
+          <li>
+            Prefer user-facing terms from <a href="https://github.com/patleeman/neon-pilot/blob/main/CONTEXT.md"><code>CONTEXT.md</code></a
+            >; keep implementation details in architecture docs, not onboarding docs.
+          </li>
+          <li>
+            For docs-only edits, run formatting checks rather than the full product suite unless examples or generated references changed.
+          </li>
+        </ul>
         <h2 id="source-docs-scope">Source Docs Scope</h2>
         <p>
           Treat root docs, <code>docs/</code>, <code>extensions/*/README.md</code>, <code>packages/*/README.md</code>, and benchmark docs as
@@ -466,7 +525,8 @@
         <h2>On this page</h2>
         <a href="#quick-start">Quick start</a><a href="#start-here">Start here</a><a href="#common-tasks">Common Tasks</a
         ><a href="#reference">Reference</a><a href="#builder-and-architecture-docs">Builder and Architecture Docs</a
-        ><a href="#extension-docs">Extension docs</a><a href="#source-docs-scope">Source Docs Scope</a>
+        ><a href="#extension-docs">Extension docs</a><a href="#docs-maintenance-checklist">Docs maintenance checklist</a
+        ><a href="#source-docs-scope">Source Docs Scope</a>
       </aside>
     </main>
   </body>

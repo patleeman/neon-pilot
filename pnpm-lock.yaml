@@ -20,10 +20,10 @@ importers:
         specifier: 0.18.1
         version: 0.18.1(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@neon-pilot/desktop':
-        specifier: workspace:0.11.24
+        specifier: workspace:0.11.25
         version: link:packages/desktop
       '@neon-pilot/ui':
-        specifier: workspace:0.11.24
+        specifier: workspace:0.11.25
         version: link:packages/ui
       '@pierre/trees':
         specifier: 1.0.0-beta.3
@@ -96,7 +96,7 @@ importers:
         specifier: 3.4.1
         version: 3.4.1
       '@neon-pilot/core':
-        specifier: workspace:0.11.24
+        specifier: workspace:0.11.25
         version: link:packages/core
       '@types/jsdom':
         specifier: 28.0.1
@@ -199,13 +199,13 @@ importers:
         specifier: 5.2.8
         version: 5.2.8
       '@neon-pilot/core':
-        specifier: workspace:0.11.24
+        specifier: workspace:0.11.25
         version: link:../core
       '@neon-pilot/extensions':
-        specifier: workspace:0.11.24
+        specifier: workspace:0.11.25
         version: link:../extensions
       '@neon-pilot/ui':
-        specifier: workspace:0.11.24
+        specifier: workspace:0.11.25
         version: link:../ui
       '@silvia-odwyer/photon-node':
         specifier: 0.3.4

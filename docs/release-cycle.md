@@ -4,18 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.24** — stable release.
+**v0.11.25** — stable release being prepared locally.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.24
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.25
 
 Highlights in this train:
 
-- Makes conversation running state backend-authoritative so sidebar indicators, active streams, automation badges, and stale runtime transitions stay in sync.
-- Improves live transcript rendering with throttled streaming Markdown, automatic tool-block reveal, and more reliable terminal stream flushing.
-- Refines everyday app copy and conversation styling across settings, provider setup, extension sections, checkpoint rows, titles, and composer surfaces.
-- Starts new sessions with the Workbench closed and fixes sidebar context menu clipping for a cleaner default workspace.
-- Moves the Telegram Gateway out of the bundled app extension set while keeping first-party installable extension release flow aligned.
-- Refreshes Pi runtime packages to `^0.79.9` for the stable 0.11.24 patch train.
+- Makes `neon-pilot open active` safer by defaulting to read-only inspection unless mutation is explicitly requested.
+- Improves CLI help text so commands describe their effects and recovery paths more clearly.
+- Adds event log clearing for focused local troubleshooting resets.
+- Clarifies docs and onboarding navigation so users and agents can find setup, usage, and release guidance faster.
+- Labels automated conversation wakeups more clearly in user-visible activity surfaces.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

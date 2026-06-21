@@ -115,7 +115,8 @@
         </ul>
         <p>
           The renderer may fall back to local shaping only when the transcript is locally mutated after load, such as stream deltas,
-          explicit hydration, pending prompts, or append-only merges.
+          explicit block hydration, or pending prompts. Backend transcript/bootstrap refreshes should return authoritative snapshots instead
+          of requiring the renderer to merge cached transcript windows.
         </p>
         <h2 id="banned-critical-path-operations">Banned critical-path operations</h2>
         <p>For open-thread, type, send, and stream paths, do not add:</p>

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.25 — 2026-06-21
+
+### Highlights
+
+- Makes `neon-pilot open active` safer by defaulting to read-only inspection unless a workflow explicitly opts into mutation.
+- Improves CLI help text so everyday commands explain what they do, what they change, and how to recover from common mistakes.
+- Adds event log clearing so local troubleshooting state can be reset without disturbing the rest of the app profile.
+- Clarifies docs and onboarding navigation so new users and agents can find the right setup, usage, and release guidance faster.
+- Labels automated conversation wakeups more clearly so background activity is easier to understand in transcripts and status surfaces.
+
+### Notes
+
+- 5 commits since the previous release.
+
 ## 0.11.24 — 2026-06-21
 
 ### Highlights

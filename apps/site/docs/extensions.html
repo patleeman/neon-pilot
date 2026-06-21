@@ -70,8 +70,9 @@
         <p>
           Terminology: <strong>extensions</strong> are Neon Pilot app packages that can add UI, tools, backend actions, settings, and
           skills. <strong>Agent plugins</strong> are portable Codex/Claude-style capability packages, often with files such as
-          <code>.codex-plugin/plugin.json</code>; they are imported as managed compatibility packages and may contribute instructions or
-          skills, but they are not native app extensions unless wrapped with <code>extension.json</code> and built extension artifacts.
+          <code>.codex-plugin/plugin.json</code>; the bundled Agent Plugins extension imports them from Git or local directories, tracks
+          updates, and exposes compatible skills, docs, hooks, and MCP declarations through Neon Pilot-managed wrappers. Agent plugins are
+          not native app extensions.
         </p>
         <h2 id="contents">Contents</h2>
         <ul>
@@ -528,11 +529,6 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
               <td><a href="#composer-controls-composercontrols">See below</a></td>
             </tr>
             <tr>
-              <td><code>composerButtons</code></td>
-              <td>Legacy composer controls</td>
-              <td><a href="#composer-buttons-composerbuttons">See below</a></td>
-            </tr>
-            <tr>
               <td><code>composerInputTools</code></td>
               <td>Component tools beside composer controls</td>
               <td><a href="#composer-input-tools-composerinputtools">See below</a></td>
@@ -743,7 +739,7 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
         &quot;title&quot;: &quot;Agent Board&quot;,
         &quot;description&quot;: &quot;Sidecar task board&quot;,
         &quot;entry&quot;: &quot;dist/webapp/index.html&quot;,
-        &quot;portlessName&quot;: &quot;board.agent-board&quot;
+        &quot;localhostName&quot;: &quot;board-agent-board&quot;
       }
     ]
   }
@@ -759,19 +755,46 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
         &quot;id&quot;: &quot;dev&quot;,
         &quot;title&quot;: &quot;Local Dev App&quot;,
         &quot;target&quot;: &quot;http://127.0.0.1:5173&quot;,
-        &quot;portlessName&quot;: &quot;dev.agent-board&quot;
+        &quot;localhostName&quot;: &quot;dev-agent-board&quot;
       }
     ]
   }
 }</code></pre>
         <p>
-          The default Portless name is <code>{webappId}.{extensionId}</code>. The host exposes <code>GET /api/extensions/webapps</code> for
-          discovery, <code>GET /webapps/{extensionId}/{webappId}/...</code> as a direct debug route, and
-          <code>POST /api/extensions/webapps/{extensionId}/{webappId}/portless</code> with
-          <code>{ &quot;enabled&quot;: true | false }</code> to register or remove the Portless alias. Portless is an optional local CLI
-          integration; install it separately when using alias registration. Current Portless releases require Node 24 or newer, so Neon
-          Pilot does not bundle it in the desktop dependency graph.
+          The default <code>localhostName</code> is <code>{webappId}-{extensionId}</code> and maps to
+          <code>https://{localhostName}.localhost</code> through Neon Pilot's built-in localhost webapp proxy. Explicit
+          <code>localhostName</code> values must be a single lowercase DNS label so the generated local HTTPS certificate can match the
+          hostname. The backend starts that proxy automatically, tries to bind HTTPS on port <code>443</code> and HTTP on port
+          <code>80</code>, and redirects HTTP to HTTPS when the HTTPS listener is available. If privileged ports are unavailable, discovery
+          responses include the actual fallback port.
         </p>
+        <p>The host exposes:</p>
+        <ul>
+          <li><code>GET /api/extensions/webapps</code> for discovery.</li>
+          <li><code>GET /api/extensions/webapps/localhost-proxy</code> for proxy/certificate status.</li>
+          <li>
+            <code>POST /api/extensions/webapps/localhost-proxy/trust</code> to trust the generated local certificate on supported platforms.
+          </li>
+          <li><code>GET /webapps/{extensionId}/{webappId}/...</code> as a direct debug route.</li>
+        </ul>
+        <p>
+          Inside a webapp's own <code>.localhost</code> origin, use the <code>/.neon</code> bridge for host APIs. The bridge keeps the page
+          same-origin while forwarding to the extension host:
+        </p>
+        <ul>
+          <li><code>GET /.neon/api/extensions/webapps/current</code> returns the current webapp contribution.</li>
+          <li>
+            <code>GET /.neon/api/extensions/webapps</code> and <code>GET /.neon/api/extensions/webapps/localhost-proxy</code> mirror
+            discovery/status.
+          </li>
+          <li><code>POST /.neon/api/extensions/{extensionId}/actions/{actionId}</code> invokes declared backend actions.</li>
+          <li>
+            <code>GET|POST /.neon/api/conversations/{conversationId}/attachments</code>,
+            <code>GET|PATCH|DELETE /.neon/api/conversations/{conversationId}/attachments/{attachmentId}</code>, and
+            <code>GET /.neon/api/conversations/{conversationId}/attachments/{attachmentId}/asset</code> expose conversation attachments for
+            sidecar editors.
+          </li>
+        </ul>
         <h3 id="message-actions-messageactions">Message Actions (<code>messageActions</code>)</h3>
         <p>Add hover-reveal text buttons on messages, inline with copy/fork/rewind. Action-based — no frontend entry needed.</p>
         <pre><code>{
@@ -1117,8 +1140,8 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           optional and controls tab ordering after the built-in Threads tab.
         </p>
         <p>
-          Keybindings can open a quick-open surface directly with legacy <code>commandPalette:&lt;section&gt;</code> or the first-class
-          command form <code>command: &quot;palette.open&quot;, args: { &quot;scope&quot;: &quot;knowledge&quot; }</code>.
+          Keybindings can open a quick-open surface directly with
+          <code>command: &quot;palette.open&quot;, args: { &quot;scope&quot;: &quot;knowledge&quot; }</code>.
         </p>
         <h3 id="settings-component-settingscomponent">Settings Component (<code>settingsComponent</code>)</h3>
         <p>Add one component-backed section to the main Settings page.</p>
@@ -1192,17 +1215,11 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
 }</code></pre>
         <p>
           Slots are <code>leading</code>, <code>preferences</code>, and <code>actions</code>. Controls sort by
-          <code>priority</code> ascending, then extension id, then contribution id. The component receives <code>pa</code>,
-          <code>controlContext</code>, and the legacy alias <code>buttonContext</code>. <code>controlContext.renderMode</code> is
-          <code>inline</code> or <code>menu</code>; <code>insertText(text)</code> inserts at the current composer selection;
-          <code>appendText(text)</code> inserts at the end when available; <code>openFilePicker()</code> opens the core-owned attachment
-          input; and model/goal fields expose the current composer preference state.
-        </p>
-        <h3 id="composer-buttons-composerbuttons">Composer Buttons (<code>composerButtons</code>)</h3>
-        <p>
-          Legacy alias for composer controls. Existing <code>placement: &quot;afterModelPicker&quot;</code> maps to
-          <code>slot: &quot;preferences&quot;</code>; <code>placement: &quot;actions&quot;</code> maps to
-          <code>slot: &quot;actions&quot;</code>. New extensions should use <code>composerControls</code>.
+          <code>priority</code> ascending, then extension id, then contribution id. The component receives <code>pa</code> and
+          <code>controlContext</code>. <code>controlContext.renderMode</code> is <code>inline</code> or <code>menu</code>;
+          <code>insertText(text)</code> inserts at the current composer selection; <code>appendText(text)</code> inserts at the end when
+          available; <code>openFilePicker()</code> opens the core-owned attachment input; and model/goal fields expose the current composer
+          preference state.
         </p>
         <h3 id="composer-input-tools-composerinputtools">Composer Input Tools (<code>composerInputTools</code>)</h3>
         <p>
@@ -1619,7 +1636,7 @@ export function MyPanel({ pa, context }: ExtensionSurfaceProps) {
           <li><code>pa.storage.*</code> — read/write extension state</li>
           <li><code>pa.workspace.*</code> — workspace file operations</li>
           <li><code>pa.browser.*</code> — browser control</li>
-          <li><code>pa.runs.*</code> — background run operations</li>
+          <li><code>pa.executions.*</code> — background execution operations</li>
           <li><code>pa.automations.*</code> — scheduled task management</li>
           <li><code>pa.events.publish(event, payload)</code> — publish inter-extension events</li>
           <li><code>pa.extensions.callAction(id, action, input)</code> — call another extension's action</li>
@@ -1640,12 +1657,13 @@ export function MyPanel({ pa, context }: ExtensionSurfaceProps) {
         <p>
           The backend API is deliberately two-layered: public stubs under <code>packages/extensions/src/backend/*.ts</code>, and host
           implementations under <code>packages/desktop/server/extensions/backendApi/*.ts</code>. Extension source imports only
-          <code>@neon-pilot/extensions/backend/{name}</code>. It must not import desktop server files, <code>@neon-pilot/core</code>,
-          <code>@neon-pilot/daemon</code>, or agent-runtime internals directly. System extension source may use type-only Pi imports for
-          extension hook types, but runtime value imports from Pi must go through a focused host seam. Host backend API modules should be
-          thin adapters; lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in
-          half the app. If a backend API wraps process-local host state and may run in the backend worker, it must use the worker capability
-          bridge instead of importing that state directly in the worker. <code>pnpm run check:extensions</code> enforces this with
+          <code>@neon-pilot/extensions</code> and <code>@neon-pilot/extensions/backend/{name}</code>. It must not import desktop server
+          files, <code>@neon-pilot/core</code>, <code>@neon-pilot/daemon</code>, or agent-runtime internals directly. System extension
+          source should use the public <code>ExtensionAPI</code> type from <code>@neon-pilot/extensions</code> for agent lifecycle hooks,
+          and any missing host capability should become a focused SDK/backend seam. Host backend API modules should be thin adapters;
+          lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in half the app.
+          If a backend API wraps process-local host state and may run in the backend worker, it must use the worker capability bridge
+          instead of importing that state directly in the worker. <code>pnpm run check:extensions</code> enforces this with
           <code>scripts/check-extension-backend-api.mjs</code> and packaged source/bundle checks before packaged bundle checks run.
         </p>
         <p>
@@ -2026,8 +2044,8 @@ const enabled = settings['myExt.featureEnabled'] === true;</code></pre>
               <td>Scheduled task management</td>
             </tr>
             <tr>
-              <td><code>ctx.runs</code></td>
-              <td>Background run management</td>
+              <td><code>ctx.executions</code></td>
+              <td>Background execution management</td>
             </tr>
             <tr>
               <td><code>ctx.conversations</code></td>
@@ -2308,9 +2326,9 @@ const available = ctx.notify.isSystemAvailable();</code></pre>
     &quot;knowledge:read&quot;,
     &quot;knowledge:write&quot;,
     &quot;knowledge:readwrite&quot;,
-    &quot;runs:read&quot;,
-    &quot;runs:start&quot;,
-    &quot;runs:cancel&quot;,
+    &quot;executions:read&quot;,
+    &quot;executions:start&quot;,
+    &quot;executions:cancel&quot;,
     &quot;ui:notify&quot;
   ]
 }</code></pre>
@@ -2321,7 +2339,7 @@ const available = ctx.notify.isSystemAvailable();</code></pre>
           <code>backend.agentExtension</code> field.
         </p>
         <pre><code>// backend.ts — exported as the value referenced by agentExtension
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI } from '@neon-pilot/extensions';
 
 export default function (pi: ExtensionAPI) {
   // Subscribe to agent lifecycle events
@@ -2451,10 +2469,7 @@ export default function (pi: ExtensionAPI) {
             </tr>
           </tbody>
         </table>
-        <p>
-          For the full list of Pi lifecycle events and signatures, inspect the installed
-          <code>@earendil-works/pi-coding-agent</code> package docs that match the pinned dependency version.
-        </p>
+        <p>For the public hook type surface, use <code>ExtensionAPI</code> from <code>@neon-pilot/extensions</code>.</p>
         <h2 id="development-workflow">Development Workflow</h2>
         <h3 id="building">Building</h3>
         <p>Extensions need to be built before they can be loaded:</p>
@@ -2496,12 +2511,11 @@ pnpm test</code></pre>
           extension backend from its built <code>dist</code> output, verifies backend action handler exports, smoke-calls known safe tool
           surfaces such as <code>scheduled_task</code>, and runs product-critical smoke calls for Knowledge, Automations, and Diffs
           extension actions. It fails on forbidden bare imports that are not available inside the packaged desktop app, such as
-          <code>@earendil-works/pi-coding-agent</code>, <code>@neon-pilot/core</code>, <code>@neon-pilot/daemon</code>, <code>jsdom</code>,
-          and <code>@sinclair/typebox</code>. It also rejects absolute or <code>file:</code> imports, forbidden bundled runtime path
-          fragments, and backend bundles over their explicit byte budget. The packaged-extension hardening knobs live in
-          <code>scripts/extension-hardening-config.mjs</code>, so smoke inputs and size budgets are explicit instead of being buried in the
-          checker. This catches release-temp paths, accidental daemon bundling, runaway backend API seams, and the “works from repo
-          node_modules, breaks in the signed app” class of extension bug before release.
+          <code>@neon-pilot/core</code>, <code>@neon-pilot/daemon</code>, <code>jsdom</code>, and <code>@sinclair/typebox</code>. It also
+          rejects absolute or <code>file:</code> imports, forbidden bundled runtime path fragments, and backend bundles over their explicit
+          byte budget. The packaged-extension hardening knobs live in <code>scripts/extension-hardening-config.mjs</code>, so smoke inputs
+          and size budgets are explicit instead of being buried in the checker. This catches release-temp paths, accidental daemon bundling,
+          runaway backend API seams, and the “works from repo node_modules, breaks in the signed app” class of extension bug before release.
         </p>
         <p>
           The desktop server also runs an enabled-extension backend health check on startup. Failures are logged, surfaced as extension

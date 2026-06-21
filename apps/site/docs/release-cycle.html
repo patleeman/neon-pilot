@@ -62,24 +62,17 @@
           produce a release — release is a manual local process.
         </p>
         <h2 id="current-release">Current release</h2>
-        <p><strong>v0.11.22</strong> — stable release.</p>
-        <p>Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.22</p>
+        <p><strong>v0.11.25</strong> — stable release being prepared locally.</p>
+        <p>Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.25</p>
         <p>Highlights in this train:</p>
         <ul>
           <li>
-            Promotes the 0.11.22 RC conversation and navigation hardening to the stable channel, including backend-owned workspace state,
-            route recovery, sidebar hydration, and empty-conversation reuse fixes.
+            Makes <code>neon-pilot open active</code> safer by defaulting to read-only inspection unless mutation is explicitly requested.
           </li>
-          <li>
-            Ships the redesigned public site refresh with stronger first-screen product context, updated feature coverage, and
-            release-aligned internal documentation.
-          </li>
-          <li>
-            Adds the site visual evaluation loop so screenshot capture, visual judgments, and refinement work can be repeated against the
-            public site with the same workflow used for app surfaces.
-          </li>
-          <li>Refreshes Pi runtime packages to <code>^0.79.5</code> for the stable 0.11.22 train.</li>
-          <li>Keeps the stable app release aligned with the matching first-party extension catalog and installable extension artifacts.</li>
+          <li>Improves CLI help text so commands describe their effects and recovery paths more clearly.</li>
+          <li>Adds event log clearing for focused local troubleshooting resets.</li>
+          <li>Clarifies docs and onboarding navigation so users and agents can find setup, usage, and release guidance faster.</li>
+          <li>Labels automated conversation wakeups more clearly in user-visible activity surfaces.</li>
           <li>Keep this section aligned with <code>package.json</code>, <code>CHANGELOG.md</code>, and the tag being prepared.</li>
         </ul>
         <h2 id="rc-release-operating-instructions">RC release operating instructions</h2>
@@ -213,7 +206,17 @@ pnpm run release:desktop:major</code></pre>
           <li>
             <strong>Release QA</strong> — run <code>pnpm run qa:release</code> and complete the hands-on checklist in
             <code>docs/release-qa.md</code> against the app build or packaged release candidate; record commit SHA, build, and pass/fail
-            notes before continuing
+            notes before continuing. <code>release:publish</code> requires <code>NEON_PILOT_RELEASE_QA_ACK=1</code> plus
+            <code>NEON_PILOT_RELEASE_QA_NOTES=/path/to/notes.md</code>, or an explicit <code>NEON_PILOT_RELEASE_QA_WAIVED=1</code> with
+            <code>NEON_PILOT_RELEASE_QA_WAIVER_REASON</code>, before any tag push or GitHub asset upload.
+          </li>
+          <li>
+            <strong>First-party extension release gate</strong> — before any desktop tag push or GitHub asset upload,
+            <code>release:publish</code> checks the matching tag in <code>patleeman/neon-pilot-extensions</code> for
+            <code>neon-extension-catalog.json</code> plus one <code>&lt;extension-id&gt;.neon-extension.zip</code> asset for every generated
+            installable catalog entry. Override the repo with <code>NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_REPO</code>; waive only with
+            <code>NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVED=1</code> and
+            <code>NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVER_REASON</code>.
           </li>
           <li><strong>Build</strong> — builds signed desktop artifacts locally</li>
           <li>
@@ -226,11 +229,6 @@ pnpm run release:desktop:major</code></pre>
           <li>
             <strong>GitHub release</strong> — creates or updates the matching release in the releases repository, using the matching
             <code>CHANGELOG.md</code> section as the release notes
-          </li>
-          <li>
-            <strong>First-party extension release</strong> — publish the matching <code>patleeman/neon-pilot-extensions</code> release tag
-            and assets for the same app version. The release must include <code>neon-extension-catalog.json</code> plus every stable
-            <code>.neon-extension.zip</code> package that should appear in Settings → Extensions → Install.
           </li>
         </ol>
         <p>
