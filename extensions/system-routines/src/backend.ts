@@ -243,17 +243,58 @@ function defaultState(): RoutinesState {
   };
 }
 
+function clearRoutineParent(routine: Routine): Routine {
+  const next = { ...routine };
+  delete next.parentRoutineId;
+  delete next.parentOutcomeId;
+  return next;
+}
+
+function routineHasAncestor(routinesById: Map<string, Routine>, routineId: string, ancestorId: string): boolean {
+  const seen = new Set<string>();
+  let current = routinesById.get(routineId);
+  while (current?.parentRoutineId) {
+    if (current.parentRoutineId === ancestorId) return true;
+    if (seen.has(current.parentRoutineId)) return true;
+    seen.add(current.parentRoutineId);
+    current = routinesById.get(current.parentRoutineId);
+  }
+  return false;
+}
+
+function repairRoutineParents(routines: Routine[]): Routine[] {
+  const routinesById = new Map(routines.map((routine) => [routine.id, routine]));
+  return routines.map((routine) => {
+    if (!routine.parentRoutineId && !routine.parentOutcomeId) return routine;
+    const parent = routine.parentRoutineId ? routinesById.get(routine.parentRoutineId) : null;
+    const outcomeExists = parent?.outcomes.some((outcome) => outcome.id === routine.parentOutcomeId);
+    if (
+      !parent ||
+      parent.type !== 'decision' ||
+      parent.hookId !== routine.hookId ||
+      parent.position !== routine.position ||
+      !routine.parentOutcomeId ||
+      !outcomeExists ||
+      routineHasAncestor(routinesById, parent.id, routine.id)
+    ) {
+      return clearRoutineParent(routine);
+    }
+    return routine;
+  });
+}
+
 async function readState(ctx: ExtensionBackendContext): Promise<RoutinesState> {
   const stored = await ctx.storage.get(STORE_KEY).catch(() => null);
   if (!isRecord(stored)) return defaultState();
+  const routines = Array.isArray(stored.routines)
+    ? stored.routines.map(normalizeRoutine).filter((routine): routine is Routine => Boolean(routine))
+    : defaultState().routines;
   return {
     version: 1,
     hookPoints: Array.isArray(stored.hookPoints)
       ? stored.hookPoints.map(normalizeHookPoint).filter((hook): hook is RoutineHookPoint => Boolean(hook))
       : [],
-    routines: Array.isArray(stored.routines)
-      ? stored.routines.map(normalizeRoutine).filter((routine): routine is Routine => Boolean(routine))
-      : defaultState().routines,
+    routines: repairRoutineParents(routines),
     runs: Array.isArray(stored.runs) ? (stored.runs.filter(isRecord).slice(0, RUN_LIMIT) as unknown as RoutineRunRecord[]) : [],
   };
 }
@@ -357,7 +398,7 @@ export async function reorderRoutines(input: unknown, ctx: ExtensionBackendConte
 export async function moveRoutine(input: unknown, ctx: ExtensionBackendContext) {
   if (!isRecord(input)) throw new Error('routineId and position are required.');
   const routineId = stringValue(input.routineId).trim();
-  const position = positionValue(input.position);
+  let position = positionValue(input.position);
   const targetRoutineId = stringValue(input.targetRoutineId).trim();
   const parentRoutineId = stringValue(input.parentRoutineId).trim();
   const parentOutcomeId = stringValue(input.parentOutcomeId).trim();
@@ -367,6 +408,17 @@ export async function moveRoutine(input: unknown, ctx: ExtensionBackendContext) 
   const moving = state.routines.find((routine) => routine.id === routineId);
   if (!moving) throw new Error('Routine not found.');
   if (parentRoutineId === routineId) throw new Error('Routine cannot be nested inside itself.');
+  if (parentRoutineId || parentOutcomeId) {
+    if (!parentRoutineId || !parentOutcomeId) throw new Error('Choose a judge route before dropping this routine.');
+    const routinesById = new Map(state.routines.map((routine) => [routine.id, routine]));
+    const parent = routinesById.get(parentRoutineId);
+    if (!parent || parent.type !== 'decision') throw new Error('Drop routines onto a judge route.');
+    if (parent.hookId !== moving.hookId) throw new Error('Routines can only move within the same event.');
+    if (!parent.outcomes.some((outcome) => outcome.id === parentOutcomeId)) throw new Error('That judge route no longer exists.');
+    if (routineHasAncestor(routinesById, parent.id, moving.id))
+      throw new Error('A routine cannot move inside one of its own nested routes.');
+    position = parent.position;
+  }
 
   const timestamp = now();
   const targetLane = state.routines

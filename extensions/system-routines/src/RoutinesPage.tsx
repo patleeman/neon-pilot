@@ -396,17 +396,60 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       parent?: { parentRoutineId: string; parentOutcomeId: string } | null,
     ) => {
       if (!routineId || routineId === targetRoutineId) return;
-      const result = (await pa.extension.invoke('moveRoutine', { routineId, position, targetRoutineId, ...(parent ?? {}) })) as StateResult;
-      setData(result);
-      const selected = result.routines.find((routine) => routine.id === selectedRoutineId);
-      if (selected) setDraft({ ...selected, outcomes: selected.outcomes.map((outcome) => ({ ...outcome })) });
-      setDragId(null);
-      setDragOverPosition(null);
-      setDragTargetRoutineId(null);
-      setDragTargetRoute(null);
-      setDragPreview(null);
+      if (unsavedRoutineIds.has(routineId)) {
+        if (parent?.parentRoutineId === routineId) {
+          const message = 'Save the judge before moving routines into its routes.';
+          setActionError(message);
+          pa.ui.toast(message, 'error');
+        } else {
+          const parentRoutine = parent ? data?.routines.find((routine) => routine.id === parent.parentRoutineId) : null;
+          const nextPosition = parentRoutine?.position ?? position;
+          const applyMove = (routine: Routine): Routine => {
+            const next = { ...routine, position: nextPosition, updatedAt: new Date().toISOString() };
+            if (parent && parentRoutine)
+              return { ...next, parentRoutineId: parent.parentRoutineId, parentOutcomeId: parent.parentOutcomeId };
+            delete next.parentRoutineId;
+            delete next.parentOutcomeId;
+            return next;
+          };
+          setData((current) =>
+            current
+              ? { ...current, routines: current.routines.map((routine) => (routine.id === routineId ? applyMove(routine) : routine)) }
+              : current,
+          );
+          if (selectedRoutineId === routineId && draft) setDraft(applyMove(draft));
+          setActionError(null);
+        }
+        setDragId(null);
+        setDragOverPosition(null);
+        setDragTargetRoutineId(null);
+        setDragTargetRoute(null);
+        setDragPreview(null);
+        return;
+      }
+      try {
+        const result = (await pa.extension.invoke('moveRoutine', {
+          routineId,
+          position,
+          targetRoutineId,
+          ...(parent ?? {}),
+        })) as StateResult;
+        setData(result);
+        const selected = result.routines.find((routine) => routine.id === selectedRoutineId);
+        if (selected) setDraft({ ...selected, outcomes: selected.outcomes.map((outcome) => ({ ...outcome })) });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setActionError(message);
+        pa.ui.toast(message || 'Routine was not moved', 'error');
+      } finally {
+        setDragId(null);
+        setDragOverPosition(null);
+        setDragTargetRoutineId(null);
+        setDragTargetRoute(null);
+        setDragPreview(null);
+      }
     },
-    [pa, selectedRoutineId],
+    [data?.routines, draft, pa, selectedRoutineId, unsavedRoutineIds],
   );
 
   const moveRoutine = useCallback(
@@ -550,6 +593,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         <div
           data-routine-id={routine.id}
           data-routine-position={routine.position}
+          data-routine-type={routine.type}
           draggable
           onDragStart={(event) => onDragStartRoutine(event, routine.id)}
           onDragEnd={onDragEndRoutine}

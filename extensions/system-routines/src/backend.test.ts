@@ -140,6 +140,38 @@ describe('system-routines backend', () => {
     expect(state.hooks).toContainEqual(expect.objectContaining({ id: 'example.before', title: 'Example' }));
   });
 
+  it('repairs routines with invalid parents so they remain visible', async () => {
+    const ctx = createCtx();
+    await (ctx as { storage: { put: (key: string, value: unknown) => Promise<unknown> } }).storage.put('routines-state-v1', {
+      version: 1,
+      hookPoints: [],
+      runs: [],
+      routines: [
+        {
+          id: 'orphaned-routine',
+          hookId: 'checkpoint',
+          position: 'before',
+          parentRoutineId: 'missing-judge',
+          parentOutcomeId: 'pass',
+          type: 'instruction',
+          name: 'Orphaned routine',
+          instruction: 'Still visible',
+          enabled: true,
+          order: 0,
+          failureBehavior: 'continue',
+          outcomes: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    const state = (await getState({}, ctx)) as { routines: Array<{ id: string; parentRoutineId?: string; parentOutcomeId?: string }> };
+    const repaired = state.routines.find((routine) => routine.id === 'orphaned-routine');
+    expect(repaired?.parentRoutineId).toBeUndefined();
+    expect(repaired?.parentOutcomeId).toBeUndefined();
+  });
+
   it('moves routines into judge routes', async () => {
     const ctx = createCtx();
     const initial = (await getState({}, ctx)) as { routines: Array<{ id: string; name: string; position: string; order: number }> };
@@ -156,6 +188,31 @@ describe('system-routines backend', () => {
       parentRoutineId: 'checkpoint-review-code',
       parentOutcomeId: 'pass',
     });
+  });
+
+  it('rejects moves that would nest a routine inside its own child route', async () => {
+    const ctx = createCtx();
+    await saveRoutine(
+      {
+        id: 'child-judge',
+        hookId: 'checkpoint',
+        position: 'before',
+        parentRoutineId: 'checkpoint-review-code',
+        parentOutcomeId: 'pass',
+        type: 'decision',
+        name: 'Child judge',
+        instruction: 'Choose one',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'continue',
+        outcomes: [{ id: 'ok', label: 'OK', target: 'Continue', behavior: 'continue' }],
+      },
+      ctx,
+    );
+
+    await expect(
+      moveRoutine({ routineId: 'checkpoint-review-code', position: 'before', parentRoutineId: 'child-judge', parentOutcomeId: 'ok' }, ctx),
+    ).rejects.toThrow('own nested routes');
   });
 
   it('moves routines between lanes and reorders the target lane', async () => {
