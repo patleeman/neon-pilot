@@ -38,7 +38,7 @@ vi.mock('../session/sessionSnapshot', () => ({
 
 vi.mock('../components/Layout', async () => {
   const { useAppEvents } = await import('./contexts');
-  const { useAllSessions, useAllExecutions, useAllTasks } = await import('../store');
+  const { useAllSessions, useAllExecutions, useAllTasks, useSessionPresence } = await import('../store');
   const AppDataOnlyProbe = React.memo(function AppDataOnlyProbe() {
     const sessions = useAllSessions();
     const globalWithProbe = globalThis as typeof globalThis & { __APP_DATA_ONLY_RENDER_COUNT__?: number };
@@ -48,14 +48,13 @@ vi.mock('../components/Layout', async () => {
 
   return {
     Layout: () => {
-      const sessions = useAllSessions();
       const executions = useAllExecutions();
       const tasks = useAllTasks();
       const { versions } = useAppEvents();
-      const session = sessions.find((candidate) => candidate.id === 'conv-1');
+      const presence = useSessionPresence('conv-1');
       return (
         <main>
-          <span>{session?.isRunning ? 'conversation running' : 'conversation idle'}</span>
+          <span>{presence === 'streaming' ? 'conversation running' : 'conversation idle'}</span>
           <span>executions version {versions.executions}</span>
           <span>runs version {versions.runs}</span>
           <span>tasks version {versions.tasks}</span>
@@ -281,7 +280,7 @@ describe('App execution state integration', () => {
     ({ container, root } = await renderApp());
 
     await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
-    expect(container.textContent).toContain('conversation idle');
+    expect(container.textContent).toContain('conversation running');
 
     await emitDesktopEvent({
       type: 'sessions',
@@ -447,8 +446,14 @@ describe('App execution state integration', () => {
   });
 
   it('does not let a stale bootstrap task snapshot overwrite a newer invalidation refresh', async () => {
-    const bootstrapTasks = createDeferredPromise<Array<{ id: string; title: string; running: boolean; enabled: boolean; prompt: string; scheduleType: 'cron' }>>();
-    const refreshTasks = createDeferredPromise<Array<{ id: string; title: string; running: boolean; enabled: boolean; prompt: string; scheduleType: 'cron' }>>();
+    const bootstrapTasks =
+      createDeferredPromise<
+        Array<{ id: string; title: string; running: boolean; enabled: boolean; prompt: string; scheduleType: 'cron' }>
+      >();
+    const refreshTasks =
+      createDeferredPromise<
+        Array<{ id: string; title: string; running: boolean; enabled: boolean; prompt: string; scheduleType: 'cron' }>
+      >();
     apiTasksMock.mockReturnValueOnce(bootstrapTasks.promise).mockReturnValueOnce(refreshTasks.promise);
 
     ({ container, root } = await renderApp());

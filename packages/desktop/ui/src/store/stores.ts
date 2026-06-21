@@ -22,18 +22,24 @@ export const executionStore: EntityStore<ExecutionRecord> = createEntityStore<Ex
 export type RunningState = 'idle' | 'streaming' | 'automation' | 'hasRuns' | 'stale';
 
 let presenceStates = new Map<string, RunningState>();
+let liveStreamingOverrides = new Map<string, boolean>();
+let presenceVersion = 0;
 const presenceListeners = new Map<string, Set<() => void>>();
+const presenceAllListeners = new Set<() => void>();
 
 function isActiveExecutionStatus(status: string | undefined): boolean {
   return status === 'pending' || status === 'queued' || status === 'waiting' || status === 'running' || status === 'recovering';
 }
 
 function computeRunningState(sessionId: string): RunningState {
+  const liveStreamingOverride = liveStreamingOverrides.get(sessionId);
+  if (liveStreamingOverride === true) return 'streaming';
+
   const session = sessionStore.get(sessionId);
   if (!session) return 'idle';
 
-  // Explicit running flag from SSE live session
-  if (session.isRunning) return 'streaming';
+  if (liveStreamingOverride === true) return 'streaming';
+  if (liveStreamingOverride === undefined && session.isRunning) return 'streaming';
 
   // Automation task actively running for this thread
   const hasAutomation = taskStore.getAll().some((t) => t.running && t.threadConversationId === sessionId);
@@ -56,9 +62,22 @@ function rederivePresenceForAll(): void {
       affectedIds.add(id);
     }
   }
+  if (affectedIds.size === 0) return;
+  presenceVersion += 1;
   for (const id of affectedIds) {
     presenceListeners.get(id)?.forEach((cb) => cb());
   }
+  presenceAllListeners.forEach((cb) => cb());
+}
+
+function rederivePresenceForId(sessionId: string): void {
+  const next = computeRunningState(sessionId);
+  const current = presenceStates.get(sessionId);
+  if (current === next) return;
+  presenceStates = new Map(presenceStates).set(sessionId, next);
+  presenceVersion += 1;
+  presenceListeners.get(sessionId)?.forEach((cb) => cb());
+  presenceAllListeners.forEach((cb) => cb());
 }
 
 // Wire source-store changes to presence re-derivation
@@ -79,6 +98,13 @@ export const presenceStore = {
     };
   },
 
+  subscribeAll(callback: () => void): () => void {
+    presenceAllListeners.add(callback);
+    return () => {
+      presenceAllListeners.delete(callback);
+    };
+  },
+
   get(sessionId: string): RunningState {
     if (!presenceStates.has(sessionId)) {
       presenceStates = new Map(presenceStates).set(sessionId, computeRunningState(sessionId));
@@ -86,10 +112,30 @@ export const presenceStore = {
     return presenceStates.get(sessionId) ?? 'idle';
   },
 
+  getVersion(): number {
+    return presenceVersion;
+  },
+
+  setLiveStreaming(sessionId: string, running: boolean | null): void {
+    if (!sessionId.trim()) return;
+    if (running === null) {
+      if (!liveStreamingOverrides.has(sessionId)) return;
+      liveStreamingOverrides = new Map(liveStreamingOverrides);
+      liveStreamingOverrides.delete(sessionId);
+    } else {
+      if (liveStreamingOverrides.get(sessionId) === running) return;
+      liveStreamingOverrides = new Map(liveStreamingOverrides).set(sessionId, running);
+    }
+    rederivePresenceForId(sessionId);
+  },
+
   /** Reset all cached presence (for test isolation). */
   reset(): void {
     presenceStates = new Map();
+    liveStreamingOverrides = new Map();
+    presenceVersion = 0;
     presenceListeners.clear();
+    presenceAllListeners.clear();
   },
 };
 

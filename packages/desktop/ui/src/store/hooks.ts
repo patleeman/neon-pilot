@@ -56,6 +56,12 @@ export function useSessionPresence(id: string | null | undefined): RunningState 
   return useDerivedValue(subscribe, getSnapshot);
 }
 
+export function usePresenceVersion(): number {
+  const subscribe = useCallback((onStoreChange: () => void) => presenceStore.subscribeAll(onStoreChange), []);
+  const getSnapshot = useCallback(() => presenceStore.getVersion(), []);
+  return useDerivedValue(subscribe, getSnapshot);
+}
+
 // ── Collection hooks ─────────────────────────────────────────────────────────
 
 export function useAllSessions(): readonly SessionMeta[] {

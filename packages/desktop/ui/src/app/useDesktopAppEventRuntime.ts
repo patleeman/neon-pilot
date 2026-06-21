@@ -6,7 +6,7 @@ import { subscribeDesktopRealtimeAppEvents } from '../desktop/desktopRealtime';
 import { fetchSessionsSnapshot } from '../session/sessionSnapshot';
 import { applyRemoteConversationLayout, forgetConversationTab, openConversationTab } from '../session/sessionTabs';
 import type { AppEventTopic, DaemonState, DesktopAppEvent, DurableRunListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
-import { executionStore, runStore, sessionStore, taskStore, titleStore } from '../store';
+import { executionStore, presenceStore, runStore, sessionStore, taskStore, titleStore } from '../store';
 import { buildAppSnapshotRefreshPlan, incrementAppEventVersionsForTopics, incrementRunProjectionEventVersions } from './appEventProjection';
 import { INITIAL_APP_EVENT_VERSIONS } from './contexts';
 
@@ -40,7 +40,6 @@ export function useDesktopAppEventRuntime() {
   const refreshSessionMetaSeqRef = useRef(new Map<string, number>());
   const refreshSessionMetaTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const sessionsSnapshotRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sessionRunningOverridesRef = useRef(new Map<string, boolean>());
   const refreshInvalidationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingInvalidationTopicsRef = useRef(new Set<AppEventTopic>());
   const subscriptionGenerationRef = useRef(0);
@@ -56,32 +55,20 @@ export function useDesktopAppEventRuntime() {
 
   const setProjects = useCallback(() => {}, []);
 
-  const applySessionRunningOverride = useCallback((session: SessionMeta): SessionMeta => {
-    const running = sessionRunningOverridesRef.current.get(session.id);
-    if (running === undefined) return session;
-    return session.isRunning === running ? session : { ...session, isRunning: running };
+  const setSessions = useCallback((items: SessionMeta[]) => {
+    sessionStore.replaceAll(items);
+    sessionStore.markReady?.();
   }, []);
 
-  const setSessions = useCallback(
-    (items: SessionMeta[]) => {
-      sessionStore.replaceAll(items.map(applySessionRunningOverride));
-      sessionStore.markReady?.();
-    },
-    [applySessionRunningOverride],
-  );
-
-  const applySessionMetaUpdate = useCallback(
-    (sessionId: string, nextSession: SessionMeta | null) => {
-      if (!nextSession) {
-        sessionRunningOverridesRef.current.delete(sessionId);
-        sessionStore.remove(sessionId);
-        forgetConversationTab(sessionId);
-        return;
-      }
-      sessionStore.upsert(applySessionRunningOverride(nextSession));
-    },
-    [applySessionRunningOverride],
-  );
+  const applySessionMetaUpdate = useCallback((sessionId: string, nextSession: SessionMeta | null) => {
+    if (!nextSession) {
+      presenceStore.setLiveStreaming(sessionId, null);
+      sessionStore.remove(sessionId);
+      forgetConversationTab(sessionId);
+      return;
+    }
+    sessionStore.upsert(nextSession);
+  }, []);
 
   const bumpConversationVersion = useCallback((sessionId: string) => {
     setConversationVersions((previous) => bumpConversationScopedEventVersions(previous, sessionId));
@@ -108,9 +95,6 @@ export function useDesktopAppEventRuntime() {
           .then((session) => {
             if (refreshSessionMetaSeqRef.current.get(sessionId) !== nextSeq) {
               return;
-            }
-            if (sessionRunningOverridesRef.current.get(sessionId) === session.isRunning) {
-              sessionRunningOverridesRef.current.delete(sessionId);
             }
             applySessionMetaUpdate(sessionId, session);
           })
@@ -271,8 +255,7 @@ export function useDesktopAppEventRuntime() {
           return;
         case 'session_meta_changed':
           if (payload.running !== undefined) {
-            sessionRunningOverridesRef.current.set(payload.sessionId, payload.running);
-            sessionStore.patch(payload.sessionId, { isRunning: payload.running } as Partial<SessionMeta>);
+            presenceStore.setLiveStreaming(payload.sessionId, payload.running);
           }
           bumpConversationMetadataVersion(payload.sessionId);
           void refreshSessionMeta(payload.sessionId);
