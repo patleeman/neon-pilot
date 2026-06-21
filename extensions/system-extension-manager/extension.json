@@ -198,7 +198,7 @@
       "component": "ExtensionRepositoriesSettingsPanel",
       "sectionId": "settings-extension-repositories",
       "label": "Extension repositories",
-      "description": "Manage GitHub repositories used to populate installable extensions.",
+      "description": "Choose where Neon Pilot looks for extensions you can install. Add a GitHub source only when you want extensions from another trusted repository.",
       "order": 20
     },
     "commands": [

@@ -61,8 +61,8 @@ export function ImageProbeSettings() {
             saving
               ? 'Saving vision model…'
               : selectedVisionModel
-                ? `Image probing uses ${selectedVisionModel}.`
-                : 'Required before probing uploaded images with text-only models.'
+                ? `Image questions use ${selectedVisionModel}.`
+                : 'Choose a vision model before asking about uploaded images from text-only chats.'
           }
         >
           <Select

@@ -1944,6 +1944,7 @@ function ExtensionSettingsComponentPanels({
           key={`${registration.extensionId}:${registration.id}`}
           id={registration.sectionId}
           title={registration.label}
+          description={registration.description}
           className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-extension-components-group')}
         >
           <div className="settings-page-extension-component-body">

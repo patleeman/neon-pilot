@@ -172,7 +172,7 @@ export function AgentPluginsSettingsPanel() {
   }
 
   async function checkUpdates(plugin?: AgentPlugin) {
-    await runOperation(plugin ? `Checked ${plugin.displayName}.` : 'Checked agent plugins.', () =>
+    await runOperation(plugin ? `Checked ${plugin.displayName}.` : 'Checked capability packages.', () =>
       invoke('checkPluginUpdates', plugin ? { id: plugin.id } : {}),
     );
   }
@@ -189,14 +189,18 @@ export function AgentPluginsSettingsPanel() {
   return (
     <div className="space-y-5">
       {loading && !data ? (
-        <SupportingText>Loading agent plugins...</SupportingText>
+        <SupportingText>Loading capability packages...</SupportingText>
       ) : error && !data ? (
-        <p className="text-[12px] text-danger">Failed to load agent plugins: {error}</p>
+        <p className="text-[12px] text-danger">Failed to load capability packages: {error}</p>
       ) : data ? (
         <>
           <SettingsRow
-            title="Plugin storage"
-            description={<span className="break-all font-mono text-[11px]">{data.storageRoot}</span>}
+            title="Installed package folder"
+            description={
+              <span>
+                Neon Pilot stores downloaded skill packs here: <span className="break-all font-mono text-[11px]">{data.storageRoot}</span>
+              </span>
+            }
             actionsClassName="max-w-none"
           >
             <div className="flex items-center gap-2">
@@ -212,7 +216,7 @@ export function AgentPluginsSettingsPanel() {
           {operation.error ? <Notice tone="danger">{operation.error}</Notice> : null}
           {operation.message ? <Notice tone="success">{operation.message}</Notice> : null}
 
-          <RailSubsection title="Add plugin">
+          <RailSubsection title="Add a capability package">
             <form className="space-y-3" onSubmit={handleAddPlugin}>
               <div className="grid gap-3 sm:grid-cols-[9rem_minmax(0,1fr)_8rem]">
                 <Field label="Source">
@@ -262,14 +266,14 @@ export function AgentPluginsSettingsPanel() {
                 </div>
                 <div className="flex items-end">
                   <ToolbarButton type="submit" disabled={operation.busy || !draft.source.trim()}>
-                    {operation.busy ? 'Working...' : 'Add plugin'}
+                    {operation.busy ? 'Working...' : 'Add package'}
                   </ToolbarButton>
                 </div>
               </div>
             </form>
           </RailSubsection>
 
-          <RailSubsection title="Installed plugins">
+          <RailSubsection title="Installed packages">
             {plugins.length > 0 ? (
               <div className="space-y-2">
                 {plugins.map((plugin) => {
@@ -301,12 +305,13 @@ export function AgentPluginsSettingsPanel() {
               </div>
             ) : (
               <SupportingText>
-                No agent plugins installed. Add a Codex or Claude plugin repository to import agent capabilities.
+                No capability packages installed. Add a trusted Codex or Claude-style repository when you want agents to use its reusable
+                skills or MCP definitions.
               </SupportingText>
             )}
           </RailSubsection>
 
-          <RailSubsection title={selectedPlugin ? `Plugin details: ${selectedPlugin.displayName}` : 'Plugin details'}>
+          <RailSubsection title={selectedPlugin ? `Package details: ${selectedPlugin.displayName}` : 'Package details'}>
             {selectedPlugin ? (
               <div className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">

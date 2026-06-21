@@ -44,7 +44,7 @@
       "component": "DictationSettingsPanel",
       "sectionId": "settings-dictation",
       "label": "Dictation",
-      "description": "Configure local dictation via Whisper.cpp for the composer mic button.",
+      "description": "Choose the local speech-to-text model used by the mic button in the message composer. Install a model here before using dictation.",
       "order": 30
     }
   },

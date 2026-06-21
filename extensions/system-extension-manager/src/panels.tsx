@@ -1003,7 +1003,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       setNotice({ type: 'info', message: `Installing ${item.name} from ${item.marketplaceSourceId ?? item.tag}...` });
       try {
         if (item.packageType && item.packageType !== 'extension') {
-          throw new Error('Agent plugins are installed from Settings -> Agent Plugins.');
+          throw new Error('Agent capability packages are installed from Settings → Agent capability packages.');
         }
         await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: item.id });
         setNotice({ type: 'success', message: `Installed ${item.name}. Enable it from the extensions list when you're ready.` });

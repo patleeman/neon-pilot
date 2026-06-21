@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "id": "system-agent-plugins",
-  "name": "Agent Plugins",
+  "name": "Agent capability packages",
   "packageType": "system",
-  "description": "Import Codex and Claude plugin repositories as managed agent capability packages.",
+  "description": "Add trusted external skill packs so agents can use their instructions, tools, and MCP server definitions.",
   "version": "0.1.0",
   "defaultEnabled": true,
   "frontend": {
@@ -76,16 +76,16 @@
       "id": "agent-plugins",
       "component": "AgentPluginsSettingsPanel",
       "sectionId": "settings-agent-plugins",
-      "label": "Agent Plugins",
-      "description": "Import Codex and Claude plugin repositories as skills, hooks, MCP declarations, and related agent instructions.",
+      "label": "Agent capability packages",
+      "description": "Install trusted Codex or Claude-style skill packs. Use this when you want agents to learn reusable workflows, instructions, or MCP server definitions from an external repository.",
       "order": 35
     },
     "commands": [
       {
         "id": "open-agent-plugins",
-        "title": "Open Agent Plugins",
-        "category": "Agent Plugins",
-        "description": "Open Agent Plugins settings.",
+        "title": "Open agent capability packages",
+        "category": "Agent capability packages",
+        "description": "Open agent capability package settings.",
         "action": "app.navigate",
         "args": {
           "to": "/settings#agent-plugins"
@@ -94,9 +94,9 @@
       },
       {
         "id": "check-agent-plugin-updates",
-        "title": "Check Agent Plugin Updates",
-        "category": "Agent Plugins",
-        "description": "Check installed agent plugins for source updates.",
+        "title": "Check capability package updates",
+        "category": "Agent capability packages",
+        "description": "Check installed agent capability packages for source updates.",
         "action": "checkPluginUpdates"
       }
     ]

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "id": "system-image-probe",
-  "name": "Image Probe",
+  "name": "Image questions",
   "packageType": "system",
-  "description": "Inspect image attachments with a host-owned vision agent.",
+  "description": "Let the agent answer questions about attached screenshots and images when the current chat model cannot see them.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -15,7 +15,7 @@
       {
         "id": "probeImage",
         "handler": "probeImage",
-        "title": "Probe image",
+        "title": "Ask about image",
         "worker": {
           "enabled": true
         }
@@ -27,16 +27,16 @@
       "id": "image-probe-settings",
       "component": "ImageProbeSettings",
       "sectionId": "settings-image-probe",
-      "label": "Image Probe",
-      "description": "Vision model used by image probing.",
+      "label": "Image questions",
+      "description": "Choose the vision model Neon Pilot uses to answer questions about attached images and screenshots. You only need this if image analysis gives poor answers or uses the wrong model.",
       "order": 20
     },
     "tools": [
       {
         "id": "probe-image",
         "name": "probe_image",
-        "title": "Probe image",
-        "description": "Ask the configured vision subagent about selected image attachments when the current model cannot see images.",
+        "title": "Ask about image",
+        "description": "Ask the configured vision model about selected image attachments when the current chat model cannot see images.",
         "action": "probeImage",
         "inputSchema": {
           "type": "object",

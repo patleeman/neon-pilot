@@ -93,7 +93,7 @@ describe('AgentPluginsSettingsPanel', () => {
 
     render(<AgentPluginsSettingsPanel />);
 
-    expect(screen.getByText('Plugin storage')).toBeTruthy();
+    expect(screen.getByText('Installed package folder')).toBeTruthy();
     expect(screen.getAllByText('Review Pack').length).toBeGreaterThan(0);
     expect(screen.getByText('Available to agents')).toBeTruthy();
     expect(screen.getByText('Skills and agent instructions are discovered but not available.')).toBeTruthy();
@@ -113,7 +113,7 @@ describe('AgentPluginsSettingsPanel', () => {
       target: { value: 'https://github.com/example/review-pack' },
     });
     fireEvent.change(screen.getByDisplayValue('Auto'), { target: { value: 'codex' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add plugin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add package' }));
 
     await waitFor(() =>
       expect(mocks.api.invokeExtensionAction).toHaveBeenCalledWith('system-agent-plugins', 'addPlugin', {
