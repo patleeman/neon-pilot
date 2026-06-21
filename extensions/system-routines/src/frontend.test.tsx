@@ -71,6 +71,10 @@ function createPa() {
   return {
     pa: {
       extension: { invoke },
+      models: vi.fn(async () => [
+        { id: 'gpt-5.4', provider: 'openai-codex', name: 'GPT-5.4' },
+        { id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash' },
+      ]),
       ui: { toast: vi.fn(), confirm: vi.fn(async () => true) },
     } as never,
     invoke,

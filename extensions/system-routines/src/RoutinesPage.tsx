@@ -21,6 +21,13 @@ interface SkillItem {
   description?: string;
 }
 
+interface ModelItem {
+  id: string;
+  provider?: string;
+  name?: string;
+  label?: string;
+}
+
 const FALLBACK_SKILLS: SkillItem[] = [
   { id: 'autoreview', name: 'Autoreview', description: 'Review code changes before shipping.' },
   { id: 'second-model-review', name: 'Second model review', description: 'Ask another model to review the change.' },
@@ -106,6 +113,31 @@ function ownerLabel(ownerExtensionId: string): string {
 
 function ownerKind(ownerExtensionId: string): string {
   return ownerExtensionId === 'core' ? 'App event' : 'Extension event';
+}
+
+function modelLabel(model: ModelItem): string {
+  return model.label ?? model.name ?? model.id;
+}
+
+function modelSelectionValue(model: ModelItem, models: ModelItem[]): string {
+  const duplicateIds = models.filter((candidate) => candidate.id === model.id).length > 1;
+  return duplicateIds && model.provider ? `${model.provider}/${model.id}` : model.id;
+}
+
+function groupedModels(models: ModelItem[]) {
+  const groups = new Map<string, ModelItem[]>();
+  for (const model of models) groups.set(model.provider ?? 'Models', [...(groups.get(model.provider ?? 'Models') ?? []), model]);
+  return Array.from(groups.entries());
+}
+
+function hasModelValue(models: ModelItem[], value?: string): boolean {
+  if (!value) return true;
+  return models.some(
+    (model) =>
+      modelSelectionValue(model, models) === value ||
+      model.id === value ||
+      (model.provider ? `${model.provider}/${model.id}` === value : false),
+  );
 }
 
 function failureBehaviorDescription(behavior: Routine['failureBehavior']): string {
@@ -234,6 +266,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Routine | null>(null);
   const [skills, setSkills] = useState<SkillItem[]>([]);
+  const [models, setModels] = useState<ModelItem[]>([]);
   const [skillQuery, setSkillQuery] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showRuns, setShowRuns] = useState(false);
@@ -286,6 +319,16 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         setSkills(Array.from(byId.values()));
       })
       .catch(() => setSkills(FALLBACK_SKILLS));
+  }, [pa]);
+
+  useEffect(() => {
+    void pa
+      .models()
+      .then((result) => {
+        const listed = Array.isArray(result) ? (result as ModelItem[]) : [];
+        setModels(listed.filter((model) => typeof model.id === 'string' && model.id.length > 0));
+      })
+      .catch(() => setModels([]));
   }, [pa]);
 
   const selectedHook = data?.hooks.find((hook) => hook.id === selectedHookId) ?? data?.hooks[0];
@@ -719,28 +762,56 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 <div className="mb-2 text-[11px] uppercase tracking-wider text-secondary">Model for this routine</div>
                 <label className="mb-2 grid gap-1">
                   <span className="text-[10px] uppercase tracking-wider text-dim">Primary model</span>
-                  <TextInput
-                    className="w-full font-mono text-[12px]"
-                    placeholder="Use app default"
+                  <Select
+                    className="w-full"
                     value={draft.modelRef ?? ''}
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                      setDraft({ ...draft, modelRef: event.target.value.trim() || undefined })
+                    disabled={models.length === 0}
+                    onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                      setDraft({ ...draft, modelRef: event.target.value || undefined })
                     }
-                  />
+                  >
+                    <option value="">Use app default</option>
+                    {!hasModelValue(models, draft.modelRef) && draft.modelRef ? (
+                      <option value={draft.modelRef}>{draft.modelRef}</option>
+                    ) : null}
+                    {groupedModels(models).map(([provider, providerModels]) => (
+                      <optgroup key={provider} label={provider}>
+                        {providerModels.map((model) => (
+                          <option key={`${model.provider ?? ''}/${model.id}`} value={modelSelectionValue(model, models)}>
+                            {modelLabel(model)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </Select>
                 </label>
                 <label className="grid gap-1">
                   <span className="text-[10px] uppercase tracking-wider text-dim">Backup model</span>
-                  <TextInput
-                    className="w-full font-mono text-[12px]"
-                    placeholder="Optional provider/model fallback"
+                  <Select
+                    className="w-full"
                     value={draft.fallbackModelRef ?? ''}
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                      setDraft({ ...draft, fallbackModelRef: event.target.value.trim() || undefined })
+                    disabled={models.length === 0}
+                    onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                      setDraft({ ...draft, fallbackModelRef: event.target.value || undefined })
                     }
-                  />
+                  >
+                    <option value="">No backup model</option>
+                    {!hasModelValue(models, draft.fallbackModelRef) && draft.fallbackModelRef ? (
+                      <option value={draft.fallbackModelRef}>{draft.fallbackModelRef}</option>
+                    ) : null}
+                    {groupedModels(models).map(([provider, providerModels]) => (
+                      <optgroup key={provider} label={provider}>
+                        {providerModels.map((model) => (
+                          <option key={`${model.provider ?? ''}/${model.id}`} value={modelSelectionValue(model, models)}>
+                            {modelLabel(model)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </Select>
                 </label>
                 <div className="mt-2 text-[11px] text-secondary">
-                  Leave blank to use the current app model. Use <span className="font-mono">provider/model</span> when a provider matters.
+                  Use the app default unless this routine needs a specific model. Backup retries once if the primary model fails.
                 </div>
               </div>
             ) : null}
@@ -1007,13 +1078,14 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             <div className="relative flex items-start gap-1">
               <button
                 type="button"
-                className="rounded px-2 py-1 text-[12px] text-accent hover:bg-surface-3"
+                className={cx('rounded px-2 py-1 text-[12px] hover:bg-surface-3', isEditing ? 'bg-surface-3 text-primary' : 'text-accent')}
                 onClick={(event) => {
                   event.stopPropagation();
-                  selectRoutine(routine);
+                  if (isEditing) closeEditor();
+                  else selectRoutine(routine);
                 }}
               >
-                {isEditing ? 'Editing' : 'Edit'}
+                {isEditing ? 'Done' : 'Edit'}
               </button>
               <button
                 type="button"
