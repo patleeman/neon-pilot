@@ -169,6 +169,10 @@ async function main() {
           }
         };
         await new Promise((r) => setTimeout(r, 100));
+        const smokeInstructionName = 'Smoke temporary routine ' + Date.now();
+        if (!bodyIncludes('CONTINUES THE EVENT') || !bodyIncludes('STOPS THE EVENT')) {
+          throw new Error('decision outcome reaction labels missing');
+        }
 
         click(byText('button', 'Add routine'), 'Add routine');
         await new Promise((r) => setTimeout(r, 100));
@@ -216,7 +220,7 @@ async function main() {
         click(byText('button', 'Instruction'), 'Instruction menu item');
         await new Promise((r) => setTimeout(r, 100));
         const name = Array.from(document.querySelectorAll('input')).find((el) => el.value === 'New instruction');
-        input(name, 'Smoke temporary routine');
+        input(name, smokeInstructionName);
         const instruction = Array.from(document.querySelectorAll('textarea')).at(-1);
         input(instruction, 'Smoke instruction /skill:');
         await new Promise((r) => setTimeout(r, 100));
@@ -226,9 +230,9 @@ async function main() {
         click(Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'Save'), 'Save instruction');
         await new Promise((r) => setTimeout(r, 700));
         assertNoUiErrors();
-        if (!document.body.innerText.includes('Smoke temporary routine')) throw new Error('saved instruction missing');
+        if (!document.body.innerText.includes(smokeInstructionName)) throw new Error('saved instruction missing');
         await waitUntil(() => !bodyIncludes('Unsaved changes'), 'instruction saved state');
-        const block = Array.from(document.querySelectorAll('[data-routine-id]')).find((el) => el.textContent?.includes('Smoke temporary routine'));
+        const block = Array.from(document.querySelectorAll('[data-routine-id]')).find((el) => el.textContent?.includes(smokeInstructionName));
         const target = Array.from(document.querySelectorAll('[data-routine-id]')).find((el) => el.textContent?.includes('Review code changes'));
         if (!block || !target) throw new Error('drag candidates missing');
         const handle = block.querySelector('button[aria-label^="Drag"]');
@@ -236,17 +240,18 @@ async function main() {
         const targetRect = target.getBoundingClientRect();
         handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: rect.left + 2, clientY: rect.top + 2 }));
         window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: targetRect.left + 10, clientY: targetRect.top + 10 }));
+        await new Promise((r) => setTimeout(r, 100));
         window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: targetRect.left + 10, clientY: targetRect.top + 10 }));
         await new Promise((r) => setTimeout(r, 500));
         assertNoUiErrors();
-        click(Array.from(document.querySelectorAll('[data-routine-id]')).find((el) => el.textContent?.includes('Smoke temporary routine')), 'temporary routine block');
+        click(Array.from(document.querySelectorAll('[data-routine-id]')).find((el) => el.textContent?.includes(smokeInstructionName)), 'temporary routine block');
         await new Promise((r) => setTimeout(r, 100));
         click(Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'Delete'), 'Delete instruction');
         await new Promise((r) => setTimeout(r, 100));
         click(byText('button', 'Confirm'), 'Confirm delete instruction');
         await new Promise((r) => setTimeout(r, 500));
         assertNoUiErrors();
-        if (document.body.innerText.includes('Smoke temporary routine')) throw new Error('temporary instruction was not deleted');
+        if (document.body.innerText.includes(smokeInstructionName)) throw new Error('temporary instruction was not deleted');
         return 'ok';
       })()
     `,

@@ -238,6 +238,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverPosition, setDragOverPosition] = useState<RoutinePosition | null>(null);
+  const [dragTargetRoutineId, setDragTargetRoutineId] = useState<string | null>(null);
+  const [dragPreview, setDragPreview] = useState<{ x: number; y: number; name: string; type: RoutineType } | null>(null);
   const pointerDragIdRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -291,6 +293,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const savedDraft = draft ? data?.routines.find((routine) => routine.id === draft.id) : null;
   const draftIsDirty = Boolean(draft && (unsavedRoutineIds.has(draft.id) || JSON.stringify(draft) !== JSON.stringify(savedDraft ?? null)));
   const branchRoutineOptions = hookRoutines.filter((routine) => routine.id !== draft?.id);
+  const routineNameById = useMemo(() => new Map(hookRoutines.map((routine) => [routine.id, routine.name])), [hookRoutines]);
 
   useEffect(() => {
     if (!data) return;
@@ -385,6 +388,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       if (selected) setDraft({ ...selected, outcomes: selected.outcomes.map((outcome) => ({ ...outcome })) });
       setDragId(null);
       setDragOverPosition(null);
+      setDragTargetRoutineId(null);
+      setDragPreview(null);
     },
     [pa, selectedRoutineId],
   );
@@ -398,15 +403,22 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   );
 
   const startPointerDrag = useCallback(
-    (event: React.PointerEvent<HTMLElement>, routineId: string) => {
+    (event: React.PointerEvent<HTMLElement>, routine: Routine) => {
       event.preventDefault();
       event.stopPropagation();
-      pointerDragIdRef.current = routineId;
-      setDragId(routineId);
+      pointerDragIdRef.current = routine.id;
+      setDragId(routine.id);
+      setDragTargetRoutineId(null);
+      setDragPreview({ x: event.clientX, y: event.clientY, name: routine.name, type: routine.type });
 
       const onPointerMove = (moveEvent: PointerEvent) => {
+        setDragPreview({ x: moveEvent.clientX, y: moveEvent.clientY, name: routine.name, type: routine.type });
         const element = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY) as HTMLElement | null;
+        const targetRoutine = element?.closest<HTMLElement>('[data-routine-id]');
         const lane = element?.closest<HTMLElement>('[data-routine-lane]')?.dataset.routineLane as RoutinePosition | undefined;
+        setDragTargetRoutineId(
+          targetRoutine?.dataset.routineId && targetRoutine.dataset.routineId !== routine.id ? targetRoutine.dataset.routineId : null,
+        );
         if (lane === 'before' || lane === 'after') setDragOverPosition(lane);
       };
 
@@ -419,12 +431,16 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         const targetRoutine = element?.closest<HTMLElement>('[data-routine-id]');
         const targetLane = element?.closest<HTMLElement>('[data-routine-lane]');
         const position = (targetRoutine?.dataset.routinePosition ?? targetLane?.dataset.routineLane) as RoutinePosition | undefined;
+        const targetRoutineId =
+          targetRoutine?.dataset.routineId && targetRoutine.dataset.routineId !== routineIdToMove ? targetRoutine.dataset.routineId : '';
         if (routineIdToMove && (position === 'before' || position === 'after')) {
-          void moveRoutineById(routineIdToMove, position, targetRoutine?.dataset.routineId ?? '');
+          void moveRoutineById(routineIdToMove, position, targetRoutineId);
           return;
         }
         setDragId(null);
         setDragOverPosition(null);
+        setDragTargetRoutineId(null);
+        setDragPreview(null);
       };
 
       window.addEventListener('pointermove', onPointerMove);
@@ -439,15 +455,24 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     setDragId(routineId);
   }, []);
 
-  const onDragOverLane = useCallback((event: React.DragEvent, position: RoutinePosition) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-    setDragOverPosition(position);
-  }, []);
+  const onDragOverLane = useCallback(
+    (event: React.DragEvent, position: RoutinePosition) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      const targetRoutine = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-routine-id]');
+      setDragTargetRoutineId(
+        targetRoutine?.dataset.routineId && targetRoutine.dataset.routineId !== dragId ? targetRoutine.dataset.routineId : null,
+      );
+      setDragOverPosition(position);
+    },
+    [dragId],
+  );
 
   const onDragEndRoutine = useCallback(() => {
     setDragId(null);
     setDragOverPosition(null);
+    setDragTargetRoutineId(null);
+    setDragPreview(null);
   }, []);
 
   const onInstructionChange = useCallback((value: string) => {
@@ -480,126 +505,149 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const renderBlock = (routine: Routine) => {
     const isUnsaved = unsavedRoutineIds.has(routine.id);
     return (
-      <div
-        key={routine.id}
-        data-routine-id={routine.id}
-        data-routine-position={routine.position}
-        draggable
-        onDragStart={(event) => onDragStartRoutine(event, routine.id)}
-        onDragEnd={onDragEndRoutine}
-        onDragOver={(event) => onDragOverLane(event, routine.position)}
-        onDrop={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          void moveRoutine(routine.position, routine.id);
-        }}
-        onClick={() => selectRoutine(routine)}
-        className={cx(
-          'relative overflow-visible rounded-md border bg-surface-2 text-left transition-colors',
-          dragId === routine.id && 'opacity-60',
-          selectedRoutineId === routine.id ? 'border-accent/70 bg-accent/10' : 'border-border-subtle',
-        )}
-      >
-        <div className="grid grid-cols-[22px_1fr_auto] gap-2 px-2 py-2">
-          <button
-            type="button"
-            aria-label={`Drag ${routine.name}`}
-            className="cursor-grab text-dim active:cursor-grabbing"
-            onPointerDown={(event) => startPointerDrag(event, routine.id)}
-          >
-            ⋮⋮
-          </button>
-          <div className="min-w-0">
-            <div className="flex gap-2 text-[11px] text-secondary">
-              <span className={routine.type === 'decision' ? 'text-purple-300' : routine.type === 'stop' ? 'text-danger' : 'text-accent'}>
-                {routineLabel(routine.type)}
-              </span>
-              {routine.type === 'instruction' ? (
-                <span>
-                  {routine.failureBehavior === 'block'
-                    ? 'blocks on fail'
-                    : routine.failureBehavior === 'warn'
-                      ? 'warns on fail'
-                      : 'continues'}
-                </span>
-              ) : null}
-              {isUnsaved ? <span className="text-warning">unsaved</span> : null}
-            </div>
-            <div className="mt-0.5 truncate text-[13px] font-semibold">{routine.name}</div>
-            <div className="truncate text-[12px] text-secondary">{routine.instruction || 'No instruction yet.'}</div>
-          </div>
-          <div className="relative">
+      <div key={routine.id}>
+        {dragTargetRoutineId === routine.id ? (
+          <div className="mb-2 h-1 rounded-full bg-accent shadow-[0_0_18px_rgba(80,160,255,0.45)]" />
+        ) : null}
+        <div
+          data-routine-id={routine.id}
+          data-routine-position={routine.position}
+          draggable
+          onDragStart={(event) => onDragStartRoutine(event, routine.id)}
+          onDragEnd={onDragEndRoutine}
+          onDragOver={(event) => onDragOverLane(event, routine.position)}
+          onDrop={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void moveRoutine(routine.position, routine.id);
+          }}
+          onClick={() => selectRoutine(routine)}
+          className={cx(
+            'relative overflow-visible rounded-md border bg-surface-2 text-left transition-colors',
+            dragId === routine.id && 'scale-[0.99] border-accent/60 bg-accent/10 opacity-45 ring-1 ring-accent/40',
+            dragTargetRoutineId === routine.id && 'border-accent/70',
+            selectedRoutineId === routine.id ? 'border-accent/70 bg-accent/10' : 'border-border-subtle',
+          )}
+        >
+          <div className="grid grid-cols-[22px_1fr_auto] gap-2 px-2 py-2">
             <button
               type="button"
-              aria-label={`More actions for ${routine.name}`}
-              aria-expanded={openRoutineMenuId === routine.id}
-              className="rounded px-2 py-1 text-xl leading-none text-secondary hover:bg-surface-3 hover:text-primary"
-              onClick={(event) => {
-                event.stopPropagation();
-                setOpenRoutineMenuId((current) => (current === routine.id ? null : routine.id));
-              }}
+              aria-label={`Drag ${routine.name}`}
+              className="cursor-grab rounded px-1 text-dim hover:bg-surface-3 hover:text-primary active:cursor-grabbing"
+              onPointerDown={(event) => startPointerDrag(event, routine)}
             >
-              …
+              ⋮⋮
             </button>
-            {openRoutineMenuId === routine.id ? (
-              <div
-                className="absolute right-0 top-8 z-20 min-w-40 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] py-1 text-[12px] shadow-2xl"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <button
-                  type="button"
-                  className="block w-full px-3 py-2 text-left text-primary hover:bg-surface-3"
-                  onClick={() => {
-                    selectRoutine(routine);
-                    setOpenRoutineMenuId(null);
-                  }}
-                >
-                  Edit routine
-                </button>
-                <button
-                  type="button"
-                  className="block w-full px-3 py-2 text-left text-primary hover:bg-surface-3"
-                  onClick={() => {
-                    setOpenRoutineMenuId(null);
-                    void moveRoutineById(routine.id, routine.position === 'before' ? 'after' : 'before');
-                  }}
-                >
-                  Move to {routine.position === 'before' ? 'After' : 'Before'}
-                </button>
-                <button
-                  type="button"
-                  className="block w-full px-3 py-2 text-left text-danger hover:bg-surface-3"
-                  onClick={() => void deleteRoutine(routine)}
-                >
-                  Delete routine
-                </button>
-              </div>
-            ) : null}
-          </div>
-        </div>
-        {routine.type === 'decision' && routine.outcomes.length ? (
-          <div className="grid gap-1 border-t border-border-subtle px-9 py-2 text-[12px]">
-            {routine.outcomes.map((outcome) => (
-              <div key={outcome.id} className="grid grid-cols-[128px_1fr] gap-2">
-                <span
-                  className={cx(
-                    'font-mono font-semibold',
-                    outcome.behavior === 'block'
-                      ? 'text-danger'
-                      : outcome.behavior === 'warn'
-                        ? 'text-warning'
-                        : outcome.behavior === 'ask'
-                          ? 'text-accent'
-                          : 'text-success',
-                  )}
-                >
-                  {outcome.id}
+            <div className="min-w-0">
+              <div className="flex gap-2 text-[11px] text-secondary">
+                <span className={routine.type === 'decision' ? 'text-purple-300' : routine.type === 'stop' ? 'text-danger' : 'text-accent'}>
+                  {routineLabel(routine.type)}
                 </span>
-                <span className="text-secondary">{outcome.target}</span>
+                {routine.type === 'instruction' ? (
+                  <span>
+                    {routine.failureBehavior === 'block'
+                      ? 'blocks on fail'
+                      : routine.failureBehavior === 'warn'
+                        ? 'warns on fail'
+                        : 'continues'}
+                  </span>
+                ) : null}
+                {isUnsaved ? <span className="text-warning">unsaved</span> : null}
               </div>
-            ))}
+              <div className="mt-0.5 truncate text-[13px] font-semibold">{routine.name}</div>
+              <div className="truncate text-[12px] text-secondary">{routine.instruction || 'No instruction yet.'}</div>
+            </div>
+            <div className="relative">
+              <button
+                type="button"
+                aria-label={`More actions for ${routine.name}`}
+                aria-expanded={openRoutineMenuId === routine.id}
+                className="rounded px-2 py-1 text-xl leading-none text-secondary hover:bg-surface-3 hover:text-primary"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpenRoutineMenuId((current) => (current === routine.id ? null : routine.id));
+                }}
+              >
+                …
+              </button>
+              {openRoutineMenuId === routine.id ? (
+                <div
+                  className="absolute right-0 top-8 z-20 min-w-40 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] py-1 text-[12px] shadow-2xl"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    className="block w-full px-3 py-2 text-left text-primary hover:bg-surface-3"
+                    onClick={() => {
+                      selectRoutine(routine);
+                      setOpenRoutineMenuId(null);
+                    }}
+                  >
+                    Edit routine
+                  </button>
+                  <button
+                    type="button"
+                    className="block w-full px-3 py-2 text-left text-primary hover:bg-surface-3"
+                    onClick={() => {
+                      setOpenRoutineMenuId(null);
+                      void moveRoutineById(routine.id, routine.position === 'before' ? 'after' : 'before');
+                    }}
+                  >
+                    Move to {routine.position === 'before' ? 'After' : 'Before'}
+                  </button>
+                  <button
+                    type="button"
+                    className="block w-full px-3 py-2 text-left text-danger hover:bg-surface-3"
+                    onClick={() => void deleteRoutine(routine)}
+                  >
+                    Delete routine
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
-        ) : null}
+          {routine.type === 'decision' && routine.outcomes.length ? (
+            <div className="grid gap-1 border-t border-border-subtle px-9 py-2 text-[12px]">
+              {routine.outcomes.map((outcome) => {
+                const branchTargetName = outcome.nextRoutineId ? routineNameById.get(outcome.nextRoutineId) : null;
+                const reaction =
+                  outcome.behavior === 'branch'
+                    ? branchTargetName
+                      ? `Then runs ${branchTargetName}`
+                      : 'Branches when a target is chosen'
+                    : outcome.behavior === 'block'
+                      ? 'Stops the event'
+                      : outcome.behavior === 'warn'
+                        ? 'Warns and continues'
+                        : outcome.behavior === 'ask'
+                          ? 'Asks you before continuing'
+                          : 'Continues the event';
+                return (
+                  <div key={outcome.id} className="grid grid-cols-[128px_1fr_auto] items-start gap-2">
+                    <span
+                      className={cx(
+                        'font-mono font-semibold',
+                        outcome.behavior === 'block'
+                          ? 'text-danger'
+                          : outcome.behavior === 'warn'
+                            ? 'text-warning'
+                            : outcome.behavior === 'ask' || outcome.behavior === 'branch'
+                              ? 'text-accent'
+                              : 'text-success',
+                      )}
+                    >
+                      {outcome.id}
+                    </span>
+                    <span className="text-secondary">{outcome.target}</span>
+                    <span className="rounded-sm bg-surface-3 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-dim">
+                      {reaction}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
       </div>
     );
   };
@@ -997,6 +1045,22 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           )}
         </aside>
       </div>
+      {dragPreview ? (
+        <div
+          className="pointer-events-none fixed z-50 w-72 rounded-md border border-accent/70 bg-[#10141d]/95 px-3 py-2 text-left shadow-2xl ring-1 ring-accent/30"
+          style={{ left: dragPreview.x + 14, top: dragPreview.y + 14 }}
+        >
+          <div className="text-[11px] uppercase tracking-[0.14em] text-accent">Dragging {routineLabel(dragPreview.type)}</div>
+          <div className="mt-1 truncate text-[13px] font-semibold text-primary">{dragPreview.name}</div>
+          <div className="mt-1 text-[11px] text-secondary">
+            {dragTargetRoutineId
+              ? `Drop to place before ${routineNameById.get(dragTargetRoutineId) ?? 'this routine'}.`
+              : dragOverPosition
+                ? `Drop to place at the end of ${dragOverPosition}.`
+                : 'Move over a lane to choose where it lands.'}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
