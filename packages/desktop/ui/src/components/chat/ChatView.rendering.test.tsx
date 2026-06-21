@@ -110,12 +110,12 @@ describe('ChatView rendering stability', () => {
     expect(timeAgoSpy).toHaveBeenCalledWith(updatedTail.ts);
   });
 
-  it('renders the streaming assistant tail as plain text until the stream settles', () => {
+  it('renders markdown in the streaming assistant tail before the stream settles', () => {
     const streamingTail = createStreamingTail('**streaming** tail');
     const { container, root } = renderChatView([streamingTail], { isStreaming: true });
 
-    expect(container.textContent).toContain('**streaming** tail');
-    expect(container.querySelector('strong')).toBeNull();
+    expect(container.textContent).toContain('streaming tail');
+    expect(container.querySelector('strong')?.textContent).toBe('streaming');
 
     act(() => {
       root.render(<ChatView messages={[streamingTail]} isStreaming={false} />);
@@ -125,14 +125,14 @@ describe('ChatView rendering stability', () => {
     expect(container.querySelector('strong')?.textContent).toBe('streaming');
   });
 
-  it('keeps completed markdown-looking chunks plain while the stream is active', () => {
+  it('renders completed markdown-looking chunks while the stream is active', () => {
     const streamingTail = createStreamingTail(['# Streaming title', '', '**active** tail'].join('\n'));
     const { container } = renderChatView([streamingTail], { isStreaming: true });
 
-    expect(container.textContent).toContain('# Streaming title');
-    expect(container.textContent).toContain('**active** tail');
-    expect(container.querySelector('h1')).toBeNull();
-    expect(container.querySelector('strong')).toBeNull();
+    expect(container.textContent).toContain('Streaming title');
+    expect(container.textContent).toContain('active tail');
+    expect(container.querySelector('h1')?.textContent).toBe('Streaming title');
+    expect(container.querySelector('strong')?.textContent).toBe('active');
   });
 
   it('does not install continuous reply-selection polling when selection replies are enabled', () => {
