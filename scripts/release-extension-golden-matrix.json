@@ -60,7 +60,7 @@
     {
       "extensionId": "system-telemetry",
       "path": "/telemetry",
-      "text": ["Telemetry"]
+      "text": ["Diagnostics"]
     }
   ],
   "actions": [
