@@ -112,6 +112,26 @@ describe('RoutinesPage', () => {
     expect(screen.getByDisplayValue('Run QA')).toBeTruthy();
   });
 
+  it('shows a branch target selector for decision outcomes', async () => {
+    const { pa } = createPa();
+    render(<RoutinesPage {...props(pa)} />);
+    await screen.findByText('Checkpoint timeline');
+
+    fireEvent.click(screen.getByText('Add routine ▾'));
+    fireEvent.click(screen.getAllByText('Instruction')[0]);
+    fireEvent.change(screen.getByDisplayValue('New instruction'), { target: { value: 'Linked follow-up routine' } });
+    fireEvent.click(screen.getByText('Save'));
+    await screen.findByText(/Saved at|Saved/);
+
+    fireEvent.click(screen.getAllByText('Review code changes')[0]);
+    const effectSelect = screen.getAllByDisplayValue('Continue').at(-1);
+    expect(effectSelect).toBeTruthy();
+    fireEvent.change(effectSelect as HTMLElement, { target: { value: 'branch' } });
+
+    expect(await screen.findByText('Then run')).toBeTruthy();
+    expect(screen.getByText(/Branch links this outcome to another routine/)).toBeTruthy();
+  });
+
   it('opens routine actions from the larger dots menu', async () => {
     const { pa, invoke } = createPa();
     render(<RoutinesPage {...props(pa)} />);

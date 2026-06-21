@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* eslint-env node */
 
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -90,7 +90,12 @@ async function waitFor(cdp, expression, label, timeoutMs = 15_000) {
   throw new Error(`Timed out waiting for ${label}. Last value: ${JSON.stringify(last)}`);
 }
 
+function stopTestingAppForPort() {
+  spawnSync('pkill', ['-f', `Neon Pilot Testing.*--remote-debugging-port=${port}`], { stdio: 'ignore' });
+}
+
 async function main() {
+  stopTestingAppForPort();
   const childEnv = { ...process.env };
   delete childEnv.ELECTRON_RUN_AS_NODE;
   const child = run(
@@ -106,6 +111,7 @@ async function main() {
   try {
     const page = await waitForPage();
     cdp = connect(page.webSocketDebuggerUrl);
+    await cdp.send('Network.clearBrowserCache').catch(() => undefined);
     await cdp.send('Page.navigate', { url: 'neon-pilot://app/routines' });
     await waitFor(cdp, `Boolean(document.body && document.body.innerText.includes('Checkpoint timeline'))`, 'Routines page');
 
@@ -113,8 +119,11 @@ async function main() {
       cdp,
       `
       (async () => {
+        window.__routinesSmokeErrors = [];
+        window.addEventListener('error', (event) => window.__routinesSmokeErrors.push(event.message || String(event.error || 'error')));
+        window.addEventListener('unhandledrejection', (event) => window.__routinesSmokeErrors.push(String(event.reason?.message || event.reason || 'unhandled rejection')));
         const byText = (selector, text) => Array.from(document.querySelectorAll(selector)).find((el) => el.textContent?.includes(text));
-        const click = (el) => { if (!el) throw new Error('missing clickable'); el.click(); };
+        const click = (el, label = 'clickable') => { if (!el) throw new Error('missing ' + label); el.click(); };
         const input = (el, value) => {
           if (!el) throw new Error('missing input');
           const prototype = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
@@ -123,22 +132,88 @@ async function main() {
           el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: value }));
           el.dispatchEvent(new Event('change', { bubbles: true }));
         };
+        const selectValue = (el, value) => {
+          if (!el) throw new Error('missing select');
+          const optionIndex = Array.from(el.options).findIndex((option) => option.value === value);
+          if (optionIndex >= 0) el.selectedIndex = optionIndex;
+          const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set;
+          setter?.call(el, value);
+          el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+        };
+        const bodyIncludes = (text) => document.body?.innerText.includes(text);
+        const waitUntil = async (predicate, label, timeoutMs = 5000) => {
+          const started = Date.now();
+          while (Date.now() - started < timeoutMs) {
+            if (predicate()) return;
+            await new Promise((r) => setTimeout(r, 100));
+          }
+          throw new Error('timed out waiting for ' + label);
+        };
+        const assertInspectorCanScrollBottom = async () => {
+          const scroller = Array.from(document.querySelectorAll('aside .overflow-auto')).at(-1);
+          if (!scroller) throw new Error('routine inspector scroll region missing');
+          scroller.scrollTop = scroller.scrollHeight;
+          await new Promise((r) => requestAnimationFrame(r));
+          const variableRow = Array.from(document.querySelectorAll('aside *')).find((el) => el.textContent?.trim() === '{{conversationId}}');
+          if (!variableRow) throw new Error('inspector bottom variables missing');
+          const rowRect = variableRow.getBoundingClientRect();
+          const scrollerRect = scroller.getBoundingClientRect();
+          if (rowRect.bottom > scrollerRect.bottom + 2) throw new Error('inspector bottom content is cut off');
+        };
+        const assertNoUiErrors = () => {
+          const text = document.body?.innerText || '';
+          const errors = window.__routinesSmokeErrors || [];
+          if (text.includes('requires permission') || text.includes('Unhandled rejection') || errors.some((error) => /requires permission|Unhandled/i.test(error))) {
+            throw new Error('Routines UI surfaced runtime/permission error: ' + [...errors, text].join('\\n').slice(0, 1000));
+          }
+        };
         await new Promise((r) => setTimeout(r, 100));
-        click(byText('button', 'Add routine'));
+
+        click(byText('button', 'Add routine'), 'Add routine');
         await new Promise((r) => setTimeout(r, 100));
-        click(byText('button', 'Instruction'));
+        click(byText('button', 'Decision'), 'Decision menu item');
+        await new Promise((r) => setTimeout(r, 150));
+        input(Array.from(document.querySelectorAll('input')).find((el) => el.value === 'New decision'), 'Smoke decision routine');
+        input(Array.from(document.querySelectorAll('textarea')).at(-1), 'Return OUTCOME: smoke_branch when this smoke test asks.');
+        await waitUntil(() => bodyIncludes('Unsaved changes'), 'new decision unsaved state');
+        await assertInspectorCanScrollBottom();
+        click(byText('button', 'Add outcome'), 'Add outcome');
+        await new Promise((r) => setTimeout(r, 100));
+        input(Array.from(document.querySelectorAll('input')).find((el) => el.value === 'new_outcome'), 'smoke_branch');
+        input(Array.from(document.querySelectorAll('input')).find((el) => el.value === 'Describe what happens next'), 'Run the linked smoke routine');
+        const branchableSelect = Array.from(document.querySelectorAll('select'))
+          .filter((el) => Array.from(el.options).some((option) => option.value === 'branch') && el.value === 'continue')
+          .at(-1);
+        if (!branchableSelect) throw new Error('decision outcome branch option missing');
+        click(Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'Save'), 'Save decision');
+        await new Promise((r) => setTimeout(r, 700));
+        assertNoUiErrors();
+        if (!bodyIncludes('Smoke decision routine')) throw new Error('saved decision missing');
+        await waitUntil(() => !bodyIncludes('Unsaved changes'), 'decision saved state');
+        click(Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'Delete'), 'Delete decision');
+        await new Promise((r) => setTimeout(r, 100));
+        click(byText('button', 'Confirm'), 'Confirm delete decision');
+        await new Promise((r) => setTimeout(r, 500));
+        if (bodyIncludes('Smoke decision routine')) throw new Error('temporary decision was not deleted');
+
+        click(byText('button', 'Add routine'), 'Add routine');
+        await new Promise((r) => setTimeout(r, 100));
+        click(byText('button', 'Instruction'), 'Instruction menu item');
         await new Promise((r) => setTimeout(r, 100));
         const name = Array.from(document.querySelectorAll('input')).find((el) => el.value === 'New instruction');
         input(name, 'Smoke temporary routine');
         const instruction = Array.from(document.querySelectorAll('textarea')).at(-1);
         input(instruction, 'Smoke instruction /skill:');
         await new Promise((r) => setTimeout(r, 100));
-        click(byText('button', '/skill:autoreview'));
+        click(byText('button', '/skill:autoreview'), 'skill autocomplete option');
         await new Promise((r) => setTimeout(r, 250));
         if (!Array.from(document.querySelectorAll('textarea')).some((el) => el.value.includes('/skill:autoreview'))) throw new Error('skill autocomplete did not insert');
-        click(byText('button', 'Save'));
-        await new Promise((r) => setTimeout(r, 500));
+        click(Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'Save'), 'Save instruction');
+        await new Promise((r) => setTimeout(r, 700));
+        assertNoUiErrors();
         if (!document.body.innerText.includes('Smoke temporary routine')) throw new Error('saved instruction missing');
+        await waitUntil(() => !bodyIncludes('Unsaved changes'), 'instruction saved state');
         const block = Array.from(document.querySelectorAll('[data-routine-id]')).find((el) => el.textContent?.includes('Smoke temporary routine'));
         const target = Array.from(document.querySelectorAll('[data-routine-id]')).find((el) => el.textContent?.includes('Review code changes'));
         if (!block || !target) throw new Error('drag candidates missing');
@@ -149,12 +224,14 @@ async function main() {
         window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: targetRect.left + 10, clientY: targetRect.top + 10 }));
         window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: targetRect.left + 10, clientY: targetRect.top + 10 }));
         await new Promise((r) => setTimeout(r, 500));
-        click(Array.from(document.querySelectorAll('[data-routine-id]')).find((el) => el.textContent?.includes('Smoke temporary routine')));
+        assertNoUiErrors();
+        click(Array.from(document.querySelectorAll('[data-routine-id]')).find((el) => el.textContent?.includes('Smoke temporary routine')), 'temporary routine block');
         await new Promise((r) => setTimeout(r, 100));
-        click(byText('button', 'Delete'));
+        click(Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'Delete'), 'Delete instruction');
         await new Promise((r) => setTimeout(r, 100));
-        click(byText('button', 'Confirm'));
+        click(byText('button', 'Confirm'), 'Confirm delete instruction');
         await new Promise((r) => setTimeout(r, 500));
+        assertNoUiErrors();
         if (document.body.innerText.includes('Smoke temporary routine')) throw new Error('temporary instruction was not deleted');
         return 'ok';
       })()
@@ -169,6 +246,7 @@ async function main() {
   } finally {
     cdp?.close();
     child.kill('SIGTERM');
+    stopTestingAppForPort();
   }
 }
 
