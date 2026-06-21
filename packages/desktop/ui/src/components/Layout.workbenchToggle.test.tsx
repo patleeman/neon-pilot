@@ -8,7 +8,7 @@ import { api } from '../client/api';
 import { setExtensionCommandContext } from '../extensions/commands';
 import { SIDEBAR_WIDTH_STORAGE_KEY } from '../local/localSettings';
 import { sessionStore } from '../store';
-import { APP_LAYOUT_MODE_STORAGE_KEY } from '../ui-state/appLayoutMode';
+import { APP_LAYOUT_MODE_SESSION_STORAGE_KEY, APP_LAYOUT_MODE_STORAGE_KEY } from '../ui-state/appLayoutMode';
 import { Layout } from './Layout';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -55,6 +55,11 @@ function ConversationRouteFixture() {
   );
 }
 
+function setWorkbenchModeForCurrentSession() {
+  window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+  window.sessionStorage.setItem(APP_LAYOUT_MODE_SESSION_STORAGE_KEY, 'workbench');
+}
+
 function renderLayout(pathname = '/conversations/new') {
   return render(
     <MemoryRouter initialEntries={[pathname]}>
@@ -72,6 +77,7 @@ describe('Layout workbench toggle', () => {
   beforeEach(() => {
     installLocalStorageShim();
     window.localStorage.clear();
+    window.sessionStorage.clear();
     setViewportWidth(1600);
     document.documentElement.dataset.neonPilotDesktop = '1';
     Object.defineProperty(window, 'ResizeObserver', {
@@ -104,6 +110,7 @@ describe('Layout workbench toggle', () => {
     delete (window as { ResizeObserver?: unknown }).ResizeObserver;
     delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
     window.localStorage.clear();
+    window.sessionStorage.clear();
     sessionStore.reset?.();
   });
 
@@ -115,6 +122,15 @@ describe('Layout workbench toggle', () => {
     expect(screen.getByText('Conversation draft')).toBeTruthy();
     expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
     expect((screen.getByRole('button', { name: 'Show workbench' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('starts with the workbench closed even when the previous app session left it open', () => {
+    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+
+    renderLayout('/conversations/conv-1');
+
+    expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show workbench' })).toBeTruthy();
   });
 
   it('uses the desktop right-rail shortcut to toggle the workbench on conversation routes', () => {
@@ -157,7 +173,7 @@ describe('Layout workbench toggle', () => {
   });
 
   it('restores saved sidebar and workbench document widths on conversation workbench routes', () => {
-    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    setWorkbenchModeForCurrentSession();
     window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, '280');
     window.localStorage.setItem('pa:workbench-document-width', '640');
 
@@ -171,7 +187,7 @@ describe('Layout workbench toggle', () => {
   });
 
   it('persists dragged sidebar and workbench widths across conversation route transitions', () => {
-    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    setWorkbenchModeForCurrentSession();
 
     renderLayout('/conversations/conv-1');
 
@@ -220,7 +236,7 @@ describe('Layout workbench toggle', () => {
   });
 
   it('accepts command-only desktop shortcut events for workbench refresh', () => {
-    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    setWorkbenchModeForCurrentSession();
     const refreshListener = vi.fn();
     window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
     setExtensionCommandContext('workbench.hasActiveFile', true);
@@ -279,7 +295,7 @@ describe('Layout workbench toggle', () => {
       },
     ]);
     vi.mocked(api.extensionCommands).mockResolvedValue([]);
-    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    setWorkbenchModeForCurrentSession();
     const refreshListener = vi.fn();
     window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
     renderLayout('/conversations/conv-1?workspaceFile=%2Frepo%2FREADME.md');
@@ -296,7 +312,7 @@ describe('Layout workbench toggle', () => {
   });
 
   it('accepts command-only desktop shortcut events for workbench diff toggle', () => {
-    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    setWorkbenchModeForCurrentSession();
     const diffListener = vi.fn();
     window.addEventListener('pa:workbench-toggle-diff', diffListener);
     setExtensionCommandContext('workbench.canToggleDiff', true);
@@ -380,7 +396,7 @@ describe('Layout workbench toggle', () => {
   });
 
   it('opens a side chat after reservation without waiting for live-session creation', async () => {
-    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    setWorkbenchModeForCurrentSession();
     const reserveConversation = vi.spyOn(api, 'reserveConversation').mockResolvedValue({
       id: 'side-chat-1',
       sessionFile: '/tmp/side-chat-1.jsonl',
@@ -420,7 +436,7 @@ describe('Layout workbench toggle', () => {
   });
 
   it('uses the conversation title for side chat tabs when metadata is available', async () => {
-    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    setWorkbenchModeForCurrentSession();
     sessionStore.upsert({
       id: 'side-chat-1',
       file: '/tmp/side-chat-1.jsonl',
@@ -448,7 +464,7 @@ describe('Layout workbench toggle', () => {
   });
 
   it('keeps the workbench new tab button outside the scrollable tab lane', () => {
-    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    setWorkbenchModeForCurrentSession();
 
     renderLayout('/conversations/conv-1');
 
@@ -460,5 +476,4 @@ describe('Layout workbench toggle', () => {
     expect(newTabButton.closest('.overflow-x-auto')).toBeNull();
     expect(document.querySelector('.ui-workbench-tab')?.parentElement?.className).toContain('overflow-x-auto');
   });
-
 });
