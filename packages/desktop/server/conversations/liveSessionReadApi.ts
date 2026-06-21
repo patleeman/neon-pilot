@@ -3,7 +3,7 @@ import type { AgentSession } from '@earendil-works/pi-coding-agent';
 import { normalizeModelContextWindow } from '../models/modelContextWindows.js';
 import type { LiveContextUsage } from './liveSessionEvents.js';
 import { resolveLiveSessionFile } from './liveSessionPersistence.js';
-import { resolveTranscriptTailRecoveryPlan } from './liveSessionRecovery.js';
+import { computeCanonicalLiveSessionRunning } from './liveSessionRunningState.js';
 import { hasQueuedOrActiveStaleTurn, type LiveSessionStaleTurnState } from './liveSessionStaleTurns.js';
 import { readLiveSessionContextUsage } from './liveSessionStateBroadcasts.js';
 
@@ -26,32 +26,8 @@ export interface LiveSessionReadHost extends LiveSessionStaleTurnState {
  *  The lastDurableRunState guard handles the race where agent_end fires before
  *  session.isStreaming is cleared by the Pi runtime. When lastDurableRunState
  *  is 'waiting' and there's no queued stale turn state, the session is truly idle. */
-function isTerminalDurableRunState(state: string | undefined): boolean {
-  return state === 'waiting' || state === 'interrupted' || state === 'completed' || state === 'failed' || state === 'cancelled';
-}
-
 export function computeLiveSessionRunning(entry: LiveSessionReadHost): boolean {
-  if (entry.isCompacting) {
-    return true;
-  }
-  if (isTerminalDurableRunState(entry.lastDurableRunState)) {
-    return false;
-  }
-  if (entry.lastDurableRunState === 'running' || entry.lastDurableRunState === 'recovering') {
-    return true;
-  }
-  if (!entry.session.isStreaming) {
-    return false;
-  }
-  const sessionManager = entry.session.sessionManager;
-  if (
-    sessionManager &&
-    typeof sessionManager.getBranch === 'function' &&
-    resolveTranscriptTailRecoveryPlan(sessionManager)?.reason === 'dangling_tool_call'
-  ) {
-    return false;
-  }
-  return true;
+  return computeCanonicalLiveSessionRunning(entry);
 }
 
 export function listLiveSessions<TEntry extends LiveSessionReadHost>(
