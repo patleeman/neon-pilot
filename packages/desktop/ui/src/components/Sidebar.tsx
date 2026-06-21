@@ -1749,7 +1749,7 @@ const SessionRow = memo(function SessionRow({
 
   return (
     <OpenConversationRow
-      session={isRunning ? { ...session, isRunning: true } : session}
+      session={session.isRunning === isRunning ? session : { ...session, isRunning }}
       active={active}
       pinned={pinned}
       locked={locked}

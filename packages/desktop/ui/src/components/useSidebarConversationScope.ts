@@ -5,6 +5,7 @@ import { DRAFT_CONVERSATION_ROUTE } from '../conversation/draftConversation';
 import { isPendingConversationShellId } from '../conversation/pendingConversationShell';
 import { normalizeWorkspacePaths } from '../local/savedWorkspacePaths';
 import type { SessionMeta } from '../shared/types';
+import { useSessionPresence } from '../store';
 import { getSessionWorkspaceCwd } from './sidebarThreadModel';
 
 type UseSidebarConversationScopeInput = {
@@ -32,11 +33,13 @@ export function useSidebarConversationScope({
     const conversationId = readConversationIdFromPathname(locationPathname);
     return isPendingConversationShellId(conversationId) ? null : conversationId;
   }, [locationPathname]);
+  const activePresence = useSessionPresence(activeConversationId);
 
   const activeSession = useMemo(() => {
     if (!activeConversationId) return null;
     const session = (sessions ?? []).find((candidate) => candidate.id === activeConversationId);
-    if (session) return session;
+    const isRunning = activePresence === 'streaming' || activePresence === 'automation';
+    if (session) return session.isRunning === isRunning ? session : { ...session, isRunning };
 
     return {
       id: activeConversationId,
@@ -47,10 +50,10 @@ export function useSidebarConversationScope({
       model: '',
       title: liveTitles.get(activeConversationId) ?? 'Connecting…',
       messageCount: 0,
-      isRunning: false,
+      isRunning,
       isLive: true,
     } satisfies SessionMeta;
-  }, [activeConversationId, draftCwd, liveTitles, sessions]);
+  }, [activeConversationId, activePresence, liveTitles, sessions]);
 
   const visibleConversationTabs = useMemo(() => {
     if (!activeSession) return tabs;

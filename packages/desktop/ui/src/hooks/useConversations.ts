@@ -61,6 +61,7 @@ function applyLayoutState(
 }
 
 function buildPlaceholderSessionMeta(id: string, title?: string): SessionMeta {
+  const presence = presenceStore.get(id);
   return {
     id,
     file: '',
@@ -70,7 +71,7 @@ function buildPlaceholderSessionMeta(id: string, title?: string): SessionMeta {
     model: '',
     title: title ?? 'Connecting…',
     messageCount: 0,
-    isRunning: presenceStore.get(id) === 'streaming',
+    isRunning: presence === 'streaming' || presence === 'automation',
   };
 }
 
@@ -328,7 +329,8 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
         const liveTitle = normalizeConversationTitle(liveTitles.get(session.id));
         const sessionTitle = normalizeConversationTitle(session.title) ?? NEW_CONVERSATION_TITLE;
         const title = liveTitle ?? sessionTitle;
-        const isRunning = presenceStore.get(session.id) === 'streaming';
+        const presence = presenceStore.get(session.id);
+        const isRunning = presence === 'streaming' || presence === 'automation';
 
         return title === session.title && isRunning === session.isRunning ? session : { ...session, title, isRunning };
       }),
