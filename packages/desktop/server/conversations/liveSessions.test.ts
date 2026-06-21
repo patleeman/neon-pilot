@@ -3773,7 +3773,13 @@ describe('submitPromptSession', () => {
     unsubscribe();
 
     expect(submitted.acceptedAs).toBe('started');
-    expect(events).toContainEqual({ type: 'session_meta_changed', sessionId: 'session-submit-started', running: true });
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: 'conversation_state_changed',
+        conversation: expect.objectContaining({ id: 'session-submit-started', running: true }),
+      }),
+    );
+    expect(events).toContainEqual({ type: 'session_meta_changed', sessionId: 'session-submit-started' });
     void submitted.completion.then(() => {
       completionResolved = true;
     });
@@ -3851,7 +3857,12 @@ describe('submitPromptSession', () => {
     unsubscribe();
 
     expect(submitted.acceptedAs).toBe('queued');
-    expect(events).not.toContainEqual({ type: 'session_meta_changed', sessionId: 'session-submit-queued', running: true });
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        type: 'conversation_state_changed',
+        conversation: expect.objectContaining({ id: 'session-submit-queued', running: true }),
+      }),
+    );
     await expect(submitted.completion).resolves.toBeUndefined();
     expect(followUp).toHaveBeenCalledWith('keep going');
   });

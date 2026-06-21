@@ -35,7 +35,14 @@ import {
   unpinConversationTab,
 } from '../session/sessionTabs';
 import type { SessionMeta } from '../shared/types';
-import { conversationRuntimeStore, sessionStore, useAllSessions, useAllTasks, usePresenceVersion, useSessionsReady } from '../store';
+import {
+  conversationRuntimeStore,
+  sessionStore,
+  useAllSessions,
+  useAllTasks,
+  useConversationActivityStatusVersion,
+  useSessionsReady,
+} from '../store';
 
 const CONVERSATION_LAYOUT_BOOTSTRAP_RETRY_DELAYS_MS = [500, 1_000, 2_000, 4_000, 8_000];
 
@@ -122,7 +129,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   );
   const { titles: liveTitles } = useContext(LiveTitlesContext);
   const sessions = useAllSessions();
-  const presenceVersion = usePresenceVersion();
+  const conversationActivityStatusVersion = useConversationActivityStatusVersion();
   const sessionsReady = useSessionsReady();
   const tasks = useAllTasks();
   const { status: sseStatus } = useSseConnection();
@@ -334,7 +341,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
 
         return title === session.title && isRunning === session.isRunning ? session : { ...session, title, isRunning };
       }),
-    [liveTitles, presenceVersion, titledSessionSource],
+    [liveTitles, conversationActivityStatusVersion, titledSessionSource],
   );
   const sessionsById = useMemo(
     () => new Map(withTitles.map((session) => [session.id, session] satisfies [string, SessionMeta])),
@@ -393,7 +400,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
           normalizeConversationTitle(liveTitles.get(id)) ?? automationThreadTitleBySessionId.get(id) ?? 'Connecting…',
         );
       }),
-    [automationThreadTitleBySessionId, liveTitles, pinnedIds, presenceVersion, sessionsById],
+    [automationThreadTitleBySessionId, liveTitles, pinnedIds, conversationActivityStatusVersion, sessionsById],
   );
   const tabs = useMemo(
     () =>
@@ -408,7 +415,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
           normalizeConversationTitle(liveTitles.get(id)) ?? automationThreadTitleBySessionId.get(id) ?? 'Connecting…',
         );
       }),
-    [automationThreadTitleBySessionId, liveTitles, openIds, presenceVersion, sessionsById],
+    [automationThreadTitleBySessionId, liveTitles, openIds, conversationActivityStatusVersion, sessionsById],
   );
   const archivedSessions = useMemo(
     () =>

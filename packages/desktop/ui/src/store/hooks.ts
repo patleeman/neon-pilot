@@ -8,7 +8,15 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 import type { ConversationRuntimeState, DurableRunRecord, ExecutionRecord, ScheduledTaskSummary, SessionMeta } from '../shared/types';
 import type { EntityStore } from './createEntityStore';
-import { conversationRuntimeStore, executionStore, presenceStore, type RunningState, runStore, sessionStore, taskStore } from './stores';
+import {
+  type ConversationActivityStatus,
+  conversationActivityStatusStore,
+  conversationRuntimeStore,
+  executionStore,
+  runStore,
+  sessionStore,
+  taskStore,
+} from './stores';
 
 // ── Internal helper ──────────────────────────────────────────────────────────
 
@@ -39,18 +47,18 @@ export function useSession(id: string | null | undefined): SessionMeta | undefin
   return useEntityValue(sessionStore, id);
 }
 
-export function useSessionPresence(id: string | null | undefined): RunningState {
+export function useConversationActivityStatus(id: string | null | undefined): ConversationActivityStatus {
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
       if (!id) return () => {};
-      return presenceStore.subscribe(id, onStoreChange);
+      return conversationActivityStatusStore.subscribe(id, onStoreChange);
     },
     [id],
   );
 
-  const getSnapshot = useCallback((): RunningState => {
+  const getSnapshot = useCallback((): ConversationActivityStatus => {
     if (!id) return 'idle';
-    return presenceStore.get(id);
+    return conversationActivityStatusStore.get(id);
   }, [id]);
 
   return useDerivedValue(subscribe, getSnapshot);
@@ -73,9 +81,9 @@ export function useConversationRuntime(id: string | null | undefined): Conversat
   return useDerivedValue(subscribe, getSnapshot);
 }
 
-export function usePresenceVersion(): number {
-  const subscribe = useCallback((onStoreChange: () => void) => presenceStore.subscribeAll(onStoreChange), []);
-  const getSnapshot = useCallback(() => presenceStore.getVersion(), []);
+export function useConversationActivityStatusVersion(): number {
+  const subscribe = useCallback((onStoreChange: () => void) => conversationActivityStatusStore.subscribeAll(onStoreChange), []);
+  const getSnapshot = useCallback(() => conversationActivityStatusStore.getVersion(), []);
   return useDerivedValue(subscribe, getSnapshot);
 }
 

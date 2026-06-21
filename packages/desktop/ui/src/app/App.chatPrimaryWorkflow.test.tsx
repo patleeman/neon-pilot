@@ -248,7 +248,10 @@ describe('App chat primary live workflow', () => {
       expect(screen.getByLabelText('Background work running')).toBeTruthy();
     });
 
-    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-live', running: true });
+    await emitDesktopEvent({
+      type: 'conversation_state_changed',
+      conversation: { id: 'conv-live', running: true, revision: 1, updatedAt: '2026-04-01T00:00:00.000Z' },
+    });
 
     await waitFor(() => {
       expect(screen.getByLabelText('Running conversation')).toBeTruthy();

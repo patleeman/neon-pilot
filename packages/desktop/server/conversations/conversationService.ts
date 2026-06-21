@@ -316,7 +316,7 @@ export function publishConversationSessionMetaChanged(...conversationIds: Array<
     if (running !== undefined) {
       publishConversationRuntimeState({ conversationId, running });
     }
-    publishAppEvent({ type: 'session_meta_changed', sessionId: conversationId, ...(running !== undefined ? { running } : {}) });
+    publishAppEvent({ type: 'session_meta_changed', sessionId: conversationId });
   }
 }
 

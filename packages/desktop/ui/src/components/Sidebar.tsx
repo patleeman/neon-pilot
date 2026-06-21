@@ -105,9 +105,9 @@ import {
   useAllExecutions,
   useAllSessions,
   useAllTasks,
+  useConversationActivityStatus,
   useConversationRuntime,
   useSession,
-  useSessionPresence,
   useSessionsReady,
 } from '../store';
 import { ConversationStatusText } from './ConversationStatusText';
@@ -1748,14 +1748,14 @@ const SessionRow = memo(function SessionRow({
   // Use store as primary source; fall back to initialSession from parent (AppDataContext)
   // during initial render before SSE has seeded the store.
   const storeSession = useSession(sessionId);
-  const presence = useSessionPresence(sessionId);
+  const activityStatus = useConversationActivityStatus(sessionId);
   const conversationRuntime = useConversationRuntime(sessionId);
   const session = storeSession ?? initialSession;
 
   if (!session) return null;
 
   const isRunning = conversationRuntime?.running ?? session.isRunning ?? false;
-  const pending = (hasPendingRuns ?? false) || presence === 'hasRuns' || presence === 'automation';
+  const pending = (hasPendingRuns ?? false) || activityStatus === 'hasRuns' || activityStatus === 'automation';
 
   return (
     <OpenConversationRow
@@ -1766,7 +1766,7 @@ const SessionRow = memo(function SessionRow({
       canDrag={canDrag}
       isDragging={isDragging}
       dropPosition={dropPosition}
-      isAutomation={presence === 'automation'}
+      isAutomation={activityStatus === 'automation'}
       automationTitle={automationTitle}
       hasPendingRuns={pending}
       backgroundWorkKind={backgroundWorkKind}

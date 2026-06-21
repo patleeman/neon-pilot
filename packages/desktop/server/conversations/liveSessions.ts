@@ -247,19 +247,14 @@ function createParallelPromptJobId(): string {
 
 function publishSessionMetaChanged(sessionId: string): void {
   const entry = registry.get(sessionId);
-  const package_: { type: 'session_meta_changed'; sessionId: string; running?: boolean } = {
-    type: 'session_meta_changed',
-    sessionId,
-  };
   if (entry) {
     const running = computeLiveSessionRunning(entry);
     if (running !== entry.running) {
       entry.running = running;
     }
-    package_.running = running;
     publishConversationRuntimeState({ conversationId: sessionId, running });
   }
-  publishAppEvent(package_);
+  publishAppEvent({ type: 'session_meta_changed', sessionId });
 }
 
 function publishOptimisticPromptRunningState(entry: LiveEntry): void {
@@ -268,7 +263,7 @@ function publishOptimisticPromptRunningState(entry: LiveEntry): void {
   }
   entry.running = true;
   publishConversationRuntimeState({ conversationId: entry.sessionId, running: true });
-  publishAppEvent({ type: 'session_meta_changed', sessionId: entry.sessionId, running: true });
+  publishAppEvent({ type: 'session_meta_changed', sessionId: entry.sessionId });
 }
 
 function syncPromptRunningState(entry: LiveEntry): void {

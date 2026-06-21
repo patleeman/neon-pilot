@@ -2,7 +2,7 @@
  * Data store — normalized entity stores with per-ID subscriptions.
  *
  * Usage:
- *   import { useSession, useSessionPresence } from '../store';
+ *   import { useSession, useConversationActivityStatus } from '../store';
  *
  * The stores are wired to the SSE event system in App.tsx. Components
  * subscribe to individual entities and only re-render when their ID changes.
@@ -14,11 +14,19 @@ export {
   useAllRuns,
   useAllSessions,
   useAllTasks,
+  useConversationActivityStatus,
+  useConversationActivityStatusVersion,
   useConversationRuntime,
-  usePresenceVersion,
   useSession,
-  useSessionPresence,
   useSessionsReady,
 } from './hooks';
-export type { RunningState } from './stores';
-export { conversationRuntimeStore, executionStore, presenceStore, runStore, sessionStore, taskStore, titleStore } from './stores';
+export type { ConversationActivityStatus } from './stores';
+export {
+  conversationActivityStatusStore,
+  conversationRuntimeStore,
+  executionStore,
+  runStore,
+  sessionStore,
+  taskStore,
+  titleStore,
+} from './stores';

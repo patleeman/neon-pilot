@@ -855,7 +855,7 @@ export type AppEvent =
   | { type: 'invalidate'; topics: AppEventTopic[] }
   | { type: 'live_title'; sessionId: string; title: string }
   | { type: 'conversation_state_changed'; conversation: ConversationRuntimeState }
-  | { type: 'session_meta_changed'; sessionId: string; running?: boolean }
+  | { type: 'session_meta_changed'; sessionId: string }
   | { type: 'session_file_changed'; sessionId: string }
   | {
       type: 'conversation_workspace_changed';
@@ -881,7 +881,7 @@ export type DesktopAppEvent =
   | { type: 'conversation_state_changed'; conversation: ConversationRuntimeState }
   | { type: 'notification'; extensionId: string; message: string; severity?: string; details?: string }
   | { type: 'extension_command'; command: string; args?: unknown; sourceExtensionId?: string; requestId?: string }
-  | { type: 'session_meta_changed'; sessionId: string; running?: boolean }
+  | { type: 'session_meta_changed'; sessionId: string }
   | { type: 'session_file_changed'; sessionId: string }
   | {
       type: 'conversation_workspace_changed';

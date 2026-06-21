@@ -15,26 +15,26 @@ export const taskStore: EntityStore<ScheduledTaskSummary> = createEntityStore<Sc
 export const runStore: EntityStore<DurableRunRecord> = createEntityStore<DurableRunRecord>(undefined, (r) => r.runId);
 export const executionStore: EntityStore<ExecutionRecord> = createEntityStore<ExecutionRecord>();
 
-// ── Conversation runtime and running state ───────────────────────────────────
+// ── Conversation runtime and derived activity status ─────────────────────────
 // Backend-published conversation runtime records are the authority for durable
 // runtime facts such as whether a conversation is running. The derived
-// RunningState folds that backend runtime together with other backend snapshots
-// for task/execution indicators.
+// ConversationActivityStatus folds that backend runtime together with other
+// backend snapshots for task/execution indicators.
 
-export type RunningState = 'idle' | 'streaming' | 'automation' | 'hasRuns' | 'stale';
+export type ConversationActivityStatus = 'idle' | 'streaming' | 'automation' | 'hasRuns' | 'stale';
 
-let presenceStates = new Map<string, RunningState>();
+let conversationActivityStatusStates = new Map<string, ConversationActivityStatus>();
 let conversationRuntimeStates = new Map<string, ConversationRuntimeState>();
-let presenceVersion = 0;
+let conversationActivityStatusVersion = 0;
 const conversationRuntimeListeners = new Map<string, Set<() => void>>();
-const presenceListeners = new Map<string, Set<() => void>>();
-const presenceAllListeners = new Set<() => void>();
+const conversationActivityStatusListeners = new Map<string, Set<() => void>>();
+const conversationActivityStatusAllListeners = new Set<() => void>();
 
 function isActiveExecutionStatus(status: string | undefined): boolean {
   return status === 'pending' || status === 'queued' || status === 'waiting' || status === 'running' || status === 'recovering';
 }
 
-function computeRunningState(sessionId: string): RunningState {
+function computeConversationActivityStatus(sessionId: string): ConversationActivityStatus {
   const backendRuntime = conversationRuntimeStates.get(sessionId);
   if (backendRuntime?.running === true) return 'streaming';
 
@@ -54,38 +54,38 @@ function computeRunningState(sessionId: string): RunningState {
   return 'idle';
 }
 
-function rederivePresenceForAll(): void {
+function rederiveConversationActivityStatusForAll(): void {
   const affectedIds = new Set<string>();
-  for (const id of presenceStates.keys()) {
-    const next = computeRunningState(id);
-    const current = presenceStates.get(id);
+  for (const id of conversationActivityStatusStates.keys()) {
+    const next = computeConversationActivityStatus(id);
+    const current = conversationActivityStatusStates.get(id);
     if (current !== next) {
-      presenceStates.set(id, next);
+      conversationActivityStatusStates.set(id, next);
       affectedIds.add(id);
     }
   }
   if (affectedIds.size === 0) return;
-  presenceVersion += 1;
+  conversationActivityStatusVersion += 1;
   for (const id of affectedIds) {
-    presenceListeners.get(id)?.forEach((cb) => cb());
+    conversationActivityStatusListeners.get(id)?.forEach((cb) => cb());
   }
-  presenceAllListeners.forEach((cb) => cb());
+  conversationActivityStatusAllListeners.forEach((cb) => cb());
 }
 
-function rederivePresenceForId(sessionId: string): void {
-  const next = computeRunningState(sessionId);
-  const current = presenceStates.get(sessionId);
+function rederiveConversationActivityStatusForId(sessionId: string): void {
+  const next = computeConversationActivityStatus(sessionId);
+  const current = conversationActivityStatusStates.get(sessionId);
   if (current === next) return;
-  presenceStates = new Map(presenceStates).set(sessionId, next);
-  presenceVersion += 1;
-  presenceListeners.get(sessionId)?.forEach((cb) => cb());
-  presenceAllListeners.forEach((cb) => cb());
+  conversationActivityStatusStates = new Map(conversationActivityStatusStates).set(sessionId, next);
+  conversationActivityStatusVersion += 1;
+  conversationActivityStatusListeners.get(sessionId)?.forEach((cb) => cb());
+  conversationActivityStatusAllListeners.forEach((cb) => cb());
 }
 
-// Wire source-store changes to presence re-derivation
-sessionStore.subscribeAll(() => rederivePresenceForAll());
-taskStore.subscribeAll(() => rederivePresenceForAll());
-executionStore.subscribeAll(() => rederivePresenceForAll());
+// Wire source-store changes to derived activity-status re-computation.
+sessionStore.subscribeAll(() => rederiveConversationActivityStatusForAll());
+taskStore.subscribeAll(() => rederiveConversationActivityStatusForAll());
+executionStore.subscribeAll(() => rederiveConversationActivityStatusForAll());
 
 export const conversationRuntimeStore = {
   subscribe(sessionId: string, callback: () => void): () => void {
@@ -111,7 +111,7 @@ export const conversationRuntimeStore = {
     }
     conversationRuntimeStates = new Map(conversationRuntimeStates).set(sessionId, { ...runtime, id: sessionId });
     conversationRuntimeListeners.get(sessionId)?.forEach((cb) => cb());
-    rederivePresenceForId(sessionId);
+    rederiveConversationActivityStatusForId(sessionId);
   },
 
   clear(sessionId: string): void {
@@ -119,7 +119,7 @@ export const conversationRuntimeStore = {
     conversationRuntimeStates = new Map(conversationRuntimeStates);
     conversationRuntimeStates.delete(sessionId);
     conversationRuntimeListeners.get(sessionId)?.forEach((cb) => cb());
-    rederivePresenceForId(sessionId);
+    rederiveConversationActivityStatusForId(sessionId);
   },
 
   get(sessionId: string): ConversationRuntimeState | undefined {
@@ -132,44 +132,50 @@ export const conversationRuntimeStore = {
   },
 };
 
-export const presenceStore = {
+export const conversationActivityStatusStore = {
   subscribe(sessionId: string, callback: () => void): () => void {
-    // Ensure the session is tracked so rederivePresenceForAll() picks it up
-    if (!presenceStates.has(sessionId)) {
-      presenceStates = new Map(presenceStates).set(sessionId, computeRunningState(sessionId));
+    // Ensure the session is tracked so rederiveConversationActivityStatusForAll() picks it up
+    if (!conversationActivityStatusStates.has(sessionId)) {
+      conversationActivityStatusStates = new Map(conversationActivityStatusStates).set(
+        sessionId,
+        computeConversationActivityStatus(sessionId),
+      );
     }
-    if (!presenceListeners.has(sessionId)) presenceListeners.set(sessionId, new Set());
-    presenceListeners.get(sessionId)!.add(callback);
+    if (!conversationActivityStatusListeners.has(sessionId)) conversationActivityStatusListeners.set(sessionId, new Set());
+    conversationActivityStatusListeners.get(sessionId)!.add(callback);
     return () => {
-      presenceListeners.get(sessionId)?.delete(callback);
+      conversationActivityStatusListeners.get(sessionId)?.delete(callback);
     };
   },
 
   subscribeAll(callback: () => void): () => void {
-    presenceAllListeners.add(callback);
+    conversationActivityStatusAllListeners.add(callback);
     return () => {
-      presenceAllListeners.delete(callback);
+      conversationActivityStatusAllListeners.delete(callback);
     };
   },
 
-  get(sessionId: string): RunningState {
-    if (!presenceStates.has(sessionId)) {
-      presenceStates = new Map(presenceStates).set(sessionId, computeRunningState(sessionId));
+  get(sessionId: string): ConversationActivityStatus {
+    if (!conversationActivityStatusStates.has(sessionId)) {
+      conversationActivityStatusStates = new Map(conversationActivityStatusStates).set(
+        sessionId,
+        computeConversationActivityStatus(sessionId),
+      );
     }
-    return presenceStates.get(sessionId) ?? 'idle';
+    return conversationActivityStatusStates.get(sessionId) ?? 'idle';
   },
 
   getVersion(): number {
-    return presenceVersion;
+    return conversationActivityStatusVersion;
   },
 
-  /** Reset all cached presence (for test isolation). */
+  /** Reset cached activity status (for test isolation). */
   reset(): void {
-    presenceStates = new Map();
+    conversationActivityStatusStates = new Map();
     conversationRuntimeStore.reset();
-    presenceVersion = 0;
-    presenceListeners.clear();
-    presenceAllListeners.clear();
+    conversationActivityStatusVersion = 0;
+    conversationActivityStatusListeners.clear();
+    conversationActivityStatusAllListeners.clear();
   },
 };
 
@@ -211,6 +217,6 @@ export function resetAllStores(): void {
   taskStore.reset?.();
   runStore.reset?.();
   executionStore.reset?.();
-  presenceStore.reset();
+  conversationActivityStatusStore.reset();
   titleStore.reset();
 }

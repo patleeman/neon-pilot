@@ -31,7 +31,7 @@ vi.mock('../desktop/desktopEventSource', () => ({
 }));
 
 import { api } from '../client/api.js';
-import { presenceStore, sessionStore } from '../store';
+import { conversationActivityStatusStore, sessionStore } from '../store';
 import { primeConversationBootstrapCache } from './useConversationBootstrap.js';
 import {
   applyDesktopConversationStreamEvent,
@@ -699,7 +699,7 @@ describe('useDesktopConversationState', () => {
     });
 
     expect(latestState?.state?.stream.isStreaming).toBe(true);
-    expect(presenceStore.get('conv-sidebar-running')).toBe('idle');
+    expect(conversationActivityStatusStore.get('conv-sidebar-running')).toBe('idle');
     expect(sessionStore.get('conv-sidebar-running')?.isRunning).toBe(false);
   });
 

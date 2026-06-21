@@ -73,7 +73,7 @@ export function publishRunningChange(entry: LiveEntry): void {
   if (next === entry.running) return;
   entry.running = next;
   publishConversationRuntimeState({ conversationId: entry.sessionId, running: next });
-  publishAppEvent({ type: 'session_meta_changed', sessionId: entry.sessionId, running: next });
+  publishAppEvent({ type: 'session_meta_changed', sessionId: entry.sessionId });
 }
 
 export function broadcastTitle(

@@ -727,7 +727,7 @@ describe('conversation live state helpers', () => {
         isLiveSession: true,
         hasVisibleSessionDetail: false,
       }),
-    ).toBe('Summarizing 2 related threads…');
+    ).toBe('Summarizing 2 related conversations…');
 
     expect(
       resolveDisplayedConversationPendingStatusLabel({

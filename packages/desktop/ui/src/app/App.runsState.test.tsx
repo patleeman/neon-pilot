@@ -38,7 +38,7 @@ vi.mock('../session/sessionSnapshot', () => ({
 
 vi.mock('../components/Layout', async () => {
   const { useAppEvents } = await import('./contexts');
-  const { useAllSessions, useAllExecutions, useAllTasks, useSessionPresence } = await import('../store');
+  const { useAllSessions, useAllExecutions, useAllTasks, useConversationActivityStatus } = await import('../store');
   const AppDataOnlyProbe = React.memo(function AppDataOnlyProbe() {
     const sessions = useAllSessions();
     const globalWithProbe = globalThis as typeof globalThis & { __APP_DATA_ONLY_RENDER_COUNT__?: number };
@@ -51,10 +51,10 @@ vi.mock('../components/Layout', async () => {
       const executions = useAllExecutions();
       const tasks = useAllTasks();
       const { versions } = useAppEvents();
-      const presence = useSessionPresence('conv-1');
+      const activityStatus = useConversationActivityStatus('conv-1');
       return (
         <main>
-          <span>{presence === 'streaming' ? 'conversation running' : 'conversation idle'}</span>
+          <span>{activityStatus === 'streaming' ? 'conversation running' : 'conversation idle'}</span>
           <span>executions version {versions.executions}</span>
           <span>runs version {versions.runs}</span>
           <span>tasks version {versions.tasks}</span>
@@ -358,12 +358,12 @@ describe('App execution state integration', () => {
       type: 'sessions',
       sessions: [{ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' }],
     });
-    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
+    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1' });
     await act(async () => {
       vi.advanceTimersByTime(500);
       await Promise.resolve();
     });
-    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: false });
+    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1' });
     await act(async () => {
       vi.advanceTimersByTime(749);
       await Promise.resolve();

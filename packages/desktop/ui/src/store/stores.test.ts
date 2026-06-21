@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { ExecutionRecord, ScheduledTaskSummary } from '../shared/types';
-import { conversationRuntimeStore, executionStore, presenceStore, resetAllStores, sessionStore, taskStore } from './stores';
+import {
+  conversationActivityStatusStore,
+  conversationRuntimeStore,
+  executionStore,
+  resetAllStores,
+  sessionStore,
+  taskStore,
+} from './stores';
 
 function session(id: string, isRunning = false) {
   return {
@@ -27,7 +34,7 @@ function execution(id: string, conversationId: string, status: string): Executio
   };
 }
 
-describe('presenceStore', () => {
+describe('conversationActivityStatusStore', () => {
   afterEach(() => {
     resetAllStores();
   });
@@ -36,15 +43,15 @@ describe('presenceStore', () => {
     sessionStore.replaceAll([session('conv-1'), session('conv-2')]);
     executionStore.replaceAll([execution('run-1', 'conv-1', 'running')]);
 
-    expect(presenceStore.get('conv-1')).toBe('hasRuns');
-    expect(presenceStore.get('conv-2')).toBe('idle');
+    expect(conversationActivityStatusStore.get('conv-1')).toBe('hasRuns');
+    expect(conversationActivityStatusStore.get('conv-2')).toBe('idle');
   });
 
   it.each(['pending', 'queued', 'waiting', 'running', 'recovering'])('marks %s executions as pending background work', (status) => {
     sessionStore.replaceAll([session('conv-1')]);
     executionStore.replaceAll([execution('run-1', 'conv-1', status)]);
 
-    expect(presenceStore.get('conv-1')).toBe('hasRuns');
+    expect(conversationActivityStatusStore.get('conv-1')).toBe('hasRuns');
   });
 
   it.each(['completed', 'failed', 'cancelled', 'interrupted'])(
@@ -53,7 +60,7 @@ describe('presenceStore', () => {
       sessionStore.replaceAll([session('conv-1')]);
       executionStore.replaceAll([execution('run-1', 'conv-1', status)]);
 
-      expect(presenceStore.get('conv-1')).toBe('idle');
+      expect(conversationActivityStatusStore.get('conv-1')).toBe('idle');
     },
   );
 
@@ -71,21 +78,21 @@ describe('presenceStore', () => {
     };
     taskStore.replaceAll([task]);
 
-    expect(presenceStore.get('conv-1')).toBe('idle');
-    expect(presenceStore.get('conv-2')).toBe('automation');
+    expect(conversationActivityStatusStore.get('conv-1')).toBe('idle');
+    expect(conversationActivityStatusStore.get('conv-2')).toBe('automation');
   });
 
   it('lets backend running state override stale session snapshots', () => {
     sessionStore.replaceAll([session('conv-1', false)]);
 
     conversationRuntimeStore.apply({ id: 'conv-1', running: true, revision: 1, updatedAt: '2026-01-01T00:00:00.000Z' });
-    expect(presenceStore.get('conv-1')).toBe('streaming');
+    expect(conversationActivityStatusStore.get('conv-1')).toBe('streaming');
 
     sessionStore.replaceAll([session('conv-1', false)]);
-    expect(presenceStore.get('conv-1')).toBe('streaming');
+    expect(conversationActivityStatusStore.get('conv-1')).toBe('streaming');
 
     conversationRuntimeStore.apply({ id: 'conv-1', running: false, revision: 2, updatedAt: '2026-01-01T00:00:01.000Z' });
-    expect(presenceStore.get('conv-1')).toBe('idle');
+    expect(conversationActivityStatusStore.get('conv-1')).toBe('idle');
   });
 
   it('ignores stale backend running revisions', () => {
@@ -94,7 +101,7 @@ describe('presenceStore', () => {
     conversationRuntimeStore.apply({ id: 'conv-1', running: true, revision: 2, updatedAt: '2026-01-01T00:00:02.000Z' });
     conversationRuntimeStore.apply({ id: 'conv-1', running: false, revision: 1, updatedAt: '2026-01-01T00:00:01.000Z' });
 
-    expect(presenceStore.get('conv-1')).toBe('streaming');
+    expect(conversationActivityStatusStore.get('conv-1')).toBe('streaming');
   });
 
   it('notifies conversation runtime subscribers when backend runtime changes', () => {
