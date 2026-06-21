@@ -14,8 +14,8 @@ import { CHAT_VIEW_RENDERING_PROFILE, type ChatViewPerformanceMode, WindowedChat
 import { ImageInspectModal, type InspectableImage } from './ImageMessageBlocks.js';
 import {
   INLINE_TRACE_RUN_TOGGLE_FIRST_COMMAND_EVENT,
-  registerInlineTraceRunToggleCapability,
   type InlineTraceRunCommandDetail,
+  registerInlineTraceRunToggleCapability,
 } from './inlineTraceRunCommands.js';
 import { buildInlineRunExpansionKey } from './linkedRunPolling.js';
 import { collectTraceClusterLinkedRuns } from './linkedRuns.js';
@@ -362,7 +362,7 @@ export const ChatView = memo(function ChatView({
   // while there's already an error in the transcript.
   const showStreamingIndicator =
     !!streamingStatusLabel &&
-    lastBlock?.type !== 'error' &&
+    (isCompacting || lastBlock?.type !== 'error') &&
     (isCompacting || Boolean(pendingStatusLabel) || !lastBlock || lastBlock.type === 'user');
   // Avoid CSS content-visibility for transcript blocks. In Electron/Chromium it
   // can decide a visible trace cluster is skippable, leaving only the reserved

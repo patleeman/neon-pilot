@@ -159,6 +159,18 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('Compacting context…');
   });
 
+  it('renders the compaction status indicator over a context overflow error tail', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        messages: [{ type: 'error', ts: '2026-03-11T18:00:00.000Z', message: 'context_length_exceeded' }],
+        isCompacting: true,
+        isStreaming: false,
+      }),
+    );
+
+    expect(html).toContain('Compacting context…');
+  });
+
   it('auto-opens the internal-work cluster while live or when a running step remains', () => {
     const liveHtml = renderToStaticMarkup(
       createElement(ChatView, {
