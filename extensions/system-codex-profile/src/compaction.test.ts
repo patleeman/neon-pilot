@@ -643,6 +643,78 @@ describe('openai native compaction extension', () => {
     });
   });
 
+  it('runs Codex native compaction from the model shape even when lifecycle ctx has no modelProfile', async () => {
+    const harness = createPiHarness();
+    openaiNativeCompactionExtension(harness.pi as never);
+
+    const beforeCompact =
+      harness.getHandler<(event: Record<string, unknown>, ctx: Record<string, unknown>) => Promise<unknown>>('session_before_compact');
+
+    compactMock.mockResolvedValue({
+      summary: 'Portable summary',
+      firstKeptEntryId: 'user-1',
+      tokensBefore: 321,
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        output: [
+          {
+            type: 'message',
+            role: 'assistant',
+            content: [{ type: 'output_text', text: 'Codex native replacement history' }],
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = (await beforeCompact(
+      {
+        branchEntries: [userMessageEntry('user-1', 'Prompt after compaction')],
+        preparation: {
+          firstKeptEntryId: 'user-1',
+          tokensBefore: 321,
+        },
+        signal: new AbortController().signal,
+      },
+      {
+        model: CODEX_MODEL,
+        hasUI: false,
+        getSystemPrompt: () => 'System instructions',
+        sessionManager: {
+          getSessionId: () => 'session-codex-compact',
+        },
+        modelRegistry: {
+          getApiKeyAndHeaders: vi.fn().mockResolvedValue({
+            ok: true,
+            apiKey: createJwt({ 'https://api.openai.com/auth': { chatgpt_account_id: 'acct_123' } }),
+          }),
+        },
+      },
+    )) as { compaction: { details: { nativeCompaction?: { modelKey?: string; replacementHistory?: unknown[] } } } };
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://chatgpt.com/backend-api/codex/responses/compact',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'chatgpt-account-id': 'acct_123',
+          originator: 'pi',
+          'OpenAI-Beta': 'responses=experimental',
+        }),
+      }),
+    );
+    expect(result.compaction.details.nativeCompaction?.modelKey).toBe(modelKey(CODEX_MODEL));
+    expect(result.compaction.details.nativeCompaction?.replacementHistory).toEqual([
+      {
+        type: 'message',
+        role: 'assistant',
+        content: [{ type: 'output_text', text: 'Codex native replacement history' }],
+      },
+    ]);
+  });
+
   it('omits empty image attachments from native compaction input', async () => {
     const harness = createPiHarness();
     openaiNativeCompactionExtension(harness.pi as never);
