@@ -25,22 +25,22 @@
   "contributes": {
     "commands": [
       {
-        "id": "open",
+        "id": "routines.open",
         "title": "Open Routines",
         "category": "Routines",
         "description": "Open the Routines page.",
         "action": "app.navigate",
         "args": { "to": "/routines" },
-        "icon": "workflow"
+        "icon": "automation"
       },
       {
-        "id": "new",
+        "id": "routines.new",
         "title": "New Routine",
         "category": "Routines",
         "description": "Open Routines to add a lifecycle routine.",
         "action": "app.navigate",
         "args": { "to": "/routines?action=new" },
-        "icon": "workflow"
+        "icon": "automation"
       }
     ],
     "views": [
@@ -52,7 +52,7 @@
         "placement": "primary",
         "scope": "global",
         "component": "RoutinesPage",
-        "icon": "workflow",
+        "icon": "automation",
         "activation": "on-route"
       },
       {
@@ -62,7 +62,7 @@
         "placement": "primary",
         "scope": "global",
         "component": "RoutinesSidebar",
-        "icon": "workflow",
+        "icon": "automation",
         "activation": "on-route"
       }
     ],
@@ -71,7 +71,7 @@
         "id": "routines-nav",
         "label": "Routines",
         "route": "/routines",
-        "icon": "workflow",
+        "icon": "automation",
         "section": "primary",
         "sidebarView": "routines-sidebar"
       }

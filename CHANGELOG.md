@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.26 — 2026-06-21
+
+### Highlights
+
+- Adds Routines as a top-level workflow surface for before/after lifecycle hooks, starting with checkpoint review/report routines.
+- Wires checkpoint saves through Routines so user-configured before hooks can block and after hooks can warn without making checkpoint own the workflow engine.
+- Hardens the Routines page with real sidebar navigation, reliable add/edit/save/delete flows, decision outcomes, `/skill:` autocomplete, run history, and drag reordering.
+- Adds automated Routines desktop smoke coverage plus release golden matrix coverage for the `/routines` route and backend state action.
+- Tightens system extension UI development guidance so frontend/manifest changes require desktop UI builds, app-path QA, and full-frame interaction checks.
+- Includes conversation lifecycle polish for running-state accuracy, stopped conversation handling, active goal elapsed time, CLI conversation identity, and transcript link resilience.
+
+### Notes
+
+- 13 commits since the previous release.
+
 ## 0.11.25 — 2026-06-21
 
 ### Highlights
