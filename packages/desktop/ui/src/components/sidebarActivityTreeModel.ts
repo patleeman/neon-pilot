@@ -30,7 +30,7 @@ export function buildSidebarActivityTreeItems(input: {
       ...item.metadata,
       ...(conversationItemBySessionId.has(conversationId) ? {} : { canArchive: false }),
       ...(pinnedIdSet.has(conversationId) ? { isPinned: true } : {}),
-      ...(input.runningAutomationConversationIds.has(conversationId) ? { isRunning: true, hasPendingRuns: false } : {}),
+      ...(input.runningAutomationConversationIds.has(conversationId) ? { hasPendingRuns: true } : {}),
       ...(input.pendingExecutionConversationIds.has(conversationId) && !input.runningAutomationConversationIds.has(conversationId)
         ? { hasPendingRuns: true, backgroundWorkKind: input.backgroundWorkKindByConversationId.get(conversationId) }
         : {}),

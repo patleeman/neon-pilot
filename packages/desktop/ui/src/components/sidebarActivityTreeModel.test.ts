@@ -127,8 +127,8 @@ describe('sidebar activity tree model', () => {
     expect(tree.find((treeItem) => treeItem.id === 'conversation:pinned')?.metadata).toEqual(expect.objectContaining({ isPinned: true }));
     expect(tree.find((treeItem) => treeItem.id === 'conversation:running')).toEqual(
       expect.objectContaining({
-        status: 'running',
-        metadata: expect.objectContaining({ hasPendingRuns: false, isRunning: true }),
+        status: 'idle',
+        metadata: expect.objectContaining({ hasPendingRuns: true, isRunning: false }),
       }),
     );
     expect(tree.find((treeItem) => treeItem.id === 'conversation:queued')?.metadata).toEqual(

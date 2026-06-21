@@ -377,7 +377,7 @@ describe('Sidebar', () => {
     expect(html).not.toContain('Human thread');
   });
 
-  it('renders running state for automation-owned threads even when the conversation is not a live local session', () => {
+  it('renders automation-owned threads as background work when the conversation is not a live local session', () => {
     storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-auto']));
 
     const html = renderSidebar('/conversations/new', {
@@ -395,8 +395,9 @@ describe('Sidebar', () => {
       ],
     });
 
-    expect(html).toContain('aria-label="Running conversation"');
-    expect(html).toContain('ui-spinner');
+    expect(html).toContain('aria-label="Background work running"');
+    expect(html).not.toContain('aria-label="Running conversation"');
+    expect(html).not.toContain('ui-spinner');
     expect(html).toContain('Morning briefing thread');
   });
 
@@ -1235,7 +1236,7 @@ describe('Sidebar', () => {
       expect(html.match(/ui-sidebar-session-row-active/g)).toHaveLength(1);
     });
 
-    it('forces the running indicator for automation-owned threads even with session.isRunning=false', () => {
+    it('shows automation-owned threads as background work without forcing conversation running', () => {
       storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-auto-force']));
 
       const html = renderSidebar('/conversations/new', {
@@ -1253,8 +1254,9 @@ describe('Sidebar', () => {
         ],
       });
 
-      expect(html).toContain('aria-label="Running conversation"');
-      expect(html).toContain('ui-spinner');
+      expect(html).toContain('aria-label="Background work running"');
+      expect(html).not.toContain('aria-label="Running conversation"');
+      expect(html).not.toContain('ui-spinner');
       expect(html).toContain('Automation thread');
     });
 

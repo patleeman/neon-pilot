@@ -1755,7 +1755,7 @@ const SessionRow = memo(function SessionRow({
   if (!session) return null;
 
   const isRunning = conversationRuntime?.running ?? session.isRunning ?? false;
-  const pending = (hasPendingRuns ?? false) || presence === 'hasRuns';
+  const pending = (hasPendingRuns ?? false) || presence === 'hasRuns' || presence === 'automation';
 
   return (
     <OpenConversationRow
@@ -2350,7 +2350,7 @@ export function Sidebar() {
         ...(conversationItemBySessionId.has(conversationId) ? {} : { canArchive: false }),
         ...(pinnedIdSet.has(conversationId) ? { isPinned: true } : {}),
         ...(lockedConversationIdSet.has(conversationId) ? { isLocked: true, canArchive: false } : {}),
-        ...(runningAutomationConversationIdSet.has(conversationId) ? { isRunning: true, hasPendingRuns: false } : {}),
+        ...(runningAutomationConversationIdSet.has(conversationId) ? { hasPendingRuns: true } : {}),
         ...(pendingExecutionConversationIdSet.has(conversationId) && !runningAutomationConversationIdSet.has(conversationId)
           ? { hasPendingRuns: true, backgroundWorkKind: backgroundWorkKindByConversationId.get(conversationId) }
           : {}),
