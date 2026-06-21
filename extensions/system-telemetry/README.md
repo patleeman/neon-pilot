@@ -1,4 +1,4 @@
-# Telemetry Extension
+# Diagnostics Extension
 
 This extension owns the product behavior documented below. Keep extension-specific user and agent docs here so the implementation and documentation move together.
 
@@ -6,9 +6,9 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 <!-- Source: docs/telemetry.md -->
 
-# Telemetry
+# Diagnostics
 
-Telemetry explains where Neon Pilot stores local observability data, which path is authoritative, and how the Settings and Telemetry pages read it.
+Diagnostics explains where Neon Pilot stores local observability data, which path is authoritative, and how the Settings and Diagnostics pages read it.
 
 ## Storage locations
 
@@ -81,7 +81,7 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
 
 ## Read path
 
-The Telemetry page reads `/api/traces/*` endpoints. Those endpoints combine trace tables and app telemetry queries depending on the panel.
+The Diagnostics page reads `/api/traces/*` endpoints. Those endpoints combine trace tables and app telemetry queries depending on the panel.
 
 Generic app telemetry reads use `queryAppTelemetryEvents`:
 
@@ -92,14 +92,14 @@ Extension action telemetry uses the same app telemetry data. Renderer-owned UI r
 
 ## Settings diagnostics
 
-Settings → Desktop includes a **Telemetry logs** panel. It shows:
+Settings → Desktop includes a **Diagnostic logs** panel. It shows:
 
 - raw log folder path
 - file count and total size
 - recent JSONL files
 - **Open log folder** for local inspection
 - **Export JSONL bundle** for bug reports
-- **Prune/vacuum DB** to run the app telemetry and trace SQLite cleanup immediately
+- **Clean up diagnostics index** to run the app activity and trace SQLite cleanup immediately
 
 The export endpoint writes a combined JSONL bundle under `<state-root>/exports/telemetry/` and returns the path so the desktop bridge can open it in Finder. The maintenance endpoint prunes capped app telemetry rows, prunes/caps trace tables, and runs `VACUUM` on the shared observability database.
 

@@ -117,7 +117,7 @@
         "id": "scratchpad",
         "name": "scratchpad",
         "title": "Manage Scratchpad",
-        "description": "Read or update the current conversation scratchpad. Use for durable per-thread working notes, assumptions, decisions, and handoff state; do not store secrets.",
+        "description": "Read or update the current conversation scratchpad. Use for durable per-conversation working notes, assumptions, decisions, and handoff state; do not store secrets.",
         "action": "scratchpadTool",
         "inputSchema": {
           "type": "object",
@@ -205,7 +205,10 @@
         "jsonDefault": true,
         "inputAction": "set",
         "usage": "conversations scratchpad set <conversationId> [--content <markdown>] [--json]",
-        "examples": ["neon-pilot conversations scratchpad set conversation-example --content \"## Plan\"", "neon-pilot conversations scratchpad set conversation-example --json"],
+        "examples": [
+          "neon-pilot conversations scratchpad set conversation-example --content \"## Plan\"",
+          "neon-pilot conversations scratchpad set conversation-example --json"
+        ],
         "argsSchema": {
           "type": "array",
           "items": { "type": "string" },
@@ -217,7 +220,7 @@
           "properties": {
             "content": { "type": "string", "description": "Markdown content." },
             "json": { "type": "boolean", "description": "Print structured JSON output." },
-            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing runtime state." }
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
           },
           "additionalProperties": true
         },
@@ -237,7 +240,10 @@
         "jsonDefault": true,
         "inputAction": "append",
         "usage": "conversations scratchpad patch <conversationId> [--operation append|prepend] [--content <markdown>] [--json]",
-        "examples": ["neon-pilot conversations scratchpad patch conversation-example --operation append --content \"Validation passed\"", "neon-pilot conversations scratchpad patch conversation-example --json"],
+        "examples": [
+          "neon-pilot conversations scratchpad patch conversation-example --operation append --content \"Validation passed\"",
+          "neon-pilot conversations scratchpad patch conversation-example --json"
+        ],
         "argsSchema": {
           "type": "array",
           "items": { "type": "string" },
@@ -250,7 +256,7 @@
             "operation": { "type": "string", "enum": ["append", "prepend"], "description": "Patch operation." },
             "content": { "type": "string", "description": "Markdown content." },
             "json": { "type": "boolean", "description": "Print structured JSON output." },
-            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing runtime state." }
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
           },
           "additionalProperties": true
         },

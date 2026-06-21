@@ -296,7 +296,7 @@ function describeDs4Health(health: ReturnType<typeof useDs4Health>, active: bool
     return {
       tone: 'muted',
       label: 'DS4 setup needed',
-      title: 'DS4 runtime is not installed. Setup clones ds4, builds ds4-server, and downloads the selected model.',
+      title: 'DS4 is not installed. Setup will install DS4, build the server, and download the selected model.',
       canSetup: true,
       canStart: false,
     };
@@ -305,7 +305,7 @@ function describeDs4Health(health: ReturnType<typeof useDs4Health>, active: bool
     return {
       tone: 'muted',
       label: 'DS4 setup needed',
-      title: `The selected DS4 model (${health.selectedSlot.name ?? health.selectedModelId}) is not installed as the active runtime slot.`,
+      title: `The selected DS4 model (${health.selectedSlot.name ?? health.selectedModelId}) is not installed.`,
       canSetup: true,
       canStart: false,
     };

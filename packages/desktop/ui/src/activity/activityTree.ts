@@ -41,7 +41,7 @@ export function buildExecutionActivityId(executionId: string): string {
 }
 
 function formatConversationActivityTitle(session: SessionMeta): string {
-  return session.title || 'Untitled thread';
+  return session.title || 'Untitled conversation';
 }
 
 export function buildActivityTreeItems({ conversations, executions = [] }: BuildActivityTreeInput): ActivityTreeItem[] {

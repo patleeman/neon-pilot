@@ -4,6 +4,7 @@ import {
   AppPageLayout,
   Checkbox,
   CodeBlock,
+  cx,
   Disclosure,
   Field,
   IconButton,
@@ -16,7 +17,6 @@ import {
   Textarea,
   TextInput,
   ToolbarButton,
-  cx,
 } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -314,9 +314,7 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
         templates[0] ??
         null)
       : null;
-  const selectedSavedWorkflow = selectedTemplate
-    ? (savedWorkflows.find((workflow) => workflow.id === selectedTemplate.id) ?? null)
-    : null;
+  const selectedSavedWorkflow = selectedTemplate ? (savedWorkflows.find((workflow) => workflow.id === selectedTemplate.id) ?? null) : null;
   const pageSummary = `${workflows.length} runs / ${savedWorkflows.length} saved / ${templates.length} templates`;
   const hasLibraryItems = workflows.length > 0 || savedWorkflows.length > 0 || templates.length > 0;
 
@@ -570,7 +568,7 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                     />
                   </div>
                 </Field>
-                <Field label="Args JSON">
+                <Field label="Workflow input JSON">
                   <Textarea
                     className="h-24 font-mono text-[12px]"
                     value={draft.argsText}

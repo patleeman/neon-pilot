@@ -1,10 +1,10 @@
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { setExtensionCommandContext } from '../../extensions/commands.js';
 import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { dispatchTranscriptSpotlight, transcriptTargetAttributes } from '../../transcript/spotlight.js';
-import { setExtensionCommandContext } from '../../extensions/commands.js';
 import { cx, MessageActionButton, MessageCard, MessageMeta, TextButton } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
@@ -1030,7 +1030,7 @@ export const SummaryMessage = memo(function SummaryMessage({
         };
       case 'related':
         return {
-          label: block.title || 'Reused thread summaries',
+          label: block.title || 'Reused conversation summaries',
           detail:
             block.detail?.trim() ||
             'Selected conversations were summarized and injected before this prompt so this thread could start with reused context.',

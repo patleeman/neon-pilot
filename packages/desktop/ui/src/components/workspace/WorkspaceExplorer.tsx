@@ -880,7 +880,7 @@ export function WorkspaceExplorer({
       <div className="flex h-full flex-col bg-panel text-sm">
         <div className="min-h-0 flex-1 overflow-hidden px-1.5 py-2">
           {rootListing.status === 'loading' && !rootListing.data ? (
-            <PanelMessage className="animate-pulse px-3 py-2">Loading...</PanelMessage>
+            <PanelMessage className="animate-pulse px-3 py-2">Loading workspace…</PanelMessage>
           ) : rootListing.error ? (
             <EmptyState title="Workspace unavailable" body={rootListing.error} className="px-3 py-8" />
           ) : (
@@ -953,7 +953,7 @@ export function WorkspaceExplorer({
           <div className="min-w-0 flex-1">
             <div className="truncate text-[12px] font-semibold text-primary">{rootListing.data?.rootName ?? 'Workspace'}</div>
             <div className="truncate font-mono text-[10px] text-dim" title={rootListing.data?.root ?? cwd}>
-              {rootListing.data?.rootKind === 'git' ? 'repo root' : 'cwd'} · {rootListing.data?.branch ?? 'no branch'}
+              {rootListing.data?.rootKind === 'git' ? 'Project root' : 'Working directory'} · {rootListing.data?.branch ?? 'No branch'}
             </div>
           </div>
           {changes.length > 0 && (

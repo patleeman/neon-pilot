@@ -93,7 +93,7 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
       };
   const status = describeInlineRunStatus(detailRun?.status?.status ?? inferStatusFromLinkedRunDetail(run.detail));
   const runStreaming = isRunActive(detailRun);
-  const outputLabel = detailRun?.manifest?.kind === 'raw-shell' ? 'Terminal output' : 'Run output';
+  const outputLabel = detailRun?.manifest?.kind === 'raw-shell' ? 'Terminal output' : 'Output';
   const outputPathLabel = snapshot.log?.path?.split('/').filter(Boolean).pop() ?? 'output.log';
   const hasOutput = Boolean(snapshot.log?.log && snapshot.log.log.length > 0);
   const emptyOutputLabel = runStreaming ? 'Waiting for output…' : '(empty)';
@@ -110,7 +110,11 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
     : undefined;
   const latestTimelinePoint = timeline.at(-1);
   const resolvedFromMention = resolvedRunId !== run.runId;
-  const pollingLabel = snapshot.unavailable ? 'Run record unavailable' : pollEnabled ? 'Polling live log' : 'Polling paused (off-screen)';
+  const pollingLabel = snapshot.unavailable
+    ? 'Background task unavailable'
+    : pollEnabled
+      ? 'Live log updating'
+      : 'Live log paused (off-screen)';
 
   return (
     <div
@@ -203,7 +207,7 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
             <details className="ui-disclosure">
               <summary className="ui-disclosure-summary">
                 <span>Details</span>
-                <span className="ui-disclosure-meta">Command and runtime metadata</span>
+                <span className="ui-disclosure-meta">Command details</span>
               </summary>
               <div className="ui-disclosure-body">
                 <div className="space-y-2.5">
@@ -215,8 +219,8 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
                   {targetCwd && <InlineRunMetadataRow label="Working dir" value={<span className="font-mono">{targetCwd}</span>} />}
                   {targetModel && <InlineRunMetadataRow label="Model" value={targetModel} />}
                   {targetProfile && <InlineRunMetadataRow label="Profile" value={targetProfile} />}
-                  <InlineRunMetadataRow label="Run" value={detailRun.manifest?.kind ?? 'unknown'} />
-                  <InlineRunMetadataRow label="Source" value={detailRun.manifest?.source?.type ?? 'unknown'} />
+                  <InlineRunMetadataRow label="Type" value={detailRun.manifest?.kind ?? 'unknown'} />
+                  <InlineRunMetadataRow label="Started by" value={detailRun.manifest?.source?.type ?? 'unknown'} />
                   <InlineRunMetadataRow label="Attempt" value={String(detailRun.status?.activeAttempt ?? 0)} />
                   {detailRun.checkpoint?.step && <InlineRunMetadataRow label="Checkpoint" value={detailRun.checkpoint.step} />}
                   {snapshot.log?.path && (

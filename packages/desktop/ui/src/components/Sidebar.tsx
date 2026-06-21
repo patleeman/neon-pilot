@@ -1511,7 +1511,7 @@ const OpenConversationRow = memo(function OpenConversationRow({
             {isAutomation ? (
               <span
                 className="shrink-0 text-accent/75"
-                title={automationTitle ? `Automation thread: ${automationTitle}` : 'Automation thread'}
+                title={automationTitle ? `Automation conversation: ${automationTitle}` : 'Automation conversation'}
               >
                 <Ico d={PATH.automations} size={11} />
               </span>
@@ -1522,7 +1522,7 @@ const OpenConversationRow = memo(function OpenConversationRow({
               </span>
             ) : null}
             {locked ? (
-              <span className="shrink-0 text-dim" title="Locked thread" aria-label="Locked thread">
+              <span className="shrink-0 text-dim" title="Locked conversation" aria-label="Locked conversation">
                 <Ico d={PATH.lock} size={11} />
               </span>
             ) : null}
@@ -2504,7 +2504,7 @@ export function Sidebar() {
         return true;
       }
 
-      showSidebarNotice('danger', `Unlock this thread before ${actionLabel}.`, 4000);
+      showSidebarNotice('danger', `Unlock this conversation before ${actionLabel}.`, 4000);
       return false;
     },
     [isConversationLocked, showSidebarNotice],
@@ -3284,7 +3284,11 @@ export function Sidebar() {
       });
 
       if (lockedCount > 0) {
-        showSidebarNotice('danger', lockedCount === 1 ? 'Skipped 1 locked thread.' : `Skipped ${lockedCount} locked threads.`, 4000);
+        showSidebarNotice(
+          'danger',
+          lockedCount === 1 ? 'Skipped 1 locked conversation.' : `Skipped ${lockedCount} locked conversations.`,
+          4000,
+        );
       }
 
       return unlockedSessionIds.length;
@@ -3389,13 +3393,13 @@ export function Sidebar() {
     (label: string, sessionIds: readonly string[]) => {
       const archivedCount = archiveConversationGroupSessions(sessionIds);
       if (archivedCount === 0) {
-        showSidebarNotice('danger', `No threads to archive in ${label}.`, 4000);
+        showSidebarNotice('danger', `No conversations to archive in ${label}.`, 4000);
         return;
       }
 
       showSidebarNotice(
         'accent',
-        archivedCount === 1 ? `Archived 1 thread from ${label}.` : `Archived ${archivedCount} threads from ${label}.`,
+        archivedCount === 1 ? `Archived 1 conversation from ${label}.` : `Archived ${archivedCount} conversations from ${label}.`,
       );
     },
     [archiveConversationGroupSessions, showSidebarNotice],
@@ -3423,7 +3427,7 @@ export function Sidebar() {
       }
 
       if (removedCount === 0 && !includesDraft && !normalizedCwd) {
-        showSidebarNotice('danger', `No threads to remove in ${label}.`, 4000);
+        showSidebarNotice('danger', `No conversations to remove in ${label}.`, 4000);
         return;
       }
 
@@ -4014,7 +4018,7 @@ export function Sidebar() {
                   <ActivityTreeView
                     items={activityTreeItems}
                     activeItemId={activeActivityTreeItemId}
-                    emptyMessage={loading || !sessionsReady ? 'Loading threads…' : 'No threads yet.'}
+                    emptyMessage={loading || !sessionsReady ? 'Loading conversations…' : 'No conversations yet.'}
                     className="min-h-0"
                     canDragItem={canDragActivityTreeItem}
                     canDropItem={canDropActivityTreeItem}
@@ -4299,7 +4303,7 @@ export function Sidebar() {
                           group.items.length > 0 ? (
                             group.items.map(renderConversationRow)
                           ) : !loading && sessionsReady ? (
-                            <PanelMessage className="px-4 pb-1 pt-0">No threads yet.</PanelMessage>
+                            <PanelMessage className="px-4 pb-1 pt-0">No conversations yet.</PanelMessage>
                           ) : null
                         ) : null}
                       </div>
@@ -4328,7 +4332,7 @@ export function Sidebar() {
       ) : null}
       {renameConversationPrompt ? (
         <TextPromptDialog
-          title="Rename thread"
+          title="Rename conversation"
           label="Thread name"
           initialValue={renameConversationPrompt.currentTitle}
           confirmLabel="Save"

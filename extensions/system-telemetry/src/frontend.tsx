@@ -88,11 +88,11 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
     <div className="h-full overflow-y-auto">
       <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
         <AppPageIntro
-          title="Telemetry"
+          title="Diagnostics"
           actions={
             <div className="flex items-center gap-2">
               <TimeRangeSelector value={range} onChange={setRange} />
-              <IconButton aria-label="Refresh telemetry" title="Refresh telemetry" onClick={refetch}>
+              <IconButton aria-label="Refresh diagnostics" title="Refresh diagnostics" onClick={refetch}>
                 <RefreshIcon />
               </IconButton>
             </div>
@@ -126,7 +126,7 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
           <TracesToolFlow data={toolFlow} />
         </AppPageSection>
 
-        <AppPageSection title="Runtime" layout="stacked" bodyClassName="space-y-4">
+        <AppPageSection title="App activity" layout="stacked" bodyClassName="space-y-4">
           <TracesContextPointers data={contextPointers} />
           <TracesAutoMode data={autoMode} />
           <TracesSessionIntegrity events={sessionIntegrity ?? []} />

@@ -236,18 +236,18 @@ function CronBuilderEditor({ value, onChange }: { value: CronEditorState; onChan
 }
 
 function formatTargetTypeLabel(targetType: TaskFormState['targetType'] | string | undefined): string {
-  return targetType === 'conversation' ? 'Thread' : 'Job';
+  return targetType === 'conversation' ? 'Conversation' : 'Background job';
 }
 
 function formatThreadModeLabel(mode: TaskFormState['threadMode']): string {
   switch (mode) {
     case 'existing':
-      return 'Existing thread';
+      return 'Existing conversation';
     case 'none':
-      return 'No thread';
+      return 'Do not post to chat';
     case 'dedicated':
     default:
-      return 'Dedicated thread';
+      return 'New conversation';
   }
 }
 
@@ -307,7 +307,7 @@ function TaskAdvancedMenu({
             aria-label="Automation target"
           >
             <option value="background-agent">Background job</option>
-            <option value="conversation">Conversation thread</option>
+            <option value="conversation">Conversation</option>
           </InlineSelect>
         </div>
 
@@ -323,7 +323,7 @@ function TaskAdvancedMenu({
                 aria-label="Schedule editor mode"
               >
                 <option value="builder">Simple schedule</option>
-                <option value="raw">Raw cron</option>
+                <option value="raw">Custom cron expression</option>
               </InlineSelect>
             </div>
 
@@ -349,7 +349,7 @@ function TaskAdvancedMenu({
         )}
 
         <div className="space-y-1.5">
-          <SectionLabel tone="muted">Thread</SectionLabel>
+          <SectionLabel tone="muted">Result conversation</SectionLabel>
           <InlineSelect
             value={value.threadMode}
             onChange={(event) =>
@@ -360,11 +360,11 @@ function TaskAdvancedMenu({
             }
             className="w-full"
             name="threadMode"
-            aria-label="Automation thread mode"
+            aria-label="Automation result conversation"
           >
-            <option value="dedicated">Dedicated thread</option>
-            <option value="existing">Existing thread</option>
-            {value.targetType !== 'conversation' && <option value="none">No thread</option>}
+            <option value="dedicated">New conversation</option>
+            <option value="existing">Existing conversation</option>
+            {value.targetType !== 'conversation' && <option value="none">Do not post to chat</option>}
           </InlineSelect>
           {value.threadMode === 'existing' && (
             <InlineSelect
@@ -372,9 +372,9 @@ function TaskAdvancedMenu({
               onChange={(event) => onChange({ threadConversationId: event.target.value })}
               className="w-full"
               name="threadConversationId"
-              aria-label="Existing automation thread"
+              aria-label="Existing automation conversation"
             >
-              <option value="">Choose thread</option>
+              <option value="">Choose conversation</option>
               {existingThreadOptions.map((entry) => (
                 <option key={entry.id} value={entry.id}>
                   {entry.label}
@@ -383,7 +383,7 @@ function TaskAdvancedMenu({
             </InlineSelect>
           )}
           {value.threadMode === 'existing' && existingThreadOptions.length === 0 && (
-            <p className={FIELD_HELP_CLASS}>No saved threads match this working directory yet.</p>
+            <p className={FIELD_HELP_CLASS}>No saved conversations match this working directory yet.</p>
           )}
         </div>
 
@@ -528,9 +528,9 @@ function TaskEditorForm({
     formatTargetTypeLabel(value.targetType),
     value.scheduleMode === 'cron' && value.catchUpWindowMinutes.trim() ? `catch up ${value.catchUpWindowMinutes.trim()}m` : null,
     value.threadMode === 'existing'
-      ? (selectedExistingThread?.label ?? 'Existing thread')
+      ? (selectedExistingThread?.label ?? 'Existing conversation')
       : value.threadMode === 'none'
-        ? 'No thread'
+        ? 'Do not post to chat'
         : null,
     value.model.trim() ? (value.model.trim().split('/').pop() ?? value.model.trim()) : null,
     value.thinkingLevel.trim() ? thinkingLabel : null,
@@ -882,12 +882,12 @@ export function ScheduledTaskPanel({
         )}
         {taskDetail.cwd && (
           <div className="ui-detail-row">
-            <span className="ui-detail-label">cwd</span>
+            <span className="ui-detail-label">Working directory</span>
             <p className="ui-detail-value break-all">{taskDetail.cwd}</p>
           </div>
         )}
         <div className="ui-detail-row">
-          <span className="ui-detail-label">thread</span>
+          <span className="ui-detail-label">Conversation</span>
           <div className="min-w-0">
             <p className="ui-detail-value">{formatThreadModeLabel(taskDetail.threadMode)}</p>
             {taskDetail.threadTitle && <CardMeta className="mt-0.5 break-all">{taskDetail.threadTitle}</CardMeta>}

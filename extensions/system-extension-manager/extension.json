@@ -135,7 +135,7 @@
       {
         "id": "reloadExtensions",
         "handler": "reloadExtensions",
-        "title": "Reload extension registry",
+        "title": "Refresh extensions",
         "worker": {
           "enabled": true
         }
@@ -217,7 +217,7 @@
         "id": "reload-registry",
         "title": "Reload Extensions",
         "category": "Extensions",
-        "description": "Reload the extension registry.",
+        "description": "Refresh the installed extension list.",
         "action": "reloadExtensions"
       },
       {
@@ -305,7 +305,7 @@
       {
         "id": "extensions-create",
         "command": "extensions create",
-        "description": "Create a runtime extension: extensions create <id> --name <name> [--template <template>]",
+        "description": "Create an installed extension: extensions create <id> --name <name> [--template <template>]",
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "create",
@@ -328,7 +328,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true
@@ -344,7 +344,7 @@
       {
         "id": "extensions-snapshot",
         "command": "extensions snapshot",
-        "description": "Snapshot a runtime extension by id.",
+        "description": "Snapshot an installed extension by id.",
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "snapshot",
@@ -367,7 +367,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true
@@ -407,7 +407,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true
@@ -484,7 +484,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true
@@ -523,7 +523,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true
@@ -566,7 +566,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             },
             "expected-id": {
               "type": "string",
@@ -620,7 +620,7 @@
       {
         "id": "extensions-reload",
         "command": "extensions reload",
-        "description": "Reload an extension backend by id, or refresh registry state.",
+        "description": "Reload an extension by id, or refresh extension state.",
         "action": "manageExtension",
         "inputAction": "reload",
         "usage": "extensions reload [extensionId] [--json]",
@@ -642,7 +642,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true
@@ -658,7 +658,7 @@
       {
         "id": "extensions-smoke",
         "command": "extensions smoke",
-        "description": "Run backend smoke checks for an installed extension.",
+        "description": "Run smoke checks for an installed extension.",
         "action": "manageExtension",
         "inputAction": "smoke",
         "usage": "extensions smoke <extensionId> [--json]",
@@ -680,7 +680,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true
@@ -718,7 +718,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true
@@ -756,7 +756,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true

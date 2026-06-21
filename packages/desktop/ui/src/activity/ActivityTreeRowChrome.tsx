@@ -181,8 +181,8 @@ export function ActivityTreeRowActions({
           role="button"
           tabIndex={-1}
           className="shrink-0 rounded px-1 text-[14px] leading-none text-dim opacity-0 hover:bg-surface-hover hover:text-primary group-hover:opacity-100 group-focus-within:opacity-100"
-          aria-label="Archive thread"
-          title="Archive thread"
+          aria-label="Archive conversation"
+          title="Archive conversation"
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -220,7 +220,7 @@ export function ActivityTreePinnedIcon({ pinned }: { pinned: boolean }) {
 export function ActivityTreeLockIcon({ locked }: { locked: boolean }) {
   if (!locked) return null;
   return (
-    <span className="shrink-0 text-dim" title="Locked thread" aria-label="Locked thread">
+    <span className="shrink-0 text-dim" title="Locked conversation" aria-label="Locked conversation">
       <svg
         width="11"
         height="11"

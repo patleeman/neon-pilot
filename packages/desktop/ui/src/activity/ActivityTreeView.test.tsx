@@ -110,12 +110,12 @@ describe('ActivityTreeView', () => {
       act(() => {
         row?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 12 }));
       });
-      expect(container.querySelector('[role="menu"]')).not.toBeNull();
+      expect(document.body.querySelector('[role="menu"]')).not.toBeNull();
 
       act(() => {
         document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
       });
-      expect(container.querySelector('[role="menu"]')).toBeNull();
+      expect(document.body.querySelector('[role="menu"]')).toBeNull();
     } finally {
       unmount();
     }
@@ -244,8 +244,8 @@ describe('ActivityTreeView', () => {
       const parentRow = rows.find((candidate) => candidate.textContent?.includes('Archived parent scaffold'));
       const childRow = rows.find((candidate) => candidate.textContent?.includes('Open child branch'));
 
-      expect(parentRow?.querySelector('[aria-label="Archive thread"]')).toBeNull();
-      expect(childRow?.querySelector('[aria-label="Archive thread"]')).not.toBeNull();
+      expect(parentRow?.querySelector('[aria-label="Archive conversation"]')).toBeNull();
+      expect(childRow?.querySelector('[aria-label="Archive conversation"]')).not.toBeNull();
     } finally {
       unmount();
     }

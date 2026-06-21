@@ -71,7 +71,7 @@ export function ActivityTreeView({
   ariaLabel = 'Threads',
   className,
   style,
-  emptyMessage = 'No threads yet.',
+  emptyMessage = 'No conversations yet.',
   canDragItem,
   canDropItem,
   collapsedGroupItemIds,

@@ -123,11 +123,11 @@ export function validateTaskForm(state: TaskFormState, _mode: 'create' | 'edit')
   }
 
   if (state.threadMode === 'existing' && !state.threadConversationId.trim()) {
-    return 'Choose an existing thread.';
+    return 'Choose an existing conversation.';
   }
 
   if (state.targetType === 'conversation' && state.threadMode === 'none') {
-    return 'Thread automations need a thread.';
+    return 'Conversation automations need a conversation.';
   }
 
   return null;

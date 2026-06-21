@@ -297,14 +297,14 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
       >
         <AppPageIntro
           title="Prompt Assembly"
-          summary="Inspect every capability the agent can see: instruction files, skills, injected tools, MCP servers, templates, and context."
+          summary="Review the instructions, skills, tools, MCP servers, templates, and context available to the agent."
           actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
         />
 
         <AppPageSection
           id="system-prompt"
-          title="System Prompt"
-          description="Customize the generated runtime instruction template. Nunjucks variables such as knowledge_root and skills_dir are available."
+          title="Agent instructions template"
+          description="Customize the generated instruction template. Advanced variables such as knowledge_root and skills_dir are available."
           className="border-t border-border-subtle pt-10 first:border-t-0 first:pt-0"
           bodyClassName="space-y-3"
         >
@@ -357,7 +357,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
           description={
             <>
               {formatCount(visibleAgentCapabilities.length, 'capability')} shown: instructions, skills, tools, MCP, templates, and context.
-              <span className="block text-[12px] text-dim">CWD {data.cwd ?? data.repoRoot}</span>
+              <span className="block text-[12px] text-dim">Working directory: {data.cwd ?? data.repoRoot}</span>
             </>
           }
           actions={
@@ -393,7 +393,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         <CapabilitySection
           id="tools"
           title="Tools"
-          description="Callable tools injected into the agent runtime for the current workspace."
+          description="Tools the agent can call in the current workspace."
           rows={toolCapabilities}
           busyId={busyId}
           onToggle={toggleCapability}
@@ -402,7 +402,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         <CapabilitySection
           id="mcp"
           title="MCP"
-          description="Model Context Protocol servers available to the runtime."
+          description="Model Context Protocol servers available to the agent."
           rows={mcpCapabilities}
           busyId={busyId}
           onToggle={toggleCapability}
@@ -411,11 +411,11 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         <CapabilitySection
           id="issues"
           title="Issues"
-          description="Diagnostics, invalid registrations, and runtime entries that need attention."
+          description="Problems, invalid registrations, and unavailable entries that need attention."
           rows={issueCapabilities}
           busyId={busyId}
           onToggle={toggleCapability}
-          emptyTitle="No runtime issues found"
+          emptyTitle="No issues found"
         />
       </AppPageLayout>
     </div>

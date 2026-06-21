@@ -98,7 +98,13 @@ export function ScratchpadPanel({ pa, context }: ExtensionSurfaceProps) {
               {state.updatedAt ? `Updated ${new Date(state.updatedAt).toLocaleString()}` : loading ? 'Loading...' : 'No saved notes'}
             </p>
           </div>
-          <IconButton compact aria-label="Refresh scratchpad" title="Refresh scratchpad" disabled={loading || saving} onClick={() => void load()}>
+          <IconButton
+            compact
+            aria-label="Refresh scratchpad"
+            title="Refresh scratchpad"
+            disabled={loading || saving}
+            onClick={() => void load()}
+          >
             ↻
           </IconButton>
         </div>
@@ -122,7 +128,7 @@ export function ScratchpadPanel({ pa, context }: ExtensionSurfaceProps) {
             setDraft(event.target.value);
             setSavedMessage(null);
           }}
-          placeholder="Keep thread-local working notes here: assumptions, decisions, open questions, handoff state. Do not store secrets."
+          placeholder="Keep conversation notes here: assumptions, decisions, open questions, and handoff state. Do not store secrets."
           disabled={loading}
           aria-label="Conversation scratchpad"
         />

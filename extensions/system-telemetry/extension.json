@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "id": "system-telemetry",
-  "name": "Telemetry",
+  "name": "Diagnostics",
   "packageType": "system",
-  "description": "Inspect app traces, model usage, tool health, and runtime performance.",
+  "description": "Inspect local app activity, model usage, tool health, and performance.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -11,7 +11,9 @@
   },
   "backend": {
     "entry": "dist/backend.mjs",
-    "actions": [{ "id": "getTelemetryData", "handler": "getTelemetryData", "title": "Get telemetry data", "worker": { "enabled": true } }],
+    "actions": [
+      { "id": "getTelemetryData", "handler": "getTelemetryData", "title": "Get diagnostics data", "worker": { "enabled": true } }
+    ],
     "routes": [
       { "method": "GET", "path": "/traces/summary", "handler": "summary", "worker": { "enabled": true } },
       { "method": "GET", "path": "/traces/model-usage", "handler": "modelUsage", "worker": { "enabled": true } },
@@ -32,7 +34,7 @@
     "views": [
       {
         "id": "page",
-        "title": "Telemetry",
+        "title": "Diagnostics",
         "location": "main",
         "route": "/telemetry",
         "component": "TelemetryPage",
@@ -44,7 +46,7 @@
     "nav": [
       {
         "id": "telemetry-nav",
-        "label": "Telemetry",
+        "label": "Diagnostics",
         "route": "/telemetry",
         "icon": "graph"
       }

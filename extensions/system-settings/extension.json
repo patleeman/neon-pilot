@@ -15,7 +15,7 @@
         "type": "select",
         "default": "keychain",
         "enum": ["keychain", "file", "env-only"],
-        "description": "Secret storage backend. Keychain is recommended on macOS; file is for dev/headless; env-only disables writes.",
+        "description": "Where secrets are stored. Keychain is recommended on macOS; local file is for development; environment-only mode disables saving.",
         "group": "Security",
         "order": 1
       },
@@ -106,7 +106,7 @@
       {
         "id": "settings-schema",
         "command": "settings schema",
-        "description": "List manifest-declared settings schema.",
+        "description": "List settings definitions.",
         "action": "manageSettings",
         "jsonDefault": true,
         "usage": "settings schema [--json]",
@@ -178,7 +178,7 @@
       {
         "id": "settings-set",
         "command": "settings set",
-        "description": "Update a manifest-declared non-secret setting by key and JSON value.",
+        "description": "Update a non-secret setting by key and JSON value.",
         "action": "manageSettings",
         "inputAction": "set",
         "usage": "settings set <key> <value> [--json]",
@@ -204,7 +204,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true
@@ -220,7 +220,7 @@
       {
         "id": "settings-reset",
         "command": "settings reset",
-        "description": "Reset one or more settings to manifest defaults: settings reset <key...>",
+        "description": "Reset one or more settings to defaults: settings reset <key...>",
         "action": "manageSettings",
         "jsonDefault": true,
         "inputAction": "reset",
@@ -246,7 +246,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true

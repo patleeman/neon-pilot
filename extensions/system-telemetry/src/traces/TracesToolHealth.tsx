@@ -1,5 +1,5 @@
 /**
- * Tool Telemetry — Per-tool cards with sparklines
+ * Tool health — Per-tool cards with sparklines
  */
 
 import type { TraceToolHealth } from '@neon-pilot/extensions/data';
@@ -20,7 +20,7 @@ export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   if (!tools || tools.length === 0) {
     return (
       <SurfacePanel className="overflow-hidden">
-        <PanelHeader title="Tool Telemetry" meta="No tool data yet" metaClassName="bg-transparent px-0" />
+        <PanelHeader title="Tool health" meta="No tool data yet" metaClassName="bg-transparent px-0" />
         <PanelMessage align="center" className="p-6">
           Tool calls will appear here as agents execute tools.
         </PanelMessage>
@@ -34,7 +34,7 @@ export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   return (
     <SurfacePanel className="overflow-hidden">
       <PanelHeader
-        title="Tool Telemetry"
+        title="Tool health"
         meta={`${totalCalls} calls · ${totalErrors} errors (${((totalErrors / Math.max(totalCalls, 1)) * 100).toFixed(1)}%)`}
       />
       <div className="p-4 grid grid-cols-2 gap-2.5">

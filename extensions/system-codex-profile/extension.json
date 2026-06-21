@@ -34,7 +34,7 @@
       {
         "id": "codex-compatible",
         "title": "Codex Compatible",
-        "description": "Codex-shaped runtime behavior for GPT coding models.",
+        "description": "Codex-compatible behavior for GPT coding models.",
         "match": ["openai-codex/*"],
         "priority": 100
       }

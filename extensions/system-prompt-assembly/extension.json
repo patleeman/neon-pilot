@@ -12,7 +12,7 @@
       {
         "id": "inspectAgentRuntime",
         "handler": "inspectAgentRuntime",
-        "title": "Inspect agent runtime",
+        "title": "Inspect agent context",
         "worker": {
           "enabled": true
         }
@@ -36,7 +36,7 @@
       {
         "id": "updateRuntimeCapability",
         "handler": "updateRuntimeCapability",
-        "title": "Enable or disable a runtime capability",
+        "title": "Enable or disable an agent capability",
         "worker": {
           "enabled": true
         }

@@ -556,9 +556,9 @@ describe('SettingsPage provider model editor', () => {
     click(queryButton(container, 'Continue'));
 
     expect(container.textContent).toContain('Provider · anthropic');
-    expect(container.textContent).toContain('Saved overrides and custom models');
+    expect(container.textContent).toContain('These are the models Neon Pilot will show for this provider');
 
-    click(queryButtonByLabel(container, 'Add model'));
+    click(queryButton(container, 'Add model'));
     const modelIdInput = queryInput(container, '#settings-provider-model-id');
     updateInputValue(modelIdInput, 'claude-sonnet-4-7');
     await flushAsyncWork();
@@ -588,7 +588,7 @@ describe('SettingsPage provider model editor', () => {
     updateSelectValue(queryProviderPicker(container), 'anthropic');
     click(queryButton(container, 'Continue'));
 
-    click(queryButtonByLabel(container, 'Refresh models'));
+    click(queryButton(container, 'Find models from provider…'));
     await flushAsyncWork();
 
     expect(refreshModelsMock).toHaveBeenCalled();
@@ -884,14 +884,14 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderPage('settings-desktop');
     await flushAsyncWork();
 
-    const button = queryButtonByLabel(container, 'Clean up telemetry index');
+    const button = queryButtonByLabel(container, 'Clean up diagnostics index');
     await act(async () => {
       button.click();
     });
     await flushAsyncWork();
 
     expect(maintainTelemetryDbMock).toHaveBeenCalledWith();
-    expect(container.textContent).toContain('Pruned 1 app telemetry rows and 2 trace rows');
+    expect(container.textContent).toContain('Pruned 1 app activity rows and 2 trace rows');
   });
 
   it('does not render the vision model selector in general conversation settings', async () => {

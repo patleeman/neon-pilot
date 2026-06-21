@@ -163,9 +163,9 @@ interface ActivityActorLookup {
 const EDITOR_TOC_ITEMS: Array<{ id: EditorSectionId; label: string; summary: string }> = [
   { id: 'automation-general', label: 'General', summary: 'Name and instruction' },
   { id: 'automation-schedule', label: 'Schedule', summary: 'When it runs' },
-  { id: 'automation-policies', label: 'Policies', summary: 'Attached rules' },
+  { id: 'automation-policies', label: 'Run rules', summary: 'Missed and overlapping runs' },
   { id: 'automation-delivery', label: 'Delivery', summary: 'Where results go' },
-  { id: 'automation-runtime', label: 'Runtime', summary: 'Model, cwd, and timeout' },
+  { id: 'automation-runtime', label: 'Execution defaults', summary: 'Model, folder, and timeout' },
 ];
 
 const THINKING_LEVEL_OPTIONS = [
@@ -1008,21 +1008,21 @@ function schedulePreview(form: AutomationFormState) {
 function buildCreateWithChatPrompt(form: AutomationFormState) {
   const input = readFormInput(form);
   const lines = [
-    "Read the built-in scheduled-tasks skill, then let's chat about the automation I want to create. Help me shape the schedule, policies, delivery, and runtime defaults. Do not create the automation until I confirm the final version.",
+    "Read the built-in scheduled-tasks skill, then let's chat about the automation I want to create. Help me shape the schedule, run rules, delivery, and execution defaults. Do not create the automation until I confirm the final version.",
     '',
     'Starter draft from the automation form:',
     `- Title: ${input.title || '<help me choose a concise title>'}`,
     `- Prompt: ${input.prompt || '<help me write what should run>'}`,
     input.cron ? `- Schedule: recurring cron ${input.cron}` : `- Schedule: once at ${input.at || '<help me choose a time>'}`,
     `- Target: ${input.targetType}`,
-    `- Thread mode: ${input.threadMode}`,
-    input.threadConversationId ? `- Existing thread id: ${input.threadConversationId}` : null,
+    `- Result conversation: ${input.threadMode}`,
+    input.threadConversationId ? `- Existing conversation id: ${input.threadConversationId}` : null,
     input.cwd ? `- Working directory: ${input.cwd}` : null,
     input.model ? `- Model: ${input.model}` : null,
     input.thinkingLevel ? `- Thinking level: ${input.thinkingLevel}` : null,
     input.timeoutSeconds ? `- Timeout seconds: ${input.timeoutSeconds}` : null,
     input.catchUpWindowSeconds && input.cron ? `- Catch-up policy window seconds: ${input.catchUpWindowSeconds}` : null,
-    input.policies.length > 0 ? `- Policies: ${JSON.stringify(input.policies)}` : null,
+    input.policies.length > 0 ? `- Run rules: ${JSON.stringify(input.policies)}` : null,
     `- Enabled: ${input.enabled ? 'true' : 'false'}`,
   ].filter(Boolean);
   return lines.join('\n');
@@ -1363,7 +1363,12 @@ function PolicyRuleRow({
           </select>
         </>
       )}
-      <IconButton compact className="ml-auto opacity-0 group-hover:opacity-100" aria-label="Remove policy" onClick={() => onRemove(index)}>
+      <IconButton
+        compact
+        className="ml-auto opacity-0 group-hover:opacity-100"
+        aria-label="Remove run rule"
+        onClick={() => onRemove(index)}
+      >
         ×
       </IconButton>
     </div>
@@ -2148,7 +2153,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       </div>
                     </div>
                   ) : (
-                    <Field label="Run at" hint="ISO timestamp or natural phrase, depending on backend support.">
+                    <Field label="Run at" hint="Enter a date/time, like tomorrow 8pm or 2026-06-22 09:00.">
                       <TextInput
                         autoComplete="off"
                         name="automation-at"
@@ -2168,8 +2173,8 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
 
               <FormSection
                 id="automation-policies"
-                title="Policies"
-                description="Attach first-party rules that decide what happens to each eligible run."
+                title="Run rules"
+                description="Choose what happens when a schedule is missed or another run is already active."
               >
                 <div className="grid gap-3">
                   <div className="grid gap-1">
@@ -2185,13 +2190,13 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <ToolbarButton type="button" onClick={() => addPolicy('once_per_period')}>
-                      + Once per period
+                      + Limit frequency
                     </ToolbarButton>
                     <ToolbarButton type="button" onClick={() => addPolicy('catch_up')}>
-                      + Catch up
+                      + Missed schedules
                     </ToolbarButton>
                     <ToolbarButton type="button" onClick={() => addPolicy('overlap')}>
-                      + Overlap
+                      + Already running
                     </ToolbarButton>
                   </div>
                 </div>
@@ -2213,7 +2218,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                         <option value="conversation">Conversation</option>
                       </Select>
                     </Field>
-                    <Field label="Thread mode">
+                    <Field label="Result conversation">
                       <Select
                         name="automation-thread-mode"
                         value={form.threadMode}
@@ -2227,9 +2232,9 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                           })
                         }
                       >
-                        <option value="dedicated">Dedicated thread</option>
-                        <option value="existing">Existing thread</option>
-                        {form.targetType === 'background-agent' ? <option value="none">No thread</option> : null}
+                        <option value="dedicated">New conversation</option>
+                        <option value="existing">Existing conversation</option>
+                        {form.targetType === 'background-agent' ? <option value="none">Do not post to chat</option> : null}
                       </Select>
                     </Field>
                   </div>
@@ -2238,7 +2243,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       label="Thread"
                       hint={
                         conversationOptions.length === 0
-                          ? 'No saved threads found yet.'
+                          ? 'No saved conversations found yet.'
                           : 'Choose the conversation that should receive automation results.'
                       }
                     >
@@ -2248,9 +2253,9 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                         value={form.threadConversationId}
                         onChange={(event) => setForm({ ...form, threadConversationId: event.target.value })}
                       >
-                        <option value="">Choose thread</option>
+                        <option value="">Choose conversation</option>
                         {form.threadConversationId && !conversationOptions.some((option) => option.id === form.threadConversationId) ? (
-                          <option value={form.threadConversationId}>Current saved thread</option>
+                          <option value={form.threadConversationId}>Selected saved conversation</option>
                         ) : null}
                         {conversationOptions.map((option) => (
                           <option key={option.id} value={option.id}>
@@ -2264,16 +2269,16 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                     className="border-t border-border-subtle/70 pt-3"
                     items={[
                       {
-                        label: 'Run target',
+                        label: 'Result type',
                         value: form.targetType === 'conversation' ? 'Conversation' : 'Background agent',
                       },
                       {
-                        label: 'Thread binding',
+                        label: 'Chat posting',
                         value:
                           form.threadMode === 'dedicated'
-                            ? 'Dedicated thread'
+                            ? 'New conversation'
                             : form.threadMode === 'existing'
-                              ? 'Existing thread'
+                              ? 'Existing conversation'
                               : 'None',
                       },
                     ]}
@@ -2283,11 +2288,11 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
 
               <FormSection
                 id="automation-runtime"
-                title="Runtime"
+                title="Execution defaults"
                 description="Defaults are usually right. Change these only when the automation needs a specific workspace or model."
               >
                 <div className="grid gap-4">
-                  <Field label="Working directory" hint="Leave blank to use the current runtime cwd.">
+                  <Field label="Working directory" hint="Leave blank to use this conversation’s working directory.">
                     <div className="flex gap-2">
                       <TextInput
                         autoComplete="off"
@@ -2310,7 +2315,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       >
                         <option value="">Default model</option>
                         {form.model && !modelOptions.some((option) => option.id === form.model) ? (
-                          <option value={form.model}>Current saved model</option>
+                          <option value={form.model}>Selected saved model</option>
                         ) : null}
                         {modelOptions.map((option) => (
                           <option key={option.id} value={option.id}>

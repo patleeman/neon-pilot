@@ -57,7 +57,7 @@
         "id": "scheduled-task",
         "name": "scheduled_task",
         "title": "Scheduled task",
-        "description": "Create, inspect, validate, run, and delete daemon-managed scheduled tasks.",
+        "description": "Create, inspect, validate, run, and delete scheduled automations.",
         "action": "scheduledTask",
         "inputSchema": {
           "type": "object",
@@ -323,7 +323,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true
@@ -363,7 +363,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true
@@ -442,7 +442,7 @@
             },
             "dry-run": {
               "type": "boolean",
-              "description": "Validate and describe the operation without changing runtime state."
+              "description": "Validate and describe the operation without changing app state."
             }
           },
           "additionalProperties": true
@@ -885,7 +885,7 @@
       {
         "id": "scheduled-tasks",
         "title": "Scheduled Tasks",
-        "description": "Built-in guidance for daemon-backed scheduled automations and conversation callbacks.",
+        "description": "Built-in guidance for scheduled automations and conversation callbacks.",
         "path": "skills/scheduled-tasks/SKILL.md"
       }
     ]

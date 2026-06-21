@@ -596,7 +596,7 @@ function formatAppearsInSummary(extension: ExtensionInstallSummary): string {
     extension.manifest?.contributes?.commands?.length ? 'Command' : null,
     hasExtensionSettings(extension) ? 'Settings' : null,
   ].filter(Boolean);
-  return labels.length ? labels.join(' · ') : 'Runtime';
+  return labels.length ? labels.join(' · ') : 'Background capability';
 }
 
 function extensionStatusLabel(extension: ExtensionInstallSummary, unavailableCatalogItem = false): string {
@@ -697,10 +697,10 @@ function ExtensionRepositoriesControl({
           className="min-w-0 bg-base"
           value={input}
           onChange={(event) => onInputChange(event.currentTarget.value)}
-          placeholder="GitHub repo URL or owner/repo"
+          placeholder="GitHub URL or owner/name"
         />
         <Button variant="action" className="px-3 py-2 text-[13px]" disabled={busyId === 'extension-source'} onClick={onAdd}>
-          {busyId === 'extension-source' ? 'Adding...' : 'Add repo'}
+          {busyId === 'extension-source' ? 'Adding...' : 'Add source'}
         </Button>
       </div>
       <ResourceList>
@@ -775,7 +775,7 @@ export function ExtensionRepositoriesSettingsPanel({ pa }: ExtensionSurfaceProps
   const addSource = useCallback(async () => {
     const parsed = parseGithubCatalogSource(input);
     if (!parsed) {
-      showError('Extension repository must be a GitHub repo URL or owner/repo.');
+      showError('Extension source must be a GitHub URL or owner/name.');
       return;
     }
     const nextSources = [...sources.filter((source) => repoKey(source) !== repoKey(parsed)), parsed];
@@ -1022,7 +1022,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const addCatalogSource = useCallback(async () => {
     const parsed = parseGithubCatalogSource(catalogSourceInput);
     if (!parsed) {
-      showActionError('Extension repository must be a GitHub repo URL or owner/repo.');
+      showActionError('Extension source must be a GitHub URL or owner/name.');
       return;
     }
     const nextSources = [...catalogSources.filter((source) => repoKey(source) !== repoKey(parsed)), parsed];
@@ -1719,7 +1719,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 </div>
               </div>
               {extensions.length === 0 ? (
-                <EmptyState title="No extensions installed" body="Ask an agent to create one under the runtime extensions directory." />
+                <EmptyState title="No extensions installed" body="Install one from a source, or ask an agent to build one." />
               ) : visibleExtensions.length === 0 ? (
                 <EmptyState title={emptyVisibleExtensionsTitle} body={emptyVisibleExtensionsBody} />
               ) : (

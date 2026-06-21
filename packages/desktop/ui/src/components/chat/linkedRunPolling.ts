@@ -74,7 +74,7 @@ function isDurableRunUnavailableError(error: unknown): boolean {
 function describeDurableRunPollingError(error: unknown): { message: string; unavailable: boolean } {
   if (isDurableRunUnavailableError(error)) {
     return {
-      message: 'Run record unavailable. This linked task may have been cleaned up or belongs to an older dev session.',
+      message: 'Background task unavailable. It may have been cleaned up or belongs to an older dev session.',
       unavailable: true,
     };
   }

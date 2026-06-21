@@ -3,7 +3,7 @@
   "id": "system-skills",
   "name": "Skills",
   "packageType": "system",
-  "description": "Backend compatibility actions for agent skills. The user-facing management surface lives in Prompt Assembly.",
+  "description": "Compatibility actions for agent skills. Manage visible skill settings in Prompt Assembly.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",

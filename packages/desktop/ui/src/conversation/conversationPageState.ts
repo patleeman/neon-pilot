@@ -30,9 +30,7 @@ export function resolveConversationComposerRunState(input: {
   const liveSessionIsStreaming = input.bootstrapLiveSessionIsStreaming === true || input.desktopLiveSessionIsStreaming === true;
   const explicitlyIdle = input.sessionIsRunning === false && !liveSessionIsStreaming && !input.hasStaleTurnState;
   const streamControlsActive =
-    !input.hasStaleTurnState &&
-    !explicitlyIdle &&
-    (input.streamIsStreaming || liveSessionIsStreaming || input.sessionIsRunning === true);
+    !input.hasStaleTurnState && !explicitlyIdle && (input.streamIsStreaming || liveSessionIsStreaming || input.sessionIsRunning === true);
 
   return {
     allowQueuedPrompts: streamControlsActive || input.hasStaleTurnState,
@@ -59,7 +57,7 @@ function resolvePendingConversationPreparationStatusLabel(prompt: PendingConvers
     return null;
   }
 
-  return `Summarizing ${relatedThreadCount} related thread${relatedThreadCount === 1 ? '' : 's'}…`;
+  return `Summarizing ${relatedThreadCount} related conversation${relatedThreadCount === 1 ? '' : 's'}…`;
 }
 
 export function resolveDisplayedConversationPendingStatusLabel(input: {

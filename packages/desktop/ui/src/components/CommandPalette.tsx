@@ -16,7 +16,7 @@ import {
   THREAD_COMMAND_PALETTE_SECTIONS,
   THREADS_COMMAND_PALETTE_SCOPE,
 } from '../commands/commandPalette';
-import { activateCommandPaletteItem, executePaletteCommand, type CommandPaletteAction } from '../commands/commandPaletteActions';
+import { activateCommandPaletteItem, type CommandPaletteAction, executePaletteCommand } from '../commands/commandPaletteActions';
 import { COMMAND_PALETTE_STATE_EVENT, OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import {
   buildConversationContentSearchItems,
@@ -60,10 +60,10 @@ function isMacPlatform(): boolean {
 
 function emptyStateCopy(scope: CommandPaletteScope, query: string): string {
   if (query.trim().length > 0) {
-    return scope === THREADS_COMMAND_PALETTE_SCOPE ? `No threads match “${query}”.` : `No items match “${query}”.`;
+    return scope === THREADS_COMMAND_PALETTE_SCOPE ? `No conversations match “${query}”.` : `No items match “${query}”.`;
   }
 
-  return scope === THREADS_COMMAND_PALETTE_SCOPE ? 'No threads yet.' : 'No items yet.';
+  return scope === THREADS_COMMAND_PALETTE_SCOPE ? 'No conversations yet.' : 'No items yet.';
 }
 
 export function CommandPalette() {
