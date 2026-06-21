@@ -22,7 +22,8 @@ export const executionStore: EntityStore<ExecutionRecord> = createEntityStore<Ex
 export type RunningState = 'idle' | 'streaming' | 'automation' | 'hasRuns' | 'stale';
 
 let presenceStates = new Map<string, RunningState>();
-let liveStreamingOverrides = new Map<string, boolean>();
+type LiveStreamingSource = 'app' | 'activeConversation';
+let liveStreamingOverrides = new Map<string, Partial<Record<LiveStreamingSource, boolean>>>();
 let presenceVersion = 0;
 const presenceListeners = new Map<string, Set<() => void>>();
 const presenceAllListeners = new Set<() => void>();
@@ -33,13 +34,13 @@ function isActiveExecutionStatus(status: string | undefined): boolean {
 
 function computeRunningState(sessionId: string): RunningState {
   const liveStreamingOverride = liveStreamingOverrides.get(sessionId);
-  if (liveStreamingOverride === true) return 'streaming';
+  if (liveStreamingOverride && Object.values(liveStreamingOverride).some((running) => running === true)) return 'streaming';
 
   const session = sessionStore.get(sessionId);
   if (!session) return 'idle';
 
-  if (liveStreamingOverride === true) return 'streaming';
-  if (liveStreamingOverride === undefined && session.isRunning) return 'streaming';
+  if (liveStreamingOverride && Object.values(liveStreamingOverride).some((running) => running === true)) return 'streaming';
+  if (!liveStreamingOverride && session.isRunning) return 'streaming';
 
   // Automation task actively running for this thread
   const hasAutomation = taskStore.getAll().some((t) => t.running && t.threadConversationId === sessionId);
@@ -116,15 +117,22 @@ export const presenceStore = {
     return presenceVersion;
   },
 
-  setLiveStreaming(sessionId: string, running: boolean | null): void {
+  setLiveStreaming(sessionId: string, running: boolean | null, source: LiveStreamingSource = 'app'): void {
     if (!sessionId.trim()) return;
+    const current = liveStreamingOverrides.get(sessionId) ?? {};
     if (running === null) {
-      if (!liveStreamingOverrides.has(sessionId)) return;
+      if (current[source] === undefined) return;
       liveStreamingOverrides = new Map(liveStreamingOverrides);
-      liveStreamingOverrides.delete(sessionId);
+      const next = { ...current };
+      delete next[source];
+      if (Object.keys(next).length === 0) {
+        liveStreamingOverrides.delete(sessionId);
+      } else {
+        liveStreamingOverrides.set(sessionId, next);
+      }
     } else {
-      if (liveStreamingOverrides.get(sessionId) === running) return;
-      liveStreamingOverrides = new Map(liveStreamingOverrides).set(sessionId, running);
+      if (current[source] === running) return;
+      liveStreamingOverrides = new Map(liveStreamingOverrides).set(sessionId, { ...current, [source]: running });
     }
     rederivePresenceForId(sessionId);
   },

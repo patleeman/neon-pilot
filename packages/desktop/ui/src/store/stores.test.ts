@@ -40,15 +40,12 @@ describe('presenceStore', () => {
     expect(presenceStore.get('conv-2')).toBe('idle');
   });
 
-  it.each(['pending', 'queued', 'waiting', 'running', 'recovering'])(
-    'marks %s executions as pending background work',
-    (status) => {
-      sessionStore.replaceAll([session('conv-1')]);
-      executionStore.replaceAll([execution('run-1', 'conv-1', status)]);
+  it.each(['pending', 'queued', 'waiting', 'running', 'recovering'])('marks %s executions as pending background work', (status) => {
+    sessionStore.replaceAll([session('conv-1')]);
+    executionStore.replaceAll([execution('run-1', 'conv-1', status)]);
 
-      expect(presenceStore.get('conv-1')).toBe('hasRuns');
-    },
-  );
+    expect(presenceStore.get('conv-1')).toBe('hasRuns');
+  });
 
   it.each(['completed', 'failed', 'cancelled', 'interrupted'])(
     'does not mark terminal %s executions as pending background work',
@@ -76,5 +73,17 @@ describe('presenceStore', () => {
 
     expect(presenceStore.get('conv-1')).toBe('idle');
     expect(presenceStore.get('conv-2')).toBe('automation');
+  });
+
+  it('does not let a stale false source clear a true live running source', () => {
+    sessionStore.replaceAll([session('conv-1', false)]);
+
+    presenceStore.setLiveStreaming('conv-1', true, 'app');
+    presenceStore.setLiveStreaming('conv-1', false, 'activeConversation');
+
+    expect(presenceStore.get('conv-1')).toBe('streaming');
+
+    presenceStore.setLiveStreaming('conv-1', false, 'app');
+    expect(presenceStore.get('conv-1')).toBe('idle');
   });
 });

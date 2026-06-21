@@ -626,7 +626,10 @@ export function useDesktopConversationState(conversationId: string | null, optio
     }
 
     const nextRunning = matchedState.stream.isStreaming || matchedState.liveSession.isStreaming === true;
-    presenceStore.setLiveStreaming(conversationId, nextRunning);
+    presenceStore.setLiveStreaming(conversationId, nextRunning, 'activeConversation');
+    return () => {
+      presenceStore.setLiveStreaming(conversationId, null, 'activeConversation');
+    };
   }, [conversationId, matchedState?.liveSession.isStreaming, matchedState?.stream.isStreaming]);
 
   useEffect(() => {
