@@ -6288,7 +6288,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                           }
                         }}
                         placeholder="Name this conversation"
-                        className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-2 text-[26px] font-semibold leading-[1.08] tracking-normal text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35"
+                        className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-1.5 text-[38px] font-semibold leading-[1.05] tracking-[-0.02em] text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 sm:text-[42px]"
                         disabled={titleSaving}
                       />
                       <IconButton

@@ -35,7 +35,7 @@ import {
   unpinConversationTab,
 } from '../session/sessionTabs';
 import type { SessionMeta } from '../shared/types';
-import { sessionStore, useAllSessions, useAllTasks, useSessionsReady } from '../store';
+import { presenceStore, sessionStore, useAllSessions, useAllTasks, usePresenceVersion, useSessionsReady } from '../store';
 
 const CONVERSATION_LAYOUT_BOOTSTRAP_RETRY_DELAYS_MS = [500, 1_000, 2_000, 4_000, 8_000];
 
@@ -70,7 +70,7 @@ function buildPlaceholderSessionMeta(id: string, title?: string): SessionMeta {
     model: '',
     title: title ?? 'Connecting…',
     messageCount: 0,
-    isRunning: false,
+    isRunning: presenceStore.get(id) === 'streaming',
   };
 }
 
@@ -121,6 +121,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   );
   const { titles: liveTitles } = useContext(LiveTitlesContext);
   const sessions = useAllSessions();
+  const presenceVersion = usePresenceVersion();
   const sessionsReady = useSessionsReady();
   const tasks = useAllTasks();
   const { status: sseStatus } = useSseConnection();
@@ -327,10 +328,11 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
         const liveTitle = normalizeConversationTitle(liveTitles.get(session.id));
         const sessionTitle = normalizeConversationTitle(session.title) ?? NEW_CONVERSATION_TITLE;
         const title = liveTitle ?? sessionTitle;
+        const isRunning = presenceStore.get(session.id) === 'streaming';
 
-        return title === session.title ? session : { ...session, title };
+        return title === session.title && isRunning === session.isRunning ? session : { ...session, title, isRunning };
       }),
-    [liveTitles, titledSessionSource],
+    [liveTitles, presenceVersion, titledSessionSource],
   );
   const sessionsById = useMemo(
     () => new Map(withTitles.map((session) => [session.id, session] satisfies [string, SessionMeta])),
@@ -389,7 +391,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
           normalizeConversationTitle(liveTitles.get(id)) ?? automationThreadTitleBySessionId.get(id) ?? 'Connecting…',
         );
       }),
-    [automationThreadTitleBySessionId, liveTitles, pinnedIds, sessionsById],
+    [automationThreadTitleBySessionId, liveTitles, pinnedIds, presenceVersion, sessionsById],
   );
   const tabs = useMemo(
     () =>
@@ -404,7 +406,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
           normalizeConversationTitle(liveTitles.get(id)) ?? automationThreadTitleBySessionId.get(id) ?? 'Connecting…',
         );
       }),
-    [automationThreadTitleBySessionId, liveTitles, openIds, sessionsById],
+    [automationThreadTitleBySessionId, liveTitles, openIds, presenceVersion, sessionsById],
   );
   const archivedSessions = useMemo(
     () =>

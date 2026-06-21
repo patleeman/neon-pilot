@@ -13,7 +13,7 @@ import {
 import { mergeSessionSnapshotPreservingOrder } from '../session/sessionListState.js';
 import { openConversationTab, resetLocalWriteGrace, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
 import type { ScheduledTaskSummary, SessionMeta } from '../shared/types.js';
-import { sessionStore, taskStore } from '../store';
+import { presenceStore, sessionStore, taskStore } from '../store';
 import { useConversations } from './useConversations.js';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -1057,5 +1057,36 @@ describe('useConversations', () => {
     });
     await flushAsyncWork();
     expect(latestHookResult?.tabs[0]?.isRunning).toBe(false);
+  });
+
+  it('keeps sidebar running state from live presence when the session snapshot is stale', async () => {
+    apiMocks.sidebarConversations.mockResolvedValue({
+      sessionIds: ['conv-running'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+    });
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    renderProbeIntoRoot(root, {
+      sessions: [createSession({ id: 'conv-running', isRunning: false })],
+      tasks: null,
+    });
+    await flushAsyncWork();
+    expect(latestHookResult?.tabs[0]?.isRunning).toBe(false);
+
+    await act(async () => {
+      presenceStore.setLiveStreaming('conv-running', true);
+    });
+
+    expect(latestHookResult?.tabs[0]?.isRunning).toBe(true);
   });
 });
