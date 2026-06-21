@@ -140,6 +140,24 @@ describe('system-routines backend', () => {
     expect(state.hooks).toContainEqual(expect.objectContaining({ id: 'example.before', title: 'Example' }));
   });
 
+  it('moves routines into judge routes', async () => {
+    const ctx = createCtx();
+    const initial = (await getState({}, ctx)) as { routines: Array<{ id: string; name: string; position: string; order: number }> };
+    const report = initial.routines.find((routine) => routine.name === 'Report checkpoint');
+    expect(report).toBeTruthy();
+
+    const moved = (await moveRoutine(
+      { routineId: report?.id, position: 'before', parentRoutineId: 'checkpoint-review-code', parentOutcomeId: 'pass' },
+      ctx,
+    )) as {
+      routines: Array<{ id: string; name: string; position: string; parentRoutineId?: string; parentOutcomeId?: string }>;
+    };
+    expect(moved.routines.find((routine) => routine.id === report?.id)).toMatchObject({
+      parentRoutineId: 'checkpoint-review-code',
+      parentOutcomeId: 'pass',
+    });
+  });
+
   it('moves routines between lanes and reorders the target lane', async () => {
     const ctx = createCtx();
     const initial = (await getState({}, ctx)) as { routines: Array<{ id: string; name: string; position: string; order: number }> };

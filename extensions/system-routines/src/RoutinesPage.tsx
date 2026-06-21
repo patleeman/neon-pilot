@@ -245,6 +245,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverPosition, setDragOverPosition] = useState<RoutinePosition | null>(null);
   const [dragTargetRoutineId, setDragTargetRoutineId] = useState<string | null>(null);
+  const [dragTargetRoute, setDragTargetRoute] = useState<{ parentRoutineId: string; parentOutcomeId: string } | null>(null);
   const [dragPreview, setDragPreview] = useState<{ x: number; y: number; name: string; type: RoutineType } | null>(null);
   const pointerDragIdRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -388,15 +389,21 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   );
 
   const moveRoutineById = useCallback(
-    async (routineId: string, position: RoutinePosition, targetRoutineId = '') => {
+    async (
+      routineId: string,
+      position: RoutinePosition,
+      targetRoutineId = '',
+      parent?: { parentRoutineId: string; parentOutcomeId: string } | null,
+    ) => {
       if (!routineId || routineId === targetRoutineId) return;
-      const result = (await pa.extension.invoke('moveRoutine', { routineId, position, targetRoutineId })) as StateResult;
+      const result = (await pa.extension.invoke('moveRoutine', { routineId, position, targetRoutineId, ...(parent ?? {}) })) as StateResult;
       setData(result);
       const selected = result.routines.find((routine) => routine.id === selectedRoutineId);
       if (selected) setDraft({ ...selected, outcomes: selected.outcomes.map((outcome) => ({ ...outcome })) });
       setDragId(null);
       setDragOverPosition(null);
       setDragTargetRoutineId(null);
+      setDragTargetRoute(null);
       setDragPreview(null);
     },
     [pa, selectedRoutineId],
@@ -417,13 +424,20 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       pointerDragIdRef.current = routine.id;
       setDragId(routine.id);
       setDragTargetRoutineId(null);
+      setDragTargetRoute(null);
       setDragPreview({ x: event.clientX, y: event.clientY, name: routine.name, type: routine.type });
 
       const onPointerMove = (moveEvent: PointerEvent) => {
         setDragPreview({ x: moveEvent.clientX, y: moveEvent.clientY, name: routine.name, type: routine.type });
         const element = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY) as HTMLElement | null;
+        const targetRoute = element?.closest<HTMLElement>('[data-routine-route]');
         const targetRoutine = element?.closest<HTMLElement>('[data-routine-id]');
         const lane = element?.closest<HTMLElement>('[data-routine-lane]')?.dataset.routineLane as RoutinePosition | undefined;
+        setDragTargetRoute(
+          targetRoute?.dataset.parentRoutineId && targetRoute.dataset.parentOutcomeId
+            ? { parentRoutineId: targetRoute.dataset.parentRoutineId, parentOutcomeId: targetRoute.dataset.parentOutcomeId }
+            : null,
+        );
         setDragTargetRoutineId(
           targetRoutine?.dataset.routineId && targetRoutine.dataset.routineId !== routine.id ? targetRoutine.dataset.routineId : null,
         );
@@ -436,18 +450,26 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         const routineIdToMove = pointerDragIdRef.current;
         pointerDragIdRef.current = null;
         const element = document.elementFromPoint(upEvent.clientX, upEvent.clientY) as HTMLElement | null;
+        const targetRoute = element?.closest<HTMLElement>('[data-routine-route]');
         const targetRoutine = element?.closest<HTMLElement>('[data-routine-id]');
         const targetLane = element?.closest<HTMLElement>('[data-routine-lane]');
-        const position = (targetRoutine?.dataset.routinePosition ?? targetLane?.dataset.routineLane) as RoutinePosition | undefined;
+        const routeParent =
+          targetRoute?.dataset.parentRoutineId && targetRoute.dataset.parentOutcomeId
+            ? { parentRoutineId: targetRoute.dataset.parentRoutineId, parentOutcomeId: targetRoute.dataset.parentOutcomeId }
+            : null;
+        const position = (targetRoutine?.dataset.routinePosition ?? targetLane?.dataset.routineLane ?? routine.position) as
+          | RoutinePosition
+          | undefined;
         const targetRoutineId =
           targetRoutine?.dataset.routineId && targetRoutine.dataset.routineId !== routineIdToMove ? targetRoutine.dataset.routineId : '';
         if (routineIdToMove && (position === 'before' || position === 'after')) {
-          void moveRoutineById(routineIdToMove, position, targetRoutineId);
+          void moveRoutineById(routineIdToMove, position, targetRoutineId, routeParent);
           return;
         }
         setDragId(null);
         setDragOverPosition(null);
         setDragTargetRoutineId(null);
+        setDragTargetRoute(null);
         setDragPreview(null);
       };
 
@@ -467,7 +489,14 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     (event: React.DragEvent, position: RoutinePosition) => {
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
-      const targetRoutine = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-routine-id]');
+      const target = event.target as HTMLElement | null;
+      const targetRoute = target?.closest<HTMLElement>('[data-routine-route]');
+      const targetRoutine = target?.closest<HTMLElement>('[data-routine-id]');
+      setDragTargetRoute(
+        targetRoute?.dataset.parentRoutineId && targetRoute.dataset.parentOutcomeId
+          ? { parentRoutineId: targetRoute.dataset.parentRoutineId, parentOutcomeId: targetRoute.dataset.parentOutcomeId }
+          : null,
+      );
       setDragTargetRoutineId(
         targetRoutine?.dataset.routineId && targetRoutine.dataset.routineId !== dragId ? targetRoutine.dataset.routineId : null,
       );
@@ -480,6 +509,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     setDragId(null);
     setDragOverPosition(null);
     setDragTargetRoutineId(null);
+    setDragTargetRoute(null);
     setDragPreview(null);
   }, []);
 
@@ -617,7 +647,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           {routine.type === 'decision' && routine.outcomes.length ? (
             <div className="border-t border-border-subtle px-9 py-2 text-[12px]">
               <div className="mb-2 text-[11px] uppercase tracking-[0.12em] text-dim">Routes</div>
-              <div className="grid gap-1 border-l border-border-subtle pl-2">
+              <div className="grid gap-2 border-l border-border-subtle pl-3">
                 {routine.outcomes.map((outcome) => {
                   const branchTargetName = outcome.nextRoutineId ? routineNameById.get(outcome.nextRoutineId) : null;
                   const reaction =
@@ -636,9 +666,26 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     .filter((child) => child.parentRoutineId === routine.id && child.parentOutcomeId === outcome.id)
                     .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
                   return (
-                    <div key={outcome.id} className="rounded-md border border-border-subtle/70 bg-app/30 p-2">
-                      <div className="grid grid-cols-[20px_128px_1fr_auto] items-start gap-2">
-                        <span className="mt-2 h-px bg-border-subtle" />
+                    <div
+                      key={outcome.id}
+                      data-routine-route="true"
+                      data-parent-routine-id={routine.id}
+                      data-parent-outcome-id={outcome.id}
+                      className={cx(
+                        'rounded-md px-2 py-1.5 transition-colors',
+                        dragTargetRoute?.parentRoutineId === routine.id && dragTargetRoute.parentOutcomeId === outcome.id
+                          ? 'bg-accent/10 outline outline-1 outline-accent/40'
+                          : 'bg-transparent',
+                      )}
+                      onDragOver={(event) => onDragOverLane(event, routine.position)}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (dragId)
+                          void moveRoutineById(dragId, routine.position, '', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
+                      }}
+                    >
+                      <div className="grid grid-cols-[128px_1fr_auto] items-start gap-2">
                         <span
                           className={cx(
                             'font-mono font-semibold',
@@ -658,9 +705,9 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                           {reaction}
                         </span>
                       </div>
-                      <div className="ml-5 mt-2 border-l border-border-subtle pl-3">
-                        <div className="mb-2 flex items-center justify-between gap-2 text-[11px] text-dim">
-                          <span>Runs when judge returns {outcome.id}</span>
+                      <div className="ml-3 mt-2 border-l border-border-subtle/70 pl-3">
+                        <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-dim">
+                          <span>If judge returns {outcome.id}</span>
                           <div className="flex gap-1">
                             <button
                               type="button"
@@ -687,8 +734,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                         {routeChildren.length ? (
                           <div className="grid gap-2">{routeChildren.map(renderBlock)}</div>
                         ) : (
-                          <div className="rounded border border-dashed border-border-subtle px-3 py-2 text-[11px] text-secondary">
-                            No instructions on this route yet.
+                          <div className="rounded border border-dashed border-border-subtle/70 px-3 py-2 text-[11px] text-secondary">
+                            Drop a routine here, or add one.
                           </div>
                         )}
                       </div>
@@ -1105,11 +1152,13 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           <div className="text-[11px] uppercase tracking-[0.14em] text-accent">Dragging {routineLabel(dragPreview.type)}</div>
           <div className="mt-1 truncate text-[13px] font-semibold text-primary">{dragPreview.name}</div>
           <div className="mt-1 text-[11px] text-secondary">
-            {dragTargetRoutineId
-              ? `Drop to place before ${routineNameById.get(dragTargetRoutineId) ?? 'this routine'}.`
-              : dragOverPosition
-                ? `Drop to place at the end of ${dragOverPosition}.`
-                : 'Move over a lane to choose where it lands.'}
+            {dragTargetRoute
+              ? `Drop into ${routineNameById.get(dragTargetRoute.parentRoutineId) ?? 'judge'} → ${dragTargetRoute.parentOutcomeId}.`
+              : dragTargetRoutineId
+                ? `Drop to place before ${routineNameById.get(dragTargetRoutineId) ?? 'this routine'}.`
+                : dragOverPosition
+                  ? `Drop to place at the end of ${dragOverPosition}.`
+                  : 'Move over a lane or judge route to choose where it lands.'}
           </div>
         </div>
       ) : null}

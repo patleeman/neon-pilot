@@ -359,25 +359,49 @@ export async function moveRoutine(input: unknown, ctx: ExtensionBackendContext) 
   const routineId = stringValue(input.routineId).trim();
   const position = positionValue(input.position);
   const targetRoutineId = stringValue(input.targetRoutineId).trim();
+  const parentRoutineId = stringValue(input.parentRoutineId).trim();
+  const parentOutcomeId = stringValue(input.parentOutcomeId).trim();
   if (!routineId) throw new Error('routineId and position are required.');
 
   const state = await readState(ctx);
   const moving = state.routines.find((routine) => routine.id === routineId);
   if (!moving) throw new Error('Routine not found.');
+  if (parentRoutineId === routineId) throw new Error('Routine cannot be nested inside itself.');
 
   const timestamp = now();
   const targetLane = state.routines
-    .filter((routine) => routine.hookId === moving.hookId && routine.position === position && routine.id !== routineId)
+    .filter(
+      (routine) =>
+        routine.hookId === moving.hookId &&
+        routine.position === position &&
+        routine.id !== routineId &&
+        (routine.parentRoutineId ?? '') === parentRoutineId &&
+        (routine.parentOutcomeId ?? '') === parentOutcomeId,
+    )
     .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
   const insertIndex = targetRoutineId ? targetLane.findIndex((routine) => routine.id === targetRoutineId) : -1;
-  targetLane.splice(insertIndex >= 0 ? insertIndex : targetLane.length, 0, { ...moving, position, updatedAt: timestamp });
+  targetLane.splice(insertIndex >= 0 ? insertIndex : targetLane.length, 0, {
+    ...moving,
+    position,
+    ...(parentRoutineId && parentOutcomeId
+      ? { parentRoutineId, parentOutcomeId }
+      : { parentRoutineId: undefined, parentOutcomeId: undefined }),
+    updatedAt: timestamp,
+  });
   const targetOrder = new Map(targetLane.map((routine, index) => [routine.id, index]));
 
   const sourceLane =
-    moving.position === position
+    moving.position === position && (moving.parentRoutineId ?? '') === parentRoutineId && (moving.parentOutcomeId ?? '') === parentOutcomeId
       ? []
       : state.routines
-          .filter((routine) => routine.hookId === moving.hookId && routine.position === moving.position && routine.id !== routineId)
+          .filter(
+            (routine) =>
+              routine.hookId === moving.hookId &&
+              routine.position === moving.position &&
+              routine.id !== routineId &&
+              (routine.parentRoutineId ?? '') === (moving.parentRoutineId ?? '') &&
+              (routine.parentOutcomeId ?? '') === (moving.parentOutcomeId ?? ''),
+          )
           .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
   const sourceOrder = new Map(sourceLane.map((routine, index) => [routine.id, index]));
 
@@ -385,7 +409,14 @@ export async function moveRoutine(input: unknown, ctx: ExtensionBackendContext) 
     await writeState(ctx, {
       ...state,
       routines: state.routines.map((routine) => {
-        if (routine.id === routineId) return { ...routine, position, order: targetOrder.get(routine.id) ?? 0, updatedAt: timestamp };
+        if (routine.id === routineId) {
+          const next = { ...routine, position, order: targetOrder.get(routine.id) ?? 0, updatedAt: timestamp };
+          if (parentRoutineId && parentOutcomeId) return { ...next, parentRoutineId, parentOutcomeId };
+          const topLevel = { ...next };
+          delete topLevel.parentRoutineId;
+          delete topLevel.parentOutcomeId;
+          return topLevel;
+        }
         if (routine.hookId !== moving.hookId) return routine;
         if (routine.position === position && targetOrder.has(routine.id)) {
           return { ...routine, order: targetOrder.get(routine.id) ?? routine.order, updatedAt: timestamp };
