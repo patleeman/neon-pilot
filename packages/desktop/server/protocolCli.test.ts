@@ -175,6 +175,21 @@ describe('protocol CLI', () => {
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('--quiet      Suppress non-essential human output'));
   });
 
+  it('prints command-family help for extension CLI groups', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        { extensionId: 'system-settings', surfaceId: 'settings-list', command: 'settings list', action: 'manageSettings' },
+        { extensionId: 'system-settings', surfaceId: 'settings-get', command: 'settings get', action: 'manageSettings' },
+      ],
+    });
+
+    await expect(runProtocolCli(['help', 'settings'])).resolves.toBe(0);
+
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('settings commands'));
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('settings list [system-settings]'));
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Run `neon-pilot help settings <subcommand>`'));
+  });
+
   it('uses packaged resourcesPath for cli status when repo root env is unavailable', async () => {
     Object.defineProperty(process, 'resourcesPath', {
       value: '/Applications/Neon Pilot.app/Contents/Resources',

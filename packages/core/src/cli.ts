@@ -470,7 +470,7 @@ export function renderCliCommandHelp(definition: NeonPilotCliCommandDefinition, 
     definition.mode ? `mode=${definition.mode}` : undefined,
     definition.requiresApp === false ? 'offline-ok' : definition.requiresApp === true ? 'requires-app' : undefined,
     definition.destructive ? 'destructive' : undefined,
-    definition.supportsDryRun ? 'dry-run' : undefined,
+    definition.supportsDryRun ? 'supports-dry-run' : undefined,
     definition.startsBackgroundWork ? 'starts-background-work' : undefined,
     definition.outputModes?.length ? `output=${definition.outputModes.join('|')}` : undefined,
   ].filter((item): item is string => Boolean(item));
@@ -489,10 +489,35 @@ function humanCliExamples(examples: string[]): string[] {
   return nonJsonExamples.length > 0 ? nonJsonExamples : examples;
 }
 
+export function renderCliCommandGroupHelp(definitions: NeonPilotCliCommandDefinition[], group: string, commandName = 'neon-pilot'): string {
+  const normalized = group.trim();
+  const commands = definitions
+    .filter(
+      (definition) =>
+        definition.command.startsWith(`${normalized} `) || definition.aliases?.some((alias) => alias.startsWith(`${normalized} `)),
+    )
+    .sort((a, b) => a.command.localeCompare(b.command));
+  const lines = [`${normalized} commands`];
+  lines.push('', `Usage: ${commandName} ${normalized} <subcommand> [args]`);
+  lines.push('', 'Subcommands:');
+  lines.push(...commands.map(renderCliCommandListEntry));
+  lines.push('', `Run \`${commandName} help ${normalized} <subcommand>\` for command-specific options.`);
+  return `${lines.join('\n')}\n`;
+}
+
 export function findCliHelpTarget<T extends NeonPilotCliCommandDefinition>(definitions: T[], target: string): T | undefined {
   const normalized = target.trim();
   if (!normalized) return undefined;
   return definitions.find((definition) => definition.command === normalized || definition.aliases?.includes(normalized));
+}
+
+export function findCliCommandGroup<T extends NeonPilotCliCommandDefinition>(definitions: T[], target: string): T[] {
+  const normalized = target.trim();
+  if (!normalized) return [];
+  return definitions.filter(
+    (definition) =>
+      definition.command.startsWith(`${normalized} `) || definition.aliases?.some((alias) => alias.startsWith(`${normalized} `)),
+  );
 }
 
 export function actionFromCliCommand(command: string): string | undefined {
@@ -620,10 +645,8 @@ function validatePrimitiveSchema(schema: unknown, value: unknown, label: string,
 export function withDefaultCliCommandContract<T extends NeonPilotCliCommandDefinition>(definition: T): T {
   const mode = definition.mode ?? inferCliCommandMode(definition.command);
   const requiresApp = definition.requiresApp ?? inferCliCommandRequiresApp(definition.command);
-  const supportsDryRun =
-    definition.supportsDryRun ??
-    (mode === 'write' || mode === 'destructive' || mode === 'background' || definition.command === 'conversations run-turn');
   const usage = definition.usage ?? inferCliCommandUsage(definition.command);
+  const supportsDryRun = definition.supportsDryRun ?? cliContractHasDryRun(definition.flagsSchema, usage);
   const outputModes = definition.outputModes ?? (mode === 'streaming' ? ['text', 'json', 'jsonl'] : ['text', 'json']);
   const destructive = definition.destructive ?? mode === 'destructive';
   const flagsSchema = withCliShellFlags(definition.flagsSchema ?? inferCliFlagsSchema(definition.command, { supportsDryRun, mode }), {
@@ -658,6 +681,19 @@ export function withDefaultCliCommandContract<T extends NeonPilotCliCommandDefin
         }
       : {}),
   };
+}
+
+function cliContractHasDryRun(flagsSchema: Record<string, unknown> | undefined, usage: string): boolean {
+  const properties =
+    flagsSchema &&
+    typeof flagsSchema === 'object' &&
+    !Array.isArray(flagsSchema) &&
+    flagsSchema.properties &&
+    typeof flagsSchema.properties === 'object' &&
+    !Array.isArray(flagsSchema.properties)
+      ? (flagsSchema.properties as Record<string, unknown>)
+      : undefined;
+  return Boolean(properties?.['dry-run']) || usage.includes('--dry-run');
 }
 
 function inferCliCommandIntent(command: string): string | undefined {

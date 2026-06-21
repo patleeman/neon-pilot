@@ -5,17 +5,19 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCliInvocation,
   commandMatches,
+  findCliCommandGroup,
   findCliHelpTarget,
   formatCliError,
   formatCliResult,
+  type NeonPilotCliCommandDefinition,
   parseCliFlags,
+  renderCliCommandGroupHelp,
   renderCliCommandHelp,
   renderCliCommandList,
   renderCliUsage,
   selectCliCommandMatch,
   validateCliInvocation,
   withDefaultCliCommandContract,
-  type NeonPilotCliCommandDefinition,
 } from './cli.js';
 
 const commands: NeonPilotCliCommandDefinition[] = [
@@ -101,6 +103,15 @@ describe('core CLI shell helpers', () => {
     expect(findCliHelpTarget(commands, 'ext list')).toBe(commands[1]);
   });
 
+  it('renders command family help for group-level help targets', () => {
+    expect(findCliCommandGroup(commands, 'extensions')).toEqual([commands[1], commands[2]]);
+    const help = renderCliCommandGroupHelp(commands.slice(1), 'extensions', 'neon-pilot');
+    expect(help).toContain('extensions commands');
+    expect(help).toContain('Usage: neon-pilot extensions <subcommand> [args]');
+    expect(help).toContain('extensions list [system-extension-manager]  List installed extensions.');
+    expect(help).toContain('Run `neon-pilot help extensions <subcommand>`');
+  });
+
   it('hides advanced commands by default and shows them in verbose or JSON modes', () => {
     const commandDefinitions = [
       withDefaultCliCommandContract({ id: 'ask', command: 'ask', description: 'Ask Neon Pilot.' }),
@@ -145,6 +156,22 @@ describe('core CLI shell helpers', () => {
     expect(renderCliCommandList(commandDefinitions, false, { brief: true, verbose: true })).toContain(
       'protocol | host.raw_protocol_escape_hatch | advanced',
     );
+  });
+
+  it('labels dry-run support explicitly and does not infer it for executable turns', () => {
+    const turnHelp = renderCliCommandHelp(withDefaultCliCommandContract({ id: 'ask', command: 'ask' }), 'neon-pilot');
+    expect(turnHelp).not.toContain('supports-dry-run');
+    expect(turnHelp).not.toContain('dry-run');
+
+    const pruneHelp = renderCliCommandHelp(
+      withDefaultCliCommandContract({
+        id: 'prune',
+        command: 'conversations retention prune',
+        usage: 'conversations retention prune [olderThan] [--dry-run] [--json]',
+      }),
+      'neon-pilot',
+    );
+    expect(pruneHelp).toContain('supports-dry-run');
   });
 
   it('keeps JSON examples out of normal help when a human example exists', () => {

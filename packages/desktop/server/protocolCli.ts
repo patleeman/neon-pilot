@@ -1,31 +1,33 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { createInterface } from 'node:readline/promises';
+import { pathToFileURL } from 'node:url';
 
 import {
   actionFromCliCommand,
   buildCliCommandSchema,
   buildCliInvocation,
   commandTokens,
+  findCliCommandGroup,
   findCliHelpTarget,
-  formatCliTable,
   formatCliError,
   formatCliResult,
+  formatCliTable,
   getPiAgentRuntimeDir,
-  resolveNeonPilotRuntimeChannel,
   getStateRoot,
   NEON_PILOT_CLI_EXIT_CODES,
+  type NeonPilotCliCommandDefinition,
+  renderCliCommandGroupHelp,
   renderCliCommandHelp,
   renderCliCommandList,
   renderCliUsage,
+  resolveNeonPilotRuntimeChannel,
   selectCliCommandMatch,
   stripCliGlobalFlags,
   stripJsonFlag,
   validateCliInvocation,
   wantsJson,
   withDefaultCliCommandContract,
-  type NeonPilotCliCommandDefinition,
 } from '@neon-pilot/core';
 
 import { createRuntimeState } from './app/runtimeState.js';
@@ -844,8 +846,18 @@ async function printHelp(args: string[], rawArgs = args): Promise<number> {
     return 0;
   }
   try {
-    const match = findCliHelpTarget(await allCliCommandDefinitions(), helpTarget);
+    const definitions = await allCliCommandDefinitions();
+    const match = findCliHelpTarget(definitions, helpTarget);
     if (!match) {
+      const groupCommands = findCliCommandGroup(definitions, helpTarget);
+      if (groupCommands.length > 0) {
+        process.stdout.write(
+          wantsJson(rawArgs)
+            ? `${JSON.stringify({ group: helpTarget, commands: groupCommands }, null, 2)}\n`
+            : renderCliCommandGroupHelp(groupCommands, helpTarget),
+        );
+        return 0;
+      }
       writeCliError(
         {
           code: 'unknown_command',
