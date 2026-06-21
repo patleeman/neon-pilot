@@ -1937,8 +1937,21 @@ export function createExtensionBackendCapabilityDispatcher(
       },
     ) => createExtensionConversationsCapability().connections(conversationId, options),
     get: (_extensionId: string, conversationId: string) => createExtensionConversationsCapability().get(conversationId),
-    create: (_extensionId: string, input?: Parameters<ReturnType<typeof createExtensionConversationsCapability>['create']>[0]) =>
-      createExtensionConversationsCapability().create(input),
+    create: (
+      _extensionId: string,
+      input?: Parameters<ReturnType<typeof createExtensionConversationsCapability>['create']>[0] & {
+        runtimeScope?: string;
+        runtimeSettingsFilePath?: string;
+      },
+    ) =>
+      createExtensionConversationsCapability(
+        input?.runtimeSettingsFilePath
+          ? {
+              getRuntimeScope: () => input.runtimeScope ?? 'shared',
+              getSettingsFile: () => input.runtimeSettingsFilePath!,
+            }
+          : undefined,
+      ).create(input),
     setActiveTools: (_extensionId: string, conversationId: string, toolNames: string[]) =>
       createExtensionConversationsCapability().setActiveTools(conversationId, toolNames),
     appendCustomEntry: (_extensionId: string, conversationId: string, customType: string, data?: unknown) =>
