@@ -263,7 +263,7 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
     }
     case 'checkpoint': {
       const action = read('action');
-      const message = excerpt('message') ?? read('checkpointId');
+      const message = action === 'save' ? (excerpt('message') ?? read('checkpointId')) : null;
       return [action, message].filter(Boolean).join(' ');
     }
     case 'subagent': {

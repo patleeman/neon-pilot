@@ -7,25 +7,18 @@ import type { ChatViewLayout } from './chatViewTypes.js';
 import { readLinkedRuns } from './linkedRuns.js';
 import { ContextShelf } from './MessageBlocks.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
-import { buildSummaryPreview } from './summaryPreview.js';
-import { ToolBlock } from './ToolBlock.js';
-import {
-  registerTraceClusterOverflowToggleCapability,
-  registerTraceClusterToggleCapability,
-  TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT,
-  TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT,
-  type TraceClusterCommandDetail,
-} from './traceClusterCommands.js';
-import {
-  registerThinkingBlockToggleCapability,
-  THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
-  type ThinkingBlockCommandDetail,
-} from './thinkingBlockCommands.js';
 import {
   registerSubagentBlockToggleCapability,
   SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
   type SubagentBlockCommandDetail,
 } from './subagentBlockCommands.js';
+import { buildSummaryPreview } from './summaryPreview.js';
+import {
+  registerThinkingBlockToggleCapability,
+  THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
+  type ThinkingBlockCommandDetail,
+} from './thinkingBlockCommands.js';
+import { ToolBlock } from './ToolBlock.js';
 import {
   type ConversationDiffDisclosureMode,
   type ConversationTranscriptDisclosureMode,
@@ -36,6 +29,13 @@ import {
   toggleDisclosurePreference,
   toolMeta,
 } from './toolPresentation.js';
+import {
+  registerTraceClusterOverflowToggleCapability,
+  registerTraceClusterToggleCapability,
+  TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT,
+  TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT,
+  type TraceClusterCommandDetail,
+} from './traceClusterCommands.js';
 import type { TraceClusterSummary, TraceClusterSummaryCategory, TraceConversationBlock } from './transcriptItems.js';
 
 export const ThinkingBlock = memo(function ThinkingBlock({
@@ -224,7 +224,7 @@ function hasArtifactPresentation(block: Extract<MessageBlock, { type: 'tool_use'
 function hasPinnedToolBlock(block: TraceConversationBlock): block is Extract<MessageBlock, { type: 'tool_use' }> {
   return (
     block.type === 'tool_use' &&
-    (block.tool === 'checkpoint' ||
+    (isCheckpointSaveBlock(block) ||
       block.tool === 'ask_user' ||
       block.tool === 'image' ||
       block.tool === 'browser_screenshot' ||
@@ -427,7 +427,6 @@ export function TraceClusterBlock({
     return blocks.slice(-MAX_VISIBLE_TRACE_BLOCKS);
   }, [blocks, open, runningBlockIndex, showAllBlocks]);
   const overflowBlockCount = Math.max(0, blocks.length - MAX_VISIBLE_TRACE_BLOCKS);
-  const hiddenBlockCount = open && !showAllBlocks ? overflowBlockCount : 0;
   const canToggleTraceClusterOverflow = open && overflowBlockCount > 0;
   useEffect(() => {
     if (!canToggleTraceClusterOverflow) return undefined;

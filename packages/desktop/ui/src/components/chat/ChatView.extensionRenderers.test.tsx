@@ -124,6 +124,29 @@ describe('chat view extension transcript renderers', () => {
     expect(html).toContain('checkpoint transcript card');
   });
 
+  it('renders checkpoint list calls as ordinary tool rows, not pinned checkpoint cards', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        transcriptDisclosureMode: 'expanded',
+        messages: [
+          {
+            type: 'tool_use',
+            ts: '2026-05-12T18:00:00.000Z',
+            tool: 'checkpoint',
+            input: { action: 'list' },
+            details: { checkpointId: '1504906c4' },
+            output: '1504906c4 fix: align conversation title edit styling',
+            status: 'ok',
+          },
+        ],
+      }),
+    );
+
+    expect(html).toContain('checkpoint');
+    expect(html).not.toContain('1504906');
+    expect(html).not.toContain('data-extension-tool-host');
+  });
+
   it('collapses repeated checkpoint save attempts with the same message in pinned tool rows', () => {
     const checkpointInput = { action: 'save', message: 'fix: dedupe checkpoint retries', paths: ['src/file.ts'] };
     const html = renderToStaticMarkup(
