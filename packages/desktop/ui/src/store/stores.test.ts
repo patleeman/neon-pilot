@@ -87,4 +87,13 @@ describe('presenceStore', () => {
     presenceStore.setBackendRunning('conv-1', false);
     expect(presenceStore.get('conv-1')).toBe('idle');
   });
+
+  it('ignores stale backend running revisions', () => {
+    sessionStore.replaceAll([session('conv-1', false)]);
+
+    presenceStore.setBackendRunning('conv-1', true, 2);
+    presenceStore.setBackendRunning('conv-1', false, 1);
+
+    expect(presenceStore.get('conv-1')).toBe('streaming');
+  });
 });

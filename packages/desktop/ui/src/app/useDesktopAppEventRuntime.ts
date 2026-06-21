@@ -253,6 +253,9 @@ export function useDesktopAppEventRuntime() {
           setTitle(payload.sessionId, payload.title);
           titleStore.set(payload.sessionId, payload.title);
           return;
+        case 'conversation_state_changed':
+          presenceStore.setBackendRunning(payload.conversation.id, payload.conversation.running, payload.conversation.revision);
+          return;
         case 'session_meta_changed':
           if (payload.running !== undefined) {
             presenceStore.setBackendRunning(payload.sessionId, payload.running);

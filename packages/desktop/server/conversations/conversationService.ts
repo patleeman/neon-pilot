@@ -55,6 +55,13 @@ import {
   type SessionImageAsset,
 } from './sessions.js';
 
+let conversationRuntimeRevision = 0;
+
+function nextConversationRuntimeRevision(): number {
+  conversationRuntimeRevision += 1;
+  return conversationRuntimeRevision;
+}
+
 let getRuntimeScopeFn: () => string = () => {
   throw new Error('getRuntimeScope not initialized for conversation service');
 };
@@ -313,6 +320,12 @@ export function publishConversationSessionMetaChanged(...conversationIds: Array<
     seen.add(conversationId);
     const liveEntry = readLiveSession(conversationId);
     const running = liveEntry ? isLiveEntryRunning(liveEntry) : undefined;
+    if (running !== undefined) {
+      publishAppEvent({
+        type: 'conversation_state_changed',
+        conversation: { id: conversationId, running, revision: nextConversationRuntimeRevision(), updatedAt: new Date().toISOString() },
+      });
+    }
     publishAppEvent({ type: 'session_meta_changed', sessionId: conversationId, ...(running !== undefined ? { running } : {}) });
   }
 }

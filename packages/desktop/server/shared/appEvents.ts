@@ -39,6 +39,7 @@ export type AppEvent =
   | { type: 'connected' }
   | { type: 'invalidate'; topics: AppEventTopic[] }
   | { type: 'live_title'; sessionId: string; title: string }
+  | { type: 'conversation_state_changed'; conversation: ConversationRuntimeState }
   | { type: 'notification'; extensionId: string; message: string; severity: string; details?: string }
   | { type: 'extension_command'; command: string; args?: unknown; sourceExtensionId?: string; requestId?: string }
   | { type: 'session_meta_changed'; sessionId: string; running?: boolean }
@@ -56,6 +57,13 @@ export type AppEvent =
       conversationWorkspaceMigratedAt: string | null;
     }
   | { type: 'open_session'; sessionId: string };
+
+export interface ConversationRuntimeState {
+  id: string;
+  revision: number;
+  updatedAt: string;
+  running: boolean;
+}
 
 export interface AppEventMonitorOptions {
   repoRoot: string;

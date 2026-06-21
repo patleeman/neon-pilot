@@ -22,7 +22,7 @@ export const executionStore: EntityStore<ExecutionRecord> = createEntityStore<Ex
 export type RunningState = 'idle' | 'streaming' | 'automation' | 'hasRuns' | 'stale';
 
 let presenceStates = new Map<string, RunningState>();
-let backendRunningOverrides = new Map<string, boolean>();
+let backendRunningOverrides = new Map<string, { running: boolean; revision: number }>();
 let presenceVersion = 0;
 const presenceListeners = new Map<string, Set<() => void>>();
 const presenceAllListeners = new Set<() => void>();
@@ -33,7 +33,7 @@ function isActiveExecutionStatus(status: string | undefined): boolean {
 
 function computeRunningState(sessionId: string): RunningState {
   const backendRunningOverride = backendRunningOverrides.get(sessionId);
-  if (backendRunningOverride === true) return 'streaming';
+  if (backendRunningOverride?.running === true) return 'streaming';
 
   const session = sessionStore.get(sessionId);
   if (!session) return 'idle';
@@ -115,15 +115,17 @@ export const presenceStore = {
     return presenceVersion;
   },
 
-  setBackendRunning(sessionId: string, running: boolean | null): void {
+  setBackendRunning(sessionId: string, running: boolean | null, revision = Date.now()): void {
     if (!sessionId.trim()) return;
     if (running === null) {
       if (!backendRunningOverrides.has(sessionId)) return;
       backendRunningOverrides = new Map(backendRunningOverrides);
       backendRunningOverrides.delete(sessionId);
     } else {
-      if (backendRunningOverrides.get(sessionId) === running) return;
-      backendRunningOverrides = new Map(backendRunningOverrides).set(sessionId, running);
+      const current = backendRunningOverrides.get(sessionId);
+      if (current && revision < current.revision) return;
+      if (current?.running === running && current.revision === revision) return;
+      backendRunningOverrides = new Map(backendRunningOverrides).set(sessionId, { running, revision });
     }
     rederivePresenceForId(sessionId);
   },

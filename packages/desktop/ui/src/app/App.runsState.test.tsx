@@ -401,6 +401,23 @@ describe('App execution state integration', () => {
     expect(container.textContent).toContain('conversation idle');
   });
 
+  it('uses revisioned backend conversation state events for running state', async () => {
+    apiSessionMetaMock.mockResolvedValue({ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' });
+    ({ container, root } = await renderApp());
+
+    await emitDesktopEvent({
+      type: 'conversation_state_changed',
+      conversation: { id: 'conv-1', running: true, revision: 2, updatedAt: '2026-01-01T00:00:00.000Z' },
+    });
+    expect(container.textContent).toContain('conversation running');
+
+    await emitDesktopEvent({
+      type: 'conversation_state_changed',
+      conversation: { id: 'conv-1', running: false, revision: 1, updatedAt: '2026-01-01T00:00:00.000Z' },
+    });
+    expect(container.textContent).toContain('conversation running');
+  });
+
   it('does not let stale meta refresh undo a stopped running event', async () => {
     apiSessionMetaMock.mockResolvedValue({
       id: 'conv-1',
