@@ -194,6 +194,9 @@ async function workspaceOpenUpdate(ctx: ExtensionBackendContext, params: Record<
     for (const id of ids) if (!open.includes(id)) open.push(id);
     return ctx.conversations.updateWorkspace({ openConversationIds: open, pinnedConversationIds: pinned.filter((id) => !idSet.has(id)) });
   } else if (operation === 'active') {
+    if (ids.length === 0 && !flagBoolean(params, 'clear')) {
+      throw new Error('A conversation id is required to set the active conversation. Use --clear to clear it.');
+    }
     const activeConversationId = ids[0] ?? null;
     return ctx.conversations.updateWorkspace({ activeConversationId });
   } else {
@@ -468,13 +471,17 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
     return { ...body, action: 'workspace_open_update', operation: 'pin', conversationIds: flagStringArray(flags, 'id') ?? positionals };
   if (command === 'conversations open unpin')
     return { ...body, action: 'workspace_open_update', operation: 'unpin', conversationIds: flagStringArray(flags, 'id') ?? positionals };
-  if (command === 'conversations open active')
+  if (command === 'conversations open active') {
+    const clear = flagBoolean(flags, 'clear');
+    if (!positionals[0] && !clear) return { ...body, action: 'workspace_get' };
     return {
       ...body,
       action: 'workspace_open_update',
       operation: 'active',
       conversationIds: positionals[0] ? [positionals[0]] : undefined,
+      clear,
     };
+  }
   if (command === 'conversations archive')
     return { ...body, action: 'workspace_open_update', operation: 'archive', conversationIds: flagStringArray(flags, 'id') ?? positionals };
   if (command === 'conversations unarchive')

@@ -674,10 +674,10 @@
           <li><code>neon-pilot conversations list --json</code></li>
         </ul>
         <h3 id="conversations-open-active">conversations open active</h3>
-        <p>Set or clear the active sidebar conversation: conversations open active [id]</p>
+        <p>Show or set the active sidebar conversation; use --clear to clear it.</p>
         <ul>
           <li>Source: extension (system-conversation-tools)</li>
-          <li>Usage: <code>neon-pilot conversations open active [conversationId] [--json]</code></li>
+          <li>Usage: <code>neon-pilot conversations open active [conversationId|--clear] [--json]</code></li>
           <li>Mode: write</li>
           <li>Requires app: no</li>
           <li>Idempotent: no</li>
@@ -687,9 +687,9 @@
         </ul>
         <p>Examples:</p>
         <ul>
-          <li><code>neon-pilot conversations open active</code></li>
+          <li><code>neon-pilot conversations open active --json</code></li>
           <li><code>neon-pilot conversations open active conversation-example</code></li>
-          <li><code>neon-pilot conversations open active conversation-example --json</code></li>
+          <li><code>neon-pilot conversations open active --clear --json</code></li>
         </ul>
         <h3 id="conversations-open-add">conversations open add</h3>
         <p>Add conversations to the open/sidebar list: conversations open add &lt;id...&gt;</p>

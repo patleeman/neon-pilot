@@ -86,6 +86,7 @@ const AdminConversationParams = {
     olderThanMs: { type: 'number', minimum: 1 },
     archivedOnly: { type: 'boolean' },
     dryRun: { type: 'boolean' },
+    clear: { type: 'boolean', description: 'Explicitly clear the active sidebar conversation.' },
     active: { type: 'boolean', description: 'Only include currently active conversation activity items.' },
     visibility: { type: 'string', enum: ['primary', 'system', 'hidden', 'visible', 'all'] },
     kind: { type: 'string', enum: ['activity', 'state', 'asset', 'context', 'integration', 'surface', 'all'] },

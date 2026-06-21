@@ -605,10 +605,10 @@ Examples:
 
 ### conversations open active
 
-Set or clear the active sidebar conversation: conversations open active [id]
+Show or set the active sidebar conversation; use --clear to clear it.
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations open active [conversationId] [--json]`
+- Usage: `neon-pilot conversations open active [conversationId|--clear] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -618,9 +618,9 @@ Set or clear the active sidebar conversation: conversations open active [id]
 
 Examples:
 
-- `neon-pilot conversations open active`
+- `neon-pilot conversations open active --json`
 - `neon-pilot conversations open active conversation-example`
-- `neon-pilot conversations open active conversation-example --json`
+- `neon-pilot conversations open active --clear --json`
 
 ### conversations open add
 

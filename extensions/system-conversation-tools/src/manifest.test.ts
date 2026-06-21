@@ -185,8 +185,9 @@ describe('system-conversation-tools manifest', () => {
       },
     });
     expect(commands.get('conversations open active')).toMatchObject({
-      usage: 'conversations open active [conversationId] [--json]',
+      usage: 'conversations open active [conversationId|--clear] [--json]',
       argsSchema: { maxItems: 1 },
+      flagsSchema: { properties: { clear: { type: 'boolean' } } },
     });
     expect(commands.get('conversations retention prune')).toMatchObject({
       usage: 'conversations retention prune [olderThan] [--older-than <duration>] [--archived-only] [--dry-run] [--json]',
@@ -198,7 +199,8 @@ describe('system-conversation-tools manifest', () => {
         'conversations run-turn <conversationId> --text <message> [--timeout-ms <ms>] [--follow] [--format text|json|jsonl] [--cancel-on-interrupt] [--json]',
     });
     expect(commands.get('conversations transcript append')).toMatchObject({
-      usage: 'conversations transcript append <conversationId> [type] [--type <type>] [--data <json>] [--block-id <id>] [--title <title>] [--json]',
+      usage:
+        'conversations transcript append <conversationId> [type] [--type <type>] [--data <json>] [--block-id <id>] [--title <title>] [--json]',
       argsSchema: { minItems: 1, maxItems: 2 },
       flagsSchema: { properties: { type: { type: 'string' }, data: { type: 'string' } } },
     });

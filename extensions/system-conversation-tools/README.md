@@ -10,29 +10,29 @@ The `ask_user` tool presents interactive prompts to the user through the desktop
 
 ## Question Styles
 
-| Style                | Behavior                                          | Output                   |
-| -------------------- | ------------------------------------------------- | ------------------------ |
-| `radio`              | Single choice from options                        | One selected value       |
-| `check` / `checkbox` | Multiple choice                                   | Array of selected values |
+| Style                | Behavior                   | Output                   |
+| -------------------- | -------------------------- | ------------------------ |
+| `radio`              | Single choice from options | One selected value       |
+| `check` / `checkbox` | Multiple choice            | Array of selected values |
 
 ## Parameters
 
-| Parameter   | Type     | Description                           |
-| ----------- | -------- | ------------------------------------- |
-| `details`   | string   | Context or description                |
-| `questions` | object[] | Question prompts (max 8 questions)    |
+| Parameter   | Type     | Description                        |
+| ----------- | -------- | ---------------------------------- |
+| `details`   | string   | Context or description             |
+| `questions` | object[] | Question prompts (max 8 questions) |
 
 ### Question object
 
 When using `questions[]`, each question has:
 
-| Field      | Type                               | Description                            |
-| ---------- | ---------------------------------- | -------------------------------------- |
-| `id`       | string                             | Stable identifier for tracking answers |
-| `label`    | string                             | User-facing question                   |
-| `details`  | string                             | Supporting context                     |
-| `style`    | `"radio"`, `"check"`, `"checkbox"` | Input style                            |
-| `options`  | array                              | Available answers (max 12)             |
+| Field     | Type                               | Description                            |
+| --------- | ---------------------------------- | -------------------------------------- |
+| `id`      | string                             | Stable identifier for tracking answers |
+| `label`   | string                             | User-facing question                   |
+| `details` | string                             | Supporting context                     |
+| `style`   | `"radio"`, `"check"`, `"checkbox"` | Input style                            |
+| `options` | array                              | Available answers (max 12)             |
 
 ### Option object
 
@@ -108,10 +108,10 @@ Options can be simple strings or objects:
 
 ## Limits
 
-| Limit                     | Value |
-| ------------------------- | ----- |
-| Max questions per call    | 8     |
-| Max options per question  | 12    |
+| Limit                    | Value |
+| ------------------------ | ----- |
+| Max questions per call   | 8     |
+| Max options per question | 12    |
 
 ## Desktop UI Rendering
 
@@ -363,7 +363,9 @@ neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b -
 neon-pilot conversations open list --json
 neon-pilot conversations open add conv-a conv-b --json
 neon-pilot conversations open pin conv-a --json
+neon-pilot conversations open active --json
 neon-pilot conversations open active conv-b --json
+neon-pilot conversations open active --clear --json
 neon-pilot conversations archive conv-old --json
 neon-pilot conversations unarchive conv-old --json
 neon-pilot conversations delete conv-old --json

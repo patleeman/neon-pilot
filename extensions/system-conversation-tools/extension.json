@@ -18,9 +18,7 @@
         "description": "Ask the user one or more focused questions in the desktop UI.",
         "action": "askUser",
         "promptSnippet": "Ask the user structured questions with buttons, radio choices, or checkboxes.",
-        "promptGuidelines": [
-          "Ask only when blocked on a real decision or approval. Prefer questions[] for structured choices."
-        ],
+        "promptGuidelines": ["Ask only when blocked on a real decision or approval. Prefer questions[] for structured choices."],
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -50,11 +48,7 @@
                   },
                   "style": {
                     "type": "string",
-                    "enum": [
-                      "radio",
-                      "check",
-                      "checkbox"
-                    ],
+                    "enum": ["radio", "check", "checkbox"],
                     "description": "radio for one choice, check/checkbox for multi-select."
                   },
                   "options": {
@@ -85,17 +79,13 @@
                               "description": "Optional supporting text shown under the option."
                             }
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "required": ["value"]
                         }
                       ]
                     }
                   }
                 },
-                "required": [
-                  "options"
-                ]
+                "required": ["options"]
               }
             }
           },
@@ -158,9 +148,7 @@
       {
         "id": "open-thread-palette",
         "title": "Open thread palette",
-        "keys": [
-          "mod+p"
-        ],
+        "keys": ["mod+p"],
         "command": "palette.open",
         "args": {
           "scope": "threads"
@@ -169,9 +157,7 @@
       {
         "id": "open-command-palette",
         "title": "Open command palette",
-        "keys": [
-          "mod+shift+p"
-        ],
+        "keys": ["mod+shift+p"],
         "command": "palette.open",
         "args": {
           "scope": "commands"
@@ -187,11 +173,7 @@
         "jsonDefault": true,
         "inputAction": "inspect",
         "usage": "conversations list [query...] [--json]",
-        "examples": [
-          "neon-pilot conversations list",
-          "neon-pilot conversations list planning",
-          "neon-pilot conversations list --json"
-        ],
+        "examples": ["neon-pilot conversations list", "neon-pilot conversations list planning", "neon-pilot conversations list --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -214,15 +196,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "conversations",
-            "list"
-          ],
+          "argv": ["conversations", "list"],
           "expectJsonFields": []
         }
       },
@@ -234,10 +210,7 @@
         "jsonDefault": true,
         "inputAction": "inspect",
         "usage": "conversations search [query...] [--json]",
-        "examples": [
-          "neon-pilot conversations search planning notes",
-          "neon-pilot conversations search --json"
-        ],
+        "examples": ["neon-pilot conversations search planning notes", "neon-pilot conversations search --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -260,16 +233,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "conversations",
-            "search",
-            "example"
-          ],
+          "argv": ["conversations", "search", "example"],
           "expectJsonFields": []
         }
       },
@@ -301,13 +267,7 @@
             },
             "visibility": {
               "type": "string",
-              "enum": [
-                "primary",
-                "system",
-                "hidden",
-                "visible",
-                "all"
-              ]
+              "enum": ["primary", "system", "hidden", "visible", "all"]
             },
             "json": {
               "type": "boolean",
@@ -322,10 +282,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-connections",
@@ -378,10 +335,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-inspect",
@@ -417,10 +371,7 @@
             },
             "order": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "description": "Transcript/result order."
             }
           },
@@ -432,10 +383,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-transcript-read",
@@ -470,10 +418,7 @@
             },
             "order": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "description": "Transcript order."
             }
           },
@@ -485,10 +430,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-create",
@@ -569,10 +511,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "ask",
@@ -669,11 +608,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json",
-          "jsonl"
-        ],
+        "outputModes": ["text", "json", "jsonl"],
         "streaming": {
           "supportsFollow": true,
           "supportsJsonl": true,
@@ -687,10 +622,7 @@
         "action": "conversationTool",
         "inputAction": "set_title",
         "usage": "conversations title <conversationId> [--json]",
-        "examples": [
-          "neon-pilot conversations title conversation-example",
-          "neon-pilot conversations title conversation-example --json"
-        ],
+        "examples": ["neon-pilot conversations title conversation-example", "neon-pilot conversations title conversation-example --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -719,10 +651,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-cwd",
@@ -731,10 +660,7 @@
         "action": "conversationTool",
         "inputAction": "change_working_directory",
         "usage": "conversations cwd <conversationId> [--json]",
-        "examples": [
-          "neon-pilot conversations cwd conversation-example",
-          "neon-pilot conversations cwd conversation-example --json"
-        ],
+        "examples": ["neon-pilot conversations cwd conversation-example", "neon-pilot conversations cwd conversation-example --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -763,10 +689,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-ensure-live",
@@ -808,10 +731,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-send",
@@ -821,10 +741,7 @@
         "jsonDefault": true,
         "inputAction": "send_message",
         "usage": "conversations send <conversationId> [--json]",
-        "examples": [
-          "neon-pilot conversations send conversation-example",
-          "neon-pilot conversations send conversation-example --json"
-        ],
+        "examples": ["neon-pilot conversations send conversation-example", "neon-pilot conversations send conversation-example --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -853,10 +770,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-run-turn",
@@ -896,11 +810,7 @@
               "description": "Follow turn progress when supported."
             },
             "format": {
-              "enum": [
-                "text",
-                "json",
-                "jsonl"
-              ],
+              "enum": ["text", "json", "jsonl"],
               "description": "Output format."
             },
             "cancel-on-interrupt": {
@@ -920,11 +830,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json",
-          "jsonl"
-        ],
+        "outputModes": ["text", "json", "jsonl"],
         "streaming": {
           "supportsFollow": true,
           "supportsJsonl": true,
@@ -938,10 +844,7 @@
         "action": "conversationTool",
         "inputAction": "abort",
         "usage": "conversations abort <conversationId> [--json]",
-        "examples": [
-          "neon-pilot conversations abort conversation-example",
-          "neon-pilot conversations abort conversation-example --json"
-        ],
+        "examples": ["neon-pilot conversations abort conversation-example", "neon-pilot conversations abort conversation-example --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -970,10 +873,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-compact",
@@ -1014,10 +914,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-fork",
@@ -1027,10 +924,7 @@
         "jsonDefault": true,
         "inputAction": "fork",
         "usage": "conversations fork <conversationId> [--json]",
-        "examples": [
-          "neon-pilot conversations fork conversation-example",
-          "neon-pilot conversations fork conversation-example --json"
-        ],
+        "examples": ["neon-pilot conversations fork conversation-example", "neon-pilot conversations fork conversation-example --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -1059,10 +953,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-tools",
@@ -1072,10 +963,7 @@
         "jsonDefault": true,
         "inputAction": "set_active_tools",
         "usage": "conversations tools <conversationId> [--json]",
-        "examples": [
-          "neon-pilot conversations tools conversation-example",
-          "neon-pilot conversations tools conversation-example --json"
-        ],
+        "examples": ["neon-pilot conversations tools conversation-example", "neon-pilot conversations tools conversation-example --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -1104,10 +992,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-rollback",
@@ -1149,10 +1034,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-workspace",
@@ -1162,10 +1044,7 @@
         "jsonDefault": true,
         "inputAction": "workspace_get",
         "usage": "conversations workspace [--json]",
-        "examples": [
-          "neon-pilot conversations workspace",
-          "neon-pilot conversations workspace --json"
-        ],
+        "examples": ["neon-pilot conversations workspace", "neon-pilot conversations workspace --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -1189,15 +1068,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "conversations",
-            "workspace"
-          ],
+          "argv": ["conversations", "workspace"],
           "expectJsonFields": []
         }
       },
@@ -1264,10 +1137,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-open-list",
@@ -1277,10 +1147,7 @@
         "jsonDefault": true,
         "inputAction": "workspace_get",
         "usage": "conversations open list [--json]",
-        "examples": [
-          "neon-pilot conversations open list",
-          "neon-pilot conversations open list --json"
-        ],
+        "examples": ["neon-pilot conversations open list", "neon-pilot conversations open list --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -1304,16 +1171,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "conversations",
-            "open",
-            "list"
-          ],
+          "argv": ["conversations", "open", "list"],
           "expectJsonFields": []
         }
       },
@@ -1357,10 +1217,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-open-remove",
@@ -1402,10 +1259,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-open-pin",
@@ -1447,10 +1301,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-open-unpin",
@@ -1492,23 +1343,20 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-open-active",
         "command": "conversations open active",
-        "description": "Set or clear the active sidebar conversation: conversations open active [id]",
+        "description": "Show or set the active sidebar conversation; use --clear to clear it.",
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "workspace_open_update",
-        "usage": "conversations open active [conversationId] [--json]",
+        "usage": "conversations open active [conversationId|--clear] [--json]",
         "examples": [
-          "neon-pilot conversations open active",
+          "neon-pilot conversations open active --json",
           "neon-pilot conversations open active conversation-example",
-          "neon-pilot conversations open active conversation-example --json"
+          "neon-pilot conversations open active --clear --json"
         ],
         "argsSchema": {
           "type": "array",
@@ -1528,6 +1376,10 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing runtime state."
+            },
+            "clear": {
+              "type": "boolean",
+              "description": "Clear the active sidebar conversation. Required for clearing."
             }
           },
           "additionalProperties": true
@@ -1538,10 +1390,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-archive",
@@ -1583,10 +1432,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-unarchive",
@@ -1628,10 +1474,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-delete",
@@ -1641,10 +1484,7 @@
         "jsonDefault": true,
         "inputAction": "delete",
         "usage": "conversations delete <id> [--json]",
-        "examples": [
-          "neon-pilot conversations delete example-id",
-          "neon-pilot conversations delete example-id --json"
-        ],
+        "examples": ["neon-pilot conversations delete example-id", "neon-pilot conversations delete example-id --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -1673,10 +1513,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-retention-prune",
@@ -1726,10 +1563,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-transcript-append",
@@ -1788,10 +1622,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "conversations-transcript-update",
@@ -1850,10 +1681,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       }
     ]
   },
@@ -1967,9 +1795,5 @@
       }
     ]
   },
-  "permissions": [
-    "conversations:readwrite",
-    "storage:readwrite",
-    "ui:notify"
-  ]
+  "permissions": ["conversations:readwrite", "storage:readwrite", "ui:notify"]
 }

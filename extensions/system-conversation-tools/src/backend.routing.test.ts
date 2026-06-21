@@ -292,6 +292,42 @@ describe('system-conversation-tools backend routing', () => {
     expect(conversations.prune).toHaveBeenLastCalledWith({ olderThanMs: 7_776_000_000, archivedOnly: true, dryRun: true });
   });
 
+  it('treats no-arg open active CLI as a read-only workspace getter', async () => {
+    const context = ctx({
+      conversations: {
+        ...((ctx() as { conversations: Record<string, unknown> }).conversations as Record<string, unknown>),
+        getWorkspace: vi.fn().mockResolvedValue({ openConversationIds: ['conv-1'], activeConversationId: 'conv-1' }),
+        updateWorkspace: vi.fn().mockResolvedValue({ activeConversationId: null }),
+      },
+    });
+    const conversations = context as unknown as {
+      conversations: { getWorkspace: ReturnType<typeof vi.fn>; updateWorkspace: ReturnType<typeof vi.fn> };
+    };
+
+    await expect(conversationTool({ cli: { command: 'conversations open active', args: [] } }, context)).resolves.toMatchObject({
+      details: { openConversationIds: ['conv-1'], activeConversationId: 'conv-1' },
+    });
+
+    expect(conversations.conversations.getWorkspace).toHaveBeenCalledWith();
+    expect(conversations.conversations.updateWorkspace).not.toHaveBeenCalled();
+  });
+
+  it('requires explicit clear for open active CLI clearing', async () => {
+    const context = ctx();
+    const conversations = (context as { conversations: { updateWorkspace: ReturnType<typeof vi.fn> } }).conversations;
+
+    await conversationTool({ cli: { command: 'conversations open active', args: ['--clear'] } }, context);
+    expect(conversations.updateWorkspace).toHaveBeenLastCalledWith({ activeConversationId: null });
+  });
+
+  it('sets open active CLI by id', async () => {
+    const context = ctx();
+    const conversations = (context as { conversations: { updateWorkspace: ReturnType<typeof vi.fn> } }).conversations;
+
+    await conversationTool({ cli: { command: 'conversations open active', args: ['conv-2'] } }, context);
+    expect(conversations.updateWorkspace).toHaveBeenLastCalledWith({ activeConversationId: 'conv-2' });
+  });
+
   it('sets the title on an explicit target conversation when conversationId is provided', async () => {
     const context = ctx();
 
