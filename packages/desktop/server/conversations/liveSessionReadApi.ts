@@ -3,6 +3,7 @@ import type { AgentSession } from '@earendil-works/pi-coding-agent';
 import { normalizeModelContextWindow } from '../models/modelContextWindows.js';
 import type { LiveContextUsage } from './liveSessionEvents.js';
 import { resolveLiveSessionFile } from './liveSessionPersistence.js';
+import { resolveTranscriptTailRecoveryPlan } from './liveSessionRecovery.js';
 import { hasQueuedOrActiveStaleTurn, type LiveSessionStaleTurnState } from './liveSessionStaleTurns.js';
 import { readLiveSessionContextUsage } from './liveSessionStateBroadcasts.js';
 
@@ -32,7 +33,21 @@ export function computeLiveSessionRunning(entry: LiveSessionReadHost): boolean {
   if (entry.lastDurableRunState === 'waiting') {
     return false;
   }
-  return Boolean(entry.session.isStreaming || entry.lastDurableRunState === 'running' || entry.lastDurableRunState === 'recovering');
+  if (entry.lastDurableRunState === 'running' || entry.lastDurableRunState === 'recovering') {
+    return true;
+  }
+  if (!entry.session.isStreaming) {
+    return false;
+  }
+  const sessionManager = entry.session.sessionManager;
+  if (
+    sessionManager &&
+    typeof sessionManager.getBranch === 'function' &&
+    resolveTranscriptTailRecoveryPlan(sessionManager)?.reason === 'dangling_tool_call'
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export function listLiveSessions<TEntry extends LiveSessionReadHost>(

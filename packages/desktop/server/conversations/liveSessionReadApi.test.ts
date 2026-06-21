@@ -56,6 +56,29 @@ describe('computeLiveSessionRunning', () => {
     ).toBe(true);
   });
 
+  it('returns false for a bootstrapped stale tool-use tail with no active durable run', () => {
+    expect(
+      computeLiveSessionRunning(
+        makeEntry({
+          session: {
+            isStreaming: true,
+            sessionManager: {
+              getBranch: () => [
+                { type: 'message', id: 'user-1', parentId: null, message: { role: 'user', content: [{ type: 'text', text: 'prompt' }] } },
+                {
+                  type: 'message',
+                  id: 'assistant-1',
+                  parentId: 'user-1',
+                  message: { role: 'assistant', stopReason: 'toolUse', content: [{ type: 'toolCall', id: 'call-1' }] },
+                },
+              ],
+            },
+          } as unknown,
+        }),
+      ),
+    ).toBe(false);
+  });
+
   it('returns false when lastDurableRunState is waiting but session.isStreaming has not cleared yet (race guard)', () => {
     // This simulates the agent_end → syncDurableConversationRun('waiting') race:
     // lastDurableRunState flips to 'waiting' synchronously but session.isStreaming

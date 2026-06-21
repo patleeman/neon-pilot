@@ -11,6 +11,7 @@ import type { LiveContextUsage, LiveSessionToolDefinition } from './liveSessionE
 import { type ParallelPromptJob, type ParallelPromptPreview, readParallelState } from './liveSessionParallelJobs.js';
 import { buildLiveSessionPresenceState, type LiveSessionPresenceHost, type LiveSessionPresenceState } from './liveSessionPresence.js';
 import { type QueuedPromptPreview, readQueueState } from './liveSessionQueue.js';
+import { resolveTranscriptTailRecoveryPlan } from './liveSessionRecovery.js';
 import { hasQueuedOrActiveStaleTurn } from './liveSessionStaleTurns.js';
 import { readLiveSessionContextUsage } from './liveSessionStateBroadcasts.js';
 import { applyLatestCompactionSummaryTitle, buildLiveStateBlocks, mergeConversationHistoryBlocks } from './liveSessionTranscript.js';
@@ -105,7 +106,16 @@ function isSmallLiveSessionFile(filePath: string): boolean {
 function isLiveSessionSnapshotStreaming(entry: LiveSessionSnapshotHost): boolean {
   if (entry.isCompacting) return true;
   if (entry.lastDurableRunState === 'waiting') return false;
-  return Boolean(entry.session.isStreaming || entry.lastDurableRunState === 'running' || entry.lastDurableRunState === 'recovering');
+  if (entry.lastDurableRunState === 'running' || entry.lastDurableRunState === 'recovering') return true;
+  if (!entry.session.isStreaming) return false;
+  const sessionManager = entry.session.sessionManager;
+  if (
+    sessionManager &&
+    typeof sessionManager.getBranch === 'function' &&
+    resolveTranscriptTailRecoveryPlan(sessionManager)?.reason === 'dangling_tool_call'
+  )
+    return false;
+  return true;
 }
 
 export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlocks?: number): LiveSessionSnapshot {

@@ -197,4 +197,29 @@ describe('liveSessionStateSnapshot', () => {
     expect(buildLiveSessionSnapshot(entry)).toMatchObject({ isStreaming: false });
     await expect(readLiveSessionStateSnapshotFromEntry(entry, 'Done')).resolves.toMatchObject({ isStreaming: false });
   });
+
+  it('treats a bootstrapped dangling tool-use tail as idle when no durable run is active', async () => {
+    const { buildLiveSessionSnapshot } = await import('./liveSessionStateSnapshot.js');
+
+    const entry = {
+      session: {
+        sessionFile: '/tmp/session.jsonl',
+        isStreaming: true,
+        sessionManager: {
+          getEntries: () => [],
+          getBranch: () => [
+            { type: 'message', id: 'user-1', parentId: null, message: { role: 'user', content: [{ type: 'text', text: 'prompt' }] } },
+            {
+              type: 'message',
+              id: 'assistant-1',
+              parentId: 'user-1',
+              message: { role: 'assistant', stopReason: 'toolUse', content: [{ type: 'toolCall', id: 'call-1' }] },
+            },
+          ],
+        },
+      },
+    } as never;
+
+    expect(buildLiveSessionSnapshot(entry)).toMatchObject({ isStreaming: false });
+  });
 });
