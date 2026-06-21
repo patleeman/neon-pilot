@@ -170,20 +170,20 @@ async function main() {
         };
         await new Promise((r) => setTimeout(r, 100));
         const smokeInstructionName = 'Smoke temporary routine ' + Date.now();
-        if (!bodyIncludes('PATH CONTINUES') || !bodyIncludes('PATH STOPS HERE')) {
+        if (!bodyIncludes('ROUTE CONTINUES') || !bodyIncludes('ROUTE STOPS HERE')) {
           throw new Error('branch path reaction labels missing');
         }
 
         click(byText('button', 'Add routine'), 'Add routine');
         await new Promise((r) => setTimeout(r, 100));
-        click(byText('button', 'Branch'), 'Branch menu item');
+        click(byText('button', 'Judge'), 'Judge menu item');
         await new Promise((r) => setTimeout(r, 150));
-        input(Array.from(document.querySelectorAll('input')).find((el) => el.value === 'New branch'), 'Smoke branch routine');
+        input(Array.from(document.querySelectorAll('input')).find((el) => el.value === 'New judge'), 'Smoke judge routine');
         input(Array.from(document.querySelectorAll('textarea')).at(-1), 'Return OUTCOME: smoke_branch when this smoke test asks.');
         await waitUntil(() => bodyIncludes('Unsaved changes'), 'new decision unsaved state');
         await assertInspectorCanScrollBottom();
         for (let index = 1; index <= 10; index += 1) {
-          click(byText('button', 'Add path'), 'Add path');
+          click(byText('button', 'Add route'), 'Add route');
           await new Promise((r) => setTimeout(r, 60));
           input(Array.from(document.querySelectorAll('input')).filter((el) => el.value === 'new_path').at(-1), 'smoke_' + index);
           input(
@@ -194,8 +194,8 @@ async function main() {
         if (!Array.from(document.querySelectorAll('input')).some((el) => el.value === 'smoke_10')) {
           throw new Error('ten added branch paths did not render');
         }
-        const removeButtons = Array.from(document.querySelectorAll('button')).filter((el) => el.textContent?.trim() === 'Remove path');
-        click(removeButtons.at(-1), 'Remove path');
+        const removeButtons = Array.from(document.querySelectorAll('button')).filter((el) => el.textContent?.trim() === 'Remove route');
+        click(removeButtons.at(-1), 'Remove route');
         await new Promise((r) => setTimeout(r, 100));
         if (Array.from(document.querySelectorAll('input')).some((el) => el.value === 'smoke_10')) {
           throw new Error('removed branch path still rendered');
@@ -207,13 +207,13 @@ async function main() {
         click(Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'Save'), 'Save decision');
         await new Promise((r) => setTimeout(r, 700));
         assertNoUiErrors();
-        if (!bodyIncludes('Smoke branch routine')) throw new Error('saved branch routine missing');
+        if (!bodyIncludes('Smoke judge routine')) throw new Error('saved judge routine missing');
         await waitUntil(() => !bodyIncludes('Unsaved changes'), 'decision saved state');
         click(Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'Delete'), 'Delete decision');
         await new Promise((r) => setTimeout(r, 100));
         click(byText('button', 'Confirm'), 'Confirm delete decision');
         await new Promise((r) => setTimeout(r, 500));
-        if (bodyIncludes('Smoke branch routine')) throw new Error('temporary branch routine was not deleted');
+        if (bodyIncludes('Smoke judge routine')) throw new Error('temporary judge routine was not deleted');
 
         click(byText('button', 'Add routine'), 'Add routine');
         await new Promise((r) => setTimeout(r, 100));

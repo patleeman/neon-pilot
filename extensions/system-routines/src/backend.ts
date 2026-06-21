@@ -182,6 +182,8 @@ function normalizeRoutine(value: unknown, fallbackOrder = 0): Routine | null {
     id: stringValue(value.id, makeId('routine')).trim() || makeId('routine'),
     hookId,
     position: positionValue(value.position),
+    ...(typeof value.parentRoutineId === 'string' && value.parentRoutineId.trim() ? { parentRoutineId: value.parentRoutineId.trim() } : {}),
+    ...(typeof value.parentOutcomeId === 'string' && value.parentOutcomeId.trim() ? { parentOutcomeId: value.parentOutcomeId.trim() } : {}),
     type: typeValue(value.type),
     name,
     instruction: stringValue(value.instruction),
@@ -265,7 +267,7 @@ async function writeState(ctx: ExtensionBackendContext, state: RoutinesState): P
 
 function routinesFor(state: RoutinesState, hookId: string, position: RoutinePosition): Routine[] {
   return state.routines
-    .filter((routine) => routine.enabled && routine.hookId === hookId && routine.position === position)
+    .filter((routine) => routine.enabled && routine.hookId === hookId && routine.position === position && !routine.parentRoutineId)
     .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
 }
 
@@ -323,7 +325,18 @@ export async function deleteRoutine(input: unknown, ctx: ExtensionBackendContext
   const routineId = stringValue(input.routineId).trim();
   if (!routineId) throw new Error('routineId is required.');
   const state = await readState(ctx);
-  return toStateResult(await writeState(ctx, { ...state, routines: state.routines.filter((routine) => routine.id !== routineId) }));
+  const idsToDelete = new Set<string>([routineId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const routine of state.routines) {
+      if (routine.parentRoutineId && idsToDelete.has(routine.parentRoutineId) && !idsToDelete.has(routine.id)) {
+        idsToDelete.add(routine.id);
+        changed = true;
+      }
+    }
+  }
+  return toStateResult(await writeState(ctx, { ...state, routines: state.routines.filter((routine) => !idsToDelete.has(routine.id)) }));
 }
 
 export async function reorderRoutines(input: unknown, ctx: ExtensionBackendContext) {
@@ -477,11 +490,21 @@ async function runRoutine(
         message: outcome.target,
         skillRefs,
       };
+      const routeChildren = state.routines
+        .filter((candidate) => candidate.enabled && candidate.parentRoutineId === routine.id && candidate.parentOutcomeId === outcome.id)
+        .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
+      const childSteps: RoutineRunStep[] = [];
+      for (const child of routeChildren) {
+        childSteps.push(...(await runRoutine(child, state, ctx, context, visited)));
+        if (childSteps.some((childStep) => childStep.status === 'blocked' || childStep.status === 'failed')) break;
+      }
       if (outcome.behavior === 'branch' && outcome.nextRoutineId) {
         const nextRoutine = state.routines.find((candidate) => candidate.id === outcome.nextRoutineId && candidate.enabled);
-        return nextRoutine ? [step, ...(await runRoutine(nextRoutine, state, ctx, context, visited))] : [step];
+        return nextRoutine
+          ? [step, ...childSteps, ...(await runRoutine(nextRoutine, state, ctx, context, visited))]
+          : [step, ...childSteps];
       }
-      return [step];
+      return [step, ...childSteps];
     }
     return [{ routineId: routine.id, routineName: routine.name, status: 'passed', text: result.text, skillRefs }];
   } catch (error) {

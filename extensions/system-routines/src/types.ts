@@ -24,6 +24,8 @@ export interface Routine {
   id: string;
   hookId: string;
   position: RoutinePosition;
+  parentRoutineId?: string;
+  parentOutcomeId?: string;
   type: RoutineType;
   name: string;
   instruction: string;

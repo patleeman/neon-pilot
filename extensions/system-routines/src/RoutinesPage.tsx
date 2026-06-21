@@ -59,14 +59,20 @@ async function navigateRoutines(pa: ExtensionSurfaceProps['pa'], hookId: string)
   }
 }
 
-function nowRoutine(hookId: string, position: RoutinePosition, type: RoutineType): Routine {
+function nowRoutine(
+  hookId: string,
+  position: RoutinePosition,
+  type: RoutineType,
+  parent?: { parentRoutineId: string; parentOutcomeId: string },
+): Routine {
   const timestamp = new Date().toISOString();
   return {
     id: `routine-${Date.now().toString(36)}`,
     hookId,
     position,
+    ...(parent ?? {}),
     type,
-    name: type === 'decision' ? 'New branch' : type === 'stop' ? 'Stop event' : 'New instruction',
+    name: type === 'decision' ? 'New judge' : type === 'stop' ? 'Stop event' : 'New instruction',
     instruction: type === 'stop' ? 'Stop this lifecycle event and explain why.' : '',
     enabled: true,
     order: 999,
@@ -84,7 +90,7 @@ function groupedHooks(hooks: HookWithSummary[]) {
 }
 
 function routineLabel(type: RoutineType): string {
-  if (type === 'decision') return 'Branch routine';
+  if (type === 'decision') return 'Judge routine';
   if (type === 'stop') return 'Stop routine';
   return 'Instruction routine';
 }
@@ -287,8 +293,9 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     () => (data?.routines ?? []).filter((routine) => routine.hookId === selectedHookId).sort((left, right) => left.order - right.order),
     [data, selectedHookId],
   );
-  const beforeRoutines = hookRoutines.filter((routine) => routine.position === 'before');
-  const afterRoutines = hookRoutines.filter((routine) => routine.position === 'after');
+  const topLevelRoutines = hookRoutines.filter((routine) => !routine.parentRoutineId);
+  const beforeRoutines = topLevelRoutines.filter((routine) => routine.position === 'before');
+  const afterRoutines = topLevelRoutines.filter((routine) => routine.position === 'after');
   const selectedRuns = (data?.runs ?? []).filter((run) => run.hookId === selectedHookId).slice(0, 20);
   const savedDraft = draft ? data?.routines.find((routine) => routine.id === draft.id) : null;
   const draftIsDirty = Boolean(draft && (unsavedRoutineIds.has(draft.id) || JSON.stringify(draft) !== JSON.stringify(savedDraft ?? null)));
@@ -366,9 +373,10 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   }, [deleteRoutine, draft]);
 
   const addRoutine = useCallback(
-    (type: RoutineType) => {
+    (type: RoutineType, parent?: { parentRoutineId: string; parentOutcomeId: string }) => {
       if (!selectedHook) return;
-      const routine = nowRoutine(selectedHook.id, 'before', type);
+      const parentRoutine = parent ? hookRoutines.find((routine) => routine.id === parent.parentRoutineId) : null;
+      const routine = nowRoutine(selectedHook.id, parentRoutine?.position ?? 'before', type, parent);
       setShowAdd(false);
       setActionError(null);
       setSelectedRoutineId(routine.id);
@@ -376,7 +384,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       setUnsavedRoutineIds((current) => new Set(current).add(routine.id));
       setData((current) => (current ? { ...current, routines: [...current.routines, routine] } : current));
     },
-    [selectedHook],
+    [hookRoutines, selectedHook],
   );
 
   const moveRoutineById = useCallback(
@@ -608,43 +616,82 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           </div>
           {routine.type === 'decision' && routine.outcomes.length ? (
             <div className="border-t border-border-subtle px-9 py-2 text-[12px]">
-              <div className="mb-2 text-[11px] uppercase tracking-[0.12em] text-dim">Branches</div>
+              <div className="mb-2 text-[11px] uppercase tracking-[0.12em] text-dim">Routes</div>
               <div className="grid gap-1 border-l border-border-subtle pl-2">
                 {routine.outcomes.map((outcome) => {
                   const branchTargetName = outcome.nextRoutineId ? routineNameById.get(outcome.nextRoutineId) : null;
                   const reaction =
                     outcome.behavior === 'branch'
                       ? branchTargetName
-                        ? `Path continues to ${branchTargetName}`
-                        : 'Path can continue to another routine'
+                        ? `Route continues to ${branchTargetName}`
+                        : 'Route can continue to another routine'
                       : outcome.behavior === 'block'
-                        ? 'Path stops here'
+                        ? 'Route stops here'
                         : outcome.behavior === 'warn'
-                          ? 'Path warns and continues'
+                          ? 'Route warns and continues'
                           : outcome.behavior === 'ask'
-                            ? 'Path asks you first'
-                            : 'Path continues';
+                            ? 'Route asks you first'
+                            : 'Route continues';
+                  const routeChildren = hookRoutines
+                    .filter((child) => child.parentRoutineId === routine.id && child.parentOutcomeId === outcome.id)
+                    .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
                   return (
-                    <div key={outcome.id} className="grid grid-cols-[20px_128px_1fr_auto] items-start gap-2">
-                      <span className="mt-2 h-px bg-border-subtle" />
-                      <span
-                        className={cx(
-                          'font-mono font-semibold',
-                          outcome.behavior === 'block'
-                            ? 'text-danger'
-                            : outcome.behavior === 'warn'
-                              ? 'text-warning'
-                              : outcome.behavior === 'ask' || outcome.behavior === 'branch'
-                                ? 'text-accent'
-                                : 'text-success',
+                    <div key={outcome.id} className="rounded-md border border-border-subtle/70 bg-app/30 p-2">
+                      <div className="grid grid-cols-[20px_128px_1fr_auto] items-start gap-2">
+                        <span className="mt-2 h-px bg-border-subtle" />
+                        <span
+                          className={cx(
+                            'font-mono font-semibold',
+                            outcome.behavior === 'block'
+                              ? 'text-danger'
+                              : outcome.behavior === 'warn'
+                                ? 'text-warning'
+                                : outcome.behavior === 'ask' || outcome.behavior === 'branch'
+                                  ? 'text-accent'
+                                  : 'text-success',
+                          )}
+                        >
+                          {outcome.id}
+                        </span>
+                        <span className="text-secondary">{outcome.target}</span>
+                        <span className="rounded-sm bg-surface-3 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-dim">
+                          {reaction}
+                        </span>
+                      </div>
+                      <div className="ml-5 mt-2 border-l border-border-subtle pl-3">
+                        <div className="mb-2 flex items-center justify-between gap-2 text-[11px] text-dim">
+                          <span>Runs when judge returns {outcome.id}</span>
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              className="rounded px-2 py-1 text-accent hover:bg-surface-3"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                addRoutine('instruction', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
+                              }}
+                            >
+                              Add instruction
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded px-2 py-1 text-accent hover:bg-surface-3"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                addRoutine('decision', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
+                              }}
+                            >
+                              Add judge
+                            </button>
+                          </div>
+                        </div>
+                        {routeChildren.length ? (
+                          <div className="grid gap-2">{routeChildren.map(renderBlock)}</div>
+                        ) : (
+                          <div className="rounded border border-dashed border-border-subtle px-3 py-2 text-[11px] text-secondary">
+                            No instructions on this route yet.
+                          </div>
                         )}
-                      >
-                        {outcome.id}
-                      </span>
-                      <span className="text-secondary">{outcome.target}</span>
-                      <span className="rounded-sm bg-surface-3 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-dim">
-                        {reaction}
-                      </span>
+                      </div>
                     </div>
                   );
                 })}
@@ -689,8 +736,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
                 onClick={() => addRoutine('decision')}
               >
-                <span className="block text-[13px] font-medium text-primary">Branch</span>
-                <span className="block text-[11px] text-secondary">Choose a path based on the prompt.</span>
+                <span className="block text-[13px] font-medium text-primary">Judge</span>
+                <span className="block text-[11px] text-secondary">Assess a prompt and route to one path.</span>
               </button>
               <button className="block w-full px-3 py-2 text-left hover:bg-surface-3" onClick={() => addRoutine('stop')}>
                 <span className="block text-[13px] font-medium text-primary">Stop</span>
@@ -737,7 +784,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 <div>
                   <h2 className="m-0 text-[18px] font-semibold">{selectedHook.title} timeline</h2>
                   <p className="m-0 mt-1 text-[13px] text-secondary">
-                    Drag routines within Before or After. Branch routines choose a path; Stop routines are the only gate.
+                    Drag routines within Before or After. Judge routines assess a prompt, output one enum, then run the matching nested
+                    route.
                   </p>
                 </div>
                 <section
@@ -828,7 +876,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   }
                 >
                   <option value="instruction">Instruction: run a prompt</option>
-                  <option value="decision">Branch: choose a path</option>
+                  <option value="decision">Judge: choose a route</option>
                   <option value="stop">Stop: block this event</option>
                 </Select>
                 {draft.type === 'stop' ? (
@@ -905,7 +953,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 {draft.type === 'decision' ? (
                   <>
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <label className="block text-[11px] uppercase tracking-wider text-secondary">Branches</label>
+                      <label className="block text-[11px] uppercase tracking-wider text-secondary">Routes</label>
                       <Button
                         variant="ghost"
                         onClick={() =>
@@ -918,7 +966,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                           })
                         }
                       >
-                        Add path
+                        Add route
                       </Button>
                     </div>
                     <div className="mb-3 grid gap-2">
@@ -926,7 +974,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                         <div key={index} className="rounded-md border border-border-subtle bg-surface-2 p-2">
                           <div className="grid gap-2">
                             <label className="grid gap-1">
-                              <span className="text-[10px] uppercase tracking-wider text-dim">Path value</span>
+                              <span className="text-[10px] uppercase tracking-wider text-dim">Enum value</span>
                               <TextInput
                                 className="w-full font-mono text-[12px]"
                                 placeholder="needs_review"
@@ -942,7 +990,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                               />
                             </label>
                             <label className="grid gap-1">
-                              <span className="text-[10px] uppercase tracking-wider text-dim">Path meaning</span>
+                              <span className="text-[10px] uppercase tracking-wider text-dim">Route meaning</span>
                               <TextInput
                                 className="w-full text-[12px]"
                                 placeholder="Route to review"
@@ -958,7 +1006,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                               />
                             </label>
                             <label className="grid gap-1">
-                              <span className="text-[10px] uppercase tracking-wider text-dim">Path action</span>
+                              <span className="text-[10px] uppercase tracking-wider text-dim">Fallback action</span>
                               <Select
                                 className="w-full"
                                 value={outcome.behavior}
@@ -981,7 +1029,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                               >
                                 <option value="continue">Continue</option>
                                 <option value="warn">Warn and continue</option>
-                                <option value="block">Stop this path</option>
+                                <option value="block">Stop if this route has no next step</option>
                                 <option value="ask">Ask me</option>
                                 <option value="branch">Branch</option>
                               </Select>
@@ -1010,7 +1058,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                                   ))}
                                 </Select>
                                 <span className="text-[11px] text-secondary">
-                                  This path can continue into another routine. If no routine is selected, the path records its result and
+                                  This route can continue into another routine. If no routine is selected, the route records its result and
                                   stops there.
                                 </span>
                               </label>
@@ -1022,7 +1070,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                                   setDraft({ ...draft, outcomes: draft.outcomes.filter((_, itemIndex) => itemIndex !== index) })
                                 }
                               >
-                                Remove path
+                                Remove route
                               </Button>
                             </div>
                           </div>
@@ -1030,8 +1078,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                       ))}
                     </div>
                     <div className="mb-3 text-[12px] text-secondary">
-                      The prompt must return one path value. Each path controls what happens next; it is not a gate unless the path action
-                      is Stop.
+                      The judge prompt must return one enum value. That value selects the nested route below and runs only the routines
+                      inside it.
                     </div>
                   </>
                 ) : null}

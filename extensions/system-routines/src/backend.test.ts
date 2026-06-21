@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { runAgentTaskMock } = vi.hoisted(() => ({ runAgentTaskMock: vi.fn() }));
 vi.mock('@neon-pilot/extensions/backend/agent', () => ({ runAgentTask: runAgentTaskMock }));
 
-import { getState, moveRoutine, registerHookPoint, runHook, saveRoutine } from './backend.js';
+import { deleteRoutine, getState, moveRoutine, registerHookPoint, runHook, saveRoutine } from './backend.js';
 
 function createCtx() {
   const store = new Map<string, unknown>();
@@ -51,6 +51,76 @@ describe('system-routines backend', () => {
     };
     expect(result.blocked).toBe(false);
     expect(result.status).toBe('passed');
+  });
+
+  it('runs only routines nested under the judge output route', async () => {
+    const ctx = createCtx();
+    await saveRoutine(
+      {
+        id: 'nested-pass',
+        hookId: 'checkpoint',
+        position: 'before',
+        parentRoutineId: 'checkpoint-review-code',
+        parentOutcomeId: 'pass',
+        type: 'instruction',
+        name: 'Pass instruction',
+        instruction: 'Run only on pass',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'continue',
+        outcomes: [],
+      },
+      ctx,
+    );
+    await saveRoutine(
+      {
+        id: 'nested-issues',
+        hookId: 'checkpoint',
+        position: 'before',
+        parentRoutineId: 'checkpoint-review-code',
+        parentOutcomeId: 'issues_found',
+        type: 'instruction',
+        name: 'Issues instruction',
+        instruction: 'Run only on issues',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'continue',
+        outcomes: [],
+      },
+      ctx,
+    );
+    runAgentTaskMock.mockResolvedValueOnce({ text: 'OUTCOME: pass' }).mockResolvedValueOnce({ text: 'pass child ran' });
+
+    const result = (await runHook({ hookId: 'checkpoint', position: 'before', context: { cwd: '/repo' } }, ctx)) as {
+      run: { steps: Array<{ routineName: string }> };
+    };
+
+    expect(result.run.steps.map((step) => step.routineName)).toContain('Pass instruction');
+    expect(result.run.steps.map((step) => step.routineName)).not.toContain('Issues instruction');
+  });
+
+  it('deletes nested route routines when their judge is deleted', async () => {
+    const ctx = createCtx();
+    await saveRoutine(
+      {
+        id: 'nested-pass',
+        hookId: 'checkpoint',
+        position: 'before',
+        parentRoutineId: 'checkpoint-review-code',
+        parentOutcomeId: 'pass',
+        type: 'instruction',
+        name: 'Pass instruction',
+        instruction: 'Run only on pass',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'continue',
+        outcomes: [],
+      },
+      ctx,
+    );
+    const state = (await deleteRoutine({ routineId: 'checkpoint-review-code' }, ctx)) as { routines: Array<{ id: string }> };
+    expect(state.routines.some((routine) => routine.id === 'checkpoint-review-code')).toBe(false);
+    expect(state.routines.some((routine) => routine.id === 'nested-pass')).toBe(false);
   });
 
   it('saves custom routines', async () => {

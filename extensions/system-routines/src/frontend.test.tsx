@@ -93,7 +93,7 @@ describe('RoutinesPage', () => {
     expect(await screen.findByText('Checkpoint timeline')).toBeTruthy();
     expect(screen.getAllByText('Review code changes').length).toBeGreaterThan(0);
     expect(screen.getByText('Add routine ▾')).toBeTruthy();
-    expect(screen.getByText(/The prompt must return one path value/)).toBeTruthy();
+    expect(screen.getByText(/The judge prompt must return one enum value/)).toBeTruthy();
   });
 
   it('adds paths and saves the draft instead of resetting it', async () => {
@@ -101,7 +101,7 @@ describe('RoutinesPage', () => {
     render(<RoutinesPage {...props(pa)} />);
     await screen.findByText('Checkpoint timeline');
 
-    fireEvent.click(screen.getByText('Add path'));
+    fireEvent.click(screen.getByText('Add route'));
     expect(screen.getByDisplayValue('new_path')).toBeTruthy();
     fireEvent.change(screen.getByDisplayValue('new_path'), { target: { value: 'needs_qa' } });
     fireEvent.change(screen.getByDisplayValue('Describe this path'), { target: { value: 'Run QA' } });
@@ -129,7 +129,7 @@ describe('RoutinesPage', () => {
     fireEvent.change(effectSelect as HTMLElement, { target: { value: 'branch' } });
 
     expect(await screen.findByText('Then run')).toBeTruthy();
-    expect(screen.getByText(/This path can continue into another routine/)).toBeTruthy();
+    expect(screen.getByText(/This route can continue into another routine/)).toBeTruthy();
   });
 
   it('opens routine actions from the larger dots menu', async () => {
