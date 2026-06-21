@@ -29,7 +29,9 @@ export function SettingsField({ entry, value, label: labelOverride, description,
     <div className="flex flex-col gap-2 border-b border-border-subtle/60 px-3 py-2.5 last:border-b-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0 flex-1 pt-0.5">
         <span className="block text-[13px] font-medium leading-5 text-primary">{label}</span>
-        {showDescription && hint ? <span className="line-clamp-2 block max-w-[34rem] text-[12px] leading-5 text-secondary">{hint}</span> : null}
+        {showDescription && hint ? (
+          <span className="line-clamp-2 block max-w-[34rem] text-[12px] leading-5 text-secondary">{hint}</span>
+        ) : null}
       </div>
       <div className={cx('min-w-0', isBoolean ? 'sm:w-auto sm:flex-shrink-0 sm:self-center' : 'sm:w-[min(100%,32rem)] sm:flex-shrink-0')}>
         {renderControl(entry, currentValue, handleChange)}
@@ -65,7 +67,7 @@ function renderControl(entry: UnifiedSettingsEntry, currentValue: unknown, onCha
         <Select value={String(currentValue)} onChange={(e) => onChange(e.target.value)} className="bg-surface/70">
           {(entry.enum ?? []).map((opt) => (
             <option key={opt} value={opt}>
-              {opt}
+              {entry.enumLabels?.[opt] ?? opt}
             </option>
           ))}
         </Select>
@@ -268,7 +270,12 @@ function AgentToolListControl({
               autoComplete="off"
               spellCheck={false}
             />
-            <IconButton compact aria-label={`Remove additional agent tool ${index + 1}`} title="Remove" onClick={() => removeCustomTool(index)}>
+            <IconButton
+              compact
+              aria-label={`Remove additional agent tool ${index + 1}`}
+              title="Remove"
+              onClick={() => removeCustomTool(index)}
+            >
               ×
             </IconButton>
           </div>

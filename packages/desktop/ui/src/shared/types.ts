@@ -1990,6 +1990,7 @@ export interface UnifiedSettingsEntry {
   description?: string;
   group: string;
   enum?: string[];
+  enumLabels?: Record<string, string>;
   placeholder?: string;
   order: number;
 }

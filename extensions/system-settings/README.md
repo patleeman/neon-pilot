@@ -73,18 +73,20 @@ await api.updateSettings({ 'myExt.timeout': 60 }); // updates + returns merged
 | Section      | Source                                                                                         |
 | ------------ | ---------------------------------------------------------------------------------------------- |
 | Appearance   | Built-in (theme picker)                                                                        |
-| Conversation | Built-in (model, thinking)                                                                     |
-| Workspace    | Built-in (default working dir)                                                                 |
+| Conversation | Built-in (model, thinking, transcript display defaults)                                        |
+| Workspace    | Built-in (default working directory for tools and shell commands)                              |
 | Extensions   | Built-in extension enablement, imported packages, AGENTS.md files, skills, tools, and settings |
 | Commands     | Built-in and extension command/keybinding editor                                               |
 | Providers    | Built-in (model providers, credentials)                                                        |
-| Desktop      | Built-in (updates, app behavior)                                                               |
+| Desktop      | Built-in (updates, launch behavior, diagnostics)                                               |
 
 Knowledge setup lives in the installable Knowledge extension when that package is installed and is surfaced in Settings through its component-backed Knowledge Base panel. Manifest-declared extension settings render in the Settings page's Extension Settings section.
 
-The first-party Conversation extension setting `conversation.transcriptDisclosure`
-controls whether transcript tool/thinking details use auto-collapse or stay
-expanded by default.
+The first-party Conversation settings use user-facing labels in the UI:
+
+- **Tool and reasoning details** (`conversation.transcriptDisclosure`) controls whether completed tool/reasoning transcript blocks open automatically or stay collapsed unless useful.
+- **Code changes** (`conversation.diffDisclosure`) controls whether inline file diffs start collapsed or expanded.
+- **Keep important tool results visible** (`conversation.pinnedToolCalls`) keeps side results such as edits, checkpoints, artifacts, questions, and subagents visible in the transcript.
 
 ## Usage
 

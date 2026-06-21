@@ -14,11 +14,7 @@
       "secrets.provider": {
         "type": "select",
         "default": "keychain",
-        "enum": [
-          "keychain",
-          "file",
-          "env-only"
-        ],
+        "enum": ["keychain", "file", "env-only"],
         "description": "Secret storage backend. Keychain is recommended on macOS; file is for dev/headless; env-only disables writes.",
         "group": "Security",
         "order": 1
@@ -26,29 +22,23 @@
       "conversation.transcriptDisclosure": {
         "type": "select",
         "default": "auto",
-        "enum": [
-          "auto",
-          "expanded"
-        ],
-        "description": "Conversation transcript details. Auto keeps completed tool and thinking blocks collapsed; Expanded keeps them open.",
+        "enum": ["auto", "expanded"],
+        "description": "Controls whether tool calls and reasoning details open automatically in the conversation transcript.",
         "group": "Conversation",
         "order": 10
       },
       "conversation.diffDisclosure": {
         "type": "select",
         "default": "collapsed",
-        "enum": [
-          "collapsed",
-          "expanded"
-        ],
-        "description": "Inline file diffs in conversations. Collapsed shows a View diff button; Expanded opens file-changing diffs by default.",
+        "enum": ["collapsed", "expanded"],
+        "description": "Controls whether file changes shown in conversations start collapsed or expanded.",
         "group": "Conversation",
         "order": 11
       },
       "conversation.pinnedToolCalls": {
         "type": "boolean",
         "default": true,
-        "description": "Show important tool calls below collapsed internal-work groups, including edits, checkpoints, artifacts, images, questions, and subagents.",
+        "description": "Keep important side results, such as edits, checkpoints, artifacts, images, questions, and subagents, visible in the transcript.",
         "group": "Conversation",
         "order": 12
       }
@@ -82,11 +72,7 @@
         "action": "manageSettings",
         "jsonDefault": true,
         "usage": "settings list [prefix] [--json]",
-        "examples": [
-          "neon-pilot settings list",
-          "neon-pilot settings list conversation",
-          "neon-pilot settings list --json"
-        ],
+        "examples": ["neon-pilot settings list", "neon-pilot settings list conversation", "neon-pilot settings list --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -111,15 +97,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "settings",
-            "list"
-          ],
+          "argv": ["settings", "list"],
           "expectJsonFields": []
         }
       },
@@ -130,10 +110,7 @@
         "action": "manageSettings",
         "jsonDefault": true,
         "usage": "settings schema [--json]",
-        "examples": [
-          "neon-pilot settings schema",
-          "neon-pilot settings schema --json"
-        ],
+        "examples": ["neon-pilot settings schema", "neon-pilot settings schema --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -157,15 +134,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "settings",
-            "schema"
-          ],
+          "argv": ["settings", "schema"],
           "expectJsonFields": []
         }
       },
@@ -176,10 +147,7 @@
         "action": "manageSettings",
         "jsonDefault": true,
         "usage": "settings get <key> [--json]",
-        "examples": [
-          "neon-pilot settings get conversation.pinnedToolCalls",
-          "neon-pilot settings get conversation.pinnedToolCalls --json"
-        ],
+        "examples": ["neon-pilot settings get conversation.pinnedToolCalls", "neon-pilot settings get conversation.pinnedToolCalls --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -205,10 +173,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "settings-set",
@@ -250,10 +215,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "settings-reset",
@@ -295,10 +257,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       }
     ],
     "views": [
@@ -353,13 +312,7 @@
         "title": "Manage settings",
         "worker": {
           "enabled": true,
-          "inputActions": [
-            "list",
-            "schema",
-            "get",
-            "set",
-            "reset"
-          ]
+          "inputActions": ["list", "schema", "get", "set", "reset"]
         }
       },
       {
@@ -368,17 +321,10 @@
         "title": "Manage Neon Pilot CLI",
         "worker": {
           "enabled": true,
-          "inputActions": [
-            "status",
-            "install",
-            "uninstall"
-          ]
+          "inputActions": ["status", "install", "uninstall"]
         }
       }
     ]
   },
-  "permissions": [
-    "settings:read",
-    "settings:write"
-  ]
+  "permissions": ["settings:read", "settings:write"]
 }

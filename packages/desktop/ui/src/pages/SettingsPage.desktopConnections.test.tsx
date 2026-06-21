@@ -112,9 +112,9 @@ describe('DesktopConnectionsSettingsPanel', () => {
     const { container } = renderPanel();
     await flushAsyncWork();
 
-    expect(container.textContent).toContain('Auto-install updates');
-    expect(container.textContent).toContain('Update path');
-    expect(container.textContent).toContain('Start on sign in');
+    expect(container.textContent).toContain('Install updates automatically');
+    expect(container.textContent).toContain('Update channel');
+    expect(container.textContent).toContain('Launch Neon Pilot when you sign in');
   });
 
   it('persists app behavior changes through the desktop bridge', async () => {
@@ -175,7 +175,9 @@ describe('DesktopConnectionsSettingsPanel', () => {
     const { container } = renderPanel();
     await flushAsyncWork();
 
-    const autoInstallSwitch = container.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Auto-install updates"]');
+    const autoInstallSwitch = container.querySelector<HTMLButtonElement>(
+      'button[role="switch"][aria-label="Install updates automatically"]',
+    );
     if (!(autoInstallSwitch instanceof HTMLButtonElement)) {
       throw new Error('Expected auto-install switch');
     }
@@ -194,7 +196,9 @@ describe('DesktopConnectionsSettingsPanel', () => {
     });
     await flushAsyncWork();
 
-    const startOnSignInSwitch = container.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Start on sign in"]');
+    const startOnSignInSwitch = container.querySelector<HTMLButtonElement>(
+      'button[role="switch"][aria-label="Launch Neon Pilot when you sign in"]',
+    );
     if (!(startOnSignInSwitch instanceof HTMLButtonElement)) {
       throw new Error('Expected start-on-sign-in switch');
     }
@@ -571,12 +575,8 @@ describe('CommandsSettingsSection', () => {
     const staleKeybindings = deferred<Awaited<ReturnType<typeof api.extensionKeybindings>>>();
     const freshKeybindings = deferred<Awaited<ReturnType<typeof api.extensionKeybindings>>>();
 
-    vi.spyOn(api, 'extensionCommands')
-      .mockReturnValueOnce(staleCommands.promise)
-      .mockReturnValueOnce(freshCommands.promise);
-    vi.spyOn(api, 'extensionKeybindings')
-      .mockReturnValueOnce(staleKeybindings.promise)
-      .mockReturnValueOnce(freshKeybindings.promise);
+    vi.spyOn(api, 'extensionCommands').mockReturnValueOnce(staleCommands.promise).mockReturnValueOnce(freshCommands.promise);
+    vi.spyOn(api, 'extensionKeybindings').mockReturnValueOnce(staleKeybindings.promise).mockReturnValueOnce(freshKeybindings.promise);
 
     const container = document.createElement('div');
     document.body.appendChild(container);

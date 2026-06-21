@@ -85,6 +85,23 @@ const SETTINGS_QUICK_LINKS = [
 
 const SETTINGS_PANEL_COMPACT_CLASS = 'settings-page-panel-compact';
 const SETTINGS_PANEL_DENSE_CLASS = 'settings-page-panel-dense';
+
+const SETTINGS_ENTRY_LABELS: Record<string, string> = {
+  'conversation.transcriptDisclosure': 'Tool and reasoning details',
+  'conversation.diffDisclosure': 'Code changes',
+  'conversation.pinnedToolCalls': 'Keep important tool results visible',
+};
+
+const SETTINGS_SELECT_LABELS: Record<string, Record<string, string>> = {
+  'conversation.transcriptDisclosure': {
+    auto: 'Automatic',
+    expanded: 'Always expanded',
+  },
+  'conversation.diffDisclosure': {
+    collapsed: 'Start collapsed',
+    expanded: 'Always expanded',
+  },
+};
 const SETTINGS_ROW_GROUP_CLASS = 'settings-page-row-group';
 
 type SettingsQuickLink = { id: string; label: ReactNode; summary?: ReactNode; children?: readonly SettingsQuickLink[] };
@@ -1733,21 +1750,21 @@ export function DesktopConnectionsSettingsPanel() {
         {appPreferencesState ? (
           <>
             <SettingsControlRow
-              title="Auto-install updates"
+              title="Install updates automatically"
               description={formatDesktopUpdateSummary(appPreferencesState)}
               disabled={action !== null || !appPreferencesState.update.supported}
             >
               <Switch
                 checked={appPreferencesState.autoInstallUpdates}
                 disabled={action !== null || !appPreferencesState.update.supported}
-                aria-label="Auto-install updates"
+                aria-label="Install updates automatically"
                 onClick={() => {
                   void handleUpdateAppPreferences({ autoInstallUpdates: !appPreferencesState.autoInstallUpdates });
                 }}
               />
             </SettingsControlRow>
 
-            <SettingsControlRow title="Update path">
+            <SettingsControlRow title="Update channel">
               <Select
                 id="desktop-update-path"
                 value={appPreferencesState.updatePath}
@@ -1763,14 +1780,14 @@ export function DesktopConnectionsSettingsPanel() {
             </SettingsControlRow>
 
             <SettingsControlRow
-              title="Start on sign in"
+              title="Launch Neon Pilot when you sign in"
               description={formatStartOnSystemStartSummary(appPreferencesState)}
               disabled={action !== null || !appPreferencesState.supportsStartOnSystemStart}
             >
               <Switch
                 checked={appPreferencesState.startOnSystemStart}
                 disabled={action !== null || !appPreferencesState.supportsStartOnSystemStart}
-                aria-label="Start on sign in"
+                aria-label="Launch Neon Pilot when you sign in"
                 onClick={() => {
                   void handleUpdateAppPreferences({ startOnSystemStart: !appPreferencesState.startOnSystemStart });
                 }}
@@ -1911,42 +1928,43 @@ function ExtensionSettingsSection({
 
   if (groupByExtension) {
     return (
-      <div className={separated ? 'pt-4' : undefined}>
-        <SettingsGroup title="Extension settings" className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-extension-settings-group')}>
-          {entriesByExtension.map(([extensionId, entries]) => {
-            const entriesByGroup = new Map<string, UnifiedSettingsEntry[]>();
-            for (const entry of entries) {
-              const group = entry.group || 'General';
-              if (!entriesByGroup.has(group)) entriesByGroup.set(group, []);
-              entriesByGroup.get(group)!.push(entry);
-            }
-            const groupedEntries = [...entriesByGroup.entries()];
-            const extensionLabel = extensionLabels?.get(extensionId) ?? formatExtensionFallbackLabel(extensionId);
-            const showExtensionSubheading = entries.length > 1;
-            return (
-              <div key={extensionId} id={settingsExtensionAnchorId(extensionId)} className="settings-page-extension-settings-section">
-                {showExtensionSubheading ? <div className="settings-page-extension-subheading">{extensionLabel}</div> : null}
-                {groupedEntries.map(([group, groupEntries]) => (
-                  <div key={group} className="contents">
-                    {groupedEntries.length > 1 ? <div className="settings-page-extension-group-label">{group}</div> : null}
-                    {groupEntries.map((entry) => (
-                      <SettingsField
-                        key={entry.key}
-                        entry={entry}
-                        value={draft[entry.key]}
-                        label={formatSettingsEntryFallbackLabel(entry.key)}
-                        description={entry.description ? `${extensionLabel} · ${entry.description}` : extensionLabel}
-                        showDescription
-                        onChange={(key, val) => void autosaveSetting(key, val)}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-          {saveError ? <p className="settings-page-panel-message text-[12px] text-danger">{saveError}</p> : null}
-        </SettingsGroup>
+      <div className={separated ? 'space-y-3 pt-4' : 'space-y-3'}>
+        {entriesByExtension.map(([extensionId, entries]) => {
+          const entriesByGroup = new Map<string, UnifiedSettingsEntry[]>();
+          for (const entry of entries) {
+            const group = entry.group || 'General';
+            if (!entriesByGroup.has(group)) entriesByGroup.set(group, []);
+            entriesByGroup.get(group)!.push(entry);
+          }
+          const groupedEntries = [...entriesByGroup.entries()];
+          const extensionLabel = extensionLabels?.get(extensionId) ?? formatExtensionFallbackLabel(extensionId);
+          return (
+            <SettingsGroup
+              key={extensionId}
+              title={extensionLabel}
+              id={settingsExtensionAnchorId(extensionId)}
+              className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-extension-settings-group')}
+            >
+              {groupedEntries.map(([group, groupEntries]) => (
+                <div key={group} className="contents">
+                  {groupedEntries.length > 1 ? <div className="settings-page-extension-group-label">{group}</div> : null}
+                  {groupEntries.map((entry) => (
+                    <SettingsField
+                      key={entry.key}
+                      entry={{ ...entry, enumLabels: SETTINGS_SELECT_LABELS[entry.key] }}
+                      value={draft[entry.key]}
+                      label={SETTINGS_ENTRY_LABELS[entry.key] ?? formatSettingsEntryFallbackLabel(entry.key)}
+                      description={entry.description ?? extensionLabel}
+                      showDescription
+                      onChange={(key, val) => void autosaveSetting(key, val)}
+                    />
+                  ))}
+                </div>
+              ))}
+            </SettingsGroup>
+          );
+        })}
+        {saveError ? <p className="settings-page-panel-message text-[12px] text-danger">{saveError}</p> : null}
       </div>
     );
   }
@@ -1958,8 +1976,9 @@ function ExtensionSettingsSection({
           {entries.map((entry) => (
             <SettingsField
               key={entry.key}
-              entry={entry}
+              entry={{ ...entry, enumLabels: SETTINGS_SELECT_LABELS[entry.key] }}
               value={draft[entry.key]}
+              label={SETTINGS_ENTRY_LABELS[entry.key]}
               showDescription={false}
               onChange={(key, val) => void autosaveSetting(key, val)}
             />
@@ -1978,21 +1997,19 @@ function ExtensionSettingsComponentPanels({
 }) {
   if (registrations.length === 0) return null;
   return (
-    <div className="pt-4">
-      <SettingsGroup title="Extension integrations" className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-extension-components-group')}>
-        {registrations.map((registration) => (
-          <div
-            key={`${registration.extensionId}:${registration.id}`}
-            id={registration.sectionId}
-            className="settings-page-extension-component"
-          >
-            <div className="settings-page-extension-subheading">{registration.label}</div>
-            <div className="settings-page-extension-component-body">
-              <SettingsPanelHost registration={registration} />
-            </div>
+    <div className="space-y-3 pt-4">
+      {registrations.map((registration) => (
+        <SettingsGroup
+          key={`${registration.extensionId}:${registration.id}`}
+          id={registration.sectionId}
+          title={registration.label}
+          className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-extension-components-group')}
+        >
+          <div className="settings-page-extension-component-body">
+            <SettingsPanelHost registration={registration} />
           </div>
-        ))}
-      </SettingsGroup>
+        </SettingsGroup>
+      ))}
     </div>
   );
 }
@@ -2114,10 +2131,16 @@ function ExtensionSecretsSection() {
 
   return (
     <div className="settings-page-section-stack">
-      <SettingsGroup title="Secret storage">
+      <SettingsGroup title="Secrets">
         <SettingsControlRow
-          title="Backend"
-          description={activeBackend === 'keychain' ? 'macOS Keychain' : activeBackend === 'env-only' ? 'Environment only' : 'Local file'}
+          title="Where secrets are stored"
+          description={
+            activeBackend === 'keychain'
+              ? 'Saved in macOS Keychain.'
+              : activeBackend === 'env-only'
+                ? 'Read from environment variables only; Neon Pilot cannot save new secrets.'
+                : 'Saved in a local secrets file.'
+          }
         >
           <Select
             id="settings-secret-backend"
@@ -2149,7 +2172,7 @@ function ExtensionSecretsSection() {
                   description={
                     <>
                       <SecretSourceLabel source={secret.source} />
-                      {secret.env ? ` · ${secret.env}` : ''}
+                      {secret.env ? ` · Advanced name: ${secret.env}` : ''}
                     </>
                   }
                   actionsClassName="settings-page-secret-actions"
@@ -3451,7 +3474,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                 </SettingsGroup>
               </SettingsSection>
 
-              <SettingsSection id="settings-conversation" label="Conversation" description="Model and behavior defaults for new chats.">
+              <SettingsSection
+                id="settings-conversation"
+                label="Conversation"
+                description="Model and transcript defaults for new conversations."
+              >
                 <div className="settings-page-section-stack">
                   <SettingsGroup title="Model defaults">
                     {modelsLoading && !modelState ? (
@@ -3517,7 +3544,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                 </div>
               </SettingsSection>
 
-              <SettingsSection id="settings-workspace" label="Workspace" description="Default working directory and local context paths.">
+              <SettingsSection
+                id="settings-workspace"
+                label="Workspace"
+                description="Working directory defaults for tools and shell commands."
+              >
                 <div className="settings-page-section-stack">
                   <SettingsGroup title="Working directory">
                     {defaultCwdLoading && !defaultCwdState ? (
@@ -3533,13 +3564,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         }}
                       >
                         <SettingsControlRow
-                          title="Default cwd"
+                          title="Default working directory"
                           description={
                             savingDefaultCwd
                               ? 'Saving...'
                               : defaultCwdState.currentCwd
-                                ? `Default · ${defaultCwdState.effectiveCwd}`
-                                : `Process · ${defaultCwdState.effectiveCwd}`
+                                ? `New conversations and tools start in ${defaultCwdState.effectiveCwd}`
+                                : `No default set. Tools use the app process directory: ${defaultCwdState.effectiveCwd}`
                           }
                           actionsClassName="settings-page-cwd-actions"
                         >
@@ -3574,8 +3605,14 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                           </div>
                         </SettingsControlRow>
                         <SettingsControlRow
-                          title="Runtime fallback"
-                          description={savingDefaultCwd ? 'Saving…' : defaultCwdDirty ? 'Auto-save pending…' : 'Auto-saved'}
+                          title="When no default is set"
+                          description={
+                            savingDefaultCwd
+                              ? 'Saving…'
+                              : defaultCwdDirty
+                                ? 'Auto-save pending…'
+                                : 'Use the app process directory for tools and shell commands.'
+                          }
                         >
                           <ToolbarButton
                             type="button"
@@ -3584,7 +3621,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             }}
                             disabled={savingDefaultCwd || pickingDefaultCwd || defaultCwdState.currentCwd.length === 0}
                           >
-                            Use process cwd
+                            Clear default
                           </ToolbarButton>
                         </SettingsControlRow>
                       </form>
@@ -3603,7 +3640,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                 <ExtensionSecretsSection />
               </SettingsSection>
 
-              <SettingsSection id="settings-extensions" label="Extensions" description="Preferences declared by installed extensions.">
+              <SettingsSection
+                id="settings-extensions"
+                label="Extensions"
+                description="Installed extension preferences and integration setup."
+              >
                 <ExtensionSettingsSection excludeExtensionIds={['system-settings']} groupByExtension extensionLabels={extensionLabels} />
                 <ExtensionSettingsComponentPanels registrations={extensionRegistry.settingsComponents} />
               </SettingsSection>

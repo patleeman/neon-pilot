@@ -29,6 +29,21 @@ const agentToolListEntry: UnifiedSettingsEntry = {
   order: 20,
 };
 
+const selectEntry: UnifiedSettingsEntry = {
+  extensionId: 'system-settings',
+  key: 'conversation.diffDisclosure',
+  type: 'select',
+  default: 'collapsed',
+  description: 'Controls whether file changes start collapsed or expanded.',
+  group: 'Conversation',
+  enum: ['collapsed', 'expanded'],
+  enumLabels: {
+    collapsed: 'Start collapsed',
+    expanded: 'Always expanded',
+  },
+  order: 30,
+};
+
 describe('SettingsField', () => {
   it('separates setting labels from inline descriptions in text content', () => {
     const onChange = vi.fn();
@@ -36,6 +51,14 @@ describe('SettingsField', () => {
 
     expect(getByText('Emoji Picker Items').textContent).toBe('Emoji Picker Items');
     expect(getByText('Emoji reply starters.').textContent).toBe('Emoji reply starters.');
+  });
+
+  it('renders human labels for select values when provided', () => {
+    const onChange = vi.fn();
+    const { getByText } = render(<SettingsField entry={selectEntry} value={undefined} onChange={onChange} />);
+
+    expect(getByText('Start collapsed')).toBeTruthy();
+    expect(getByText('Always expanded')).toBeTruthy();
   });
 
   it('renders emoji label lists as separate emoji and label controls', () => {
@@ -70,9 +93,7 @@ describe('SettingsField', () => {
 
   it('renders agent tool lists as common tool checkboxes and custom rows', () => {
     const onChange = vi.fn();
-    const { getByLabelText } = render(
-      <SettingsField entry={agentToolListEntry} value="bash,read,custom_tool" onChange={onChange} />,
-    );
+    const { getByLabelText } = render(<SettingsField entry={agentToolListEntry} value="bash,read,custom_tool" onChange={onChange} />);
 
     expect((getByLabelText('bash') as HTMLInputElement).checked).toBe(true);
     expect((getByLabelText('read') as HTMLInputElement).checked).toBe(true);
@@ -82,9 +103,7 @@ describe('SettingsField', () => {
 
   it('serializes edited agent tool lists back to the setting string', () => {
     const onChange = vi.fn();
-    const { getByLabelText } = render(
-      <SettingsField entry={agentToolListEntry} value="bash,read,custom_tool" onChange={onChange} />,
-    );
+    const { getByLabelText } = render(<SettingsField entry={agentToolListEntry} value="bash,read,custom_tool" onChange={onChange} />);
 
     fireEvent.click(getByLabelText('edit'));
     expect(onChange).toHaveBeenLastCalledWith('dynamicWorkflows.defaultAgentAllowedTools', 'bash,read,edit,custom_tool');
