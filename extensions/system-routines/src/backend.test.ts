@@ -53,6 +53,38 @@ describe('system-routines backend', () => {
     expect(result.status).toBe('passed');
   });
 
+  it('passes routine model settings and retries with fallback model', async () => {
+    const ctx = createCtx();
+    await saveRoutine(
+      {
+        id: 'model-routine',
+        hookId: 'checkpoint',
+        position: 'before',
+        type: 'instruction',
+        name: 'Model routine',
+        instruction: 'Use configured model',
+        enabled: true,
+        order: -1,
+        failureBehavior: 'continue',
+        modelRef: 'primary/model',
+        fallbackModelRef: 'backup/model',
+        outcomes: [],
+      },
+      ctx,
+    );
+    runAgentTaskMock
+      .mockRejectedValueOnce(new Error('primary down'))
+      .mockResolvedValueOnce({ text: 'backup ok', model: 'model', provider: 'backup' });
+
+    const result = (await runHook({ hookId: 'checkpoint', position: 'before', context: { cwd: '/repo' } }, ctx)) as {
+      run: { steps: Array<{ routineName: string; fallbackUsed?: boolean; provider?: string }> };
+    };
+
+    expect(runAgentTaskMock).toHaveBeenNthCalledWith(1, expect.objectContaining({ modelRef: 'primary/model' }), ctx);
+    expect(runAgentTaskMock).toHaveBeenNthCalledWith(2, expect.objectContaining({ modelRef: 'backup/model' }), ctx);
+    expect(result.run.steps.find((step) => step.routineName === 'Model routine')).toMatchObject({ fallbackUsed: true, provider: 'backup' });
+  });
+
   it('runs only routines nested under the judge output route', async () => {
     const ctx = createCtx();
     await saveRoutine(

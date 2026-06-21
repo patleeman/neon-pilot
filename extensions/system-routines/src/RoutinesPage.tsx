@@ -91,7 +91,7 @@ function groupedHooks(hooks: HookWithSummary[]) {
 
 function routineLabel(type: RoutineType): string {
   if (type === 'decision') return 'Judge routine';
-  if (type === 'stop') return 'Stop routine';
+  if (type === 'stop') return 'Manual stop';
   return 'Instruction routine';
 }
 
@@ -638,6 +638,12 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               </div>
               <div className="mt-0.5 truncate text-[13px] font-semibold">{routine.name}</div>
               <div className="truncate text-[12px] text-secondary">{routine.instruction || 'No instruction yet.'}</div>
+              {routine.type !== 'stop' && (routine.modelRef || routine.fallbackModelRef) ? (
+                <div className="mt-1 truncate font-mono text-[11px] text-dim">
+                  {routine.modelRef || 'app default'}
+                  {routine.fallbackModelRef ? ` → ${routine.fallbackModelRef}` : ''}
+                </div>
+              ) : null}
             </div>
             <div className="relative">
               <button
@@ -968,11 +974,11 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 >
                   <option value="instruction">Instruction: run a prompt</option>
                   <option value="decision">Judge: choose a route</option>
-                  <option value="stop">Stop: block this event</option>
+                  <option value="stop">Manual stop: always block</option>
                 </Select>
                 {draft.type === 'stop' ? (
                   <div className="mb-3 rounded-md border border-warning/30 bg-warning/10 p-2 text-[12px] text-secondary">
-                    Stop routines always block the selected event. Use the instruction field to explain when and why the event should stop.
+                    Manual stop never calls a model. It always blocks this event and uses the instruction below as the explanation.
                   </div>
                 ) : null}
                 <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Position</label>
@@ -1010,6 +1016,37 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     </Select>
                     <div className="mb-3 mt-1 text-[12px] text-secondary">{failureBehaviorDescription(draft.failureBehavior)}</div>
                   </>
+                ) : null}
+                {draft.type !== 'stop' ? (
+                  <div className="mb-3 rounded-md border border-border-subtle bg-surface-2 p-2">
+                    <div className="mb-2 text-[11px] uppercase tracking-wider text-secondary">Model for this routine</div>
+                    <label className="mb-2 grid gap-1">
+                      <span className="text-[10px] uppercase tracking-wider text-dim">Primary model</span>
+                      <TextInput
+                        className="w-full font-mono text-[12px]"
+                        placeholder="Use app default"
+                        value={draft.modelRef ?? ''}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                          setDraft({ ...draft, modelRef: event.target.value.trim() || undefined })
+                        }
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      <span className="text-[10px] uppercase tracking-wider text-dim">Backup model</span>
+                      <TextInput
+                        className="w-full font-mono text-[12px]"
+                        placeholder="Optional provider/model fallback"
+                        value={draft.fallbackModelRef ?? ''}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                          setDraft({ ...draft, fallbackModelRef: event.target.value.trim() || undefined })
+                        }
+                      />
+                    </label>
+                    <div className="mt-2 text-[11px] text-secondary">
+                      Leave blank to use the current app model. Use <span className="font-mono">provider/model</span> when a provider
+                      matters. If the primary model fails, this routine retries once with the backup.
+                    </div>
+                  </div>
                 ) : null}
                 <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Instruction</label>
                 <div className="relative">

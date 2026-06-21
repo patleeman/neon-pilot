@@ -32,6 +32,8 @@ export interface Routine {
   enabled: boolean;
   order: number;
   failureBehavior: RoutineFailureBehavior;
+  modelRef?: string;
+  fallbackModelRef?: string;
   outcomes: RoutineOutcome[];
   createdAt: string;
   updatedAt: string;
@@ -45,6 +47,9 @@ export interface RoutineRunStep {
   text?: string;
   message?: string;
   skillRefs: string[];
+  model?: string;
+  provider?: string;
+  fallbackUsed?: boolean;
 }
 
 export interface RoutineRunRecord {

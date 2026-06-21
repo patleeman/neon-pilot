@@ -190,6 +190,10 @@ function normalizeRoutine(value: unknown, fallbackOrder = 0): Routine | null {
     enabled: boolValue(value.enabled, true),
     order: Number.isFinite(value.order) ? Number(value.order) : fallbackOrder,
     failureBehavior: failureBehaviorValue(value.failureBehavior),
+    ...(typeof value.modelRef === 'string' && value.modelRef.trim() ? { modelRef: value.modelRef.trim() } : {}),
+    ...(typeof value.fallbackModelRef === 'string' && value.fallbackModelRef.trim()
+      ? { fallbackModelRef: value.fallbackModelRef.trim() }
+      : {}),
     outcomes: Array.isArray(value.outcomes)
       ? value.outcomes.map(normalizeOutcome).filter((outcome): outcome is RoutineOutcome => Boolean(outcome))
       : [],
@@ -523,6 +527,24 @@ function statusForFailure(behavior: RoutineFailureBehavior): RoutineRunStep['sta
   return 'passed';
 }
 
+async function runRoutineAgentTask(routine: Routine, ctx: ExtensionBackendContext, context: Record<string, unknown>) {
+  const baseInput = {
+    prompt: buildPrompt(routine, context),
+    cwd: typeof context.cwd === 'string' ? context.cwd : undefined,
+    tools: 'default' as const,
+    timeoutMs: 10 * 60 * 1000,
+  };
+  try {
+    return {
+      result: await runAgentTask({ ...baseInput, ...(routine.modelRef ? { modelRef: routine.modelRef } : {}) }, ctx),
+      fallbackUsed: false,
+    };
+  } catch (error) {
+    if (!routine.fallbackModelRef || routine.fallbackModelRef === routine.modelRef) throw error;
+    return { result: await runAgentTask({ ...baseInput, modelRef: routine.fallbackModelRef }, ctx), fallbackUsed: true };
+  }
+}
+
 async function runRoutine(
   routine: Routine,
   state: RoutinesState,
@@ -541,15 +563,7 @@ async function runRoutine(
     return [{ routineId: routine.id, routineName: routine.name, status: 'blocked', message: routine.instruction, skillRefs }];
   }
   try {
-    const result = await runAgentTask(
-      {
-        prompt: buildPrompt(routine, context),
-        cwd: typeof context.cwd === 'string' ? context.cwd : undefined,
-        tools: 'default',
-        timeoutMs: 10 * 60 * 1000,
-      },
-      ctx,
-    );
+    const { result, fallbackUsed } = await runRoutineAgentTask(routine, ctx, context);
     if (routine.type === 'decision') {
       const outcome = parseOutcome(result.text, routine.outcomes);
       if (!outcome) {
@@ -572,6 +586,9 @@ async function runRoutine(
         text: result.text,
         message: outcome.target,
         skillRefs,
+        model: result.model,
+        provider: result.provider,
+        fallbackUsed,
       };
       const routeChildren = state.routines
         .filter((candidate) => candidate.enabled && candidate.parentRoutineId === routine.id && candidate.parentOutcomeId === outcome.id)
@@ -589,7 +606,18 @@ async function runRoutine(
       }
       return [step, ...childSteps];
     }
-    return [{ routineId: routine.id, routineName: routine.name, status: 'passed', text: result.text, skillRefs }];
+    return [
+      {
+        routineId: routine.id,
+        routineName: routine.name,
+        status: 'passed',
+        text: result.text,
+        skillRefs,
+        model: result.model,
+        provider: result.provider,
+        fallbackUsed,
+      },
+    ];
   } catch (error) {
     return [
       {
