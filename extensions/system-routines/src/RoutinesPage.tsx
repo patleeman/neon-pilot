@@ -1,5 +1,5 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { Button, cx, ErrorState, LoadingState } from '@neon-pilot/extensions/ui';
+import { Button, cx, ErrorState, LoadingState, SearchInput, Select, Textarea, TextInput, ToolbarButton } from '@neon-pilot/extensions/ui';
 import React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -31,6 +31,24 @@ const DEFAULT_OUTCOMES: RoutineOutcome[] = [
   { id: 'pass', label: 'Pass', target: 'Continue', behavior: 'continue' },
   { id: 'fail', label: 'Fail', target: 'Block', behavior: 'block' },
 ];
+
+function hookIdFromHash(hash?: string): string | null {
+  const raw = (hash ?? '').replace(/^#/, '');
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+async function navigateRoutines(pa: ExtensionSurfaceProps['pa'], hookId: string) {
+  const to = `/routines#${encodeURIComponent(hookId)}`;
+  const handled = await pa.commands?.execute?.('app.navigate', { to });
+  if (!handled && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('neon-pilot-desktop-navigate', { detail: { route: to } }));
+  }
+}
 
 function nowRoutine(hookId: string, position: RoutinePosition, type: RoutineType): Routine {
   const timestamp = new Date().toISOString();
@@ -68,14 +86,106 @@ function statusDot(summary: string) {
   return 'bg-success';
 }
 
-export function RoutinesPage({ pa }: ExtensionSurfaceProps) {
+function RoutineHookList({
+  hooks,
+  selectedHookId,
+  query,
+  onQueryChange,
+  onSelect,
+}: {
+  hooks: HookWithSummary[];
+  selectedHookId: string;
+  query: string;
+  onQueryChange: (query: string) => void;
+  onSelect: (hookId: string) => void;
+}) {
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleHooks = normalizedQuery
+    ? hooks.filter((hook) => `${hook.title} ${hook.description} ${hook.group}`.toLowerCase().includes(normalizedQuery))
+    : hooks;
+
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-transparent">
+      <div className="px-4 pb-2 pt-1">
+        <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-dim">Routines</div>
+      </div>
+      <div className="px-2 pb-2">
+        <SearchInput
+          value={query}
+          onChange={(event: React.ChangeEvent<HTMLInputElement>) => onQueryChange(event.target.value)}
+          placeholder="Search events…"
+        />
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+        {groupedHooks(visibleHooks).map(([group, groupHooks]) => (
+          <div key={group} className="py-2">
+            <div className="px-2 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-dim">{group}</div>
+            {groupHooks.map((hook) => (
+              <button
+                key={hook.id}
+                type="button"
+                onClick={() => onSelect(hook.id)}
+                className={cx(
+                  'grid w-full grid-cols-[8px_1fr] gap-2 rounded-md px-2 py-2 text-left text-[13px] text-secondary hover:bg-surface/60 hover:text-primary',
+                  hook.id === selectedHookId && 'bg-surface-2 text-primary',
+                )}
+              >
+                <span className={cx('mt-1.5 h-2 w-2 rounded-full', statusDot(hook.summary))} />
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{hook.title}</span>
+                  <span className="block truncate text-[11px] text-dim">{hook.summary}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function RoutinesSidebar({ pa, context }: ExtensionSurfaceProps) {
   const [data, setData] = useState<StateResult | null>(null);
-  const [selectedHookId, setSelectedHookId] = useState('checkpoint');
+  const [query, setQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const selectedHookId = hookIdFromHash(context.hash) ?? 'checkpoint';
+
+  useEffect(() => {
+    let disposed = false;
+    pa.extension
+      .invoke('getState', {})
+      .then((result) => {
+        if (!disposed) setData(result as StateResult);
+      })
+      .catch((err) => {
+        if (!disposed) setError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [pa]);
+
+  if (error) return <div className="p-3 text-[12px] text-danger">{error}</div>;
+  if (!data) return <LoadingState label="Loading routines…" />;
+
+  return (
+    <RoutineHookList
+      hooks={data.hooks}
+      selectedHookId={selectedHookId}
+      query={query}
+      onQueryChange={setQuery}
+      onSelect={(hookId) => void navigateRoutines(pa, hookId)}
+    />
+  );
+}
+
+export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
+  const [data, setData] = useState<StateResult | null>(null);
+  const [selectedHookId, setSelectedHookId] = useState(hookIdFromHash(context.hash) ?? 'checkpoint');
   const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Routine | null>(null);
   const [skills, setSkills] = useState<SkillItem[]>([]);
   const [skillQuery, setSkillQuery] = useState<string | null>(null);
-  const [showAdd, setShowAdd] = useState(false);
   const [showRuns, setShowRuns] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +214,11 @@ export function RoutinesPage({ pa }: ExtensionSurfaceProps) {
   }, [load]);
 
   useEffect(() => {
+    const nextHookId = hookIdFromHash(context.hash);
+    if (nextHookId) setSelectedHookId(nextHookId);
+  }, [context.hash]);
+
+  useEffect(() => {
     void pa.extension
       .invoke('listSkills', {})
       .then((result) => {
@@ -122,6 +237,15 @@ export function RoutinesPage({ pa }: ExtensionSurfaceProps) {
   const beforeRoutines = hookRoutines.filter((routine) => routine.position === 'before');
   const afterRoutines = hookRoutines.filter((routine) => routine.position === 'after');
   const selectedRuns = (data?.runs ?? []).filter((run) => run.hookId === selectedHookId).slice(0, 20);
+
+  useEffect(() => {
+    if (!data) return;
+    const currentRoutine = data.routines.find((routine) => routine.id === selectedRoutineId && routine.hookId === selectedHookId);
+    if (currentRoutine) return;
+    const next = data.routines.find((routine) => routine.hookId === selectedHookId) ?? null;
+    setSelectedRoutineId(next?.id ?? null);
+    setDraft(next ? { ...next, outcomes: next.outcomes.map((outcome) => ({ ...outcome })) } : null);
+  }, [data, selectedHookId, selectedRoutineId]);
 
   const selectRoutine = useCallback((routine: Routine) => {
     setSelectedRoutineId(routine.id);
@@ -151,7 +275,6 @@ export function RoutinesPage({ pa }: ExtensionSurfaceProps) {
     (type: RoutineType) => {
       if (!selectedHook) return;
       const routine = nowRoutine(selectedHook.id, 'before', type);
-      setShowAdd(false);
       setSelectedRoutineId(routine.id);
       setDraft(routine);
       setData((current) => (current ? { ...current, routines: [...current.routines, routine] } : current));
@@ -268,77 +391,34 @@ export function RoutinesPage({ pa }: ExtensionSurfaceProps) {
   );
 
   return (
-    <div className="grid h-full grid-cols-[248px_minmax(560px,1fr)_330px] bg-app text-primary">
-      <aside className="min-w-0 border-r border-border-subtle bg-surface-1">
-        <div className="flex h-12 items-center border-b border-border-subtle px-4">
-          <h1 className="text-[14px] font-semibold">Routines</h1>
-        </div>
-        <div className="m-2 rounded-md border border-border-subtle bg-surface-0 px-2 py-1.5 text-secondary">Search lifecycle events…</div>
-        {groupedHooks(data.hooks).map(([group, hooks]) => (
-          <div key={group} className="px-2 py-2">
-            <div className="px-2 py-1 text-[11px] uppercase tracking-wider text-dim">{group}</div>
-            {hooks.map((hook) => (
-              <button
-                key={hook.id}
-                type="button"
-                onClick={() => {
-                  setSelectedHookId(hook.id);
-                  const next = data.routines.find((routine) => routine.hookId === hook.id) ?? null;
-                  setSelectedRoutineId(next?.id ?? null);
-                  setDraft(next);
-                }}
-                className={cx(
-                  'grid w-full grid-cols-[8px_1fr] gap-2 rounded-md px-2 py-2 text-left text-secondary',
-                  hook.id === selectedHookId && 'bg-surface-3 text-primary',
-                )}
-              >
-                <span className={cx('mt-1.5 h-2 w-2 rounded-full', statusDot(hook.summary))} />
-                <span className="min-w-0">
-                  <span className="block truncate">{hook.title}</span>
-                  <span className="block truncate text-[11px] text-dim">{hook.summary}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        ))}
-      </aside>
-
-      <main className="min-w-0">
-        <div className="flex h-12 items-center gap-2 border-b border-border-subtle px-4">
+    <div className="grid h-full min-h-0 grid-cols-[minmax(560px,1fr)_360px] bg-app text-[13px] text-primary">
+      <main className="min-w-0 overflow-hidden">
+        <div className="flex h-14 items-center gap-2 border-b border-border-subtle/70 px-5">
           <div>
-            <div className="font-semibold">{selectedHook.title}</div>
-            <div className="text-[12px] text-secondary">{selectedHook.description}</div>
+            <div className="text-[15px] font-semibold">{selectedHook.title}</div>
+            <div className="mt-0.5 text-[12px] text-secondary">{selectedHook.description}</div>
           </div>
           <div className="flex-1" />
-          <Button variant="ghost" onClick={() => setShowRuns((value) => !value)}>
+          <ToolbarButton type="button" onClick={() => setShowRuns((value) => !value)}>
             {showRuns ? 'Timeline' : 'Runs'}
-          </Button>
-          <div className="relative">
-            <Button variant="primary" onClick={() => setShowAdd((value) => !value)}>
-              Add routine ▾
-            </Button>
-            {showAdd ? (
-              <div className="absolute right-0 top-9 z-10 w-56 overflow-hidden rounded-md border border-border-subtle bg-surface-1 shadow-xl">
-                <button
-                  className="block w-full border-b border-border-subtle px-3 py-2 text-left"
-                  onClick={() => addRoutine('instruction')}
-                >
-                  <b>Instruction</b>
-                  <span className="block text-[11px] text-secondary">Run a prompt and continue, warn, or block.</span>
-                </button>
-                <button className="block w-full border-b border-border-subtle px-3 py-2 text-left" onClick={() => addRoutine('decision')}>
-                  <b>Decision</b>
-                  <span className="block text-[11px] text-secondary">Run a prompt that chooses one outcome.</span>
-                </button>
-                <button className="block w-full px-3 py-2 text-left" onClick={() => addRoutine('stop')}>
-                  <b>Stop</b>
-                  <span className="block text-[11px] text-secondary">Block the lifecycle event with a message.</span>
-                </button>
-              </div>
-            ) : null}
-          </div>
+          </ToolbarButton>
+          <Select
+            name="routine-add"
+            aria-label="Add routine"
+            className="h-8 w-36 bg-surface/40 text-[13px]"
+            value=""
+            onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
+              const type = event.target.value as RoutineType;
+              if (type) addRoutine(type);
+            }}
+          >
+            <option value="">Add routine</option>
+            <option value="instruction">Instruction</option>
+            <option value="decision">Decision</option>
+            <option value="stop">Stop</option>
+          </Select>
         </div>
-        <div className="overflow-auto p-5">
+        <div className="h-[calc(100%-3.5rem)] overflow-auto p-6">
           {showRuns ? (
             <div className="grid max-w-3xl gap-2">
               {selectedRuns.length === 0 ? <div className="text-secondary">No routine runs yet.</div> : null}
@@ -397,10 +477,11 @@ export function RoutinesPage({ pa }: ExtensionSurfaceProps) {
             </div>
             <div className="overflow-auto p-4">
               <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Routine type</label>
-              <select
-                className="mb-3 w-full rounded-md border border-border-subtle bg-surface-0 p-2"
+              <Select
+                name="routine-type"
+                className="mb-3 w-full"
                 value={draft.type}
-                onChange={(event) =>
+                onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
                   setDraft({
                     ...draft,
                     type: event.target.value as RoutineType,
@@ -411,45 +492,51 @@ export function RoutinesPage({ pa }: ExtensionSurfaceProps) {
                 <option value="instruction">Instruction: run and continue</option>
                 <option value="decision">Decision: choose one outcome</option>
                 <option value="stop">Stop: block lifecycle event</option>
-              </select>
+              </Select>
               <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Position</label>
-              <select
-                className="mb-3 w-full rounded-md border border-border-subtle bg-surface-0 p-2"
+              <Select
+                name="routine-position"
+                className="mb-3 w-full"
                 value={draft.position}
-                onChange={(event) => setDraft({ ...draft, position: event.target.value as RoutinePosition })}
+                onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                  setDraft({ ...draft, position: event.target.value as RoutinePosition })
+                }
               >
                 <option value="before">Before</option>
                 <option value="after">After</option>
-              </select>
+              </Select>
               <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Name</label>
-              <input
-                className="mb-3 w-full rounded-md border border-border-subtle bg-surface-0 p-2"
+              <TextInput
+                className="mb-3 w-full"
                 value={draft.name}
-                onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, name: event.target.value })}
               />
               {draft.type === 'instruction' ? (
                 <>
                   <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Pass / fail behavior</label>
-                  <select
-                    className="mb-3 w-full rounded-md border border-border-subtle bg-surface-0 p-2"
+                  <Select
+                    name="routine-failure-behavior"
+                    className="mb-3 w-full"
                     value={draft.failureBehavior}
-                    onChange={(event) => setDraft({ ...draft, failureBehavior: event.target.value as Routine['failureBehavior'] })}
+                    onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                      setDraft({ ...draft, failureBehavior: event.target.value as Routine['failureBehavior'] })
+                    }
                   >
                     <option value="continue">Continue either way</option>
                     <option value="warn">Warn if this routine fails</option>
                     <option value="block">Block if this routine fails</option>
-                  </select>
+                  </Select>
                 </>
               ) : null}
               <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Instruction</label>
               <div className="relative">
-                <textarea
-                  className="min-h-40 w-full resize-y rounded-md border border-border-subtle bg-surface-0 p-2 font-mono text-[12px]"
+                <Textarea
+                  className="min-h-40 w-full resize-y text-[13px]"
                   value={draft.instruction}
                   onFocus={(event) => onInstructionChange(event.currentTarget.value)}
                   onKeyUp={(event) => onInstructionChange(event.currentTarget.value)}
                   onInput={(event) => onInstructionChange(event.currentTarget.value)}
-                  onChange={(event) => onInstructionChange(event.target.value)}
+                  onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onInstructionChange(event.target.value)}
                 />
                 {skillMatches.length ? (
                   <div className="absolute left-2 top-20 z-10 w-64 overflow-hidden rounded-md border border-border-subtle bg-surface-1 shadow-xl">
@@ -474,9 +561,12 @@ export function RoutinesPage({ pa }: ExtensionSurfaceProps) {
                   <label className="mb-1 block text-[11px] uppercase tracking-wider text-secondary">Outcomes</label>
                   <div className="mb-3 overflow-hidden rounded-md border border-border-subtle">
                     {draft.outcomes.map((outcome, index) => (
-                      <div key={index} className="grid grid-cols-[110px_1fr] gap-2 border-b border-border-subtle p-2 last:border-b-0">
+                      <div
+                        key={index}
+                        className="grid grid-cols-[118px_minmax(0,1fr)] gap-2 border-b border-border-subtle p-2 last:border-b-0"
+                      >
                         <input
-                          className="bg-transparent font-mono text-[11px]"
+                          className="min-w-0 bg-transparent font-mono text-[11px] text-primary outline-none"
                           value={outcome.id}
                           onChange={(event) =>
                             setDraft({
@@ -488,7 +578,7 @@ export function RoutinesPage({ pa }: ExtensionSurfaceProps) {
                           }
                         />
                         <input
-                          className="bg-transparent text-secondary"
+                          className="min-w-0 bg-transparent text-secondary outline-none"
                           value={outcome.target}
                           onChange={(event) =>
                             setDraft({

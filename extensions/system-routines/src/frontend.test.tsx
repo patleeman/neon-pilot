@@ -45,12 +45,21 @@ function pa() {
   } as never;
 }
 
+function props() {
+  return {
+    pa: pa(),
+    context: { extensionId: 'system-routines', surfaceId: 'page', pathname: '/routines', route: '/routines', search: '', hash: '' },
+    surface: { id: 'page', title: 'Routines', location: 'main', component: 'RoutinesPage' },
+    params: {},
+  } as never;
+}
+
 describe('RoutinesPage', () => {
   it('renders the timeline and routine inspector', async () => {
-    render(<RoutinesPage pa={pa()} />);
+    render(<RoutinesPage {...props()} />);
     expect(await screen.findByText('Checkpoint timeline')).toBeTruthy();
     expect(screen.getAllByText('Review code changes').length).toBeGreaterThan(0);
-    expect(screen.getByText('Add routine ▾')).toBeTruthy();
+    expect(screen.getByText('Add routine')).toBeTruthy();
     expect(screen.getByText('Decision output is constrained to these enum values.')).toBeTruthy();
   });
 });
