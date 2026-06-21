@@ -1210,7 +1210,7 @@ Examples:
 
 ### extensions create
 
-Create a runtime extension: extensions create <id> --name <name> [--template <template>]
+Create an installed extension: extensions create <id> --name <name> [--template <template>]
 
 - Source: extension (system-extension-manager)
 - Usage: `neon-pilot extensions create <extensionId> [--json]`
@@ -1355,7 +1355,7 @@ Examples:
 
 ### extensions reload
 
-Reload an extension backend by id, or refresh registry state.
+Reload an extension by id, or refresh extension state.
 
 - Source: extension (system-extension-manager)
 - Usage: `neon-pilot extensions reload [extensionId] [--json]`
@@ -1374,7 +1374,7 @@ Examples:
 
 ### extensions smoke
 
-Run backend smoke checks for an installed extension.
+Run smoke checks for an installed extension.
 
 - Source: extension (system-extension-manager)
 - Usage: `neon-pilot extensions smoke <extensionId> [--json]`
@@ -1392,7 +1392,7 @@ Examples:
 
 ### extensions snapshot
 
-Snapshot a runtime extension by id.
+Snapshot an installed extension by id.
 
 - Source: extension (system-extension-manager)
 - Usage: `neon-pilot extensions snapshot <extensionId> [--json]`
@@ -1629,7 +1629,7 @@ Examples:
 
 ### settings reset
 
-Reset one or more settings to manifest defaults: settings reset <key...>
+Reset one or more settings to defaults: settings reset <key...>
 
 - Source: extension (system-settings)
 - Usage: `neon-pilot settings reset <key> [--json]`
@@ -1647,7 +1647,7 @@ Examples:
 
 ### settings schema
 
-List manifest-declared settings schema.
+List settings definitions.
 
 - Source: extension (system-settings)
 - Usage: `neon-pilot settings schema [--json]`
@@ -1665,7 +1665,7 @@ Examples:
 
 ### settings set
 
-Update a manifest-declared non-secret setting by key and JSON value.
+Update a non-secret setting by key and JSON value.
 
 - Source: extension (system-settings)
 - Usage: `neon-pilot settings set <key> <value> [--json]`

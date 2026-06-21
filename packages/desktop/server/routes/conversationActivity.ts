@@ -2,12 +2,12 @@ import type { Express, Response } from 'express';
 
 import { listConversationActivity } from '../conversations/conversationActivity.js';
 import {
-  listConversationConnections,
   type ConversationConnectionKind,
   type ConversationConnectionSurface,
+  listConversationConnections,
 } from '../conversations/conversationConnections.js';
 import { logError } from '../middleware/index.js';
-import type { ServerRouteContext } from './context.js';
+import type { RuntimeScopeTaskSummary, ServerRouteContext } from './context.js';
 
 function parseBooleanQuery(value: unknown): boolean | undefined {
   if (typeof value !== 'string') return undefined;
@@ -62,6 +62,28 @@ function handleError(res: Response, err: unknown): void {
   res.status(500).json({ error: message });
 }
 
+function readRuntimeScope(context: Pick<ServerRouteContext, 'getRuntimeScope'>): string | undefined {
+  try {
+    return context.getRuntimeScope();
+  } catch (err) {
+    logError('conversation activity runtime scope unavailable', {
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return undefined;
+  }
+}
+
+function readRuntimeTasks(context: Pick<ServerRouteContext, 'listTasksForRuntimeScope'>): RuntimeScopeTaskSummary[] {
+  try {
+    return context.listTasksForRuntimeScope();
+  } catch (err) {
+    logError('conversation activity scheduled tasks unavailable', {
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
+}
+
 export function registerConversationActivityRoutes(
   router: Pick<Express, 'get'>,
   context: Pick<ServerRouteContext, 'getRuntimeScope' | 'listTasksForRuntimeScope'>,
@@ -72,8 +94,8 @@ export function registerConversationActivityRoutes(
         await listConversationActivity(req.params.id, {
           active: parseBooleanQuery(req.query.active),
           visibility: parseVisibilityQuery(req.query.visibility),
-          tasks: context.listTasksForRuntimeScope(),
-          profile: context.getRuntimeScope(),
+          tasks: readRuntimeTasks(context),
+          profile: readRuntimeScope(context),
         }),
       );
     } catch (err) {
@@ -89,8 +111,8 @@ export function registerConversationActivityRoutes(
           kind: parseKindQuery(req.query.kind),
           surface: parseSurfaceQuery(req.query.surface),
           visibility: parseVisibilityQuery(req.query.visibility),
-          tasks: context.listTasksForRuntimeScope(),
-          profile: context.getRuntimeScope(),
+          tasks: readRuntimeTasks(context),
+          profile: readRuntimeScope(context),
         }),
       );
     } catch (err) {

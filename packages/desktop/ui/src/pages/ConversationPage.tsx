@@ -2787,7 +2787,13 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     () => (draft ? pendingQueue : mergeLiveAndActivityPendingQueueItems({ liveQueue: pendingQueue, activityQueue: activityPendingQueue })),
     [activityPendingQueue, draft, pendingQueue],
   );
-  const visibleDeferredResumes = draft ? deferredResumes : activityDeferredResumeItems;
+  const visibleDeferredResumes = useMemo(() => {
+    if (draft) return deferredResumes;
+    if (activityDeferredResumeItems.length === 0) return deferredResumes;
+    const byId = new Map(deferredResumes.map((resume) => [resume.id, resume]));
+    for (const resume of activityDeferredResumeItems) byId.set(resume.id, resume);
+    return Array.from(byId.values());
+  }, [activityDeferredResumeItems, deferredResumes, draft]);
   const deferredResumePresentation = useMemo(
     () =>
       resolveDeferredResumePresentationState({
