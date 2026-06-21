@@ -13,7 +13,7 @@ import {
 import { mergeSessionSnapshotPreservingOrder } from '../session/sessionListState.js';
 import { openConversationTab, resetLocalWriteGrace, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
 import type { ScheduledTaskSummary, SessionMeta } from '../shared/types.js';
-import { presenceStore, sessionStore, taskStore } from '../store';
+import { conversationRuntimeStore, sessionStore, taskStore } from '../store';
 import { useConversations } from './useConversations.js';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -1084,7 +1084,12 @@ describe('useConversations', () => {
     expect(latestHookResult?.tabs[0]?.isRunning).toBe(false);
 
     await act(async () => {
-      presenceStore.setBackendRunning('conv-running', true);
+      conversationRuntimeStore.apply({
+        id: 'conv-running',
+        running: true,
+        revision: 1,
+        updatedAt: '2026-04-01T00:00:01.000Z',
+      });
     });
 
     expect(latestHookResult?.tabs[0]?.isRunning).toBe(true);

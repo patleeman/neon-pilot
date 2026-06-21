@@ -163,20 +163,6 @@ export const presenceStore = {
     return presenceVersion;
   },
 
-  setBackendRunning(sessionId: string, running: boolean | null, revision = Date.now()): void {
-    if (!sessionId.trim()) return;
-    if (running === null) {
-      conversationRuntimeStore.clear(sessionId);
-    } else {
-      conversationRuntimeStore.apply({ id: sessionId, running, revision, updatedAt: new Date().toISOString() });
-    }
-  },
-
-  /** @deprecated Frontend code must not author running state; use backend-published conversation state. */
-  setLiveStreaming(sessionId: string, running: boolean | null): void {
-    this.setBackendRunning(sessionId, running);
-  },
-
   /** Reset all cached presence (for test isolation). */
   reset(): void {
     presenceStates = new Map();

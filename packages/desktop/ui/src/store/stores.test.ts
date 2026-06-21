@@ -78,21 +78,21 @@ describe('presenceStore', () => {
   it('lets backend running state override stale session snapshots', () => {
     sessionStore.replaceAll([session('conv-1', false)]);
 
-    presenceStore.setBackendRunning('conv-1', true);
+    conversationRuntimeStore.apply({ id: 'conv-1', running: true, revision: 1, updatedAt: '2026-01-01T00:00:00.000Z' });
     expect(presenceStore.get('conv-1')).toBe('streaming');
 
     sessionStore.replaceAll([session('conv-1', false)]);
     expect(presenceStore.get('conv-1')).toBe('streaming');
 
-    presenceStore.setBackendRunning('conv-1', false);
+    conversationRuntimeStore.apply({ id: 'conv-1', running: false, revision: 2, updatedAt: '2026-01-01T00:00:01.000Z' });
     expect(presenceStore.get('conv-1')).toBe('idle');
   });
 
   it('ignores stale backend running revisions', () => {
     sessionStore.replaceAll([session('conv-1', false)]);
 
-    presenceStore.setBackendRunning('conv-1', true, 2);
-    presenceStore.setBackendRunning('conv-1', false, 1);
+    conversationRuntimeStore.apply({ id: 'conv-1', running: true, revision: 2, updatedAt: '2026-01-01T00:00:02.000Z' });
+    conversationRuntimeStore.apply({ id: 'conv-1', running: false, revision: 1, updatedAt: '2026-01-01T00:00:01.000Z' });
 
     expect(presenceStore.get('conv-1')).toBe('streaming');
   });
