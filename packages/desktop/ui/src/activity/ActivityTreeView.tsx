@@ -1,6 +1,7 @@
 import type { FileTreeContextMenuOpenContext } from '@pierre/trees';
 import type { CSSProperties, DragEvent, ReactNode } from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { PanelMessage } from '../components/ui';
 import type { ActivityTreeItem } from './activityTree';
@@ -46,6 +47,13 @@ interface ActivityTreeContextMenuState {
   x: number;
   y: number;
 }
+
+interface ActivityTreeContextMenuPosition {
+  x: number;
+  y: number;
+}
+
+const ACTIVITY_TREE_CONTEXT_MENU_VIEWPORT_GAP_PX = 8;
 
 const ACTIVITY_TREE_ROOT_INDENT_REM = 0.25;
 const ACTIVITY_TREE_CHILD_INDENT_REM = 0.375;
@@ -101,12 +109,36 @@ export function ActivityTreeView({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [collapsedBranchIds, setCollapsedBranchIds] = useState<Set<string>>(() => new Set());
   const [contextMenu, setContextMenu] = useState<ActivityTreeContextMenuState | null>(null);
+  const [contextMenuPosition, setContextMenuPosition] = useState<ActivityTreeContextMenuPosition | null>(null);
   const contextMenuRootRef = useRef<HTMLDivElement | null>(null);
   const draggedItemIdRef = useRef<string | null>(null);
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ itemId: string; position: ActivityTreeDropPosition } | null>(null);
 
-  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+    setContextMenuPosition(null);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!contextMenu || typeof window === 'undefined') return;
+
+    const menuElement = contextMenuRootRef.current;
+    if (!menuElement) {
+      setContextMenuPosition({ x: contextMenu.x, y: contextMenu.y });
+      return;
+    }
+
+    const bounds = menuElement.getBoundingClientRect();
+    const maxX = window.innerWidth - bounds.width - ACTIVITY_TREE_CONTEXT_MENU_VIEWPORT_GAP_PX;
+    const maxY = window.innerHeight - bounds.height - ACTIVITY_TREE_CONTEXT_MENU_VIEWPORT_GAP_PX;
+    const nextPosition = {
+      x: Math.max(ACTIVITY_TREE_CONTEXT_MENU_VIEWPORT_GAP_PX, Math.min(contextMenu.x, maxX)),
+      y: Math.max(ACTIVITY_TREE_CONTEXT_MENU_VIEWPORT_GAP_PX, Math.min(contextMenu.y, maxY)),
+    };
+
+    setContextMenuPosition((current) => (current?.x === nextPosition.x && current.y === nextPosition.y ? current : nextPosition));
+  }, [contextMenu]);
 
   useEffect(() => {
     if (!contextMenu || typeof document === 'undefined') return;
@@ -334,7 +366,10 @@ export function ActivityTreeView({
                 onDragEndItem?.();
               }}
               onInlineAction={onInlineAction}
-              onOpenContextMenu={(contextItem, x, y) => setContextMenu({ item: contextItem, x, y })}
+              onOpenContextMenu={(contextItem, x, y) => {
+                setContextMenuPosition({ x, y });
+                setContextMenu({ item: contextItem, x, y });
+              }}
               onOpenItem={onOpenItem}
               onToggleBranch={toggleExpanded}
               onToggleGroup={toggleGroupCollapsed}
@@ -342,22 +377,33 @@ export function ActivityTreeView({
           );
         })}
       </div>
-      {contextMenu && renderContextMenu ? (
-        <div
-          ref={contextMenuRootRef}
-          data-file-tree-context-menu-root="true"
-          className="fixed z-[1000]"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {renderContextMenu(contextMenu.item, {
-            anchorElement: document.body,
-            anchorRect: { x: contextMenu.x, y: contextMenu.y, width: 1, height: 1 },
-            close: closeContextMenu,
-            restoreFocus: () => {},
-          } as FileTreeContextMenuOpenContext)}
-        </div>
-      ) : null}
+      {contextMenu && renderContextMenu
+        ? createPortal(
+            <div
+              ref={contextMenuRootRef}
+              data-file-tree-context-menu-root="true"
+              className="fixed z-[1000]"
+              style={{
+                left: contextMenuPosition?.x ?? contextMenu.x,
+                top: contextMenuPosition?.y ?? contextMenu.y,
+              }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              {renderContextMenu(contextMenu.item, {
+                anchorElement: document.body,
+                anchorRect: {
+                  x: contextMenuPosition?.x ?? contextMenu.x,
+                  y: contextMenuPosition?.y ?? contextMenu.y,
+                  width: 1,
+                  height: 1,
+                },
+                close: closeContextMenu,
+                restoreFocus: () => {},
+              } as FileTreeContextMenuOpenContext)}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

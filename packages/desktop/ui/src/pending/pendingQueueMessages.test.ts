@@ -5,6 +5,7 @@ import type { PendingConversationPrompt } from './pendingConversationPrompt';
 import {
   appendPendingInitialPromptBlock,
   buildConversationPendingQueueItems,
+  mergeLiveAndActivityPendingQueueItems,
   resolveRestoredQueuedPromptComposerUpdate,
 } from './pendingQueueMessages';
 
@@ -194,6 +195,32 @@ describe('appendPendingInitialPromptBlock', () => {
         type: 'followUp',
         queueIndex: 0,
       },
+    ]);
+  });
+
+  it('keeps live queued prompts visible while the activity shelf catches up', () => {
+    expect(
+      mergeLiveAndActivityPendingQueueItems({
+        liveQueue: [
+          { id: 'follow-live', text: 'Testing a followup', imageCount: 0, restorable: true, type: 'followUp', queueIndex: 0 },
+        ],
+        activityQueue: [],
+      }),
+    ).toEqual([{ id: 'follow-live', text: 'Testing a followup', imageCount: 0, restorable: true, type: 'followUp', queueIndex: 0 }]);
+  });
+
+  it('deduplicates live and activity queued prompts while preserving live restore indexes', () => {
+    expect(
+      mergeLiveAndActivityPendingQueueItems({
+        liveQueue: [{ id: 'follow-1', text: 'live text', imageCount: 0, restorable: true, type: 'followUp', queueIndex: 1 }],
+        activityQueue: [
+          { id: 'follow-1', text: 'activity text', imageCount: 0, restorable: true, type: 'followUp', queueIndex: 0 },
+          { id: 'steer-1', text: 'activity steer', imageCount: 0, restorable: true, type: 'steer', queueIndex: 0 },
+        ],
+      }),
+    ).toEqual([
+      { id: 'follow-1', text: 'live text', imageCount: 0, restorable: true, type: 'followUp', queueIndex: 1 },
+      { id: 'steer-1', text: 'activity steer', imageCount: 0, restorable: true, type: 'steer', queueIndex: 0 },
     ]);
   });
 

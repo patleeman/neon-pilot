@@ -43,6 +43,26 @@ export function buildConversationPendingQueueItems(input: {
   ];
 }
 
+export function mergeLiveAndActivityPendingQueueItems(input: {
+  liveQueue: ConversationPendingQueueItem[];
+  activityQueue: ConversationPendingQueueItem[];
+}): ConversationPendingQueueItem[] {
+  if (input.liveQueue.length === 0) return input.activityQueue;
+  if (input.activityQueue.length === 0) return input.liveQueue;
+
+  const seen = new Set<string>();
+  const merged: ConversationPendingQueueItem[] = [];
+
+  for (const item of [...input.liveQueue, ...input.activityQueue]) {
+    const key = `${item.type}:${item.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+  }
+
+  return merged;
+}
+
 export function resolveRestoredQueuedPromptComposerUpdate(input: {
   restoredText: string;
   currentInput: string;

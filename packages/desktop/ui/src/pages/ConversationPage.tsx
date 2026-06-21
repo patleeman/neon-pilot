@@ -307,6 +307,7 @@ import {
 import {
   appendPendingInitialPromptBlock,
   buildConversationPendingQueueItems,
+  mergeLiveAndActivityPendingQueueItems,
   resolveRestoredQueuedPromptComposerUpdate,
 } from '../pending/pendingQueueMessages';
 import {
@@ -2767,7 +2768,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const activityDeferredResumeItems = useMemo(() => activityDeferredResumes(activityItems), [activityItems]);
   const activityScheduledTaskItems = useMemo(() => activityScheduledTasks(activityItems), [activityItems]);
   const activityPendingQueue = useMemo(() => activityQueuedPrompts(activityItems), [activityItems]);
-  const visiblePendingQueue = draft ? pendingQueue : activityPendingQueue;
+  const visiblePendingQueue = useMemo(
+    () => (draft ? pendingQueue : mergeLiveAndActivityPendingQueueItems({ liveQueue: pendingQueue, activityQueue: activityPendingQueue })),
+    [activityPendingQueue, draft, pendingQueue],
+  );
   const visibleDeferredResumes = draft ? deferredResumes : activityDeferredResumeItems;
   const deferredResumePresentation = useMemo(
     () =>
