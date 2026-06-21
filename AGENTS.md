@@ -34,6 +34,16 @@
 - Before final summary, use the `checkpoint` skill/tool for a targeted commit when available; otherwise use git directly. Do not stage unrelated files.
 - Before cutting a Neon Pilot release, run the release reliability gate and hands-on QA process in `docs/release-qa.md`. At minimum run `pnpm run check:release:doctor`, `pnpm run test:release-hardening`, and `pnpm run qa:release`, then record the app build, commit SHA, and pass/fail notes for the hands-on smoke checklist.
 
+## UI copy rules
+
+- Treat copywriting as product behavior, not decoration. User-visible labels, descriptions, empty states, errors, status text, settings, command titles, and tooltips must be understandable to someone who does not know Neon Pilot internals.
+- Write from the user's mental model and outcome first. Prefer labels like `Default working directory`, `Update channel`, `Where secrets are stored`, and `Code changes`; avoid implementation words like `cwd`, `backend`, `runtime fallback`, `disclosure`, `manifest`, `provider`, or `repo` unless the surface is explicitly developer-only or the term is defined in `CONTEXT.md` and expected for the user.
+- Every non-obvious setting or control needs earned secondary text that answers: what changes if I use this? Keep it compact and operational; do not add marketing copy or restate the label.
+- Enum values must be human-readable in the UI. Do not expose raw values such as `auto`, `collapsed`, `env-only`, or `fileExplorer` when a clearer label like `Automatic`, `Start collapsed`, `Environment only`, or `File Explorer` is possible.
+- Prefer concrete nouns and verbs over abstract platform language. Say what the app will do: `Launch Neon Pilot when you sign in`, `Keep important tool results visible`, `Clear default`, `Save API key`.
+- Hide advanced/internal identifiers unless they help recovery or debugging. If shown, label them as advanced details, for example `Advanced name: EXA_API_KEY`.
+- When touching a page, opportunistically fix adjacent confusing copy in the same surface if it is low-risk and covered by the same validation path.
+
 ## UI design bans
 
 - Before creating or modifying user-visible app or extension UI, read `docs/design/neon-pilot-taste.md`. For generated extension UI, also read `benchmarks/extension-quality/visual-rubric.md` and use `docs/design/extension-visual-refinement.md` when iterating with screenshot-backed judges.
