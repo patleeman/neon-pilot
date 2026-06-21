@@ -178,14 +178,28 @@ async function main() {
         input(Array.from(document.querySelectorAll('textarea')).at(-1), 'Return OUTCOME: smoke_branch when this smoke test asks.');
         await waitUntil(() => bodyIncludes('Unsaved changes'), 'new decision unsaved state');
         await assertInspectorCanScrollBottom();
-        click(byText('button', 'Add outcome'), 'Add outcome');
+        for (let index = 1; index <= 10; index += 1) {
+          click(byText('button', 'Add outcome'), 'Add outcome');
+          await new Promise((r) => setTimeout(r, 60));
+          input(Array.from(document.querySelectorAll('input')).filter((el) => el.value === 'new_outcome').at(-1), 'smoke_' + index);
+          input(
+            Array.from(document.querySelectorAll('input')).filter((el) => el.value === 'Describe what happens next').at(-1),
+            'Smoke outcome ' + index,
+          );
+        }
+        if (!Array.from(document.querySelectorAll('input')).some((el) => el.value === 'smoke_10')) {
+          throw new Error('ten added decision outcomes did not render');
+        }
+        const removeButtons = Array.from(document.querySelectorAll('button')).filter((el) => el.textContent?.trim() === 'Remove outcome');
+        click(removeButtons.at(-1), 'Remove outcome');
         await new Promise((r) => setTimeout(r, 100));
-        input(Array.from(document.querySelectorAll('input')).find((el) => el.value === 'new_outcome'), 'smoke_branch');
-        input(Array.from(document.querySelectorAll('input')).find((el) => el.value === 'Describe what happens next'), 'Run the linked smoke routine');
+        if (Array.from(document.querySelectorAll('input')).some((el) => el.value === 'smoke_10')) {
+          throw new Error('removed decision outcome still rendered');
+        }
         const branchableSelect = Array.from(document.querySelectorAll('select'))
           .filter((el) => Array.from(el.options).some((option) => option.value === 'branch') && el.value === 'continue')
           .at(-1);
-        if (!branchableSelect) throw new Error('decision outcome branch option missing');
+        if (!branchableSelect) throw new Error('decision outcome branch option missing after adding many outcomes');
         click(Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'Save'), 'Save decision');
         await new Promise((r) => setTimeout(r, 700));
         assertNoUiErrors();
