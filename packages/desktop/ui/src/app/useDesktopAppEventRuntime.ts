@@ -6,7 +6,7 @@ import { subscribeDesktopRealtimeAppEvents } from '../desktop/desktopRealtime';
 import { fetchSessionsSnapshot } from '../session/sessionSnapshot';
 import { applyRemoteConversationLayout, forgetConversationTab, openConversationTab } from '../session/sessionTabs';
 import type { AppEventTopic, DaemonState, DesktopAppEvent, DurableRunListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
-import { executionStore, presenceStore, runStore, sessionStore, taskStore, titleStore } from '../store';
+import { conversationRuntimeStore, executionStore, runStore, sessionStore, taskStore, titleStore } from '../store';
 import { buildAppSnapshotRefreshPlan, incrementAppEventVersionsForTopics, incrementRunProjectionEventVersions } from './appEventProjection';
 import { INITIAL_APP_EVENT_VERSIONS } from './contexts';
 
@@ -62,7 +62,7 @@ export function useDesktopAppEventRuntime() {
 
   const applySessionMetaUpdate = useCallback((sessionId: string, nextSession: SessionMeta | null) => {
     if (!nextSession) {
-      presenceStore.setBackendRunning(sessionId, null);
+      conversationRuntimeStore.clear(sessionId);
       sessionStore.remove(sessionId);
       forgetConversationTab(sessionId);
       return;
@@ -254,12 +254,9 @@ export function useDesktopAppEventRuntime() {
           titleStore.set(payload.sessionId, payload.title);
           return;
         case 'conversation_state_changed':
-          presenceStore.setBackendRunning(payload.conversation.id, payload.conversation.running, payload.conversation.revision);
+          conversationRuntimeStore.apply(payload.conversation);
           return;
         case 'session_meta_changed':
-          if (payload.running !== undefined) {
-            presenceStore.setBackendRunning(payload.sessionId, payload.running);
-          }
           bumpConversationMetadataVersion(payload.sessionId);
           void refreshSessionMeta(payload.sessionId);
           return;

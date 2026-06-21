@@ -5,7 +5,7 @@
  * execution data. Backend snapshots and backend-published events write to them;
  * components and hooks read through granular subscriptions.
  */
-import type { DurableRunRecord, ExecutionRecord, ScheduledTaskSummary, SessionMeta } from '../shared/types';
+import type { ConversationRuntimeState, DurableRunRecord, ExecutionRecord, ScheduledTaskSummary, SessionMeta } from '../shared/types';
 import { createEntityStore, type EntityStore } from './createEntityStore';
 
 // ── Entity stores ────────────────────────────────────────────────────────────
@@ -15,14 +15,16 @@ export const taskStore: EntityStore<ScheduledTaskSummary> = createEntityStore<Sc
 export const runStore: EntityStore<DurableRunRecord> = createEntityStore<DurableRunRecord>(undefined, (r) => r.runId);
 export const executionStore: EntityStore<ExecutionRecord> = createEntityStore<ExecutionRecord>();
 
-// ── Running state (derived) ──────────────────────────────────────────────────
-// Merges session.isRunning + automation tasks + pending executions into one
-// canonical RunningState per conversation ID. Components subscribe per-ID.
+// ── Conversation runtime and running state ───────────────────────────────────
+// Backend-published conversation runtime records are the authority for durable
+// runtime facts such as whether a conversation is running. The derived
+// RunningState folds that backend runtime together with other backend snapshots
+// for task/execution indicators.
 
 export type RunningState = 'idle' | 'streaming' | 'automation' | 'hasRuns' | 'stale';
 
 let presenceStates = new Map<string, RunningState>();
-let backendRunningOverrides = new Map<string, { running: boolean; revision: number }>();
+let conversationRuntimeStates = new Map<string, ConversationRuntimeState>();
 let presenceVersion = 0;
 const presenceListeners = new Map<string, Set<() => void>>();
 const presenceAllListeners = new Set<() => void>();
@@ -32,13 +34,13 @@ function isActiveExecutionStatus(status: string | undefined): boolean {
 }
 
 function computeRunningState(sessionId: string): RunningState {
-  const backendRunningOverride = backendRunningOverrides.get(sessionId);
-  if (backendRunningOverride?.running === true) return 'streaming';
+  const backendRuntime = conversationRuntimeStates.get(sessionId);
+  if (backendRuntime?.running === true) return 'streaming';
 
   const session = sessionStore.get(sessionId);
   if (!session) return 'idle';
 
-  if (backendRunningOverride === undefined && session.isRunning) return 'streaming';
+  if (backendRuntime === undefined && session.isRunning) return 'streaming';
 
   // Automation task actively running for this thread
   const hasAutomation = taskStore.getAll().some((t) => t.running && t.threadConversationId === sessionId);
@@ -84,6 +86,40 @@ sessionStore.subscribeAll(() => rederivePresenceForAll());
 taskStore.subscribeAll(() => rederivePresenceForAll());
 executionStore.subscribeAll(() => rederivePresenceForAll());
 
+export const conversationRuntimeStore = {
+  apply(runtime: ConversationRuntimeState): void {
+    const sessionId = runtime.id.trim();
+    if (!sessionId) return;
+    const current = conversationRuntimeStates.get(sessionId);
+    if (current && runtime.revision < current.revision) return;
+    if (
+      current &&
+      runtime.revision === current.revision &&
+      current.running === runtime.running &&
+      current.updatedAt === runtime.updatedAt
+    ) {
+      return;
+    }
+    conversationRuntimeStates = new Map(conversationRuntimeStates).set(sessionId, { ...runtime, id: sessionId });
+    rederivePresenceForId(sessionId);
+  },
+
+  clear(sessionId: string): void {
+    if (!conversationRuntimeStates.has(sessionId)) return;
+    conversationRuntimeStates = new Map(conversationRuntimeStates);
+    conversationRuntimeStates.delete(sessionId);
+    rederivePresenceForId(sessionId);
+  },
+
+  get(sessionId: string): ConversationRuntimeState | undefined {
+    return conversationRuntimeStates.get(sessionId);
+  },
+
+  reset(): void {
+    conversationRuntimeStates = new Map();
+  },
+};
+
 export const presenceStore = {
   subscribe(sessionId: string, callback: () => void): () => void {
     // Ensure the session is tracked so rederivePresenceForAll() picks it up
@@ -118,16 +154,10 @@ export const presenceStore = {
   setBackendRunning(sessionId: string, running: boolean | null, revision = Date.now()): void {
     if (!sessionId.trim()) return;
     if (running === null) {
-      if (!backendRunningOverrides.has(sessionId)) return;
-      backendRunningOverrides = new Map(backendRunningOverrides);
-      backendRunningOverrides.delete(sessionId);
+      conversationRuntimeStore.clear(sessionId);
     } else {
-      const current = backendRunningOverrides.get(sessionId);
-      if (current && revision < current.revision) return;
-      if (current?.running === running && current.revision === revision) return;
-      backendRunningOverrides = new Map(backendRunningOverrides).set(sessionId, { running, revision });
+      conversationRuntimeStore.apply({ id: sessionId, running, revision, updatedAt: new Date().toISOString() });
     }
-    rederivePresenceForId(sessionId);
   },
 
   /** @deprecated Frontend code must not author running state; use backend-published conversation state. */
@@ -138,7 +168,7 @@ export const presenceStore = {
   /** Reset all cached presence (for test isolation). */
   reset(): void {
     presenceStates = new Map();
-    backendRunningOverrides = new Map();
+    conversationRuntimeStore.reset();
     presenceVersion = 0;
     presenceListeners.clear();
     presenceAllListeners.clear();

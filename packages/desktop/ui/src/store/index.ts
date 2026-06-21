@@ -20,4 +20,4 @@ export {
   useSessionsReady,
 } from './hooks';
 export type { RunningState } from './stores';
-export { executionStore, presenceStore, runStore, sessionStore, taskStore, titleStore } from './stores';
+export { conversationRuntimeStore, executionStore, presenceStore, runStore, sessionStore, taskStore, titleStore } from './stores';

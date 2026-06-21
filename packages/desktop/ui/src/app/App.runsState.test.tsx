@@ -110,6 +110,13 @@ async function emitDesktopEvent(event: DesktopAppEvent) {
   });
 }
 
+async function emitConversationRunning(conversationId: string, running: boolean, revision = 1) {
+  await emitDesktopEvent({
+    type: 'conversation_state_changed',
+    conversation: { id: conversationId, running, revision, updatedAt: '2026-01-01T00:00:00.000Z' },
+  });
+}
+
 async function flushInvalidationRefresh() {
   await act(async () => {
     vi.advanceTimersByTime(150);
@@ -246,7 +253,7 @@ describe('App execution state integration', () => {
     expect(container.textContent).not.toContain('stale active run');
   });
 
-  it('updates conversation running state immediately from session meta change events', async () => {
+  it('updates conversation running state immediately from revisioned conversation state events', async () => {
     apiSessionMetaMock.mockResolvedValue({ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' });
     ({ container, root } = await renderApp());
 
@@ -254,7 +261,8 @@ describe('App execution state integration', () => {
       type: 'sessions',
       sessions: [{ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' }],
     });
-    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
+    await emitConversationRunning('conv-1', true, 1);
+    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1' });
 
     expect(apiSessionMetaMock).not.toHaveBeenCalled();
     expect(container.textContent).toContain('conversation running');
@@ -279,7 +287,7 @@ describe('App execution state integration', () => {
     });
     ({ container, root } = await renderApp());
 
-    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
+    await emitConversationRunning('conv-1', true, 1);
     expect(container.textContent).toContain('conversation running');
 
     await emitDesktopEvent({
@@ -301,7 +309,7 @@ describe('App execution state integration', () => {
   it('keeps an active running event from being overwritten by a stale sessions snapshot while meta refresh is pending', async () => {
     ({ container, root } = await renderApp());
 
-    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
+    await emitConversationRunning('conv-1', true, 1);
     expect(container.textContent).toContain('conversation running');
 
     await emitDesktopEvent({
@@ -322,7 +330,7 @@ describe('App execution state integration', () => {
     });
     ({ container, root } = await renderApp());
 
-    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
+    await emitConversationRunning('conv-1', true, 1);
     expect(container.textContent).toContain('conversation running');
 
     await act(async () => {
@@ -338,7 +346,7 @@ describe('App execution state integration', () => {
 
     expect(container.textContent).toContain('conversation running');
 
-    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: false });
+    await emitConversationRunning('conv-1', false, 2);
     expect(container.textContent).toContain('conversation idle');
   });
 
@@ -384,20 +392,18 @@ describe('App execution state integration', () => {
     expect(container.textContent).toContain('app data sessions 1');
   });
 
-  it('handles session_meta_changed running:false and clears the running indicator', async () => {
+  it('handles revisioned running:false and clears the running indicator', async () => {
     apiSessionMetaMock.mockResolvedValue({ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' });
     ({ container, root } = await renderApp());
 
-    // Set running: true via sessions_snapshot
     await emitDesktopEvent({
       type: 'sessions_snapshot',
       sessions: [{ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' }],
     });
-    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
+    await emitConversationRunning('conv-1', true, 1);
     expect(container.textContent).toContain('conversation running');
 
-    // Clear via session_meta_changed with running: false
-    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: false });
+    await emitConversationRunning('conv-1', false, 2);
     expect(container.textContent).toContain('conversation idle');
   });
 
@@ -432,7 +438,8 @@ describe('App execution state integration', () => {
       type: 'sessions_snapshot',
       sessions: [{ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z', isRunning: true }],
     });
-    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: false });
+    await emitConversationRunning('conv-1', false, 2);
+    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1' });
     expect(container.textContent).toContain('conversation idle');
 
     await act(async () => {
