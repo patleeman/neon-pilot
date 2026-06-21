@@ -8,6 +8,7 @@
     "system-automations",
     "system-conversation-tools",
     "system-diffs",
+    "system-routines",
     "system-mcp",
     "system-telemetry",
     "system-todo",
@@ -53,6 +54,11 @@
       "text": ["Automations"]
     },
     {
+      "extensionId": "system-routines",
+      "path": "/routines",
+      "text": ["Routines", "Checkpoint timeline", "Review code changes"]
+    },
+    {
       "extensionId": "system-dynamic-workflows",
       "path": "/workflows",
       "text": ["Workflows"]
@@ -87,6 +93,12 @@
       "actionId": "listWorkflows",
       "input": {},
       "text": ["workflows"]
+    },
+    {
+      "extensionId": "system-routines",
+      "actionId": "getState",
+      "input": {},
+      "text": ["hooks", "routines", "checkpoint"]
     }
   ],
   "agentTools": {

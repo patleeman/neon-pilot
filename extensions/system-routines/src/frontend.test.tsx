@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RoutinesPage } from './RoutinesPage.js';
+import type { Routine } from './types.js';
 
-const state = {
+const baseState = {
   hooks: [
     {
       id: 'checkpoint',
@@ -32,22 +33,49 @@ const state = {
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     },
-  ],
+  ] satisfies Routine[],
   runs: [],
 };
 
-function pa() {
-  return {
-    extension: {
-      invoke: vi.fn(async (action: string) => (action === 'listSkills' ? { skills: [{ id: 'autoreview', name: 'Autoreview' }] } : state)),
-    },
-    ui: { toast: vi.fn(), confirm: vi.fn(async () => true) },
-  } as never;
+function cloneState() {
+  return JSON.parse(JSON.stringify(baseState)) as typeof baseState;
 }
 
-function props() {
+function createPa() {
+  const state = cloneState();
+  const invoke = vi.fn(async (action: string, input: unknown) => {
+    if (action === 'listSkills') return { skills: [{ id: 'autoreview', name: 'Autoreview' }] };
+    if (action === 'saveRoutine') {
+      const routine = input as Routine;
+      const index = state.routines.findIndex((item) => item.id === routine.id);
+      if (index >= 0) state.routines[index] = routine;
+      else state.routines.push(routine);
+      return state;
+    }
+    if (action === 'deleteRoutine') {
+      const routineId = (input as { routineId: string }).routineId;
+      state.routines = state.routines.filter((routine) => routine.id !== routineId);
+      return state;
+    }
+    if (action === 'moveRoutine') {
+      const { routineId, position } = input as { routineId: string; position: 'before' | 'after' };
+      state.routines = state.routines.map((routine) => (routine.id === routineId ? { ...routine, position } : routine));
+      return state;
+    }
+    return state;
+  });
   return {
-    pa: pa(),
+    pa: {
+      extension: { invoke },
+      ui: { toast: vi.fn(), confirm: vi.fn(async () => true) },
+    } as never,
+    invoke,
+  };
+}
+
+function props(pa: never) {
+  return {
+    pa,
     context: { extensionId: 'system-routines', surfaceId: 'page', pathname: '/routines', route: '/routines', search: '', hash: '' },
     surface: { id: 'page', title: 'Routines', location: 'main', component: 'RoutinesPage' },
     params: {},
@@ -55,11 +83,51 @@ function props() {
 }
 
 describe('RoutinesPage', () => {
+  beforeEach(() => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+  });
+
   it('renders the timeline and routine inspector', async () => {
-    render(<RoutinesPage {...props()} />);
+    const { pa } = createPa();
+    render(<RoutinesPage {...props(pa)} />);
     expect(await screen.findByText('Checkpoint timeline')).toBeTruthy();
     expect(screen.getAllByText('Review code changes').length).toBeGreaterThan(0);
     expect(screen.getByText('Add routine ▾')).toBeTruthy();
     expect(screen.getByText('Decision output is constrained to these enum values.')).toBeTruthy();
+  });
+
+  it('adds outcomes and saves the draft instead of resetting it', async () => {
+    const { pa, invoke } = createPa();
+    render(<RoutinesPage {...props(pa)} />);
+    await screen.findByText('Checkpoint timeline');
+
+    fireEvent.click(screen.getByText('Add outcome'));
+    expect(screen.getByDisplayValue('new_outcome')).toBeTruthy();
+    fireEvent.change(screen.getByDisplayValue('new_outcome'), { target: { value: 'needs_qa' } });
+    fireEvent.change(screen.getByDisplayValue('Continue'), { target: { value: 'Run QA' } });
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('saveRoutine', expect.objectContaining({ name: 'Review code changes' })));
+    expect(screen.getByDisplayValue('needs_qa')).toBeTruthy();
+    expect(screen.getByDisplayValue('Run QA')).toBeTruthy();
+  });
+
+  it('inserts a skill reference and deletes a temporary routine', async () => {
+    const { pa, invoke } = createPa();
+    render(<RoutinesPage {...props(pa)} />);
+    await screen.findByText('Checkpoint timeline');
+
+    fireEvent.click(screen.getByText('Add routine ▾'));
+    fireEvent.click(screen.getAllByText('Instruction')[0]);
+    fireEvent.change(screen.getByDisplayValue('New instruction'), { target: { value: 'Temporary instruction' } });
+    const textboxes = screen.getAllByRole('textbox');
+    fireEvent.change(textboxes[textboxes.length - 1], { target: { value: 'Use /skill:' } });
+    fireEvent.click(await screen.findByText('/skill:autoreview'));
+    expect(screen.getByDisplayValue('Use /skill:autoreview')).toBeTruthy();
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('saveRoutine', expect.objectContaining({ name: 'Temporary instruction' })));
+
+    fireEvent.click(screen.getByText('Delete'));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('deleteRoutine', expect.objectContaining({ routineId: expect.any(String) })));
   });
 });

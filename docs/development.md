@@ -117,6 +117,19 @@ Desktop runtime channels are intentionally isolated under the `neon-pilot*` name
 
 Before launching or closing `Neon Pilot Testing.app`, check whether another instance already exists. Do not quit, kill, or recycle a process you did not start; connect to it when appropriate or use a separate debug port/session. After QA, close only the app process and browser session you started.
 
+### UI extension done checklist
+
+For any user-visible extension UI, “done” means the app path was exercised, not just that tests and builds passed:
+
+- Open the exact route, rail, sidebar view, Settings section, transcript renderer, or composer control in the desktop app.
+- Compare the full app frame against the closest existing product surface before inventing layout or spacing.
+- Click every control touched by the change: add/create, edit, save, delete, menus, dropdowns, autocomplete, filters/search, drag/reorder, dialogs, and run/history toggles.
+- Verify state after save/delete/reorder by refreshing or reopening the surface.
+- Capture or inspect a full-frame screenshot for density, typography, clipping, overlapping popovers, sticky menus, empty/error/loading states, and sidebar/right-rail fit.
+- Run the focused package/extension build plus `pnpm --dir packages/desktop run build:ui` when frontend, route, nav, sidebar, manifest, or shared UI behavior changed.
+
+If a user can plausibly discover an issue by clicking a visible control once, the agent should catch it before checkpointing.
+
 ## Checkpoints
 
 Before final summary, use the checkpoint skill/tool. In this repo, checkpoint commits go directly to `main`; no branch is needed.
