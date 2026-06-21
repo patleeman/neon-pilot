@@ -524,6 +524,46 @@ function summarize(record: ExtensionAgentConversationRecord): ExtensionAgentConv
   };
 }
 
+function summarizeCanonicalConversation(value: unknown, owner: string): ExtensionAgentConversationSummary | null {
+  if (!isRecord(value) || typeof value.id !== 'string' || !value.id.trim()) return null;
+  const id = value.id.trim();
+  const model = typeof value.currentModel === 'string' ? value.currentModel : typeof value.model === 'string' ? value.model : undefined;
+  return {
+    id,
+    ownerExtensionId: owner,
+    title: typeof value.title === 'string' && value.title.trim() ? value.title.trim() : 'Conversation',
+    cwd: typeof value.cwd === 'string' ? value.cwd : '',
+    ...(model ? { model } : {}),
+    visibility: 'visible',
+    persistence: 'saved',
+    tools: 'default',
+    createdAt: typeof value.timestamp === 'string' ? value.timestamp : typeof value.createdAt === 'string' ? value.createdAt : '',
+    updatedAt:
+      typeof value.lastActivityAt === 'string'
+        ? value.lastActivityAt
+        : typeof value.updatedAt === 'string'
+          ? value.updatedAt
+          : typeof value.timestamp === 'string'
+            ? value.timestamp
+            : '',
+    isBusy: Boolean(value.running ?? value.isRunning),
+    disposed: false,
+    messageCount: typeof value.messageCount === 'number' && Number.isFinite(value.messageCount) ? value.messageCount : 0,
+  };
+}
+
+async function listCanonicalConversationSummaries(
+  ctx: ExtensionBackendContextLike,
+  owner: string,
+): Promise<ExtensionAgentConversationSummary[]> {
+  if (!ctx.conversations) return [];
+  const listed = await ctx.conversations.list().catch(() => null);
+  const raw = Array.isArray(listed) ? listed : isRecord(listed) && Array.isArray(listed.sessions) ? listed.sessions : [];
+  return raw
+    .map((value) => summarizeCanonicalConversation(value, owner))
+    .filter((value): value is ExtensionAgentConversationSummary => value !== null);
+}
+
 function getOwnedRecord(conversationId: string, ctx: ExtensionBackendContextLike): ExtensionAgentConversationRecord {
   const record = conversations.get(conversationId);
   if (!record || record.disposed) throw new Error(`Agent conversation not found: ${conversationId}`);
@@ -939,9 +979,17 @@ export async function listAgentConversations(_input: unknown, ctx: ExtensionBack
 
   await assertPermission(ctx, 'agent:conversations');
   const owner = ownerExtensionId(ctx);
-  return Array.from(conversations.values())
+  const local = Array.from(conversations.values())
     .filter((record) => record.ownerExtensionId === owner && !record.disposed)
     .map(summarize);
+  const canonical = await listCanonicalConversationSummaries(ctx, owner);
+  const byId = new Map<string, ExtensionAgentConversationSummary>();
+  for (const summary of canonical) byId.set(summary.id, summary);
+  for (const summary of local) {
+    const existing = byId.get(summary.id);
+    byId.set(summary.id, existing && summary.visibility === 'visible' ? { ...summary, ...existing } : { ...existing, ...summary });
+  }
+  return Array.from(byId.values()).sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 }
 
 export async function abortAgentConversation(input: { conversationId: string }, ctx: ExtensionBackendContextLike) {

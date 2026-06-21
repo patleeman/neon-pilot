@@ -2,7 +2,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 import type { ExtensionBackendContext, ExtensionProtocolContext } from '@neon-pilot/extensions';
-import { updateExtensionSettings } from '@neon-pilot/extensions/backend/settings';
 import {
   abortAgentConversation,
   createAgentConversation,
@@ -23,6 +22,7 @@ import {
   startBackgroundRun,
   waitForAnyDurableRun,
 } from '@neon-pilot/extensions/backend/runs';
+import { updateExtensionSettings } from '@neon-pilot/extensions/backend/settings';
 
 type JsonRecord = Record<string, unknown>;
 type ToolMode = 'none' | 'default';
@@ -209,7 +209,12 @@ function readAllowedTools(value: unknown): string[] | undefined {
 function readStringArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(readString).filter((item): item is string => Boolean(item));
   const text = readString(value);
-  return text ? text.split(',').map((item) => item.trim()).filter(Boolean) : [];
+  return text
+    ? text
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
 }
 
 function normalizeAction(action: string, input: JsonRecord): string {
@@ -461,8 +466,8 @@ export async function neonPilotAgent(input: unknown, ctx: ExtensionBackendContex
           cwd: getCwd(params, ctx),
           modelRef: readString(params.modelRef) ?? readString(params.model),
           tools: readToolMode(params.tools, 'none'),
-          visibility: readVisibility(params.visibility),
-          persistence: readPersistence(params.persistence),
+          visibility: readVisibility(params.visibility) ?? 'visible',
+          persistence: readPersistence(params.persistence) ?? 'saved',
         },
         ctx,
       );

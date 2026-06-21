@@ -466,6 +466,45 @@ describe('extension agent backend API', () => {
     expect(aborted).toMatchObject({ id: 'visible-conversation', isBusy: false });
   });
 
+  it('lists canonical host conversations alongside extension-local hidden handles', async () => {
+    installImporter();
+    const conversations = {
+      create: vi.fn(async () => ({ id: 'visible-conversation' })),
+      sendMessage: vi.fn(async () => ({ accepted: true })),
+      getMeta: vi.fn(async () => ({})),
+      list: vi.fn(async () => [
+        {
+          id: 'visible-conversation',
+          title: 'Visible title',
+          cwd: '/visible-cwd',
+          currentModel: 'openai/gpt-4.1',
+          isRunning: true,
+          messageCount: 3,
+          timestamp: '2026-06-01T00:00:00.000Z',
+          lastActivityAt: '2026-06-01T00:01:00.000Z',
+        },
+      ]),
+    };
+    const ctx = createCtx({ conversations });
+    const hidden = await createAgentConversation({ title: 'Hidden thread', tools: 'none' }, ctx);
+    await createAgentConversation({ title: 'Visible thread', visibility: 'visible', persistence: 'saved' }, ctx);
+
+    const listed = await listAgentConversations({}, ctx);
+
+    expect(listed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'visible-conversation', visibility: 'visible', persistence: 'saved', isBusy: true }),
+        expect.objectContaining({ id: hidden.id, visibility: 'hidden', persistence: 'ephemeral' }),
+      ]),
+    );
+    expect(listed.find((item) => item.id === 'visible-conversation')).toMatchObject({
+      title: 'Visible title',
+      cwd: '/visible-cwd',
+      visibility: 'visible',
+      persistence: 'saved',
+    });
+  });
+
   it('rejects mixed visibility and persistence modes', async () => {
     installImporter();
 

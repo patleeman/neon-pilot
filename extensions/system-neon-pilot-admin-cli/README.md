@@ -15,6 +15,10 @@ Keep product administration here unless the command is core shell behavior. Do n
 - Backend exports: `neonPilotAgent`, `neonPilotAgentCli`, settings read/update helpers, and admin action handlers
 - Settings: controls whether the CLI entrypoint is enabled
 
+## Conversation identity
+
+CLI-created conversations are user-addressable app threads. `conversation create` therefore creates a canonical visible, saved conversation by default and returns the canonical conversation id used by the sidebar, transcript routes, daemon live-run state, and follow-up commands. Hidden ephemeral agent handles are reserved for internal extension/tool flows and should not be used for CLI or MCP-style user thread creation unless the caller explicitly asks for hidden ephemeral behavior.
+
 ## Validation
 
 ```bash

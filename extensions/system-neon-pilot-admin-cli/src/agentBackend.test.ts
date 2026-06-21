@@ -1,7 +1,7 @@
-import { PassThrough } from 'node:stream';
 import { mkdtempSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { PassThrough } from 'node:stream';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -45,6 +45,19 @@ describe('system-neon-pilot-admin-cli agent backend', () => {
     });
     expect(runAgentTask).toHaveBeenCalledWith(
       expect.objectContaining({ prompt: 'Review this', cwd: '/repo', tools: 'default' }),
+      expect.anything(),
+    );
+  });
+
+  it('creates CLI conversations as canonical visible saved conversations', async () => {
+    const createAgentConversation = vi.fn(async () => ({ id: 'conversation-canonical' }));
+    __setNeonPilotAgentApisForTest({ agent: { createAgentConversation } });
+
+    await expect(neonPilotAgent({ action: 'conversation_create', title: 'CLI thread' }, ctx())).resolves.toMatchObject({
+      details: { action: 'conversation_create', conversation: { id: 'conversation-canonical' } },
+    });
+    expect(createAgentConversation).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'CLI thread', cwd: '/repo', visibility: 'visible', persistence: 'saved' }),
       expect.anything(),
     );
   });
