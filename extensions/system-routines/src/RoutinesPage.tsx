@@ -28,8 +28,8 @@ const FALLBACK_SKILLS: SkillItem[] = [
 ];
 
 const DEFAULT_OUTCOMES: RoutineOutcome[] = [
-  { id: 'pass', label: 'Pass', target: 'Continue', behavior: 'continue' },
-  { id: 'fail', label: 'Fail', target: 'Block', behavior: 'block' },
+  { id: 'path_a', label: 'Path A', target: 'Describe the first path', behavior: 'continue' },
+  { id: 'path_b', label: 'Path B', target: 'Describe the second path', behavior: 'continue' },
 ];
 
 function replaceLastSkillReference(instruction: string, skillId: string): string {
@@ -66,7 +66,7 @@ function nowRoutine(hookId: string, position: RoutinePosition, type: RoutineType
     hookId,
     position,
     type,
-    name: type === 'decision' ? 'New decision' : type === 'stop' ? 'Stop event' : 'New instruction',
+    name: type === 'decision' ? 'New branch' : type === 'stop' ? 'Stop event' : 'New instruction',
     instruction: type === 'stop' ? 'Stop this lifecycle event and explain why.' : '',
     enabled: true,
     order: 999,
@@ -84,7 +84,7 @@ function groupedHooks(hooks: HookWithSummary[]) {
 }
 
 function routineLabel(type: RoutineType): string {
-  if (type === 'decision') return 'Decision routine';
+  if (type === 'decision') return 'Branch routine';
   if (type === 'stop') return 'Stop routine';
   return 'Instruction routine';
 }
@@ -109,11 +109,11 @@ function failureBehaviorDescription(behavior: Routine['failureBehavior']): strin
 }
 
 function outcomeBehaviorDescription(behavior: RoutineOutcome['behavior']): string {
-  if (behavior === 'block') return 'Block stops the event and reports the outcome.';
-  if (behavior === 'warn') return 'Warn records the outcome and continues.';
-  if (behavior === 'ask') return 'Ask pauses so you can decide what happens next.';
-  if (behavior === 'branch') return 'Branch runs another routine after this decision.';
-  return 'Continue lets the event proceed.';
+  if (behavior === 'block') return 'Stop ends this event on this path.';
+  if (behavior === 'warn') return 'Warn marks this path and continues.';
+  if (behavior === 'ask') return 'Ask pauses this path so you can decide.';
+  if (behavior === 'branch') return 'Run another routine on this path.';
+  return 'Continue follows this path.';
 }
 
 function statusDot(summary: string) {
@@ -607,44 +607,48 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             </div>
           </div>
           {routine.type === 'decision' && routine.outcomes.length ? (
-            <div className="grid gap-1 border-t border-border-subtle px-9 py-2 text-[12px]">
-              {routine.outcomes.map((outcome) => {
-                const branchTargetName = outcome.nextRoutineId ? routineNameById.get(outcome.nextRoutineId) : null;
-                const reaction =
-                  outcome.behavior === 'branch'
-                    ? branchTargetName
-                      ? `Then runs ${branchTargetName}`
-                      : 'Branches when a target is chosen'
-                    : outcome.behavior === 'block'
-                      ? 'Stops the event'
-                      : outcome.behavior === 'warn'
-                        ? 'Warns and continues'
-                        : outcome.behavior === 'ask'
-                          ? 'Asks you before continuing'
-                          : 'Continues the event';
-                return (
-                  <div key={outcome.id} className="grid grid-cols-[128px_1fr_auto] items-start gap-2">
-                    <span
-                      className={cx(
-                        'font-mono font-semibold',
-                        outcome.behavior === 'block'
-                          ? 'text-danger'
-                          : outcome.behavior === 'warn'
-                            ? 'text-warning'
-                            : outcome.behavior === 'ask' || outcome.behavior === 'branch'
-                              ? 'text-accent'
-                              : 'text-success',
-                      )}
-                    >
-                      {outcome.id}
-                    </span>
-                    <span className="text-secondary">{outcome.target}</span>
-                    <span className="rounded-sm bg-surface-3 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-dim">
-                      {reaction}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="border-t border-border-subtle px-9 py-2 text-[12px]">
+              <div className="mb-2 text-[11px] uppercase tracking-[0.12em] text-dim">Branches</div>
+              <div className="grid gap-1 border-l border-border-subtle pl-2">
+                {routine.outcomes.map((outcome) => {
+                  const branchTargetName = outcome.nextRoutineId ? routineNameById.get(outcome.nextRoutineId) : null;
+                  const reaction =
+                    outcome.behavior === 'branch'
+                      ? branchTargetName
+                        ? `Path continues to ${branchTargetName}`
+                        : 'Path can continue to another routine'
+                      : outcome.behavior === 'block'
+                        ? 'Path stops here'
+                        : outcome.behavior === 'warn'
+                          ? 'Path warns and continues'
+                          : outcome.behavior === 'ask'
+                            ? 'Path asks you first'
+                            : 'Path continues';
+                  return (
+                    <div key={outcome.id} className="grid grid-cols-[20px_128px_1fr_auto] items-start gap-2">
+                      <span className="mt-2 h-px bg-border-subtle" />
+                      <span
+                        className={cx(
+                          'font-mono font-semibold',
+                          outcome.behavior === 'block'
+                            ? 'text-danger'
+                            : outcome.behavior === 'warn'
+                              ? 'text-warning'
+                              : outcome.behavior === 'ask' || outcome.behavior === 'branch'
+                                ? 'text-accent'
+                                : 'text-success',
+                        )}
+                      >
+                        {outcome.id}
+                      </span>
+                      <span className="text-secondary">{outcome.target}</span>
+                      <span className="rounded-sm bg-surface-3 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-dim">
+                        {reaction}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
         </div>
@@ -685,8 +689,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
                 onClick={() => addRoutine('decision')}
               >
-                <span className="block text-[13px] font-medium text-primary">Decision</span>
-                <span className="block text-[11px] text-secondary">Choose one named outcome.</span>
+                <span className="block text-[13px] font-medium text-primary">Branch</span>
+                <span className="block text-[11px] text-secondary">Choose a path based on the prompt.</span>
               </button>
               <button className="block w-full px-3 py-2 text-left hover:bg-surface-3" onClick={() => addRoutine('stop')}>
                 <span className="block text-[13px] font-medium text-primary">Stop</span>
@@ -733,7 +737,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 <div>
                   <h2 className="m-0 text-[18px] font-semibold">{selectedHook.title} timeline</h2>
                   <p className="m-0 mt-1 text-[13px] text-secondary">
-                    Drag routines within Before or After. Decision routines choose a named outcome and follow that branch.
+                    Drag routines within Before or After. Branch routines choose a path; Stop routines are the only gate.
                   </p>
                 </div>
                 <section
@@ -824,7 +828,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   }
                 >
                   <option value="instruction">Instruction: run a prompt</option>
-                  <option value="decision">Decision: choose an outcome</option>
+                  <option value="decision">Branch: choose a path</option>
                   <option value="stop">Stop: block this event</option>
                 </Select>
                 {draft.type === 'stop' ? (
@@ -863,7 +867,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     >
                       <option value="continue">Continue if this routine fails</option>
                       <option value="warn">Warn and continue if this routine fails</option>
-                      <option value="block">Block this event if the routine fails</option>
+                      <option value="block">Stop this event if the routine fails</option>
                     </Select>
                     <div className="mb-3 mt-1 text-[12px] text-secondary">{failureBehaviorDescription(draft.failureBehavior)}</div>
                   </>
@@ -901,7 +905,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 {draft.type === 'decision' ? (
                   <>
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <label className="block text-[11px] uppercase tracking-wider text-secondary">Decision outcomes</label>
+                      <label className="block text-[11px] uppercase tracking-wider text-secondary">Branches</label>
                       <Button
                         variant="ghost"
                         onClick={() =>
@@ -909,12 +913,12 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                             ...draft,
                             outcomes: [
                               ...draft.outcomes,
-                              { id: 'new_outcome', label: 'New outcome', target: 'Describe what happens next', behavior: 'continue' },
+                              { id: 'new_path', label: 'New path', target: 'Describe this path', behavior: 'continue' },
                             ],
                           })
                         }
                       >
-                        Add outcome
+                        Add path
                       </Button>
                     </div>
                     <div className="mb-3 grid gap-2">
@@ -922,10 +926,10 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                         <div key={index} className="rounded-md border border-border-subtle bg-surface-2 p-2">
                           <div className="grid gap-2">
                             <label className="grid gap-1">
-                              <span className="text-[10px] uppercase tracking-wider text-dim">Output value</span>
+                              <span className="text-[10px] uppercase tracking-wider text-dim">Path value</span>
                               <TextInput
                                 className="w-full font-mono text-[12px]"
-                                placeholder="pass"
+                                placeholder="needs_review"
                                 value={outcome.id}
                                 onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                                   setDraft({
@@ -938,10 +942,10 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                               />
                             </label>
                             <label className="grid gap-1">
-                              <span className="text-[10px] uppercase tracking-wider text-dim">What happens</span>
+                              <span className="text-[10px] uppercase tracking-wider text-dim">Path meaning</span>
                               <TextInput
                                 className="w-full text-[12px]"
-                                placeholder="Continue checkpoint"
+                                placeholder="Route to review"
                                 value={outcome.target}
                                 onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                                   setDraft({
@@ -954,7 +958,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                               />
                             </label>
                             <label className="grid gap-1">
-                              <span className="text-[10px] uppercase tracking-wider text-dim">Effect</span>
+                              <span className="text-[10px] uppercase tracking-wider text-dim">Path action</span>
                               <Select
                                 className="w-full"
                                 value={outcome.behavior}
@@ -977,7 +981,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                               >
                                 <option value="continue">Continue</option>
                                 <option value="warn">Warn and continue</option>
-                                <option value="block">Block this event</option>
+                                <option value="block">Stop this path</option>
                                 <option value="ask">Ask me</option>
                                 <option value="branch">Branch</option>
                               </Select>
@@ -1006,8 +1010,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                                   ))}
                                 </Select>
                                 <span className="text-[11px] text-secondary">
-                                  Branch links this outcome to another routine. If no routine is selected, the branch records the outcome
-                                  and stops there.
+                                  This path can continue into another routine. If no routine is selected, the path records its result and
+                                  stops there.
                                 </span>
                               </label>
                             ) : null}
@@ -1018,7 +1022,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                                   setDraft({ ...draft, outcomes: draft.outcomes.filter((_, itemIndex) => itemIndex !== index) })
                                 }
                               >
-                                Remove outcome
+                                Remove path
                               </Button>
                             </div>
                           </div>
@@ -1026,8 +1030,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                       ))}
                     </div>
                     <div className="mb-3 text-[12px] text-secondary">
-                      The decision prompt must return one of these output values. Each value controls whether the event continues, warns,
-                      asks you, branches, or blocks.
+                      The prompt must return one path value. Each path controls what happens next; it is not a gate unless the path action
+                      is Stop.
                     </div>
                   </>
                 ) : null}

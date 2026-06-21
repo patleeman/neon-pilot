@@ -93,18 +93,18 @@ describe('RoutinesPage', () => {
     expect(await screen.findByText('Checkpoint timeline')).toBeTruthy();
     expect(screen.getAllByText('Review code changes').length).toBeGreaterThan(0);
     expect(screen.getByText('Add routine ▾')).toBeTruthy();
-    expect(screen.getByText(/The decision prompt must return one of these output values/)).toBeTruthy();
+    expect(screen.getByText(/The prompt must return one path value/)).toBeTruthy();
   });
 
-  it('adds outcomes and saves the draft instead of resetting it', async () => {
+  it('adds paths and saves the draft instead of resetting it', async () => {
     const { pa, invoke } = createPa();
     render(<RoutinesPage {...props(pa)} />);
     await screen.findByText('Checkpoint timeline');
 
-    fireEvent.click(screen.getByText('Add outcome'));
-    expect(screen.getByDisplayValue('new_outcome')).toBeTruthy();
-    fireEvent.change(screen.getByDisplayValue('new_outcome'), { target: { value: 'needs_qa' } });
-    fireEvent.change(screen.getByDisplayValue('Describe what happens next'), { target: { value: 'Run QA' } });
+    fireEvent.click(screen.getByText('Add path'));
+    expect(screen.getByDisplayValue('new_path')).toBeTruthy();
+    fireEvent.change(screen.getByDisplayValue('new_path'), { target: { value: 'needs_qa' } });
+    fireEvent.change(screen.getByDisplayValue('Describe this path'), { target: { value: 'Run QA' } });
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('saveRoutine', expect.objectContaining({ name: 'Review code changes' })));
@@ -112,7 +112,7 @@ describe('RoutinesPage', () => {
     expect(screen.getByDisplayValue('Run QA')).toBeTruthy();
   });
 
-  it('shows a branch target selector for decision outcomes', async () => {
+  it('shows a next-routine selector for branch paths', async () => {
     const { pa } = createPa();
     render(<RoutinesPage {...props(pa)} />);
     await screen.findByText('Checkpoint timeline');
@@ -129,7 +129,7 @@ describe('RoutinesPage', () => {
     fireEvent.change(effectSelect as HTMLElement, { target: { value: 'branch' } });
 
     expect(await screen.findByText('Then run')).toBeTruthy();
-    expect(screen.getByText(/Branch links this outcome to another routine/)).toBeTruthy();
+    expect(screen.getByText(/This path can continue into another routine/)).toBeTruthy();
   });
 
   it('opens routine actions from the larger dots menu', async () => {

@@ -170,50 +170,50 @@ async function main() {
         };
         await new Promise((r) => setTimeout(r, 100));
         const smokeInstructionName = 'Smoke temporary routine ' + Date.now();
-        if (!bodyIncludes('CONTINUES THE EVENT') || !bodyIncludes('STOPS THE EVENT')) {
-          throw new Error('decision outcome reaction labels missing');
+        if (!bodyIncludes('PATH CONTINUES') || !bodyIncludes('PATH STOPS HERE')) {
+          throw new Error('branch path reaction labels missing');
         }
 
         click(byText('button', 'Add routine'), 'Add routine');
         await new Promise((r) => setTimeout(r, 100));
-        click(byText('button', 'Decision'), 'Decision menu item');
+        click(byText('button', 'Branch'), 'Branch menu item');
         await new Promise((r) => setTimeout(r, 150));
-        input(Array.from(document.querySelectorAll('input')).find((el) => el.value === 'New decision'), 'Smoke decision routine');
+        input(Array.from(document.querySelectorAll('input')).find((el) => el.value === 'New branch'), 'Smoke branch routine');
         input(Array.from(document.querySelectorAll('textarea')).at(-1), 'Return OUTCOME: smoke_branch when this smoke test asks.');
         await waitUntil(() => bodyIncludes('Unsaved changes'), 'new decision unsaved state');
         await assertInspectorCanScrollBottom();
         for (let index = 1; index <= 10; index += 1) {
-          click(byText('button', 'Add outcome'), 'Add outcome');
+          click(byText('button', 'Add path'), 'Add path');
           await new Promise((r) => setTimeout(r, 60));
-          input(Array.from(document.querySelectorAll('input')).filter((el) => el.value === 'new_outcome').at(-1), 'smoke_' + index);
+          input(Array.from(document.querySelectorAll('input')).filter((el) => el.value === 'new_path').at(-1), 'smoke_' + index);
           input(
-            Array.from(document.querySelectorAll('input')).filter((el) => el.value === 'Describe what happens next').at(-1),
-            'Smoke outcome ' + index,
+            Array.from(document.querySelectorAll('input')).filter((el) => el.value === 'Describe this path').at(-1),
+            'Smoke path ' + index,
           );
         }
         if (!Array.from(document.querySelectorAll('input')).some((el) => el.value === 'smoke_10')) {
-          throw new Error('ten added decision outcomes did not render');
+          throw new Error('ten added branch paths did not render');
         }
-        const removeButtons = Array.from(document.querySelectorAll('button')).filter((el) => el.textContent?.trim() === 'Remove outcome');
-        click(removeButtons.at(-1), 'Remove outcome');
+        const removeButtons = Array.from(document.querySelectorAll('button')).filter((el) => el.textContent?.trim() === 'Remove path');
+        click(removeButtons.at(-1), 'Remove path');
         await new Promise((r) => setTimeout(r, 100));
         if (Array.from(document.querySelectorAll('input')).some((el) => el.value === 'smoke_10')) {
-          throw new Error('removed decision outcome still rendered');
+          throw new Error('removed branch path still rendered');
         }
         const branchableSelect = Array.from(document.querySelectorAll('select'))
           .filter((el) => Array.from(el.options).some((option) => option.value === 'branch') && el.value === 'continue')
           .at(-1);
-        if (!branchableSelect) throw new Error('decision outcome branch option missing after adding many outcomes');
+        if (!branchableSelect) throw new Error('branch path action option missing after adding many paths');
         click(Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'Save'), 'Save decision');
         await new Promise((r) => setTimeout(r, 700));
         assertNoUiErrors();
-        if (!bodyIncludes('Smoke decision routine')) throw new Error('saved decision missing');
+        if (!bodyIncludes('Smoke branch routine')) throw new Error('saved branch routine missing');
         await waitUntil(() => !bodyIncludes('Unsaved changes'), 'decision saved state');
         click(Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'Delete'), 'Delete decision');
         await new Promise((r) => setTimeout(r, 100));
         click(byText('button', 'Confirm'), 'Confirm delete decision');
         await new Promise((r) => setTimeout(r, 500));
-        if (bodyIncludes('Smoke decision routine')) throw new Error('temporary decision was not deleted');
+        if (bodyIncludes('Smoke branch routine')) throw new Error('temporary branch routine was not deleted');
 
         click(byText('button', 'Add routine'), 'Add routine');
         await new Promise((r) => setTimeout(r, 100));
