@@ -1595,7 +1595,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       <div className={embedded ? 'min-w-0' : 'h-full overflow-y-auto'}>
         <div className="min-w-0">
           <AppPageLayout
-            shellClassName={embedded ? 'max-w-none px-0 py-0' : 'max-w-[74rem]'}
+            shellClassName={embedded ? 'max-w-none px-0 py-0' : undefined}
             contentClassName={embedded ? 'space-y-6' : 'flex flex-col gap-7'}
           >
             {!embedded ? (

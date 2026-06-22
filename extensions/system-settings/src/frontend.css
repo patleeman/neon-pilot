@@ -3,7 +3,7 @@
 }
 
 .settings-page-main.ui-app-page-main {
-  max-width: 50rem;
+  max-width: none;
   margin-inline: auto;
 }
 

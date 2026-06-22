@@ -86,7 +86,7 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
+      <AppPageLayout contentClassName="space-y-6">
         <AppPageIntro
           title="Diagnostics"
           actions={

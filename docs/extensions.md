@@ -1241,18 +1241,18 @@ Backend action handlers can also use `ctx.telemetry.record(...)`, which records 
 
 ## Main page layout
 
-Main-route extension pages should use the shared app page primitives instead of hand-rolled widths or padding:
+Main-route extension pages must use the shared app page primitives instead of hand-rolled widths, padding, title scales, or local page chrome:
 
 ```tsx
 <div className="h-full overflow-y-auto">
-  <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
+  <AppPageLayout contentClassName="space-y-6">
     <AppPageIntro title="Page title" summary="One sentence explaining what this page controls." actions={actions} />
     {/* page sections */}
   </AppPageLayout>
 </div>
 ```
 
-Use the same `max-w-[72rem]`, `space-y-10`, and `AppPageIntro` title/summary pattern for normal pages. Only use a wider shell for table-heavy management surfaces that genuinely need it.
+`AppPageLayout` owns the canonical page width, page padding, header rhythm, and responsive behavior. Do not pass custom `max-w-*`, page padding, or large `space-y-*` values for normal pages. If a workflow needs a list/detail, editor, or split-pane layout, keep the same `AppPageLayout` shell and use shared workbench/list primitives inside it instead of inventing a separate full-page frame.
 
 ## Styling guidance
 
@@ -1273,7 +1273,7 @@ Guidelines:
 
 - Use semantic theme tokens: `bg-base`, `bg-surface`, `bg-elevated`, `text-primary`, `text-secondary`, `text-dim`, `border-border-subtle`, `text-accent`, `text-success`, `text-warning`, and `text-danger`.
 - Avoid hard-coded colors, custom shadows, gradients, decorative pills, and nested bordered cards. Spacing, typography, and alignment should do most of the hierarchy work.
-- Keep typography consistent: page titles come from `AppPageIntro`; section titles are usually `text-[18px] font-semibold tracking-tight`; body copy is usually `text-[13px] leading-6 text-secondary`.
+- Keep typography consistent: page titles come from `AppPageIntro`; section titles come from `AppPageSection`; body copy uses compact `text-[12px]`/`text-[13px]` secondary text. Do not hard-code oversized page titles.
 - Prefer shared UI from `@neon-pilot/extensions/ui` over local lookalikes. Common first choices are `ToolbarButton`/`IconButton` for actions, `EmptyState`/`LoadingState`/`ErrorState` for feedback, `AppPageEmptyState`/`AppPageSection` for page structure, `SegmentedControl` for mutually exclusive modes, `DataTableActionGroup` for row actions, `RuntimeHeaderControls` for runtime refresh/reset headers, `RailSubsection` for compact rails, `ResourcePickerDialog` for file/resource selection, and `ChatView`/`ExtensionChatRail` for chat surfaces.
 - Right-rail and panel views are compact tools, not full pages. Use tighter padding, smaller type, and avoid page-scale headers there.
 

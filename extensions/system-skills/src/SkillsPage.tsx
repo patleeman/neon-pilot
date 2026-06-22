@@ -118,7 +118,7 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   if (error) return <ErrorState title="Failed to load skills" message={error} />;
 
   return (
-    <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
+    <AppPageLayout contentClassName="space-y-6">
       <AppPageIntro title="Skills" summary="Enable or disable agent skills. Disabled skills are hidden from the agent’s context." />
 
       <FilterToolbar

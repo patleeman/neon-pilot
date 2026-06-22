@@ -1,5 +1,17 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { Button, cx, ErrorState, LoadingState, SearchInput, Select, Textarea, TextInput, ToolbarButton } from '@neon-pilot/extensions/ui';
+import {
+  AppPageIntro,
+  AppPageLayout,
+  Button,
+  cx,
+  ErrorState,
+  LoadingState,
+  SearchInput,
+  Select,
+  Textarea,
+  TextInput,
+  ToolbarButton,
+} from '@neon-pilot/extensions/ui';
 import React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -627,7 +639,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const renderEditor = (routine: Routine) => {
     if (!draft || draft.id !== routine.id) return null;
     return (
-      <div className="border-t border-border-subtle bg-app/35 px-9 py-4" onClick={(event) => event.stopPropagation()}>
+      <div className="border-t border-border-subtle bg-app/35 px-4 py-4" onClick={(event) => event.stopPropagation()}>
         <div className="mb-4">
           <div className={cx('text-[12px]', draftIsDirty ? 'text-warning' : 'text-success')}>
             {saving ? 'Saving…' : draftIsDirty ? 'Unsaved changes' : lastSavedAt ? `Saved at ${lastSavedAt}` : 'Saved'}
@@ -1125,7 +1137,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           </div>
           {isEditing ? renderEditor(routine) : null}
           {!isEditing && routine.type === 'decision' && routine.outcomes.length ? (
-            <div className="border-t border-border-subtle px-9 py-2 text-[12px]">
+            <div className="border-t border-border-subtle px-4 py-2 text-[12px]">
               <div className="mb-2 text-[11px] uppercase tracking-[0.12em] text-dim">Routes</div>
               <div className="grid gap-2 border-l border-border-subtle pl-3">
                 {routine.outcomes.map((outcome) => {
@@ -1231,130 +1243,131 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-app text-[13px] text-primary">
-      <div className="flex h-[88px] shrink-0 items-center gap-2 border-b border-border-subtle/70 px-9">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <div className="text-[15px] font-semibold">{selectedHook.title}</div>
-            <span className="rounded-sm bg-surface-3 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-dim">
-              {ownerKind(selectedHook.ownerExtensionId)} · {ownerLabel(selectedHook.ownerExtensionId)}
-            </span>
-          </div>
-          <div className="mt-0.5 max-w-xl truncate text-[12px] text-secondary">{selectedHook.description}</div>
-        </div>
-        <div className="flex-1" />
-        <ToolbarButton type="button" onClick={() => setShowRuns((value) => !value)}>
-          {showRuns ? 'Timeline' : 'Runs'}
-        </ToolbarButton>
-        <div className="relative">
-          <ToolbarButton type="button" onClick={() => setShowAdd((value) => !value)}>
-            Add routine ▾
+    <div className="h-full min-h-0 overflow-auto bg-app text-[13px] text-primary">
+      <AppPageLayout contentClassName="flex min-h-full flex-col gap-5">
+        <div className="flex shrink-0 items-start gap-2 border-b border-border-subtle/70 pb-5">
+          <AppPageIntro
+            eyebrow={`${ownerKind(selectedHook.ownerExtensionId)} · ${ownerLabel(selectedHook.ownerExtensionId)}`}
+            title={selectedHook.title}
+            summary={selectedHook.description}
+          />
+          <div className="flex-1" />
+          <ToolbarButton type="button" onClick={() => setShowRuns((value) => !value)}>
+            {showRuns ? 'Timeline' : 'Runs'}
           </ToolbarButton>
-          {showAdd ? (
-            <div className="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] shadow-2xl">
-              <button
-                className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
-                onClick={() => addRoutine('instruction')}
-              >
-                <span className="block text-[13px] font-medium text-primary">Instruction</span>
-                <span className="block text-[11px] text-secondary">Run a prompt and continue.</span>
-              </button>
-              <button
-                className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
-                onClick={() => addRoutine('decision')}
-              >
-                <span className="block text-[13px] font-medium text-primary">Judge</span>
-                <span className="block text-[11px] text-secondary">Assess a prompt and route to one path.</span>
-              </button>
-              <button className="block w-full px-3 py-2 text-left hover:bg-surface-3" onClick={() => addRoutine('stop')}>
-                <span className="block text-[13px] font-medium text-primary">Manual stop</span>
-                <span className="block text-[11px] text-secondary">Advanced: always block this event.</span>
-              </button>
-            </div>
-          ) : null}
+          <div className="relative">
+            <ToolbarButton type="button" onClick={() => setShowAdd((value) => !value)}>
+              Add routine ▾
+            </ToolbarButton>
+            {showAdd ? (
+              <div className="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] shadow-2xl">
+                <button
+                  className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
+                  onClick={() => addRoutine('instruction')}
+                >
+                  <span className="block text-[13px] font-medium text-primary">Instruction</span>
+                  <span className="block text-[11px] text-secondary">Run a prompt and continue.</span>
+                </button>
+                <button
+                  className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
+                  onClick={() => addRoutine('decision')}
+                >
+                  <span className="block text-[13px] font-medium text-primary">Judge</span>
+                  <span className="block text-[11px] text-secondary">Assess a prompt and route to one path.</span>
+                </button>
+                <button className="block w-full px-3 py-2 text-left hover:bg-surface-3" onClick={() => addRoutine('stop')}>
+                  <span className="block text-[13px] font-medium text-primary">Manual stop</span>
+                  <span className="block text-[11px] text-secondary">Advanced: always block this event.</span>
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
 
-      <main className="min-h-0 flex-1 overflow-hidden">
-        <div className="h-full overflow-auto px-9 py-7">
-          {showRuns ? (
-            <div className="grid min-h-full max-w-5xl gap-2">
-              {selectedRuns.length === 0 ? (
-                <div className="grid min-h-[24rem] place-items-center text-center">
-                  <div>
-                    <div className="text-[14px] font-medium text-primary">No routine runs yet.</div>
-                    <div className="mt-2 max-w-sm text-[12px] text-secondary">
-                      Runs appear here after a lifecycle event executes routines for {selectedHook.title.toLowerCase()}.
+        <main className="min-h-0 flex-1 overflow-hidden">
+          <div className="h-full overflow-auto">
+            {showRuns ? (
+              <div className="grid min-h-full max-w-5xl gap-2">
+                {selectedRuns.length === 0 ? (
+                  <div className="grid min-h-[24rem] place-items-center text-center">
+                    <div>
+                      <div className="text-[14px] font-medium text-primary">No routine runs yet.</div>
+                      <div className="mt-2 max-w-sm text-[12px] text-secondary">
+                        Runs appear here after a lifecycle event executes routines for {selectedHook.title.toLowerCase()}.
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : null}
-              {selectedRuns.map((run) => (
-                <div key={run.id} className="rounded-md border border-border-subtle bg-surface-2 p-3">
-                  <div className="flex gap-2">
-                    <b>{run.status}</b>
-                    <span className="text-secondary">{new Date(run.startedAt).toLocaleString()}</span>
+                ) : null}
+                {selectedRuns.map((run) => (
+                  <div key={run.id} className="rounded-md border border-border-subtle bg-surface-2 p-3">
+                    <div className="flex gap-2">
+                      <b>{run.status}</b>
+                      <span className="text-secondary">{new Date(run.startedAt).toLocaleString()}</span>
+                    </div>
+                    <div className="mt-2 grid gap-1 text-[12px] text-secondary">
+                      {run.steps.map((step, index) => (
+                        <div key={`${step.routineId}-${index}`}>
+                          {step.routineName}: {step.outcome ?? step.status} {step.message ? `— ${step.message}` : ''}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="mt-2 grid gap-1 text-[12px] text-secondary">
-                    {run.steps.map((step, index) => (
-                      <div key={`${step.routineId}-${index}`}>
-                        {step.routineName}: {step.outcome ?? step.status} {step.message ? `— ${step.message}` : ''}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid max-w-6xl gap-5">
-              <div>
-                <h2 className="m-0 text-[18px] font-semibold">{selectedHook.title} timeline</h2>
-                <p className="m-0 mt-1 text-[13px] text-secondary">
-                  Drag routines within Before or After. Judge routines assess a prompt, output one enum, then run the matching nested route.
-                </p>
+                ))}
               </div>
-              <section
-                data-routine-lane="before"
-                className={cx(
-                  'grid gap-2 rounded-md transition-colors',
-                  dragOverPosition === 'before' && dragId ? 'bg-accent/5 outline outline-1 outline-accent/30' : '',
-                )}
-                onDragOver={(event) => onDragOverLane(event, 'before')}
-                onDragLeave={() => setDragOverPosition((current) => (current === 'before' ? null : current))}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  void moveRoutine('before');
-                }}
-              >
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
-                  Before
+            ) : (
+              <div className="grid max-w-6xl gap-5">
+                <div>
+                  <h2 className="m-0 text-[18px] font-semibold">{selectedHook.title} timeline</h2>
+                  <p className="m-0 mt-1 text-[13px] text-secondary">
+                    Drag routines within Before or After. Judge routines assess a prompt, output one enum, then run the matching nested
+                    route.
+                  </p>
                 </div>
-                {beforeRoutines.map(renderBlock)}
-                {beforeRoutines.length === 0 ? <div className="py-6 text-[12px] text-secondary">No routines before this event.</div> : null}
-              </section>
-              <section
-                data-routine-lane="after"
-                className={cx(
-                  'grid gap-2 rounded-md transition-colors',
-                  dragOverPosition === 'after' && dragId ? 'bg-accent/5 outline outline-1 outline-accent/30' : '',
-                )}
-                onDragOver={(event) => onDragOverLane(event, 'after')}
-                onDragLeave={() => setDragOverPosition((current) => (current === 'after' ? null : current))}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  void moveRoutine('after');
-                }}
-              >
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
-                  After
-                </div>
-                {afterRoutines.map(renderBlock)}
-                {afterRoutines.length === 0 ? <div className="py-6 text-[12px] text-secondary">No routines after this event.</div> : null}
-              </section>
-            </div>
-          )}
-        </div>
-      </main>
+                <section
+                  data-routine-lane="before"
+                  className={cx(
+                    'grid gap-2 rounded-md transition-colors',
+                    dragOverPosition === 'before' && dragId ? 'bg-accent/5 outline outline-1 outline-accent/30' : '',
+                  )}
+                  onDragOver={(event) => onDragOverLane(event, 'before')}
+                  onDragLeave={() => setDragOverPosition((current) => (current === 'before' ? null : current))}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    void moveRoutine('before');
+                  }}
+                >
+                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
+                    Before
+                  </div>
+                  {beforeRoutines.map(renderBlock)}
+                  {beforeRoutines.length === 0 ? (
+                    <div className="py-6 text-[12px] text-secondary">No routines before this event.</div>
+                  ) : null}
+                </section>
+                <section
+                  data-routine-lane="after"
+                  className={cx(
+                    'grid gap-2 rounded-md transition-colors',
+                    dragOverPosition === 'after' && dragId ? 'bg-accent/5 outline outline-1 outline-accent/30' : '',
+                  )}
+                  onDragOver={(event) => onDragOverLane(event, 'after')}
+                  onDragLeave={() => setDragOverPosition((current) => (current === 'after' ? null : current))}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    void moveRoutine('after');
+                  }}
+                >
+                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
+                    After
+                  </div>
+                  {afterRoutines.map(renderBlock)}
+                  {afterRoutines.length === 0 ? <div className="py-6 text-[12px] text-secondary">No routines after this event.</div> : null}
+                </section>
+              </div>
+            )}
+          </div>
+        </main>
+      </AppPageLayout>
       {dragPreview ? (
         <div
           className="pointer-events-none fixed z-50 w-72 rounded-md border border-accent/70 bg-[#10141d]/95 px-3 py-2 text-left shadow-2xl ring-1 ring-accent/30"

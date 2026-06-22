@@ -420,7 +420,7 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[76rem]" contentClassName="flex min-h-full flex-col gap-5">
+      <AppPageLayout contentClassName="flex min-h-full flex-col gap-5">
         <AppPageIntro
           title="Workflows"
           summary={pageSummary}

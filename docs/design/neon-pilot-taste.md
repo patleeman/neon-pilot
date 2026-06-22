@@ -32,7 +32,15 @@ Use this workflow especially when:
 
 ## Layout Modes
 
-Neon Pilot uses adaptive workbench layouts, not one fixed page template.
+Neon Pilot uses adaptive workbench layouts, not one-off page chrome. Every main-route app or extension page must start from the shared `AppPageLayout` and `AppPageIntro` rhythm unless it is embedded in an existing workbench pane.
+
+Canonical page rules:
+
+- `AppPageLayout` owns page padding, max width, and responsive behavior. Do not hard-code competing `max-w-*`, page-level `px-*`, or oversized vertical gaps on normal pages.
+- `AppPageIntro` owns the page title scale, optional summary, and top-right actions. Do not create local hero headers or 30–40px page titles.
+- Page sections should use shared page/section/list/table primitives before local wrappers. A page can be solo, list/detail, table, editor, or split-pane, but its outer shell should still feel like the same product.
+- Full-height split workflows may use `h-full` inside the canonical shell, but they should not invent separate top bars, padding systems, or title treatments.
+- Settings, Extension Manager, Diagnostics, Automations, Routines, and installed extension pages should look like siblings: same title rhythm, toolbar density, spacing scale, and edge alignment.
 
 ### Chat + Workbench
 

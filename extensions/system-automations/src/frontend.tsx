@@ -1844,8 +1844,8 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   return (
     <div className="h-full min-h-0 overflow-hidden">
       <AppPageLayout
-        shellClassName={editorOpen ? 'max-w-[72rem]' : 'h-full max-w-none'}
-        contentClassName={editorOpen ? 'space-y-10' : 'flex h-full min-h-0 flex-col overflow-hidden space-y-0'}
+        shellClassName={editorOpen ? undefined : 'h-full'}
+        contentClassName={editorOpen ? 'space-y-6' : 'flex h-full min-h-0 flex-col overflow-hidden space-y-0'}
       >
         {!editorOpen && (
           <>
@@ -1949,7 +1949,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
             }}
           >
             <AppPageLayout
-              shellClassName="max-w-[72rem]"
               contentClassName="space-y-0"
               gridClassName="!grid-cols-[minmax(0,1fr)] xl:!grid-cols-[minmax(0,1fr)_14rem]"
               asideClassName="hidden xl:block"
@@ -1969,7 +1968,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                   <TextButton className="text-[13px]" onClick={closeEditor}>
                     ← Live events
                   </TextButton>
-                  <h2 className="mt-6 text-[30px] font-semibold leading-[1.06] tracking-normal text-primary">
+                  <h2 className="mt-6 text-[22px] font-semibold leading-tight tracking-[-0.01em] text-primary">
                     {editingId ? 'Edit scheduled publisher' : 'New scheduled publisher'}
                   </h2>
                   <p className="mt-2 text-[13px] text-secondary">

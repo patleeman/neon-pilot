@@ -3523,25 +3523,30 @@ body {
 
 .ui-app-page-shell {
   min-height: 100%;
-  padding: 2rem;
+  width: 100%;
+  max-width: 74rem;
+  margin-inline: auto;
+  padding: 1.5rem 2rem 2.5rem;
 }
 
 .ui-app-page-grid,
 .ui-app-page-grid-centered {
   display: grid;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .ui-app-page-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(13rem, 18rem);
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 15rem);
 }
 
 .ui-app-page-main {
   min-width: 0;
+  width: 100%;
 }
 
 .ui-app-page-intro {
   display: flex;
+  min-height: 2.5rem;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
@@ -3550,7 +3555,7 @@ body {
 .ui-app-page-eyebrow,
 .ui-app-page-toc-title {
   color: rgb(var(--color-dim));
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -3559,21 +3564,21 @@ body {
 .ui-app-page-title {
   margin: 0;
   color: rgb(var(--color-primary));
-  font-size: 2rem;
+  font-size: 1.375rem;
   font-weight: 650;
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .ui-app-page-summary {
   max-width: 44rem;
   color: rgb(var(--color-secondary));
-  font-size: 0.875rem;
-  line-height: 1.65;
+  font-size: 0.75rem;
+  line-height: 1.5;
 }
 
 .ui-app-page-section {
   display: grid;
-  gap: 1.25rem;
+  gap: 1rem;
   scroll-margin-top: 2rem;
 }
 
@@ -3592,17 +3597,17 @@ body {
 .ui-app-page-section-title {
   margin: 0;
   color: rgb(var(--color-primary));
-  font-size: 2rem;
+  font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: 0;
-  line-height: 1.15;
+  line-height: 1.2;
 }
 
 .ui-app-page-section-description {
   max-width: 48rem;
   color: rgb(var(--color-secondary));
-  font-size: 0.875rem;
-  line-height: 1.5rem;
+  font-size: 0.75rem;
+  line-height: 1.4rem;
 }
 
 .ui-app-page-section-meta {
