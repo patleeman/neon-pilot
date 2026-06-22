@@ -2,9 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const gatewayState = vi.hoisted(() => ({
   attachGatewayConversation: vi.fn(),
-  defaultGatewayProviders: vi.fn(() => [
-    { id: 'telegram', label: 'Telegram', implemented: true, configurationLocation: 'gateways' },
-  ]),
+  defaultGatewayProviders: vi.fn(() => [{ id: 'telegram', label: 'Telegram', implemented: true, configurationLocation: 'gateways' }]),
   detachGatewayConversation: vi.fn(),
   ensureGatewayConnection: vi.fn(),
   normalizeGatewayProviderId: vi.fn((value: unknown) =>
@@ -26,6 +24,10 @@ const extensionRegistry = vi.hoisted(() => ({
       configurationLocation: 'extension',
     },
   ]),
+}));
+const telegramAccess = vi.hoisted(() => ({
+  readTelegramAccessPolicy: vi.fn(() => ({ approvedUserIds: ['111'], approvedChatIds: ['222'] })),
+  writeTelegramAccessPolicy: vi.fn((_stateRoot: string, _profile: string, policy: unknown) => policy),
 }));
 const telegramAuth = vi.hoisted(() => ({
   readTelegramBotToken: vi.fn(() => null as string | null),
@@ -65,6 +67,7 @@ const appEvents = vi.hoisted(() => ({
 
 vi.mock('../gateways/gatewayState.js', () => gatewayState);
 vi.mock('../extensions/extensionRegistry.js', () => extensionRegistry);
+vi.mock('../gateways/telegramAccess.js', () => telegramAccess);
 vi.mock('../gateways/telegramAuth.js', () => telegramAuth);
 vi.mock('../gateways/telegramGateway.js', () => ({ TelegramGatewayRuntime: runtime.TelegramGatewayRuntime }));
 vi.mock('../conversations/liveSessionLifecycle.js', () => lifecycle);
@@ -217,6 +220,25 @@ describe('gateway routes', () => {
     const active = response();
     handler({ params: { provider: 'telegram' }, body: { status: 'active', enabled: true } }, active);
     expect(latestRuntime().start).toHaveBeenCalledOnce();
+  });
+
+  it('reads and writes Telegram access policy', () => {
+    const router = register();
+    const getAccess = route(router, 'get', '/api/gateways/telegram/access');
+    const patchAccess = route(router, 'patch', '/api/gateways/telegram/access');
+
+    const read = response();
+    getAccess({}, read);
+    expect(telegramAccess.readTelegramAccessPolicy).toHaveBeenCalledWith('/state', 'shared');
+    expect(read.json).toHaveBeenCalledWith({ approvedUserIds: ['111'], approvedChatIds: ['222'] });
+
+    const written = response();
+    patchAccess({ body: { approvedUserIds: ['333'], approvedChatIds: ['444'], ignored: true } }, written);
+    expect(telegramAccess.writeTelegramAccessPolicy).toHaveBeenCalledWith('/state', 'shared', {
+      approvedUserIds: ['333'],
+      approvedChatIds: ['444'],
+    });
+    expect(written.json).toHaveBeenCalledWith({ approvedUserIds: ['333'], approvedChatIds: ['444'] });
   });
 
   it('writes and removes telegram tokens while updating gateway state', () => {
