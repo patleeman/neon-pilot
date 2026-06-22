@@ -16,7 +16,7 @@ const commands = vi.hoisted(() => ({
 vi.mock('./gatewayState.js', () => state);
 vi.mock('./telegramCommands.js', () => commands);
 
-import { TelegramGatewayRuntime } from './telegramGateway.js';
+import { renderTelegramHtml, splitTelegramMessage, TelegramGatewayRuntime } from './telegramGateway.js';
 
 describe('TelegramGatewayRuntime', () => {
   beforeEach(() => {
@@ -47,6 +47,12 @@ describe('TelegramGatewayRuntime', () => {
       ...overrides,
     };
   }
+
+  it('renders Telegram-safe rich HTML from common markdown', () => {
+    expect(renderTelegramHtml('**bold** `code` <x>')).toBe('<b>bold</b> <code>code</code> &lt;x&gt;');
+    expect(renderTelegramHtml('```ts\nconst x = 1 < 2;\n```')).toBe('<pre>ts\nconst x = 1 &lt; 2;\n</pre>');
+    expect(splitTelegramMessage('a'.repeat(9000)).length).toBeGreaterThan(1);
+  });
 
   it('ignores updates without messages and creates/binds conversations for new chats', async () => {
     const d = deps();
@@ -81,7 +87,7 @@ describe('TelegramGatewayRuntime', () => {
     expect(d.fetch).toHaveBeenCalledWith(
       'https://api.telegram.org/bottoken/sendMessage',
       expect.objectContaining({
-        body: JSON.stringify({ chat_id: 'C1', text: 'Unsupported Telegram message type. Send text or a photo.' }),
+        body: expect.stringContaining('Unsupported Telegram message type'),
       }),
     );
   });
@@ -100,7 +106,7 @@ describe('TelegramGatewayRuntime', () => {
     expect(d.setModel).toHaveBeenCalledWith('conv-1', 'provider/model');
     expect(d.fetch).toHaveBeenCalledWith(
       'https://api.telegram.org/bottoken/sendMessage',
-      expect.objectContaining({ body: JSON.stringify({ chat_id: '123', text: 'Model set to provider/model.' }) }),
+      expect.objectContaining({ body: expect.stringContaining('Model set to provider/model.') }),
     );
     expect(d.submitPrompt).not.toHaveBeenCalled();
   });
@@ -197,10 +203,7 @@ describe('TelegramGatewayRuntime', () => {
     expect(d.fetch).toHaveBeenCalledWith(
       'https://api.telegram.org/bottoken/sendMessage',
       expect.objectContaining({
-        body: JSON.stringify({
-          chat_id: '123',
-          text: 'This Telegram chat is not approved for Neon Pilot. Ask the app owner to approve chat ID 123 or user ID 777.',
-        }),
+        body: expect.stringContaining('not approved for Neon Pilot'),
       }),
     );
   });
@@ -213,7 +216,7 @@ describe('TelegramGatewayRuntime', () => {
     await expect(runtime.deliverAssistantReply({ conversationId: 'conv-1', text: ' hello ' })).resolves.toBe(true);
     expect(d.fetch).toHaveBeenCalledWith(
       'https://api.telegram.org/bottoken/sendMessage',
-      expect.objectContaining({ body: JSON.stringify({ chat_id: '123', text: 'hello' }) }),
+      expect.objectContaining({ body: expect.stringContaining('hello') }),
     );
     expect(state.recordGatewayEvent).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'outbound', message: 'Delivered assistant reply to Pat' }),

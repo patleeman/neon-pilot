@@ -55,6 +55,8 @@ interface TelegramInlineKeyboardButton {
 
 interface TelegramSendMessageOptions {
   reply_markup?: { inline_keyboard: TelegramInlineKeyboardButton[][] };
+  parse_mode?: 'HTML';
+  disable_web_page_preview?: boolean;
 }
 
 interface TelegramUpdate {
@@ -98,6 +100,7 @@ export interface TelegramGatewayRuntimeDependencies {
 }
 
 const TYPING_INTERVAL_MS = 4_000;
+const TELEGRAM_MESSAGE_LIMIT = 4_096;
 
 class TypingIndicator {
   private timer: NodeJS.Timeout | null = null;
@@ -493,7 +496,16 @@ export class TelegramGatewayRuntime {
   private async sendMessage(chatId: string, text: string, options: TelegramSendMessageOptions = {}): Promise<void> {
     const token = this.dependencies.readBotToken();
     if (!token) return;
-    await this.telegramRequest(token, 'sendMessage', { chat_id: chatId, text, ...options });
+    const chunks = splitTelegramMessage(text).map(renderTelegramHtml);
+    for (const [index, chunk] of chunks.entries()) {
+      await this.telegramRequest(token, 'sendMessage', {
+        chat_id: chatId,
+        text: chunk,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+        ...(index === chunks.length - 1 ? options : {}),
+      });
+    }
   }
 
   private async answerCallbackQuery(callbackQueryId: string): Promise<void> {
@@ -516,6 +528,53 @@ export class TelegramGatewayRuntime {
     }
     return payload.result as T;
   }
+}
+
+export function renderTelegramHtml(markdown: string): string {
+  const segments: string[] = [];
+  let cursor = 0;
+  const fencePattern = /```([\w.-]+)?\n([\s\S]*?)```/g;
+  for (const match of markdown.matchAll(fencePattern)) {
+    const index = match.index ?? 0;
+    segments.push(renderTelegramInlineMarkdown(markdown.slice(cursor, index)));
+    const language = match[1]?.trim();
+    const code = match[2] ?? '';
+    segments.push(`<pre>${escapeTelegramHtml(language ? `${language}\n${code}` : code)}</pre>`);
+    cursor = index + match[0].length;
+  }
+  segments.push(renderTelegramInlineMarkdown(markdown.slice(cursor)));
+  return segments.join('').trim() || escapeTelegramHtml(markdown);
+}
+
+export function splitTelegramMessage(text: string): string[] {
+  if (text.length <= TELEGRAM_MESSAGE_LIMIT * 0.8) return [text];
+  const chunks: string[] = [];
+  let remaining = text;
+  while (remaining.length > TELEGRAM_MESSAGE_LIMIT) {
+    const slice = remaining.slice(0, TELEGRAM_MESSAGE_LIMIT);
+    const splitAt = Math.max(slice.lastIndexOf('\n\n'), slice.lastIndexOf('\n'), slice.lastIndexOf(' '));
+    const boundary = splitAt > TELEGRAM_MESSAGE_LIMIT * 0.5 ? splitAt : TELEGRAM_MESSAGE_LIMIT;
+    chunks.push(remaining.slice(0, boundary).trimEnd());
+    remaining = remaining.slice(boundary).trimStart();
+  }
+  if (remaining) chunks.push(remaining);
+  return chunks;
+}
+
+function renderTelegramInlineMarkdown(text: string): string {
+  const escaped = escapeTelegramHtml(text);
+  return escaped
+    .replace(/^###\s+(.+)$/gm, '<b>$1</b>')
+    .replace(/^##\s+(.+)$/gm, '<b>$1</b>')
+    .replace(/^#\s+(.+)$/gm, '<b>$1</b>')
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*\n][\s\S]*?[^*\n])\*\*/g, '<b>$1</b>')
+    .replace(/__([^_\n][\s\S]*?[^_\n])__/g, '<b>$1</b>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<i>$2</i>');
+}
+
+function escapeTelegramHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function commandKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] } {
