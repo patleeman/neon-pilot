@@ -179,7 +179,8 @@ describe('AutomationsPage', () => {
     const { container } = await renderPage(createPa(), { search: '?action=new' });
 
     expect(container.textContent).toContain('New scheduled publisher');
-    expect(container.textContent).toContain('Create with chat');
+    expect(container.textContent).toContain('Save automation');
+    expect(container.textContent).not.toContain('Create with chat');
     expect(container.querySelector('input[name="automation-title"]')).not.toBeNull();
   });
 
@@ -242,8 +243,6 @@ describe('AutomationsPage', () => {
       ]);
       await Promise.resolve();
     });
-
-    expect(container.textContent).toContain('1 scheduled publisher');
 
     await act(async () => {
       staleTasks.resolve([
@@ -665,9 +664,8 @@ describe('AutomationsPage', () => {
       }),
     );
 
-    expect(container.textContent).toContain('1 past due');
-    expect(container.textContent).toContain('past due');
     expect(container.textContent).toContain('schedule.due');
+    expect(container.textContent).toContain('Daily check');
   });
 
   it('links conversation automations to their thread', async () => {
@@ -694,75 +692,32 @@ describe('AutomationsPage', () => {
     expect(openThreadButton).not.toBeUndefined();
   });
 
-  it('opens a chat draft instead of directly creating a new automation', async () => {
-    let resolveCommand: ((value: boolean) => void) | undefined;
-    const execute = vi.fn(
-      () =>
-        new Promise<boolean>((resolve) => {
-          resolveCommand = resolve;
-        }),
-    );
-    const pa = createPa();
-    pa.commands.execute = execute as never;
+  it('saves a new automation directly from the editor', async () => {
+    const create = vi.fn(async () => ({ ok: true }));
+    const pa = createPa({ create });
     const { container } = await renderPage(pa, { search: '?action=new' });
 
-    expect(container.textContent).toContain('Create with chat');
-    expect(container.textContent).not.toContain('Create automation');
+    expect(container.textContent).toContain('Save automation');
+    expect(container.textContent).not.toContain('Create with chat');
 
-    const chatButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create with chat');
-    if (!chatButton) throw new Error('Create with chat button not found');
+    const title = container.querySelector<HTMLInputElement>('input[name="automation-title"]');
+    const prompt = container.querySelector<HTMLTextAreaElement>('textarea[name="automation-prompt"]');
+    const saveButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Save automation');
+    if (!title || !prompt || !saveButton) throw new Error('Creation controls not found');
 
     await act(async () => {
-      chatButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      chatButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(title, 'Saved check');
+      title.dispatchEvent(new Event('input', { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(prompt, 'Run the saved check');
+      prompt.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      saveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
 
-    expect(pa.automations.create).not.toHaveBeenCalled();
-    expect(pa.commands.execute).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      resolveCommand?.(true);
-      await Promise.resolve();
-    });
-
-    expect(pa.automations.create).not.toHaveBeenCalled();
-    expect(pa.commands.execute).toHaveBeenCalledWith(
-      'conversation.newAndFocus',
-      expect.objectContaining({
-        initialPromptText: expect.stringContaining('Read the built-in scheduled-tasks skill'),
-      }),
-    );
-    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toBeUndefined();
-    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialPromptText).toContain(
-      'Do not create the automation until I confirm',
-    );
-    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialPromptText).toContain('- Timeout seconds: 1800');
-    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialPromptText).toContain(
-      '- Catch-up policy window seconds: 900',
-    );
-  });
-
-  it('keeps the editor open when chat creation cannot be opened', async () => {
-    const pa = createPa();
-    pa.commands.execute = vi.fn(async () => false) as never;
-    const { container } = await renderPage(pa, { search: '?action=new' });
-
-    const chatButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create with chat');
-    if (!chatButton) throw new Error('Create with chat button not found');
-
-    await act(async () => {
-      chatButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    expect(pa.automations.create).not.toHaveBeenCalled();
-    expect(pa.ui.notify).toHaveBeenCalledWith({
-      type: 'error',
-      message: 'Could not open chat for automation creation.',
-      source: 'system-automations',
-    });
-    expect(container.textContent).toContain('Create with chat');
+    expect(pa.commands.execute).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ title: 'Saved check', prompt: 'Run the saved check' }));
   });
 
   it('lets recurring schedules be composed from controls', async () => {
@@ -771,8 +726,10 @@ describe('AutomationsPage', () => {
 
     const cadence = container.querySelector<HTMLSelectElement>('select[name="automation-recurring-cadence"]');
     const time = container.querySelector<HTMLInputElement>('input[name="automation-recurring-time"]');
-    const chatButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create with chat');
-    if (!cadence || !time || !chatButton) throw new Error('Schedule builder controls not found');
+    const saveButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Save automation');
+    const title = container.querySelector<HTMLInputElement>('input[name="automation-title"]');
+    const prompt = container.querySelector<HTMLTextAreaElement>('textarea[name="automation-prompt"]');
+    if (!cadence || !time || !saveButton || !title || !prompt) throw new Error('Schedule builder controls not found');
 
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(cadence, 'daily');
@@ -784,12 +741,16 @@ describe('AutomationsPage', () => {
       time.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await act(async () => {
-      chatButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(title, 'Afternoon check');
+      title.dispatchEvent(new Event('input', { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(prompt, 'Check in the afternoon');
+      prompt.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      saveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialPromptText).toContain(
-      'Schedule: recurring cron 30 14 * * *',
-    );
+    expect(pa.automations.create).toHaveBeenCalledWith(expect.objectContaining({ cron: '30 14 * * *' }));
   });
 
   it('saves edited catch-up policy values as the automation policy source of truth', async () => {

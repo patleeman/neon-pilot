@@ -844,6 +844,21 @@ function numberOrNull(value: string) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function toDateTimeLocalInput(value: string) {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return '';
+  const date = new Date(timestamp);
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(timestamp - offsetMs).toISOString().slice(0, 16);
+}
+
+function fromDateTimeLocalInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const timestamp = Date.parse(trimmed);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : trimmed;
+}
+
 function readAutomationPolicies(input: unknown, catchUpWindowSeconds: string): AutomationPolicy[] {
   if (Array.isArray(input)) {
     return input
@@ -896,7 +911,7 @@ function formFromTask(task: AutomationTaskForEditor): AutomationFormState {
     scheduleType: task.at ? 'at' : 'cron',
     cron,
     scheduleBuilder: easyScheduleFromCron(cron) ?? emptyForm.scheduleBuilder,
-    at: task.at || '',
+    at: task.at ? toDateTimeLocalInput(task.at) : '',
     cwd: task.cwd || '',
     targetType,
     threadMode,
@@ -921,7 +936,7 @@ function readFormInput(form: AutomationFormState) {
     enabled: form.enabled,
     prompt: form.prompt.trim(),
     cron,
-    at: form.scheduleType === 'at' ? form.at.trim() : null,
+    at: form.scheduleType === 'at' ? fromDateTimeLocalInput(form.at) : null,
     cwd: form.cwd.trim() || null,
     targetType: form.targetType,
     threadMode,
@@ -979,7 +994,8 @@ function FormSection({
 
 function schedulePreview(form: AutomationFormState) {
   if (form.scheduleType === 'at') {
-    return form.at.trim() ? `Runs once at ${form.at.trim()}.` : 'Runs once at the selected time.';
+    const timestamp = form.at ? Date.parse(form.at) : Number.NaN;
+    return Number.isFinite(timestamp) ? `Runs once at ${new Date(timestamp).toLocaleString()}.` : 'Choose a date and time.';
   }
   const cron = form.cron.trim();
   const preset = CRON_PRESETS.find((candidate) => candidate.cron === cron);
@@ -2143,11 +2159,11 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       </div>
                     </div>
                   ) : (
-                    <Field label="Run at" hint="Enter a date/time, like tomorrow 8pm or 2026-06-22 09:00.">
+                    <Field label="Run at" hint="Choose the exact local date and time for this one-time automation.">
                       <TextInput
-                        autoComplete="off"
+                        required
+                        type="datetime-local"
                         name="automation-at"
-                        placeholder="tomorrow 8pm"
                         value={form.at}
                         onChange={(event) => setForm({ ...form, at: event.target.value })}
                       />
