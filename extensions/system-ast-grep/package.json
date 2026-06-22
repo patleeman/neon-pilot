@@ -1,0 +1,6 @@
+{
+  "name": "@neon-pilot/system-ast-grep",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true
+}

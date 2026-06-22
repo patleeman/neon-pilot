@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 2,
+  "id": "system-hashline-edit",
+  "name": "Hashline Edit",
+  "packageType": "system",
+  "defaultEnabled": true,
+  "description": "Hash-anchored line editing tools inspired by Oh My Pi Hashline.",
+  "version": "0.1.0",
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      { "id": "readHashline", "handler": "readHashline", "title": "Read Hashline File", "worker": { "enabled": true } },
+      { "id": "hashlineEdit", "handler": "hashlineEdit", "title": "Hashline Edit", "worker": { "enabled": true } }
+    ]
+  },
+  "contributes": {
+    "tools": [
+      {
+        "id": "read-hashline",
+        "name": "read_hashline",
+        "title": "Read Hashline File",
+        "description": "Read a text file with line numbers and a content hash tag for hashline_edit anchors.",
+        "action": "readHashline",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "description": "File path relative to the workspace cwd." },
+            "offset": { "type": "number", "description": "1-indexed line number to start reading from." },
+            "limit": { "type": "number", "description": "Maximum number of lines to return." }
+          },
+          "required": ["path"],
+          "additionalProperties": false
+        },
+        "promptGuidelines": "Use before hashline_edit; copy the [path#TAG] header and visible line numbers exactly."
+      },
+      {
+        "id": "hashline-edit",
+        "name": "hashline_edit",
+        "title": "Hashline Edit",
+        "description": "Apply hash-anchored line edits to existing text files. Sections start with [PATH#TAG], followed by SWAP, DEL, INS.PRE, INS.POST, INS.HEAD, or INS.TAIL operations.",
+        "action": "hashlineEdit",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "input": { "type": "string", "description": "Hashline patch text. Example: [src/app.ts#A1B2]\nSWAP 3.=3:\n+new line" }
+          },
+          "required": ["input"],
+          "additionalProperties": false
+        },
+        "promptGuidelines": "Only edit lines shown by read_hashline for the matching [path#TAG]. Re-read after each successful edit because tags and line numbers change."
+      }
+    ]
+  },
+  "permissions": ["filesystem:read", "filesystem:write"]
+}

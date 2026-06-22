@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 2,
+  "id": "system-ast-grep",
+  "name": "AST Grep",
+  "packageType": "system",
+  "defaultEnabled": true,
+  "description": "Structural code search using the ast-grep CLI, inspired by Oh My Pi's ast_grep tool.",
+  "version": "0.1.0",
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [{ "id": "astGrep", "handler": "astGrep", "title": "AST Grep", "worker": { "enabled": true } }]
+  },
+  "contributes": {
+    "tools": [
+      {
+        "id": "ast-grep",
+        "name": "ast_grep",
+        "title": "AST Grep",
+        "description": "Search code with ast-grep structural patterns. Use when regex search is too imprecise for syntax-aware code queries.",
+        "action": "astGrep",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "pattern": {
+              "type": "string",
+              "description": "ast-grep pattern, e.g. console.log($$$), import { $$$IMPORTS } from \"react\"."
+            },
+            "paths": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Files or directories to search. Defaults to current workspace."
+            },
+            "lang": { "type": "string", "description": "Optional ast-grep language override, e.g. typescript, tsx, python, rust." },
+            "glob": { "type": "string", "description": "Optional glob filter relative to searched paths, e.g. **/*.ts." },
+            "limit": { "type": "number", "description": "Maximum matches to return. Default 50, max 200." }
+          },
+          "required": ["pattern"],
+          "additionalProperties": false
+        },
+        "promptGuidelines": "Use for syntax-aware searches like calls, imports, declarations, and code shapes; use regular grep/search for plain text."
+      }
+    ]
+  },
+  "permissions": ["filesystem:read", "process:exec"]
+}
