@@ -4,6 +4,10 @@ vi.mock('./liveSessionRecovery.js', () => ({
   resolveTranscriptTailRecoveryPlan: vi.fn(() => null),
 }));
 
+vi.mock('./liveSessionPersistence.js', () => ({
+  resolveLiveSessionFile: vi.fn((session: { sessionFile?: string }) => session.sessionFile ?? ''),
+}));
+
 import type { LiveSessionReadHost } from './liveSessionReadApi.js';
 import { computeLiveSessionRunning, listLiveSessions } from './liveSessionReadApi.js';
 
