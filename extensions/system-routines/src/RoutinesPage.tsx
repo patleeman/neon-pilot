@@ -1,5 +1,7 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
+  type ActivityTreeItem,
+  ActivityTreeView,
   AppPageIntro,
   AppPageLayout,
   Button,
@@ -7,6 +9,7 @@ import {
   ErrorState,
   LoadingState,
   SearchInput,
+  SectionLabel,
   Select,
   Textarea,
   TextInput,
@@ -162,10 +165,10 @@ function outcomeBehaviorDescription(behavior: RoutineOutcome['behavior']): strin
   return 'Continue follows this path.';
 }
 
-function statusDot(summary: string) {
-  if (summary === 'No routines') return 'bg-[#35445b]';
-  if (/fail|block|warn/i.test(summary)) return 'bg-warning';
-  return 'bg-success';
+function routineTreeStatus(summary: string): ActivityTreeItem['status'] {
+  if (/fail|block|warn/i.test(summary)) return 'failed';
+  if (summary === 'No routines') return 'idle';
+  return 'done';
 }
 
 function RoutineHookList({
@@ -188,46 +191,49 @@ function RoutineHookList({
       )
     : hooks;
 
+  const treeItems: ActivityTreeItem[] = groupedHooks(visibleHooks).flatMap(([group, groupHooks]) => {
+    const groupId = `group:${group}`;
+    return [
+      {
+        id: groupId,
+        kind: 'group',
+        title: group,
+        status: 'idle',
+      },
+      ...groupHooks.map((hook) => ({
+        id: hook.id,
+        parentId: groupId,
+        kind: 'conversation' as const,
+        title: hook.title,
+        subtitle: hook.summary,
+        status: routineTreeStatus(hook.summary),
+        metadata: { owner: ownerLabel(hook.ownerExtensionId) },
+      })),
+    ];
+  });
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-transparent">
-      <div className="px-4 pb-2 pt-1">
-        <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-dim">Routines</div>
+      <div className="px-4 pb-0.5 pt-1">
+        <SectionLabel className="block">Routines</SectionLabel>
       </div>
-      <div className="px-2 pb-2">
+      <div className="px-2 pb-1.5 pt-1">
         <SearchInput
           value={query}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => onQueryChange(event.target.value)}
-          placeholder="Search events…"
+          placeholder="Search routines…"
         />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
-        {groupedHooks(visibleHooks).map(([group, groupHooks]) => (
-          <div key={group} className="py-2">
-            <div className="px-2 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-dim">{group}</div>
-            {groupHooks.map((hook) => (
-              <button
-                key={hook.id}
-                type="button"
-                onClick={() => onSelect(hook.id)}
-                className={cx(
-                  'grid w-full grid-cols-[8px_1fr] gap-2 rounded-md px-2 py-2 text-left text-[13px] text-secondary hover:bg-surface/60 hover:text-primary',
-                  hook.id === selectedHookId && 'bg-surface-2 text-primary',
-                )}
-              >
-                <span className={cx('mt-1.5 h-2 w-2 rounded-full', statusDot(hook.summary))} />
-                <span className="min-w-0">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-medium">{hook.title}</span>
-                    <span className="shrink-0 rounded-sm bg-surface-3 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-dim">
-                      {ownerLabel(hook.ownerExtensionId)}
-                    </span>
-                  </span>
-                  <span className="block truncate text-[11px] text-dim">{hook.summary}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        ))}
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-3">
+        <ActivityTreeView
+          items={treeItems}
+          activeItemId={selectedHookId}
+          ariaLabel="Routines"
+          emptyMessage={normalizedQuery ? 'No routines match.' : 'No routines yet.'}
+          onOpenItem={(item: ActivityTreeItem) => {
+            if (item.kind !== 'group') onSelect(item.id);
+          }}
+        />
       </div>
     </div>
   );
