@@ -119,10 +119,10 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
 
   return (
     <AppPageLayout contentClassName="space-y-6">
-      <AppPageIntro title="Skills" summary="Enable or disable agent skills. Disabled skills are hidden from the agent’s context." />
+      <AppPageIntro title="Skills" />
 
       <FilterToolbar
-        className="border-b border-border-subtle/70 pb-5"
+        className="pb-5"
         filters={
           <TabList ariaLabel="Skill filters">
             {TABS.map((tab) => (

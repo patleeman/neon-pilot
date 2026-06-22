@@ -1246,13 +1246,13 @@ Main-route extension pages must use the shared app page primitives instead of ha
 ```tsx
 <div className="h-full overflow-y-auto">
   <AppPageLayout contentClassName="space-y-6">
-    <AppPageIntro title="Page title" summary="One sentence explaining what this page controls." actions={actions} />
+    <AppPageIntro title="Page title" actions={actions} />
     {/* page sections */}
   </AppPageLayout>
 </div>
 ```
 
-`AppPageLayout` owns canonical page padding, left-aligned header rhythm, and responsive behavior. Do not pass custom `max-w-*`, page padding, or large `space-y-*` values for normal pages. If a workflow needs a list/detail, editor, or split-pane layout, keep the same `AppPageLayout` shell and use shared workbench/list primitives inside it instead of inventing a separate full-page frame.
+`AppPageLayout` owns canonical page padding, left-aligned header rhythm, and responsive behavior. `AppPageIntro` should be title-only by default; avoid page-level eyebrows, subtitles, or divider lines that make sibling pages look unrelated. Do not pass custom `max-w-*`, page padding, or large `space-y-*` values for normal pages. If a workflow needs a list/detail, editor, or split-pane layout, keep the same `AppPageLayout` shell and use shared workbench/list primitives inside it instead of inventing a separate full-page frame.
 
 ## Styling guidance
 

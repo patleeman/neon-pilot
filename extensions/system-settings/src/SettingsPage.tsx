@@ -546,7 +546,7 @@ function SettingsSection({
       className={cx('settings-page-section scroll-mt-20 space-y-4 pt-4 first:pt-0', className)}
     >
       <div className="settings-page-section-heading">
-        <h1 className="settings-page-section-title text-[18px] font-semibold leading-tight text-primary">{label}</h1>
+        <h1 className="settings-page-section-title text-[22px] font-semibold leading-tight tracking-[-0.01em] text-primary">{label}</h1>
       </div>
       {children}
     </section>

@@ -123,10 +123,6 @@ function ownerLabel(ownerExtensionId: string): string {
     .join(' ');
 }
 
-function ownerKind(ownerExtensionId: string): string {
-  return ownerExtensionId === 'core' ? 'App event' : 'Extension event';
-}
-
 function modelLabel(model: ModelItem): string {
   return model.label ?? model.name ?? model.id;
 }
@@ -1245,44 +1241,43 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   return (
     <div className="h-full min-h-0 overflow-auto bg-app text-[13px] text-primary">
       <AppPageLayout contentClassName="flex min-h-full flex-col gap-5">
-        <div className="flex shrink-0 items-start gap-2 border-b border-border-subtle/70 pb-5">
-          <AppPageIntro
-            eyebrow={`${ownerKind(selectedHook.ownerExtensionId)} · ${ownerLabel(selectedHook.ownerExtensionId)}`}
-            title={selectedHook.title}
-            summary={selectedHook.description}
-          />
-          <div className="flex-1" />
-          <ToolbarButton type="button" onClick={() => setShowRuns((value) => !value)}>
-            {showRuns ? 'Timeline' : 'Runs'}
-          </ToolbarButton>
-          <div className="relative">
-            <ToolbarButton type="button" onClick={() => setShowAdd((value) => !value)}>
-              Add routine ▾
-            </ToolbarButton>
-            {showAdd ? (
-              <div className="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] shadow-2xl">
-                <button
-                  className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
-                  onClick={() => addRoutine('instruction')}
-                >
-                  <span className="block text-[13px] font-medium text-primary">Instruction</span>
-                  <span className="block text-[11px] text-secondary">Run a prompt and continue.</span>
-                </button>
-                <button
-                  className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
-                  onClick={() => addRoutine('decision')}
-                >
-                  <span className="block text-[13px] font-medium text-primary">Judge</span>
-                  <span className="block text-[11px] text-secondary">Assess a prompt and route to one path.</span>
-                </button>
-                <button className="block w-full px-3 py-2 text-left hover:bg-surface-3" onClick={() => addRoutine('stop')}>
-                  <span className="block text-[13px] font-medium text-primary">Manual stop</span>
-                  <span className="block text-[11px] text-secondary">Advanced: always block this event.</span>
-                </button>
+        <AppPageIntro
+          title={selectedHook.title}
+          actions={
+            <>
+              <ToolbarButton type="button" onClick={() => setShowRuns((value) => !value)}>
+                {showRuns ? 'Timeline' : 'Runs'}
+              </ToolbarButton>
+              <div className="relative">
+                <ToolbarButton type="button" onClick={() => setShowAdd((value) => !value)}>
+                  Add routine ▾
+                </ToolbarButton>
+                {showAdd ? (
+                  <div className="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] shadow-2xl">
+                    <button
+                      className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
+                      onClick={() => addRoutine('instruction')}
+                    >
+                      <span className="block text-[13px] font-medium text-primary">Instruction</span>
+                      <span className="block text-[11px] text-secondary">Run a prompt and continue.</span>
+                    </button>
+                    <button
+                      className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
+                      onClick={() => addRoutine('decision')}
+                    >
+                      <span className="block text-[13px] font-medium text-primary">Judge</span>
+                      <span className="block text-[11px] text-secondary">Assess a prompt and route to one path.</span>
+                    </button>
+                    <button className="block w-full px-3 py-2 text-left hover:bg-surface-3" onClick={() => addRoutine('stop')}>
+                      <span className="block text-[13px] font-medium text-primary">Manual stop</span>
+                      <span className="block text-[11px] text-secondary">Advanced: always block this event.</span>
+                    </button>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
-        </div>
+            </>
+          }
+        />
 
         <main className="min-h-0 flex-1 overflow-hidden">
           <div className="h-full overflow-auto">

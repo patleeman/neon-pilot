@@ -316,7 +316,6 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
         null)
       : null;
   const selectedSavedWorkflow = selectedTemplate ? (savedWorkflows.find((workflow) => workflow.id === selectedTemplate.id) ?? null) : null;
-  const pageSummary = `${workflows.length} runs / ${savedWorkflows.length} saved / ${templates.length} templates`;
   const hasLibraryItems = workflows.length > 0 || savedWorkflows.length > 0 || templates.length > 0;
   const savedDraftRef = useRef<string | null>(null);
   const draftSaveRequestIdRef = useRef(0);
@@ -449,7 +448,6 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
       <AppPageLayout contentClassName="flex min-h-full flex-col gap-5">
         <AppPageIntro
           title="Workflows"
-          summary={pageSummary}
           actions={
             <IconButton aria-label="Refresh workflows" title="Refresh workflows" onClick={() => void refresh()}>
               <RefreshIcon />

@@ -2,6 +2,7 @@ import type { NativeExtensionClient } from '@neon-pilot/extensions';
 import type { ScheduledTaskSchedulerHealth, ScheduledTaskSummary } from '@neon-pilot/extensions/data';
 import { timeAgo } from '@neon-pilot/extensions/data';
 import {
+  AppPageIntro,
   AppPageLayout,
   AppPageToc,
   Button,
@@ -424,10 +425,6 @@ function sortTasks(tasks: ScheduledTaskSummary[]) {
   );
 }
 
-function sortPastDueTasks(tasks: ScheduledTaskSummary[]) {
-  return [...tasks].sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')) || taskName(a).localeCompare(taskName(b)));
-}
-
 function readConversationOptions(input: unknown): ConversationOption[] {
   if (!Array.isArray(input)) return [];
   return input
@@ -469,19 +466,6 @@ function readPickedFolderPath(input: unknown): string | null {
   if (record.cancelled === true) return null;
   const path = typeof record.path === 'string' ? record.path.trim() : '';
   return path || null;
-}
-
-function oneTimeTaskAtMs(task: Pick<ScheduledTaskSummary, 'at'>) {
-  const scheduledAt = task.at?.trim();
-  if (!scheduledAt) return null;
-  const atMs = Date.parse(scheduledAt);
-  return Number.isFinite(atMs) ? atMs : null;
-}
-
-function isPastDueOneTimeTask(task: ScheduledTaskSummary, nowMs = Date.now()) {
-  if (task.enabled === false || task.running || task.lastRunAt) return false;
-  const atMs = oneTimeTaskAtMs(task);
-  return atMs !== null && atMs <= nowMs;
 }
 
 function toneDotClass(tone: ActivityTone) {
@@ -1790,19 +1774,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     [closeEditor, editingId, load, pa],
   );
 
-  const enabledCount = useMemo(() => tasks.filter((task) => task.enabled !== false).length, [tasks]);
-  const enabledLabel = useMemo(() => (enabledCount === 1 ? '1 enabled' : `${enabledCount} enabled`), [enabledCount]);
-  const countLabel = useMemo(
-    () =>
-      `${tasks.length === 1 ? '1 scheduled publisher' : `${tasks.length} scheduled publishers`} · ${
-        eventBusSubscriptions.length === 1 ? '1 event rule' : `${eventBusSubscriptions.length} event rules`
-      }`,
-    [eventBusSubscriptions.length, tasks.length],
-  );
-  const nowMs = Date.now();
-  const allPastDueTasks = useMemo(() => sortPastDueTasks(tasks.filter((task) => isPastDueOneTimeTask(task, nowMs))), [tasks, nowMs]);
-  const pastDueLabel = allPastDueTasks.length === 1 ? '1 past due' : `${allPastDueTasks.length} past due`;
-
   const conversationLookup = useMemo(
     () => new Map(conversationOptions.map((conversation) => [conversation.id, conversation])),
     [conversationOptions],
@@ -1874,90 +1845,84 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
       >
         {!editorOpen && (
           <>
-            <div className="flex h-14 shrink-0 items-center justify-between border-b border-border-subtle/70">
-              <div className="flex min-w-0 items-center gap-4">
-                <div className="min-w-0">
-                  <h1 className="truncate text-[15px] font-semibold text-primary">Automations</h1>
-                  <div className="mt-0.5 truncate text-[12px] text-secondary">
-                    {enabledLabel} · {countLabel}
-                    {allPastDueTasks.length > 0 ? ` · ${pastDueLabel}` : ''}
-                  </div>
+            <AppPageIntro
+              title="Automations"
+              actions={
+                <div className="flex min-w-0 items-center gap-2">
+                  <SchedulerHealthDot health={health} />
+                  <Select
+                    name="automation-status-filter"
+                    aria-label="Filter by status"
+                    className="h-8 w-28 bg-surface/40 text-[13px]"
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value as ActivityStatusFilter)}
+                  >
+                    {(Object.keys(ACTIVITY_STATUS_FILTER_LABELS) as ActivityStatusFilter[]).map((value) => (
+                      <option key={value} value={value}>
+                        {ACTIVITY_STATUS_FILTER_LABELS[value]}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select
+                    name="automation-from-filter"
+                    aria-label="Filter by emitter"
+                    className="h-8 w-32 bg-surface/40 text-[13px]"
+                    value={fromFilter}
+                    onChange={(event) => setFromFilter(event.target.value)}
+                  >
+                    <option value="all">Emitter: All</option>
+                    {fromFilterOptions.map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select
+                    name="automation-used-by-filter"
+                    aria-label="Filter by automation"
+                    className="h-8 w-36 bg-surface/40 text-[13px]"
+                    value={usedByFilter}
+                    onChange={(event) => setUsedByFilter(event.target.value)}
+                  >
+                    <option value="all">Used by: All</option>
+                    {usedByFilterOptions.map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </Select>
+                  <SearchInput
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search events…"
+                    className="w-48 bg-surface/40 text-[13px]"
+                  />
+                  <Select
+                    name="automation-sort"
+                    aria-label="Sort events"
+                    className="h-8 w-32 bg-surface/40 text-[13px]"
+                    value={activitySort}
+                    onChange={(event) => setActivitySort(event.target.value as ActivitySort)}
+                  >
+                    {(Object.keys(ACTIVITY_SORT_LABELS) as ActivitySort[]).map((value) => (
+                      <option key={value} value={value}>
+                        {ACTIVITY_SORT_LABELS[value]}
+                      </option>
+                    ))}
+                  </Select>
+                  <ToolbarButton
+                    type="button"
+                    disabled={eventBusEvents.length === 0 || busy === 'clear-events'}
+                    onClick={() => void clearEventLog()}
+                  >
+                    {busy === 'clear-events' ? 'Clearing…' : 'Clear log'}
+                  </ToolbarButton>
+                  <IconButton title="Reload automations" aria-label="Reload automations" onClick={() => void reload()}>
+                    <RefreshIcon />
+                  </IconButton>
                 </div>
-                <SchedulerHealthDot health={health} />
-              </div>
-              <div className="flex min-w-0 items-center gap-2">
-                <Select
-                  name="automation-status-filter"
-                  aria-label="Filter by status"
-                  className="h-8 w-28 bg-surface/40 text-[13px]"
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value as ActivityStatusFilter)}
-                >
-                  {(Object.keys(ACTIVITY_STATUS_FILTER_LABELS) as ActivityStatusFilter[]).map((value) => (
-                    <option key={value} value={value}>
-                      {ACTIVITY_STATUS_FILTER_LABELS[value]}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  name="automation-from-filter"
-                  aria-label="Filter by emitter"
-                  className="h-8 w-32 bg-surface/40 text-[13px]"
-                  value={fromFilter}
-                  onChange={(event) => setFromFilter(event.target.value)}
-                >
-                  <option value="all">Emitter: All</option>
-                  {fromFilterOptions.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  name="automation-used-by-filter"
-                  aria-label="Filter by automation"
-                  className="h-8 w-36 bg-surface/40 text-[13px]"
-                  value={usedByFilter}
-                  onChange={(event) => setUsedByFilter(event.target.value)}
-                >
-                  <option value="all">Used by: All</option>
-                  {usedByFilterOptions.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </Select>
-                <SearchInput
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search events…"
-                  className="w-48 bg-surface/40 text-[13px]"
-                />
-                <Select
-                  name="automation-sort"
-                  aria-label="Sort events"
-                  className="h-8 w-32 bg-surface/40 text-[13px]"
-                  value={activitySort}
-                  onChange={(event) => setActivitySort(event.target.value as ActivitySort)}
-                >
-                  {(Object.keys(ACTIVITY_SORT_LABELS) as ActivitySort[]).map((value) => (
-                    <option key={value} value={value}>
-                      {ACTIVITY_SORT_LABELS[value]}
-                    </option>
-                  ))}
-                </Select>
-                <ToolbarButton
-                  type="button"
-                  disabled={eventBusEvents.length === 0 || busy === 'clear-events'}
-                  onClick={() => void clearEventLog()}
-                >
-                  {busy === 'clear-events' ? 'Clearing…' : 'Clear log'}
-                </ToolbarButton>
-                <IconButton title="Reload automations" aria-label="Reload automations" onClick={() => void reload()}>
-                  <RefreshIcon />
-                </IconButton>
-              </div>
-            </div>
+              }
+            />
             {notice ? <Notice>{notice}</Notice> : null}
           </>
         )}
