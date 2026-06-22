@@ -278,6 +278,33 @@ describe('TelegramGatewayRuntime', () => {
     );
   });
 
+  it('falls back to a new message when editing the working message fails', async () => {
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
+    const d = deps({
+      fetch: vi.fn(async (url: string) => ({
+        ok: !url.endsWith('/editMessageText'),
+        json: async () =>
+          url.endsWith('/editMessageText')
+            ? { ok: false, description: 'message is not modified' }
+            : { ok: true, result: url.endsWith('/sendMessage') ? { message_id: 42 } : true },
+      })),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: 'hello' } });
+    await runtime.deliverAssistantReply({ conversationId: 'conv-1', text: 'final reply' });
+
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/editMessageText',
+      expect.objectContaining({ body: expect.stringContaining('final reply') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('final reply') }),
+    );
+  });
+
   it('edits the working message into an error when prompt submission fails', async () => {
     state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
     const d = deps({

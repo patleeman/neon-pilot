@@ -234,7 +234,10 @@ export class TelegramGatewayRuntime {
     const pending = this.pendingStatusMessages.get(input.conversationId);
     if (pending) {
       this.pendingStatusMessages.delete(input.conversationId);
-      await this.editMessage(pending.chatId, pending.messageId, text);
+      const edited = await this.tryEditMessage(pending.chatId, pending.messageId, text);
+      if (!edited) {
+        await this.sendMessage(target.externalChatId, text);
+      }
     } else {
       await this.sendMessage(target.externalChatId, text);
     }
@@ -602,20 +605,32 @@ export class TelegramGatewayRuntime {
   }
 
   private async editMessage(chatId: string, messageId: number, text: string): Promise<void> {
+    const edited = await this.tryEditMessage(chatId, messageId, text);
+    if (!edited) {
+      await this.sendMessage(chatId, text);
+    }
+  }
+
+  private async tryEditMessage(chatId: string, messageId: number, text: string): Promise<boolean> {
     const token = this.dependencies.readBotToken();
-    if (!token) return;
+    if (!token) return false;
     const chunks = splitTelegramMessage(text);
     const [firstChunk = '', ...remainingChunks] = chunks;
-    await this.telegramRequest(token, 'editMessageText', {
-      chat_id: chatId,
-      message_id: messageId,
-      text: renderTelegramHtml(firstChunk),
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
-    });
+    try {
+      await this.telegramRequest(token, 'editMessageText', {
+        chat_id: chatId,
+        message_id: messageId,
+        text: renderTelegramHtml(firstChunk),
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      });
+    } catch {
+      return false;
+    }
     for (const chunk of remainingChunks) {
       await this.sendMessage(chatId, chunk);
     }
+    return true;
   }
 
   private async answerCallbackQuery(callbackQueryId: string): Promise<void> {
