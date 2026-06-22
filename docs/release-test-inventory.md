@@ -114,7 +114,9 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Nav item: Gateways.
 - Gateway provider: `telegram`.
 - Secret: `telegramBotToken`.
-- Test Telegram setup state, token save/redaction, start/stop/status, invalid token, incoming command routing, gateway sidebar, empty/error states, and extension disable cleanup.
+- Test Telegram setup state, token save/redaction, safe bot token check, approved user/chat ID persistence, start/stop/status, invalid token, incoming command routing, gateway sidebar, empty/error states, and extension disable cleanup.
+- Test Hermes-style Telegram UX: BotFather command menu publishing, `/help`, `/whoami`, `/threads`, `/switch`, `/model` with inline keyboards, callback handling, working-message edit into final replies, failed prompt edit into error text, HTML/rich markdown rendering, table/task-list normalization, link-preview suppression, and long-reply chunking.
+- Live smoke with real credentials: save bot token, add the tester's Telegram user ID or chat ID, run Test bot, send `/whoami`, `/threads`, tap a thread button, send `/model` and tap a model, send a prompt that returns markdown/table/task-list content, confirm the `⏳ Working…` message edits into the final response, and confirm an unapproved chat is rejected.
 
 ### Prompt Assembly runtime inspection (`system-prompt-assembly`)
 
