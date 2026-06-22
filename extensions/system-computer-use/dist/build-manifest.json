@@ -1,0 +1,37 @@
+{
+  "extensionId": "system-computer-use",
+  "builtAt": "2026-06-22T19:36:05.385Z",
+  "frontendEntry": null,
+  "backendEntry": "dist/backend.mjs",
+  "sourceHashes": [
+    {
+      "path": "extension.json",
+      "sha256": "97b4d05ef2f6caa35a28bc287799613f52b7b7e08384dd2a4a8741f023c13d1d"
+    },
+    {
+      "path": "src/backend.ts",
+      "sha256": "4aac69ca8e0381e3b944ba312fee7cf516d4877091a5257dc30cc89a2b5c1013"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "dist/package.json",
+      "bytes": 135,
+      "imports": []
+    },
+    {
+      "path": "dist/xhr-sync-worker.js",
+      "bytes": 1641,
+      "imports": []
+    },
+    {
+      "path": "extensions/system-computer-use/.dist.tmp-89326-1782156965172/backend.mjs",
+      "bytes": 11287,
+      "imports": [
+        "node:fs",
+        "node:path",
+        "node:url"
+      ]
+    }
+  ]
+}

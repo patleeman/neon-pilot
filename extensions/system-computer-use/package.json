@@ -1,0 +1,9 @@
+{
+  "name": "@neon-pilot/extension-system-computer-use",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@neon-pilot/extensions": "workspace:0.9.3-rc.2"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@earendil-works/pi-coding-agent",
+  "version": "0.78.1",
+  "piConfig": {
+    "configDir": ".pi"
+  },
+  "type": "module"
+}

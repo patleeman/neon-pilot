@@ -16,6 +16,14 @@ export async function callMcpTool(...args: unknown[]) {
   return callCoreExport('callMcpTool', ...args);
 }
 
+export async function callMcpToolDirect(...args: unknown[]) {
+  return callCoreExport('callMcpToolDirect', ...args);
+}
+
+export async function connectMcpServerDirect(...args: unknown[]) {
+  return callCoreExport('connectMcpServerDirect', ...args);
+}
+
 export async function clearMcpServerAuth(...args: unknown[]) {
   return callCoreExport('clearMcpServerAuth', ...args);
 }
