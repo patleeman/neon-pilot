@@ -152,7 +152,8 @@ describe('RoutinesPage', () => {
     await screen.findByText('Checkpoint timeline');
 
     fireEvent.click(screen.getByLabelText('More actions for Review code changes'));
-    expect(screen.getByText('Edit routine')).toBeTruthy();
+    expect(screen.getByText('Move to After')).toBeTruthy();
+    expect(screen.queryByText('Edit routine')).toBeNull();
     fireEvent.click(screen.getByText('Move to After'));
 
     await waitFor(() =>
@@ -176,8 +177,8 @@ describe('RoutinesPage', () => {
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('saveRoutine', expect.objectContaining({ name: 'Temporary instruction' })));
 
     await screen.findByText('Temporary instruction');
-    fireEvent.click(screen.getAllByText('Edit').at(-1) as HTMLElement);
-    fireEvent.click(screen.getByText('Delete'));
+    fireEvent.click(screen.getByLabelText('More actions for Temporary instruction'));
+    fireEvent.click(screen.getByText('Delete routine'));
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('deleteRoutine', expect.objectContaining({ routineId: expect.any(String) })));
   });
 });

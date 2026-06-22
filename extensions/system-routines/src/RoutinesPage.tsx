@@ -407,11 +407,6 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     [data?.routines, pa, selectedHookId, unsavedRoutineIds],
   );
 
-  const remove = useCallback(async () => {
-    if (!draft) return;
-    await deleteRoutine(draft);
-  }, [deleteRoutine, draft]);
-
   const addRoutine = useCallback(
     (type: RoutineType, parent?: { parentRoutineId: string; parentOutcomeId: string }) => {
       if (!selectedHook) return;
@@ -633,24 +628,11 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     if (!draft || draft.id !== routine.id) return null;
     return (
       <div className="border-t border-border-subtle bg-app/35 px-9 py-4" onClick={(event) => event.stopPropagation()}>
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <div className={cx('text-[12px]', draftIsDirty ? 'text-warning' : 'text-success')}>
-              {saving ? 'Saving…' : draftIsDirty ? 'Unsaved changes' : lastSavedAt ? `Saved at ${lastSavedAt}` : 'Saved'}
-            </div>
-            <p className="m-0 mt-1 text-[12px] text-secondary">Edit this routine inline. Save collapses it back into the timeline.</p>
+        <div className="mb-4">
+          <div className={cx('text-[12px]', draftIsDirty ? 'text-warning' : 'text-success')}>
+            {saving ? 'Saving…' : draftIsDirty ? 'Unsaved changes' : lastSavedAt ? `Saved at ${lastSavedAt}` : 'Saved'}
           </div>
-          <div className="flex shrink-0 gap-2">
-            <Button variant="ghost" onClick={() => void remove()}>
-              Delete
-            </Button>
-            <Button variant="ghost" disabled={saving} onClick={closeEditor}>
-              Done
-            </Button>
-            <Button variant="primary" disabled={!draftIsDirty || saving} onClick={() => void save()}>
-              {saving ? 'Saving…' : 'Save'}
-            </Button>
-          </div>
+          <p className="m-0 mt-1 text-[12px] text-secondary">Edit this routine inline. Save collapses it back into the timeline.</p>
         </div>
         {actionError ? (
           <div className="mb-4 rounded-md border border-danger/30 bg-danger/10 p-2 text-[12px] text-danger">{actionError}</div>
@@ -1087,52 +1069,58 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               >
                 {isEditing ? 'Done' : 'Edit'}
               </button>
-              <button
-                type="button"
-                aria-label={`More actions for ${routine.name}`}
-                aria-expanded={openRoutineMenuId === routine.id}
-                className="rounded px-2 py-1 text-xl leading-none text-secondary hover:bg-surface-3 hover:text-primary"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setOpenRoutineMenuId((current) => (current === routine.id ? null : routine.id));
-                }}
-              >
-                …
-              </button>
-              {openRoutineMenuId === routine.id ? (
-                <div
-                  className="absolute right-0 top-8 z-20 min-w-40 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] py-1 text-[12px] shadow-2xl"
-                  onClick={(event) => event.stopPropagation()}
+              {isEditing ? (
+                <button
+                  type="button"
+                  disabled={!draftIsDirty || saving}
+                  className="rounded bg-accent px-2 py-1 text-[12px] text-white disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-dim"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void save();
+                  }}
                 >
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+              ) : (
+                <>
                   <button
                     type="button"
-                    className="block w-full px-3 py-2 text-left text-primary hover:bg-surface-3"
-                    onClick={() => {
-                      selectRoutine(routine);
-                      setOpenRoutineMenuId(null);
+                    aria-label={`More actions for ${routine.name}`}
+                    aria-expanded={openRoutineMenuId === routine.id}
+                    className="rounded px-2 py-1 text-xl leading-none text-secondary hover:bg-surface-3 hover:text-primary"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setOpenRoutineMenuId((current) => (current === routine.id ? null : routine.id));
                     }}
                   >
-                    Edit routine
+                    …
                   </button>
-                  <button
-                    type="button"
-                    className="block w-full px-3 py-2 text-left text-primary hover:bg-surface-3"
-                    onClick={() => {
-                      setOpenRoutineMenuId(null);
-                      void moveRoutineById(routine.id, routine.position === 'before' ? 'after' : 'before');
-                    }}
-                  >
-                    Move to {routine.position === 'before' ? 'After' : 'Before'}
-                  </button>
-                  <button
-                    type="button"
-                    className="block w-full px-3 py-2 text-left text-danger hover:bg-surface-3"
-                    onClick={() => void deleteRoutine(routine)}
-                  >
-                    Delete routine
-                  </button>
-                </div>
-              ) : null}
+                  {openRoutineMenuId === routine.id ? (
+                    <div
+                      className="absolute right-0 top-8 z-20 min-w-40 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] py-1 text-[12px] shadow-2xl"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        className="block w-full px-3 py-2 text-left text-primary hover:bg-surface-3"
+                        onClick={() => {
+                          setOpenRoutineMenuId(null);
+                          void moveRoutineById(routine.id, routine.position === 'before' ? 'after' : 'before');
+                        }}
+                      >
+                        Move to {routine.position === 'before' ? 'After' : 'Before'}
+                      </button>
+                      <button
+                        type="button"
+                        className="block w-full px-3 py-2 text-left text-danger hover:bg-surface-3"
+                        onClick={() => void deleteRoutine(routine)}
+                      >
+                        Delete routine
+                      </button>
+                    </div>
+                  ) : null}
+                </>
+              )}
             </div>
           </div>
           {isEditing ? renderEditor(routine) : null}
