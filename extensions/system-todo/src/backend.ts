@@ -22,6 +22,11 @@ interface TodoState {
   items: TodoItem[];
 }
 
+function todoItemWithOptionalNote(item: Omit<TodoItem, 'note'> & { note?: string | undefined }): TodoItem {
+  const { note, ...rest } = item;
+  return note ? { ...rest, note } : rest;
+}
+
 interface ConversationInput {
   conversationId?: string;
 }
@@ -61,7 +66,7 @@ function normalizeState(value: unknown): TodoState {
         const note = typeof raw.note === 'string' && raw.note.trim() ? raw.note.trim().slice(0, MAX_NOTE_LENGTH) : undefined;
         const createdAt = typeof raw.createdAt === 'string' && raw.createdAt.trim() ? raw.createdAt : nowIso();
         const updatedAt = typeof raw.updatedAt === 'string' && raw.updatedAt.trim() ? raw.updatedAt : createdAt;
-        return [{ id, text, status: normalizeStatus(raw.status), ...(note ? { note } : {}), createdAt, updatedAt }];
+        return [todoItemWithOptionalNote({ id, text, status: normalizeStatus(raw.status), note, createdAt, updatedAt })];
       })
     : [];
 
@@ -77,7 +82,12 @@ async function readState(conversationId: string, ctx: ExtensionBackendContext): 
 }
 
 async function writeState(conversationId: string, state: TodoState, ctx: ExtensionBackendContext): Promise<TodoState> {
-  const next = { ...state, schemaVersion: 1 as const, updatedAt: nowIso(), items: state.items.slice(0, MAX_ITEMS) };
+  const next = {
+    ...state,
+    schemaVersion: 1 as const,
+    updatedAt: nowIso(),
+    items: state.items.slice(0, MAX_ITEMS).map(todoItemWithOptionalNote),
+  };
   await ctx.conversations.metadata.set({
     conversationId,
     namespace: METADATA_NAMESPACE,
@@ -124,7 +134,7 @@ export async function addItem(input: unknown, ctx: ExtensionBackendContext): Pro
   const at = nowIso();
   return writeState(
     conversationId,
-    { ...state, items: [{ id: makeId(), text, status, ...(note ? { note } : {}), createdAt: at, updatedAt: at }, ...state.items] },
+    { ...state, items: [todoItemWithOptionalNote({ id: makeId(), text, status, note, createdAt: at, updatedAt: at }), ...state.items] },
     ctx,
   );
 }
@@ -145,13 +155,13 @@ export async function updateItem(input: unknown, ctx: ExtensionBackendContext): 
     if (item.id !== id) return item;
     found = true;
     const note = hasNote ? optionalNote(record.note) : item.note;
-    return {
+    return todoItemWithOptionalNote({
       ...item,
       ...(hasText ? { text: requireText(record.text) } : {}),
       ...(hasStatus ? { status: normalizeStatus(record.status, item.status) } : {}),
-      ...(note ? { note } : { note: undefined }),
+      note,
       updatedAt: nowIso(),
-    };
+    });
   });
   if (!found) throw new Error(`Todo not found: ${id}`);
   return writeState(conversationId, { ...state, items }, ctx);
@@ -195,7 +205,7 @@ function planItemsFrom(input: unknown): Array<{ text: string; status: TodoStatus
 export async function setPlan(input: unknown, ctx: ExtensionBackendContext): Promise<TodoState> {
   const conversationId = conversationIdFrom(input, ctx);
   const at = nowIso();
-  const items = planItemsFrom(input).map((item) => ({ id: makeId(), ...item, createdAt: at, updatedAt: at }));
+  const items = planItemsFrom(input).map((item) => todoItemWithOptionalNote({ id: makeId(), ...item, createdAt: at, updatedAt: at }));
   const state = await readState(conversationId, ctx);
   return writeState(conversationId, { ...state, items }, ctx);
 }
