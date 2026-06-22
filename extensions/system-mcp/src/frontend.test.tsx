@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { McpSettingsPanel } from './frontend';
@@ -45,15 +45,7 @@ vi.mock('@neon-pilot/extensions/settings', () => ({
       {children}
     </section>
   ),
-  SettingsRow: ({
-    title,
-    description,
-    children,
-  }: {
-    title: React.ReactNode;
-    description?: React.ReactNode;
-    children: React.ReactNode;
-  }) => (
+  SettingsRow: ({ title, description, children }: { title: React.ReactNode; description?: React.ReactNode; children: React.ReactNode }) => (
     <section>
       <h4>{title}</h4>
       {description ? <p>{description}</p> : null}
@@ -191,9 +183,11 @@ describe('McpSettingsPanel', () => {
     fireEvent.change(screen.getByLabelText('Argument 2'), { target: { value: '--stdio' } });
     fireEvent.click(screen.getAllByRole('button', { name: 'Up' }).at(-1)!);
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[1]!);
-    fireEvent.click(screen.getByRole('button', { name: 'Save server' }));
 
-    await waitFor(() => expect(mocks.api.invokeExtensionAction).toHaveBeenCalledWith('system-mcp', 'saveExplicitConfig', expect.any(Object)));
+    await waitFor(
+      () => expect(mocks.api.invokeExtensionAction).toHaveBeenCalledWith('system-mcp', 'saveExplicitConfig', expect.any(Object)),
+      { timeout: 1400 },
+    );
     const payload = mocks.api.invokeExtensionAction.mock.calls[0]?.[2] as { json: string };
     expect(JSON.parse(payload.json)).toEqual({
       mcpServers: {

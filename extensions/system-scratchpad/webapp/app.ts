@@ -13,13 +13,14 @@ const meta = document.querySelector<HTMLSpanElement>('#meta')!;
 const notice = document.querySelector<HTMLDivElement>('#notice')!;
 const count = document.querySelector<HTMLSpanElement>('#count')!;
 const conversation = document.querySelector<HTMLSpanElement>('#conversation')!;
-const saveButton = document.querySelector<HTMLButtonElement>('#save')!;
 const clearButton = document.querySelector<HTMLButtonElement>('#clear')!;
 const revertButton = document.querySelector<HTMLButtonElement>('#revert')!;
 const refreshButton = document.querySelector<HTMLButtonElement>('#refresh')!;
 
 let saved = '';
 let saving = false;
+let autosaveTimer: number | null = null;
+let saveRequestId = 0;
 
 function setNotice(message: string | null, tone: 'info' | 'error' = 'info') {
   if (!message) {
@@ -39,9 +40,13 @@ function dirty() {
 
 function updateControls() {
   count.textContent = `${editor.value.length.toLocaleString()} chars`;
-  saveButton.disabled = saving || !conversationId || !dirty();
   revertButton.disabled = saving || !dirty();
   clearButton.disabled = saving || !conversationId || editor.value.length === 0;
+  if (saving) {
+    meta.textContent = 'Saving...';
+  } else if (dirty()) {
+    meta.textContent = 'Unsaved changes';
+  }
 }
 
 async function invoke<T>(actionId: string, input: unknown): Promise<T> {
@@ -88,28 +93,55 @@ async function load() {
 }
 
 async function save(content: string) {
+  const requestId = ++saveRequestId;
   saving = true;
   updateControls();
   setNotice(null);
   try {
-    applyState(await invoke<ScratchpadState>('setScratchpad', { conversationId, content }));
+    const state = await invoke<ScratchpadState>('setScratchpad', { conversationId, content });
+    if (saveRequestId !== requestId) return;
+    saved = state.content ?? '';
+    if (editor.value === content) {
+      editor.value = saved;
+    }
+    meta.textContent = state.updatedAt ? `Updated ${new Date(state.updatedAt).toLocaleString()}` : 'No saved notes';
+    updateControls();
     setNotice(content.trim() ? 'Saved' : 'Cleared');
   } catch (error) {
+    if (saveRequestId !== requestId) return;
     setNotice(error instanceof Error ? error.message : String(error), 'error');
   } finally {
-    saving = false;
-    updateControls();
+    if (saveRequestId === requestId) {
+      saving = false;
+      updateControls();
+    }
   }
 }
 
-editor.addEventListener('input', updateControls);
+function scheduleAutosave() {
+  updateControls();
+  setNotice(null);
+  if (autosaveTimer !== null) {
+    window.clearTimeout(autosaveTimer);
+  }
+  if (!conversationId || !dirty()) return;
+  autosaveTimer = window.setTimeout(() => {
+    autosaveTimer = null;
+    void save(editor.value);
+  }, 700);
+}
+
+editor.addEventListener('input', scheduleAutosave);
 refreshButton.addEventListener('click', () => void load());
 revertButton.addEventListener('click', () => {
+  if (autosaveTimer !== null) {
+    window.clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+  }
   editor.value = saved;
   setNotice(null);
   updateControls();
 });
 clearButton.addEventListener('click', () => void save(''));
-saveButton.addEventListener('click', () => void save(editor.value));
 
 void load();

@@ -27,6 +27,7 @@ export function ScratchpadPanel({ pa, context }: ExtensionSurfaceProps) {
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const paRef = useRef(pa);
   const loadRequestIdRef = useRef(0);
+  const saveRequestIdRef = useRef(0);
   paRef.current = pa;
 
   const dirty = draft !== state.content;
@@ -59,24 +60,44 @@ export function ScratchpadPanel({ pa, context }: ExtensionSurfaceProps) {
     void load();
   }, [conversationId, load]);
 
-  async function save(content: string) {
-    if (!conversationId || saving) return;
-    setSaving(true);
-    setError(null);
-    setSavedMessage(null);
-    try {
-      const next = normalizeState(await paRef.current.extension.invoke('setScratchpad', { conversationId, content }), conversationId);
-      setState(next);
-      setDraft(next.content);
-      setSavedMessage(content.trim() ? 'Saved' : 'Cleared');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message);
-      paRef.current.ui?.notify?.({ type: 'error', source: 'Scratchpad', message: 'Scratchpad update failed', details: message });
-    } finally {
-      setSaving(false);
+  const save = useCallback(
+    async (content: string) => {
+      if (!conversationId || saving) return;
+      const requestId = (saveRequestIdRef.current += 1);
+      setSaving(true);
+      setError(null);
+      setSavedMessage(null);
+      try {
+        const next = normalizeState(await paRef.current.extension.invoke('setScratchpad', { conversationId, content }), conversationId);
+        if (saveRequestIdRef.current !== requestId) return;
+        setState(next);
+        setDraft((current) => (current === content ? next.content : current));
+        setSavedMessage(content.trim() ? 'Saved' : 'Cleared');
+      } catch (err) {
+        if (saveRequestIdRef.current !== requestId) return;
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
+        paRef.current.ui?.notify?.({ type: 'error', source: 'Scratchpad', message: 'Scratchpad update failed', details: message });
+      } finally {
+        if (saveRequestIdRef.current === requestId) setSaving(false);
+      }
+    },
+    [conversationId, saving],
+  );
+
+  useEffect(() => {
+    if (!conversationId || loading || saving || !dirty) {
+      return undefined;
     }
-  }
+
+    const timeout = window.setTimeout(() => {
+      void save(draft);
+    }, 700);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [conversationId, dirty, draft, loading, save, saving]);
 
   if (!conversationId) {
     return (
@@ -95,7 +116,15 @@ export function ScratchpadPanel({ pa, context }: ExtensionSurfaceProps) {
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-sm font-semibold">Scratchpad</h2>
             <p className="truncate text-[11px] text-muted">
-              {state.updatedAt ? `Updated ${new Date(state.updatedAt).toLocaleString()}` : loading ? 'Loading...' : 'No saved notes'}
+              {saving
+                ? 'Saving...'
+                : dirty
+                  ? 'Unsaved changes'
+                  : state.updatedAt
+                    ? `Updated ${new Date(state.updatedAt).toLocaleString()}`
+                    : loading
+                      ? 'Loading...'
+                      : 'No saved notes'}
             </p>
           </div>
           <IconButton
@@ -142,9 +171,6 @@ export function ScratchpadPanel({ pa, context }: ExtensionSurfaceProps) {
         </TextButton>
         <TextButton disabled={!draft || saving || loading} onClick={() => void save('')}>
           Clear
-        </TextButton>
-        <TextButton disabled={!dirty || saving || loading} onClick={() => void save(draft)}>
-          {saving ? 'Saving...' : 'Save'}
         </TextButton>
       </footer>
     </section>

@@ -18,7 +18,7 @@ import {
   TextInput,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type WorkflowSummary = {
   id: string;
@@ -303,6 +303,7 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
   const [draft, setDraft] = useState<SavedWorkflowDraft>(EMPTY_DRAFT);
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
+  const [draftStatus, setDraftStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const selected = detail?.workflow ?? workflows.find((workflow) => workflow.id === selectedId) ?? null;
@@ -317,6 +318,8 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
   const selectedSavedWorkflow = selectedTemplate ? (savedWorkflows.find((workflow) => workflow.id === selectedTemplate.id) ?? null) : null;
   const pageSummary = `${workflows.length} runs / ${savedWorkflows.length} saved / ${templates.length} templates`;
   const hasLibraryItems = workflows.length > 0 || savedWorkflows.length > 0 || templates.length > 0;
+  const savedDraftRef = useRef<string | null>(null);
+  const draftSaveRequestIdRef = useRef(0);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -385,20 +388,40 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
     await refresh();
   }
 
-  async function saveDraft() {
-    setDraftError(null);
+  useEffect(() => {
+    if (!draftOpen || !draft.id) return undefined;
+    let payload: ReturnType<typeof parseDraft>;
     try {
-      const payload = parseDraft(draft);
-      if (!payload.name) throw new Error('Name is required.');
-      if (!payload.script.trim()) throw new Error('Script is required.');
-      await pa.extension.invoke('saveWorkflow', payload);
-      setDraftOpen(false);
-      setDraft(EMPTY_DRAFT);
-      await refresh();
+      payload = parseDraft(draft);
+      if (!payload.name || !payload.script.trim()) return undefined;
     } catch (saveError) {
       setDraftError(saveError instanceof Error ? saveError.message : String(saveError));
+      return undefined;
     }
-  }
+
+    const serialized = JSON.stringify(payload);
+    if (serialized === savedDraftRef.current) return undefined;
+    setDraftError(null);
+    setDraftStatus('Unsaved changes');
+    const timeout = window.setTimeout(() => {
+      const requestId = (draftSaveRequestIdRef.current += 1);
+      setDraftStatus('Saving...');
+      void pa.extension
+        .invoke('saveWorkflow', payload)
+        .then(async () => {
+          if (draftSaveRequestIdRef.current !== requestId) return;
+          savedDraftRef.current = serialized;
+          setDraftStatus('Saved');
+          await refresh();
+        })
+        .catch((saveError: unknown) => {
+          if (draftSaveRequestIdRef.current !== requestId) return;
+          setDraftError(saveError instanceof Error ? saveError.message : String(saveError));
+          setDraftStatus('Save failed');
+        });
+    }, 900);
+    return () => window.clearTimeout(timeout);
+  }, [draft, draftOpen, pa.extension, refresh]);
 
   async function deleteSaved(template: WorkflowTemplate) {
     await pa.extension.invoke('deleteSavedWorkflow', { id: template.id });
@@ -407,8 +430,11 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
   }
 
   function editSaved(template: WorkflowTemplate) {
-    setDraft(templateToDraft(template));
+    const nextDraft = templateToDraft(template);
+    setDraft(nextDraft);
+    savedDraftRef.current = JSON.stringify(parseDraft(nextDraft));
     setDraftError(null);
+    setDraftStatus(null);
     setDraftOpen(true);
   }
 
@@ -582,12 +608,14 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                     onChange={(event) => setDraft((current) => ({ ...current, script: event.target.value }))}
                   />
                 </Field>
+                {draftStatus ? <p className="text-[12px] text-dim">{draftStatus}</p> : null}
                 <div className="flex flex-wrap gap-2">
-                  <ToolbarButton onClick={() => void saveDraft()}>Save</ToolbarButton>
                   <ToolbarButton
                     onClick={() => {
                       setDraftOpen(false);
                       setDraftError(null);
+                      setDraftStatus(null);
+                      savedDraftRef.current = null;
                     }}
                   >
                     Close
@@ -627,8 +655,8 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                   ) : null}
                   <IconButton
                     compact
-                    aria-label={`Save ${selectedTemplate.name}`}
-                    title={`Save ${selectedTemplate.name}`}
+                    aria-label={`Add ${selectedTemplate.name} to saved workflows`}
+                    title={`Add ${selectedTemplate.name} to saved workflows`}
                     onClick={() => void saveTemplate(selectedTemplate)}
                   >
                     <SaveIcon />

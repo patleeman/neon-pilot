@@ -1388,6 +1388,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const [editorOpen, setEditorOpen] = useState(openNewFromRoute);
   const [form, setForm] = useState<AutomationFormState>(emptyForm);
   const [busy, setBusy] = useState<string | null>(null);
+  const [autosaveStatus, setAutosaveStatus] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<ActivityStatusFilter>('all');
   const [fromFilter, setFromFilter] = useState('all');
   const [usedByFilter, setUsedByFilter] = useState('all');
@@ -1398,6 +1399,8 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const [conversationOptions, setConversationOptions] = useState<ConversationOption[]>([]);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const createWithChatInFlightRef = useRef(false);
+  const savedFormInputRef = useRef<string | null>(null);
+  const autosaveRequestIdRef = useRef(0);
   const loadSequenceRef = useRef(0);
   const backgroundReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1516,9 +1519,12 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   }, [eventBusEvents.length, load, pa]);
 
   const openEditor = useCallback((task?: ScheduledTaskSummary) => {
+    const nextForm = task ? formFromTask(task) : { ...emptyForm };
     setEditingId(task?.id ?? null);
     setEditorOpen(true);
-    setForm(task ? formFromTask(task) : { ...emptyForm });
+    setForm(nextForm);
+    savedFormInputRef.current = task ? JSON.stringify(readFormInput(nextForm)) : null;
+    setAutosaveStatus(null);
     setNotice(null);
   }, []);
 
@@ -1526,6 +1532,8 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     setEditingId(null);
     setEditorOpen(false);
     setForm(emptyForm);
+    savedFormInputRef.current = null;
+    setAutosaveStatus(null);
   }, []);
 
   const createWithChat = useCallback(async () => {
@@ -1549,30 +1557,47 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     }
   }, [closeEditor, form, pa]);
 
-  const save = useCallback(
-    async (event: React.FormEvent) => {
-      event.preventDefault();
+  useEffect(() => {
+    if (!editorOpen || !editingId || busy === 'save' || !form.title.trim() || !form.prompt.trim()) {
+      return undefined;
+    }
+
+    const input = readFormInput(form);
+    const serialized = JSON.stringify(input);
+    if (serialized === savedFormInputRef.current) {
+      setAutosaveStatus(null);
+      return undefined;
+    }
+
+    setAutosaveStatus('Unsaved changes');
+    const timeout = window.setTimeout(() => {
+      const requestId = (autosaveRequestIdRef.current += 1);
       setBusy('save');
-      try {
-        if (editingId) {
-          await pa.automations.update(editingId, readFormInput(form));
-          setNotice('Automation updated.');
-        } else {
-          await pa.automations.create(readFormInput(form));
-          setNotice('Automation created.');
-        }
-        closeEditor();
-        await load();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(msg);
-        pa.ui.notify({ type: 'error', message: `Failed to save automation: ${msg}`, source: 'system-automations' });
-      } finally {
-        setBusy(null);
-      }
-    },
-    [closeEditor, editingId, form, load, pa],
-  );
+      setAutosaveStatus('Saving...');
+      void pa.automations
+        .update(editingId, input)
+        .then(async () => {
+          if (autosaveRequestIdRef.current !== requestId) return;
+          savedFormInputRef.current = serialized;
+          setAutosaveStatus('Saved');
+          await load();
+        })
+        .catch((err: unknown) => {
+          if (autosaveRequestIdRef.current !== requestId) return;
+          const msg = err instanceof Error ? err.message : String(err);
+          setError(msg);
+          setAutosaveStatus('Save failed');
+          pa.ui.notify({ type: 'error', message: `Failed to update automation: ${msg}`, source: 'system-automations' });
+        })
+        .finally(() => {
+          if (autosaveRequestIdRef.current === requestId) setBusy(null);
+        });
+    }, 900);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [busy, editingId, editorOpen, form, load, pa]);
 
   const reemitActivityEvent = useCallback(
     async (event: AutomationActivityEvent) => {
@@ -1941,7 +1966,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
           <form
             onSubmit={(event) => {
               if (editingId) {
-                void save(event);
+                event.preventDefault();
                 return;
               }
               event.preventDefault();
@@ -1974,14 +1999,9 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                   <p className="mt-2 text-[13px] text-secondary">
                     Define what the agent should do, when it should run, and where results should appear.
                   </p>
+                  {editingId && autosaveStatus ? <p className="mt-2 text-[12px] text-muted">{autosaveStatus}</p> : null}
                 </div>
-                {editingId ? (
-                  <div className="flex shrink-0 flex-wrap gap-2">
-                    <ToolbarButton type="submit" disabled={busy === 'save'}>
-                      {busy === 'save' ? 'Saving…' : 'Save changes'}
-                    </ToolbarButton>
-                  </div>
-                ) : (
+                {!editingId ? (
                   <ToolbarButton
                     type="button"
                     className="self-start"
@@ -1990,7 +2010,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                   >
                     {busy === 'create-chat' ? 'Opening chat…' : 'Create with chat'}
                   </ToolbarButton>
-                )}
+                ) : null}
               </div>
 
               <FormSection
@@ -2395,15 +2415,11 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {editingId ? (
-                    <ToolbarButton type="submit" disabled={busy === 'save'}>
-                      {busy === 'save' ? 'Saving…' : 'Save changes'}
-                    </ToolbarButton>
-                  ) : (
+                  {!editingId ? (
                     <ToolbarButton type="button" disabled={busy === 'create-chat'} onClick={() => void createWithChat()}>
                       {busy === 'create-chat' ? 'Opening chat…' : 'Create with chat'}
                     </ToolbarButton>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </AppPageLayout>

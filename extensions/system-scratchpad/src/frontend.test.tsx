@@ -22,7 +22,15 @@ function renderPanel({
     <ScratchpadPanel
       pa={{ extension: { invoke }, ui: { notify } } as never}
       context={{ conversationId, cwd: '/repo', pathname: '', search: '', hash: '' }}
-      surface={{ id: 'scratchpad', extensionId: 'system-scratchpad', title: 'Scratchpad', location: 'rightRail', component: 'ScratchpadPanel' } as never}
+      surface={
+        {
+          id: 'scratchpad',
+          extensionId: 'system-scratchpad',
+          title: 'Scratchpad',
+          location: 'rightRail',
+          component: 'ScratchpadPanel',
+        } as never
+      }
       params={{}}
     />,
   );
@@ -42,11 +50,13 @@ describe('ScratchpadPanel', () => {
     expect((editor as HTMLTextAreaElement).value).toBe('Initial note');
 
     fireEvent.change(editor, { target: { value: 'Updated note' } });
-    fireEvent.click(screen.getByText('Save'));
 
-    await waitFor(() => {
-      expect(invoke).toHaveBeenCalledWith('setScratchpad', { conversationId: 'conv-1', content: 'Updated note' });
-    });
+    await waitFor(
+      () => {
+        expect(invoke).toHaveBeenCalledWith('setScratchpad', { conversationId: 'conv-1', content: 'Updated note' });
+      },
+      { timeout: 1200 },
+    );
     expect(await screen.findByText('Saved')).toBeTruthy();
   });
 

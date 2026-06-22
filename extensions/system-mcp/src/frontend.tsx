@@ -11,7 +11,7 @@ import {
   ToolbarButton,
   useApi,
 } from '@neon-pilot/extensions/settings';
-import React, { type FormEvent, useEffect, useMemo, useState } from 'react';
+import React, { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 type McpServerConfig = {
   name: string;
@@ -123,9 +123,7 @@ function configFromDraft(draft: ServerDraft, existing?: Record<string, unknown>)
     return { ...base, type: 'remote', url: draft.url.trim() };
   }
 
-  const args = draft.args
-    .map((arg) => arg.trim())
-    .filter(Boolean);
+  const args = draft.args.map((arg) => arg.trim()).filter(Boolean);
   return {
     ...base,
     command: draft.command.trim(),
@@ -177,16 +175,20 @@ export function McpSettingsPanel() {
     message: null,
   });
   const [operation, setOperation] = useState<Record<string, { busy?: boolean; message?: string; error?: string }>>({});
+  const savedDraftRef = useRef<string | null>(null);
+  const autosaveRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (mcpState) {
       const nextConfig = parseExplicitConfig(mcpState.explicitConfigJson);
       const nextServerNames = Object.keys(nextConfig.mcpServers).sort((a, b) => a.localeCompare(b));
       const nextSelectedName =
-        selectedServerName && nextServerNames.includes(selectedServerName) ? selectedServerName : nextServerNames[0] ?? null;
+        selectedServerName && nextServerNames.includes(selectedServerName) ? selectedServerName : (nextServerNames[0] ?? null);
       setExplicitConfig(nextConfig);
       setSelectedServerName(nextSelectedName);
-      setDraft(nextSelectedName ? draftFromRawServer(nextSelectedName, nextConfig.mcpServers[nextSelectedName] ?? {}) : null);
+      const nextDraft = nextSelectedName ? draftFromRawServer(nextSelectedName, nextConfig.mcpServers[nextSelectedName] ?? {}) : null;
+      setDraft(nextDraft);
+      savedDraftRef.current = nextDraft ? JSON.stringify(nextDraft) : null;
       setSaveState({ busy: false, error: null, message: null });
     }
   }, [mcpState?.explicitConfigJson]);
@@ -199,8 +201,10 @@ export function McpSettingsPanel() {
     () => Object.keys(visibleExplicitConfig.mcpServers).sort((a, b) => a.localeCompare(b)),
     [visibleExplicitConfig],
   );
-  const selectedRawServer = selectedServerName ? visibleExplicitConfig.mcpServers[selectedServerName] ?? null : null;
-  const selectedEffectiveServer = selectedServerName ? mcpState?.servers.find((entry) => entry.name === selectedServerName) ?? null : null;
+  const selectedRawServer = selectedServerName ? (visibleExplicitConfig.mcpServers[selectedServerName] ?? null) : null;
+  const selectedEffectiveServer = selectedServerName
+    ? (mcpState?.servers.find((entry) => entry.name === selectedServerName) ?? null)
+    : null;
   const selectedDisabled = Boolean(selectedRawServer && (selectedRawServer.disabled === true || selectedRawServer.enabled === false));
   const selectedStatus = selectedServerName ? operation[selectedServerName] : undefined;
 
@@ -234,6 +238,41 @@ export function McpSettingsPanel() {
     await persist({ mcpServers: nextServers }, `${name} saved.`);
   }
 
+  useEffect(() => {
+    if (!draft?.originalName || saveState.busy) return undefined;
+    const validationError = validateDraft(draft);
+    if (validationError) return undefined;
+    const serialized = JSON.stringify(draft);
+    if (serialized === savedDraftRef.current) return undefined;
+
+    setSaveState({ busy: false, error: null, message: 'Unsaved changes' });
+    const timeout = window.setTimeout(() => {
+      const requestId = (autosaveRequestIdRef.current += 1);
+      const name = draft.name.trim();
+      const nextServers = { ...explicitConfig.mcpServers };
+      if (draft.originalName && draft.originalName !== name) delete nextServers[draft.originalName];
+      const existingServer = draft.originalName ? explicitConfig.mcpServers[draft.originalName] : undefined;
+      nextServers[name] = configFromDraft(draft, existingServer as Record<string, unknown> | undefined);
+      setSaveState({ busy: true, error: null, message: null });
+      void saveExplicitMcpConfig({ mcpServers: nextServers })
+        .then(async () => {
+          if (autosaveRequestIdRef.current !== requestId) return;
+          savedDraftRef.current = JSON.stringify({ ...draft, originalName: name, name });
+          setExplicitConfig({ mcpServers: nextServers });
+          setSelectedServerName(name);
+          setDraft((current) => (current ? { ...current, originalName: name, name } : current));
+          await refetch();
+          setSaveState({ busy: false, error: null, message: `${name} saved.` });
+        })
+        .catch((error: unknown) => {
+          if (autosaveRequestIdRef.current !== requestId) return;
+          setSaveState({ busy: false, error: error instanceof Error ? error.message : String(error), message: null });
+        });
+    }, 900);
+
+    return () => window.clearTimeout(timeout);
+  }, [draft, explicitConfig.mcpServers, refetch, saveState.busy]);
+
   async function removeServer(name: string) {
     const nextServers = { ...explicitConfig.mcpServers };
     delete nextServers[name];
@@ -265,12 +304,14 @@ export function McpSettingsPanel() {
   function selectServer(name: string, rawServer: Record<string, unknown>, server?: McpServerConfig) {
     setSelectedServerName(name);
     setDraft(server ? draftFromServer(server) : draftFromRawServer(name, rawServer));
+    savedDraftRef.current = JSON.stringify(server ? draftFromServer(server) : draftFromRawServer(name, rawServer));
     setSaveState({ busy: false, error: null, message: null });
   }
 
   function startNewServerDraft() {
     setSelectedServerName(null);
     setDraft({ ...emptyDraft });
+    savedDraftRef.current = null;
     setSaveState({ busy: false, error: null, message: null });
   }
 
@@ -339,10 +380,23 @@ export function McpSettingsPanel() {
 
           <RailSubsection title={draft?.originalName ? `Server details: ${draft.originalName}` : 'Server details'}>
             {draft ? (
-              <form className="space-y-3" onSubmit={handleSubmitDraft}>
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  if (draft.originalName) {
+                    event.preventDefault();
+                    return;
+                  }
+                  void handleSubmitDraft(event);
+                }}
+              >
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Name">
-                    <TextInput value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} autoComplete="off" />
+                    <TextInput
+                      value={draft.name}
+                      onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                      autoComplete="off"
+                    />
                   </Field>
                   <Field label="Transport">
                     <Select
@@ -423,9 +477,11 @@ export function McpSettingsPanel() {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <ToolbarButton type="submit" disabled={saveState.busy || Boolean(validateDraft(draft))}>
-                    {saveState.busy ? 'Saving…' : 'Save server'}
-                  </ToolbarButton>
+                  {!draft.originalName ? (
+                    <ToolbarButton type="submit" disabled={saveState.busy || Boolean(validateDraft(draft))}>
+                      {saveState.busy ? 'Adding…' : 'Add server'}
+                    </ToolbarButton>
+                  ) : null}
                   {draft.originalName ? (
                     <>
                       <ToolbarButton type="button" onClick={() => void toggleServer(draft.originalName!)} disabled={saveState.busy}>
@@ -468,7 +524,9 @@ export function McpSettingsPanel() {
                   ) : (
                     <ToolbarButton
                       type="button"
-                      onClick={() => setDraft(selectedServerName && selectedRawServer ? draftFromRawServer(selectedServerName, selectedRawServer) : null)}
+                      onClick={() =>
+                        setDraft(selectedServerName && selectedRawServer ? draftFromRawServer(selectedServerName, selectedRawServer) : null)
+                      }
                     >
                       Cancel
                     </ToolbarButton>

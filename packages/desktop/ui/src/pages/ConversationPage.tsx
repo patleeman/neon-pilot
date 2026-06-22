@@ -3738,8 +3738,13 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       return;
     }
 
+    if (nextTitle === title) {
+      setIsEditingTitle(false);
+      return;
+    }
+
     await renameConversationTo(nextTitle);
-  }, [draft, id, renameConversationTo, showNotice, titleDraft]);
+  }, [draft, id, renameConversationTo, showNotice, title, titleDraft]);
 
   const submitConversationCwdChange = useCallback(
     async (nextCwdOverride?: string | null) => {
@@ -6306,39 +6311,25 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                           if (event.key === 'Escape') {
                             event.preventDefault();
                             cancelTitleEdit();
+                            return;
                           }
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            void saveTitleEdit();
+                          }
+                        }}
+                        onBlur={() => {
+                          void saveTitleEdit();
                         }}
                         placeholder="Name this conversation"
                         className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-1.5 text-[32px] font-semibold leading-[1.08] tracking-[-0.018em] text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 sm:text-[36px]"
                         disabled={titleSaving}
                       />
                       <IconButton
-                        type="submit"
-                        shape="circle"
-                        size="sm"
-                        className="h-8 w-8 text-accent hover:bg-accent/10 hover:text-accent focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={titleSaving}
-                        title={titleSaving ? 'Saving…' : 'Save title'}
-                        aria-label={titleSaving ? 'Saving title' : 'Save title'}
-                      >
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M20 6 9 17l-5-5" />
-                        </svg>
-                      </IconButton>
-                      <IconButton
                         shape="circle"
                         size="sm"
                         className="h-8 w-8 text-secondary hover:bg-surface-hover hover:text-primary focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+                        onMouseDown={(event) => event.preventDefault()}
                         onClick={cancelTitleEdit}
                         disabled={titleSaving}
                         title="Cancel title edit"
