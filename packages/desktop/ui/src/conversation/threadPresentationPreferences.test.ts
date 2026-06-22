@@ -38,6 +38,14 @@ describe('threadPresentationPreferences', () => {
     expect(readThreadsSortMode()).toBe('updated');
   });
 
+  it('lets manual ordering coexist with project organization', () => {
+    writeThreadsOrganizeMode('project');
+    writeThreadsSortMode('manual');
+
+    expect(readThreadsOrganizeMode()).toBe('project');
+    expect(readThreadsSortMode()).toBe('manual');
+  });
+
   it('preserves legacy manual organize mode as manual sort', () => {
     writeThreadsOrganizeMode('project');
     window.localStorage.setItem('pa:sidebar-nav-section:threads-organize', 'manual');

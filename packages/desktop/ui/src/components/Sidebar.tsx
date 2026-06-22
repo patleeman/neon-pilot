@@ -1887,15 +1887,6 @@ export function Sidebar() {
     };
   }, [versions.sessions]);
 
-  useEffect(() => {
-    if (readThreadsSortMode() !== 'manual') {
-      return;
-    }
-
-    writeThreadsOrganizeMode('chronological');
-    writeThreadsSortMode('manual');
-  }, []);
-
   const showSidebarNotice = useCallback((tone: 'accent' | 'danger', text: string, durationMs = 2500) => {
     if (tone === 'danger') {
       addNotification({ type: 'error', message: text, source: 'sidebar' });
