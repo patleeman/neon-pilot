@@ -142,6 +142,7 @@ export class TelegramGatewayRuntime {
     if (!token) return;
     this.abortController = new AbortController();
     this.polling = true;
+    void this.configureBotCommands(token).catch(() => undefined);
     void this.pollLoop(token, this.abortController.signal);
   }
 
@@ -473,6 +474,23 @@ export class TelegramGatewayRuntime {
       externalChatLabel: chat.externalChatLabel,
     });
     await this.sendMessage(chat.externalChatId, `Switched this Telegram chat to ${selected.title || selected.id}.`);
+  }
+
+  private async configureBotCommands(token: string): Promise<void> {
+    await this.telegramRequest(token, 'setMyCommands', {
+      commands: [
+        { command: 'help', description: 'Show Telegram gateway commands' },
+        { command: 'new', description: 'Start a new Neon Pilot conversation' },
+        { command: 'threads', description: 'List and switch conversations' },
+        { command: 'model', description: 'Show or change the model' },
+        { command: 'status', description: 'Show current gateway status' },
+        { command: 'stop', description: 'Pause replies for this conversation' },
+        { command: 'resume', description: 'Resume replies or switch to a named thread' },
+        { command: 'compact', description: 'Compact the current thread' },
+        { command: 'rename', description: 'Rename the current thread' },
+        { command: 'archive', description: 'Archive and detach the thread' },
+      ],
+    });
   }
 
   private async pollLoop(token: string, signal: AbortSignal): Promise<void> {

@@ -248,16 +248,20 @@ describe('TelegramGatewayRuntime', () => {
     await expect(runtime.deliverAssistantReply({ conversationId: 'conv-1', text: 'hello' })).resolves.toBe(false);
   });
 
-  it('start/stop respect bot token availability and abort polling', () => {
+  it('start/stop respect bot token availability, publishes Telegram commands, and aborts polling', async () => {
     const d = deps({ readBotToken: vi.fn(() => null) });
     const runtime = new TelegramGatewayRuntime(d as never);
     runtime.start();
     expect(d.fetch).not.toHaveBeenCalled();
 
-    const d2 = deps({ fetch: vi.fn(async () => new Promise(() => undefined)) });
+    const d2 = deps({ fetch: vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, result: [] }) })) });
     const runtime2 = new TelegramGatewayRuntime(d2 as never);
     runtime2.start();
+    await vi.waitFor(() => expect(d2.fetch).toHaveBeenCalledWith('https://api.telegram.org/bottoken/setMyCommands', expect.anything()));
+    expect(d2.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/setMyCommands',
+      expect.objectContaining({ body: expect.stringContaining('"command":"threads"') }),
+    );
     runtime2.stop();
-    expect(d2.fetch).toHaveBeenCalled();
   });
 });
