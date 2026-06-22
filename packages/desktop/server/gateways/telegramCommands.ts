@@ -30,6 +30,7 @@ export function parseTelegramGatewayCommand(text: string): TelegramGatewayComman
     case '/start':
       return { kind: 'start' };
     case '/help':
+    case '/commands':
       return { kind: 'help' };
     case '/status':
       return { kind: 'status' };

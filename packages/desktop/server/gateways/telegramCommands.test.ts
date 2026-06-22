@@ -7,6 +7,7 @@ describe('parseTelegramGatewayCommand', () => {
     expect(parseTelegramGatewayCommand('/start')).toEqual({ kind: 'start' });
     expect(parseTelegramGatewayCommand('/pause@my_bot')).toEqual({ kind: 'stop' });
     expect(parseTelegramGatewayCommand('/model gpt-5.5')).toEqual({ kind: 'model', model: 'gpt-5.5' });
+    expect(parseTelegramGatewayCommand('/commands')).toEqual({ kind: 'help' });
     expect(parseTelegramGatewayCommand('/whoami')).toEqual({ kind: 'whoami' });
     expect(parseTelegramGatewayCommand('/reset')).toEqual({ kind: 'new' });
     expect(parseTelegramGatewayCommand('/threads')).toEqual({ kind: 'threads' });
