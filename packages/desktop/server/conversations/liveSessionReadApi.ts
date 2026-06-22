@@ -40,17 +40,10 @@ export function listLiveSessions<TEntry extends LiveSessionReadHost>(
     sessionFile: resolveLiveSessionFile(entry.session) ?? '',
     title: resolveTitle(entry),
     running: computeLiveSessionRunning(entry),
-    isStreaming:
-      // lastDurableRunState is the authoritative state — it transitions to 'waiting'
-      // synchronously in syncLiveSessionDurableRun before session.isStreaming is
-      // cleared by the agent runtime. Without this guard the conversation appears
-      // permanently 'running' because agent_end listeners (handleLiveSessionEvent)
-      // fire before the agent's finishRun() sets isStreaming = false.
-      entry.isCompacting
-        ? true
-        : entry.lastDurableRunState === 'waiting'
-          ? false
-          : entry.session.isStreaming || entry.lastDurableRunState === 'running' || entry.lastDurableRunState === 'recovering',
+    // Keep public live metadata in lock-step with the canonical running-state
+    // resolver. Raw AgentSession.isStreaming can lag after agent_end and has
+    // repeatedly left conversations stuck in a running state.
+    isStreaming: computeLiveSessionRunning(entry),
     hasStaleTurnState: hasQueuedOrActiveStaleTurn(entry),
     ...(entry.lastDurableRunState ? { lastDurableRunState: entry.lastDurableRunState } : {}),
   }));

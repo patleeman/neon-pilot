@@ -237,6 +237,24 @@ describe('createLiveSessionCapability', () => {
     expect(result.bootstrap?.sessionDetail?.meta?.workspaceCwd).toBeNull();
   });
 
+  it('uses canonical running state for created-session bootstrap streaming flags', async () => {
+    liveRegistry.set('test-session', {
+      sessionId: 'test-session',
+      cwd: '/repo',
+      title: 'Finished session',
+      session: { isStreaming: true, sessionFile: '/sessions/test-session.jsonl' },
+      queuedStaleTurnCustomTypes: [],
+      activeStaleTurnCustomType: null,
+      lastDurableRunState: 'waiting',
+      isCompacting: false,
+    } as never);
+
+    const result = await createLiveSessionCapability({}, createContext());
+
+    expect(result.bootstrap?.sessionDetail.meta.isRunning).toBe(false);
+    expect(result.bootstrap?.liveSession.isStreaming).toBe(false);
+  });
+
   it('submits the initial prompt when creating a live session with prompt text', async () => {
     isLocalLiveMock.mockReturnValue(true);
 

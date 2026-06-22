@@ -26,6 +26,10 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
   getExtensionHostClient: () => extensionHostClient,
 }));
 
+vi.mock('./liveSessionRecovery.js', () => ({
+  resolveTranscriptTailRecoveryPlan: vi.fn(() => null),
+}));
+
 describe('liveSessionStateSnapshot', () => {
   beforeEach(() => {
     vi.clearAllMocks();

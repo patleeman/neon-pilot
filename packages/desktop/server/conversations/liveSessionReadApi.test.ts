@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('./liveSessionRecovery.js', () => ({
+  resolveTranscriptTailRecoveryPlan: vi.fn(() => null),
+}));
 
 import type { LiveSessionReadHost } from './liveSessionReadApi.js';
-import { computeLiveSessionRunning } from './liveSessionReadApi.js';
+import { computeLiveSessionRunning, listLiveSessions } from './liveSessionReadApi.js';
 
 function makeEntry(overrides: Partial<LiveSessionReadHost> = {}): LiveSessionReadHost {
   return {
@@ -149,5 +153,16 @@ describe('computeLiveSessionRunning', () => {
         }),
       ),
     ).toBe(false);
+  });
+});
+
+describe('listLiveSessions', () => {
+  it('reports isStreaming from the canonical running resolver', () => {
+    const entry = makeEntry({
+      session: { isStreaming: true } as unknown,
+      lastDurableRunState: 'waiting',
+    });
+
+    expect(listLiveSessions([['session-1', entry]], () => 'Done')).toMatchObject([{ id: 'session-1', running: false, isStreaming: false }]);
   });
 });

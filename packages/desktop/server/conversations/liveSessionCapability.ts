@@ -29,6 +29,7 @@ import { syncWebLiveConversationRun } from './conversationRuns.js';
 import { appendConversationWorkspaceMetadata, readConversationSessionMeta, resolveConversationSessionFile } from './conversationService.js';
 import { queueConversationSummaryRefresh } from './conversationSummaries.js';
 import { type InjectedTurnEnvelopeOptions, wrapInjectedTurnMessage } from './injectedTurnEnvelope.js';
+import { computeCanonicalLiveSessionRunning } from './liveSessionRunningState.js';
 import {
   abortSession as abortLocalSession,
   branchSession as branchLiveSession,
@@ -489,7 +490,7 @@ function buildCreatedLiveSessionBootstrap(
   const title = liveEntry.title.trim() || 'New Conversation';
   const model = typeof liveEntry.session.model?.id === 'string' ? liveEntry.session.model.id : '';
   const hasStaleTurnState = liveEntry.queuedStaleTurnCustomTypes.length > 0 || liveEntry.activeStaleTurnCustomType !== null;
-  const isRunning = liveEntry.session.isStreaming || hasStaleTurnState;
+  const isStreaming = computeCanonicalLiveSessionRunning(liveEntry);
 
   return {
     conversationId,
@@ -504,7 +505,7 @@ function buildCreatedLiveSessionBootstrap(
         model,
         title,
         messageCount: 0,
-        isRunning,
+        isRunning: isStreaming,
         isLive: true,
         lastActivityAt: now,
       },
@@ -520,7 +521,7 @@ function buildCreatedLiveSessionBootstrap(
       cwd: liveEntry.cwd,
       sessionFile,
       ...(title ? { title } : {}),
-      isStreaming: liveEntry.session.isStreaming,
+      isStreaming,
       ...(hasStaleTurnState ? { hasStaleTurnState: true } : {}),
     },
   };
