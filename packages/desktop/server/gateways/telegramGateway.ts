@@ -213,6 +213,7 @@ export class TelegramGatewayRuntime {
         images,
       });
     } catch (error) {
+      this.stopTyping(externalChatId);
       this.pendingStatusMessages.delete(target.conversationId);
       const failure = error instanceof Error ? error.message : String(error);
       if (statusMessage?.message_id) {

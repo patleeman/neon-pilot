@@ -484,6 +484,15 @@ describe('TelegramGatewayRuntime', () => {
       'https://api.telegram.org/bottoken/editMessageText',
       expect.objectContaining({ body: expect.stringContaining('Telegram prompt failed: boom') }),
     );
+
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
+    await runtime.deliverAssistantReply({ conversationId: 'conv-1', text: 'late reply' });
+    const editCalls = d.fetch.mock.calls.filter(([url]) => String(url).endsWith('/editMessageText'));
+    expect(editCalls).toHaveLength(1);
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('late reply') }),
+    );
   });
 
   it('delivers assistant replies to bound chats and records events', async () => {
