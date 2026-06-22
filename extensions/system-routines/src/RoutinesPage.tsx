@@ -1246,7 +1246,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
 
   return (
     <div className="h-full min-h-0 overflow-auto bg-app text-[13px] text-primary">
-      <AppPageLayout contentClassName="flex min-h-full flex-col gap-5">
+      <AppPageLayout contentClassName="flex min-h-full w-full max-w-6xl flex-col gap-5">
         <AppPageIntro
           title={selectedHook.title}
           actions={
@@ -1288,7 +1288,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         <main className="min-h-0 flex-1 overflow-hidden">
           <div className="h-full overflow-auto">
             {showRuns ? (
-              <div className="grid min-h-full max-w-5xl gap-2">
+              <div className="grid min-h-full gap-2">
                 {selectedRuns.length === 0 ? (
                   <div className="grid min-h-[24rem] place-items-center text-center">
                     <div>
@@ -1316,7 +1316,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 ))}
               </div>
             ) : (
-              <div className="grid max-w-6xl gap-5">
+              <div className="grid gap-5">
                 <div>
                   <h2 className="m-0 text-[18px] font-semibold">{selectedHook.title} timeline</h2>
                   <p className="m-0 mt-1 text-[13px] text-secondary">
