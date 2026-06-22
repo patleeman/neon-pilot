@@ -3524,8 +3524,7 @@ body {
 .ui-app-page-shell {
   min-height: 100%;
   width: 100%;
-  max-width: 74rem;
-  margin-inline: auto;
+  max-width: none;
   padding: 1.5rem 2rem 2.5rem;
 }
 

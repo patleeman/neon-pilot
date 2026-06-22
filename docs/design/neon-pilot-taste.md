@@ -36,7 +36,7 @@ Neon Pilot uses adaptive workbench layouts, not one-off page chrome. Every main-
 
 Canonical page rules:
 
-- `AppPageLayout` owns page padding, max width, and responsive behavior. Do not hard-code competing `max-w-*`, page-level `px-*`, or oversized vertical gaps on normal pages.
+- `AppPageLayout` owns page padding and responsive behavior. Main-route pages are left-aligned in the workspace, not centered hero pages. Do not hard-code competing `max-w-*`, page-level `px-*`, or oversized vertical gaps on normal pages.
 - `AppPageIntro` owns the page title scale, optional summary, and top-right actions. Do not create local hero headers or 30–40px page titles.
 - Page sections should use shared page/section/list/table primitives before local wrappers. A page can be solo, list/detail, table, editor, or split-pane, but its outer shell should still feel like the same product.
 - Full-height split workflows may use `h-full` inside the canonical shell, but they should not invent separate top bars, padding systems, or title treatments.

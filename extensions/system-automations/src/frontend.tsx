@@ -1874,7 +1874,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
       >
         {!editorOpen && (
           <>
-            <div className="flex h-14 shrink-0 items-center justify-between border-b border-border-subtle/70 px-5">
+            <div className="flex h-14 shrink-0 items-center justify-between border-b border-border-subtle/70">
               <div className="flex min-w-0 items-center gap-4">
                 <div className="min-w-0">
                   <h1 className="truncate text-[15px] font-semibold text-primary">Automations</h1>

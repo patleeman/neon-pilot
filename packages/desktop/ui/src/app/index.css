@@ -504,7 +504,7 @@
   }
 
   .ui-app-page-shell {
-    @apply mx-auto min-h-full w-full max-w-[74rem] px-5 pb-10 pt-5 sm:px-8 sm:pb-12 sm:pt-6;
+    @apply min-h-full w-full max-w-none px-5 pb-10 pt-5 sm:px-8 sm:pb-12 sm:pt-6;
   }
 
   .ui-app-page-grid {
@@ -516,7 +516,7 @@
   }
 
   .ui-app-page-main {
-    @apply mx-auto w-full min-w-0;
+    @apply w-full min-w-0;
   }
 
   .ui-app-page-main-centered {

@@ -1252,7 +1252,7 @@ Main-route extension pages must use the shared app page primitives instead of ha
 </div>
 ```
 
-`AppPageLayout` owns the canonical page width, page padding, header rhythm, and responsive behavior. Do not pass custom `max-w-*`, page padding, or large `space-y-*` values for normal pages. If a workflow needs a list/detail, editor, or split-pane layout, keep the same `AppPageLayout` shell and use shared workbench/list primitives inside it instead of inventing a separate full-page frame.
+`AppPageLayout` owns canonical page padding, left-aligned header rhythm, and responsive behavior. Do not pass custom `max-w-*`, page padding, or large `space-y-*` values for normal pages. If a workflow needs a list/detail, editor, or split-pane layout, keep the same `AppPageLayout` shell and use shared workbench/list primitives inside it instead of inventing a separate full-page frame.
 
 ## Styling guidance
 
