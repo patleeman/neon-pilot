@@ -1012,6 +1012,27 @@ function buildCreateWithChatPrompt(form: AutomationFormState) {
   return lines.join('\n');
 }
 
+function Metric({
+  label,
+  value,
+  detail,
+  tone = 'accent',
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone?: 'accent' | 'success' | 'danger';
+}) {
+  const valueClass = tone === 'success' ? 'text-success' : tone === 'danger' ? 'text-danger' : 'text-accent';
+  return (
+    <div className="min-w-0">
+      <div className={cx('text-[18px] font-semibold leading-tight tabular-nums', valueClass)}>{value}</div>
+      <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-dim">{label}</div>
+      <div className="mt-1 truncate text-[11px] text-muted">{detail}</div>
+    </div>
+  );
+}
+
 function RefreshIcon() {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -1038,7 +1059,7 @@ function ActivityTimeline({
 }) {
   if (events.length === 0) {
     return (
-      <div className="flex h-full min-h-[26rem] items-center justify-center border-t border-border-subtle/70 px-6 text-center">
+      <div className="flex h-full min-h-[26rem] items-center justify-center px-6 text-center">
         <div className="max-w-sm">
           <div className="text-[14px] font-medium text-primary">No events match this view.</div>
           <div className="mt-1 text-[12px] leading-5 text-secondary">
@@ -1177,7 +1198,7 @@ function ActivityInspector({
 
   if (!event) {
     return (
-      <aside className="flex h-full min-h-0 w-[20rem] shrink-0 flex-col border-l border-border-subtle/70 bg-background/55 px-4 py-4">
+      <aside className="flex h-full min-h-0 w-[20rem] shrink-0 flex-col bg-background/55 px-4 py-4">
         <div className="text-[11px] uppercase text-dim">Event</div>
         <h2 className="mt-2 text-[16px] font-semibold leading-tight text-primary">No event selected</h2>
         <p className="mt-2 text-[12px] leading-5 text-secondary">Select a row to inspect what emitted it and what used it.</p>
@@ -1189,7 +1210,7 @@ function ActivityInspector({
   const actionBusy = busy === replayBusyKey || (event.taskId ? busy === `pause:${event.taskId}` : false);
   const displayTone = statusTone(event.status, event.tone);
   return (
-    <aside className="flex h-full min-h-0 w-[20rem] shrink-0 flex-col border-l border-border-subtle/70 bg-background/55">
+    <aside className="flex h-full min-h-0 w-[20rem] shrink-0 flex-col bg-background/55">
       <div className="border-b border-border-subtle/70 px-4 py-4">
         <div className="text-[11px] uppercase text-dim">Event</div>
         <h2 className="mt-1 break-words text-[18px] font-semibold leading-tight text-primary">{event.displayName}</h2>
@@ -1810,6 +1831,12 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   }, [activityEvents, activitySort, fromFilter, query, statusFilter, usedByFilter]);
   const selectedActivity =
     filteredActivityEvents.find((event) => event.id === selectedActivityId) ?? filteredActivityEvents[0] ?? activityEvents[0] ?? null;
+  const enabledTaskCount = tasks.filter((task) => task.enabled !== false).length;
+  const pastDueTaskCount = tasks.filter((task) => {
+    if (task.enabled === false || task.scheduleType !== 'at' || !task.at) return false;
+    const dueAt = new Date(task.at).getTime();
+    return Number.isFinite(dueAt) && dueAt < Date.now() && !task.running;
+  }).length;
 
   useEffect(() => {
     if (!selectedActivity && selectedActivityId !== null) {
@@ -1849,80 +1876,116 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
               title="Automations"
               actions={
                 <div className="flex min-w-0 items-center gap-2">
-                  <SchedulerHealthDot health={health} />
-                  <Select
-                    name="automation-status-filter"
-                    aria-label="Filter by status"
-                    className="h-8 w-28 bg-surface/40 text-[13px]"
-                    value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value as ActivityStatusFilter)}
-                  >
-                    {(Object.keys(ACTIVITY_STATUS_FILTER_LABELS) as ActivityStatusFilter[]).map((value) => (
-                      <option key={value} value={value}>
-                        {ACTIVITY_STATUS_FILTER_LABELS[value]}
-                      </option>
-                    ))}
-                  </Select>
-                  <Select
-                    name="automation-from-filter"
-                    aria-label="Filter by emitter"
-                    className="h-8 w-32 bg-surface/40 text-[13px]"
-                    value={fromFilter}
-                    onChange={(event) => setFromFilter(event.target.value)}
-                  >
-                    <option value="all">Emitter: All</option>
-                    {fromFilterOptions.map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </Select>
-                  <Select
-                    name="automation-used-by-filter"
-                    aria-label="Filter by automation"
-                    className="h-8 w-36 bg-surface/40 text-[13px]"
-                    value={usedByFilter}
-                    onChange={(event) => setUsedByFilter(event.target.value)}
-                  >
-                    <option value="all">Used by: All</option>
-                    {usedByFilterOptions.map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </Select>
-                  <SearchInput
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search events…"
-                    className="w-48 bg-surface/40 text-[13px]"
-                  />
-                  <Select
-                    name="automation-sort"
-                    aria-label="Sort events"
-                    className="h-8 w-32 bg-surface/40 text-[13px]"
-                    value={activitySort}
-                    onChange={(event) => setActivitySort(event.target.value as ActivitySort)}
-                  >
-                    {(Object.keys(ACTIVITY_SORT_LABELS) as ActivitySort[]).map((value) => (
-                      <option key={value} value={value}>
-                        {ACTIVITY_SORT_LABELS[value]}
-                      </option>
-                    ))}
-                  </Select>
-                  <ToolbarButton
-                    type="button"
-                    disabled={eventBusEvents.length === 0 || busy === 'clear-events'}
-                    onClick={() => void clearEventLog()}
-                  >
-                    {busy === 'clear-events' ? 'Clearing…' : 'Clear log'}
-                  </ToolbarButton>
+                  <Button type="button" onClick={() => openEditor()}>
+                    Create with agent
+                  </Button>
                   <IconButton title="Reload automations" aria-label="Reload automations" onClick={() => void reload()}>
                     <RefreshIcon />
                   </IconButton>
                 </div>
               }
             />
+            <div className="grid grid-cols-2 gap-6 py-5 sm:grid-cols-4 lg:grid-cols-6">
+              <Metric
+                label="Scheduled publishers"
+                value={tasks.length.toLocaleString()}
+                detail={`${tasks.length.toLocaleString()} scheduled ${tasks.length === 1 ? 'publisher' : 'publishers'} · ${enabledTaskCount.toLocaleString()} enabled${pastDueTaskCount > 0 ? ` · ${pastDueTaskCount.toLocaleString()} past due` : ''}`}
+              />
+              <Metric
+                label="Event rules"
+                value={eventBusSubscriptions.length.toLocaleString()}
+                detail={`${eventBusSubscriptions.filter((subscription) => subscription.enabled).length.toLocaleString()} enabled`}
+              />
+              <Metric
+                label="Events shown"
+                value={filteredActivityEvents.length.toLocaleString()}
+                detail={`${activityEvents.length.toLocaleString()} total retained`}
+              />
+              <Metric
+                label="Failures"
+                value={activityEvents.filter((event) => statusTone(event.status, event.tone) === 'danger').length.toLocaleString()}
+                detail="Retained history"
+                tone="danger"
+              />
+              <Metric
+                label="Scheduler"
+                value={health?.running ? 'Running' : 'Stopped'}
+                detail={health?.running ? 'Ready for due runs' : 'Not running'}
+                tone={health?.running ? 'success' : 'danger'}
+              />
+              <div className="flex items-start justify-end pt-1">
+                <SchedulerHealthDot health={health} />
+              </div>
+            </div>
+            <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
+              <Select
+                name="automation-status-filter"
+                aria-label="Filter by status"
+                className="h-8 w-28 bg-surface/40 text-[13px]"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as ActivityStatusFilter)}
+              >
+                {(Object.keys(ACTIVITY_STATUS_FILTER_LABELS) as ActivityStatusFilter[]).map((value) => (
+                  <option key={value} value={value}>
+                    {ACTIVITY_STATUS_FILTER_LABELS[value]}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                name="automation-from-filter"
+                aria-label="Filter by emitter"
+                className="h-8 w-32 bg-surface/40 text-[13px]"
+                value={fromFilter}
+                onChange={(event) => setFromFilter(event.target.value)}
+              >
+                <option value="all">Emitter: All</option>
+                {fromFilterOptions.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                name="automation-used-by-filter"
+                aria-label="Filter by automation"
+                className="h-8 w-36 bg-surface/40 text-[13px]"
+                value={usedByFilter}
+                onChange={(event) => setUsedByFilter(event.target.value)}
+              >
+                <option value="all">Used by: All</option>
+                {usedByFilterOptions.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </Select>
+              <SearchInput
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search events…"
+                className="w-48 bg-surface/40 text-[13px]"
+              />
+              <Select
+                name="automation-sort"
+                aria-label="Sort events"
+                className="h-8 w-32 bg-surface/40 text-[13px]"
+                value={activitySort}
+                onChange={(event) => setActivitySort(event.target.value as ActivitySort)}
+              >
+                {(Object.keys(ACTIVITY_SORT_LABELS) as ActivitySort[]).map((value) => (
+                  <option key={value} value={value}>
+                    {ACTIVITY_SORT_LABELS[value]}
+                  </option>
+                ))}
+              </Select>
+              <ToolbarButton
+                type="button"
+                disabled={eventBusEvents.length === 0 || busy === 'clear-events'}
+                onClick={() => void clearEventLog()}
+              >
+                {busy === 'clear-events' ? 'Clearing…' : 'Clear log'}
+              </ToolbarButton>
+            </div>
             {notice ? <Notice>{notice}</Notice> : null}
           </>
         )}
