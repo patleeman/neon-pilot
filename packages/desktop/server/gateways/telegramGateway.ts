@@ -200,11 +200,22 @@ export class TelegramGatewayRuntime {
     if (statusMessage?.message_id) {
       this.pendingStatusMessages.set(target.conversationId, { chatId: externalChatId, messageId: statusMessage.message_id });
     }
-    await this.dependencies.submitPrompt({
-      conversationId: target.conversationId,
-      text: text || 'Please review this Telegram photo.',
-      images,
-    });
+    try {
+      await this.dependencies.submitPrompt({
+        conversationId: target.conversationId,
+        text: text || 'Please review this Telegram photo.',
+        images,
+      });
+    } catch (error) {
+      this.pendingStatusMessages.delete(target.conversationId);
+      const failure = error instanceof Error ? error.message : String(error);
+      if (statusMessage?.message_id) {
+        await this.editMessage(externalChatId, statusMessage.message_id, `Telegram prompt failed: ${failure}`);
+      } else {
+        await this.sendMessage(externalChatId, `Telegram prompt failed: ${failure}`);
+      }
+      throw error;
+    }
   }
 
   async deliverAssistantReply(input: { conversationId: string; text: string }): Promise<boolean> {
