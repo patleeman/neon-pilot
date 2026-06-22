@@ -108,6 +108,18 @@ const electronBuilderConfig = {
     'node_modules/file-uri-to-path{,/**/*}',
     'node_modules/node-pty{,/**/*}',
     'node_modules/fsevents{,/**/*}',
+    // @earendil-works/pi-coding-agent is imported dynamically at runtime by the
+    // extension host child (serverModuleResolver resolves the bare specifier to
+    // app.asar.unpacked/node_modules/...). esbuild inlines the static import
+    // graph, but the dynamic import('@/earendil-works/pi-coding-agent') call
+    // site survives bundling and requires the real package — plus its sibling
+    // packages (pi-agent-core, pi-ai, pi-tui), which pi-coding-agent imports
+    // internally — on disk outside app.asar. Without this, Node throws
+    // "Cannot find package '@earendil-works/pi-coding-agent'" in packaged builds.
+    'node_modules/@earendil-works/pi-agent-core{,/**/*}',
+    'node_modules/@earendil-works/pi-ai{,/**/*}',
+    'node_modules/@earendil-works/pi-coding-agent{,/**/*}',
+    'node_modules/@earendil-works/pi-tui{,/**/*}',
   ],
   asarUnpack: [
     'server/dist/conversations/conversationInspectWorker.js',
@@ -122,6 +134,13 @@ const electronBuilderConfig = {
     'node_modules/bindings/**/*',
     'node_modules/file-uri-to-path/**/*',
     'node_modules/node-pty/**/*',
+    // Extract the @earendil-works scope so the extension host's dynamic
+    // import('@earendil-works/pi-coding-agent') resolves from real files.
+    // See the matching `files` entries above for why this is required.
+    'node_modules/@earendil-works/pi-agent-core/**/*',
+    'node_modules/@earendil-works/pi-ai/**/*',
+    'node_modules/@earendil-works/pi-coding-agent/**/*',
+    'node_modules/@earendil-works/pi-tui/**/*',
   ],
   extraMetadata: {
     main: './dist/main.js',

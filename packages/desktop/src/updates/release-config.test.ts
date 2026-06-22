@@ -62,6 +62,25 @@ describe('desktop release config', () => {
     );
   });
 
+  it('packages and unpacks the @earendil-works runtime-externalized packages together', () => {
+    // The extension host child dynamically imports '@earendil-works/pi-coding-agent'
+    // (the bare specifier survives esbuild bundling) and serverModuleResolver
+    // resolves it to app.asar.unpacked/node_modules/@earendil-works/... at
+    // runtime. pi-coding-agent also imports its sibling packages
+    // (pi-agent-core, pi-ai, pi-tui) internally, so the whole scope must be
+    // shipped as real files outside app.asar. Without this pairing, the
+    // packaged app throws "Cannot find package '@earendil-works/pi-coding-agent'"
+    // on the first dynamic import in the extension host.
+    const earendilWorksPackages = ['pi-agent-core', 'pi-ai', 'pi-coding-agent', 'pi-tui'];
+
+    expect(electronBuilderConfig.files).toEqual(
+      expect.arrayContaining(earendilWorksPackages.map((name) => `node_modules/@earendil-works/${name}{,/**/*}`)),
+    );
+    expect(electronBuilderConfig.asarUnpack).toEqual(
+      expect.arrayContaining(earendilWorksPackages.map((name) => `node_modules/@earendil-works/${name}/**/*`)),
+    );
+  });
+
   it('does not treat the local sharp stub as a native module', () => {
     expect(electronBuilderConfig.asarUnpack).not.toContain('node_modules/sharp/**/*');
   });

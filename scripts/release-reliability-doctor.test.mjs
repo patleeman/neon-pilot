@@ -4,8 +4,9 @@ import {
   checkConversationAdminFlows,
   checkDeferredResumeLifecycle,
   checkExtensionStateSanity,
-  checkInstallableCatalogCompatibility,
   checkHeartbeatConfig,
+  checkInstallableCatalogCompatibility,
+  checkPackagingExternalsConsistency,
   checkUnifiedAdminSurface,
   collectInstallableCatalogCompatibility,
   satisfiesVersionRange,
@@ -90,5 +91,68 @@ describe('release reliability doctor', () => {
     expect(satisfiesVersionRange('0.11.22', '>=0.10.0 <0.11.0')).toBe(false);
     expect(satisfiesVersionRange('0.11.0-rc.1', '>=0.11.0-rc.1 <0.11.0')).toBe(true);
     expect(satisfiesVersionRange('0.11.22', '^0.11.0')).toBe(null);
+  });
+
+  describe('packaging externals consistency', () => {
+    it('accepts a runtime bare specifier shipped in both files and asarUnpack', () => {
+      const result = checkPackagingExternalsConsistency({
+        filesShipped: ['node_modules/@earendil-works/pi-coding-agent{,/**/*}'],
+        asarUnpacked: ['node_modules/@earendil-works/pi-coding-agent/**/*'],
+        runtimeSpecifiers: ['@earendil-works/pi-coding-agent'],
+      });
+      expect(result.ok).toBe(true);
+      expect(result.failures).toEqual([]);
+    });
+
+    it('flags a runtime bare specifier missing from electron-builder files and asarUnpack', () => {
+      const result = checkPackagingExternalsConsistency({
+        filesShipped: [],
+        asarUnpacked: [],
+        runtimeSpecifiers: ['@earendil-works/pi-coding-agent'],
+      });
+      expect(result.ok).toBe(false);
+      expect(result.failures.join('\n')).toContain('is not in electron-builder files');
+      expect(result.failures.join('\n')).toContain('is not in asarUnpack');
+      expect(result.failures.join('\n')).toContain('node_modules/@earendil-works/pi-coding-agent{,/**/*}');
+      expect(result.failures.join('\n')).toContain('node_modules/@earendil-works/pi-coding-agent/**/*');
+    });
+
+    it('flags a runtime bare specifier present in files but absent from asarUnpack (asymmetry)', () => {
+      const result = checkPackagingExternalsConsistency({
+        filesShipped: ['node_modules/some-native-pkg{,/**/*}'],
+        asarUnpacked: [],
+        runtimeSpecifiers: [],
+      });
+      expect(result.ok).toBe(false);
+      expect(result.failures.join('\n')).toContain("'node_modules/some-native-pkg' is in electron-builder files but not asarUnpack");
+    });
+
+    it('flags a package present in asarUnpack but absent from electron-builder files', () => {
+      const result = checkPackagingExternalsConsistency({
+        filesShipped: [],
+        asarUnpacked: ['node_modules/orphan-pkg/**/*'],
+        runtimeSpecifiers: [],
+      });
+      expect(result.ok).toBe(false);
+      expect(result.failures.join('\n')).toContain("'node_modules/orphan-pkg' is in asarUnpack but not electron-builder files");
+    });
+
+    it('exempts Node/Electron built-ins from the on-disk requirement', () => {
+      const result = checkPackagingExternalsConsistency({
+        filesShipped: [],
+        asarUnpacked: [],
+        runtimeSpecifiers: ['fs', 'node:fs/promises', 'crypto', 'electron'],
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    it('exempts resolver-redirected (@neon-pilot/*) and allowlisted CJS/Electron packages from the on-disk requirement', () => {
+      const result = checkPackagingExternalsConsistency({
+        filesShipped: ['node_modules/ajv{,/**/*}', 'node_modules/fsevents{,/**/*}'],
+        asarUnpacked: [],
+        runtimeSpecifiers: ['@neon-pilot/core', 'ajv', 'ajv-formats', 'fsevents'],
+      });
+      expect(result.ok).toBe(true);
+    });
   });
 });
