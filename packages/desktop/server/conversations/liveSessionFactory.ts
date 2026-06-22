@@ -227,13 +227,23 @@ async function applyExtensionToolSelection(session: AgentSession, settingsFile: 
   const patchable = session as unknown as { setActiveTools?: (toolNames: string[]) => void; getActiveToolNames?: () => string[] };
   if (typeof patchable.setActiveTools !== 'function') return;
 
+  const effectiveModelRef = modelRefOverride ?? readSavedModelRef(settingsFile);
   const extensionToolNames = await warmLiveSessionToolSelection(settingsFile, modelRefOverride);
   const currentToolNames = patchable.getActiveToolNames?.() ?? [];
   if (currentToolNames.length === 1 && extensionToolNames.includes(currentToolNames[0] ?? '')) {
     return;
   }
-  const activeToolNames = [...new Set([...currentToolNames, ...extensionToolNames])];
+  const activeToolNames = applyModelToolSelectionOverrides([...new Set([...currentToolNames, ...extensionToolNames])], effectiveModelRef);
   patchable.setActiveTools(activeToolNames);
+}
+
+function applyModelToolSelectionOverrides(toolNames: string[], modelRefOverride?: string | null): string[] {
+  const modelRef = modelRefOverride?.trim() ?? '';
+  const isCodexCompatible = modelRef.startsWith('openai-codex/');
+  if (!isCodexCompatible) return toolNames;
+
+  const withoutBrittleFileEditors = toolNames.filter((toolName) => toolName !== 'edit' && toolName !== 'write');
+  return withoutBrittleFileEditors.includes('apply_patch') ? withoutBrittleFileEditors : [...withoutBrittleFileEditors, 'apply_patch'];
 }
 
 export async function createPreparedLiveAgentSession(input: {

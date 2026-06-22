@@ -195,6 +195,30 @@ describe('live session factory', () => {
     );
   });
 
+  it('replaces edit and write with apply_patch when a Codex model is selected', async () => {
+    const s = session();
+    s.getActiveToolNames.mockReturnValue(['bash', 'read', 'edit', 'write']);
+    tools.buildToolInjectionPlanAsync.mockResolvedValueOnce({ activeToolNames: ['apply_patch', 'artifact'] });
+    const codexModel = { id: 'gpt-5.4', provider: 'openai-codex' };
+    modelRegistry.createRuntimeModelRegistry.mockReturnValue({ getAvailable: vi.fn(() => [codexModel]) });
+    agent.createAgentSession.mockResolvedValueOnce({ session: s });
+
+    await createPreparedLiveAgentSession({
+      cwd: '/repo',
+      agentDir: '/agent',
+      settingsFile: '/settings.json',
+      sessionManager: {} as never,
+      options: { initialModel: 'openai-codex/gpt-5.4' },
+    });
+
+    expect(tools.buildToolInjectionPlanAsync).toHaveBeenCalledWith({
+      runtimeScope: 'shared',
+      repoRoot: '/repo',
+      modelRef: 'openai-codex/gpt-5.4',
+    });
+    expect(s.setActiveTools).toHaveBeenCalledWith(['bash', 'read', 'apply_patch', 'artifact']);
+  });
+
   it('lets explicit allowed tools override selected model profile tools at session creation', async () => {
     const s = session();
     modelPrefs.readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
