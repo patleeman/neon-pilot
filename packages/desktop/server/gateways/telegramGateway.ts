@@ -822,6 +822,10 @@ function statusKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] }
         { text: 'Pause replies', callback_data: 'cmd:/stop' },
         { text: 'Resume replies', callback_data: 'cmd:/resume' },
       ],
+      [
+        { text: 'Compact', callback_data: 'cmd:/compact' },
+        { text: 'Archive', callback_data: 'cmd:/archive' },
+      ],
       [{ text: 'Help', callback_data: 'cmd:/help' }],
     ],
   };

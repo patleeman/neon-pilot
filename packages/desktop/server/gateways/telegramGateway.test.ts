@@ -188,6 +188,14 @@ describe('TelegramGatewayRuntime', () => {
       'https://api.telegram.org/bottoken/sendMessage',
       expect.objectContaining({ body: expect.stringContaining('callback_data":"cmd:/stop') }),
     );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('callback_data":"cmd:/compact') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('callback_data":"cmd:/archive') }),
+    );
   });
 
   it('includes whoami in the help inline controls', async () => {
