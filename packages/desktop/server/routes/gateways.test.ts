@@ -89,6 +89,7 @@ import {
 describe('gateway routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
     conversationService.readSessionDetailForRoute.mockResolvedValue({
       sessionRead: { detail: { blocks: [{ type: 'text', text: ' latest reply ' }] } },
     });
@@ -220,6 +221,27 @@ describe('gateway routes', () => {
     const active = response();
     handler({ params: { provider: 'telegram' }, body: { status: 'active', enabled: true } }, active);
     expect(latestRuntime().start).toHaveBeenCalledOnce();
+  });
+
+  it('tests the configured Telegram bot token without exposing it', async () => {
+    const router = register();
+    const testToken = route(router, 'post', '/api/gateways/telegram/test');
+
+    const missing = response();
+    await testToken({}, missing);
+    expect(missing.status).toHaveBeenCalledWith(400);
+
+    telegramAuth.readTelegramBotToken.mockReturnValueOnce('secret-token');
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ ok: true, result: { id: 123, username: 'neon_bot' } }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const ok = response();
+    await testToken({}, ok);
+
+    expect(fetchMock).toHaveBeenCalledWith('https://api.telegram.org/botsecret-token/getMe', { method: 'POST' });
+    expect(ok.json).toHaveBeenCalledWith({ ok: true, bot: { id: 123, username: 'neon_bot' } });
   });
 
   it('reads and writes Telegram access policy', () => {

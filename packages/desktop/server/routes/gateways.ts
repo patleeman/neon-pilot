@@ -382,6 +382,29 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
     }
   });
 
+  router.post('/api/gateways/telegram/test', async (_req: Request, res: Response) => {
+    try {
+      const token = readTelegramBotToken(getAuthFileFn(), getStateRootFn());
+      if (!token) {
+        res.status(400).json({ error: 'Telegram bot token is required' });
+        return;
+      }
+      const response = await fetch(`https://api.telegram.org/bot${token}/getMe`, { method: 'POST' });
+      const payload = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        description?: string;
+        result?: { id?: number; username?: string; first_name?: string };
+      };
+      if (!response.ok || payload.ok !== true) {
+        res.status(502).json({ ok: false, error: payload.description || 'Telegram getMe failed' });
+        return;
+      }
+      res.json({ ok: true, bot: payload.result ?? null });
+    } catch (err) {
+      handleGatewayError(res, err);
+    }
+  });
+
   router.post('/api/gateways/telegram/token', (req: Request, res: Response) => {
     try {
       const token = readOptionalString(req.body?.token);
