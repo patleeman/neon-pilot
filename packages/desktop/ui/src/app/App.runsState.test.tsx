@@ -407,6 +407,34 @@ describe('App execution state integration', () => {
     expect(container.textContent).toContain('conversation idle');
   });
 
+  it('lets canonical idle session meta refresh clear a missed running:false runtime event', async () => {
+    apiSessionMetaMock.mockResolvedValue({
+      id: 'conv-1',
+      title: 'Conversation',
+      cwd: '/repo',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      isRunning: false,
+    });
+    ({ container, root } = await renderApp());
+
+    await emitDesktopEvent({
+      type: 'sessions_snapshot',
+      sessions: [{ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z', isRunning: true }],
+    });
+    await emitConversationRunning('conv-1', true, 1);
+    expect(container.textContent).toContain('conversation running');
+
+    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1' });
+    await act(async () => {
+      vi.advanceTimersByTime(750);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiSessionMetaMock).toHaveBeenCalledWith('conv-1');
+    expect(container.textContent).toContain('conversation idle');
+  });
+
   it('uses revisioned backend conversation state events for running state', async () => {
     apiSessionMetaMock.mockResolvedValue({ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' });
     ({ container, root } = await renderApp());

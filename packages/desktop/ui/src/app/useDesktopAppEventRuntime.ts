@@ -68,6 +68,7 @@ export function useDesktopAppEventRuntime() {
       return;
     }
     sessionStore.upsert(nextSession);
+    conversationRuntimeStore.reconcileIdleFromSessionMeta(nextSession);
   }, []);
 
   const bumpConversationVersion = useCallback((sessionId: string) => {

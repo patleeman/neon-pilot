@@ -114,6 +114,21 @@ export const conversationRuntimeStore = {
     rederiveConversationActivityStatusForId(sessionId);
   },
 
+  reconcileIdleFromSessionMeta(session: Pick<SessionMeta, 'id' | 'isRunning'>): void {
+    const sessionId = session.id.trim();
+    if (!sessionId || session.isRunning !== false) return;
+    const current = conversationRuntimeStates.get(sessionId);
+    if (current?.running !== true) return;
+
+    conversationRuntimeStates = new Map(conversationRuntimeStates).set(sessionId, {
+      ...current,
+      running: false,
+      updatedAt: new Date().toISOString(),
+    });
+    conversationRuntimeListeners.get(sessionId)?.forEach((cb) => cb());
+    rederiveConversationActivityStatusForId(sessionId);
+  },
+
   clear(sessionId: string): void {
     if (!conversationRuntimeStates.has(sessionId)) return;
     conversationRuntimeStates = new Map(conversationRuntimeStates);

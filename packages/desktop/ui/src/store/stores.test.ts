@@ -104,6 +104,26 @@ describe('conversationActivityStatusStore', () => {
     expect(conversationActivityStatusStore.get('conv-1')).toBe('streaming');
   });
 
+  it('lets canonical idle session metadata clear stale backend running state', () => {
+    sessionStore.replaceAll([session('conv-1', true)]);
+    conversationRuntimeStore.apply({ id: 'conv-1', running: true, revision: 2, updatedAt: '2026-01-01T00:00:02.000Z' });
+
+    conversationRuntimeStore.reconcileIdleFromSessionMeta(session('conv-1', false));
+
+    expect(conversationRuntimeStore.get('conv-1')?.running).toBe(false);
+    expect(conversationActivityStatusStore.get('conv-1')).toBe('idle');
+  });
+
+  it('does not let running session metadata override an explicit stopped runtime event', () => {
+    sessionStore.replaceAll([session('conv-1', true)]);
+    conversationRuntimeStore.apply({ id: 'conv-1', running: false, revision: 2, updatedAt: '2026-01-01T00:00:02.000Z' });
+
+    conversationRuntimeStore.reconcileIdleFromSessionMeta(session('conv-1', true));
+
+    expect(conversationRuntimeStore.get('conv-1')?.running).toBe(false);
+    expect(conversationActivityStatusStore.get('conv-1')).toBe('idle');
+  });
+
   it('notifies conversation runtime subscribers when backend runtime changes', () => {
     const notifications: Array<boolean | undefined> = [];
     const unsubscribe = conversationRuntimeStore.subscribe('conv-1', () => {
