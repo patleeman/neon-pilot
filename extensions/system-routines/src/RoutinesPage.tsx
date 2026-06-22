@@ -171,21 +171,30 @@ function routineTreeStatus(summary: string): ActivityTreeItem['status'] {
   return 'done';
 }
 
+function publishRoutinesState(state: StateResult) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<StateResult>('neon-pilot-routines-state', { detail: state }));
+}
+
 function RoutineHookList({
   hooks,
   selectedHookId,
   query,
+  showAllHooks,
   onQueryChange,
   onSelect,
+  onShowAllHooksChange,
 }: {
   hooks: HookWithSummary[];
   selectedHookId: string;
   query: string;
+  showAllHooks: boolean;
   onQueryChange: (query: string) => void;
   onSelect: (hookId: string) => void;
+  onShowAllHooksChange: (show: boolean) => void;
 }) {
   const normalizedQuery = query.trim().toLowerCase();
-  const activeHooks = hooks.filter((hook) => hook.summary !== 'No routines');
+  const activeHooks = showAllHooks ? hooks : hooks.filter((hook) => hook.summary !== 'No routines' || hook.id === selectedHookId);
   const visibleHooks = normalizedQuery
     ? activeHooks.filter((hook) =>
         `${hook.title} ${hook.description} ${hook.group} ${ownerLabel(hook.ownerExtensionId)}`.toLowerCase().includes(normalizedQuery),
@@ -216,7 +225,16 @@ function RoutineHookList({
   return (
     <div className="flex h-full min-h-0 flex-col bg-transparent">
       <div className="px-4 pb-0.5 pt-1">
-        <SectionLabel className="block">Routines</SectionLabel>
+        <div className="flex items-center justify-between gap-2">
+          <SectionLabel className="block">Routines</SectionLabel>
+          <button
+            type="button"
+            className="rounded px-1.5 py-0.5 text-[11px] text-accent hover:bg-surface-3"
+            onClick={() => onShowAllHooksChange(!showAllHooks)}
+          >
+            {showAllHooks ? 'Done' : 'Add event'}
+          </button>
+        </div>
       </div>
       <div className="px-2 pb-1.5 pt-1">
         <SearchInput
@@ -230,9 +248,20 @@ function RoutineHookList({
           items={treeItems}
           activeItemId={selectedHookId}
           ariaLabel="Routines"
-          emptyMessage={normalizedQuery ? 'No active routine hooks match.' : 'No routines yet. Use Add routine to choose a hook.'}
+          emptyMessage={
+            normalizedQuery
+              ? showAllHooks
+                ? 'No events match.'
+                : 'No active routine hooks match.'
+              : showAllHooks
+                ? 'No events available.'
+                : 'No routines yet. Add an event to start.'
+          }
           onOpenItem={(item: ActivityTreeItem) => {
-            if (item.kind !== 'group') onSelect(item.id);
+            if (item.kind !== 'group') {
+              onSelect(item.id);
+              if (showAllHooks) onShowAllHooksChange(false);
+            }
           }}
         />
       </div>
@@ -243,6 +272,7 @@ function RoutineHookList({
 export function RoutinesSidebar({ pa, context }: ExtensionSurfaceProps) {
   const [data, setData] = useState<StateResult | null>(null);
   const [query, setQuery] = useState('');
+  const [showAllHooks, setShowAllHooks] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectedHookId = hookIdFromHash(context.hash) ?? 'checkpoint';
 
@@ -261,6 +291,12 @@ export function RoutinesSidebar({ pa, context }: ExtensionSurfaceProps) {
     };
   }, [pa]);
 
+  useEffect(() => {
+    const onState = (event: Event) => setData((event as CustomEvent<StateResult>).detail);
+    window.addEventListener('neon-pilot-routines-state', onState);
+    return () => window.removeEventListener('neon-pilot-routines-state', onState);
+  }, []);
+
   if (error) return <div className="p-3 text-[12px] text-danger">{error}</div>;
   if (!data) return <LoadingState label="Loading routines…" />;
 
@@ -269,8 +305,10 @@ export function RoutinesSidebar({ pa, context }: ExtensionSurfaceProps) {
       hooks={data.hooks}
       selectedHookId={selectedHookId}
       query={query}
+      showAllHooks={showAllHooks}
       onQueryChange={setQuery}
       onSelect={(hookId) => void navigateRoutines(pa, hookId)}
+      onShowAllHooksChange={setShowAllHooks}
     />
   );
 }
@@ -286,6 +324,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [showRuns, setShowRuns] = useState(false);
   const [openRoutineMenuId, setOpenRoutineMenuId] = useState<string | null>(null);
+  const [pendingScrollRoutineId, setPendingScrollRoutineId] = useState<string | null>(null);
   const [unsavedRoutineIds, setUnsavedRoutineIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
@@ -368,6 +407,18 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     setDraft(null);
   }, [data, selectedHookId, selectedRoutineId, unsavedRoutineIds]);
 
+  useEffect(() => {
+    if (!pendingScrollRoutineId) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.querySelector<HTMLElement>(`[data-routine-id="${pendingScrollRoutineId}"]`);
+      if (target) {
+        target.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+        setPendingScrollRoutineId(null);
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pendingScrollRoutineId, data?.routines, selectedHookId, selectedRoutineId]);
+
   const selectRoutine = useCallback((routine: Routine) => {
     setSelectedRoutineId(routine.id);
     setDraft({ ...routine, outcomes: routine.outcomes.map((outcome) => ({ ...outcome })) });
@@ -381,6 +432,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       const result = (await pa.extension.invoke('saveRoutine', draft)) as StateResult;
       const saved = result.routines.find((routine) => routine.id === draft.id) ?? draft;
       setData(result);
+      publishRoutinesState(result);
       setSelectedHookId(saved.hookId);
       setSelectedRoutineId(null);
       setDraft(null);
@@ -417,6 +469,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       }
       const result = (await pa.extension.invoke('deleteRoutine', { routineId: routine.id })) as StateResult;
       setData(result);
+      publishRoutinesState(result);
       setSelectedRoutineId(null);
       setDraft(null);
       setOpenRoutineMenuId(null);
@@ -435,6 +488,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       setActionError(null);
       setSelectedHookId(hookId);
       setSelectedRoutineId(routine.id);
+      setPendingScrollRoutineId(routine.id);
       setDraft(routine);
       setUnsavedRoutineIds((current) => new Set(current).add(routine.id));
       setData((current) => (current ? { ...current, routines: [...current.routines, routine] } : current));
@@ -490,6 +544,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           ...(parent ?? {}),
         })) as StateResult;
         setData(result);
+        publishRoutinesState(result);
         const selected = result.routines.find((routine) => routine.id === selectedRoutineId);
         if (selected) setDraft({ ...selected, outcomes: selected.outcomes.map((outcome) => ({ ...outcome })) });
       } catch (err) {
