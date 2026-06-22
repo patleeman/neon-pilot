@@ -196,6 +196,10 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
         title: session.title,
         updatedAt: session.lastActivityAt ?? session.timestamp,
       })),
+    listModels: async () =>
+      (await getAvailableModelObjects()).map((model) => ({
+        id: model.id,
+      })),
     createConversation: async (input) => {
       const created = await createLiveSessionCapability({}, liveSessionContext(context));
       renameSession(created.id, input.title);

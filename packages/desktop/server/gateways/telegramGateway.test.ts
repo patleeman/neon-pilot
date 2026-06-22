@@ -34,6 +34,10 @@ describe('TelegramGatewayRuntime', () => {
         { id: 'conv-1', title: 'Existing' },
         { id: 'conv-2', title: 'Project planning' },
       ]),
+      listModels: vi.fn(() => [
+        { id: 'provider/model-a', label: 'Model A' },
+        { id: 'provider/model-b', label: 'Model B' },
+      ]),
       submitPrompt: vi.fn(async () => undefined),
       renameConversation: vi.fn(async () => undefined),
       compactConversation: vi.fn(async () => undefined),
@@ -126,6 +130,22 @@ describe('TelegramGatewayRuntime', () => {
     );
     expect(state.attachGatewayConversation).toHaveBeenCalledWith(
       expect.objectContaining({ conversationId: 'conv-2', conversationTitle: 'Project planning', externalChatId: '123' }),
+    );
+  });
+
+  it('shows an inline model picker for /model without arguments', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'model' });
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps({ getCurrentModel: vi.fn(() => 'provider/model-b') });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: '/model' } });
+
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({
+        body: expect.stringContaining('callback_data":"model:provider/model-b'),
+      }),
     );
   });
 

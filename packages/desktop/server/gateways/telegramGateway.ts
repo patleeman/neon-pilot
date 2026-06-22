@@ -77,12 +77,19 @@ export interface TelegramGatewayConversationSummary {
   updatedAt?: string;
 }
 
+interface TelegramGatewayModelSummary {
+  id: string;
+  label?: string;
+  provider?: string;
+}
+
 export interface TelegramGatewayRuntimeDependencies {
   stateRoot: string;
   profile: string;
   authFile: string;
   createConversation: (input: { title: string }) => Promise<{ id: string }>;
   listConversations: () => Promise<TelegramGatewayConversationSummary[]> | TelegramGatewayConversationSummary[];
+  listModels: () => Promise<TelegramGatewayModelSummary[]> | TelegramGatewayModelSummary[];
   submitPrompt: (input: {
     conversationId: string;
     text: string;
@@ -237,7 +244,13 @@ export class TelegramGatewayRuntime {
     if (!callback.message?.chat || !callback.data) return;
     await this.answerCallbackQuery(callback.id);
     const data = callback.data.trim();
-    const text = data.startsWith('cmd:') ? data.slice(4) : data.startsWith('switch:') ? `/switch ${data.slice(7)}` : '';
+    const text = data.startsWith('cmd:')
+      ? data.slice(4)
+      : data.startsWith('switch:')
+        ? `/switch ${data.slice(7)}`
+        : data.startsWith('model:')
+          ? `/model ${data.slice(6)}`
+          : '';
     if (!text) return;
     await this.processUpdate({
       update_id: 0,
@@ -368,7 +381,9 @@ export class TelegramGatewayRuntime {
       case 'model':
         if (!command.model) {
           const model = await this.dependencies.getCurrentModel(target.conversationId);
-          await this.sendMessage(target.externalChatId, model ? `Current model: ${model}` : 'No model selected.');
+          await this.sendMessage(target.externalChatId, model ? `Current model: ${model}` : 'No model selected.', {
+            reply_markup: await this.modelKeyboard(model ?? undefined),
+          });
           return;
         }
         await this.dependencies.setModel(target.conversationId, command.model);
@@ -406,6 +421,21 @@ export class TelegramGatewayRuntime {
     rows.push([
       { text: 'New thread', callback_data: 'cmd:/new' },
       { text: 'Refresh list', callback_data: 'cmd:/threads' },
+    ]);
+    return { inline_keyboard: rows };
+  }
+
+  private async modelKeyboard(currentModel?: string): Promise<{ inline_keyboard: TelegramInlineKeyboardButton[][] }> {
+    const models = (await this.dependencies.listModels()).slice(0, 12);
+    const rows = models.map((model) => [
+      {
+        text: `${model.id === currentModel ? '✓ ' : ''}${truncateButtonText(model.label || model.id)}`,
+        callback_data: `model:${model.id}`,
+      },
+    ]);
+    rows.push([
+      { text: 'Refresh models', callback_data: 'cmd:/model' },
+      { text: 'Cancel', callback_data: 'cmd:/status' },
     ]);
     return { inline_keyboard: rows };
   }
