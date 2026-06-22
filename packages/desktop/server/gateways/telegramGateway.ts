@@ -272,7 +272,7 @@ export class TelegramGatewayRuntime {
 
   private async processCallbackQuery(callback: TelegramCallbackQuery): Promise<void> {
     if (!callback.message?.chat || !callback.data) return;
-    await this.answerCallbackQuery(callback.id);
+    await this.answerCallbackQuery(callback.id).catch(() => undefined);
     const data = callback.data.trim();
     if (data.startsWith('modelpage:')) {
       const page = Number.parseInt(data.slice(10), 10);

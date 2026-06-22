@@ -190,6 +190,33 @@ describe('TelegramGatewayRuntime', () => {
     );
   });
 
+  it('still handles callback actions when answering the callback fails', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'switch', target: 'conv-2' });
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps({
+      fetch: vi.fn(async (url: string) => ({
+        ok: !url.endsWith('/answerCallbackQuery'),
+        json: async () =>
+          url.endsWith('/answerCallbackQuery')
+            ? { ok: false, description: 'query is too old' }
+            : { ok: true, result: url.endsWith('/sendMessage') ? { message_id: 42 } : true },
+      })),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      callback_query: {
+        id: 'callback-1',
+        from: { id: 777 },
+        data: 'switch:conv-2',
+        message: { message_id: 10, chat: { id: 123 } },
+      },
+    });
+
+    expect(state.attachGatewayConversation).toHaveBeenCalledWith(expect.objectContaining({ conversationId: 'conv-2' }));
+  });
+
   it('paginates the inline model picker from callback buttons', async () => {
     state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
     const d = deps({
