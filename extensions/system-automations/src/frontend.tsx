@@ -989,29 +989,6 @@ function schedulePreview(form: AutomationFormState) {
   return cron ? 'Uses a custom saved schedule.' : 'Choose a recurring schedule.';
 }
 
-function buildCreateWithChatPrompt(form: AutomationFormState) {
-  const input = readFormInput(form);
-  const lines = [
-    "Read the built-in scheduled-tasks skill, then let's chat about the automation I want to create. Help me shape the schedule, run rules, delivery, and execution defaults. Do not create the automation until I confirm the final version.",
-    '',
-    'Starter draft from the automation form:',
-    `- Title: ${input.title || '<help me choose a concise title>'}`,
-    `- Prompt: ${input.prompt || '<help me write what should run>'}`,
-    input.cron ? `- Schedule: recurring cron ${input.cron}` : `- Schedule: once at ${input.at || '<help me choose a time>'}`,
-    `- Target: ${input.targetType}`,
-    `- Result conversation: ${input.threadMode}`,
-    input.threadConversationId ? `- Existing conversation id: ${input.threadConversationId}` : null,
-    input.cwd ? `- Working directory: ${input.cwd}` : null,
-    input.model ? `- Model: ${input.model}` : null,
-    input.thinkingLevel ? `- Thinking level: ${input.thinkingLevel}` : null,
-    input.timeoutSeconds ? `- Timeout seconds: ${input.timeoutSeconds}` : null,
-    input.catchUpWindowSeconds && input.cron ? `- Catch-up policy window seconds: ${input.catchUpWindowSeconds}` : null,
-    input.policies.length > 0 ? `- Run rules: ${JSON.stringify(input.policies)}` : null,
-    `- Enabled: ${input.enabled ? 'true' : 'false'}`,
-  ].filter(Boolean);
-  return lines.join('\n');
-}
-
 function RefreshIcon() {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -1382,7 +1359,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const [activeEditorSection, setActiveEditorSection] = useState<EditorSectionId>('automation-general');
   const [conversationOptions, setConversationOptions] = useState<ConversationOption[]>([]);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
-  const createWithChatInFlightRef = useRef(false);
   const savedFormInputRef = useRef<string | null>(null);
   const autosaveRequestIdRef = useRef(0);
   const loadSequenceRef = useRef(0);
@@ -1520,26 +1496,32 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     setAutosaveStatus(null);
   }, []);
 
-  const createWithChat = useCallback(async () => {
-    if (createWithChatInFlightRef.current) return;
-    createWithChatInFlightRef.current = true;
-    setBusy('create-chat');
+  const saveAutomation = useCallback(async () => {
+    if (busy === 'save' || !form.title.trim() || !form.prompt.trim()) return;
+    const input = readFormInput(form);
+    setBusy('save');
+    setNotice(null);
     try {
-      const prompt = buildCreateWithChatPrompt(form);
-      const opened = await pa.commands.execute('conversation.newAndFocus', {
-        initialPromptText: prompt,
-        cwd: form.cwd.trim() || undefined,
-      });
-      if (opened) {
-        closeEditor();
+      if (editingId) {
+        await pa.automations.update(editingId, input);
+        savedFormInputRef.current = JSON.stringify(input);
+        setAutosaveStatus('Saved');
+        setNotice('Automation saved.');
+        await load();
         return;
       }
-      pa.ui.notify({ type: 'error', message: 'Could not open chat for automation creation.', source: 'system-automations' });
+      await pa.automations.create(input);
+      setNotice('Automation saved.');
+      closeEditor();
+      await load();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      pa.ui.notify({ type: 'error', message: `Failed to save automation: ${msg}`, source: 'system-automations' });
     } finally {
-      createWithChatInFlightRef.current = false;
       setBusy(null);
     }
-  }, [closeEditor, form, pa]);
+  }, [busy, closeEditor, editingId, form, load, pa]);
 
   useEffect(() => {
     if (!editorOpen || !editingId || busy === 'save' || !form.title.trim() || !form.prompt.trim()) {
@@ -1838,10 +1820,10 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   }
 
   return (
-    <div className="h-full min-h-0 overflow-hidden">
+    <div className={cx('h-full min-h-0', editorOpen ? 'overflow-auto' : 'overflow-hidden')}>
       <AppPageLayout
         shellClassName={editorOpen ? undefined : 'h-full'}
-        contentClassName={editorOpen ? 'space-y-6' : 'flex h-full min-h-0 flex-col overflow-hidden space-y-0'}
+        contentClassName={editorOpen ? 'space-y-6 pb-12' : 'flex h-full min-h-0 flex-col overflow-hidden space-y-0'}
       >
         {!editorOpen && (
           <>
@@ -1851,7 +1833,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 <div className="flex min-w-0 items-center gap-2">
                   <SchedulerHealthDot health={health} />
                   <ToolbarButton type="button" onClick={() => openEditor()}>
-                    Create with agent
+                    New automation
                   </ToolbarButton>
                   <Select
                     name="automation-status-filter"
@@ -1938,7 +1920,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 return;
               }
               event.preventDefault();
-              void createWithChat();
+              void saveAutomation();
             }}
           >
             <AppPageLayout
@@ -1969,16 +1951,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                   </p>
                   {editingId && autosaveStatus ? <p className="mt-2 text-[12px] text-muted">{autosaveStatus}</p> : null}
                 </div>
-                {!editingId ? (
-                  <ToolbarButton
-                    type="button"
-                    className="self-start"
-                    disabled={busy === 'create-chat'}
-                    onClick={() => void createWithChat()}
-                  >
-                    {busy === 'create-chat' ? 'Opening chat…' : 'Create with chat'}
-                  </ToolbarButton>
-                ) : null}
               </div>
 
               <FormSection
@@ -2383,11 +2355,13 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {!editingId ? (
-                    <ToolbarButton type="button" disabled={busy === 'create-chat'} onClick={() => void createWithChat()}>
-                      {busy === 'create-chat' ? 'Opening chat…' : 'Create with chat'}
-                    </ToolbarButton>
-                  ) : null}
+                  <ToolbarButton
+                    type="button"
+                    disabled={busy === 'save' || !form.title.trim() || !form.prompt.trim()}
+                    onClick={() => void saveAutomation()}
+                  >
+                    {busy === 'save' ? 'Saving…' : editingId ? 'Save changes' : 'Save automation'}
+                  </ToolbarButton>
                 </div>
               </div>
             </AppPageLayout>
