@@ -98,6 +98,24 @@ describe('TelegramGatewayRuntime', () => {
     );
   });
 
+  it('treats /reset as starting a new Telegram conversation', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'new' });
+    const d = deps();
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      message: { message_id: 10, chat: { id: 123, username: 'pat' }, from: { id: 777 }, text: '/reset' },
+    });
+
+    expect(state.findGatewayChatTarget).not.toHaveBeenCalled();
+    expect(d.createConversation).toHaveBeenCalledWith({ title: 'Telegram: pat' });
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('Started a new Telegram conversation.') }),
+    );
+  });
+
   it('handles command messages after ensuring chat target', async () => {
     commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'model', model: 'provider/model' });
     state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
