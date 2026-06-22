@@ -1781,10 +1781,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     linesDeleted: number;
   } | null>(null);
 
-  const [notice, setNotice] = useState<{ tone: 'accent' | 'danger'; text: string } | null>(null);
+  const [notice, setNotice] = useState<{ tone: 'accent' | 'danger' | 'warning'; text: string } | null>(null);
   const [savingPreference, setSavingPreference] = useState<'model' | 'thinking' | 'serviceTier' | null>(null);
   const noticeTimeoutRef = useRef<number | null>(null);
-  const showNotice = useCallback((tone: 'accent' | 'danger', text: string, durationMs = 2500) => {
+  const showNotice = useCallback((tone: 'accent' | 'danger' | 'warning', text: string, durationMs = 2500) => {
     setNotice({ tone, text });
     if (tone === 'danger') {
       addNotification({ type: 'warning', message: text, source: 'core' });
@@ -1792,10 +1792,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     if (noticeTimeoutRef.current !== null) {
       window.clearTimeout(noticeTimeoutRef.current);
     }
-    noticeTimeoutRef.current = window.setTimeout(() => {
-      setNotice(null);
-      noticeTimeoutRef.current = null;
-    }, durationMs);
+    if (durationMs > 0) {
+      noticeTimeoutRef.current = window.setTimeout(() => {
+        setNotice(null);
+        noticeTimeoutRef.current = null;
+      }, durationMs);
+    }
   }, []);
 
   const ensureConversationCanControl = useCallback((_action: string): boolean => {
@@ -1848,6 +1850,19 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const [attachments, setAttachments] = useState<ComposerImageAttachment[]>([]);
   const showTextOnlyImageHint =
     attachments.length > 0 && selectedComposerModel !== null && !selectedComposerModel.input?.includes('image') && !defaultVisionModel;
+
+  useEffect(() => {
+    if (showTextOnlyImageHint) {
+      showNotice('warning', 'Set a vision model in Settings to inspect attached images.', 0);
+    } else if (notice?.text === 'Set a vision model in Settings to inspect attached images.') {
+      setNotice(null);
+      if (noticeTimeoutRef.current !== null) {
+        window.clearTimeout(noticeTimeoutRef.current);
+        noticeTimeoutRef.current = null;
+      }
+    }
+  }, [showTextOnlyImageHint]);
+
   const [drawingAttachments, setDrawingAttachments] = useState<ComposerDrawingAttachment[]>([]);
   const [pendingBrowserComments, setPendingBrowserComments] = useReloadState<PendingBrowserComment[]>({
     storageKey: browserCommentsStorageKey,
@@ -6747,10 +6762,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                   />
                 </div>
               )}
-
-              {showTextOnlyImageHint ? (
-                <p className="mb-2 text-[12px] text-secondary">Set a vision model in Settings to inspect attached images.</p>
-              ) : null}
 
               {composerChromeReady ? (
                 <ConversationGoalPanel goal={stream.goalState} onCancel={() => void streamSend('/goal clear')} />
