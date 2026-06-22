@@ -22,6 +22,7 @@ import {
   appendConversationWorkspaceMetadata,
   readConversationSessionMetaByFilePath,
 } from './conversationTranscriptOps.js';
+import { type InjectedTurnEnvelopeOptions, wrapInjectedTurnMessage } from './injectedTurnEnvelope.js';
 import { executeLiveSessionBash } from './liveSessionBash.js';
 import { finalizeLiveSessionBashExecution } from './liveSessionBashFinalization.js';
 import { branchLiveSession, forkLiveSession } from './liveSessionBranching.js';
@@ -890,13 +891,16 @@ export async function promptSession(
   behavior?: 'steer' | 'followUp',
   images?: PromptImageAttachment[],
   _surfaceId?: string,
+  injectedTurn?: InjectedTurnEnvelopeOptions,
 ): Promise<void> {
   const entry = registry.get(sessionId);
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
   // Prompt submission should survive quick navigation between conversations.
   // Keep surface-gated control for takeover/abort actions, but let an already
   // clicked send continue even if this surface disconnects a moment later.
-  await runPromptOnLiveEntry(entry, text, resolvePromptBehavior(entry, behavior), images);
+  const normalizedBehavior = resolvePromptBehavior(entry, behavior);
+  const submittedText = injectedTurn ? wrapInjectedTurnMessage(text, { ...injectedTurn, delivery: normalizedBehavior ?? 'started' }) : text;
+  await runPromptOnLiveEntry(entry, submittedText, normalizedBehavior, images);
 }
 
 export async function submitPromptSession(

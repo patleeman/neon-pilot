@@ -46,7 +46,9 @@ const uiPreferences = vi.hoisted(() => ({
     return uiPreferences.saved;
   }),
 }));
-const settingsPersistence = vi.hoisted(() => ({ persistSettingsWrite: vi.fn((writer: (settingsFile: string) => unknown) => writer('/settings.json')) }));
+const settingsPersistence = vi.hoisted(() => ({
+  persistSettingsWrite: vi.fn((writer: (settingsFile: string) => unknown) => writer('/settings.json')),
+}));
 
 vi.mock('../conversations/conversationSessionCapability.js', () => sessionsCapability);
 vi.mock('../conversations/liveSessionBroadcasts.js', () => broadcasts);
@@ -236,7 +238,12 @@ describe('extensionConversations', () => {
 
     await expect(capability.sendMessage('conv-1', 'hello')).resolves.toEqual({ accepted: true, delivery: 'started' });
     expect(liveSessionCapability.submitLiveSessionPromptCapability).toHaveBeenLastCalledWith(
-      expect.objectContaining({ conversationId: 'conv-1', text: 'hello', behavior: undefined }),
+      expect.objectContaining({
+        conversationId: 'conv-1',
+        text: 'hello',
+        behavior: undefined,
+        injectedTurn: expect.objectContaining({ source: { type: 'extension', id: 'extension' } }),
+      }),
       expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
     );
     expect(entry.session.prompt).not.toHaveBeenCalled();
@@ -252,7 +259,12 @@ describe('extensionConversations', () => {
     });
     await expect(capability.sendMessage('conv-1', 'now', { steer: true })).resolves.toEqual({ accepted: true, delivery: 'queued' });
     expect(liveSessionCapability.submitLiveSessionPromptCapability).toHaveBeenLastCalledWith(
-      expect.objectContaining({ conversationId: 'conv-1', text: 'now', behavior: 'steer' }),
+      expect.objectContaining({
+        conversationId: 'conv-1',
+        text: 'now',
+        behavior: 'steer',
+        injectedTurn: expect.objectContaining({ source: { type: 'extension', id: 'extension' } }),
+      }),
       expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
     );
     expect(entry.session.steer).not.toHaveBeenCalled();

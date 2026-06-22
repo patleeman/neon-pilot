@@ -28,6 +28,7 @@ import { resolveConversationCwd, resolveNeutralChatCwd } from './conversationCwd
 import { syncWebLiveConversationRun } from './conversationRuns.js';
 import { appendConversationWorkspaceMetadata, readConversationSessionMeta, resolveConversationSessionFile } from './conversationService.js';
 import { queueConversationSummaryRefresh } from './conversationSummaries.js';
+import { type InjectedTurnEnvelopeOptions, wrapInjectedTurnMessage } from './injectedTurnEnvelope.js';
 import {
   abortSession as abortLocalSession,
   branchSession as branchLiveSession,
@@ -156,6 +157,7 @@ export interface SubmitLiveSessionPromptCapabilityInput {
   contextMessages?: unknown;
   relatedConversationIds?: unknown;
   surfaceId?: string;
+  injectedTurn?: InjectedTurnEnvelopeOptions;
 }
 
 export interface SubmitLiveSessionParallelPromptCapabilityInput {
@@ -991,9 +993,13 @@ export async function submitLiveSessionPromptCapability(
 
   const syncedRunAtMs = performance.now();
 
+  const submittedText = input.injectedTurn
+    ? wrapInjectedTurnMessage(prepared.text, { ...input.injectedTurn, delivery: behavior ?? 'started' })
+    : prepared.text;
+
   const submittedPrompt = await submitLocalPromptSession(
     liveConversationId,
-    prepared.text,
+    submittedText,
     behavior,
     prepared.promptImages,
     prepared.surfaceId,

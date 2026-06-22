@@ -1469,6 +1469,8 @@ await ctx.conversations.searchIndex(sessionIds);
 
 **Permission required:** `conversations:readwrite` for write operations.
 
+Messages sent by extensions through `ctx.conversations.sendMessage(...)` are wrapped before they reach the agent in a standard `<neon_pilot_injected_turn>` envelope. The envelope identifies the injecting extension and delivery mode, so the agent can distinguish a human prompt from an extension-triggered extra turn.
+
 The `conversations` capability also exposes first-class lifecycle helpers:
 
 ```typescript

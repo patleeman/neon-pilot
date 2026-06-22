@@ -120,7 +120,10 @@ export async function cancelQueuedPrompt(sessionId: string, behavior: string, pr
   return callModuleExport<boolean>('../../conversations/liveSessions.js', 'cancelQueuedPrompt', sessionId, behavior, previewId);
 }
 export async function promptSession(sessionId: string, prompt: string, behavior: string) {
-  return callModuleExport<void>('../../conversations/liveSessions.js', 'promptSession', sessionId, prompt, behavior);
+  return callModuleExport<void>('../../conversations/liveSessions.js', 'promptSession', sessionId, prompt, behavior, undefined, undefined, {
+    source: { type: 'extension', id: 'system-automations', name: 'Automations' },
+    reason: 'Automation queued this conversation turn.',
+  });
 }
 export async function queuePromptContext(sessionId: string, customType: string, content: string) {
   return callModuleExport<void>('../../conversations/liveSessions.js', 'queuePromptContext', sessionId, customType, content);

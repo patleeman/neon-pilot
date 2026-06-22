@@ -70,6 +70,19 @@ describe('backendApi/automations', () => {
       'followUp',
       'preview-1',
     );
+
+    resolver.callServerModuleExport.mockResolvedValueOnce(undefined);
+    await expect(automations.promptSession('session-1', 'Continue', 'followUp')).resolves.toBeUndefined();
+    expect(resolver.callServerModuleExport).toHaveBeenLastCalledWith(
+      '../../conversations/liveSessions.js',
+      'promptSession',
+      'session-1',
+      'Continue',
+      'followUp',
+      undefined,
+      undefined,
+      expect.objectContaining({ source: { type: 'extension', id: 'system-automations', name: 'Automations' } }),
+    );
   });
 
   it('uses core helpers for deferred resume and task callback state', async () => {

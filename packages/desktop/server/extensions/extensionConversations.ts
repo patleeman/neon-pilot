@@ -639,6 +639,10 @@ export function createExtensionConversationsCapability(
             text,
             behavior: options?.steer ? 'steer' : undefined,
             images: options?.images,
+            injectedTurn: {
+              source: { type: 'extension', id: extensionId },
+              reason: 'Extension conversation API sent this prompt.',
+            },
           },
           buildLiveSessionCapabilityContext(),
         );
