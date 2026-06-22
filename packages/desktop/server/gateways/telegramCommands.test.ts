@@ -13,6 +13,8 @@ describe('parseTelegramGatewayCommand', () => {
     expect(parseTelegramGatewayCommand('/switch 2')).toEqual({ kind: 'switch', target: '2' });
     expect(parseTelegramGatewayCommand('/resume Project planning')).toEqual({ kind: 'switch', target: 'Project planning' });
     expect(parseTelegramGatewayCommand('/resume')).toEqual({ kind: 'resume' });
+    expect(parseTelegramGatewayCommand('/title')).toEqual({ kind: 'title' });
+    expect(parseTelegramGatewayCommand('/title Daily agent')).toEqual({ kind: 'rename', title: 'Daily agent' });
     expect(parseTelegramGatewayCommand('/rename Daily agent')).toEqual({ kind: 'rename', title: 'Daily agent' });
   });
 

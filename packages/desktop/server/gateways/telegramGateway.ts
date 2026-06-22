@@ -185,7 +185,13 @@ export class TelegramGatewayRuntime {
     const target = await this.ensureChatTarget({ externalChatId, externalChatLabel, forceNew: command?.kind === 'new' });
 
     if (command) {
-      await this.handleCommand(command, { conversationId: target.conversationId, externalChatId, externalChatLabel, externalUserId });
+      await this.handleCommand(command, {
+        conversationId: target.conversationId,
+        conversationTitle: target.conversationTitle,
+        externalChatId,
+        externalChatLabel,
+        externalUserId,
+      });
       return;
     }
 
@@ -354,7 +360,13 @@ export class TelegramGatewayRuntime {
 
   private async handleCommand(
     command: NonNullable<ReturnType<typeof parseTelegramGatewayCommand>>,
-    target: { conversationId: string; externalChatId: string; externalChatLabel: string; externalUserId?: string },
+    target: {
+      conversationId: string;
+      conversationTitle?: string;
+      externalChatId: string;
+      externalChatLabel: string;
+      externalUserId?: string;
+    },
   ): Promise<void> {
     switch (command.kind) {
       case 'start':
@@ -457,6 +469,9 @@ export class TelegramGatewayRuntime {
       case 'compact':
         await this.dependencies.compactConversation(target.conversationId);
         await this.sendMessage(target.externalChatId, 'Compaction requested.');
+        return;
+      case 'title':
+        await this.sendMessage(target.externalChatId, `Current thread title: ${target.conversationTitle || target.conversationId}`);
         return;
       case 'rename':
         await this.dependencies.renameConversation(target.conversationId, command.title);
@@ -564,6 +579,7 @@ export class TelegramGatewayRuntime {
         { command: 'stop', description: 'Pause replies for this conversation' },
         { command: 'resume', description: 'Resume replies or switch to a named thread' },
         { command: 'compact', description: 'Compact the current thread' },
+        { command: 'title', description: 'Show or rename the current thread' },
         { command: 'rename', description: 'Rename the current thread' },
         { command: 'archive', description: 'Archive and detach the thread' },
       ],

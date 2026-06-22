@@ -12,6 +12,7 @@ export type TelegramGatewayCommand =
   | { kind: 'detach' }
   | { kind: 'model'; model?: string }
   | { kind: 'compact' }
+  | { kind: 'title' }
   | { kind: 'rename'; title: string }
   | { kind: 'archive' };
 
@@ -56,6 +57,8 @@ export function parseTelegramGatewayCommand(text: string): TelegramGatewayComman
       return arg ? { kind: 'model', model: arg } : { kind: 'model' };
     case '/compact':
       return { kind: 'compact' };
+    case '/title':
+      return arg ? { kind: 'rename', title: arg } : { kind: 'title' };
     case '/rename':
       return arg ? { kind: 'rename', title: arg } : null;
     case '/archive':
@@ -79,6 +82,7 @@ export function formatTelegramGatewayHelp(): string {
     '/resume — resume replies',
     '/model [name] — show or change model',
     '/compact — compact the thread',
+    '/title [name] — show or rename the thread',
     '/rename <title> — rename the thread',
     '/archive — archive and detach the thread',
   ].join('\n');
