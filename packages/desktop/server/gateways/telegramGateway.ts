@@ -41,9 +41,26 @@ interface TelegramMessage {
   photo?: TelegramPhotoSize[];
 }
 
+interface TelegramCallbackQuery {
+  id: string;
+  from?: TelegramUser;
+  message?: TelegramMessage;
+  data?: string;
+}
+
+interface TelegramInlineKeyboardButton {
+  text: string;
+  callback_data: string;
+}
+
+interface TelegramSendMessageOptions {
+  reply_markup?: { inline_keyboard: TelegramInlineKeyboardButton[][] };
+}
+
 interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
+  callback_query?: TelegramCallbackQuery;
 }
 
 interface TelegramApiResponse<T> {
@@ -127,6 +144,11 @@ export class TelegramGatewayRuntime {
   }
 
   async processUpdate(update: TelegramUpdate): Promise<void> {
+    if (update.callback_query) {
+      await this.processCallbackQuery(update.callback_query);
+      return;
+    }
+
     const message = update.message;
     if (!message) return;
 
@@ -208,6 +230,18 @@ export class TelegramGatewayRuntime {
     return false;
   }
 
+  private async processCallbackQuery(callback: TelegramCallbackQuery): Promise<void> {
+    if (!callback.message?.chat || !callback.data) return;
+    await this.answerCallbackQuery(callback.id);
+    const data = callback.data.trim();
+    const text = data.startsWith('cmd:') ? data.slice(4) : data.startsWith('switch:') ? `/switch ${data.slice(7)}` : '';
+    if (!text) return;
+    await this.processUpdate({
+      update_id: 0,
+      message: { ...callback.message, from: callback.from, text },
+    });
+  }
+
   private async ensureChatTarget(input: {
     externalChatId: string;
     externalChatLabel: string;
@@ -260,10 +294,12 @@ export class TelegramGatewayRuntime {
   ): Promise<void> {
     switch (command.kind) {
       case 'start':
-        await this.sendMessage(target.externalChatId, `Connected to ${target.externalChatLabel}. Use /help for commands.`);
+        await this.sendMessage(target.externalChatId, `Connected to ${target.externalChatLabel}. Use /help for commands.`, {
+          reply_markup: commandKeyboard(),
+        });
         return;
       case 'help':
-        await this.sendMessage(target.externalChatId, formatTelegramGatewayHelp());
+        await this.sendMessage(target.externalChatId, formatTelegramGatewayHelp(), { reply_markup: commandKeyboard() });
         return;
       case 'status': {
         const model = await this.dependencies.getCurrentModel(target.conversationId);
@@ -274,13 +310,16 @@ export class TelegramGatewayRuntime {
         return;
       }
       case 'threads':
-        await this.sendMessage(target.externalChatId, await this.formatConversationList());
+        await this.sendMessage(target.externalChatId, await this.formatConversationList(), {
+          reply_markup: await this.conversationKeyboard(),
+        });
         return;
       case 'switch':
         if (!command.target) {
           await this.sendMessage(
             target.externalChatId,
             await this.formatConversationList('Send /switch <number>, /switch <title>, or /switch <id>.'),
+            { reply_markup: await this.conversationKeyboard() },
           );
           return;
         }
@@ -356,6 +395,18 @@ export class TelegramGatewayRuntime {
     ].join('\n');
   }
 
+  private async conversationKeyboard(): Promise<{ inline_keyboard: TelegramInlineKeyboardButton[][] }> {
+    const conversations = (await this.dependencies.listConversations()).slice(0, 8);
+    const rows = conversations.map((conversation, index) => [
+      { text: `${index + 1}. ${truncateButtonText(conversation.title || conversation.id)}`, callback_data: `switch:${conversation.id}` },
+    ]);
+    rows.push([
+      { text: 'New thread', callback_data: 'cmd:/new' },
+      { text: 'Refresh list', callback_data: 'cmd:/threads' },
+    ]);
+    return { inline_keyboard: rows };
+  }
+
   private async switchConversation(
     target: string,
     chat: { conversationId: string; externalChatId: string; externalChatLabel: string },
@@ -374,6 +425,7 @@ export class TelegramGatewayRuntime {
         matches.length > 1
           ? `Multiple conversations matched "${target}".\n${await this.formatConversationList('Pick one with /switch <number>:')}`
           : `No conversation matched "${target}".\n${await this.formatConversationList('Pick one with /switch <number>:')}`,
+        { reply_markup: await this.conversationKeyboard() },
       );
       return;
     }
@@ -396,7 +448,7 @@ export class TelegramGatewayRuntime {
         const updates = await this.telegramRequest<TelegramUpdate[]>(token, 'getUpdates', {
           timeout: 50,
           offset: this.nextOffset || undefined,
-          allowed_updates: ['message'],
+          allowed_updates: ['message', 'callback_query'],
         });
         for (const update of updates) {
           this.nextOffset = Math.max(this.nextOffset, update.update_id + 1);
@@ -438,10 +490,16 @@ export class TelegramGatewayRuntime {
     this.typingIndicators.delete(chatId);
   }
 
-  private async sendMessage(chatId: string, text: string): Promise<void> {
+  private async sendMessage(chatId: string, text: string, options: TelegramSendMessageOptions = {}): Promise<void> {
     const token = this.dependencies.readBotToken();
     if (!token) return;
-    await this.telegramRequest(token, 'sendMessage', { chat_id: chatId, text });
+    await this.telegramRequest(token, 'sendMessage', { chat_id: chatId, text, ...options });
+  }
+
+  private async answerCallbackQuery(callbackQueryId: string): Promise<void> {
+    const token = this.dependencies.readBotToken();
+    if (!token) return;
+    await this.telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callbackQueryId });
   }
 
   private async telegramRequest<T>(token: string, method: string, body: unknown): Promise<T> {
@@ -458,6 +516,26 @@ export class TelegramGatewayRuntime {
     }
     return payload.result as T;
   }
+}
+
+function commandKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] } {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'Threads', callback_data: 'cmd:/threads' },
+        { text: 'New thread', callback_data: 'cmd:/new' },
+      ],
+      [
+        { text: 'Status', callback_data: 'cmd:/status' },
+        { text: 'Help', callback_data: 'cmd:/help' },
+      ],
+    ],
+  };
+}
+
+function truncateButtonText(value: string): string {
+  const trimmed = value.trim();
+  return trimmed.length > 36 ? `${trimmed.slice(0, 33)}…` : trimmed;
 }
 
 function formatTelegramChatLabel(chat: TelegramChat): string {

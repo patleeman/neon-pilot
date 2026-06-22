@@ -123,6 +123,29 @@ describe('TelegramGatewayRuntime', () => {
     );
   });
 
+  it('handles inline keyboard callbacks as slash commands', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'switch', target: 'conv-2' });
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps();
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      callback_query: {
+        id: 'callback-1',
+        from: { id: 777 },
+        data: 'switch:conv-2',
+        message: { message_id: 10, chat: { id: 123 } },
+      },
+    });
+
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/answerCallbackQuery',
+      expect.objectContaining({ body: JSON.stringify({ callback_query_id: 'callback-1' }) }),
+    );
+    expect(state.attachGatewayConversation).toHaveBeenCalledWith(expect.objectContaining({ conversationId: 'conv-2' }));
+  });
+
   it('loads best Telegram photo and submits it as an image prompt', async () => {
     state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
     const d = deps({
