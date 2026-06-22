@@ -284,8 +284,6 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const [models, setModels] = useState<ModelItem[]>([]);
   const [skillQuery, setSkillQuery] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [addHookQuery, setAddHookQuery] = useState('');
-  const [addHookId, setAddHookId] = useState<string | null>(null);
   const [showRuns, setShowRuns] = useState(false);
   const [openRoutineMenuId, setOpenRoutineMenuId] = useState<string | null>(null);
   const [unsavedRoutineIds, setUnsavedRoutineIds] = useState<Set<string>>(new Set());
@@ -361,17 +359,6 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const draftIsDirty = Boolean(draft && (unsavedRoutineIds.has(draft.id) || JSON.stringify(draft) !== JSON.stringify(savedDraft ?? null)));
   const branchRoutineOptions = hookRoutines.filter((routine) => routine.id !== draft?.id);
   const routineNameById = useMemo(() => new Map(hookRoutines.map((routine) => [routine.id, routine.name])), [hookRoutines]);
-  const addHookOptions = useMemo(() => {
-    const normalizedQuery = addHookQuery.trim().toLowerCase();
-    const hooks = data?.hooks ?? [];
-    return normalizedQuery
-      ? hooks.filter((hook) =>
-          `${hook.title} ${hook.description} ${hook.group} ${ownerLabel(hook.ownerExtensionId)}`.toLowerCase().includes(normalizedQuery),
-        )
-      : hooks;
-  }, [addHookQuery, data?.hooks]);
-  const addHook = data?.hooks.find((hook) => hook.id === (addHookId ?? selectedHook?.id)) ?? selectedHook;
-
   useEffect(() => {
     if (!data || !selectedRoutineId) return;
     if (unsavedRoutineIds.has(selectedRoutineId)) return;
@@ -394,6 +381,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       const result = (await pa.extension.invoke('saveRoutine', draft)) as StateResult;
       const saved = result.routines.find((routine) => routine.id === draft.id) ?? draft;
       setData(result);
+      setSelectedHookId(saved.hookId);
       setSelectedRoutineId(null);
       setDraft(null);
       setUnsavedRoutineIds((current) => {
@@ -403,12 +391,13 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       });
       setLastSavedAt(new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
       pa.ui.toast('Routine saved', 'info');
+      if (saved.hookId !== selectedHookId) void navigateRoutines(pa, saved.hookId);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
     }
-  }, [draft, pa]);
+  }, [draft, pa, selectedHookId]);
 
   const deleteRoutine = useCallback(
     async (routine: Routine) => {
@@ -443,8 +432,6 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       const parentRoutine = parent ? hookRoutines.find((routine) => routine.id === parent.parentRoutineId) : null;
       const routine = nowRoutine(hookId, parentRoutine?.position ?? 'before', type, parent);
       setShowAdd(false);
-      setAddHookId(null);
-      setAddHookQuery('');
       setActionError(null);
       setSelectedHookId(hookId);
       setSelectedRoutineId(routine.id);
@@ -660,6 +647,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
 
   const renderEditor = (routine: Routine) => {
     if (!draft || draft.id !== routine.id) return null;
+    const draftHook = data?.hooks.find((hook) => hook.id === draft.hookId) ?? selectedHook;
     return (
       <div className="border-t border-border-subtle bg-app/35 px-4 py-4" onClick={(event) => event.stopPropagation()}>
         <div className="mb-4">
@@ -673,6 +661,25 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         ) : null}
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
           <div className="grid gap-3">
+            <label className="grid gap-1">
+              <span className="text-[11px] uppercase tracking-wider text-secondary">Event</span>
+              <Select
+                name="routine-hook"
+                className="w-full"
+                value={draft.hookId}
+                onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setDraft({ ...draft, hookId: event.target.value })}
+              >
+                {groupedHooks(data?.hooks ?? []).map(([group, hooks]) => (
+                  <optgroup key={group} label={group}>
+                    {hooks.map((hook) => (
+                      <option key={hook.id} value={hook.id}>
+                        {hook.title}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </Select>
+            </label>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1">
                 <span className="text-[11px] uppercase tracking-wider text-secondary">Routine type</span>
@@ -833,7 +840,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             ) : null}
             <div>
               <div className="mb-1 text-[11px] uppercase tracking-wider text-secondary">Available variables</div>
-              {selectedHook.variables.map((variable) => (
+              {draftHook.variables.map((variable) => (
                 <div key={variable.name} className="flex justify-between border-b border-border-subtle py-1 text-[12px]">
                   <span>{`{{${variable.name}}}`}</span>
                   <span className="text-secondary">{variable.label}</span>
@@ -1279,72 +1286,27 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   Add routine ▾
                 </ToolbarButton>
                 {showAdd ? (
-                  <div className="absolute right-0 top-9 z-20 grid max-h-[32rem] w-[28rem] grid-cols-[1fr_1.35fr] overflow-hidden rounded-md border border-border-subtle bg-[#10141d] shadow-2xl">
-                    <div>
-                      <div className="border-b border-border-subtle px-3 py-2">
-                        <div className="text-[12px] font-medium text-primary">{addHook?.title ?? 'Choose an event'}</div>
-                        <div className="mt-0.5 text-[11px] text-secondary">
-                          {addHook ? ownerLabel(addHook.ownerExtensionId) : 'Select a hook first.'}
-                        </div>
-                      </div>
-                      <button
-                        className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3 disabled:opacity-50"
-                        disabled={!addHook}
-                        onClick={() => addHook && addRoutine('instruction', undefined, addHook.id)}
-                      >
-                        <span className="block text-[13px] font-medium text-primary">Instruction</span>
-                        <span className="block text-[11px] text-secondary">Run an agent invocation and continue.</span>
-                      </button>
-                      <button
-                        className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3 disabled:opacity-50"
-                        disabled={!addHook}
-                        onClick={() => addHook && addRoutine('decision', undefined, addHook.id)}
-                      >
-                        <span className="block text-[13px] font-medium text-primary">Judge</span>
-                        <span className="block text-[11px] text-secondary">Assess the event and choose a path.</span>
-                      </button>
-                      <button
-                        className="block w-full px-3 py-2 text-left hover:bg-surface-3 disabled:opacity-50"
-                        disabled={!addHook}
-                        onClick={() => addHook && addRoutine('stop', undefined, addHook.id)}
-                      >
-                        <span className="block text-[13px] font-medium text-primary">Manual stop</span>
-                        <span className="block text-[11px] text-secondary">Advanced: always block this event.</span>
-                      </button>
-                    </div>
-
-                    <div className="min-h-0 border-l border-border-subtle">
-                      <div className="border-b border-border-subtle p-2">
-                        <SearchInput
-                          value={addHookQuery}
-                          onChange={(event: React.ChangeEvent<HTMLInputElement>) => setAddHookQuery(event.target.value)}
-                          placeholder="Find event…"
-                        />
-                      </div>
-                      <div className="max-h-[27rem] overflow-y-auto py-1">
-                        {groupedHooks(addHookOptions).map(([group, hooks]) => (
-                          <div key={group} className="py-1">
-                            <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-secondary">{group}</div>
-                            {hooks.map((hook) => (
-                              <button
-                                key={hook.id}
-                                className={cx(
-                                  'block w-full px-3 py-2 text-left hover:bg-surface-3',
-                                  (addHook?.id ?? selectedHook.id) === hook.id ? 'bg-surface-3' : '',
-                                )}
-                                onClick={() => setAddHookId(hook.id)}
-                              >
-                                <span className="block text-[12px] font-medium text-primary">{hook.title}</span>
-                                <span className="line-clamp-2 block text-[11px] text-secondary">{hook.description}</span>
-                              </button>
-                            ))}
-                          </div>
-                        ))}
-                        {addHookOptions.length === 0 ? <div className="px-3 py-4 text-[12px] text-secondary">No events match.</div> : null}
-                      </div>
-                    </div>
+                  <div className="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] shadow-2xl">
+                    <button
+                      className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
+                      onClick={() => addRoutine('instruction')}
+                    >
+                      <span className="block text-[13px] font-medium text-primary">Instruction</span>
+                      <span className="block text-[11px] text-secondary">Run an agent invocation.</span>
+                    </button>
+                    <button
+                      className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
+                      onClick={() => addRoutine('decision')}
+                    >
+                      <span className="block text-[13px] font-medium text-primary">Judge</span>
+                      <span className="block text-[11px] text-secondary">Assess the event and choose a path.</span>
+                    </button>
+                    <button className="block w-full px-3 py-2 text-left hover:bg-surface-3" onClick={() => addRoutine('stop')}>
+                      <span className="block text-[13px] font-medium text-primary">Manual stop</span>
+                      <span className="block text-[11px] text-secondary">Advanced: always block this event.</span>
+                    </button>
                   </div>
-                ) : null}
+                ) : null}{' '}
               </div>
             </>
           }
