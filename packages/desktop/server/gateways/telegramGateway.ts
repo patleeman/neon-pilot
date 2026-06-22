@@ -274,6 +274,24 @@ export class TelegramGatewayRuntime {
     if (!callback.message?.chat || !callback.data) return;
     await this.answerCallbackQuery(callback.id);
     const data = callback.data.trim();
+    if (data.startsWith('modelpage:')) {
+      const page = Number.parseInt(data.slice(10), 10);
+      const chatId = String(callback.message.chat.id);
+      const target = findGatewayChatTarget({
+        stateRoot: this.dependencies.stateRoot,
+        profile: this.dependencies.profile,
+        provider: 'telegram',
+        externalChatId: chatId,
+      });
+      const currentModel = target?.conversationId ? await this.dependencies.getCurrentModel(target.conversationId) : undefined;
+      await this.sendMessage(chatId, currentModel ? `Current model: ${currentModel}` : 'Choose a model:', {
+        reply_markup: await this.modelKeyboard(
+          typeof currentModel === 'string' ? currentModel : undefined,
+          Number.isFinite(page) ? page : 0,
+        ),
+      });
+      return;
+    }
     const text = data.startsWith('cmd:')
       ? data.slice(4)
       : data.startsWith('switch:')
@@ -429,7 +447,7 @@ export class TelegramGatewayRuntime {
         if (!command.model) {
           const model = await this.dependencies.getCurrentModel(target.conversationId);
           await this.sendMessage(target.externalChatId, model ? `Current model: ${model}` : 'No model selected.', {
-            reply_markup: await this.modelKeyboard(model ?? undefined),
+            reply_markup: await this.modelKeyboard(model ?? undefined, 0),
           });
           return;
         }
@@ -472,16 +490,27 @@ export class TelegramGatewayRuntime {
     return { inline_keyboard: rows };
   }
 
-  private async modelKeyboard(currentModel?: string): Promise<{ inline_keyboard: TelegramInlineKeyboardButton[][] }> {
-    const models = (await this.dependencies.listModels()).slice(0, 12);
-    const rows = models.map((model) => [
+  private async modelKeyboard(currentModel?: string, page = 0): Promise<{ inline_keyboard: TelegramInlineKeyboardButton[][] }> {
+    const pageSize = 8;
+    const models = await this.dependencies.listModels();
+    const pageCount = Math.max(1, Math.ceil(models.length / pageSize));
+    const safePage = Math.min(Math.max(0, page), pageCount - 1);
+    const visibleModels = models.slice(safePage * pageSize, safePage * pageSize + pageSize);
+    const rows = visibleModels.map((model) => [
       {
         text: `${model.id === currentModel ? '✓ ' : ''}${truncateButtonText(model.label || model.id)}`,
         callback_data: `model:${model.id}`,
       },
     ]);
+    if (pageCount > 1) {
+      rows.push([
+        { text: '‹ Prev', callback_data: `modelpage:${Math.max(0, safePage - 1)}` },
+        { text: `${safePage + 1}/${pageCount}`, callback_data: `modelpage:${safePage}` },
+        { text: 'Next ›', callback_data: `modelpage:${Math.min(pageCount - 1, safePage + 1)}` },
+      ]);
+    }
     rows.push([
-      { text: 'Refresh models', callback_data: 'cmd:/model' },
+      { text: 'Refresh models', callback_data: `modelpage:${safePage}` },
       { text: 'Cancel', callback_data: 'cmd:/status' },
     ]);
     return { inline_keyboard: rows };

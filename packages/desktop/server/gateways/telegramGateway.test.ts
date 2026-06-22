@@ -190,6 +190,34 @@ describe('TelegramGatewayRuntime', () => {
     );
   });
 
+  it('paginates the inline model picker from callback buttons', async () => {
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps({
+      listModels: vi.fn(() => Array.from({ length: 10 }, (_, index) => ({ id: `provider/model-${index + 1}` }))),
+      getCurrentModel: vi.fn(() => 'provider/model-9'),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      callback_query: {
+        id: 'callback-1',
+        from: { id: 777 },
+        data: 'modelpage:1',
+        message: { message_id: 10, chat: { id: 123 } },
+      },
+    });
+
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('callback_data":"model:provider/model-9') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('2/2') }),
+    );
+  });
+
   it('handles inline keyboard callbacks as slash commands', async () => {
     commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'switch', target: 'conv-2' });
     state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
