@@ -817,8 +817,9 @@ function commandKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] 
       ],
       [
         { text: 'Status', callback_data: 'cmd:/status' },
-        { text: 'Help', callback_data: 'cmd:/help' },
+        { text: 'Who am I?', callback_data: 'cmd:/whoami' },
       ],
+      [{ text: 'Help', callback_data: 'cmd:/help' }],
     ],
   };
 }

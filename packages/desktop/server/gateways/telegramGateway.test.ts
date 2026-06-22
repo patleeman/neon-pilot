@@ -153,6 +153,20 @@ describe('TelegramGatewayRuntime', () => {
     );
   });
 
+  it('includes whoami in the help inline controls', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'help' });
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps();
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, from: { id: 777 }, text: '/help' } });
+
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('callback_data":"cmd:/whoami') }),
+    );
+  });
+
   it('reports Telegram user and chat IDs with /whoami', async () => {
     commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'whoami' });
     state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
