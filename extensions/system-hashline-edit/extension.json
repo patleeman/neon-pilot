@@ -9,8 +9,22 @@
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "readHashline", "handler": "readHashline", "title": "Read Hashline File", "worker": { "enabled": true } },
-      { "id": "hashlineEdit", "handler": "hashlineEdit", "title": "Hashline Edit", "worker": { "enabled": true } }
+      {
+        "id": "readHashline",
+        "handler": "readHashline",
+        "title": "Read Hashline File",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "hashlineEdit",
+        "handler": "hashlineEdit",
+        "title": "Hashline Edit",
+        "worker": {
+          "enabled": true
+        }
+      }
     ]
   },
   "contributes": {
@@ -24,14 +38,23 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "path": { "type": "string", "description": "File path relative to the workspace cwd." },
-            "offset": { "type": "number", "description": "1-indexed line number to start reading from." },
-            "limit": { "type": "number", "description": "Maximum number of lines to return." }
+            "path": {
+              "type": "string",
+              "description": "File path relative to the workspace cwd."
+            },
+            "offset": {
+              "type": "number",
+              "description": "1-indexed line number to start reading from."
+            },
+            "limit": {
+              "type": "number",
+              "description": "Maximum number of lines to return."
+            }
           },
           "required": ["path"],
           "additionalProperties": false
         },
-        "promptGuidelines": "Use before hashline_edit; copy the [path#TAG] header and visible line numbers exactly."
+        "promptGuidelines": ["Use before hashline_edit; copy the [path#TAG] header and visible line numbers exactly."]
       },
       {
         "id": "hashline-edit",
@@ -42,12 +65,17 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "input": { "type": "string", "description": "Hashline patch text. Example: [src/app.ts#A1B2]\nSWAP 3.=3:\n+new line" }
+            "input": {
+              "type": "string",
+              "description": "Hashline patch text. Example: [src/app.ts#A1B2]\nSWAP 3.=3:\n+new line"
+            }
           },
           "required": ["input"],
           "additionalProperties": false
         },
-        "promptGuidelines": "Only edit lines shown by read_hashline for the matching [path#TAG]. Re-read after each successful edit because tags and line numbers change."
+        "promptGuidelines": [
+          "Only edit lines shown by read_hashline for the matching [path#TAG]. Re-read after each successful edit because tags and line numbers change."
+        ]
       }
     ]
   },

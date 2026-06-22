@@ -8,7 +8,16 @@
   "version": "0.1.0",
   "backend": {
     "entry": "dist/backend.mjs",
-    "actions": [{ "id": "astGrep", "handler": "astGrep", "title": "AST Grep", "worker": { "enabled": true } }]
+    "actions": [
+      {
+        "id": "astGrep",
+        "handler": "astGrep",
+        "title": "AST Grep",
+        "worker": {
+          "enabled": true
+        }
+      }
+    ]
   },
   "contributes": {
     "tools": [
@@ -27,19 +36,32 @@
             },
             "paths": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "description": "Files or directories to search. Defaults to current workspace."
             },
-            "lang": { "type": "string", "description": "Optional ast-grep language override, e.g. typescript, tsx, python, rust." },
-            "glob": { "type": "string", "description": "Optional glob filter relative to searched paths, e.g. **/*.ts." },
-            "limit": { "type": "number", "description": "Maximum matches to return. Default 50, max 200." }
+            "lang": {
+              "type": "string",
+              "description": "Optional ast-grep language override, e.g. typescript, tsx, python, rust."
+            },
+            "glob": {
+              "type": "string",
+              "description": "Optional glob filter relative to searched paths, e.g. **/*.ts."
+            },
+            "limit": {
+              "type": "number",
+              "description": "Maximum matches to return. Default 50, max 200."
+            }
           },
           "required": ["pattern"],
           "additionalProperties": false
         },
-        "promptGuidelines": "Use for syntax-aware searches like calls, imports, declarations, and code shapes; use regular grep/search for plain text."
+        "promptGuidelines": [
+          "Use for syntax-aware searches like calls, imports, declarations, and code shapes; use regular grep/search for plain text."
+        ]
       }
     ]
   },
-  "permissions": ["filesystem:read", "process:exec"]
+  "permissions": ["filesystem:read", "shell:execute"]
 }

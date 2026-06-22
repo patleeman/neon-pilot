@@ -8,17 +8,60 @@
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "computerUse", "handler": "computerUse", "title": "Computer use", "worker": { "enabled": true } },
-      { "id": "computerUseStatus", "handler": "computerUseStatus", "title": "Computer Use status", "worker": { "enabled": true } },
-      { "id": "computerUseDoctor", "handler": "computerUseDoctor", "title": "Run Computer Use doctor", "worker": { "enabled": true } },
-      { "id": "computerUseInstall", "handler": "computerUseInstall", "title": "Install Cua Driver", "worker": { "enabled": true } }
+      {
+        "id": "computerUse",
+        "handler": "computerUse",
+        "title": "Computer use",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "computerUseStatus",
+        "handler": "computerUseStatus",
+        "title": "Computer Use status",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "computerUseDoctor",
+        "handler": "computerUseDoctor",
+        "title": "Run Computer Use doctor",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "computerUseInstall",
+        "handler": "computerUseInstall",
+        "title": "Install Cua Driver",
+        "worker": {
+          "enabled": true
+        }
+      }
     ]
   },
   "contributes": {
     "commands": [
-      { "id": "computer-use.status", "title": "Check Computer Use status", "category": "Computer Use", "action": "computerUseStatus" },
-      { "id": "computer-use.doctor", "title": "Run Computer Use doctor", "category": "Computer Use", "action": "computerUseDoctor" },
-      { "id": "computer-use.install", "title": "Install Cua Driver", "category": "Computer Use", "action": "computerUseInstall" }
+      {
+        "id": "computer-use.status",
+        "title": "Check Computer Use status",
+        "category": "Computer Use",
+        "action": "computerUseStatus"
+      },
+      {
+        "id": "computer-use.doctor",
+        "title": "Run Computer Use doctor",
+        "category": "Computer Use",
+        "action": "computerUseDoctor"
+      },
+      {
+        "id": "computer-use.install",
+        "title": "Install Cua Driver",
+        "category": "Computer Use",
+        "action": "computerUseInstall"
+      }
     ],
     "tools": [
       {
@@ -27,7 +70,9 @@
         "title": "Computer Use",
         "description": "Capture and control visible native desktop apps through Cua Driver without moving the real cursor or stealing focus.",
         "action": "computerUse",
-        "promptGuidelines": "Use for native desktop apps; prefer browser tools for web-only tasks, recapture after state changes, and never type passwords or click permission dialogs.",
+        "promptGuidelines": [
+          "Use for native desktop apps; prefer browser tools for web-only tasks, recapture after state changes, and never type passwords or click permission dialogs."
+        ],
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -35,17 +80,43 @@
               "type": "string",
               "enum": ["status", "doctor", "capture", "window_state", "click", "type", "key", "scroll", "drag", "focus_app", "raw"]
             },
-            "tool": { "type": "string", "description": "Raw Cua MCP tool name. Required only for action=raw." },
-            "arguments": { "type": "object", "description": "Raw or additional Cua MCP arguments.", "additionalProperties": true },
-            "pid": { "type": "number" },
-            "window_id": { "type": "number" },
-            "element": { "type": "number" },
-            "x": { "type": "number" },
-            "y": { "type": "number" },
-            "text": { "type": "string" },
-            "keys": { "type": "string" },
-            "button": { "type": "string" },
-            "capture_after": { "type": "boolean", "description": "Capture after the action when supported." }
+            "tool": {
+              "type": "string",
+              "description": "Raw Cua MCP tool name. Required only for action=raw."
+            },
+            "arguments": {
+              "type": "object",
+              "description": "Raw or additional Cua MCP arguments.",
+              "additionalProperties": true
+            },
+            "pid": {
+              "type": "number"
+            },
+            "window_id": {
+              "type": "number"
+            },
+            "element": {
+              "type": "number"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "text": {
+              "type": "string"
+            },
+            "keys": {
+              "type": "string"
+            },
+            "button": {
+              "type": "string"
+            },
+            "capture_after": {
+              "type": "boolean",
+              "description": "Capture after the action when supported."
+            }
           },
           "required": ["action"],
           "additionalProperties": false

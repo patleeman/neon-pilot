@@ -448,6 +448,11 @@ async function smokeAgentFactory(exportName) {
 }
 
 const smokes = {
+  async 'system-ast-grep'() {
+    const result = await module.astGrep({ pattern: 'console.log($$$ARGS)', paths: ['.'], lang: 'ts' }, ctx);
+    assert(result.content?.[0]?.text?.includes('No structural matches found'), 'ast-grep smoke failed');
+    assert(Array.isArray(result.details?.paths), 'ast-grep paths missing');
+  },
   async 'system-artifacts'() {
     const result = await module.artifact({ action: 'list' }, ctx);
     assert(result.action === 'list', 'artifact list did not return list action');
@@ -496,6 +501,9 @@ const smokes = {
     const result = await snapshot.execute('smoke', {}, undefined, undefined, ctx.agentToolContext);
     assert(result?.isError === true, 'browser_snapshot should report unavailable desktop host in smoke');
   },
+  async 'system-computer-use'() {
+    await expectReject(() => module.computerUse({ action: 'key', keys: 'Lock Screen' }, ctx), /Blocked unsafe key sequence/i);
+  },
   async 'system-conversation-tools'() {
     const result = await module.copyConversationId({ conversationId: 'smoke-conversation' }, ctx);
     assert(result.ok === true && result.conversationId === 'smoke-conversation', 'copyConversationId failed');
@@ -537,6 +545,14 @@ const smokes = {
   async 'system-extension-manager'() {
     const result = await module.listHostViewComponents({}, ctx);
     assert(result.ok === true && Array.isArray(result.hostViewComponents), 'host component list failed');
+  },
+  async 'system-hashline-edit'() {
+    writeFileSync(join(cwd, 'hashline.txt'), 'alpha\nbeta\n');
+    const read = await module.readHashline({ path: 'hashline.txt' }, ctx);
+    const header = /^\[(.+#[0-9A-F]{4})\]/.exec(read.content?.[0]?.text ?? '')?.[1];
+    assert(header, 'read_hashline header missing');
+    const edited = await module.hashlineEdit({ input: '[' + header + ']\nSWAP 2:\n+beta smoke' }, ctx);
+    assert(edited.content?.[0]?.text?.includes('beta smoke'), 'hashline_edit smoke failed');
   },
   async 'system-image-probe'() {
     await expectReject(() => module.probeImage({ imageIds: [], question: 'what is this?' }, ctx), /at least one image ID/i);

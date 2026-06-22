@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.27** — stable release being prepared locally.
+**v0.11.28** — stable release being prepared locally.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.27
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.28
 
 Highlights in this train:
 
-- Makes Automations easier to use with a compact toolbar, clearer creation entry point, and direct save flow.
-- Polishes Routines editing with inline timeline edits, model fallback controls, clearer edit exits, and more reliable inspector scrolling.
-- Improves Routines routing and drag behavior, including branch-oriented decisions, judge route nesting, and better invalid-drop handling.
-- Standardizes extension page layouts and page headers so core workflow surfaces feel more consistent.
-- Preserves workspace context and project thread organization across extension-created conversations and manually ordered threads.
+- Improves the Telegram Gateway with safer approved-user access, richer message rendering, inline thread/model controls, command aliases, and clearer prompt-failure feedback.
+- Adds Computer Use, AST grep, and Hashline Edit as system extensions so packaged builds expose more first-party agent capabilities.
+- Makes conversation CLI turns return quickly by default while keeping `--wait`, `--follow`, and JSONL streaming for completion-aware workflows.
+- Refines Routines event selection and setup flows so empty or newly configured profiles are easier to recover from.
+- Hardens packaged app/runtime behavior with canonical live-session running state, packaging external checks, stale callback tolerance, and refreshed Pi runtime packages.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

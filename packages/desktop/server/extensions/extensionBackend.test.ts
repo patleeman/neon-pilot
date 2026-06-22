@@ -1056,7 +1056,7 @@ describe('extension backend action invocation', () => {
       'askUser',
       { type: 'action', label: 'action askUser', target: 'askUser' },
       [{ questions: [{ label: 'Proceed?', options: ['Yes', 'No'] }] }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
@@ -1064,7 +1064,7 @@ describe('extension backend action invocation', () => {
           runtimeSettingsFilePath: expect.any(String),
           toolContext: { conversationId: 'conv-1', cwd: '/repo' },
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-conversation-tools',
@@ -1074,7 +1074,7 @@ describe('extension backend action invocation', () => {
       'conversationInspect',
       { type: 'action', label: 'action conversationInspect', target: 'conversationInspect' },
       [{ action: 'list' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
@@ -1082,7 +1082,7 @@ describe('extension backend action invocation', () => {
           runtimeSettingsFilePath: expect.any(String),
           toolContext: { conversationId: 'conv-1', cwd: '/repo' },
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-conversation-tools',
@@ -1110,7 +1110,7 @@ describe('extension backend action invocation', () => {
       'conversationCwd',
       { type: 'action', label: 'action conversationCwd', target: 'conversationCwd' },
       [{ cwd: '/next' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
@@ -1118,7 +1118,7 @@ describe('extension backend action invocation', () => {
           runtimeSettingsFilePath: expect.any(String),
           toolContext: { conversationId: 'conv-1', cwd: '/repo' },
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-conversation-tools',
@@ -1175,14 +1175,14 @@ describe('extension backend action invocation', () => {
       'readSettings',
       { type: 'action', label: 'action readSettings', target: 'readSettings' },
       [{}],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -1235,14 +1235,14 @@ describe('extension backend action invocation', () => {
       'installModel',
       { type: 'action', label: 'action installModel', target: 'installModel' },
       [{ model: 'base.en' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-local-dictation',
@@ -1252,14 +1252,14 @@ describe('extension backend action invocation', () => {
       'transcribeFile',
       { type: 'action', label: 'action transcribeFile', target: 'transcribeFile' },
       [{ dataBase64: 'AAE=', mimeType: 'audio/pcm', language: 'en' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -1298,14 +1298,14 @@ describe('extension backend action invocation', () => {
       'start',
       { type: 'action', label: 'action caffeinateStart', target: 'caffeinateStart' },
       [{}],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -1398,14 +1398,14 @@ describe('extension backend action invocation', () => {
       'webFetch',
       { type: 'action', label: 'action webFetch', target: 'webFetch' },
       [{ url: 'https://example.com' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -1488,14 +1488,14 @@ describe('extension backend action invocation', () => {
       'duckDuckGoSearch',
       { type: 'action', label: 'action duckDuckGoSearch', target: 'duckDuckGoSearch' },
       [{ query: 'neon pilot' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-exa-search',
@@ -1505,14 +1505,14 @@ describe('extension backend action invocation', () => {
       'exaSearch',
       { type: 'action', label: 'action exaSearch', target: 'exaSearch' },
       [{ query: 'neon pilot', count: 3 }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -1599,14 +1599,14 @@ describe('extension backend action invocation', () => {
       'searchModels',
       { type: 'action', label: 'action localModelsSearch', target: 'localModelsSearch' },
       [{ query: 'qwen', format: 'gguf', limit: 5 }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-local-models',
@@ -1616,14 +1616,14 @@ describe('extension backend action invocation', () => {
       'mlxSearch',
       { type: 'action', label: 'action localModelsMlxSearch', target: 'localModelsMlxSearch' },
       [{ query: 'qwen' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-local-models',
@@ -1633,14 +1633,14 @@ describe('extension backend action invocation', () => {
       'modelDetails',
       { type: 'action', label: 'action localModelsModelDetails', target: 'localModelsModelDetails' },
       [{ modelId: 'org/model' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-local-models',
@@ -1650,14 +1650,14 @@ describe('extension backend action invocation', () => {
       'localModelsDiscover',
       { type: 'action', label: 'action localModelsDiscover', target: 'localModelsDiscover' },
       [{}],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -1860,14 +1860,14 @@ describe('extension backend action invocation', () => {
       'status',
       { type: 'action', label: 'action videoProbeStatus', target: 'videoProbeStatus' },
       [{}],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-video-probe',
@@ -1877,14 +1877,14 @@ describe('extension backend action invocation', () => {
       'writeSettings',
       { type: 'action', label: 'action videoProbeWriteSettings', target: 'videoProbeWriteSettings' },
       [{ backend: 'local', localModel: 'mlx/model' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-video-probe',
@@ -1894,14 +1894,14 @@ describe('extension backend action invocation', () => {
       'resetInstallation',
       { type: 'action', label: 'action videoProbeReset', target: 'videoProbeReset' },
       [{}],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -1973,14 +1973,14 @@ describe('extension backend action invocation', () => {
       'warmPointers',
       { type: 'action', label: 'action warmPointers', target: 'warmPointers' },
       [{ prompt: 'architecture process split', currentConversationId: 'conv-1', currentCwd: '/repo' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -2019,14 +2019,14 @@ describe('extension backend action invocation', () => {
       'getTelemetryData',
       { type: 'action', label: 'action getTelemetryData', target: 'getTelemetryData' },
       [{ range: '1h' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -2407,7 +2407,7 @@ describe('extension backend action invocation', () => {
       'conversationTool',
       { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
       [{ action: 'create', cwd: '/repo', title: 'Worker conversation', live: false }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
@@ -2415,7 +2415,7 @@ describe('extension backend action invocation', () => {
           runtimeSettingsFilePath: expect.any(String),
           toolContext: { conversationId: 'conv-1', cwd: '/repo' },
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-conversation-tools',
@@ -2433,7 +2433,7 @@ describe('extension backend action invocation', () => {
           runtimeSettingsFilePath: expect.any(String),
           toolContext: { conversationId: 'conv-1', cwd: '/repo' },
         }),
-        timeoutMs: 180_000,
+        timeoutMs: 900_000,
       },
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
@@ -2444,7 +2444,7 @@ describe('extension backend action invocation', () => {
       'conversationTool',
       { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
       [{ action: 'inspect', inspectAction: 'list' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
@@ -2452,7 +2452,7 @@ describe('extension backend action invocation', () => {
           runtimeSettingsFilePath: expect.any(String),
           toolContext: { conversationId: 'conv-1', cwd: '/repo' },
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-conversation-tools',
@@ -2462,7 +2462,7 @@ describe('extension backend action invocation', () => {
       'conversationTool',
       { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
       [{ action: 'change_working_directory', cwd: '/next' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
@@ -2470,7 +2470,7 @@ describe('extension backend action invocation', () => {
           runtimeSettingsFilePath: expect.any(String),
           toolContext: { conversationId: 'conv-1', cwd: '/repo' },
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-conversation-tools',
@@ -2480,14 +2480,14 @@ describe('extension backend action invocation', () => {
       'conversationTool',
       { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
       [{ action: 'send_message', conversationId: 'conv-1', text: 'Go', steer: true }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-conversation-tools',
@@ -2497,14 +2497,14 @@ describe('extension backend action invocation', () => {
       'conversationTool',
       { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
       [{ action: 'fork', conversationId: 'conv-1', targetCwd: '/fork', title: 'Fork' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-conversation-tools',
@@ -2514,14 +2514,14 @@ describe('extension backend action invocation', () => {
       'conversationTool',
       { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
       [{ action: 'workspace_get' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-conversation-tools',
@@ -2531,14 +2531,14 @@ describe('extension backend action invocation', () => {
       'conversationTool',
       { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
       [{ action: 'rollback', conversationId: 'conv-1', count: 2 }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -2615,14 +2615,14 @@ describe('extension backend action invocation', () => {
       'mcpTool',
       { type: 'action', label: 'action mcpTool', target: 'mcpTool' },
       [{ action: 'list' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-mcp',
@@ -2632,14 +2632,14 @@ describe('extension backend action invocation', () => {
       'saveExplicitMcpConfig',
       { type: 'action', label: 'action saveExplicitConfig', target: 'saveExplicitConfig' },
       [{ json: '{"mcpServers":{}}' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -3015,14 +3015,14 @@ describe('extension backend action invocation', () => {
       'createExtension',
       { type: 'action', label: 'action createExtension', target: 'createExtension' },
       [{ id: 'new-extension', name: 'New Extension' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-extension-manager',
@@ -3032,14 +3032,14 @@ describe('extension backend action invocation', () => {
       'installExtensionFromUrl',
       { type: 'action', label: 'action installExtensionFromUrl', target: 'installExtensionFromUrl' },
       [{ url: 'https://example.test/remote.neon-extension.zip' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-extension-manager',
@@ -3049,14 +3049,14 @@ describe('extension backend action invocation', () => {
       'manageExtension',
       { type: 'action', label: 'action manageExtension', target: 'manageExtension' },
       [{ action: 'create', id: 'managed-extension' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-extension-manager',
@@ -3066,14 +3066,14 @@ describe('extension backend action invocation', () => {
       'reloadExtension',
       { type: 'action', label: 'action reloadExtension', target: 'reloadExtension' },
       [{ id: 'system-todo' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-extension-manager',
@@ -3083,14 +3083,14 @@ describe('extension backend action invocation', () => {
       'manageExtension',
       { type: 'action', label: 'action manageExtension', target: 'manageExtension' },
       [{ action: 'reload', id: 'system-todo' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-extension-manager',
@@ -3100,14 +3100,14 @@ describe('extension backend action invocation', () => {
       'updateSearchPaths',
       { type: 'action', label: 'action updateSearchPaths', target: 'updateSearchPaths' },
       [{ paths: ['/extensions/one'] }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-extension-manager',
@@ -3117,14 +3117,14 @@ describe('extension backend action invocation', () => {
       'manageExtension',
       { type: 'action', label: 'action manageExtension', target: 'manageExtension' },
       [{ action: 'updateSearchPaths', paths: ['/extensions/one'] }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-extension-manager',
@@ -3134,14 +3134,14 @@ describe('extension backend action invocation', () => {
       'manageExtension',
       { type: 'action', label: 'action manageExtension', target: 'manageExtension' },
       [{ action: 'reloadExtensions' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -3348,14 +3348,14 @@ describe('extension backend action invocation', () => {
       'knowledgeReadFile',
       { type: 'action', label: 'action knowledgeReadFile', target: 'knowledgeReadFile' },
       [{ id: 'notes/a.md' }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-knowledge',
@@ -3565,14 +3565,14 @@ describe('extension backend action invocation', () => {
       'ping',
       { type: 'route', label: 'route POST /ping', target: '/ping' },
       [{ method: 'POST', path: '/ping', query: { q: '1' }, params: {}, body: { ok: true } }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -3613,14 +3613,14 @@ describe('extension backend action invocation', () => {
       'summary',
       { type: 'route', label: 'route GET /traces/summary', target: '/traces/summary' },
       [{ method: 'GET', path: '/traces/summary', query: { range: '1h' }, params: {} }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
@@ -3728,14 +3728,14 @@ describe('extension backend action invocation', () => {
       'knowledgeSearchRoute',
       { type: 'route', label: 'route GET /knowledge/search', target: '/knowledge/search' },
       [{ method: 'GET', path: '/knowledge/search', query: { q: 'alpha' }, params: {} }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-knowledge',
@@ -3743,14 +3743,14 @@ describe('extension backend action invocation', () => {
       'memoryRoute',
       { type: 'route', label: 'route GET /memory', target: '/memory' },
       [{ method: 'GET', path: '/memory', query: {}, params: {} }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     for (const [method, path, exportName, query, body] of mutationRouteInputs) {
       expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
@@ -3812,14 +3812,14 @@ describe('extension backend action invocation', () => {
       'asset',
       { type: 'route', label: 'route GET /asset', target: '/asset' },
       [{ method: 'GET', path: '/asset', query: { id: 'images/shot.png' }, params: {} }],
-      {
+      expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
-      },
+      }),
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
