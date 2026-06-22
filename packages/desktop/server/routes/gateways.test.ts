@@ -242,6 +242,19 @@ describe('gateway routes', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('https://api.telegram.org/botsecret-token/getMe', { method: 'POST' });
     expect(ok.json).toHaveBeenCalledWith({ ok: true, bot: { id: 123, username: 'neon_bot' } });
+
+    telegramAuth.readTelegramBotToken.mockReturnValueOnce('bad-token');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        json: async () => ({ ok: false, description: 'Unauthorized' }),
+      })),
+    );
+    const invalid = response();
+    await testToken({}, invalid);
+    expect(invalid.status).toHaveBeenCalledWith(502);
+    expect(invalid.json).toHaveBeenCalledWith({ ok: false, error: 'Unauthorized' });
   });
 
   it('reads and writes Telegram access policy', () => {
