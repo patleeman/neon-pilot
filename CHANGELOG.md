@@ -9,6 +9,7 @@
 - Improves Routines routing and drag behavior, including branch-oriented decisions, judge route nesting, and better invalid-drop handling.
 - Standardizes extension page layouts and page headers so core workflow surfaces feel more consistent.
 - Preserves workspace context and project thread organization across extension-created conversations and manually ordered threads.
+- Brings the Telegram Gateway closer to a polished mobile bot experience with approved user/chat IDs, richer Telegram rendering, inline thread/model controls, command-menu publishing, working-message edits, and safer bot-token testing.
 
 ### Notes
 
