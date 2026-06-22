@@ -503,6 +503,16 @@ describe('TelegramGatewayRuntime', () => {
     );
   });
 
+  it('suppresses explicit Telegram silence-token replies', async () => {
+    const d = deps();
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await expect(runtime.deliverAssistantReply({ conversationId: 'conv-1', text: '[SILENT]' })).resolves.toBe(true);
+
+    expect(state.findGatewayChatTargetByConversation).not.toHaveBeenCalled();
+    expect(d.fetch).not.toHaveBeenCalled();
+  });
+
   it('delivers assistant replies to bound chats and records events', async () => {
     state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
     const d = deps();

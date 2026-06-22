@@ -228,6 +228,7 @@ export class TelegramGatewayRuntime {
   async deliverAssistantReply(input: { conversationId: string; text: string }): Promise<boolean> {
     const text = input.text.trim();
     if (!text) return false;
+    if (isTelegramSilenceToken(text)) return true;
 
     const target = findGatewayChatTargetByConversation({
       stateRoot: this.dependencies.stateRoot,
@@ -856,6 +857,10 @@ function statusKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] }
       [{ text: 'Help', callback_data: 'cmd:/help' }],
     ],
   };
+}
+
+function isTelegramSilenceToken(text: string): boolean {
+  return /^(?:\[?SILENT\]?|NO[_\s-]?REPLY)$/i.test(text.trim());
 }
 
 function commandKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] } {
