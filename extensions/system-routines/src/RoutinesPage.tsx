@@ -1246,7 +1246,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
 
   return (
     <div className="h-full min-h-0 overflow-auto bg-app text-[13px] text-primary">
-      <AppPageLayout contentClassName="flex min-h-full w-full max-w-6xl flex-col gap-5">
+      <AppPageLayout contentClassName="flex min-h-full w-full max-w-none flex-col gap-5">
         <AppPageIntro
           title={selectedHook.title}
           actions={
