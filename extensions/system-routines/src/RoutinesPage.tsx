@@ -8,6 +8,9 @@ import {
   cx,
   ErrorState,
   LoadingState,
+  MenuItem,
+  MenuShell,
+  PositionedMenu,
   SearchInput,
   SectionLabel,
   Select,
@@ -813,20 +816,22 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onInstructionChange(event.target.value)}
                 />
                 {skillMatches.length ? (
-                  <div className="mt-1 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] shadow-2xl">
+                  <MenuShell role="listbox" className="static mt-1 w-full">
                     {skillMatches.map((skill) => (
-                      <button
+                      <MenuItem
                         key={skill.id}
                         type="button"
-                        className="block w-full border-b border-border-subtle px-2 py-1.5 text-left last:border-b-0 hover:bg-surface-2"
+                        role="option"
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => applySkill(skill)}
                       >
-                        <b>/skill:{skill.id}</b>
-                        <span className="block truncate text-[11px] text-secondary">{skill.description ?? skill.name}</span>
-                      </button>
+                        <span className="min-w-0">
+                          <b>/skill:{skill.id}</b>
+                          <span className="block truncate text-[11px] text-secondary">{skill.description ?? skill.name}</span>
+                        </span>
+                      </MenuItem>
                     ))}
-                  </div>
+                  </MenuShell>
                 ) : null}
               </div>
               <span className="text-[12px] text-secondary">
@@ -1192,28 +1197,25 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     …
                   </button>
                   {openRoutineMenuId === routine.id ? (
-                    <div
-                      className="absolute right-0 top-8 z-20 min-w-40 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] py-1 text-[12px] shadow-2xl"
+                    <PositionedMenu
+                      placement="absolute"
+                      position={{ right: 0, top: '2rem' }}
+                      className="min-w-40"
                       onClick={(event) => event.stopPropagation()}
                     >
-                      <button
+                      <MenuItem
                         type="button"
-                        className="block w-full px-3 py-2 text-left text-primary hover:bg-surface-3"
                         onClick={() => {
                           setOpenRoutineMenuId(null);
                           void moveRoutineById(routine.id, routine.position === 'before' ? 'after' : 'before');
                         }}
                       >
                         Move to {routine.position === 'before' ? 'After' : 'Before'}
-                      </button>
-                      <button
-                        type="button"
-                        className="block w-full px-3 py-2 text-left text-danger hover:bg-surface-3"
-                        onClick={() => void deleteRoutine(routine)}
-                      >
+                      </MenuItem>
+                      <MenuItem type="button" tone="danger" onClick={() => void deleteRoutine(routine)}>
                         Delete routine
-                      </button>
-                    </div>
+                      </MenuItem>
+                    </PositionedMenu>
                   ) : null}
                 </>
               )}
@@ -1341,26 +1343,26 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   Add routine ▾
                 </ToolbarButton>
                 {showAdd ? (
-                  <div className="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-md border border-border-subtle bg-[#10141d] shadow-2xl">
-                    <button
-                      className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
-                      onClick={() => addRoutine('instruction')}
-                    >
-                      <span className="block text-[13px] font-medium text-primary">Instruction</span>
-                      <span className="block text-[11px] text-secondary">Run an agent invocation.</span>
-                    </button>
-                    <button
-                      className="block w-full border-b border-border-subtle px-3 py-2 text-left hover:bg-surface-3"
-                      onClick={() => addRoutine('decision')}
-                    >
-                      <span className="block text-[13px] font-medium text-primary">Judge</span>
-                      <span className="block text-[11px] text-secondary">Assess the event and choose a path.</span>
-                    </button>
-                    <button className="block w-full px-3 py-2 text-left hover:bg-surface-3" onClick={() => addRoutine('stop')}>
-                      <span className="block text-[13px] font-medium text-primary">Manual stop</span>
-                      <span className="block text-[11px] text-secondary">Advanced: always block this event.</span>
-                    </button>
-                  </div>
+                  <PositionedMenu placement="absolute" position={{ right: 0, top: '2.25rem' }} className="w-56">
+                    <MenuItem type="button" className="items-start" onClick={() => addRoutine('instruction')}>
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-medium text-primary">Instruction</span>
+                        <span className="block text-[11px] text-secondary">Run an agent invocation.</span>
+                      </span>
+                    </MenuItem>
+                    <MenuItem type="button" className="items-start" onClick={() => addRoutine('decision')}>
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-medium text-primary">Judge</span>
+                        <span className="block text-[11px] text-secondary">Assess the event and choose a path.</span>
+                      </span>
+                    </MenuItem>
+                    <MenuItem type="button" className="items-start" onClick={() => addRoutine('stop')}>
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-medium text-primary">Manual stop</span>
+                        <span className="block text-[11px] text-secondary">Advanced: always block this event.</span>
+                      </span>
+                    </MenuItem>
+                  </PositionedMenu>
                 ) : null}{' '}
               </div>
             </>
@@ -1453,7 +1455,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       </AppPageLayout>
       {dragPreview ? (
         <div
-          className="pointer-events-none fixed z-50 w-72 rounded-md border border-accent/70 bg-[#10141d]/95 px-3 py-2 text-left shadow-2xl ring-1 ring-accent/30"
+          className="pointer-events-none fixed z-50 w-72 rounded-md border border-accent/70 bg-surface/95 px-3 py-2 text-left shadow-2xl ring-1 ring-accent/30"
           style={{ left: dragPreview.x + 14, top: dragPreview.y + 14 }}
         >
           <div className="text-[11px] uppercase tracking-[0.14em] text-accent">Dragging {routineLabel(dragPreview.type)}</div>

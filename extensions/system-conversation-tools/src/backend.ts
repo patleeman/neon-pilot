@@ -135,6 +135,28 @@ function conversationCreateInput(params: Record<string, unknown>) {
   };
 }
 
+function detachedConversationCliFlag(flags: ParsedCliArgs['flags']): boolean {
+  const wait = flagBoolean(flags, 'wait');
+  const follow = flagBoolean(flags, 'follow');
+  const format = flagString(flags, 'format');
+  return wait !== true && follow !== true && format !== 'jsonl';
+}
+
+function conversationTurnRunOptions(ctx: ExtensionBackendContext, params: Record<string, unknown>) {
+  return {
+    ...conversationSendOptions(params),
+    ...(optionalString(params.cwd) ? { cwd: optionalString(params.cwd) } : {}),
+    ...(optionalPositiveNumber(params.timeoutMs) ? { timeoutMs: optionalPositiveNumber(params.timeoutMs) } : {}),
+    ...(params.follow === true || optionalString(params.format) === 'jsonl'
+      ? { onEvent: (event: unknown) => emitConversationRunTurnCliEvent(ctx, event) }
+      : {}),
+  };
+}
+
+function shouldRunConversationTurnSynchronously(params: Record<string, unknown>): boolean {
+  return params.detached !== true || params.follow === true || optionalString(params.format) === 'jsonl';
+}
+
 function workspaceUpdateInput(params: Record<string, unknown>) {
   return {
     ...(Array.isArray(params.openConversationIds) ? { openConversationIds: optionalStringArray(params.openConversationIds) ?? [] } : {}),
@@ -252,13 +274,13 @@ function parseCliArgs(args: readonly string[]): ParsedCliArgs {
   return { positionals, flags };
 }
 
-function flagString(flags: ParsedCliArgs['flags'], key: string): string | undefined {
+function flagString(flags: Record<string, unknown>, key: string): string | undefined {
   const value = flags[key];
   if (Array.isArray(value)) return value.at(-1);
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
-function flagStringArray(flags: ParsedCliArgs['flags'], key: string): string[] | undefined {
+function flagStringArray(flags: Record<string, unknown>, key: string): string[] | undefined {
   const value = flags[key];
   if (Array.isArray(value)) return value.map((entry) => entry.trim()).filter(Boolean);
   if (typeof value === 'string' && value.trim())
@@ -269,19 +291,19 @@ function flagStringArray(flags: ParsedCliArgs['flags'], key: string): string[] |
   return undefined;
 }
 
-function flagToolNames(flags: ParsedCliArgs['flags']): string[] | undefined {
+function flagToolNames(flags: Record<string, unknown>): string[] | undefined {
   const names = [...(flagStringArray(flags, 'tool') ?? []), ...(flagStringArray(flags, 'tools') ?? [])];
   return names.length > 0 ? names : undefined;
 }
 
-function flagNumber(flags: ParsedCliArgs['flags'], key: string): number | undefined {
+function flagNumber(flags: Record<string, unknown>, key: string): number | undefined {
   const value = flagString(flags, key);
   if (!value) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function flagBoolean(flags: ParsedCliArgs['flags'], key: string): boolean | undefined {
+function flagBoolean(flags: Record<string, unknown>, key: string): boolean | undefined {
   const value = flags[key];
   if (value === undefined) return undefined;
   if (value === true) return true;
@@ -391,6 +413,7 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
       follow: flagBoolean(flags, 'follow'),
       format: flagString(flags, 'format'),
       cancelOnInterrupt: flagBoolean(flags, 'cancel-on-interrupt'),
+      detached: detachedConversationCliFlag(flags),
     };
   if (command === 'conversations title')
     return {
@@ -423,6 +446,7 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
       follow: flagBoolean(flags, 'follow'),
       format: flagString(flags, 'format'),
       cancelOnInterrupt: flagBoolean(flags, 'cancel-on-interrupt'),
+      detached: detachedConversationCliFlag(flags),
     };
   if (command === 'conversations abort') return { ...body, action: 'abort', conversationId: positionals[0] };
   if (command === 'conversations compact')
@@ -550,25 +574,41 @@ function emitConversationRunTurnCliEvent(ctx: ExtensionBackendContext, event: un
   });
 }
 
+async function startConversationTurn(ctx: ExtensionBackendContext, conversationId: string, payload: Record<string, unknown>) {
+  const text = requiredString(payload, 'text');
+  if (shouldRunConversationTurnSynchronously(payload)) {
+    const turnResult = await ctx.conversations.runTurn(conversationId, text, conversationTurnRunOptions(ctx, payload));
+    return {
+      conversationId,
+      detached: false,
+      turn: turnResult,
+      text: typeof (turnResult as { text?: unknown }).text === 'string' ? (turnResult as { text: string }).text : undefined,
+    };
+  }
+
+  if (optionalString(payload.cwd)) {
+    await ctx.conversations.ensureLive(conversationId, { cwd: optionalString(payload.cwd) });
+  }
+  const sendResult = await ctx.conversations.sendMessage(conversationId, text, conversationSendOptions(payload));
+  return {
+    conversationId,
+    detached: true,
+    send: sendResult,
+    text: `Conversation ${conversationId} started.`,
+  };
+}
+
 async function createAndRunConversation(ctx: ExtensionBackendContext, payload: Record<string, unknown>) {
   const createResult = (await ctx.conversations.create({
     ...conversationCreateInput({ ...payload, live: true }),
   })) as Record<string, unknown>;
   const conversationId = optionalString(createResult.conversationId) ?? optionalString(createResult.id);
   if (!conversationId) throw new Error('Created conversation did not return a conversation id.');
-  const turnResult = await ctx.conversations.runTurn(conversationId, requiredString(payload, 'text'), {
-    ...conversationSendOptions(payload),
-    ...(optionalString(payload.cwd) ? { cwd: optionalString(payload.cwd) } : {}),
-    ...(optionalPositiveNumber(payload.timeoutMs) ? { timeoutMs: optionalPositiveNumber(payload.timeoutMs) } : {}),
-    ...(payload.follow === true || optionalString(payload.format) === 'jsonl'
-      ? { onEvent: (event: unknown) => emitConversationRunTurnCliEvent(ctx, event) }
-      : {}),
-  });
+  const turnResult = await startConversationTurn(ctx, conversationId, payload);
   return {
     ...createResult,
+    ...turnResult,
     conversationId,
-    turn: turnResult,
-    text: typeof (turnResult as { text?: unknown }).text === 'string' ? (turnResult as { text: string }).text : undefined,
   };
 }
 
@@ -694,17 +734,7 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
       );
 
     case 'run_turn':
-      return toolResult(
-        action,
-        await ctx.conversations.runTurn(requiredString(payload, 'conversationId'), requiredString(payload, 'text'), {
-          ...conversationSendOptions(payload),
-          ...(optionalString(payload.cwd) ? { cwd: optionalString(payload.cwd) } : {}),
-          ...(optionalPositiveNumber(payload.timeoutMs) ? { timeoutMs: optionalPositiveNumber(payload.timeoutMs) } : {}),
-          ...(payload.follow === true || optionalString(payload.format) === 'jsonl'
-            ? { onEvent: (event: unknown) => emitConversationRunTurnCliEvent(ctx, event) }
-            : {}),
-        }),
-      );
+      return toolResult(action, await startConversationTurn(ctx, requiredString(payload, 'conversationId'), payload));
 
     case 'abort':
       return toolResult(action, await ctx.conversations.abort(requiredString(payload, 'conversationId')));

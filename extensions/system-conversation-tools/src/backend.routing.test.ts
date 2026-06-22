@@ -217,7 +217,14 @@ describe('system-conversation-tools backend routing', () => {
       { cli: { command: 'conversations run-turn', args: ['conv-2', '--text', 'Finish', '--timeout-ms', '123'] } },
       context,
     );
-    expect(conversations.runTurn).toHaveBeenLastCalledWith('conv-2', 'Finish', { timeoutMs: 123 });
+    expect(conversations.sendMessage).toHaveBeenLastCalledWith('conv-2', 'Finish', {});
+    expect(conversations.runTurn).not.toHaveBeenCalledWith('conv-2', 'Finish', expect.anything());
+
+    await conversationTool(
+      { cli: { command: 'conversations run-turn', args: ['conv-2', '--text', 'Wait', '--timeout-ms', '123', '--wait'] } },
+      context,
+    );
+    expect(conversations.runTurn).toHaveBeenLastCalledWith('conv-2', 'Wait', { timeoutMs: 123 });
 
     const askResult = await conversationTool(
       {
@@ -233,8 +240,12 @@ describe('system-conversation-tools backend routing', () => {
       live: true,
       model: 'opencode-go/deepseek-v4-flash',
     });
-    expect(conversations.runTurn).toHaveBeenLastCalledWith('created-1', 'Do the thing', { cwd: '/repo', timeoutMs: 456 });
-    expect(askResult).toMatchObject({ content: [{ type: 'text', text: 'done' }], details: { conversationId: 'created-1', text: 'done' } });
+    expect(conversations.ensureLive).toHaveBeenLastCalledWith('created-1', { cwd: '/repo' });
+    expect(conversations.sendMessage).toHaveBeenLastCalledWith('created-1', 'Do the thing', {});
+    expect(askResult).toMatchObject({
+      content: [{ type: 'text', text: 'Conversation created-1 started.' }],
+      details: { conversationId: 'created-1', detached: true, text: 'Conversation created-1 started.' },
+    });
 
     await conversationTool(
       {

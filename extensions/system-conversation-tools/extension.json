@@ -516,11 +516,11 @@
       {
         "id": "ask",
         "command": "ask",
-        "description": "Create a conversation, run one turn, and print the result.",
+        "description": "Create a live conversation, send one prompt, and return the conversation id. Use --wait, --follow, or --format jsonl to wait for completion.",
         "action": "conversationTool",
         "jsonDefault": false,
         "inputAction": "create_and_run",
-        "usage": "ask [prompt...] [--text <prompt>] [--prompt <prompt>] [--title <title>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]",
+        "usage": "ask [prompt...] [--text <prompt>] [--prompt <prompt>] [--title <title>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--wait] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]",
         "examples": [
           "neon-pilot ask --model opencode-go/deepseek-v4-flash --cwd /repo \"Summarize the diff\"",
           "neon-pilot ask --text \"Reply with ready\" --json"
@@ -561,7 +561,7 @@
             },
             "timeout-ms": {
               "type": "number",
-              "description": "Maximum time to wait for completion."
+              "description": "Maximum time to wait for completion when --wait, --follow, or --format jsonl is used."
             },
             "timeout": {
               "type": "number",
@@ -570,6 +570,10 @@
             "follow": {
               "type": "boolean",
               "description": "Stream text deltas while waiting."
+            },
+            "wait": {
+              "type": "boolean",
+              "description": "Wait for the conversation turn to finish instead of returning after the prompt is accepted."
             },
             "format": {
               "type": "string",
@@ -606,7 +610,7 @@
         "requiresApp": true,
         "destructive": false,
         "idempotent": false,
-        "startsBackgroundWork": false,
+        "startsBackgroundWork": true,
         "supportsDryRun": true,
         "outputModes": ["text", "json", "jsonl"],
         "streaming": {
@@ -775,11 +779,11 @@
       {
         "id": "conversations-run-turn",
         "command": "conversations run-turn",
-        "description": "Run a conversation turn and wait for completion: conversations run-turn <id> --text <message> [--timeout-ms <ms>]",
+        "description": "Send a turn to a live conversation and return after it is accepted. Use --wait, --follow, or --format jsonl to wait for completion.",
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "run_turn",
-        "usage": "conversations run-turn <conversationId> --text <message> [--timeout-ms <ms>] [--follow] [--format text|json|jsonl] [--cancel-on-interrupt] [--json]",
+        "usage": "conversations run-turn <conversationId> --text <message> [--wait] [--timeout-ms <ms>] [--follow] [--format text|json|jsonl] [--cancel-on-interrupt] [--json]",
         "examples": [
           "neon-pilot conversations run-turn conversation-example --text Hello",
           "neon-pilot conversations run-turn conversation-example --text Hello --json"
@@ -809,6 +813,10 @@
               "type": "boolean",
               "description": "Follow turn progress when supported."
             },
+            "wait": {
+              "type": "boolean",
+              "description": "Wait for the conversation turn to finish instead of returning after the prompt is accepted."
+            },
             "format": {
               "enum": ["text", "json", "jsonl"],
               "description": "Output format."
@@ -828,7 +836,7 @@
         "requiresApp": true,
         "destructive": false,
         "idempotent": false,
-        "startsBackgroundWork": false,
+        "startsBackgroundWork": true,
         "supportsDryRun": true,
         "outputModes": ["text", "json", "jsonl"],
         "streaming": {
@@ -1694,6 +1702,7 @@
         "title": "Conversation",
         "worker": {
           "enabled": true,
+          "timeoutMs": 900000,
           "inputActions": [
             "activity",
             "connections",

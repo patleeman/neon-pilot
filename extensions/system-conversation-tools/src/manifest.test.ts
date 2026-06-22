@@ -82,9 +82,10 @@ describe('system-conversation-tools manifest', () => {
       ]),
     );
     const conversationTool = (manifest.backend.actions ?? []).find((action: { id: string }) => action.id === 'conversationTool') as
-      | { worker?: { inputActions?: string[] } }
+      | { worker?: { inputActions?: string[]; timeoutMs?: number } }
       | undefined;
     expect(conversationTool?.worker?.inputActions).toEqual(expect.arrayContaining(['inspect', 'create', 'create_and_run', 'run_turn']));
+    expect(conversationTool?.worker?.timeoutMs).toBeGreaterThanOrEqual(900_000);
   });
 
   it('declares conversation CLI commands on the conversation tool action', () => {
@@ -165,8 +166,9 @@ describe('system-conversation-tools manifest', () => {
     });
     expect(commands.get('ask')).toMatchObject({
       usage:
-        'ask [prompt...] [--text <prompt>] [--prompt <prompt>] [--title <title>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]',
+        'ask [prompt...] [--text <prompt>] [--prompt <prompt>] [--title <title>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--wait] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]',
       requiresApp: true,
+      startsBackgroundWork: true,
       outputModes: ['text', 'json', 'jsonl'],
       flagsSchema: {
         properties: {
@@ -178,6 +180,7 @@ describe('system-conversation-tools manifest', () => {
           tool: { type: 'string' },
           tools: { type: 'string' },
           'timeout-ms': { type: 'number' },
+          wait: { type: 'boolean' },
           follow: { type: 'boolean' },
           format: { type: 'string' },
           'cancel-on-interrupt': { type: 'boolean' },
@@ -196,7 +199,9 @@ describe('system-conversation-tools manifest', () => {
     });
     expect(commands.get('conversations run-turn')).toMatchObject({
       usage:
-        'conversations run-turn <conversationId> --text <message> [--timeout-ms <ms>] [--follow] [--format text|json|jsonl] [--cancel-on-interrupt] [--json]',
+        'conversations run-turn <conversationId> --text <message> [--wait] [--timeout-ms <ms>] [--follow] [--format text|json|jsonl] [--cancel-on-interrupt] [--json]',
+      startsBackgroundWork: true,
+      flagsSchema: { properties: { wait: { type: 'boolean' } } },
     });
     expect(commands.get('conversations transcript append')).toMatchObject({
       usage:

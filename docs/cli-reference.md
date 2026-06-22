@@ -61,10 +61,10 @@ Examples:
 
 ### ask
 
-Create a conversation, run one turn, and print the result.
+Create a live conversation, send one prompt, and return the conversation id. Use --wait, --follow, or --format jsonl to wait for completion.
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot ask [prompt...] [--text <prompt>] [--prompt <prompt>] [--title <title>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]`
+- Usage: `neon-pilot ask [prompt...] [--text <prompt>] [--prompt <prompt>] [--title <title>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--wait] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]`
 - Mode: streaming
 - Requires app: yes
 - Idempotent: no
@@ -750,10 +750,10 @@ Examples:
 
 ### conversations run-turn
 
-Run a conversation turn and wait for completion: conversations run-turn <id> --text <message> [--timeout-ms <ms>]
+Send a turn to a live conversation and return after it is accepted. Use --wait, --follow, or --format jsonl to wait for completion.
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations run-turn <conversationId> --text <message> [--timeout-ms <ms>] [--follow] [--format text|json|jsonl] [--cancel-on-interrupt] [--json]`
+- Usage: `neon-pilot conversations run-turn <conversationId> --text <message> [--wait] [--timeout-ms <ms>] [--follow] [--format text|json|jsonl] [--cancel-on-interrupt] [--json]`
 - Mode: streaming
 - Requires app: yes
 - Idempotent: no

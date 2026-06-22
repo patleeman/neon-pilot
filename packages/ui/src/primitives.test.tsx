@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -102,6 +105,8 @@ import {
   WorkbenchTabButton,
   WorkbenchTabCloseButton,
 } from './primitives';
+
+const uiStyles = readFileSync(fileURLToPath(new URL('./styles.css', import.meta.url)), 'utf8');
 
 describe('design-system primitives', () => {
   it('joins class names with falsey values removed', () => {
@@ -590,6 +595,13 @@ describe('design-system primitives', () => {
         createElement(InlineSelect, { value: 'daily', disabled: true }, createElement('option', { value: 'daily' }, 'Daily')),
       ),
     ).toContain('ui-inline-select');
+  });
+
+  it('keeps select popups on the active theme color scheme', () => {
+    expect(uiStyles).toMatch(/\[data-theme='light'\]\s*{[^}]*color-scheme:\s*light/s);
+    expect(uiStyles).toMatch(/\[data-theme='dark'\]\s*{[^}]*color-scheme:\s*dark/s);
+    expect(uiStyles).toContain('.ui-select option');
+    expect(uiStyles).toContain('.ui-inline-select option');
   });
 
   it('renders checkbox with design-system class', () => {
