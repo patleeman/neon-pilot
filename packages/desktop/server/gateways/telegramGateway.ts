@@ -847,6 +847,10 @@ function statusKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] }
       ],
       [
         { text: 'Compact', callback_data: 'cmd:/compact' },
+        { text: 'Title', callback_data: 'cmd:/title' },
+      ],
+      [
+        { text: 'Detach', callback_data: 'cmd:/detach' },
         { text: 'Archive', callback_data: 'cmd:/archive' },
       ],
       [{ text: 'Help', callback_data: 'cmd:/help' }],

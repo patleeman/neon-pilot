@@ -194,6 +194,14 @@ describe('TelegramGatewayRuntime', () => {
     );
     expect(d.fetch).toHaveBeenCalledWith(
       'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('callback_data":"cmd:/title') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('callback_data":"cmd:/detach') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
       expect.objectContaining({ body: expect.stringContaining('callback_data":"cmd:/archive') }),
     );
   });
