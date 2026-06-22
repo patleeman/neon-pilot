@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.26** — stable release being prepared locally.
+**v0.11.27** — stable release being prepared locally.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.26
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.27
 
 Highlights in this train:
 
-- Adds Routines as a top-level workflow surface for before/after lifecycle hooks, starting with checkpoint review/report routines.
-- Wires checkpoint saves through Routines so configured before hooks can block and after hooks can warn.
-- Hardens the Routines page with real sidebar navigation, decision outcomes, `/skill:` autocomplete, run history, and reliable drag reordering.
-- Adds automated Routines desktop smoke coverage and release golden matrix coverage.
-- Tightens system extension UI development guidance around desktop UI builds, app-path QA, and full-frame interaction checks.
+- Makes Automations easier to use with a compact toolbar, clearer creation entry point, and direct save flow.
+- Polishes Routines editing with inline timeline edits, model fallback controls, clearer edit exits, and more reliable inspector scrolling.
+- Improves Routines routing and drag behavior, including branch-oriented decisions, judge route nesting, and better invalid-drop handling.
+- Standardizes extension page layouts and page headers so core workflow surfaces feel more consistent.
+- Preserves workspace context and project thread organization across extension-created conversations and manually ordered threads.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

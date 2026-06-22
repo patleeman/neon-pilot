@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.27 — 2026-06-22
+
+### Highlights
+
+- Makes Automations easier to use with a compact toolbar, clearer creation entry point, and direct save flow.
+- Polishes Routines editing with inline timeline edits, model fallback controls, clearer edit exits, and more reliable inspector scrolling.
+- Improves Routines routing and drag behavior, including branch-oriented decisions, judge route nesting, and better invalid-drop handling.
+- Standardizes extension page layouts and page headers so core workflow surfaces feel more consistent.
+- Preserves workspace context and project thread organization across extension-created conversations and manually ordered threads.
+
+### Notes
+
+- 32 commits since the previous release.
+
 ## 0.11.26 — 2026-06-21
 
 ### Highlights

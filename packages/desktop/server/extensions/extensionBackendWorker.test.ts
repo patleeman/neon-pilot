@@ -563,7 +563,7 @@ export async function doThing(_input, ctx) {
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'create',
-      input: { cwd: '/repo', title: 'Welcome', live: false },
+      input: expect.objectContaining({ cwd: '/repo', title: 'Welcome', live: false }),
     });
     workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { id: 'conv-2', conversationId: 'conv-2' } });
 
