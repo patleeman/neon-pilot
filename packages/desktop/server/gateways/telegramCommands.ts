@@ -38,6 +38,7 @@ export function parseTelegramGatewayCommand(text: string): TelegramGatewayComman
     case '/pause':
       return { kind: 'stop' };
     case '/new':
+    case '/reset':
       return { kind: 'new' };
     case '/threads':
     case '/sessions':
@@ -69,7 +70,7 @@ export function formatTelegramGatewayHelp(): string {
     'Neon Pilot Telegram commands:',
     '/status — show gateway status',
     '/whoami — show your Telegram IDs and access status',
-    '/new — start a new conversation',
+    '/new or /reset — start a new conversation',
     '/threads — list recent conversations',
     '/switch <number|id|title> — switch this chat to another conversation',
     '/attach — attach this chat as the main gateway thread',

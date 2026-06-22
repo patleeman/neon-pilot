@@ -556,6 +556,7 @@ export class TelegramGatewayRuntime {
       commands: [
         { command: 'help', description: 'Show Telegram gateway commands' },
         { command: 'new', description: 'Start a new Neon Pilot conversation' },
+        { command: 'reset', description: 'Reset this chat to a new conversation' },
         { command: 'threads', description: 'List and switch conversations' },
         { command: 'model', description: 'Show or change the model' },
         { command: 'status', description: 'Show current gateway status' },

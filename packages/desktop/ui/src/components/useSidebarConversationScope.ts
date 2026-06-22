@@ -45,7 +45,7 @@ export function useSidebarConversationScope({
       id: activeConversationId,
       file: '',
       timestamp: new Date().toISOString(),
-      cwd: '',
+      cwd: draftCwd,
       cwdSlug: '',
       model: '',
       title: liveTitles.get(activeConversationId) ?? 'Connecting…',

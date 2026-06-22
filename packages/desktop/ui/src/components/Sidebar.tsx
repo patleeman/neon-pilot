@@ -35,7 +35,6 @@ import {
 import {
   buildConversationDeeplink,
   buildConversationSurfacePath,
-  readConversationIdFromPathname,
   resolveConversationAdjacentPath,
   resolveConversationCloseRedirect,
 } from '../conversation/conversationRoutes';
@@ -101,11 +100,13 @@ import {
 import type { GatewayState, SessionMeta } from '../shared/types';
 import { timeAgoCompact } from '../shared/utils';
 import {
+  conversationRuntimeStore,
   sessionStore,
   useAllExecutions,
   useAllSessions,
   useAllTasks,
   useConversationActivityStatus,
+  useConversationActivityStatusVersion,
   useConversationRuntime,
   useSession,
   useSessionsReady,
@@ -115,6 +116,7 @@ import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
 import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
 import { IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
+import { useSidebarConversationScope } from './useSidebarConversationScope';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 
 const SIDEBAR_CONVERSATION_PREFETCH_TAIL_BLOCKS = 120;
@@ -1804,6 +1806,7 @@ export function Sidebar() {
   const sessionsReady = useSessionsReady();
   const tasks = useAllTasks();
   const executionRecords = useAllExecutions();
+  const conversationActivityStatusVersion = useConversationActivityStatusVersion();
   const extensionRegistry = useExtensionRegistry();
   const {
     pinnedIds,
@@ -1912,48 +1915,15 @@ export function Sidebar() {
     [],
   );
 
-  const activeConversationId = useMemo(() => readConversationIdFromPathname(location.pathname), [location.pathname]);
-  const activeSession = useMemo(() => {
-    if (!activeConversationId) return null;
-    const session = (sessions ?? []).find((candidate) => candidate.id === activeConversationId);
-    if (session) return session;
-
-    return {
-      id: activeConversationId,
-      file: '',
-      timestamp: new Date().toISOString(),
-      cwd: draftCwd,
-      cwdSlug: '',
-      model: '',
-      title: liveTitles.get(activeConversationId) ?? 'Connecting…',
-      messageCount: 0,
-      isRunning: false,
-      isLive: true,
-    } satisfies SessionMeta;
-  }, [activeConversationId, draftCwd, liveTitles, sessions]);
-  const visibleConversationTabs = useMemo(() => {
-    if (!activeSession) return tabs;
-    const alreadyVisible =
-      pinnedSessions.some((session) => session.id === activeSession.id) || tabs.some((session) => session.id === activeSession.id);
-    return alreadyVisible ? tabs : [activeSession, ...tabs];
-  }, [activeSession, pinnedSessions, tabs]);
-  const workspaceConversationTabs = useMemo(
-    () => [...pinnedSessions, ...visibleConversationTabs],
-    [pinnedSessions, visibleConversationTabs],
-  );
-  const pinnedWorkspacePaths = useMemo(
-    () => normalizeWorkspacePaths(pinnedSessions.map((session) => getLocalSessionWorkspacePath(session))),
-    [pinnedSessions],
-  );
-  const openWorkspacePaths = useMemo(
-    () =>
-      normalizeWorkspacePaths([
-        draftCwd,
-        ...pinnedSessions.map((session) => getLocalSessionWorkspacePath(session)),
-        ...visibleConversationTabs.map((session) => getLocalSessionWorkspacePath(session)),
-      ]),
-    [draftCwd, pinnedSessions, visibleConversationTabs],
-  );
+  const { activeConversationId, openWorkspacePaths, pinnedWorkspacePaths, visibleConversationTabs, workspaceConversationTabs } =
+    useSidebarConversationScope({
+      draftCwd,
+      liveTitles,
+      locationPathname: location.pathname,
+      pinnedSessions,
+      sessions,
+      tabs,
+    });
 
   const persistSavedWorkspacePathsState = useCallback((workspacePaths: string[], options: { invalidateLoads?: boolean } = {}) => {
     const normalized = normalizeWorkspacePaths(workspacePaths);
@@ -2341,8 +2311,11 @@ export function Sidebar() {
       const conversationId = typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : null;
       if (!conversationId) return item;
 
+      const backendRuntime = conversationRuntimeStore.get(conversationId);
+      const isRunning = backendRuntime?.running ?? item.metadata?.isRunning === true;
       const metadata = {
         ...item.metadata,
+        isRunning,
         ...(conversationItemBySessionId.has(conversationId) ? {} : { canArchive: false }),
         ...(pinnedIdSet.has(conversationId) ? { isPinned: true } : {}),
         ...(lockedConversationIdSet.has(conversationId) ? { isLocked: true, canArchive: false } : {}),
@@ -2351,7 +2324,7 @@ export function Sidebar() {
           ? { hasPendingRuns: true, backgroundWorkKind: backgroundWorkKindByConversationId.get(conversationId) }
           : {}),
       };
-      return { ...item, status: metadata.isRunning ? 'running' : item.status, metadata };
+      return { ...item, status: isRunning ? 'running' : item.status === 'running' ? 'idle' : item.status, metadata };
     });
 
     if (threadsOrganizeMode !== 'project' || groupedConversationRows.length === 0) {
@@ -2394,6 +2367,7 @@ export function Sidebar() {
   }, [
     activityTreeSessions,
     backgroundWorkKindByConversationId,
+    conversationActivityStatusVersion,
     groupedConversationRows,
     lockedConversationIdSet,
     pendingExecutionConversationIdSet,

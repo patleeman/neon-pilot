@@ -875,6 +875,60 @@ describe('LocalBackendProcesses', () => {
     }
   });
 
+  it('routes session list projections through backend RPC once the backend child is live', async () => {
+    class WarmLiveStateBackend extends LocalBackendProcesses {
+      readonly calls: Array<{ method: string; args: unknown[] }> = [];
+
+      override async callLocalApiMethod(method: string, args: unknown[]): Promise<unknown> {
+        this.calls.push({ method, args });
+        if (method === 'readDesktopSessions') {
+          return [{ id: 'live-session', isRunning: true }];
+        }
+        if (method === 'readDesktopSidebarConversations') {
+          return {
+            sessionIds: ['live-session'],
+            pinnedSessionIds: [],
+            archivedSessionIds: [],
+            lockedConversationIds: [],
+            activeConversationId: 'live-session',
+            workspacePaths: [],
+            remoteControlledConversationIds: [],
+            conversationWorkspaceRevision: 1,
+            conversationWorkspaceUpdatedAt: '2026-06-22T00:00:00.000Z',
+            conversationWorkspaceMigratedAt: null,
+            sessions: [{ id: 'live-session', isRunning: true }],
+          };
+        }
+        return null;
+      }
+    }
+
+    const backend = new WarmLiveStateBackend();
+    (backend as unknown as { child?: FakeChildProcess }).child = new FakeChildProcess();
+
+    const sessionsResponse = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/sessions?limit=100',
+    });
+    const sidebarResponse = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/sidebar/conversations',
+    });
+
+    expect(JSON.parse(sessionsResponse.headers['X-PA-Perf'])).toMatchObject({ localApi: { fastPath: 'backend-rpc' } });
+    expect(JSON.parse(new TextDecoder().decode(sessionsResponse.body))).toEqual([{ id: 'live-session', isRunning: true }]);
+    expect(JSON.parse(sidebarResponse.headers['X-PA-Perf'])).toMatchObject({ localApi: { fastPath: 'backend-rpc' } });
+    expect(JSON.parse(new TextDecoder().decode(sidebarResponse.body))).toMatchObject({
+      sessionIds: ['live-session'],
+      activeConversationId: 'live-session',
+      sessions: [{ id: 'live-session', isRunning: true }],
+    });
+    expect(backend.calls).toEqual([
+      { method: 'readDesktopSessions', args: [{ limit: 100 }] },
+      { method: 'readDesktopSidebarConversations', args: [] },
+    ]);
+  });
+
   it('serves sidebar conversations from the main process with backend-confirmed sessions', async () => {
     const originalStateRoot = process.env.NEON_PILOT_STATE_ROOT;
     const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-sidebar-conversations-'));

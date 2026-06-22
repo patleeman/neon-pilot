@@ -13,7 +13,7 @@ import {
 } from '../local/localSettings.js';
 import { applyRemoteConversationLayout, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
 import type { DurableRunListResult, ExecutionListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
-import { executionStore, runStore, sessionStore, taskStore } from '../store';
+import { conversationActivityStatusStore, conversationRuntimeStore, executionStore, runStore, sessionStore, taskStore } from '../store';
 import { buildGatewayConversationAttachRoute, Sidebar } from './Sidebar.js';
 
 const apiMocks = vi.hoisted(() => ({
@@ -131,6 +131,11 @@ describe('Sidebar', () => {
     extensionRegistryMock.state.contextMenus = [];
     extensionRegistryMock.state.activityTreeItemActions = [];
     extensionRegistryMock.state.activityTreeItemStyles = [];
+    sessionStore.reset?.();
+    taskStore.reset?.();
+    runStore.reset?.();
+    executionStore.reset?.();
+    conversationActivityStatusStore.reset();
     apiMocks.sidebarConversations.mockReset();
     apiMocks.sidebarConversations.mockImplementation(async () => ({
       sessionIds: JSON.parse(storage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]') as string[],
@@ -1110,6 +1115,44 @@ describe('Sidebar', () => {
       expect(html).toContain('title="Agent is still running"');
       expect(html).not.toContain('aria-label="Background work running"');
       expect(html).not.toContain('aria-label="Conversation needs review"');
+    });
+
+    it('shows backend runtime state for the active conversation even when it is not in the saved workspace', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+      conversationRuntimeStore.apply({
+        id: 'conv-active-runtime',
+        running: true,
+        revision: 1,
+        updatedAt: '2026-03-16T10:00:00.000Z',
+      });
+
+      const html = renderSidebar('/conversations/conv-active-runtime', {
+        sessions: [createSession({ id: 'conv-active-runtime', title: 'Runtime active task', isRunning: false })],
+      });
+
+      expect(html).toContain('Runtime active task');
+      expect(html).toContain('aria-label="Running conversation"');
+      expect(html).toContain('ui-spinner');
+      expect(html).not.toContain('aria-label="Background work running"');
+    });
+
+    it('lets backend runtime state clear stale running session snapshots', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-stale-running']));
+      conversationRuntimeStore.apply({
+        id: 'conv-stale-running',
+        running: false,
+        revision: 1,
+        updatedAt: '2026-03-16T10:00:00.000Z',
+      });
+
+      const html = renderSidebar('/conversations/conv-stale-running', {
+        sessions: [createSession({ id: 'conv-stale-running', title: 'Actually idle task', isRunning: true })],
+      });
+
+      expect(html).toContain('Actually idle task');
+      expect(html).not.toContain('aria-label="Running conversation"');
+      expect(html).not.toContain('ui-spinner');
+      expect(html).toContain('ui-sidebar-session-time');
     });
 
     it('shows a subagent glyph for subagent background work when the session is not running', () => {

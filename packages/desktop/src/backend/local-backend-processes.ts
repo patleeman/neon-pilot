@@ -541,6 +541,13 @@ export class LocalBackendProcesses {
     }
 
     if (input.method === 'GET' && path === '/api/sessions' && url.searchParams.has('limit')) {
+      const limitValue = Number(url.searchParams.get('limit'));
+      const limit = Number.isSafeInteger(limitValue) && limitValue > 0 ? limitValue : undefined;
+      const args = [limit === undefined ? {} : { limit }];
+      if (this.hasBackendChildForLiveState()) {
+        return this.makeJsonResponse(await this.callLocalApiMethod('readDesktopSessions', args), 'backend-rpc');
+      }
+
       const { readConversationSessionsCapability } = await import('../../server/conversations/conversationSessionCapability.js');
       const { setConversationServiceContext } = await import('../../server/conversations/conversationService.js');
       setConversationServiceContext({
@@ -560,9 +567,7 @@ export class LocalBackendProcesses {
           nodeBrowserViews: [],
         }),
       });
-      const limitValue = Number(url.searchParams.get('limit'));
-      const limit = Number.isSafeInteger(limitValue) && limitValue > 0 ? limitValue : undefined;
-      return this.makeJsonResponse(readConversationSessionsCapability(limit === undefined ? {} : { limit }), 'main-process');
+      return this.makeJsonResponse(readConversationSessionsCapability(args[0]), 'main-process');
     }
     if (input.method === 'POST' && path === '/api/sessions/search') {
       return this.makeJsonResponse({ query: jsonBody.query, mode: 'allTerms', scope: 'all', matches: [] }, 'main-process');
@@ -580,8 +585,12 @@ export class LocalBackendProcesses {
       return this.makeJsonResponse(await readConversationWorkspaceFastPath(), 'main-process');
     }
     if (input.method === 'GET' && path === '/api/sidebar/conversations') {
+      const hasBackendChild = this.hasBackendChildForLiveState();
       this.warmBackendChild();
       this.warmCriticalExtensionRegistryModule();
+      if (hasBackendChild) {
+        return this.makeJsonResponse(await this.callLocalApiMethod('readDesktopSidebarConversations', []), 'backend-rpc');
+      }
       return this.makeJsonResponse(await readSidebarConversationsFastPath(), 'main-process');
     }
     if (input.method === 'PATCH' && path === '/api/conversation-workspace') {
@@ -657,6 +666,11 @@ export class LocalBackendProcesses {
     }
 
     return null;
+  }
+
+  private hasBackendChildForLiveState(): boolean {
+    const child = this.child;
+    return Boolean(child && !child.killed);
   }
 
   private warmBackendChild(): void {
