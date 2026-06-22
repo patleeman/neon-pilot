@@ -601,6 +601,7 @@ export class TelegramGatewayRuntime {
         { command: 'status', description: 'Show current gateway status' },
         { command: 'whoami', description: 'Show your Telegram IDs and access status' },
         { command: 'stop', description: 'Pause replies for this conversation' },
+        { command: 'pause', description: 'Pause replies for this conversation' },
         { command: 'resume', description: 'Resume replies or switch to a named thread' },
         { command: 'compact', description: 'Compact the current thread' },
         { command: 'title', description: 'Show or rename the current thread' },
