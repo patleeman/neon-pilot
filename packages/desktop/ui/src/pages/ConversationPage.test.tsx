@@ -24,6 +24,7 @@ import {
   shouldLoadConversationModels,
   shouldMountComposerShelvesImmediately,
   shouldShowMissingConversationState,
+  shouldShowNewConversationSetup,
   shouldUseHealthyDesktopConversationState,
 } from './ConversationPage.js';
 
@@ -57,6 +58,33 @@ function findFirstNodeByClass(node: ParsedNode, className: string): ParsedNode |
 }
 
 describe('desktop conversation state fallback', () => {
+  it('shows the setup picker for any editable empty conversation, including persisted non-live threads', () => {
+    expect(
+      shouldShowNewConversationSetup({
+        draft: false,
+        hasRenderableMessages: false,
+        showConversationLoadingState: false,
+        hasSessionError: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldShowNewConversationSetup({
+        draft: false,
+        hasRenderableMessages: true,
+        showConversationLoadingState: false,
+        hasSessionError: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldShowNewConversationSetup({
+        draft: false,
+        hasRenderableMessages: false,
+        showConversationLoadingState: false,
+        hasSessionError: true,
+      }),
+    ).toBe(false);
+  });
+
   it('mounts composer shelves as soon as restored conversation chrome is ready', () => {
     expect(
       shouldMountComposerShelvesImmediately({

@@ -515,6 +515,16 @@ export function shouldMountComposerShelvesImmediately(input: {
   return input.composerChromeReady && !input.showConversationLoadingState;
 }
 
+export function shouldShowNewConversationSetup(input: {
+  draft: boolean;
+  hasRenderableMessages: boolean;
+  showConversationLoadingState: boolean;
+  hasSessionError: boolean;
+}): boolean {
+  if (input.draft) return true;
+  return !input.hasRenderableMessages && !input.showConversationLoadingState && !input.hasSessionError;
+}
+
 export function ConversationPage({ draft = false, conversationId }: { draft?: boolean; conversationId?: string | null }) {
   const { id: routeId } = useParams<{ id?: string }>();
   const location = useLocation();
@@ -1314,8 +1324,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   });
   const showConversationLoadingState =
     showBootstrapLoadingState || (!hasRenderableMessages && (sessionLoading || hydratingLiveConversation));
-  const showLiveNewConversationSetup = !draft && isLiveSession && !hasRenderableMessages && !showConversationLoadingState;
-  const showNewConversationSetup = draft || showLiveNewConversationSetup;
+  const showNewConversationSetup = shouldShowNewConversationSetup({
+    draft,
+    hasRenderableMessages,
+    showConversationLoadingState,
+    hasSessionError: Boolean(sessionError),
+  });
   const scrollBinding = resolveConversationVisibleScrollBinding({
     draft,
     routeConversationId: id,
