@@ -352,6 +352,7 @@ export class TelegramGatewayRuntime {
         await this.sendMessage(
           target.externalChatId,
           `Telegram gateway active. Conversation: ${target.conversationId}${model ? `\nModel: ${model}` : ''}`,
+          { reply_markup: statusKeyboard() },
         );
         return;
       }
@@ -760,6 +761,22 @@ function formatMarkdownTable(header: string[], rows: string[][]): string {
 
 function escapeTelegramHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function statusKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] } {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'Threads', callback_data: 'cmd:/threads' },
+        { text: 'Model', callback_data: 'cmd:/model' },
+      ],
+      [
+        { text: 'Pause replies', callback_data: 'cmd:/stop' },
+        { text: 'Resume replies', callback_data: 'cmd:/resume' },
+      ],
+      [{ text: 'Help', callback_data: 'cmd:/help' }],
+    ],
+  };
 }
 
 function commandKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] } {
