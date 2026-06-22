@@ -276,6 +276,32 @@ describe('TelegramGatewayRuntime', () => {
     expect(state.attachGatewayConversation).toHaveBeenCalledWith(expect.objectContaining({ conversationId: 'conv-2' }));
   });
 
+  it('paginates the inline thread picker from callback buttons', async () => {
+    const d = deps({
+      listConversations: vi.fn(() => Array.from({ length: 10 }, (_, index) => ({ id: `conv-${index + 1}`, title: `Thread ${index + 1}` }))),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      callback_query: {
+        id: 'callback-1',
+        from: { id: 777 },
+        data: 'threadpage:1',
+        message: { message_id: 10, chat: { id: 123 } },
+      },
+    });
+
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('callback_data":"switch:conv-9') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('2/2') }),
+    );
+  });
+
   it('paginates the inline model picker from callback buttons', async () => {
     state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
     const d = deps({

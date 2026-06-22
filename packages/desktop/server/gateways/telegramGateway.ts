@@ -280,6 +280,13 @@ export class TelegramGatewayRuntime {
     if (!callback.message?.chat || !callback.data) return;
     await this.answerCallbackQuery(callback.id).catch(() => undefined);
     const data = callback.data.trim();
+    if (data.startsWith('threadpage:')) {
+      const page = Number.parseInt(data.slice(11), 10);
+      await this.sendMessage(String(callback.message.chat.id), await this.formatConversationList('Recent Neon Pilot conversations:'), {
+        reply_markup: await this.conversationKeyboard(Number.isFinite(page) ? page : 0),
+      });
+      return;
+    }
     if (data.startsWith('modelpage:')) {
       const page = Number.parseInt(data.slice(10), 10);
       const chatId = String(callback.message.chat.id);
@@ -493,14 +500,28 @@ export class TelegramGatewayRuntime {
     ].join('\n');
   }
 
-  private async conversationKeyboard(): Promise<{ inline_keyboard: TelegramInlineKeyboardButton[][] }> {
-    const conversations = (await this.dependencies.listConversations()).slice(0, 8);
-    const rows = conversations.map((conversation, index) => [
-      { text: `${index + 1}. ${truncateButtonText(conversation.title || conversation.id)}`, callback_data: `switch:${conversation.id}` },
+  private async conversationKeyboard(page = 0): Promise<{ inline_keyboard: TelegramInlineKeyboardButton[][] }> {
+    const pageSize = 8;
+    const conversations = await this.dependencies.listConversations();
+    const pageCount = Math.max(1, Math.ceil(conversations.length / pageSize));
+    const safePage = Math.min(Math.max(0, page), pageCount - 1);
+    const visibleConversations = conversations.slice(safePage * pageSize, safePage * pageSize + pageSize);
+    const rows = visibleConversations.map((conversation, index) => [
+      {
+        text: `${safePage * pageSize + index + 1}. ${truncateButtonText(conversation.title || conversation.id)}`,
+        callback_data: `switch:${conversation.id}`,
+      },
     ]);
+    if (pageCount > 1) {
+      rows.push([
+        { text: '‹ Prev', callback_data: `threadpage:${Math.max(0, safePage - 1)}` },
+        { text: `${safePage + 1}/${pageCount}`, callback_data: `threadpage:${safePage}` },
+        { text: 'Next ›', callback_data: `threadpage:${Math.min(pageCount - 1, safePage + 1)}` },
+      ]);
+    }
     rows.push([
       { text: 'New thread', callback_data: 'cmd:/new' },
-      { text: 'Refresh list', callback_data: 'cmd:/threads' },
+      { text: 'Refresh list', callback_data: `threadpage:${safePage}` },
     ]);
     return { inline_keyboard: rows };
   }
