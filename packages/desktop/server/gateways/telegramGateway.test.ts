@@ -54,6 +54,8 @@ describe('TelegramGatewayRuntime', () => {
 
   it('renders Telegram-safe rich HTML from common markdown', () => {
     expect(renderTelegramHtml('**bold** `code` <x>')).toBe('<b>bold</b> <code>code</code> &lt;x&gt;');
+    expect(renderTelegramHtml('- [x] shipped\n- [ ] test')).toBe('☑ shipped\n☐ test');
+    expect(renderTelegramHtml('| Name | Status |\n| --- | --- |\n| Gateway | Ready |')).toBe('• Name: Gateway\n  Status: Ready');
     expect(renderTelegramHtml('```ts\nconst x = 1 < 2;\n```')).toBe('<pre>ts\nconst x = 1 &lt; 2;\n</pre>');
     expect(splitTelegramMessage('a'.repeat(9000)).length).toBeGreaterThan(1);
   });

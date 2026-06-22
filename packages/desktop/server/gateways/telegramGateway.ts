@@ -592,7 +592,8 @@ export function splitTelegramMessage(text: string): string[] {
 }
 
 function renderTelegramInlineMarkdown(text: string): string {
-  const escaped = escapeTelegramHtml(text);
+  const normalized = normalizeMarkdownTables(normalizeTaskLists(text));
+  const escaped = escapeTelegramHtml(normalized);
   return escaped
     .replace(/^###\s+(.+)$/gm, '<b>$1</b>')
     .replace(/^##\s+(.+)$/gm, '<b>$1</b>')
@@ -601,6 +602,65 @@ function renderTelegramInlineMarkdown(text: string): string {
     .replace(/\*\*([^*\n][\s\S]*?[^*\n])\*\*/g, '<b>$1</b>')
     .replace(/__([^_\n][\s\S]*?[^_\n])__/g, '<b>$1</b>')
     .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<i>$2</i>');
+}
+
+function normalizeTaskLists(text: string): string {
+  return text.replace(/^\s*[-*]\s+\[([ xX])]\s+(.+)$/gm, (_match, checked: string, label: string) => {
+    return `${checked.trim().toLowerCase() === 'x' ? '☑' : '☐'} ${label}`;
+  });
+}
+
+function normalizeMarkdownTables(text: string): string {
+  const lines = text.split('\n');
+  const output: string[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const header = parseMarkdownTableRow(lines[index] ?? '');
+    const divider = lines[index + 1] ?? '';
+    if (header && isMarkdownTableDivider(divider)) {
+      const rows: string[][] = [];
+      index += 2;
+      while (index < lines.length) {
+        const row = parseMarkdownTableRow(lines[index] ?? '');
+        if (!row) break;
+        rows.push(row);
+        index += 1;
+      }
+      index -= 1;
+      output.push(formatMarkdownTable(header, rows));
+    } else {
+      output.push(lines[index] ?? '');
+    }
+  }
+  return output.join('\n');
+}
+
+function parseMarkdownTableRow(line: string): string[] | null {
+  const trimmed = line.trim();
+  if (!trimmed.includes('|')) return null;
+  const cells = trimmed
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim());
+  return cells.length >= 2 && cells.some(Boolean) ? cells : null;
+}
+
+function isMarkdownTableDivider(line: string): boolean {
+  const cells = parseMarkdownTableRow(line);
+  return Boolean(cells && cells.every((cell) => /^:?-{3,}:?$/.test(cell)));
+}
+
+function formatMarkdownTable(header: string[], rows: string[][]): string {
+  if (rows.length === 0) return header.join(' · ');
+  if (header.length <= 4 && rows.every((row) => row.every((cell) => cell.length <= 48))) {
+    return rows
+      .map((row) => row.map((cell, index) => `${header[index] || `Column ${index + 1}`}: ${cell || '—'}`).join('\n'))
+      .map((row) => `• ${row.replace(/\n/g, '\n  ')}`)
+      .join('\n');
+  }
+  const allRows = [header, ...rows];
+  const widths = header.map((_, column) => Math.min(32, Math.max(...allRows.map((row) => (row[column] || '').length))));
+  return allRows.map((row) => row.map((cell, column) => (cell || '').padEnd(widths[column] ?? 0)).join('  ')).join('\n');
 }
 
 function escapeTelegramHtml(value: string): string {
