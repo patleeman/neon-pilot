@@ -65,6 +65,10 @@ interface TelegramUpdate {
   callback_query?: TelegramCallbackQuery;
 }
 
+interface TelegramSentMessage {
+  message_id: number;
+}
+
 interface TelegramApiResponse<T> {
   ok: boolean;
   result?: T;
@@ -133,6 +137,7 @@ export class TelegramGatewayRuntime {
   private polling = false;
   private nextOffset = 0;
   private typingIndicators = new Map<string, TypingIndicator>();
+  private pendingStatusMessages = new Map<string, { chatId: string; messageId: number }>();
 
   constructor(private readonly dependencies: TelegramGatewayRuntimeDependencies) {}
 
@@ -191,6 +196,10 @@ export class TelegramGatewayRuntime {
 
     const images = message.photo?.length ? await this.loadTelegramPhotos(message.photo) : undefined;
     this.startTyping(externalChatId);
+    const statusMessage = await this.sendMessage(externalChatId, '⏳ Working…');
+    if (statusMessage?.message_id) {
+      this.pendingStatusMessages.set(target.conversationId, { chatId: externalChatId, messageId: statusMessage.message_id });
+    }
     await this.dependencies.submitPrompt({
       conversationId: target.conversationId,
       text: text || 'Please review this Telegram photo.',
@@ -211,7 +220,13 @@ export class TelegramGatewayRuntime {
     if (!target) return false;
 
     this.stopTyping(target.externalChatId);
-    await this.sendMessage(target.externalChatId, text);
+    const pending = this.pendingStatusMessages.get(input.conversationId);
+    if (pending) {
+      this.pendingStatusMessages.delete(input.conversationId);
+      await this.editMessage(pending.chatId, pending.messageId, text);
+    } else {
+      await this.sendMessage(target.externalChatId, text);
+    }
     recordGatewayEvent({
       stateRoot: this.dependencies.stateRoot,
       profile: this.dependencies.profile,
@@ -541,18 +556,37 @@ export class TelegramGatewayRuntime {
     this.typingIndicators.delete(chatId);
   }
 
-  private async sendMessage(chatId: string, text: string, options: TelegramSendMessageOptions = {}): Promise<void> {
+  private async sendMessage(chatId: string, text: string, options: TelegramSendMessageOptions = {}): Promise<TelegramSentMessage | null> {
     const token = this.dependencies.readBotToken();
-    if (!token) return;
+    if (!token) return null;
     const chunks = splitTelegramMessage(text).map(renderTelegramHtml);
+    let lastMessage: TelegramSentMessage | null = null;
     for (const [index, chunk] of chunks.entries()) {
-      await this.telegramRequest(token, 'sendMessage', {
+      lastMessage = await this.telegramRequest<TelegramSentMessage>(token, 'sendMessage', {
         chat_id: chatId,
         text: chunk,
         parse_mode: 'HTML',
         disable_web_page_preview: true,
         ...(index === chunks.length - 1 ? options : {}),
       });
+    }
+    return lastMessage;
+  }
+
+  private async editMessage(chatId: string, messageId: number, text: string): Promise<void> {
+    const token = this.dependencies.readBotToken();
+    if (!token) return;
+    const chunks = splitTelegramMessage(text);
+    const [firstChunk = '', ...remainingChunks] = chunks;
+    await this.telegramRequest(token, 'editMessageText', {
+      chat_id: chatId,
+      message_id: messageId,
+      text: renderTelegramHtml(firstChunk),
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+    });
+    for (const chunk of remainingChunks) {
+      await this.sendMessage(chatId, chunk);
     }
   }
 

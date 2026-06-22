@@ -230,6 +230,33 @@ describe('TelegramGatewayRuntime', () => {
     );
   });
 
+  it('edits the working status message when delivering the next assistant reply', async () => {
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
+    const d = deps({
+      fetch: vi.fn(async (url: string) => ({
+        ok: true,
+        json: async () => ({
+          ok: true,
+          result: url.endsWith('/sendMessage') ? { message_id: 42 } : true,
+        }),
+      })),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: 'hello' } });
+    await runtime.deliverAssistantReply({ conversationId: 'conv-1', text: '**done**' });
+
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/editMessageText',
+      expect.objectContaining({ body: expect.stringContaining('"message_id":42') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/editMessageText',
+      expect.objectContaining({ body: expect.stringContaining('<b>done</b>') }),
+    );
+  });
+
   it('delivers assistant replies to bound chats and records events', async () => {
     state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
     const d = deps();
