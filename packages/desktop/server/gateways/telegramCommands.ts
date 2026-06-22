@@ -2,6 +2,7 @@ export type TelegramGatewayCommand =
   | { kind: 'start' }
   | { kind: 'help' }
   | { kind: 'status' }
+  | { kind: 'whoami' }
   | { kind: 'stop' }
   | { kind: 'resume' }
   | { kind: 'new' }
@@ -31,6 +32,8 @@ export function parseTelegramGatewayCommand(text: string): TelegramGatewayComman
       return { kind: 'help' };
     case '/status':
       return { kind: 'status' };
+    case '/whoami':
+      return { kind: 'whoami' };
     case '/stop':
     case '/pause':
       return { kind: 'stop' };
@@ -65,6 +68,7 @@ export function formatTelegramGatewayHelp(): string {
   return [
     'Neon Pilot Telegram commands:',
     '/status — show gateway status',
+    '/whoami — show your Telegram IDs and access status',
     '/new — start a new conversation',
     '/threads — list recent conversations',
     '/switch <number|id|title> — switch this chat to another conversation',

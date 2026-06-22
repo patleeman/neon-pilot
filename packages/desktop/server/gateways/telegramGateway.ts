@@ -185,7 +185,7 @@ export class TelegramGatewayRuntime {
     const target = await this.ensureChatTarget({ externalChatId, externalChatLabel, forceNew: command?.kind === 'new' });
 
     if (command) {
-      await this.handleCommand(command, { conversationId: target.conversationId, externalChatId, externalChatLabel });
+      await this.handleCommand(command, { conversationId: target.conversationId, externalChatId, externalChatLabel, externalUserId });
       return;
     }
 
@@ -322,7 +322,7 @@ export class TelegramGatewayRuntime {
 
   private async handleCommand(
     command: NonNullable<ReturnType<typeof parseTelegramGatewayCommand>>,
-    target: { conversationId: string; externalChatId: string; externalChatLabel: string },
+    target: { conversationId: string; externalChatId: string; externalChatLabel: string; externalUserId?: string },
   ): Promise<void> {
     switch (command.kind) {
       case 'start':
@@ -338,6 +338,22 @@ export class TelegramGatewayRuntime {
         await this.sendMessage(
           target.externalChatId,
           `Telegram gateway active. Conversation: ${target.conversationId}${model ? `\nModel: ${model}` : ''}`,
+        );
+        return;
+      }
+      case 'whoami': {
+        const policy = this.dependencies.readAccessPolicy();
+        const approvedByChat = policy.approvedChatIds.includes(target.externalChatId);
+        const approvedByUser = Boolean(target.externalUserId && policy.approvedUserIds.includes(target.externalUserId));
+        await this.sendMessage(
+          target.externalChatId,
+          [
+            'Telegram access:',
+            `Chat ID: ${target.externalChatId}`,
+            target.externalUserId ? `User ID: ${target.externalUserId}` : 'User ID: unavailable',
+            `Approved: ${approvedByChat || approvedByUser ? 'yes' : 'no'}`,
+            approvedByChat ? 'Matched: chat ID' : approvedByUser ? 'Matched: user ID' : 'Matched: none',
+          ].join('\n'),
         );
         return;
       }
@@ -499,6 +515,7 @@ export class TelegramGatewayRuntime {
         { command: 'threads', description: 'List and switch conversations' },
         { command: 'model', description: 'Show or change the model' },
         { command: 'status', description: 'Show current gateway status' },
+        { command: 'whoami', description: 'Show your Telegram IDs and access status' },
         { command: 'stop', description: 'Pause replies for this conversation' },
         { command: 'resume', description: 'Resume replies or switch to a named thread' },
         { command: 'compact', description: 'Compact the current thread' },

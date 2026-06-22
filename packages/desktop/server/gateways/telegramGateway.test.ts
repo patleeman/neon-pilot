@@ -135,6 +135,27 @@ describe('TelegramGatewayRuntime', () => {
     );
   });
 
+  it('reports Telegram user and chat IDs with /whoami', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'whoami' });
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps();
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      message: { message_id: 10, chat: { id: 123 }, from: { id: 777 }, text: '/whoami' },
+    });
+
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('User ID: 777') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('Matched: chat ID') }),
+    );
+  });
+
   it('shows an inline model picker for /model without arguments', async () => {
     commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'model' });
     state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
