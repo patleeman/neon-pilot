@@ -5,6 +5,8 @@ export type TelegramGatewayCommand =
   | { kind: 'stop' }
   | { kind: 'resume' }
   | { kind: 'new' }
+  | { kind: 'threads' }
+  | { kind: 'switch'; target?: string }
   | { kind: 'attach' }
   | { kind: 'detach' }
   | { kind: 'model'; model?: string }
@@ -32,10 +34,16 @@ export function parseTelegramGatewayCommand(text: string): TelegramGatewayComman
     case '/stop':
     case '/pause':
       return { kind: 'stop' };
-    case '/resume':
-      return { kind: 'resume' };
     case '/new':
       return { kind: 'new' };
+    case '/threads':
+    case '/sessions':
+      return { kind: 'threads' };
+    case '/thread':
+    case '/switch':
+      return arg ? { kind: 'switch', target: arg } : { kind: 'switch' };
+    case '/resume':
+      return arg ? { kind: 'switch', target: arg } : { kind: 'resume' };
     case '/attach':
       return { kind: 'attach' };
     case '/detach':
@@ -58,6 +66,8 @@ export function formatTelegramGatewayHelp(): string {
     'Neon Pilot Telegram commands:',
     '/status — show gateway status',
     '/new — start a new conversation',
+    '/threads — list recent conversations',
+    '/switch <number|id|title> — switch this chat to another conversation',
     '/attach — attach this chat as the main gateway thread',
     '/detach — detach this chat',
     '/stop or /pause — stop replies',

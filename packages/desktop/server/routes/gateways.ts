@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from 'express';
 
-import { readSessionDetailForRoute } from '../conversations/conversationService.js';
+import { listConversationSessionsSnapshot, readSessionDetailForRoute } from '../conversations/conversationService.js';
 import {
   compactLiveSessionCapability,
   createLiveSessionCapability,
@@ -190,6 +190,12 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
     authFile: context.getAuthFile(),
     readBotToken: () => readTelegramBotToken(context.getAuthFile(), context.getStateRoot()),
     readAccessPolicy: () => readTelegramAccessPolicy(context.getStateRoot(), context.getRuntimeScope()),
+    listConversations: () =>
+      listConversationSessionsSnapshot({ includeLive: true, limit: 50, profile: context.getRuntimeScope() }).map((session) => ({
+        id: session.id,
+        title: session.title,
+        updatedAt: session.lastActivityAt ?? session.timestamp,
+      })),
     createConversation: async (input) => {
       const created = await createLiveSessionCapability({}, liveSessionContext(context));
       renameSession(created.id, input.title);

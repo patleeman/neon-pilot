@@ -52,11 +52,18 @@ interface TelegramApiResponse<T> {
   description?: string;
 }
 
+export interface TelegramGatewayConversationSummary {
+  id: string;
+  title?: string;
+  updatedAt?: string;
+}
+
 export interface TelegramGatewayRuntimeDependencies {
   stateRoot: string;
   profile: string;
   authFile: string;
   createConversation: (input: { title: string }) => Promise<{ id: string }>;
+  listConversations: () => Promise<TelegramGatewayConversationSummary[]> | TelegramGatewayConversationSummary[];
   submitPrompt: (input: {
     conversationId: string;
     text: string;
@@ -266,6 +273,19 @@ export class TelegramGatewayRuntime {
         );
         return;
       }
+      case 'threads':
+        await this.sendMessage(target.externalChatId, await this.formatConversationList());
+        return;
+      case 'switch':
+        if (!command.target) {
+          await this.sendMessage(
+            target.externalChatId,
+            await this.formatConversationList('Send /switch <number>, /switch <title>, or /switch <id>.'),
+          );
+          return;
+        }
+        await this.switchConversation(command.target, target);
+        return;
       case 'stop':
       case 'detach':
         upsertGatewayChatTarget({
@@ -325,6 +345,49 @@ export class TelegramGatewayRuntime {
         await this.sendMessage(target.externalChatId, 'Archived and detached this thread.');
         return;
     }
+  }
+
+  private async formatConversationList(prefix = 'Recent Neon Pilot conversations:'): Promise<string> {
+    const conversations = (await this.dependencies.listConversations()).slice(0, 12);
+    if (conversations.length === 0) return 'No Neon Pilot conversations found. Send /new to start one.';
+    return [
+      prefix,
+      ...conversations.map((conversation, index) => `${index + 1}. ${conversation.title || conversation.id} — ${conversation.id}`),
+    ].join('\n');
+  }
+
+  private async switchConversation(
+    target: string,
+    chat: { conversationId: string; externalChatId: string; externalChatLabel: string },
+  ): Promise<void> {
+    const conversations = await this.dependencies.listConversations();
+    const normalizedTarget = target.trim().toLowerCase();
+    const byNumber = /^\d+$/.test(normalizedTarget) ? conversations[Number.parseInt(normalizedTarget, 10) - 1] : undefined;
+    const matches = conversations.filter(
+      (conversation) =>
+        conversation.id.toLowerCase() === normalizedTarget || (conversation.title || '').toLowerCase().includes(normalizedTarget),
+    );
+    const selected = byNumber ?? (matches.length === 1 ? matches[0] : undefined);
+    if (!selected) {
+      await this.sendMessage(
+        chat.externalChatId,
+        matches.length > 1
+          ? `Multiple conversations matched "${target}".\n${await this.formatConversationList('Pick one with /switch <number>:')}`
+          : `No conversation matched "${target}".\n${await this.formatConversationList('Pick one with /switch <number>:')}`,
+      );
+      return;
+    }
+
+    attachGatewayConversation({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      conversationId: selected.id,
+      conversationTitle: selected.title,
+      externalChatId: chat.externalChatId,
+      externalChatLabel: chat.externalChatLabel,
+    });
+    await this.sendMessage(chat.externalChatId, `Switched this Telegram chat to ${selected.title || selected.id}.`);
   }
 
   private async pollLoop(token: string, signal: AbortSignal): Promise<void> {

@@ -30,6 +30,10 @@ describe('TelegramGatewayRuntime', () => {
       profile: 'shared',
       authFile: '/auth',
       createConversation: vi.fn(async () => ({ id: 'conv-new' })),
+      listConversations: vi.fn(() => [
+        { id: 'conv-1', title: 'Existing' },
+        { id: 'conv-2', title: 'Project planning' },
+      ]),
       submitPrompt: vi.fn(async () => undefined),
       renameConversation: vi.fn(async () => undefined),
       compactConversation: vi.fn(async () => undefined),
@@ -99,6 +103,24 @@ describe('TelegramGatewayRuntime', () => {
       expect.objectContaining({ body: JSON.stringify({ chat_id: '123', text: 'Model set to provider/model.' }) }),
     );
     expect(d.submitPrompt).not.toHaveBeenCalled();
+  });
+
+  it('lists and switches Telegram chats between conversations', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'threads' }).mockReturnValueOnce({ kind: 'switch', target: '2' });
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps();
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: '/threads' } });
+    await runtime.processUpdate({ update_id: 2, message: { message_id: 11, chat: { id: 123 }, text: '/switch 2' } });
+
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('Project planning — conv-2') }),
+    );
+    expect(state.attachGatewayConversation).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: 'conv-2', conversationTitle: 'Project planning', externalChatId: '123' }),
+    );
   });
 
   it('loads best Telegram photo and submits it as an image prompt', async () => {
