@@ -16,8 +16,8 @@ import {
   defaultGatewayProviders,
   detachGatewayConversation,
   ensureGatewayConnection,
-  type GatewayProviderSummary,
   type GatewayProviderId,
+  type GatewayProviderSummary,
   type GatewayStatus,
   normalizeGatewayProviderId,
   readGatewayState,
@@ -25,6 +25,7 @@ import {
   updateGatewayConnectionStatus,
   upsertGatewayChatTarget,
 } from '../gateways/gatewayState.js';
+import { readTelegramAccessPolicy, writeTelegramAccessPolicy } from '../gateways/telegramAccess.js';
 import { readTelegramBotToken, removeTelegramBotToken, writeTelegramBotToken } from '../gateways/telegramAuth.js';
 import { TelegramGatewayRuntime } from '../gateways/telegramGateway.js';
 import { logError } from '../middleware/index.js';
@@ -90,7 +91,11 @@ function publishTelegramGatewayHostApi(): void {
     recordGatewayEvent: (input) => {
       const provider = requireRegisteredGatewayProvider(input.provider);
       const kind =
-        input.kind === 'inbound' || input.kind === 'outbound' || input.kind === 'routing' || input.kind === 'status' || input.kind === 'error'
+        input.kind === 'inbound' ||
+        input.kind === 'outbound' ||
+        input.kind === 'routing' ||
+        input.kind === 'status' ||
+        input.kind === 'error'
           ? input.kind
           : null;
       if (!kind) throw new Error('Gateway event kind is invalid.');
@@ -184,6 +189,7 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
     profile: context.getRuntimeScope(),
     authFile: context.getAuthFile(),
     readBotToken: () => readTelegramBotToken(context.getAuthFile(), context.getStateRoot()),
+    readAccessPolicy: () => readTelegramAccessPolicy(context.getStateRoot(), context.getRuntimeScope()),
     createConversation: async (input) => {
       const created = await createLiveSessionCapability({}, liveSessionContext(context));
       renameSession(created.id, input.title);
@@ -245,9 +251,7 @@ function readOptionalString(value: unknown): string | undefined {
 }
 
 export function startTelegramGatewayRuntime(): { running: boolean } {
-  const initialTelegramState = readCurrentGatewayState().connections.find(
-    (connection) => connection.provider === 'telegram',
-  );
+  const initialTelegramState = readCurrentGatewayState().connections.find((connection) => connection.provider === 'telegram');
   if (initialTelegramState?.enabled && readTelegramBotToken(getAuthFileFn(), getStateRootFn())) {
     ensureTelegramRuntime().start();
     return { running: true };
@@ -345,6 +349,24 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
   router.get('/api/gateways/telegram/token', (_req, res) => {
     try {
       res.json({ configured: readTelegramBotToken(getAuthFileFn(), getStateRootFn()) !== null });
+    } catch (err) {
+      handleGatewayError(res, err);
+    }
+  });
+
+  router.get('/api/gateways/telegram/access', (_req, res) => {
+    try {
+      res.json(readTelegramAccessPolicy(getStateRootFn(), getRuntimeScopeFn()));
+    } catch (err) {
+      handleGatewayError(res, err);
+    }
+  });
+
+  router.patch('/api/gateways/telegram/access', (req: Request, res: Response) => {
+    try {
+      const approvedUserIds = Array.isArray(req.body?.approvedUserIds) ? req.body.approvedUserIds : [];
+      const approvedChatIds = Array.isArray(req.body?.approvedChatIds) ? req.body.approvedChatIds : [];
+      res.json(writeTelegramAccessPolicy(getStateRootFn(), getRuntimeScopeFn(), { approvedUserIds, approvedChatIds }));
     } catch (err) {
       handleGatewayError(res, err);
     }

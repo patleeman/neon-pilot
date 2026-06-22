@@ -37,6 +37,7 @@ describe('TelegramGatewayRuntime', () => {
       getCurrentModel: vi.fn(() => 'model-1'),
       setModel: vi.fn(async () => undefined),
       readBotToken: vi.fn(() => 'token'),
+      readAccessPolicy: vi.fn(() => ({ approvedUserIds: ['777'], approvedChatIds: ['123', 'C1'] })),
       notifyNewConversation: vi.fn(),
       fetch: vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, result: true }) })),
       ...overrides,
@@ -134,6 +135,29 @@ describe('TelegramGatewayRuntime', () => {
       text: 'see photo',
       images: [{ data: 'AQID', mimeType: 'image/png', name: 'telegram-photo.jpg' }],
     });
+  });
+
+  it('rejects messages from unapproved Telegram users and chats', async () => {
+    const d = deps({ readAccessPolicy: vi.fn(() => ({ approvedUserIds: [], approvedChatIds: ['999'] })) });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      message: { message_id: 10, chat: { id: 123, first_name: 'Pat' }, from: { id: 777 }, text: 'hello' },
+    });
+
+    expect(d.createConversation).not.toHaveBeenCalled();
+    expect(d.submitPrompt).not.toHaveBeenCalled();
+    expect(state.recordGatewayEvent).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({
+        body: JSON.stringify({
+          chat_id: '123',
+          text: 'This Telegram chat is not approved for Neon Pilot. Ask the app owner to approve chat ID 123 or user ID 777.',
+        }),
+      }),
+    );
   });
 
   it('delivers assistant replies to bound chats and records events', async () => {

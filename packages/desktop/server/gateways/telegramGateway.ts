@@ -6,6 +6,7 @@ import {
   recordGatewayEvent,
   upsertGatewayChatTarget,
 } from './gatewayState.js';
+import { hasTelegramAccessApprovals, isTelegramMessageApproved, type TelegramAccessPolicy } from './telegramAccess.js';
 import { formatTelegramGatewayHelp, parseTelegramGatewayCommand } from './telegramCommands.js';
 
 interface TelegramChat {
@@ -24,9 +25,17 @@ interface TelegramPhotoSize {
   file_size?: number;
 }
 
+interface TelegramUser {
+  id: number | string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+}
+
 interface TelegramMessage {
   message_id: number;
   chat: TelegramChat;
+  from?: TelegramUser;
   text?: string;
   caption?: string;
   photo?: TelegramPhotoSize[];
@@ -59,6 +68,7 @@ export interface TelegramGatewayRuntimeDependencies {
   getCurrentModel: (conversationId: string) => Promise<string | null> | string | null;
   setModel: (conversationId: string, model: string) => Promise<void>;
   readBotToken: () => string | null;
+  readAccessPolicy: () => TelegramAccessPolicy;
   notifyNewConversation?: (conversationId: string) => void;
   fetch?: typeof fetch;
 }
@@ -114,8 +124,18 @@ export class TelegramGatewayRuntime {
     if (!message) return;
 
     const externalChatId = String(message.chat.id);
+    const externalUserId = message.from ? String(message.from.id) : undefined;
     const externalChatLabel = formatTelegramChatLabel(message.chat);
     const text = (message.text ?? message.caption ?? '').trim();
+    if (!this.isMessageApproved({ externalChatId, externalUserId, externalChatLabel })) {
+      await this.sendMessage(
+        externalChatId,
+        `This Telegram chat is not approved for Neon Pilot. Ask the app owner to approve chat ID ${externalChatId}${
+          externalUserId ? ` or user ID ${externalUserId}` : ''
+        }.`,
+      );
+      return;
+    }
     const command = parseTelegramGatewayCommand(text);
     const target = await this.ensureChatTarget({ externalChatId, externalChatLabel, forceNew: command?.kind === 'new' });
 
@@ -161,6 +181,24 @@ export class TelegramGatewayRuntime {
       message: `Delivered assistant reply to ${target.externalChatLabel || target.externalChatId}`,
     });
     return true;
+  }
+
+  private isMessageApproved(input: { externalChatId: string; externalUserId?: string; externalChatLabel: string }): boolean {
+    const policy = this.dependencies.readAccessPolicy();
+    if (isTelegramMessageApproved(policy, { chatId: input.externalChatId, userId: input.externalUserId })) {
+      return true;
+    }
+    const message = hasTelegramAccessApprovals(policy)
+      ? `Rejected Telegram message from unapproved chat ${input.externalChatLabel || input.externalChatId}`
+      : 'Rejected Telegram message because no approved Telegram users or chats are configured';
+    recordGatewayEvent({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      kind: 'error',
+      message,
+    });
+    return false;
   }
 
   private async ensureChatTarget(input: {
