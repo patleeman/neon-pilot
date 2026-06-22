@@ -574,6 +574,7 @@ export class TelegramGatewayRuntime {
         { command: 'new', description: 'Start a new Neon Pilot conversation' },
         { command: 'reset', description: 'Reset this chat to a new conversation' },
         { command: 'threads', description: 'List and switch conversations' },
+        { command: 'sessions', description: 'List and switch conversations' },
         { command: 'model', description: 'Show or change the model' },
         { command: 'status', description: 'Show current gateway status' },
         { command: 'whoami', description: 'Show your Telegram IDs and access status' },

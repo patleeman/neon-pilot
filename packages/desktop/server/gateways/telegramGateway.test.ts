@@ -486,6 +486,10 @@ describe('TelegramGatewayRuntime', () => {
     );
     expect(d2.fetch).toHaveBeenCalledWith(
       'https://api.telegram.org/bottoken/setMyCommands',
+      expect.objectContaining({ body: expect.stringContaining('"command":"sessions"') }),
+    );
+    expect(d2.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/setMyCommands',
       expect.objectContaining({ body: expect.stringContaining('"command":"whoami"') }),
     );
     runtime2.stop();
