@@ -233,6 +233,60 @@ describe('desktop local API conversation asset routes', () => {
 });
 
 describe('desktop local API product fast-path errors', () => {
+  it('serves health and session-state compatibility endpoints instead of falling through to incomplete routes', async () => {
+    const healthResponse = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/health',
+    });
+    expect(healthResponse.statusCode).toBe(200);
+    expect(readJsonBody(healthResponse)).toEqual(
+      expect.objectContaining({
+        ok: true,
+        status: 'ready',
+        profile: 'shared',
+      }),
+    );
+
+    const sessionStateResponse = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/session-state',
+    });
+    expect(sessionStateResponse.statusCode).toBe(200);
+    expect(readJsonBody(sessionStateResponse)).toEqual(
+      expect.objectContaining({
+        ok: true,
+        sessions: expect.any(Array),
+        liveSessions: expect.any(Array),
+      }),
+    );
+
+    const executionsResponse = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/executions',
+    });
+    expect(executionsResponse.statusCode).toBe(200);
+    expect(readJsonBody(executionsResponse)).toEqual(
+      expect.objectContaining({
+        executions: expect.any(Array),
+      }),
+    );
+
+    const summariesResponse = await dispatchDesktopLocalApiRequest({
+      method: 'POST',
+      path: '/api/conversation-summaries',
+      body: { sessionIds: [] },
+    });
+    expect(summariesResponse.statusCode).toBe(200);
+    expect(readJsonBody(summariesResponse)).toEqual({ summaries: {} });
+
+    const executionDetailResponse = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/executions/missing-local-api-product-execution',
+    });
+    expect(executionDetailResponse.statusCode).toBe(404);
+    expect(readJsonBody(executionDetailResponse)).toEqual({ error: 'Execution not found' });
+  });
+
   it('returns mapped error responses instead of throwing through the backend child', async () => {
     const runResponse = await dispatchDesktopLocalApiRequest({
       method: 'GET',

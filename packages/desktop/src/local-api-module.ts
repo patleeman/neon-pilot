@@ -35,6 +35,8 @@ export interface LocalApiModule {
     };
   }): Promise<{ close(): Promise<void> }>;
   readDesktopAppStatus(): Promise<unknown>;
+  readDesktopLocalApiHealth(): Promise<unknown>;
+  readDesktopSessionState(): Promise<unknown>;
   readDesktopDaemonState(): Promise<unknown>;
   readDesktopSessions(): Promise<unknown>;
   readDesktopSessionMeta(sessionId: string): Promise<unknown>;
@@ -342,6 +344,8 @@ const MAIN_PROCESS_LOCAL_API_METHODS = new Set<keyof LocalApiModule>([
 
 const WORKER_LOCAL_API_METHODS = new Set<keyof LocalApiModule>([
   'readDesktopAppStatus',
+  'readDesktopLocalApiHealth',
+  'readDesktopSessionState',
   'readDesktopDaemonState',
   'readDesktopSessions',
   'readDesktopSessionMeta',
