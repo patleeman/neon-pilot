@@ -83,7 +83,8 @@
     "eval:site-visual-judge": "node scripts/site-visual-judge.mjs",
     "site:capture-app-screenshots": "node scripts/site-capture-app-screenshots.mjs",
     "bench:ds4": "node scripts/ds4-task-benchmark.mjs",
-    "bench:agent": "node scripts/neon-pilot-agent-benchmark.mjs"
+    "bench:agent": "node scripts/neon-pilot-agent-benchmark.mjs",
+    "test:dictation": "vitest run extensions/system-local-dictation/src/backend.test.ts extensions/system-local-dictation/src/capture.test.ts extensions/system-local-dictation/src/frontend.test.tsx extensions/system-local-dictation/src/localWhisperProvider.test.ts"
   },
   "devDependencies": {
     "@electron/asar": "3.4.1",

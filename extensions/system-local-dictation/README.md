@@ -13,3 +13,16 @@ The Settings panel lets users pick a curated Whisper.cpp model (`tiny`, `base`, 
 The backend loads `whisper-cpp-node` from the desktop package dependency, not from the extension folder. Keep this explicit resolver in place because bundled system extension backends run from `extensions/<id>/dist`, where normal Node resolution will not find `packages/desktop/node_modules`.
 
 Release packaging must include `node_modules/whisper-cpp-node` and `node_modules/@whisper-cpp-node` as unpacked resources. The backend loads the native binding at runtime via `createRequire`, so a working waveform with no transcript usually means the release app is missing those native dictation dependencies.
+
+## Validation
+
+Run the focused dictation safety net before shipping dictation changes:
+
+```bash
+pnpm run test:dictation
+node scripts/extension-build.mjs extensions/system-local-dictation
+```
+
+`test:dictation` covers the capture boundary, backend action contract, local Whisper provider contract, and the composer control behavior. In particular it verifies that recording exposes a visible stop control and that completed transcriptions insert through the composer API instead of a global window event.
+
+A full live microphone smoke still requires manual app validation because macOS microphone permission and real audio devices are outside jsdom/Vitest. When possible, validate in the desktop app by opening a conversation, clicking the mic, confirming the stop-square control appears, stopping recording, and confirming dictated text appears in the composer.
