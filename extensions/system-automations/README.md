@@ -9,7 +9,7 @@ Automations are schedule-first and always auditable from a conversation thread:
 - Every automation has one owner thread.
 - No automation runs invisibly or without a thread.
 - When a schedule fires, the backend opens/unarchives the owner thread in persisted workspace state without stealing frontend focus.
-- The run is recorded in the owner thread transcript with an `Automation run` system entry.
+- The run is recorded in the owner thread transcript as a collapsed `Automation run` context entry.
 - The conversation shelf and sidebar use backend task state; enabled or running automations keep their owner thread visibly marked.
 - The Automations page is a single table: status, automation, schedule, next run, last run, owner thread, and actions.
 
@@ -40,7 +40,7 @@ Important behavior:
 - New tasks default to `targetType: "conversation"`.
 - `threadMode: "none"` is rejected.
 - `threadMode` supports `"existing"` and `"dedicated"`.
-- Every fire that starts an agent writes a visible owner-thread transcript entry.
+- Every fire that starts an agent writes a collapsed owner-thread transcript context entry.
 - Failure notifications are raised through alerts; success notifications are not shown by default.
 
 ## Schedule formats
@@ -80,7 +80,7 @@ now+1d@20:00
 - Catch-up policies can run the latest missed cron slot if it is still inside the catch-up window.
 - Overlapping runs are skipped and surfaced.
 - Failures before durable run creation are recorded as automation activity and alerted.
-- Failed runs write an owner-thread transcript entry with the error and log path when available.
+- Failed runs write a collapsed owner-thread transcript context entry with the error and log path when available.
 
 ## CLI
 

@@ -26,6 +26,7 @@ export function buildCustomMessageSessionEntry(input: {
   customType: string;
   content: string;
   details?: unknown;
+  display?: boolean;
 }): Record<string, unknown> {
   return {
     type: 'custom_message',
@@ -35,5 +36,6 @@ export function buildCustomMessageSessionEntry(input: {
     customType: input.customType,
     content: input.content,
     ...(input.details !== undefined ? { details: input.details } : {}),
+    ...(input.display !== undefined ? { display: input.display } : {}),
   };
 }

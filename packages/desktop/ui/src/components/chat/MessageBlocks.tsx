@@ -5,7 +5,7 @@ import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { dispatchTranscriptSpotlight, transcriptTargetAttributes } from '../../transcript/spotlight.js';
-import { cx, MessageActionButton, MessageCard, MessageMeta, TextButton } from '../ui.js';
+import { cx, MessageActionButton, MessageCard, MessageMeta, StatusDot, TextButton } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
@@ -184,6 +184,64 @@ function summarizeSystemEventText(text: string): string {
   return normalized.length > 140 ? `${normalized.slice(0, 137).trimEnd()}…` : normalized;
 }
 
+function automationRunSummary(text: string): { title: string; tone: 'running' | 'success' | 'danger' | 'muted' } {
+  const firstLine =
+    text
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .map((line) => line.trim())
+      .find(Boolean) ?? 'Automation run';
+  const normalized = firstLine.replace(/^Automation\s+/i, '');
+  const title = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  if (/\bstarted\b/i.test(firstLine)) return { title, tone: 'running' };
+  if (/\bcompleted\b/i.test(firstLine)) return { title, tone: 'success' };
+  if (/\bfailed\b|cancelled|could not start/i.test(firstLine)) return { title, tone: 'danger' };
+  return { title, tone: 'muted' };
+}
+
+function AutomationRunContextBlock({
+  block,
+  replySelectionScopeProps,
+  onOpenFilePath,
+  onOpenCheckpoint,
+  validatedFilePathTargets,
+}: {
+  block: Extract<MessageBlock, { type: 'context' }>;
+  replySelectionScopeProps: Record<string, unknown>;
+  onOpenFilePath?: (path: string) => void;
+  onOpenCheckpoint?: (checkpointId: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
+}) {
+  const summary = automationRunSummary(block.text);
+  const statusTone =
+    summary.tone === 'running' ? 'accent' : summary.tone === 'success' ? 'success' : summary.tone === 'danger' ? 'danger' : 'muted';
+
+  return (
+    <LazyDetails
+      className="group/item w-full text-[12px] text-secondary"
+      dataAttrs={{ 'data-context-type': 'automation_run', 'data-automation-run-block': '1' }}
+      summary={
+        <summary className={contextShelfSummaryClassName}>
+          <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+            <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+              ›
+            </span>
+            <StatusDot tone={statusTone} size="xs" />
+            <span className="shrink-0 font-medium text-primary/90">Automation</span>
+            <span className="min-w-0 truncate text-dim/90">{summary.title}</span>
+            {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
+          </span>
+          <span className="h-px bg-border-subtle" aria-hidden="true" />
+        </summary>
+      }
+    >
+      <div {...replySelectionScopeProps} className={contextShelfBodyClassName}>
+        {renderText(block.text, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}
+      </div>
+    </LazyDetails>
+  );
+}
+
 function contextShelfLabel(block: Extract<MessageBlock, { type: 'context' | 'summary' }>): string {
   if (block.type === 'summary') {
     switch (block.kind) {
@@ -358,6 +416,19 @@ export const ContextShelf = memo(function ContextShelf({
             <div key={block.id ?? index} className="px-2 py-0.5">
               <TopologyBlock block={block} />
             </div>
+          );
+        }
+
+        if (block.type === 'context' && block.customType === 'automation_run') {
+          return (
+            <AutomationRunContextBlock
+              key={block.id ?? index}
+              block={block}
+              replySelectionScopeProps={replySelectionScopeProps}
+              onOpenFilePath={onOpenFilePath}
+              onOpenCheckpoint={onOpenCheckpoint}
+              validatedFilePathTargets={validatedFilePathTargets}
+            />
           );
         }
 

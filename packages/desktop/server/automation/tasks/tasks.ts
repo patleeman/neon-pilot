@@ -24,6 +24,7 @@ import {
   saveDurableRunStatus,
   scanDurableRun,
 } from '../../runs/store.js';
+import { invalidateAppTopics, publishAppEvent } from '../../shared/appEvents.js';
 import {
   appendAutomationActivityEntry,
   deleteStoredAutomation,
@@ -181,6 +182,7 @@ function appendThreadAutomationEvent(
       sessionFile,
       customType: 'automation_run',
       content: lines.join('\n'),
+      display: false,
       details: {
         automationId: task.id,
         title,
@@ -193,6 +195,10 @@ function appendThreadAutomationEvent(
       },
       blockId: `automation_run:${task.id}:${input.runId ?? input.timestamp}:${input.kind}`,
     });
+    if (task.threadConversationId?.trim()) {
+      publishAppEvent({ type: 'session_file_changed', sessionId: task.threadConversationId.trim() });
+      invalidateAppTopics('sessions');
+    }
   } catch {
     // A broken owner-thread binding should not prevent the durable failure audit/alert.
   }

@@ -37,7 +37,8 @@ describe('sessionCustomEntrySerialization', () => {
         customType: 'kind',
         content: 'body',
         details: { ok: true },
+        display: false,
       }),
-    ).toMatchObject({ details: { ok: true } });
+    ).toMatchObject({ details: { ok: true }, display: false });
   });
 });

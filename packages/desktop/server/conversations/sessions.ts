@@ -1753,6 +1753,7 @@ export function appendStoredVisibleCustomMessage(input: {
   content: string;
   details?: unknown;
   blockId?: string;
+  display?: boolean;
 }): string | null {
   const customType = input.customType.trim();
   const content = input.content.trim();
@@ -1776,6 +1777,7 @@ export function appendStoredVisibleCustomMessage(input: {
             : { value: input.details }),
           extensionBlockId: blockId,
         },
+        display: input.display,
       }),
     ),
     'utf-8',

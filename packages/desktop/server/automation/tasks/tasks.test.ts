@@ -33,6 +33,7 @@ import {
   saveDurableRunManifest,
   saveDurableRunStatus,
 } from '../../runs/store.js';
+import { subscribeAppEvents } from '../../shared/appEvents.js';
 import type { DaemonConfig } from '../config.js';
 import {
   appendAutomationActivityEntry,
@@ -2001,6 +2002,15 @@ describe('tasks module scheduling', () => {
         conversationBehavior: 'followUp',
       }),
     );
+    const boundTask = runTask.mock.calls[0]?.[0].task;
+    expect(boundTask?.threadSessionFile).toBeTruthy();
+    const rawSessionLines = readFileSync(boundTask!.threadSessionFile!, 'utf-8')
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    expect(rawSessionLines).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'custom_message', customType: 'automation_run', display: false })]),
+    );
 
     const runId = runtimeState['conversation-check']?.lastRunId;
     expect(runId).toBeTruthy();
@@ -2008,6 +2018,61 @@ describe('tasks module scheduling', () => {
     expect(runStatus).toEqual(expect.objectContaining({ status: 'completed' }));
 
     await module.stop?.(context);
+  });
+
+  it('publishes owner-thread transcript changes when automation run entries are appended', async () => {
+    const taskDir = createTempDir('tasks-module-definitions-');
+    const stateRoot = createTempDir('tasks-module-state-');
+    const dbPath = resolveRuntimeDbPath(stateRoot);
+    const events: Array<{ type: string; sessionId?: string; topics?: string[] }> = [];
+    const unsubscribe = subscribeAppEvents((event) => {
+      if (event.type === 'session_file_changed' || event.type === 'invalidate') events.push(event);
+    });
+
+    try {
+      createStoredAutomation({
+        dbPath,
+        id: 'transcript-check',
+        title: 'Transcript check',
+        enabled: true,
+        at: '2026-03-02T10:00:05.000Z',
+        cwd: '/tmp/workspace',
+        prompt: 'Check the transcript.',
+        targetType: 'conversation',
+      });
+
+      let currentTime = new Date('2026-03-02T10:00:00.000Z');
+      const runTask = vi.fn(async (request: TaskRunRequest) => createRunResult(request, true, currentTime.toISOString()));
+      const module = createTasksModule(
+        {
+          enabled: true,
+          taskDir,
+          tickIntervalSeconds: 30,
+          maxRetries: 3,
+          reapAfterDays: 7,
+          defaultTimeoutSeconds: 1800,
+        },
+        { now: () => currentTime, runTask },
+      );
+      const { context } = createContext(taskDir, stateRoot);
+
+      await module.start(context);
+      currentTime = new Date('2026-03-02T10:00:10.000Z');
+      await module.handleEvent(createTimerEvent(), context);
+      await waitForCondition(() => loadAutomationRuntimeStateMap({ dbPath })['transcript-check']?.lastStatus === 'success');
+
+      const conversationId = runTask.mock.calls[0]?.[0].task.threadConversationId;
+      expect(events).toEqual(
+        expect.arrayContaining([expect.objectContaining({ type: 'session_file_changed', sessionId: conversationId })]),
+      );
+      expect(events).toEqual(
+        expect.arrayContaining([expect.objectContaining({ type: 'invalidate', topics: expect.arrayContaining(['sessions']) })]),
+      );
+
+      await module.stop?.(context);
+    } finally {
+      unsubscribe();
+    }
   });
 
   it('reruns recurring conversation automations after the prior run completes', async () => {
