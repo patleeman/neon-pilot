@@ -485,6 +485,47 @@ describe('ExtensionManagerPage', () => {
     expect(within(screen.getByRole('dialog', { name: 'Install extension' })).queryByText('Agent Browser')).toBeNull();
   });
 
+  it('installs an available extension from the install modal', async () => {
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') {
+        return {
+          ok: true,
+          version: '0.9.1-rc.6',
+          tag: 'v0.9.1-rc.6',
+          extensions: [
+            {
+              id: 'available-only',
+              name: 'Available Only',
+              description: 'Catalog-only extension.',
+              version: '1.0.0',
+              tag: 'v1.0.0',
+            },
+          ],
+        };
+      }
+      if (action === 'readExtensionSources') return { sources: [] };
+      if (action === 'installCatalogExtension') return { ok: true, extension: { id: 'available-only' } };
+      return { ok: true };
+    });
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
+    const dialog = await screen.findByRole('dialog', { name: 'Install extension' });
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Install' }));
+
+    await screen.findByText("Installed Available Only. Enable it from the extensions list when you're ready.");
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'installCatalogExtension', { id: 'available-only' });
+    expect(mocks.extensionInstallations).toHaveBeenCalledTimes(2);
+    expect(mocks.notifyExtensionRegistryChanged).toHaveBeenCalled();
+  });
+
   it('shows catalog-installed extensions in the installed list when summaries lag', async () => {
     const callAction = vi.fn().mockResolvedValue({
       ok: true,
