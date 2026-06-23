@@ -141,4 +141,31 @@ describe('registerDesktopIpc', () => {
     const hasBrowserHandler = calls.some((call: unknown[]) => (call[0] as string).includes('workbench-browser'));
     expect(hasBrowserHandler).toBe(true);
   });
+
+  it('delegates folder picking to the host controller for the sender window', async () => {
+    mockIpcHandle.mockClear();
+    const pickFolder = vi.fn().mockReturnValue({ path: '/workspace/selected', cancelled: false });
+    const getHostController = vi.fn(() => ({ pickFolder }));
+    const getHostIdForWebContentsId = vi.fn(() => 'secondary-host');
+
+    registerDesktopIpc({
+      hostManager: {
+        getActiveHostId: () => 'local',
+        getHostController,
+      } as never,
+      windowController: {
+        getHostIdForWebContentsId,
+      } as never,
+    });
+
+    const pickFolderCall = mockIpcHandle.mock.calls.find(([channel]) => channel === 'neon-pilot-desktop:pick-folder');
+    expect(pickFolderCall).toBeDefined();
+
+    const result = await pickFolderCall?.[1]({ sender: { id: 42 } }, { cwd: '/workspace', prompt: 'Choose project' });
+
+    expect(getHostIdForWebContentsId).toHaveBeenCalledWith(42);
+    expect(getHostController).toHaveBeenCalledWith('secondary-host');
+    expect(pickFolder).toHaveBeenCalledWith({ cwd: '/workspace', prompt: 'Choose project' });
+    expect(result).toEqual({ path: '/workspace/selected', cancelled: false });
+  });
 });
