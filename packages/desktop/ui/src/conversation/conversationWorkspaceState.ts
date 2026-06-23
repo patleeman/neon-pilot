@@ -14,7 +14,7 @@ export function resolveConversationCurrentCwd(input: {
 export function buildAvailableDraftWorkspacePaths(input: {
   draftCwdValue: string;
   savedWorkspacePaths: string[];
-  sessions?: readonly SessionMeta[] | null;
+  sessions?: readonly Pick<SessionMeta, 'cwd' | 'workspaceCwd'>[] | null;
 }): string[] {
   const sessionCwds = (input.sessions ?? [])
     .map((s) => getLocalSessionWorkspaceCwd(s))
@@ -25,6 +25,17 @@ export function buildAvailableDraftWorkspacePaths(input: {
     ...input.savedWorkspacePaths,
   ]);
   return allPaths;
+}
+
+export function buildActiveConversationWorkspacePaths(input: {
+  currentCwd: string | null | undefined;
+  sessions?: readonly Pick<SessionMeta, 'cwd' | 'workspaceCwd'>[] | null;
+}): string[] {
+  const currentWorkspaceCwd = input.currentCwd && !isNeutralChatCwdPath(input.currentCwd) ? input.currentCwd : null;
+  const sessionCwds = (input.sessions ?? [])
+    .map((s) => getLocalSessionWorkspaceCwd(s))
+    .filter((cwd): cwd is string => cwd !== null && cwd.length > 0);
+  return normalizeWorkspacePaths([...(currentWorkspaceCwd ? [currentWorkspaceCwd] : []), ...sessionCwds]);
 }
 
 function getLocalSessionWorkspaceCwd(session: Pick<SessionMeta, 'cwd' | 'workspaceCwd'>): string | null {

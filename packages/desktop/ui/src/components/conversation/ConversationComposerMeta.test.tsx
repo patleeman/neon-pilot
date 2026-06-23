@@ -23,7 +23,7 @@ const baseProps: React.ComponentProps<typeof ConversationComposerMeta> = {
   conversationCwdError: null,
   conversationCwdBusy: false,
   conversationCwdPickBusy: false,
-  onConversationCwdDraftChange: vi.fn(),
+  availableConversationWorkspacePaths: ['/repo'],
   onSubmitConversationCwdChange: vi.fn(),
   onCancelConversationCwdEdit: vi.fn(),
   onPickConversationCwd: vi.fn(),
@@ -81,5 +81,28 @@ describe('ConversationComposerMeta', () => {
     expect(html).toContain('Chat - no workspace');
     expect(html).toContain('Chat');
     expect(html).not.toContain('chat-workspaces/shared');
+  });
+
+  it('renders saved conversation cwd editing as an immediate dropdown picker', () => {
+    const html = renderToString(
+      <ConversationComposerMeta
+        {...baseProps}
+        draft={false}
+        conversationCwdEditorOpen
+        currentCwd="/repo/project"
+        currentCwdLabel="project"
+        conversationCwdDraft="/repo/project"
+        availableConversationWorkspacePaths={['/repo/project', '/repo/other']}
+      />,
+    );
+
+    expect(html).toContain('Conversation working directory');
+    expect(html).toContain('/repo/project');
+    expect(html).toContain('/repo/other');
+    expect(html).toContain('Choose folder');
+    expect(html).toContain('Cancel working directory edit');
+    expect(html).not.toContain('Switch');
+    expect(html).not.toContain('>Cancel<');
+    expect(html).not.toContain('type="text"');
   });
 });

@@ -191,7 +191,11 @@ import { buildSuggestedContextShelfState } from '../conversation/conversationSug
 import { NEW_CONVERSATION_TITLE } from '../conversation/conversationTitle';
 import { INITIAL_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS } from '../conversation/conversationTranscriptPaging';
 import { buildOpenArtifactSearch, buildOpenKnowledgeFileSearch } from '../conversation/conversationWorkbenchNavigation';
-import { buildAvailableDraftWorkspacePaths, resolveConversationCurrentCwd } from '../conversation/conversationWorkspaceState';
+import {
+  buildActiveConversationWorkspacePaths,
+  buildAvailableDraftWorkspacePaths,
+  resolveConversationCurrentCwd,
+} from '../conversation/conversationWorkspaceState';
 import {
   beginDraftConversationAttachmentsMutation,
   buildDraftConversationComposerStorageKey,
@@ -2457,6 +2461,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     () => buildAvailableDraftWorkspacePaths({ draftCwdValue: setupWorkspaceCwd ?? '', savedWorkspacePaths, sessions }),
     [savedWorkspacePaths, sessions, setupWorkspaceCwd],
   );
+  const availableConversationWorkspacePaths = useMemo(
+    () => buildActiveConversationWorkspacePaths({ currentCwd, sessions }),
+    [currentCwd, sessions],
+  );
   const relatedThreadCandidates = useMemo(
     () =>
       selectDraftRelatedThreadCandidates({
@@ -3843,14 +3851,31 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         return;
       }
 
+      const nextSavedWorkspacePaths = syncLocalSavedWorkspacePaths([
+        result.path,
+        ...savedWorkspacePaths.filter((path) => path !== result.path),
+      ]);
+      void api.setSavedWorkspacePaths(nextSavedWorkspacePaths);
       setConversationCwdDraft(result.path);
       setConversationCwdEditorOpen(true);
+      await submitConversationCwdChange(result.path);
     } catch (error) {
       setConversationCwdError(error instanceof Error ? error.message : 'Could not choose a folder.');
     } finally {
       setConversationCwdPickBusy(false);
     }
-  }, [conversationCwdBusy, conversationCwdDraft, conversationCwdPickBusy, currentCwd, draft, ensureConversationCanControl, id]);
+  }, [
+    conversationCwdBusy,
+    conversationCwdDraft,
+    conversationCwdPickBusy,
+    currentCwd,
+    draft,
+    ensureConversationCanControl,
+    id,
+    savedWorkspacePaths,
+    submitConversationCwdChange,
+    syncLocalSavedWorkspacePaths,
+  ]);
 
   const pickLiveSetupConversationCwd = useCallback(async () => {
     if (draft || !id || conversationCwdPickBusy || conversationCwdBusy) {
@@ -6595,6 +6620,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       visibleTranscriptEndPercent,
       previousTranscriptPercent,
       previousTranscriptBlockStep,
+      availableConversationWorkspacePaths,
       availableDraftWorkspacePaths,
       clearDraftConversationCwdSelection,
       pickDraftConversationCwd,
@@ -6963,14 +6989,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                 conversationCwdError={conversationCwdError}
                 conversationCwdBusy={conversationCwdBusy}
                 conversationCwdPickBusy={conversationCwdPickBusy}
-                onConversationCwdDraftChange={(value) => {
-                  setConversationCwdDraft(value);
-                  if (conversationCwdError) {
-                    setConversationCwdError(null);
-                  }
-                }}
-                onSubmitConversationCwdChange={() => {
-                  void submitConversationCwdChange();
+                availableConversationWorkspacePaths={availableConversationWorkspacePaths}
+                onSubmitConversationCwdChange={(cwd) => {
+                  void submitConversationCwdChange(cwd);
                 }}
                 onCancelConversationCwdEdit={cancelConversationCwdEdit}
                 onPickConversationCwd={() => {

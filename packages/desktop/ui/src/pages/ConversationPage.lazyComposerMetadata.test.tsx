@@ -886,7 +886,7 @@ describe('ConversationPage lazy composer metadata', () => {
     });
   });
 
-  it('ignores an older live session context refresh after a same-thread workspace switch triggers a newer one', async () => {
+  it('ignores an older live session context refresh after a same-thread workspace dropdown switch triggers a newer one', async () => {
     regressionBootstrapData.liveSession = {
       live: true,
       id: 'conv-regression',
@@ -919,14 +919,13 @@ describe('ConversationPage lazy composer metadata', () => {
           liveSessionContextResolvers.push(resolve);
         }),
     );
-    apiMock.pickFolder.mockResolvedValue({ cancelled: false, path: '/tmp/new-workspace' });
     apiMock.changeConversationCwd.mockResolvedValue({
       id: 'conv-regression',
-      cwd: '/tmp/new-workspace',
+      cwd: '/tmp/next-project',
       changed: false,
     });
 
-    renderConversationPage();
+    renderSwitchableConversationPage();
 
     await act(async () => {
       vi.advanceTimersByTime(300);
@@ -941,20 +940,19 @@ describe('ConversationPage lazy composer metadata', () => {
     });
 
     await act(async () => {
-      fireEvent.change(screen.getByRole('textbox', { name: 'Conversation working directory' }), {
-        target: { value: '/tmp/new-workspace' },
+      fireEvent.change(screen.getByRole('combobox', { name: 'Conversation working directory' }), {
+        target: { value: '/tmp/next-project' },
       });
-      fireEvent.click(screen.getByRole('button', { name: 'Switch' }));
       await Promise.resolve();
       await Promise.resolve();
     });
 
-    expect(apiMock.changeConversationCwd).toHaveBeenCalledWith('conv-regression', '/tmp/new-workspace', 'surface-test');
+    expect(apiMock.changeConversationCwd).toHaveBeenCalledWith('conv-regression', '/tmp/next-project', 'surface-test');
     expect(apiMock.liveSessionContext).toHaveBeenCalledTimes(2);
 
     await act(async () => {
       liveSessionContextResolvers[1]?.({
-        cwd: '/tmp/new-workspace',
+        cwd: '/tmp/next-project',
         branch: 'main',
         git: {
           changeCount: 0,
@@ -965,8 +963,8 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
 
-    const workspaceButton = screen.getByRole('button', { name: '/tmp/new-workspace' });
-    expect(workspaceButton.getAttribute('title')).toBe('Working directory: /tmp/new-workspace');
+    const workspaceButton = screen.getByRole('button', { name: '/tmp/next-project' });
+    expect(workspaceButton.getAttribute('title')).toBe('Working directory: /tmp/next-project');
 
     await act(async () => {
       liveSessionContextResolvers[0]?.({
@@ -981,7 +979,60 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByRole('button', { name: '/tmp/new-workspace' }).getAttribute('title')).toBe('Working directory: /tmp/new-workspace');
+    expect(screen.getByRole('button', { name: '/tmp/next-project' }).getAttribute('title')).toBe('Working directory: /tmp/next-project');
+  });
+
+  it('switches the saved conversation working directory after choosing a folder', async () => {
+    regressionBootstrapData.liveSession = {
+      live: true,
+      id: 'conv-regression',
+      cwd: '/tmp/project',
+      sessionFile: '/tmp/conv-regression.jsonl',
+      title: 'Regression conversation',
+      isStreaming: false,
+      hasStaleTurnState: false,
+    };
+    regressionBootstrapData.sessionDetail = {
+      ...regressionBootstrapData.sessionDetail,
+      meta: {
+        ...regressionBootstrapData.sessionDetail.meta,
+        cwd: '/tmp/project',
+        cwdSlug: 'project',
+        isLive: true,
+      },
+    };
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = createDesktopStateFromRegressionBootstrap();
+    apiMock.pickFolder.mockResolvedValue({ cancelled: false, path: '/tmp/picked-workspace' });
+    apiMock.changeConversationCwd.mockResolvedValue({
+      id: 'conv-regression',
+      cwd: '/tmp/picked-workspace',
+      changed: false,
+    });
+
+    renderConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '/tmp/project' }));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Choose folder' }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiMock.pickFolder).toHaveBeenCalledWith({ cwd: '/tmp/project', prompt: 'Choose a working directory' });
+    expect(apiMock.setSavedWorkspacePaths).toHaveBeenCalledWith(['/tmp/picked-workspace']);
+    expect(apiMock.changeConversationCwd).toHaveBeenCalledWith('conv-regression', '/tmp/picked-workspace', 'surface-test');
   });
 
   it('opens the saved drawing picker from its conversation command path', async () => {

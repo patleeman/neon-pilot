@@ -4,7 +4,7 @@ import type { ConversationContextUsageTokensPresentation } from '../../conversat
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import { StatusBarItemHost } from '../../extensions/StatusBarItemHost';
 import { type ExtensionStatusBarItemRegistration, useExtensionRegistry } from '../../extensions/useExtensionRegistry';
-import { RowButton, TextButton } from '../ui';
+import { IconButton, RowButton, TextButton } from '../ui';
 import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
 
 export type ConversationGitSummaryPresentation =
@@ -29,7 +29,7 @@ export function ConversationComposerMeta({
   conversationCwdError,
   conversationCwdBusy,
   conversationCwdPickBusy,
-  onConversationCwdDraftChange,
+  availableConversationWorkspacePaths,
   onSubmitConversationCwdChange,
   onCancelConversationCwdEdit,
   onPickConversationCwd,
@@ -54,8 +54,8 @@ export function ConversationComposerMeta({
   conversationCwdError: string | null;
   conversationCwdBusy: boolean;
   conversationCwdPickBusy: boolean;
-  onConversationCwdDraftChange: (value: string) => void;
-  onSubmitConversationCwdChange: () => void;
+  availableConversationWorkspacePaths: string[];
+  onSubmitConversationCwdChange: (cwd?: string | null) => void;
   onCancelConversationCwdEdit: () => void;
   onPickConversationCwd: () => void;
   onBeginConversationCwdEdit: () => void;
@@ -126,55 +126,72 @@ export function ConversationComposerMeta({
             />
           </div>
         ) : conversationCwdEditorOpen ? (
-          <form
+          <div
             className="flex min-w-0 max-w-full flex-1 items-center gap-1.5 xl:max-w-[26rem] xl:flex-none"
-            onSubmit={(event) => {
-              event.preventDefault();
-              onSubmitConversationCwdChange();
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                onCancelConversationCwdEdit();
+              }
             }}
           >
-            <FolderIcon className="shrink-0 text-dim/70" />
-            <input
-              autoFocus
-              value={conversationCwdDraft}
-              onChange={(event) => {
-                onConversationCwdDraftChange(event.target.value);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') {
-                  event.preventDefault();
-                  onCancelConversationCwdEdit();
-                }
-              }}
-              placeholder={currentCwd ?? '~/workingdir/repo'}
-              spellCheck={false}
-              aria-label="Conversation working directory"
-              className="h-7 min-w-0 w-full rounded-md border border-border-subtle bg-surface/45 px-2 text-[11px] font-mono text-primary outline-none transition-colors focus:border-accent/50 xl:max-w-[22rem]"
-              disabled={conversationCwdBusy || conversationCwdPickBusy}
-            />
+            <label className="sr-only" htmlFor="conversation-composer-cwd">
+              Conversation working directory
+            </label>
+            <div className="relative min-w-0 flex-1 xl:max-w-[22rem]">
+              <select
+                id="conversation-composer-cwd"
+                autoFocus
+                value={conversationCwdDraft}
+                onChange={(event) => {
+                  const nextWorkspacePath = event.target.value.trim();
+                  if (nextWorkspacePath) {
+                    onSubmitConversationCwdChange(nextWorkspacePath);
+                  }
+                }}
+                aria-label="Conversation working directory"
+                className="h-7 w-full min-w-0 truncate appearance-none rounded-md border border-border-subtle bg-surface/45 pl-2 pr-6 text-[11px] font-mono text-primary outline-none transition-colors hover:bg-surface/55 focus:border-accent/50 disabled:opacity-50"
+                disabled={conversationCwdBusy || conversationCwdPickBusy || availableConversationWorkspacePaths.length === 0}
+              >
+                {availableConversationWorkspacePaths.length === 0 ? <option value="">Choose a working directory</option> : null}
+                {availableConversationWorkspacePaths.map((workspacePath) => (
+                  <option key={workspacePath} value={workspacePath}>
+                    {workspacePath}
+                  </option>
+                ))}
+              </select>
+              <svg
+                aria-hidden="true"
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-dim/70"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
             <BrowsePathButton
               busy={conversationCwdBusy || conversationCwdPickBusy}
               onClick={onPickConversationCwd}
               title={conversationCwdPickBusy ? 'Choosing folder…' : 'Choose folder'}
               ariaLabel="Choose folder"
             />
-            <TextButton
-              type="submit"
-              tone="accent"
-              className="h-7 rounded-md px-2 text-[10px] hover:bg-surface/45"
-              disabled={conversationCwdBusy || conversationCwdPickBusy}
-            >
-              {conversationCwdBusy ? 'Switching…' : 'Switch'}
-            </TextButton>
-            <TextButton
-              type="button"
-              className="h-7 rounded-md px-2 text-[10px] hover:bg-surface/45"
+            <IconButton
+              size="sm"
               onClick={onCancelConversationCwdEdit}
+              title="Cancel working directory edit"
+              aria-label="Cancel working directory edit"
+              className="border border-transparent hover:bg-surface/45 hover:text-primary focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base disabled:opacity-50"
               disabled={conversationCwdBusy || conversationCwdPickBusy}
             >
-              Cancel
-            </TextButton>
-          </form>
+              <CloseIcon />
+            </IconButton>
+          </div>
         ) : (
           <RowButton
             type="button"
@@ -203,6 +220,25 @@ export function ConversationComposerMeta({
       {rightStatusItems.length > 0 &&
         rightStatusItems.map((item) => <StatusBarItem key={item.id} item={item} statusBarContext={statusBarContext} />)}
     </div>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
   );
 }
 
