@@ -21,6 +21,8 @@ import {
 import { resolveRuntimeResources } from '@neon-pilot/core';
 import { parseDocument, stringify as stringifyYaml } from 'yaml';
 
+import { listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
+
 // ── Memory path utilities ─────────────────────────────────────────────────────
 
 export function normalizeMemoryPath(value: unknown): string {
@@ -259,6 +261,40 @@ export function listSkillsForProfile(profile: string): SkillItem[] {
         path: filePath,
       });
     }
+  }
+
+  for (const registration of listExtensionSkillRegistrations()) {
+    const normalizedPath = normalizeMemoryPath(registration.path);
+    if (!normalizedPath || seenPaths.has(normalizedPath)) {
+      continue;
+    }
+    seenPaths.add(normalizedPath);
+
+    const frontmatter = parseSkillFrontmatter(registration.path);
+    const name =
+      typeof frontmatter.id === 'string' && frontmatter.id.trim().length > 0
+        ? frontmatter.id.trim()
+        : typeof frontmatter.name === 'string' && frontmatter.name.trim().length > 0
+          ? frontmatter.name.trim()
+          : registration.id;
+    if (!name || seenNames.has(name)) {
+      continue;
+    }
+    seenNames.add(name);
+
+    const description =
+      typeof frontmatter.summary === 'string' && frontmatter.summary.trim().length > 0
+        ? frontmatter.summary.trim()
+        : typeof frontmatter.description === 'string' && frontmatter.description.trim().length > 0
+          ? frontmatter.description.trim()
+          : (registration.description ?? '');
+
+    skills.push({
+      name,
+      source: `extension:${registration.extensionId}`,
+      description,
+      path: registration.path,
+    });
   }
 
   skills.sort((a, b) => a.name.localeCompare(b.name));

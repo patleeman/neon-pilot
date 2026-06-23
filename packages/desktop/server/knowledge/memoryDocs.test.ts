@@ -216,6 +216,44 @@ profiles:
     expect(readFileSync(created.path, 'utf-8')).toContain('# Project Helper');
   });
 
+  it('lists enabled extension skills with their frontmatter names', () => {
+    const stateRoot = process.env.NEON_PILOT_STATE_ROOT as string;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-plugin');
+    writeFile(
+      join(extensionRoot, 'skills', 'plugin-workflow', 'SKILL.md'),
+      `---
+name: plugin-workflow
+description: Use when running the plugin workflow.
+---
+
+# Plugin Workflow
+`,
+    );
+    writeFile(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-plugin',
+        name: 'Agent Plugin',
+        packageType: 'user',
+        contributes: {
+          skills: [{ id: 'plugin-skill', path: 'skills/plugin-workflow/SKILL.md' }],
+        },
+      }),
+    );
+
+    expect(listSkillsForProfile('assistant')).toEqual(
+      expect.arrayContaining([
+        {
+          name: 'plugin-workflow',
+          source: 'extension:agent-plugin',
+          description: 'Use when running the plugin workflow.',
+          path: join(extensionRoot, 'skills', 'plugin-workflow', 'SKILL.md'),
+        },
+      ]),
+    );
+  });
+
   it('finds docs, generates note ids, and builds structured markdown', () => {
     const stateRoot = process.env.NEON_PILOT_STATE_ROOT as string;
     writeFile(
