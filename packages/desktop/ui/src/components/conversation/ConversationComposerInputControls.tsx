@@ -19,9 +19,9 @@ import {
 } from 'react';
 
 import type { ComposerDrawingAttachment } from '../../conversation/promptAttachments';
+import { setExtensionCommandContext } from '../../extensions/commands';
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
-import { setExtensionCommandContext } from '../../extensions/commands';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import {
   getModelSelectionValue,
@@ -30,10 +30,10 @@ import {
   THINKING_LEVEL_OPTIONS,
 } from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
-import { cx, IconButton } from '../ui';
-import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
+import { cx, IconButton, Select } from '../ui';
 import { COMPOSER_CREATE_DRAWING_COMMAND_EVENT } from './composerInputCommands';
 import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
+import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
 import { ConversationPreferencesRow } from './ConversationPreferencesRow';
 
 function getComposerPreferenceInlineLimit(composerShellWidth: number | null): number {
@@ -195,12 +195,12 @@ function CoreModelPreferenceControls({
   const selectedModel = resolveSelectableModel(models, currentModel);
   const modelGroups = groupModelsByProvider(models);
   const selectBaseClassName =
-    'h-8 min-w-0 truncate rounded-md border border-transparent bg-transparent px-2 text-[11px] font-medium text-secondary outline-none hover:bg-surface/55 hover:text-primary focus:border-accent/30 focus:bg-surface/55 focus:text-primary disabled:opacity-50';
+    'h-8 min-w-0 truncate border-transparent bg-transparent px-2 text-xs font-medium text-secondary disabled:opacity-50';
   const modelSelectClassName = cx(selectBaseClassName, compact ? 'max-w-[8.25rem]' : 'max-w-[10rem]');
   const thinkingSelectClassName = cx(selectBaseClassName, compact ? 'max-w-[5.75rem]' : 'max-w-[7rem]');
   return (
     <>
-      <select
+      <Select
         aria-label="Conversation model"
         title="Conversation model"
         className={modelSelectClassName}
@@ -218,8 +218,8 @@ function CoreModelPreferenceControls({
             ))}
           </optgroup>
         ))}
-      </select>
-      <select
+      </Select>
+      <Select
         aria-label="Thinking level"
         title="Thinking level"
         className={thinkingSelectClassName}
@@ -232,7 +232,7 @@ function CoreModelPreferenceControls({
             {option.label}
           </option>
         ))}
-      </select>
+      </Select>
     </>
   );
 }
@@ -626,7 +626,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
             onPaste={onPaste}
             rows={1}
             disabled={composerDisabled}
-            className="w-full resize-none overscroll-contain bg-transparent text-[14px] leading-relaxed text-primary outline-none placeholder:text-dim disabled:cursor-default disabled:text-dim"
+            className="w-full resize-none overscroll-contain bg-transparent text-sm leading-relaxed text-primary outline-none placeholder:text-dim disabled:cursor-default disabled:text-dim"
             placeholder={
               pendingAskUserQuestion
                 ? 'Answer 1-9, or type to skip…'

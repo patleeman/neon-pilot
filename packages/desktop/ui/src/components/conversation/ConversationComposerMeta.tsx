@@ -4,7 +4,7 @@ import type { ConversationContextUsageTokensPresentation } from '../../conversat
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import { StatusBarItemHost } from '../../extensions/StatusBarItemHost';
 import { type ExtensionStatusBarItemRegistration, useExtensionRegistry } from '../../extensions/useExtensionRegistry';
-import { RowButton, TextButton } from '../ui';
+import { RowButton, Select, TextButton, TextInput } from '../ui';
 import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
 
 export type ConversationGitSummaryPresentation =
@@ -74,7 +74,7 @@ export function ConversationComposerMeta({
   };
   const neutralChatCwd = currentCwdLabel === 'Chat';
   return (
-    <div className="conversation-composer-meta mt-1.5 flex min-h-4 flex-row items-center justify-between gap-2 overflow-visible px-3 text-[10.5px] font-mono text-dim/80 tracking-[0.02em]">
+    <div className="conversation-composer-meta mt-1.5 flex min-h-4 flex-row items-center justify-between gap-2 overflow-visible px-3 text-xs font-mono text-dim/80 tracking-[0.02em]">
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
         {draft ? (
           <div className="flex min-w-0 max-w-full flex-1 items-center gap-1.5 xl:max-w-[26rem] xl:flex-none">
@@ -83,7 +83,7 @@ export function ConversationComposerMeta({
               Workspace folder
             </label>
             <div className="relative min-w-0 flex-1 xl:max-w-[22rem]">
-              <select
+              <Select
                 id="draft-composer-cwd"
                 value={draftCwdValue}
                 onChange={(event) => {
@@ -94,7 +94,7 @@ export function ConversationComposerMeta({
                   }
                   onSelectDraftWorkspace(nextWorkspacePath);
                 }}
-                className="h-7 w-full min-w-0 truncate appearance-none rounded-md bg-transparent pl-1 pr-6 text-[11px] font-mono text-secondary outline-none transition-colors hover:bg-surface/45 hover:text-primary focus-visible:bg-surface/55 focus-visible:text-primary"
+                className="h-7 w-full min-w-0 truncate appearance-none border-transparent bg-transparent py-0 pl-1 pr-6 text-xs font-mono text-secondary"
               >
                 <option value="">Chat</option>
                 {availableDraftWorkspacePaths.map((workspacePath) => (
@@ -102,7 +102,7 @@ export function ConversationComposerMeta({
                     {workspacePath}
                   </option>
                 ))}
-              </select>
+              </Select>
               <svg
                 aria-hidden="true"
                 width="10"
@@ -134,7 +134,7 @@ export function ConversationComposerMeta({
             }}
           >
             <FolderIcon className="shrink-0 text-dim/70" />
-            <input
+            <TextInput
               autoFocus
               value={conversationCwdDraft}
               onChange={(event) => {
@@ -149,7 +149,7 @@ export function ConversationComposerMeta({
               placeholder={currentCwd ?? '~/workingdir/repo'}
               spellCheck={false}
               aria-label="Conversation working directory"
-              className="h-7 min-w-0 w-full rounded-md border border-border-subtle bg-surface/45 px-2 text-[11px] font-mono text-primary outline-none transition-colors focus:border-accent/50 xl:max-w-[22rem]"
+              className="h-7 min-w-0 w-full px-2 text-xs font-mono text-primary xl:max-w-[22rem]"
               disabled={conversationCwdBusy || conversationCwdPickBusy}
             />
             <BrowsePathButton
@@ -158,17 +158,12 @@ export function ConversationComposerMeta({
               title={conversationCwdPickBusy ? 'Choosing folder…' : 'Choose folder'}
               ariaLabel="Choose folder"
             />
-            <TextButton
-              type="submit"
-              tone="accent"
-              className="h-7 rounded-md px-2 text-[10px] hover:bg-surface/45"
-              disabled={conversationCwdBusy || conversationCwdPickBusy}
-            >
+            <TextButton type="submit" tone="accent" className="h-7 px-2 text-xs" disabled={conversationCwdBusy || conversationCwdPickBusy}>
               {conversationCwdBusy ? 'Switching…' : 'Switch'}
             </TextButton>
             <TextButton
               type="button"
-              className="h-7 rounded-md px-2 text-[10px] hover:bg-surface/45"
+              className="h-7 px-2 text-xs"
               onClick={onCancelConversationCwdEdit}
               disabled={conversationCwdBusy || conversationCwdPickBusy}
             >
@@ -184,7 +179,7 @@ export function ConversationComposerMeta({
             title={neutralChatCwd ? 'Chat - no workspace' : currentCwd ? `Working directory: ${currentCwd}` : 'Set working directory'}
           >
             {neutralChatCwd ? <ChatBubbleIcon className="shrink-0 text-dim/70" /> : <FolderIcon className="shrink-0 text-dim/70" />}
-            <span className="ui-truncate-start min-w-0 flex-1 font-mono text-[11px]">{currentCwdLabel || 'Set working directory'}</span>
+            <span className="ui-truncate-start min-w-0 flex-1 font-mono text-xs">{currentCwdLabel || 'Set working directory'}</span>
           </RowButton>
         )}
 

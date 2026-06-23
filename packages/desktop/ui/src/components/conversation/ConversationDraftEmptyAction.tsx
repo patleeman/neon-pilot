@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import { setExtensionCommandContext } from '../../extensions/commands';
-import { cx, RowButton, SectionLabel } from '../ui';
+import { cx, MenuShell, RowButton, SectionLabel } from '../ui';
 import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
 import {
   DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT,
@@ -164,10 +164,7 @@ export function ConversationDraftEmptyAction({
           <span className="sr-only">Saved workspace</span>
           <RowButton
             compact
-            className={cx(
-              'min-h-11 w-full justify-start rounded-md border border-border-subtle bg-surface/45 px-2.5 py-2 text-left shadow-sm',
-              workspacePickerDisabled && 'cursor-default opacity-60',
-            )}
+            className={cx('min-h-11 w-full justify-start px-2.5 py-2 text-left', workspacePickerDisabled && 'cursor-default opacity-60')}
             aria-haspopup="listbox"
             aria-expanded={workspacePickerOpen}
             aria-label="Saved workspace"
@@ -176,10 +173,10 @@ export function ConversationDraftEmptyAction({
             onClick={() => setWorkspacePickerOpen((open) => !open)}
           >
             <span className="min-w-0 flex-1">
-              <span className={cx('block truncate text-[12px]', hasDraftCwd ? 'font-mono text-primary' : 'text-secondary')}>
+              <span className={cx('block truncate text-xs', hasDraftCwd ? 'font-mono text-primary' : 'text-secondary')}>
                 {selectedWorkspace.label}
               </span>
-              <span className="block truncate text-[11px] text-dim">{selectedWorkspace.detail}</span>
+              <span className="block truncate text-xs text-dim">{selectedWorkspace.detail}</span>
             </span>
             <svg
               aria-hidden="true"
@@ -198,11 +195,11 @@ export function ConversationDraftEmptyAction({
           </RowButton>
 
           {workspacePickerOpen && !workspacePickerDisabled ? (
-            <div
+            <MenuShell
               role="listbox"
               aria-label="Saved workspaces"
-              className="absolute left-0 right-0 top-full z-50 mt-1 overflow-y-auto rounded-lg border border-border-subtle bg-base p-1 shadow-xl"
-              style={{ maxHeight: 'min(18rem, 42vh)' }}
+              className="absolute bottom-auto left-0 right-0 top-full z-50 mb-0 mt-1 overflow-y-auto p-1"
+              style={{ bottom: 'auto', marginBottom: 0, maxHeight: 'min(18rem, 42vh)' }}
             >
               <div className="space-y-0.5">
                 {workspaceOptions.map((option) => (
@@ -217,15 +214,15 @@ export function ConversationDraftEmptyAction({
                     onClick={() => selectWorkspace(option.value)}
                   >
                     <span className="min-w-0 flex-1">
-                      <span className={cx('block truncate text-[12px]', option.value ? 'font-mono text-primary' : 'text-secondary')}>
+                      <span className={cx('block truncate text-xs', option.value ? 'font-mono text-primary' : 'text-secondary')}>
                         {option.label}
                       </span>
-                      <span className="ui-truncate-start block text-[11px] text-dim">{option.detail}</span>
+                      <span className="ui-truncate-start block text-xs text-dim">{option.detail}</span>
                     </span>
                   </RowButton>
                 ))}
               </div>
-            </div>
+            </MenuShell>
           ) : null}
         </div>
 
@@ -237,7 +234,7 @@ export function ConversationDraftEmptyAction({
         />
       </div>
 
-      {draftCwdError && <p className="text-[11px] text-danger/80">{draftCwdError}</p>}
+      {draftCwdError && <p className="text-xs text-danger/80">{draftCwdError}</p>}
       {extensionPanels}
     </div>
   );
