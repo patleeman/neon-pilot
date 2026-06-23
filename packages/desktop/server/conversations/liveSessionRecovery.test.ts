@@ -62,10 +62,6 @@ function assistantText(id: string, parentId: string | null, text = 'done'): Bran
   return message(id, parentId, 'assistant', [{ type: 'text', text }], { stopReason: 'stop' });
 }
 
-function branchSummary(id: string, parentId: string | null): BranchEntry {
-  return { type: 'branch_summary', id, parentId };
-}
-
 function overflowRecoverySummary(id: string, parentId: string | null): BranchEntry {
   return {
     type: 'branch_summary',
@@ -93,7 +89,7 @@ describe('live session recovery', () => {
       });
     });
 
-    it('does not recover an older dangling tool call after a later final assistant answer', () => {
+    it('recovers an earlier dangling tool call before a later final assistant answer', () => {
       const plan = resolveTranscriptTailRecoveryPlan({
         getBranch: () => [
           user('user-1', null),
@@ -103,20 +99,25 @@ describe('live session recovery', () => {
         ],
       } as never);
 
-      expect(plan).toBeNull();
+      expect(plan).toMatchObject({
+        targetEntryId: 'user-1',
+        reason: 'dangling_tool_call',
+      });
     });
 
-    it('does not recover an older dangling tool call after a branch summary and new user tail', () => {
+    it('recovers when an unfinished tool-use tail already has a later user message', () => {
       const plan = resolveTranscriptTailRecoveryPlan({
         getBranch: () => [
           user('user-1', null),
           assistantToolCall('assistant-1', 'user-1', 'call_stale'),
-          branchSummary('summary-1', 'user-1'),
-          user('user-2', 'summary-1', 'What else to do?'),
+          user('user-2', 'assistant-1', 'What else to do?'),
         ],
       } as never);
 
-      expect(plan).toBeNull();
+      expect(plan).toMatchObject({
+        targetEntryId: 'user-1',
+        reason: 'dangling_tool_call',
+      });
     });
 
     it('does not recover when the tail tool call has a matching result', () => {
@@ -169,10 +170,10 @@ describe('live session recovery', () => {
   });
 
   describe('repairDanglingToolCallContext', () => {
-    it('does not branch backward for stale dangling tool calls before a stable tail', () => {
+    it('branches backward for stale dangling tool calls before a stable tail', () => {
       const branch = vi.fn();
       const resetLeaf = vi.fn();
-      const buildSessionContext = vi.fn(() => ({ messages: [] }));
+      const buildSessionContext = vi.fn(() => ({ messages: [{ role: 'user', content: [{ type: 'text', text: 'prompt' }] }] }));
       const state = { messages: [{ role: 'assistant', content: [{ type: 'text', text: 'done' }] }] };
 
       const repaired = repairDanglingToolCallContext({
@@ -191,11 +192,11 @@ describe('live session recovery', () => {
         },
       } as never);
 
-      expect(repaired).toBe(false);
-      expect(branch).not.toHaveBeenCalled();
+      expect(repaired).toBe(true);
+      expect(branch).toHaveBeenCalledWith('user-1');
       expect(resetLeaf).not.toHaveBeenCalled();
-      expect(buildSessionContext).not.toHaveBeenCalled();
-      expect(state.messages).toEqual([{ role: 'assistant', content: [{ type: 'text', text: 'done' }] }]);
+      expect(buildSessionContext).toHaveBeenCalledOnce();
+      expect(state.messages).toEqual([{ role: 'user', content: [{ type: 'text', text: 'prompt' }] }]);
     });
   });
 });

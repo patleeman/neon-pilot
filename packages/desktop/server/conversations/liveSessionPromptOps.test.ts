@@ -85,6 +85,26 @@ describe('runPromptOnLiveEntry image probing', () => {
     expect(rememberImageProbeAttachmentsMock).toHaveBeenCalledWith('session-1', images);
     expect(entry.session.prompt).toHaveBeenCalledWith('What is wrong here?', { images });
   });
+
+  it('repairs the transcript before any non-streaming continuation behavior', async () => {
+    const entry = createEntry({ id: 'text-model', input: ['text'] });
+    Object.assign(entry.session, { isStreaming: false });
+
+    await runPromptOnLiveEntry(entry, 'continue', 'followUp', undefined, callbacks);
+
+    expect(callbacks.repairLiveSessionTranscriptTail).toHaveBeenCalledWith('session-1');
+    expect(entry.session.followUp).toHaveBeenCalledWith('continue');
+  });
+
+  it('does not mutate the transcript before queueing into an active stream', async () => {
+    const entry = createEntry({ id: 'text-model', input: ['text'] });
+    Object.assign(entry.session, { isStreaming: true });
+
+    await runPromptOnLiveEntry(entry, 'continue', 'followUp', undefined, callbacks);
+
+    expect(callbacks.repairLiveSessionTranscriptTail).not.toHaveBeenCalled();
+    expect(entry.session.followUp).toHaveBeenCalledWith('continue');
+  });
 });
 
 describe('submitPromptOnLiveEntry', () => {

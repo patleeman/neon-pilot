@@ -33,7 +33,9 @@ function extractMessageText(message: unknown): string {
   }
   if (Array.isArray(content)) {
     return content
-      .map((part) => (part && typeof part === 'object' && typeof (part as { text?: unknown }).text === 'string' ? (part as { text: string }).text : ''))
+      .map((part) =>
+        part && typeof part === 'object' && typeof (part as { text?: unknown }).text === 'string' ? (part as { text: string }).text : '',
+      )
       .join('')
       .trim();
   }
@@ -131,7 +133,7 @@ export async function runPromptOnLiveEntry<TEntry extends LiveSessionPromptHost>
   const storedImages = hasImages && images ? rememberImageProbeAttachments(entry.sessionId, images) : [];
   const promptText = shouldUseTextOnlyImageHandling ? appendImageProbeNotice(text, storedImages, preferredVisionModel) : text;
 
-  if (behavior === undefined) {
+  if (behavior === undefined || !session.isStreaming) {
     callbacks.repairLiveSessionTranscriptTail(entry.sessionId);
   }
 

@@ -8,41 +8,52 @@ function resolveDanglingToolCallRepairLeafId(sessionManager: Pick<SessionManager
     return undefined;
   }
 
-  const trailingToolResultIds = new Set<string>();
-  let index = branch.length - 1;
+  let pendingAssistant:
+    | {
+        parentId: string | null | undefined;
+        unresolvedToolCallIds: Set<string>;
+      }
+    | undefined;
 
-  while (index >= 0) {
-    const entry = branch[index];
-    if (entry?.type !== 'message' || entry.message.role !== 'toolResult') {
-      break;
+  for (const entry of branch) {
+    if (pendingAssistant) {
+      if (entry?.type === 'message' && entry.message.role === 'toolResult') {
+        const toolCallId = entry.message.toolCallId?.trim();
+        if (toolCallId) {
+          pendingAssistant.unresolvedToolCallIds.delete(toolCallId);
+        }
+        if (pendingAssistant.unresolvedToolCallIds.size === 0) {
+          pendingAssistant = undefined;
+        }
+        continue;
+      }
+
+      if (pendingAssistant.unresolvedToolCallIds.size > 0) {
+        return pendingAssistant.parentId ?? null;
+      }
     }
 
-    const toolCallId = entry.message.toolCallId?.trim();
-    if (toolCallId) {
-      trailingToolResultIds.add(toolCallId);
+    if (entry?.type !== 'message' || entry.message.role !== 'assistant') {
+      continue;
     }
-    index -= 1;
-  }
 
-  const candidate = branch[index];
-  if (candidate?.type !== 'message' || candidate.message.role !== 'assistant') {
-    return undefined;
-  }
+    const toolCallIds = entry.message.content.flatMap((part) => {
+      if (part.type !== 'toolCall') {
+        return [];
+      }
+      const toolCallId = part.id?.trim();
+      return toolCallId ? [toolCallId] : [];
+    });
 
-  const toolCallIds = candidate.message.content.flatMap((part) => {
-    if (part.type !== 'toolCall') {
-      return [];
+    if (toolCallIds.length > 0) {
+      pendingAssistant = {
+        parentId: entry.parentId,
+        unresolvedToolCallIds: new Set(toolCallIds),
+      };
     }
-    const toolCallId = part.id?.trim();
-    return toolCallId ? [toolCallId] : [];
-  });
-
-  if (toolCallIds.length === 0) {
-    return undefined;
   }
 
-  const hasDanglingToolCall = toolCallIds.some((toolCallId) => !trailingToolResultIds.has(toolCallId));
-  return hasDanglingToolCall ? (candidate.parentId ?? null) : undefined;
+  return pendingAssistant && pendingAssistant.unresolvedToolCallIds.size > 0 ? (pendingAssistant.parentId ?? null) : undefined;
 }
 
 export function repairDanglingToolCallContext(session: Pick<AgentSession, 'sessionManager' | 'state'>): boolean {
