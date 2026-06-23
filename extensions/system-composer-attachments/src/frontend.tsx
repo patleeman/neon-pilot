@@ -1,13 +1,11 @@
 import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
 import { IconButton } from '@neon-pilot/extensions/ui';
+import React from 'react';
 
-export function AttachFilesComposerControl({
-  controlContext,
-}: {
-  controlContext: ComposerControlContext;
-}) {
+export function AttachFilesComposerControl({ controlContext }: { controlContext: ComposerControlContext }) {
   const context = controlContext;
   const handleOpenFilePicker = () => {
+    if (context.composerDisabled) return;
     context.openFilePicker();
   };
 
@@ -21,7 +19,7 @@ export function AttachFilesComposerControl({
         }
       }}
       onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
+        if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
           event.preventDefault();
           handleOpenFilePicker();
         }
