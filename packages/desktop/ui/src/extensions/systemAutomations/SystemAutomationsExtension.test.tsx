@@ -106,15 +106,17 @@ describe('AutomationsPage', () => {
     expect(container.querySelector('select[name="automation-owner-thread"]')).not.toBeNull();
   });
 
-  it('renders a schedule-first table with next run, last run, and owner thread', async () => {
+  it('renders a schedule-first list with next run, last run, and owner thread', async () => {
     const { container } = await renderPage();
 
-    expect(container.textContent).toContain('Schedules');
+    expect(container.textContent).toContain('Automations');
     expect(container.textContent).toContain('Scheduler: healthy');
-    expect(container.textContent).toContain('StatusAutomationScheduleNext runLast runOwner threadActions');
+    expect(container.textContent).toContain('StateNameNext');
     expect(container.textContent).toContain('Release watch');
     expect(container.textContent).toContain('Recurring · */15 * * * *');
     expect(container.textContent).toContain('Release watch thread');
+    expect(container.textContent).toContain('Last:');
+    expect(container.textContent).toContain('Automation details');
     expect(container.textContent).toContain('Paused check');
     expect(container.textContent).toContain('Paused');
   });
@@ -127,7 +129,7 @@ describe('AutomationsPage', () => {
 
     await act(async () =>
       buttons()
-        .find((button) => button.textContent === 'Run now')
+        .find((button) => button.textContent === 'Run')
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
     );
     expect(pa.automations.run).toHaveBeenCalledWith('release-watch');

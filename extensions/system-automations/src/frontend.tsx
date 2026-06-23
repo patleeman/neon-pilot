@@ -3,26 +3,16 @@ import { timeAgo } from '@neon-pilot/extensions/data';
 import {
   AppPageIntro,
   AppPageLayout,
-  AppPageSection,
   BrowsePathButton,
   Button,
-  DataTable,
-  DataTableActionGroup,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-  Dialog,
-  DialogBody,
-  DialogFooter,
-  DialogHeader,
-  EmptyState,
+  cx,
   Field,
   FieldError,
   FieldHint,
   FieldLabel,
   IconButton,
+  KeyValueItem,
+  KeyValueList,
   LoadingState,
   Notice,
   Pill,
@@ -330,6 +320,15 @@ function buildSaveInput(form: AutomationFormState): Record<string, unknown> {
   };
 }
 
+function formSchedulePreview(form: AutomationFormState): string {
+  if (form.scheduleType === 'at') {
+    const iso = localInputToIso(form.atLocal);
+    return iso ? `Once · ${formatDateTime(iso)}` : 'Once · not scheduled';
+  }
+  const preset = CRON_PRESETS.find((item) => item.value === form.cron);
+  return preset ? `Recurring · ${preset.label}` : `Recurring · ${form.cron || 'custom cron'}`;
+}
+
 function groupedModels(models: ModelOption[]): Array<[string, ModelOption[]]> {
   const groups = new Map<string, ModelOption[]>();
   for (const model of models) groups.set(model.provider ?? 'Models', [...(groups.get(model.provider ?? 'Models') ?? []), model]);
@@ -404,6 +403,11 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
       setEditorOpen(true);
     }
   }, [context?.search]);
+
+  useEffect(() => {
+    if (loading || tasks.length > 0 || editingId || form.ownerThreadId || !conversations[0]?.id) return;
+    setForm((current) => ({ ...current, ownerThreadId: conversations[0]?.id ?? '' }));
+  }, [conversations, editingId, form.ownerThreadId, loading, tasks.length]);
 
   const visibleTasks = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -528,17 +532,17 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const cronValue = cronSelectValue(form.cron);
   const timeoutValue = timeoutSelectValue(form.timeoutSeconds);
   const editingTitle = editingId ? 'Edit automation' : 'New automation';
+  const showEditor = editorOpen || (!loading && tasks.length === 0);
+  const selectedTask = editingId ? tasks.find((task) => task.id === editingId) : null;
 
   return (
     <div className="h-full overflow-y-auto bg-base">
-      <AppPageLayout contentClassName="space-y-6">
+      <AppPageLayout contentClassName="flex min-h-full flex-col gap-5">
         <AppPageIntro
-          eyebrow="Automations"
-          title="Schedules"
-          summary="Every automation belongs to a thread. When it fires, the owner thread reopens in the sidebar and the run is written into the transcript."
+          title="Automations"
           actions={
             <div className="flex items-center gap-2">
-              <IconButton aria-label="Refresh schedules" title="Refresh schedules" onClick={() => void load()}>
+              <IconButton aria-label="Refresh automations" title="Refresh automations" onClick={() => void load()}>
                 <RefreshIcon />
               </IconButton>
               <Button variant="action" tone="accent" onClick={openCreate}>
@@ -548,306 +552,336 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
           }
         />
 
-        <div className="flex items-center gap-2 text-[12px] text-secondary">
-          <span>
-            Scheduler: {health?.status ?? 'unknown'}
-            {health?.lastEvaluatedAt ? ` · checked ${timeAgo(health.lastEvaluatedAt)}` : ''}
-          </span>
-        </div>
+        {error ? <Notice tone="danger">{error}</Notice> : null}
 
-        {error ? (
-          <Notice tone="danger" title="Something went wrong">
-            {error}
-          </Notice>
-        ) : null}
+        <div className="grid min-h-[calc(100vh-11rem)] gap-5 lg:grid-cols-[25rem_minmax(0,1fr)]">
+          <section className="flex min-w-0 flex-col border-t border-border-subtle pt-3">
+            <div className="flex min-h-7 items-center justify-between gap-3">
+              <SectionLabel>Schedules</SectionLabel>
+              <div className="flex items-center gap-2 text-[11px] text-dim">
+                {loading ? <span>Refreshing…</span> : null}
+                <span>
+                  Scheduler: {health?.status ?? 'unknown'}
+                  {health?.lastEvaluatedAt ? ` · ${timeAgo(health.lastEvaluatedAt)}` : ''}
+                </span>
+              </div>
+            </div>
 
-        <AppPageSection
-          title="Schedules"
-          description="Automations run on the schedule you set and post their results into the owner thread."
-          actions={
             <SearchInput
-              className="w-64"
-              placeholder="Search schedules…"
+              className="mt-3 w-full"
+              placeholder="Search automations…"
               value={search}
               onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)}
             />
-          }
-        >
-          {loading && tasks.length === 0 ? (
-            <LoadingState label="Loading schedules…" className="py-10" />
-          ) : visibleTasks.length === 0 ? (
-            <EmptyState
-              title={search.trim() ? 'No schedules match your search.' : 'No automations yet.'}
-              body={search.trim() ? 'Try a different search term.' : 'Create one and bind it to a thread.'}
-              action={
-                search.trim() ? null : (
-                  <Button variant="action" tone="accent" onClick={openCreate}>
-                    New automation
-                  </Button>
-                )
-              }
-              className="py-10"
-            />
-          ) : (
-            <DataTable>
-              <DataTableHead>
-                <DataTableRow>
-                  <DataTableHeaderCell>Status</DataTableHeaderCell>
-                  <DataTableHeaderCell>Automation</DataTableHeaderCell>
-                  <DataTableHeaderCell>Schedule</DataTableHeaderCell>
-                  <DataTableHeaderCell>Next run</DataTableHeaderCell>
-                  <DataTableHeaderCell>Last run</DataTableHeaderCell>
-                  <DataTableHeaderCell>Owner thread</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
-                </DataTableRow>
-              </DataTableHead>
-              <DataTableBody>
-                {visibleTasks.map((task) => (
-                  <DataTableRow key={task.id}>
-                    <DataTableCell>
-                      <div className="flex flex-col gap-1">
+
+            <div className="mt-3 min-h-0 flex-1 overflow-auto">
+              <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.25rem] border-y border-border-subtle py-1.5 text-[11px] uppercase tracking-[0.08em] text-dim">
+                <span>State</span>
+                <span>Name</span>
+                <span className="text-right">Next</span>
+              </div>
+
+              {loading && tasks.length === 0 ? (
+                <LoadingState label="Loading automations…" className="border-b border-border-subtle py-3" />
+              ) : null}
+
+              {!loading && visibleTasks.length === 0 ? (
+                <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.25rem] border-b border-border-subtle py-2 text-[12px]">
+                  <span className="text-dim">Empty</span>
+                  <span className="truncate text-secondary">{search.trim() ? 'No matches' : 'No automations yet'}</span>
+                  <span className="text-right text-dim">0</span>
+                </div>
+              ) : null}
+
+              {visibleTasks.map((task) => {
+                const selected = editingId === task.id;
+                return (
+                  <div key={task.id} className={cx('border-b border-border-subtle px-0 py-2 text-[12px]', selected && 'bg-accent/10')}>
+                    <button
+                      type="button"
+                      className="grid w-full grid-cols-[5.5rem_minmax(0,1fr)_5.25rem] items-start gap-2 text-left"
+                      onClick={() => openEdit(task)}
+                    >
+                      <span>
                         <Pill tone={statusPillTone(task)}>{statusLabel(task)}</Pill>
-                        {task.lastStatus === 'failed' ? <span className="text-[11px] text-danger">Needs attention</span> : null}
-                      </div>
-                    </DataTableCell>
-                    <DataTableCell>
-                      <button className="text-left font-medium text-primary hover:underline" onClick={() => openEdit(task)}>
-                        {taskTitle(task)}
-                      </button>
-                      <div className="mt-0.5 font-mono text-[11px] text-dim">@{task.id}</div>
-                    </DataTableCell>
-                    <DataTableCell>
-                      <span className="font-mono text-[12px] text-secondary">{scheduleText(task)}</span>
-                    </DataTableCell>
-                    <DataTableCell className="text-secondary">{nextRunText(task)}</DataTableCell>
-                    <DataTableCell className="text-secondary">
-                      {task.lastRunAt ? `${timeAgo(task.lastRunAt)} · ${formatDateTime(task.lastRunAt)}` : 'Never'}
-                    </DataTableCell>
-                    <DataTableCell>
-                      {task.threadConversationId ? (
-                        <button
-                          className="text-primary hover:underline"
-                          onClick={() => {
-                            window.location.href = `/conversations/${encodeURIComponent(task.threadConversationId ?? '')}`;
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium text-primary">{taskTitle(task)}</span>
+                        <span className="mt-0.5 block truncate font-mono text-[11px] text-dim">{scheduleText(task)}</span>
+                        {task.threadTitle || task.threadConversationId ? (
+                          <span className="mt-0.5 block truncate text-[11px] text-secondary">
+                            {task.threadTitle || task.threadConversationId}
+                          </span>
+                        ) : null}
+                        <span className="mt-0.5 block truncate text-[11px] text-dim">
+                          Last: {task.lastRunAt ? `${timeAgo(task.lastRunAt)} · ${formatDateTime(task.lastRunAt)}` : 'Never'}
+                        </span>
+                      </span>
+                      <span className="truncate text-right text-[11px] text-secondary">{nextRunText(task)}</span>
+                    </button>
+                    <div className="mt-2 flex flex-wrap gap-1 pl-[5.5rem]" onClick={(event) => event.stopPropagation()}>
+                      <Button className="px-2 py-0.5 text-[11px]" disabled={busy === `run:${task.id}`} onClick={() => void runNow(task)}>
+                        Run
+                      </Button>
+                      <Button
+                        className="px-2 py-0.5 text-[11px]"
+                        disabled={busy?.endsWith(`:${task.id}`)}
+                        onClick={() => void updateEnabled(task, !task.enabled)}
+                      >
+                        {task.enabled ? 'Pause' : 'Resume'}
+                      </Button>
+                      <Button className="px-2 py-0.5 text-[11px]" onClick={() => openEdit(task)}>
+                        Edit
+                      </Button>
+                      <Button className="px-2 py-0.5 text-[11px]" tone="danger" onClick={() => void deleteTask(task)}>
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="flex min-w-0 flex-col border-t border-border-subtle pt-3">
+            <div className="flex min-h-7 items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="truncate text-[16px] font-semibold text-primary">
+                  {showEditor ? editingTitle : selectedTask ? taskTitle(selectedTask) : 'Automation details'}
+                </h2>
+                <p className="mt-0.5 text-[12px] text-dim">
+                  {showEditor ? 'Edit the schedule, prompt, and run context inline.' : 'Select an automation to edit its schedule.'}
+                </p>
+              </div>
+              {showEditor ? (
+                <div className="flex items-center gap-2">
+                  {tasks.length > 0 ? (
+                    <Button variant="ghost" onClick={closeEditor}>
+                      Close
+                    </Button>
+                  ) : null}
+                  <Button variant="action" tone="accent" disabled={busy === 'save'} onClick={() => void save()}>
+                    {busy === 'save' ? 'Saving…' : 'Save automation'}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+
+            {showEditor ? (
+              <div className="mt-4 grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
+                <div className="min-w-0 space-y-4">
+                  {formError ? <Notice tone="danger">{formError}</Notice> : null}
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Name">
+                      <TextInput
+                        name="automation-title"
+                        autoFocus
+                        value={form.title}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, title: event.target.value })}
+                        placeholder="Morning release check"
+                      />
+                    </Field>
+                    <Field label="Owner thread" hint={ownerConversation?.cwd ? `Working from ${ownerConversation.cwd}` : undefined}>
+                      <Select
+                        name="automation-owner-thread"
+                        className="w-full"
+                        value={form.ownerThreadId}
+                        onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, ownerThreadId: event.target.value })}
+                      >
+                        <option value="">Choose a thread…</option>
+                        {conversations.map((conversation) => (
+                          <option key={conversation.id} value={conversation.id}>
+                            {conversation.title}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="ui-field">
+                      <FieldLabel>Schedule</FieldLabel>
+                      <SegmentedControl
+                        ariaLabel="Schedule type"
+                        value={form.scheduleType}
+                        options={scheduleTypeOptions}
+                        onChange={(next: 'cron' | 'at') => setForm({ ...form, scheduleType: next })}
+                      />
+                      <FieldHint>
+                        {form.scheduleType === 'cron' ? 'Runs on a repeating cron schedule.' : 'Runs once at the date and time you choose.'}
+                      </FieldHint>
+                    </div>
+
+                    {form.scheduleType === 'cron' ? (
+                      <div className="ui-field">
+                        <FieldLabel>Repeat</FieldLabel>
+                        <Select
+                          className="w-full"
+                          value={cronValue}
+                          onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
+                            const next = event.target.value;
+                            setForm((current) => ({ ...current, cron: next === CUSTOM_VALUE ? current.cron : next }));
                           }}
                         >
-                          {task.threadTitle || task.threadConversationId}
-                        </button>
-                      ) : (
-                        <span className="text-danger">Missing owner thread</span>
-                      )}
-                    </DataTableCell>
-                    <DataTableCell>
-                      <DataTableActionGroup>
-                        <Button disabled={busy === `run:${task.id}`} onClick={() => void runNow(task)}>
-                          Run
-                        </Button>
-                        <Button disabled={busy?.endsWith(`:${task.id}`)} onClick={() => void updateEnabled(task, !task.enabled)}>
-                          {task.enabled ? 'Pause' : 'Resume'}
-                        </Button>
-                        <Button onClick={() => openEdit(task)}>Edit</Button>
-                        <Button tone="danger" onClick={() => void deleteTask(task)}>
-                          Delete
-                        </Button>
-                      </DataTableActionGroup>
-                    </DataTableCell>
-                  </DataTableRow>
-                ))}
-              </DataTableBody>
-            </DataTable>
-          )}
-        </AppPageSection>
-      </AppPageLayout>
-
-      {editorOpen ? (
-        <Dialog onClose={closeEditor} className="max-w-2xl">
-          <DialogHeader title={editingTitle} description="Choose the schedule and the thread where runs will appear." />
-          <DialogBody className="space-y-4">
-            {formError ? <Notice tone="danger">{formError}</Notice> : null}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Name">
-                <TextInput
-                  name="automation-title"
-                  autoFocus
-                  value={form.title}
-                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, title: event.target.value })}
-                  placeholder="Morning release check"
-                />
-              </Field>
-              <Field label="Owner thread" hint={ownerConversation?.cwd ? `Working from ${ownerConversation.cwd}` : undefined}>
-                <Select
-                  name="automation-owner-thread"
-                  className="w-full"
-                  value={form.ownerThreadId}
-                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, ownerThreadId: event.target.value })}
-                >
-                  <option value="">Choose a thread…</option>
-                  {conversations.map((conversation) => (
-                    <option key={conversation.id} value={conversation.id}>
-                      {conversation.title}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="ui-field">
-                <FieldLabel>Schedule</FieldLabel>
-                <SegmentedControl
-                  ariaLabel="Schedule type"
-                  value={form.scheduleType}
-                  options={scheduleTypeOptions}
-                  onChange={(next: 'cron' | 'at') => setForm({ ...form, scheduleType: next })}
-                />
-                <FieldHint>
-                  {form.scheduleType === 'cron' ? 'Runs on a repeating cron schedule.' : 'Runs once at the date and time you choose.'}
-                </FieldHint>
-              </div>
-
-              {form.scheduleType === 'cron' ? (
-                <div className="ui-field">
-                  <FieldLabel>Repeat</FieldLabel>
-                  <Select
-                    className="w-full"
-                    value={cronValue}
-                    onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
-                      const next = event.target.value;
-                      setForm((current) => ({ ...current, cron: next === CUSTOM_VALUE ? current.cron : next }));
-                    }}
-                  >
-                    {CRON_PRESETS.map((preset) => (
-                      <option key={preset.value} value={preset.value}>
-                        {preset.label}
-                      </option>
-                    ))}
-                    <option value={CUSTOM_VALUE}>Custom cron…</option>
-                  </Select>
-                  {cronValue === CUSTOM_VALUE ? (
-                    <div className="mt-2">
-                      <TextInput
-                        className="w-full font-mono text-[13px]"
-                        value={form.cron}
-                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, cron: event.target.value })}
-                        placeholder="0 9 * * *"
-                      />
-                      <FieldHint>Five-field cron: minute hour day-of-month month day-of-week.</FieldHint>
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="ui-field">
-                  <FieldLabel>Run at</FieldLabel>
-                  <TextInput
-                    type="datetime-local"
-                    className="w-full"
-                    value={form.atLocal}
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, atLocal: event.target.value })}
-                  />
-                  {form.scheduleType === 'at' && !form.atLocal ? <FieldError>Pick a date and time.</FieldError> : null}
-                  <FieldHint>Times are in your local timezone.</FieldHint>
-                </div>
-              )}
-            </div>
-
-            <Field label="Instructions" hint="The prompt sent to the agent each time this automation fires.">
-              <Textarea
-                name="automation-prompt"
-                className="min-h-32 w-full resize-y text-[13px]"
-                value={form.prompt}
-                onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setForm({ ...form, prompt: event.target.value })}
-                placeholder="Check the release dashboard and post a summary of anything new."
-              />
-            </Field>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Model" hint="Leave on the app default unless this automation needs a specific model.">
-                <Select
-                  className="w-full"
-                  value={form.model}
-                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, model: event.target.value })}
-                >
-                  <option value="">Use app default</option>
-                  {groupedModels(models).map(([provider, providerModels]) => (
-                    <optgroup key={provider} label={provider}>
-                      {providerModels.map((model) => (
-                        <option key={`${provider}/${model.id}`} value={model.id}>
-                          {modelLabel(model)}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </Select>
-              </Field>
-
-              <div className="ui-field">
-                <FieldLabel>Timeout</FieldLabel>
-                <Select
-                  className="w-full"
-                  value={timeoutValue}
-                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
-                    const next = event.target.value;
-                    setForm((current) => ({ ...current, timeoutSeconds: next === CUSTOM_VALUE ? current.timeoutSeconds : next }));
-                  }}
-                >
-                  {TIMEOUT_PRESETS.map((preset) => (
-                    <option key={preset.value} value={preset.value}>
-                      {preset.label}
-                    </option>
-                  ))}
-                  <option value={CUSTOM_VALUE}>Custom…</option>
-                </Select>
-                {timeoutValue === CUSTOM_VALUE ? (
-                  <div className="mt-2">
-                    <TextInput
-                      inputMode="numeric"
-                      className="w-full"
-                      value={form.timeoutSeconds}
-                      onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, timeoutSeconds: event.target.value })}
-                    />
-                    <FieldHint>Seconds before the run is stopped.</FieldHint>
+                          {CRON_PRESETS.map((preset) => (
+                            <option key={preset.value} value={preset.value}>
+                              {preset.label}
+                            </option>
+                          ))}
+                          <option value={CUSTOM_VALUE}>Custom cron…</option>
+                        </Select>
+                        {cronValue === CUSTOM_VALUE ? (
+                          <div className="mt-2">
+                            <TextInput
+                              className="w-full font-mono text-[13px]"
+                              value={form.cron}
+                              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, cron: event.target.value })}
+                              placeholder="0 9 * * *"
+                            />
+                            <FieldHint>Five-field cron: minute hour day-of-month month day-of-week.</FieldHint>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="ui-field">
+                        <FieldLabel>Run at</FieldLabel>
+                        <TextInput
+                          type="datetime-local"
+                          className="w-full"
+                          value={form.atLocal}
+                          onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, atLocal: event.target.value })}
+                        />
+                        {form.scheduleType === 'at' && !form.atLocal ? <FieldError>Pick a date and time.</FieldError> : null}
+                        <FieldHint>Times are in your local timezone.</FieldHint>
+                      </div>
+                    )}
                   </div>
-                ) : null}
-              </div>
-            </div>
 
-            <div className="ui-field">
-              <FieldLabel>Working directory</FieldLabel>
-              <div className="flex gap-2">
-                <TextInput
-                  className="min-w-0 flex-1 font-mono text-[12px]"
-                  value={form.cwd}
-                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, cwd: event.target.value })}
-                  placeholder="Defaults to the owner thread's working directory"
-                />
-                <BrowsePathButton
-                  busy={pickingCwd}
-                  title="Choose working directory"
-                  ariaLabel="Choose automation working directory"
-                  onClick={() => void pickCwd()}
-                />
-              </div>
-              <FieldHint>Overrides the owner thread's working directory for this automation's runs.</FieldHint>
-            </div>
+                  <Field label="Instructions" hint="The prompt sent to the agent each time this automation fires.">
+                    <Textarea
+                      name="automation-prompt"
+                      className="min-h-32 w-full resize-y text-[13px]"
+                      value={form.prompt}
+                      onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setForm({ ...form, prompt: event.target.value })}
+                      placeholder="Check the release dashboard and post a summary of anything new."
+                    />
+                  </Field>
 
-            <div className="flex items-center justify-between gap-3 pt-1">
-              <div className="min-w-0">
-                <SectionLabel>Enabled</SectionLabel>
-                <SupportingText className="mt-0.5">Paused automations keep their schedule but won't run.</SupportingText>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Model" hint="Leave on the app default unless this automation needs a specific model.">
+                      <Select
+                        className="w-full"
+                        value={form.model}
+                        onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, model: event.target.value })}
+                      >
+                        <option value="">Use app default</option>
+                        {groupedModels(models).map(([provider, providerModels]) => (
+                          <optgroup key={provider} label={provider}>
+                            {providerModels.map((model) => (
+                              <option key={`${provider}/${model.id}`} value={model.id}>
+                                {modelLabel(model)}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </Select>
+                    </Field>
+
+                    <div className="ui-field">
+                      <FieldLabel>Timeout</FieldLabel>
+                      <Select
+                        className="w-full"
+                        value={timeoutValue}
+                        onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
+                          const next = event.target.value;
+                          setForm((current) => ({ ...current, timeoutSeconds: next === CUSTOM_VALUE ? current.timeoutSeconds : next }));
+                        }}
+                      >
+                        {TIMEOUT_PRESETS.map((preset) => (
+                          <option key={preset.value} value={preset.value}>
+                            {preset.label}
+                          </option>
+                        ))}
+                        <option value={CUSTOM_VALUE}>Custom…</option>
+                      </Select>
+                      {timeoutValue === CUSTOM_VALUE ? (
+                        <div className="mt-2">
+                          <TextInput
+                            inputMode="numeric"
+                            className="w-full"
+                            value={form.timeoutSeconds}
+                            onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                              setForm({ ...form, timeoutSeconds: event.target.value })
+                            }
+                          />
+                          <FieldHint>Seconds before the run is stopped.</FieldHint>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="ui-field">
+                    <FieldLabel>Working directory</FieldLabel>
+                    <div className="flex gap-2">
+                      <TextInput
+                        className="min-w-0 flex-1 font-mono text-[12px]"
+                        value={form.cwd}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, cwd: event.target.value })}
+                        placeholder="Defaults to the owner thread's working directory"
+                      />
+                      <BrowsePathButton
+                        busy={pickingCwd}
+                        title="Choose working directory"
+                        ariaLabel="Choose automation working directory"
+                        onClick={() => void pickCwd()}
+                      />
+                    </div>
+                    <FieldHint>Overrides the owner thread's working directory for this automation's runs.</FieldHint>
+                  </div>
+                </div>
+
+                <aside className="min-w-0 border-t border-border-subtle pt-3 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
+                  <SectionLabel>Run preview</SectionLabel>
+                  <KeyValueList className="mt-3">
+                    <KeyValueItem label="State" value={form.enabled ? 'Enabled' : 'Paused'} />
+                    <KeyValueItem label="Schedule" value={formSchedulePreview(form)} />
+                    <KeyValueItem label="Owner" value={(ownerConversation?.title ?? form.ownerThreadId) || 'Not selected'} />
+                    <KeyValueItem label="Timeout" value={`${Number(form.timeoutSeconds) || 0}s`} />
+                    <KeyValueItem label="Working dir" value={form.cwd || ownerConversation?.cwd || 'Thread default'} />
+                  </KeyValueList>
+
+                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
+                    <div className="min-w-0">
+                      <SectionLabel>Enabled</SectionLabel>
+                      <SupportingText className="mt-0.5">Paused automations keep their schedule but won't run.</SupportingText>
+                    </div>
+                    <Switch
+                      checked={form.enabled}
+                      onClick={() => setForm({ ...form, enabled: !form.enabled })}
+                      aria-label="Enable automation"
+                    />
+                  </div>
+                </aside>
               </div>
-              <Switch checked={form.enabled} onClick={() => setForm({ ...form, enabled: !form.enabled })} aria-label="Enable automation" />
-            </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="ghost" onClick={closeEditor}>
-              Cancel
-            </Button>
-            <Button variant="action" tone="accent" disabled={busy === 'save'} onClick={() => void save()}>
-              {busy === 'save' ? 'Saving…' : 'Save automation'}
-            </Button>
-          </DialogFooter>
-        </Dialog>
-      ) : null}
+            ) : (
+              <div className="mt-3 grid max-w-xl gap-0 text-[12px]">
+                {[
+                  ['Status', 'No automation selected'],
+                  ['Next run', 'Select a row to inspect or edit'],
+                  ['Owner thread', '—'],
+                  ['Last run', '—'],
+                ].map(([label, value]) => (
+                  <div key={label} className="grid grid-cols-[8rem_minmax(0,1fr)] border-b border-border-subtle py-2">
+                    <span className="text-dim">{label}</span>
+                    <span className="truncate text-secondary">{value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </AppPageLayout>
     </div>
   );
 }
