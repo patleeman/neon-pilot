@@ -4,6 +4,7 @@
 
 import type { TraceTokenDaily } from '@neon-pilot/extensions/data';
 import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
+import React from 'react';
 
 export function TracesBraidChart({ data }: { data: TraceTokenDaily[] }) {
   if (!data || data.length < 2) {

@@ -4,6 +4,7 @@
 
 import type { TraceTokenDaily } from '@neon-pilot/extensions/data';
 import { PanelHeader, PanelMessage, SurfacePanel } from '@neon-pilot/extensions/ui';
+import React from 'react';
 
 export function TracesHeatmap({ data }: { data: TraceTokenDaily[] }) {
   if (!data || data.length === 0) {

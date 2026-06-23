@@ -2,6 +2,7 @@
  * Auto Mode tracking display
  */
 
+import type { AutoModeSummary } from '@neon-pilot/extensions/data';
 import {
   DashboardGrid,
   DashboardGridCell,
@@ -12,6 +13,7 @@ import {
   SectionLabel,
   SurfacePanel,
 } from '@neon-pilot/extensions/ui';
+import React from 'react';
 
 export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
   if (!data || data.recentEvents.length === 0) {

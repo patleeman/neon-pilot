@@ -15,6 +15,7 @@ import {
   StatusDot,
   SurfacePanel,
 } from '@neon-pilot/extensions/ui';
+import React from 'react';
 
 export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   if (!tools || tools.length === 0) {

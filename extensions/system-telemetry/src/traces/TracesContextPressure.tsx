@@ -4,6 +4,7 @@
 
 import type { TraceCompactionAggs, TraceCompactionEvent, TraceContextSession } from '@neon-pilot/extensions/data';
 import { DashboardGrid, DashboardGridCell, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import React from 'react';
 
 export function TracesContextPressure({
   sessions,

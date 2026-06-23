@@ -7,6 +7,7 @@
 
 import type { ContextPointerUsageResult } from '@neon-pilot/extensions/data';
 import { DashboardGrid, MetricTile, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import React from 'react';
 
 export function TracesContextPointers({ data }: { data: ContextPointerUsageResult | null }) {
   if (!data || data.summary.totalSuggested === 0) {

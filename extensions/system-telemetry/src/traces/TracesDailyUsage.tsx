@@ -10,6 +10,7 @@ import {
   PanelMessage,
   SurfacePanel,
 } from '@neon-pilot/extensions/ui';
+import React from 'react';
 
 function formatCompact(value: number): string {
   if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;

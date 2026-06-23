@@ -8,11 +8,12 @@ import {
   DashboardGridCell,
   MetricTile,
   PanelHeader,
-  ProgressRow,
   type ProgressBarTone,
+  ProgressRow,
   SectionLabel,
   SurfacePanel,
 } from '@neon-pilot/extensions/ui';
+import React from 'react';
 
 export function TracesModelUsage({
   models,

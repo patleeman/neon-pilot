@@ -10,11 +10,12 @@ import {
   type MetricTone,
   PanelHeader,
   PanelMessage,
-  ProgressRow,
   type ProgressBarTone,
+  ProgressRow,
   StatGrid,
   SurfacePanel,
 } from '@neon-pilot/extensions/ui';
+import React from 'react';
 
 export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
   if (!loop) {

@@ -27,7 +27,7 @@ import {
   StatGrid,
   StatusDot,
 } from '@neon-pilot/extensions/ui';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 import { TracesAgentLoop } from './traces/TracesAgentLoop';
 import { TracesAutoMode } from './traces/TracesAutoMode';

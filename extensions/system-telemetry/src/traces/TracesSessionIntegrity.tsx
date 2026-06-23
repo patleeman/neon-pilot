@@ -16,6 +16,7 @@ import {
   PanelHeader,
   SurfacePanel,
 } from '@neon-pilot/extensions/ui';
+import React from 'react';
 
 interface Props {
   events: AppTelemetryEventRow[];

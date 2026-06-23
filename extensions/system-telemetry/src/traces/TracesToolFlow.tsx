@@ -12,6 +12,7 @@ import {
   SectionLabel,
   SurfacePanel,
 } from '@neon-pilot/extensions/ui';
+import React from 'react';
 
 export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
   if (!data || (data.transitions.length === 0 && data.coOccurrences.length === 0)) {
