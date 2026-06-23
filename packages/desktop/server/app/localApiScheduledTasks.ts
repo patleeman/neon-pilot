@@ -1,3 +1,5 @@
+import { type AppEventTopic, invalidateAppTopics } from '../shared/appEvents.js';
+
 export interface DesktopScheduledTaskMutationInput {
   title?: string;
   enabled?: boolean;
@@ -22,6 +24,9 @@ export interface DesktopScheduledTaskMutationInput {
   threadConversationId?: string | null;
 }
 
+export const DESKTOP_SCHEDULED_TASK_MUTATION_TOPICS = ['tasks', 'sessions', 'workspace'] satisfies AppEventTopic[];
+export const DESKTOP_SCHEDULED_TASK_RUN_TOPICS = ['tasks', 'runs', 'sessions', 'workspace'] satisfies AppEventTopic[];
+
 export function normalizeDesktopScheduledTaskCreateInput(input: DesktopScheduledTaskMutationInput): DesktopScheduledTaskMutationInput & {
   title: string;
   prompt: string;
@@ -31,4 +36,13 @@ export function normalizeDesktopScheduledTaskCreateInput(input: DesktopScheduled
     title: input.title ?? '',
     prompt: input.prompt ?? '',
   };
+}
+
+export async function withDesktopScheduledTaskMutationInvalidation<T>(
+  operation: () => Promise<T>,
+  options: { includeRuns?: boolean } = {},
+): Promise<T> {
+  const result = await operation();
+  invalidateAppTopics(...(options.includeRuns ? DESKTOP_SCHEDULED_TASK_RUN_TOPICS : DESKTOP_SCHEDULED_TASK_MUTATION_TOPICS));
+  return result;
 }

@@ -5,13 +5,18 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const daemon = vi.hoisted(() => ({ callDaemonExport: vi.fn() }));
+const resolver = vi.hoisted(() => ({ callServerModuleExport: vi.fn() }));
 
 vi.mock('./daemonBridge.js', () => daemon);
+vi.mock('./serverModuleResolver.js', () => resolver);
+
+const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
 
 describe('backendApi/runs', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    delete (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE];
   });
 
   afterEach(() => {
@@ -44,6 +49,28 @@ describe('backendApi/runs', () => {
     daemon.callDaemonExport.mockResolvedValueOnce({ accepted: true, runId: 'run-1' });
     await expect(runs.startBackgroundRun({ taskSlug: 'task' })).resolves.toEqual({ accepted: true, runId: 'run-1' });
     expect(daemon.callDaemonExport).toHaveBeenLastCalledWith('startBackgroundRun', { taskSlug: 'task' });
+  });
+
+  it('spreads app invalidation topics so renderers receive normal topic names', async () => {
+    const runs = await import('./runs.js');
+    resolver.callServerModuleExport.mockResolvedValueOnce(undefined).mockResolvedValueOnce(undefined);
+
+    await runs.invalidateAppTopics(['runs', 'tasks']);
+    await runs.invalidateAppTopics('runs');
+
+    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(1, '../../shared/appEvents.js', 'invalidateAppTopics', 'runs', 'tasks');
+    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(2, '../../shared/appEvents.js', 'invalidateAppTopics', 'runs');
+  });
+
+  it('uses the trusted host UI capability bridge for app invalidation when available', async () => {
+    const bridge = vi.fn(async () => undefined);
+    (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
+    const runs = await import('./runs.js');
+
+    await runs.invalidateAppTopics(['runs', 'tasks']);
+
+    expect(bridge).toHaveBeenCalledWith('ui', 'invalidate', { topics: ['runs', 'tasks'] });
+    expect(resolver.callServerModuleExport).not.toHaveBeenCalled();
   });
 
   it('returns undefined for missing runs but rethrows unrelated daemon errors', async () => {

@@ -10,6 +10,15 @@ export type QueuedPromptPreview = Record<string, unknown>;
 import { callDaemonExport } from './daemonBridge.js';
 import { callServerModuleExport } from './serverModuleResolver.js';
 
+const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
+
+type ExtensionHostCapabilityBridge = (capability: string, operation: string, input?: unknown) => Promise<unknown>;
+type ExtensionBackendAutomationsGlobal = typeof globalThis & { [EXTENSION_HOST_CAPABILITY_BRIDGE]?: ExtensionHostCapabilityBridge };
+
+function getWorkerCapabilityBridge(): ExtensionHostCapabilityBridge | undefined {
+  return (globalThis as ExtensionBackendAutomationsGlobal)[EXTENSION_HOST_CAPABILITY_BRIDGE];
+}
+
 async function callModuleExport<T>(specifier: string, name: string, ...args: unknown[]): Promise<T> {
   return callServerModuleExport<T>(specifier, name, ...args);
 }
@@ -130,7 +139,13 @@ export async function queuePromptContext(sessionId: string, customType: string, 
 }
 export async function invalidateAppTopics(topics: string | string[]): Promise<void> {
   try {
-    await callModuleExport<void>('../../shared/appEvents.js', 'invalidateAppTopics', topics);
+    const topicList = Array.isArray(topics) ? topics : [topics];
+    const bridge = getWorkerCapabilityBridge();
+    if (bridge) {
+      await bridge('ui', 'invalidate', { topics: topicList });
+      return;
+    }
+    await callModuleExport<void>('../../shared/appEvents.js', 'invalidateAppTopics', ...topicList);
   } catch {
     // Invalidation is best-effort for extension backend bundles.
   }

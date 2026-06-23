@@ -6,10 +6,13 @@ const resolver = vi.hoisted(() => ({ callServerModuleExport: vi.fn() }));
 vi.mock('./daemonBridge.js', () => daemon);
 vi.mock('./serverModuleResolver.js', () => resolver);
 
+const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
+
 describe('backendApi/automations', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    delete (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE];
   });
 
   it('parses deferred resume delays and normalizes automation targets', async () => {
@@ -83,6 +86,35 @@ describe('backendApi/automations', () => {
       undefined,
       expect.objectContaining({ source: { type: 'extension', id: 'system-automations', name: 'Automations' } }),
     );
+  });
+
+  it('spreads app invalidation topics so renderers receive normal topic names', async () => {
+    const automations = await import('./automations.js');
+    resolver.callServerModuleExport.mockResolvedValueOnce(undefined).mockResolvedValueOnce(undefined);
+
+    await automations.invalidateAppTopics(['tasks', 'runs', 'sessions']);
+    await automations.invalidateAppTopics('tasks');
+
+    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(
+      1,
+      '../../shared/appEvents.js',
+      'invalidateAppTopics',
+      'tasks',
+      'runs',
+      'sessions',
+    );
+    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(2, '../../shared/appEvents.js', 'invalidateAppTopics', 'tasks');
+  });
+
+  it('uses the trusted host UI capability bridge for app invalidation when available', async () => {
+    const bridge = vi.fn(async () => undefined);
+    (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
+    const automations = await import('./automations.js');
+
+    await automations.invalidateAppTopics(['tasks', 'sessions', 'workspace']);
+
+    expect(bridge).toHaveBeenCalledWith('ui', 'invalidate', { topics: ['tasks', 'sessions', 'workspace'] });
+    expect(resolver.callServerModuleExport).not.toHaveBeenCalled();
   });
 
   it('uses core helpers for deferred resume and task callback state', async () => {

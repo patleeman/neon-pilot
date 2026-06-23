@@ -19,12 +19,18 @@ import type {
   ExtensionHostRouteResponse,
 } from '../../server/extensions/extensionHostProtocol.js';
 import { decodeExtensionHostProtocolFrame, encodeExtensionHostProtocolFrame } from '../../server/extensions/extensionHostProtocolFrames.js';
+import { type AppEvent, subscribeAppEvents } from '../../server/shared/appEvents.js';
 import { installSharedConversationServiceContext, SHARED_CHILD_RUNTIME_SCOPE } from './conversation-service-context.js';
 
 interface ExtensionHostReadyMessage {
   type: 'ready';
   port: number;
   token: string;
+}
+
+interface ExtensionHostDesktopAppEventMessage {
+  type: 'desktop-app-event';
+  event: AppEvent;
 }
 
 interface ExtensionHostRequestBody {
@@ -45,7 +51,9 @@ interface ExtensionHostProtocolRequestBody {
 
 let shuttingDown = false;
 
-function sendParentMessage(message: ExtensionHostReadyMessage | { type: 'fatal'; error: string }): void {
+function sendParentMessage(
+  message: ExtensionHostReadyMessage | ExtensionHostDesktopAppEventMessage | { type: 'fatal'; error: string },
+): void {
   if (typeof process.send === 'function') {
     process.send(message);
     return;
@@ -216,6 +224,9 @@ async function main(): Promise<void> {
   setDefaultExtensionBackendWorkerUrl(new URL('../../server/dist/extensions/extensionBackendWorker.js', import.meta.url));
   setExtensionHostClient(createInProcessExtensionHostClient());
   installSharedConversationServiceContext();
+  subscribeAppEvents((event) => {
+    sendParentMessage({ type: 'desktop-app-event', event });
+  });
 
   const token = process.env.NEON_PILOT_EXTENSION_HOST_TOKEN?.trim() || randomUUID();
   const server = createServer((request, response) => {

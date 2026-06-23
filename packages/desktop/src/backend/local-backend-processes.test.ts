@@ -318,6 +318,39 @@ describe('LocalBackendProcesses', () => {
     );
   });
 
+  it('forwards extension-host desktop app events into the local backend runtime', async () => {
+    const extensionHost = new FakeChildProcess();
+    const backendChild = new FakeChildProcess();
+    childProcessMocks.spawn
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => extensionHost.emit('message', { type: 'ready', port: 4101, token: 'extension-host-token' }));
+        return extensionHost;
+      })
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => backendChild.emit('message', { type: 'ready', port: 5101, token: 'backend-token' }));
+        return backendChild;
+      });
+
+    const backend = new LocalBackendProcesses();
+    await backend.ensureStarted();
+
+    extensionHost.emit('message', { type: 'desktop-app-event', event: { type: 'invalidate', topics: ['tasks', 'sessions'] } });
+
+    let request: { type?: string; event?: unknown } | undefined;
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      request = backendChild.send.mock.calls
+        .map((call) => call[0] as typeof request)
+        .find((message) => message?.type === 'desktop-app-event');
+      if (request) break;
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
+
+    expect(request).toMatchObject({
+      type: 'desktop-app-event',
+      event: { type: 'invalidate', topics: ['tasks', 'sessions'] },
+    });
+  });
+
   it('preserves packaged app roots without synthesizing a repo root for child processes', () => {
     const originalEnv = { ...process.env };
     try {

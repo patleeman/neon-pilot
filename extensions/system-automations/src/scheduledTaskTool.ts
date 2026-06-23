@@ -454,7 +454,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                 await clearTaskCallbackBinding({ profile: runtimeScope, taskId });
               }
 
-              await invalidateAppTopics('tasks');
+              await invalidateAppTopics(['tasks', 'sessions', 'workspace']);
 
               return {
                 content: [
@@ -481,7 +481,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
               const taskId = readRequiredString(params.taskId, 'taskId');
               await deleteStoredAutomation(taskId);
               await clearTaskCallbackBinding({ profile: runtimeScope, taskId });
-              await invalidateAppTopics('tasks');
+              await invalidateAppTopics(['tasks', 'sessions', 'workspace']);
 
               return {
                 content: [{ type: 'text' as const, text: `Deleted scheduled task @${taskId}.` }],
@@ -559,7 +559,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                 throw new Error(result.reason ?? `Could not start scheduled task @${taskId}.`);
               }
 
-              await invalidateAppTopics(['tasks', 'runs']);
+              await invalidateAppTopics(['tasks', 'runs', 'sessions', 'workspace']);
               return {
                 content: [{ type: 'text' as const, text: `Started scheduled task @${taskId} as run ${result.runId}.` }],
                 details: {

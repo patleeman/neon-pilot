@@ -101,6 +101,46 @@ describe('desktop local API conversation actions', () => {
     expect(Buffer.from(response.body).toString('utf-8')).toBe('Conversation not found.');
     expect(response.headers['X-PA-Perf']).toContain('"fastPath":"product"');
   });
+
+  it('serves execution snapshots through the desktop product fast path', async () => {
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/executions',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(Array.isArray(readJsonBody(response).executions)).toBe(true);
+    expect(response.headers['X-PA-Perf']).toContain('"fastPath":"product"');
+  });
+
+  it('serves conversation execution snapshots through the desktop product fast path', async () => {
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/conversations/conversation-1/executions?active=true&visibility=visible',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(readJsonBody(response)).toMatchObject({
+      conversationId: 'conversation-1',
+      primary: expect.any(Array),
+      system: expect.any(Array),
+      hidden: expect.any(Array),
+      executions: expect.any(Array),
+    });
+    expect(response.headers['X-PA-Perf']).toContain('"fastPath":"product"');
+  });
+
+  it('serves conversation summaries through the desktop product fast path', async () => {
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'POST',
+      path: '/api/conversation-summaries',
+      body: { sessionIds: ['missing-session'] },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(readJsonBody(response)).toEqual({ summaries: {} });
+    expect(response.headers['X-PA-Perf']).toContain('"fastPath":"product"');
+  });
 });
 
 describe('desktop local API conversation rename route', () => {

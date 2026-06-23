@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { getStateRoot } from '@neon-pilot/core';
 
 import { removeNeonPilotCliControlPlaneRecord, writeNeonPilotCliControlPlaneRecord } from '../../server/cliControlPlane.js';
+import type { AppEvent } from '../../server/shared/appEvents.js';
 import type { DesktopApiStreamEvent } from '../hosts/types.js';
 
 export interface LocalBackendWorkbenchBrowserToolHost {
@@ -35,6 +36,11 @@ interface BackendFatalMessage {
 }
 
 type BackendChildMessage = BackendReadyMessage | BackendFatalMessage;
+
+interface ExtensionHostDesktopAppEventMessage {
+  type: 'desktop-app-event';
+  event: AppEvent;
+}
 
 const nativeWorkbenchBrowserMethods = new Set(['isActive', 'listTabs', 'snapshot', 'screenshot', 'cdp']);
 const NATIVE_WORKBENCH_BROWSER_SLOW_MS = 1_000;
@@ -95,7 +101,10 @@ interface LocalApiRpcResponseMessage {
 }
 
 function isBackendChildMessage(value: unknown): value is BackendChildMessage {
-  return Boolean(value && typeof value === 'object' && typeof (value as { type?: unknown }).type === 'string');
+  return (
+    Boolean(value && typeof value === 'object') &&
+    ((value as { type?: unknown }).type === 'ready' || (value as { type?: unknown }).type === 'fatal')
+  );
 }
 
 function resolveBackendChildEntry(): string {
@@ -941,6 +950,10 @@ export class LocalBackendProcesses {
     child.on('message', (message) => {
       if (this.isNativeWorkbenchBrowserRequest(message)) {
         void this.handleNativeWorkbenchBrowserRequest(child, message);
+        return;
+      }
+      if (this.isExtensionHostDesktopAppEvent(message)) {
+        void this.forwardExtensionHostDesktopAppEvent(message.event);
       }
     });
     child.once('exit', () => {
@@ -972,6 +985,28 @@ export class LocalBackendProcesses {
       nativeWorkbenchBrowserMethods.has((value as { method: string }).method) &&
       Array.isArray((value as { args?: unknown }).args)
     );
+  }
+
+  private isExtensionHostDesktopAppEvent(value: unknown): value is ExtensionHostDesktopAppEventMessage {
+    return (
+      Boolean(value && typeof value === 'object') &&
+      (value as { type?: unknown }).type === 'desktop-app-event' &&
+      Boolean((value as { event?: unknown }).event && typeof (value as { event?: unknown }).event === 'object')
+    );
+  }
+
+  private async forwardExtensionHostDesktopAppEvent(event: AppEvent): Promise<void> {
+    try {
+      const child = this.child;
+      if (child && !child.killed && child.connected && typeof child.send === 'function') {
+        const sent = child.send({ type: 'desktop-app-event', event });
+        if (sent) return;
+      }
+      await this.callLocalApiMethod('publishDesktopAppEventFromExtensionHost', [event]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`[extension-host] failed to forward desktop app event: ${message}\n`);
+    }
   }
 
   private isLocalApiRpcResponse(value: unknown): value is LocalApiRpcResponseMessage {

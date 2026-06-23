@@ -87,6 +87,7 @@ import {
   readConversationSessionsCapability,
   readConversationSessionSearchIndexCapability,
 } from '../conversations/conversationSessionCapability.js';
+import { readConversationSummaryIndexCapability } from '../conversations/conversationSummaries.js';
 import { readDesktopConversationState } from '../conversations/desktopConversationState.js';
 import { createAttentionEventFlusher } from '../conversations/liveDeferredResumes.js';
 import {
@@ -122,6 +123,7 @@ import {
   getAvailableModelObjects,
   updateLiveSessionModelPreferences,
 } from '../conversations/liveSessions.js';
+import { listConversationExecutions, listExecutions } from '../executions/executionService.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import { notifyExtensionStartupStatus } from '../extensions/extensionNotifications.js';
@@ -161,7 +163,7 @@ import type { ServerRouteContext } from '../routes/context.js';
 import { registerServerRoutes } from '../routes/registerAll.js';
 import { buildToolsRouteState } from '../routes/tools.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
-import { invalidateAppTopics, publishAppEvent, subscribeAppEvents } from '../shared/appEvents.js';
+import { type AppEvent, type AppEventTopic, invalidateAppTopics, publishAppEvent, subscribeAppEvents } from '../shared/appEvents.js';
 import {
   getLocalhostWebappProxyStatus,
   startLocalhostWebappProxy,
@@ -189,7 +191,7 @@ import { buildRelatedConversationResults } from './localApiRelatedConversations.
 import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing.js';
 import { resolveRollbackLeafId, rewriteConversationSessionToLeaf, validateDesktopRollbackTurns } from './localApiRollback.js';
 import { buildLocalApiQueryObject, buildLocalApiRoutePattern, findMatchingLocalApiRoute } from './localApiRouting.js';
-import { normalizeDesktopScheduledTaskCreateInput } from './localApiScheduledTasks.js';
+import { normalizeDesktopScheduledTaskCreateInput, withDesktopScheduledTaskMutationInvalidation } from './localApiScheduledTasks.js';
 import { normalizeFastConversationSearchLimit, normalizeFastConversationSearchTerms } from './localApiSearch.js';
 import { buildDesktopSidebarConversationSnapshot } from './localApiSidebarConversations.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
@@ -283,6 +285,46 @@ export interface DesktopLocalApiDispatchResult {
 }
 
 type DesktopAppBridgeEvent = { type: 'open' } | { type: 'event'; event: unknown } | { type: 'error'; message: string } | { type: 'close' };
+
+function isAppEventTopic(value: unknown): value is AppEventTopic {
+  return (
+    value === 'sessions' ||
+    value === 'sessionFiles' ||
+    value === 'artifacts' ||
+    value === 'checkpoints' ||
+    value === 'attachments' ||
+    value === 'extensions' ||
+    value === 'tasks' ||
+    value === 'models' ||
+    value === 'runs' ||
+    value === 'executions' ||
+    value === 'automation' ||
+    value === 'daemon' ||
+    value === 'workspace' ||
+    value === 'knowledgeBase' ||
+    value === 'notifications'
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function readDesktopLocalApiBooleanParam(value: string | null): boolean | undefined {
+  if (value === null) return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true' || normalized === '1') return true;
+  if (normalized === 'false' || normalized === '0') return false;
+  return undefined;
+}
+
+function readDesktopExecutionVisibilityParam(value: string | null): 'primary' | 'system' | 'hidden' | 'visible' | 'all' | undefined {
+  if (value === null) return undefined;
+  const normalized = value.trim();
+  return normalized === 'primary' || normalized === 'system' || normalized === 'hidden' || normalized === 'visible' || normalized === 'all'
+    ? normalized
+    : undefined;
+}
 
 export function setDesktopWorkbenchBrowserToolHost(host: WorkbenchBrowserToolHost | null): void {
   setWorkbenchBrowserToolHost(host);
@@ -861,6 +903,24 @@ export async function subscribeDesktopAppEvents(onEvent: (event: DesktopAppBridg
   };
 }
 
+export async function publishDesktopAppEventFromExtensionHost(event: unknown): Promise<{ ok: true }> {
+  await getLocalRoutes();
+  if (!isRecord(event) || typeof event.type !== 'string') {
+    throw new Error('Invalid desktop app event from extension host.');
+  }
+
+  if (event.type === 'invalidate') {
+    const topics = Array.isArray(event.topics) ? event.topics.filter(isAppEventTopic) : [];
+    if (topics.length > 0) {
+      invalidateAppTopics(...topics);
+    }
+    return { ok: true };
+  }
+
+  publishAppEvent(event as AppEvent);
+  return { ok: true };
+}
+
 export async function subscribeDesktopLocalApiStream(
   path: string,
   onEvent: (event: DesktopLocalApiStreamEvent) => void,
@@ -1202,6 +1262,16 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   }
 
   if (method === 'GET' && path === '/api/runs') return createDesktopLocalApiJsonResponse(await readDesktopDurableRuns());
+  if (method === 'GET' && path === '/api/executions') return createDesktopLocalApiJsonResponse(await listExecutions());
+  const conversationExecutionsMatch = /^\/api\/conversations\/([^/]+)\/executions$/.exec(path);
+  if (method === 'GET' && conversationExecutionsMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await listConversationExecutions(decodeURIComponent(conversationExecutionsMatch[1] ?? ''), {
+        active: readDesktopLocalApiBooleanParam(input.url.searchParams.get('active')),
+        visibility: readDesktopExecutionVisibilityParam(input.url.searchParams.get('visibility')),
+      }),
+    );
+  }
   const runLogMatch = /^\/api\/runs\/([^/]+)\/log$/.exec(path);
   if (method === 'GET' && runLogMatch) {
     return createDesktopLocalApiJsonResponse(
@@ -1608,6 +1678,23 @@ export async function dispatchDesktopLocalApiRequest(input: {
         },
       };
     }
+  }
+
+  if (input.method === 'POST' && url.pathname === '/api/conversation-summaries') {
+    const response = createDesktopLocalApiJsonResponse(readConversationSummaryIndexCapability(input.body as { sessionIds?: unknown }));
+    return {
+      ...response,
+      headers: {
+        ...response.headers,
+        'X-PA-Perf': JSON.stringify({
+          localApi: {
+            totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
+            responseBytes: response.body.byteLength,
+            fastPath: 'product',
+          },
+        }),
+      },
+    };
   }
 
   const routes = await getLocalRoutes();
@@ -2107,7 +2194,9 @@ export async function createDesktopScheduledTask(input: {
   threadConversationId?: string | null;
 }) {
   await getLocalRoutes();
-  return createScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, normalizeDesktopScheduledTaskCreateInput(input));
+  return withDesktopScheduledTaskMutationInvalidation(() =>
+    createScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, normalizeDesktopScheduledTaskCreateInput(input)),
+  );
 }
 
 export async function updateDesktopScheduledTask(input: {
@@ -2135,17 +2224,19 @@ export async function updateDesktopScheduledTask(input: {
   threadConversationId?: string | null;
 }) {
   await getLocalRoutes();
-  return updateScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, input);
+  return withDesktopScheduledTaskMutationInvalidation(() => updateScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, input));
 }
 
 export async function runDesktopScheduledTask(taskId: string) {
   await getLocalRoutes();
-  return runScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, taskId);
+  return withDesktopScheduledTaskMutationInvalidation(() => runScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, taskId), {
+    includeRuns: true,
+  });
 }
 
 export async function deleteDesktopScheduledTask(taskId: string) {
   await getLocalRoutes();
-  return deleteScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, taskId);
+  return withDesktopScheduledTaskMutationInvalidation(() => deleteScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, taskId));
 }
 
 export async function markDesktopConversationAttention(input: { conversationId: string; read?: boolean }) {

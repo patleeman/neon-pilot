@@ -157,6 +157,7 @@ describe('scheduledTaskTool', () => {
       expect.objectContaining({ threadMode: 'existing', threadConversationId: 'conv-1' }),
     );
     expect(automations.clearTaskCallbackBinding).toHaveBeenCalledWith({ profile: 'runtime', taskId: 'task-1' });
+    expect(automations.invalidateAppTopics).toHaveBeenCalledWith(['tasks', 'sessions', 'workspace']);
     expect(result.content[0].text).toBe('Saved scheduled task @task-1 for tomorrow at 6pm.');
   });
 
@@ -210,7 +211,17 @@ describe('scheduledTaskTool', () => {
       requireAck: true,
       autoResumeIfOpen: true,
     });
+    expect(automations.invalidateAppTopics).toHaveBeenCalledWith(['tasks', 'sessions', 'workspace']);
     expect(result.details).toMatchObject({ action: 'save', taskId: 'agent-check', targetType: 'background-agent' });
+  });
+
+  it('deletes an automation, clears callbacks, and invalidates task and conversation topics', async () => {
+    const result = await registerTool().execute('call-1', { action: 'delete', taskId: 'task-1' });
+
+    expect(automations.deleteStoredAutomation).toHaveBeenCalledWith('task-1');
+    expect(automations.clearTaskCallbackBinding).toHaveBeenCalledWith({ profile: 'runtime', taskId: 'task-1' });
+    expect(automations.invalidateAppTopics).toHaveBeenCalledWith(['tasks', 'sessions', 'workspace']);
+    expect(result.details).toMatchObject({ action: 'delete', taskId: 'task-1' });
   });
 
   it('rejects conversation automations that also request background-agent callback delivery', async () => {
@@ -255,6 +266,7 @@ describe('scheduledTaskTool', () => {
       expect.objectContaining({ category: 'scheduled_task', name: 'run_tool_run', runId: 'run-1', status: 202 }),
       { extensionId: 'system-automations' },
     );
+    expect(automations.invalidateAppTopics).toHaveBeenCalledWith(['tasks', 'runs', 'sessions', 'workspace']);
     expect(result.details).toMatchObject({ action: 'run', taskId: 'task-1', runId: 'run-1' });
   });
 

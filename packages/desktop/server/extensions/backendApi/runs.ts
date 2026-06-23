@@ -4,6 +4,15 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { callDaemonExport } from './daemonBridge.js';
 import { callServerModuleExport } from './serverModuleResolver.js';
 
+const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
+
+type ExtensionHostCapabilityBridge = (capability: string, operation: string, input?: unknown) => Promise<unknown>;
+type ExtensionBackendRunsGlobal = typeof globalThis & { [EXTENSION_HOST_CAPABILITY_BRIDGE]?: ExtensionHostCapabilityBridge };
+
+function getWorkerCapabilityBridge(): ExtensionHostCapabilityBridge | undefined {
+  return (globalThis as ExtensionBackendRunsGlobal)[EXTENSION_HOST_CAPABILITY_BRIDGE];
+}
+
 export interface ScheduledTaskThreadInput {
   threadMode?: string | null;
   threadConversationId?: string | null;
@@ -12,7 +21,13 @@ export interface ScheduledTaskThreadInput {
 
 export async function invalidateAppTopics(topics: string | string[]): Promise<void> {
   try {
-    await callServerModuleExport<void>('../../shared/appEvents.js', 'invalidateAppTopics', topics);
+    const topicList = Array.isArray(topics) ? topics : [topics];
+    const bridge = getWorkerCapabilityBridge();
+    if (bridge) {
+      await bridge('ui', 'invalidate', { topics: topicList });
+      return;
+    }
+    await callServerModuleExport<void>('../../shared/appEvents.js', 'invalidateAppTopics', ...topicList);
   } catch {
     // Invalidation is best-effort for extension backend bundles.
   }

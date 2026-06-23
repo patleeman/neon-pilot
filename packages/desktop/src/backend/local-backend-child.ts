@@ -14,6 +14,11 @@ import { setExtensionHostClient } from '../../server/extensions/extensionHostCli
 import { createExtensionHostRpcClient } from '../../server/extensions/extensionHostRpcClient.js';
 import { loadRawLocalApiModule, type LocalApiModule } from '../local-api-module.js';
 import { installSharedConversationServiceContext, SHARED_CHILD_RUNTIME_SCOPE } from './conversation-service-context.js';
+import {
+  bridgeRawLocalApiAppEventsToBundledRuntime,
+  isDesktopAppEventBridgeMessage,
+  publishBundledDesktopAppEvent,
+} from './local-backend-app-events.js';
 import { proxyDesktopLocalApiStream } from './local-backend-stream-proxy.js';
 
 interface BackendReadyMessage {
@@ -286,9 +291,11 @@ async function main(): Promise<void> {
   // first paint on this import.
   let localApiReady = false;
   let localApi: LocalApiModule | null = null;
+  let unsubscribeRawLocalApiAppEvents: (() => void) | undefined;
   try {
     localApi = await loadRawLocalApiModule();
     installNativeWorkbenchBrowserBridge(localApi);
+    unsubscribeRawLocalApiAppEvents = await bridgeRawLocalApiAppEventsToBundledRuntime(localApi);
     localApiReady = true;
     localhostWebappProxy = await localApi.startDesktopLocalhostWebappProxy({
       stateRoot: getStateRoot(),
@@ -396,7 +403,20 @@ async function main(): Promise<void> {
       return;
     }
 
+    if (isDesktopAppEventBridgeMessage(message)) {
+      publishBundledDesktopAppEvent(message.event);
+      if (localApi)
+        void handleLocalApiRpcRequest(localApi, {
+          type: 'local-api-rpc-request',
+          id: randomUUID(),
+          method: 'publishDesktopAppEventFromExtensionHost',
+          args: [message.event],
+        });
+      return;
+    }
+
     if (message && typeof message === 'object' && (message as { type?: unknown }).type === 'shutdown') {
+      unsubscribeRawLocalApiAppEvents?.();
       void shutdown(server);
     }
   });
