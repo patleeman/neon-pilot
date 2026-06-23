@@ -123,6 +123,7 @@ export function DictationButton({
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const captureRef = useRef<ComposerDictationCapture | null>(null);
   const pendingStartRef = useRef<Promise<void> | null>(null);
+  const pendingModelInstallRef = useRef<Promise<void> | null>(null);
   const pointerRef = useRef<{ pointerId: number; startedAt: number; startedExistingRecording: boolean } | null>(null);
   const mountedRef = useRef(true);
   const busy = state === 'preparing' || state === 'transcribing';
@@ -139,6 +140,27 @@ export function DictationButton({
       }
     };
   }, []);
+
+  const ensureModelInstalled = useCallback(async () => {
+    if (!pendingModelInstallRef.current) {
+      pendingModelInstallRef.current = (async () => {
+        const status = (await pa.extension.invoke('modelStatus')) as DictationModelStatus;
+        if (!status.installed) {
+          if (mountedRef.current) {
+            pa.ui.toast('Installing dictation model while you speak…');
+          }
+          await pa.extension.invoke('installModel', { model: status.model });
+          if (mountedRef.current) {
+            pa.ui.toast('Dictation model installed.');
+          }
+        }
+      })().finally(() => {
+        pendingModelInstallRef.current = null;
+      });
+      void pendingModelInstallRef.current.catch(() => {});
+    }
+    await pendingModelInstallRef.current;
+  }, [pa]);
 
   useEffect(() => {
     pa.commands.setContext('toggleAvailable', toggleAvailable);
@@ -160,15 +182,14 @@ export function DictationButton({
       const { audio, durationMs, mimeType, fileName } = await capture.stop();
       if (!mountedRef.current) return;
       if (audio.byteLength === 0 || durationMs < 150) return;
-      const status = (await pa.extension.invoke('modelStatus')) as DictationModelStatus;
-      if (!mountedRef.current) return;
-      if (!status.installed) {
+      const waitedForModelInstall = pendingModelInstallRef.current !== null;
+      if (waitedForModelInstall) {
         setState('preparing');
-        pa.ui.toast('Installing dictation model…');
-        await pa.extension.invoke('installModel', { model: status.model });
+      }
+      await ensureModelInstalled();
+      if (waitedForModelInstall) {
         if (!mountedRef.current) return;
         setState('transcribing');
-        pa.ui.toast('Dictation model installed.');
       }
       const result = (await pa.extension.invoke('transcribeFile', { dataBase64: bytesToBase64(audio), mimeType, fileName })) as {
         text?: string;
@@ -212,6 +233,7 @@ export function DictationButton({
           return;
         }
         captureRef.current = capture;
+        void ensureModelInstalled().catch(() => {});
       } catch (error) {
         if (mountedRef.current) {
           setStartedAt(null);
@@ -224,7 +246,7 @@ export function DictationButton({
     })();
     pendingStartRef.current = pendingStart;
     await pendingStart;
-  }, [busy, controlContext.composerDisabled, pa]);
+  }, [busy, controlContext.composerDisabled, ensureModelInstalled, pa]);
 
   useEffect(() => {
     const handleDictationToggleCommand = () => {

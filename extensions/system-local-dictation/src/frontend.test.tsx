@@ -27,6 +27,11 @@ function createDeferred<T>() {
   return { promise, resolve };
 }
 
+async function flushMicrotasks() {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 function dispatchPointerDown(button: HTMLButtonElement) {
   Object.defineProperty(button, 'setPointerCapture', { configurable: true, value: vi.fn() });
   const event = new Event('pointerdown', { bubbles: true, cancelable: true });
@@ -202,12 +207,13 @@ describe('DictationButton', () => {
     expect(appendText).toHaveBeenCalledWith('hello world');
   });
 
-  it('installs the selected model from the composer path before first transcription', async () => {
+  it('installs the selected model while recording and waits before first transcription', async () => {
     const setContext = vi.fn();
     const appendText = vi.fn();
+    const installDeferred = createDeferred<{ model: string; cacheDir: string }>();
     const invoke = vi.fn(async (action: string) => {
       if (action === 'modelStatus') return { installed: false, model: 'base.en' };
-      if (action === 'installModel') return { model: 'base.en', cacheDir: '/runtime/transcription-models' };
+      if (action === 'installModel') return installDeferred.promise;
       return { text: ' first run works ' };
     });
     const stop = vi.fn(async () => ({
@@ -222,14 +228,28 @@ describe('DictationButton', () => {
 
     await act(async () => {
       dispatchPointerDown(button);
+      await flushMicrotasks();
     });
+
+    expect(container.querySelector('button')?.getAttribute('aria-label')).toBe('Stop dictation');
+    expect(invoke).toHaveBeenCalledWith('modelStatus');
+    expect(invoke).toHaveBeenCalledWith('installModel', { model: 'base.en' });
+    expect(invoke).not.toHaveBeenCalledWith('transcribeFile', expect.any(Object));
+
     await act(async () => {
       dispatchPointerDown(button);
       dispatchPointerUp(button);
+      await flushMicrotasks();
     });
 
-    expect(invoke).toHaveBeenCalledWith('modelStatus');
-    expect(invoke).toHaveBeenCalledWith('installModel', { model: 'base.en' });
+    expect(invoke).not.toHaveBeenCalledWith('transcribeFile', expect.any(Object));
+
+    await act(async () => {
+      installDeferred.resolve({ model: 'base.en', cacheDir: '/runtime/transcription-models' });
+      await installDeferred.promise;
+      await flushMicrotasks();
+    });
+
     expect(invoke).toHaveBeenCalledWith('transcribeFile', expect.any(Object));
     expect(appendText).toHaveBeenCalledWith('first run works');
   });
