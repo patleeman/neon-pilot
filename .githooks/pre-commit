@@ -118,7 +118,23 @@ else
   green "✓ lint passed (no staged TS/TSX files)"
 fi
 
-# ── 6. Extension/core boundary guardrails ────────────────
+# ── 6. UI pattern audit ──────────────────────────────────
+
+UI_PATTERN_FILES=$(staged_files | grep -cE '^(packages/desktop/ui/src/|packages/ui/src/|extensions/|scripts/check-ui-patterns\.mjs$|scripts/check-ui-patterns\.test\.mjs$|\.githooks/pre-commit$|package\.json$)' || true)
+if [ "$UI_PATTERN_FILES" -gt 0 ]; then
+  if UI_PATTERN_MAX_FINDINGS=0 run_pnpm run check:ui-patterns &>/dev/null; then
+    green "✓ UI pattern audit passed"
+  else
+    echo ""
+    UI_PATTERN_MAX_FINDINGS=0 run_pnpm run check:ui-patterns 2>&1
+    red "✗ UI pattern audit failed"
+    exit 1
+  fi
+else
+  green "✓ UI pattern audit skipped"
+fi
+
+# ── 7. Extension/core boundary guardrails ────────────────
 
 BOUNDARY_FILES=$(staged_files | grep -cE '^(extensions/|installable-extensions/|packages/desktop/server/extensions/backendApi/|packages/extensions/|scripts/check-core-extension-boundary\.mjs$|scripts/check-extension-backend-api\.mjs$|\.githooks/pre-commit$|package\.json$)' || true)
 if [ "$BOUNDARY_FILES" -gt 0 ]; then

@@ -15,5 +15,42 @@
     "simple-import-sort/imports": "error",
     "simple-import-sort/exports": "error"
   },
+  "overrides": [
+    {
+      "files": ["extensions/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@neon-pilot/ui",
+                "message": "Extension frontend code must import design-system primitives from @neon-pilot/extensions/ui."
+              },
+              {
+                "name": "@neon-pilot/desktop",
+                "message": "Extensions must not import desktop internals; route host access through @neon-pilot/extensions APIs."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "@neon-pilot/ui/*",
+                  "@neon-pilot/desktop/*",
+                  "packages/ui/*",
+                  "packages/desktop/*",
+                  "*/packages/ui/*",
+                  "*/packages/desktop/*",
+                  "**/packages/ui/*",
+                  "**/packages/desktop/*"
+                ],
+                "message": "Extensions must use @neon-pilot/extensions public contracts instead of UI or desktop internals."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
   "ignorePatterns": ["dist", "node_modules", "coverage", "*.d.ts"]
 }

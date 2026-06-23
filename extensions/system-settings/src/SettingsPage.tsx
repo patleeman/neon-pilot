@@ -1,29 +1,21 @@
 import {
   api,
-  AppPageLayout,
   type AppTelemetryLogBundleExport,
   type AppTelemetryLogDiagnostics,
-  Button,
-  Checkbox,
   CORE_KEYBOARD_SHORTCUT_REGISTRATIONS,
   createDesktopAwareEventSource,
   createModelEditorDraft,
   createProviderEditorDraft,
-  cx,
   DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS,
   type DesktopAppPreferencesState,
   type DesktopEnvironmentState,
-  Disclosure,
   EXTENSION_REGISTRY_CHANGED_EVENT,
   type ExtensionKeybindingRegistration,
   formatContextWindowLabel,
-  formatKeyboardShortcutLabel,
   formatThinkingLevelLabel,
   getDesktopBridge,
   groupModelsByProvider,
-  IconButton,
   isDesktopShell,
-  KeyboardShortcutCaptureInput,
   listHostCommands,
   type ModelEditorDraft,
   type ModelProviderApi,
@@ -40,31 +32,43 @@ import {
   type ProviderOAuthLoginState,
   type ProviderOAuthLoginStreamEvent,
   readDesktopEnvironment,
-  RowButton,
-  SearchInput,
   type SecretsState,
   type SecretStatusEntry,
-  SectionLabel,
-  SegmentedControl,
-  Select,
   SettingsField,
   SettingsPanel,
   SettingsPanelHost,
   SettingsRow,
   subscribeDesktopProviderOAuthLogin,
-  Switch,
   type TelemetryDbMaintenanceResult,
-  TextButton,
-  TextInput,
   type ThemeAccent,
   THINKING_LEVEL_OPTIONS,
-  ToolbarButton,
-  UnifiedSettingsEntry,
+  type UnifiedSettingsEntry,
   useApi,
   useExtensionRegistry,
   useTheme,
 } from '@neon-pilot/extensions/settings';
-import type { ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
+import {
+  AppPageLayout,
+  Button,
+  Checkbox,
+  cx,
+  Disclosure,
+  type ExtensionSurfaceProps,
+  formatKeyboardShortcutLabel,
+  IconButton,
+  KeyboardShortcutCaptureInput,
+  RowButton,
+  SearchInput,
+  SectionLabel,
+  SegmentedControl,
+  Select,
+  SwatchOption,
+  Switch,
+  Textarea,
+  TextButton,
+  TextInput,
+  ToolbarButton,
+} from '@neon-pilot/extensions/ui';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -3387,21 +3391,20 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         const isSelected = accent === entry.id;
                         const currentTokens = theme.includes('dark') ? entry.dark : entry.light;
                         return (
-                          <button
+                          <SwatchOption
                             key={entry.id}
                             type="button"
-                            role="radio"
-                            aria-checked={isSelected}
-                            aria-label={entry.label}
-                            className={cx('ui-swatch-button', isSelected && 'ui-swatch-button-selected')}
+                            checked={isSelected}
+                            label={entry.label}
+                            swatch={
+                              <span
+                                className="h-full w-full rounded-full"
+                                style={{ backgroundColor: `rgb(${currentTokens.accent.replaceAll(' ', ', ')})` }}
+                              />
+                            }
                             title={entry.label}
                             onClick={() => setAccent(entry.id as ThemeAccent)}
-                          >
-                            <span
-                              className="ui-swatch-chip"
-                              style={{ backgroundColor: `rgb(${currentTokens.accent.replaceAll(' ', ', ')})` }}
-                            />
-                          </button>
+                          />
                         );
                       })}
                     </div>
@@ -3845,8 +3848,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         Edit raw provider options only when a provider needs custom headers, compatibility flags, or model
                                         overrides. See provider options docs.
                                       </p>
-                                      <textarea
-                                        className="ui-text-input min-h-[150px] font-mono text-[12px] leading-5"
+                                      <Textarea
+                                        className="min-h-[150px] font-mono text-[12px] leading-5"
                                         value={advancedProviderJson}
                                         onChange={(event) => {
                                           setAdvancedProviderJson(event.target.value);

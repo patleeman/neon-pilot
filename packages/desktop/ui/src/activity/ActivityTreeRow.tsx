@@ -1,7 +1,6 @@
 import { type DragEvent, memo, useMemo } from 'react';
 
 import { recordActivityTreeRowRender } from '../client/perfDiagnostics';
-import { TreeItemButton } from '../components/ui';
 import type { ActivityTreeItem } from './activityTree';
 import {
   ActivityTreeDropMarker,
@@ -92,17 +91,27 @@ function ActivityTreeRowComponent({
       ...(accentColor ? { boxShadow: `inset 2px 0 0 ${accentColor}` } : {}),
     };
   }, [item.accentColor, item.backgroundColor, rowModel.rowPaddingLeftRem]);
+  const openOrToggleItem = () => {
+    if (item.kind === 'group') {
+      onToggleGroup(item);
+      return;
+    }
+    onOpenItem?.(item);
+  };
 
   return (
-    <TreeItemButton
-      selected={active}
+    <div
+      role="treeitem"
+      tabIndex={0}
+      aria-selected={active ? 'true' : 'false'}
+      aria-expanded={item.kind === 'group' ? expanded : undefined}
       draggable={canDrag}
       onDragStart={canDrag ? (event) => onDragStart(item, event) : undefined}
       onDragOver={(event) => onDragOver(item, event)}
       onDrop={(event) => onDrop(item, event)}
       onDragEnd={onDragEnd}
       className={[
-        'ui-sidebar-session-row group relative flex w-full items-center gap-1 select-none text-left',
+        'ui-sidebar-session-row group relative flex w-full items-center gap-1 select-none text-left focus:outline-none focus-within:ring-1 focus-within:ring-accent/25',
         item.kind === 'group' && 'font-semibold',
         active && 'ui-sidebar-session-row-active',
         canDrag && (dragged ? 'cursor-grabbing opacity-60' : 'cursor-grab'),
@@ -113,13 +122,11 @@ function ActivityTreeRowComponent({
       data-sidebar-session-id={rowModel.dataSidebarSessionId}
       data-sidebar-group-key={rowModel.dataSidebarGroupKey}
       title={canDrag ? 'Drag to reorder conversations' : rowModel.title}
-      expanded={item.kind === 'group' ? expanded : undefined}
-      onClick={() => {
-        if (item.kind === 'group') {
-          onToggleGroup(item);
-          return;
-        }
-        onOpenItem?.(item);
+      onClick={openOrToggleItem}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openOrToggleItem();
       }}
       onContextMenu={(event) => {
         if (!renderContextMenu) return;
@@ -151,7 +158,7 @@ function ActivityTreeRowComponent({
         onInlineAction={onInlineAction}
         onOpenContextMenu={onOpenContextMenu}
       />
-    </TreeItemButton>
+    </div>
   );
 }
 

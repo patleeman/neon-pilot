@@ -12,6 +12,7 @@ import {
   PanelHeader,
   Pill,
   ResourceListItem,
+  RowButton,
   SectionLabel,
   SurfacePanel,
   Textarea,
@@ -515,40 +516,42 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                 </div>
               ) : null}
               {savedWorkflows.map((item) => (
-                <button
+                <RowButton
                   key={item.id}
                   type="button"
-                  className={cx(
-                    'ui-compact-table-button',
-                    selectedId === null && selectedTemplate?.id === item.id && 'ui-selected-row-accent',
-                  )}
+                  selected={selectedId === null && selectedTemplate?.id === item.id}
+                  compact
+                  className="rounded-none border-b border-border-subtle px-0 py-0"
                   onClick={() => {
                     setSelectedId(null);
                     setSelectedTemplateId(item.id);
                   }}
                 >
-                  <span className="text-dim">Saved</span>
-                  <span className="min-w-0 truncate font-medium text-primary">{item.name}</span>
-                  <span className="text-right text-secondary">ready</span>
-                </button>
+                  <span className="grid w-full grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2 py-1.5 text-[12px]">
+                    <span className="text-dim">Saved</span>
+                    <span className="min-w-0 truncate font-medium text-primary">{item.name}</span>
+                    <span className="text-right text-secondary">ready</span>
+                  </span>
+                </RowButton>
               ))}
               {templates.map((item) => (
-                <button
+                <RowButton
                   key={item.id}
                   type="button"
-                  className={cx(
-                    'ui-compact-table-button',
-                    selectedId === null && selectedTemplate?.id === item.id && 'ui-selected-row-accent',
-                  )}
+                  selected={selectedId === null && selectedTemplate?.id === item.id}
+                  compact
+                  className="rounded-none border-b border-border-subtle px-0 py-0"
                   onClick={() => {
                     setSelectedId(null);
                     setSelectedTemplateId(item.id);
                   }}
                 >
-                  <span className="text-dim">Template</span>
-                  <span className="min-w-0 truncate font-medium text-primary">{item.name}</span>
-                  <span className="text-right text-secondary">stock</span>
-                </button>
+                  <span className="grid w-full grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2 py-1.5 text-[12px]">
+                    <span className="text-dim">Template</span>
+                    <span className="min-w-0 truncate font-medium text-primary">{item.name}</span>
+                    <span className="text-right text-secondary">stock</span>
+                  </span>
+                </RowButton>
               ))}
             </div>
             {draftOpen ? (

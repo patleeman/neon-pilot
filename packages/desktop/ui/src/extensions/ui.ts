@@ -1,7 +1,7 @@
 export type { ActivityTreeItem } from '../activity/activityTree';
 export { type ActivityTreeDropPosition, ActivityTreeView, type ActivityTreeViewProps } from '../activity/ActivityTreeView';
-export { buildDesktopWebSocketUrl } from '../client/endpoints';
 export { buildApiPath } from '../client/apiBase';
+export { buildDesktopWebSocketUrl } from '../client/endpoints';
 export { ChatRailComposer, type ChatRailComposerProps } from '../components/chat/ChatRailComposer';
 export { ChatView, type ChatViewProps } from '../components/chat/ChatView';
 export type { ChatViewLayout } from '../components/chat/chatViewTypes';
@@ -21,6 +21,8 @@ export {
   BrowsePathButton,
   Button,
   ButtonLink,
+  type ButtonTone,
+  type ButtonVariant,
   CardBody,
   CardMeta,
   CardTitle,
@@ -95,14 +97,20 @@ export {
   type MessageCardRole,
   MessageMeta,
   MetaLabel,
+  type MetaLabelTone,
   MetricTile,
   type MetricTone,
   Notice,
+  type NoticeTone,
   PanelHeader,
   PanelMessage,
+  type PanelMessageTone,
   Pill,
+  type PillTone,
   PositionedMenu,
+  type PositionedMenuPlacement,
   ProgressBar,
+  type ProgressBarTone,
   ProgressRow,
   RailSection,
   RailSubsection,
@@ -127,6 +135,7 @@ export {
   SectionLabel,
   type SectionLabelTone,
   SegmentedControl,
+  type SegmentedControlOption,
   Select,
   SettingsPanel,
   SettingsRow,
@@ -135,17 +144,23 @@ export {
   ShelfBody,
   ShelfHeader,
   ShelfSection,
+  type SidebarAction,
   SidebarActionHeader,
   SidebarList,
+  type SidebarListItem,
   SidebarMessage,
   SidebarNavButton,
   SidebarRow,
   SidebarSection,
+  type SidebarTemplateItem,
   SidebarTemplateList,
   Spinner,
+  type SpinnerSize,
   Stat,
   StatGrid,
   StatusDot,
+  type StatusDotSize,
+  type StatusDotTone,
   SupportingText,
   SurfacePanel,
   SwatchOption,
@@ -165,6 +180,7 @@ export {
   ToolResultCard,
   type ToolResultCardTone,
   Tooltip,
+  type TooltipPosition,
   WorkbenchHeader,
   WorkbenchShell,
 } from '../components/ui';

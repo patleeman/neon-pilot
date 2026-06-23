@@ -1727,6 +1727,58 @@ body {
   color: rgb(var(--color-accent));
 }
 
+.ui-sidebar-nav-item {
+  position: relative;
+  display: flex;
+  min-height: 1.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin-inline: 0.25rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  padding: 0.25rem 0.625rem;
+  color: rgb(var(--color-secondary));
+  font: inherit;
+  font-size: 0.84375rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.ui-sidebar-nav-item:hover {
+  background: rgb(var(--color-elevated));
+  color: rgb(var(--color-primary));
+}
+
+.ui-sidebar-nav-item:focus-visible {
+  outline: none;
+  background: rgb(var(--color-accent) / 0.1);
+  color: rgb(var(--color-primary));
+  box-shadow: 0 0 0 1px rgb(var(--color-accent) / 0.25);
+}
+
+.ui-sidebar-nav-item:active {
+  background: rgb(var(--color-accent) / 0.1);
+  color: rgb(var(--color-primary));
+}
+
+.ui-sidebar-nav-item-active {
+  background: rgb(var(--color-accent) / 0.1);
+  color: rgb(var(--color-accent));
+  box-shadow: inset 0 0 0 1px rgb(var(--color-accent) / 0.22);
+}
+
+.ui-sidebar-nav-item-active svg {
+  color: rgb(var(--color-steel));
+  opacity: 1;
+}
+
 .ui-sidebar-section {
   display: flex;
   min-height: 0;
@@ -4142,6 +4194,74 @@ body {
 
 .ui-search-input::-webkit-search-cancel-button {
   appearance: none;
+}
+
+.ui-command-palette-search-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ui-command-palette-search-icon {
+  color: rgb(var(--color-dim));
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+
+.ui-command-palette-input {
+  min-height: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: rgb(var(--color-primary));
+  outline: none;
+}
+
+.ui-command-palette-input:hover,
+.ui-command-palette-input:focus,
+.ui-command-palette-input:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
+.ui-command-palette-input::placeholder {
+  color: rgb(var(--color-dim));
+}
+
+.ui-command-palette-input-default {
+  font-size: 0.9375rem;
+}
+
+.ui-command-palette-input-compact {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+}
+
+.ui-command-palette-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgb(var(--color-dim) / 0.7);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+}
+
+.ui-command-palette-result-accent {
+  width: 1px;
+  height: 0.875rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgb(var(--color-border-subtle));
+  transition: background-color 140ms ease;
+}
+
+.ui-command-palette-result-accent-selected {
+  background: rgb(var(--color-accent));
 }
 
 .ui-segmented-control {

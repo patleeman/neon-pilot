@@ -116,7 +116,17 @@ import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
 import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
-import { CardMeta, IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
+import {
+  CardMeta,
+  IconButton,
+  MenuItem,
+  MenuSeparator,
+  PanelMessage,
+  PositionedMenu,
+  RowButton,
+  SectionLabel,
+  SidebarNavButton,
+} from './ui';
 import { useSidebarConversationScope } from './useSidebarConversationScope';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 
@@ -740,11 +750,11 @@ function ThreadsFilterButton({
       </IconButton>
       {menuOpen && menuPosition
         ? renderSidebarMenuPortal(
-            <div
+            <PositionedMenu
               ref={menuRootRef}
-              className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[172px]"
+              placement="fixed"
+              className="min-w-[172px]"
               style={getSidebarMenuPositionStyle(menuPosition, 172)}
-              role="menu"
               aria-label="Threads organization options"
             >
               <div className="space-y-px">
@@ -808,7 +818,7 @@ function ThreadsFilterButton({
                   onClick: () => onChangeSortMode('manual'),
                 })}
               </div>
-            </div>,
+            </PositionedMenu>,
           )
         : null}
     </>
@@ -1037,9 +1047,10 @@ function ConversationCwdGroupHeader({
       </div>
       {menuOpen && menuPosition
         ? renderSidebarMenuPortal(
-            <div
+            <PositionedMenu
               ref={menuRootRef}
-              className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[214px]"
+              placement="fixed"
+              className="min-w-[214px]"
               style={getSidebarMenuPositionStyle(menuPosition, 214)}
               onKeyDown={(event) => {
                 if (event.key === 'Escape') {
@@ -1047,7 +1058,6 @@ function ConversationCwdGroupHeader({
                   setMenuOpen(false);
                 }
               }}
-              role="menu"
               aria-label={`Workspace actions for ${label}`}
             >
               <div className="space-y-px">
@@ -1090,7 +1100,7 @@ function ConversationCwdGroupHeader({
                   </MenuItem>
                 ) : null}
               </div>
-            </div>,
+            </PositionedMenu>,
           )
         : null}
     </div>
@@ -1582,9 +1592,10 @@ const OpenConversationRow = memo(function OpenConversationRow({
       </div>
       {menuOpen && menuPosition
         ? renderSidebarMenuPortal(
-            <div
+            <PositionedMenu
               ref={menuRootRef}
-              className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
+              placement="fixed"
+              className="min-w-[224px]"
               style={getSidebarMenuPositionStyle(menuPosition, 224)}
               onKeyDown={(event) => {
                 if (event.key === 'Escape') {
@@ -1592,7 +1603,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
                   setMenuOpen(false);
                 }
               }}
-              role="menu"
               aria-label={`Conversation actions for ${session.title}`}
             >
               <div className="space-y-px">
@@ -1676,7 +1686,7 @@ const OpenConversationRow = memo(function OpenConversationRow({
                   </>
                 )}
               </div>
-            </div>,
+            </PositionedMenu>,
           )
         : null}
     </div>
@@ -4106,10 +4116,7 @@ export function Sidebar() {
                         conversationGroup?.items.some(({ session }) => session.id === DRAFT_CONVERSATION_ID),
                       );
                       return (
-                        <div
-                          className="ui-menu-shell ui-context-menu-shell static bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
-                          role="menu"
-                        >
+                        <PositionedMenu placement="static" className="min-w-[224px]">
                           {item.route ? (
                             <MenuItem
                               onClick={() => {
@@ -4285,7 +4292,7 @@ export function Sidebar() {
                               ))}
                             </>
                           ) : null}
-                        </div>
+                        </PositionedMenu>
                       );
                     }}
                   />

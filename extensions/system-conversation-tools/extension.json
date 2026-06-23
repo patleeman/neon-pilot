@@ -148,7 +148,7 @@
       {
         "id": "open-thread-palette",
         "title": "Open thread palette",
-        "keys": ["mod+p"],
+        "keys": ["mod+k", "mod+p"],
         "command": "palette.open",
         "args": {
           "scope": "threads"

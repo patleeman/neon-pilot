@@ -218,13 +218,13 @@ export function FileChangesToolDiff({ fileChanges }: { fileChanges: FileChange[]
   if (fileChanges.length === 0) return null;
 
   return (
-    <div className="border-t border-border-subtle/70 bg-black/5 px-2.5 py-2 font-sans text-[11px]">
+    <div className="border-t border-border-subtle/70 bg-surface/45 px-2.5 py-2 font-sans text-[11px]">
       <div className="space-y-2">
         {fileChanges.map((change) => {
           const key = displayPath(change);
           const open = expanded.has(key);
           return (
-            <section key={key} className="ui-panel-muted overflow-hidden bg-base/75">
+            <section key={key} className="ui-panel-muted overflow-hidden">
               <RowButton
                 onClick={() => {
                   setExpanded((current) => {
@@ -234,7 +234,7 @@ export function FileChangesToolDiff({ fileChanges }: { fileChanges: FileChange[]
                     return next;
                   });
                 }}
-                className="bg-elevated/30 px-2.5 py-2"
+                className="px-2.5 py-2"
               >
                 <span className={cx('shrink-0 text-dim transition-transform', open && 'rotate-90')} aria-hidden="true">
                   ›
@@ -249,7 +249,7 @@ export function FileChangesToolDiff({ fileChanges }: { fileChanges: FileChange[]
               </RowButton>
               {open ? (
                 change.patch ? (
-                  <div className="overflow-hidden bg-[rgb(var(--color-terminal-surface))]">
+                  <div className="overflow-hidden bg-surface">
                     <Suspense fallback={<div className="px-3 py-2 text-dim">Loading diff...</div>}>
                       <PatchDiff patch={change.patch} options={diffOptions} style={fileChangeDiffStyle} />
                     </Suspense>

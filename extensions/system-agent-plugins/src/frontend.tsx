@@ -1,18 +1,16 @@
+import { api, SettingsRow, useApi } from '@neon-pilot/extensions/settings';
 import {
-  api,
-  cx,
   Field,
   Notice,
   Pill,
   RailSubsection,
+  RowButton,
   Select,
-  SettingsRow,
   SupportingText,
   Switch,
   TextInput,
   ToolbarButton,
-  useApi,
-} from '@neon-pilot/extensions/settings';
+} from '@neon-pilot/extensions/ui';
 import React, { type FormEvent, useMemo, useState } from 'react';
 
 type SourceKind = 'git' | 'local';
@@ -247,11 +245,12 @@ export function AgentPluginsSettingsPanel() {
                 {plugins.map((plugin) => {
                   const selected = selectedPlugin?.id === plugin.id;
                   return (
-                    <button
+                    <RowButton
                       key={plugin.id}
                       type="button"
                       aria-pressed={selected}
-                      className={cx('ui-selectable-card', selected && 'ui-selectable-card-selected')}
+                      selected={selected}
+                      className="block px-3 py-2"
                       onClick={() => setSelectedId(plugin.id)}
                     >
                       <span className="flex flex-wrap items-center gap-2">
@@ -263,7 +262,7 @@ export function AgentPluginsSettingsPanel() {
                         {plugin.autoUpdate ? <Pill tone="warning">auto update</Pill> : null}
                       </span>
                       <span className="ui-supporting-text mt-1 block break-all">{pluginSourceLabel(plugin)}</span>
-                    </button>
+                    </RowButton>
                   );
                 })}
               </div>

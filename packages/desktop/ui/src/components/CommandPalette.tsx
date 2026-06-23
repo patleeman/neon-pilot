@@ -37,7 +37,7 @@ import type {
 import { useConversations } from '../hooks/useConversations';
 import type { ConversationContentSearchMatch } from '../shared/types';
 import { useAllSessions, useSessionsReady } from '../store';
-import { cx, RowButton, SegmentedControl } from './ui';
+import { cx, Keycap, PanelMessage, RowButton, SearchInput, SectionLabel, SegmentedControl } from './ui';
 
 type ExtensionQuickOpenProvider = {
   list?: () => Promise<ExtensionQuickOpenItem[]> | ExtensionQuickOpenItem[];
@@ -772,9 +772,9 @@ export function CommandPalette() {
         }}
       >
         <div className={cx('border-b border-border-subtle px-4 py-3.5', anchorRect && 'px-2.5 pb-2 pt-0')}>
-          <div className={cx('flex items-center gap-2 min-w-0', anchorRect && 'h-7')}>
-            <span className="text-[13px] text-dim">⌕</span>
-            <input
+          <div className={cx('ui-command-palette-search-row', anchorRect && 'h-7')}>
+            <span className="ui-command-palette-search-icon">⌕</span>
+            <SearchInput
               ref={inputRef}
               value={query}
               onChange={(event) => {
@@ -786,13 +786,11 @@ export function CommandPalette() {
               placeholder={anchorRect ? 'Search threads, models, settings…' : searchPlaceholder}
               aria-label="Search command palette"
               className={cx(
-                'min-w-0 flex-1 bg-transparent text-primary placeholder:text-dim outline-none',
-                anchorRect ? 'font-mono text-[11px] tracking-[0.05em]' : 'text-[15px]',
+                'ui-command-palette-input',
+                anchorRect ? 'ui-command-palette-input-compact' : 'ui-command-palette-input-default',
               )}
             />
-            <span className="shrink-0 rounded border border-border-subtle bg-surface px-1.5 py-0.5 font-mono text-[10px] text-dim">
-              {macPlatform ? '⌘K' : 'Ctrl+K'}
-            </span>
+            <Keycap className="shrink-0 text-[10px] text-dim">{macPlatform ? '⌘K' : 'Ctrl+K'}</Keycap>
           </div>
 
           <div className="mt-2.5 flex items-center justify-between gap-3">
@@ -810,14 +808,18 @@ export function CommandPalette() {
               }}
             />
 
-            <div className="flex items-center gap-2 font-mono text-[10px] text-dim/70">
+            <div className="ui-command-palette-shortcuts">
               <span>{visibleCount > 0 ? `${cursor + 1}/${visibleCount}` : '0/0'}</span>
               <span>↵ open</span>
               <span>esc close</span>
             </div>
           </div>
 
-          {actionError && <p className="pt-2 text-[11px] text-danger">{actionError}</p>}
+          {actionError && (
+            <PanelMessage tone="danger" className="mt-2 px-0 py-0 text-[11px]">
+              {actionError}
+            </PanelMessage>
+          )}
         </div>
 
         <div
@@ -842,7 +844,7 @@ export function CommandPalette() {
             <section key={group.section} className="pb-1 last:pb-0">
               {showSectionHeaders && (
                 <div className="px-2.5 pb-0.5 flex items-center gap-2">
-                  <p className="ui-section-label">{group.label}</p>
+                  <SectionLabel>{group.label}</SectionLabel>
                   <span className="ui-section-count">
                     {group.items.length}
                     {group.total > group.items.length ? `/${group.total}` : ''}
@@ -875,10 +877,7 @@ export function CommandPalette() {
                     title={item.subtitle ?? item.title}
                   >
                     <span
-                      className={cx(
-                        'mt-[3px] h-3.5 w-px shrink-0 rounded-full transition-colors',
-                        isSelected ? 'bg-accent' : 'bg-border-subtle',
-                      )}
+                      className={cx('ui-command-palette-result-accent mt-[3px]', isSelected && 'ui-command-palette-result-accent-selected')}
                     />
 
                     <div className="min-w-0 flex-1">
@@ -899,7 +898,7 @@ export function CommandPalette() {
               query.trim().length === 0 &&
               group.section === 'archived' &&
               group.total > group.items.length ? (
-                <p className="px-2.5 py-2 text-[11px] text-dim font-mono">Scroll to load older threads…</p>
+                <PanelMessage className="px-2.5 py-2 font-mono text-[11px]">Scroll to load older threads…</PanelMessage>
               ) : null}
             </section>
           ))}
@@ -908,40 +907,42 @@ export function CommandPalette() {
             <section key={`loading:${section}`} className="pb-2 last:pb-0">
               {showSectionHeaders && (
                 <div className="px-2.5 pb-1 flex items-center gap-2">
-                  <p className="ui-section-label">{labelForSection(section)}</p>
+                  <SectionLabel>{labelForSection(section)}</SectionLabel>
                 </div>
               )}
-              <p className="px-2.5 py-3 text-[12px] text-dim font-mono">Loading {labelForSection(section).toLowerCase()}…</p>
+              <PanelMessage className="px-2.5 py-3 font-mono text-[12px]">Loading {labelForSection(section).toLowerCase()}…</PanelMessage>
             </section>
           ))}
 
           {conversationContentSearchError && scope === THREADS_COMMAND_PALETTE_SCOPE && (
             <section className="pb-2 last:pb-0">
-              <p className="px-2.5 py-3 text-[12px] text-danger">Failed to search thread contents: {conversationContentSearchError}</p>
+              <PanelMessage tone="danger" className="px-2.5 py-3 text-[12px]">
+                Failed to search thread contents: {conversationContentSearchError}
+              </PanelMessage>
             </section>
           )}
 
           {quickOpenError && scope !== THREADS_COMMAND_PALETTE_SCOPE && (
             <section className="pb-2 last:pb-0">
-              <p className="px-2.5 py-3 text-[12px] text-danger">
+              <PanelMessage tone="danger" className="px-2.5 py-3 text-[12px]">
                 Failed to load {quickOpenScopeLabel.toLowerCase()}: {quickOpenError}
-              </p>
+              </PanelMessage>
             </section>
           )}
 
           {quickOpenSearchError && scope !== THREADS_COMMAND_PALETTE_SCOPE && (
             <section className="pb-2 last:pb-0">
-              <p className="px-2.5 py-3 text-[12px] text-danger">
+              <PanelMessage tone="danger" className="px-2.5 py-3 text-[12px]">
                 Failed to search {quickOpenScopeLabel.toLowerCase()}: {quickOpenSearchError}
-              </p>
+              </PanelMessage>
             </section>
           )}
 
           {extensionSearchError && activeSearchProvider && (
             <section className="pb-2 last:pb-0">
-              <p className="px-2.5 py-3 text-[12px] text-danger">
+              <PanelMessage tone="danger" className="px-2.5 py-3 text-[12px]">
                 Failed to search {activeSearchProvider.title.toLowerCase()}: {extensionSearchError}
-              </p>
+              </PanelMessage>
             </section>
           )}
 
@@ -951,7 +952,9 @@ export function CommandPalette() {
             !(quickOpenError && scope !== THREADS_COMMAND_PALETTE_SCOPE) &&
             !(quickOpenSearchError && scope !== THREADS_COMMAND_PALETTE_SCOPE) &&
             !(extensionSearchError && activeSearchProvider) && (
-              <p className="px-4 py-10 text-center font-mono text-[12px] text-dim">{emptyStateCopy(scope, query)}</p>
+              <PanelMessage align="center" className="px-4 py-10 font-mono text-[12px]">
+                {emptyStateCopy(scope, query)}
+              </PanelMessage>
             )}
         </div>
       </div>

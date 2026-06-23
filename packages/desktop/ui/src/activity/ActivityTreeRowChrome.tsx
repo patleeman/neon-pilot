@@ -125,8 +125,8 @@ export function ActivityTreeRowActions({
   return (
     <>
       {item.kind === 'group' && renderContextMenu ? (
-        <span
-          role="button"
+        <button
+          type="button"
           tabIndex={-1}
           className="ui-icon-button ui-icon-button-compact h-5 w-5 shrink-0"
           aria-label={`Workspace actions for ${item.title}`}
@@ -141,11 +141,11 @@ export function ActivityTreeRowActions({
           }}
         >
           <MoreActionsIcon />
-        </span>
+        </button>
       ) : null}
       {rowModel.canCreateChild ? (
-        <span
-          role="button"
+        <button
+          type="button"
           tabIndex={-1}
           className="ui-icon-button ui-icon-button-compact h-5 w-5 shrink-0"
           aria-label={`New conversation in ${item.title}`}
@@ -157,12 +157,12 @@ export function ActivityTreeRowActions({
           }}
         >
           <PlusIcon />
-        </span>
+        </button>
       ) : null}
       {inlineActions.map((action) => (
-        <span
+        <button
           key={action.id}
-          role="button"
+          type="button"
           tabIndex={-1}
           className="ui-icon-button ui-icon-button-compact h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
           aria-label={action.title}
@@ -174,11 +174,11 @@ export function ActivityTreeRowActions({
           }}
         >
           {action.icon ?? '•'}
-        </span>
+        </button>
       ))}
       {rowModel.canArchive ? (
-        <span
-          role="button"
+        <button
+          type="button"
           tabIndex={-1}
           className="ui-icon-button ui-icon-button-compact h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
           aria-label="Archive conversation"
@@ -190,7 +190,7 @@ export function ActivityTreeRowActions({
           }}
         >
           <CloseIcon />
-        </span>
+        </button>
       ) : null}
     </>
   );
@@ -307,19 +307,19 @@ function ExpanderButton({
   expanded: boolean;
   label: string;
   title?: string;
-  onClick: (event: MouseEvent<HTMLSpanElement>) => void;
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
   return (
-    <span
-      role="button"
+    <button
+      type="button"
       tabIndex={-1}
-      className="-ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-dim hover:text-primary"
+      className="-ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border-0 bg-transparent p-0 text-dim hover:text-primary"
       aria-label={label}
       title={title}
       onClick={onClick}
     >
       {expanded ? '▾' : '▸'}
-    </span>
+    </button>
   );
 }
 

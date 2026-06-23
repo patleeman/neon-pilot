@@ -266,16 +266,6 @@
     box-shadow: 0 0 0 6px rgb(var(--color-steel) / 0.16);
   }
 
-  .ui-sidebar-nav-item {
-    @apply relative mx-1 flex min-h-7 items-center gap-2 rounded-md px-2.5 py-1 text-[13.5px] font-medium leading-5 text-secondary transition-colors hover:bg-elevated hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:bg-accent/10 focus-visible:text-primary active:bg-accent/10 active:text-primary;
-  }
-
-  .ui-sidebar-nav-item-active {
-    @apply text-accent;
-    background-color: rgb(var(--color-accent) / 0.1);
-    box-shadow: inset 0 0 0 1px rgb(var(--color-accent) / 0.22);
-  }
-
   .ui-browser-entry-selected::before,
   .ui-list-row-selected::before {
     content: '';
@@ -287,11 +277,6 @@
     border-radius: 999px;
     background: linear-gradient(180deg, rgb(var(--color-accent)), rgb(var(--color-steel)));
     opacity: 0.95;
-  }
-
-  .ui-sidebar-nav-item-active svg {
-    opacity: 1;
-    color: rgb(var(--color-steel));
   }
 
   .ui-sidebar-nav-badge {
@@ -409,11 +394,6 @@
   .ui-workbench-new-tab-grid .ui-action-tile {
     min-height: 3.5rem;
     padding: 0.75rem;
-  }
-
-  .ui-section-label {
-    @apply text-[10px] font-semibold uppercase tracking-wider;
-    color: rgb(var(--color-teal) / 0.88);
   }
 
   .ui-section-count {
