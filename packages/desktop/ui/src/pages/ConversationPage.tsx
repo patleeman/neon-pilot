@@ -6335,8 +6335,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           data-visible-message-count={visibleTranscriptMessages?.length ?? 0}
           style={{ scrollPaddingTop: `${conversationHeaderOffset + 16}px` }}
         >
-          <div ref={conversationHeaderRef} className="sticky top-0 z-30 bg-base/90 px-8 pt-6 backdrop-blur sm:px-10">
-            <div className="mx-auto w-full max-w-6xl pb-4 pt-1">
+          <div
+            ref={conversationHeaderRef}
+            className="conversation-header sticky top-0 z-30 bg-base/90 px-4 pt-5 backdrop-blur sm:px-6 lg:px-10"
+          >
+            <div className="conversation-header-content mx-auto w-full max-w-6xl pb-4 pt-1">
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1 max-w-4xl">
                   {isEditingTitle && !draft ? (
@@ -6564,7 +6567,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
             onClick={() => {
               scrollToBottom({ behavior: 'smooth', force: true });
             }}
-            className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 ui-pill ui-pill-muted shadow-md"
+            className="conversation-scroll-to-bottom absolute bottom-4 left-1/2 z-20 -translate-x-1/2 ui-pill ui-pill-muted shadow-md"
           >
             ↓ scroll to bottom
           </TextButton>
@@ -6689,12 +6692,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="conversation-page-shell flex h-full flex-col overflow-hidden">
       {transcriptPane}
       {/* Input area */}
       {!keyboardOpen && (
         <ConversationComposer
-          className={`bg-gradient-to-t from-base via-base to-transparent px-8 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-colors sm:px-10 ${dragOver ? 'bg-accent/5' : ''}`}
+          className={`conversation-composer-region bg-gradient-to-t from-base via-base to-transparent px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-colors sm:px-6 lg:px-10 ${dragOver ? 'bg-accent/5' : ''}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -6704,7 +6707,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           shellRef={composerShellRef}
           shellClassName={undefined}
           notice={notice}
-          childrenClassName="relative mx-auto w-full max-w-6xl"
+          childrenClassName="conversation-composer-inner relative mx-auto w-full max-w-6xl"
           dragOverlay={
             dragOver ? (
               <div className="px-4 py-3 text-center text-[12px] text-accent border-b border-accent/20">📎 Drop files to attach</div>
