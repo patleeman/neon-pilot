@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppEvents } from '../../app/contexts.js';
 import { api } from '../../client/api.js';
 import { dispatchOpenCompanionChat } from '../../companion/companionEvents.js';
+import { splitComposerShelvesByPlacement } from '../../conversation/conversationComposerShelves.js';
+import { buildComposerShelfContext } from '../../conversation/conversationExtensionContexts.js';
 import {
   persistForkPromptDraft,
   resolveBranchEntryIdFromSessionDetailResult,
@@ -10,9 +12,12 @@ import {
   resolveRewindTargetFromResolvedEntry,
   resolveSessionEntryIdFromBlockId,
 } from '../../conversation/forking.js';
+import { ComposerShelfHost } from '../../extensions/ComposerShelfHost.js';
+import { useExtensionRegistry } from '../../extensions/useExtensionRegistry.js';
 import { useDesktopConversationState } from '../../hooks/useDesktopConversationState.js';
 import { getModelSelectionValue } from '../../model/modelPreferences.js';
 import type { MessageBlock, ModelInfo, PromptAttachmentRefInput, PromptImageInput } from '../../shared/types.js';
+import { ConversationGoalPanel } from '../conversation/ConversationGoalPanel.js';
 import { ChatRailComposer } from './ChatRailComposer.js';
 import { ChatView } from './ChatView.js';
 import { awaitPendingSideChatSession } from './sideChatSessionReadiness.js';
@@ -28,6 +33,7 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
     tailBlocks: 400,
   });
   const { conversationVersions } = useAppEvents();
+  const extensionRegistry = useExtensionRegistry();
 
   const stream = desktopState.state?.stream ?? null;
   const messages: MessageBlock[] = stream?.blocks ?? [];
@@ -35,6 +41,7 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
   const isCompacting = stream?.isCompacting ?? false;
   const contextUsage = stream?.contextUsage ?? null;
   const tokens = stream?.tokens ?? null;
+  const goalState = stream?.goalState ?? null;
 
   // ── Models ────────────────────────────────────────────────────────────
   const [models, setModels] = useState<ModelInfo[]>([]);
@@ -248,7 +255,33 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
     [conversationId],
   );
 
+  const handleCancelGoal = useCallback(() => {
+    void desktopState.send('/goal clear');
+  }, [desktopState]);
+
   const composerWorkspaceCwd = desktopState.state?.sessionDetail?.meta?.cwd ?? workspaceCwd;
+  const { top: composerShelvesTop, bottom: composerShelvesBottom } = useMemo(
+    () => splitComposerShelvesByPlacement(extensionRegistry.composerShelves),
+    [extensionRegistry.composerShelves],
+  );
+  const composerShelfContext = useMemo(
+    () => buildComposerShelfContext({ conversationId, isStreaming, isLive: true }),
+    [conversationId, isStreaming],
+  );
+  const conversationShelves =
+    composerShelvesTop.length > 0 || composerShelvesBottom.length > 0 ? (
+      <>
+        <ConversationGoalPanel goal={goalState} onCancel={handleCancelGoal} />
+        {composerShelvesTop.map((shelf) => (
+          <ComposerShelfHost key={`${shelf.extensionId}:${shelf.id}`} registration={shelf} shelfContext={composerShelfContext} />
+        ))}
+        {composerShelvesBottom.map((shelf) => (
+          <ComposerShelfHost key={`${shelf.extensionId}:${shelf.id}`} registration={shelf} shelfContext={composerShelfContext} />
+        ))}
+      </>
+    ) : goalState ? (
+      <ConversationGoalPanel goal={goalState} onCancel={handleCancelGoal} />
+    ) : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-base select-text" data-chat-rail="1">
@@ -282,6 +315,7 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
           onAbortStream={handleAbort}
           onSelectModel={handleModelSelect}
           onSelectThinkingLevel={handleThinkingLevelSelect}
+          conversationShelves={conversationShelves}
         />
       </div>
     </div>
