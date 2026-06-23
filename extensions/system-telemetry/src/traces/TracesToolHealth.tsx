@@ -147,7 +147,7 @@ function ToolCard({ tool }: { tool: TraceToolHealth }) {
   const okCalls = tool.calls - tool.errors;
 
   return (
-    <SurfacePanel muted className={hasTrouble ? 'border-danger/20 bg-danger/[0.03] p-3' : 'border-transparent p-3'}>
+    <SurfacePanel muted className={hasTrouble ? 'ui-surface-danger-soft p-3' : 'border-transparent p-3'}>
       <div className="mb-2.5 flex min-w-0 items-center gap-2">
         <StatusDot tone={dotTone} size="xs" className="shrink-0" />
         <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{tool.toolName}</span>
@@ -167,7 +167,7 @@ function ToolCard({ tool }: { tool: TraceToolHealth }) {
       </div>
       <div className="mt-2.5 pt-2 border-t border-border-subtle/50">
         <div className="flex h-2 overflow-hidden rounded-md bg-surface">
-          <div className="bg-success/70" style={{ width: `${tool.calls > 0 ? (okCalls / tool.calls) * 100 : 0}%` }} />
+          <div className="ui-health-ok-bar" style={{ width: `${tool.calls > 0 ? (okCalls / tool.calls) * 100 : 0}%` }} />
           {tool.errors > 0 && <div className="bg-danger" style={{ width: `${(tool.errors / tool.calls) * 100}%` }} />}
         </div>
         <div className="flex justify-between text-[9px] text-dim mt-1">

@@ -230,11 +230,7 @@ function RoutineHookList({
       <div className="px-4 pb-0.5 pt-1">
         <div className="flex items-center justify-between gap-2">
           <SectionLabel className="block">Routines</SectionLabel>
-          <button
-            type="button"
-            className="rounded px-1.5 py-0.5 text-[11px] text-accent hover:bg-surface-3"
-            onClick={() => onShowAllHooksChange(!showAllHooks)}
-          >
+          <button type="button" className="ui-inline-action-link" onClick={() => onShowAllHooksChange(!showAllHooks)}>
             {showAllHooks ? 'Done' : 'Add event'}
           </button>
         </div>
@@ -714,9 +710,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           </div>
           <p className="m-0 mt-1 text-[12px] text-secondary">Edit this routine inline. Save collapses it back into the timeline.</p>
         </div>
-        {actionError ? (
-          <div className="mb-4 rounded-md border border-danger/30 bg-danger/10 p-2 text-[12px] text-danger">{actionError}</div>
-        ) : null}
+        {actionError ? <div className="ui-callout-danger mb-4">{actionError}</div> : null}
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
           <div className="grid gap-3">
             <label className="grid gap-1">
@@ -774,7 +768,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               </label>
             </div>
             {draft.type === 'stop' ? (
-              <div className="rounded-md border border-warning/30 bg-warning/10 p-2 text-[12px] text-secondary">
+              <div className="ui-callout-warning">
                 Manual stop never calls a model. It always blocks this event and uses the instruction below as the explanation.
               </div>
             ) : null}
@@ -841,7 +835,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           </div>
           <div className="grid content-start gap-3">
             {draft.type !== 'stop' ? (
-              <div className="rounded-md border border-border-subtle bg-surface-2 p-3">
+              <div className="ui-flat-panel">
                 <div className="mb-2 text-[11px] uppercase tracking-wider text-secondary">Model for this routine</div>
                 <label className="mb-2 grid gap-1">
                   <span className="text-[10px] uppercase tracking-wider text-dim">Primary model</span>
@@ -935,7 +929,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             </div>
             <div className="grid gap-2">
               {draft.outcomes.map((outcome, index) => (
-                <div key={index} className="rounded-md border border-border-subtle bg-surface-2 p-3">
+                <div key={index} className="ui-flat-panel">
                   <div className="grid gap-2 md:grid-cols-[180px_1fr_220px_auto]">
                     <label className="grid gap-1">
                       <span className="text-[10px] uppercase tracking-wider text-dim">Enum value</span>
@@ -1008,7 +1002,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     </div>
                   </div>
                   {outcome.behavior === 'branch' ? (
-                    <label className="mt-2 grid gap-1 rounded-md border border-border-subtle bg-app/40 p-2">
+                    <label className="ui-flat-panel mt-2 grid gap-1 p-2">
                       <span className="text-[10px] uppercase tracking-wider text-dim">Then run</span>
                       <Select
                         className="w-full"
@@ -1037,9 +1031,9 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     data-parent-outcome-id={outcome.id}
                     className={cx(
                       'mt-3 border-l border-border-subtle/70 pl-3 transition-colors',
-                      dragTargetRoute?.parentRoutineId === routine.id && dragTargetRoute.parentOutcomeId === outcome.id
-                        ? 'bg-accent/10 outline outline-1 outline-accent/40'
-                        : '',
+                      dragTargetRoute?.parentRoutineId === routine.id &&
+                        dragTargetRoute.parentOutcomeId === outcome.id &&
+                        'ui-drop-surface-active',
                     )}
                     onDragOver={(event) => onDragOverLane(event, routine.position)}
                     onDrop={(event) => {
@@ -1054,7 +1048,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                       <div className="flex gap-1">
                         <button
                           type="button"
-                          className="rounded px-2 py-1 text-accent hover:bg-surface-3"
+                          className="ui-inline-action-link"
                           onClick={(event) => {
                             event.stopPropagation();
                             addRoutine('instruction', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
@@ -1064,7 +1058,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                         </button>
                         <button
                           type="button"
-                          className="rounded px-2 py-1 text-accent hover:bg-surface-3"
+                          className="ui-inline-action-link"
                           onClick={(event) => {
                             event.stopPropagation();
                             addRoutine('decision', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
@@ -1101,9 +1095,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     const isEditing = selectedRoutineId === routine.id && draft?.id === routine.id;
     return (
       <div key={routine.id}>
-        {dragTargetRoutineId === routine.id ? (
-          <div className="mb-2 h-1 rounded-full bg-accent shadow-[0_0_18px_rgba(80,160,255,0.45)]" />
-        ) : null}
+        {dragTargetRoutineId === routine.id ? <div className="ui-drop-indicator mb-2" /> : null}
         <div
           data-routine-id={routine.id}
           data-routine-position={routine.position}
@@ -1118,17 +1110,17 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             void moveRoutine(routine.position, routine.id);
           }}
           className={cx(
-            'relative overflow-visible rounded-md border bg-surface-2 text-left transition-colors',
-            dragId === routine.id && 'scale-[0.99] border-accent/60 bg-accent/10 opacity-45 ring-1 ring-accent/40',
-            dragTargetRoutineId === routine.id && 'border-accent/70',
-            isEditing ? 'border-accent/70 bg-accent/10' : 'border-border-subtle',
+            'ui-draggable-card',
+            dragId === routine.id && 'ui-draggable-card-dragging',
+            dragTargetRoutineId === routine.id && 'ui-draggable-card-target',
+            isEditing && 'ui-draggable-card-editing',
           )}
         >
           <div className="grid grid-cols-[22px_1fr_auto] gap-2 px-2 py-2">
             <button
               type="button"
               aria-label={`Drag ${routine.name}`}
-              className="cursor-grab rounded px-1 text-dim hover:bg-surface-3 hover:text-primary active:cursor-grabbing"
+              className="ui-inline-action-link cursor-grab active:cursor-grabbing"
               onPointerDown={(event) => startPointerDrag(event, routine)}
             >
               ⋮⋮
@@ -1161,7 +1153,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             <div className="relative flex items-start gap-1">
               <button
                 type="button"
-                className={cx('rounded px-2 py-1 text-[12px] hover:bg-surface-3', isEditing ? 'bg-surface-3 text-primary' : 'text-accent')}
+                className={cx('ui-inline-action-link', isEditing && 'text-primary')}
                 onClick={(event) => {
                   event.stopPropagation();
                   if (isEditing) closeEditor();
@@ -1188,7 +1180,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     type="button"
                     aria-label={`More actions for ${routine.name}`}
                     aria-expanded={openRoutineMenuId === routine.id}
-                    className="rounded px-2 py-1 text-xl leading-none text-secondary hover:bg-surface-3 hover:text-primary"
+                    className="ui-inline-action-link text-xl leading-none text-secondary"
                     onClick={(event) => {
                       event.stopPropagation();
                       setOpenRoutineMenuId((current) => (current === routine.id ? null : routine.id));
@@ -1252,7 +1244,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                       className={cx(
                         'rounded-md px-2 py-1.5 transition-colors',
                         dragTargetRoute?.parentRoutineId === routine.id && dragTargetRoute.parentOutcomeId === outcome.id
-                          ? 'bg-accent/10 outline outline-1 outline-accent/40'
+                          ? 'ui-drop-surface-active'
                           : 'bg-transparent',
                       )}
                       onDragOver={(event) => onDragOverLane(event, routine.position)}
@@ -1289,7 +1281,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                           <div className="flex gap-1">
                             <button
                               type="button"
-                              className="rounded px-2 py-1 text-accent hover:bg-surface-3"
+                              className="ui-inline-action-link"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 addRoutine('instruction', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
@@ -1299,7 +1291,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                             </button>
                             <button
                               type="button"
-                              className="rounded px-2 py-1 text-accent hover:bg-surface-3"
+                              className="ui-inline-action-link"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 addRoutine('decision', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
@@ -1384,7 +1376,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   </div>
                 ) : null}
                 {selectedRuns.map((run) => (
-                  <div key={run.id} className="rounded-md border border-border-subtle bg-surface-2 p-3">
+                  <div key={run.id} className="ui-flat-panel">
                     <div className="flex gap-2">
                       <b>{run.status}</b>
                       <span className="text-secondary">{new Date(run.startedAt).toLocaleString()}</span>
@@ -1412,7 +1404,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   data-routine-lane="before"
                   className={cx(
                     'grid gap-2 rounded-md transition-colors',
-                    dragOverPosition === 'before' && dragId ? 'bg-accent/5 outline outline-1 outline-accent/30' : '',
+                    dragOverPosition === 'before' && dragId ? 'ui-drop-surface-active' : '',
                   )}
                   onDragOver={(event) => onDragOverLane(event, 'before')}
                   onDragLeave={() => setDragOverPosition((current) => (current === 'before' ? null : current))}
@@ -1433,7 +1425,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   data-routine-lane="after"
                   className={cx(
                     'grid gap-2 rounded-md transition-colors',
-                    dragOverPosition === 'after' && dragId ? 'bg-accent/5 outline outline-1 outline-accent/30' : '',
+                    dragOverPosition === 'after' && dragId ? 'ui-drop-surface-active' : '',
                   )}
                   onDragOver={(event) => onDragOverLane(event, 'after')}
                   onDragLeave={() => setDragOverPosition((current) => (current === 'after' ? null : current))}
@@ -1454,10 +1446,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         </main>
       </AppPageLayout>
       {dragPreview ? (
-        <div
-          className="pointer-events-none fixed z-50 w-72 rounded-md border border-accent/70 bg-surface/95 px-3 py-2 text-left shadow-2xl ring-1 ring-accent/30"
-          style={{ left: dragPreview.x + 14, top: dragPreview.y + 14 }}
-        >
+        <div className="ui-drag-preview" style={{ left: dragPreview.x + 14, top: dragPreview.y + 14 }}>
           <div className="text-[11px] uppercase tracking-[0.14em] text-accent">Dragging {routineLabel(dragPreview.type)}</div>
           <div className="mt-1 truncate text-[13px] font-semibold text-primary">{dragPreview.name}</div>
           <div className="mt-1 text-[11px] text-secondary">

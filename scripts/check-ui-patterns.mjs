@@ -21,7 +21,7 @@ const patterns = [
   {
     id: 'web-shadow-blur',
     message: 'shadow/backdrop treatment; prefer flat desktop workbench surfaces',
-    regex: /\b(?:shadow-(?:sm|md|lg|xl|2xl)|shadow\b|backdrop-blur(?:-\w+)?)\b/,
+    regex: /\b(?:shadow-(?!none\b)(?:sm|md|lg|xl|2xl)|shadow(?!-)\b|backdrop-blur(?:-\w+)?)\b/,
   },
   {
     id: 'arbitrary-text-size',

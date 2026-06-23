@@ -3393,15 +3393,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             role="radio"
                             aria-checked={isSelected}
                             aria-label={entry.label}
-                            className={cx(
-                              'inline-flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-elevated transition-colors hover:border-border-default',
-                              isSelected && 'border-accent bg-accent/10',
-                            )}
+                            className={cx('ui-swatch-button', isSelected && 'ui-swatch-button-selected')}
                             title={entry.label}
                             onClick={() => setAccent(entry.id as ThemeAccent)}
                           >
                             <span
-                              className="h-4 w-4 rounded-full border border-border-default"
+                              className="ui-swatch-chip"
                               style={{ backgroundColor: `rgb(${currentTokens.accent.replaceAll(' ', ', ')})` }}
                             />
                           </button>
@@ -4095,12 +4092,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         </div>
                                         {editingModelId === NEW_MODEL_ID ? (
                                           <div className="flex flex-wrap gap-2">
-                                            <span className="rounded-full border border-border-subtle px-2 py-1 text-[12px] text-secondary">
-                                              Try provider lookup first
-                                            </span>
-                                            <span className="rounded-full border border-border-subtle px-2 py-1 text-[12px] text-secondary">
-                                              Or paste a model ID
-                                            </span>
+                                            <span className="ui-subtle-pill">Try provider lookup first</span>
+                                            <span className="ui-subtle-pill">Or paste a model ID</span>
                                           </div>
                                         ) : null}
                                         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto] md:items-end">
@@ -4379,7 +4372,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         </div>
                                       )}
                                       {!selectedProviderLogin.deviceCode && selectedProviderLogin.authUrl && (
-                                        <div className="space-y-2 rounded-md border border-border-subtle bg-elevated/50 p-2.5">
+                                        <div className="ui-flat-panel space-y-2 p-2.5">
                                           <label className="ui-card-meta" htmlFor="settings-provider-oauth-url">
                                             OAuth login URL
                                           </label>

@@ -376,12 +376,9 @@ function WorkspaceStatusBadge({ status, count }: { status: WorkspaceGitStatusCha
     );
   }
   return (
-    <span
-      className="rounded-sm bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent"
-      title={`${count} changed descendant${count === 1 ? '' : 's'}`}
-    >
+    <Pill tone="accent" mono className="px-1.5 py-0 text-[10px]" title={`${count} changed descendant${count === 1 ? '' : 's'}`}>
       {count}
-    </span>
+    </Pill>
   );
 }
 
@@ -412,8 +409,8 @@ function WorkspaceTreeRow({
     <div>
       <div
         className={cx(
-          'group flex min-h-7 min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-[12px] text-secondary hover:bg-surface/70 hover:text-primary',
-          selected && 'bg-accent/10 text-primary',
+          'group flex min-h-7 min-w-0 items-center gap-1 px-1.5 py-1 text-[12px] text-secondary',
+          selected && 'ui-selected-row-accent text-primary',
         )}
         style={{ paddingLeft: `${8 + depth * 14}px` }}
         onClick={() => (isDirectory ? onToggle(entry) : onSelect(entry))}
@@ -435,7 +432,7 @@ function WorkspaceTreeRow({
         )}
         <WorkspaceStatusBadge status={entry.gitStatus} count={entry.descendantGitStatusCount} />
         <TextButton
-          className="hidden shrink-0 rounded px-1 py-0.5 text-[10px] text-dim hover:bg-elevated hover:text-primary group-hover:inline"
+          className="hidden shrink-0 px-1 py-0.5 text-[10px] text-dim group-hover:inline"
           title="Draft an agent prompt for this path"
           onClick={(event) => {
             event.stopPropagation();
@@ -867,10 +864,7 @@ export function WorkspaceExplorer({
 
   if (!open && !railOnly) {
     return (
-      <ToolbarButton
-        className="absolute right-3 top-3 z-40 rounded-md border border-border-subtle bg-base/90 px-2 py-1 text-[11px] text-secondary shadow-sm hover:text-primary"
-        onClick={() => setOpen(true)}
-      >
+      <ToolbarButton className="absolute right-3 top-3 z-40 px-2 py-1 text-[11px] text-secondary" onClick={() => setOpen(true)}>
         Files
       </ToolbarButton>
     );
@@ -1431,7 +1425,7 @@ export function WorkspaceFileDocument({
           </Suspense>
         )}
       </div>
-      {saveState.error ? <div className="bg-danger/5 px-3 py-1 text-[11px] text-danger">{saveState.error}</div> : null}
+      {saveState.error ? <div className="ui-surface-danger-soft px-3 py-1 text-[11px] text-danger">{saveState.error}</div> : null}
       {selectionContextMenu ? (
         <div
           ref={selectionContextMenuRef}

@@ -1,5 +1,6 @@
 import {
   api,
+  cx,
   Field,
   Notice,
   Pill,
@@ -353,11 +354,7 @@ export function McpSettingsPanel() {
                     <button
                       type="button"
                       aria-pressed={selected}
-                      className={`w-full rounded-md border px-3 py-2 text-left transition ${
-                        selected
-                          ? 'border-accent/60 bg-accent/10'
-                          : 'border-border-subtle/70 bg-surface-muted/20 hover:border-border-subtle'
-                      }`}
+                      className={cx('ui-selectable-card', selected && 'ui-selectable-card-selected')}
                       onClick={() => selectServer(name, rawServer, server)}
                     >
                       <span className="flex flex-wrap items-center gap-2">

@@ -458,7 +458,7 @@ export function AskUserQuestionToolBlock({
     <div
       className={cx(
         'border-y border-border-subtle/40 py-2.5 text-[12px] transition-colors',
-        state.status === 'pending' && '-mx-2 border-warning/20 bg-warning/5 px-2',
+        state.status === 'pending' && 'ui-transcript-warning-row',
       )}
       data-transcript-event="ask-user-question"
       onKeyDownCapture={mode === 'inline' ? handlePanelHotkeys : undefined}
@@ -609,7 +609,7 @@ export function AskUserQuestionToolBlock({
                               indicator={indicator}
                               label={option.label}
                               details={option.details}
-                              className={cx('-mx-0.5 focus-visible:ring-offset-surface', submitting && 'cursor-default opacity-60')}
+                              className={cx('-mx-0.5', submitting && 'cursor-default opacity-60')}
                             />
                           );
                         })}

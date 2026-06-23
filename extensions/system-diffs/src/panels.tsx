@@ -57,10 +57,7 @@ function CheckpointFallbackToolBlock({ block }: { block: CheckpointTranscriptBlo
           : 'Checkpoint';
 
   return (
-    <SurfacePanel
-      muted
-      className={cx('px-3.5 py-3 text-[12px]', isError ? 'border-danger/30 bg-danger/5' : 'border-success/20 bg-success/5')}
-    >
+    <SurfacePanel muted className={cx('px-3.5 py-3 text-[12px]', isError ? 'ui-surface-danger-soft' : 'ui-surface-success-soft')}>
       <div className="flex items-start gap-3">
         <div className="ui-chat-avatar mt-0.5">
           <span className="ui-chat-avatar-mark">✓</span>

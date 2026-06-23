@@ -1,9 +1,8 @@
+import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
 import { useEffect, useRef, useState } from 'react';
 
-import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
-
-import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { setExtensionCommandContext } from '../../extensions/commands';
+import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import type { ExtensionComposerControlRegistration } from '../../extensions/useExtensionRegistry';
 import { cx, IconButton } from '../ui';
 import {
@@ -112,10 +111,7 @@ export function ConversationPreferencesRow({
           <IconButton
             type="button"
             onClick={() => setMenuOpen((current) => !current)}
-            className={cx(
-              'h-8 w-8 rounded-md border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base',
-              menuOpen && 'bg-surface/55 text-primary',
-            )}
+            className={cx('h-8 w-8', menuOpen && 'bg-surface/55 text-primary')}
             aria-label="More composer settings"
             aria-expanded={menuOpen}
             aria-haspopup="dialog"

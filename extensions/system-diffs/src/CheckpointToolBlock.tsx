@@ -43,10 +43,7 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
   return (
     <SurfacePanel
       muted
-      className={cx(
-        'px-3 py-2.5 text-[12px] transition-colors',
-        isError ? 'border-danger/30 bg-danger/5' : 'border-success/20 bg-success/5',
-      )}
+      className={cx('px-3 py-2.5 text-[12px] transition-colors', isError ? 'ui-surface-danger-soft' : 'ui-surface-success-soft')}
     >
       <div className="flex items-start gap-2.5">
         <span className="mt-0.5 text-[13px] text-success">✓</span>

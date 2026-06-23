@@ -164,6 +164,7 @@ const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
 const NOTIFICATIONS_MARK_ALL_READ_EVENT = 'neon-pilot-notifications-mark-all-read';
 const NOTIFICATIONS_DISMISS_ALL_EVENT = 'neon-pilot-notifications-dismiss-all';
 const NOTIFICATIONS_CLOSE_EVENT = 'neon-pilot-notifications-close';
+const SIDEBAR_AUTO_COLLAPSE_WIDTH = 720;
 
 const WorkspaceExplorer = lazyRouteWithRecovery('layout-workspace-explorer', () =>
   import('./workspace/WorkspaceExplorer').then((module) => ({ default: module.WorkspaceExplorer })),
@@ -1540,6 +1541,11 @@ export function Layout() {
   const viewportWidth = useViewportWidth();
   const sidebar = useResize({ initial: 224, min: 160, max: 320, storageKey: SIDEBAR_WIDTH_STORAGE_KEY, side: 'left' });
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  useEffect(() => {
+    if (viewportWidth < SIDEBAR_AUTO_COLLAPSE_WIDTH) {
+      setSidebarOpen(false);
+    }
+  }, [viewportWidth]);
   const railMinWidth = 160;
   const railMaxWidth = getRailMaxWidth({
     viewportWidth,

@@ -3,10 +3,8 @@ import { cx, MenuGroupLabel, MenuItem, MenuSeparator, PositionedMenu, SectionLab
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
-const INLINE_TRIGGER_CLASS =
-  'h-8 min-w-0 truncate rounded-md border border-transparent bg-transparent px-1.5 text-[11px] font-medium text-secondary outline-none transition-colors hover:bg-surface/45 hover:text-primary focus-visible:border-border-subtle focus-visible:bg-surface/55 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-accent/20 disabled:cursor-default disabled:opacity-40';
-const MENU_TRIGGER_CLASS =
-  'h-9 w-full min-w-0 rounded-lg border border-border-subtle bg-surface/45 px-2.5 text-[12px] font-medium text-primary outline-none transition-colors hover:bg-surface/65 focus-visible:border-accent/50 focus-visible:bg-surface/65 disabled:cursor-default disabled:opacity-40';
+const INLINE_TRIGGER_CLASS = 'ui-menu-trigger-inline truncate disabled:cursor-default disabled:opacity-40';
+const MENU_TRIGGER_CLASS = 'ui-menu-trigger-block truncate disabled:cursor-default disabled:opacity-40';
 export const MODEL_PICKER_MENU_STYLE = {
   maxHeight: 'min(20rem, calc(100vh - 7rem))',
   overflowY: 'auto',
@@ -411,7 +409,7 @@ function Ds4HealthIndicator({
     description.canStart;
   const dotClass =
     description.tone === 'active'
-      ? 'bg-accent shadow-[0_0_10px_rgba(96,165,250,0.65)] animate-pulse'
+      ? 'ui-status-dot-active'
       : description.tone === 'ok'
         ? 'bg-emerald-400'
         : description.tone === 'danger'
@@ -425,7 +423,7 @@ function Ds4HealthIndicator({
         <span className="font-mono text-[10px] leading-none text-amber-300">{setupProgress}%</span>
       ) : (
         <>
-          {active ? <span className="absolute h-3 w-3 rounded-full bg-accent/25 animate-ping" /> : null}
+          {active ? <span className="ui-status-dot-active-ping" /> : null}
           <span className={cx('relative h-1.5 w-1.5 rounded-full', dotClass)} />
         </>
       )}
@@ -444,7 +442,7 @@ function Ds4HealthIndicator({
       }}
     >
       <summary
-        className="flex min-w-0 cursor-pointer list-none items-center gap-1.5 rounded px-1 py-0.5 hover:bg-surface/55 hover:text-primary [&::-webkit-details-marker]:hidden"
+        className="ui-menu-trigger-inline flex cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden"
         aria-label={`${description.label} menu`}
       >
         {compactStatus}
@@ -515,9 +513,7 @@ function MenuButton({
       }}
     >
       {checked !== undefined ? (
-        <span className="flex w-3 shrink-0 justify-center">
-          {checked ? <span className="h-1.5 w-1.5 rounded-full bg-current" /> : null}
-        </span>
+        <span className="flex w-3 shrink-0 justify-center">{checked ? <span className="ui-radio-dot" /> : null}</span>
       ) : null}
       {children}
     </MenuItem>

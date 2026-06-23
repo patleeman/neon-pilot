@@ -233,7 +233,7 @@ export function TodoShelf({
               actions={
                 <IconButton
                   compact
-                  className="text-[12px] text-secondary hover:bg-surface hover:text-danger"
+                  className="text-[12px] text-secondary"
                   disabled={Boolean(busyId)}
                   title="Delete todo"
                   aria-label="Delete todo"

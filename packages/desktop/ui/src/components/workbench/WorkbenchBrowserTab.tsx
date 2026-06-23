@@ -16,12 +16,7 @@ import { Button, IconButton, Textarea, TextInput, ToolbarButton } from '../ui';
 
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 export const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
-const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set([
-  'browser.newTab',
-  'browser.reopenTab',
-  'browser.closeTab',
-  'browser.focusLocation',
-]);
+const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set(['browser.newTab', 'browser.reopenTab', 'browser.closeTab', 'browser.focusLocation']);
 
 function hasBlockingHtmlModal(): boolean {
   if (typeof document === 'undefined') {
@@ -494,20 +489,14 @@ export function WorkbenchBrowserTab({
           const x = Math.max(6, Math.min(marker.target.viewportRect.x, hostWidth - 28));
           const y = Math.max(6, Math.min(marker.target.viewportRect.y, hostHeight - 28));
           return (
-            <div
-              key={marker.id}
-              className="pointer-events-none absolute z-10 flex h-6 w-6 items-center justify-center rounded-full border border-accent/70 bg-accent text-[11px] font-semibold text-black shadow-lg"
-              style={{ left: x, top: y }}
-              title={marker.comment}
-              aria-hidden="true"
-            >
+            <div key={marker.id} className="ui-workbench-drop-badge" style={{ left: x, top: y }} title={marker.comment} aria-hidden="true">
               {index + 1}
             </div>
           );
         })}
         {commentDraft ? (
           <div
-            className="absolute z-20 w-[min(18rem,calc(100%-1rem))] rounded-xl border border-accent/30 bg-surface/95 p-2 shadow-2xl backdrop-blur"
+            className="ui-workbench-drop-popover"
             style={{
               left: Math.max(8, Math.min(commentDraft.target.viewportRect.x, (browserHostRef.current?.clientWidth ?? 320) - 296)),
               top: Math.max(

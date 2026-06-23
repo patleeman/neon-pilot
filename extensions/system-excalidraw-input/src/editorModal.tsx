@@ -328,7 +328,7 @@ function ExcalidrawEditor({
           onClick={() => {
             void handleAttach();
           }}
-          className="ui-icon-button-compact gap-1.5 bg-accent px-2.5 text-white hover:bg-accent/90 disabled:bg-accent/50 disabled:text-white/70"
+          className="ui-accent-solid-button ui-icon-button-compact gap-1.5 px-2.5"
           disabled={busy || !LoadedExcalidraw || loadError !== null}
           title={attaching ? 'Attaching...' : attachButtonLabel}
           aria-label={attachButtonLabel}

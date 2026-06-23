@@ -368,10 +368,7 @@ export function DesktopTopBar({
       <div className="ui-desktop-top-bar__center flex items-center justify-center gap-2" style={dragStyle}>
         <div
           ref={searchShellRef}
-          className={cx(
-            'flex h-7 w-full max-w-[560px] items-center gap-2 rounded-sm border border-border-subtle bg-elevated px-2 text-left text-[11px] text-dim transition-colors focus-within:border-accent/35 focus-within:bg-surface hover:border-border-default hover:bg-surface hover:text-secondary',
-            paletteOpen && 'pointer-events-none opacity-0',
-          )}
+          className={cx('ui-command-search-trigger', paletteOpen && 'pointer-events-none opacity-0')}
           style={noDragStyle}
         >
           <span aria-hidden="true">⌕</span>

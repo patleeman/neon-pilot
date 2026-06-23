@@ -44,6 +44,7 @@ import {
   InlineSelect,
   InlineTextInput,
   LoadingState,
+  MenuShell,
   RailSubsection,
   SectionLabel,
   Switch,
@@ -53,8 +54,8 @@ import {
 
 const TITLE_INPUT_CLASS = 'w-full min-w-0 bg-transparent text-[16px] font-medium text-primary placeholder:text-dim/75 outline-none';
 const PROMPT_INPUT_CLASS =
-  'min-h-0 flex-1 w-full resize-none overflow-y-auto bg-transparent px-1 pb-3 pt-2 text-[15px] leading-7 text-primary placeholder:text-dim/75 outline-none';
-const FIELD_HELP_CLASS = 'text-[12px] leading-relaxed text-secondary';
+  'min-h-0 flex-1 w-full resize-none overflow-y-auto bg-transparent px-1 pb-3 pt-2 text-sm leading-6 text-primary placeholder:text-dim/75 outline-none';
+const FIELD_HELP_CLASS = 'ui-card-meta leading-relaxed';
 export function taskStatusMeta(task: ScheduledTaskDetail): { text: string; cls: string } {
   if (task.running) return { text: 'running', cls: 'text-accent' };
   if (task.lastStatus === 'success') return { text: 'success', cls: 'text-success' };
@@ -212,7 +213,7 @@ function CronBuilderEditor({ value, onChange }: { value: CronEditorState; onChan
       </div>
 
       {!value.supported && value.mode === 'raw' && (
-        <p className="text-[12px] leading-relaxed text-secondary">
+        <p className={FIELD_HELP_CLASS}>
           This cron pattern is outside the simple editor. Switch back to Simple schedule in the menu if you want the builder.
         </p>
       )}
@@ -224,7 +225,7 @@ function CronBuilderEditor({ value, onChange }: { value: CronEditorState; onChan
               key={option.value}
               checked={value.builder.weekdays.includes(option.value)}
               onClick={() => toggleWeekday(option.value)}
-              className="min-w-9 px-2.5 py-1.5 text-[12px]"
+              className="min-w-9 px-2.5 py-1.5"
             >
               {option.shortLabel}
             </CheckButton>
@@ -266,10 +267,7 @@ function InlineSwitch({
       aria-label={label}
       onClick={() => onCheckedChange(!checked)}
       label={label}
-      className={cx(
-        'h-8 shrink-0 rounded-md px-1.5 text-[12px] font-medium transition-colors hover:bg-surface/45 hover:text-primary',
-        checked && 'text-primary',
-      )}
+      className={cx('h-8 shrink-0 px-1.5 font-medium', checked && 'text-primary')}
     />
   );
 }
@@ -286,7 +284,7 @@ function TaskAdvancedMenu({
   onChange: (patch: Partial<TaskFormState>) => void;
 }) {
   return (
-    <div className="absolute top-full right-0 z-20 mt-2 w-[20rem] rounded-xl border border-border-default bg-surface/95 p-3 shadow-2xl backdrop-blur-md">
+    <MenuShell role="group" className="absolute right-0 top-full z-20 mt-2 w-[20rem] p-3">
       <div className="space-y-3">
         <SectionLabel tone="muted" className="block">
           More options
@@ -426,7 +424,7 @@ function TaskAdvancedMenu({
           </>
         )}
       </div>
-    </div>
+    </MenuShell>
   );
 }
 
@@ -577,7 +575,11 @@ function TaskEditorForm({
               autoFocus
             />
             <div ref={moreMenuRef} className="relative flex shrink-0 items-center gap-2">
-              {advancedSummary && <span className="max-w-[16rem] truncate text-[12px] text-secondary">{advancedSummary}</span>}
+              {advancedSummary && (
+                <CardMeta as="span" className="max-w-[16rem] truncate">
+                  {advancedSummary}
+                </CardMeta>
+              )}
               <ToolbarButton
                 type="button"
                 onClick={() => setMoreMenuOpen((current) => !current)}
@@ -614,9 +616,9 @@ function TaskEditorForm({
       <div className="px-6 pb-4 pt-2">
         <div className="mx-auto max-w-4xl space-y-2">
           {visibleError ? (
-            <p className="text-[12px] text-danger" aria-live="polite">
+            <CardMeta className="text-danger" aria-live="polite">
               {visibleError}
-            </p>
+            </CardMeta>
           ) : null}
 
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -670,13 +672,13 @@ function TaskEditorForm({
                     ))}
                   </InlineSelect>
                 ) : (
-                  <span className="text-[12px] text-secondary">Chat</span>
+                  <CardMeta as="span">Chat</CardMeta>
                 )}
               </div>
             </div>
 
             <div className="flex shrink-0 items-center justify-end gap-3 xl:self-end">
-              <TextButton type="button" onClick={onCancel} className="text-[13px]">
+              <TextButton type="button" onClick={onCancel}>
                 Cancel
               </TextButton>
               <ToolbarButton type="submit" disabled={saving}>
@@ -784,7 +786,11 @@ export function ScheduledTaskPanel({
   }
 
   if (!task) {
-    return <div className="px-4 py-4 text-[12px] text-dim">Task not found.</div>;
+    return (
+      <CardMeta as="div" className="px-4 py-4">
+        Task not found.
+      </CardMeta>
+    );
   }
 
   async function handleSave() {
@@ -853,7 +859,7 @@ export function ScheduledTaskPanel({
               </>
             )}
           </CardMeta>
-          <p className="text-[12px] text-secondary">{taskDetail.id}</p>
+          <CardMeta>{taskDetail.id}</CardMeta>
         </div>
         <ToolbarButton
           onClick={() => {
@@ -896,7 +902,7 @@ export function ScheduledTaskPanel({
                 type="button"
                 onClick={() => navigate(`/conversations/${encodeURIComponent(taskDetail.threadConversationId)}`)}
                 tone="accent"
-                className="mt-1 text-[11px]"
+                className="mt-1"
               >
                 Open thread →
               </TextButton>
@@ -927,11 +933,11 @@ export function ScheduledTaskPanel({
         <RailSubsection title="Recent scheduler activity">
           <div className="space-y-2">
             {taskDetail.activity.slice(0, 5).map((entry) => (
-              <div key={entry.id} className="text-[12px] leading-relaxed">
+              <div key={entry.id} className="leading-relaxed">
                 <p className={entry.kind === 'run-failed' || entry.outcome === 'skipped' ? 'text-danger' : 'text-secondary'}>
                   {formatScheduledTaskActivity(entry)}
                 </p>
-                <p className="text-[11px] text-dim">recorded {timeAgo(entry.createdAt)}</p>
+                <CardMeta>recorded {timeAgo(entry.createdAt)}</CardMeta>
               </div>
             ))}
           </div>

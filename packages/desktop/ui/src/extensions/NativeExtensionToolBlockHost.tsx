@@ -94,10 +94,7 @@ function MissingExtensionRendererFallback({ block }: { block: ToolBlock }) {
   const isError = block.status === 'error' || !!block.error;
 
   return (
-    <SurfacePanel
-      muted
-      className={cx('px-3 py-2.5 text-[12px]', isError ? 'border-danger/30 bg-danger/5' : 'border-border/60 bg-panel/80')}
-    >
+    <SurfacePanel muted className={cx('px-3 py-2.5 text-[12px]', isError ? 'ui-surface-danger-soft' : 'border-border/60 bg-panel/80')}>
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <Pill tone={isError ? 'danger' : 'muted'} mono>
           {block.tool}

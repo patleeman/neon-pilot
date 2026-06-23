@@ -185,7 +185,7 @@ function WorkflowCard({ workflow, selected, onSelect }: { workflow: WorkflowSumm
       meta={<Pill tone={statusTone(workflow.status)}>{workflow.status}</Pill>}
       detail={workflow.activePhase || workflow.cwd}
       selected={selected}
-      className={cx('px-3 py-2', selected && 'bg-accent/10')}
+      className={cx('px-3 py-2', selected && 'ui-selected-row-accent')}
       onClick={onSelect}
     >
       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-dim">
@@ -519,8 +519,8 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                   key={item.id}
                   type="button"
                   className={cx(
-                    'grid w-full grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2 border-b border-border-subtle py-1.5 text-left text-[12px] hover:bg-surface-hover',
-                    selectedId === null && selectedTemplate?.id === item.id && 'bg-accent/10',
+                    'ui-compact-table-button',
+                    selectedId === null && selectedTemplate?.id === item.id && 'ui-selected-row-accent',
                   )}
                   onClick={() => {
                     setSelectedId(null);
@@ -537,8 +537,8 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                   key={item.id}
                   type="button"
                   className={cx(
-                    'grid w-full grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2 border-b border-border-subtle py-1.5 text-left text-[12px] hover:bg-surface-hover',
-                    selectedId === null && selectedTemplate?.id === item.id && 'bg-accent/10',
+                    'ui-compact-table-button',
+                    selectedId === null && selectedTemplate?.id === item.id && 'ui-selected-row-accent',
                   )}
                   onClick={() => {
                     setSelectedId(null);

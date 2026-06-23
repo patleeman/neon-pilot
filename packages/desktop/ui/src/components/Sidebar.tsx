@@ -116,7 +116,7 @@ import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
 import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
-import { cx, IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
+import { CardMeta, IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
 import { useSidebarConversationScope } from './useSidebarConversationScope';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 
@@ -170,11 +170,7 @@ function GatewayRailIcon({ provider }: { provider: string }) {
     .slice(0, 2)
     .toUpperCase();
   return (
-    <span
-      className="grid h-3.5 min-w-3.5 shrink-0 place-items-center rounded-sm bg-accent/15 px-0.5 text-[8px] font-semibold text-accent"
-      title={label}
-      aria-label={label}
-    >
+    <span className="ui-sidebar-count-badge" title={label} aria-label={label}>
       {abbreviation || 'GW'}
     </span>
   );
@@ -229,6 +225,7 @@ const LEGACY_THREAD_LIST_ENABLED = false;
 const SIDEBAR_BROWSER_NEW_CHAT_HOTKEY = 'Ctrl+Shift+N';
 const WORKBENCH_CLOSE_ACTIVE_FILE_EVENT = 'pa:workbench-close-active-file';
 const WORKBENCH_DOCUMENT_WITH_OPEN_FILE_SELECTOR = '[data-workbench-document-pane="true"][data-has-open-file="true"]';
+const SIDEBAR_DROP_TARGET_STYLE = { backgroundColor: 'rgb(var(--color-accent) / 0.1)' } satisfies CSSProperties;
 
 function getExtensionNavIcon(icon: string | undefined): string {
   switch (icon) {
@@ -594,9 +591,9 @@ function SidebarSettingsNav({ items, notice }: { items: SidebarExtensionNavItem[
   return (
     <div className="relative z-20 shrink-0 bg-panel">
       {notice ? (
-        <div aria-live="polite" className="px-4 pb-2 text-[11px] text-accent/80">
+        <CardMeta as="div" aria-live="polite" className="px-4 pb-2" style={{ color: 'rgb(var(--color-accent) / 0.8)' }}>
           {notice}
-        </div>
+        </CardMeta>
       ) : null}
       <div className="border-t border-border-subtle px-0 py-2 space-y-0.5">
         {items.map((item) => (
@@ -751,7 +748,9 @@ function ThreadsFilterButton({
               aria-label="Threads organization options"
             >
               <div className="space-y-px">
-                <div className="px-2.5 pt-2 pb-1 text-[12px] font-medium text-dim">Show</div>
+                <SectionLabel tone="muted" className="block px-2.5 pb-1 pt-2">
+                  Show
+                </SectionLabel>
                 {renderMenuItem({
                   label: 'All threads',
                   icon: PATH.list,
@@ -771,7 +770,9 @@ function ThreadsFilterButton({
                   onClick: () => onChangeFilterMode('automation'),
                 })}
                 <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
-                <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Organize</div>
+                <SectionLabel tone="muted" className="block px-2.5 pb-1 pt-1">
+                  Organize
+                </SectionLabel>
                 {renderMenuItem({
                   label: 'By project',
                   icon: PATH.workspace,
@@ -785,7 +786,9 @@ function ThreadsFilterButton({
                   onClick: () => onChangeOrganizeMode('chronological'),
                 })}
                 <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
-                <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Order</div>
+                <SectionLabel tone="muted" className="block px-2.5 pb-1 pt-1">
+                  Order
+                </SectionLabel>
                 {renderMenuItem({
                   label: 'Created',
                   icon: PATH.clock,
@@ -865,7 +868,7 @@ function ConversationCwdGroupHeader({
     Number(Boolean(onOpenInFinder)) + Number(Boolean(onEditName)) + Number(Boolean(onArchiveThreads)) + Number(Boolean(onRemove));
   const showMenuDivider = Boolean((onOpenInFinder || onEditName) && (onArchiveThreads || onRemove));
   const toggleButtonClassName = [
-    'min-w-0 flex-1 gap-2 rounded-md py-1 text-primary hover:bg-white/5',
+    'min-w-0 flex-1 gap-2 py-1 text-primary',
     canDrag && (isDragging ? 'cursor-grabbing opacity-60' : 'cursor-grab'),
   ]
     .filter(Boolean)
@@ -977,7 +980,8 @@ function ConversationCwdGroupHeader({
 
   return (
     <div
-      className={['relative px-4 pt-1 pb-0.5 transition-colors', isConversationDropTarget && 'bg-accent/10'].filter(Boolean).join(' ')}
+      className="relative px-4 pt-1 pb-0.5 transition-colors"
+      style={isConversationDropTarget ? SIDEBAR_DROP_TARGET_STYLE : undefined}
       onContextMenu={handleContextMenu}
       draggable={canDrag}
       onDragStart={canDrag ? onDragStart : undefined}
@@ -987,13 +991,7 @@ function ConversationCwdGroupHeader({
       data-sidebar-group-key={dragId}
     >
       {dropPosition ? (
-        <span
-          aria-hidden="true"
-          className={[
-            'pointer-events-none absolute left-4 right-4 z-10 h-0.5 rounded-full bg-accent/80',
-            dropPosition === 'before' ? 'top-0' : 'bottom-0',
-          ].join(' ')}
-        />
+        <span aria-hidden="true" className={['ui-sidebar-drop-indicator', dropPosition === 'before' ? 'top-0' : 'bottom-0'].join(' ')} />
       ) : null}
       <div className="flex items-center gap-1">
         <RowButton
@@ -1010,7 +1008,7 @@ function ConversationCwdGroupHeader({
           <span className="shrink-0 text-secondary">
             <Ico d={iconPath} size={13} />
           </span>
-          <span className="min-w-0 truncate text-[14px] font-semibold tracking-tight">{label}</span>
+          <span className="min-w-0 truncate text-sm font-semibold tracking-tight">{label}</span>
         </RowButton>
         {hasMenuActions ? (
           <IconButton
@@ -1492,13 +1490,7 @@ const OpenConversationRow = memo(function OpenConversationRow({
       onContextMenu={handleContextMenu}
     >
       {dropPosition ? (
-        <span
-          aria-hidden="true"
-          className={[
-            'pointer-events-none absolute left-4 right-4 z-10 h-0.5 rounded-full bg-accent/80',
-            dropPosition === 'before' ? 'top-0' : 'bottom-0',
-          ].join(' ')}
-        />
+        <span aria-hidden="true" className={['ui-sidebar-drop-indicator', dropPosition === 'before' ? 'top-0' : 'bottom-0'].join(' ')} />
       ) : null}
       <Link
         to={`/conversations/${session.id}`}
@@ -1550,7 +1542,7 @@ const OpenConversationRow = memo(function OpenConversationRow({
               decoratorsByPosition['before-title'].map((d) => (
                 <ConversationDecoratorHost key={`${d.extensionId}:${d.id}`} registration={d} session={session} />
               ))}
-            <p className="ui-row-title truncate text-[12px] leading-tight">{session.title}</p>
+            <p className="ui-row-title truncate leading-tight">{session.title}</p>
             {decoratorsByPosition['after-title'].length > 0 &&
               decoratorsByPosition['after-title'].map((d) => (
                 <ConversationDecoratorHost key={`${d.extensionId}:${d.id}`} registration={d} session={session} />
@@ -4036,10 +4028,8 @@ export function Sidebar() {
             </div>
 
             <div
-              className={cx(
-                'flex-1 overflow-y-auto overflow-x-hidden min-h-0 pb-3 transition-colors',
-                workbenchChatDropHover && 'bg-accent/10',
-              )}
+              className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 pb-3 transition-colors"
+              style={workbenchChatDropHover ? SIDEBAR_DROP_TARGET_STYLE : undefined}
               onDragOver={handleWorkbenchChatDragOver}
               onDragLeave={handleWorkbenchChatDragLeave}
               onDrop={handleWorkbenchChatDrop}

@@ -28,20 +28,18 @@ export function resolveExtensionModalSizeClasses(size: ExtensionModalSize | unde
     case 'fullscreen':
       return {
         backdropClassName: '!items-start !p-3 !pt-[calc(2.75rem+0.5rem)]',
-        dialogClassName:
-          '!h-[calc(100vh-4rem)] !max-h-[calc(100vh-4rem)] !w-[calc(100vw-1.5rem)] !max-w-none rounded-lg border-border-default bg-surface',
+        dialogClassName: 'ui-extension-modal-fullscreen',
         bodyClassName: 'flex min-h-0 flex-1 overflow-hidden p-0',
       };
     case 'large':
       return {
-        dialogClassName:
-          'h-[min(86vh,calc(100vh-2rem))] max-h-[calc(100vh-2rem)] w-[min(78rem,calc(100vw-2rem))] max-w-none rounded-lg border-border-default bg-surface',
+        dialogClassName: 'ui-extension-modal-large',
         bodyClassName: 'min-h-0 flex-1 overflow-auto',
       };
     case 'default':
     default:
       return {
-        dialogClassName: 'max-h-[85vh] max-w-2xl rounded-lg border-border-default bg-surface',
+        dialogClassName: 'ui-extension-modal-default',
       };
   }
 }
