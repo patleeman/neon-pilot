@@ -118,6 +118,7 @@ describe('AutomationsPage', () => {
     expect(document.querySelector('select[name="automation-owner-thread"]')).not.toBeNull();
     expect(document.querySelector('select[name="automation-timeout-preset"]')?.closest('.ui-field')).not.toBeNull();
     expect(document.querySelector('input[name="automation-cwd"]')).not.toBeNull();
+    expect(document.querySelector('[aria-label="Enable automation"]')).toBeNull();
   });
 
   it('mounts the creation dialog at document body so the overlay covers desktop chrome', async () => {
@@ -213,6 +214,7 @@ describe('AutomationsPage', () => {
     if (!title) throw new Error('edit title input missing');
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
     expect(title.value).toBe('Release watch');
+    expect(document.querySelector('[aria-label="Enable automation"]')).toBeNull();
 
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(title, 'Release watch updated');
@@ -253,6 +255,7 @@ describe('AutomationsPage', () => {
       expect.objectContaining({
         title: 'Morning release check',
         prompt: 'Check release status.',
+        enabled: true,
         targetType: 'conversation',
         threadMode: 'existing',
         threadConversationId: 'conv-owner',

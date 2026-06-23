@@ -32,7 +32,6 @@ import {
   PositionedMenu,
   SegmentedControl,
   Select,
-  Switch,
   Textarea,
   TextInput,
 } from '@neon-pilot/extensions/ui';
@@ -827,15 +826,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       onClick={() => void pickCwd()}
                     />
                   </div>
-                </div>
-
-                <div className="flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
-                  <FieldLabel>Enabled</FieldLabel>
-                  <Switch
-                    checked={form.enabled}
-                    onClick={() => setForm({ ...form, enabled: !form.enabled })}
-                    aria-label="Enable automation"
-                  />
                 </div>
               </Disclosure>
             </DialogBody>
