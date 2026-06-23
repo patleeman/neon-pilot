@@ -7,6 +7,7 @@ import {
   Button,
   cx,
   ErrorState,
+  IconButton,
   LoadingState,
   MenuItem,
   MenuShell,
@@ -15,6 +16,7 @@ import {
   SectionLabel,
   Select,
   Textarea,
+  TextButton,
   TextInput,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
@@ -230,9 +232,7 @@ function RoutineHookList({
       <div className="px-4 pb-0.5 pt-1">
         <div className="flex items-center justify-between gap-2">
           <SectionLabel className="block">Routines</SectionLabel>
-          <button type="button" className="ui-inline-action-link" onClick={() => onShowAllHooksChange(!showAllHooks)}>
-            {showAllHooks ? 'Done' : 'Add event'}
-          </button>
+          <TextButton onClick={() => onShowAllHooksChange(!showAllHooks)}>{showAllHooks ? 'Done' : 'Add event'}</TextButton>
         </div>
       </div>
       <div className="px-2 pb-1.5 pt-1">
@@ -1046,8 +1046,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-dim">
                       <span>If judge returns {outcome.id}</span>
                       <div className="flex gap-1">
-                        <button
-                          type="button"
+                        <TextButton
                           className="ui-inline-action-link"
                           onClick={(event) => {
                             event.stopPropagation();
@@ -1055,9 +1054,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                           }}
                         >
                           Add instruction
-                        </button>
-                        <button
-                          type="button"
+                        </TextButton>
+                        <TextButton
                           className="ui-inline-action-link"
                           onClick={(event) => {
                             event.stopPropagation();
@@ -1065,7 +1063,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                           }}
                         >
                           Add judge
-                        </button>
+                        </TextButton>
                       </div>
                     </div>
                     {hookRoutines.filter((child) => child.parentRoutineId === routine.id && child.parentOutcomeId === outcome.id).length ? (
@@ -1117,14 +1115,14 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           )}
         >
           <div className="grid grid-cols-[22px_1fr_auto] gap-2 px-2 py-2">
-            <button
-              type="button"
+            <TextButton
               aria-label={`Drag ${routine.name}`}
+              title={`Drag ${routine.name}`}
               className="ui-inline-action-link cursor-grab active:cursor-grabbing"
               onPointerDown={(event) => startPointerDrag(event, routine)}
             >
               ⋮⋮
-            </button>
+            </TextButton>
             <div className="min-w-0">
               <div className="flex gap-2 text-[11px] text-secondary">
                 <span className={routine.type === 'decision' ? 'text-purple-300' : routine.type === 'stop' ? 'text-danger' : 'text-accent'}>
@@ -1151,8 +1149,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               ) : null}
             </div>
             <div className="relative flex items-start gap-1">
-              <button
-                type="button"
+              <TextButton
                 className={cx('ui-inline-action-link', isEditing && 'text-primary')}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -1161,24 +1158,24 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 }}
               >
                 {isEditing ? 'Done' : 'Edit'}
-              </button>
+              </TextButton>
               {isEditing ? (
-                <button
-                  type="button"
+                <Button
+                  variant="action"
                   disabled={!draftIsDirty || saving}
-                  className="rounded bg-accent px-2 py-1 text-[12px] text-white disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-dim"
                   onClick={(event) => {
                     event.stopPropagation();
                     void save();
                   }}
                 >
                   {saving ? 'Saving…' : 'Save'}
-                </button>
+                </Button>
               ) : (
                 <>
-                  <button
-                    type="button"
+                  <IconButton
+                    compact
                     aria-label={`More actions for ${routine.name}`}
+                    title={`More actions for ${routine.name}`}
                     aria-expanded={openRoutineMenuId === routine.id}
                     className="ui-inline-action-link text-xl leading-none text-secondary"
                     onClick={(event) => {
@@ -1187,7 +1184,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     }}
                   >
                     …
-                  </button>
+                  </IconButton>
                   {openRoutineMenuId === routine.id ? (
                     <PositionedMenu
                       placement="absolute"
@@ -1279,8 +1276,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                         <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-dim">
                           <span>If judge returns {outcome.id}</span>
                           <div className="flex gap-1">
-                            <button
-                              type="button"
+                            <TextButton
                               className="ui-inline-action-link"
                               onClick={(event) => {
                                 event.stopPropagation();
@@ -1288,9 +1284,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                               }}
                             >
                               Add instruction
-                            </button>
-                            <button
-                              type="button"
+                            </TextButton>
+                            <TextButton
                               className="ui-inline-action-link"
                               onClick={(event) => {
                                 event.stopPropagation();
@@ -1298,7 +1293,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                               }}
                             >
                               Add judge
-                            </button>
+                            </TextButton>
                           </div>
                         </div>
                         {routeChildren.length ? (
