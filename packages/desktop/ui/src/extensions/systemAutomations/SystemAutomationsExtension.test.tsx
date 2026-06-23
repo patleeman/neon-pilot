@@ -107,6 +107,8 @@ describe('AutomationsPage', () => {
     const title = document.querySelector<HTMLInputElement>('input[name="automation-title"]');
     expect(dialog).not.toBeNull();
     expect(dialog?.getAttribute('aria-modal')).toBe('true');
+    expect(dialog?.querySelector('form')?.className).toContain('flex');
+    expect(dialog?.querySelector('.ui-dialog-body')?.className).toContain('flex-1');
     expect(title).not.toBeNull();
     expect(document.activeElement).toBe(title);
     expect(document.querySelector('select[name="automation-owner-thread"]')).not.toBeNull();
