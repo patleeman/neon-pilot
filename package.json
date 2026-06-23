@@ -52,6 +52,7 @@
     "check:cli:fixtures": "node scripts/check-cli-fixtures.mjs",
     "check:cli:docs": "node scripts/generate-cli-reference.mjs --check",
     "check:cli": "pnpm run check:cli:surface && pnpm run check:cli:fixtures && pnpm run check:cli:docs",
+    "check:ui-patterns": "node scripts/check-ui-patterns.mjs",
     "check:release": "pnpm run build:ts && pnpm run build:extensions && pnpm --dir packages/desktop run build:server && pnpm --dir packages/desktop run build:main && pnpm test && pnpm run check:extensions:static && pnpm run check:cli && pnpm run check:release:doctor",
     "check:release:doctor": "node scripts/release-reliability-doctor.mjs",
     "qa:release": "node scripts/release-qa.mjs",

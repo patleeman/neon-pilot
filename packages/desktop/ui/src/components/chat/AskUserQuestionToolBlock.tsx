@@ -501,7 +501,7 @@ export function AskUserQuestionToolBlock({
                         onClick={() => activateQuestion(index)}
                         onKeyDown={(event) => handleQuestionTabKeyDown(index, event)}
                         className={cx(
-                          'min-w-0 px-2 py-1 text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
+                          'min-w-0 px-2 py-1',
                           active ? 'text-primary hover:text-primary' : answered ? 'text-secondary' : 'text-dim',
                         )}
                       >
@@ -522,10 +522,8 @@ export function AskUserQuestionToolBlock({
                           variant="action"
                           disabled={!canAdvanceToNextQuestion || submitting}
                           onClick={advanceToNextQuestion}
-                          className={cx(
-                            'px-1.5 py-0.5 text-[11px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
-                            canAdvanceToNextQuestion && !submitting ? 'text-accent' : 'text-dim',
-                          )}
+                          tone={canAdvanceToNextQuestion && !submitting ? 'accent' : 'default'}
+                          className="px-1.5 py-0.5"
                         >
                           Next →
                         </Button>
@@ -538,10 +536,8 @@ export function AskUserQuestionToolBlock({
                           void submitIfReady();
                         }}
                         onKeyDown={handleSubmitKeyDown}
-                        className={cx(
-                          'px-1.5 py-0.5 text-[11px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
-                          canSubmit && !submitting ? 'text-accent' : 'text-dim',
-                        )}
+                        tone={canSubmit && !submitting ? 'accent' : 'default'}
+                        className="px-1.5 py-0.5"
                       >
                         {submitLabel}
                       </Button>

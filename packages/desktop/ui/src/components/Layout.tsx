@@ -141,8 +141,10 @@ import {
   CenteredMessage,
   cx,
   IconButton,
+  Notice,
   PanelMessage,
   SectionLabel,
+  SurfacePanel,
   WorkbenchTab,
   WorkbenchTabActionButton,
   WorkbenchTabButton,
@@ -775,22 +777,22 @@ class RouteContentBoundary extends Component<
     return (
       <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden select-text">
         <div className="flex h-full items-center justify-center px-8 py-10">
-          <div className="max-w-lg rounded-2xl border border-border-subtle bg-surface px-6 py-6 shadow-sm">
+          <SurfacePanel className="max-w-lg px-6 py-6">
             <SectionLabel tone="muted">Recovered from render error</SectionLabel>
             <h1 className="mt-2 text-[22px] font-semibold text-primary">{title}</h1>
             <p className="mt-2 text-[13px] leading-6 text-secondary">{body}</p>
             {errorMessage ? (
-              <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3">
+              <Notice tone="warning" className="mt-4">
                 <SectionLabel tone="muted">Error details</SectionLabel>
                 <p className="mt-2 whitespace-pre-wrap break-words font-mono text-[12px] leading-5 text-primary">{errorMessage}</p>
-              </div>
+              </Notice>
             ) : null}
             <div className="mt-5 flex flex-wrap gap-2">
               <Link to="/conversations/new" className="ui-action-button">
                 New conversation
               </Link>
             </div>
-          </div>
+          </SurfacePanel>
         </div>
       </main>
     );

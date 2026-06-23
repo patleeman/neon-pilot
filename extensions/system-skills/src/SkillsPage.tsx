@@ -3,7 +3,6 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
-  cx,
   EmptyState,
   ErrorState,
   FilterToolbar,
@@ -153,16 +152,12 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
                 title={skill.name}
                 meta={<MetaLabel tone="muted">{sourceLabel(skill)}</MetaLabel>}
                 detail={skill.sourceLabel ?? skill.path}
-                titleClassName="text-[13px]"
-                detailClassName="text-[11px]"
                 actions={
                   <Button
                     variant="ghost"
+                    tone={skill.enabled ? 'success' : 'default'}
                     onClick={() => void toggleSkill(skill)}
-                    className={cx(
-                      'rounded-full px-3 py-1 text-[12px]',
-                      skill.enabled ? 'border-success/40 bg-success/10 text-success' : 'border-subtle bg-muted text-secondary',
-                    )}
+                    className="px-2 py-1"
                   >
                     {skill.enabled ? 'Enabled' : 'Disabled'}
                   </Button>

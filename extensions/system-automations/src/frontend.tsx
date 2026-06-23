@@ -1,6 +1,33 @@
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
 import type { ScheduledTaskSchedulerHealth, ScheduledTaskSummary } from '@neon-pilot/extensions/data';
 import { timeAgo } from '@neon-pilot/extensions/data';
+import {
+  AppPageIntro,
+  AppPageLayout,
+  Button,
+  ButtonLink,
+  Checkbox,
+  DataTable,
+  DataTableActionGroup,
+  DataTableBody,
+  DataTableCell,
+  DataTableEmptyRow,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+  Field,
+  FilterToolbar,
+  InlineCode,
+  Notice,
+  SearchInput,
+  Select,
+  StatusDot,
+  type StatusDotTone,
+  SurfacePanel,
+  Textarea,
+  TextInput,
+  ToolbarButton,
+} from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface ConversationOption {
@@ -95,11 +122,11 @@ function statusText(task: ScheduledTaskSummary): string {
   return 'Scheduled';
 }
 
-function statusTone(task: ScheduledTaskSummary): string {
-  if (task.running) return 'bg-blue-500';
-  if (!task.enabled) return 'bg-zinc-500';
-  if (task.lastStatus === 'failed') return 'bg-red-500';
-  return 'bg-emerald-500';
+function statusTone(task: ScheduledTaskSummary): StatusDotTone {
+  if (task.running) return 'steel';
+  if (!task.enabled) return 'muted';
+  if (task.lastStatus === 'failed') return 'danger';
+  return 'success';
 }
 
 function parseCronPart(part: string, min: number, max: number): Set<number> | null {
@@ -334,251 +361,207 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-app text-primary">
-      <div className="mx-auto flex h-full w-full max-w-6xl flex-col gap-6 px-8 py-8">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-secondary">Automations</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Schedules</h1>
-            <p className="mt-2 max-w-2xl text-sm text-secondary">
-              Every automation belongs to a thread. When it fires, the owner thread is reopened in the sidebar and the run is written into
-              the transcript.
-            </p>
-            <p className="mt-2 text-xs text-tertiary">
-              Scheduler: {health?.status ?? 'unknown'}
-              {health?.lastEvaluatedAt ? ` · checked ${timeAgo(health.lastEvaluatedAt)}` : ''}
-            </p>
+    <AppPageLayout contentClassName="flex h-full min-h-0 flex-col gap-5">
+      <AppPageIntro
+        title="Automations"
+        summary={
+          <span>
+            Scheduler: {health?.status ?? 'unknown'}
+            {health?.lastEvaluatedAt ? ` · checked ${timeAgo(health.lastEvaluatedAt)}` : ''}
+          </span>
+        }
+        actions={<Button onClick={openCreate}>New Automation</Button>}
+      />
+
+      {error ? <Notice tone="danger">{error}</Notice> : null}
+
+      {editorOpen ? (
+        <SurfacePanel>
+          <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-4 py-3">
+            <div className="min-w-0">
+              <h2 className="m-0 text-[13px] font-semibold text-primary">{editingId ? 'Edit Automation' : 'New Automation'}</h2>
+              <p className="mt-1 text-[12px] text-secondary">Choose the schedule and the thread where runs will appear.</p>
+            </div>
+            <ToolbarButton onClick={() => setEditorOpen(false)}>Close</ToolbarButton>
           </div>
-          <button
-            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-app shadow-sm hover:opacity-90"
-            onClick={openCreate}
-          >
-            New automation
-          </button>
-        </header>
-
-        {error ? <div className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div> : null}
-
-        {editorOpen ? (
-          <section className="rounded-2xl border border-border-subtle bg-surface/70 p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold">{editingId ? 'Edit automation' : 'New automation'}</h2>
-                <p className="text-sm text-secondary">Choose the schedule and the thread where runs will appear.</p>
-              </div>
-              <button className="text-sm text-secondary hover:text-primary" onClick={() => setEditorOpen(false)}>
-                Close
-              </button>
-            </div>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <label className="grid gap-1 text-sm">
-                Name
-                <input
-                  name="automation-title"
-                  className="rounded-lg border border-border-subtle bg-surface px-3 py-2"
-                  value={form.title}
-                  onChange={(event) => setForm({ ...form, title: event.target.value })}
-                />
-              </label>
-              <label className="grid gap-1 text-sm">
-                Owner thread
-                <select
-                  name="automation-owner-thread"
-                  className="rounded-lg border border-border-subtle bg-surface px-3 py-2"
-                  value={form.ownerThreadId}
-                  onChange={(event) => setForm({ ...form, ownerThreadId: event.target.value })}
-                >
-                  <option value="">Choose a thread…</option>
-                  {conversations.map((conversation) => (
-                    <option key={conversation.id} value={conversation.id}>
-                      {conversation.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-1 text-sm">
-                Schedule type
-                <select
-                  className="rounded-lg border border-border-subtle bg-surface px-3 py-2"
-                  value={form.scheduleType}
-                  onChange={(event) => setForm({ ...form, scheduleType: event.target.value === 'at' ? 'at' : 'cron' })}
-                >
-                  <option value="cron">Recurring</option>
-                  <option value="at">Once</option>
-                </select>
-              </label>
-              {form.scheduleType === 'cron' ? (
-                <label className="grid gap-1 text-sm">
-                  Cron
-                  <input
-                    className="rounded-lg border border-border-subtle bg-surface px-3 py-2 font-mono"
-                    value={form.cron}
-                    onChange={(event) => setForm({ ...form, cron: event.target.value })}
-                  />
-                </label>
-              ) : (
-                <label className="grid gap-1 text-sm">
-                  Run at
-                  <input
-                    className="rounded-lg border border-border-subtle bg-surface px-3 py-2"
-                    placeholder="2026-06-23T09:00:00.000Z"
-                    value={form.at}
-                    onChange={(event) => setForm({ ...form, at: event.target.value })}
-                  />
-                </label>
-              )}
-              <label className="grid gap-1 text-sm md:col-span-2">
-                Instructions
-                <textarea
-                  name="automation-prompt"
-                  className="min-h-32 rounded-lg border border-border-subtle bg-surface px-3 py-2"
-                  value={form.prompt}
-                  onChange={(event) => setForm({ ...form, prompt: event.target.value })}
-                />
-              </label>
-              <label className="grid gap-1 text-sm">
-                Working directory
-                <div className="flex gap-2">
-                  <input
-                    className="min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-3 py-2"
-                    value={form.cwd}
-                    onChange={(event) => setForm({ ...form, cwd: event.target.value })}
-                  />
-                  <button className="rounded-lg border border-border-subtle px-3 py-2 text-sm" onClick={() => void pickCwd()} type="button">
-                    Choose…
-                  </button>
-                </div>
-              </label>
-              <label className="grid gap-1 text-sm">
-                Timeout seconds
-                <input
-                  className="rounded-lg border border-border-subtle bg-surface px-3 py-2"
-                  inputMode="numeric"
-                  value={form.timeoutSeconds}
-                  onChange={(event) => setForm({ ...form, timeoutSeconds: event.target.value })}
-                />
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={form.enabled} onChange={(event) => setForm({ ...form, enabled: event.target.checked })} />{' '}
-                Enabled
-              </label>
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button className="rounded-lg border border-border-subtle px-4 py-2 text-sm" onClick={() => setEditorOpen(false)}>
-                Cancel
-              </button>
-              <button
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-app"
-                disabled={busy === 'save'}
-                onClick={() => void save()}
+          <div className="grid gap-4 p-4 md:grid-cols-2">
+            <Field label="Name">
+              <TextInput
+                name="automation-title"
+                value={form.title}
+                onChange={(event) => setForm({ ...form, title: event.target.value })}
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="Owner Thread">
+              <Select
+                name="automation-owner-thread"
+                value={form.ownerThreadId}
+                onChange={(event) => setForm({ ...form, ownerThreadId: event.target.value })}
               >
-                {busy === 'save' ? 'Saving…' : 'Save automation'}
-              </button>
-            </div>
-          </section>
-        ) : null}
+                <option value="">Choose a thread…</option>
+                {conversations.map((conversation) => (
+                  <option key={conversation.id} value={conversation.id}>
+                    {conversation.title}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Schedule Type">
+              <Select
+                value={form.scheduleType}
+                onChange={(event) => setForm({ ...form, scheduleType: event.target.value === 'at' ? 'at' : 'cron' })}
+              >
+                <option value="cron">Recurring</option>
+                <option value="at">Once</option>
+              </Select>
+            </Field>
+            {form.scheduleType === 'cron' ? (
+              <Field label="Cron">
+                <TextInput
+                  className="font-mono"
+                  value={form.cron}
+                  onChange={(event) => setForm({ ...form, cron: event.target.value })}
+                  autoComplete="off"
+                />
+              </Field>
+            ) : (
+              <Field label="Run At">
+                <TextInput
+                  placeholder="2026-06-23T09:00:00.000Z"
+                  value={form.at}
+                  onChange={(event) => setForm({ ...form, at: event.target.value })}
+                  autoComplete="off"
+                />
+              </Field>
+            )}
+            <Field label="Instructions" className="md:col-span-2">
+              <Textarea
+                name="automation-prompt"
+                className="min-h-32"
+                value={form.prompt}
+                onChange={(event) => setForm({ ...form, prompt: event.target.value })}
+              />
+            </Field>
+            <Field label="Working Directory">
+              <div className="flex gap-2">
+                <TextInput
+                  className="min-w-0 flex-1"
+                  value={form.cwd}
+                  onChange={(event) => setForm({ ...form, cwd: event.target.value })}
+                  autoComplete="off"
+                />
+                <ToolbarButton onClick={() => void pickCwd()} type="button">
+                  Choose…
+                </ToolbarButton>
+              </div>
+            </Field>
+            <Field label="Timeout Seconds">
+              <TextInput
+                inputMode="numeric"
+                value={form.timeoutSeconds}
+                onChange={(event) => setForm({ ...form, timeoutSeconds: event.target.value })}
+                autoComplete="off"
+              />
+            </Field>
+            <label className="flex items-center gap-2 text-[13px] text-primary">
+              <Checkbox checked={form.enabled} onChange={(event) => setForm({ ...form, enabled: event.target.checked })} />
+              Enabled
+            </label>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-border-subtle px-4 py-3">
+            <ToolbarButton onClick={() => setEditorOpen(false)}>Cancel</ToolbarButton>
+            <Button variant="action" disabled={busy === 'save'} onClick={() => void save()}>
+              {busy === 'save' ? 'Saving…' : 'Save automation'}
+            </Button>
+          </div>
+        </SurfacePanel>
+      ) : null}
 
-        <div className="flex items-center gap-3">
-          <input
-            className="w-full max-w-md rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm"
+      <FilterToolbar
+        search={
+          <SearchInput
+            className="w-full max-w-md"
             placeholder="Search schedules…"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
-          <button className="rounded-lg border border-border-subtle px-3 py-2 text-sm" onClick={() => void load()}>
-            Refresh
-          </button>
-        </div>
+        }
+        actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
+      />
 
-        <div className="min-h-0 overflow-auto rounded-2xl border border-border-subtle">
-          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-            <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-secondary">
-              <tr>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Automation</th>
-                <th className="px-4 py-3 font-medium">Schedule</th>
-                <th className="px-4 py-3 font-medium">Next run</th>
-                <th className="px-4 py-3 font-medium">Last run</th>
-                <th className="px-4 py-3 font-medium">Owner thread</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleTasks.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-10 text-center text-secondary" colSpan={7}>
-                    No automations yet. Create one and bind it to a thread.
-                  </td>
-                </tr>
-              ) : (
-                visibleTasks.map((task) => (
-                  <tr key={task.id} className="border-t border-border-subtle align-top hover:bg-surface/60">
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full ${statusTone(task)}`} />
-                        {statusText(task)}
-                      </span>
-                      {task.lastStatus === 'failed' ? <div className="mt-1 text-xs text-danger">Needs attention</div> : null}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button className="font-medium text-primary hover:underline" onClick={() => openEdit(task)}>
-                        {taskTitle(task)}
-                      </button>
-                      <div className="mt-1 font-mono text-xs text-tertiary">@{task.id}</div>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs">{scheduleText(task)}</td>
-                    <td className="px-4 py-3">{nextRunText(task)}</td>
-                    <td className="px-4 py-3">
-                      {task.lastRunAt ? `${timeAgo(task.lastRunAt)} · ${formatDateTime(task.lastRunAt)}` : 'Never'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {task.threadConversationId ? (
-                        <button
-                          className="text-primary hover:underline"
-                          onClick={() => {
-                            window.location.href = `/conversations/${encodeURIComponent(task.threadConversationId ?? '')}`;
-                          }}
-                        >
-                          {task.threadTitle || task.threadConversationId}
-                        </button>
-                      ) : (
-                        <span className="text-danger">Missing owner thread</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          className="rounded border border-border-subtle px-2 py-1 text-xs"
-                          disabled={busy === `run:${task.id}`}
-                          onClick={() => void runNow(task)}
-                        >
-                          Run now
-                        </button>
-                        <button
-                          className="rounded border border-border-subtle px-2 py-1 text-xs"
-                          disabled={busy?.endsWith(`:${task.id}`)}
-                          onClick={() => void updateEnabled(task, !task.enabled)}
-                        >
-                          {task.enabled ? 'Pause' : 'Resume'}
-                        </button>
-                        <button className="rounded border border-border-subtle px-2 py-1 text-xs" onClick={() => openEdit(task)}>
-                          Edit
-                        </button>
-                        <button
-                          className="rounded border border-danger/40 px-2 py-1 text-xs text-danger"
-                          onClick={() => void deleteTask(task)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="min-h-0 overflow-auto">
+        <DataTable tableClassName="min-w-[980px]">
+          <DataTableHead>
+            <DataTableRow>
+              <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell>Automation</DataTableHeaderCell>
+              <DataTableHeaderCell>Schedule</DataTableHeaderCell>
+              <DataTableHeaderCell>Next Run</DataTableHeaderCell>
+              <DataTableHeaderCell>Last Run</DataTableHeaderCell>
+              <DataTableHeaderCell>Owner Thread</DataTableHeaderCell>
+              <DataTableHeaderCell>Actions</DataTableHeaderCell>
+            </DataTableRow>
+          </DataTableHead>
+          <DataTableBody>
+            {visibleTasks.length === 0 ? (
+              <DataTableEmptyRow colSpan={7}>No automations yet. Create one and bind it to a thread.</DataTableEmptyRow>
+            ) : (
+              visibleTasks.map((task) => (
+                <DataTableRow key={task.id}>
+                  <DataTableCell>
+                    <span className="inline-flex items-center gap-2">
+                      <StatusDot tone={statusTone(task)} />
+                      {statusText(task)}
+                    </span>
+                    {task.lastStatus === 'failed' ? <div className="mt-1 text-xs text-danger">Needs attention</div> : null}
+                  </DataTableCell>
+                  <DataTableCell>
+                    <Button variant="ghost" className="px-0 py-0 font-medium text-primary" onClick={() => openEdit(task)}>
+                      {taskTitle(task)}
+                    </Button>
+                    <div className="mt-1">
+                      <InlineCode>@{task.id}</InlineCode>
+                    </div>
+                  </DataTableCell>
+                  <DataTableCell className="font-mono text-xs">{scheduleText(task)}</DataTableCell>
+                  <DataTableCell>{nextRunText(task)}</DataTableCell>
+                  <DataTableCell>
+                    {task.lastRunAt ? `${timeAgo(task.lastRunAt)} · ${formatDateTime(task.lastRunAt)}` : 'Never'}
+                  </DataTableCell>
+                  <DataTableCell>
+                    {task.threadConversationId ? (
+                      <ButtonLink
+                        variant="ghost"
+                        className="px-0 py-0 text-primary"
+                        href={`/conversations/${encodeURIComponent(task.threadConversationId)}`}
+                      >
+                        {task.threadTitle || task.threadConversationId}
+                      </ButtonLink>
+                    ) : (
+                      <span className="text-danger">Missing owner thread</span>
+                    )}
+                  </DataTableCell>
+                  <DataTableCell>
+                    <DataTableActionGroup>
+                      <ToolbarButton disabled={busy === `run:${task.id}`} onClick={() => void runNow(task)}>
+                        Run now
+                      </ToolbarButton>
+                      <ToolbarButton disabled={busy?.endsWith(`:${task.id}`)} onClick={() => void updateEnabled(task, !task.enabled)}>
+                        {task.enabled ? 'Pause' : 'Resume'}
+                      </ToolbarButton>
+                      <ToolbarButton onClick={() => openEdit(task)}>Edit</ToolbarButton>
+                      <ToolbarButton className="text-danger" onClick={() => void deleteTask(task)}>
+                        Delete
+                      </ToolbarButton>
+                    </DataTableActionGroup>
+                  </DataTableCell>
+                </DataTableRow>
+              ))
+            )}
+          </DataTableBody>
+        </DataTable>
       </div>
-    </div>
+    </AppPageLayout>
   );
 }

@@ -53,12 +53,13 @@ function pillToneClass(tone: PillTone) {
 }
 
 export type ButtonVariant = 'toolbar' | 'action' | 'ghost';
-export type ButtonTone = 'default' | 'accent' | 'danger' | 'warning';
+export type ButtonTone = 'default' | 'accent' | 'danger' | 'warning' | 'success';
 
 function buttonToneClass(tone: ButtonTone) {
   if (tone === 'accent') return 'text-accent';
   if (tone === 'danger') return 'text-danger';
   if (tone === 'warning') return 'text-warning';
+  if (tone === 'success') return 'text-success';
   return null;
 }
 

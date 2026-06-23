@@ -330,11 +330,11 @@ Start with the smallest shared primitive that fits the job, then compose upward:
 
 - Page chrome: `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageEmptyState`
 - Actions: `Button`, `ToolbarButton`, `IconButton`, `TextButton`, `CheckButton`
-- Forms: `Field`, `TextInput`, `TextAreaInput`, `SelectInput`, `CheckboxInput`, `SegmentedControl`, `Switch`, `ToggleRow`
-- Feedback: `LoadingState`, `ErrorState`, `EmptyState`, `InlineStatus`, `StatusBadge`
-- Lists and tables: `DataTable`, `DataTableEmptyRow`, `DataTableActionGroup`, `ResourceList`, `ResourceListRow`
-- Runtime pages: `RuntimePage`, `RuntimeStatusStrip`, `RuntimeHeaderControls`, `MetricTile`, `DashboardGrid`
-- Rails, sidebars, and settings panels: `RailSubsection`, `SidebarSection`, `SidebarActionHeader`, `SidebarList`, `SidebarTemplateList`, `SidebarRow`, `SidebarMessage`, `SidebarTreeSection`, `ActivityTreeView`, `SettingsPanel`, `SettingsRow`, `SettingsField`, `Switch`, `Select`, `TextInput`, `Textarea`, `ToolbarButton`
+- Forms: `Field`, `TextInput`, `Textarea`, `Select`, `Checkbox`, `SegmentedControl`, `Switch`, `SettingToggleRow`
+- Feedback: `LoadingState`, `CenteredLoadingState`, `PanelMessage`, `Notice`, `ErrorState`, `EmptyState`, `StatusDot`, `Pill`
+- Lists and tables: `DataTable`, `DataTableEmptyRow`, `DataTableActionGroup`, `ResourceList`, `ResourceListRow`, `ResourceListItem`
+- Runtime pages: `RuntimePage`, `RuntimeStrip`, `RuntimeHeaderControls`, `RuntimeSection`, `MetricTile`, `DashboardGrid`
+- Rails, sidebars, and settings panels: `RailSection`, `RailSubsection`, `SidebarSection`, `SidebarActionHeader`, `SidebarList`, `SidebarTemplateList`, `SidebarRow`, `SidebarMessage`, `SidebarTreeSection`, `ActivityTreeView`, `SettingsPanel`, `SettingsRow`, `Switch`, `Select`, `TextInput`, `Textarea`, `ToolbarButton`
 - Chat and files: `ChatView`, `ChatRailComposer`, `ExtensionChatRail`, `ResourcePickerDialog`
 
 Use local markup for product-specific layout and content, but extract repeated chrome, action groups, pickers, chat surfaces, table actions, runtime summaries, and settings rows into shared UI instead of creating extension-local lookalikes. See [Design system](../../docs/design-system.md) and [`packages/ui`](../ui/README.md) for the full component catalog, Storybook guidance, and replacement checklist.
