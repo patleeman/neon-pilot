@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 
-import { cx, IconButton, Select, Switch, TextInput } from '../components/ui';
+import { Checkbox, cx, IconButton, Select, Switch, TextInput } from '../components/ui';
 import type { UnifiedSettingsEntry } from '../shared/types';
 
 const EMOJI_OPTIONS = ['👍', '👎', '✅', '❓', '💡', '📋', '❤️', '🚀', '👀', '🙌', '🙏', '⚠️'];
@@ -247,8 +247,7 @@ function AgentToolListControl({
       <div className="grid grid-cols-2 gap-1.5 text-[12px] text-secondary sm:grid-cols-4">
         {COMMON_AGENT_TOOLS.map((tool) => (
           <label key={tool} className="flex min-w-0 items-center gap-1.5 rounded border border-border-subtle/70 bg-surface/70 px-2 py-1.5">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={selectedCommonTools.includes(tool)}
               onChange={() => toggleCommonTool(tool)}
               className="size-3.5 shrink-0 accent-accent"

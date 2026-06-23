@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react';
 
 import { ConversationStatusText } from '../components/ConversationStatusText';
+import { IconButton } from '../components/ui';
 import { timeAgoCompact } from '../shared/utils';
 import type { ActivityTreeItem } from './activityTree';
 import type { ActivityTreeRowModel } from './activityTreeRowModel';
@@ -125,10 +126,10 @@ export function ActivityTreeRowActions({
   return (
     <>
       {item.kind === 'group' && renderContextMenu ? (
-        <button
-          type="button"
+        <IconButton
           tabIndex={-1}
-          className="ui-icon-button ui-icon-button-compact h-5 w-5 shrink-0"
+          compact
+          className="h-5 w-5 shrink-0"
           aria-label={`Workspace actions for ${item.title}`}
           title={
             typeof item.metadata?.cwd === 'string' ? `Workspace actions for ${item.metadata.cwd}` : `Workspace actions for ${item.title}`
@@ -141,13 +142,13 @@ export function ActivityTreeRowActions({
           }}
         >
           <MoreActionsIcon />
-        </button>
+        </IconButton>
       ) : null}
       {rowModel.canCreateChild ? (
-        <button
-          type="button"
+        <IconButton
           tabIndex={-1}
-          className="ui-icon-button ui-icon-button-compact h-5 w-5 shrink-0"
+          compact
+          className="h-5 w-5 shrink-0"
           aria-label={`New conversation in ${item.title}`}
           title={typeof item.metadata?.cwd === 'string' ? `New conversation in ${item.metadata.cwd}` : `New conversation in ${item.title}`}
           onClick={(event) => {
@@ -157,14 +158,14 @@ export function ActivityTreeRowActions({
           }}
         >
           <PlusIcon />
-        </button>
+        </IconButton>
       ) : null}
       {inlineActions.map((action) => (
-        <button
+        <IconButton
           key={action.id}
-          type="button"
           tabIndex={-1}
-          className="ui-icon-button ui-icon-button-compact h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+          compact
+          className="h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
           aria-label={action.title}
           title={action.title}
           onClick={(event) => {
@@ -174,13 +175,13 @@ export function ActivityTreeRowActions({
           }}
         >
           {action.icon ?? '•'}
-        </button>
+        </IconButton>
       ))}
       {rowModel.canArchive ? (
-        <button
-          type="button"
+        <IconButton
           tabIndex={-1}
-          className="ui-icon-button ui-icon-button-compact h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+          compact
+          className="h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
           aria-label="Archive conversation"
           title="Archive conversation"
           onClick={(event) => {
@@ -190,7 +191,7 @@ export function ActivityTreeRowActions({
           }}
         >
           <CloseIcon />
-        </button>
+        </IconButton>
       ) : null}
     </>
   );
@@ -310,16 +311,16 @@ function ExpanderButton({
   onClick: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
   return (
-    <button
-      type="button"
+    <IconButton
       tabIndex={-1}
-      className="-ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border-0 bg-transparent p-0 text-dim hover:text-primary"
+      compact
+      className="-ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border-0 bg-transparent !p-0 text-dim hover:text-primary"
       aria-label={label}
       title={title}
       onClick={onClick}
     >
       {expanded ? '▾' : '▸'}
-    </button>
+    </IconButton>
   );
 }
 

@@ -2,7 +2,7 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 
 import { DESKTOP_SHORTCUT_EVENT } from '../commands/desktopShortcutEvents';
 import { setExtensionCommandContext } from '../extensions/commands';
-import { CardMeta, cx, IconButton, Keycap, MenuShell } from './ui';
+import { CardMeta, cx, IconButton, Keycap, MenuShell, SearchInput } from './ui';
 
 const PAGE_SEARCH_MATCH_HIGHLIGHT = 'pa-page-search-match';
 const PAGE_SEARCH_ACTIVE_HIGHLIGHT = 'pa-page-search-active';
@@ -592,9 +592,8 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
             <circle cx="11" cy="11" r="7" />
             <path d="m20 20-3.5-3.5" />
           </svg>
-          <input
+          <SearchInput
             ref={inputRef}
-            type="text"
             value={query}
             onChange={(event) => {
               pendingScrollToMatchRef.current = true;
@@ -613,7 +612,7 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
                 moveToMatch(event.shiftKey ? -1 : 1);
               }
             }}
-            className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-primary outline-none placeholder:text-dim/70"
+            className="min-w-0 flex-1 !border-0 !bg-transparent !p-0 text-sm text-primary outline-none placeholder:text-dim/70 hover:!bg-transparent focus:!border-0 focus:!bg-transparent"
             placeholder="Find on page…"
             aria-label="Find on page"
             autoComplete="off"

@@ -49,10 +49,12 @@ import {
   SectionLabel,
   Switch,
   TextButton,
+  TextInput,
   ToolbarButton,
 } from './ui';
 
-const TITLE_INPUT_CLASS = 'w-full min-w-0 bg-transparent text-[16px] font-medium text-primary placeholder:text-dim/75 outline-none';
+const TITLE_INPUT_CLASS =
+  'w-full min-w-0 !border-0 !bg-transparent !p-0 !text-[16px] !font-medium text-primary outline-none placeholder:text-dim/75 hover:!bg-transparent focus:!border-0 focus:!bg-transparent';
 const PROMPT_INPUT_CLASS =
   'min-h-0 flex-1 w-full resize-none overflow-y-auto bg-transparent px-1 pb-3 pt-2 text-sm leading-6 text-primary placeholder:text-dim/75 outline-none';
 const FIELD_HELP_CLASS = 'ui-card-meta leading-relaxed';
@@ -564,7 +566,7 @@ function TaskEditorForm({
       <div className="min-h-0 flex-1 px-6 pb-2 pt-5">
         <div className="mx-auto flex h-full min-h-0 max-w-4xl flex-col">
           <div className="flex items-start justify-between gap-3 px-1">
-            <input
+            <TextInput
               value={value.title}
               onChange={(event) => onChange({ title: event.target.value })}
               className={TITLE_INPUT_CLASS}

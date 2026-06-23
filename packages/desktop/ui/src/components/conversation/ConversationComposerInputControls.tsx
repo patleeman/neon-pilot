@@ -30,7 +30,7 @@ import {
   THINKING_LEVEL_OPTIONS,
 } from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
-import { cx, IconButton, Select } from '../ui';
+import { cx, IconButton, Select, Textarea } from '../ui';
 import { COMPOSER_CREATE_DRAWING_COMMAND_EVENT } from './composerInputCommands';
 import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
 import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
@@ -579,6 +579,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
 
   return (
     <div className="px-3 pt-2.5 pb-2.5">
+      {/* ui-pattern-ok raw-control reason="Hidden native file input is required to open the browser file picker and is triggered by shared composer controls." */}
       <input
         ref={fileInputRef}
         type="file"
@@ -596,7 +597,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
 
       <div className="flex flex-col gap-0">
         <div className="px-1 pt-1">
-          <textarea
+          <Textarea
             ref={textareaRef}
             value={localInput}
             onChange={(event) => {
@@ -626,7 +627,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
             onPaste={onPaste}
             rows={1}
             disabled={composerDisabled}
-            className="w-full resize-none overscroll-contain bg-transparent text-sm leading-relaxed text-primary outline-none placeholder:text-dim disabled:cursor-default disabled:text-dim"
+            className="w-full resize-none overscroll-contain !border-0 !bg-transparent !p-0 text-sm leading-relaxed text-primary outline-none placeholder:text-dim hover:!bg-transparent focus:!border-0 focus:!bg-transparent disabled:cursor-default disabled:text-dim"
             placeholder={
               pendingAskUserQuestion
                 ? 'Answer 1-9, or type to skip…'

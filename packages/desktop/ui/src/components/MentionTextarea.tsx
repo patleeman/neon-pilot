@@ -11,7 +11,7 @@ import {
 
 import { filterMentionItems, MAX_MENTION_MENU_ITEMS, type MentionItem } from '../conversation/conversationMentions';
 import { useNodeMentionItems } from '../hooks/useNodeMentionItems';
-import { cx, Pill, RowButton, SectionLabel } from './ui';
+import { cx, Pill, RowButton, SectionLabel, Textarea } from './ui';
 
 interface MentionMatch {
   query: string;
@@ -162,12 +162,12 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
         </div>
       )}
 
-      <textarea
+      <Textarea
         {...rest}
         ref={textareaRef}
         value={value}
         disabled={disabled}
-        className={className}
+        className={cx('!border-0 !bg-transparent !p-0 !shadow-none hover:!bg-transparent focus:!border-0 focus:!bg-transparent', className)}
         onChange={(event) => {
           onValueChange(event.target.value);
           updateMentionStateFromTextarea(event.target);

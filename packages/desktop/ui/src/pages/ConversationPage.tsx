@@ -35,6 +35,7 @@ import {
   PageHeader,
   SectionLabel,
   TextButton,
+  TextInput,
   ToolbarButton,
 } from '../components/ui';
 import type { ExcalidrawSceneData } from '../content/excalidrawUtils';
@@ -6374,7 +6375,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                         void saveTitleEdit();
                       }}
                     >
-                      <input
+                      <TextInput
                         ref={titleInputRef}
                         value={titleDraft}
                         onChange={(event) => setTitleDraft(event.target.value)}
@@ -6393,7 +6394,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                           void saveTitleEdit();
                         }}
                         placeholder="Name this conversation"
-                        className="ui-conversation-title-input"
+                        className="ui-conversation-title-input !border-transparent !bg-transparent !px-3 !py-1.5 !text-[2rem] !font-[650] !leading-[1.08] hover:!bg-base/35 focus:!bg-base/35"
                         disabled={titleSaving}
                       />
                       <IconButton
