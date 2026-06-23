@@ -254,21 +254,18 @@ These are bundled first-party extensions found under `extensions/system-*` with 
 
 The repository docs mention optional first-party extensions distributed from `patleeman/neon-pilot-extensions`; their source is not present in this checkout. They should be inventoried from that repository or installed package artifacts before assigning coverage percentages.
 
-| Surface               | Mentioned user feature                                                          | Local evidence in this checkout                                                                             | Coverage |
-| --------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------- |
-| Knowledge             | Knowledge browser/edit/sync, knowledge base browsing, editing, references, sync | Core knowledge backend primitives and local UI state tests; no bundled `extensions/system-knowledge` source | TBD      |
-| Browser               | Workbench browser views and browser automation                                  | Core embedded Workbench Browser tests; optional browser extension source absent                             | TBD      |
-| Agent Browser         | agent-browser CLI integration                                                   | Docs mention optional extension; no local source                                                            | TBD      |
-| Auto Router           | judge-based model routing controls                                              | Docs mention optional extension; no local source                                                            | TBD      |
-| DuckDuckGo Search     | Web search using DuckDuckGo HTML                                                | Docs mention optional extension; no local source                                                            | TBD      |
-| Exa Search            | Exa web search                                                                  | Docs mention optional extension; no local source                                                            | TBD      |
-| DS4                   | Local DeepSeek V4 Flash provider/profile                                        | Docs mention optional extension; no local source                                                            | TBD      |
-| Hermes Agent          | Hermes Agent API session interface                                              | Some gateway/server tests exist; optional extension source absent                                           | TBD      |
-| Local Models          | MLX/GGUF runtime management                                                     | Docs/release inventory mention it; no obvious source tests found                                            | TBD      |
-| Suggested Context     | Related conversation suggestions                                                | Core suggested-context hooks exist; optional extension source absent                                        | TBD      |
-| Video Probe           | Video analysis                                                                  | Docs mention optional extension; no local source                                                            | TBD      |
-| Writing Studio        | Document-first collaborative writing surface                                    | Docs mention optional extension; no local source                                                            | TBD      |
-| Mobile pairing bridge | Kitty Litter/Alleycat mobile pairing                                            | Docs mention optional extension; no local source                                                            | TBD      |
+| Surface           | Mentioned user feature                                                          | Local evidence in this checkout                                                                             | Coverage |
+| ----------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------- |
+| Knowledge         | Knowledge browser/edit/sync, knowledge base browsing, editing, references, sync | Core knowledge backend primitives and local UI state tests; no bundled `extensions/system-knowledge` source | TBD      |
+| Browser           | Workbench browser views and browser automation                                  | Core embedded Workbench Browser tests; optional browser extension source absent                             | TBD      |
+| Agent Browser     | agent-browser CLI integration                                                   | Docs mention optional extension; no local source                                                            | TBD      |
+| Auto Router       | judge-based model routing controls                                              | Docs mention optional extension; no local source                                                            | TBD      |
+| DuckDuckGo Search | Web search using DuckDuckGo HTML                                                | Docs mention optional extension; no local source                                                            | TBD      |
+| Exa Search        | Exa web search                                                                  | Docs mention optional extension; no local source                                                            | TBD      |
+| DS4               | Local DeepSeek V4 Flash provider/profile                                        | Docs mention optional extension; no local source                                                            | TBD      |
+| Suggested Context | Related conversation suggestions                                                | Core suggested-context hooks exist; optional extension source absent                                        | TBD      |
+| Video Probe       | Video analysis                                                                  | Docs mention optional extension; no local source                                                            | TBD      |
+| Writing Studio    | Document-first collaborative writing surface                                    | Docs mention optional extension; no local source                                                            | TBD      |
 
 ## Current Coverage Gaps to Track First
 
@@ -277,7 +274,6 @@ These are not final verdicts. They are areas where the audit found no obvious us
 | Area                                                                                         | Gap                                                                                          |
 | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | Installable Knowledge extension                                                              | Full `/knowledge` page/file/sync workflows are not represented by local extension source.    |
-| Optional Local Models                                                                        | No obvious local source tests found.                                                         |
 | Optional Browser/Agent Browser extensions                                                    | Core browser host has tests; optional extension source is absent.                            |
 | `/gateways` page UI                                                                          | Backend gateway/Telegram tests exist, but no obvious frontend route workflow test was found. |
 | Live Telegram gateway                                                                        | Backend tests exist; live credential/chat smoke remains manual.                              |

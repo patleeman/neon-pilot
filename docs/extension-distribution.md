@@ -53,23 +53,19 @@ The first-party optional repository is [`patleeman/neon-pilot-extensions`](https
 
 Current first-party optional packages:
 
-| Extension                   | What it adds                                                          |
-| --------------------------- | --------------------------------------------------------------------- |
-| Agent Browser               | agent-browser CLI integration for browser and Electron app automation |
-| Kitty Litter Mobile Pairing | Alleycat-compatible mobile pairing bridge                             |
-| Auto Router                 | composer auto-router controls and judge-based model routing policy    |
-| Browser                     | Workbench browser views and browser automation tools                  |
-| DS4                         | DeepSeek V4 Flash local model profile and DS4-shaped tools            |
-| DuckDuckGo Search           | DuckDuckGo-backed agent web search                                    |
-| Dynamic Workflows           | model-authored JavaScript workflow coordinators and subagent fan-out  |
-| Exa Search                  | Exa-backed agent web search with extension-managed secrets            |
-| Hermes Agent                | Hermes Agent API session interface                                    |
-| Knowledge                   | knowledge base file browsing, editing, references, and sync           |
-| Local Models                | local MLX and GGUF model runtime management                           |
-| Self Preservation           | guard that blocks the agent from killing its own process              |
-| Suggested Context           | related conversation suggestions for new prompts                      |
-| Video Probe                 | video analysis through local mlx-vlm or a remote video-capable model  |
-| Writing Studio              | document-first collaborative markdown writing surface                 |
+| Extension         | What it adds                                                          |
+| ----------------- | --------------------------------------------------------------------- |
+| Agent Browser     | agent-browser CLI integration for browser and Electron app automation |
+| Auto Router       | composer auto-router controls and judge-based model routing policy    |
+| Browser           | Workbench browser views and browser automation tools                  |
+| DS4               | DeepSeek V4 Flash local model profile and DS4-shaped tools            |
+| DuckDuckGo Search | DuckDuckGo-backed agent web search                                    |
+| Dynamic Workflows | model-authored JavaScript workflow coordinators and subagent fan-out  |
+| Exa Search        | Exa-backed agent web search with extension-managed secrets            |
+| Knowledge         | knowledge base file browsing, editing, references, and sync           |
+| Suggested Context | related conversation suggestions for new prompts                      |
+| Video Probe       | video analysis through local mlx-vlm or a remote video-capable model  |
+| Writing Studio    | document-first collaborative markdown writing surface                 |
 
 ## Extension package format
 

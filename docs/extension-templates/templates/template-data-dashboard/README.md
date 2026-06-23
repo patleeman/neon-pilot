@@ -3,7 +3,7 @@
 Read-only page that loads data from a backend action and renders it as a table or stat grid.
 No create/edit/delete. Good for status pages, diagnostics, run history, and analytics.
 
-Derived from: `system-telemetry`, `system-local-models` (server tab).
+Derived from: `system-telemetry`.
 
 ## Files
 

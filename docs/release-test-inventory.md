@@ -53,7 +53,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Pages/views: Settings, Provider settings, Desktop settings.
 - Settings keys: `secrets.provider` (`keychain`, `file`, `env-only`), `conversation.transcriptDisclosure` (`auto`, `expanded`), `conversation.diffDisclosure`, and `conversation.pinnedToolCalls`.
 - Test provider add/edit/remove, model/provider validation, secrets redaction, desktop preferences, keyboard shortcut preferences, persistence after restart.
-- Extension settings components hosted here: extension repositories, Knowledge Base when installed, Dictation, MCP tools, Image Probe, AI Gateway, Neon Pilot CLI, Alleycat host when installed.
+- Extension settings components hosted here: extension repositories, Knowledge Base when installed, Dictation, MCP tools, Image Probe, AI Gateway, Neon Pilot CLI.
 
 ### `/settings/providers` — Provider settings
 
@@ -123,12 +123,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Product surface: Settings -> Extensions and Extension Manager details. Prompt Assembly does not contribute a standalone nav item or `/prompt-assembly` route.
 - Actions: `inspectAgentRuntime`, `inspectPromptAssembly`, `updatePromptAssemblySkillEnabled`, `updateRuntimeCapability`.
 - Test runtime capability inventory, instruction layers, skill enable/disable, runtime capability toggles, diagnostics display, reload persistence, and failure isolation.
-
-### `/ext/system-local-models` — Local Models (`system-local-models`, default disabled)
-
-- Nav item/page: Local Models.
-- Actions: `localModelsStatus`, `localModelsMlxSetModel`, `localModelsMlxSetup`, `localModelsMlxUpdateRuntime`, `localModelsMlxStart`, `localModelsMlxStop`, `localModelsMlxSearch`, `localModelsSearch`, `localModelsModelDetails`, `localModelsGgufDownload`, `localModelsGgufCancelDownload`, `localModelsGgufSaveSettings`, `localModelsGgufSetModel`, `localModelsGgufReveal`, `localModelsMlxDelete`, `localModelsGgufDelete`, `localModelsGgufInstallRuntime`, `localModelsGgufStart`, `localModelsGgufStop`, `localModelsGgufRunPrompt`, `localModelsDiscover`.
-- Test MLX setup/start/stop/update/delete, GGUF download/cancel/settings/reveal/delete/runtime install/start/stop/run prompt, Hugging Face search/details, model selection propagation.
 
 ## Workbench rails, workbench details, and transcript renderers
 
@@ -290,12 +284,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 - Actions: `listSkills`, `updateSkillEnabled`.
 - Skills page/surface: list skills, enable/disable, search/filter if present, persistence, prompt assembly integration.
-
-### Alleycat mobile pairing (`system-alleycat`, default disabled)
-
-- Actions: `alleycatStart`, `alleycatStop`, `alleycatStatus`, `rotateToken`.
-- Host/settings surface.
-- Test host start/stop/status, pairing token rotation, mobile connect/disconnect, invalid token, port conflict.
 
 ### Neon Pilot CLI (`system-neon-pilot-admin-cli`)
 
@@ -563,17 +551,13 @@ Bundled system-extension entries are derived from local `extensions/*/extension.
 Validate these by installing from the catalog or release artifact and reading the installed extension manifest:
 
 - system-agent-browser — Agent Browser
-- system-alleycat — Kitty Litter Mobile Pairing
 - system-auto-router — Auto Router
 - system-browser — Browser
 - system-ds4 — DS4
 - system-duckduckgo-search — DuckDuckGo Search
 - system-dynamic-workflows — Dynamic Workflows
 - system-exa-search — Exa Search
-- system-hermes-agent — Hermes Agent
 - system-knowledge — Knowledge
-- system-local-models — Local Models
-- system-self-preservation — Self Preservation
 - system-suggested-context — Suggested Context
 - system-video-probe — Video Probe
 - system-writing-studio — Writing Studio

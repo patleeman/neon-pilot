@@ -136,7 +136,7 @@ Use these as reference implementations when migrating similar surfaces:
 - `packages/desktop/ui/src/components/conversation/ConversationActivityShelf.tsx` and `ConversationQueueShelf.tsx`: compact conversation shelves use `ShelfSection`.
 - `packages/desktop/ui/src/components/chat/MessageBlocks.tsx`: transcript messages use `MessageCard`, `MessageMeta`, and `MessageActionButton`.
 - `../neon-pilot-extensions/system-ds4/src/frontend.tsx`: runtime settings use `SurfacePanel`, `Disclosure`, `ProgressBar`, `Pill`, `DashboardGrid`, `MetricTile`, and `CodeBlock`.
-- `../neon-pilot-extensions/system-local-models/src/page.tsx` and `system-video-probe/src/frontend.tsx`: selected-model/runtime summaries use `DashboardGrid` and `MetricTile`.
+- `../neon-pilot-extensions/system-video-probe/src/frontend.tsx`: selected-model/runtime summaries use `DashboardGrid` and `MetricTile`.
 - `../neon-pilot-extensions/system-browser/src/panels.tsx`: browser tab rail uses `RailSection` and `ResourceListItem`.
 
 ## Agent Checklist

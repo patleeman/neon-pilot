@@ -12,14 +12,6 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     tag: 'v0.10.2',
   },
   {
-    id: 'system-alleycat',
-    name: 'Kitty Litter Mobile Pairing (Alleycat)',
-    description:
-      'Pair the Kitty Litter iOS app directly with Neon Pilot using a PA-owned Alleycat-compatible host and Codex-shaped conversation APIs.',
-    version: '0.1.1',
-    tag: 'v0.11.1',
-  },
-  {
     id: 'system-auto-router',
     name: 'Auto Router',
     description: 'Adds a composer control for judge-based model routing policy settings.',
@@ -62,13 +54,6 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     tag: 'v0.10.2',
   },
   {
-    id: 'system-hermes-agent',
-    name: 'Hermes Agent',
-    description: 'Connect to a running Hermes Agent instance and use Neon Pilot as its session interface.',
-    version: '0.1.0',
-    tag: 'v0.10.2',
-  },
-  {
     id: 'system-knowledge',
     name: 'Knowledge',
     description: 'Browse and edit knowledge base files beside the active conversation.',
@@ -77,20 +62,6 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     compatibility: {
       neonPilot: '>=0.10.0',
     },
-  },
-  {
-    id: 'system-local-models',
-    name: 'Local Models',
-    description: 'Manage local MLX and GGUF model runtimes from one workspace.',
-    version: '0.1.0',
-    tag: 'v0.10.2',
-  },
-  {
-    id: 'system-self-preservation',
-    name: 'Self Preservation',
-    description: 'Blocks the agent from killing its own process.',
-    version: '0.1.0',
-    tag: 'v0.10.2',
   },
   {
     id: 'system-suggested-context',
