@@ -367,6 +367,18 @@
     border-color: rgb(var(--color-terminal-border) / 0.72);
   }
 
+  .ui-terminal-block__command {
+    color: rgb(var(--color-terminal-primary));
+  }
+
+  .ui-terminal-block__output {
+    color: rgb(var(--color-terminal-secondary));
+  }
+
+  .ui-terminal-block__muted {
+    color: rgb(var(--color-terminal-dim));
+  }
+
   .ui-action-button {
     @apply inline-flex select-none items-center gap-1 rounded-md border border-steel/20 bg-surface/55 px-2 py-1 text-[11px] font-medium text-secondary transition-colors hover:border-steel/30 hover:bg-steel/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel/25 focus-visible:ring-offset-2 focus-visible:ring-offset-base disabled:cursor-not-allowed disabled:opacity-40;
   }
@@ -1433,6 +1445,9 @@
   --color-terminal-surface: 20 20 15;
   --color-terminal-chrome: 12 12 8;
   --color-terminal-border: 61 61 49;
+  --color-terminal-primary: 245 243 232;
+  --color-terminal-secondary: 197 194 176;
+  --color-terminal-dim: 150 146 124;
 }
 
 /* ─── Neon Pilot dark theme ──────────────────────────────────────────────── */
@@ -1465,6 +1480,9 @@
   --color-terminal-surface: 7 9 13;
   --color-terminal-chrome: 13 17 24;
   --color-terminal-border: 31 39 56;
+  --color-terminal-primary: 245 243 232;
+  --color-terminal-secondary: 188 185 168;
+  --color-terminal-dim: 124 121 102;
 }
 
 /* ─── Base ────────────────────────────────────────────────────────────────── */

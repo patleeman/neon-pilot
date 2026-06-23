@@ -64,7 +64,7 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
     <div className="group space-y-1.5" onMouseEnter={prefetchDeferredOutput} onFocus={prefetchDeferredOutput}>
       <div className={cx('ui-terminal-block', isError ? 'border-danger/35' : null)}>
         <div className="ui-terminal-block__chrome flex items-center gap-2 border-b px-3 py-2 text-[11px]">
-          <span className="min-w-0 flex-1 break-all text-primary">{presentation.command}</span>
+          <span className="ui-terminal-block__command min-w-0 flex-1 break-all">{presentation.command}</span>
           {presentation.executionWrappers.map((wrapper) => (
             <Pill key={wrapper.id} tone="accent" mono>
               {wrapper.label ?? wrapper.id}
@@ -81,23 +81,26 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
           <div className="px-3 py-2.5 max-h-96 overflow-y-auto">
             {block.output ? (
               <pre
-                className={cx('whitespace-pre-wrap break-all text-[11px] leading-relaxed', isError ? 'text-danger/85' : 'text-secondary')}
+                className={cx(
+                  'whitespace-pre-wrap break-all text-[11px] leading-relaxed',
+                  isError ? 'text-danger/85' : 'ui-terminal-block__output',
+                )}
               >
                 {block.output}
               </pre>
             ) : isRunning ? (
-              <p className="text-[11px] italic leading-relaxed text-dim">Waiting for output…</p>
+              <p className="ui-terminal-block__muted text-[11px] italic leading-relaxed">Waiting for output…</p>
             ) : outputDeferred ? (
-              <p className="text-[11px] italic leading-relaxed text-dim">Older terminal output is available on demand.</p>
+              <p className="ui-terminal-block__muted text-[11px] italic leading-relaxed">Older terminal output is available on demand.</p>
             ) : null}
           </div>
         )}
 
-        <div className="ui-terminal-block__chrome flex flex-wrap items-center gap-2 border-t px-3 py-2 text-[10px] text-dim">
+        <div className="ui-terminal-block__chrome ui-terminal-block__muted flex flex-wrap items-center gap-2 border-t px-3 py-2 text-[10px]">
           {footerBits.map((bit) => (
             <span key={bit}>{bit}</span>
           ))}
-          {presentation.fullOutputPath && <span className="min-w-0 break-all text-dim/80">{presentation.fullOutputPath}</span>}
+          {presentation.fullOutputPath && <span className="min-w-0 break-all opacity-80">{presentation.fullOutputPath}</span>}
           {outputDeferred && blockId && (
             <Button
               variant="action"
