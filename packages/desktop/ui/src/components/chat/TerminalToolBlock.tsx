@@ -62,7 +62,7 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
 
   return (
     <div className="group space-y-1.5" onMouseEnter={prefetchDeferredOutput} onFocus={prefetchDeferredOutput}>
-      <div className={cx('ui-terminal-block', isError ? 'border-danger/35' : null)}>
+      <div className={cx('ui-terminal-block', isError ? 'text-danger' : null)}>
         <div className="ui-terminal-block__chrome flex items-center gap-2 border-b px-3 py-2 text-[11px]">
           <span className="ui-terminal-block__command min-w-0 flex-1 break-all">{presentation.command}</span>
           {presentation.executionWrappers.map((wrapper) => (

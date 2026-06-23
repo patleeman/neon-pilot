@@ -5,7 +5,7 @@ import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { dispatchTranscriptSpotlight, transcriptTargetAttributes } from '../../transcript/spotlight.js';
-import { cx, MessageActionButton, MessageCard, MessageMeta, TextButton } from '../ui.js';
+import { cx, MessageActionButton, MessageCard, MessageMeta, Textarea, TextButton } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
@@ -554,7 +554,7 @@ export const UserMessage = memo(function UserMessage({
                 void saveEdit();
               }}
             >
-              <textarea
+              <Textarea
                 value={editDraft}
                 onChange={(event) => setEditDraft(event.target.value)}
                 onKeyDown={(event) => {
@@ -565,7 +565,7 @@ export const UserMessage = memo(function UserMessage({
                 }}
                 disabled={editSaving}
                 autoFocus
-                className="min-h-[96px] w-full resize-y rounded-xl border border-border-subtle bg-base/60 px-3 py-2 text-sm leading-relaxed text-primary outline-none focus:border-accent/50"
+                className="min-h-[96px] w-full resize-y leading-relaxed"
               />
               <div className="flex justify-end gap-2">
                 <MessageActionButton type="button" onClick={cancelEdit} disabled={editSaving}>

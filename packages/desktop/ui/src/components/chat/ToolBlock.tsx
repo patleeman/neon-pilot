@@ -24,8 +24,8 @@ import { TerminalToolBlock } from './TerminalToolBlock.js';
 import {
   registerToolBlockLinkedRunsToggleCapability,
   registerToolBlockToggleCapability,
-  TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT,
   TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
+  TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT,
   type ToolBlockCommandDetail,
 } from './toolBlockCommands.js';
 import {
@@ -395,7 +395,7 @@ export function ToolBlock({
   }
 
   const headerClassName = cx(
-    'w-full flex items-center gap-2 px-2.5 py-2 hover:bg-black/5 transition-colors text-left',
+    'ui-row-button w-full flex items-center gap-2 px-2.5 py-2 text-left',
     (subagentConversationRoute || (fileChangingTool && fileChanges.length > 0 && !isRunning && !isError)) && 'cursor-pointer',
   );
   const headerContent = (
@@ -448,7 +448,7 @@ export function ToolBlock({
       className={cx(
         'rounded-lg text-[12px] font-mono overflow-hidden transition-colors',
         meta.color,
-        isError && 'border border-danger/40 bg-danger/5 text-danger',
+        isError && 'border border-border-subtle/70 bg-elevated/25 text-danger',
       )}
     >
       {subagentConversationRoute ? (

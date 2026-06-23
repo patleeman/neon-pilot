@@ -17,7 +17,7 @@ import {
 import { timeAgo } from '../../shared/utils';
 import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import { transcriptTargetAttributes } from '../../transcript/spotlight';
-import { cx, MetaLabel, Pill, RowButton, SectionLabel, StatusDot, TextButton } from '../ui';
+import { cx, MetaLabel, Pill, RowButton, SectionLabel, StatusDot, SurfacePanel, TextButton } from '../ui';
 import {
   INLINE_RUN_LOG_TAIL_LINES,
   INLINE_RUN_POLL_INTERVAL_MS,
@@ -119,17 +119,17 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
   return (
     <div
       ref={cardRef}
-      className="rounded-lg border border-border-subtle/70 bg-elevated/35 overflow-hidden"
+      className="ui-panel-muted overflow-hidden bg-elevated/35"
       tabIndex={-1}
       {...transcriptTargetAttributes({ kind: 'background_run', runId: resolvedRunId })}
     >
-      <div className="flex items-start gap-3 px-2.5 py-2 hover:bg-elevated/70 transition-colors">
-        <RowButton compact onClick={onToggle} aria-expanded={expanded} className="min-w-0 flex-1 p-0 hover:bg-transparent">
+      <div className="flex items-start gap-3 px-2.5 py-2">
+        <RowButton compact onClick={onToggle} aria-expanded={expanded} className="min-w-0 flex-1 bg-transparent p-0">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {detailRun && (
-              <MetaLabel tone="accent" className={cx('rounded-md border border-accent/20 px-1.5 py-0.5', runIsShell && 'font-mono')}>
+              <Pill tone="accent" mono={runIsShell}>
                 {runIsShell ? '›_ Shell' : '✦ Agent'}
-              </MetaLabel>
+              </Pill>
             )}
             <Pill tone={status.tone}>{status.text}</Pill>
             <span className="truncate text-[12px] font-medium text-primary">{headline.title}</span>
@@ -178,7 +178,7 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
           )}
 
           {(detailRun || snapshot.log) && (
-            <div className="rounded-md border border-border-subtle/70 bg-elevated/40 overflow-hidden">
+            <SurfacePanel muted className="overflow-hidden bg-elevated/40">
               <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle/60 px-2 py-1.5 text-dim">
                 <StatusDot tone={runStreaming ? 'accent' : 'muted'} className={runStreaming ? 'animate-pulse' : 'opacity-40'} />
                 <MetaLabel tone="muted">{outputLabel}</MetaLabel>
@@ -200,7 +200,7 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
                   <p className="text-[11px] italic leading-relaxed text-dim">{emptyOutputLabel}</p>
                 )}
               </div>
-            </div>
+            </SurfacePanel>
           )}
 
           {detailRun && (

@@ -5,8 +5,8 @@ import { type ColorTheme, useTheme } from '../../ui-state/theme';
 import { cx, MetaLabel, RowButton } from '../ui';
 import {
   FILE_CHANGE_TOGGLE_FIRST_COMMAND_EVENT,
-  registerFileChangeToggleCapability,
   type FileChangeCommandDetail,
+  registerFileChangeToggleCapability,
 } from './fileChangeCommands';
 
 interface FileChange {
@@ -224,7 +224,7 @@ export function FileChangesToolDiff({ fileChanges }: { fileChanges: FileChange[]
           const key = displayPath(change);
           const open = expanded.has(key);
           return (
-            <section key={key} className="overflow-hidden rounded-md border border-border-subtle/70 bg-base/75">
+            <section key={key} className="ui-panel-muted overflow-hidden bg-base/75">
               <RowButton
                 onClick={() => {
                   setExpanded((current) => {
