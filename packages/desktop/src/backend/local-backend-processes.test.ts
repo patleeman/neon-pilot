@@ -174,6 +174,29 @@ describe('LocalBackendProcesses', () => {
     expect(backend).toBeDefined();
   });
 
+  it('includes a browser-usable realtime WebSocket URL in owned runtime status', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ daemonHealthy: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const backend = new LocalBackendProcesses() as LocalBackendProcesses & {
+      child?: FakeChildProcess;
+      baseUrl?: string;
+      token?: string;
+    };
+    backend.child = new FakeChildProcess();
+    backend.baseUrl = 'http://127.0.0.1:4321';
+    backend.token = 'backend-secret';
+
+    await expect(backend.getStatus()).resolves.toEqual({
+      daemonHealthy: true,
+      baseUrl: 'http://127.0.0.1:4321',
+      realtimeUrl: 'ws://127.0.0.1:4321/api/realtime?realtimeToken=backend-secret',
+    });
+    expect(fetchMock).toHaveBeenCalledWith(new URL('/health', 'http://127.0.0.1:4321'), {
+      method: 'GET',
+      headers: { Authorization: 'Bearer backend-secret' },
+    });
+  });
+
   it('rolls back extension host state when backend child startup fails and can retry', async () => {
     const firstExtensionHost = new FakeChildProcess();
     const firstBackend = new FakeChildProcess();

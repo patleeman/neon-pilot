@@ -1,16 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import { createWriteStream, mkdirSync, type WriteStream } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import type { Socket } from 'node:net';
 import { dirname, join } from 'node:path';
+import type { Duplex } from 'node:stream';
 
 import { getStateRoot } from '@neon-pilot/core';
 import { bindInProcessDaemonClient, NeonPilotDaemon } from '@neon-pilot/daemon';
 
 import { setLocalBackendBaseUrl } from '../../server/app/localBackendBaseUrl.js';
+import { createDesktopRealtimeUpgradeHandler } from '../../server/app/realtime.js';
 import { setExtensionHostClient } from '../../server/extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from '../../server/extensions/extensionHostRpcClient.js';
-import { proxyDesktopLocalApiStream } from './local-backend-stream-proxy.js';
 import { loadRawLocalApiModule, type LocalApiModule } from '../local-api-module.js';
+import { installSharedConversationServiceContext, SHARED_CHILD_RUNTIME_SCOPE } from './conversation-service-context.js';
+import { proxyDesktopLocalApiStream } from './local-backend-stream-proxy.js';
 
 interface BackendReadyMessage {
   type: 'ready';
@@ -167,6 +171,25 @@ function assertAuthorized(request: IncomingMessage, token: string): void {
   }
 }
 
+function isAuthorizedRealtimeUpgrade(request: IncomingMessage, token: string): boolean {
+  const auth = request.headers.authorization ?? '';
+  if (auth === `Bearer ${token}`) {
+    return true;
+  }
+
+  try {
+    const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+    return url.searchParams.get('realtimeToken') === token;
+  } catch {
+    return false;
+  }
+}
+
+function rejectUpgrade(socket: Duplex, statusCode: number, statusText: string): void {
+  socket.write(`HTTP/1.1 ${String(statusCode)} ${statusText}\r\nConnection: close\r\n\r\n`);
+  socket.destroy();
+}
+
 function isLocalApiRpcRequest(value: unknown): value is LocalApiRpcRequest {
   return (
     Boolean(value && typeof value === 'object') &&
@@ -250,6 +273,7 @@ async function main(): Promise<void> {
   const token = process.env.NEON_PILOT_BACKEND_TOKEN?.trim() || randomUUID();
   const extensionHostBaseUrl = process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL?.trim();
   const extensionHostToken = process.env.NEON_PILOT_EXTENSION_HOST_TOKEN?.trim();
+  installSharedConversationServiceContext();
   if (extensionHostBaseUrl && extensionHostToken) {
     setExtensionHostClient(createExtensionHostRpcClient({ baseUrl: extensionHostBaseUrl, token: extensionHostToken }));
   }
@@ -333,6 +357,18 @@ async function main(): Promise<void> {
         writeJson(response, message === 'Unauthorized' ? 401 : 500, { error: message });
       }
     })();
+  });
+  const handleRealtimeUpgrade = createDesktopRealtimeUpgradeHandler({ getRuntimeScope: () => SHARED_CHILD_RUNTIME_SCOPE });
+  server.on('upgrade', (request, socket, head) => {
+    if (!isAuthorizedRealtimeUpgrade(request, token)) {
+      rejectUpgrade(socket, 401, 'Unauthorized');
+      return;
+    }
+    if (!localApiReady) {
+      rejectUpgrade(socket, 503, 'Service Unavailable');
+      return;
+    }
+    handleRealtimeUpgrade(request, socket as Socket, head);
   });
 
   await new Promise<void>((resolve) => {

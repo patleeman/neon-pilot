@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '../client/api';
 import { getDesktopBridge } from '../desktop/desktopBridge';
-import { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
+import { openDesktopRealtimeSocket } from '../desktop/desktopRealtimeConnection';
 import type {
+  ConversationAggregateDelta,
+  ConversationAggregateState,
   ConversationBootstrapState,
   DesktopConversationState,
   DisplayBlock,
@@ -14,13 +16,23 @@ import type {
 } from '../shared/types';
 import { recordRendererTelemetry } from '../telemetry/appTelemetry';
 import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from './sessionStream';
-import { readCachedConversationBootstrap, readCachedConversationBootstrapSeed } from './useConversationBootstrap';
 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
 const MAX_CACHED_DESKTOP_CONVERSATION_STATES = 8;
 const STREAM_CONTROL_FLUSH_INTERVAL_MS = 16;
 const desktopConversationStateCache = new Map<string, DesktopConversationState>();
 const desktopConversationStateInflight = new Map<string, Promise<DesktopConversationState>>();
+
+function desktopConversationStateFromAggregate(aggregate: ConversationAggregateState): DesktopConversationState {
+  if (!('conversation' in aggregate)) {
+    return aggregate as unknown as DesktopConversationState;
+  }
+  return {
+    ...aggregate.conversation,
+    activity: aggregate.activity,
+    revision: aggregate.revision,
+  };
+}
 
 interface DesktopConversationStateOptions {
   tailBlocks?: number;
@@ -508,11 +520,12 @@ function fetchDesktopConversationStateCached(
   }
 
   const request = api
-    .desktopConversationState(conversationId, {
+    .conversationAggregate(conversationId, {
       ...(tailBlocks !== undefined ? { tailBlocks } : {}),
       ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
     })
-    .then((nextState: DesktopConversationState) => {
+    .then((nextAggregate: ConversationAggregateState) => {
+      const nextState = desktopConversationStateFromAggregate(nextAggregate);
       const previous = desktopConversationStateCache.get(cacheKey) ?? null;
       const mergedState = mergeDesktopConversationState(previous, nextState);
       rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
@@ -581,22 +594,8 @@ export function useDesktopConversationState(conversationId: string | null, optio
     } satisfies DesktopConversationStateOptions;
     const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
     const cachedState = desktopConversationStateCache.get(cacheKey) ?? null;
-    const cachedBootstrap = cachedState ? null : readCachedConversationBootstrap(conversationId, requestOptions);
-    const bootstrapState = cachedBootstrap ? createDesktopConversationStateFromBootstrap(conversationId, cachedBootstrap) : null;
-    if (bootstrapState) {
-      rememberDesktopConversationState(desktopConversationStateCache, cacheKey, bootstrapState);
-    }
-    setState((current) => (current?.conversationId === conversationId ? current : (cachedState ?? bootstrapState)));
+    setState((current) => (current?.conversationId === conversationId ? current : cachedState));
     setError(null);
-
-    if (!cachedState && !bootstrapState) {
-      const seededBootstrap = readCachedConversationBootstrapSeed(conversationId, requestOptions);
-      if (seededBootstrap) {
-        const seededState = createDesktopConversationStateFromBootstrap(conversationId, seededBootstrap);
-        rememberDesktopConversationState(desktopConversationStateCache, cacheKey, seededState);
-        setState((current) => (current?.conversationId === conversationId ? current : seededState));
-      }
-    }
 
     void fetchDesktopConversationStateCached(conversationId, requestOptions)
       .then((nextState) => {
@@ -621,22 +620,19 @@ export function useDesktopConversationState(conversationId: string | null, optio
   }, [bridge, conversationId, mode, options?.includeToolBlocks, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
 
   useEffect(() => {
-    if (mode !== 'local' || !conversationId || !matchedState?.liveSession?.live) {
+    if (mode !== 'local' || !conversationId) {
       return;
     }
 
-    const params = new URLSearchParams();
     const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
     const requestOptions = {
       ...(tailBlocks !== undefined ? { tailBlocks } : {}),
       ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
     } satisfies DesktopConversationStateOptions;
     const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
-    if (tailBlocks !== undefined) params.set('tailBlocks', String(tailBlocks));
-    params.set('surfaceId', surfaceId);
-    params.set('surfaceType', surfaceType);
-    const source = createDesktopAwareEventSource(`/api/live-sessions/${encodeURIComponent(conversationId)}/events?${params.toString()}`);
     let closed = false;
+    let socket: WebSocket | null = null;
+    let subscriptionId: string | null = null;
 
     const clearPendingStreamFlushTimer = () => {
       if (pendingStreamFlushTimerRef.current === null) {
@@ -746,24 +742,94 @@ export function useDesktopConversationState(conversationId: string | null, optio
     const shouldFlushStreamEventOnFrame = (streamEvent: SseEvent): boolean =>
       streamEvent.type === 'text_delta' || streamEvent.type === 'thinking_delta' || streamEvent.type === 'tool_update';
 
-    source.onmessage = (event) => {
+    const enqueueStreamEvent = (streamEvent: SseEvent) => {
+      if (closed) {
+        return;
+      }
+      pendingStreamEventsRef.current.push(streamEvent);
+      if (shouldFlushStreamEventImmediately(streamEvent)) {
+        flushPendingStreamEvents();
+      } else if (shouldFlushStreamEventOnFrame(streamEvent)) {
+        schedulePendingStreamEventsFrameFlush();
+      } else {
+        schedulePendingStreamEventsTimerFlush(STREAM_CONTROL_FLUSH_INTERVAL_MS);
+      }
+    };
+
+    const applyAggregateActivityDelta = (delta: Extract<ConversationAggregateDelta, { type: 'activity' }>) => {
+      setState((previous) =>
+        previous?.conversationId === conversationId
+          ? {
+              ...previous,
+              activity: delta.activity,
+              revision: delta.revision,
+            }
+          : previous,
+      );
+    };
+
+    const applyAggregateSnapshot = (aggregate: ConversationAggregateState) => {
+      if (aggregate.conversationId !== conversationId) {
+        return;
+      }
+      const nextState = desktopConversationStateFromAggregate(aggregate);
+      setState((previous) => {
+        const mergedState = mergeDesktopConversationState(previous, nextState);
+        rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
+        return mergedState;
+      });
+      setError(null);
+    };
+
+    const handleAggregateDelta = (delta: ConversationAggregateDelta) => {
+      if (delta.conversationId !== conversationId) {
+        return;
+      }
+      if (delta.type === 'activity') {
+        applyAggregateActivityDelta(delta);
+        return;
+      }
+      for (const streamEvent of delta.events) {
+        enqueueStreamEvent(streamEvent);
+      }
+      if (delta.activity) {
+        applyAggregateActivityDelta({
+          type: 'activity',
+          conversationId: delta.conversationId,
+          revision: delta.revision,
+          activity: delta.activity,
+        });
+      }
+    };
+
+    const handleRealtimeMessage = (event: MessageEvent) => {
       if (closed) {
         return;
       }
       try {
-        const streamEvent = JSON.parse(event.data) as SseEvent;
-        pendingStreamEventsRef.current.push(streamEvent);
-        if (shouldFlushStreamEventImmediately(streamEvent)) {
-          flushPendingStreamEvents();
-        } else if (shouldFlushStreamEventOnFrame(streamEvent)) {
-          schedulePendingStreamEventsFrameFlush();
-        } else {
-          schedulePendingStreamEventsTimerFlush(STREAM_CONTROL_FLUSH_INTERVAL_MS);
+        const message = JSON.parse(String(event.data)) as
+          | { type: 'conversation_snapshot'; id?: string; subscriptionId: string; state: ConversationAggregateState }
+          | { type: 'conversation_delta'; subscriptionId: string; delta: ConversationAggregateDelta }
+          | { type: 'error'; id?: string; message: string }
+          | { type: string };
+        if (message.type === 'conversation_snapshot') {
+          subscriptionId = message.subscriptionId;
+          applyAggregateSnapshot(message.state);
+          return;
+        }
+        if (message.type === 'conversation_delta' && (!subscriptionId || message.subscriptionId === subscriptionId)) {
+          subscriptionId = message.subscriptionId;
+          handleAggregateDelta(message.delta);
+          return;
+        }
+        if (message.type === 'error') {
+          setError(message.message);
+          return;
         }
       } catch (nextError) {
         recordRendererTelemetry({
           category: 'renderer_error',
-          name: 'conversation_stream_event_parse_failed',
+          name: 'conversation_realtime_event_parse_failed',
           route: `${window.location.pathname}${window.location.search}`,
           sessionId: conversationId,
           metadata: { message: nextError instanceof Error ? nextError.message : String(nextError) },
@@ -782,9 +848,10 @@ export function useDesktopConversationState(conversationId: string | null, optio
 
     const refreshAuthoritativeState = () => {
       void api
-        .desktopConversationState(conversationId, requestOptions)
-        .then((nextState) => {
+        .conversationAggregate(conversationId, requestOptions)
+        .then((nextAggregate) => {
           if (closed) return;
+          const nextState = desktopConversationStateFromAggregate(nextAggregate);
           setState((previous) => {
             const mergedState = mergeDesktopConversationState(previous, nextState);
             rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
@@ -799,7 +866,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         });
     };
 
-    source.onerror = () => {
+    const handleRealtimeError = () => {
       if (closed) {
         return;
       }
@@ -808,27 +875,57 @@ export function useDesktopConversationState(conversationId: string | null, optio
       scheduleReconnectRetry();
     };
 
+    void openDesktopRealtimeSocket()
+      .then((nextSocket) => {
+        if (closed) {
+          nextSocket.close();
+          return;
+        }
+        socket = nextSocket;
+        let subscribeSent = false;
+        const sendSubscribe = () => {
+          if (closed) return;
+          if (subscribeSent) return;
+          subscribeSent = true;
+          nextSocket.send(
+            JSON.stringify({
+              type: 'conversation_subscribe',
+              id: `conversation:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`,
+              conversationId,
+              ...(tailBlocks !== undefined ? { tailBlocks } : {}),
+              surfaceId,
+              surfaceType,
+            }),
+          );
+        };
+        nextSocket.addEventListener('open', sendSubscribe);
+        nextSocket.addEventListener('message', handleRealtimeMessage);
+        nextSocket.addEventListener('error', handleRealtimeError);
+        nextSocket.addEventListener('close', handleRealtimeError);
+        if (nextSocket.readyState === WebSocket.OPEN) {
+          sendSubscribe();
+        }
+      })
+      .catch((nextError) => {
+        if (closed) return;
+        setError(nextError instanceof Error ? nextError.message : String(nextError));
+        scheduleReconnectRetry();
+      });
+
     return () => {
       closed = true;
       if (reconnectRetryRef.current !== null) {
         window.clearTimeout(reconnectRetryRef.current);
         reconnectRetryRef.current = null;
       }
-      source.close();
+      if (subscriptionId && socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'unsubscribe', subscriptionId }));
+      }
+      socket?.close();
       clearPendingStreamFlush();
       pendingStreamEventsRef.current = [];
     };
-  }, [
-    bridge,
-    conversationId,
-    matchedState?.liveSession?.live,
-    mode,
-    options?.includeToolBlocks,
-    options?.tailBlocks,
-    subscriptionVersion,
-    surfaceId,
-    surfaceType,
-  ]);
+  }, [bridge, conversationId, mode, options?.includeToolBlocks, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
 
   const reconnect = useCallback(() => {
     if (mode === 'local') {
@@ -886,7 +983,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       } satisfies DesktopConversationStateOptions;
       let stateForSend = matchedState;
       if (!stateForSend) {
-        stateForSend = await api.desktopConversationState(conversationId, requestOptions);
+        stateForSend = desktopConversationStateFromAggregate(await api.conversationAggregate(conversationId, requestOptions));
         setState((previous) => {
           if (
             activeConversationIdRef.current !== conversationId ||

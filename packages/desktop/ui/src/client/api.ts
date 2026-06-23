@@ -22,9 +22,8 @@ import type {
   CacheEfficiencyAggregate,
   CacheEfficiencyPoint,
   ContextPointerUsageResult,
-  ConversationActivityResult,
+  ConversationAggregateState,
   ConversationAttachmentAssetData,
-  ConversationBootstrapState,
   ConversationCheckpointReviewContext,
   ConversationCommitCheckpointRecord,
   ConversationConnectionsResult,
@@ -32,7 +31,6 @@ import type {
   ConversationContextDocRef,
   ConversationSummaryRecord,
   DefaultCwdState,
-  DesktopConversationState,
   FilePickerResult,
   GatewayProviderId,
   GatewayState,
@@ -655,16 +653,6 @@ export const api = {
   },
 
   // ── Conversation Activity ─────────────────────────────────────────────────
-  conversationActivity: async (
-    id: string,
-    options: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' } = {},
-  ) => {
-    const params = new URLSearchParams();
-    if (options.active !== undefined) params.set('active', String(options.active));
-    if (options.visibility) params.set('visibility', options.visibility);
-    const query = params.toString();
-    return get<ConversationActivityResult>(`/conversations/${encodeURIComponent(id)}/activity${query ? `?${query}` : ''}`);
-  },
   conversationConnections: async (
     id: string,
     options: {
@@ -844,44 +832,20 @@ export const api = {
     post<WorkspaceEntry>('/workspace/rename', { cwd, path, newName }),
   moveWorkspacePath: async (cwd: string, path: string, targetDir: string) =>
     post<WorkspaceEntry>('/workspace/move', { cwd, path, targetDir }),
-  conversationBootstrap: async (
-    id: string,
-    options?: {
-      tailBlocks?: number;
-      includeToolBlocks?: boolean;
-    },
-  ) => {
+  conversationAggregate: async (id: string, options?: { tailBlocks?: number; includeToolBlocks?: boolean }) => {
     const startedAtMs = performance.now();
     const params = new URLSearchParams();
     if (options?.tailBlocks !== undefined) params.set('tailBlocks', String(options.tailBlocks));
     if (options?.includeToolBlocks === false) params.set('includeToolBlocks', 'false');
     const query = params.toString();
-    const result = await get<ConversationBootstrapState>(`/conversations/${encodeURIComponent(id)}/bootstrap${query ? `?${query}` : ''}`);
+    const result = await get<ConversationAggregateState>(`/conversations/${encodeURIComponent(id)}/aggregate${query ? `?${query}` : ''}`);
     recordClientPerfTiming({
-      name: 'desktop.conversationBootstrap',
+      name: 'desktop.conversationAggregate',
       startedAtMs,
       meta: {
         conversationId: id,
         tailBlocks: options?.tailBlocks,
-        serverPerf: result.perf,
-      },
-    });
-    return result;
-  },
-  desktopConversationState: async (id: string, options?: { tailBlocks?: number; includeToolBlocks?: boolean }) => {
-    const startedAtMs = performance.now();
-    const params = new URLSearchParams();
-    if (options?.tailBlocks !== undefined) params.set('tailBlocks', String(options.tailBlocks));
-    if (options?.includeToolBlocks === false) params.set('includeToolBlocks', 'false');
-    const query = params.toString();
-    const result = await get<DesktopConversationState>(`/conversations/${encodeURIComponent(id)}/state${query ? `?${query}` : ''}`);
-    recordClientPerfTiming({
-      name: 'desktop.conversationState',
-      startedAtMs,
-      meta: {
-        conversationId: id,
-        tailBlocks: options?.tailBlocks,
-        serverPerf: result.perf,
+        serverPerf: result.conversation.perf,
       },
     });
     return result;

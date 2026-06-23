@@ -205,6 +205,7 @@ describe('extensionAutomations', () => {
         accepted: true,
         runId: 'run-1',
       });
+      expect(middleware.invalidateAppTopics).toHaveBeenCalledWith('tasks', 'runs', 'sessions', 'workspace');
       await expect(createExtensionAutomationsCapability(context).readLog('task-1')).resolves.toEqual({ log: 'hello log', path: logPath });
     } finally {
       rmSync(dir, { recursive: true, force: true });

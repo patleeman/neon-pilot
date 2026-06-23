@@ -36,6 +36,7 @@ import {
 } from '../automation/scheduledTaskCapability.js';
 import { loadScheduledTasksForProfile } from '../automation/scheduledTasks.js';
 import { buildScheduledTaskThreadDetail } from '../automation/scheduledTaskThreads.js';
+import { readConversationAggregateState } from '../conversations/conversationAggregate.js';
 import {
   createConversationAttachmentCapability,
   deleteConversationAttachmentCapability,
@@ -1335,6 +1336,18 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       await readDesktopConversationBootstrap({
         conversationId: decodeURIComponent(conversationBootstrapMatch[1] ?? ''),
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
+      }),
+    );
+  }
+  const conversationAggregateMatch = /^\/api\/conversations\/([^/]+)\/aggregate$/.exec(path);
+  if (method === 'GET' && conversationAggregateMatch) {
+    const capabilityContext = await getLocalLiveSessionCapabilityContext();
+    return createDesktopLocalApiJsonResponse(
+      await readConversationAggregateState({
+        conversationId: decodeURIComponent(conversationAggregateMatch[1] ?? ''),
+        profile: capabilityContext.getRuntimeScope(),
+        tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
+        tasks: capabilityContext.listTasksForRuntimeScope?.().map((task) => ({ ...task, title: task.title ?? task.id })),
       }),
     );
   }

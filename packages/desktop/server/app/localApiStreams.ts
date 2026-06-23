@@ -2,18 +2,13 @@ import { existsSync, watch } from 'node:fs';
 import { join } from 'node:path';
 
 import { getDurableRunLogCursor, getDurableRunSnapshot, readDurableRunLogDelta } from '../automation/durableRuns.js';
-import { inlineConversationSessionSnapshotAssetsCapability } from '../conversations/conversationSessionAssetCapability.js';
-import type { DisplayBlock } from '../conversations/conversationTypes.js';
-import { subscribe as subscribeLiveSession } from '../conversations/liveSessions.js';
-import { subscribeProviderOAuthLogin } from '../models/providerAuth.js';
-import { shouldCloseProviderOAuthSubscription } from './localApiProviderOAuthSubscription.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { subscribeProviderOAuthLogin } from '../models/providerAuth.js';
 import { buildSnapshotEventsForTopic, readInitialAppEventTopics } from '../routes/system.js';
 import { subscribeAppEvents } from '../shared/appEvents.js';
 import { readWorkspaceRootSnapshot } from '../workspace/workspaceExplorer.js';
+import { shouldCloseProviderOAuthSubscription } from './localApiProviderOAuthSubscription.js';
 
-const MAX_DESKTOP_LOCAL_API_STREAM_TAIL_BLOCKS = 10000;
-const LIVE_SESSION_INITIAL_REPLAY_DEFER_MS = 150;
 const DEFERRED_APP_EVENT_SNAPSHOT_DELAY_MS = 6_000;
 
 export type DesktopLocalApiStreamEvent =
@@ -72,75 +67,6 @@ function parsePositiveInteger(raw: string | null, options?: { minimum?: number; 
   }
 
   return parsed;
-}
-
-async function subscribeDesktopLiveSessionStream(url: URL, onEvent: (event: DesktopLocalApiStreamEvent) => void): Promise<() => void> {
-  const match = /^\/api\/live-sessions\/([^/]+)\/events$/.exec(url.pathname);
-  const sessionId = decodeURIComponent(match?.[1] ?? '');
-  if (!sessionId) {
-    throw new Error('Live session id is required.');
-  }
-
-  const tailBlocks = parsePositiveInteger(url.searchParams.get('tailBlocks'), {
-    maximum: MAX_DESKTOP_LOCAL_API_STREAM_TAIL_BLOCKS,
-  });
-  const surfaceId = url.searchParams.get('surfaceId')?.trim() ?? '';
-  const surfaceType = url.searchParams.get('surfaceType') === 'mobile_web' ? 'mobile_web' : 'desktop_web';
-
-  const pendingPayloads: unknown[] = [];
-  let opened = false;
-  let closed = false;
-  const writeEvent = (event: unknown) => {
-    if (closed) {
-      return;
-    }
-
-    const payload =
-      event && typeof event === 'object' && (event as { type?: unknown }).type === 'snapshot'
-        ? inlineConversationSessionSnapshotAssetsCapability(
-            sessionId,
-            event as {
-              type: 'snapshot';
-              blocks: DisplayBlock[];
-              blockOffset: number;
-              totalBlocks: number;
-            },
-          )
-        : event;
-
-    if (!opened) {
-      pendingPayloads.push(payload);
-      return;
-    }
-
-    emitStreamMessage(onEvent, payload);
-  };
-
-  const unsubscribe = subscribeLiveSession(sessionId, writeEvent, {
-    ...(tailBlocks ? { tailBlocks } : {}),
-    ...(surfaceId ? { surface: { surfaceId, surfaceType } } : {}),
-    deferInitialReplayMs: LIVE_SESSION_INITIAL_REPLAY_DEFER_MS,
-  });
-
-  if (!unsubscribe) {
-    throw new Error('Not a live session');
-  }
-
-  onEvent({ type: 'open' });
-  opened = true;
-  for (const payload of pendingPayloads) {
-    emitStreamMessage(onEvent, payload);
-  }
-
-  return () => {
-    if (closed) {
-      return;
-    }
-
-    closed = true;
-    unsubscribe();
-    onEvent({ type: 'close' });
-  };
 }
 
 async function subscribeDesktopExtensionRouteStream(url: URL, onEvent: (event: DesktopLocalApiStreamEvent) => void): Promise<() => void> {
@@ -553,10 +479,6 @@ export async function subscribeDesktopLocalApiStreamByUrl(
   url: URL,
   onEvent: (event: DesktopLocalApiStreamEvent) => void,
 ): Promise<() => void> {
-  if (/^\/api\/live-sessions\/[^/]+\/events$/.test(url.pathname)) {
-    return subscribeDesktopLiveSessionStream(url, onEvent);
-  }
-
   if (/^\/api\/runs\/[^/]+\/events$/.test(url.pathname)) {
     return subscribeDesktopRunStream(url, onEvent);
   }

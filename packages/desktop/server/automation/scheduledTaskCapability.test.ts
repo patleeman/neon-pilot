@@ -569,5 +569,6 @@ describe('scheduledTaskCapability', () => {
       accepted: true,
       runId: 'run-1',
     });
+    expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks', 'runs', 'sessions', 'workspace');
   });
 });

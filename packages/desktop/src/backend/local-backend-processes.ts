@@ -20,6 +20,7 @@ export interface LocalBackendWorkbenchBrowserToolHost {
 interface LocalBackendStatus {
   daemonHealthy: boolean;
   baseUrl?: string;
+  realtimeUrl?: string;
 }
 
 interface BackendReadyMessage {
@@ -121,6 +122,16 @@ function resolveExtensionHostChildEntry(): string {
 
 function renderBackendChildExit(code: number | null, signal: NodeJS.Signals | null): Error {
   return new Error(`Local backend exited before it was ready (code=${String(code)} signal=${String(signal)})`);
+}
+
+function buildRealtimeUrl(baseUrl: string | undefined, token: string | undefined): string | undefined {
+  if (!baseUrl || !token) {
+    return undefined;
+  }
+  const url = new URL('/api/realtime', baseUrl);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.searchParams.set('realtimeToken', token);
+  return url.toString();
 }
 
 async function readConversationWorkspaceFastPath(): Promise<unknown> {
@@ -257,19 +268,20 @@ export class LocalBackendProcesses {
   }
 
   async getStatus(): Promise<LocalBackendStatus> {
+    const realtimeUrl = buildRealtimeUrl(this.baseUrl, this.token);
     if (!this.hasOwnedRuntime()) {
-      return { daemonHealthy: false };
+      return { daemonHealthy: false, ...(realtimeUrl ? { realtimeUrl } : {}) };
     }
 
     try {
       const response = await this.fetch('/health', { method: 'GET' });
       if (!response.ok) {
-        return { daemonHealthy: false, baseUrl: this.baseUrl };
+        return { daemonHealthy: false, baseUrl: this.baseUrl, ...(realtimeUrl ? { realtimeUrl } : {}) };
       }
       const body = (await response.json()) as { daemonHealthy?: unknown };
-      return { daemonHealthy: body.daemonHealthy === true, baseUrl: this.baseUrl };
+      return { daemonHealthy: body.daemonHealthy === true, baseUrl: this.baseUrl, ...(realtimeUrl ? { realtimeUrl } : {}) };
     } catch {
-      return { daemonHealthy: false, baseUrl: this.baseUrl };
+      return { daemonHealthy: false, baseUrl: this.baseUrl, ...(realtimeUrl ? { realtimeUrl } : {}) };
     }
   }
 

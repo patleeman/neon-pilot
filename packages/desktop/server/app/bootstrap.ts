@@ -176,6 +176,6 @@ export function startServerListeners(options: {
   });
 
   if ('on' in server && typeof server.on === 'function') {
-    server.on('upgrade', options.handleUpgrade ?? createDesktopRealtimeUpgradeHandler());
+    server.on('upgrade', options.handleUpgrade ?? createDesktopRealtimeUpgradeHandler({ getRuntimeScope: options.getRuntimeScope }));
   }
 }

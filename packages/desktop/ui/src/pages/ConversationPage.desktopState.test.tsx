@@ -26,35 +26,28 @@ afterEach(() => {
   consoleErrorSpy = null;
   vi.resetModules();
   vi.clearAllMocks();
-  vi.doUnmock('../hooks/useConversationBootstrap');
   vi.doUnmock('../hooks/useDesktopConversationState');
-  vi.doUnmock('../hooks/useConversationBootstrap.js');
   vi.doUnmock('../hooks/useDesktopConversationState.js');
-  vi.unmock('../hooks/useConversationBootstrap');
   vi.unmock('../hooks/useDesktopConversationState');
-  vi.unmock('../hooks/useConversationBootstrap.js');
   vi.unmock('../hooks/useDesktopConversationState.js');
 });
 
 describe('ConversationPage desktop local state', () => {
   it('does not bootstrap a reserved conversation route that carries an initial pending prompt', async () => {
-    const conversationBootstrap = vi.fn(() => ({ data: null, loading: false, error: null }));
-    vi.doMock('../hooks/useConversationBootstrap', () => ({
-      useConversationBootstrap: conversationBootstrap,
+    const useDesktopConversationState = vi.fn(() => ({
+      mode: 'local',
+      active: true,
+      loading: true,
+      error: null,
+      surfaceId: 'surface-local',
+      reconnect: vi.fn(),
+      send: vi.fn(),
+      abort: vi.fn(),
+      takeover: vi.fn(),
+      state: null,
     }));
     vi.doMock('../hooks/useDesktopConversationState', () => ({
-      useDesktopConversationState: () => ({
-        mode: 'local',
-        active: true,
-        loading: true,
-        error: null,
-        surfaceId: 'surface-local',
-        reconnect: vi.fn(),
-        send: vi.fn(),
-        abort: vi.fn(),
-        takeover: vi.fn(),
-        state: null,
-      }),
+      useDesktopConversationState,
     }));
 
     const { ConversationPage } = await import('./ConversationPage.js');
@@ -99,7 +92,7 @@ describe('ConversationPage desktop local state', () => {
       </AppDataContext.Provider>,
     );
 
-    expect(conversationBootstrap).toHaveBeenCalledWith('reserved-conv', expect.any(Object));
+    expect(useDesktopConversationState).toHaveBeenCalledWith('reserved-conv', expect.objectContaining({ enabled: true }));
   }, 15000);
 
   it('renders the active conversation from the dedicated desktop state subscription', async () => {

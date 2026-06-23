@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { primeConversationBootstrapCache } from '../hooks/useConversationBootstrap';
+import { primeDesktopConversationStateCache } from '../hooks/useDesktopConversationState';
 import { primeSessionDetailCache } from '../hooks/useSessions';
 import { isConversationSessionNotLiveError, primeCreatedConversationOpenCaches } from './conversationSessionLifecycle';
 
-vi.mock('../hooks/useConversationBootstrap', () => ({
-  primeConversationBootstrapCache: vi.fn(),
+vi.mock('../hooks/useDesktopConversationState', () => ({
+  primeDesktopConversationStateCache: vi.fn(),
 }));
 
 vi.mock('../hooks/useSessions', () => ({
@@ -14,7 +14,7 @@ vi.mock('../hooks/useSessions', () => ({
 
 describe('conversation session lifecycle helpers', () => {
   beforeEach(() => {
-    vi.mocked(primeConversationBootstrapCache).mockReset();
+    vi.mocked(primeDesktopConversationStateCache).mockReset();
     vi.mocked(primeSessionDetailCache).mockReset();
   });
 
@@ -25,7 +25,7 @@ describe('conversation session lifecycle helpers', () => {
     expect(isConversationSessionNotLiveError(new Error('network exploded'))).toBe(false);
   });
 
-  it('primes bootstrap and session-detail caches for newly created conversations', () => {
+  it('primes aggregate-compatible desktop and session-detail caches for newly created conversations', () => {
     const sessionDetail = {
       meta: { id: 'conv-1' },
       blocks: [],
@@ -50,7 +50,7 @@ describe('conversation session lifecycle helpers', () => {
       },
     );
 
-    expect(primeConversationBootstrapCache).toHaveBeenCalledWith('conv-1', bootstrap, { tailBlocks: 120 }, '7');
+    expect(primeDesktopConversationStateCache).toHaveBeenCalledWith('conv-1', bootstrap, { tailBlocks: 120, includeToolBlocks: false });
     expect(primeSessionDetailCache).toHaveBeenCalledWith('conv-1', sessionDetail, { tailBlocks: 120 }, 8);
   });
 
@@ -61,7 +61,7 @@ describe('conversation session lifecycle helpers', () => {
       sessionDetailVersion: 8,
     });
 
-    expect(primeConversationBootstrapCache).not.toHaveBeenCalled();
+    expect(primeDesktopConversationStateCache).not.toHaveBeenCalled();
     expect(primeSessionDetailCache).not.toHaveBeenCalled();
   });
 });

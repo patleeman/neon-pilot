@@ -62,9 +62,9 @@ describe('createDesktopAwareEventSource', () => {
     vi.stubGlobal('window', { location: { protocol: 'neon-pilot:', host: 'app' } });
 
     const { createDesktopAwareEventSource } = await import('./desktopEventSource');
-    const source = createDesktopAwareEventSource('/api/live-sessions/live-1/events');
+    const source = createDesktopAwareEventSource('/api/runs/run-1/events');
 
-    expect(sources[0]?.url).toBe('/api/live-sessions/live-1/events');
+    expect(sources[0]?.url).toBe('/api/runs/run-1/events');
     source.close();
     expect(sources[0]?.closed).toBe(true);
   });
@@ -108,7 +108,7 @@ describe('createDesktopAwareEventSource', () => {
     vi.stubGlobal('window', { location: { protocol: 'http:', host: '127.0.0.1:3000' } });
 
     const { createDesktopAwareEventSource } = await import('./desktopEventSource');
-    const source = createDesktopAwareEventSource('/api/live-sessions/live-1/events');
+    const source = createDesktopAwareEventSource('/api/runs/run-1/events');
     const onopen = vi.fn();
     const onmessage = vi.fn();
     source.onopen = onopen;
@@ -117,7 +117,7 @@ describe('createDesktopAwareEventSource', () => {
     const socket = sockets[0];
     expect(socket?.url).toBe('ws://127.0.0.1:3000/api/realtime');
     socket?.open();
-    expect(JSON.parse(socket?.sent[0] ?? '{}')).toMatchObject({ type: 'subscribe', path: '/api/live-sessions/live-1/events' });
+    expect(JSON.parse(socket?.sent[0] ?? '{}')).toMatchObject({ type: 'subscribe', path: '/api/runs/run-1/events' });
 
     socket?.receive({ type: 'stream', subscriptionId: 'sub-1', event: { type: 'open' } });
     socket?.receive({
@@ -148,7 +148,7 @@ describe('createDesktopAwareEventSource', () => {
     vi.stubGlobal('window', { location: { protocol: 'http:', host: '127.0.0.1:3000' } });
 
     const { createDesktopAwareEventSource } = await import('./desktopEventSource');
-    const source = createDesktopAwareEventSource('/api/live-sessions/live-1/events');
+    const source = createDesktopAwareEventSource('/api/runs/run-1/events');
     const socket = sockets[0];
 
     source.close();

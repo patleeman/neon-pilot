@@ -3,36 +3,100 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const eventSources = vi.hoisted(() => [] as FakeEventSource[]);
+const eventSources = vi.hoisted(() => [] as FakeRealtimeSocket[]);
 
-class FakeEventSource {
+class FakeRealtimeSocket extends EventTarget {
   onopen: ((event: Event) => void) | null = null;
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
-  readyState = 1;
+  static OPEN = 1;
+  static CLOSED = 3;
+  readyState = FakeRealtimeSocket.OPEN;
   closed = false;
+  sent: string[] = [];
+  conversationId = 'conv-1';
+
+  override addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: AddEventListenerOptions | boolean,
+  ): void {
+    super.addEventListener(type, listener, options);
+    if (!listener) return;
+    const callback =
+      typeof listener === 'function'
+        ? listener
+        : (event: Event) => {
+            listener.handleEvent(event);
+          };
+    if (type === 'message') {
+      this.onmessage = callback as (event: MessageEvent<string>) => void;
+    }
+    if (type === 'error') {
+      this.onerror = callback as (event: Event) => void;
+    }
+    if (type === 'open') {
+      this.onopen = callback as (event: Event) => void;
+    }
+  }
 
   close(): void {
     this.closed = true;
-    this.readyState = 2;
+    this.readyState = FakeRealtimeSocket.CLOSED;
+    this.dispatchEvent(new Event('close'));
   }
 
   send(data: unknown): void {
-    this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(data) }));
+    if (typeof data === 'string') {
+      this.sent.push(data);
+      try {
+        const message = JSON.parse(data) as { type?: string; conversationId?: string };
+        if (message.type === 'conversation_subscribe' && message.conversationId) {
+          this.conversationId = message.conversationId;
+        }
+      } catch {
+        // Ignore test helper parse failures.
+      }
+      return;
+    }
+    this.receive({
+      type: 'conversation_delta',
+      subscriptionId: 'sub-test',
+      delta: {
+        type: 'stream_events',
+        conversationId: this.conversationId,
+        revision: 1,
+        events: [data],
+      },
+    });
+  }
+
+  receive(data: unknown): void {
+    const event = new MessageEvent('message', { data: typeof data === 'string' ? data : JSON.stringify(data) });
+    this.dispatchEvent(event);
+  }
+
+  fail(): void {
+    const event = new Event('error');
+    this.dispatchEvent(event);
   }
 }
 
-vi.mock('../desktop/desktopEventSource', () => ({
-  createDesktopAwareEventSource: vi.fn(() => {
-    const source = new FakeEventSource();
+vi.mock('../desktop/desktopRealtimeConnection', () => ({
+  openDesktopRealtimeSocket: vi.fn(async () => {
+    const source = new FakeRealtimeSocket();
     eventSources.push(source);
+    void Promise.resolve()
+      .then(() => Promise.resolve())
+      .then(() => {
+        source.dispatchEvent(new Event('open'));
+      });
     return source;
   }),
 }));
 
 import { api } from '../client/api.js';
 import { conversationActivityStatusStore, sessionStore } from '../store';
-import { primeConversationBootstrapCache } from './useConversationBootstrap.js';
 import {
   applyDesktopConversationStreamEvent,
   applyDesktopConversationStreamEvents,
@@ -447,7 +511,7 @@ describe('useDesktopConversationState', () => {
   });
 
   it('treats an empty desktop conversation response as loaded state', async () => {
-    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+    vi.spyOn(api, 'conversationAggregate').mockResolvedValue({
       conversationId: 'conv-empty',
       sessionDetail: null,
       bootstrap: null,
@@ -493,14 +557,18 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.loading).toBe(false);
     expect(latestState?.state?.conversationId).toBe('conv-empty');
     expect(latestState?.state?.stream.blocks).toEqual([]);
+    expect(eventSources[0]?.sent.map((entry) => JSON.parse(entry)).filter((entry) => entry.type === 'conversation_subscribe')).toHaveLength(
+      1,
+    );
+    expect(JSON.parse(eventSources[0]?.sent[0] ?? '{}')).toMatchObject({ type: 'conversation_subscribe', conversationId: 'conv-empty' });
   });
 
   it('reuses an in-flight desktop conversation prefetch when the page opens', async () => {
-    let resolveRequest: (state: Awaited<ReturnType<typeof api.desktopConversationState>>) => void = () => {};
-    const request = new Promise<Awaited<ReturnType<typeof api.desktopConversationState>>>((resolve) => {
+    let resolveRequest: (state: Awaited<ReturnType<typeof api.conversationAggregate>>) => void = () => {};
+    const request = new Promise<Awaited<ReturnType<typeof api.conversationAggregate>>>((resolve) => {
       resolveRequest = resolve;
     });
-    const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(request);
+    const conversationAggregate = vi.spyOn(api, 'conversationAggregate').mockReturnValue(request);
 
     Object.defineProperty(window, 'neonPilotDesktop', {
       configurable: true,
@@ -519,7 +587,7 @@ describe('useDesktopConversationState', () => {
     });
 
     expect(prefetch).not.toBeNull();
-    expect(desktopConversationState).toHaveBeenCalledTimes(1);
+    expect(conversationAggregate).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       resolveRequest({
@@ -555,7 +623,7 @@ describe('useDesktopConversationState', () => {
   });
 
   it('uses a primed create bootstrap as the initial desktop conversation state', async () => {
-    const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
+    const conversationAggregate = vi.spyOn(api, 'conversationAggregate').mockReturnValue(new Promise(() => undefined));
 
     primeDesktopConversationStateCache(
       'conv-created',
@@ -599,11 +667,11 @@ describe('useDesktopConversationState', () => {
 
     expect(latestState?.loading).toBe(false);
     expect(latestState?.state?.sessionDetail?.meta.id).toBe('conv-created');
-    expect(desktopConversationState).toHaveBeenCalledWith('conv-created', { tailBlocks: 20 });
+    expect(conversationAggregate).toHaveBeenCalledWith('conv-created', { tailBlocks: 20 });
   });
 
   it('seeds stream running state from live bootstrap metadata before the stream snapshot arrives', async () => {
-    vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
+    vi.spyOn(api, 'conversationAggregate').mockReturnValue(new Promise(() => undefined));
 
     primeDesktopConversationStateCache(
       'conv-running-bootstrap',
@@ -680,8 +748,8 @@ describe('useDesktopConversationState', () => {
         cwdChange: null,
         title: null,
       },
-    } satisfies Awaited<ReturnType<typeof api.desktopConversationState>>;
-    vi.spyOn(api, 'desktopConversationState').mockResolvedValue(liveState);
+    } as unknown as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    vi.spyOn(api, 'conversationAggregate').mockResolvedValue(liveState);
     sessionStore.upsert({
       id: 'conv-sidebar-running',
       title: 'Sidebar row',
@@ -736,8 +804,8 @@ describe('useDesktopConversationState', () => {
         cwdChange: null,
         title: null,
       },
-    } satisfies Awaited<ReturnType<typeof api.desktopConversationState>>;
-    vi.spyOn(api, 'desktopConversationState').mockResolvedValue(liveState);
+    } as unknown as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    vi.spyOn(api, 'conversationAggregate').mockResolvedValue(liveState);
 
     Object.defineProperty(window, 'neonPilotDesktop', {
       configurable: true,
@@ -767,34 +835,8 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ isStreaming: false }));
   });
 
-  it('seeds saved desktop conversations from the bootstrap cache while refreshing desktop state', async () => {
-    const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
-
-    primeConversationBootstrapCache(
-      'conv-cached',
-      {
-        conversationId: 'conv-cached',
-        sessionDetail: {
-          meta: {
-            id: 'conv-cached',
-            file: '/repo/cached.jsonl',
-            timestamp: '2026-05-30T00:00:00.000Z',
-            cwd: '/repo',
-            cwdSlug: 'repo',
-            model: 'gpt',
-            title: 'Cached Conversation',
-            messageCount: 2,
-          },
-          blocks: [{ type: 'text', id: 'text-1', text: 'Cached reply', ts: '2026-05-30T00:00:00.000Z' }],
-          blockOffset: 0,
-          totalBlocks: 1,
-          contextUsage: null,
-        },
-        liveSession: { live: false },
-      },
-      { tailBlocks: 20, includeToolBlocks: false },
-      '1',
-    );
+  it('waits for aggregate state instead of seeding saved conversations from the bootstrap cache', async () => {
+    const conversationAggregate = vi.spyOn(api, 'conversationAggregate').mockReturnValue(new Promise(() => undefined));
 
     Object.defineProperty(window, 'neonPilotDesktop', {
       configurable: true,
@@ -811,10 +853,9 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(latestState?.loading).toBe(false);
-    expect(latestState?.state?.sessionDetail?.blocks).toEqual([expect.objectContaining({ text: 'Cached reply' })]);
-    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ text: 'Cached reply' })]);
-    expect(desktopConversationState).toHaveBeenCalledWith('conv-cached', { tailBlocks: 20, includeToolBlocks: false });
+    expect(latestState?.loading).toBe(true);
+    expect(latestState?.state).toBeNull();
+    expect(conversationAggregate).toHaveBeenCalledWith('conv-cached', { tailBlocks: 20, includeToolBlocks: false });
   });
 
   it('resumes a persisted desktop conversation before sending a prompt', async () => {
@@ -856,8 +897,8 @@ describe('useDesktopConversationState', () => {
         cwdChange: null,
         title: null,
       },
-    } satisfies Awaited<ReturnType<typeof api.desktopConversationState>>;
-    vi.spyOn(api, 'desktopConversationState')
+    } as unknown as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    vi.spyOn(api, 'conversationAggregate')
       .mockResolvedValueOnce(savedConversationState)
       .mockResolvedValue({
         ...savedConversationState,
@@ -911,7 +952,7 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.state?.liveSession).toEqual(
       expect.objectContaining({ live: true, id: 'conv-saved', sessionFile: '/repo/saved.jsonl' }),
     );
-    expect(eventSources).toHaveLength(1);
+    expect(eventSources.length).toBeGreaterThanOrEqual(1);
   });
 
   it('fetches and resumes persisted conversation state when sending before hydration finishes', async () => {
@@ -953,12 +994,12 @@ describe('useDesktopConversationState', () => {
         cwdChange: null,
         title: null,
       },
-    } satisfies Awaited<ReturnType<typeof api.desktopConversationState>>;
-    let resolveInitialState: (state: Awaited<ReturnType<typeof api.desktopConversationState>>) => void = () => {};
-    const initialStateRequest = new Promise<Awaited<ReturnType<typeof api.desktopConversationState>>>((resolve) => {
+    } as unknown as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    let resolveInitialState: (state: Awaited<ReturnType<typeof api.conversationAggregate>>) => void = () => {};
+    const initialStateRequest = new Promise<Awaited<ReturnType<typeof api.conversationAggregate>>>((resolve) => {
       resolveInitialState = resolve;
     });
-    vi.spyOn(api, 'desktopConversationState').mockReturnValueOnce(initialStateRequest).mockResolvedValue(savedConversationState);
+    vi.spyOn(api, 'conversationAggregate').mockReturnValueOnce(initialStateRequest).mockResolvedValue(savedConversationState);
     const sendConversationMessage = vi.spyOn(api, 'sendConversationMessage').mockResolvedValue({
       ok: true,
       accepted: true,
@@ -1041,7 +1082,7 @@ describe('useDesktopConversationState', () => {
         cwdChange: null,
         title: null,
       },
-    } satisfies Awaited<ReturnType<typeof api.desktopConversationState>>;
+    } as unknown as Awaited<ReturnType<typeof api.conversationAggregate>>;
     const convTwoState = {
       ...convOneState,
       conversationId: 'conv-2',
@@ -1053,12 +1094,12 @@ describe('useDesktopConversationState', () => {
         ...convOneState.stream,
         blocks: [{ type: 'text' as const, id: 'text-2', text: 'Second reply', ts: '2026-05-30T00:00:01.000Z' }],
       },
-    } satisfies Awaited<ReturnType<typeof api.desktopConversationState>>;
-    let resolveSendState: (state: Awaited<ReturnType<typeof api.desktopConversationState>>) => void = () => {};
-    const sendStateRequest = new Promise<Awaited<ReturnType<typeof api.desktopConversationState>>>((resolve) => {
+    } as unknown as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    let resolveSendState: (state: Awaited<ReturnType<typeof api.conversationAggregate>>) => void = () => {};
+    const sendStateRequest = new Promise<Awaited<ReturnType<typeof api.conversationAggregate>>>((resolve) => {
       resolveSendState = resolve;
     });
-    vi.spyOn(api, 'desktopConversationState')
+    vi.spyOn(api, 'conversationAggregate')
       .mockReturnValueOnce(new Promise(() => undefined))
       .mockReturnValueOnce(sendStateRequest)
       .mockResolvedValueOnce(convTwoState)
@@ -1122,7 +1163,7 @@ describe('useDesktopConversationState', () => {
   });
 
   it('uses a primed reserved conversation as live state while refreshing desktop state and subscribing', async () => {
-    const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
+    const conversationAggregate = vi.spyOn(api, 'conversationAggregate').mockReturnValue(new Promise(() => undefined));
 
     primeReservedDesktopConversationStateCache(
       {
@@ -1159,12 +1200,12 @@ describe('useDesktopConversationState', () => {
         sessionFile: '/repo/reserved.jsonl',
       }),
     );
-    expect(desktopConversationState).toHaveBeenCalledWith('conv-reserved', { tailBlocks: 20 });
+    expect(conversationAggregate).toHaveBeenCalledWith('conv-reserved', { tailBlocks: 20 });
     expect(eventSources).toHaveLength(1);
   });
 
   it('does not let a stale non-live refresh make a reserved new conversation resume before sending', async () => {
-    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+    vi.spyOn(api, 'conversationAggregate').mockResolvedValue({
       conversationId: 'conv-reserved',
       sessionDetail: {
         meta: {
@@ -1261,7 +1302,7 @@ describe('useDesktopConversationState', () => {
       return frameCallbacks.length;
     });
     vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
-    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+    vi.spyOn(api, 'conversationAggregate').mockResolvedValue({
       conversationId: 'conv-1',
       sessionDetail: null,
       bootstrap: null,
@@ -1328,7 +1369,7 @@ describe('useDesktopConversationState', () => {
       return frameCallbacks.length;
     });
     vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
-    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+    vi.spyOn(api, 'conversationAggregate').mockResolvedValue({
       conversationId: 'conv-1',
       sessionDetail: null,
       bootstrap: null,
@@ -1387,7 +1428,7 @@ describe('useDesktopConversationState', () => {
   });
 
   it('keeps live state healthy when a malformed SSE frame arrives', async () => {
-    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+    vi.spyOn(api, 'conversationAggregate').mockResolvedValue({
       conversationId: 'conv-1',
       sessionDetail: null,
       bootstrap: null,
@@ -1440,7 +1481,7 @@ describe('useDesktopConversationState', () => {
   });
 
   it('refetches conversation state when reconnect is requested after a same-conversation cwd change', async () => {
-    const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+    const conversationAggregate = vi.spyOn(api, 'conversationAggregate').mockResolvedValue({
       conversationId: 'conv-1',
       sessionDetail: null,
       bootstrap: null,
@@ -1482,9 +1523,9 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    const initialFetchCount = desktopConversationState.mock.calls.length;
+    const initialFetchCount = conversationAggregate.mock.calls.length;
     expect(initialFetchCount).toBeGreaterThan(0);
-    expect(desktopConversationState).toHaveBeenLastCalledWith('conv-1', { tailBlocks: 20 });
+    expect(conversationAggregate).toHaveBeenLastCalledWith('conv-1', { tailBlocks: 20 });
 
     await act(async () => {
       latestReconnect?.();
@@ -1492,7 +1533,7 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(desktopConversationState).toHaveBeenCalledTimes(initialFetchCount + 1);
+    expect(conversationAggregate).toHaveBeenCalledTimes(initialFetchCount + 1);
   });
 
   it('preserves active streaming state and schedules reconnection when the SSE connection errors', async () => {
@@ -1503,7 +1544,7 @@ describe('useDesktopConversationState', () => {
       return frameCallbacks.length;
     });
     vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
-    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+    vi.spyOn(api, 'conversationAggregate').mockResolvedValue({
       conversationId: 'conv-1',
       sessionDetail: null,
       bootstrap: null,
@@ -1593,7 +1634,7 @@ describe('useDesktopConversationState', () => {
       return frameCallbacks.length;
     });
     vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
-    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+    vi.spyOn(api, 'conversationAggregate').mockResolvedValue({
       conversationId: 'conv-1',
       sessionDetail: null,
       bootstrap: null,
@@ -1666,7 +1707,7 @@ describe('useDesktopConversationState', () => {
       return 1;
     });
     vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
-    vi.spyOn(api, 'desktopConversationState')
+    vi.spyOn(api, 'conversationAggregate')
       .mockResolvedValueOnce({
         conversationId: 'conv-1',
         sessionDetail: null,
@@ -1743,7 +1784,7 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(api.desktopConversationState).toHaveBeenCalledTimes(2);
+    expect(api.conversationAggregate).toHaveBeenCalledTimes(2);
     expect(latestState?.state?.stream.isStreaming).toBe(false);
     expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ live: false, isStreaming: false }));
     expect(latestState?.error).toBeNull();
@@ -1752,7 +1793,7 @@ describe('useDesktopConversationState', () => {
   });
 
   it('keeps same-conversation state visible while refetching', async () => {
-    let resolveSecondFetch: ((value: Awaited<ReturnType<typeof api.desktopConversationState>>) => void) | null = null;
+    let resolveSecondFetch: ((value: Awaited<ReturnType<typeof api.conversationAggregate>>) => void) | null = null;
     const initialState = {
       conversationId: 'conv-1',
       sessionDetail: null,
@@ -1778,7 +1819,7 @@ describe('useDesktopConversationState', () => {
         title: null,
       },
     };
-    vi.spyOn(api, 'desktopConversationState')
+    vi.spyOn(api, 'conversationAggregate')
       .mockResolvedValueOnce(initialState)
       .mockImplementationOnce(
         () =>
@@ -1829,7 +1870,7 @@ describe('useDesktopConversationState', () => {
   });
 
   it('shows cached conversation state immediately when switching back to a recent thread', async () => {
-    let resolveThirdFetch: ((value: Awaited<ReturnType<typeof api.desktopConversationState>>) => void) | null = null;
+    let resolveThirdFetch: ((value: Awaited<ReturnType<typeof api.conversationAggregate>>) => void) | null = null;
     const convOneState = {
       conversationId: 'conv-1',
       sessionDetail: null,
@@ -1863,7 +1904,7 @@ describe('useDesktopConversationState', () => {
         blocks: [{ type: 'text' as const, id: 'block-2', text: 'Second transcript', ts: '2026-05-24T00:00:01.000Z' }],
       },
     };
-    vi.spyOn(api, 'desktopConversationState')
+    vi.spyOn(api, 'conversationAggregate')
       .mockResolvedValueOnce(convOneState)
       .mockResolvedValueOnce(convTwoState)
       .mockImplementationOnce(

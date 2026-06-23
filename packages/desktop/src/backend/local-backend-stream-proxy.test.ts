@@ -48,7 +48,7 @@ describe('proxyDesktopLocalApiStream', () => {
     const pending = proxyDesktopLocalApiStream(
       request as never,
       response as never,
-      '/api/live-sessions/live-1/events',
+      '/api/runs/run-1/events',
       subscribeDesktopLocalApiStream as never,
     );
     request.emit('close');

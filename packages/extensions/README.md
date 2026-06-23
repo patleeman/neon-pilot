@@ -393,7 +393,7 @@ const visible = await createAgentConversation(
 
 Extension-owned conversations support two modes: hidden+ephemeral for private worker sessions, and visible+saved for host conversation sessions that appear in the normal conversation system. They are scoped to the owning extension id and require `agent:conversations`. Use `runAgentTask` when you only need create → send → dispose.
 
-Use `streamAgentMessage` from an SSE `backend.routes` handler when an extension owns a private chat interface and needs token/tool streaming. It returns a route-ready `{ stream: 'sse', events }` response with normalized chat events. Visible+saved conversations should use the host live-session events endpoint instead because they are normal app conversations. Frontend chat surfaces should render shared `ChatView` and `ChatRailComposer` from `@neon-pilot/extensions/ui`.
+Use `streamAgentMessage` from an SSE `backend.routes` handler when an extension owns a private chat interface and needs token/tool streaming. It returns a route-ready `{ stream: 'sse', events }` response with normalized chat events. Visible+saved conversations are normal app conversations and should render the host conversation page/rail, which hydrates through the conversation aggregate and receives WebSocket deltas from the desktop realtime bus.
 
 Extensions can record fire-and-forget app telemetry through the dedicated telemetry seam:
 

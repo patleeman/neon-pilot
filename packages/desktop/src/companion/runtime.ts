@@ -33,21 +33,10 @@ import type {
   CompanionSshTargetTestInput,
   CompanionSurfaceType,
 } from '@neon-pilot/daemon';
+import { WebSocket } from 'ws';
 
 import { parseApiDispatchResult, readApiDispatchError } from '../hosts/api-dispatch.js';
 import type { HostManager } from '../hosts/host-manager.js';
-import type { DesktopApiStreamEvent } from '../hosts/types.js';
-
-function toQuery(params: Record<string, string | undefined>): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (typeof value === 'string' && value.length > 0) {
-      search.set(key, value);
-    }
-  }
-  const query = search.toString();
-  return query.length > 0 ? `?${query}` : '';
-}
 
 function toInternalSurfaceType(surfaceType: CompanionSurfaceType | undefined): 'desktop_web' | 'mobile_web' | undefined {
   if (surfaceType === 'desktop_ui') {
@@ -141,14 +130,6 @@ async function invokeDesktopExtensionActionByRouteCapability<T = unknown>(
   return invokeDesktopExtensionAction<T>(hostManager, extensionId, actionId, input);
 }
 
-async function subscribeDesktopApiStream(
-  hostManager: HostManager,
-  path: string,
-  onEvent: (event: DesktopApiStreamEvent) => void,
-): Promise<() => void> {
-  return hostManager.getHostController('local').subscribeApiStream(path, onEvent);
-}
-
 const COMPANION_TRANSCRIPT_TAIL_BLOCKS = 10000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -223,7 +204,7 @@ function normalizeCompanionTranscriptTailBlocks(value: number | undefined): numb
     return COMPANION_TRANSCRIPT_TAIL_BLOCKS;
   }
 
-  return Math.max(value, COMPANION_TRANSCRIPT_TAIL_BLOCKS);
+  return Math.min(value, COMPANION_TRANSCRIPT_TAIL_BLOCKS);
 }
 
 function normalizeConversationBootstrapForCompanion(conversationId: string, envelope: unknown): unknown {
@@ -275,6 +256,129 @@ function normalizeConversationEventForCompanion(conversationId: string, event: u
   }
 
   return event;
+}
+
+async function subscribeDesktopConversationAggregate(
+  hostManager: HostManager,
+  input: CompanionConversationSubscriptionInput,
+  onEvent: (event: unknown) => void,
+): Promise<() => void> {
+  const controller = hostManager.getHostController('local');
+  const realtimeUrl = await controller.getRealtimeUrl?.();
+  if (!realtimeUrl) {
+    throw new Error('Desktop realtime conversation subscriptions are unavailable.');
+  }
+
+  return await new Promise<() => void>((resolve, reject) => {
+    const socket = new WebSocket(realtimeUrl);
+    let settled = false;
+    let closed = false;
+    let subscriptionId: string | undefined;
+
+    const failBeforeReady = (error: unknown) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      reject(error instanceof Error ? error : new Error(String(error)));
+    };
+
+    const unsubscribe = () => {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      if (socket.readyState === WebSocket.OPEN && subscriptionId) {
+        socket.send(JSON.stringify({ type: 'unsubscribe', subscriptionId }));
+      }
+      socket.close();
+    };
+
+    socket.on('open', () => {
+      if (closed) {
+        return;
+      }
+      onEvent({ type: 'open' });
+      socket.send(
+        JSON.stringify({
+          type: 'conversation_subscribe',
+          conversationId: input.conversationId,
+          tailBlocks: normalizeCompanionTranscriptTailBlocks(input.tailBlocks),
+          ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
+          ...(toInternalSurfaceType(input.surfaceType) ? { surfaceType: toInternalSurfaceType(input.surfaceType) } : {}),
+        }),
+      );
+    });
+
+    socket.on('message', (raw) => {
+      let message: unknown;
+      try {
+        message = JSON.parse(String(raw));
+      } catch (error) {
+        onEvent({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+        return;
+      }
+
+      if (!isRecord(message)) {
+        return;
+      }
+
+      if (message.type === 'error') {
+        const errorMessage = typeof message.message === 'string' ? message.message : 'Conversation subscription failed.';
+        onEvent({ type: 'error', message: errorMessage });
+        failBeforeReady(new Error(errorMessage));
+        return;
+      }
+
+      if (message.type === 'conversation_snapshot') {
+        subscriptionId = typeof message.subscriptionId === 'string' ? message.subscriptionId : subscriptionId;
+        onEvent({
+          type: 'conversation_snapshot',
+          state: message.state,
+        });
+        if (!settled) {
+          settled = true;
+          resolve(unsubscribe);
+        }
+        return;
+      }
+
+      if (message.type !== 'conversation_delta') {
+        return;
+      }
+
+      if (subscriptionId && message.subscriptionId !== subscriptionId) {
+        return;
+      }
+
+      const delta = message.delta;
+      if (!isRecord(delta)) {
+        return;
+      }
+
+      if (delta.type === 'stream_events' && Array.isArray(delta.events)) {
+        for (const event of delta.events) {
+          onEvent(normalizeConversationEventForCompanion(input.conversationId, event));
+        }
+      }
+
+      if (isRecord(delta.activity)) {
+        onEvent({ type: 'activity', activity: delta.activity });
+      } else if (delta.type === 'activity') {
+        onEvent({ type: 'activity', activity: undefined });
+      }
+    });
+
+    socket.on('error', (error) => {
+      onEvent({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+      failBeforeReady(error);
+    });
+
+    socket.on('close', () => {
+      onEvent({ type: 'close' });
+      failBeforeReady(new Error('Desktop realtime conversation subscription closed before it was ready.'));
+    });
+  });
 }
 
 function buildExecutionTargets(_hostManager: HostManager) {
@@ -909,36 +1013,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
     },
 
     async subscribeConversation(input: CompanionConversationSubscriptionInput, onEvent: (event: unknown) => void) {
-      const query = toQuery({
-        ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
-        ...(toInternalSurfaceType(input.surfaceType) ? { surfaceType: toInternalSurfaceType(input.surfaceType) } : {}),
-        tailBlocks: String(normalizeCompanionTranscriptTailBlocks(input.tailBlocks)),
-      });
-
-      return subscribeDesktopApiStream(
-        hostManager,
-        `/api/live-sessions/${encodeURIComponent(input.conversationId)}/events${query}`,
-        (event) => {
-          if (event.type === 'message') {
-            try {
-              const payload = JSON.parse(event.data || 'null') as unknown;
-              onEvent(normalizeConversationEventForCompanion(input.conversationId, payload));
-            } catch (error) {
-              onEvent({ type: 'error', message: error instanceof Error ? error.message : String(error) });
-            }
-            return;
-          }
-
-          if (event.type === 'error') {
-            onEvent({ type: 'error', message: event.message });
-            return;
-          }
-
-          if (event.type === 'close') {
-            onEvent({ type: 'close' });
-          }
-        },
-      );
+      return subscribeDesktopConversationAggregate(hostManager, input, onEvent);
     },
   };
 }

@@ -137,6 +137,18 @@ describe('LocalHostController', () => {
     await expect(controller.getRealtimeUrl()).resolves.toBe('ws://127.0.0.1:4321/api/realtime');
   });
 
+  it('uses the backend-provided realtime WebSocket URL when it includes local credentials', async () => {
+    const backend = createBackendMock();
+    vi.mocked(backend.getStatus).mockResolvedValue({
+      daemonHealthy: true,
+      baseUrl: 'http://127.0.0.1:4321',
+      realtimeUrl: 'ws://127.0.0.1:4321/api/realtime?realtimeToken=secret',
+    } as never);
+    const controller = new LocalHostController({ id: 'local', label: 'Local', kind: 'local' }, backend);
+
+    await expect(controller.getRealtimeUrl()).resolves.toBe('ws://127.0.0.1:4321/api/realtime?realtimeToken=secret');
+  });
+
   it('registers the Workbench Browser native host with the backend without booting the web child', async () => {
     const backend = createBackendMock();
     const controller = new LocalHostController({ id: 'local', label: 'Local', kind: 'local' }, backend);
@@ -647,7 +659,7 @@ describe('LocalHostController', () => {
     expect(backend.ensureStarted).not.toHaveBeenCalled();
   });
 
-  it('routes live-session event streams through the local API module without loopback proxying', async () => {
+  it('routes local API event streams through the local API module without loopback proxying', async () => {
     const unsubscribe = vi.fn();
     const subscribeDesktopLocalApiStream = vi.fn().mockResolvedValue(unsubscribe);
     const loadLocalApi = vi.fn().mockResolvedValue(
@@ -660,10 +672,10 @@ describe('LocalHostController', () => {
     const controller = new LocalHostController({ id: 'local', label: 'Local', kind: 'local' }, backend, loadLocalApi);
     const onEvent = vi.fn();
 
-    await expect(controller.subscribeApiStream('/api/live-sessions/live-1/events?tailBlocks=20', onEvent)).resolves.toBe(unsubscribe);
+    await expect(controller.subscribeApiStream('/api/runs/run-1/events', onEvent)).resolves.toBe(unsubscribe);
 
     expect(loadLocalApi).toHaveBeenCalledTimes(1);
-    expect(subscribeDesktopLocalApiStream).toHaveBeenCalledWith('/api/live-sessions/live-1/events?tailBlocks=20', onEvent);
+    expect(subscribeDesktopLocalApiStream).toHaveBeenCalledWith('/api/runs/run-1/events', onEvent);
     expect(backend.ensureStarted).not.toHaveBeenCalled();
   });
 

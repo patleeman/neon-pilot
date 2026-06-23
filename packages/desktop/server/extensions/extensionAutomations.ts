@@ -235,6 +235,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       if (!resolvedTask.task.prompt.trim()) throw new Error('Task has no prompt body');
       const result = await startScheduledTaskRun(resolvedTask.task.id);
       if (!result.accepted) throw new Error(result.reason ?? 'Could not start the task run.');
+      invalidateAppTopics('tasks', 'runs', 'sessions', 'workspace');
       return { ok: true, accepted: result.accepted, runId: result.runId };
     },
     async readLog(taskId: string) {

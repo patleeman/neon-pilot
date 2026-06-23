@@ -128,6 +128,67 @@ const regressionBootstrapData = {
   },
 };
 
+function createDesktopStateFromRegressionBootstrap() {
+  return {
+    conversationId: regressionBootstrapData.conversationId,
+    sessionDetail: regressionBootstrapData.sessionDetail,
+    liveSession: regressionBootstrapData.liveSession,
+    stream: {
+      blocks: regressionBootstrapData.sessionDetail.blocks,
+      blockOffset: regressionBootstrapData.sessionDetail.blockOffset,
+      totalBlocks: regressionBootstrapData.sessionDetail.totalBlocks,
+      hasSnapshot: true,
+      isStreaming: regressionBootstrapData.liveSession.live === true && regressionBootstrapData.liveSession.isStreaming === true,
+      isCompacting: false,
+      error: null,
+      title: regressionBootstrapData.liveSession.title,
+      tokens: null,
+      cost: null,
+      contextUsage: null,
+      pendingQueue: { steering: [], followUp: [] },
+      parallelJobs: [],
+      presence: { surfaces: [] },
+      goalState: null,
+      systemPrompt: null,
+      toolDefinitions: [],
+      cwdChange: null,
+    },
+  };
+}
+
+function setDesktopConversationFixture(data = regressionBootstrapData) {
+  desktopConversationState.mode = 'local';
+  desktopConversationState.active = true;
+  desktopConversationState.surfaceId = 'surface-test';
+  desktopConversationState.loading = false;
+  desktopConversationState.error = null;
+  desktopConversationState.state = {
+    conversationId: data.conversationId,
+    sessionDetail: data.sessionDetail,
+    liveSession: data.liveSession,
+    stream: {
+      blocks: data.sessionDetail.blocks,
+      blockOffset: data.sessionDetail.blockOffset,
+      totalBlocks: data.sessionDetail.totalBlocks,
+      hasSnapshot: true,
+      isStreaming: data.liveSession.live === true && data.liveSession.isStreaming === true,
+      isCompacting: false,
+      error: null,
+      title: data.liveSession.title,
+      tokens: null,
+      cost: null,
+      contextUsage: null,
+      pendingQueue: { steering: [], followUp: [] },
+      parallelJobs: [],
+      presence: { surfaces: [] },
+      goalState: null,
+      systemPrompt: null,
+      toolDefinitions: [],
+      cwdChange: null,
+    },
+  };
+}
+
 function createRegressionBootstrapData(conversationId: string, cwd = `/tmp/${conversationId}`) {
   return {
     conversationId,
@@ -196,16 +257,6 @@ vi.mock('../components/ConversationDrawingsPickerModal', () => ({
 vi.mock('../hooks/useDesktopConversationState', () => ({
   primeReservedDesktopConversationStateCache: vi.fn(),
   useDesktopConversationState: () => desktopConversationState,
-}));
-
-const regressionBootstrap = {
-  loading: false,
-  error: null,
-  data: regressionBootstrapData,
-};
-
-vi.mock('../hooks/useConversationBootstrap', () => ({
-  useConversationBootstrap: () => regressionBootstrap,
 }));
 
 vi.mock('../session/sessionTabs', () => ({
@@ -428,9 +479,6 @@ function renderSwitchableConversationPage() {
 beforeEach(() => {
   vi.useFakeTimers();
   window.localStorage.clear();
-  regressionBootstrap.loading = false;
-  regressionBootstrap.error = null;
-  regressionBootstrap.data = regressionBootstrapData;
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
   desktopConversationState.mode = 'disabled';
   desktopConversationState.active = false;
@@ -857,13 +905,13 @@ describe('ConversationPage lazy composer metadata', () => {
         isLive: true,
       },
     };
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = createDesktopStateFromRegressionBootstrap();
 
     const liveSessionContextResolvers: Array<
-      (value: {
-        cwd: string;
-        branch: string | null;
-        git: { changeCount: number; linesAdded: number; linesDeleted: number } | null;
-      }) => void
+      (value: { cwd: string; branch: string | null; git: { changeCount: number; linesAdded: number; linesDeleted: number } | null }) => void
     > = [];
     apiMock.liveSessionContext.mockImplementation(
       () =>
@@ -901,7 +949,7 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.changeConversationCwd).toHaveBeenCalledWith('conv-regression', '/tmp/new-workspace', '');
+    expect(apiMock.changeConversationCwd).toHaveBeenCalledWith('conv-regression', '/tmp/new-workspace', 'surface-test');
     expect(apiMock.liveSessionContext).toHaveBeenCalledTimes(2);
 
     await act(async () => {
@@ -933,9 +981,7 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByRole('button', { name: '/tmp/new-workspace' }).getAttribute('title')).toBe(
-      'Working directory: /tmp/new-workspace',
-    );
+    expect(screen.getByRole('button', { name: '/tmp/new-workspace' }).getAttribute('title')).toBe('Working directory: /tmp/new-workspace');
   });
 
   it('opens the saved drawing picker from its conversation command path', async () => {
@@ -969,7 +1015,8 @@ describe('ConversationPage lazy composer metadata', () => {
   it('ignores stale attachment refreshes after switching saved conversations', async () => {
     vi.useRealTimers();
 
-    let resolveRegressionAttachments: ((value: { conversationId: string; attachments: Array<Record<string, unknown>> }) => void) | null = null;
+    let resolveRegressionAttachments: ((value: { conversationId: string; attachments: Array<Record<string, unknown>> }) => void) | null =
+      null;
     let resolveNextAttachments: ((value: { conversationId: string; attachments: Array<Record<string, unknown>> }) => void) | null = null;
 
     apiMock.conversationAttachments.mockImplementation((conversationId: string) => {
@@ -988,7 +1035,7 @@ describe('ConversationPage lazy composer metadata', () => {
       throw new Error(`unexpected conversation ${conversationId}`);
     });
 
-    regressionBootstrap.data = createRegressionBootstrapData('conv-regression', '/tmp/project');
+    setDesktopConversationFixture(createRegressionBootstrapData('conv-regression', '/tmp/project'));
     renderSwitchableConversationPage();
 
     await act(async () => {
@@ -1000,7 +1047,7 @@ describe('ConversationPage lazy composer metadata', () => {
       expect(apiMock.conversationAttachments).toHaveBeenCalledWith('conv-regression');
     });
 
-    regressionBootstrap.data = createRegressionBootstrapData('conv-next', '/tmp/next-project');
+    setDesktopConversationFixture(createRegressionBootstrapData('conv-next', '/tmp/next-project'));
     fireEvent.click(screen.getByRole('button', { name: 'Go next' }));
 
     await act(async () => {
@@ -1071,7 +1118,7 @@ describe('ConversationPage lazy composer metadata', () => {
       throw new Error(`unexpected conversation ${conversationId}`);
     });
 
-    regressionBootstrap.data = createRegressionBootstrapData('conv-regression', '/tmp/project');
+    setDesktopConversationFixture(createRegressionBootstrapData('conv-regression', '/tmp/project'));
     renderSwitchableConversationPage();
 
     await act(async () => {
@@ -1083,7 +1130,7 @@ describe('ConversationPage lazy composer metadata', () => {
       expect(apiMock.conversationAttachments).toHaveBeenCalledWith('conv-regression');
     });
 
-    regressionBootstrap.data = createRegressionBootstrapData('conv-next', '/tmp/next-project');
+    setDesktopConversationFixture(createRegressionBootstrapData('conv-next', '/tmp/next-project'));
     fireEvent.click(screen.getByRole('button', { name: 'Go next' }));
 
     await act(async () => {

@@ -2,19 +2,12 @@ import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import type { Express, Request, Response } from 'express';
 
 import { resolveNeutralChatCwd } from '../conversations/conversationCwd.js';
-import { parseTailBlocksQuery } from '../conversations/conversationService.js';
 import {
   type LiveSessionCapabilityContext,
   LiveSessionCapabilityInputError,
   submitLiveSessionPromptCapability,
 } from '../conversations/liveSessionCapability.js';
-import {
-  isLive as isLocalLive,
-  LiveSessionControlError,
-  prewarmLiveSessionLoader,
-  prewarmLiveSessionToolSelection,
-  subscribe as subscribeLocal,
-} from '../conversations/liveSessions.js';
+import { LiveSessionControlError, prewarmLiveSessionLoader, prewarmLiveSessionToolSelection } from '../conversations/liveSessions.js';
 import { logError, logWarn } from '../middleware/index.js';
 import type { ServerRouteContext } from './context.js';
 
@@ -186,24 +179,6 @@ export async function handleLiveSessionPrompt(req: Request, res: Response): Prom
   }
 }
 
-function isLiveSession(sessionId: string): boolean {
-  return isLocalLive(sessionId);
-}
-
-function subscribeLiveSession(
-  sessionId: string,
-  listener: (event: unknown) => void,
-  options?: {
-    tailBlocks?: number;
-    surface?: {
-      surfaceId: string;
-      surfaceType: 'desktop_web' | 'mobile_web';
-    };
-  },
-): (() => void) | null {
-  return subscribeLocal(sessionId, listener, options);
-}
-
 function readRequestSurfaceId(body: unknown): string | undefined {
   if (!body || typeof body !== 'object') {
     return undefined;
@@ -227,7 +202,7 @@ export function writeLiveConversationControlError(res: Response, error: unknown)
 }
 
 export function registerLiveSessionRoutes(
-  router: Pick<Express, 'get' | 'post' | 'patch' | 'delete'>,
+  _router: Pick<Express, 'get' | 'post' | 'patch' | 'delete'>,
   context: Pick<
     ServerRouteContext,
     | 'getRuntimeScope'
@@ -245,78 +220,6 @@ export function registerLiveSessionRoutes(
   /** Create a new live session */
 
   /** Resume an existing session file into a live session */
-
-  router.get('/api/live-sessions/:id/events', (req, res) => {
-    const { id } = req.params;
-    if (!isLiveSession(id)) {
-      res.status(404).json({ error: 'Not a live session' });
-      return;
-    }
-
-    const tailBlocks = parseTailBlocksQuery(req.query.tailBlocks);
-    const rawSurfaceId = Array.isArray(req.query.surfaceId) ? req.query.surfaceId[0] : req.query.surfaceId;
-    const surfaceId = typeof rawSurfaceId === 'string' ? rawSurfaceId.trim() : '';
-    const rawSurfaceType = Array.isArray(req.query.surfaceType) ? req.query.surfaceType[0] : req.query.surfaceType;
-    const surfaceType = rawSurfaceType === 'mobile_web' ? 'mobile_web' : 'desktop_web';
-
-    const bufferedEvents: unknown[] = [];
-    let streamReady = false;
-    let closed = false;
-    const unsubscribe = subscribeLiveSession(
-      id,
-      (event) => {
-        if (closed) {
-          return;
-        }
-
-        if (streamReady) {
-          res.write(`data: ${JSON.stringify(event)}\n\n`);
-        } else {
-          bufferedEvents.push(event);
-        }
-      },
-      {
-        ...(tailBlocks ? { tailBlocks } : {}),
-        ...(surfaceId ? { surface: { surfaceId, surfaceType } } : {}),
-      },
-    );
-    if (!unsubscribe) {
-      res.status(404).json({ error: 'Not a live session' });
-      return;
-    }
-
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders();
-    streamReady = true;
-    for (const event of bufferedEvents) {
-      if (closed) {
-        break;
-      }
-      res.write(`data: ${JSON.stringify(event)}\n\n`);
-    }
-    bufferedEvents.length = 0;
-
-    const heartbeat = setInterval(() => {
-      if (!closed) {
-        res.write(': heartbeat\n\n');
-      }
-    }, 15_000);
-
-    const close = () => {
-      if (closed) {
-        return;
-      }
-
-      closed = true;
-      clearInterval(heartbeat);
-      unsubscribe();
-    };
-
-    req.on('close', close);
-  });
 
   /** Abort a running agent */
 

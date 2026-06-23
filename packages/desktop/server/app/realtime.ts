@@ -3,15 +3,21 @@ import type { Socket } from 'node:net';
 
 import { type WebSocket, WebSocketServer } from 'ws';
 
-import { type AppEvent, subscribeAppEvents } from '../shared/appEvents.js';
-import { isTrustedOrigin, resolveRequestOrigin } from '../shared/webSecurity.js';
+import {
+  type ConversationAggregateDelta,
+  type ConversationAggregateState,
+  readConversationAggregateState,
+  subscribeConversationAggregate,
+} from '../conversations/conversationAggregate.js';
 import {
   closeTerminalSession,
   resizeTerminalSession,
   subscribeTerminalSession,
-  writeTerminalSession,
   type TerminalSessionEvent,
+  writeTerminalSession,
 } from '../extensions/terminalSessions.js';
+import { type AppEvent, subscribeAppEvents } from '../shared/appEvents.js';
+import { isTrustedOrigin, resolveRequestOrigin } from '../shared/webSecurity.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 
 export const DESKTOP_REALTIME_PATH = '/api/realtime';
@@ -23,7 +29,17 @@ type RealtimeServerMessage =
   | { type: 'subscribed'; id?: string; subscriptionId: string }
   | { type: 'unsubscribed'; id?: string; subscriptionId: string }
   | { type: 'stream'; subscriptionId: string; event: DesktopLocalApiStreamEvent }
-  | { type: 'terminal_attached'; id?: string; terminalId: string; pid?: number | null; replay: string; exited: boolean; exitCode: number | null }
+  | { type: 'conversation_snapshot'; id?: string; subscriptionId: string; state: ConversationAggregateState }
+  | { type: 'conversation_delta'; subscriptionId: string; delta: ConversationAggregateDelta }
+  | {
+      type: 'terminal_attached';
+      id?: string;
+      terminalId: string;
+      pid?: number | null;
+      replay: string;
+      exited: boolean;
+      exitCode: number | null;
+    }
   | { type: 'terminal'; terminalId: string; event: TerminalSessionEvent }
   | { type: 'error'; id?: string; message: string };
 
@@ -31,6 +47,11 @@ type RealtimeClientMessage = {
   type?: string;
   id?: string;
   path?: string;
+  conversationId?: string;
+  profile?: string;
+  tailBlocks?: number;
+  surfaceId?: string;
+  surfaceType?: string;
   subscriptionId?: string;
   terminalId?: string;
   data?: string;
@@ -52,10 +73,29 @@ function readHeaderValue(value: string | string[] | undefined): string | undefin
   return Array.isArray(value) ? value[0] : value;
 }
 
+function normalizeRealtimeTailBlocks(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? Math.min(10000, value) : undefined;
+}
+
+function isTrustedDesktopAppOrigin(origin: string | undefined): boolean {
+  if (typeof origin !== 'string' || origin.trim().length === 0) {
+    return false;
+  }
+  try {
+    const parsed = new URL(origin);
+    return parsed.protocol === 'neon-pilot:' && parsed.hostname === 'app';
+  } catch {
+    return false;
+  }
+}
+
 function isTrustedRealtimeUpgrade(request: IncomingMessage): boolean {
   const headers = request.headers ?? {};
   const origin = readHeaderValue(headers.origin);
   if (typeof origin !== 'string' || origin.trim().length === 0) {
+    return true;
+  }
+  if (isTrustedDesktopAppOrigin(origin)) {
     return true;
   }
 
@@ -74,11 +114,18 @@ function isTrustedRealtimeUpgrade(request: IncomingMessage): boolean {
   );
 }
 
-export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage, socket: Socket, head: Buffer) => void {
+export interface DesktopRealtimeUpgradeHandlerOptions {
+  getRuntimeScope?: () => string;
+}
+
+export function createDesktopRealtimeUpgradeHandler(
+  options: DesktopRealtimeUpgradeHandlerOptions = {},
+): (request: IncomingMessage, socket: Socket, head: Buffer) => void {
   const server = new WebSocketServer({ noServer: true, maxPayload: DESKTOP_REALTIME_MAX_EVENT_BYTES });
 
   server.on('connection', (websocket) => {
     const streamSubscriptions = new Map<string, () => void>();
+    const conversationSubscriptions = new Map<string, () => void>();
     const terminalSubscriptions = new Map<string, () => void>();
     let cleanedUp = false;
     const sendRealtimeMessage = (message: RealtimeServerMessage) => {
@@ -94,6 +141,8 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
       appUnsubscribe();
       for (const unsubscribe of streamSubscriptions.values()) unsubscribe();
       streamSubscriptions.clear();
+      for (const unsubscribe of conversationSubscriptions.values()) unsubscribe();
+      conversationSubscriptions.clear();
       for (const unsubscribe of terminalSubscriptions.values()) unsubscribe();
       terminalSubscriptions.clear();
     };
@@ -115,7 +164,79 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
           const subscriptionId = typeof message.subscriptionId === 'string' ? message.subscriptionId : '';
           streamSubscriptions.get(subscriptionId)?.();
           streamSubscriptions.delete(subscriptionId);
+          conversationSubscriptions.get(subscriptionId)?.();
+          conversationSubscriptions.delete(subscriptionId);
           sendRealtimeMessage({ type: 'unsubscribed', id: message.id, subscriptionId });
+          return;
+        }
+
+        if (message.type === 'conversation_subscribe') {
+          const conversationId = typeof message.conversationId === 'string' ? message.conversationId.trim() : '';
+          const profile =
+            typeof message.profile === 'string' && message.profile.trim()
+              ? message.profile.trim()
+              : (options.getRuntimeScope?.() ?? 'shared');
+          if (!conversationId) {
+            sendRealtimeMessage({ type: 'error', id: message.id, message: 'Conversation id is required.' });
+            return;
+          }
+
+          const subscriptionId = `conv:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
+          let unsubscribe: (() => void) | undefined;
+          try {
+            const pendingDeltas: ConversationAggregateDelta[] = [];
+            let snapshotSent = false;
+            const tailBlocks = normalizeRealtimeTailBlocks(message.tailBlocks);
+            unsubscribe = subscribeConversationAggregate({
+              conversationId,
+              profile,
+              tailBlocks,
+              ...(typeof message.surfaceId === 'string' && message.surfaceId.trim()
+                ? {
+                    surface: {
+                      surfaceId: message.surfaceId.trim(),
+                      surfaceType: message.surfaceType === 'mobile_web' ? 'mobile_web' : 'desktop_web',
+                    },
+                  }
+                : {}),
+              onDelta: (delta) => {
+                if (!snapshotSent) {
+                  pendingDeltas.push(delta);
+                  return;
+                }
+                sendRealtimeMessage({ type: 'conversation_delta', subscriptionId, delta });
+              },
+            });
+            if (cleanedUp || websocket.readyState !== websocket.OPEN) {
+              unsubscribe();
+              return;
+            }
+            conversationSubscriptions.set(subscriptionId, unsubscribe);
+            const state = await readConversationAggregateState({
+              conversationId,
+              profile,
+              tailBlocks,
+            });
+            if (cleanedUp || websocket.readyState !== websocket.OPEN) {
+              unsubscribe();
+              conversationSubscriptions.delete(subscriptionId);
+              return;
+            }
+            snapshotSent = true;
+            sendRealtimeMessage({ type: 'conversation_snapshot', id: message.id, subscriptionId, state });
+            for (const delta of pendingDeltas) {
+              sendRealtimeMessage({ type: 'conversation_delta', subscriptionId, delta });
+            }
+          } catch (error) {
+            unsubscribe?.();
+            conversationSubscriptions.delete(subscriptionId);
+            if (cleanedUp) return;
+            sendRealtimeMessage({
+              type: 'error',
+              id: message.id,
+              message: error instanceof Error ? error.message : String(error),
+            });
+          }
           return;
         }
 
@@ -158,7 +279,12 @@ export function createDesktopRealtimeUpgradeHandler(): (request: IncomingMessage
           const terminalId = typeof message.terminalId === 'string' ? message.terminalId : '';
           const cols = typeof message.cols === 'number' ? message.cols : NaN;
           const rows = typeof message.rows === 'number' ? message.rows : NaN;
-          if (!terminalId || !Number.isFinite(cols) || !Number.isFinite(rows) || !resizeTerminalSession({ id: terminalId, cols, rows }).ok) {
+          if (
+            !terminalId ||
+            !Number.isFinite(cols) ||
+            !Number.isFinite(rows) ||
+            !resizeTerminalSession({ id: terminalId, cols, rows }).ok
+          ) {
             sendRealtimeMessage({ type: 'error', id: message.id, message: 'Terminal resize failed.' });
           }
           return;

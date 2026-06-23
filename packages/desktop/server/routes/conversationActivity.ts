@@ -1,6 +1,5 @@
 import type { Express, Response } from 'express';
 
-import { listConversationActivity } from '../conversations/conversationActivity.js';
 import {
   type ConversationConnectionKind,
   type ConversationConnectionSurface,
@@ -88,21 +87,6 @@ export function registerConversationActivityRoutes(
   router: Pick<Express, 'get'>,
   context: Pick<ServerRouteContext, 'getRuntimeScope' | 'listTasksForRuntimeScope'>,
 ): void {
-  router.get('/api/conversations/:id/activity', async (req, res) => {
-    try {
-      res.json(
-        await listConversationActivity(req.params.id, {
-          active: parseBooleanQuery(req.query.active),
-          visibility: parseVisibilityQuery(req.query.visibility),
-          tasks: readRuntimeTasks(context),
-          profile: readRuntimeScope(context),
-        }),
-      );
-    } catch (err) {
-      handleError(res, err);
-    }
-  });
-
   router.get('/api/conversations/:id/connections', async (req, res) => {
     try {
       res.json(

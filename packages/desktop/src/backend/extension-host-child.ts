@@ -19,6 +19,7 @@ import type {
   ExtensionHostRouteResponse,
 } from '../../server/extensions/extensionHostProtocol.js';
 import { decodeExtensionHostProtocolFrame, encodeExtensionHostProtocolFrame } from '../../server/extensions/extensionHostProtocolFrames.js';
+import { installSharedConversationServiceContext, SHARED_CHILD_RUNTIME_SCOPE } from './conversation-service-context.js';
 
 interface ExtensionHostReadyMessage {
   type: 'ready';
@@ -214,6 +215,7 @@ async function shutdown(server: ReturnType<typeof createServer>): Promise<void> 
 async function main(): Promise<void> {
   setDefaultExtensionBackendWorkerUrl(new URL('../../server/dist/extensions/extensionBackendWorker.js', import.meta.url));
   setExtensionHostClient(createInProcessExtensionHostClient());
+  installSharedConversationServiceContext();
 
   const token = process.env.NEON_PILOT_EXTENSION_HOST_TOKEN?.trim() || randomUUID();
   const server = createServer((request, response) => {
@@ -317,7 +319,7 @@ async function main(): Promise<void> {
       }
     })();
   });
-  server.on('upgrade', createDesktopRealtimeUpgradeHandler());
+  server.on('upgrade', createDesktopRealtimeUpgradeHandler({ getRuntimeScope: () => SHARED_CHILD_RUNTIME_SCOPE }));
 
   await new Promise<void>((resolve) => {
     server.listen(0, '127.0.0.1', () => resolve());

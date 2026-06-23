@@ -84,7 +84,6 @@ import { type ExtensionSurfaceSummary, isExtensionLeftNavItemSurface, isNativeEx
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { GATEWAY_STATE_CHANGED_EVENT } from '../gateways/gatewayEvents';
 import { getOrCreateConversationSurfaceId } from '../hooks/sessionStream';
-import { buildConversationBootstrapVersionKey, fetchConversationBootstrapCached } from '../hooks/useConversationBootstrap';
 import { useConversations } from '../hooks/useConversations';
 import { prefetchDesktopConversationState } from '../hooks/useDesktopConversationState';
 import { normalizeWorkspacePaths, readStoredWorkspacePaths, writeStoredWorkspacePaths } from '../local/savedWorkspacePaths';
@@ -120,7 +119,6 @@ import { cx, IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, Secti
 import { useSidebarConversationScope } from './useSidebarConversationScope';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 
-const SIDEBAR_CONVERSATION_PREFETCH_TAIL_BLOCKS = 120;
 const SIDEBAR_DESKTOP_CONVERSATION_PREFETCH_TAIL_BLOCKS = 40;
 const SIDEBAR_CONVERSATION_PREFETCH_DELAY_MS = 140;
 
@@ -2152,14 +2150,6 @@ export function Sidebar() {
   );
   const lockedConversationIdSet = useMemo(() => new Set(lockedConversationIds), [lockedConversationIds]);
 
-  const conversationBootstrapVersionKey = useMemo(
-    () =>
-      buildConversationBootstrapVersionKey({
-        sessionsVersion: versions.sessions,
-        sessionFilesVersion: versions.sessionFiles,
-      }),
-    [versions.sessionFiles, versions.sessions],
-  );
   const prefetchConversation = useCallback(
     (conversationId: string) => {
       const normalizedConversationId = conversationId.trim();
@@ -2167,17 +2157,12 @@ export function Sidebar() {
         return;
       }
 
-      void fetchConversationBootstrapCached(
-        normalizedConversationId,
-        { tailBlocks: SIDEBAR_CONVERSATION_PREFETCH_TAIL_BLOCKS },
-        conversationBootstrapVersionKey,
-      ).catch(() => undefined);
       void prefetchDesktopConversationState(normalizedConversationId, {
         tailBlocks: SIDEBAR_DESKTOP_CONVERSATION_PREFETCH_TAIL_BLOCKS,
         includeToolBlocks: false,
       })?.catch(() => undefined);
     },
-    [activeConversationId, conversationBootstrapVersionKey],
+    [activeConversationId],
   );
   const activeConversationSurfaceId = useMemo(() => {
     if (location.pathname === DRAFT_CONVERSATION_ROUTE) {

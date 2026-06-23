@@ -290,7 +290,7 @@ describe('desktop conversation state fallback', () => {
     expect(shouldEnableMessageForkControls({ renderingStaleTranscript: false, conversationId: undefined })).toBe(false);
   });
 
-  it('uses the dedicated desktop state only while the local subscription is healthy', () => {
+  it('uses the dedicated desktop aggregate source for saved conversation routes', () => {
     expect(
       shouldUseHealthyDesktopConversationState({
         draft: false,
@@ -307,7 +307,7 @@ describe('desktop conversation state fallback', () => {
         desktopMode: 'local',
         desktopError: 'Conversation state subscription failed.',
       }),
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       shouldUseHealthyDesktopConversationState({
@@ -316,7 +316,7 @@ describe('desktop conversation state fallback', () => {
         desktopMode: 'checking',
         desktopError: null,
       }),
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       shouldUseHealthyDesktopConversationState({

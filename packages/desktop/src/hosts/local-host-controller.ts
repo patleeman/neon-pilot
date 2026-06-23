@@ -37,6 +37,7 @@ import type {
 interface LocalBackendStatus {
   daemonHealthy: boolean;
   baseUrl?: string;
+  realtimeUrl?: string;
 }
 
 interface LocalBackendController {
@@ -196,6 +197,7 @@ export class LocalHostController implements HostController {
 
   async getRealtimeUrl(): Promise<string | undefined> {
     const status = await this.backend.getStatus();
+    if (status.realtimeUrl) return status.realtimeUrl;
     if (!status.baseUrl) return undefined;
     const url = new URL('/api/realtime', status.baseUrl);
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';

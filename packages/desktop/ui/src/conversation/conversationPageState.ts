@@ -472,7 +472,7 @@ export function shouldUseHealthyDesktopConversationState(input: {
   desktopMode: 'checking' | 'local' | 'inactive';
   desktopError: string | null;
 }): boolean {
-  return !input.draft && Boolean(input.conversationId) && input.desktopMode === 'local' && !input.desktopError;
+  return !input.draft && Boolean(input.conversationId) && input.desktopMode !== 'inactive';
 }
 
 export function shouldSubscribeToDesktopConversationState(input: { draft: boolean }): boolean {

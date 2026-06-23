@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const subscribeAppEventsMock = vi.fn();
 const subscribeDesktopLocalApiStreamByUrlMock = vi.fn();
+const conversationAggregateMock = vi.hoisted(() => ({
+  readConversationAggregateState: vi.fn(),
+  subscribeConversationAggregate: vi.fn(),
+}));
 const terminalSessionsMock = vi.hoisted(() => ({
   closeTerminalSession: vi.fn(),
   resizeTerminalSession: vi.fn(),
@@ -18,6 +22,8 @@ vi.mock('../shared/appEvents.js', () => ({
 vi.mock('./localApiStreams.js', () => ({
   subscribeDesktopLocalApiStreamByUrl: subscribeDesktopLocalApiStreamByUrlMock,
 }));
+
+vi.mock('../conversations/conversationAggregate.js', () => conversationAggregateMock);
 
 vi.mock('../extensions/terminalSessions.js', () => terminalSessionsMock);
 
@@ -37,6 +43,14 @@ describe('createDesktopRealtimeUpgradeHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     subscribeAppEventsMock.mockReturnValue(vi.fn());
+    conversationAggregateMock.readConversationAggregateState.mockResolvedValue({
+      conversationId: 'conv-1',
+      revision: 0,
+      updatedAt: '2026-06-23T00:00:00.000Z',
+      conversation: { conversationId: 'conv-1', sessionDetail: null, liveSession: { live: false }, stream: {} },
+      activity: { conversationId: 'conv-1', items: [], primary: [], system: [], hidden: [] },
+    });
+    conversationAggregateMock.subscribeConversationAggregate.mockReturnValue(vi.fn());
     terminalSessionsMock.subscribeTerminalSession.mockReturnValue({ ok: false });
     terminalSessionsMock.writeTerminalSession.mockReturnValue({ ok: true });
     terminalSessionsMock.resizeTerminalSession.mockReturnValue({ ok: true });
@@ -94,7 +108,7 @@ describe('createDesktopRealtimeUpgradeHandler', () => {
     handleUpgrade.mockRestore();
   });
 
-  it('accepts realtime WebSocket upgrades from same-origin browsers and missing-origin clients', async () => {
+  it('accepts realtime WebSocket upgrades from same-origin browsers, desktop app renderers, and missing-origin clients', async () => {
     const { createDesktopRealtimeUpgradeHandler } = await import('./realtime.js');
     const handler = createDesktopRealtimeUpgradeHandler();
     const server = (await import('ws')).WebSocketServer;
@@ -111,9 +125,22 @@ describe('createDesktopRealtimeUpgradeHandler', () => {
       { destroy: vi.fn() } as never,
       Buffer.alloc(0),
     );
-    handler({ url: '/api/realtime', headers: { host: '127.0.0.1:4123' }, socket: {} } as never, { destroy: vi.fn() } as never, Buffer.alloc(0));
+    handler(
+      {
+        url: '/api/realtime',
+        headers: { host: '127.0.0.1:4123', origin: 'neon-pilot://app' },
+        socket: {},
+      } as never,
+      { destroy: vi.fn() } as never,
+      Buffer.alloc(0),
+    );
+    handler(
+      { url: '/api/realtime', headers: { host: '127.0.0.1:4123' }, socket: {} } as never,
+      { destroy: vi.fn() } as never,
+      Buffer.alloc(0),
+    );
 
-    expect(handleUpgrade).toHaveBeenCalledTimes(2);
+    expect(handleUpgrade).toHaveBeenCalledTimes(3);
     handleUpgrade.mockRestore();
   });
 
@@ -160,10 +187,10 @@ describe('createDesktopRealtimeUpgradeHandler', () => {
     });
 
     handler({ url: '/api/realtime' } as never, { destroy: vi.fn() } as never, Buffer.alloc(0));
-    fakeSocket.receive({ type: 'subscribe', id: 'req-1', path: '/api/live-sessions/live-1/events' });
+    fakeSocket.receive({ type: 'subscribe', id: 'req-1', path: '/api/runs/run-1/events' });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(subscribeDesktopLocalApiStreamByUrlMock.mock.calls[0]?.[0]?.pathname).toBe('/api/live-sessions/live-1/events');
+    expect(subscribeDesktopLocalApiStreamByUrlMock.mock.calls[0]?.[0]?.pathname).toBe('/api/runs/run-1/events');
     const openMessage = fakeSocket.sent.map((entry) => JSON.parse(entry)).find((entry) => entry.type === 'stream');
     expect(openMessage.event).toEqual({ type: 'open' });
     const subscribed = fakeSocket.sent.map((entry) => JSON.parse(entry)).find((entry) => entry.type === 'subscribed');
@@ -178,6 +205,119 @@ describe('createDesktopRealtimeUpgradeHandler', () => {
 
     fakeSocket.receive({ type: 'unsubscribe', id: 'req-2', subscriptionId: subscribed.subscriptionId });
     expect(streamUnsubscribe).toHaveBeenCalledTimes(1);
+    handleUpgrade.mockRestore();
+  });
+
+  it('subscribes conversation aggregates over the WebSocket protocol', async () => {
+    const unsubscribe = vi.fn();
+    let emitDelta: ((delta: { type: 'activity'; conversationId: string; revision: number; activity: unknown }) => void) | undefined;
+    conversationAggregateMock.subscribeConversationAggregate.mockImplementation((input) => {
+      emitDelta = input.onDelta;
+      return unsubscribe;
+    });
+
+    const fakeSocket = new FakeWebSocket();
+    const { createDesktopRealtimeUpgradeHandler } = await import('./realtime.js');
+    const handler = createDesktopRealtimeUpgradeHandler();
+    const server = (await import('ws')).WebSocketServer;
+    const handleUpgrade = vi.spyOn(server.prototype, 'handleUpgrade').mockImplementation((_request, _socket, _head, cb) => {
+      cb(fakeSocket as never);
+    });
+
+    handler({ url: '/api/realtime' } as never, { destroy: vi.fn() } as never, Buffer.alloc(0));
+    fakeSocket.receive({
+      type: 'conversation_subscribe',
+      id: 'conv-req-1',
+      conversationId: 'conv-1',
+      profile: 'shared',
+      tailBlocks: 40,
+      surfaceId: 'surface-1',
+      surfaceType: 'desktop_web',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(conversationAggregateMock.readConversationAggregateState).toHaveBeenCalledWith({
+      conversationId: 'conv-1',
+      profile: 'shared',
+      tailBlocks: 40,
+    });
+    expect(conversationAggregateMock.subscribeConversationAggregate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'conv-1',
+        profile: 'shared',
+        tailBlocks: 40,
+        surface: { surfaceId: 'surface-1', surfaceType: 'desktop_web' },
+      }),
+    );
+    const snapshot = fakeSocket.sent.map((entry) => JSON.parse(entry)).find((entry) => entry.type === 'conversation_snapshot');
+    expect(snapshot).toMatchObject({ type: 'conversation_snapshot', id: 'conv-req-1', state: { conversationId: 'conv-1' } });
+
+    emitDelta?.({
+      type: 'activity',
+      conversationId: 'conv-1',
+      revision: 1,
+      activity: { conversationId: 'conv-1', items: [], primary: [], system: [], hidden: [] },
+    });
+    expect(fakeSocket.sent.map((entry) => JSON.parse(entry)).at(-1)).toMatchObject({
+      type: 'conversation_delta',
+      subscriptionId: snapshot.subscriptionId,
+      delta: { type: 'activity', conversationId: 'conv-1', revision: 1 },
+    });
+
+    fakeSocket.receive({ type: 'unsubscribe', subscriptionId: snapshot.subscriptionId });
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    handleUpgrade.mockRestore();
+  });
+
+  it('buffers conversation deltas emitted while the initial aggregate snapshot is loading', async () => {
+    let resolveState: ((state: unknown) => void) | undefined;
+    conversationAggregateMock.readConversationAggregateState.mockReturnValue(
+      new Promise((resolve) => {
+        resolveState = resolve;
+      }),
+    );
+    conversationAggregateMock.subscribeConversationAggregate.mockImplementation((input) => {
+      input.onDelta({
+        type: 'activity',
+        conversationId: 'conv-1',
+        revision: 1,
+        activity: { conversationId: 'conv-1', items: [], primary: [], system: [], hidden: [] },
+      });
+      return vi.fn();
+    });
+
+    const fakeSocket = new FakeWebSocket();
+    const { createDesktopRealtimeUpgradeHandler } = await import('./realtime.js');
+    const handler = createDesktopRealtimeUpgradeHandler({ getRuntimeScope: () => 'profile-a' });
+    const server = (await import('ws')).WebSocketServer;
+    const handleUpgrade = vi.spyOn(server.prototype, 'handleUpgrade').mockImplementation((_request, _socket, _head, cb) => {
+      cb(fakeSocket as never);
+    });
+
+    handler({ url: '/api/realtime' } as never, { destroy: vi.fn() } as never, Buffer.alloc(0));
+    fakeSocket.receive({ type: 'conversation_subscribe', id: 'conv-req-1', conversationId: 'conv-1' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(conversationAggregateMock.subscribeConversationAggregate).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: 'conv-1', profile: 'profile-a' }),
+    );
+    expect(fakeSocket.sent.map((entry) => JSON.parse(entry)).find((entry) => entry.type === 'conversation_delta')).toBeUndefined();
+
+    resolveState?.({
+      conversationId: 'conv-1',
+      revision: 0,
+      updatedAt: '2026-06-23T00:00:00.000Z',
+      conversation: { conversationId: 'conv-1', sessionDetail: null, liveSession: { live: false }, stream: {} },
+      activity: { conversationId: 'conv-1', items: [], primary: [], system: [], hidden: [] },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const messages = fakeSocket.sent.map((entry) => JSON.parse(entry));
+    const snapshotIndex = messages.findIndex((entry) => entry.type === 'conversation_snapshot');
+    const deltaIndex = messages.findIndex((entry) => entry.type === 'conversation_delta');
+    expect(snapshotIndex).toBeGreaterThan(-1);
+    expect(deltaIndex).toBeGreaterThan(snapshotIndex);
+    expect(messages[deltaIndex]).toMatchObject({ delta: { type: 'activity', revision: 1 } });
     handleUpgrade.mockRestore();
   });
 
@@ -200,7 +340,7 @@ describe('createDesktopRealtimeUpgradeHandler', () => {
     });
 
     handler({ url: '/api/realtime' } as never, { destroy: vi.fn() } as never, Buffer.alloc(0));
-    fakeSocket.receive({ type: 'subscribe', id: 'req-late', path: '/api/live-sessions/live-1/events' });
+    fakeSocket.receive({ type: 'subscribe', id: 'req-late', path: '/api/runs/run-1/events' });
     fakeSocket.emit('close');
 
     resolveSubscribe?.(streamUnsubscribe);

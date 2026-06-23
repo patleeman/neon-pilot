@@ -131,7 +131,9 @@ describe('localApiStreams', () => {
       return unsubscribeFromEvents;
     });
 
-    const close = await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/app-events/events'), (event) => events.push(event));
+    const close = await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/app-events/events'), (event) =>
+      events.push(event),
+    );
 
     close();
     listener?.({ type: 'late_app_event', id: 'evt-1' });
@@ -160,52 +162,11 @@ describe('localApiStreams', () => {
     vi.useRealTimers();
   });
 
-  it('ignores malformed live stream tailBlocks instead of partially parsing them', async () => {
-    const unsubscribe = vi.fn();
-    subscribeLiveSessionMock.mockImplementation((_sessionId, listener) => {
-      listener({ type: 'snapshot', blocks: [], blockOffset: 0, totalBlocks: 0, isStreaming: false });
-      return unsubscribe;
-    });
-    const events: unknown[] = [];
-
-    await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/live-sessions/session-1/events?tailBlocks=20abc'), (event) =>
-      events.push(event),
-    );
-
-    expect(subscribeLiveSessionMock).toHaveBeenCalledWith('session-1', expect.any(Function), { deferInitialReplayMs: 150 });
-    expect(events).toEqual(
-      expect.arrayContaining([
-        { type: 'open' },
-        { type: 'message', data: JSON.stringify({ type: 'snapshot', blocks: [], blockOffset: 0, totalBlocks: 0, isStreaming: false }) },
-      ]),
-    );
-  });
-
-  it('ignores unsafe live stream tailBlocks', async () => {
-    const unsubscribe = vi.fn();
-    subscribeLiveSessionMock.mockImplementation((_sessionId, listener) => {
-      listener({ type: 'snapshot', blocks: [], blockOffset: 0, totalBlocks: 0, isStreaming: false });
-      return unsubscribe;
-    });
-
-    await subscribeDesktopLocalApiStreamByUrl(
-      new URL(`http://local.test/api/live-sessions/session-1/events?tailBlocks=${Number.MAX_SAFE_INTEGER + 1}`),
-      vi.fn(),
-    );
-
-    expect(subscribeLiveSessionMock).toHaveBeenCalledWith('session-1', expect.any(Function), { deferInitialReplayMs: 150 });
-  });
-
-  it('caps live stream tailBlocks before subscribing', async () => {
-    const unsubscribe = vi.fn();
-    subscribeLiveSessionMock.mockReturnValue(unsubscribe);
-
-    await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/live-sessions/session-1/events?tailBlocks=50000'), vi.fn());
-
-    expect(subscribeLiveSessionMock).toHaveBeenCalledWith('session-1', expect.any(Function), {
-      tailBlocks: 10000,
-      deferInitialReplayMs: 150,
-    });
+  it('does not expose live session event streams through the local API stream bridge', async () => {
+    await expect(
+      subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/live-sessions/session-1/events?tailBlocks=20'), vi.fn()),
+    ).rejects.toThrow('No local API stream for /api/live-sessions/session-1/events');
+    expect(subscribeLiveSessionMock).not.toHaveBeenCalled();
   });
 
   it('stops desktop run stream polling after a terminal snapshot grace period', async () => {
@@ -271,9 +232,8 @@ describe('localApiStreams', () => {
       return unsubscribe;
     });
 
-    const close = await subscribeDesktopLocalApiStreamByUrl(
-      new URL('http://local.test/api/provider-auth/oauth/login-1/events'),
-      (event) => events.push(event),
+    const close = await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/provider-auth/oauth/login-1/events'), (event) =>
+      events.push(event),
     );
 
     expect(subscribeProviderOAuthLoginMock).toHaveBeenCalledWith('login-1', expect.any(Function));
@@ -356,10 +316,7 @@ describe('localApiStreams', () => {
         signal: expect.any(AbortSignal),
       },
     });
-    expect(events).toEqual([
-      { type: 'open' },
-      { type: 'sse', data: JSON.stringify({ type: 'output', data: 'startup-prompt' }) },
-    ]);
+    expect(events).toEqual([{ type: 'open' }, { type: 'sse', data: JSON.stringify({ type: 'output', data: 'startup-prompt' }) }]);
 
     unsubscribe();
     releaseEvent?.();
@@ -404,9 +361,8 @@ describe('localApiStreams', () => {
       })(),
     });
 
-    await subscribeDesktopLocalApiStreamByUrl(
-      new URL('http://local.test/api/extensions/system-terminal/routes/stream'),
-      (event) => events.push(event),
+    await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/extensions/system-terminal/routes/stream'), (event) =>
+      events.push(event),
     );
     await Promise.resolve();
 
@@ -427,9 +383,8 @@ describe('localApiStreams', () => {
       })(),
     });
 
-    await subscribeDesktopLocalApiStreamByUrl(
-      new URL('http://local.test/api/extensions/system-terminal/routes/stream'),
-      (event) => events.push(event),
+    await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/extensions/system-terminal/routes/stream'), (event) =>
+      events.push(event),
     );
     await Promise.resolve();
 

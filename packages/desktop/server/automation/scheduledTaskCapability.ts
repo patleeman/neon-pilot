@@ -486,6 +486,8 @@ export async function runScheduledTaskCapability(profile: string, taskId: string
     throw new Error(result.reason ?? 'Could not start the task run.');
   }
 
+  invalidateAppTopics('tasks', 'runs', 'sessions', 'workspace');
+
   return {
     ok: true as const,
     accepted: result.accepted,

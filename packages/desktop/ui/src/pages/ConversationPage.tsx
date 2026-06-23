@@ -265,7 +265,6 @@ import {
 } from '../conversation/relatedThreadSelection';
 import { collectCompletedToolAutoOpenBlockKeys, findRequestedToolPresentationToOpen } from '../conversation/toolAutoOpen';
 import { useComposerController } from '../conversation/useComposerController';
-import { useConversationActivity } from '../conversation/useConversationActivity';
 import { useConversationComposerMenus, type UseConversationComposerMenusState } from '../conversation/useConversationComposerMenus';
 import { useComposerModifierKeys, useVisualViewportKeyboardInset } from '../conversation/useConversationKeyboardState';
 import { useConversationModels } from '../conversation/useConversationModels';
@@ -288,7 +287,6 @@ import { NewConversationPanelHost } from '../extensions/NewConversationPanelHost
 import type { ExtensionMentionRegistration, ExtensionSlashCommandRegistration } from '../extensions/types';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { INITIAL_STREAM_STATE, retryLiveSessionActionAfterTakeover } from '../hooks/sessionStream';
-import { useConversationBootstrap } from '../hooks/useConversationBootstrap';
 import { useConversationEventVersion } from '../hooks/useConversationEventVersion';
 import { useConversationScroll } from '../hooks/useConversationScroll';
 import { primeReservedDesktopConversationStateCache, useDesktopConversationState } from '../hooks/useDesktopConversationState';
@@ -337,7 +335,6 @@ import type { ConversationSummaryRecord } from '../shared/types';
 import {
   runStore,
   sessionStore,
-  taskStore,
   useAllRuns,
   useAllSessions,
   useAllTasks,
@@ -718,18 +715,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const desktopSessionDetailNeedsRequestedTail =
     visibleDesktopSessionDetail !== null && !hasConversationLoadedHistoricalTailBlocks(visibleDesktopSessionDetail, historicalTailBlocks);
   const conversationVersionKey = `${effectiveConversationEventVersion}`;
-  const shouldFetchConversationBootstrap =
-    !draft &&
-    !desktopConversationChecking &&
-    (!useDesktopConversation || !visibleDesktopConversationState || desktopSessionDetailNeedsRequestedTail);
-  const { data: webConversationBootstrap, loading: webConversationBootstrapLoading } = useConversationBootstrap(
-    shouldFetchConversationBootstrap ? id : undefined,
-    {
-      tailBlocks: historicalTailBlocks,
-      includeToolBlocks: false,
-      versionKey: conversationVersionKey,
-    },
-  );
+  const webConversationBootstrap = null;
+  const webConversationBootstrapLoading = false;
   const desktopConversationBootstrap =
     id && visibleDesktopConversationState
       ? {
@@ -839,6 +826,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const streamAbort = stream.abort;
   const streamReconnect = stream.reconnect;
   const streamTakeover = stream.takeover;
+  const desktopConversationRefresh = desktopConversation.refresh;
   const currentSurfaceId = stream.surfaceId;
 
   useEffect(() => {
@@ -1003,17 +991,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     detail: webSessionDetail,
     loading: webSessionLoading,
     error: webSessionError,
-  } = useSessionDetail(
-    bootstrapPendingInitialSessionDetail ||
-      (useDesktopConversation && Boolean(visibleDesktopConversationState?.sessionDetail || bootstrapSessionDetail)) ||
-      desktopConversationChecking
-      ? undefined
-      : id,
-    {
-      tailBlocks: historicalTailBlocks,
-      version: effectiveConversationEventVersion,
-    },
-  );
+  } = useSessionDetail(bootstrapPendingInitialSessionDetail || useDesktopConversation || desktopConversationChecking ? undefined : id, {
+    tailBlocks: historicalTailBlocks,
+    version: effectiveConversationEventVersion,
+  });
   const sessionDetail = useDesktopConversation
     ? shouldUseWebBootstrapForDesktopTail
       ? (bootstrapSessionDetail ?? visibleDesktopSessionDetail ?? webSessionDetail)
@@ -1164,13 +1145,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
   // Pending steer/followup queue as reported by the live session.
   const pendingQueue = useMemo(() => buildConversationPendingQueueItems(stream.pendingQueue), [stream.pendingQueue]);
-  const pendingQueueActivityRefreshKey = useMemo(
-    () =>
-      [...stream.pendingQueue.steering, ...stream.pendingQueue.followUp]
-        .map((item) => `${item.id}:${item.restorable === false ? 'remote' : 'local'}:${item.text}:${item.imageCount}`)
-        .join('|'),
-    [stream.pendingQueue],
-  );
 
   // Live sessions hydrate from the SSE snapshot; until that arrives, fall back to
   // JSONL + live deltas only when we have at least one source of blocks.
@@ -2116,24 +2090,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const wholeLineBashRunningRef = useRef(false);
   const composerSubmitRunningRef = useRef(false);
   const [showBackgroundRunDetails, setShowBackgroundRunDetails] = useState(false);
-  const { activity: conversationActivity, refresh: refreshConversationActivity } = useConversationActivity(
-    draft ? null : id,
-    pendingQueueActivityRefreshKey,
-  );
-
-  useEffect(() => {
-    if (draft || !id) return;
-    let cancelled = false;
-    api
-      .tasks()
-      .then((nextTasks) => {
-        if (!cancelled) taskStore.replaceAll(nextTasks);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [draft, id, versions.tasks]);
 
   const composerDisabled = isConversationComposerDisabled({
     conversationNeedsTakeover,
@@ -2199,7 +2155,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       setCancellingBackgroundRunIds((current) => new Set(current).add(normalizedRunId));
       void api
         .cancelExecution(normalizedRunId)
-        .then(() => refreshConversationActivity())
+        .then(() => desktopConversationRefresh())
         .catch(() => {})
         .finally(() => {
           setCancellingBackgroundRunIds((current) => {
@@ -2209,7 +2165,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           });
         });
     },
-    [refreshConversationActivity],
+    [desktopConversationRefresh],
   );
 
   useEffect(() => {
@@ -2826,7 +2782,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [currentSessionMeta, id]);
 
   const savedConversationSessionFile = currentSessionMeta?.file ?? visibleSessionDetail?.meta.file ?? null;
-  const activityItems = conversationActivity.items;
+  const activityItems = visibleDesktopConversationState?.activity?.items ?? [];
   const activityBackgroundExecutions = useMemo(() => activityExecutions(activityItems), [activityItems]);
   const activityDeferredResumeItems = useMemo(() => activityDeferredResumes(activityItems), [activityItems]);
   const activityScheduledTaskItems = useMemo(() => activityScheduledTasks(activityItems), [activityItems]);
@@ -2866,29 +2822,22 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const runScheduledTaskFromShelf = useCallback(
     async (taskId: string) => {
       await api.runTaskNow(taskId);
-      const nextTasks = await api.tasks();
-      taskStore.replaceAll(nextTasks);
-      await refreshConversationActivity().catch(() => {});
+      await desktopConversationRefresh().catch(() => {});
     },
-    [refreshConversationActivity],
+    [desktopConversationRefresh],
   );
 
   useEffect(() => {
     if (!conversationScheduledTasks.some((task) => task.running)) return;
     let cancelled = false;
     const timeout = window.setTimeout(() => {
-      api
-        .tasks()
-        .then((nextTasks) => {
-          if (!cancelled) taskStore.replaceAll(nextTasks);
-        })
-        .catch(() => {});
+      if (!cancelled) void desktopConversationRefresh().catch(() => {});
     }, 5_000);
     return () => {
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [conversationScheduledTasks]);
+  }, [conversationScheduledTasks, desktopConversationRefresh]);
 
   const hasReadyDeferredResumes = deferredResumePresentation.hasReadyResumes;
   const deferredResumeAutoResumeKey = deferredResumePresentation.autoResumeKey;
@@ -3008,9 +2957,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
     const data = await api.deferredResumes(id);
     setDeferredResumes(data.resumes);
-    await refreshConversationActivity().catch(() => {});
+    await desktopConversationRefresh().catch(() => {});
     return data.resumes;
-  }, [id, refreshConversationActivity]);
+  }, [desktopConversationRefresh, id]);
 
   const refetchLiveSessionContext = useCallback(async () => {
     if (draft || !id) {
@@ -4727,7 +4676,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     try {
       const result = await api.scheduleDeferredResume(id, { delay, prompt, behavior });
       setDeferredResumes(result.resumes);
-      await refreshConversationActivity().catch(() => {});
+      await desktopConversationRefresh().catch(() => {});
       composerController.clear();
       showNotice(
         'accent',
@@ -4749,7 +4698,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     try {
       const result = await api.fireDeferredResumeNow(id, resumeId);
       setDeferredResumes(result.resumes);
-      await refreshConversationActivity().catch(() => {});
+      await desktopConversationRefresh().catch(() => {});
       showNotice('accent', 'Wakeup firing…');
     } catch (error) {
       showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
@@ -4767,7 +4716,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     try {
       const result = await api.cancelDeferredResume(id, resumeId);
       setDeferredResumes(result.resumes);
-      await refreshConversationActivity().catch(() => {});
+      await desktopConversationRefresh().catch(() => {});
       showNotice('accent', 'Wakeup cancelled.');
     } catch (error) {
       showNotice('danger', error instanceof Error ? error.message : String(error), 4000);

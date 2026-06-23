@@ -1,6 +1,5 @@
-import { buildDesktopWebSocketUrl } from '../client/endpoints';
 import type { DesktopAppEvent } from '../shared/types';
-import { createDesktopAwareEventSource } from './desktopEventSource';
+import { openDesktopRealtimeSocket } from './desktopRealtimeConnection';
 
 interface DesktopRealtimeListener {
   onopen?: () => void;
@@ -11,67 +10,56 @@ interface DesktopRealtimeListener {
 
 type DesktopRealtimeMessage = { type: 'connected' } | { type: 'app_event'; event: DesktopAppEvent } | { type: 'error'; message: string };
 
-function shouldUseDesktopEventStream(): boolean {
-  return typeof window !== 'undefined' && window.location.protocol === 'neon-pilot:';
-}
-
 export function subscribeDesktopRealtimeAppEvents(listener: DesktopRealtimeListener): () => void {
-  if (shouldUseDesktopEventStream()) {
-    const source = createDesktopAwareEventSource('/api/app-events/events?initialSnapshotTopics=sessions,tasks,runs,daemon');
-    let closed = false;
-    source.onopen = () => {
-      if (closed) return;
-      listener.onopen?.();
-    };
-    source.onmessage = (event) => {
-      if (closed) return;
-      try {
-        listener.onevent?.(JSON.parse(event.data) as DesktopAppEvent);
-      } catch {
-        listener.onerror?.();
-      }
-    };
-    source.onerror = () => {
-      if (closed) return;
-      listener.onerror?.();
-    };
-    return () => {
-      if (closed) return;
-      closed = true;
-      source.close();
-    };
-  }
-
-  const socket = new WebSocket(buildDesktopWebSocketUrl('/api/realtime'));
   let closed = false;
+  let socket: WebSocket | null = null;
 
-  socket.addEventListener('open', () => {
-    if (closed) return;
-    listener.onopen?.();
-  });
-  socket.addEventListener('message', (event) => {
-    if (closed) return;
-    try {
-      const message = JSON.parse(String(event.data)) as DesktopRealtimeMessage;
-      if (message.type === 'app_event') listener.onevent?.(message.event);
-      if (message.type === 'error') listener.onerror?.();
-    } catch {
+  void openDesktopRealtimeSocket()
+    .then((nextSocket) => {
+      if (closed) {
+        nextSocket.close();
+        return;
+      }
+      socket = nextSocket;
+      let openNotified = false;
+      const notifyOpen = () => {
+        if (closed) return;
+        if (openNotified) return;
+        openNotified = true;
+        listener.onopen?.();
+      };
+      nextSocket.addEventListener('open', notifyOpen);
+      nextSocket.addEventListener('message', (event) => {
+        if (closed) return;
+        try {
+          const message = JSON.parse(String(event.data)) as DesktopRealtimeMessage;
+          if (message.type === 'app_event') listener.onevent?.(message.event);
+          if (message.type === 'error') listener.onerror?.();
+        } catch {
+          listener.onerror?.();
+        }
+      });
+      nextSocket.addEventListener('error', () => {
+        if (closed) return;
+        listener.onerror?.();
+      });
+      nextSocket.addEventListener('close', () => {
+        if (closed) return;
+        closed = true;
+        listener.onclose?.();
+      });
+      if (nextSocket.readyState === WebSocket.OPEN) {
+        notifyOpen();
+      }
+    })
+    .catch(() => {
+      if (closed) return;
       listener.onerror?.();
-    }
-  });
-  socket.addEventListener('error', () => {
-    if (closed) return;
-    listener.onerror?.();
-  });
-  socket.addEventListener('close', () => {
-    if (closed) return;
-    closed = true;
-    listener.onclose?.();
-  });
+    });
 
   return () => {
     if (closed) return;
     closed = true;
-    socket.close();
+    socket?.close();
   };
 }

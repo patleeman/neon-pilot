@@ -1186,10 +1186,35 @@ export interface DesktopConversationState {
   liveSession: ConversationBootstrapLiveState;
   extensionMetadataNamespaces?: string[];
   stream: DesktopConversationStreamState;
+  activity?: ConversationActivityResult;
+  revision?: number;
   perf?: Record<string, number>;
 }
 
-// ── SSE events from /api/live-sessions/:id/events ────────────────────────────
+export interface ConversationAggregateState {
+  conversationId: string;
+  revision: number;
+  updatedAt: string;
+  conversation: DesktopConversationState;
+  activity: ConversationActivityResult;
+}
+
+export type ConversationAggregateDelta =
+  | {
+      type: 'stream_events';
+      conversationId: string;
+      revision: number;
+      events: SseEvent[];
+      activity?: ConversationActivityResult;
+    }
+  | {
+      type: 'activity';
+      conversationId: string;
+      revision: number;
+      activity: ConversationActivityResult;
+    };
+
+// ── Conversation stream events carried by aggregate realtime deltas ──────────
 
 export type SseEvent =
   | {

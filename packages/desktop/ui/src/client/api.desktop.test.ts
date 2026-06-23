@@ -619,7 +619,6 @@ describe('api desktop transport', () => {
     const durableRunLog = await api.durableRunLog('run-1', 25);
     const durableRunAttention = await api.markDurableRunAttentionRead('run-1', false);
     const cancelledRun = await api.cancelDurableRun('run-1');
-    const bootstrap = await api.conversationBootstrap('conversation-1', { tailBlocks: 12 });
     const renamed = await api.renameConversation('conversation-1', 'Renamed conversation', 'surface-1');
     const changedCwd = await api.changeConversationCwd('live-1', '/next-repo', 'surface-1');
     const resumeResult = await api.resumeConversation('conversation-1');
@@ -684,10 +683,6 @@ describe('api desktop transport', () => {
     expect(readDurableRunLog).toHaveBeenCalledWith({ runId: 'run-1', tail: 25 });
     expect(markDurableRunAttention).toHaveBeenCalledWith({ runId: 'run-1', read: false });
     expect(cancelDurableRun).toHaveBeenCalledWith('run-1');
-    expect(readConversationBootstrap).toHaveBeenCalledWith({
-      conversationId: 'conversation-1',
-      tailBlocks: 12,
-    });
     expect(renameConversation).toHaveBeenCalledWith({
       conversationId: 'conversation-1',
       name: 'Renamed conversation',
@@ -812,7 +807,6 @@ describe('api desktop transport', () => {
     expect(durableRunLog).toEqual({ path: '/runs/run-1.log', log: 'tail' });
     expect(durableRunAttention).toEqual({ ok: true });
     expect(cancelledRun).toEqual({ cancelled: true, runId: 'run-1' });
-    expect(bootstrap).toEqual(createBootstrapState());
     expect(renamed).toEqual({ ok: true, title: 'Renamed conversation' });
     expect(changedCwd).toEqual({ id: 'live-1', sessionFile: '/tmp/live-1.jsonl', cwd: '/next-repo', changed: true });
     expect(resumeResult).toEqual({
