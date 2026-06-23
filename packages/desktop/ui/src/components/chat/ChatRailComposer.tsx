@@ -78,7 +78,6 @@ export interface ChatRailComposerProps {
   composerPlaceholder?: string;
   externalDraft?: { id: string; text: string } | null;
   layout?: 'default' | 'compact';
-  conversationShelves?: ReactNode;
 }
 
 export function ChatRailComposer({
@@ -98,7 +97,6 @@ export function ChatRailComposer({
   composerPlaceholder,
   externalDraft,
   layout = 'default',
-  conversationShelves,
 }: ChatRailComposerProps) {
   const [input, setInput] = useState(() => (conversationId ? (readForkPromptDraft(conversationId) ?? '') : ''));
   const [attachments, setAttachments] = useState<ComposerImageAttachment[]>([]);
@@ -353,22 +351,18 @@ export function ChatRailComposer({
     </div>
   );
 
-  const hasAttachmentShelf = attachments.length > 0 || drawingAttachments.length > 0;
   const shelves =
-    conversationShelves || hasAttachmentShelf ? (
+    attachments.length > 0 || drawingAttachments.length > 0 ? (
       <div className="max-h-[min(34vh,20rem)] overflow-y-auto overscroll-contain">
-        {conversationShelves}
-        {hasAttachmentShelf ? (
-          <ComposerAttachmentShelf
-            attachments={attachments}
-            drawingAttachments={drawingAttachments}
-            onRemoveAttachment={(index) => setAttachments((current) => removeComposerImageFileAtIndex(current, index))}
-            onEditDrawing={() => {}}
-            onRemoveDrawingAttachment={(localId) =>
-              setDrawingAttachments((current) => removeComposerDrawingAttachmentByLocalId(current, localId))
-            }
-          />
-        ) : null}
+        <ComposerAttachmentShelf
+          attachments={attachments}
+          drawingAttachments={drawingAttachments}
+          onRemoveAttachment={(index) => setAttachments((current) => removeComposerImageFileAtIndex(current, index))}
+          onEditDrawing={() => {}}
+          onRemoveDrawingAttachment={(localId) =>
+            setDrawingAttachments((current) => removeComposerDrawingAttachmentByLocalId(current, localId))
+          }
+        />
       </div>
     ) : null;
 
