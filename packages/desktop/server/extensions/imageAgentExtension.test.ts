@@ -162,6 +162,40 @@ function createSuccessfulImageResponse(
   );
 }
 
+function createCompletedImageResponse(
+  options: {
+    outputFormat?: string;
+    quality?: string;
+    background?: string;
+    responseId?: string;
+  } = {},
+) {
+  return new Response(
+    [
+      'event: response.completed',
+      `data: ${JSON.stringify({
+        response: {
+          id: options.responseId ?? 'resp_completed_image',
+          output: [
+            {
+              type: 'image_generation_call',
+              result: 'ZmFrZS1jb21wbGV0ZWQtaW1hZ2U=',
+              output_format: options.outputFormat ?? 'png',
+              quality: options.quality ?? 'low',
+              background: options.background ?? 'opaque',
+            },
+          ],
+        },
+      })}`,
+      '',
+    ].join('\n'),
+    {
+      status: 200,
+      headers: { 'content-type': 'text/event-stream' },
+    },
+  );
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   buildSessionContextForRuntimeMock.mockClear();
@@ -352,6 +386,60 @@ describe('image agent extension', () => {
       background: 'opaque',
       size: 'auto',
       action: 'auto',
+      source: 'none',
+      sourceImageCount: 0,
+    });
+  });
+
+  it('executes when the Responses API returns the image in the completed payload', async () => {
+    const imageTool = registerImageTool();
+    const openAiModel = createModel({
+      id: 'gpt-4.1',
+      provider: 'openai',
+      api: 'openai-responses',
+      baseUrl: 'https://api.openai.com/v1',
+    });
+    const fetchMock = vi.fn().mockResolvedValue(createCompletedImageResponse({ responseId: 'resp_completed_tool' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await imageTool.execute(
+      'tool-completed-response',
+      {
+        prompt: 'A tiny blue square icon.',
+        quality: 'low',
+        size: '1024x1024',
+      },
+      undefined,
+      undefined,
+      createToolContext({
+        currentModel: openAiModel,
+        models: [openAiModel],
+        authByProvider: {
+          openai: { apiKey: 'openai-key' },
+        },
+      }),
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, request] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api.openai.com/v1/responses');
+    const body = JSON.parse(String(request.body)) as { model: string; tools: Array<{ type: string; quality?: string; size?: string }> };
+    expect(body).toMatchObject({
+      model: 'gpt-4.1',
+      tools: [{ type: 'image_generation', quality: 'low', size: '1024x1024' }],
+    });
+    expect(result.content).toEqual([
+      { type: 'text', text: 'Generated image with openai/gpt-4.1.' },
+      { type: 'image', data: 'ZmFrZS1jb21wbGV0ZWQtaW1hZ2U=', mimeType: 'image/png' },
+    ]);
+    expect(result.details).toMatchObject({
+      provider: 'openai',
+      model: 'gpt-4.1',
+      responseId: 'resp_completed_tool',
+      outputFormat: 'png',
+      quality: 'low',
+      background: 'opaque',
+      size: '1024x1024',
       source: 'none',
       sourceImageCount: 0,
     });
