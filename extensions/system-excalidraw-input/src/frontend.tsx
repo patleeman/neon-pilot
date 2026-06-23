@@ -1,6 +1,6 @@
 import { type NativeExtensionClient } from '@neon-pilot/extensions';
 import { CenteredLoadingState, IconButton } from '@neon-pilot/extensions/ui';
-import { lazy, Suspense, useEffect } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 
 import type { ExcalidrawEditorSavePayload } from './editorModal';
 
@@ -58,6 +58,7 @@ export function ExcalidrawInputTool({
   }, [pa, toolContext]);
 
   const openDrawingModal = async () => {
+    if (toolContext.composerDisabled) return;
     const result = await pa.ui.openModal({
       component: 'ExcalidrawEditorModal',
       props: { conversationId: toolContext.conversationId, saveLabel: 'Attach to chat' },
@@ -79,7 +80,7 @@ export function ExcalidrawInputTool({
         }
       }}
       onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
+        if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
           event.preventDefault();
           void openDrawingModal();
         }
