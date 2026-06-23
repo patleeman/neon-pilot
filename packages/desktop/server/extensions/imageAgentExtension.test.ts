@@ -194,6 +194,59 @@ describe('image agent extension', () => {
     });
   });
 
+  it('parses image-generation output from completed response payloads', () => {
+    const parsed = parseImageGenerationSse(
+      [
+        'event: response.completed',
+        `data: ${JSON.stringify({
+          response: {
+            id: 'resp_completed',
+            output: [
+              {
+                type: 'image_generation_call',
+                result: 'ZmFrZS1jb21wbGV0ZWQtaW1hZ2U=',
+                output_format: 'webp',
+                quality: 'high',
+                background: 'transparent',
+              },
+            ],
+          },
+        })}`,
+        '',
+      ].join('\n'),
+    );
+
+    expect(parsed).toEqual({
+      assistantText: '',
+      imageBase64: 'ZmFrZS1jb21wbGV0ZWQtaW1hZ2U=',
+      outputFormat: 'webp',
+      quality: 'high',
+      background: 'transparent',
+      responseId: 'resp_completed',
+    });
+  });
+
+  it('uses the latest streamed partial image when no final result is present', () => {
+    const parsed = parseImageGenerationSse(
+      [
+        'event: response.image_generation_call.partial_image',
+        'data: {"partial_image_b64":"Zmlyc3QtcGFydGlhbA==","partial_image_index":0}',
+        '',
+        'event: response.image_generation_call.partial_image',
+        'data: {"partial_image_b64":"ZmluYWwtcGFydGlhbA==","partial_image_index":1}',
+        '',
+        'event: response.image_generation_call.completed',
+        'data: {"item_id":"ig_123","output_index":0,"sequence_number":3}',
+        '',
+      ].join('\n'),
+    );
+
+    expect(parsed).toMatchObject({
+      imageBase64: 'ZmluYWwtcGFydGlhbA==',
+      outputFormat: 'png',
+    });
+  });
+
   it('rejects malformed image-generation SSE image data', () => {
     expect(() =>
       parseImageGenerationSse(

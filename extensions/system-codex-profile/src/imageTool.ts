@@ -41,6 +41,15 @@ export interface ParsedImageGenerationSse {
   responseId?: string;
 }
 
+type ImageGenerationSseItem = {
+  type?: string;
+  result?: string | null;
+  output_format?: string;
+  outputFormat?: string;
+  quality?: string;
+  background?: string;
+};
+
 const ImageToolParams = {
   type: 'object',
   properties: {
@@ -519,6 +528,15 @@ function flushSseEvent(events: Array<{ event: string; data: string }>, event: st
   });
 }
 
+function readImageGenerationSseItem(value: unknown): ImageGenerationSseItem | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const item = value as ImageGenerationSseItem;
+  return item.type === 'image_generation_call' ? item : undefined;
+}
+
 export function parseImageGenerationSse(raw: string): ParsedImageGenerationSse {
   const events: Array<{ event: string; data: string }> = [];
   let currentEvent = '';
@@ -568,16 +586,11 @@ export function parseImageGenerationSse(raw: string): ParsedImageGenerationSse {
     }
 
     const record = payload as {
-      response?: { id?: string; error?: { message?: string } };
+      response?: { id?: string; error?: { message?: string }; output?: unknown[] };
       message?: string;
       text?: string;
-      item?: {
-        type?: string;
-        result?: string;
-        output_format?: string;
-        quality?: string;
-        background?: string;
-      };
+      item?: unknown;
+      partial_image_b64?: string;
     };
 
     responseId = responseId ?? record.response?.id;
@@ -595,17 +608,31 @@ export function parseImageGenerationSse(raw: string): ParsedImageGenerationSse {
       continue;
     }
 
-    if (
-      event.event === 'response.output_item.done' &&
-      record.item?.type === 'image_generation_call' &&
-      typeof record.item.result === 'string' &&
-      record.item.result.trim()
-    ) {
-      imageBase64 = record.item.result.trim();
-      outputFormat =
-        typeof record.item.output_format === 'string' && record.item.output_format.trim() ? record.item.output_format.trim() : outputFormat;
-      quality = typeof record.item.quality === 'string' && record.item.quality.trim() ? record.item.quality.trim() : quality;
-      background = typeof record.item.background === 'string' && record.item.background.trim() ? record.item.background.trim() : background;
+    if (event.event === 'response.image_generation_call.partial_image' && typeof record.partial_image_b64 === 'string') {
+      const partialImageBase64 = record.partial_image_b64.trim();
+      if (partialImageBase64) {
+        imageBase64 = partialImageBase64;
+      }
+      continue;
+    }
+
+    const outputItems = [
+      ...(event.event === 'response.output_item.done' ? [record.item] : []),
+      ...(event.event === 'response.completed' && Array.isArray(record.response?.output) ? record.response.output : []),
+    ];
+
+    for (const outputItem of outputItems) {
+      const imageItem = readImageGenerationSseItem(outputItem);
+      const result = typeof imageItem?.result === 'string' ? imageItem.result.trim() : '';
+      if (!result) {
+        continue;
+      }
+
+      imageBase64 = result;
+      const itemOutputFormat = imageItem.output_format ?? imageItem.outputFormat;
+      outputFormat = typeof itemOutputFormat === 'string' && itemOutputFormat.trim() ? itemOutputFormat.trim() : outputFormat;
+      quality = typeof imageItem.quality === 'string' && imageItem.quality.trim() ? imageItem.quality.trim() : quality;
+      background = typeof imageItem.background === 'string' && imageItem.background.trim() ? imageItem.background.trim() : background;
     }
   }
 
