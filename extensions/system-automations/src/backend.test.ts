@@ -46,8 +46,8 @@ vi.mock('@neon-pilot/extensions/backend/runs', () => ({
   getDurableRun: (...args: unknown[]) => mocks.getDurableRun(...args),
 }));
 
-import { deferredResume } from './conversationQueueBackend.js';
 import { scheduledTask as scheduledTaskEntrypoint } from './backend.js';
+import { deferredResume } from './conversationQueueBackend.js';
 import { scheduledTask } from './scheduledTaskBackend.js';
 
 function createCtx(overrides?: Record<string, unknown>) {
@@ -77,7 +77,7 @@ describe('system-automations backend', () => {
       expect(result.text).toContain('Started scheduled task @daily-check as run run-1');
       expect(backendAutomationMock.resolveScheduledTaskForProfile).toHaveBeenCalledWith('shared', 'daily-check');
       expect(backendAutomationMock.startScheduledTaskRun).toHaveBeenCalledWith('daily-check');
-      expect(mocks.invalidateTopics).toHaveBeenCalledWith(['tasks', 'runs']);
+      expect(mocks.invalidateTopics).toHaveBeenCalledWith(['tasks', 'runs', 'sessions', 'workspace']);
       expect(invalidate).toHaveBeenCalledWith(['tasks', 'runs', 'sessions']);
     });
 

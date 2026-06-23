@@ -48,6 +48,11 @@ model_catalog="/path/to/neon-pilot/model-gateway/model-catalog.json"
 ```
 
 The fake model proves the Responses shape and SSE lifecycle without provider credentials. Real provider checks require Neon Pilot provider credentials in the runtime's normal Pi-backed model configuration.
+The loopback endpoint still requires the generated gateway token. For a live smoke, copy the Auth token from the Codex client setup rows and run:
+
+```bash
+MODEL_GATEWAY_AUTH_TOKEN='<generated gateway token>' pnpm run smoke:model-gateway
+```
 
 If the loopback endpoint does not bind after restart, the extension stays manageable from Settings and reports the listener error there. Change
 the port or stop the other process, then Refresh or save the port again.

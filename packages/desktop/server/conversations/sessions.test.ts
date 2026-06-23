@@ -1387,6 +1387,62 @@ describe('sessions', () => {
     expect(detail?.blocks.filter((block) => block.type === 'text').map((block) => block.text)).toContain('Imported summary note.');
   });
 
+  it('renders persisted automation run custom messages as collapsed transcript context', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const dir = join(sessionsDir, '--tmp-project--');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, '2026-03-11T12-00-00-000Z_session-automation-run.jsonl'),
+      [
+        JSON.stringify({ type: 'session', id: 'session-automation-run', timestamp: '2026-03-11T12:00:00.000Z', cwd: '/tmp/project' }),
+        JSON.stringify({ type: 'model_change', modelId: 'test-model' }),
+        JSON.stringify({
+          type: 'message',
+          id: 'session-automation-run-user-1',
+          parentId: null,
+          timestamp: '2026-03-11T12:00:00.000Z',
+          message: { role: 'user', content: [{ type: 'text', text: 'Run the release check later.' }] },
+        }),
+        JSON.stringify({
+          type: 'custom_message',
+          id: 'session-automation-run-audit-1',
+          parentId: 'session-automation-run-user-1',
+          timestamp: '2026-03-11T12:00:01.000Z',
+          customType: 'automation_run',
+          content: 'Automation completed: release-check\n\nTask: @release-check\nOutput:\nAll clear.',
+          display: false,
+        }),
+      ].join('\n') + '\n',
+    );
+
+    const detail = readSessionBlocks('session-automation-run');
+    expect(detail?.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'context',
+          customType: 'automation_run',
+          text: expect.stringContaining('Automation completed: release-check'),
+        }),
+      ]),
+    );
+    expect(detail?.renderItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'context_cluster',
+          blocks: expect.arrayContaining([
+            expect.objectContaining({
+              type: 'context',
+              customType: 'automation_run',
+              text: expect.stringContaining('Task: @release-check'),
+            }),
+          ]),
+        }),
+      ]),
+    );
+  });
+
   it('renders bash tool calls in display blocks', () => {
     const blocks = buildDisplayBlocksFromEntries([
       {
