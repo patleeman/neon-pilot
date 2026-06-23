@@ -141,6 +141,19 @@ describe('desktop local API conversation actions', () => {
     expect(readJsonBody(response)).toEqual({ summaries: {} });
     expect(response.headers['X-PA-Perf']).toContain('"fastPath":"product"');
   });
+
+  it('continues past host-webapp wildcard routes for workspace tree requests', async () => {
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: `/api/workspace/tree?cwd=${encodeURIComponent(resolve('.'))}`,
+    });
+    const body = readJsonBody(response);
+
+    expect(response.statusCode).toBe(200);
+    expect(body.path).toBe('');
+    expect(Array.isArray(body.entries)).toBe(true);
+    expect(Buffer.from(response.body).toString('utf-8')).not.toContain('Local API route did not complete');
+  });
 });
 
 describe('desktop local API conversation rename route', () => {

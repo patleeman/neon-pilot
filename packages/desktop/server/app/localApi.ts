@@ -190,7 +190,7 @@ import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences
 import { buildRelatedConversationResults } from './localApiRelatedConversations.js';
 import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing.js';
 import { resolveRollbackLeafId, rewriteConversationSessionToLeaf, validateDesktopRollbackTurns } from './localApiRollback.js';
-import { buildLocalApiQueryObject, buildLocalApiRoutePattern, findMatchingLocalApiRoute } from './localApiRouting.js';
+import { buildLocalApiQueryObject, buildLocalApiRoutePattern } from './localApiRouting.js';
 import { normalizeDesktopScheduledTaskCreateInput, withDesktopScheduledTaskMutationInvalidation } from './localApiScheduledTasks.js';
 import { normalizeFastConversationSearchLimit, normalizeFastConversationSearchTerms } from './localApiSearch.js';
 import { buildDesktopSidebarConversationSnapshot } from './localApiSidebarConversations.js';
@@ -253,7 +253,8 @@ function prewarmDesktopModelDefinitions(): void {
   modelDefinitionsPrewarmTimer.unref?.();
 }
 
-type RouteHandler = (req: LocalApiRequest, res: LocalApiResponse) => unknown;
+type RouteNext = (error?: unknown) => void;
+type RouteHandler = (req: LocalApiRequest, res: LocalApiResponse, next?: RouteNext) => unknown;
 
 interface RegisteredRoute {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -522,12 +523,15 @@ function isTrustedDesktopLocalApiDispatch(input: {
   );
 }
 
-function findLocalApiRouteForRequest(routes: RegisteredRoute[], method: string, pathname: string, headers?: Record<string, string>) {
-  if (shouldPrioritizeWebappHostRoute(headers)) {
-    const hostRoute = routes.find((candidate) => candidate.method === method && candidate.path === '*');
-    if (hostRoute) return hostRoute;
+function findLocalApiRoutesForRequest(routes: RegisteredRoute[], method: string, pathname: string, headers?: Record<string, string>) {
+  const matchingRoutes = routes.filter((candidate) => candidate.method === method && candidate.pattern.test(pathname));
+  if (!shouldPrioritizeWebappHostRoute(headers)) {
+    return matchingRoutes;
   }
-  return findMatchingLocalApiRoute(routes, method, pathname);
+
+  const hostRoutes = matchingRoutes.filter((candidate) => candidate.path === '*');
+  const remainingRoutes = matchingRoutes.filter((candidate) => candidate.path !== '*');
+  return [...hostRoutes, ...remainingRoutes];
 }
 
 function createRouteCollector(
@@ -1699,49 +1703,96 @@ export async function dispatchDesktopLocalApiRequest(input: {
 
   const routes = await getLocalRoutes();
   const routesReadyAtMs = performance.now();
-  const route = findLocalApiRouteForRequest(routes, input.method, url.pathname, input.headers);
+  const matchingRoutes = findLocalApiRoutesForRequest(routes, input.method, url.pathname, input.headers);
 
-  if (!route) {
+  if (matchingRoutes.length === 0) {
     return createDesktopLocalApiErrorResponse(404, `No local API route for ${input.method} ${url.pathname}`);
   }
 
-  const match = route.pattern.exec(url.pathname);
-  const params = Object.fromEntries(route.keys.map((key, index) => [key, decodeURIComponent(match?.[index + 1] ?? '')]));
-  const req = createLocalApiRequest({
-    method: input.method,
-    url,
-    params,
-    body: input.body,
-    headers: input.headers,
-  });
-  const res = new LocalApiResponse();
-
   const handlerStartedAtMs = performance.now();
-  try {
-    await route.handler(req, res);
-  } catch (error) {
-    const statusCode = getDesktopLocalApiErrorStatus(error);
-    const message = error instanceof Error ? error.message : String(error);
-    const errorResponse = createDesktopLocalApiErrorResponse(statusCode, message);
-    return {
-      ...errorResponse,
-      headers: {
-        ...errorResponse.headers,
-        'X-PA-Perf': JSON.stringify({
-          localApi: {
-            routeLookupMs: Math.round(routesReadyAtMs - startedAtMs),
-            handlerMs: Math.round(performance.now() - handlerStartedAtMs),
-            totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
-            responseBytes: errorResponse.body.byteLength,
-          },
-        }),
-      },
+  let res: LocalApiResponse | null = null;
+  let handlerFinishedAtMs = handlerStartedAtMs;
+  let routeCompleted = false;
+
+  for (const route of matchingRoutes) {
+    const match = route.pattern.exec(url.pathname);
+    const params = Object.fromEntries(route.keys.map((key, index) => [key, decodeURIComponent(match?.[index + 1] ?? '')]));
+    const req = createLocalApiRequest({
+      method: input.method,
+      url,
+      params,
+      body: input.body,
+      headers: input.headers,
+    });
+    res = new LocalApiResponse();
+    let nextCalled = false;
+    let nextError: unknown;
+    const next: RouteNext = (error?: unknown) => {
+      nextCalled = true;
+      nextError = error;
     };
+
+    try {
+      await route.handler(req, res, next);
+    } catch (error) {
+      const statusCode = getDesktopLocalApiErrorStatus(error);
+      const message = error instanceof Error ? error.message : String(error);
+      const errorResponse = createDesktopLocalApiErrorResponse(statusCode, message);
+      return {
+        ...errorResponse,
+        headers: {
+          ...errorResponse.headers,
+          'X-PA-Perf': JSON.stringify({
+            localApi: {
+              routeLookupMs: Math.round(routesReadyAtMs - startedAtMs),
+              handlerMs: Math.round(performance.now() - handlerStartedAtMs),
+              totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
+              responseBytes: errorResponse.body.byteLength,
+            },
+          }),
+        },
+      };
+    }
+    handlerFinishedAtMs = performance.now();
+
+    if (nextError) {
+      const statusCode = getDesktopLocalApiErrorStatus(nextError);
+      const message = nextError instanceof Error ? nextError.message : String(nextError);
+      const errorResponse = createDesktopLocalApiErrorResponse(statusCode, message);
+      return {
+        ...errorResponse,
+        headers: {
+          ...errorResponse.headers,
+          'X-PA-Perf': JSON.stringify({
+            localApi: {
+              routeLookupMs: Math.round(routesReadyAtMs - startedAtMs),
+              handlerMs: Math.round(handlerFinishedAtMs - handlerStartedAtMs),
+              totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
+              responseBytes: errorResponse.body.byteLength,
+            },
+          }),
+        },
+      };
+    }
+
+    if (res.ended) {
+      routeCompleted = true;
+      break;
+    }
+
+    if (nextCalled) {
+      continue;
+    }
+
+    break;
   }
-  const handlerFinishedAtMs = performance.now();
+
+  if (!res) {
+    return createDesktopLocalApiErrorResponse(404, `No local API route for ${input.method} ${url.pathname}`);
+  }
 
   const contentType = res.headers.get('content-type') ?? '';
-  if (!res.ended) {
+  if (!routeCompleted) {
     if (contentType.toLowerCase().includes('text/event-stream')) {
       throw new Error(`Local API stream requires subscribeDesktopLocalApiStream for ${input.method} ${url.pathname}`);
     }

@@ -51,15 +51,7 @@ vi.mock('../../ui-state/theme', () => ({
 }));
 
 vi.mock('./WorkspaceCodeEditor', () => ({
-  WorkspaceCodeEditor: ({
-    value,
-    editable,
-    onChange,
-  }: {
-    value?: string;
-    editable?: boolean;
-    onChange?: (value: string) => void;
-  }) =>
+  WorkspaceCodeEditor: ({ value, editable, onChange }: { value?: string; editable?: boolean; onChange?: (value: string) => void }) =>
     React.createElement('textarea', {
       'aria-label': 'mock editor',
       readOnly: !editable,
@@ -153,6 +145,35 @@ describe('formatWorkspaceEntrySize', () => {
   it('omits unsafe file sizes', () => {
     expect(formatWorkspaceEntrySize(Number.MAX_SAFE_INTEGER + 1)).toBe('');
     expect(formatWorkspaceEntrySize(1.5)).toBe('');
+  });
+
+  it('does not render internal workspace tree route failures in the file explorer', async () => {
+    apiMocks.workspaceTree.mockRejectedValue(
+      new Error(
+        [
+          'Error: Local API route did not complete for GET /api/workspace/tree at Module.ep',
+          '(file:///Users/patrick/workingdir/neon-pilot/packages/desktop/server/dist/app/localApi.js:132:20)',
+        ].join('\n'),
+      ),
+    );
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(React.createElement(WorkspaceExplorer, { cwd: '/repo', onDraftPrompt: () => undefined }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('Could not load the workspace file tree. Refresh the workspace or reopen the conversation.');
+    });
+    expect(container.textContent).toContain('Workspace unavailable');
+    expect(container.textContent).not.toContain('/api/workspace/tree');
+    expect(container.textContent).not.toContain('localApi.js');
   });
 
   it('ignores stale file loads after switching paths', async () => {
@@ -576,7 +597,7 @@ describe('formatWorkspaceEntrySize', () => {
     vi.useRealTimers();
   });
 
-  it('ignores stale forced file loads from \"Open anyway\" after switching to a different file', async () => {
+  it('ignores stale forced file loads from "Open anyway" after switching to a different file', async () => {
     const tree = deferred<{
       root: string;
       rootName: string;
@@ -590,14 +611,12 @@ describe('formatWorkspaceEntrySize', () => {
     const normalFileLoad = deferred<ReturnType<typeof file>>();
 
     apiMocks.workspaceTree.mockReturnValue(tree.promise);
-    apiMocks.workspaceFile.mockImplementation(
-      (_cwd: string, path: string, opts?: { force?: boolean }) => {
-        if (path === 'large.ts' && !opts?.force) return largeFileLoad.promise;
-        if (path === 'large.ts' && opts?.force) return largeFileForcedLoad.promise;
-        if (path === 'normal.ts') return normalFileLoad.promise;
-        throw new Error(`unexpected ${path}`);
-      },
-    );
+    apiMocks.workspaceFile.mockImplementation((_cwd: string, path: string, opts?: { force?: boolean }) => {
+      if (path === 'large.ts' && !opts?.force) return largeFileLoad.promise;
+      if (path === 'large.ts' && opts?.force) return largeFileForcedLoad.promise;
+      if (path === 'normal.ts') return normalFileLoad.promise;
+      throw new Error(`unexpected ${path}`);
+    });
     apiMocks.workspaceDiff.mockResolvedValue({ addedLines: [], deletedBlocks: [] });
 
     const container = document.createElement('div');
@@ -659,9 +678,7 @@ describe('formatWorkspaceEntrySize', () => {
     });
 
     // Click "Open anyway" — triggers forced load
-    const openAnywayBtn = Array.from(container.querySelectorAll('button')).find((btn) =>
-      btn.textContent?.includes('Open anyway'),
-    );
+    const openAnywayBtn = Array.from(container.querySelectorAll('button')).find((btn) => btn.textContent?.includes('Open anyway'));
     expect(openAnywayBtn).toBeTruthy();
     act(() => {
       openAnywayBtn!.dispatchEvent(new MouseEvent('click', { bubbles: true }));

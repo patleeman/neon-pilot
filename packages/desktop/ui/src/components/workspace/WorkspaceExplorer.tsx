@@ -191,6 +191,22 @@ export function formatWorkspaceEntrySize(size: number | null): string {
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function formatWorkspaceLoadError(error: unknown, fallback: string): string {
+  const raw = error instanceof Error ? error.message : String(error ?? '');
+  const firstLine = raw.split('\n')[0]?.trim() ?? '';
+  if (
+    !firstLine ||
+    raw.includes('\n') ||
+    /Local API route did not complete/i.test(raw) ||
+    /\/api\/workspace\//i.test(raw) ||
+    /file:\/\//i.test(raw) ||
+    /\s+at\s+\S+/i.test(raw)
+  ) {
+    return fallback;
+  }
+  return firstLine;
+}
+
 function fileIcon(entry: WorkspaceEntry): string {
   if (entry.kind === 'directory') return '▸';
   if (entry.kind === 'symlink') return '↗';
@@ -551,7 +567,11 @@ export function WorkspaceExplorer({
       setRootListing({ status: 'idle', data, error: null });
     } catch (error) {
       if (refreshSerial.current !== serial) return;
-      setRootListing({ status: 'idle', data: null, error: error instanceof Error ? error.message : String(error) });
+      setRootListing({
+        status: 'idle',
+        data: null,
+        error: formatWorkspaceLoadError(error, 'Could not load the workspace file tree. Refresh the workspace or reopen the conversation.'),
+      });
     }
   }, [cwd]);
 
@@ -632,7 +652,7 @@ export function WorkspaceExplorer({
             ...(current[path] ?? { expanded: true, entries: null }),
             expanded: true,
             loading: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: formatWorkspaceLoadError(error, 'Could not load this folder. Refresh the workspace or try again.'),
           },
         }));
       }
@@ -692,7 +712,11 @@ export function WorkspaceExplorer({
         if (!isCurrentRequest()) {
           return;
         }
-        setFileState({ status: 'idle', data: null, error: error instanceof Error ? error.message : String(error) });
+        setFileState({
+          status: 'idle',
+          data: null,
+          error: formatWorkspaceLoadError(error, 'Could not open this file. Refresh the workspace or try again.'),
+        });
       }
     },
     [cwd],
@@ -1175,7 +1199,11 @@ export function WorkspaceFileDocument({
         if (!isCurrentRequest()) {
           return;
         }
-        setFileState({ status: 'idle', data: null, error: error instanceof Error ? error.message : String(error) });
+        setFileState({
+          status: 'idle',
+          data: null,
+          error: formatWorkspaceLoadError(error, 'Could not open this file. Refresh the workspace or try again.'),
+        });
       }
     },
     [cwd, path],
