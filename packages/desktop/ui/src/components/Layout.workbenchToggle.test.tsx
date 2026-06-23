@@ -250,6 +250,28 @@ describe('Layout workbench toggle', () => {
     window.removeEventListener('pa:workbench-refresh-active-file', refreshListener);
   });
 
+  it('closes the workbench when the last workbench tab is closed', async () => {
+    setWorkbenchModeForCurrentSession();
+    renderLayout('/conversations/conv-1');
+
+    expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'File Explorer' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Open a tab')).toBeNull();
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'workbench.closeActiveTab' } }));
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
+    });
+    expect(window.localStorage.getItem(APP_LAYOUT_MODE_STORAGE_KEY)).toBe('compact');
+    expect(screen.getByRole('button', { name: 'Show workbench' })).toBeTruthy();
+  });
+
   it('does not consume global keybindings for unavailable commands', async () => {
     vi.mocked(api.extensionKeybindings).mockResolvedValue([
       {

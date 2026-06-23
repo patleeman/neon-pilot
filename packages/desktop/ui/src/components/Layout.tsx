@@ -1881,11 +1881,24 @@ export function Layout() {
         setSelectedToolByConversation((current) => clearSelectedWorkbenchTool(current, 'terminal'));
       }
 
+      if (nextWouldHaveNoTabs) {
+        setAppLayoutMode('compact');
+        writeAppLayoutMode('compact');
+        setSearchParams(
+          (current) => {
+            const nextSearch = new URLSearchParams(clearWorkbenchOnlySearchParamsForCompact(current.toString()));
+            nextSearch.delete('view');
+            return nextSearch;
+          },
+          { replace: true },
+        );
+      }
+
       if (nextWouldHaveNoTabs && closingTab?.mode === 'files') {
         clearActiveWorkbenchFileSelection();
       }
     },
-    [activeWorkbenchTabId, clearActiveWorkbenchFileSelection],
+    [activeWorkbenchTabId, clearActiveWorkbenchFileSelection, setSearchParams],
   );
 
   const promoteWorkbenchChatTab = useCallback(
