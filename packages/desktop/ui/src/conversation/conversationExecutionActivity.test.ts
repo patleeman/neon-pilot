@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ScheduledTaskSummary } from '../shared/types';
-import { buildScheduledTaskIndicatorText } from './conversationExecutionActivity';
+import { buildScheduledTaskIndicatorText, selectConversationScheduledTasks } from './conversationExecutionActivity';
 
 function task(overrides: Partial<ScheduledTaskSummary> & Pick<ScheduledTaskSummary, 'id'>): ScheduledTaskSummary {
   return {
@@ -24,5 +24,25 @@ describe('conversation scheduled task activity', () => {
     expect(buildScheduledTaskIndicatorText([task({ id: 'task-1', running: true }), task({ id: 'task-2', enabled: false })])).toBe(
       '1 running · 1 enabled',
     );
+  });
+
+  it('selects thread-owned tasks from the task store when the activity route is unavailable', () => {
+    expect(
+      selectConversationScheduledTasks({
+        conversationId: 'conv-1',
+        activityTasks: [],
+        tasks: [task({ id: 'task-1', title: 'Store task' }), task({ id: 'task-2', threadConversationId: 'conv-2' })],
+      }),
+    ).toEqual([expect.objectContaining({ id: 'task-1', title: 'Store task' })]);
+  });
+
+  it('dedupes task-store and activity-route records by task id', () => {
+    expect(
+      selectConversationScheduledTasks({
+        conversationId: 'conv-1',
+        activityTasks: [task({ id: 'task-1', title: 'Activity title' })],
+        tasks: [task({ id: 'task-1', title: 'Fresh store title' })],
+      }),
+    ).toEqual([expect.objectContaining({ id: 'task-1', title: 'Fresh store title' })]);
   });
 });

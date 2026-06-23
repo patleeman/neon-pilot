@@ -34,7 +34,6 @@ import {
   saveDurableRunStatus,
 } from '../../runs/store.js';
 import type { DaemonConfig } from '../config.js';
-import { closeEventBusDbs, createEventBusSubscription, listEventBusEvents } from '../eventBus.js';
 import {
   appendAutomationActivityEntry,
   closeAutomationDbs,
@@ -212,7 +211,6 @@ describe('tasks module scheduling', () => {
   afterEach(async () => {
     startBackgroundRunMock.mockReset();
     startScheduledTaskRunMock.mockReset();
-    closeEventBusDbs();
     closeAutomationDbs();
     await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
   });
@@ -1285,26 +1283,15 @@ describe('tasks module scheduling', () => {
     await module.stop?.(context);
   });
 
-  it('dispatches event-bus subscriptions when scheduled tasks become due', async () => {
+  it('runs due automations directly without durable event-bus dispatch', async () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');
-    const dbPath = resolveRuntimeDbPath(stateRoot);
     seedAutomation(stateRoot, {
       id: 'checkout-poller',
       title: 'Checkout poller',
       cron: '* * * * *',
       prompt: 'Poll checkout events',
     });
-    createEventBusSubscription({
-      dbPath,
-      subscription: {
-        id: 'sub-score-orders',
-        name: 'Score scheduled orders',
-        pattern: 'schedule.due',
-        action: { type: 'run_task', taskId: 'score-orders' },
-      },
-    });
-    startScheduledTaskRunMock.mockResolvedValue({ accepted: true, runId: 'run-score-orders' });
 
     const currentTime = new Date('2026-03-02T10:10:00.000Z');
     const runTask = vi.fn(async (request: TaskRunRequest) =>
@@ -1329,16 +1316,8 @@ describe('tasks module scheduling', () => {
     await module.start(context);
     await module.handleEvent(createTimerEvent(), context);
 
-    await waitForCondition(() => startScheduledTaskRunMock.mock.calls.length === 1);
-    expect(startScheduledTaskRunMock).toHaveBeenCalledWith('score-orders');
-    await waitForCondition(() =>
-      listEventBusEvents({ dbPath }).some(
-        (event) =>
-          event.type === 'schedule.due' &&
-          event.metadata.taskId === 'checkout-poller' &&
-          event.reactions.some((reaction) => reaction.subscriptionId === 'sub-score-orders' && reaction.status === 'completed'),
-      ),
-    );
+    await waitForCondition(() => runTask.mock.calls.length === 1);
+    expect(startScheduledTaskRunMock).not.toHaveBeenCalled();
 
     await module.stop?.(context);
   });
@@ -1559,7 +1538,7 @@ describe('tasks module scheduling', () => {
       catchUpWindowSeconds: 15 * 60,
       prompt: 'Assemble the morning briefing.',
     });
-    setStoredAutomationThreadBinding('morning-brief', { dbPath, mode: 'none' });
+    setStoredAutomationThreadBinding('morning-brief', { dbPath, mode: 'dedicated' });
 
     saveAutomationSchedulerState({ lastEvaluatedAt: '2026-03-02T09:59:30.000Z' }, { dbPath });
 
@@ -1622,7 +1601,7 @@ describe('tasks module scheduling', () => {
       catchUpWindowSeconds: 5 * 60,
       prompt: 'Assemble the morning briefing.',
     });
-    setStoredAutomationThreadBinding('morning-brief', { dbPath, mode: 'none' });
+    setStoredAutomationThreadBinding('morning-brief', { dbPath, mode: 'dedicated' });
 
     saveAutomationSchedulerState({ lastEvaluatedAt: '2026-03-02T09:59:30.000Z' }, { dbPath });
 
@@ -1694,7 +1673,7 @@ describe('tasks module scheduling', () => {
       policies: [{ kind: 'catch_up', enabled: true, windowSeconds: 15 * 60, mode: 'latest' }],
       prompt: 'Catch up through policy.',
     });
-    setStoredAutomationThreadBinding('policy-catch-up', { dbPath, mode: 'none' });
+    setStoredAutomationThreadBinding('policy-catch-up', { dbPath, mode: 'dedicated' });
     saveAutomationSchedulerState({ lastEvaluatedAt: '2026-03-02T09:59:30.000Z' }, { dbPath });
 
     const currentTime = new Date('2026-03-02T10:10:00.000Z');
@@ -1738,7 +1717,7 @@ describe('tasks module scheduling', () => {
       policies: [{ kind: 'once_per_period', enabled: true, count: 1, period: 'day' }],
       prompt: 'Run once per day.',
     });
-    setStoredAutomationThreadBinding('daily-flex', { dbPath, mode: 'none' });
+    setStoredAutomationThreadBinding('daily-flex', { dbPath, mode: 'dedicated' });
 
     let currentTime = new Date('2026-03-02T10:00:00.000Z');
     const runTask = vi.fn(async (request: TaskRunRequest) => createRunResult(request, true, currentTime.toISOString()));
@@ -1790,7 +1769,12 @@ describe('tasks module scheduling', () => {
       targetType: 'conversation',
       prompt: 'Run maintenance.',
     });
-    setStoredAutomationThreadBinding('broken-thread', { dbPath, mode: 'none' });
+    setStoredAutomationThreadBinding('broken-thread', {
+      dbPath,
+      mode: 'existing',
+      conversationId: 'missing-thread',
+      sessionFile: '/missing/thread.jsonl',
+    });
 
     const currentTime = new Date('2026-03-02T10:10:00.000Z');
     const module = createTasksModule(
@@ -1817,7 +1801,7 @@ describe('tasks module scheduling', () => {
       expect.objectContaining({
         automationId: 'broken-thread',
         kind: 'run-failed',
-        message: 'Conversation automation @broken-thread requires a thread.',
+        message: 'Automation @broken-thread is bound to a missing thread.',
       }),
     ]);
     expect(getAlert({ stateRoot, profile: 'assistant', alertId: 'automation-run-failed-broken-thread' })).toEqual(

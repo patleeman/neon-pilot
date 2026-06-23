@@ -11,6 +11,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'f
 import { dirname, join, resolve } from 'path';
 
 import type { TasksModuleConfig } from '../../config.js';
+import { appendStoredVisibleCustomMessage } from '../../conversations/conversationService.js';
 import {
   appendDurableRunEvent,
   createDurableRunManifest,
@@ -23,8 +24,6 @@ import {
   saveDurableRunStatus,
   scanDurableRun,
 } from '../../runs/store.js';
-import { emitEventBusEvent } from '../eventBus.js';
-import { dispatchEventBusReaction } from '../eventBusHost.js';
 import {
   appendAutomationActivityEntry,
   deleteStoredAutomation,
@@ -37,6 +36,7 @@ import {
   type StoredAutomation,
 } from '../store.js';
 import { ensureAutomationThread } from '../threads.js';
+import { openAutomationOwnerThread } from '../workspace.js';
 import { cronMatches, type ParsedCronExpression, type ParsedTaskDefinition } from './tasks-parser.js';
 import { runTaskInIsolatedPi, type TaskRunRequest, type TaskRunResult } from './tasks-runner.js';
 import { createEmptyTaskState, type TaskRuntimeState, type TaskStateFile } from './tasks-store.js';
@@ -141,6 +141,61 @@ function formatTaskSchedule(task: ParsedTaskDefinition): string {
   }
 
   return `at ${task.schedule.at}`;
+}
+
+function appendThreadAutomationEvent(
+  task: Pick<StoredAutomation, 'id' | 'title' | 'threadSessionFile' | 'threadConversationId'>,
+  input: {
+    kind: 'started' | 'completed' | 'failed' | 'cancelled' | 'crashed';
+    runId?: string;
+    timestamp: string;
+    error?: string;
+    logPath?: string;
+    outputText?: string;
+  },
+): void {
+  const sessionFile = task.threadSessionFile?.trim();
+  if (!sessionFile) {
+    return;
+  }
+
+  const title = task.title?.trim() || task.id;
+  const statusText =
+    input.kind === 'started'
+      ? 'started'
+      : input.kind === 'completed'
+        ? 'completed'
+        : input.kind === 'cancelled'
+          ? 'was cancelled'
+          : input.kind === 'crashed'
+            ? 'could not start'
+            : 'failed';
+  const lines = [`Automation ${statusText}: ${title}`, '', `Task: @${task.id}`, `Time: ${input.timestamp}`];
+  if (input.runId) lines.push(`Run: ${input.runId}`);
+  if (input.error) lines.push('', `Error: ${input.error}`);
+  if (input.outputText?.trim()) lines.push('', 'Output:', input.outputText.trim());
+  if (input.logPath) lines.push('', `Log: ${input.logPath}`);
+
+  try {
+    appendStoredVisibleCustomMessage({
+      sessionFile,
+      customType: 'automation_run',
+      content: lines.join('\n'),
+      details: {
+        automationId: task.id,
+        title,
+        kind: input.kind,
+        runId: input.runId,
+        timestamp: input.timestamp,
+        conversationId: task.threadConversationId,
+        error: input.error,
+        logPath: input.logPath,
+      },
+      blockId: `automation_run:${task.id}:${input.runId ?? input.timestamp}:${input.kind}`,
+    });
+  } catch {
+    // A broken owner-thread binding should not prevent the durable failure audit/alert.
+  }
 }
 
 function summarizeMissedCronRuns(expression: ParsedCronExpression, evaluatedAt: Date, currentTime: Date): MissedTaskRunSummary | undefined {
@@ -643,12 +698,15 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
     options: { runIdOverride?: string } = {},
   ): Promise<void> => {
     const runnableTask = ensureAutomationThread(task.id, { dbPath: runtimeDbPath, stateRoot: context.paths.stateRoot });
-    if (runnableTask.targetType === 'conversation' && (runnableTask.threadMode === 'none' || !runnableTask.threadSessionFile)) {
-      throw new Error(`Conversation automation @${runnableTask.id} requires a thread.`);
+    if (runnableTask.threadMode === 'none' || !runnableTask.threadSessionFile || !runnableTask.threadConversationId) {
+      throw new Error(`Automation @${runnableTask.id} requires an owner thread.`);
     }
+
+    openAutomationOwnerThread({ conversationId: runnableTask.threadConversationId, stateRoot: context.paths.stateRoot });
 
     const startedAt = record.runningStartedAt ?? now().toISOString();
     const durableRun = await createDurableTaskRunRecord(runnableTask, record, startedAt, options.runIdOverride);
+    appendThreadAutomationEvent(runnableTask, { kind: 'started', runId: durableRun.runId, timestamp: startedAt });
     let finalResult: TaskRunResult | undefined;
 
     for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
@@ -814,24 +872,13 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
         logPath: finalResult.logPath,
         runId: durableRun.runId,
       });
-      void emitEventBusEvent({
-        dbPath: runtimeDbPath,
-        event: {
-          type: 'automation.completed',
-          source: 'scheduler',
-          payload: {
-            taskId: runnableTask.id,
-            runId: durableRun.runId,
-            logPath: finalResult.logPath,
-          },
-          metadata: {
-            taskId: runnableTask.id,
-            runId: durableRun.runId,
-          },
-          occurredAt: finishedAt,
-        },
-        dispatch: dispatchEventBusReaction,
-      }).catch((error) => context.logger.warn(`failed to record completion event id=${runnableTask.id}: ${(error as Error).message}`));
+      appendThreadAutomationEvent(runnableTask, {
+        kind: 'completed',
+        runId: durableRun.runId,
+        timestamp: finishedAt,
+        logPath: finalResult.logPath,
+        outputText: finalResult.outputText,
+      });
       context.logger.info(`task completed id=${runnableTask.id} run=${durableRun.runId} log=${finalResult.logPath}`);
 
       await deliverTaskCallbackWakeup(runnableTask, 'success', context, {
@@ -843,6 +890,14 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       record.lastStatus = 'skipped';
       record.lastError = finalResult.error ?? 'Task run cancelled';
       state.skippedRuns += 1;
+      appendThreadAutomationEvent(runnableTask, {
+        kind: 'cancelled',
+        runId: durableRun.runId,
+        timestamp: finishedAt,
+        error: record.lastError,
+        logPath: finalResult.logPath,
+        outputText: finalResult.outputText,
+      });
 
       saveDurableRunStatus(
         durableRun.runPaths.statusPath,
@@ -902,25 +957,14 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
         logPath: finalResult?.logPath,
         runId: durableRun.runId,
       });
-      void emitEventBusEvent({
-        dbPath: runtimeDbPath,
-        event: {
-          type: 'automation.failed',
-          source: 'scheduler',
-          payload: {
-            taskId: runnableTask.id,
-            runId: durableRun.runId,
-            error: record.lastError,
-            logPath: finalResult?.logPath,
-          },
-          metadata: {
-            taskId: runnableTask.id,
-            runId: durableRun.runId,
-          },
-          occurredAt: finishedAt,
-        },
-        dispatch: dispatchEventBusReaction,
-      }).catch((error) => context.logger.warn(`failed to record failure event id=${runnableTask.id}: ${(error as Error).message}`));
+      appendThreadAutomationEvent(runnableTask, {
+        kind: 'failed',
+        runId: durableRun.runId,
+        timestamp: finishedAt,
+        error: record.lastError,
+        logPath: finalResult?.logPath,
+        outputText: finalResult?.outputText,
+      });
       context.logger.warn(`task failed id=${runnableTask.id} run=${durableRun.runId} error=${record.lastError}`);
 
       await deliverTaskCallbackWakeup(runnableTask, 'failed', context, {
@@ -943,23 +987,6 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
     options: { runIdOverride?: string } = {},
   ): void => {
     const controller = new AbortController();
-    void emitEventBusEvent({
-      dbPath: runtimeDbPath,
-      event: {
-        type: 'schedule.due',
-        source: 'scheduler',
-        payload: {
-          taskId: task.id,
-          title: task.title,
-          schedule: formatTaskSchedule(task),
-        },
-        metadata: {
-          taskId: task.id,
-          targetType: task.targetType,
-        },
-      },
-      dispatch: dispatchEventBusReaction,
-    }).catch((error) => context.logger.warn(`failed to record schedule event id=${task.id}: ${(error as Error).message}`));
 
     record.running = true;
     record.runningStartedAt = now().toISOString();
@@ -980,6 +1007,10 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
         state.lastError = message;
         context.logger.warn(`task execution crash id=${task.id} error=${message}`);
         try {
+          if (task.threadConversationId) {
+            openAutomationOwnerThread({ conversationId: task.threadConversationId, stateRoot: context.paths.stateRoot });
+          }
+          appendThreadAutomationEvent(task, { kind: 'crashed', timestamp: failedAt, error: message });
           const activity = appendAutomationActivityEntry(
             task.id,
             {

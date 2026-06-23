@@ -18,6 +18,8 @@ export function hasConversationComposerShelfContent(input: {
   pendingQueueCount: number;
   draft: boolean;
   orderedDeferredResumesCount: number;
+  scheduledTasksCount?: number;
+  backgroundExecutionsCount?: number;
   pendingBrowserCommentsCount: number;
   hasActiveQuestion: boolean;
 }): boolean {
@@ -28,6 +30,8 @@ export function hasConversationComposerShelfContent(input: {
     input.draftMentionItemsCount > 0 ||
     input.pendingQueueCount > 0 ||
     (!input.draft && input.orderedDeferredResumesCount > 0) ||
+    (!input.draft && (input.scheduledTasksCount ?? 0) > 0) ||
+    (!input.draft && (input.backgroundExecutionsCount ?? 0) > 0) ||
     input.pendingBrowserCommentsCount > 0 ||
     input.hasActiveQuestion
   );

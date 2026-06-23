@@ -93,7 +93,11 @@ import {
   nextDragOverStateForDragOver,
   shouldHandleDroppedComposerFiles,
 } from '../conversation/conversationDragDrop';
-import { buildBackgroundExecutionIndicatorText, buildScheduledTaskIndicatorText } from '../conversation/conversationExecutionActivity';
+import {
+  buildBackgroundExecutionIndicatorText,
+  buildScheduledTaskIndicatorText,
+  selectConversationScheduledTasks,
+} from '../conversation/conversationExecutionActivity';
 import { buildComposerShelfContext, buildNewConversationPanelContext } from '../conversation/conversationExtensionContexts';
 import { buildMissionAutoModeInputFromDraft, createDraftMissionTask } from '../conversation/conversationGoalMode';
 import { formatThinkingLevelLabel } from '../conversation/conversationHeader';
@@ -2116,6 +2120,21 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     draft ? null : id,
     pendingQueueActivityRefreshKey,
   );
+
+  useEffect(() => {
+    if (draft || !id) return;
+    let cancelled = false;
+    api
+      .tasks()
+      .then((nextTasks) => {
+        if (!cancelled) taskStore.replaceAll(nextTasks);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [draft, id, versions.tasks]);
+
   const composerDisabled = isConversationComposerDisabled({
     conversationNeedsTakeover,
     preparingRelatedThreadContext,
@@ -2839,7 +2858,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   );
   const backgroundExecutionIndicatorText = buildBackgroundExecutionIndicatorText(visibleActiveConversationBackgroundExecutions);
   const showActiveBackgroundRunDetails = showBackgroundRunDetails;
-  const conversationScheduledTasks = activityScheduledTaskItems;
+  const conversationScheduledTasks = useMemo(
+    () => selectConversationScheduledTasks({ conversationId: id, activityTasks: activityScheduledTaskItems, tasks }),
+    [activityScheduledTaskItems, id, tasks],
+  );
   const scheduledTaskIndicatorText = buildScheduledTaskIndicatorText(conversationScheduledTasks);
   const runScheduledTaskFromShelf = useCallback(
     async (taskId: string) => {
@@ -2850,6 +2872,23 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     },
     [refreshConversationActivity],
   );
+
+  useEffect(() => {
+    if (!conversationScheduledTasks.some((task) => task.running)) return;
+    let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      api
+        .tasks()
+        .then((nextTasks) => {
+          if (!cancelled) taskStore.replaceAll(nextTasks);
+        })
+        .catch(() => {});
+    }, 5_000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [conversationScheduledTasks]);
 
   const hasReadyDeferredResumes = deferredResumePresentation.hasReadyResumes;
   const deferredResumeAutoResumeKey = deferredResumePresentation.autoResumeKey;
@@ -6069,6 +6108,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       pendingQueueCount: visiblePendingQueue.length,
       draft,
       orderedDeferredResumesCount: orderedDeferredResumes.length,
+      scheduledTasksCount: conversationScheduledTasks.length,
+      backgroundExecutionsCount: visibleActiveConversationBackgroundExecutions.length,
       pendingBrowserCommentsCount: pendingBrowserComments.length,
       hasActiveQuestion: Boolean(pendingAskUserQuestion && composerActiveQuestion),
     });

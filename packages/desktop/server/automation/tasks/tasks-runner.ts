@@ -371,18 +371,19 @@ async function runTaskWithStandaloneAgent(input: {
   signal?: AbortSignal;
 }): Promise<TaskRunResult> {
   const { task, startedAt, logPath, stream, capture, signal } = input;
+  const shouldWriteSession = task.targetType !== 'conversation' && task.threadMode !== 'none' && Boolean(task.threadSessionFile);
   const argv = buildBackgroundAgentArgv({
     prompt: task.prompt,
     ...(task.modelRef ? { model: task.modelRef } : {}),
-    ...(task.threadMode === 'none' || !task.threadSessionFile ? { noSession: true } : {}),
+    ...(!shouldWriteSession ? { noSession: true } : {}),
   });
   argv.push('--cwd', task.cwd ?? process.cwd());
-  if (task.threadSessionFile && task.threadMode !== 'none') {
+  if (shouldWriteSession && task.threadSessionFile) {
     argv.push('--session-file', task.threadSessionFile);
   }
 
   writeLine(stream, '# mode=standalone-agent-runner');
-  if (task.threadSessionFile && task.threadMode !== 'none') {
+  if (shouldWriteSession && task.threadSessionFile) {
     writeLine(stream, `# sessionFile=${task.threadSessionFile}`);
   }
   writeLine(stream, `# command=${argv.map((part) => JSON.stringify(part)).join(' ')}`);

@@ -40,10 +40,11 @@ export function resolveScheduledTaskThreadBinding(input: ScheduledTaskThreadInpu
   conversationId?: string;
   sessionFile?: string;
 } {
-  const mode = normalizeAutomationThreadModeForSelection(input.threadMode);
-  if (mode === 'none') {
-    return { mode };
+  const requestedMode = readOptionalString(input.threadMode ?? undefined);
+  if (requestedMode === 'none') {
+    throw new Error('Automations require an owner thread.');
   }
+  const mode = normalizeAutomationThreadModeForSelection(input.threadMode);
 
   if (mode === 'dedicated') {
     return { mode };
@@ -84,16 +85,12 @@ export function applyScheduledTaskThreadBinding(
   },
 ): StoredAutomation {
   const resolved = resolveScheduledTaskThreadBinding(input);
-  const updated = setStoredAutomationThreadBinding(taskId, {
+  setStoredAutomationThreadBinding(taskId, {
     dbPath: input.dbPath,
     mode: resolved.mode,
     conversationId: resolved.conversationId,
     sessionFile: resolved.sessionFile,
   });
-
-  if (updated.threadMode === 'none') {
-    return updated;
-  }
 
   return ensureAutomationThread(taskId, { dbPath: input.dbPath });
 }

@@ -135,7 +135,7 @@ describe('extensionAutomations', () => {
     await expect(createExtensionAutomationsCapability(context, 'automation-helper-ext').list()).resolves.toEqual([]);
   });
 
-  it('creates a conversation automation with thread binding and invalidates tasks', async () => {
+  it('creates a conversation automation with thread binding and invalidates visible thread state', async () => {
     threads.resolveScheduledTaskThreadBinding.mockReturnValue({ mode: 'existing', conversationId: 'conv-1', sessionFile: '/session.json' });
     const created = task({ targetType: 'conversation' });
     daemon.createStoredAutomation.mockReturnValue(created);
@@ -156,7 +156,7 @@ describe('extensionAutomations', () => {
       'task-1',
       expect.objectContaining({ threadMode: 'existing', threadConversationId: 'conv-1' }),
     );
-    expect(middleware.invalidateAppTopics).toHaveBeenCalledWith('tasks');
+    expect(middleware.invalidateAppTopics).toHaveBeenCalledWith('tasks', 'sessions', 'workspace');
     expect(result).toMatchObject({ ok: true, task: { id: 'task-1', targetType: 'conversation' } });
   });
 
@@ -171,7 +171,10 @@ describe('extensionAutomations', () => {
     threads.applyScheduledTaskThreadBinding.mockReturnValue(created);
     taskService.findTaskForProfile.mockReturnValue({ task: created, runtime: undefined });
 
-    await expect(createExtensionAutomationsCapability(context, 'automation-helper-ext').create({ title: 'New' })).resolves.toMatchObject({
+    threads.resolveScheduledTaskThreadBinding.mockReturnValue({ mode: 'existing', conversationId: 'conv-1', sessionFile: '/session.json' });
+    await expect(
+      createExtensionAutomationsCapability(context, 'automation-helper-ext').create({ title: 'New', threadConversationId: 'conv-1' }),
+    ).resolves.toMatchObject({
       ok: true,
       task: { id: 'task-1' },
     });
@@ -184,7 +187,7 @@ describe('extensionAutomations', () => {
     await expect(createExtensionAutomationsCapability(context).delete('task-1')).resolves.toEqual({ ok: true, deleted: true });
     expect(daemon.deleteStoredAutomation).toHaveBeenCalledWith('task-1');
     expect(core.clearTaskCallbackBinding).toHaveBeenCalledWith({ profile: 'shared', taskId: 'task-1' });
-    expect(middleware.invalidateAppTopics).toHaveBeenCalledWith('tasks');
+    expect(middleware.invalidateAppTopics).toHaveBeenCalledWith('tasks', 'sessions', 'workspace');
   });
 
   it('runs tasks and reads available logs', async () => {

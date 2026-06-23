@@ -37,43 +37,6 @@ function flagBoolean(flags: Record<string, string | boolean>, key: string): bool
   return undefined;
 }
 
-function flagJson(flags: Record<string, string | boolean>, key: string): unknown {
-  const value = flagString(flags, key);
-  return value ? JSON.parse(value) : undefined;
-}
-
-function normalizeEventBusCliInput(input: unknown): unknown {
-  if (!isRecord(input) || !isRecord(input.cli)) return input;
-  const args = cliArgs(input);
-  const flags = cliFlags(input);
-  const action = typeof input.action === 'string' ? input.action : undefined;
-  return {
-    ...input,
-    ...(action === 'emit' && args[0] ? { type: args[0] } : {}),
-    ...(action === 'delay' && args[0] ? { type: args[0] } : {}),
-    ...(action === 'replay' && args[0] ? { eventId: args[0] } : {}),
-    ...(action === 'cancel_delayed' && args[0] ? { delayedEventId: args[0] } : {}),
-    ...(action === 'delete_subscription' && args[0] ? { subscriptionId: args[0] } : {}),
-    ...(action === 'save_subscription' && args[0] ? { id: args[0] } : {}),
-    ...(flagString(flags, 'type') ? { type: flagString(flags, 'type') } : {}),
-    ...(flagString(flags, 'source') ? { source: flagString(flags, 'source') } : {}),
-    ...(flagString(flags, 'due-at') ? { dueAt: flagString(flags, 'due-at') } : {}),
-    ...(flagString(flags, 'emit-at') ? { emitAt: flagString(flags, 'emit-at') } : {}),
-    ...(flagNumber(flags, 'delay-ms') !== undefined ? { delayMs: flagNumber(flags, 'delay-ms') } : {}),
-    ...(flagString(flags, 'older-than') ? { olderThan: flagString(flags, 'older-than') } : {}),
-    ...(flagNumber(flags, 'keep-latest') !== undefined ? { keepLatest: flagNumber(flags, 'keep-latest') } : {}),
-    ...(flagNumber(flags, 'limit') !== undefined ? { limit: flagNumber(flags, 'limit') } : {}),
-    ...(flagString(flags, 'name') ? { name: flagString(flags, 'name') } : {}),
-    ...(flagString(flags, 'pattern') ? { pattern: flagString(flags, 'pattern') } : {}),
-    ...(flagBoolean(flags, 'enabled') !== undefined ? { enabled: flagBoolean(flags, 'enabled') } : {}),
-    ...(flagBoolean(flags, 'disabled') === true ? { enabled: false } : {}),
-    ...(flagBoolean(flags, 'dry-run') !== undefined ? { dryRun: flagBoolean(flags, 'dry-run') } : {}),
-    ...(flagJson(flags, 'payload-json') !== undefined ? { payload: flagJson(flags, 'payload-json') } : {}),
-    ...(flagJson(flags, 'metadata-json') !== undefined ? { metadata: flagJson(flags, 'metadata-json') } : {}),
-    ...(flagJson(flags, 'action-json') !== undefined ? { subscriptionAction: flagJson(flags, 'action-json') } : {}),
-  };
-}
-
 function normalizeScheduledTaskCliInput(input: unknown): unknown {
   if (!isRecord(input) || !isRecord(input.cli)) return input;
   const args = cliArgs(input);
@@ -107,9 +70,4 @@ function normalizeScheduledTaskCliInput(input: unknown): unknown {
 export async function scheduledTask(input: unknown, ctx: ScheduledTaskBackendContext) {
   const module = await import('./scheduledTaskBackend.js');
   return module.scheduledTask(normalizeScheduledTaskCliInput(input), ctx);
-}
-
-export async function eventBus(input: unknown, ctx: ScheduledTaskBackendContext) {
-  const module = await import('./eventBusBackend.js');
-  return module.eventBus(normalizeEventBusCliInput(input), ctx);
 }

@@ -46,7 +46,8 @@ function formatSystemEventLabel(customType?: string): string {
     case 'conversation_automation_review':
     case 'conversation_automation_item':
     case 'conversation_automation_post_turn_review':
-      return 'Automation event';
+    case 'automation_run':
+      return 'Automation run';
     default: {
       const normalized = customType?.replace(/[_-]+/g, ' ').trim();
       if (!normalized) {

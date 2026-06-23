@@ -3,6 +3,7 @@ import { basename, dirname, join, normalize } from 'node:path';
 
 import {
   getDurableTasksDir,
+  getPiAgentRuntimeDir,
   getStateRoot,
   resolveConversationAttentionStatePath,
   resolveDeferredResumeStateFile,
@@ -384,7 +385,7 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
       { path: getDaemonConfigFilePath(), kind: 'file' },
       { path: daemonPaths.socketPath, kind: 'file' },
     ],
-    workspace: [],
+    workspace: [{ path: join(getPiAgentRuntimeDir(), 'settings.json'), kind: 'file' }],
     knowledgeBase: [],
     notifications: [],
   };

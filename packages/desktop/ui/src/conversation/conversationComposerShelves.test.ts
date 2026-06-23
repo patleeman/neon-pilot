@@ -29,6 +29,9 @@ describe('conversationComposerShelves', () => {
 
     expect(hasConversationComposerShelfContent({ ...emptyInput, orderedDeferredResumesCount: 1 })).toBe(true);
     expect(hasConversationComposerShelfContent({ ...emptyInput, draft: true, orderedDeferredResumesCount: 1 })).toBe(false);
+    expect(hasConversationComposerShelfContent({ ...emptyInput, scheduledTasksCount: 1 })).toBe(true);
+    expect(hasConversationComposerShelfContent({ ...emptyInput, draft: true, scheduledTasksCount: 1 })).toBe(false);
+    expect(hasConversationComposerShelfContent({ ...emptyInput, backgroundExecutionsCount: 1 })).toBe(true);
     expect(hasConversationComposerShelfContent({ ...emptyInput, pendingBrowserCommentsCount: 1 })).toBe(true);
     expect(hasConversationComposerShelfContent({ ...emptyInput, hasActiveQuestion: true })).toBe(true);
   });

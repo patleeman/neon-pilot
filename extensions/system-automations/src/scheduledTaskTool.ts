@@ -26,7 +26,7 @@ import { recordTelemetryEvent as recordBackendTelemetryEvent } from '@neon-pilot
 
 const SCHEDULED_TASK_ACTION_VALUES = ['list', 'get', 'save', 'delete', 'validate', 'run'] as const;
 const SCHEDULED_TASK_TARGET_VALUES = ['background-agent', 'conversation'] as const;
-const SCHEDULED_TASK_THREAD_MODE_VALUES = ['dedicated', 'existing', 'none'] as const;
+const SCHEDULED_TASK_THREAD_MODE_VALUES = ['dedicated', 'existing'] as const;
 const SCHEDULED_TASK_DELIVER_AS_VALUES = ['steer', 'followUp'] as const;
 
 type ScheduledTaskAction = (typeof SCHEDULED_TASK_ACTION_VALUES)[number];
@@ -50,12 +50,12 @@ const ScheduledTaskToolParams = {
     targetType: {
       type: 'string',
       enum: SCHEDULED_TASK_TARGET_VALUES,
-      description: 'Automation target: background-agent or conversation.',
+      description: 'Automation target. Conversation is the default so every automation runs in an auditable owner thread.',
     },
     threadMode: {
       type: 'string',
       enum: SCHEDULED_TASK_THREAD_MODE_VALUES,
-      description: 'Thread binding mode: dedicated, existing, or none.',
+      description: 'Owner thread binding mode: dedicated or existing.',
     },
     threadConversationId: {
       type: 'string',
@@ -142,22 +142,14 @@ function readConversationBehavior(value: string | undefined): 'steer' | 'followU
   return value === 'steer' || value === 'followUp' ? value : undefined;
 }
 
-function readThreadMode(value: string | undefined): 'dedicated' | 'existing' | 'none' | undefined {
-  return value === 'dedicated' || value === 'existing' || value === 'none' ? value : undefined;
-}
-
-function shouldApplyThreadBinding(params: {
-  targetType: 'background-agent' | 'conversation';
-  threadMode?: 'dedicated' | 'existing' | 'none';
-  threadConversationId?: string;
-}): boolean {
-  return params.targetType === 'conversation' || params.threadMode !== undefined || params.threadConversationId !== undefined;
+function readThreadMode(value: string | undefined): 'dedicated' | 'existing' | undefined {
+  return value === 'dedicated' || value === 'existing' ? value : undefined;
 }
 
 function resolveThreadBindingInput(params: {
   targetType: 'background-agent' | 'conversation';
   existing?: StoredAutomation;
-  threadMode?: 'dedicated' | 'existing' | 'none';
+  threadMode?: 'dedicated' | 'existing';
   threadConversationId?: string;
   currentConversationId?: string;
   currentSessionFile?: string;
@@ -165,10 +157,6 @@ function resolveThreadBindingInput(params: {
 }): ScheduledTaskThreadInput & { cwd?: string } {
   const existingConversationId = params.existing?.threadConversationId;
   const existingSessionFile = params.existing?.threadSessionFile;
-
-  if (params.targetType === 'conversation' && params.threadMode === 'none') {
-    throw new Error('Conversation automations need a thread.');
-  }
 
   if (
     params.targetType === 'conversation' &&
@@ -185,15 +173,7 @@ function resolveThreadBindingInput(params: {
     };
   }
 
-  const mode =
-    params.threadMode ??
-    (params.threadConversationId
-      ? 'existing'
-      : params.targetType === 'conversation'
-        ? params.currentConversationId
-          ? 'existing'
-          : 'dedicated'
-        : 'existing');
+  const mode = params.threadMode ?? (params.threadConversationId ? 'existing' : params.currentConversationId ? 'existing' : 'dedicated');
 
   const conversationId =
     mode === 'existing' ? (params.threadConversationId ?? params.currentConversationId ?? existingConversationId) : undefined;
@@ -224,10 +204,7 @@ async function formatTaskList(loaded: LoadedScheduledTasksForProfile, runtimeSco
       const runtime = loaded.runtimeState[task.key];
       const status = runtime?.running ? 'running' : (runtime?.lastStatus ?? (task.enabled ? 'active' : 'disabled'));
       const threadDetail = await buildScheduledTaskThreadDetail(task, { profile: runtimeScope });
-      const threadSummary =
-        threadDetail.threadMode === 'none'
-          ? undefined
-          : (threadDetail.threadTitle ?? threadDetail.threadConversationId ?? threadDetail.threadMode);
+      const threadSummary = threadDetail.threadTitle ?? threadDetail.threadConversationId ?? threadDetail.threadMode;
       return `- @${task.id} [${status}] ${task.title ?? task.id} · ${formatSchedule(task)} · ${formatTargetLabel(task)}${
         threadSummary ? ` · thread ${threadSummary}` : ''
       }`;
@@ -360,7 +337,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
               const existing = loaded.tasks.find((task) => task.id === taskId);
               const targetType =
                 params.targetType === undefined
-                  ? (existing?.targetType ?? 'background-agent')
+                  ? (existing?.targetType ?? 'conversation')
                   : normalizeAutomationTargetTypeForSelection(params.targetType);
               const deliverAs =
                 targetType === 'conversation' ? (readConversationBehavior(params.deliverAs) ?? existing?.conversationBehavior) : undefined;
@@ -373,25 +350,16 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
               const policies = Array.isArray((params as { policies?: unknown }).policies)
                 ? ((params as { policies: unknown[] }).policies as never)
                 : undefined;
-              const shouldBindThread = shouldApplyThreadBinding({
+              const threadBindingInput = resolveThreadBindingInput({
                 targetType,
+                existing,
                 threadMode,
                 threadConversationId,
+                currentConversationId,
+                currentSessionFile: sessionFile,
+                cwd,
               });
-              const threadBindingInput = shouldBindThread
-                ? resolveThreadBindingInput({
-                    targetType,
-                    existing,
-                    threadMode,
-                    threadConversationId,
-                    currentConversationId,
-                    currentSessionFile: sessionFile,
-                    cwd,
-                  })
-                : undefined;
-              const validatedThreadBinding = threadBindingInput
-                ? await resolveScheduledTaskThreadBinding({ ...threadBindingInput, profile: runtimeScope })
-                : undefined;
+              const validatedThreadBinding = await resolveScheduledTaskThreadBinding({ ...threadBindingInput, profile: runtimeScope });
 
               if (!existing && params.cron === undefined && scheduledAt === undefined) {
                 throw new Error('Provide exactly one schedule for a new automation: cron or at.');
@@ -460,14 +428,12 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                     targetType,
                     conversationBehavior: deliverAs,
                   });
-              const task = validatedThreadBinding
-                ? await applyScheduledTaskThreadBinding(saved.id, {
-                    threadMode: validatedThreadBinding.mode,
-                    threadConversationId: validatedThreadBinding.conversationId,
-                    threadSessionFile: validatedThreadBinding.sessionFile,
-                    cwd,
-                  })
-                : saved;
+              const task = await applyScheduledTaskThreadBinding(saved.id, {
+                threadMode: validatedThreadBinding.mode,
+                threadConversationId: validatedThreadBinding.conversationId,
+                threadSessionFile: validatedThreadBinding.sessionFile,
+                cwd,
+              });
 
               if (targetType === 'conversation') {
                 await clearTaskCallbackBinding({ profile: runtimeScope, taskId });

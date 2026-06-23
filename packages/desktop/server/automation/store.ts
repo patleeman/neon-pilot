@@ -483,7 +483,7 @@ function buildSyntheticAutomationFilePath(id: string): string {
 }
 
 function normalizeAutomationThreadMode(value: string | null | undefined): AutomationThreadMode {
-  if (value === 'none' || value === 'existing' || value === 'dedicated') {
+  if (value === 'existing' || value === 'dedicated') {
     return value;
   }
 
@@ -911,10 +911,7 @@ export function listStoredAutomations(options: { runtimeScope?: string; dbPath?:
   return readStoredAutomationRows(db, options.runtimeScope).map(rowToStoredAutomation);
 }
 
-export function getStoredAutomation(
-  id: string,
-  options: { runtimeScope?: string; dbPath?: string } = {},
-): StoredAutomation | undefined {
+export function getStoredAutomation(id: string, options: { runtimeScope?: string; dbPath?: string } = {}): StoredAutomation | undefined {
   const db = openAutomationDb(options.dbPath);
   const row = db
     .prepare(
@@ -1050,13 +1047,17 @@ export function setStoredAutomationThreadBinding(
 
   const db = openAutomationDb(input.dbPath);
   const updatedAt = new Date().toISOString();
+  if (input.mode === 'none') {
+    throw new Error('Automations require an owner thread.');
+  }
+
   const mode = normalizeAutomationThreadMode(input.mode);
   const conversationId =
-    mode === 'none' || mode === 'dedicated'
+    mode === 'dedicated'
       ? readOptionalString(input.conversationId ?? undefined)
       : readRequiredString(input.conversationId ?? undefined, 'conversationId');
   const sessionFile =
-    mode === 'none' || mode === 'dedicated'
+    mode === 'dedicated'
       ? readOptionalString(input.sessionFile ?? undefined)
       : readRequiredString(input.sessionFile ?? undefined, 'sessionFile');
 
@@ -1066,7 +1067,7 @@ export function setStoredAutomationThreadBinding(
     SET thread_mode = ?, thread_conversation_id = ?, thread_session_file = ?, updated_at = ?
     WHERE id = ?
   `,
-  ).run(mode, mode === 'none' ? null : (conversationId ?? null), mode === 'none' ? null : (sessionFile ?? null), updatedAt, id);
+  ).run(mode, conversationId ?? null, sessionFile ?? null, updatedAt, id);
 
   return getStoredAutomation(id, { dbPath: input.dbPath }) as StoredAutomation;
 }

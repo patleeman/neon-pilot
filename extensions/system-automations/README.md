@@ -1,312 +1,94 @@
 # Automations Extension
 
-This extension owns the product behavior documented below. Keep extension-specific user and agent docs here so the implementation and documentation move together.
+This extension owns scheduled, thread-owned automations.
 
----
+## Product model
 
-# Automations
+Automations are schedule-first and always auditable from a conversation thread:
 
-Automations is the desktop UI for inspecting and managing event-driven background work. Navigate to `/automations` to see meaningful automation events flowing through the activity stream, inspect the selected event's causal trace, and administer the publisher or subscription that caused work.
+- Every automation has one owner thread.
+- No automation runs invisibly or without a thread.
+- When a schedule fires, the backend opens/unarchives the owner thread in persisted workspace state without stealing frontend focus.
+- The run is recorded in the owner thread transcript with an `Automation run` system entry.
+- The conversation shelf and sidebar use backend task state; enabled or running automations keep their owner thread visibly marked.
+- The Automations page is a single table: status, automation, schedule, next run, last run, owner thread, and actions.
 
-Scheduled tasks are still backed by the daemon scheduler, but the default UI presents them as event-native activity:
+The old durable event-bus product path is no longer part of Automations. Schedules run directly through the daemon task scheduler instead of emitting durable `schedule.due` events and dispatching subscriptions.
 
-```
-schedule producer -> event -> reaction -> agent/thread/script/published event
-```
+## Creating an automation
 
-The timeline intentionally does not show every possible emitted event. It focuses on events that caused or attempted work, plus scheduler/publisher states that need user attention.
+From `/automations`, click **New automation**. Choose:
 
-## Event Bus
+| Field             | Description                                    |
+| ----------------- | ---------------------------------------------- |
+| Name              | User-facing automation name.                   |
+| Owner thread      | Existing thread where runs are audited.        |
+| Schedule          | Recurring cron or one-time ISO/natural time.   |
+| Instructions      | Prompt the agent runs when the schedule fires. |
+| Working directory | Optional cwd for the run.                      |
+| Timeout seconds   | Per-run timeout.                               |
+| Enabled           | Whether the schedule is active.                |
 
-The `event_bus` backend action and `events ...` CLI commands are the automation event boundary. Callers emit typed events with payload and metadata, schedule delayed event emission, list recent events, replay a recorded event, prune retained history, and manage subscriptions. Subscriptions match event type patterns and can start a scheduled task, background agent, conversation thread, shell script, or publish a follow-on event.
+Creating from chat through the `scheduled_task` tool defaults to the current conversation when available; otherwise it creates a dedicated owner thread. Creating from the Automations page requires selecting an existing owner thread.
 
-Event bus state is backend-owned in the daemon runtime database. Frontend and extension code should list or mutate it through the `eventBus` backend action or `@neon-pilot/extensions/backend/events`; do not mirror subscriptions or reaction state in renderer storage.
+## Scheduled task tool
 
-Recorded events are inspectable and replayable. Ephemeral events can still dispatch matching subscriptions, but they are not written to the durable stream. Delayed events are persisted until processed or cancelled; processing emits the configured event against the subscriptions available at processing time.
+Use `scheduled_task` for persistent one-time or recurring automations.
 
-## Activity Timeline
+Important behavior:
 
-The Automations page opens on a timeline-first view with two main regions:
+- New tasks default to `targetType: "conversation"`.
+- `threadMode: "none"` is rejected.
+- `threadMode` supports `"existing"` and `"dedicated"`.
+- Every fire that starts an agent writes a visible owner-thread transcript entry.
+- Failure notifications are raised through alerts; success notifications are not shown by default.
 
-- **Event Stream** — compact chronological events with event name, source, relative time, status, and match count.
-- **Inspector** — selected event status, source, consumer, causal trace, and direct actions.
+## Schedule formats
 
-Reaction lanes show the kind of consumer an event flowed into:
+### Cron
 
-- Agent
-- Script
-- Thread
-- Published Event
+Standard 5-field cron:
 
-The default actions are:
-
-- **Re-emit Event** — replay the selected recorded event against the subscriptions that exist now.
-- **New Subscription** — create a disabled subscription from the selected event type so it can be reviewed before enabling.
-- **Edit Scheduled Publisher** — open the scheduled publisher editor when the event is tied to a scheduler-backed publisher.
-- **Open Thread** — jump to the bound conversation when the selected reaction targets a thread.
-- **Pause Publisher** — disable the selected scheduled publisher without deleting it.
-
-Past-due, failed, running, disabled, and scheduled automations appear as event activity rather than separate table sections.
-
-When no event is selected, the inspector shows standing subscriptions with enable/disable and delete controls. Subscription rows show the matched event pattern, action summary, and per-minute reaction limit when configured.
-
-## Detail View
-
-Click an automation to open its detail page. Shows:
-
-**Configuration:**
-
-- Title and ID
-- Schedule (cron or one-time)
-- Target type and thread binding
-- Prompt to execute
-- Model override (if any)
-- Working directory
-- Timeout setting
-
-**Activity history:**
-
-A chronological log of every execution:
-
-| Column  | Description                       |
-| ------- | --------------------------------- |
-| Time    | When it ran                       |
-| Outcome | Success, failure, or timeout      |
-| Error   | Error message (if failed)         |
-| Run ID  | Associated run for log inspection |
-
-**Actions:**
-
-- Run now — trigger immediate execution
-- Enable/disable — toggle without deleting
-- Edit — modify configuration
-- Delete — remove the automation
-
-## Creating an Automation
-
-From the event stream, click **New Scheduled Publisher** or run **New Automation** from the command palette. The editor uses the Settings page layout with a right-side "On this page" rail and five sections:
-
-- **General** — automation name, recurring instruction, and enabled state
-- **Schedule** — recurring vs one-time scheduling, human-readable schedule presets, and a preview
-- **Policies** — attached first-party run rules such as catch-up, overlap handling, and once-per-period limits
-- **Delivery** — background/conversation target plus thread binding; existing threads are selected from a dropdown
-- **Runtime** — optional working directory with folder picker, model dropdown, thinking level, and timeout
-
-The UI avoids raw cron entry for common creation/editing paths; selected presets are translated to scheduler syntax internally.
-
-## Inspecting Runs
-
-The timeline shows the automation-level trace. Durable background run logs still live in the Runs extension. See [Runs](../system-runs/README.md) for run reference.
-
-## CLI
-
-The event bus CLI mirrors the backend action:
-
-```sh
-neon-pilot events list --json
-neon-pilot events emit tweet.created --source script:twitter --payload-json '{"tweetId":"tw-1"}' --json
-neon-pilot events delay agent.resume.requested --delay-ms 900000 --source agent:current --payload-json '{"reason":"follow-up"}' --json
-neon-pilot events process-due --json
-neon-pilot events replay evt_123 --json
-neon-pilot events prune --keep-latest 5000 --json
-neon-pilot events subscriptions list --json
-neon-pilot events subscriptions save sub-tweets --name "Tweet Worker" --pattern tweet.* --action-json '{"type":"start_agent","prompt":"Summarize the tweet event"}' --json
-```
-
-Use `--dry-run` on mutating commands to preview writes without emitting, replaying, saving, or deleting.
-
-## Relationship to the Daemon
-
-Automations are stored in daemon-owned runtime storage. The daemon scheduler emits schedule events when tasks become due, and event bus subscriptions dispatch the resulting reactions. The UI communicates with the daemon through the event bus backend action for stream/reaction state and through the tasks API for scheduled publisher administration.
-
----
-
-# Scheduled Tasks
-
-Scheduled tasks are persistent automations managed by the daemon. They run on a schedule (cron or one-time) and can execute as background agents or post to conversation threads.
-
-## Task Definition
-
-Each scheduled task has these fields:
-
-| Field                  | Type                                     | Description                                                   |
-| ---------------------- | ---------------------------------------- | ------------------------------------------------------------- |
-| `title`                | string                                   | Human-readable name                                           |
-| `cron`                 | string                                   | Cron expression for recurring schedule                        |
-| `at`                   | string                                   | ISO timestamp or natural language for one-time                |
-| `targetType`           | `"background-agent"` or `"conversation"` | Where the task executes                                       |
-| `prompt`               | string                                   | Prompt to execute when the task fires                         |
-| `model`                | string                                   | Optional model override                                       |
-| `cwd`                  | string                                   | Working directory                                             |
-| `timeoutSeconds`       | number                                   | Per-run timeout                                               |
-| `catchUpWindowSeconds` | number                                   | Missed-run catch-up window; cron tasks default to 900 seconds |
-| `policies`             | array                                    | First-party run policies persisted with the automation        |
-| `threadMode`           | `"dedicated"`, `"existing"`, or `"none"` | Thread binding                                                |
-| `threadConversationId` | string                                   | Existing conversation ID for thread binding                   |
-| `enabled`              | boolean                                  | Whether the task is active                                    |
-
-## Schedule Formats
-
-### Cron expressions
-
-Standard 5-field cron: `minute hour day month weekday`
-
-```
-"0 9 * * 1-5"    Every weekday at 9:00
-"*/15 * * * *"   Every 15 minutes
-"0 0 * * *"      Daily at midnight
+```text
+*/15 * * * *     Every 15 minutes
+0 9 * * 1-5      Weekdays at 9:00
+0 17 * * 5       Fridays at 17:00
 ```
 
 ### One-time
 
-ISO timestamps or natural language:
+ISO timestamps or supported natural-language inputs:
 
-```
-"2026-06-01T09:00:00Z"
-"tomorrow 8pm"
-"now+1d@20:00"
-```
-
-## Thread Modes
-
-| Mode        | Behavior                                                           |
-| ----------- | ------------------------------------------------------------------ |
-| `dedicated` | Creates a new conversation for each execution with a unique ID     |
-| `existing`  | Posts to a specific existing conversation (`threadConversationId`) |
-| `none`      | Runs without conversation interaction (background agent only)      |
-
-## Catch-Up Window
-
-If the daemon was offline when a scheduled time passed, the catch-up policy controls whether the missed execution fires when the daemon restarts. Set its window in seconds. Cron automations default to 15 minutes (`900`) so a short app restart, laptop wake, or daemon restart does not silently skip the run. A 5-minute window (`300`) means: if the daemon was offline for less than 5 minutes past the scheduled time, the task runs on restart.
-
-## Policies
-
-Automation policies are first-party rules attached to a scheduled automation. The scheduler currently enforces:
-
-- `catch_up` — run the latest missed cron slot if it is still inside the policy window.
-- `overlap` — skip a due run while the previous run is still active.
-- `once_per_period` — allow at most one successful run in a day, week, or month. Use this with a broad recurring schedule when the automation should run once per period and the exact eligible minute does not matter.
-
-## Execution Flow
-
-```
-Scheduler tick ──► Check due tasks ──► For each due task:
-                                           │
-                              ┌────────────┼────────────┐
-                              ▼            ▼            ▼
-                        background-agent  conversation  conversation
-                                          dedicated     existing
-                              │            │            │
-                              ▼            ▼            ▼
-                         Run prompt    New thread    Post to thread
+```text
+2026-06-01T09:00:00Z
+tomorrow 8pm
+now+1d@20:00
 ```
 
-## Task Activity
+## Runtime behavior
 
-Skipped and missed scheduler decisions are recorded as automation activity:
+1. Scheduler tick finds due tasks.
+2. Backend resolves/creates the owner thread.
+3. Backend opens/unarchives that thread in saved workspace state.
+4. If the live conversation runtime is available, the prompt is delivered there.
+5. If only the standalone runner is available, it runs without writing a hidden session branch and the captured result is appended as an automation transcript entry.
+6. Durable run logs and status are still written for inspection.
+7. Task snapshots update the shelf/table/sidebar.
 
-| Field              | Description                              |
-| ------------------ | ---------------------------------------- |
-| `createdAt`        | When the scheduler recorded the decision |
-| `outcome`          | `skipped` or `catch-up-started`          |
-| `count`            | Number of missed scheduled slots         |
-| `firstScheduledAt` | First missed scheduled slot              |
-| `lastScheduledAt`  | Latest missed scheduled slot             |
+## Missed, skipped, and failed runs
 
-Activity is viewable in the Automations UI. Skipped cron slots outside the catch-up window and overlap skips also raise an active alert so missed automations are visible instead of silent. Normal executions still write durable run records and logs.
+- Catch-up policies can run the latest missed cron slot if it is still inside the catch-up window.
+- Overlapping runs are skipped and surfaced.
+- Failures before durable run creation are recorded as automation activity and alerted.
+- Failed runs write an owner-thread transcript entry with the error and log path when available.
 
-The Automations page also shows scheduler health from the daemon scheduler state. If the scheduler has not checked schedules within the stale window, the UI surfaces a warning and raises an active alert. Automation detail pages show the latest expected scheduled slot next to the actual recorded result, so a missing run is visible without spelunking through logs. Failures that happen before a durable run can be created are recorded as automation activity and alerted separately.
+## CLI
 
-## Heartbeats
-
-A heartbeat is a recurring conversation-target scheduled task for agent self-administration. It is not a separate product store: it uses the scheduled task daemon, an existing conversation thread binding, and the standard overlap skip policy so due ticks coalesce when the thread is already running.
-
-Heartbeats are managed through the unified Neon Pilot admin surface, backed by the same automation schema/service as scheduled tasks:
+Use scheduled task commands:
 
 ```sh
-neon-pilot heartbeats start <heartbeat-id> --interval-minutes 5 --conversation-id <conversation-id> --prompt "Wake up, check whether work remains, and stop this heartbeat when done." --json
-neon-pilot heartbeats list --json
-neon-pilot heartbeats stop <heartbeat-id> --json
+neon-pilot tasks list --json
+neon-pilot tasks save release-watch --cron '*/15 * * * *' --thread-mode existing --thread-conversation-id <thread-id> --prompt 'Check release status' --json
+neon-pilot tasks run release-watch --json
+neon-pilot tasks delete release-watch --json
 ```
-
-Internal agents use the `neon_pilot` tool with `heartbeat_start`, `heartbeat_list`, and `heartbeat_stop`. `--interval-minutes N` is stored as the cron wrapper `*/N * * * *`; use scheduled task cron automation for cadences that do not fit that form. The callback stops itself through the admin surface when its done condition is met.
-
-## Agent Tool Reference
-
-The `scheduled_task` tool manages tasks from within a conversation:
-
-| Action     | Description                 |
-| ---------- | --------------------------- |
-| `list`     | List tasks                  |
-| `get`      | Get a task by ID            |
-| `save`     | Create or update a task     |
-| `delete`   | Delete a task               |
-| `validate` | Validate task configuration |
-| `run`      | Trigger immediate execution |
-
-## Managing Tasks
-
-Tasks are managed through the `scheduled_task` agent tool or the Automations UI. See [Automations](README.md) for the desktop UI.
-
----
-
-# Follow-up Queue
-
-Follow-up queue entries resume the current conversation later. They are conversation-bound and are the only user-facing tool for same-thread delayed continuation.
-
-Use the the unified conversation deferred-resume admin command from within a conversation for explicit wait/resume requests. Do not use `bash` + `sleep` as a timer.
-
-## Actions
-
-| Action   | Description                                    |
-| -------- | ---------------------------------------------- |
-| `add`    | Queue a follow-up after this turn or at a time |
-| `list`   | List queued follow-ups for this conversation   |
-| `cancel` | Cancel a queued follow-up by listed `id`       |
-
-## Add by delay
-
-```json
-{
-  "action": "add",
-  "trigger": "delay",
-  "delay": "30s",
-  "prompt": "Check if the build finished",
-  "title": "Build check"
-}
-```
-
-## Add by absolute time
-
-```json
-{
-  "action": "add",
-  "trigger": "at",
-  "at": "tomorrow 8pm",
-  "prompt": "Check whether the release is ready",
-  "title": "Release check"
-}
-```
-
-## Add after current turn
-
-```json
-{
-  "action": "add",
-  "trigger": "after_turn",
-  "prompt": "Continue with the next step"
-}
-```
-
-Supported time formats match scheduled tasks: ISO timestamps, natural language, and explicit forms like `now+1d@20:00`.
-
-## Relationship to scheduled tasks
-
-|             | Follow-up queue          | Scheduled tasks                  |
-| ----------- | ------------------------ | -------------------------------- |
-| Scope       | Current conversation     | App-wide                         |
-| Trigger     | After-turn, delay, time  | Cron or one-time                 |
-| Target      | Always this conversation | Background agent or conversation |
-| Persistence | Deferred resume state    | Automation store                 |
-
-Use the unified conversation deferred-resume admin command when this conversation should continue later. Use `scheduled_task` when unattended work should run on a schedule.

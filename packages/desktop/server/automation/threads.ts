@@ -141,7 +141,7 @@ export function ensureAutomationThread(taskId: string, options: { dbPath?: strin
 
   switch (task.threadMode) {
     case 'none':
-      return task;
+      throw new Error(`Automation @${task.id} is missing an owner thread.`);
     case 'existing':
       return ensureExistingThread(task, options);
     case 'dedicated':
@@ -151,15 +151,11 @@ export function ensureAutomationThread(taskId: string, options: { dbPath?: strin
 }
 
 export function resolveAutomationThreadTitle(task: Pick<StoredAutomation, 'title' | 'id' | 'threadMode'>): string | undefined {
-  if (task.threadMode === 'none') {
-    return undefined;
-  }
-
   return desiredAutomationThreadTitle(task);
 }
 
 export function normalizeAutomationThreadModeForSelection(value: string | null | undefined): AutomationThreadMode {
-  if (value === 'none' || value === 'existing' || value === 'dedicated') {
+  if (value === 'existing' || value === 'dedicated') {
     return value;
   }
 

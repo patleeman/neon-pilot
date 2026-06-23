@@ -51,6 +51,34 @@ export function buildScheduledTaskIndicatorText(tasks: ScheduledTaskSummary[]): 
   return `${enabledCount} enabled · ${tasks.length} linked`;
 }
 
+function scheduledTaskSortTimestamp(task: ScheduledTaskSummary): string {
+  return task.lastRunAt ?? task.lastSuccessAt ?? task.at ?? '';
+}
+
+export function selectConversationScheduledTasks(input: {
+  conversationId: string | null | undefined;
+  activityTasks?: readonly ScheduledTaskSummary[] | null;
+  tasks?: readonly ScheduledTaskSummary[] | null;
+}): ScheduledTaskSummary[] {
+  const conversationId = input.conversationId?.trim();
+  if (!conversationId) return [];
+
+  const byId = new Map<string, ScheduledTaskSummary>();
+  for (const task of input.activityTasks ?? []) {
+    if (task.threadConversationId === conversationId) byId.set(task.id, task);
+  }
+  for (const task of input.tasks ?? []) {
+    if (task.threadConversationId === conversationId) byId.set(task.id, task);
+  }
+
+  return Array.from(byId.values()).sort((left, right) => {
+    const leftActive = Number(Boolean(left.running || left.enabled));
+    const rightActive = Number(Boolean(right.running || right.enabled));
+    if (leftActive !== rightActive) return rightActive - leftActive;
+    return scheduledTaskSortTimestamp(right).localeCompare(scheduledTaskSortTimestamp(left)) || left.id.localeCompare(right.id);
+  });
+}
+
 function buildAutomationRunningLookups(tasks: ScheduledTaskSummary[] | null | undefined): {
   byTaskId: Map<string, boolean>;
   byConversationId: Map<string, boolean>;

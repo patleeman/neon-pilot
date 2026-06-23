@@ -43,8 +43,8 @@ function computeConversationActivityStatus(sessionId: string): ConversationActiv
 
   if (backendRuntime === undefined && session.isRunning) return 'streaming';
 
-  // Automation task actively running for this thread
-  const hasAutomation = taskStore.getAll().some((t) => t.running && t.threadConversationId === sessionId);
+  // Thread-owned automation scheduled or actively running for this thread.
+  const hasAutomation = taskStore.getAll().some((t) => (t.running || t.enabled) && t.threadConversationId === sessionId);
   if (hasAutomation) return 'automation';
 
   // Pending executions (background commands, subagents, etc.) for this thread only.

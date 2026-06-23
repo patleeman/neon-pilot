@@ -143,15 +143,15 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
     async create(input: AutomationMutationInput) {
       assertAutomationWritePermission(extensionId, 'automations.create');
       const profile = getProfile(context);
-      const targetType = normalizeAutomationTargetTypeForSelection(input.targetType);
+      const targetType = input.targetType === undefined ? 'conversation' : normalizeAutomationTargetTypeForSelection(input.targetType);
+      if (!input.threadConversationId?.trim()) {
+        throw new Error('Choose an owner thread for this automation.');
+      }
       const threadSelection = resolveScheduledTaskThreadBinding({
-        threadMode: targetType === 'conversation' && input.threadMode === 'none' ? 'dedicated' : input.threadMode,
+        threadMode: 'existing',
         threadConversationId: input.threadConversationId,
         cwd: input.cwd,
       });
-      if (targetType === 'conversation' && threadSelection.mode === 'none') {
-        throw new Error('Conversation automations need a thread.');
-      }
       const createdTask = createStoredAutomation({
         title: input.title ?? '',
         enabled: input.enabled ?? true,
@@ -171,7 +171,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
         threadSessionFile: threadSelection.sessionFile,
         cwd: input.cwd,
       });
-      invalidateAppTopics('tasks');
+      invalidateAppTopics('tasks', 'sessions', 'workspace');
       const savedTask = findTaskForProfile(profile, task.id);
       return {
         ok: true,
@@ -186,14 +186,11 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       const targetType =
         input.targetType === undefined ? resolvedTask.task.targetType : normalizeAutomationTargetTypeForSelection(input.targetType);
       const threadSelection = resolveScheduledTaskThreadBinding({
-        threadMode:
-          targetType === 'conversation' && input.threadMode === 'none' ? 'dedicated' : (input.threadMode ?? resolvedTask.task.threadMode),
-        threadConversationId: input.threadConversationId,
+        threadMode: input.threadConversationId ? 'existing' : (input.threadMode ?? resolvedTask.task.threadMode),
+        threadConversationId: input.threadConversationId ?? resolvedTask.task.threadConversationId,
+        threadSessionFile: resolvedTask.task.threadSessionFile,
         cwd: input.cwd ?? resolvedTask.task.cwd,
       });
-      if (targetType === 'conversation' && threadSelection.mode === 'none') {
-        throw new Error('Conversation automations need a thread.');
-      }
       const updatedTask = updateStoredAutomation(resolvedTask.task.id, {
         title: input.title,
         enabled: input.enabled,
@@ -213,7 +210,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
         threadSessionFile: threadSelection.sessionFile,
         cwd: input.cwd ?? updatedTask.cwd,
       });
-      invalidateAppTopics('tasks');
+      invalidateAppTopics('tasks', 'sessions', 'workspace');
       const refreshedTask = findTaskForProfile(profile, task.id);
       return {
         ok: true,
@@ -228,7 +225,7 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       const deleted = deleteStoredAutomation(resolvedTask.task.id);
       if (!deleted) throw new Error('Task not found');
       clearTaskCallbackBinding({ profile, taskId: resolvedTask.task.id });
-      invalidateAppTopics('tasks');
+      invalidateAppTopics('tasks', 'sessions', 'workspace');
       return { ok: true, deleted: true };
     },
     async run(taskId: string) {
