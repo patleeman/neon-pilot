@@ -167,7 +167,8 @@ function ensureExcalidrawStyles() {
 
 function getExcalidrawTheme(): 'dark' | 'light' {
   if (document.documentElement.classList.contains('dark')) return 'dark';
-  if (document.documentElement.dataset.theme === 'dark') return 'dark';
+  if (document.documentElement.dataset.themeAppearance === 'dark') return 'dark';
+  if (document.documentElement.dataset.theme === 'dark' || document.documentElement.dataset.theme === 'studio-dark') return 'dark';
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 

@@ -489,7 +489,8 @@ export function WorkspaceExplorer({
   openFilesScope = null,
   railOnly = false,
 }: WorkspaceExplorerProps) {
-  const { theme } = useTheme();
+  const { theme, availableThemes } = useTheme();
+  const themeAppearance = availableThemes.find((candidate) => candidate.id === theme)?.appearance ?? (theme === 'dark' ? 'dark' : 'light');
   const [open, setOpen] = useState(() => readStoredBoolean(WORKSPACE_EXPLORER_OPEN_KEY, true));
   const [showDiff, setShowDiff] = useState(() => readStoredBoolean(WORKSPACE_EXPLORER_DIFF_KEY, true));
   const [rootListing, setRootListing] = useState<LoadState<WorkspaceDirectoryListing>>({ status: 'idle', data: null, error: null });
@@ -1060,7 +1061,7 @@ export function WorkspaceExplorer({
                     <WorkspaceCodeEditor
                       path={selectedFile.path}
                       value={selectedFile.content ?? ''}
-                      theme={theme}
+                      theme={themeAppearance}
                       diffSpec={diffSpec}
                       editable={false}
                     />
@@ -1126,7 +1127,8 @@ export function WorkspaceFileDocument({
   onReplyWithSelection?: (selection: { filePath: string; text: string }) => void;
   hideHeader?: boolean;
 }) {
-  const { theme } = useTheme();
+  const { theme, availableThemes } = useTheme();
+  const themeAppearance = availableThemes.find((candidate) => candidate.id === theme)?.appearance ?? (theme === 'dark' ? 'dark' : 'light');
   const [showDiff, setShowDiff] = useState(() => readStoredBoolean(WORKSPACE_EXPLORER_DIFF_KEY, true));
   const [fileState, setFileState] = useState<LoadState<WorkspaceFileContent>>({ status: 'loading', data: null, error: null });
   const [diffState, setDiffState] = useState<LoadState<WorkspaceDiffOverlay>>({ status: 'idle', data: null, error: null });
@@ -1421,7 +1423,7 @@ export function WorkspaceFileDocument({
             <WorkspaceCodeEditor
               path={selectedFile.path}
               value={draftContent}
-              theme={theme}
+              theme={themeAppearance}
               diffSpec={diffSpec}
               editable
               onChange={setDraftContent}
