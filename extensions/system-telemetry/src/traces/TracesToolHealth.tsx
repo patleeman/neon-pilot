@@ -166,10 +166,14 @@ function ToolCard({ tool }: { tool: TraceToolHealth }) {
         <Stat label="Max Latency" value={formatDuration(tool.maxLatencyMs)} />
       </div>
       <div className="mt-2.5 pt-2 border-t border-border-subtle/50">
-        <div className="flex h-2 overflow-hidden rounded-md bg-surface">
-          <div className="ui-health-ok-bar" style={{ width: `${tool.calls > 0 ? (okCalls / tool.calls) * 100 : 0}%` }} />
-          {tool.errors > 0 && <div className="bg-danger" style={{ width: `${(tool.errors / tool.calls) * 100}%` }} />}
-        </div>
+        <ProgressBar
+          value={okCalls}
+          max={Math.max(tool.calls, 1)}
+          minPercent={tool.calls > 0 ? 2 : 0}
+          tone={hasTrouble ? 'danger' : tool.errors > 0 ? 'warning' : 'success'}
+          className="h-2"
+          label={`${tool.toolName} successful calls`}
+        />
         <div className="flex justify-between text-[9px] text-dim mt-1">
           <span>{okCalls} ok</span>
           {tool.errors > 0 && <span className="text-danger">{tool.errors} err</span>}

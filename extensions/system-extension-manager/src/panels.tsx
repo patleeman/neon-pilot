@@ -37,6 +37,7 @@ import {
   SectionLabel,
   Stat,
   StatGrid,
+  StatusDot,
   Switch,
   TabButton,
   TabList,
@@ -2072,12 +2073,7 @@ function ExtensionDetailsContent({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="truncate text-[20px] font-semibold tracking-tight text-primary">{extension.name}</h3>
-              <span
-                className={cx(
-                  'h-1.5 w-1.5 rounded-full',
-                  extension.status === 'invalid' ? 'bg-danger' : extension.enabled ? 'bg-success' : 'bg-dim',
-                )}
-              />
+              <StatusDot tone={extension.status === 'invalid' ? 'danger' : extension.enabled ? 'success' : 'muted'} size="xs" />
             </div>
             <p className="mt-1 font-mono text-[11px] text-dim">{extension.id}</p>
           </div>

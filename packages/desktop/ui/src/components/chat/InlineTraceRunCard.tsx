@@ -17,7 +17,7 @@ import {
 import { timeAgo } from '../../shared/utils';
 import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import { transcriptTargetAttributes } from '../../transcript/spotlight';
-import { cx, MetaLabel, Pill, RowButton, SectionLabel, StatusDot, SurfacePanel, TextButton } from '../ui';
+import { cx, Disclosure, MetaLabel, Pill, RowButton, SectionLabel, StatusDot, SurfacePanel, TextButton } from '../ui';
 import {
   INLINE_RUN_LOG_TAIL_LINES,
   INLINE_RUN_POLL_INTERVAL_MS,
@@ -204,52 +204,51 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
           )}
 
           {detailRun && (
-            <details className="ui-disclosure">
-              <summary className="ui-disclosure-summary">
-                <span>Details</span>
-                <span className="ui-disclosure-meta">Command details</span>
-              </summary>
-              <div className="ui-disclosure-body">
-                <div className="space-y-2.5">
-                  {taskSlug && <InlineRunMetadataRow label="Task" value={taskSlug} />}
-                  {targetPrompt && (
-                    <InlineRunMetadataRow label="Prompt" value={<span className="whitespace-pre-wrap break-words">{targetPrompt}</span>} />
+            <Disclosure
+              summary={
+                <>
+                  <span>Details</span>
+                  <span className="ui-disclosure-meta">Command details</span>
+                </>
+              }
+            >
+              <div className="space-y-2.5">
+                {taskSlug && <InlineRunMetadataRow label="Task" value={taskSlug} />}
+                {targetPrompt && (
+                  <InlineRunMetadataRow label="Prompt" value={<span className="whitespace-pre-wrap break-words">{targetPrompt}</span>} />
+                )}
+                {targetCommand && <InlineRunMetadataRow label="Command" value={<span className="font-mono">{targetCommand}</span>} />}
+                {targetCwd && <InlineRunMetadataRow label="Working dir" value={<span className="font-mono">{targetCwd}</span>} />}
+                {targetModel && <InlineRunMetadataRow label="Model" value={targetModel} />}
+                {targetProfile && <InlineRunMetadataRow label="Profile" value={targetProfile} />}
+                <InlineRunMetadataRow label="Type" value={detailRun.manifest?.kind ?? 'unknown'} />
+                <InlineRunMetadataRow label="Started by" value={detailRun.manifest?.source?.type ?? 'unknown'} />
+                <InlineRunMetadataRow label="Attempt" value={String(detailRun.status?.activeAttempt ?? 0)} />
+                {detailRun.checkpoint?.step && <InlineRunMetadataRow label="Checkpoint" value={detailRun.checkpoint.step} />}
+                {snapshot.log?.path && <InlineRunMetadataRow label="Log" value={<span className="font-mono">{snapshot.log.path}</span>} />}
+              </div>
+
+              {(detailRun.status?.lastError || detailRun.problems.length > 0) && (
+                <div className="mt-3 space-y-2 border-t border-border-subtle/60 pt-2.5">
+                  {detailRun.status?.lastError && (
+                    <div className="space-y-1">
+                      <SectionLabel tone="muted">Last error</SectionLabel>
+                      <p className="whitespace-pre-wrap break-words text-[11px] text-danger/90">{detailRun.status.lastError}</p>
+                    </div>
                   )}
-                  {targetCommand && <InlineRunMetadataRow label="Command" value={<span className="font-mono">{targetCommand}</span>} />}
-                  {targetCwd && <InlineRunMetadataRow label="Working dir" value={<span className="font-mono">{targetCwd}</span>} />}
-                  {targetModel && <InlineRunMetadataRow label="Model" value={targetModel} />}
-                  {targetProfile && <InlineRunMetadataRow label="Profile" value={targetProfile} />}
-                  <InlineRunMetadataRow label="Type" value={detailRun.manifest?.kind ?? 'unknown'} />
-                  <InlineRunMetadataRow label="Started by" value={detailRun.manifest?.source?.type ?? 'unknown'} />
-                  <InlineRunMetadataRow label="Attempt" value={String(detailRun.status?.activeAttempt ?? 0)} />
-                  {detailRun.checkpoint?.step && <InlineRunMetadataRow label="Checkpoint" value={detailRun.checkpoint.step} />}
-                  {snapshot.log?.path && (
-                    <InlineRunMetadataRow label="Log" value={<span className="font-mono">{snapshot.log.path}</span>} />
+                  {detailRun.problems.length > 0 && (
+                    <div className="space-y-1">
+                      <SectionLabel tone="muted">Problems</SectionLabel>
+                      <div className="space-y-1 text-[11px] text-danger/90">
+                        {detailRun.problems.map((problem) => (
+                          <p key={problem}>• {problem}</p>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
-
-                {(detailRun.status?.lastError || detailRun.problems.length > 0) && (
-                  <div className="mt-3 space-y-2 border-t border-border-subtle/60 pt-2.5">
-                    {detailRun.status?.lastError && (
-                      <div className="space-y-1">
-                        <SectionLabel tone="muted">Last error</SectionLabel>
-                        <p className="whitespace-pre-wrap break-words text-[11px] text-danger/90">{detailRun.status.lastError}</p>
-                      </div>
-                    )}
-                    {detailRun.problems.length > 0 && (
-                      <div className="space-y-1">
-                        <SectionLabel tone="muted">Problems</SectionLabel>
-                        <div className="space-y-1 text-[11px] text-danger/90">
-                          {detailRun.problems.map((problem) => (
-                            <p key={problem}>• {problem}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </details>
+              )}
+            </Disclosure>
           )}
 
           {snapshot.error && detailRun && <p className="text-[11px] text-warning">{snapshot.error}</p>}

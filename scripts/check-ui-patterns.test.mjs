@@ -113,6 +113,63 @@ describe('check-ui-patterns', () => {
     expect(rawControls).toHaveLength(3);
   });
 
+  it('flags raw controls in desktop app frontend code', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'packages/desktop/ui/src/components/SettingsSurface.tsx',
+      `
+        export function SettingsSurface() {
+          return <button className="rounded-md border border-border-subtle px-2">Save</button>;
+        }
+      `,
+    );
+
+    const ids = findingIds(auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['packages/desktop/ui/src'] }));
+
+    expect(ids).toContain('raw-control');
+  });
+
+  it('scans extension templates by default', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'docs/extension-templates/templates/template-demo/src/frontend.tsx',
+      `
+        export function DemoTemplate() {
+          return <input className="rounded-md border border-border-subtle px-2" />;
+        }
+      `,
+    );
+
+    const ids = findingIds(auditUiPatterns({ allowlist: [], repoRoot: root }));
+
+    expect(ids).toContain('raw-control');
+  });
+
+  it('flags raw details and summary disclosures in internal TSX', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo/src/frontend.tsx',
+      `
+        export function Demo() {
+          return (
+            <details>
+              <summary>Advanced</summary>
+            </details>
+          );
+        }
+      `,
+    );
+
+    const detailsFindings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'raw-details-summary',
+    );
+
+    expect(detailsFindings).toHaveLength(2);
+  });
+
   it('flags extension imports from UI or desktop internals', () => {
     const root = createRepo();
     writeFixture(
@@ -149,16 +206,80 @@ describe('check-ui-patterns', () => {
 
     const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] });
     expect(findings).toHaveLength(1);
+    expect(parseMaxFindings(undefined)).toBe(0);
     expect(parseMaxFindings('0')).toBe(0);
+    expect(parseMaxFindings('unbounded')).toBeNull();
     expect(exceedsMaxFindings(findings, 0)).toBe(true);
+    expect(exceedsMaxFindings(findings, null)).toBe(false);
 
     const allowedFindings = auditUiPatterns({
-      allowlist: [{ id: 'raw-control', file: 'extensions/demo/src/frontend.tsx', sampleIncludes: '<input' }],
+      allowlist: [
+        {
+          id: 'raw-control',
+          file: 'extensions/demo/src/frontend.tsx',
+          reason: 'embedded third-party widget requires native input semantics',
+          sampleIncludes: '<input',
+        },
+      ],
       repoRoot: root,
       roots: ['extensions'],
     });
     expect(allowedFindings).toHaveLength(0);
     expect(exceedsMaxFindings(allowedFindings, 0)).toBe(false);
+
+    const undocumentedAllowlistFindings = auditUiPatterns({
+      allowlist: [{ id: 'raw-control', file: 'extensions/demo/src/frontend.tsx', sampleIncludes: '<input' }],
+      repoRoot: root,
+      roots: ['extensions'],
+    });
+    expect(undocumentedAllowlistFindings).toHaveLength(1);
+  });
+
+  it('requires structured inline exceptions with a matching rule id and reason', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo/src/frontend.tsx',
+      `
+        export function Demo() {
+          return (
+            <>
+              {/* ui-pattern-ok */}
+              <input className="rounded-md border border-border-subtle px-2" />
+              {/* ui-pattern-ok raw-control reason="embedded third-party color picker keeps native input semantics" */}
+              <input type="color" />
+              {/* ui-pattern-ok raw-control reason="ok" */}
+              <input type="range" />
+            </>
+          );
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] });
+    const invalidExceptions = findings.filter((finding) => finding.id === 'invalid-ui-pattern-exception');
+    const rawControls = findings.filter((finding) => finding.id === 'raw-control');
+
+    expect(invalidExceptions).toHaveLength(2);
+    expect(rawControls).toHaveLength(2);
+  });
+
+  it('does not give extension webapp surfaces a blanket pass', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo/webapp/src/App.tsx',
+      `
+        export function App() {
+          return <button className="rounded-md border border-border-subtle px-2 hover:bg-muted">Run</button>;
+        }
+      `,
+    );
+
+    const ids = findingIds(auditUiPatterns({ repoRoot: root, roots: ['extensions'] }));
+
+    expect(ids).toContain('raw-control');
+    expect(ids).toContain('custom-button-chrome');
   });
 
   it('allows design-system source files to define the primitives being enforced', () => {
@@ -174,5 +295,49 @@ describe('check-ui-patterns', () => {
     );
 
     expect(auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['packages/ui/src'] })).toEqual([]);
+  });
+
+  it('does not hide debt behind the default allowlist', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo/src/frontend.tsx',
+      `
+        export function Demo() {
+          return <span className="rounded bg-danger px-2 py-1 text-white">Failed</span>;
+        }
+      `,
+    );
+
+    expect(auditUiPatterns({ repoRoot: root, roots: ['extensions'] })).toEqual(
+      auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }),
+    );
+  });
+
+  it('requires explicit exceptions for desktop app CSS component recipes', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'packages/desktop/ui/src/app/index.css',
+      `
+        @layer components {
+          .ui-segmented-button {
+            @apply rounded-md px-2;
+          }
+
+          .ui-disclosure summary {
+            /* ui-pattern-ok desktop-css-component-recipe reason="Host stylesheet resets native summary chrome for the shared Disclosure primitive." */
+            list-style: none;
+          }
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['packages/desktop/ui/src'] }).filter(
+      (finding) => finding.id === 'desktop-css-component-recipe',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'packages/desktop/ui/src/app/index.css', sample: '.ui-segmented-button {' });
   });
 });

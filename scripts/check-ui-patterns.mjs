@@ -5,71 +5,15 @@ import { extname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = join(fileURLToPath(new URL('..', import.meta.url)));
-const defaultRoots = ['packages/desktop/ui/src', 'extensions'];
+const defaultRoots = ['packages/desktop/ui/src', 'extensions', 'docs/extension-templates'];
 const includeExt = new Set(['.css', '.ts', '.tsx']);
 const ignoreSegments = new Set(['node_modules', 'dist', 'coverage', '.git']);
 const ignoredFileRegexes = [/\.(test|spec)\.[cm]?[tj]sx?$/, /\.stories\.[cm]?[tj]sx?$/];
+const inlineExceptionId = 'invalid-ui-pattern-exception';
 
-const designSystemSourceRegexes = [
-  /^packages\/ui\/src\//,
-  /^packages\/desktop\/ui\/src\/app\/index\.css$/,
-  /^packages\/desktop\/ui\/src\/components\/ui\.[tj]sx?$/,
-];
+const designSystemSourceRegexes = [/^packages\/ui\/src\//, /^packages\/desktop\/ui\/src\/components\/ui\.[tj]sx?$/];
 
-const defaultAllowlist = [
-  {
-    id: 'raw-control',
-    fileRegex: /^extensions\/[^/]+\/webapp\//,
-  },
-  {
-    id: 'css-surface-bypass',
-    fileRegex: /^extensions\/[^/]+\/webapp\//,
-  },
-  {
-    id: 'web-shadow-blur',
-    fileRegex: /^extensions\/[^/]+\/webapp\//,
-  },
-  {
-    id: 'custom-button-chrome',
-    file: 'extensions/system-routines/src/RoutinesPage.tsx',
-    sampleIncludes: 'rounded bg-accent px-2 py-1',
-  },
-  {
-    id: 'raw-semantic-surface',
-    file: 'extensions/system-routines/src/RoutinesPage.tsx',
-    sampleIncludes: 'rounded bg-accent px-2 py-1',
-  },
-  {
-    id: 'raw-semantic-surface',
-    file: 'extensions/system-extension-manager/src/panels.tsx',
-    sampleIncludes: "extension.status === 'invalid' ? 'bg-danger' : extension.enabled ? 'bg-success' : 'bg-dim'",
-  },
-  {
-    id: 'raw-semantic-surface',
-    file: 'extensions/system-model-picker/src/frontend.tsx',
-    sample: "? 'bg-danger'",
-  },
-  {
-    id: 'raw-semantic-surface',
-    file: 'extensions/system-telemetry/src/traces/TracesAutoMode.tsx',
-    sampleIncludes: "e.enabled ? 'bg-success' : 'bg-dim'",
-  },
-  {
-    id: 'raw-semantic-surface',
-    file: 'extensions/system-telemetry/src/traces/TracesContextPointers.tsx',
-    sampleIncludes: 'w-full rounded-sm bg-accent absolute bottom-0',
-  },
-  {
-    id: 'raw-semantic-surface',
-    file: 'extensions/system-telemetry/src/traces/TracesContextPressure.tsx',
-    sampleIncludes: 'h-full bg-accent rounded-md transition-all',
-  },
-  {
-    id: 'raw-semantic-surface',
-    file: 'extensions/system-telemetry/src/traces/TracesToolHealth.tsx',
-    sampleIncludes: 'tool.errors > 0 && <div className="bg-danger"',
-  },
-];
+const defaultAllowlist = [];
 
 const rules = [
   {
@@ -84,14 +28,25 @@ const rules = [
   },
   {
     id: 'raw-control',
-    message: 'raw JSX control/action markup; use Button, ToolbarButton, IconButton, TextButton, Select, TextInput, Textarea, or Switch',
+    message:
+      'raw JSX control/action markup; use Button, ToolbarButton, IconButton, TextButton, Select, TextInput, Textarea, or Switch, or document a narrow exception with ui-pattern-ok <rule-id> reason="specific reason"',
     extensions: new Set(['.tsx']),
-    appliesTo: ({ file }) => isExtensionFrontendFile(file),
-    match: ({ snippet }) => /<\s*(?:button|input|select|textarea)(?=[\s>/])/.test(snippet) && !/\bui-[\w-]+\b/.test(snippet),
+    appliesTo: ({ file }) => isInternalFrontendFile(file),
+    match: ({ line, snippet }) =>
+      /<\s*(?:button|input|select|textarea)(?=[\s>/]|$)/.test(line) || /<\s*(?:button|input|select|textarea)(?=[\s>/])/.test(snippet),
+  },
+  {
+    id: 'raw-details-summary',
+    message:
+      'raw details/summary disclosure markup; use Disclosure or another design-system disclosure primitive, or document a narrow exception with ui-pattern-ok <rule-id> reason="specific reason"',
+    extensions: new Set(['.tsx']),
+    appliesTo: ({ file }) => isInternalFrontendFile(file),
+    match: ({ line, snippet }) => /<\s*(?:details|summary)(?=[\s>/]|$)/.test(line) || /<\s*(?:details|summary)(?=[\s>/])/.test(snippet),
   },
   {
     id: 'custom-pill',
     message: 'custom pill/status badge styling; use Pill, StatusDot, InlineMeta, or compact text status',
+    appliesTo: ({ file, extension }) => extension !== '.css' || isExtensionFrontendFile(file) || file.startsWith('extensions/'),
     match: ({ snippet }) => /\brounded-full\b(?=[^`'"]*(?:px-|border-|bg-|text-))/.test(snippet),
   },
   {
@@ -112,7 +67,7 @@ const rules = [
   {
     id: 'web-shadow-blur',
     message: 'shadow/backdrop treatment; prefer flat desktop workbench surfaces or a design-system primitive',
-    appliesTo: ({ file }) => isExtensionFrontendFile(file) || file.endsWith('.css'),
+    appliesTo: ({ file, extension }) => isExtensionFrontendFile(file) || (extension === '.css' && file.startsWith('extensions/')),
     match: ({ snippet }) =>
       /(?:^|[^\w-])(?:(?<!drop-)shadow-\[(?!none\])|(?<!drop-)shadow-(?!none\b)(?:sm|md|lg|xl|2xl)|shadow(?!-)\b|backdrop-blur(?:-\w+)?|backdropFilter\s*:|boxShadow\s*:|box-shadow\s*:|backdrop-filter\s*:)/.test(
         snippet,
@@ -124,6 +79,17 @@ const rules = [
     extensions: new Set(['.css']),
     appliesTo: ({ file }) => file.startsWith('extensions/'),
     match: ({ line }) => /\bbackground(?:-color)?\s*:\s*var\(--(?:surface|panel|elevated|base)\)/.test(line),
+  },
+  {
+    id: 'desktop-css-component-recipe',
+    message:
+      'desktop app CSS component recipe; move UI chrome to @neon-pilot/ui primitives or add a structured exception for host-level primitive CSS',
+    extensions: new Set(['.css']),
+    appliesTo: ({ file }) => file === 'packages/desktop/ui/src/app/index.css',
+    match: ({ line }) =>
+      /^\s*\.(?:ui-desktop-layout-switcher__button|ui-segmented-button|ui-node-title-input|ui-rich-editor-button|ui-skill-invocation(?:\s+summary)?|ui-disclosure\s+summary)\b/.test(
+        line,
+      ),
   },
   {
     id: 'arbitrary-text-size',
@@ -148,8 +114,13 @@ function isExtensionFrontendFile(file) {
   return (
     /^extensions\/[^/]+\/src\/.*\.tsx$/.test(file) ||
     /^extensions\/[^/]+\/webapp\/.*\.tsx$/.test(file) ||
+    /^docs\/extension-templates\/templates\/[^/]+\/src\/.*\.tsx$/.test(file) ||
     /^packages\/desktop\/ui\/src\/extensions\/.*\.tsx$/.test(file)
   );
+}
+
+function isInternalFrontendFile(file) {
+  return /^packages\/desktop\/ui\/src\/.*\.tsx$/.test(file) || isExtensionFrontendFile(file);
 }
 
 function walk(dir, files = []) {
@@ -179,14 +150,70 @@ function sampleForLine(lines, index) {
   return line.trim().replace(/\s+/g, ' ').slice(0, 260);
 }
 
+function hasSpecificReason(reason) {
+  const trimmedReason = reason?.trim() ?? '';
+  return trimmedReason.length >= 12 && !/^(?:ok|todo|fix later|temporary|n\/a|na)$/i.test(trimmedReason);
+}
+
+function parseInlineException(line) {
+  const markerIndex = line.indexOf('ui-pattern-ok');
+  if (markerIndex === -1) return null;
+
+  const tail = line.slice(markerIndex);
+  const match = /^ui-pattern-ok\s+([a-z0-9-]+)\s+reason="([^"]+)"/.exec(tail);
+  if (!match) {
+    return {
+      valid: false,
+      reason: 'use ui-pattern-ok <rule-id> reason="specific reason"',
+    };
+  }
+
+  const [, ruleId, reason] = match;
+  const trimmedReason = reason.trim();
+  if (!ruleIds.has(ruleId)) {
+    return {
+      valid: false,
+      reason: `unknown rule id "${ruleId}"`,
+      ruleId,
+    };
+  }
+
+  if (!hasSpecificReason(trimmedReason)) {
+    return {
+      valid: false,
+      reason: 'reason must be a specific justification',
+      ruleId,
+    };
+  }
+
+  return {
+    valid: true,
+    reason: trimmedReason,
+    ruleId,
+  };
+}
+
+function inlineExceptionFor(lines, index, id) {
+  const previous = index > 0 ? parseInlineException(lines[index - 1]) : null;
+  if (previous?.valid && previous.ruleId === id) return previous;
+
+  const current = parseInlineException(lines[index] ?? '');
+  if (current?.valid && current.ruleId === id) return current;
+
+  if (/^\s*\.[^{]+\{\s*$/.test(lines[index] ?? '')) {
+    const next = parseInlineException(lines[index + 1] ?? '');
+    if (next?.valid && next.ruleId === id) return next;
+  }
+
+  return null;
+}
+
 function isInlineAllowed(lines, index, id) {
-  const previous = index > 0 ? lines[index - 1] : '';
-  const current = lines[index] ?? '';
-  const marker = new RegExp(`ui-pattern-ok(?:\\s+${id})?\\b`);
-  return marker.test(previous) || marker.test(current);
+  return inlineExceptionFor(lines, index, id) !== null;
 }
 
 function allowlistMatches(allowlistEntry, finding) {
+  if (!hasSpecificReason(allowlistEntry.reason)) return false;
   if (allowlistEntry.id && allowlistEntry.id !== finding.id) return false;
   if (allowlistEntry.file && allowlistEntry.file !== finding.file) return false;
   if (allowlistEntry.fileRegex && !allowlistEntry.fileRegex.test(finding.file)) return false;
@@ -198,6 +225,21 @@ function allowlistMatches(allowlistEntry, finding) {
 
 function isAllowlisted(finding, allowlist) {
   return allowlist.some((entry) => allowlistMatches(entry, finding));
+}
+
+const ruleIds = new Set(rules.map((rule) => rule.id));
+
+function collectInvalidInlineExceptionFinding(relativeFile, lines, index) {
+  const parsed = parseInlineException(lines[index] ?? '');
+  if (parsed === null || parsed.valid) return null;
+
+  return {
+    file: relativeFile,
+    line: index + 1,
+    id: inlineExceptionId,
+    message: `invalid UI pattern exception; ${parsed.reason}`,
+    sample: sampleForLine(lines, index),
+  };
 }
 
 export function auditUiPatterns(options = {}) {
@@ -217,6 +259,9 @@ export function auditUiPatterns(options = {}) {
       const lines = text.split(/\r?\n/);
 
       lines.forEach((line, index) => {
+        const invalidInlineException = collectInvalidInlineExceptionFinding(relativeFile, lines, index);
+        if (invalidInlineException) findings.push(invalidInlineException);
+
         const snippet = sampleForLine(lines, index);
         for (const rule of rules) {
           if (rule.extensions && !rule.extensions.has(extension)) continue;
@@ -241,9 +286,10 @@ export function auditUiPatterns(options = {}) {
 }
 
 export function parseMaxFindings(rawLimit) {
-  if (rawLimit === undefined || rawLimit.trim() === '') return null;
+  if (rawLimit === undefined || rawLimit.trim() === '') return 0;
+  if (rawLimit.trim().toLowerCase() === 'unbounded') return null;
   const limit = Number.parseInt(rawLimit, 10);
-  return Number.isFinite(limit) ? limit : null;
+  return Number.isFinite(limit) ? limit : 0;
 }
 
 export function exceedsMaxFindings(findings, limit) {
@@ -272,12 +318,15 @@ export function formatUiPatternReport(findings, roots = defaultRoots) {
 }
 
 function runCli() {
+  const reportOnly = process.argv.includes('--report-only');
   const findings = auditUiPatterns();
   console.log(formatUiPatternReport(findings));
 
   const limit = parseMaxFindings(process.env.UI_PATTERN_MAX_FINDINGS);
-  if (exceedsMaxFindings(findings, limit)) {
-    console.error(`\nUI pattern audit failed: ${findings.length} findings exceed UI_PATTERN_MAX_FINDINGS=${limit}.`);
+  if (!reportOnly && exceedsMaxFindings(findings, limit)) {
+    console.error(
+      `\nUI pattern audit failed: ${findings.length} findings exceed UI_PATTERN_MAX_FINDINGS=${limit}. Use --report-only or UI_PATTERN_MAX_FINDINGS=unbounded for exploratory audits.`,
+    );
     process.exit(1);
   }
 }

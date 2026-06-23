@@ -10,6 +10,7 @@ import {
   PanelMessage,
   ProgressRow,
   SectionLabel,
+  StatusDot,
   SurfacePanel,
 } from '@neon-pilot/extensions/ui';
 
@@ -73,7 +74,7 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
           <div className="max-h-[200px] overflow-y-auto space-y-0.5">
             {data.recentEvents.slice(0, 15).map((e, i) => (
               <div key={i} className="flex items-center gap-2 py-1 text-[11px] border-b border-border-subtle/20 last:border-0">
-                <span className={`w-1.5 h-1.5 rounded-md shrink-0 ${e.enabled ? 'bg-success' : 'bg-dim'}`} />
+                <StatusDot tone={e.enabled ? 'success' : 'muted'} size="xs" className="shrink-0" />
                 <span className="font-mono text-[10px] text-dim w-[40px] shrink-0">{e.ts.slice(11, 16)}</span>
                 <span className={e.enabled ? 'text-success font-medium' : 'text-secondary'}>{e.enabled ? 'Enabled' : 'Stopped'}</span>
                 {!e.enabled && e.stopReason && <span className="text-dim truncate ml-auto">{e.stopReason}</span>}

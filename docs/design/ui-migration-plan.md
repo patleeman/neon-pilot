@@ -29,7 +29,25 @@ Run:
 pnpm run check:ui-patterns
 ```
 
-The checker reports suspicious local component styling. Set `UI_PATTERN_MAX_FINDINGS=0` to make it blocking. During this reset the expected direction is monotonically downward; after the reset lands, CI should keep the budget at zero or a tiny documented allowlist.
+The checker reports suspicious local component styling and fails with any finding by default. It scans desktop UI, first-party extensions, extension webapps, and docs extension templates.
+
+Use report-only mode only when measuring migration work:
+
+```sh
+pnpm run check:ui-patterns -- --report-only
+UI_PATTERN_MAX_FINDINGS=unbounded pnpm run check:ui-patterns
+```
+
+Narrow source exceptions must be structured inline comments:
+
+```tsx
+{/* ui-pattern-ok raw-details-summary reason="browser-native disclosure preserves markdown-rendered transcript semantics" */}
+<details>
+```
+
+Bare `ui-pattern-ok` comments are invalid and do not suppress findings. Prefer replacing raw controls, local `details`/`summary`, semantic color recipes, surface CSS, shadows, and blur with shared primitives. If an exception is unavoidable, name the exact rule and the concrete constraint so future agents can remove it intentionally.
+
+Do not commit a default allowlist that means "scheduled for migration." The default audit should be equivalent to an allowlist-free audit; migration debt belongs in code changes or in a narrow inline exception with a reason. Desktop `index.css` may host shared primitive CSS while the app owns the CSS bundle, but each app-level component recipe must be selector-scoped and justified.
 
 ## QA Contract
 

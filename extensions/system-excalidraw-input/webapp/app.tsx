@@ -2,8 +2,8 @@ import '@excalidraw/excalidraw/index.css';
 import './style.css';
 
 import { Excalidraw, exportToBlob, serializeAsJSON } from '@excalidraw/excalidraw';
-import { createRoot } from 'react-dom/client';
 import { useMemo, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 
 type SceneData = {
   elements: readonly unknown[];
@@ -181,21 +181,20 @@ function App() {
       <header className="toolbar">
         <div className="title-group">
           <label htmlFor="drawing-title">Drawing</label>
-          <input
-            id="drawing-title"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            aria-label="Drawing title"
-          />
+          {/* ui-pattern-ok raw-control reason="Static localhost Excalidraw sidecar is bundled outside the host React SDK and needs a native title input beside the canvas." */}
+          <input id="drawing-title" value={title} onChange={(event) => setTitle(event.target.value)} aria-label="Drawing title" />
         </div>
         <div className="actions">
           <span className="status">{status}</span>
+          {/* ui-pattern-ok raw-control reason="Static localhost Excalidraw sidecar uses DOM-native toolbar controls outside the host React SDK bundle." */}
           <button type="button" onClick={() => void downloadSource()} disabled={busy}>
             Source
           </button>
+          {/* ui-pattern-ok raw-control reason="Static localhost Excalidraw sidecar uses DOM-native toolbar controls outside the host React SDK bundle." */}
           <button type="button" onClick={() => void downloadPng()} disabled={busy}>
             PNG
           </button>
+          {/* ui-pattern-ok raw-control reason="Static localhost Excalidraw sidecar uses DOM-native toolbar controls outside the host React SDK bundle." */}
           <button type="button" onClick={() => void saveToConversation()} disabled={!canSaveToConversation || busy}>
             {busy ? 'Working...' : 'Save'}
           </button>

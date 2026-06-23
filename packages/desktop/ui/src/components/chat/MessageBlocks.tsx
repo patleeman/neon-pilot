@@ -5,7 +5,7 @@ import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { dispatchTranscriptSpotlight, transcriptTargetAttributes } from '../../transcript/spotlight.js';
-import { cx, MessageActionButton, MessageCard, MessageMeta, Textarea, TextButton } from '../ui.js';
+import { cx, Disclosure, MessageActionButton, MessageCard, MessageMeta, Textarea, TextButton } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
@@ -71,9 +71,9 @@ const AUTO_RESUME_CONTEXT_TYPES = new Set([
 ]);
 
 const QUIET_LIFECYCLE_CONTEXT_TYPES = new Set([...AUTO_RESUME_CONTEXT_TYPES, 'conversation_workspace_change']);
-const contextShelfItemClassName = 'group/item w-full text-[12px] text-secondary';
+const contextShelfItemClassName = 'group/item w-full !overflow-visible !rounded-none !border-0 !bg-transparent text-[12px] text-secondary';
 const contextShelfSummaryClassName =
-  'grid w-full cursor-pointer list-none grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden';
+  'grid w-full cursor-pointer list-none grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary before:!content-none after:!content-none [&::-webkit-details-marker]:hidden';
 const contextShelfBodyClassName = 'mt-3 max-h-[min(34rem,52vh)] w-full overflow-auto pl-5 pr-2 text-[12px] leading-relaxed text-secondary';
 const contextShelfSystemPromptBodyClassName =
   'mt-3 max-h-[min(34rem,52vh)] w-full overflow-auto pl-5 pr-2 text-[12px] leading-relaxed text-secondary/80';
@@ -229,18 +229,25 @@ function LazyDetails({
   className,
   dataAttrs = {},
   summary,
+  summaryClassName,
+  bodyClassName = '!border-t-0 !p-0',
   children,
 }: {
   className: string;
   dataAttrs?: Record<string, string | undefined>;
   summary: ReactNode;
+  summaryClassName?: string;
+  bodyClassName?: string;
   children: ReactNode;
 }) {
   const [openedOnce, setOpenedOnce] = useState(false);
 
   return (
-    <details
+    <Disclosure
       className={className}
+      summary={summary}
+      summaryClassName={summaryClassName}
+      bodyClassName={bodyClassName}
       {...dataAttrs}
       onToggle={(event) => {
         if (event.currentTarget.open) {
@@ -248,9 +255,8 @@ function LazyDetails({
         }
       }}
     >
-      {summary}
       {openedOnce ? children : null}
-    </details>
+    </Disclosure>
   );
 }
 
@@ -301,8 +307,9 @@ export const ContextShelf = memo(function ContextShelf({
         <LazyDetails
           className={contextShelfItemClassName}
           dataAttrs={{ 'data-context-type': 'system_prompt' }}
+          summaryClassName={contextShelfSummaryClassName}
           summary={
-            <summary className={contextShelfSummaryClassName}>
+            <>
               <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
                 <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
                   ›
@@ -313,7 +320,7 @@ export const ContextShelf = memo(function ContextShelf({
                 </span>
               </span>
               <span className="h-px bg-border-subtle" aria-hidden="true" />
-            </summary>
+            </>
           }
         >
           <div className={contextShelfSystemPromptBodyClassName}>
@@ -328,19 +335,26 @@ export const ContextShelf = memo(function ContextShelf({
         </LazyDetails>
       ) : null}
       {remoteControlled ? (
-        <details className={contextShelfItemClassName} data-context-type="remote_control">
-          <summary className={contextShelfSummaryClassName}>
-            <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
-              <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
-                ›
+        <Disclosure
+          className={contextShelfItemClassName}
+          data-context-type="remote_control"
+          summaryClassName={contextShelfSummaryClassName}
+          bodyClassName="!border-t-0 !p-0"
+          summary={
+            <>
+              <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+                <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+                  ›
+                </span>
+                <span className="shrink-0 font-medium text-primary/90">Remote control</span>
+                <span className="min-w-0 truncate text-dim/90">{remoteControlText}</span>
               </span>
-              <span className="shrink-0 font-medium text-primary/90">Remote control</span>
-              <span className="min-w-0 truncate text-dim/90">{remoteControlText}</span>
-            </span>
-            <span className="h-px bg-border-subtle" aria-hidden="true" />
-          </summary>
+              <span className="h-px bg-border-subtle" aria-hidden="true" />
+            </>
+          }
+        >
           <div className={contextShelfBodyClassName}>{remoteControlText}</div>
-        </details>
+        </Disclosure>
       ) : null}
       {blocks.map((block, index) => {
         const blockId = optionalTrimmedString(block.id);
@@ -369,8 +383,9 @@ export const ContextShelf = memo(function ContextShelf({
               'data-context-type': block.type === 'context' ? (block.customType ?? 'injected_context') : `summary:${block.kind}`,
               'data-summary-kind': block.type === 'summary' ? block.kind : undefined,
             }}
+            summaryClassName={contextShelfSummaryClassName}
             summary={
-              <summary className={contextShelfSummaryClassName}>
+              <>
                 <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
                   <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
                     ›
@@ -380,7 +395,7 @@ export const ContextShelf = memo(function ContextShelf({
                   {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
                 </span>
                 <span className="h-px bg-border-subtle" aria-hidden="true" />
-              </summary>
+              </>
             }
           >
             <div {...replySelectionScopeProps} className={contextShelfBodyClassName}>
@@ -791,20 +806,27 @@ function SystemEventFrame({
   children: ReactNode;
 }) {
   return (
-    <details className="group w-full text-dim" {...dataAttributes}>
-      <summary className="grid w-full cursor-pointer grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
-        <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
-          <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
-            ›
+    <Disclosure
+      className="group w-full !rounded-none !border-0 !bg-transparent text-dim"
+      summaryClassName="grid w-full cursor-pointer grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary before:!content-none after:!content-none [&::-webkit-details-marker]:hidden"
+      bodyClassName="!border-t-0 !p-0"
+      summary={
+        <>
+          <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+            <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
+              ›
+            </span>
+            <span className="shrink-0 font-medium text-secondary/80">{label}</span>
+            <span className="min-w-0 truncate text-dim/80">{preview}</span>
+            {ts ? <span className="ui-message-meta shrink-0 opacity-70">{timeAgo(ts)}</span> : null}
           </span>
-          <span className="shrink-0 font-medium text-secondary/80">{label}</span>
-          <span className="min-w-0 truncate text-dim/80">{preview}</span>
-          {ts ? <span className="ui-message-meta shrink-0 opacity-70">{timeAgo(ts)}</span> : null}
-        </span>
-        <span className="h-px bg-border-subtle" aria-hidden="true" />
-      </summary>
+          <span className="h-px bg-border-subtle" aria-hidden="true" />
+        </>
+      }
+      {...dataAttributes}
+    >
       <div className="mx-auto mt-3 w-[78%]">{children}</div>
-    </details>
+    </Disclosure>
   );
 }
 
@@ -1050,10 +1072,11 @@ export const SummaryMessage = memo(function SummaryMessage({
     const markerLabel = resolveCompactionMarkerLabel(block.title);
     return (
       <LazyDetails
-        className="group my-5 block w-full text-dim"
+        className="group my-5 block w-full !overflow-visible !rounded-none !border-0 !bg-transparent text-dim"
         dataAttrs={{ 'data-summary-kind': block.kind, 'data-compaction-marker': '1' }}
+        summaryClassName="grid w-full cursor-pointer grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary before:!content-none after:!content-none [&::-webkit-details-marker]:hidden"
         summary={
-          <summary className="grid w-full cursor-pointer grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
+          <>
             <span className="flex items-center gap-1.5 text-dim/85">
               <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
                 ›
@@ -1062,7 +1085,7 @@ export const SummaryMessage = memo(function SummaryMessage({
               <span>{markerLabel}</span>
             </span>
             <span className="h-px bg-border-subtle" aria-hidden="true" />
-          </summary>
+          </>
         }
       >
         <div {...replySelectionScopeProps} className="mx-auto mt-3 w-[78%] space-y-3 text-[13px] leading-relaxed text-primary/90">

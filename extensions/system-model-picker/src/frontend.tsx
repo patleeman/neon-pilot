@@ -1,5 +1,5 @@
 import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
-import { cx, MenuGroupLabel, MenuItem, MenuSeparator, PositionedMenu, SectionLabel } from '@neon-pilot/extensions/ui';
+import { cx, MenuGroupLabel, MenuItem, MenuSeparator, PositionedMenu, SectionLabel, StatusDot } from '@neon-pilot/extensions/ui';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -407,16 +407,16 @@ function Ds4HealthIndicator({
     description.tone === 'warn' ||
     'canSetup' in description ||
     description.canStart;
-  const dotClass =
+  const dotTone =
     description.tone === 'active'
-      ? 'ui-status-dot-active'
+      ? 'success'
       : description.tone === 'ok'
-        ? 'bg-emerald-400'
+        ? 'success'
         : description.tone === 'danger'
-          ? 'bg-danger'
+          ? 'danger'
           : description.tone === 'warn'
-            ? 'bg-amber-400'
-            : 'bg-dim';
+            ? 'warning'
+            : 'muted';
   const compactStatus = (
     <span className="relative flex h-3 w-3 shrink-0 items-center justify-center">
       {setupProgress !== null ? (
@@ -424,7 +424,7 @@ function Ds4HealthIndicator({
       ) : (
         <>
           {active ? <span className="ui-status-dot-active-ping" /> : null}
-          <span className={cx('relative h-1.5 w-1.5 rounded-full', dotClass)} />
+          <StatusDot tone={dotTone} size="xs" className="relative" />
         </>
       )}
     </span>

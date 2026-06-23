@@ -19,6 +19,7 @@ const apiMock = vi.hoisted(() => ({
   models: vi.fn(),
   runs: vi.fn(),
   settings: vi.fn(),
+  tasks: vi.fn(),
   liveSession: vi.fn(),
   liveSessionContext: vi.fn(),
   conversationAttachments: vi.fn(),
@@ -480,6 +481,7 @@ beforeEach(() => {
   apiMock.memory.mockResolvedValue({ memoryDocs: [], skills: [] });
   apiMock.runs.mockResolvedValue({ runs: [] });
   apiMock.settings.mockResolvedValue({});
+  apiMock.tasks.mockResolvedValue([]);
   apiMock.liveSession.mockResolvedValue({ live: false, hasStaleTurnState: false });
   apiMock.liveSessionContext.mockResolvedValue({
     cwd: '/tmp/project',
@@ -859,11 +861,7 @@ describe('ConversationPage lazy composer metadata', () => {
     };
 
     const liveSessionContextResolvers: Array<
-      (value: {
-        cwd: string;
-        branch: string | null;
-        git: { changeCount: number; linesAdded: number; linesDeleted: number } | null;
-      }) => void
+      (value: { cwd: string; branch: string | null; git: { changeCount: number; linesAdded: number; linesDeleted: number } | null }) => void
     > = [];
     apiMock.liveSessionContext.mockImplementation(
       () =>
@@ -933,9 +931,7 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByRole('button', { name: '/tmp/new-workspace' }).getAttribute('title')).toBe(
-      'Working directory: /tmp/new-workspace',
-    );
+    expect(screen.getByRole('button', { name: '/tmp/new-workspace' }).getAttribute('title')).toBe('Working directory: /tmp/new-workspace');
   });
 
   it('opens the saved drawing picker from its conversation command path', async () => {
@@ -969,7 +965,8 @@ describe('ConversationPage lazy composer metadata', () => {
   it('ignores stale attachment refreshes after switching saved conversations', async () => {
     vi.useRealTimers();
 
-    let resolveRegressionAttachments: ((value: { conversationId: string; attachments: Array<Record<string, unknown>> }) => void) | null = null;
+    let resolveRegressionAttachments: ((value: { conversationId: string; attachments: Array<Record<string, unknown>> }) => void) | null =
+      null;
     let resolveNextAttachments: ((value: { conversationId: string; attachments: Array<Record<string, unknown>> }) => void) | null = null;
 
     apiMock.conversationAttachments.mockImplementation((conversationId: string) => {

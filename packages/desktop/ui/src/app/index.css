@@ -99,10 +99,12 @@
   }
 
   .ui-desktop-layout-switcher__button {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Host stylesheet implements the shared layout switcher primitive until package UI owns the app CSS bundle." */
     @apply flex h-6 w-7 items-center justify-center rounded-sm px-0 text-[11px] font-medium text-secondary transition-colors hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel/25;
   }
 
   .ui-desktop-layout-switcher__button[aria-checked='true'] {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Host stylesheet implements selected state for the shared layout switcher primitive." */
     @apply bg-surface text-primary;
   }
 
@@ -420,10 +422,12 @@
   }
 
   .ui-segmented-button {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Host stylesheet implements shared segmented control class names used by desktop primitives." */
     @apply inline-flex items-center justify-center rounded-md px-2.5 py-1.5 text-[11px] font-medium text-dim transition-colors hover:bg-surface hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-surface;
   }
 
   .ui-segmented-button-active {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Host stylesheet implements selected state for shared segmented control primitives." */
     @apply text-accent shadow-sm ring-1 ring-accent/25;
     background-color: rgb(var(--color-accent) / 0.1);
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
@@ -529,10 +533,12 @@
   }
 
   .ui-disclosure summary {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Host stylesheet resets native summary chrome for the shared Disclosure primitive." */
     list-style: none;
   }
 
   .ui-disclosure summary::-webkit-details-marker {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Host stylesheet hides WebKit marker for the shared Disclosure primitive." */
     display: none;
   }
 
@@ -578,6 +584,7 @@
   }
 
   .ui-node-title-input {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Host stylesheet implements workflow-node title editing chrome consumed by desktop graph primitives." */
     @apply w-full rounded-2xl border border-transparent bg-transparent -mx-3 px-3 py-2 text-[32px] font-semibold leading-none tracking-tight text-primary transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 focus:outline-none;
   }
 
@@ -663,10 +670,12 @@
   }
 
   .ui-rich-editor-button {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Host stylesheet implements rich-editor toolbar chrome where the editor supplies class hooks." */
     @apply inline-flex items-center justify-center border-0 bg-transparent p-0 text-[12px] font-medium text-dim transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 focus-visible:ring-offset-2 focus-visible:ring-offset-base;
   }
 
   .ui-rich-editor-button-active {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Host stylesheet implements rich-editor toolbar selected state where the editor supplies class hooks." */
     @apply text-primary underline decoration-accent/35 underline-offset-4;
   }
 
@@ -1111,40 +1120,49 @@
   }
 
   .ui-skill-invocation {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Markdown-rendered skill invocations need host CSS because they are not mounted as React component primitives." */
     @apply rounded-xl bg-elevated/80 px-3 py-2;
   }
 
   .ui-skill-invocation summary {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Markdown-rendered skill invocation details need host CSS to reset native summary chrome." */
     @apply flex cursor-pointer list-none items-center gap-2 text-sm leading-relaxed text-primary;
   }
 
   .ui-skill-invocation summary::-webkit-details-marker {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Markdown-rendered skill invocation details need host CSS to hide WebKit markers." */
     display: none;
   }
 
   .ui-skill-invocation-summary::before {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Markdown-rendered skill invocation details use host CSS for the compact disclosure indicator." */
     content: '▸';
     @apply text-[10px] text-dim transition-transform;
   }
 
   .ui-skill-invocation[open] .ui-skill-invocation-summary::before {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Markdown-rendered skill invocation details use host CSS for open-state disclosure indicator." */
     content: '▾';
   }
 
   .ui-skill-invocation-label {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Markdown-rendered skill invocation metadata is styled by host CSS outside React primitive mounting." */
     @apply text-[10px] font-semibold uppercase tracking-[0.14em];
     color: rgb(var(--color-teal) / 0.88);
   }
 
   .ui-skill-invocation-name {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Markdown-rendered skill invocation metadata is styled by host CSS outside React primitive mounting." */
     @apply font-mono text-[13px] text-primary;
   }
 
   .ui-skill-invocation-body {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Markdown-rendered skill invocation body is styled by host CSS outside React primitive mounting." */
     @apply mt-3 space-y-3 border-t border-border-subtle pt-3;
   }
 
   .ui-skill-invocation-meta {
+    /* ui-pattern-ok desktop-css-component-recipe reason="Markdown-rendered skill invocation metadata is styled by host CSS outside React primitive mounting." */
     @apply m-0 text-[12px];
     color: rgb(var(--color-steel) / 0.76);
   }
