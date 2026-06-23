@@ -7,9 +7,11 @@ type RegisteredTool = { name: string; execute: (...args: unknown[]) => Promise<{
 type AgentEventHandler = (event: unknown, ctx: TestContext) => void | Promise<void>;
 
 interface TestContext {
-  sessionManager: { getEntries: () => unknown[] };
+  conversationId?: string;
+  sessionManager: { getEntries: () => unknown[]; getSessionId?: () => string };
   hasPendingMessages: () => boolean;
   signal: { aborted: boolean };
+  conversations?: { compact: ReturnType<typeof vi.fn> };
 }
 
 function customEntry(customType: string, data: unknown) {
@@ -76,9 +78,11 @@ function createHarness(initialEntries: unknown[] = []) {
   createConversationAutoModeAgentExtension()(pi);
 
   const ctx: TestContext = {
-    sessionManager: { getEntries: () => entries },
+    conversationId: 'conv-1',
+    sessionManager: { getEntries: () => entries, getSessionId: () => 'conv-1' },
     hasPendingMessages: () => false,
     signal: { aborted: false },
+    conversations: { compact: vi.fn().mockResolvedValue({ ok: true }) },
   };
 
   return {
@@ -520,10 +524,40 @@ describe('system-goal-mode extension', () => {
     expect(appendEntry).toHaveBeenCalledWith('conversation-goal', expect.objectContaining({ status: 'active', noProgressTurns: 0 }));
   });
 
-  it('does not disable goal mode after repeated errored no-tool turns', async () => {
+  it('compacts before scheduling another goal continuation after a raw context overflow error', async () => {
+    const { turnEnd, agentEnd, sendMessage, ctx } = createHarness([activeGoal('ship it', 1)]);
+
+    await turnEnd({ type: 'turn_end', toolResults: [], errorMessage: 'Codex error: context_length_exceeded' }, ctx);
+    await agentEnd({}, ctx);
+    await flushTimers();
+
+    expect(ctx.conversations?.compact).toHaveBeenCalledWith('conv-1');
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ customType: 'goal-continuation', content: expect.stringContaining('Objective: ship it') }),
+      { deliverAs: 'followUp', triggerTurn: true },
+    );
+  });
+
+  it('pauses the goal when raw context overflow compaction fails', async () => {
+    const { turnEnd, agentEnd, sendMessage, appendEntry, ctx } = createHarness([activeGoal('ship it', 1)]);
+    ctx.conversations?.compact.mockRejectedValueOnce(new Error('compact failed'));
+
+    await turnEnd({ type: 'turn_end', toolResults: [], errorMessage: 'context window exceeded' }, ctx);
+    await agentEnd({}, ctx);
+    await flushTimers();
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(appendEntry).toHaveBeenCalledWith(
+      'conversation-goal',
+      expect.objectContaining({ objective: 'ship it', status: 'paused', stopReason: 'overflow recovery failed', noProgressTurns: 0 }),
+    );
+  });
+
+  it('does not disable goal mode after repeated non-overflow errored no-tool turns', async () => {
     const { turnEnd, appendEntry, ctx } = createHarness([activeGoal('ship it', 1)]);
 
-    await turnEnd({ toolResults: [], errorMessage: 'context_length_exceeded' }, ctx);
+    await turnEnd({ toolResults: [], errorMessage: 'network failed' }, ctx);
     await turnEnd({ toolResults: [], status: 'failed' }, ctx);
     await flushTimers();
 

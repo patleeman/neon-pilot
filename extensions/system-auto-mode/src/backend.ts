@@ -177,6 +177,44 @@ function hasPendingMessages(ctx: { hasPendingMessages?: () => boolean }): boolea
   return typeof ctx.hasPendingMessages === 'function' ? ctx.hasPendingMessages() : false;
 }
 
+function isContextOverflowError(event: unknown): boolean {
+  if (!isRecord(event)) {
+    return false;
+  }
+  const candidates = [event.errorMessage, event.error, event.message]
+    .map((value) => (typeof value === 'string' ? value : ''))
+    .filter(Boolean);
+  return candidates.some((message) => /context_length_exceeded|context window|context overflow/i.test(message));
+}
+
+function resolveConversationId(event: unknown, ctx: unknown): string | null {
+  if (isRecord(event) && typeof event.conversationId === 'string' && event.conversationId.trim()) {
+    return event.conversationId.trim();
+  }
+  if (isRecord(ctx)) {
+    if (typeof ctx.conversationId === 'string' && ctx.conversationId.trim()) {
+      return ctx.conversationId.trim();
+    }
+    const sessionManager = ctx.sessionManager;
+    if (isRecord(sessionManager) && typeof sessionManager.getSessionId === 'function') {
+      const sessionId = sessionManager.getSessionId();
+      return typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : null;
+    }
+  }
+  return null;
+}
+
+function resolveConversationCompactor(ctx: unknown): ((conversationId: string) => Promise<unknown>) | null {
+  if (!isRecord(ctx)) {
+    return null;
+  }
+  const conversations = ctx.conversations;
+  if (!isRecord(conversations) || typeof conversations.compact !== 'function') {
+    return null;
+  }
+  return (conversationId: string) => Promise.resolve(conversations.compact(conversationId));
+}
+
 // ── Tool parameter schemas ───────────────────────────────────────────────────
 
 const GoalParams = {
@@ -326,6 +364,26 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
         const stopped = createPausedGoalState(state);
         writeGoalState(pi, stopped);
         clearPendingContinuation();
+        return;
+      }
+
+      if (isContextOverflowError(event)) {
+        clearPendingContinuation();
+        overflowRecoveryActive = true;
+        const conversationId = resolveConversationId(event, ctx);
+        const compact = resolveConversationCompactor(ctx);
+        if (!conversationId || !compact) {
+          writeGoalState(pi, createPausedGoalState(state, 'overflow recovery failed'));
+          overflowRecoveryActive = false;
+          return;
+        }
+        try {
+          await compact(conversationId);
+          overflowRecoveryActive = false;
+        } catch {
+          writeGoalState(pi, createPausedGoalState(state, 'overflow recovery failed'));
+          overflowRecoveryActive = false;
+        }
         return;
       }
 
