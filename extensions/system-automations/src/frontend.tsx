@@ -645,7 +645,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
       </AppPageLayout>
 
       {dialogOpen ? (
-        <Dialog onClose={closeDialog} labelledBy={titleId} className="max-w-[42rem]">
+        <Dialog portal onClose={closeDialog} labelledBy={titleId} className="max-w-[42rem]">
           <form onSubmit={submitForm}>
             <DialogHeader title={editingTitle} titleId={titleId} />
             <DialogBody className="grid gap-4">

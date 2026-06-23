@@ -20,6 +20,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 export function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ');
@@ -2342,6 +2343,7 @@ export function Dialog({
   onClose,
   closeOnBackdrop = true,
   labelledBy,
+  portal = false,
   onKeyDown,
   tabIndex,
   ...props
@@ -2353,6 +2355,7 @@ export function Dialog({
   onClose?: () => void;
   closeOnBackdrop?: boolean;
   labelledBy?: string;
+  portal?: boolean | HTMLElement;
 } & HTMLAttributes<HTMLDivElement>) {
   const shellRef = useRef<HTMLDivElement>(null);
 
@@ -2397,7 +2400,7 @@ export function Dialog({
     }
   };
 
-  return (
+  const dialog = (
     <div
       className={cx('ui-overlay-backdrop', backdropClassName)}
       style={backdropStyle}
@@ -2420,6 +2423,13 @@ export function Dialog({
       </div>
     </div>
   );
+
+  if (!portal || typeof document === 'undefined') {
+    return dialog;
+  }
+
+  const target = portal === true ? document.body : portal;
+  return target ? createPortal(dialog, target) : dialog;
 }
 
 export function DialogHeader({

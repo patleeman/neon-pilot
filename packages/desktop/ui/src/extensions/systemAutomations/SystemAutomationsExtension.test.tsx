@@ -13,6 +13,7 @@ const mountedRoots: Root[] = [];
 afterEach(() => {
   for (const root of mountedRoots) act(() => root.unmount());
   mountedRoots.length = 0;
+  document.body.innerHTML = '';
 });
 
 function createPa(overrides: Partial<NativeExtensionClient['automations']> = {}): NativeExtensionClient {
@@ -98,17 +99,28 @@ describe('AutomationsPage', () => {
     expect(shouldOpenNewAutomationFromSearch('?new=1')).toBe(true);
     expect(shouldOpenNewAutomationFromSearch('?filter=current')).toBe(false);
 
-    const { container } = await renderPage(createPa(), { search: '?action=new' });
+    await renderPage(createPa(), { search: '?action=new' });
 
-    expect(container.textContent).toContain('New automation');
-    expect(container.textContent).toContain('Create automation');
-    const dialog = container.querySelector('[role="dialog"]');
-    const title = container.querySelector<HTMLInputElement>('input[name="automation-title"]');
+    expect(document.body.textContent).toContain('New automation');
+    expect(document.body.textContent).toContain('Create automation');
+    const dialog = document.querySelector('[role="dialog"]');
+    const title = document.querySelector<HTMLInputElement>('input[name="automation-title"]');
     expect(dialog).not.toBeNull();
     expect(dialog?.getAttribute('aria-modal')).toBe('true');
     expect(title).not.toBeNull();
     expect(document.activeElement).toBe(title);
-    expect(container.querySelector('select[name="automation-owner-thread"]')).not.toBeNull();
+    expect(document.querySelector('select[name="automation-owner-thread"]')).not.toBeNull();
+  });
+
+  it('mounts the creation dialog at document body so the overlay covers desktop chrome', async () => {
+    const { container } = await renderPage(createPa(), { search: '?action=new' });
+
+    const backdrop = document.body.querySelector<HTMLElement>(':scope > .ui-overlay-backdrop');
+    const dialog = backdrop?.querySelector('[role="dialog"]');
+
+    expect(backdrop).not.toBeNull();
+    expect(dialog).not.toBeNull();
+    expect(container.querySelector('.ui-overlay-backdrop')).toBeNull();
   });
 
   it('keeps the empty state as a list-only page until the dialog is opened', async () => {
@@ -189,9 +201,9 @@ describe('AutomationsPage', () => {
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
     );
 
-    const title = container.querySelector<HTMLInputElement>('input[name="automation-title"]');
+    const title = document.querySelector<HTMLInputElement>('input[name="automation-title"]');
     if (!title) throw new Error('edit title input missing');
-    expect(container.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
     expect(title.value).toBe('Release watch');
 
     await act(async () => {
@@ -199,7 +211,7 @@ describe('AutomationsPage', () => {
       title.dispatchEvent(new Event('input', { bubbles: true }));
     });
     await act(async () =>
-      Array.from(container.querySelectorAll('button'))
+      Array.from(document.querySelectorAll('button'))
         .find((button) => button.textContent === 'Save automation')
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
     );
@@ -209,10 +221,10 @@ describe('AutomationsPage', () => {
 
   it('creates a new owner-threaded conversation automation', async () => {
     const pa = createPa();
-    const { container } = await renderPage(pa, { search: '?action=new' });
-    const title = container.querySelector<HTMLInputElement>('input[name="automation-title"]');
-    const owner = container.querySelector<HTMLSelectElement>('select[name="automation-owner-thread"]');
-    const prompt = container.querySelector<HTMLTextAreaElement>('textarea[name="automation-prompt"]');
+    await renderPage(pa, { search: '?action=new' });
+    const title = document.querySelector<HTMLInputElement>('input[name="automation-title"]');
+    const owner = document.querySelector<HTMLSelectElement>('select[name="automation-owner-thread"]');
+    const prompt = document.querySelector<HTMLTextAreaElement>('textarea[name="automation-prompt"]');
     if (!title || !owner || !prompt) throw new Error('editor controls missing');
 
     await act(async () => {
@@ -224,7 +236,7 @@ describe('AutomationsPage', () => {
       prompt.dispatchEvent(new Event('input', { bubbles: true }));
     });
     await act(async () =>
-      Array.from(container.querySelectorAll('button'))
+      Array.from(document.querySelectorAll('button'))
         .find((button) => button.textContent === 'Create automation')
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
     );
