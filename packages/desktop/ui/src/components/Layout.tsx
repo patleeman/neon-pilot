@@ -5,7 +5,13 @@ import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import { DESKTOP_SHORTCUT_EVENT } from '../commands/desktopShortcutEvents';
-import { COMPANION_CHAT_CLOSE_EVENT, COMPANION_CHAT_OPEN_EVENT, type CompanionChatOpenDetail } from '../companion/companionEvents';
+import {
+  COMPANION_CHAT_CLOSE_EVENT,
+  COMPANION_CHAT_OPEN_EVENT,
+  type CompanionChatOpenDetail,
+  WORKBENCH_CHAT_TAB_DRAG_MIME,
+  WORKBENCH_PROMOTE_CHAT_EVENT,
+} from '../companion/companionEvents';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
 import {
   buildConversationDeeplink,
@@ -40,7 +46,7 @@ import { SIDEBAR_WIDTH_STORAGE_KEY } from '../local/localSettings';
 import { type BrowserTabsState, readBrowserTabsState } from '../local/workbenchBrowserTabs';
 import { attemptLazyRouteRecovery, isRecoverableLazyRouteError, lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
 import { routeIsKnowledge, routeMatchesPrefix, routeSupportsWorkbench } from '../navigation/routeRegistry';
-import { CONVERSATION_LAYOUT_CHANGED_EVENT, readConversationLayout } from '../session/sessionTabs';
+import { CONVERSATION_LAYOUT_CHANGED_EVENT, ensureConversationTabOpen, readConversationLayout } from '../session/sessionTabs';
 import type { DesktopEnvironmentState, SessionMeta } from '../shared/types';
 import { useAllSessions, useSession } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
@@ -54,46 +60,7 @@ import {
   COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT,
   COMPOSER_REMOVE_FIRST_DRAWING_COMMAND_EVENT,
 } from './chat/composerAttachmentCommands';
-import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness';
-import { useConversationArtifactSummaries } from './conversationArtifactHooks';
-import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
-import {
-  CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
-  CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
-  CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
-  CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
-  CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
-  CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
-  CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
-  CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT,
-  CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
-  CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
-} from './conversation/conversationActivityCommands';
-import {
-  CONVERSATION_OPEN_ACTIVE_CHECKPOINT_COMMAND_EVENT,
-  CONVERSATION_OPEN_LATEST_CHECKPOINT_COMMAND_EVENT,
-  CONVERSATION_SCROLL_FIRST_CHECKPOINT_FILE_COMMAND_EVENT,
-} from './conversation/checkpointCommands';
-import {
-  DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT,
-  DRAWING_PICKER_OPEN_COMMAND_EVENT,
-  DRAWING_PICKER_CLOSE_COMMAND_EVENT,
-  DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT,
-} from './conversation/drawingPickerCommands';
-import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
-import { COMPOSER_CREATE_DRAWING_COMMAND_EVENT } from './conversation/composerInputCommands';
-import {
-  COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT,
-  COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT,
-  COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT,
-} from './conversation/composerPreferenceCommands';
-import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversation/conversationGoalCommands';
-import { CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT } from './conversation/conversationQueueCommands';
-import {
-  DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT,
-  DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT,
-  DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT,
-} from './conversation/draftWorkspacePickerCommands';
+import { FILE_CHANGE_TOGGLE_FIRST_COMMAND_EVENT, type FileChangeCommandDetail } from './chat/fileChangeCommands';
 import {
   IMAGE_PREVIEW_CLOSE_COMMAND_EVENT,
   IMAGE_PREVIEW_INSPECT_FIRST_COMMAND_EVENT,
@@ -101,9 +68,9 @@ import {
   type ImagePreviewCommandDetail,
 } from './chat/imagePreviewCommands';
 import { INLINE_TRACE_RUN_TOGGLE_FIRST_COMMAND_EVENT, type InlineTraceRunCommandDetail } from './chat/inlineTraceRunCommands';
-import { FILE_CHANGE_TOGGLE_FIRST_COMMAND_EVENT, type FileChangeCommandDetail } from './chat/fileChangeCommands';
 import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail } from './chat/messageActionCommands';
 import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './chat/messageEditCommands';
+import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness';
 import { SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type SubagentBlockCommandDetail } from './chat/subagentBlockCommands';
 import { THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type ThinkingBlockCommandDetail } from './chat/thinkingBlockCommands';
 import {
@@ -116,7 +83,45 @@ import {
   TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT,
   type TraceClusterCommandDetail,
 } from './chat/traceClusterCommands';
-import { WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT } from './workspaceQuickSelectCommands';
+import {
+  CONVERSATION_OPEN_ACTIVE_CHECKPOINT_COMMAND_EVENT,
+  CONVERSATION_OPEN_LATEST_CHECKPOINT_COMMAND_EVENT,
+  CONVERSATION_SCROLL_FIRST_CHECKPOINT_FILE_COMMAND_EVENT,
+} from './conversation/checkpointCommands';
+import { COMPOSER_CREATE_DRAWING_COMMAND_EVENT } from './conversation/composerInputCommands';
+import {
+  COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT,
+  COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT,
+  COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT,
+} from './conversation/composerPreferenceCommands';
+import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
+import {
+  CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
+  CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
+  CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
+  CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
+  CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
+} from './conversation/conversationActivityCommands';
+import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversation/conversationGoalCommands';
+import { CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT } from './conversation/conversationQueueCommands';
+import {
+  DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT,
+  DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT,
+  DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT,
+} from './conversation/draftWorkspacePickerCommands';
+import {
+  DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT,
+  DRAWING_PICKER_CLOSE_COMMAND_EVENT,
+  DRAWING_PICKER_OPEN_COMMAND_EVENT,
+  DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT,
+} from './conversation/drawingPickerCommands';
+import { useConversationArtifactSummaries } from './conversationArtifactHooks';
+import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
 import {
   extensionToolPanelMode,
   findExtensionToolPanelBySlot,
@@ -139,10 +144,12 @@ import {
   PanelMessage,
   SectionLabel,
   WorkbenchTab,
+  WorkbenchTabActionButton,
   WorkbenchTabButton,
   WorkbenchTabCloseButton,
 } from './ui';
 import { iconGlyphForExtensionSurface, labelForExtensionToolPanel, shouldRenderWorkbenchToolInNav } from './workbenchNav';
+import { WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT } from './workspaceQuickSelectCommands';
 
 const DESKTOP_NAVIGATE_EVENT = 'neon-pilot-desktop-navigate';
 const CommandPalette = lazyRouteWithRecovery('layout-command-palette', () =>
@@ -1000,6 +1007,7 @@ function WorkbenchPanel({
   onRailResizeReset,
   onActiveTabChange,
   onCloseTab,
+  onPromoteChatTab,
   onOpenNewTab,
   onActiveToolChange,
   onRailOpenChange,
@@ -1028,6 +1036,7 @@ function WorkbenchPanel({
   onRailResizeReset: () => void;
   onActiveTabChange: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
+  onPromoteChatTab?: (conversationId: string) => void;
   onOpenNewTab: () => void;
   onRailOpenChange: (open: boolean) => void;
   onActiveToolChange: (
@@ -1067,6 +1076,7 @@ function WorkbenchPanel({
         activeKnowledgeFileId={activeKnowledgeFileId}
         onActiveTabChange={onActiveTabChange}
         onCloseTab={onCloseTab}
+        onPromoteChatTab={onPromoteChatTab}
         onOpenNewTab={onOpenNewTab}
         onCheckpointSelect={() => undefined}
         onWorkspaceFileClear={onWorkspaceFileClear}
@@ -1185,6 +1195,7 @@ function WorkbenchTabStrip({
   activeKnowledgeFileId,
   onActiveTabChange,
   onCloseTab,
+  onPromoteChatTab,
   onOpenNewTab,
   onCheckpointSelect,
   onWorkspaceFileClear,
@@ -1198,6 +1209,7 @@ function WorkbenchTabStrip({
   activeKnowledgeFileId: string | null;
   onActiveTabChange: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
+  onPromoteChatTab?: (conversationId: string) => void;
   onOpenNewTab: () => void;
   onCheckpointSelect: (checkpointId: string | null) => void;
   onWorkspaceFileClear: () => void;
@@ -1298,26 +1310,53 @@ function WorkbenchTabStrip({
   return (
     <div className="flex h-11 shrink-0 items-center gap-1 overflow-hidden border-b border-border-subtle bg-base px-2">
       <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-        {openTabs.map((tab) => (
-          <WorkbenchTab
-            key={tab.id}
-            ref={activeTabId === tab.id ? activeTabRef : undefined}
-            active={activeTabId === tab.id}
-            title={labelForTab(tab)}
-          >
-            <WorkbenchTabButton icon={iconForMode(tab.mode)} label={labelForTab(tab)} onClick={() => selectTab(tab.id)} />
-            <WorkbenchTabCloseButton
-              aria-label={`Close ${labelForTab(tab)}`}
-              title={`Close ${labelForTab(tab)}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onCloseTab(tab.id);
-              }}
+        {openTabs.map((tab) => {
+          const isChatTab = tab.mode === 'chat' && Boolean(tab.conversationId);
+          return (
+            <WorkbenchTab
+              key={tab.id}
+              ref={activeTabId === tab.id ? activeTabRef : undefined}
+              active={activeTabId === tab.id}
+              title={labelForTab(tab)}
+              draggable={isChatTab}
+              onDragStart={
+                isChatTab
+                  ? (event) => {
+                      const conversationId = tab.conversationId as string;
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData(WORKBENCH_CHAT_TAB_DRAG_MIME, conversationId);
+                      event.dataTransfer.setData('application/x-neon-pilot-conversation', conversationId);
+                      event.dataTransfer.setData('text/plain', conversationId);
+                    }
+                  : undefined
+              }
             >
-              ×
-            </WorkbenchTabCloseButton>
-          </WorkbenchTab>
-        ))}
+              <WorkbenchTabButton icon={iconForMode(tab.mode)} label={labelForTab(tab)} onClick={() => selectTab(tab.id)} />
+              {isChatTab && onPromoteChatTab ? (
+                <WorkbenchTabActionButton
+                  aria-label={`Move ${labelForTab(tab)} to sidebar`}
+                  title={`Move ${labelForTab(tab)} to sidebar`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onPromoteChatTab(tab.conversationId as string);
+                  }}
+                >
+                  ⇱
+                </WorkbenchTabActionButton>
+              ) : null}
+              <WorkbenchTabCloseButton
+                aria-label={`Close ${labelForTab(tab)}`}
+                title={`Close ${labelForTab(tab)}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onCloseTab(tab.id);
+                }}
+              >
+                ×
+              </WorkbenchTabCloseButton>
+            </WorkbenchTab>
+          );
+        })}
       </div>
       <IconButton
         size="sm"
@@ -1622,9 +1661,7 @@ export function Layout() {
         selectedArtifactByConversation[activeConversationId] ??
         null)
       : null;
-  const hasActiveWorkbenchFile = Boolean(
-    activeWorkbenchArtifactId || activeWorkbenchKnowledgeFileId || activeWorkbenchWorkspaceFileId,
-  );
+  const hasActiveWorkbenchFile = Boolean(activeWorkbenchArtifactId || activeWorkbenchKnowledgeFileId || activeWorkbenchWorkspaceFileId);
   const previousActiveConversationIdRef = useRef<string | null>(activeConversationId);
   const prewarmedLiveSessionWorkspaceCwdsRef = useRef(new Map<string, number>());
   const activeWorkspaceCwd = activeSessionCwd;
@@ -1851,15 +1888,31 @@ export function Layout() {
     [activeWorkbenchTabId, clearActiveWorkbenchFileSelection],
   );
 
+  const promoteWorkbenchChatTab = useCallback(
+    (conversationId: string) => {
+      ensureConversationTabOpen(conversationId, { active: true });
+      const tab = openWorkbenchTabsRef.current.find(
+        (candidate) => candidate.mode === 'chat' && candidate.conversationId === conversationId,
+      );
+      if (tab) {
+        closeWorkbenchTab(tab.id);
+      }
+      navigate(`/conversations/${encodeURIComponent(conversationId)}`);
+    },
+    [closeWorkbenchTab, navigate],
+  );
+
   useEffect(() => {
     setExtensionCommandContext('route', location.pathname);
     setExtensionCommandContext('layout.mode', appLayoutMode);
     setExtensionCommandContext('conversation.hasActive', Boolean(activeConversationId));
     setExtensionCommandContext('workbench.hasActiveTab', Boolean(activeWorkbenchTabId));
+    setExtensionCommandContext('workbench.hasActiveChatTab', Boolean(activeWorkbenchChatConversationId));
     setExtensionCommandContext('workbench.hasActiveFile', hasActiveWorkbenchFile);
     setExtensionCommandContext('workbench.canToggleExplorer', canToggleWorkbenchExplorer);
   }, [
     activeConversationId,
+    activeWorkbenchChatConversationId,
     activeWorkbenchTabId,
     appLayoutMode,
     canToggleWorkbenchExplorer,
@@ -2043,6 +2096,7 @@ export function Layout() {
         'conversation.hasActive': Boolean(activeConversationId),
         'conversation.hasCwd': Boolean(activeSessionCwd?.trim()),
         'workbench.hasActiveTab': Boolean(activeWorkbenchTabId),
+        'workbench.hasActiveChatTab': Boolean(activeWorkbenchChatConversationId),
         'workbench.hasActiveFile': hasActiveWorkbenchFile,
         'workbench.canToggleExplorer': canToggleWorkbenchExplorer,
       },
@@ -2283,6 +2337,11 @@ export function Layout() {
         closeWorkbenchTab(activeWorkbenchTabId);
         return true;
       },
+      promoteActiveWorkbenchChatTab() {
+        if (!activeWorkbenchChatConversationId) return false;
+        promoteWorkbenchChatTab(activeWorkbenchChatConversationId);
+        return true;
+      },
       closeActiveWorkbenchFile() {
         if (!hasActiveWorkbenchFile) return false;
         window.dispatchEvent(new CustomEvent(WORKBENCH_CLOSE_ACTIVE_FILE_EVENT));
@@ -2335,11 +2394,15 @@ export function Layout() {
         return true;
       },
       artifactCopySource() {
-        window.dispatchEvent(new CustomEvent<{ command: ArtifactModalCommand }>(ARTIFACT_MODAL_COMMAND_EVENT, { detail: { command: 'copySource' } }));
+        window.dispatchEvent(
+          new CustomEvent<{ command: ArtifactModalCommand }>(ARTIFACT_MODAL_COMMAND_EVENT, { detail: { command: 'copySource' } }),
+        );
         return true;
       },
       artifactToggleSource() {
-        window.dispatchEvent(new CustomEvent<{ command: ArtifactModalCommand }>(ARTIFACT_MODAL_COMMAND_EVENT, { detail: { command: 'toggleSource' } }));
+        window.dispatchEvent(
+          new CustomEvent<{ command: ArtifactModalCommand }>(ARTIFACT_MODAL_COMMAND_EVENT, { detail: { command: 'toggleSource' } }),
+        );
         return true;
       },
       artifactToggleFullscreen() {
@@ -2349,7 +2412,9 @@ export function Layout() {
         return true;
       },
       artifactClose() {
-        window.dispatchEvent(new CustomEvent<{ command: ArtifactModalCommand }>(ARTIFACT_MODAL_COMMAND_EVENT, { detail: { command: 'close' } }));
+        window.dispatchEvent(
+          new CustomEvent<{ command: ArtifactModalCommand }>(ARTIFACT_MODAL_COMMAND_EVENT, { detail: { command: 'close' } }),
+        );
         return true;
       },
       closeImagePreview() {
@@ -2397,19 +2462,27 @@ export function Layout() {
         return true;
       },
       copyFirstMessageAction() {
-        window.dispatchEvent(new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'copyFirst' } }));
+        window.dispatchEvent(
+          new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'copyFirst' } }),
+        );
         return true;
       },
       editFirstMessageAction() {
-        window.dispatchEvent(new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'editFirst' } }));
+        window.dispatchEvent(
+          new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'editFirst' } }),
+        );
         return true;
       },
       rewindFirstMessageAction() {
-        window.dispatchEvent(new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'rewindFirst' } }));
+        window.dispatchEvent(
+          new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'rewindFirst' } }),
+        );
         return true;
       },
       forkFirstMessageAction() {
-        window.dispatchEvent(new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'forkFirst' } }));
+        window.dispatchEvent(
+          new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'forkFirst' } }),
+        );
         return true;
       },
       saveMessageEdit() {
@@ -2582,6 +2655,7 @@ export function Layout() {
       activeConversationId,
       activeSessionCwd,
       activeWorkbenchArtifactId,
+      activeWorkbenchChatConversationId,
       activeWorkbenchKnowledgeFileId,
       activeWorkbenchRailSurface,
       activeWorkbenchTabId,
@@ -2601,6 +2675,7 @@ export function Layout() {
       navigate,
       openWorkbenchNewTab,
       openWorkbenchToolTab,
+      promoteWorkbenchChatTab,
       setActiveConversationTool,
       startNewConversationFromLayout,
       handleToggleWorkbenchExplorer,
@@ -2896,13 +2971,21 @@ export function Layout() {
       closeWorkbenchTab(detail.conversationId);
     }
 
+    function handleWorkbenchPromoteChat(event: Event) {
+      const detail = (event as CustomEvent<{ conversationId?: string }>).detail;
+      if (!detail?.conversationId) return;
+      promoteWorkbenchChatTab(detail.conversationId);
+    }
+
     window.addEventListener(COMPANION_CHAT_OPEN_EVENT, handleCompanionChatOpen);
     window.addEventListener(COMPANION_CHAT_CLOSE_EVENT, handleCompanionChatClose);
+    window.addEventListener(WORKBENCH_PROMOTE_CHAT_EVENT, handleWorkbenchPromoteChat);
     return () => {
       window.removeEventListener(COMPANION_CHAT_OPEN_EVENT, handleCompanionChatOpen);
       window.removeEventListener(COMPANION_CHAT_CLOSE_EVENT, handleCompanionChatClose);
+      window.removeEventListener(WORKBENCH_PROMOTE_CHAT_EVENT, handleWorkbenchPromoteChat);
     };
-  }, [closeWorkbenchTab, handleAppLayoutModeChange, openWorkbenchToolTab]);
+  }, [closeWorkbenchTab, handleAppLayoutModeChange, openWorkbenchToolTab, promoteWorkbenchChatTab]);
 
   useEffect(() => {
     function handleDesktopShortcut(event: Event) {
@@ -3091,6 +3174,7 @@ export function Layout() {
                       onRailResizeReset={workbenchExplorer.reset}
                       onActiveTabChange={setActiveWorkbenchTabId}
                       onCloseTab={closeWorkbenchTab}
+                      onPromoteChatTab={promoteWorkbenchChatTab}
                       onOpenNewTab={openWorkbenchNewTab}
                       onActiveToolChange={openWorkbenchToolTab}
                       onRailOpenChange={(open) => {

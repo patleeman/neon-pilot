@@ -86,6 +86,7 @@ export interface ExtensionCommandExecutorOptions {
   scrollFirstCheckpointFile?(): boolean;
   newWorkbenchTab?(): boolean;
   closeActiveWorkbenchTab?(): boolean;
+  promoteActiveWorkbenchChatTab?(): boolean;
   closeActiveWorkbenchFile?(): boolean;
   refreshActiveWorkbenchFile?(): boolean;
   toggleWorkbenchExplorer?(): boolean;
@@ -293,6 +294,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.pageDown', title: 'Page Conversation Down', category: 'Conversation' },
     { id: 'workbench.newTab', title: 'New Workbench Tab', category: 'Workbench' },
     { id: 'workbench.closeActiveTab', title: 'Close Active Workbench Tab', category: 'Workbench' },
+    { id: 'workbench.promoteActiveChatTab', title: 'Move Active Chat Tab to Sidebar', category: 'Workbench' },
     { id: 'workbench.closeActiveFile', title: 'Close Active Workbench File', category: 'Workbench' },
     { id: 'workbench.refreshActiveFile', title: 'Refresh Active Workbench File', category: 'Workbench' },
     { id: 'workbench.toggleExplorer', title: 'Toggle Workbench Explorer', category: 'Workbench' },
@@ -877,7 +879,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.cancelLatestBackgroundRun?.() ?? false;
       },
       canExecute(_args, context) {
-        return Boolean(options.cancelLatestBackgroundRun) && readContextValue(context, 'conversation.canCancelLatestBackgroundRun') === true;
+        return (
+          Boolean(options.cancelLatestBackgroundRun) && readContextValue(context, 'conversation.canCancelLatestBackgroundRun') === true
+        );
       },
     },
     {
@@ -921,7 +925,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.cancelFirstDeferredResume?.() ?? false;
       },
       canExecute(_args, context) {
-        return Boolean(options.cancelFirstDeferredResume) && readContextValue(context, 'conversation.canCancelFirstDeferredResume') === true;
+        return (
+          Boolean(options.cancelFirstDeferredResume) && readContextValue(context, 'conversation.canCancelFirstDeferredResume') === true
+        );
       },
     },
     {
@@ -965,7 +971,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.scrollFirstCheckpointFile?.() ?? false;
       },
       canExecute(_args, context) {
-        return Boolean(options.scrollFirstCheckpointFile) && readContextValue(context, 'conversation.canScrollFirstCheckpointFile') === true;
+        return (
+          Boolean(options.scrollFirstCheckpointFile) && readContextValue(context, 'conversation.canScrollFirstCheckpointFile') === true
+        );
       },
     },
     {
@@ -1175,6 +1183,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.closeActiveWorkbenchTab) && readContextValue(context, 'workbench.hasActiveTab') === true;
+      },
+    },
+    {
+      id: 'workbench.promoteActiveChatTab',
+      title: 'Move Active Chat Tab to Sidebar',
+      category: 'Workbench',
+      execute() {
+        return options.promoteActiveWorkbenchChatTab?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.promoteActiveWorkbenchChatTab) && readContextValue(context, 'workbench.hasActiveChatTab') === true;
       },
     },
     {
@@ -1416,9 +1435,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.toggleFirstToolBlockLinkedRuns?.() ?? false;
       },
       canExecute(_args, context) {
-        return (
-          Boolean(options.toggleFirstToolBlockLinkedRuns) && readContextValue(context, 'toolBlock.canToggleFirstLinkedRuns') === true
-        );
+        return Boolean(options.toggleFirstToolBlockLinkedRuns) && readContextValue(context, 'toolBlock.canToggleFirstLinkedRuns') === true;
       },
     },
     {

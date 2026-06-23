@@ -140,8 +140,8 @@ export {
   ShelfSection,
   type SidebarAction,
   SidebarActionHeader,
-  type SidebarListItem,
   SidebarList,
+  type SidebarListItem,
   SidebarMessage,
   SidebarNavButton,
   SidebarRow,
@@ -180,6 +180,7 @@ export {
   WorkbenchHeader,
   WorkbenchShell,
   WorkbenchTab,
+  WorkbenchTabActionButton,
   WorkbenchTabButton,
   WorkbenchTabCloseButton,
 } from './primitives';

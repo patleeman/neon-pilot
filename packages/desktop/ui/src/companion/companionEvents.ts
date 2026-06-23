@@ -36,3 +36,28 @@ export function dispatchOpenCompanionChat(detail: CompanionChatOpenDetail): void
  * or when the companion conversation itself is deleted.
  */
 export const COMPANION_CHAT_CLOSE_EVENT = 'pa:companion-chat-close';
+
+/**
+ * Promote a workbench chat tab to a full sidebar thread.
+ * Dispatched when a user drags a workbench chat tab onto the left sidebar
+ * (or invokes the Move to sidebar action). Layout owns the workbench tab
+ * state and performs the promotion: open the conversation in the sidebar,
+ * close the workbench tab, and navigate to it.
+ */
+export const WORKBENCH_PROMOTE_CHAT_EVENT = 'pa:workbench-promote-chat';
+
+export interface WorkbenchPromoteChatDetail {
+  conversationId: string;
+}
+
+export function dispatchPromoteWorkbenchChat(detail: WorkbenchPromoteChatDetail): void {
+  window.dispatchEvent(new CustomEvent(WORKBENCH_PROMOTE_CHAT_EVENT, { detail }));
+}
+
+/**
+ * Drag MIME type marking a payload as a workbench chat tab being dragged
+ * onto the left sidebar. Distinct from application/x-neon-pilot-conversation
+ * (used internally by the sidebar for reordering) so the sidebar can accept
+ * the drop only from the workbench, not the reverse direction.
+ */
+export const WORKBENCH_CHAT_TAB_DRAG_MIME = 'application/x-neon-pilot-workbench-chat-tab';

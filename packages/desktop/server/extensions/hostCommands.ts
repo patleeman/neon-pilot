@@ -69,6 +69,7 @@ export const HOST_COMMAND_IDS = [
   'conversation.pageDown',
   'workbench.newTab',
   'workbench.closeActiveTab',
+  'workbench.promoteActiveChatTab',
   'workbench.closeActiveFile',
   'workbench.refreshActiveFile',
   'workbench.toggleExplorer',

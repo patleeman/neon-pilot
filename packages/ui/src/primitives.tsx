@@ -1691,6 +1691,16 @@ export const WorkbenchTabCloseButton = forwardRef<HTMLButtonElement, ButtonHTMLA
   },
 );
 
+export const WorkbenchTabActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(
+  function WorkbenchTabActionButton({ className, children, type = 'button', ...props }, ref) {
+    return (
+      <button ref={ref} type={type} className={cx('ui-workbench-tab-action-button', className)} {...props}>
+        {children}
+      </button>
+    );
+  },
+);
+
 export const SwatchOption = forwardRef<
   HTMLButtonElement,
   ButtonHTMLAttributes<HTMLButtonElement> & {

@@ -20,6 +20,7 @@ import { type ActivityTreeDropPosition, ActivityTreeView } from '../activity/Act
 import { useAppEvents, useLiveTitles } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents';
+import { dispatchPromoteWorkbenchChat, WORKBENCH_CHAT_TAB_DRAG_MIME } from '../companion/companionEvents';
 import {
   buildConversationGroupLabels,
   getConversationGroupLabel,
@@ -115,7 +116,7 @@ import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
 import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
-import { IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
+import { cx, IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
 import { useSidebarConversationScope } from './useSidebarConversationScope';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 
@@ -1854,6 +1855,7 @@ export function Sidebar() {
     position: OpenConversationDropPosition;
   } | null>(null);
   const [conversationCwdDropTargetGroupKey, setConversationCwdDropTargetGroupKey] = useState<string | null>(null);
+  const [workbenchChatDropHover, setWorkbenchChatDropHover] = useState(false);
   const conversationSurfaceId = useMemo(() => getOrCreateConversationSurfaceId(), []);
   const sidebarNoticeTimeoutRef = useRef<number | null>(null);
   const [sidebarNotice, setSidebarNotice] = useState<{ tone: 'accent' | 'danger'; text: string } | null>(null);
@@ -2595,6 +2597,55 @@ export function Sidebar() {
     setDropTarget(null);
     setGroupDropTarget(null);
     setConversationCwdDropTargetGroupKey(null);
+  }
+
+  function isWorkbenchChatTabDrag(event: DragEvent<HTMLElement>): boolean {
+    const dataTransfer = event.dataTransfer as unknown as
+      | {
+          types?: {
+            includes?: (value: string) => boolean;
+            contains?: (value: string) => boolean;
+            length?: number;
+            item?: (index: number) => string | null;
+          };
+        }
+      | undefined;
+    const types = dataTransfer?.types;
+    if (!types) return false;
+    if (typeof types.includes === 'function') return types.includes(WORKBENCH_CHAT_TAB_DRAG_MIME);
+    if (typeof types.contains === 'function') return types.contains(WORKBENCH_CHAT_TAB_DRAG_MIME);
+    const length = types.length ?? 0;
+    for (let index = 0; index < length; index += 1) {
+      if (types.item?.(index) === WORKBENCH_CHAT_TAB_DRAG_MIME) return true;
+    }
+    return false;
+  }
+
+  function handleWorkbenchChatDragOver(event: DragEvent<HTMLDivElement>) {
+    if (!isWorkbenchChatTabDrag(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    setWorkbenchChatDropHover(true);
+  }
+
+  function handleWorkbenchChatDragLeave(event: DragEvent<HTMLDivElement>) {
+    if (!isWorkbenchChatTabDrag(event)) return;
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setWorkbenchChatDropHover(false);
+  }
+
+  function handleWorkbenchChatDrop(event: DragEvent<HTMLDivElement>) {
+    if (!isWorkbenchChatTabDrag(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setWorkbenchChatDropHover(false);
+    const conversationId =
+      event.dataTransfer.getData(WORKBENCH_CHAT_TAB_DRAG_MIME) ||
+      event.dataTransfer.getData('application/x-neon-pilot-conversation') ||
+      event.dataTransfer.getData('text/plain');
+    if (conversationId) {
+      dispatchPromoteWorkbenchChat({ conversationId });
+    }
   }
 
   function getDropPosition(event: DragEvent<HTMLElement>): OpenConversationDropPosition {
@@ -3984,7 +4035,15 @@ export function Sidebar() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 pb-3">
+            <div
+              className={cx(
+                'flex-1 overflow-y-auto overflow-x-hidden min-h-0 pb-3 transition-colors',
+                workbenchChatDropHover && 'bg-accent/10',
+              )}
+              onDragOver={handleWorkbenchChatDragOver}
+              onDragLeave={handleWorkbenchChatDragLeave}
+              onDrop={handleWorkbenchChatDrop}
+            >
               <div className="py-0.5 space-y-0.5">
                 {!loading &&
                 sessionsReady &&
