@@ -1155,9 +1155,9 @@ export function CommandsSettingsSection() {
                         className="absolute right-2 top-1/2 -translate-y-1/2 text-[15px]"
                         disabled={busy}
                         aria-label={
-                          keybinding.enabled ? `Clear shortcut for ${keybinding.title}` : `Enable shortcut for ${keybinding.title}`
+                          keybinding.enabled ? `Disable shortcut for ${keybinding.title}` : `Enable shortcut for ${keybinding.title}`
                         }
-                        title={keybinding.enabled ? 'Clear shortcut' : 'Enable shortcut'}
+                        title={keybinding.enabled ? 'Disable shortcut' : 'Enable shortcut'}
                         onClick={() => void toggleKeybinding(keybinding)}
                       >
                         {keybinding.enabled ? '×' : '+'}

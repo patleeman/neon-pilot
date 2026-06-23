@@ -523,13 +523,13 @@ describe('CommandsSettingsSection', () => {
     expect(commandRow?.textContent).toContain('⌘/Ctrl + Shift + p');
     expect(commandRow?.textContent).not.toContain('mod + k');
 
-    const clearButton = commandRow?.querySelector<HTMLButtonElement>('button[aria-label="Clear shortcut for Open command palette"]');
-    if (!(clearButton instanceof HTMLButtonElement)) {
-      throw new Error('Expected command palette shortcut clear button');
+    const disableButton = commandRow?.querySelector<HTMLButtonElement>('button[aria-label="Disable shortcut for Open command palette"]');
+    if (!(disableButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected command palette shortcut disable button');
     }
 
     act(() => {
-      clearButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      disableButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     await flushAsyncWork();
 
