@@ -31,6 +31,13 @@ function createProvider(model: string, runtimeDir: string): LocalWhisperTranscri
   return new LocalWhisperTranscriptionProvider({ model, modelRootPath: join(dirname(authFile(runtimeDir)), 'transcription-models') });
 }
 
+async function ensureProviderModelInstalled(provider: LocalWhisperTranscriptionProvider): Promise<void> {
+  const status = await provider.getModelStatus();
+  if (!status.installed) {
+    await provider.installModel();
+  }
+}
+
 export async function readSettings(_input: unknown, ctx: ExtensionBackendContext) {
   return buildDictationSettingsState(settingsFile(ctx.runtimeDir));
 }
@@ -69,6 +76,7 @@ export async function transcribeFile(
 ) {
   const settings = readDictationSettings(settingsFile(ctx.runtimeDir));
   const provider = createProvider(settings.model, ctx.runtimeDir);
+  await ensureProviderModelInstalled(provider);
   return provider.transcribeFile(
     {
       data: readRequiredBase64(input.dataBase64, 'dataBase64'),

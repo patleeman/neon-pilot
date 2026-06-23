@@ -118,14 +118,15 @@ export function DictationButton({
     renderMode?: 'inline' | 'menu';
   };
 }) {
-  const [state, setState] = useState<'idle' | 'recording' | 'transcribing'>('idle');
+  const [state, setState] = useState<'idle' | 'recording' | 'preparing' | 'transcribing'>('idle');
   const [samples, setSamples] = useState<number[]>([]);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const captureRef = useRef<ComposerDictationCapture | null>(null);
   const pendingStartRef = useRef<Promise<void> | null>(null);
   const pointerRef = useRef<{ pointerId: number; startedAt: number; startedExistingRecording: boolean } | null>(null);
   const mountedRef = useRef(true);
-  const toggleAvailable = !controlContext.composerDisabled && state !== 'transcribing';
+  const busy = state === 'preparing' || state === 'transcribing';
+  const toggleAvailable = !controlContext.composerDisabled && !busy;
 
   useEffect(() => {
     return () => {
@@ -159,6 +160,16 @@ export function DictationButton({
       const { audio, durationMs, mimeType, fileName } = await capture.stop();
       if (!mountedRef.current) return;
       if (audio.byteLength === 0 || durationMs < 150) return;
+      const status = (await pa.extension.invoke('modelStatus')) as DictationModelStatus;
+      if (!mountedRef.current) return;
+      if (!status.installed) {
+        setState('preparing');
+        pa.ui.toast('Installing dictation model…');
+        await pa.extension.invoke('installModel', { model: status.model });
+        if (!mountedRef.current) return;
+        setState('transcribing');
+        pa.ui.toast('Dictation model installed.');
+      }
       const result = (await pa.extension.invoke('transcribeFile', { dataBase64: bytesToBase64(audio), mimeType, fileName })) as {
         text?: string;
       };
@@ -183,7 +194,7 @@ export function DictationButton({
   }, [controlContext.appendText, controlContext.insertText, pa]);
 
   const start = useCallback(async () => {
-    if (controlContext.composerDisabled || captureRef.current || pendingStartRef.current || state === 'transcribing') return;
+    if (controlContext.composerDisabled || captureRef.current || pendingStartRef.current || busy) return;
     const pendingStart = (async () => {
       try {
         setSamples([]);
@@ -213,7 +224,7 @@ export function DictationButton({
     })();
     pendingStartRef.current = pendingStart;
     await pendingStart;
-  }, [controlContext.composerDisabled, pa, state]);
+  }, [busy, controlContext.composerDisabled, pa]);
 
   useEffect(() => {
     const handleDictationToggleCommand = () => {
@@ -231,7 +242,7 @@ export function DictationButton({
       <IconButton
         shape="circle"
         onPointerDown={(event) => {
-          if (event.button !== 0 || controlContext.composerDisabled || state === 'transcribing') return;
+          if (event.button !== 0 || controlContext.composerDisabled || busy) return;
           event.preventDefault();
           event.currentTarget.setPointerCapture(event.pointerId);
           const startedExistingRecording = captureRef.current !== null;
@@ -251,25 +262,27 @@ export function DictationButton({
           pointerRef.current = null;
           if (!pointer.startedExistingRecording) void stop();
         }}
-        disabled={controlContext.composerDisabled || state === 'transcribing'}
+        disabled={controlContext.composerDisabled || busy}
         className={cx(
           'touch-none transition-colors disabled:cursor-default disabled:opacity-40',
           state === 'recording'
             ? 'bg-danger/15 text-danger hover:bg-danger/25'
-            : state === 'transcribing'
+            : busy
               ? 'bg-elevated text-accent'
               : 'text-secondary hover:bg-elevated/60 hover:text-primary',
         )}
         title={
           state === 'recording'
             ? 'Recording dictation — release after a hold to stop, or click again to toggle off'
-            : state === 'transcribing'
-              ? 'Transcribing…'
-              : 'Dictate. Hold to record while held, or click to toggle.'
+            : state === 'preparing'
+              ? 'Installing dictation model…'
+              : state === 'transcribing'
+                ? 'Transcribing…'
+                : 'Dictate. Hold to record while held, or click to toggle.'
         }
-        aria-label={state === 'recording' ? 'Stop dictation' : 'Start dictation'}
+        aria-label={state === 'recording' ? 'Stop dictation' : state === 'preparing' ? 'Installing dictation model' : 'Start dictation'}
       >
-        {state === 'transcribing' ? <Spinner /> : state === 'recording' ? <StopIcon /> : <MicIcon />}
+        {busy ? <Spinner /> : state === 'recording' ? <StopIcon /> : <MicIcon />}
       </IconButton>
     </>
   );

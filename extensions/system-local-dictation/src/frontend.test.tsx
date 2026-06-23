@@ -176,7 +176,9 @@ describe('DictationButton', () => {
   it('inserts transcribed text through the composer append API', async () => {
     const setContext = vi.fn();
     const appendText = vi.fn();
-    const invoke = vi.fn(async () => ({ text: ' hello world ' }));
+    const invoke = vi.fn(async (action: string) =>
+      action === 'modelStatus' ? { installed: true, model: 'base.en' } : { text: ' hello world ' },
+    );
     const stop = vi.fn(async () => ({
       audio: new Uint8Array([1, 2, 3]),
       durationMs: 500,
@@ -198,5 +200,37 @@ describe('DictationButton', () => {
     expect(stop).toHaveBeenCalledTimes(1);
     expect(invoke).toHaveBeenCalledWith('transcribeFile', expect.objectContaining({ mimeType: 'audio/pcm', fileName: 'dictation.pcm' }));
     expect(appendText).toHaveBeenCalledWith('hello world');
+  });
+
+  it('installs the selected model from the composer path before first transcription', async () => {
+    const setContext = vi.fn();
+    const appendText = vi.fn();
+    const invoke = vi.fn(async (action: string) => {
+      if (action === 'modelStatus') return { installed: false, model: 'base.en' };
+      if (action === 'installModel') return { model: 'base.en', cacheDir: '/runtime/transcription-models' };
+      return { text: ' first run works ' };
+    });
+    const stop = vi.fn(async () => ({
+      audio: new Uint8Array([1, 2, 3]),
+      durationMs: 500,
+      mimeType: 'audio/pcm',
+      fileName: 'dictation.pcm',
+    }));
+    startCaptureMock.mockResolvedValueOnce({ stop });
+    const { container } = renderDictationButton({ composerDisabled: false, setContext, invoke, appendText });
+    const button = container.querySelector('button')!;
+
+    await act(async () => {
+      dispatchPointerDown(button);
+    });
+    await act(async () => {
+      dispatchPointerDown(button);
+      dispatchPointerUp(button);
+    });
+
+    expect(invoke).toHaveBeenCalledWith('modelStatus');
+    expect(invoke).toHaveBeenCalledWith('installModel', { model: 'base.en' });
+    expect(invoke).toHaveBeenCalledWith('transcribeFile', expect.any(Object));
+    expect(appendText).toHaveBeenCalledWith('first run works');
   });
 });

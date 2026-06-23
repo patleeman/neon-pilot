@@ -69,6 +69,15 @@ describe('local dictation backend', () => {
     );
   });
 
+  it('installs the configured model before transcribing when it is missing', async () => {
+    getModelStatus.mockResolvedValueOnce({ installed: false, model: 'base.en' });
+
+    await transcribeFile({ dataBase64: Buffer.from('audio').toString('base64') }, ctx);
+
+    expect(installModel).toHaveBeenCalledTimes(1);
+    expect(installModel.mock.invocationCallOrder[0]).toBeLessThan(transcribeFileProvider.mock.invocationCallOrder[0]);
+  });
+
   it('rejects invalid base64 input', async () => {
     await expect(transcribeFile({ dataBase64: '' }, ctx)).rejects.toThrow('dataBase64 is required');
     await expect(transcribeFile({ dataBase64: 'abcde' }, ctx)).rejects.toThrow('valid base64');
