@@ -53,6 +53,7 @@ Pick the shortest path for what you are doing:
 - [SQLite migrations](sqlite-migrations.md) — shared versioned schema migration framework
 - [Release QA](release-qa.md) — required release gate and hands-on smoke checklist
 - [Release test inventory](release-test-inventory.md) — broad release-risk checklist
+- [Feature inventory](feature-inventory.md) — user-perspective feature list for QA planning and coverage mapping
 
 The public website docs are built from the page list in [`apps/site/build-docs.mjs`](../apps/site/build-docs.mjs). Update that list when a repo doc should appear on neonpilot.net; keep this README as the human and agent map for the source tree.
 
