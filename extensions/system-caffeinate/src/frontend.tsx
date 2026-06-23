@@ -1,6 +1,6 @@
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
 import { ToolbarButton, Tooltip } from '@neon-pilot/extensions/ui';
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 interface CaffeinateStatus {
   running: boolean;
@@ -54,11 +54,10 @@ export function CaffeinateToggle({ pa }: CaffeinateToggleProps) {
     const runRefresh = () => {
       if (!cancelled) void refresh();
     };
-    const timeoutId = window.setTimeout(runRefresh, 6_000);
+    runRefresh();
     const intervalId = window.setInterval(runRefresh, 10_000);
     return () => {
       cancelled = true;
-      window.clearTimeout(timeoutId);
       window.clearInterval(intervalId);
     };
   }, [refresh]);
