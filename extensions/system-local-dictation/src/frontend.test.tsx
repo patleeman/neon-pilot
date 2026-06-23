@@ -3,8 +3,8 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DictationButton } from './frontend';
 import { startComposerDictationCapture } from './capture';
+import { DictationButton } from './frontend';
 
 vi.mock('./capture', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./capture')>();
@@ -37,7 +37,19 @@ function dispatchPointerDown(button: HTMLButtonElement) {
   button.dispatchEvent(event);
 }
 
-function renderDictationButton(input: { composerDisabled: boolean; setContext: ReturnType<typeof vi.fn> }) {
+function dispatchPointerUp(button: HTMLButtonElement) {
+  const event = new Event('pointerup', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'pointerId', { value: 1 });
+  button.dispatchEvent(event);
+}
+
+function renderDictationButton(input: {
+  composerDisabled: boolean;
+  setContext: ReturnType<typeof vi.fn>;
+  invoke?: ReturnType<typeof vi.fn>;
+  appendText?: ReturnType<typeof vi.fn>;
+  insertText?: ReturnType<typeof vi.fn>;
+}) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -49,13 +61,14 @@ function renderDictationButton(input: { composerDisabled: boolean; setContext: R
         pa={
           {
             commands: { setContext: input.setContext },
-            extension: { invoke: vi.fn() },
+            extension: { invoke: input.invoke ?? vi.fn() },
             ui: { toast: vi.fn() },
           } as never
         }
         controlContext={{
           composerDisabled: input.composerDisabled,
-          insertText: vi.fn(),
+          insertText: input.insertText ?? vi.fn(),
+          appendText: input.appendText,
         }}
       />,
     );
@@ -143,5 +156,47 @@ describe('DictationButton', () => {
     });
 
     expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a stop control while recording', async () => {
+    const setContext = vi.fn();
+    startCaptureMock.mockResolvedValueOnce({
+      stop: vi.fn(async () => ({ audio: new Uint8Array(), durationMs: 0, mimeType: 'audio/pcm', fileName: 'dictation.pcm' })),
+    });
+    const { container } = renderDictationButton({ composerDisabled: false, setContext });
+
+    await act(async () => {
+      dispatchPointerDown(container.querySelector('button')!);
+    });
+
+    expect(container.querySelector('button')?.getAttribute('aria-label')).toBe('Stop dictation');
+    expect(container.querySelector('rect')).not.toBeNull();
+  });
+
+  it('inserts transcribed text through the composer append API', async () => {
+    const setContext = vi.fn();
+    const appendText = vi.fn();
+    const invoke = vi.fn(async () => ({ text: ' hello world ' }));
+    const stop = vi.fn(async () => ({
+      audio: new Uint8Array([1, 2, 3]),
+      durationMs: 500,
+      mimeType: 'audio/pcm',
+      fileName: 'dictation.pcm',
+    }));
+    startCaptureMock.mockResolvedValueOnce({ stop });
+    const { container } = renderDictationButton({ composerDisabled: false, setContext, invoke, appendText });
+    const button = container.querySelector('button')!;
+
+    await act(async () => {
+      dispatchPointerDown(button);
+    });
+    await act(async () => {
+      dispatchPointerDown(button);
+      dispatchPointerUp(button);
+    });
+
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(invoke).toHaveBeenCalledWith('transcribeFile', expect.objectContaining({ mimeType: 'audio/pcm', fileName: 'dictation.pcm' }));
+    expect(appendText).toHaveBeenCalledWith('hello world');
   });
 });

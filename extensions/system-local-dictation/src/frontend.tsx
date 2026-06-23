@@ -98,6 +98,14 @@ function MicIcon() {
   );
 }
 
+function StopIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function DictationButton({
   pa,
   controlContext,
@@ -160,7 +168,8 @@ export function DictationButton({
         pa.ui.toast('Dictation did not detect any speech.');
         return;
       }
-      window.dispatchEvent(new CustomEvent('neon-pilot:composer-append-text', { detail: { text } }));
+      const appendText = controlContext.appendText ?? controlContext.insertText;
+      appendText(text);
       pa.ui.toast('Dictation inserted.');
     } catch (error) {
       if (!mountedRef.current) return;
@@ -171,7 +180,7 @@ export function DictationButton({
         setState('idle');
       }
     }
-  }, [pa]);
+  }, [controlContext.appendText, controlContext.insertText, pa]);
 
   const start = useCallback(async () => {
     if (controlContext.composerDisabled || captureRef.current || pendingStartRef.current || state === 'transcribing') return;
@@ -260,7 +269,7 @@ export function DictationButton({
         }
         aria-label={state === 'recording' ? 'Stop dictation' : 'Start dictation'}
       >
-        {state === 'transcribing' ? <Spinner /> : <MicIcon />}
+        {state === 'transcribing' ? <Spinner /> : state === 'recording' ? <StopIcon /> : <MicIcon />}
       </IconButton>
     </>
   );
