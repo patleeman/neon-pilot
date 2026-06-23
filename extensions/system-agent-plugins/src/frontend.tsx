@@ -14,7 +14,6 @@ import {
 } from '@neon-pilot/extensions/settings';
 import React, { type FormEvent, useMemo, useState } from 'react';
 
-type PluginEcosystem = 'auto' | 'codex' | 'claude';
 type SourceKind = 'git' | 'local';
 
 type AgentPlugin = {
@@ -58,8 +57,6 @@ type PluginsState = {
 type AddDraft = {
   sourceKind: SourceKind;
   source: string;
-  ref: string;
-  ecosystem: PluginEcosystem;
 };
 
 type OperationState = {
@@ -68,7 +65,7 @@ type OperationState = {
   error: string | null;
 };
 
-const emptyDraft: AddDraft = { sourceKind: 'git', source: '', ref: '', ecosystem: 'auto' };
+const emptyDraft: AddDraft = { sourceKind: 'git', source: '' };
 
 async function listPlugins(): Promise<PluginsState> {
   const response = await api.invokeExtensionAction('system-agent-plugins', 'listPlugins', {});
@@ -94,13 +91,23 @@ function statusTone(status: AgentPlugin['status']): 'accent' | 'muted' | 'warnin
   return 'muted';
 }
 
-function formatCommit(commit?: string): string {
-  return commit ? commit.slice(0, 10) : 'unresolved';
-}
-
 function pluginSourceLabel(plugin: AgentPlugin): string {
   if (plugin.source.kind === 'git') return plugin.source.url ?? plugin.source.path;
   return plugin.source.path;
+}
+
+function capabilitySummary(plugin: AgentPlugin): string {
+  const parts: string[] = [];
+  if (plugin.capabilities.skills.length) {
+    parts.push(`${plugin.capabilities.skills.length} skill${plugin.capabilities.skills.length === 1 ? '' : 's'}`);
+  }
+  if (plugin.capabilities.mcp.length) {
+    parts.push(`${plugin.capabilities.mcp.length} MCP server${plugin.capabilities.mcp.length === 1 ? '' : 's'}`);
+  }
+  if (plugin.capabilities.docs.length) {
+    parts.push(`${plugin.capabilities.docs.length} doc${plugin.capabilities.docs.length === 1 ? '' : 's'}`);
+  }
+  return parts.length > 0 ? parts.join(' · ') : 'No supported capabilities';
 }
 
 export function AgentPluginsSettingsPanel() {
@@ -132,12 +139,10 @@ export function AgentPluginsSettingsPanel() {
       setOperation({ busy: false, message: null, error: 'Plugin source is required.' });
       return;
     }
-    const result = await runOperation('Plugin added. Review the compatibility report before enabling it.', () =>
+    const result = await runOperation('Plugin added and enabled.', () =>
       invoke<{ plugin: AgentPlugin }>('addPlugin', {
         sourceKind: draft.sourceKind,
         source,
-        ref: draft.ref.trim() || undefined,
-        ecosystem: draft.ecosystem,
       }),
     );
     if (result?.plugin) {
@@ -172,7 +177,7 @@ export function AgentPluginsSettingsPanel() {
   }
 
   async function checkUpdates(plugin?: AgentPlugin) {
-    await runOperation(plugin ? `Checked ${plugin.displayName}.` : 'Checked capability packages.', () =>
+    await runOperation(plugin ? `Checked ${plugin.displayName}.` : 'Checked all plugins.', () =>
       invoke('checkPluginUpdates', plugin ? { id: plugin.id } : {}),
     );
   }
@@ -189,46 +194,27 @@ export function AgentPluginsSettingsPanel() {
   return (
     <div className="space-y-5">
       {loading && !data ? (
-        <SupportingText>Loading capability packages...</SupportingText>
+        <SupportingText>Loading plugins...</SupportingText>
       ) : error && !data ? (
-        <p className="text-[12px] text-danger">Failed to load capability packages: {error}</p>
+        <p className="text-[12px] text-danger">Failed to load plugins: {error}</p>
       ) : data ? (
         <>
-          <SettingsRow
-            title="Installed package folder"
-            description={
-              <span>
-                Neon Pilot stores downloaded skill packs here: <span className="break-all font-mono text-[11px]">{data.storageRoot}</span>
-              </span>
-            }
-            actionsClassName="max-w-none"
-          >
-            <div className="flex items-center gap-2">
-              <ToolbarButton type="button" disabled={loading || operation.busy} onClick={() => void refetch()}>
-                Refresh
-              </ToolbarButton>
-              <ToolbarButton type="button" disabled={operation.busy} onClick={() => void checkUpdates()}>
-                Check updates
-              </ToolbarButton>
-            </div>
-          </SettingsRow>
-
           {operation.error ? <Notice tone="danger">{operation.error}</Notice> : null}
           {operation.message ? <Notice tone="success">{operation.message}</Notice> : null}
 
-          <RailSubsection title="Add a capability package">
+          <RailSubsection title="Add a plugin">
             <form className="space-y-3" onSubmit={handleAddPlugin}>
-              <div className="grid gap-3 sm:grid-cols-[9rem_minmax(0,1fr)_8rem]">
+              <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)_auto]">
                 <Field label="Source">
                   <Select
                     value={draft.sourceKind}
                     onChange={(event) => setDraft({ ...draft, sourceKind: event.target.value as SourceKind })}
                   >
-                    <option value="git">Git</option>
-                    <option value="local">Local</option>
+                    <option value="git">Git URL</option>
+                    <option value="local">Local folder</option>
                   </Select>
                 </Field>
-                <Field label={draft.sourceKind === 'git' ? 'Git URL' : 'Directory'}>
+                <Field label={draft.sourceKind === 'git' ? 'URL' : 'Folder'}>
                   <TextInput
                     value={draft.source}
                     onChange={(event) => setDraft({ ...draft, source: event.target.value })}
@@ -237,43 +223,24 @@ export function AgentPluginsSettingsPanel() {
                     spellCheck={false}
                   />
                 </Field>
-                <Field label="Ecosystem">
-                  <Select
-                    value={draft.ecosystem}
-                    onChange={(event) => setDraft({ ...draft, ecosystem: event.target.value as PluginEcosystem })}
-                  >
-                    <option value="auto">Auto</option>
-                    <option value="codex">Codex</option>
-                    <option value="claude">Claude</option>
-                  </Select>
-                </Field>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
-                <Field label="Ref">
-                  <TextInput
-                    value={draft.ref}
-                    onChange={(event) => setDraft({ ...draft, ref: event.target.value })}
-                    placeholder="Optional branch, tag, or commit"
-                    autoComplete="off"
-                    spellCheck={false}
-                    disabled={draft.sourceKind !== 'git'}
-                  />
-                </Field>
-                <div className="flex items-end">
-                  <ToolbarButton type="button" disabled={operation.busy} onClick={() => void chooseLocalDirectory()}>
-                    Pick folder
-                  </ToolbarButton>
-                </div>
-                <div className="flex items-end">
+                <div className="flex items-end gap-2">
+                  {draft.sourceKind === 'local' ? (
+                    <ToolbarButton type="button" disabled={operation.busy} onClick={() => void chooseLocalDirectory()}>
+                      Pick folder
+                    </ToolbarButton>
+                  ) : null}
                   <ToolbarButton type="submit" disabled={operation.busy || !draft.source.trim()}>
-                    {operation.busy ? 'Working...' : 'Add package'}
+                    {operation.busy ? 'Adding...' : 'Add'}
                   </ToolbarButton>
                 </div>
               </div>
+              <SupportingText>
+                Ecosystem (Codex or Claude) is detected automatically from the plugin files. Plugins are enabled immediately when added.
+              </SupportingText>
             </form>
           </RailSubsection>
 
-          <RailSubsection title="Installed packages">
+          <RailSubsection title="Installed plugins">
             {plugins.length > 0 ? (
               <div className="space-y-2">
                 {plugins.map((plugin) => {
@@ -305,13 +272,12 @@ export function AgentPluginsSettingsPanel() {
               </div>
             ) : (
               <SupportingText>
-                No capability packages installed. Add a trusted Codex or Claude-style repository when you want agents to use its reusable
-                skills or MCP definitions.
+                No plugins installed. Add a Codex or Claude Code plugin repository to give agents its skills and MCP servers.
               </SupportingText>
             )}
           </RailSubsection>
 
-          <RailSubsection title={selectedPlugin ? `Package details: ${selectedPlugin.displayName}` : 'Package details'}>
+          <RailSubsection title={selectedPlugin ? selectedPlugin.displayName : 'Plugin details'}>
             {selectedPlugin ? (
               <div className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -319,20 +285,20 @@ export function AgentPluginsSettingsPanel() {
                     title="Available to agents"
                     description={
                       selectedPlugin.enabled
-                        ? 'Skills and agent instructions from this plugin are available.'
-                        : 'Skills and agent instructions are discovered but not available.'
+                        ? 'Skills and instructions from this plugin are available to agents.'
+                        : 'Skills and instructions are installed but not available to agents.'
                     }
                   >
                     <Switch checked={selectedPlugin.enabled} onCheckedChange={() => void togglePlugin(selectedPlugin)} />
                   </SettingsRow>
-                  <SettingsRow title="Auto update" description="Applies clean Git updates after validation.">
+                  <SettingsRow title="Auto update" description="Download and apply Git updates automatically after validation.">
                     <Switch checked={selectedPlugin.autoUpdate} onCheckedChange={() => void toggleAutoUpdate(selectedPlugin)} />
                   </SettingsRow>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
                   <ToolbarButton type="button" disabled={operation.busy} onClick={() => void checkUpdates(selectedPlugin)}>
-                    Check
+                    Check for updates
                   </ToolbarButton>
                   <ToolbarButton
                     type="button"
@@ -351,89 +317,34 @@ export function AgentPluginsSettingsPanel() {
                   </ToolbarButton>
                 </div>
 
-                <div className="grid gap-2 text-[12px]">
-                  <div className="break-all text-secondary">
-                    Source: <span className="font-mono text-[11px] text-primary">{pluginSourceLabel(selectedPlugin)}</span>
-                  </div>
-                  <div className="text-secondary">
-                    Current ref:{' '}
-                    <span className="font-mono text-[11px] text-primary">{formatCommit(selectedPlugin.source.resolvedCommit)}</span>
-                    {selectedPlugin.availableUpdate ? (
-                      <>
-                        {' -> '}
-                        <span className="font-mono text-[11px] text-warning">{formatCommit(selectedPlugin.availableUpdate.commit)}</span>
-                      </>
-                    ) : null}
-                  </div>
-                  {selectedPlugin.wrapperExtensionId ? (
-                    <div className="break-all text-secondary">
-                      Wrapper extension: <span className="font-mono text-[11px] text-primary">{selectedPlugin.wrapperExtensionId}</span>
-                    </div>
+                <div className="text-[12px] text-secondary">
+                  <span className="break-all">{pluginSourceLabel(selectedPlugin)}</span>
+                  {selectedPlugin.source.resolvedCommit ? (
+                    <span className="ml-2 font-mono text-[11px] text-muted">@{selectedPlugin.source.resolvedCommit.slice(0, 10)}</span>
+                  ) : null}
+                  {selectedPlugin.availableUpdate ? (
+                    <span className="ml-2 font-mono text-[11px] text-warning">
+                      {' -> '}@{selectedPlugin.availableUpdate.commit.slice(0, 10)}
+                    </span>
                   ) : null}
                 </div>
 
-                <CapabilityList title="Skills" entries={selectedPlugin.capabilities.skills.map((skill) => `${skill.id} - ${skill.path}`)} />
-                <CapabilityList title="MCP declarations" entries={selectedPlugin.capabilities.mcp.map((entry) => entry.path)} />
-                <CapabilityList title="Docs" entries={selectedPlugin.capabilities.docs.map((entry) => entry.path)} />
-                <CapabilityList
-                  title="Indexed hooks"
-                  entries={selectedPlugin.capabilities.hooks.map((hook) => `${hook.kind} - ${hook.path}`)}
-                />
+                <div className="text-[12px] text-secondary">{capabilitySummary(selectedPlugin)}</div>
 
-                <CompatibilityReport plugin={selectedPlugin} />
+                {selectedPlugin.compatibility.warnings.length > 0 ? (
+                  <Notice tone="warning">{selectedPlugin.compatibility.warnings.join(' ')}</Notice>
+                ) : null}
+                {selectedPlugin.compatibility.blockers.length > 0 ? (
+                  <Notice tone="danger">{selectedPlugin.compatibility.blockers.join(' ')}</Notice>
+                ) : null}
+                {selectedPlugin.lastError ? <Notice tone="danger">{selectedPlugin.lastError}</Notice> : null}
               </div>
             ) : (
-              <SupportingText>Select a plugin to inspect imported capabilities, update state, and compatibility warnings.</SupportingText>
+              <SupportingText>Select a plugin to inspect its status and settings.</SupportingText>
             )}
           </RailSubsection>
         </>
       ) : null}
-    </div>
-  );
-}
-
-function CapabilityList({ title, entries }: { title: string; entries: string[] }) {
-  return (
-    <div className="space-y-1.5">
-      <div className="text-[12px] font-medium text-secondary">{title}</div>
-      {entries.length > 0 ? (
-        <div className="space-y-1">
-          {entries.map((entry) => (
-            <div key={entry} className="break-all font-mono text-[11px] text-primary">
-              {entry}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <SupportingText>None detected.</SupportingText>
-      )}
-    </div>
-  );
-}
-
-function CompatibilityReport({ plugin }: { plugin: AgentPlugin }) {
-  const rows = [
-    ['Detected', ecosystemLabel(plugin.compatibility.detectedEcosystem)],
-    ['Supported', plugin.compatibility.supported.join(', ') || 'None'],
-    ['Ignored', plugin.compatibility.ignored.join(', ') || 'None'],
-    ['Warnings', plugin.compatibility.warnings.join(', ') || 'None'],
-    ['Blockers', plugin.compatibility.blockers.join(', ') || 'None'],
-  ];
-  return (
-    <div className="space-y-1.5">
-      <div className="text-[12px] font-medium text-secondary">Compatibility</div>
-      <div className="rounded-md border border-border-subtle/70">
-        {rows.map(([label, value]) => (
-          <div
-            key={label}
-            className="grid grid-cols-[7rem_minmax(0,1fr)] gap-3 border-t border-border-subtle/60 px-3 py-2 first:border-t-0"
-          >
-            <span className="text-[12px] text-secondary">{label}</span>
-            <span className="break-words text-[12px] text-primary">{value}</span>
-          </div>
-        ))}
-      </div>
-      {plugin.lastError ? <Notice tone="danger">{plugin.lastError}</Notice> : null}
     </div>
   );
 }

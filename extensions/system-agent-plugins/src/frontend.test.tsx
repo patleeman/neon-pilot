@@ -61,9 +61,9 @@ const plugin = {
   id: 'codex-review-pack-1234',
   displayName: 'Review Pack',
   ecosystem: 'codex',
-  enabled: false,
+  enabled: true,
   autoUpdate: false,
-  status: 'added',
+  status: 'enabled',
   source: { kind: 'local', path: '/plugins/review-pack', resolvedCommit: undefined },
   capabilities: {
     skills: [{ id: 'review', path: 'skills/review/SKILL.md' }],
@@ -88,22 +88,21 @@ beforeEach(() => {
 });
 
 describe('AgentPluginsSettingsPanel', () => {
-  it('renders installed plugin capabilities and compatibility details', () => {
+  it('renders installed plugin with capability summary and warnings', () => {
     mocks.useApi.mockReturnValue(buildUseApiResult({ storageRoot: '/runtime/plugins', plugins: [plugin] }));
 
     render(<AgentPluginsSettingsPanel />);
 
-    expect(screen.getByText('Installed package folder')).toBeTruthy();
     expect(screen.getAllByText('Review Pack').length).toBeGreaterThan(0);
     expect(screen.getByText('Available to agents')).toBeTruthy();
-    expect(screen.getByText('Skills and agent instructions are discovered but not available.')).toBeTruthy();
-    expect(screen.getByText('review - skills/review/SKILL.md')).toBeTruthy();
-    expect(screen.getByText('skills/review/mcp.json')).toBeTruthy();
-    expect(screen.getByText('hooks - hooks/before_agent_start.md')).toBeTruthy();
-    expect(screen.getByText('1 skill file')).toBeTruthy();
+    expect(screen.getByText('1 skill · 1 MCP server · 1 doc')).toBeTruthy();
+    expect(screen.getByText('Hook files are indexed but not executed until mapped to Neon Pilot lifecycle boundaries.')).toBeTruthy();
+    // Raw file paths should not be shown
+    expect(screen.queryByText('review - skills/review/SKILL.md')).toBeNull();
+    expect(screen.queryByText('Compatibility')).toBeNull();
   });
 
-  it('adds a Git plugin through the backend action', async () => {
+  it('adds a Git plugin through the backend action without ecosystem or ref', async () => {
     mocks.useApi.mockReturnValue(buildUseApiResult({ storageRoot: '/runtime/plugins', plugins: [] }));
     mocks.api.invokeExtensionAction.mockResolvedValue({ result: { plugin } });
 
@@ -112,15 +111,12 @@ describe('AgentPluginsSettingsPanel', () => {
     fireEvent.change(screen.getByPlaceholderText('https://github.com/owner/plugin'), {
       target: { value: 'https://github.com/example/review-pack' },
     });
-    fireEvent.change(screen.getByDisplayValue('Auto'), { target: { value: 'codex' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add package' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
 
     await waitFor(() =>
       expect(mocks.api.invokeExtensionAction).toHaveBeenCalledWith('system-agent-plugins', 'addPlugin', {
         sourceKind: 'git',
         source: 'https://github.com/example/review-pack',
-        ref: undefined,
-        ecosystem: 'codex',
       }),
     );
     expect(mocks.refetch).toHaveBeenCalled();

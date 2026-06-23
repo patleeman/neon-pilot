@@ -78,7 +78,7 @@ describe('system-agent-plugins backend', () => {
     expect(result.plugin).toMatchObject({
       displayName: 'Review Pack',
       ecosystem: 'codex',
-      enabled: false,
+      enabled: true,
       source: { kind: 'local', path: source },
       wrapperExtensionId: 'imported-codex-agent-review-pack',
       capabilities: {
@@ -94,7 +94,7 @@ describe('system-agent-plugins backend', () => {
     expect(mocks.installMarketplacePackageAsExtension).toHaveBeenCalledWith(
       expect.objectContaining({ ecosystem: 'codex', packageType: 'agent', source, runtimeDir }),
     );
-    expect(ctx.extensions.setEnabled).toHaveBeenCalledWith('imported-codex-agent-review-pack', false);
+    expect(ctx.extensions.setEnabled).toHaveBeenCalledWith('imported-codex-agent-review-pack', true);
     expect(mocks.invalidateExtensionRegistryReadCaches).toHaveBeenCalled();
     expect(ctx.runtime.refreshSkillMcpConfig).toHaveBeenCalled();
 

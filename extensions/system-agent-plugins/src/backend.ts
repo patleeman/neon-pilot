@@ -82,12 +82,12 @@ export async function addPlugin(input: unknown, ctx: ExtensionBackendContext) {
   const registry = readRegistry(ctx);
   const existing = registry.plugins.find((plugin) => plugin.id === id);
   const wrapper = await wrapPluginAsExtension({ sourcePath: prepared.path, ecosystem: scan.ecosystem, ctx });
-  ctx.extensions.setEnabled(wrapper.extension.id, existing?.enabled ?? false);
+  ctx.extensions.setEnabled(wrapper.extension.id, true);
   const record: AgentPluginRecord = {
     id,
     displayName: scan.displayName,
     ecosystem: scan.ecosystem,
-    enabled: existing?.enabled ?? false,
+    enabled: true,
     autoUpdate: existing?.autoUpdate ?? false,
     source: {
       kind: sourceKind,
@@ -96,7 +96,7 @@ export async function addPlugin(input: unknown, ctx: ExtensionBackendContext) {
       ...(ref ? { ref } : {}),
       ...(prepared.resolvedCommit ? { resolvedCommit: prepared.resolvedCommit } : {}),
     },
-    status: existing?.enabled ? 'enabled' : 'added',
+    status: 'enabled',
     capabilities: scan.capabilities,
     compatibility: scan.compatibility,
     wrapperExtensionId: wrapper.extension.id,
