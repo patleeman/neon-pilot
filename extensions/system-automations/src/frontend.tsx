@@ -6,26 +6,37 @@ import {
   BrowsePathButton,
   Button,
   cx,
+  DataTable,
+  DataTableActionGroup,
+  DataTableBody,
+  DataTableCell,
+  DataTableEmptyRow,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+  Disclosure,
   Field,
   FieldError,
   FieldHint,
   FieldLabel,
   IconButton,
-  KeyValueItem,
-  KeyValueList,
   LoadingState,
+  MenuItem,
+  MenuSeparator,
   Notice,
   Pill,
-  SearchInput,
-  SectionLabel,
+  PositionedMenu,
   SegmentedControl,
   Select,
-  SupportingText,
   Switch,
   Textarea,
   TextInput,
 } from '@neon-pilot/extensions/ui';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useId, useMemo, useState } from 'react';
 
 interface TaskSummary {
   id: string;
@@ -43,11 +54,6 @@ interface TaskSummary {
   model?: string;
   timeoutSeconds?: number;
   lastRunAt?: string;
-}
-
-interface SchedulerHealth {
-  status?: string;
-  lastEvaluatedAt?: string;
 }
 
 interface ConversationOption {
@@ -129,10 +135,6 @@ function readTasks(input: unknown): TaskSummary[] {
   return Array.isArray(input) ? (input as TaskSummary[]) : [];
 }
 
-function readHealth(input: unknown): SchedulerHealth | null {
-  return isRecord(input) && typeof input.status === 'string' ? (input as unknown as SchedulerHealth) : null;
-}
-
 function readConversations(input: unknown): ConversationOption[] {
   if (!Array.isArray(input)) return [];
   return input
@@ -170,7 +172,10 @@ function taskTitle(task: TaskSummary): string {
 }
 
 function scheduleText(task: TaskSummary): string {
-  return task.scheduleType === 'at' ? `Once · ${formatDateTime(task.at)}` : `Recurring · ${task.cron ?? 'invalid schedule'}`;
+  if (task.scheduleType === 'at') return `Once · ${formatDateTime(task.at)}`;
+  const cron = task.cron?.trim();
+  const preset = CRON_PRESETS.find((item) => item.value === cron);
+  return preset ? preset.label : (cron ?? 'Invalid schedule');
 }
 
 function formatDateTime(value?: string): string {
@@ -184,7 +189,7 @@ function statusLabel(task: TaskSummary): string {
   if (task.running) return 'Running';
   if (!task.enabled) return 'Paused';
   if (task.lastStatus === 'failed') return 'Failed';
-  return 'Scheduled';
+  return 'On';
 }
 
 function statusPillTone(task: TaskSummary): 'accent' | 'steel' | 'danger' | 'success' {
@@ -255,6 +260,10 @@ function nextRunText(task: TaskSummary): string {
   return 'Unable to calculate';
 }
 
+function lastRunText(task: TaskSummary): string {
+  return task.lastRunAt ? timeAgo(task.lastRunAt) : 'Never';
+}
+
 function sortTasks(tasks: TaskSummary[]): TaskSummary[] {
   const rank = (task: TaskSummary) => (task.running ? 0 : task.lastStatus === 'failed' ? 1 : task.enabled ? 2 : 3);
   return [...tasks].sort((a, b) => rank(a) - rank(b) || taskTitle(a).localeCompare(taskTitle(b)));
@@ -320,15 +329,6 @@ function buildSaveInput(form: AutomationFormState): Record<string, unknown> {
   };
 }
 
-function formSchedulePreview(form: AutomationFormState): string {
-  if (form.scheduleType === 'at') {
-    const iso = localInputToIso(form.atLocal);
-    return iso ? `Once · ${formatDateTime(iso)}` : 'Once · not scheduled';
-  }
-  const preset = CRON_PRESETS.find((item) => item.value === form.cron);
-  return preset ? `Recurring · ${preset.label}` : `Recurring · ${form.cron || 'custom cron'}`;
-}
-
 function groupedModels(models: ModelOption[]): Array<[string, ModelOption[]]> {
   const groups = new Map<string, ModelOption[]>();
   for (const model of models) groups.set(model.provider ?? 'Models', [...(groups.get(model.provider ?? 'Models') ?? []), model]);
@@ -341,32 +341,31 @@ function modelLabel(model: ModelOption): string {
 
 export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; context?: AutomationsPageContext }) {
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
-  const [health, setHealth] = useState<SchedulerHealth | null>(null);
   const [conversations, setConversations] = useState<ConversationOption[]>([]);
   const [models, setModels] = useState<ModelOption[]>([]);
   const [form, setForm] = useState<AutomationFormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editorOpen, setEditorOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [menuTaskId, setMenuTaskId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [pickingCwd, setPickingCwd] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState(context?.search ?? '');
+  const titleId = useId();
+  const rowMenuBaseId = useId();
 
   const load = useCallback(async () => {
     setError(null);
     try {
       const conversationsApi = (pa as NativeExtensionClient & { conversations?: NativeExtensionClient['conversations'] }).conversations;
       const modelsFn = (pa as NativeExtensionClient & { models?: () => Promise<unknown> }).models;
-      const [taskList, schedulerHealth, conversationList, modelList] = await Promise.all([
+      const [taskList, conversationList, modelList] = await Promise.all([
         pa.automations.list(),
-        pa.automations.readSchedulerHealth(),
         conversationsApi?.list ? conversationsApi.list() : Promise.resolve([]),
         typeof modelsFn === 'function' ? modelsFn() : Promise.resolve([]),
       ]);
       setTasks(readTasks(taskList));
-      setHealth(readHealth(schedulerHealth));
       setConversations(readConversations(conversationList));
       setModels(readModels(modelList));
     } catch (err) {
@@ -395,49 +394,31 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     return () => subscription.unsubscribe();
   }, [load, pa]);
 
-  useEffect(() => {
-    if (shouldOpenNewAutomationFromSearch(context?.search)) {
-      setEditingId(null);
-      setForm((current) => ({ ...EMPTY_FORM, ownerThreadId: current.ownerThreadId }));
-      setFormError(null);
-      setEditorOpen(true);
-    }
-  }, [context?.search]);
-
-  useEffect(() => {
-    if (loading || tasks.length > 0 || editingId || form.ownerThreadId || !conversations[0]?.id) return;
-    setForm((current) => ({ ...current, ownerThreadId: conversations[0]?.id ?? '' }));
-  }, [conversations, editingId, form.ownerThreadId, loading, tasks.length]);
-
-  const visibleTasks = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const sorted = sortTasks(tasks);
-    if (!query) return sorted;
-    return sorted.filter((task) =>
-      [task.id, taskTitle(task), task.threadTitle, task.threadConversationId, task.cron, task.at].some((value) =>
-        String(value ?? '')
-          .toLowerCase()
-          .includes(query),
-      ),
-    );
-  }, [search, tasks]);
-
-  const openCreate = () => {
+  const openCreate = useCallback(() => {
     setEditingId(null);
     setForm({ ...EMPTY_FORM, ownerThreadId: conversations[0]?.id ?? '' });
     setFormError(null);
-    setEditorOpen(true);
-  };
+    setMenuTaskId(null);
+    setDialogOpen(true);
+  }, [conversations]);
 
-  const openEdit = (task: TaskSummary) => {
+  useEffect(() => {
+    if (shouldOpenNewAutomationFromSearch(context?.search)) openCreate();
+  }, [context?.search, openCreate]);
+
+  const visibleTasks = useMemo(() => sortTasks(tasks), [tasks]);
+
+  const openEdit = useCallback((task: TaskSummary) => {
     setEditingId(task.id);
     setForm(formFromTask(task));
     setFormError(null);
-    setEditorOpen(true);
-  };
+    setMenuTaskId(null);
+    setDialogOpen(true);
+  }, []);
 
-  const closeEditor = () => {
-    setEditorOpen(false);
+  const closeDialog = () => {
+    if (busy === 'save') return;
+    setDialogOpen(false);
     setFormError(null);
   };
 
@@ -462,7 +443,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
       } else {
         await pa.automations.create({ ...buildSaveInput(form), id: form.id.trim() || undefined });
       }
-      setEditorOpen(false);
+      setDialogOpen(false);
       await load();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : String(err));
@@ -471,8 +452,14 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     }
   };
 
+  const submitForm = (event: FormEvent) => {
+    event.preventDefault();
+    void save();
+  };
+
   const updateEnabled = async (task: TaskSummary, enabled: boolean) => {
     setBusy(`${enabled ? 'resume' : 'pause'}:${task.id}`);
+    setMenuTaskId(null);
     try {
       await pa.automations.update(task.id, { enabled, threadConversationId: task.threadConversationId, targetType: 'conversation' });
       await load();
@@ -485,6 +472,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
 
   const runNow = async (task: TaskSummary) => {
     setBusy(`run:${task.id}`);
+    setMenuTaskId(null);
     try {
       await pa.automations.run(task.id);
       await load();
@@ -496,9 +484,10 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   };
 
   const deleteTask = async (task: TaskSummary) => {
+    setMenuTaskId(null);
     const confirmed = await pa.ui.confirm({
       title: 'Delete automation',
-      message: `Delete automation “${taskTitle(task)}”? This cannot be undone.`,
+      message: `Delete automation "${taskTitle(task)}"? This cannot be undone.`,
     });
     if (!confirmed) return;
     setBusy(`delete:${task.id}`);
@@ -532,12 +521,10 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const cronValue = cronSelectValue(form.cron);
   const timeoutValue = timeoutSelectValue(form.timeoutSeconds);
   const editingTitle = editingId ? 'Edit automation' : 'New automation';
-  const showEditor = editorOpen || (!loading && tasks.length === 0);
-  const selectedTask = editingId ? tasks.find((task) => task.id === editingId) : null;
 
   return (
     <div className="h-full overflow-y-auto bg-base">
-      <AppPageLayout contentClassName="flex min-h-full flex-col gap-5">
+      <AppPageLayout contentClassName="flex min-h-full flex-col gap-4">
         <AppPageIntro
           title="Automations"
           actions={
@@ -554,334 +541,312 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
 
         {error ? <Notice tone="danger">{error}</Notice> : null}
 
-        <div className="grid min-h-[calc(100vh-11rem)] gap-5 lg:grid-cols-[25rem_minmax(0,1fr)]">
-          <section className="flex min-w-0 flex-col border-t border-border-subtle pt-3">
-            <div className="flex min-h-7 items-center justify-between gap-3">
-              <SectionLabel>Schedules</SectionLabel>
-              <div className="flex items-center gap-2 text-[11px] text-dim">
-                {loading ? <span>Refreshing…</span> : null}
-                <span>
-                  Scheduler: {health?.status ?? 'unknown'}
-                  {health?.lastEvaluatedAt ? ` · ${timeAgo(health.lastEvaluatedAt)}` : ''}
-                </span>
-              </div>
-            </div>
+        <DataTable
+          className="min-h-0 overflow-hidden"
+          tableClassName="table-fixed"
+          columns={
+            <colgroup>
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '26%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '13%' }} />
+              <col style={{ width: '13%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '5%' }} />
+            </colgroup>
+          }
+        >
+          <DataTableHead>
+            <DataTableRow>
+              <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell>Automation</DataTableHeaderCell>
+              <DataTableHeaderCell>Schedule</DataTableHeaderCell>
+              <DataTableHeaderCell>Next run</DataTableHeaderCell>
+              <DataTableHeaderCell>Last run</DataTableHeaderCell>
+              <DataTableHeaderCell>Owner thread</DataTableHeaderCell>
+              <DataTableHeaderCell aria-label="Actions" />
+            </DataTableRow>
+          </DataTableHead>
+          <DataTableBody>
+            {loading && tasks.length === 0 ? (
+              <DataTableEmptyRow colSpan={7} cellClassName="py-8 text-left">
+                <LoadingState label="Loading automations…" />
+              </DataTableEmptyRow>
+            ) : null}
 
-            <SearchInput
-              className="mt-3 w-full"
-              placeholder="Search automations…"
-              value={search}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)}
-            />
+            {!loading && visibleTasks.length === 0 ? (
+              <DataTableEmptyRow colSpan={7} cellClassName="py-8 text-left">
+                No automations yet.
+              </DataTableEmptyRow>
+            ) : null}
 
-            <div className="mt-3 min-h-0 flex-1 overflow-auto">
-              <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.25rem] border-y border-border-subtle py-1.5 text-[11px] uppercase tracking-[0.08em] text-dim">
-                <span>State</span>
-                <span>Name</span>
-                <span className="text-right">Next</span>
-              </div>
-
-              {loading && tasks.length === 0 ? (
-                <LoadingState label="Loading automations…" className="border-b border-border-subtle py-3" />
-              ) : null}
-
-              {!loading && visibleTasks.length === 0 ? (
-                <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.25rem] border-b border-border-subtle py-2 text-[12px]">
-                  <span className="text-dim">Empty</span>
-                  <span className="truncate text-secondary">{search.trim() ? 'No matches' : 'No automations yet'}</span>
-                  <span className="text-right text-dim">0</span>
-                </div>
-              ) : null}
-
-              {visibleTasks.map((task) => {
-                const selected = editingId === task.id;
-                return (
-                  <div key={task.id} className={cx('border-b border-border-subtle px-0 py-2 text-[12px]', selected && 'bg-accent/10')}>
+            {visibleTasks.map((task) => (
+              <DataTableRow key={task.id}>
+                <DataTableCell>
+                  <Pill tone={statusPillTone(task)}>{statusLabel(task)}</Pill>
+                </DataTableCell>
+                <DataTableCell>
+                  <div className="min-w-0">
                     <button
                       type="button"
-                      className="grid w-full grid-cols-[5.5rem_minmax(0,1fr)_5.25rem] items-start gap-2 text-left"
+                      className="block max-w-full truncate text-left font-medium text-primary hover:text-accent focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
                       onClick={() => openEdit(task)}
                     >
-                      <span>
-                        <Pill tone={statusPillTone(task)}>{statusLabel(task)}</Pill>
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium text-primary">{taskTitle(task)}</span>
-                        <span className="mt-0.5 block truncate font-mono text-[11px] text-dim">{scheduleText(task)}</span>
-                        {task.threadTitle || task.threadConversationId ? (
-                          <span className="mt-0.5 block truncate text-[11px] text-secondary">
-                            {task.threadTitle || task.threadConversationId}
-                          </span>
-                        ) : null}
-                        <span className="mt-0.5 block truncate text-[11px] text-dim">
-                          Last: {task.lastRunAt ? `${timeAgo(task.lastRunAt)} · ${formatDateTime(task.lastRunAt)}` : 'Never'}
-                        </span>
-                      </span>
-                      <span className="truncate text-right text-[11px] text-secondary">{nextRunText(task)}</span>
+                      {taskTitle(task)}
                     </button>
-                    <div className="mt-2 flex flex-wrap gap-1 pl-[5.5rem]" onClick={(event) => event.stopPropagation()}>
-                      <Button className="px-2 py-0.5 text-[11px]" disabled={busy === `run:${task.id}`} onClick={() => void runNow(task)}>
-                        Run
-                      </Button>
-                      <Button
-                        className="px-2 py-0.5 text-[11px]"
-                        disabled={busy?.endsWith(`:${task.id}`)}
-                        onClick={() => void updateEnabled(task, !task.enabled)}
-                      >
+                    {task.prompt ? <div className="mt-0.5 truncate text-[12px] text-dim">{task.prompt}</div> : null}
+                  </div>
+                </DataTableCell>
+                <DataTableCell className="truncate text-secondary">
+                  <span className={cx(task.scheduleType === 'cron' && 'font-mono text-[12px]')}>{scheduleText(task)}</span>
+                </DataTableCell>
+                <DataTableCell className="truncate text-secondary">{nextRunText(task)}</DataTableCell>
+                <DataTableCell className="truncate text-secondary">{lastRunText(task)}</DataTableCell>
+                <DataTableCell className="truncate text-secondary">{task.threadTitle || task.threadConversationId || '—'}</DataTableCell>
+                <DataTableCell className="relative">
+                  <DataTableActionGroup>
+                    <IconButton
+                      aria-label={`Actions for ${taskTitle(task)}`}
+                      title={`Actions for ${taskTitle(task)}`}
+                      aria-haspopup="menu"
+                      aria-expanded={menuTaskId === task.id}
+                      aria-controls={menuTaskId === task.id ? `${rowMenuBaseId}-${task.id}` : undefined}
+                      onClick={() => setMenuTaskId((current) => (current === task.id ? null : task.id))}
+                    >
+                      <MoreIcon />
+                    </IconButton>
+                  </DataTableActionGroup>
+                  {menuTaskId === task.id ? (
+                    <PositionedMenu
+                      id={`${rowMenuBaseId}-${task.id}`}
+                      aria-label={`Actions for ${taskTitle(task)}`}
+                      placement="absolute"
+                      position={{ top: 34, right: 8 }}
+                      className="z-20 min-w-36"
+                    >
+                      <MenuItem disabled={busy === `run:${task.id}`} onClick={() => void runNow(task)}>
+                        Run now
+                      </MenuItem>
+                      <MenuItem disabled={busy?.endsWith(`:${task.id}`)} onClick={() => void updateEnabled(task, !task.enabled)}>
                         {task.enabled ? 'Pause' : 'Resume'}
-                      </Button>
-                      <Button className="px-2 py-0.5 text-[11px]" onClick={() => openEdit(task)}>
-                        Edit
-                      </Button>
-                      <Button className="px-2 py-0.5 text-[11px]" tone="danger" onClick={() => void deleteTask(task)}>
+                      </MenuItem>
+                      <MenuItem onClick={() => openEdit(task)}>Edit</MenuItem>
+                      <MenuSeparator />
+                      <MenuItem tone="danger" disabled={busy === `delete:${task.id}`} onClick={() => void deleteTask(task)}>
                         Delete
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="flex min-w-0 flex-col border-t border-border-subtle pt-3">
-            <div className="flex min-h-7 items-center justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="truncate text-[16px] font-semibold text-primary">
-                  {showEditor ? editingTitle : selectedTask ? taskTitle(selectedTask) : 'Automation details'}
-                </h2>
-                <p className="mt-0.5 text-[12px] text-dim">
-                  {showEditor ? 'Edit the schedule, prompt, and run context inline.' : 'Select an automation to edit its schedule.'}
-                </p>
-              </div>
-              {showEditor ? (
-                <div className="flex items-center gap-2">
-                  {tasks.length > 0 ? (
-                    <Button variant="ghost" onClick={closeEditor}>
-                      Close
-                    </Button>
+                      </MenuItem>
+                    </PositionedMenu>
                   ) : null}
-                  <Button variant="action" tone="accent" disabled={busy === 'save'} onClick={() => void save()}>
-                    {busy === 'save' ? 'Saving…' : 'Save automation'}
-                  </Button>
+                </DataTableCell>
+              </DataTableRow>
+            ))}
+          </DataTableBody>
+        </DataTable>
+      </AppPageLayout>
+
+      {dialogOpen ? (
+        <Dialog onClose={closeDialog} labelledBy={titleId} className="max-w-[42rem]">
+          <form onSubmit={submitForm}>
+            <DialogHeader title={editingTitle} titleId={titleId} />
+            <DialogBody className="grid gap-4">
+              {formError ? <Notice tone="danger">{formError}</Notice> : null}
+
+              <Field label="Name">
+                <TextInput
+                  name="automation-title"
+                  autoFocus
+                  autoComplete="off"
+                  value={form.title}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, title: event.target.value })}
+                  placeholder="Morning release check…"
+                />
+              </Field>
+
+              <Field label="Instructions">
+                <Textarea
+                  name="automation-prompt"
+                  className="min-h-28 resize-y text-[13px]"
+                  value={form.prompt}
+                  onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setForm({ ...form, prompt: event.target.value })}
+                  placeholder="Check the release dashboard and summarize blockers…"
+                />
+              </Field>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="ui-field">
+                  <FieldLabel>Schedule</FieldLabel>
+                  <SegmentedControl
+                    ariaLabel="Schedule type"
+                    value={form.scheduleType}
+                    options={scheduleTypeOptions}
+                    onChange={(next: 'cron' | 'at') => setForm({ ...form, scheduleType: next })}
+                  />
                 </div>
-              ) : null}
-            </div>
 
-            {showEditor ? (
-              <div className="mt-4 grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
-                <div className="min-w-0 space-y-4">
-                  {formError ? <Notice tone="danger">{formError}</Notice> : null}
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Name">
-                      <TextInput
-                        name="automation-title"
-                        autoFocus
-                        value={form.title}
-                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, title: event.target.value })}
-                        placeholder="Morning release check"
-                      />
-                    </Field>
-                    <Field label="Owner thread" hint={ownerConversation?.cwd ? `Working from ${ownerConversation.cwd}` : undefined}>
-                      <Select
-                        name="automation-owner-thread"
-                        className="w-full"
-                        value={form.ownerThreadId}
-                        onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, ownerThreadId: event.target.value })}
-                      >
-                        <option value="">Choose a thread…</option>
-                        {conversations.map((conversation) => (
-                          <option key={conversation.id} value={conversation.id}>
-                            {conversation.title}
-                          </option>
-                        ))}
-                      </Select>
-                    </Field>
+                {form.scheduleType === 'cron' ? (
+                  <div className="ui-field">
+                    <FieldLabel>Repeat</FieldLabel>
+                    <Select
+                      name="automation-cron-preset"
+                      aria-label="Repeat schedule"
+                      value={cronValue}
+                      onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
+                        const next = event.target.value;
+                        setForm((current) => ({ ...current, cron: next === CUSTOM_VALUE ? current.cron : next }));
+                      }}
+                    >
+                      {CRON_PRESETS.map((preset) => (
+                        <option key={preset.value} value={preset.value}>
+                          {preset.label}
+                        </option>
+                      ))}
+                      <option value={CUSTOM_VALUE}>Custom cron…</option>
+                    </Select>
+                    {cronValue === CUSTOM_VALUE ? (
+                      <div className="mt-2">
+                        <TextInput
+                          name="automation-cron"
+                          aria-label="Custom cron schedule"
+                          autoComplete="off"
+                          className="font-mono text-[13px]"
+                          value={form.cron}
+                          onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, cron: event.target.value })}
+                          placeholder="0 9 * * *…"
+                        />
+                        <FieldHint>Five-field cron.</FieldHint>
+                      </div>
+                    ) : null}
                   </div>
+                ) : (
+                  <div className="ui-field">
+                    <FieldLabel>Run at</FieldLabel>
+                    <TextInput
+                      type="datetime-local"
+                      name="automation-run-at"
+                      aria-label="Run at"
+                      value={form.atLocal}
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, atLocal: event.target.value })}
+                    />
+                    {form.scheduleType === 'at' && !form.atLocal ? <FieldError>Pick a date and time.</FieldError> : null}
+                    <FieldHint>Uses your local timezone.</FieldHint>
+                  </div>
+                )}
+              </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="ui-field">
-                      <FieldLabel>Schedule</FieldLabel>
-                      <SegmentedControl
-                        ariaLabel="Schedule type"
-                        value={form.scheduleType}
-                        options={scheduleTypeOptions}
-                        onChange={(next: 'cron' | 'at') => setForm({ ...form, scheduleType: next })}
-                      />
-                      <FieldHint>
-                        {form.scheduleType === 'cron' ? 'Runs on a repeating cron schedule.' : 'Runs once at the date and time you choose.'}
-                      </FieldHint>
-                    </div>
+              <Field label="Owner thread" hint={ownerConversation?.cwd ? `Working from ${ownerConversation.cwd}` : undefined}>
+                <Select
+                  name="automation-owner-thread"
+                  value={form.ownerThreadId}
+                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, ownerThreadId: event.target.value })}
+                >
+                  <option value="">Choose a thread…</option>
+                  {conversations.map((conversation) => (
+                    <option key={conversation.id} value={conversation.id}>
+                      {conversation.title}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
 
-                    {form.scheduleType === 'cron' ? (
-                      <div className="ui-field">
-                        <FieldLabel>Repeat</FieldLabel>
-                        <Select
-                          className="w-full"
-                          value={cronValue}
-                          onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
-                            const next = event.target.value;
-                            setForm((current) => ({ ...current, cron: next === CUSTOM_VALUE ? current.cron : next }));
-                          }}
-                        >
-                          {CRON_PRESETS.map((preset) => (
-                            <option key={preset.value} value={preset.value}>
-                              {preset.label}
+              <Disclosure summary="Advanced" bodyClassName="grid gap-4 pt-3">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Model" hint="Uses the app default when empty.">
+                    <Select
+                      name="automation-model"
+                      value={form.model}
+                      onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, model: event.target.value })}
+                    >
+                      <option value="">Use app default</option>
+                      {groupedModels(models).map(([provider, providerModels]) => (
+                        <optgroup key={provider} label={provider}>
+                          {providerModels.map((model) => (
+                            <option key={`${provider}/${model.id}`} value={model.id}>
+                              {modelLabel(model)}
                             </option>
                           ))}
-                          <option value={CUSTOM_VALUE}>Custom cron…</option>
-                        </Select>
-                        {cronValue === CUSTOM_VALUE ? (
-                          <div className="mt-2">
-                            <TextInput
-                              className="w-full font-mono text-[13px]"
-                              value={form.cron}
-                              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, cron: event.target.value })}
-                              placeholder="0 9 * * *"
-                            />
-                            <FieldHint>Five-field cron: minute hour day-of-month month day-of-week.</FieldHint>
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <div className="ui-field">
-                        <FieldLabel>Run at</FieldLabel>
-                        <TextInput
-                          type="datetime-local"
-                          className="w-full"
-                          value={form.atLocal}
-                          onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, atLocal: event.target.value })}
-                        />
-                        {form.scheduleType === 'at' && !form.atLocal ? <FieldError>Pick a date and time.</FieldError> : null}
-                        <FieldHint>Times are in your local timezone.</FieldHint>
-                      </div>
-                    )}
-                  </div>
-
-                  <Field label="Instructions" hint="The prompt sent to the agent each time this automation fires.">
-                    <Textarea
-                      name="automation-prompt"
-                      className="min-h-32 w-full resize-y text-[13px]"
-                      value={form.prompt}
-                      onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setForm({ ...form, prompt: event.target.value })}
-                      placeholder="Check the release dashboard and post a summary of anything new."
-                    />
+                        </optgroup>
+                      ))}
+                    </Select>
                   </Field>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Model" hint="Leave on the app default unless this automation needs a specific model.">
-                      <Select
-                        className="w-full"
-                        value={form.model}
-                        onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, model: event.target.value })}
-                      >
-                        <option value="">Use app default</option>
-                        {groupedModels(models).map(([provider, providerModels]) => (
-                          <optgroup key={provider} label={provider}>
-                            {providerModels.map((model) => (
-                              <option key={`${provider}/${model.id}`} value={model.id}>
-                                {modelLabel(model)}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </Select>
-                    </Field>
-
-                    <div className="ui-field">
-                      <FieldLabel>Timeout</FieldLabel>
-                      <Select
-                        className="w-full"
-                        value={timeoutValue}
-                        onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
-                          const next = event.target.value;
-                          setForm((current) => ({ ...current, timeoutSeconds: next === CUSTOM_VALUE ? current.timeoutSeconds : next }));
-                        }}
-                      >
-                        {TIMEOUT_PRESETS.map((preset) => (
-                          <option key={preset.value} value={preset.value}>
-                            {preset.label}
-                          </option>
-                        ))}
-                        <option value={CUSTOM_VALUE}>Custom…</option>
-                      </Select>
-                      {timeoutValue === CUSTOM_VALUE ? (
-                        <div className="mt-2">
-                          <TextInput
-                            inputMode="numeric"
-                            className="w-full"
-                            value={form.timeoutSeconds}
-                            onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                              setForm({ ...form, timeoutSeconds: event.target.value })
-                            }
-                          />
-                          <FieldHint>Seconds before the run is stopped.</FieldHint>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-
                   <div className="ui-field">
-                    <FieldLabel>Working directory</FieldLabel>
-                    <div className="flex gap-2">
-                      <TextInput
-                        className="min-w-0 flex-1 font-mono text-[12px]"
-                        value={form.cwd}
-                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, cwd: event.target.value })}
-                        placeholder="Defaults to the owner thread's working directory"
-                      />
-                      <BrowsePathButton
-                        busy={pickingCwd}
-                        title="Choose working directory"
-                        ariaLabel="Choose automation working directory"
-                        onClick={() => void pickCwd()}
-                      />
-                    </div>
-                    <FieldHint>Overrides the owner thread's working directory for this automation's runs.</FieldHint>
+                    <FieldLabel>Timeout</FieldLabel>
+                    <Select
+                      name="automation-timeout-preset"
+                      aria-label="Timeout"
+                      value={timeoutValue}
+                      onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
+                        const next = event.target.value;
+                        setForm((current) => ({ ...current, timeoutSeconds: next === CUSTOM_VALUE ? current.timeoutSeconds : next }));
+                      }}
+                    >
+                      {TIMEOUT_PRESETS.map((preset) => (
+                        <option key={preset.value} value={preset.value}>
+                          {preset.label}
+                        </option>
+                      ))}
+                      <option value={CUSTOM_VALUE}>Custom…</option>
+                    </Select>
+                    {timeoutValue === CUSTOM_VALUE ? (
+                      <div className="mt-2">
+                        <TextInput
+                          name="automation-timeout"
+                          aria-label="Custom timeout in seconds"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          value={form.timeoutSeconds}
+                          onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                            setForm({ ...form, timeoutSeconds: event.target.value })
+                          }
+                        />
+                        <FieldHint>Seconds before the run is stopped.</FieldHint>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
-                <aside className="min-w-0 border-t border-border-subtle pt-3 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
-                  <SectionLabel>Run preview</SectionLabel>
-                  <KeyValueList className="mt-3">
-                    <KeyValueItem label="State" value={form.enabled ? 'Enabled' : 'Paused'} />
-                    <KeyValueItem label="Schedule" value={formSchedulePreview(form)} />
-                    <KeyValueItem label="Owner" value={(ownerConversation?.title ?? form.ownerThreadId) || 'Not selected'} />
-                    <KeyValueItem label="Timeout" value={`${Number(form.timeoutSeconds) || 0}s`} />
-                    <KeyValueItem label="Working dir" value={form.cwd || ownerConversation?.cwd || 'Thread default'} />
-                  </KeyValueList>
-
-                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
-                    <div className="min-w-0">
-                      <SectionLabel>Enabled</SectionLabel>
-                      <SupportingText className="mt-0.5">Paused automations keep their schedule but won't run.</SupportingText>
-                    </div>
-                    <Switch
-                      checked={form.enabled}
-                      onClick={() => setForm({ ...form, enabled: !form.enabled })}
-                      aria-label="Enable automation"
+                <div className="ui-field">
+                  <FieldLabel>Working directory</FieldLabel>
+                  <div className="flex gap-2">
+                    <TextInput
+                      name="automation-cwd"
+                      aria-label="Working directory"
+                      autoComplete="off"
+                      className="min-w-0 flex-1 font-mono text-[12px]"
+                      value={form.cwd}
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, cwd: event.target.value })}
+                      placeholder="Thread default…"
+                    />
+                    <BrowsePathButton
+                      busy={pickingCwd}
+                      title="Choose working directory"
+                      ariaLabel="Choose automation working directory"
+                      onClick={() => void pickCwd()}
                     />
                   </div>
-                </aside>
-              </div>
-            ) : (
-              <div className="mt-3 grid max-w-xl gap-0 text-[12px]">
-                {[
-                  ['Status', 'No automation selected'],
-                  ['Next run', 'Select a row to inspect or edit'],
-                  ['Owner thread', '—'],
-                  ['Last run', '—'],
-                ].map(([label, value]) => (
-                  <div key={label} className="grid grid-cols-[8rem_minmax(0,1fr)] border-b border-border-subtle py-2">
-                    <span className="text-dim">{label}</span>
-                    <span className="truncate text-secondary">{value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-      </AppPageLayout>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
+                  <FieldLabel>Enabled</FieldLabel>
+                  <Switch
+                    checked={form.enabled}
+                    onClick={() => setForm({ ...form, enabled: !form.enabled })}
+                    aria-label="Enable automation"
+                  />
+                </div>
+              </Disclosure>
+            </DialogBody>
+            <DialogFooter>
+              <Button variant="ghost" type="button" onClick={closeDialog}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="action" tone="accent" disabled={busy === 'save'}>
+                {busy === 'save' ? 'Saving…' : editingId ? 'Save automation' : 'Create automation'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Dialog>
+      ) : null}
     </div>
   );
 }
@@ -893,6 +858,16 @@ function RefreshIcon() {
       <path d="M3 2.8v2.5h2.5" />
       <path d="M3 9a5 5 0 0 0 8.5 3.2L13 10.7" />
       <path d="M13 13.2v-2.5h-2.5" />
+    </svg>
+  );
+}
+
+function MoreIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="currentColor">
+      <circle cx="3.5" cy="8" r="1.15" />
+      <circle cx="8" cy="8" r="1.15" />
+      <circle cx="12.5" cy="8" r="1.15" />
     </svg>
   );
 }

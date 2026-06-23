@@ -101,39 +101,66 @@ describe('AutomationsPage', () => {
     const { container } = await renderPage(createPa(), { search: '?action=new' });
 
     expect(container.textContent).toContain('New automation');
-    expect(container.textContent).toContain('Save automation');
-    expect(container.querySelector('input[name="automation-title"]')).not.toBeNull();
+    expect(container.textContent).toContain('Create automation');
+    const dialog = container.querySelector('[role="dialog"]');
+    const title = container.querySelector<HTMLInputElement>('input[name="automation-title"]');
+    expect(dialog).not.toBeNull();
+    expect(dialog?.getAttribute('aria-modal')).toBe('true');
+    expect(title).not.toBeNull();
+    expect(document.activeElement).toBe(title);
     expect(container.querySelector('select[name="automation-owner-thread"]')).not.toBeNull();
+  });
+
+  it('keeps the empty state as a list-only page until the dialog is opened', async () => {
+    const pa = createPa({ list: vi.fn(async () => []) });
+    const { container } = await renderPage(pa);
+
+    expect(container.querySelector('table')).not.toBeNull();
+    expect(container.textContent).toContain('No automations yet.');
+    expect(Array.from(container.querySelectorAll('button')).filter((button) => button.textContent === 'New automation')).toHaveLength(1);
+    expect(container.querySelector('input[name="automation-title"]')).toBeNull();
+    expect(container.textContent).not.toContain('Run preview');
+    expect(container.textContent).not.toContain('Scheduler');
   });
 
   it('renders a schedule-first list with next run, last run, and owner thread', async () => {
     const { container } = await renderPage();
 
     expect(container.textContent).toContain('Automations');
-    expect(container.textContent).toContain('Scheduler: healthy');
-    expect(container.textContent).toContain('StateNameNext');
+    expect(container.textContent).toContain('StatusAutomationScheduleNext runLast runOwner thread');
     expect(container.textContent).toContain('Release watch');
-    expect(container.textContent).toContain('Recurring · */15 * * * *');
+    expect(container.textContent).toContain('*/15 * * * *');
     expect(container.textContent).toContain('Release watch thread');
-    expect(container.textContent).toContain('Last:');
-    expect(container.textContent).toContain('Automation details');
     expect(container.textContent).toContain('Paused check');
     expect(container.textContent).toContain('Paused');
   });
 
-  it('runs, pauses, resumes, and deletes from the table', async () => {
+  it('runs, pauses, resumes, and deletes from the row action menu', async () => {
     const pa = createPa();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     const { container } = await renderPage(pa);
     const buttons = () => Array.from(container.querySelectorAll('button'));
+    const openReleaseMenu = async () => {
+      await act(async () =>
+        buttons()
+          .find((button) => button.getAttribute('aria-label') === 'Actions for Release watch')
+          ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+      );
+    };
 
+    await openReleaseMenu();
+    const trigger = buttons().find((button) => button.getAttribute('aria-label') === 'Actions for Release watch');
+    expect(trigger?.getAttribute('aria-haspopup')).toBe('menu');
+    expect(trigger?.getAttribute('aria-expanded')).toBe('true');
+    const menuId = trigger?.getAttribute('aria-controls');
+    expect(Array.from(container.querySelectorAll('[role="menu"]')).some((menu) => menu.id === menuId)).toBe(true);
     await act(async () =>
       buttons()
-        .find((button) => button.textContent === 'Run')
+        .find((button) => button.textContent === 'Run now')
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
     );
     expect(pa.automations.run).toHaveBeenCalledWith('release-watch');
 
+    await openReleaseMenu();
     await act(async () =>
       buttons()
         .find((button) => button.textContent === 'Pause')
@@ -144,12 +171,40 @@ describe('AutomationsPage', () => {
       expect.objectContaining({ enabled: false, threadConversationId: 'conv-owner' }),
     );
 
+    await openReleaseMenu();
     await act(async () =>
       buttons()
         .find((button) => button.textContent === 'Delete')
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
     );
     expect(pa.automations.delete).toHaveBeenCalledWith('release-watch');
+  });
+
+  it('edits an existing automation in the modal instead of an inline details pane', async () => {
+    const pa = createPa();
+    const { container } = await renderPage(pa);
+    await act(async () =>
+      Array.from(container.querySelectorAll('button'))
+        .find((button) => button.textContent === 'Release watch')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    const title = container.querySelector<HTMLInputElement>('input[name="automation-title"]');
+    if (!title) throw new Error('edit title input missing');
+    expect(container.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(title.value).toBe('Release watch');
+
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(title, 'Release watch updated');
+      title.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () =>
+      Array.from(container.querySelectorAll('button'))
+        .find((button) => button.textContent === 'Save automation')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    expect(pa.automations.update).toHaveBeenCalledWith('release-watch', expect.objectContaining({ title: 'Release watch updated' }));
   });
 
   it('creates a new owner-threaded conversation automation', async () => {
@@ -170,7 +225,7 @@ describe('AutomationsPage', () => {
     });
     await act(async () =>
       Array.from(container.querySelectorAll('button'))
-        .find((button) => button.textContent === 'Save automation')
+        .find((button) => button.textContent === 'Create automation')
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
     );
 

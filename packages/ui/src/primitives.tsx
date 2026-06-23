@@ -2317,6 +2317,23 @@ export function DataTableActionGroup({ children, className, ...props }: HTMLAttr
   );
 }
 
+const DIALOG_FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+function getDialogFocusable(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(DIALOG_FOCUSABLE_SELECTOR)).filter((element) => {
+    if (element.getAttribute('aria-hidden') === 'true') return false;
+    const style = window.getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden';
+  });
+}
+
 export function Dialog({
   children,
   className,
@@ -2325,6 +2342,8 @@ export function Dialog({
   onClose,
   closeOnBackdrop = true,
   labelledBy,
+  onKeyDown,
+  tabIndex,
   ...props
 }: {
   children: ReactNode;
@@ -2335,6 +2354,49 @@ export function Dialog({
   closeOnBackdrop?: boolean;
   labelledBy?: string;
 } & HTMLAttributes<HTMLDivElement>) {
+  const shellRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && shell.contains(active)) return;
+    const preferred = shell.querySelector<HTMLElement>('[autofocus], [data-autofocus]');
+    const target = preferred ?? getDialogFocusable(shell)[0] ?? shell;
+    target.focus({ preventScroll: true });
+  }, []);
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    onKeyDown?.(event);
+    if (event.defaultPrevented) return;
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      onClose?.();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+
+    const shell = shellRef.current;
+    if (!shell) return;
+    const focusable = getDialogFocusable(shell);
+    if (focusable.length === 0) {
+      event.preventDefault();
+      shell.focus({ preventScroll: true });
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  };
+
   return (
     <div
       className={cx('ui-overlay-backdrop', backdropClassName)}
@@ -2344,10 +2406,13 @@ export function Dialog({
       }}
     >
       <div
+        ref={shellRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
+        tabIndex={tabIndex ?? -1}
         className={cx('ui-dialog-shell', className)}
+        onKeyDown={handleKeyDown}
         onClick={(event) => event.stopPropagation()}
         {...props}
       >
