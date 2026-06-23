@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 
@@ -150,9 +149,7 @@ export function applyDesktopRuntimeEnvironmentOverrides(
     !env.NEON_PILOT_DAEMON_NAMESPACE?.trim() &&
     !env.NEON_PILOT_DAEMON_SOCKET_PATH?.trim()
   ) {
-    // Use only the first 8 hex chars of the UUID to keep the socket path within
-    // macOS's 103-char Unix socket path limit (UNIX_PATH_MAX = 104 incl. null).
-    env.NEON_PILOT_DAEMON_NAMESPACE = `${channelConfig.channel}-${randomUUID().slice(0, 8)}`;
+    env.NEON_PILOT_DAEMON_NAMESPACE = channelConfig.channel;
   }
 
   seedTestingRuntimeState(env, options);

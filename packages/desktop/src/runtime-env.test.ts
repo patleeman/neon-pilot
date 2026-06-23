@@ -60,7 +60,7 @@ describe('desktop runtime environment overrides', () => {
     expect(env.CODEX_PORT).toBeUndefined();
     expect(env.NEON_PILOT_COMPANION_PORT).toBe('0');
     expect(env.NEON_PILOT_RUNTIME_CHANNEL).toBe('test');
-    expect(env.NEON_PILOT_DAEMON_NAMESPACE).toMatch(/^test-[0-9a-f-]+$/u);
+    expect(env.NEON_PILOT_DAEMON_NAMESPACE).toBe('test');
   });
 
   it('applies dev overrides directly onto the process environment', () => {
@@ -75,7 +75,7 @@ describe('desktop runtime environment overrides', () => {
     expect(env.CODEX_PORT).toBeUndefined();
     expect(env.NEON_PILOT_COMPANION_PORT).toBe('0');
     expect(env.NEON_PILOT_RUNTIME_CHANNEL).toBe('dev');
-    expect(env.NEON_PILOT_DAEMON_NAMESPACE).toMatch(/^dev-[0-9a-f-]+$/u);
+    expect(env.NEON_PILOT_DAEMON_NAMESPACE).toBe('dev');
   });
 
   it('respects explicit daemon namespace for dev launches', () => {

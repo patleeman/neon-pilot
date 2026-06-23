@@ -1,7 +1,6 @@
 /* eslint-env node */
 
 import { spawn, spawnSync } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
@@ -68,9 +67,7 @@ function buildDesktopLaunchEnv(baseEnv = process.env) {
     ...cleanBaseEnv,
     NEON_PILOT_DESKTOP_VARIANT: desktopVariant,
     NEON_PILOT_RUNTIME_CHANNEL: 'test',
-    // Use only the first 8 hex chars of the UUID to keep the socket path within
-    // macOS's 103-char Unix socket path limit (UNIX_PATH_MAX = 104 incl. null).
-    NEON_PILOT_DAEMON_NAMESPACE: baseEnv.NEON_PILOT_DAEMON_NAMESPACE || `dev-${randomUUID().slice(0, 8)}`,
+    NEON_PILOT_DAEMON_NAMESPACE: baseEnv.NEON_PILOT_DAEMON_NAMESPACE || 'test',
     NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR: readElectronNativeModulesDir(),
     NEON_PILOT_REPO_ROOT: repoRoot,
   };

@@ -49,7 +49,7 @@ Subagents and scheduled agent tasks run through the daemon's internal background
 
 ## State Storage
 
-The daemon stores its state in `<state-root>/daemon/` by default. If `NEON_PILOT_DAEMON_NAMESPACE` is set, daemon runtime files live in `<state-root>/daemon-<namespace>/`; the namespace is sanitized for path safety. Dev/test desktop processes set a unique namespace per invocation unless one is explicitly provided, so multiple dev/test apps can run without sharing sockets, pid locks, runtime DBs, or logs. If `NEON_PILOT_DAEMON_SOCKET_PATH` is set, daemon runtime files live beside that explicit socket path instead and the namespace is ignored; this lets dev hosts pin a specific isolated runtime DB.
+The daemon stores its state in `<state-root>/daemon/` by default. If `NEON_PILOT_DAEMON_NAMESPACE` is set, daemon runtime files live in `<state-root>/daemon-<namespace>/`; the namespace is sanitized for path safety. Dev/test desktop processes use stable `dev` or `test` namespaces unless one is explicitly provided, so scheduled automations persist across local restarts. If you need an isolated dev/test daemon, set `NEON_PILOT_DAEMON_NAMESPACE` or `NEON_PILOT_DAEMON_SOCKET_PATH`; with an explicit socket path, daemon runtime files live beside that socket and the namespace is ignored.
 
 | Path         | Content                                                      |
 | ------------ | ------------------------------------------------------------ |
