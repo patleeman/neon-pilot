@@ -100,7 +100,7 @@ export function WorkspaceQuickSelectModal({
   return (
     <ResourcePickerDialog
       title="Open workspace"
-      description="Choose one of the saved workspaces or pick a new folder."
+      description="Choose a workspace or pick a new folder."
       onClose={onClose}
       backdropStyle={{
         background: 'rgb(0 0 0 / 0.52)',
@@ -140,7 +140,7 @@ export function WorkspaceQuickSelectModal({
             );
           })
         ) : (
-          <PanelMessage className="px-3 py-4">No saved workspaces yet.</PanelMessage>
+          <PanelMessage className="px-3 py-4">No workspaces yet.</PanelMessage>
         )}
 
         <ResourceListItem

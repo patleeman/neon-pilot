@@ -4,7 +4,7 @@ import {
   groupConversationItemsByCwd,
 } from '../conversation/conversationCwdGroups';
 import { isNeutralChatCwdPath } from '../conversation/conversationCwdPresentation';
-import { normalizeWorkspacePaths } from '../local/savedWorkspacePaths';
+import { buildWorkspacePickerPaths } from '../conversation/conversationWorkspaceState';
 import type { ConversationShelf } from '../session/sessionTabs';
 import type { SessionMeta } from '../shared/types';
 
@@ -116,11 +116,12 @@ export function buildSidebarThreadModel(input: SidebarThreadModelInput): Sidebar
     return true;
   });
 
-  const workspaceOrder = normalizeWorkspacePaths([
-    ...input.pinnedWorkspacePaths,
-    ...input.savedWorkspacePaths,
-    ...input.openWorkspacePaths,
-  ]);
+  const workspaceOrder = buildWorkspacePickerPaths({
+    currentCwd: null,
+    pinnedWorkspacePaths: input.pinnedWorkspacePaths,
+    savedWorkspacePaths: input.savedWorkspacePaths,
+    openWorkspacePaths: input.openWorkspacePaths,
+  });
   const conversationGroupLabels = buildConversationGroupLabels([
     ...workspaceOrder,
     ...filteredConversationItems.map((item) => getSessionWorkspaceCwd(item.session)),

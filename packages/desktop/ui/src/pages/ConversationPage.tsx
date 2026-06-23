@@ -192,8 +192,8 @@ import { NEW_CONVERSATION_TITLE } from '../conversation/conversationTitle';
 import { INITIAL_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS } from '../conversation/conversationTranscriptPaging';
 import { buildOpenArtifactSearch, buildOpenKnowledgeFileSearch } from '../conversation/conversationWorkbenchNavigation';
 import {
-  buildActiveConversationWorkspacePaths,
   buildAvailableDraftWorkspacePaths,
+  buildWorkspacePickerPaths,
   resolveConversationCurrentCwd,
 } from '../conversation/conversationWorkspaceState';
 import {
@@ -2458,12 +2458,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const hasDraftCwd = hasDraftConversationCwd(draftCwdValue);
   const setupWorkspaceCwd = draft ? draftCwdValue || null : currentCwdLabel === 'Chat' ? null : currentCwd;
   const availableDraftWorkspacePaths = useMemo(
-    () => buildAvailableDraftWorkspacePaths({ draftCwdValue: setupWorkspaceCwd ?? '', savedWorkspacePaths, sessions }),
-    [savedWorkspacePaths, sessions, setupWorkspaceCwd],
+    () => buildAvailableDraftWorkspacePaths({ draftCwdValue: setupWorkspaceCwd ?? '', savedWorkspacePaths }),
+    [savedWorkspacePaths, setupWorkspaceCwd],
   );
   const availableConversationWorkspacePaths = useMemo(
-    () => buildActiveConversationWorkspacePaths({ currentCwd, sessions }),
-    [currentCwd, sessions],
+    () => buildWorkspacePickerPaths({ currentCwd, savedWorkspacePaths }),
+    [currentCwd, savedWorkspacePaths],
   );
   const relatedThreadCandidates = useMemo(
     () =>

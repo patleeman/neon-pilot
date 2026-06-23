@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext } from '../app/contexts';
 import { DRAWING_PICKER_OPEN_COMMAND_EVENT } from '../components/conversation/drawingPickerCommands';
+import { SAVED_WORKSPACE_PATHS_STORAGE_KEY } from '../local/localSettings';
 import { sessionStore } from '../store';
 import { ConversationPage } from './ConversationPage';
 
@@ -924,6 +925,7 @@ describe('ConversationPage lazy composer metadata', () => {
       cwd: '/tmp/next-project',
       changed: false,
     });
+    window.localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify(['/tmp/project', '/tmp/next-project']));
 
     renderSwitchableConversationPage();
 
@@ -938,6 +940,12 @@ describe('ConversationPage lazy composer metadata', () => {
       fireEvent.click(screen.getByRole('button', { name: '/tmp/project' }));
       await Promise.resolve();
     });
+
+    expect(
+      Array.from((screen.getByRole('combobox', { name: 'Conversation working directory' }) as HTMLSelectElement).options).map(
+        (option) => option.value,
+      ),
+    ).toEqual(['/tmp/project', '/tmp/next-project']);
 
     await act(async () => {
       fireEvent.change(screen.getByRole('combobox', { name: 'Conversation working directory' }), {

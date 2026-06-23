@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  buildActiveConversationWorkspacePaths,
-  buildAvailableDraftWorkspacePaths,
-  resolveConversationCurrentCwd,
-} from './conversationWorkspaceState';
+import { buildAvailableDraftWorkspacePaths, buildWorkspacePickerPaths, resolveConversationCurrentCwd } from './conversationWorkspaceState';
 
 describe('conversationWorkspaceState', () => {
   it('resolves current cwd for draft and live conversations', () => {
@@ -28,22 +24,20 @@ describe('conversationWorkspaceState', () => {
     expect(buildAvailableDraftWorkspacePaths({ draftCwdValue: '', savedWorkspacePaths: ['/other'] })).toEqual(['/other']);
   });
 
-  it('builds active conversation workspace paths from the current conversation and sessions', () => {
+  it('builds workspace picker paths from the current cwd and curated workspace sources', () => {
     expect(
-      buildActiveConversationWorkspacePaths({
+      buildWorkspacePickerPaths({
         currentCwd: '/repo/current',
-        sessions: [
-          { cwd: '/repo/other' },
-          { cwd: '/repo/current' },
-          { cwd: '/Users/patrick/.local/state/neon-pilot/neon-pilot-runtime/chat-workspaces/shared' },
-        ],
+        pinnedWorkspacePaths: ['/repo/pinned'],
+        savedWorkspacePaths: ['/repo/saved', '/repo/current'],
+        openWorkspacePaths: ['/repo/open', '/repo/saved'],
       }),
-    ).toEqual(['/repo/current', '/repo/other']);
+    ).toEqual(['/repo/current', '/repo/pinned', '/repo/saved', '/repo/open']);
 
     expect(
-      buildActiveConversationWorkspacePaths({
+      buildWorkspacePickerPaths({
         currentCwd: '/Users/patrick/.local/state/neon-pilot/neon-pilot-runtime/chat-workspaces/shared',
-        sessions: [{ cwd: '/repo/other' }],
+        savedWorkspacePaths: ['/repo/other'],
       }),
     ).toEqual(['/repo/other']);
   });

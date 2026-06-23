@@ -39,6 +39,7 @@ import {
   resolveConversationAdjacentPath,
   resolveConversationCloseRedirect,
 } from '../conversation/conversationRoutes';
+import { buildWorkspacePickerPaths } from '../conversation/conversationWorkspaceState';
 import {
   DESKTOP_CONVERSATION_SHORTCUT_EVENT,
   isSidebarConversationShortcutAction,
@@ -2136,7 +2137,7 @@ export function Sidebar() {
     [activeConversationId, automationConversationIdSet, orderedConversationItems, threadsFilterMode],
   );
   const workspaceOrder = useMemo(
-    () => normalizeWorkspacePaths([...pinnedWorkspacePaths, ...savedWorkspacePaths, ...openWorkspacePaths]),
+    () => buildWorkspacePickerPaths({ currentCwd: null, pinnedWorkspacePaths, savedWorkspacePaths, openWorkspacePaths }),
     [openWorkspacePaths, pinnedWorkspacePaths, savedWorkspacePaths],
   );
   const conversationGroupLabels = useMemo(
@@ -4371,7 +4372,7 @@ export function Sidebar() {
       ) : null}
       {workspaceQuickSelectOpen ? (
         <WorkspaceQuickSelectModal
-          workspacePaths={savedWorkspacePaths}
+          workspacePaths={workspaceOrder}
           choosingNewFolder={addWorkspaceBusy}
           onClose={() => setWorkspaceQuickSelectOpen(false)}
           onSelectWorkspace={handleSelectSavedWorkspace}
