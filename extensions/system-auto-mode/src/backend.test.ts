@@ -539,6 +539,55 @@ describe('system-goal-mode extension', () => {
     );
   });
 
+  it.each([
+    ['errorMessage', { errorMessage: 'Codex error: context_length_exceeded' }],
+    ['message', { message: 'context window exceeded' }],
+    ['code', { code: 'context_length_exceeded' }],
+    ['nested error message', { error: { message: 'Your input exceeds the context window of this model.' } }],
+    ['nested provider code', { error: { code: 'context_length_exceeded' } }],
+    [
+      'codex json payload',
+      {
+        errorMessage:
+          'Codex error: {"type":"error","error":{"type":"invalid_request_error","code":"context_length_exceeded","message":"Your input exceeds the context window of this model."}}',
+      },
+    ],
+  ])('compacts raw context overflow reported via %s', async (_label, overflowEvent) => {
+    const { turnEnd, agentEnd, sendMessage, ctx } = createHarness([activeGoal('ship it', 1)]);
+
+    await turnEnd({ type: 'turn_end', toolResults: [], ...overflowEvent }, ctx);
+    await agentEnd({}, ctx);
+    await flushTimers();
+
+    expect(ctx.conversations?.compact).toHaveBeenCalledWith('conv-1');
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the session id when raw overflow events do not include a conversation id', async () => {
+    const { turnEnd, ctx } = createHarness([activeGoal('ship it', 1)]);
+    delete ctx.conversationId;
+    ctx.sessionManager.getSessionId = () => 'session-from-manager';
+
+    await turnEnd({ type: 'turn_end', toolResults: [], error: { code: 'context_length_exceeded' } }, ctx);
+
+    expect(ctx.conversations?.compact).toHaveBeenCalledWith('session-from-manager');
+  });
+
+  it('pauses instead of retrying when raw overflow cannot be compacted', async () => {
+    const { turnEnd, agentEnd, sendMessage, appendEntry, ctx } = createHarness([activeGoal('ship it', 1)]);
+    delete ctx.conversations;
+
+    await turnEnd({ type: 'turn_end', toolResults: [], errorMessage: 'context_length_exceeded' }, ctx);
+    await agentEnd({}, ctx);
+    await flushTimers();
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(appendEntry).toHaveBeenCalledWith(
+      'conversation-goal',
+      expect.objectContaining({ objective: 'ship it', status: 'paused', stopReason: 'overflow recovery failed', noProgressTurns: 0 }),
+    );
+  });
+
   it('pauses the goal when raw context overflow compaction fails', async () => {
     const { turnEnd, agentEnd, sendMessage, appendEntry, ctx } = createHarness([activeGoal('ship it', 1)]);
     ctx.conversations?.compact.mockRejectedValueOnce(new Error('compact failed'));

@@ -177,13 +177,21 @@ function hasPendingMessages(ctx: { hasPendingMessages?: () => boolean }): boolea
   return typeof ctx.hasPendingMessages === 'function' ? ctx.hasPendingMessages() : false;
 }
 
+function collectErrorText(value: unknown): string[] {
+  if (typeof value === 'string') {
+    return [value];
+  }
+  if (!isRecord(value)) {
+    return [];
+  }
+  return [value.message, value.errorMessage, value.code, value.type, value.error].flatMap(collectErrorText);
+}
+
 function isContextOverflowError(event: unknown): boolean {
   if (!isRecord(event)) {
     return false;
   }
-  const candidates = [event.errorMessage, event.error, event.message]
-    .map((value) => (typeof value === 'string' ? value : ''))
-    .filter(Boolean);
+  const candidates = [event.errorMessage, event.error, event.message, event.code, event.type].flatMap(collectErrorText);
   return candidates.some((message) => /context_length_exceeded|context window|context overflow/i.test(message));
 }
 
