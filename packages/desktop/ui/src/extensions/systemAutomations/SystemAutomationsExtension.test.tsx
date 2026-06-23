@@ -108,10 +108,16 @@ describe('AutomationsPage', () => {
     expect(dialog).not.toBeNull();
     expect(dialog?.getAttribute('aria-modal')).toBe('true');
     expect(dialog?.querySelector('form')?.className).toContain('flex');
-    expect(dialog?.querySelector('.ui-dialog-body')?.className).toContain('flex-1');
+    const body = dialog?.querySelector('.ui-dialog-body');
+    expect(body?.className).toContain('flex-col');
+    expect(body?.className).not.toContain('grid');
+    expect(dialog?.querySelector('.ui-disclosure')?.className).toContain('shrink-0');
+    expect(document.querySelector('select[name="automation-model"]')?.closest('.grid')?.className).toContain('items-start');
     expect(title).not.toBeNull();
     expect(document.activeElement).toBe(title);
     expect(document.querySelector('select[name="automation-owner-thread"]')).not.toBeNull();
+    expect(document.querySelector('select[name="automation-timeout-preset"]')?.closest('.ui-field')).not.toBeNull();
+    expect(document.querySelector('input[name="automation-cwd"]')).not.toBeNull();
   });
 
   it('mounts the creation dialog at document body so the overlay covers desktop chrome', async () => {

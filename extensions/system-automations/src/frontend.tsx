@@ -648,10 +648,10 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
         <Dialog portal onClose={closeDialog} labelledBy={titleId} className="max-w-[42rem]">
           <form className="flex min-h-0 flex-1 flex-col" onSubmit={submitForm}>
             <DialogHeader title={editingTitle} titleId={titleId} />
-            <DialogBody className="grid flex-1 gap-4">
+            <DialogBody className="flex flex-1 flex-col gap-4">
               {formError ? <Notice tone="danger">{formError}</Notice> : null}
 
-              <Field label="Name">
+              <Field label="Name" className="shrink-0">
                 <TextInput
                   name="automation-title"
                   autoFocus
@@ -662,7 +662,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 />
               </Field>
 
-              <Field label="Instructions">
+              <Field label="Instructions" className="shrink-0">
                 <Textarea
                   name="automation-prompt"
                   className="min-h-28 resize-y text-[13px]"
@@ -672,7 +672,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 />
               </Field>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid shrink-0 gap-4 sm:grid-cols-2">
                 <div className="ui-field">
                   <FieldLabel>Schedule</FieldLabel>
                   <SegmentedControl
@@ -733,7 +733,11 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 )}
               </div>
 
-              <Field label="Owner thread" hint={ownerConversation?.cwd ? `Working from ${ownerConversation.cwd}` : undefined}>
+              <Field
+                label="Owner thread"
+                className="shrink-0"
+                hint={ownerConversation?.cwd ? `Working from ${ownerConversation.cwd}` : undefined}
+              >
                 <Select
                   name="automation-owner-thread"
                   value={form.ownerThreadId}
@@ -748,8 +752,8 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 </Select>
               </Field>
 
-              <Disclosure summary="Advanced" bodyClassName="grid gap-4 pt-3">
-                <div className="grid gap-4 sm:grid-cols-2">
+              <Disclosure summary="Advanced" className="shrink-0" bodyClassName="grid gap-4 pt-3">
+                <div className="grid items-start gap-4 sm:grid-cols-2">
                   <Field label="Model" hint="Uses the app default when empty.">
                     <Select
                       name="automation-model"
@@ -769,8 +773,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                     </Select>
                   </Field>
 
-                  <div className="ui-field">
-                    <FieldLabel>Timeout</FieldLabel>
+                  <Field label="Timeout">
                     <Select
                       name="automation-timeout-preset"
                       aria-label="Timeout"
@@ -802,7 +805,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                         <FieldHint>Seconds before the run is stopped.</FieldHint>
                       </div>
                     ) : null}
-                  </div>
+                  </Field>
                 </div>
 
                 <div className="ui-field">
