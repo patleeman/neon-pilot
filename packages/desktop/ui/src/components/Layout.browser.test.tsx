@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
 import { type BrowserTabItem, type BrowserTabsState, readBrowserTabsState } from '../local/workbenchBrowserTabs';
-import { WORKBENCH_BROWSER_COMMAND_EVENT, WorkbenchBrowserTab } from './workbench/WorkbenchBrowserTab';
+import { formatWorkbenchBrowserError, WORKBENCH_BROWSER_COMMAND_EVENT, WorkbenchBrowserTab } from './workbench/WorkbenchBrowserTab';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -27,6 +27,16 @@ describe('WorkbenchBrowserTab', () => {
     }
     delete window.neonPilotDesktop;
     vi.restoreAllMocks();
+  });
+
+  it('formats native navigation failures without leaking Electron IPC details', () => {
+    expect(
+      formatWorkbenchBrowserError(
+        new Error(
+          "Error invoking remote method 'neon-pilot-desktop:workbench-browser-navigate': Error: Workbench browser only supports http(s) URLs.",
+        ),
+      ),
+    ).toBe('Enter a web address that starts with http:// or https://.');
   });
 
   it('uses a global session key independent of conversation', async () => {

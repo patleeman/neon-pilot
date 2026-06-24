@@ -10,6 +10,25 @@ const WORKBENCH_BROWSER_COMMENT_EVENT = 'neon-pilot-desktop-workbench-browser-co
 const SHOW_WORKBENCH_BROWSER_CHANNEL = `${CHANNEL_PREFIX}:show-workbench-browser`;
 const SHOW_WORKBENCH_BROWSER_EVENT = 'neon-pilot-desktop-show-workbench-browser';
 
+interface DesktopShortcutPayload {
+  action?: unknown;
+  command?: string;
+  args?: Record<string, unknown>;
+}
+
+function normalizeDesktopShortcutPayload(input: unknown): DesktopShortcutPayload {
+  if (input && typeof input === 'object' && !Array.isArray(input)) {
+    const candidate = input as { action?: unknown; command?: unknown; args?: unknown };
+    const command = typeof candidate.command === 'string' ? candidate.command.trim() : '';
+    const args = candidate.args && typeof candidate.args === 'object' && !Array.isArray(candidate.args) ? candidate.args : undefined;
+    if (command) {
+      return { action: candidate.action, command, ...(args ? { args: args as Record<string, unknown> } : {}) };
+    }
+  }
+
+  return { action: input, ...resolveDesktopShortcutCommand(input) };
+}
+
 function resolveDesktopShortcutCommand(action: unknown): { command: string; args?: Record<string, unknown> } | undefined {
   switch (action) {
     case 'close-conversation':
@@ -130,7 +149,7 @@ function dispatchDesktopEvent<T>(type: string, detail: T): void {
 }
 
 ipcRenderer.on(SHORTCUT_CHANNEL, (_event, action: unknown) => {
-  dispatchDesktopEvent(SHORTCUT_EVENT, { action, ...resolveDesktopShortcutCommand(action) });
+  dispatchDesktopEvent(SHORTCUT_EVENT, normalizeDesktopShortcutPayload(action));
 });
 
 ipcRenderer.on(NAVIGATE_CHANNEL, (_event, payload: unknown) => {

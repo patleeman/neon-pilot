@@ -1,10 +1,11 @@
-import { BrowserWindow, Menu, shell, type WebContents, WebContentsView } from 'electron';
+import { BrowserWindow, type Input, Menu, shell, type WebContents, WebContentsView } from 'electron';
 
 import { readStoredWorkbenchBrowserUrl, writeStoredWorkbenchBrowserUrl } from './state/workbench-browser-state.js';
 
 const DEFAULT_BROWSER_URL = 'https://www.google.com/';
 const MAX_SNAPSHOT_TEXT_LENGTH = 30_000;
 const BROWSER_COMMENT_CHANNEL = 'neon-pilot-desktop:workbench-browser-comment';
+const SHORTCUT_CHANNEL = 'neon-pilot-desktop:shortcut';
 
 type CdpCommand = (method: string, params?: Record<string, unknown>) => Promise<unknown>;
 
@@ -129,6 +130,11 @@ export function normalizeWorkbenchBrowserUrl(input: unknown): string {
   }
 
   return parsed.toString();
+}
+
+export function isWorkbenchBrowserCommandPaletteShortcut(input: Pick<Input, 'key' | 'meta' | 'control' | 'alt' | 'shift'>): boolean {
+  const key = typeof input.key === 'string' ? input.key.toLowerCase() : '';
+  return key === 'k' && (input.meta === true || input.control === true) && input.alt !== true && input.shift !== true;
 }
 
 function normalizeCdpMethod(input: unknown): string {
@@ -696,7 +702,16 @@ export class WorkbenchBrowserViewController {
       this.persistCurrentUrl(sessionKey, url);
     });
     view.webContents.on('page-title-updated', () => this.bumpRevision(viewKey, 'page title changed'));
-    view.webContents.on('before-input-event', () => this.bumpRevision(viewKey, 'page input'));
+    view.webContents.on('before-input-event', (event, input) => {
+      if (isWorkbenchBrowserCommandPaletteShortcut(input)) {
+        event.preventDefault();
+        if (!entry.owner.isDestroyed()) {
+          entry.owner.send(SHORTCUT_CHANNEL, { command: 'palette.open', args: { scope: 'commands' } });
+        }
+        return;
+      }
+      this.bumpRevision(viewKey, 'page input');
+    });
     void view.webContents.loadURL(readStoredWorkbenchBrowserUrl(sessionKey) ?? DEFAULT_BROWSER_URL).catch(() => undefined);
     return view;
   }

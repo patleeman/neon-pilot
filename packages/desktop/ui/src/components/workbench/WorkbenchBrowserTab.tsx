@@ -16,12 +16,7 @@ import { Button, IconButton, Textarea, TextInput, ToolbarButton } from '../ui';
 
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 export const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
-const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set([
-  'browser.newTab',
-  'browser.reopenTab',
-  'browser.closeTab',
-  'browser.focusLocation',
-]);
+const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set(['browser.newTab', 'browser.reopenTab', 'browser.closeTab', 'browser.focusLocation']);
 
 function hasBlockingHtmlModal(): boolean {
   if (typeof document === 'undefined') {
@@ -29,6 +24,24 @@ function hasBlockingHtmlModal(): boolean {
   }
 
   return Boolean(document.querySelector('[aria-modal="true"]'));
+}
+
+export function formatWorkbenchBrowserError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error ?? '');
+  const firstLine = raw.split('\n')[0]?.trim() ?? '';
+  const remoteMatch = firstLine.match(/^Error invoking remote method '[^']+':\s*(?:Error:\s*)?(.*)$/i);
+  const message = (remoteMatch?.[1] ?? firstLine).replace(/^Error:\s*/i, '').trim();
+
+  if (!message || raw.includes('\n') || /file:\/\//i.test(raw) || /\s+at\s+\S+/i.test(raw)) {
+    return 'Browser action failed. Check the address and try again.';
+  }
+  if (/only supports http\(s\) URLs/i.test(message)) {
+    return 'Enter a web address that starts with http:// or https://.';
+  }
+  if (/valid http\(s\) URL/i.test(message)) {
+    return 'Enter a valid web address.';
+  }
+  return message;
 }
 
 export function WorkbenchBrowserTab({
@@ -152,7 +165,7 @@ export function WorkbenchBrowserTab({
             syncUrlDraftFromBrowserState(nextState, activeTab.id);
           }
         })
-        .catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+        .catch((error) => setStatus(formatWorkbenchBrowserError(error)));
       return;
     }
 
@@ -181,7 +194,7 @@ export function WorkbenchBrowserTab({
           syncUrlDraftFromBrowserState(nextState, activeTab.id);
         }
       })
-      .catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+      .catch((error) => setStatus(formatWorkbenchBrowserError(error)));
   }, [bridge, browserSessionKey, syncUrlDraftFromBrowserState]);
 
   useEffect(() => {
@@ -378,7 +391,7 @@ export function WorkbenchBrowserTab({
       setStatus('');
       syncBounds();
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : String(error));
+      setStatus(formatWorkbenchBrowserError(error));
     }
   }
 

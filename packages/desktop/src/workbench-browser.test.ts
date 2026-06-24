@@ -9,6 +9,7 @@ vi.mock('electron', () => ({
   shell: { openExternal: vi.fn() },
 }));
 import {
+  isWorkbenchBrowserCommandPaletteShortcut,
   normalizeWorkbenchBrowserBounds,
   normalizeWorkbenchBrowserCdpCommands,
   normalizeWorkbenchBrowserUrl,
@@ -46,6 +47,16 @@ describe('workbench browser validation', () => {
     expect(source).toContain('entry.active = true');
     expect(source).toContain('if (!entry.deactivated)');
     expect(source).toContain('entry.view.webContents.stop();');
+  });
+
+  it('forwards command palette shortcuts out of the embedded browser', () => {
+    const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
+
+    expect(isWorkbenchBrowserCommandPaletteShortcut({ key: 'k', meta: true, control: false, alt: false, shift: false })).toBe(true);
+    expect(isWorkbenchBrowserCommandPaletteShortcut({ key: 'K', meta: false, control: true, alt: false, shift: false })).toBe(true);
+    expect(isWorkbenchBrowserCommandPaletteShortcut({ key: 'k', meta: true, control: false, alt: false, shift: true })).toBe(false);
+    expect(isWorkbenchBrowserCommandPaletteShortcut({ key: 'l', meta: true, control: false, alt: false, shift: false })).toBe(false);
+    expect(source).toContain("entry.owner.send(SHORTCUT_CHANNEL, { command: 'palette.open', args: { scope: 'commands' } });");
   });
 
   it('accepts safe content bounds', () => {
