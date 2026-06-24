@@ -201,6 +201,21 @@ export function readSettingsSectionIdFromHash(hash: string): string {
   }
 }
 
+export function readSettingsSectionIdFromPathname(pathname: string): SettingsQuickLinkId | '' {
+  switch (pathname.replace(/\/+$/, '')) {
+    case '/settings/providers':
+      return 'settings-providers';
+    case '/settings/desktop':
+      return 'settings-desktop';
+    default:
+      return '';
+  }
+}
+
+function readSettingsSectionIdFromContext(context: ExtensionSurfaceProps['context']): string {
+  return readSettingsSectionIdFromHash(context.hash) || readSettingsSectionIdFromPathname(context.pathname);
+}
+
 export function scrollSettingsSectionIntoView(container: HTMLElement | null, sectionId: SettingsQuickLinkId) {
   const section = typeof document === 'undefined' ? null : document.getElementById(sectionId);
   if (section && container?.contains(section)) {
@@ -1477,22 +1492,22 @@ async function navigateSettingsSidebar(pa: ExtensionSurfaceProps['pa'], sectionI
 export function SettingsSidebar({ pa, context }: ExtensionSurfaceProps) {
   const { settingsNavLinks } = useSettingsNavigation();
   const visibleTocLinks = useMemo(() => flattenSettingsQuickLinks(settingsNavLinks), [settingsNavLinks]);
-  const initialActiveId = readSettingsSectionIdFromHash(context.hash);
+  const initialActiveId = readSettingsSectionIdFromContext(context);
   const [activeQuickLinkId, setActiveQuickLinkId] = useState<SettingsQuickLinkId>(
     visibleTocLinks.some((item) => item.id === initialActiveId) ? initialActiveId : SETTINGS_QUICK_LINKS[0].id,
   );
   const [settingsQuery, setSettingsQuery] = useState('');
 
   useEffect(() => {
-    const hashSectionId = readSettingsSectionIdFromHash(context.hash);
-    if (visibleTocLinks.some((item) => item.id === hashSectionId)) {
-      setActiveQuickLinkId(hashSectionId);
+    const contextSectionId = readSettingsSectionIdFromContext(context);
+    if (visibleTocLinks.some((item) => item.id === contextSectionId)) {
+      setActiveQuickLinkId(contextSectionId);
       return;
     }
     if (!visibleTocLinks.some((item) => item.id === activeQuickLinkId)) {
       setActiveQuickLinkId(visibleTocLinks[0]?.id ?? SETTINGS_QUICK_LINKS[0].id);
     }
-  }, [activeQuickLinkId, context.hash, visibleTocLinks]);
+  }, [activeQuickLinkId, context.hash, context.pathname, visibleTocLinks]);
 
   return (
     <div className="settings-sidebar flex h-full min-h-0 flex-col bg-transparent">

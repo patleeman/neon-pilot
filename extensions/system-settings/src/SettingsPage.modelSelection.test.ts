@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   formatSettingsModelOptionValue,
   readSettingsSectionIdFromHash,
+  readSettingsSectionIdFromPathname,
   resolveSettingsModelOption,
   scrollSettingsSectionIntoView,
 } from './SettingsPage';
@@ -57,6 +58,13 @@ describe('settings hash section parsing', () => {
   it('decodes valid section hashes', () => {
     expect(readSettingsSectionIdFromHash('#settings-providers')).toBe('settings-providers');
     expect(readSettingsSectionIdFromHash('#extension%3Asystem-settings')).toBe('extension:system-settings');
+  });
+
+  it('maps direct settings routes to their concrete section ids', () => {
+    expect(readSettingsSectionIdFromPathname('/settings/providers')).toBe('settings-providers');
+    expect(readSettingsSectionIdFromPathname('/settings/providers/')).toBe('settings-providers');
+    expect(readSettingsSectionIdFromPathname('/settings/desktop')).toBe('settings-desktop');
+    expect(readSettingsSectionIdFromPathname('/settings')).toBe('');
   });
 });
 

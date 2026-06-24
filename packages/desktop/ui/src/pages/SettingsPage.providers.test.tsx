@@ -57,7 +57,7 @@ function renderPage(sectionId?: string) {
   return { container };
 }
 
-function renderSettingsSidebar(hash = '') {
+function renderSettingsSidebar(hash = '', pathname = '/settings') {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -69,7 +69,7 @@ function renderSettingsSidebar(hash = '') {
         pa={{ commands: { execute } }}
         context={{
           route: '/settings',
-          pathname: '/settings',
+          pathname,
           search: '',
           hash,
           params: {},
@@ -521,6 +521,14 @@ describe('SettingsPage provider model editor', () => {
     await flushAsyncWork();
 
     expect(execute).toHaveBeenCalledWith('app.navigate', { to: '/settings#settings-providers' });
+  });
+
+  it('highlights the concrete settings section for direct settings routes', async () => {
+    const { container } = renderSettingsSidebar('', '/settings/providers');
+    await flushAsyncWork();
+
+    expect(querySettingsTocLink(container, 'settings-providers').getAttribute('aria-current')).toBe('location');
+    expect(querySettingsTocLink(container, 'settings-appearance').getAttribute('aria-current')).toBeNull();
   });
 
   it('auto-saves extension settings without save or reset controls', async () => {
