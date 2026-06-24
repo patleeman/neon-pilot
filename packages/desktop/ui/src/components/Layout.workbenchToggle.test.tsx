@@ -252,6 +252,32 @@ describe('Layout workbench toggle', () => {
     window.removeEventListener('pa:workbench-refresh-active-file', refreshListener);
   });
 
+  it('clears remembered file selection after closing the active workbench file', async () => {
+    setWorkbenchModeForCurrentSession();
+    const refreshListener = vi.fn();
+    window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
+    renderLayout('/conversations/conv-1?workspaceFile=README.md');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('route-search').textContent).toBe('?workspaceFile=README.md');
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'workbench.closeActiveFile' } }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('route-search').textContent).toBe('');
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'workbench.refreshActiveFile' } }));
+    });
+
+    expect(refreshListener).not.toHaveBeenCalled();
+    window.removeEventListener('pa:workbench-refresh-active-file', refreshListener);
+  });
+
   it('closes the workbench when the last workbench tab is closed', async () => {
     setWorkbenchModeForCurrentSession();
     renderLayout('/conversations/conv-1');

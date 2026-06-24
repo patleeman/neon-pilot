@@ -113,6 +113,28 @@ describe('CommandPalette', () => {
     window.removeEventListener('neon-pilot-extension-command-execute', listener);
   });
 
+  it('shows the command empty state while unrelated quick-open providers are still loading', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionQuickOpen').mockReturnValue(new Promise(() => []));
+    Element.prototype.scrollIntoView = vi.fn();
+
+    render(
+      <MemoryRouter initialEntries={['/conversations/conv-1']}>
+        <CommandPalette />
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'commands', query: 'zzzzzz-not-a-real-command' } }),
+      );
+    });
+
+    expect(await screen.findByText('No items match “zzzzzz-not-a-real-command”.')).toBeTruthy();
+    expect(screen.queryByText('Loading commands…')).toBeNull();
+  });
+
   it('executes a rendered command workflow and closes the palette when handled', async () => {
     vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
     vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);

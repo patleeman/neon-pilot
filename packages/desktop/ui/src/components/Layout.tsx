@@ -3007,22 +3007,20 @@ export function Layout() {
       }
 
       if (activeWorkbenchKnowledgeFileId || activeWorkbenchWorkspaceFileId) {
-        setSearchParams(
-          (current) => {
-            const next = new URLSearchParams(current);
-            next.delete('file');
-            next.delete('workspaceFile');
-            return next;
-          },
-          { replace: true },
-        );
+        clearActiveWorkbenchFileSelection();
         return;
       }
     }
 
     window.addEventListener(WORKBENCH_CLOSE_ACTIVE_FILE_EVENT, handleWorkbenchCloseActiveFile);
     return () => window.removeEventListener(WORKBENCH_CLOSE_ACTIVE_FILE_EVENT, handleWorkbenchCloseActiveFile);
-  }, [activeWorkbenchArtifactId, activeWorkbenchKnowledgeFileId, activeWorkbenchWorkspaceFileId, setSearchParams]);
+  }, [
+    activeWorkbenchArtifactId,
+    activeWorkbenchKnowledgeFileId,
+    activeWorkbenchWorkspaceFileId,
+    clearActiveWorkbenchFileSelection,
+    setSearchParams,
+  ]);
 
   useEffect(() => {
     if (commandPaletteMounted) {

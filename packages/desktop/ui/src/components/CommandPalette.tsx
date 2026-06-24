@@ -49,6 +49,7 @@ const CONVERSATION_CONTENT_SEARCH_LIMIT = 80;
 const FILE_SEARCH_LIMIT = 50;
 const FILE_CONTENT_SEARCH_DEBOUNCE_MS = 160;
 const CONVERSATION_CONTENT_SEARCH_DEBOUNCE_MS = 160;
+const COMMANDS_COMMAND_PALETTE_SCOPE = 'commands';
 
 function isMacPlatform(): boolean {
   if (typeof navigator === 'undefined') {
@@ -148,7 +149,7 @@ export function CommandPalette() {
     }));
     return [...hostItems, ...extensionItems];
   }, [commandContextRevision, extensionCommands, location.pathname, navigate]);
-  const fileItems = scope === 'commands' ? commandItems : quickOpenItems;
+  const fileItems = scope === COMMANDS_COMMAND_PALETTE_SCOPE ? commandItems : quickOpenItems;
   const searchedFileItems = quickOpenSearchItems;
   const quickOpenScopes = useMemo(
     () =>
@@ -169,7 +170,7 @@ export function CommandPalette() {
   const scopeOptions = useMemo(
     () => [
       ...COMMAND_PALETTE_SCOPE_OPTIONS,
-      { value: 'commands', label: 'Commands' },
+      { value: COMMANDS_COMMAND_PALETTE_SCOPE, label: 'Commands' },
       ...quickOpenScopes.map(({ value, label }) => ({ value, label })),
       ...searchProviderScopes,
     ],
@@ -374,8 +375,8 @@ export function CommandPalette() {
 
   const activeSearchProvider = extensionSearchProviders.find((provider) => provider.id === scope) ?? null;
   const shouldSearchExtensionProvider = open && Boolean(activeSearchProvider) && query.trim().length > 0;
-  const shouldSearchQuickOpenByContent =
-    open && scope !== THREADS_COMMAND_PALETTE_SCOPE && !activeSearchProvider && query.trim().length > 0;
+  const quickOpenScopeActive = scope !== THREADS_COMMAND_PALETTE_SCOPE && scope !== COMMANDS_COMMAND_PALETTE_SCOPE && !activeSearchProvider;
+  const shouldSearchQuickOpenByContent = open && quickOpenScopeActive && query.trim().length > 0;
 
   const shouldSearchConversationsByContent = open && scope === THREADS_COMMAND_PALETTE_SCOPE && query.trim().length > 0;
 
@@ -700,11 +701,11 @@ export function CommandPalette() {
       sections.add('archived');
     }
 
-    if (scope !== THREADS_COMMAND_PALETTE_SCOPE && quickOpenLoading && fileItems.length === 0) {
+    if (quickOpenScopeActive && quickOpenLoading && fileItems.length === 0) {
       sections.add(scope);
     }
 
-    if (scope !== THREADS_COMMAND_PALETTE_SCOPE && quickOpenSearchLoading) {
+    if (quickOpenScopeActive && quickOpenSearchLoading) {
       sections.add(scope);
     }
 
@@ -721,6 +722,7 @@ export function CommandPalette() {
     sessionsReady,
     sessionsLoading,
     quickOpenLoading,
+    quickOpenScopeActive,
     quickOpenSearchLoading,
   ]);
   const showSectionHeaders = groups.length > 1;
@@ -921,7 +923,7 @@ export function CommandPalette() {
             </section>
           )}
 
-          {quickOpenError && scope !== THREADS_COMMAND_PALETTE_SCOPE && (
+          {quickOpenError && quickOpenScopeActive && (
             <section className="pb-2 last:pb-0">
               <p className="px-2.5 py-3 text-[12px] text-danger">
                 Failed to load {quickOpenScopeLabel.toLowerCase()}: {quickOpenError}
@@ -929,7 +931,7 @@ export function CommandPalette() {
             </section>
           )}
 
-          {quickOpenSearchError && scope !== THREADS_COMMAND_PALETTE_SCOPE && (
+          {quickOpenSearchError && quickOpenScopeActive && (
             <section className="pb-2 last:pb-0">
               <p className="px-2.5 py-3 text-[12px] text-danger">
                 Failed to search {quickOpenScopeLabel.toLowerCase()}: {quickOpenSearchError}
@@ -948,8 +950,8 @@ export function CommandPalette() {
           {visibleCount === 0 &&
             loadingSections.length === 0 &&
             !(conversationContentSearchError && scope === THREADS_COMMAND_PALETTE_SCOPE) &&
-            !(quickOpenError && scope !== THREADS_COMMAND_PALETTE_SCOPE) &&
-            !(quickOpenSearchError && scope !== THREADS_COMMAND_PALETTE_SCOPE) &&
+            !(quickOpenError && quickOpenScopeActive) &&
+            !(quickOpenSearchError && quickOpenScopeActive) &&
             !(extensionSearchError && activeSearchProvider) && (
               <p className="px-4 py-10 text-center font-mono text-[12px] text-dim">{emptyStateCopy(scope, query)}</p>
             )}
