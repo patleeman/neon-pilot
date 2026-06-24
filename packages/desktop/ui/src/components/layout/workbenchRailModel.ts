@@ -41,13 +41,17 @@ export function findExtensionToolPanelBySlot(panels: WorkbenchToolPanelSurface[]
 export function singletonWorkbenchToolTabId(
   mode: WorkbenchRailMode,
   surface?: WorkbenchToolPanelSurface | null,
-  conversationId?: string | null,
+  _conversationId?: string | null,
 ): string | null {
   const surfaceToolSlot = surface ? inferSurfaceToolSlot(surface) : undefined;
   if (mode === 'scratchpad' || surfaceToolSlot === 'scratchpad') {
-    return `scratchpad:${conversationId || 'global'}`;
+    return 'scratchpad';
   }
   return null;
+}
+
+export function shouldKeepActiveToolWhenConversationHasNoSavedSelection(activeToolSlot: WorkbenchRailMode): boolean {
+  return activeToolSlot === 'scratchpad';
 }
 
 export function isSinglePaneWorkbenchMode(mode: WorkbenchRailMode, surface?: { extensionId?: string } | null): boolean {

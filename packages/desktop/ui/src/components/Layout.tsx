@@ -131,6 +131,7 @@ import {
   isSinglePaneWorkbenchMode,
   parseExtensionToolPanelMode,
   resolveActiveExtensionWorkbenchSurface,
+  shouldKeepActiveToolWhenConversationHasNoSavedSelection,
   singletonWorkbenchToolTabId,
   type WorkbenchRailMode,
 } from './layout/workbenchRailModel';
@@ -2893,7 +2894,7 @@ export function Layout() {
       const savedTool = selectedToolByConversation[activeConversationId];
       if (savedTool) {
         setActiveConversationTool(savedTool);
-      } else {
+      } else if (!shouldKeepActiveToolWhenConversationHasNoSavedSelection(activeWorkbenchToolSlot)) {
         openWorkbenchNewTab();
       }
 
@@ -2920,6 +2921,7 @@ export function Layout() {
     activeWorkbenchArtifactId,
     activeWorkbenchKnowledgeFileId,
     activeWorkbenchTool,
+    activeWorkbenchToolSlot,
     activeWorkspaceCwd,
     openWorkbenchNewTab,
     setActiveConversationTool,

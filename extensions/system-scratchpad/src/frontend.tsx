@@ -169,7 +169,13 @@ export function ScratchpadPanel({ pa, context }: ExtensionSurfaceProps) {
         <TextButton disabled={!dirty || saving || loading} onClick={() => setDraft(state.content)}>
           Revert
         </TextButton>
-        <TextButton disabled={!draft || saving || loading} onClick={() => void save('')}>
+        <TextButton
+          disabled={!draft || saving || loading}
+          onClick={() => {
+            setDraft('');
+            void save('');
+          }}
+        >
           Clear
         </TextButton>
       </footer>

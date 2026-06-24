@@ -60,6 +60,26 @@ describe('ScratchpadPanel', () => {
     expect(await screen.findByText('Saved')).toBeTruthy();
   });
 
+  it('clears the visible draft when the clear action saves an empty scratchpad', async () => {
+    const invoke = vi
+      .fn()
+      .mockResolvedValueOnce({ conversationId: 'conv-1', content: 'Initial note', updatedAt: '2026-06-11T12:00:00.000Z' })
+      .mockResolvedValueOnce({ conversationId: 'conv-1', content: '', updatedAt: '2026-06-11T12:01:00.000Z' });
+
+    renderPanel({ invoke });
+
+    const editor = await screen.findByLabelText('Conversation scratchpad');
+    expect((editor as HTMLTextAreaElement).value).toBe('Initial note');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith('setScratchpad', { conversationId: 'conv-1', content: '' });
+    });
+    await waitFor(() => expect((editor as HTMLTextAreaElement).value).toBe(''));
+    expect(await screen.findByText('Cleared')).toBeTruthy();
+  });
+
   it('asks for a conversation when opened without one', () => {
     renderPanel({ conversationId: '' });
 
