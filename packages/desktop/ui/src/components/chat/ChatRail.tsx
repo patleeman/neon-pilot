@@ -6,5 +6,9 @@ import { ConversationPage } from '../../pages/ConversationPage.js';
  * stay identical across main and side chat.
  */
 export function ChatRail({ conversationId }: { conversationId: string; workspaceCwd: string | null }) {
-  return <ConversationPage conversationId={conversationId} />;
+  return (
+    <div data-chat-rail="1" className="h-full min-h-0">
+      <ConversationPage conversationId={conversationId} />
+    </div>
+  );
 }
