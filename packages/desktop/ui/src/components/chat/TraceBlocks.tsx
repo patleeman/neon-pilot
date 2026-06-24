@@ -322,6 +322,7 @@ export function TraceClusterBlock({
   deferredBlockIds = [],
   summary,
   live,
+  keepOpenUntilFollowed = false,
   onOpenArtifact,
   activeArtifactId,
   onOpenCheckpoint,
@@ -344,6 +345,7 @@ export function TraceClusterBlock({
   deferredBlockIds?: string[];
   summary: TraceClusterSummary;
   live: boolean;
+  keepOpenUntilFollowed?: boolean;
   onOpenArtifact?: (artifactId: string) => void;
   activeArtifactId?: string | null;
   onOpenCheckpoint?: (checkpointId: string) => void;
@@ -373,7 +375,8 @@ export function TraceClusterBlock({
   const throughputLabel = useMemo(() => getStreamingThroughputLabel(blocks, stableActive), [blocks, stableActive]);
   const compact = layout === 'compact';
   const title = stableActive ? 'Working' : 'Internal work';
-  const autoOpen = transcriptDisclosureMode === 'expanded' ? true : shouldAutoOpenTraceCluster(stableActive, false);
+  const autoOpen =
+    transcriptDisclosureMode === 'expanded' ? true : keepOpenUntilFollowed || shouldAutoOpenTraceCluster(stableActive, false);
   const open = resolveDisclosureOpen(autoOpen, preference);
   const toggleTraceCluster = useCallback(() => {
     setPreference((current) => toggleDisclosurePreference(autoOpen, current));

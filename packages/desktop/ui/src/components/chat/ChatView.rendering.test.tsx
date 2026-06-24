@@ -171,7 +171,7 @@ describe('ChatView rendering stability', () => {
     expect(container.textContent).toContain('Image attachment');
   });
 
-  it('keeps the tail trace cluster open across transient streaming-state drops', () => {
+  it('keeps the tail trace cluster open until transcript content follows it', () => {
     vi.useFakeTimers();
     const toolBlock = {
       id: 'tool-1',
@@ -206,6 +206,13 @@ describe('ChatView rendering stability', () => {
     });
 
     expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('npm test -- --runInBand');
+
+    act(() => {
+      root.render(<ChatView messages={[toolBlock, createAssistantBlock()]} isStreaming={false} />);
+    });
+
+    expect(container.textContent).toContain('Stable assistant reply');
     expect(container.textContent).not.toContain('npm test -- --runInBand');
   });
 

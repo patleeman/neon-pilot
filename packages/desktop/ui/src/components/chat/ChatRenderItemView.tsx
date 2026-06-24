@@ -115,6 +115,7 @@ export function ChatRenderItemView({
           }
           summary={item.summary}
           live={live}
+          keepOpenUntilFollowed={isTailItem}
           onOpenArtifact={onOpenArtifact}
           activeArtifactId={activeArtifactId}
           onOpenCheckpoint={onOpenCheckpoint}
