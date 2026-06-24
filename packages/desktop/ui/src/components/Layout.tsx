@@ -2180,15 +2180,15 @@ export function Layout() {
         return true;
       },
       findNextOnPage() {
-        dispatchDesktopShortcutCommand('page.findNext');
+        dispatchDesktopShortcutAction('find-next-in-page');
         return true;
       },
       findPreviousOnPage() {
-        dispatchDesktopShortcutCommand('page.findPrevious');
+        dispatchDesktopShortcutAction('find-previous-in-page');
         return true;
       },
       closePageSearch() {
-        dispatchDesktopShortcutCommand('page.closeFind');
+        dispatchDesktopShortcutAction('close-find-in-page');
         return true;
       },
       closeConversation() {
@@ -3008,6 +3008,14 @@ export function Layout() {
 
       const detail = (event as CustomEvent<{ action?: unknown; command?: unknown; args?: unknown }>).detail;
       if (detail?.action === undefined && typeof detail.command === 'string' && detail.command.trim()) {
+        if (
+          detail.command === 'page.find' ||
+          detail.command === 'page.findNext' ||
+          detail.command === 'page.findPrevious' ||
+          detail.command === 'page.closeFind'
+        ) {
+          return;
+        }
         void executeExtensionCommand(detail.command, detail.args, executeCommandOptions);
         return;
       }

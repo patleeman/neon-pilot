@@ -21,6 +21,12 @@ function dispatchDesktopShortcutCommand(command: string) {
   });
 }
 
+function dispatchDesktopShortcutAction(action: string) {
+  act(() => {
+    window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { action } }));
+  });
+}
+
 async function flushAsyncWork() {
   await act(async () => {
     await Promise.resolve();
@@ -179,6 +185,44 @@ describe('PageSearchBar', () => {
     expect(container.textContent).toContain('1/2');
 
     dispatchDesktopShortcutCommand('page.closeFind');
+    await flushAsyncWork();
+
+    expect(container.querySelector('input[aria-label="Find on page"]')).toBeNull();
+  });
+
+  it('navigates and closes from page-search action events dispatched by Layout commands', async () => {
+    const { container } = renderHarness();
+
+    dispatchDesktopShortcutAction('find-in-page');
+    await flushAsyncWork();
+
+    const input = container.querySelector<HTMLInputElement>('input[aria-label="Find on page"]');
+    expect(input).toBeInstanceOf(HTMLInputElement);
+
+    const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+    if (!valueSetter) {
+      throw new Error('HTMLInputElement value setter unavailable');
+    }
+
+    await act(async () => {
+      valueSetter.call(input, 'alpha beta');
+      input?.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('1/2');
+
+    dispatchDesktopShortcutAction('find-next-in-page');
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('2/2');
+
+    dispatchDesktopShortcutAction('find-previous-in-page');
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('1/2');
+
+    dispatchDesktopShortcutAction('close-find-in-page');
     await flushAsyncWork();
 
     expect(container.querySelector('input[aria-label="Find on page"]')).toBeNull();

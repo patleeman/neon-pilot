@@ -80,14 +80,16 @@ function isFindPreviousHotkey(event: KeyboardEvent): boolean {
   return key === 'g' && (event.metaKey || event.ctrlKey) && event.shiftKey;
 }
 
-function isDesktopPageSearchShortcutAction(value: unknown): value is 'find-in-page' {
-  return value === 'find-in-page';
+type DesktopPageSearchShortcutAction = 'find-in-page' | 'find-next-in-page' | 'find-previous-in-page' | 'close-find-in-page';
+
+function readDesktopPageSearchShortcutAction(value: unknown): DesktopPageSearchShortcutAction | null {
+  return value === 'find-in-page' || value === 'find-next-in-page' || value === 'find-previous-in-page' || value === 'close-find-in-page'
+    ? value
+    : null;
 }
 
 function readDesktopPageSearchCommand(value: unknown): 'page.find' | 'page.findNext' | 'page.findPrevious' | 'page.closeFind' | null {
-  return value === 'page.find' || value === 'page.findNext' || value === 'page.findPrevious' || value === 'page.closeFind'
-    ? value
-    : null;
+  return value === 'page.find' || value === 'page.findNext' || value === 'page.findPrevious' || value === 'page.closeFind' ? value : null;
 }
 
 function readSelectedSearchText(): string {
@@ -449,22 +451,23 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
 
     function handleDesktopShortcut(event: Event) {
       const detail = (event as CustomEvent<{ action?: unknown; command?: unknown }>).detail;
+      const action = readDesktopPageSearchShortcutAction(detail?.action);
       const command = readDesktopPageSearchCommand(detail?.command);
-      if (!isDesktopPageSearchShortcutAction(detail?.action) && !command) {
+      if (!action && !command) {
         return;
       }
 
-      if (command === 'page.findNext') {
+      if (action === 'find-next-in-page' || command === 'page.findNext') {
         moveToMatch(1);
         return;
       }
 
-      if (command === 'page.findPrevious') {
+      if (action === 'find-previous-in-page' || command === 'page.findPrevious') {
         moveToMatch(-1);
         return;
       }
 
-      if (command === 'page.closeFind') {
+      if (action === 'close-find-in-page' || command === 'page.closeFind') {
         closeSearch();
         return;
       }
