@@ -249,6 +249,30 @@ describe('registerWorkspaceExplorerRoutes', () => {
     });
   });
 
+  describe('POST /api/workspace/move', () => {
+    it('moves a path', async () => {
+      vi.mocked(workspace.moveWorkspacePath).mockReturnValue({ path: 'dest/file.txt' } as unknown);
+      const router = mockRouter();
+      registerWorkspaceExplorerRoutes(router as unknown, mockContext());
+      const h = getHandler(router, 'post', '/api/workspace/move');
+      const res = mockRes();
+      await h({ body: { cwd: '/repo', path: 'file.txt', targetDir: 'dest' } }, res);
+      expect(workspace.moveWorkspacePath).toHaveBeenCalledWith('/repo', 'file.txt', 'dest');
+      expect(res.json).toHaveBeenCalledWith({ path: 'dest/file.txt' });
+    });
+
+    it('returns 400 when the destination folder is invalid', async () => {
+      vi.mocked(workspace.moveWorkspacePath).mockRejectedValue(new Error('Destination folder does not exist: missing'));
+      const router = mockRouter();
+      registerWorkspaceExplorerRoutes(router as unknown, mockContext());
+      const h = getHandler(router, 'post', '/api/workspace/move');
+      const res = mockRes();
+      await h({ body: { cwd: '/repo', path: 'file.txt', targetDir: 'missing' } }, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Destination folder does not exist: missing' });
+    });
+  });
+
   describe('GET /api/workspace/uncommitted-diff', () => {
     it('returns diff or empty state', async () => {
       vi.mocked(workspace.readUncommittedDiffAsync).mockResolvedValue(null);

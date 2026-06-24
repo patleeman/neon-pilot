@@ -409,6 +409,15 @@ export async function moveWorkspacePath(cwd: string, relativePath: string, targe
   if (path === targetPath) return workspaceEntryForPath(snapshot, path);
   if (targetPath.startsWith(`${path}/`)) throw new Error('Cannot move a folder into itself');
   const workspaceRoot = await createCoreWorkspaceRoot(snapshot.root, 'move workspace path', ['move', 'metadata']);
+  if (destinationDir) {
+    if (!(await workspaceRoot.exists(destinationDir))) {
+      throw new Error(`Destination folder does not exist: ${destinationDir}`);
+    }
+    const destinationStats = await workspaceRoot.stat(destinationDir);
+    if (destinationStats.type !== 'directory') {
+      throw new Error(`Destination is not a folder: ${destinationDir}`);
+    }
+  }
   await workspaceRoot.move(path, targetPath);
   return workspaceEntryForPath(snapshot, targetPath);
 }

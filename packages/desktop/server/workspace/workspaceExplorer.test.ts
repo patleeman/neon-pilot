@@ -165,6 +165,8 @@ describe('workspace explorer', () => {
 
     const moved = await moveWorkspacePath(repo, 'notes/done.txt', 'docs');
     expect(moved.path).toBe('docs/done.txt');
+    await expect(moveWorkspacePath(repo, 'docs/done.txt', 'docs/missing')).rejects.toThrow(/destination folder does not exist/i);
+    await expect(moveWorkspacePath(repo, 'docs/done.txt', 'tracked.txt')).rejects.toThrow(/destination is not a folder/i);
 
     await deleteWorkspacePath(repo, 'docs/done.txt');
     expect(existsSync(join(repo, 'docs', 'done.txt'))).toBe(false);

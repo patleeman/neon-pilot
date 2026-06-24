@@ -761,6 +761,140 @@ describe('formatWorkspaceEntrySize', () => {
     });
   });
 
+  it('rejects slash-separated names in create file prompts before calling the workspace API', async () => {
+    apiMocks.workspaceTree.mockResolvedValue({
+      root: '/repo',
+      rootName: 'repo',
+      rootKind: 'git',
+      branch: 'main',
+      changes: [],
+      entries: [{ path: 'tmp', name: 'tmp', kind: 'directory', size: null, gitStatus: null, descendantGitStatusCount: null }],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(
+        React.createElement(WorkspaceExplorer, {
+          cwd: '/repo',
+          railOnly: true,
+          onDraftPrompt: vi.fn(),
+        }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const newFileButton = await vi.waitFor(() => {
+      const button = Array.from(container.querySelectorAll('button')).find((entry) => entry.textContent?.includes('New File'));
+      expect(button).toBeTruthy();
+      return button as HTMLButtonElement;
+    });
+
+    act(() => {
+      newFileButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const input = await vi.waitFor(() => {
+      const field = container.querySelector('input');
+      expect(field).toBeTruthy();
+      return field as HTMLInputElement;
+    });
+
+    act(() => {
+      setInputValue(input, 'nested/slash-created.txt');
+    });
+
+    const continueButton = Array.from(container.querySelectorAll('button')).find((entry) => entry.textContent?.includes('Continue'));
+    expect(continueButton).toBeTruthy();
+    await act(async () => {
+      continueButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(apiMocks.createWorkspaceFile).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('New file');
+    expect(container.textContent).toContain('File names cannot include slashes.');
+  });
+
+  it('keeps move prompts open when the destination folder is invalid', async () => {
+    apiMocks.workspaceTree.mockResolvedValue({
+      root: '/repo',
+      rootName: 'repo',
+      rootKind: 'git',
+      branch: 'main',
+      changes: [],
+      entries: [{ path: 'tmp', name: 'tmp', kind: 'directory', size: null, gitStatus: null, descendantGitStatusCount: null }],
+    });
+    const movePath = deferred<never>();
+    apiMocks.moveWorkspacePath.mockReturnValue(movePath.promise);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(
+        React.createElement(WorkspaceExplorer, {
+          cwd: '/repo',
+          railOnly: true,
+          onDraftPrompt: vi.fn(),
+        }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const moveButton = await vi.waitFor(() => {
+      const button = Array.from(container.querySelectorAll('button')).find((entry) => entry.textContent?.includes('Move to…'));
+      expect(button).toBeTruthy();
+      return button as HTMLButtonElement;
+    });
+
+    act(() => {
+      moveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('Move tmp');
+    });
+
+    const input = await vi.waitFor(() => {
+      const field = container.querySelector('input');
+      expect(field).toBeTruthy();
+      return field as HTMLInputElement;
+    });
+
+    act(() => {
+      setInputValue(input, 'tmp/missing-dest');
+    });
+
+    const submitButton = Array.from(container.querySelectorAll('button')).find((entry) => entry.textContent?.trim() === 'Move');
+    expect(submitButton).toBeTruthy();
+    await act(async () => {
+      submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(apiMocks.moveWorkspacePath).toHaveBeenCalledWith('/repo', 'tmp', 'tmp/missing-dest');
+    await act(async () => {
+      movePath.reject(new Error('Destination folder does not exist: tmp/missing-dest'));
+      try {
+        await movePath.promise;
+      } catch {
+        /* expected */
+      }
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain('Move tmp');
+    expect(container.textContent).toContain('Destination folder does not exist: tmp/missing-dest');
+  });
+
   it('ignores stale forced file loads from "Open anyway" after switching to a different file', async () => {
     const tree = deferred<{
       root: string;

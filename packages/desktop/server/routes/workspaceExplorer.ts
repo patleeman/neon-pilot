@@ -37,7 +37,7 @@ function writeWorkspaceError(res: { status: (code: number) => { json: (body: unk
   const message = error instanceof Error ? error.message : String(error);
   const status = /already exists|EEXIST/i.test(message)
     ? 409
-    : /escapes workspace root|not a directory|no such file|ENOENT/i.test(message)
+    : /escapes workspace root|not a directory|not a folder|does not exist|no such file|ENOENT/i.test(message)
       ? 400
       : 500;
   res.status(status).json({ error: message });

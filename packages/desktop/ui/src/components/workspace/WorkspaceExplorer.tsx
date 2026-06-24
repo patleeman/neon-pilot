@@ -221,6 +221,16 @@ function formatWorkspaceLoadError(error: unknown, fallback: string): string {
   return firstLine;
 }
 
+function validateWorkspaceCreateName(kind: 'file' | 'folder', name: string): string | null {
+  if (name === '.' || name === '..') {
+    return `${kind === 'file' ? 'File' : 'Folder'} name must be more specific.`;
+  }
+  if (name.includes('/') || name.includes('\\')) {
+    return `${kind === 'file' ? 'File' : 'Folder'} names cannot include slashes.`;
+  }
+  return null;
+}
+
 function fileIcon(entry: WorkspaceEntry): string {
   if (entry.kind === 'directory') return '▸';
   if (entry.kind === 'symlink') return '↗';
@@ -770,6 +780,11 @@ export function WorkspaceExplorer({
       if (!cwd) return;
       const trimmedName = name.trim();
       if (!trimmedName) return;
+      const validationError = validateWorkspaceCreateName(kind, trimmedName);
+      if (validationError) {
+        setPathPromptError(validationError);
+        return;
+      }
       const path = [directory, trimmedName].filter(Boolean).join('/');
       setPathPromptError(null);
       setPathPromptSubmitting(true);
