@@ -1042,6 +1042,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
         activeRuns.delete(task.key);
         state.runningTasks = activeRuns.size;
         persistState(context.logger);
+        invalidateAppTopics('tasks', 'runs', 'sessions', 'workspace');
       });
 
     activeRuns.set(task.key, {

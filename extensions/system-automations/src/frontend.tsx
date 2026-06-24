@@ -393,6 +393,14 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     return () => subscription.unsubscribe();
   }, [load, pa]);
 
+  useEffect(() => {
+    if (!tasks.some((task) => task.running)) return;
+    const timer = window.setInterval(() => {
+      void load();
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [load, tasks]);
+
   const openCreate = useCallback(() => {
     setEditingId(null);
     setForm({ ...EMPTY_FORM, ownerThreadId: conversations[0]?.id ?? '' });

@@ -313,6 +313,32 @@ describe('appEvents mocked behavior', () => {
     expect(vi.getTimerCount()).toBe(1);
   });
 
+  it('watches the daemon runtime database for automation task invalidations', () => {
+    markDirectory('/state/daemon');
+    existingPaths.add('/state/daemon/runtime.db');
+
+    const events: unknown[] = [];
+    const unsubscribe = subscribeAppEvents((event) => {
+      events.push(event);
+    });
+
+    startAppEventMonitor({
+      repoRoot: '/repo',
+      sessionsDir: '/sessions',
+      taskStateFile: '/state/daemon/task-state.json',
+      profileConfigFile: '/config/profile.json',
+      getRuntimeScope: () => 'assistant',
+    });
+
+    for (const registration of watchRegistrations.filter((entry) => entry.path === '/state/daemon' && entry.options.recursive !== true)) {
+      registration.callback('change', 'runtime.db');
+    }
+    vi.advanceTimersByTime(75);
+
+    expect(events).toContainEqual({ type: 'invalidate', topics: ['tasks'] });
+    unsubscribe();
+  });
+
   it('keeps a session file signature poll when recursive watching is unavailable', () => {
     unsupportedRecursivePaths.add('/sessions');
 

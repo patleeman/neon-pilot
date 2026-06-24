@@ -2068,6 +2068,11 @@ describe('tasks module scheduling', () => {
       expect(events).toEqual(
         expect.arrayContaining([expect.objectContaining({ type: 'invalidate', topics: expect.arrayContaining(['sessions']) })]),
       );
+      expect(events).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: 'invalidate', topics: expect.arrayContaining(['tasks', 'runs', 'sessions', 'workspace']) }),
+        ]),
+      );
 
       await module.stop?.(context);
     } finally {

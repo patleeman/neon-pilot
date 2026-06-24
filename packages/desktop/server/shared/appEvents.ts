@@ -355,7 +355,9 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
   const conversationCommitCheckpointsDir = resolveProfileConversationCommitCheckpointsDir({ profile });
   const conversationAttachmentsDir = resolveProfileConversationAttachmentsDir({ profile });
   const tasksDir = getDurableTasksDir();
-  const runsRoot = resolveDurableRunsRoot(dirname(options.taskStateFile));
+  const daemonStateDir = dirname(options.taskStateFile);
+  const runtimeDbFile = join(daemonStateDir, 'runtime.db');
+  const runsRoot = resolveDurableRunsRoot(daemonStateDir);
   const conversationAttentionStateFile = resolveConversationAttentionStatePath({ profile });
   const deferredResumeStateFile = resolveDeferredResumeStateFile();
   const alertsStateFile = resolveProfileAlertsStateFile({ profile });
@@ -372,6 +374,9 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
     attachments: [{ path: conversationAttachmentsDir, kind: 'directory' }],
     tasks: [
       { path: tasksDir, kind: 'directory' },
+      { path: runtimeDbFile, kind: 'file' },
+      { path: `${runtimeDbFile}-wal`, kind: 'file' },
+      { path: `${runtimeDbFile}-shm`, kind: 'file' },
       { path: options.taskStateFile, kind: 'file' },
       { path: `${options.taskStateFile}-wal`, kind: 'file' },
       { path: `${options.taskStateFile}-shm`, kind: 'file' },

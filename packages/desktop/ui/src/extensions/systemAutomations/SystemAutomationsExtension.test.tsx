@@ -14,6 +14,7 @@ afterEach(() => {
   for (const root of mountedRoots) act(() => root.unmount());
   mountedRoots.length = 0;
   document.body.innerHTML = '';
+  vi.useRealTimers();
 });
 
 function createPa(overrides: Partial<NativeExtensionClient['automations']> = {}): NativeExtensionClient {
@@ -154,6 +155,59 @@ describe('AutomationsPage', () => {
     expect(container.textContent).toContain('Release watch thread');
     expect(container.textContent).toContain('Paused check');
     expect(container.textContent).toContain('Paused');
+  });
+
+  it('refreshes running automations until the row settles', async () => {
+    vi.useFakeTimers();
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          id: 'release-watch',
+          title: 'Release watch',
+          scheduleType: 'at',
+          targetType: 'conversation',
+          running: true,
+          enabled: true,
+          at: '2026-06-24T12:00:00.000Z',
+          prompt: 'Check release state',
+          threadMode: 'existing',
+          threadConversationId: 'conv-owner',
+          threadTitle: 'Release watch thread',
+        },
+      ])
+      .mockResolvedValue([
+        {
+          id: 'release-watch',
+          title: 'Release watch',
+          scheduleType: 'at',
+          targetType: 'conversation',
+          running: false,
+          enabled: true,
+          at: '2026-06-24T12:00:00.000Z',
+          prompt: 'Check release state',
+          threadMode: 'existing',
+          threadConversationId: 'conv-owner',
+          threadTitle: 'Release watch thread',
+          lastRunAt: '2026-06-24T12:00:05.000Z',
+          lastStatus: 'success',
+        },
+      ]);
+    const pa = createPa({ list });
+    const { container } = await renderPage(pa);
+
+    expect(container.textContent).toContain('Running');
+    expect(container.textContent).toContain('Now');
+
+    await act(async () => {
+      vi.advanceTimersByTime(2500);
+      await Promise.resolve();
+    });
+
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(container.textContent).not.toContain('Running');
+    expect(container.textContent).not.toContain('Now');
+    vi.useRealTimers();
   });
 
   it('runs, pauses, resumes, and deletes from the row action menu', async () => {
