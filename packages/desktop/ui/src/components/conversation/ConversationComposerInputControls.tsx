@@ -109,8 +109,8 @@ function CoreAttachControl({ disabled, onOpenFilePicker }: { disabled: boolean; 
         }
       }}
       disabled={disabled}
-      title="Attach image or file"
-      aria-label="Attach image or file"
+      title="Attach image or drawing"
+      aria-label="Attach image or drawing"
     >
       <CoreComposerIcon path="M12 5v14M5 12h14" />
     </IconButton>

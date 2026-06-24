@@ -25,8 +25,8 @@ export function AttachFilesComposerControl({ controlContext }: { controlContext:
         }
       }}
       disabled={context.composerDisabled}
-      title="Attach image or file"
-      aria-label="Attach image or file"
+      title="Attach image or drawing"
+      aria-label="Attach image or drawing"
     >
       <svg
         width="14"

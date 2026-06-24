@@ -53,7 +53,7 @@ vi.mock('../../extensions/ComposerButtonHost', () => ({
     controlContext: { currentModel: string; currentThinkingLevel: string; models: ModelInfo[] };
     registration: { id: string };
   }) => {
-    if (registration.id === 'attach-files') return <button title="Attach image or file">Attach</button>;
+    if (registration.id === 'attach-files') return <button title="Attach image or drawing">Attach</button>;
     if (registration.id === 'model-preferences') {
       const selectedModel = controlContext.models.find((model) => model.id === controlContext.currentModel);
       const modelLabel = selectedModel?.name ?? (controlContext.currentModel.trim() || 'Select model');
@@ -196,7 +196,7 @@ describe('ConversationComposerInputControls', () => {
     const html = renderControls();
 
     expect(html).toContain('Message Neon Pilot');
-    expect(html).toContain('Attach image or file');
+    expect(html).toContain('Attach image or drawing');
     expect(html).toContain('extension-model-preferences:');
     expect(html).toContain('Model A');
     expect(html).toContain('medium');
@@ -211,7 +211,7 @@ describe('ConversationComposerInputControls', () => {
 
     const html = renderControls();
 
-    expect(html).toContain('Attach image or file');
+    expect(html).toContain('Attach image or drawing');
     expect(html).toContain('Conversation model');
     expect(html).toContain('Create drawing');
   });
