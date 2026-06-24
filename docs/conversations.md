@@ -245,14 +245,14 @@ Default desktop shortcuts are configurable in Settings → Desktop. Host and ext
 
 The desktop app and system extensions register these routes:
 
-| Route                | Page                  |
-| -------------------- | --------------------- |
-| `/conversations`     | Conversation list     |
-| `/conversations/new` | New conversation      |
-| `/conversations/:id` | Existing conversation |
-| `/settings`          | Settings page         |
-| `/knowledge`         | Knowledge browser     |
-| `/automations`       | Automation list       |
-| `/automations/:id`   | Automation detail     |
-| `/telemetry`         | Telemetry traces      |
-| `/gateways`          | Gateway connections   |
+| Route                | Page                                                                          |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `/conversations`     | Active or new conversation redirect                                           |
+| `/conversations/new` | New conversation                                                              |
+| `/conversations/:id` | Existing conversation                                                         |
+| `/settings`          | Settings page                                                                 |
+| `/knowledge`         | Knowledge browser                                                             |
+| `/automations`       | Automation list                                                               |
+| `/automations/:id`   | Automation detail                                                             |
+| `/telemetry`         | Telemetry traces                                                              |
+| `/gateways`          | Gateway connections when installed; otherwise redirects to a new conversation |

@@ -6669,6 +6669,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     hasPendingInitialPrompt: Boolean(pendingInitialPrompt),
   });
 
+  useEffect(() => {
+    if (!missingConversation || !id) {
+      return;
+    }
+
+    closeConversationTab(id);
+  }, [id, missingConversation]);
+
   if (missingConversation) {
     return (
       <div className="flex flex-col h-full">

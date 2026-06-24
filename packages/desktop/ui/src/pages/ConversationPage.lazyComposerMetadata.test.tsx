@@ -20,6 +20,7 @@ const apiMock = vi.hoisted(() => ({
   models: vi.fn(),
   runs: vi.fn(),
   settings: vi.fn(),
+  sessionDetail: vi.fn(),
   liveSession: vi.fn(),
   liveSessionContext: vi.fn(),
   conversationAttachments: vi.fn(),
@@ -347,6 +348,34 @@ function renderDraftConversationPage() {
   );
 }
 
+function renderMissingConversationPage() {
+  sessionStore.replaceAll([]);
+  sessionStore.markReady?.();
+
+  return render(
+    <AppDataContext.Provider
+      value={{
+        projects: null,
+        sessions: [],
+        tasks: [],
+        runs: null,
+        executions: null,
+        setProjects: vi.fn(),
+        setSessions: vi.fn(),
+        setTasks: vi.fn(),
+        setRuns: vi.fn(),
+        setExecutions: vi.fn(),
+      }}
+    >
+      <MemoryRouter initialEntries={['/conversations/missing-conv']}>
+        <Routes>
+          <Route path="/conversations/:id" element={<ConversationPage />} />
+        </Routes>
+      </MemoryRouter>
+    </AppDataContext.Provider>,
+  );
+}
+
 function LocationProbe() {
   const location = useLocation();
   return <div data-testid="location">{`${location.pathname}${location.search}${location.hash}`}</div>;
@@ -529,6 +558,7 @@ beforeEach(() => {
   apiMock.memory.mockResolvedValue({ memoryDocs: [], skills: [] });
   apiMock.runs.mockResolvedValue({ runs: [] });
   apiMock.settings.mockResolvedValue({});
+  apiMock.sessionDetail.mockRejectedValue(new Error('Conversation not found'));
   apiMock.liveSession.mockResolvedValue({ live: false, hasStaleTurnState: false });
   apiMock.liveSessionContext.mockResolvedValue({
     cwd: '/tmp/project',
@@ -572,6 +602,7 @@ beforeEach(() => {
     remoteControlledConversationIds: [],
   });
   sessionTabsMock.isWithinLocalWriteGrace.mockReturnValue(true);
+  sessionTabsMock.closeConversationTab.mockReset();
   sessionTabsMock.ensureConversationTabOpen.mockReset();
   sessionTabsMock.setActiveConversationTab.mockReset();
 });
@@ -582,6 +613,21 @@ afterEach(() => {
 });
 
 describe('ConversationPage lazy composer metadata', () => {
+  it('removes a missing conversation route from the workspace tabs without opening a placeholder row', async () => {
+    vi.useRealTimers();
+    renderMissingConversationPage();
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Conversation not found').length).toBeGreaterThan(0);
+    });
+
+    await waitFor(() => {
+      expect(sessionTabsMock.closeConversationTab).toHaveBeenCalledWith('missing-conv');
+    });
+    expect(sessionTabsMock.ensureConversationTabOpen).not.toHaveBeenCalledWith('missing-conv');
+    expect(sessionTabsMock.setActiveConversationTab).not.toHaveBeenCalledWith('missing-conv');
+  });
+
   it('keeps extension slash and mention registrations off the route hot path until their composer triggers appear', async () => {
     renderConversationPage();
 

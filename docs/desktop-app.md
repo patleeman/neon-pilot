@@ -77,46 +77,46 @@ Knowledge is also a primary left-sidebar page. Extension-contributed workbench t
 
 Desktop menu shortcuts are configurable in Settings → Desktop. Host and extension command keybindings are configurable in Settings → Commands. Defaults:
 
-| Action | Default |
-| --- | --- |
-| Show Neon Pilot | `Cmd/Ctrl+Shift+A` |
-| New conversation | `Cmd/Ctrl+N` |
-| Close tab | `Cmd/Ctrl+W` |
-| Reopen closed tab | `Cmd+Shift+N` |
-| Previous conversation | `Cmd/Ctrl+[` |
-| Next conversation | `Cmd/Ctrl+]` |
-| Toggle pinned | `Cmd/Ctrl+Alt+P` |
-| Archive / restore | `Cmd/Ctrl+Alt+A` |
-| Rename conversation | `Cmd/Ctrl+Alt+R` |
-| Focus composer | `Cmd/Ctrl+L` |
-| Edit working directory | `Cmd/Ctrl+Shift+L` |
-| Find on page | `Cmd/Ctrl+F` |
-| Settings | `Cmd/Ctrl+,` |
-| Quit | `Cmd/Ctrl+Q` |
-| Conversation mode | `F1` |
-| Workbench mode | `F2` |
-| New workbench tab | `Cmd/Ctrl+T` |
-| Close workbench tab | `Cmd/Ctrl+Shift+W` |
-| Close workbench file | `Cmd/Ctrl+Alt+W` |
-| Refresh workbench file | `F5` |
-| Toggle workbench explorer | `Cmd/Ctrl+B` |
-| Toggle workbench diff | `Cmd/Ctrl+Shift+D` |
-| Toggle left sidebar | `Cmd/Ctrl+/` |
-| Toggle right rail | `Cmd/Ctrl+\` |
+| Action                    | Default            |
+| ------------------------- | ------------------ |
+| Show Neon Pilot           | `Cmd/Ctrl+Shift+A` |
+| New conversation          | `Cmd/Ctrl+N`       |
+| Close tab                 | `Cmd/Ctrl+W`       |
+| Reopen closed tab         | `Cmd+Shift+N`      |
+| Previous conversation     | `Cmd/Ctrl+[`       |
+| Next conversation         | `Cmd/Ctrl+]`       |
+| Toggle pinned             | `Cmd/Ctrl+Alt+P`   |
+| Archive / restore         | `Cmd/Ctrl+Alt+A`   |
+| Rename conversation       | `Cmd/Ctrl+Alt+R`   |
+| Focus composer            | `Cmd/Ctrl+L`       |
+| Edit working directory    | `Cmd/Ctrl+Shift+L` |
+| Find on page              | `Cmd/Ctrl+F`       |
+| Settings                  | `Cmd/Ctrl+,`       |
+| Quit                      | `Cmd/Ctrl+Q`       |
+| Conversation mode         | `F1`               |
+| Workbench mode            | `F2`               |
+| New workbench tab         | `Cmd/Ctrl+T`       |
+| Close workbench tab       | `Cmd/Ctrl+Shift+W` |
+| Close workbench file      | `Cmd/Ctrl+Alt+W`   |
+| Refresh workbench file    | `F5`               |
+| Toggle workbench explorer | `Cmd/Ctrl+B`       |
+| Toggle workbench diff     | `Cmd/Ctrl+Shift+D` |
+| Toggle left sidebar       | `Cmd/Ctrl+/`       |
+| Toggle right rail         | `Cmd/Ctrl+\`       |
 
 ## Routes
 
-| Route                | Page                  |
-| -------------------- | --------------------- |
-| `/conversations`     | Conversation list     |
-| `/conversations/new` | New conversation      |
-| `/conversations/:id` | Existing conversation |
-| `/knowledge`         | Knowledge browser     |
-| `/automations`       | Automation list       |
-| `/automations/:id`   | Automation detail     |
-| `/settings`          | Settings panel        |
-| `/telemetry`         | Telemetry traces page |
-| `/gateways`          | Gateway connections   |
+| Route                | Page                                                                          |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `/conversations`     | Active or new conversation redirect                                           |
+| `/conversations/new` | New conversation                                                              |
+| `/conversations/:id` | Existing conversation                                                         |
+| `/knowledge`         | Knowledge browser                                                             |
+| `/automations`       | Automation list                                                               |
+| `/automations/:id`   | Automation detail                                                             |
+| `/settings`          | Settings panel                                                                |
+| `/telemetry`         | Telemetry traces page                                                         |
+| `/gateways`          | Gateway connections when installed; otherwise redirects to a new conversation |
 
 ## Demo Mode
 

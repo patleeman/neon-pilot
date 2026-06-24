@@ -14,6 +14,7 @@ type UseSidebarConversationScopeInput = {
   locationPathname: string;
   pinnedSessions: readonly SessionMeta[];
   sessions: readonly SessionMeta[] | null;
+  sessionsReady: boolean;
   tabs: readonly SessionMeta[];
 };
 
@@ -27,6 +28,7 @@ export function useSidebarConversationScope({
   locationPathname,
   pinnedSessions,
   sessions,
+  sessionsReady,
   tabs,
 }: UseSidebarConversationScopeInput) {
   const activeConversationId = useMemo(() => {
@@ -40,6 +42,9 @@ export function useSidebarConversationScope({
     const session = (sessions ?? []).find((candidate) => candidate.id === activeConversationId);
     const isRunning = activeRuntime?.running ?? session?.isRunning ?? false;
     if (session) return session.isRunning === isRunning ? session : { ...session, isRunning };
+    if (sessionsReady && !isRunning && !liveTitles.has(activeConversationId)) {
+      return null;
+    }
 
     return {
       id: activeConversationId,
@@ -53,7 +58,7 @@ export function useSidebarConversationScope({
       isRunning,
       isLive: true,
     } satisfies SessionMeta;
-  }, [activeConversationId, activeRuntime?.running, liveTitles, sessions]);
+  }, [activeConversationId, activeRuntime?.running, liveTitles, sessions, sessionsReady]);
 
   const visibleConversationTabs = useMemo(() => {
     if (!activeSession) return tabs;

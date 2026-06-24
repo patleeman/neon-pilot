@@ -1785,6 +1785,7 @@ export function Sidebar() {
       locationPathname: location.pathname,
       pinnedSessions,
       sessions,
+      sessionsReady,
       tabs,
     });
 
