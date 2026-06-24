@@ -17,11 +17,13 @@ import {
   SectionLabel,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
-import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState } from 'react';
+import React, { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState } from 'react';
 
 export interface ExcalidrawEditorSavePayload {
+  localId?: string;
   attachmentId?: string;
   revision?: number;
+  dirty?: boolean;
   title: string;
   scene: ExcalidrawSceneData;
   sourceData: string;
@@ -380,6 +382,7 @@ export function ExcalidrawEditorModal({
   pa: NativeExtensionClient;
   props: {
     conversationId?: string | null;
+    localId?: string;
     initialTitle?: string;
     initialScene?: ExcalidrawSceneData | null;
     initialAttachmentId?: string;
@@ -401,7 +404,10 @@ export function ExcalidrawEditorModal({
         props.conversationId
           ? async (payload) => {
               const savedPayload = await persistDrawingToConversation(pa, props.conversationId as string, payload);
+              const composerPayload = { ...savedPayload, localId: props.localId, dirty: false };
+              pa.events.publish('excalidraw:saved', composerPayload);
               pa.ui.toast('Drawing saved.');
+              close(composerPayload);
               return savedPayload;
             }
           : undefined

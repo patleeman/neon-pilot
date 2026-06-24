@@ -452,6 +452,10 @@ const ConversationSavedHeader = lazy(() =>
 );
 
 interface ExcalidrawEditorSavePayload {
+  localId?: string;
+  attachmentId?: string;
+  revision?: number;
+  dirty?: boolean;
   title: string;
   scene: ExcalidrawSceneData;
   sourceData: string;
@@ -4632,32 +4636,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
   function upsertDrawingAttachment(payload: ExcalidrawEditorSavePayload, localId?: string) {
     setDrawingAttachments((current) => {
-      if (localId) {
-        return current.map((attachment) =>
-          attachment.localId === localId
-            ? {
-                ...attachment,
-                attachmentId: payload.attachmentId,
-                revision: payload.revision,
-                title: payload.title,
-                sourceData: payload.sourceData,
-                sourceMimeType: payload.sourceMimeType,
-                sourceName: payload.sourceName,
-                previewData: payload.previewData,
-                previewMimeType: payload.previewMimeType,
-                previewName: payload.previewName,
-                previewUrl: payload.previewUrl,
-                scene: payload.scene,
-                dirty: true,
-              }
-            : attachment,
-        );
-      }
-
-      return [
-        ...current,
-        {
-          localId: createComposerDrawingLocalId(),
+      const targetLocalId = localId ?? payload.localId;
+      const dirty = payload.dirty ?? true;
+      const nextAttachment = (existingLocalId: string): ComposerDrawingAttachment =>
+        ({
+          localId: existingLocalId,
           attachmentId: payload.attachmentId,
           revision: payload.revision,
           title: payload.title,
@@ -4669,9 +4652,20 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           previewName: payload.previewName,
           previewUrl: payload.previewUrl,
           scene: payload.scene,
-          dirty: true,
-        } satisfies ComposerDrawingAttachment,
-      ];
+          dirty,
+        }) satisfies ComposerDrawingAttachment;
+
+      if (targetLocalId && current.some((attachment) => attachment.localId === targetLocalId)) {
+        return current.map((attachment) => (attachment.localId === targetLocalId ? nextAttachment(attachment.localId) : attachment));
+      }
+
+      if (payload.attachmentId && current.some((attachment) => attachment.attachmentId === payload.attachmentId)) {
+        return current.map((attachment) =>
+          attachment.attachmentId === payload.attachmentId ? nextAttachment(attachment.localId) : attachment,
+        );
+      }
+
+      return [...current, nextAttachment(targetLocalId ?? createComposerDrawingLocalId())];
     });
   }
 
@@ -4694,6 +4688,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         initialScene: drawing.scene,
         initialAttachmentId: drawing.attachmentId,
         initialRevision: drawing.revision,
+        localId,
         saveLabel: 'Update attachment',
       },
       size: 'fullscreen',
