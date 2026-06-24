@@ -146,6 +146,7 @@ export interface ExtensionCommandExecutorOptions {
   activeConversationId?: string | null;
   extensionCommands?: ExtensionCommandRegistration[];
   invokeExtensionCommand?(command: ExtensionCommandRegistration, args: unknown): Promise<unknown>;
+  onExtensionCommandResult?(command: ExtensionCommandRegistration, result: unknown): void;
   context?: ExtensionCommandContext;
 }
 
@@ -1814,7 +1815,8 @@ export async function executeExtensionCommand(command: string, args: unknown, op
       return handled;
     }
     if (!options.invokeExtensionCommand) return false;
-    await options.invokeExtensionCommand(extensionCommand, effectiveArgs ?? {});
+    const result = await options.invokeExtensionCommand(extensionCommand, effectiveArgs ?? {});
+    options.onExtensionCommandResult?.(extensionCommand, result);
     handled = true;
     return true;
   } finally {

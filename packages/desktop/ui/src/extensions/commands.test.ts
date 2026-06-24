@@ -403,7 +403,12 @@ describe('extension commands', () => {
 
   it('includes drawing picker commands gated by picker state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
-      expect.arrayContaining(['drawingPicker.open', 'drawingPicker.close', 'drawingPicker.attachFirst', 'drawingPicker.toggleFirstHistory']),
+      expect.arrayContaining([
+        'drawingPicker.open',
+        'drawingPicker.close',
+        'drawingPicker.attachFirst',
+        'drawingPicker.toggleFirstHistory',
+      ]),
     );
 
     const openDrawingPicker = vi.fn(() => true);
@@ -1595,6 +1600,33 @@ describe('extension commands', () => {
     };
 
     await expect(executeExtensionCommand('system-test.run-action', undefined, options)).resolves.toBe(false);
+  });
+
+  it('reports extension command results to the caller', async () => {
+    const extensionCommands = [
+      {
+        extensionId: 'system-test',
+        surfaceId: 'run-action',
+        title: 'Run Action',
+        action: 'runAction',
+      },
+    ];
+    const result = { ok: true, message: 'Done' };
+    const invokeExtensionCommand = vi.fn().mockResolvedValue(result);
+    const onExtensionCommandResult = vi.fn();
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      extensionCommands,
+      invokeExtensionCommand,
+      onExtensionCommandResult,
+    };
+
+    await expect(executeExtensionCommand('system-test.run-action', undefined, options)).resolves.toBe(true);
+
+    expect(onExtensionCommandResult).toHaveBeenCalledWith(extensionCommands[0], result);
   });
 
   it('executes host commands directly', async () => {

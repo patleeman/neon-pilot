@@ -240,7 +240,16 @@ async function computerUseStatus(_input, ctx) {
   }
 }
 async function computerUseDoctor(input, ctx) {
-  return callCuaTool({ ...input, action: "doctor" }, ctx);
+  try {
+    return await callCuaTool({ ...input, action: "doctor" }, ctx);
+  } catch (error) {
+    return {
+      ok: false,
+      message: "Cua Driver doctor could not run.",
+      error: messageFrom(error),
+      installHint: "Run the \u201CInstall Cua Driver\u201D command, then grant Accessibility and Screen Recording permissions when prompted by your OS."
+    };
+  }
 }
 async function computerUseInstall(_input, ctx) {
   const platform = process.platform;

@@ -24,6 +24,7 @@ import { writeClipboardText } from '../desktop/clipboard';
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { DesktopChromeContext, type DesktopRightRailControl } from '../desktop/desktopChromeContext';
 import { canExecuteExtensionCommand, executeExtensionCommand, setExtensionCommandContext } from '../extensions/commands';
+import { buildExtensionCommandNotification } from '../extensions/extensionCommandNotifications';
 import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from '../extensions/extensionModalCommands';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../extensions/extensionRegistryEvents';
 import { findMatchingExtensionKeybinding } from '../extensions/keybindings';
@@ -2797,8 +2798,18 @@ export function Layout() {
         return true;
       },
       activeConversationId,
-      invokeExtensionCommand(command: ExtensionCommandRegistration, args: unknown) {
-        return api.invokeExtensionAction(command.extensionId, command.action, args ?? {});
+      async invokeExtensionCommand(command: ExtensionCommandRegistration, args: unknown) {
+        try {
+          const response = await api.invokeExtensionAction(command.extensionId, command.action, args ?? {});
+          if (response.ok === false) return { ok: false, message: response.error };
+          return response.result;
+        } catch (error) {
+          return { ok: false, message: error instanceof Error ? error.message : String(error) };
+        }
+      },
+      onExtensionCommandResult(command: ExtensionCommandRegistration, result: unknown) {
+        const notification = buildExtensionCommandNotification(command, result);
+        if (notification) addNotification(notification);
       },
     }),
     [

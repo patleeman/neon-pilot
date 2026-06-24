@@ -163,7 +163,17 @@ export async function computerUseStatus(_input: unknown, ctx: ExtensionBackendCo
 }
 
 export async function computerUseDoctor(input: ComputerUseInput, ctx: ExtensionBackendContext): Promise<unknown> {
-  return callCuaTool({ ...input, action: 'doctor' }, ctx);
+  try {
+    return await callCuaTool({ ...input, action: 'doctor' }, ctx);
+  } catch (error) {
+    return {
+      ok: false,
+      message: 'Cua Driver doctor could not run.',
+      error: messageFrom(error),
+      installHint:
+        'Run the “Install Cua Driver” command, then grant Accessibility and Screen Recording permissions when prompted by your OS.',
+    };
+  }
 }
 
 export async function computerUseInstall(_input: unknown, ctx: ExtensionBackendContext): Promise<unknown> {

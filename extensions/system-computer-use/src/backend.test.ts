@@ -8,7 +8,7 @@ vi.mock('@neon-pilot/extensions/backend/mcp', () => ({
   callMcpToolDirect: callMcpToolDirectMock,
 }));
 
-import { computerUse, computerUseStatus } from './backend';
+import { computerUse, computerUseDoctor, computerUseStatus } from './backend';
 
 function createCtx(shellExec: ReturnType<typeof vi.fn> = vi.fn()) {
   return {
@@ -47,6 +47,30 @@ describe('system-computer-use backend', () => {
         version: 'cua-driver 1.2.3',
         telemetry: 'disabled',
         health: { ok: true },
+      }),
+    );
+    expect(callMcpToolDirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'cua-driver',
+        command: 'cua-driver',
+        args: ['mcp'],
+        env: { CUA_DRIVER_RS_TELEMETRY_ENABLED: '0' },
+      }),
+      'health_report',
+      {},
+      expect.objectContaining({ timeoutMs: 20_000 }),
+    );
+  });
+
+  it('reports a recovery hint when the Cua Driver doctor cannot run', async () => {
+    callMcpToolDirectMock.mockRejectedValue(new Error('spawn cua-driver ENOENT'));
+
+    await expect(computerUseDoctor({}, createCtx())).resolves.toEqual(
+      expect.objectContaining({
+        ok: false,
+        message: 'Cua Driver doctor could not run.',
+        error: 'spawn cua-driver ENOENT',
+        installHint: expect.stringContaining('Install Cua Driver'),
       }),
     );
     expect(callMcpToolDirectMock).toHaveBeenCalledWith(
