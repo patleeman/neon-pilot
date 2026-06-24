@@ -70,25 +70,46 @@ function clampPositiveInt(value: unknown, fallback: number): number {
   return Math.floor(parsed);
 }
 
-export async function readHashline(input: { path: string; offset?: number; limit?: number }, ctx: BackendContext) {
-  const cwd = getCwd(ctx);
-  const { relativePath, absolutePath } = normalizeWorkspacePath(cwd, input.path);
-  const raw = await readFile(absolutePath, 'utf8');
-  if (Buffer.byteLength(raw, 'utf8') > MAX_READ_BYTES)
-    throw new Error(`File is too large for read_hashline (${MAX_READ_BYTES} byte limit).`);
-  const tag = computeTag(raw);
-  const lines = splitLines(raw);
-  const offset = clampPositiveInt(input.offset, 1);
-  const limit = Math.min(clampPositiveInt(input.limit, MAX_READ_LINES), MAX_READ_LINES);
-  const startIndex = Math.min(offset - 1, lines.length);
-  const visible = lines.slice(startIndex, startIndex + limit);
-  const omitted =
-    startIndex + visible.length < lines.length ? `\n… ${lines.length - (startIndex + visible.length)} more line(s) omitted` : '';
-  const text = `[${relativePath}#${tag}]\n${formatNumberedLines(visible, startIndex + 1)}${omitted}`;
+function formatToolError(error: unknown, fallback: string): string {
+  const code = typeof error === 'object' && error ? (error as { code?: unknown }).code : undefined;
+  if (code === 'ENOENT') return 'File not found. Check the path and run read_hashline again.';
+  if (code === 'EACCES' || code === 'EPERM') return 'File permission denied. Check access and try again.';
+
+  const message = error instanceof Error ? error.message : String(error);
+  if (!message || message.includes('\n') || /\s+at\s+\S+/i.test(message)) return fallback;
+  return message;
+}
+
+function toolError(error: unknown, fallback: string) {
   return {
-    content: [{ type: 'text', text }],
-    details: { path: relativePath, tag, startLine: startIndex + 1, lines: visible.length, totalLines: lines.length },
+    content: [{ type: 'text', text: formatToolError(error, fallback) }],
+    isError: true,
   };
+}
+
+export async function readHashline(input: { path: string; offset?: number; limit?: number }, ctx: BackendContext) {
+  try {
+    const cwd = getCwd(ctx);
+    const { relativePath, absolutePath } = normalizeWorkspacePath(cwd, input.path);
+    const raw = await readFile(absolutePath, 'utf8');
+    if (Buffer.byteLength(raw, 'utf8') > MAX_READ_BYTES)
+      throw new Error(`File is too large for read_hashline (${MAX_READ_BYTES} byte limit).`);
+    const tag = computeTag(raw);
+    const lines = splitLines(raw);
+    const offset = clampPositiveInt(input.offset, 1);
+    const limit = Math.min(clampPositiveInt(input.limit, MAX_READ_LINES), MAX_READ_LINES);
+    const startIndex = Math.min(offset - 1, lines.length);
+    const visible = lines.slice(startIndex, startIndex + limit);
+    const omitted =
+      startIndex + visible.length < lines.length ? `\n… ${lines.length - (startIndex + visible.length)} more line(s) omitted` : '';
+    const text = `[${relativePath}#${tag}]\n${formatNumberedLines(visible, startIndex + 1)}${omitted}`;
+    return {
+      content: [{ type: 'text', text }],
+      details: { path: relativePath, tag, startLine: startIndex + 1, lines: visible.length, totalLines: lines.length },
+    };
+  } catch (error) {
+    return toolError(error, 'Could not read hashline file. Check the path and try again.');
+  }
 }
 
 function parseHeader(line: string): { path: string; tag: string } | null {
@@ -253,44 +274,48 @@ function buildPreview(before: string, after: string, aroundLine?: number): strin
 }
 
 export async function hashlineEdit(input: { input: string }, ctx: BackendContext) {
-  const cwd = getCwd(ctx);
-  const sections = parseSections(input.input);
-  const prepared: Array<{
-    section: Section;
-    relativePath: string;
-    absolutePath: string;
-    before: string;
-    after: string;
-    firstChangedLine?: number;
-  }> = [];
+  try {
+    const cwd = getCwd(ctx);
+    const sections = parseSections(input.input);
+    const prepared: Array<{
+      section: Section;
+      relativePath: string;
+      absolutePath: string;
+      before: string;
+      after: string;
+      firstChangedLine?: number;
+    }> = [];
 
-  for (const section of sections) {
-    const { relativePath, absolutePath } = normalizeWorkspacePath(cwd, section.path);
-    const before = await readFile(absolutePath, 'utf8');
-    const liveTag = computeTag(before);
-    if (liveTag !== section.tag) {
-      throw new Error(
-        `Edit rejected for ${relativePath}: section tag #${section.tag} does not match live file #${liveTag}. Re-run read_hashline and retry with the fresh header.`,
-      );
+    for (const section of sections) {
+      const { relativePath, absolutePath } = normalizeWorkspacePath(cwd, section.path);
+      const before = await readFile(absolutePath, 'utf8');
+      const liveTag = computeTag(before);
+      if (liveTag !== section.tag) {
+        throw new Error(
+          `Edit rejected for ${relativePath}: section tag #${section.tag} does not match live file #${liveTag}. Re-run read_hashline and retry with the fresh header.`,
+        );
+      }
+      const applied = applyOps(before, section.ops);
+      if (applied.text === before) throw new Error(`Edits to ${relativePath} produced no change. Re-read the file before retrying.`);
+      prepared.push({ section, relativePath, absolutePath, before, after: applied.text, firstChangedLine: applied.firstChangedLine });
     }
-    const applied = applyOps(before, section.ops);
-    if (applied.text === before) throw new Error(`Edits to ${relativePath} produced no change. Re-read the file before retrying.`);
-    prepared.push({ section, relativePath, absolutePath, before, after: applied.text, firstChangedLine: applied.firstChangedLine });
+
+    for (const entry of prepared) {
+      await mkdir(dirname(entry.absolutePath), { recursive: true });
+      await writeFile(entry.absolutePath, entry.after, 'utf8');
+    }
+
+    const resultText = prepared
+      .map((entry) => {
+        const tag = computeTag(entry.after);
+        const added = Math.max(0, splitLines(entry.after).length - splitLines(entry.before).length);
+        const removed = Math.max(0, splitLines(entry.before).length - splitLines(entry.after).length);
+        return `[${entry.relativePath}#${tag}]\n${buildPreview(entry.before, entry.after, entry.firstChangedLine)}\n\n${added} added, ${removed} removed. Reuse the new header or run read_hashline before the next edit.`;
+      })
+      .join('\n\n');
+
+    return { content: [{ type: 'text', text: resultText }], details: { files: prepared.map((entry) => entry.relativePath) } };
+  } catch (error) {
+    return toolError(error, 'Could not apply hashline edit. Re-run read_hashline and try again.');
   }
-
-  for (const entry of prepared) {
-    await mkdir(dirname(entry.absolutePath), { recursive: true });
-    await writeFile(entry.absolutePath, entry.after, 'utf8');
-  }
-
-  const resultText = prepared
-    .map((entry) => {
-      const tag = computeTag(entry.after);
-      const added = Math.max(0, splitLines(entry.after).length - splitLines(entry.before).length);
-      const removed = Math.max(0, splitLines(entry.before).length - splitLines(entry.after).length);
-      return `[${entry.relativePath}#${tag}]\n${buildPreview(entry.before, entry.after, entry.firstChangedLine)}\n\n${added} added, ${removed} removed. Reuse the new header or run read_hashline before the next edit.`;
-    })
-    .join('\n\n');
-
-  return { content: [{ type: 'text', text: resultText }], details: { files: prepared.map((entry) => entry.relativePath) } };
 }

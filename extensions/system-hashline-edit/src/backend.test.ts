@@ -67,14 +67,44 @@ describe('system-hashline-edit backend', () => {
     const tag = tagFromRead(read.content[0]?.text ?? '');
     writeFileSync(filePath, 'changed\ntwo\n');
 
-    await expect(hashlineEdit({ input: `[src.txt#${tag}]\nSWAP 1:\n+ONE` }, ctx(cwd))).rejects.toThrow('does not match live file');
+    const result = await hashlineEdit({ input: `[src.txt#${tag}]\nSWAP 1:\n+ONE` }, ctx(cwd));
+
+    expect(result).toMatchObject({
+      isError: true,
+      content: [{ type: 'text', text: expect.stringContaining('does not match live file') }],
+    });
     expect(readFileSync(filePath, 'utf8')).toBe('changed\ntwo\n');
   });
 
-  it('rejects paths outside the workspace before reading or writing', async () => {
+  it('returns tool errors for paths outside the workspace before reading or writing', async () => {
     const cwd = createWorkspace();
 
-    await expect(readHashline({ path: '../outside.txt' }, ctx(cwd))).rejects.toThrow('Invalid workspace path');
-    await expect(hashlineEdit({ input: '[../outside.txt#ABCD]\nDEL 1' }, ctx(cwd))).rejects.toThrow('Invalid workspace path');
+    await expect(readHashline({ path: '../outside.txt' }, ctx(cwd))).resolves.toMatchObject({
+      isError: true,
+      content: [{ type: 'text', text: 'Invalid workspace path: ../outside.txt' }],
+    });
+    await expect(hashlineEdit({ input: '[../outside.txt#ABCD]\nDEL 1' }, ctx(cwd))).resolves.toMatchObject({
+      isError: true,
+      content: [{ type: 'text', text: 'Invalid workspace path: ../outside.txt' }],
+    });
+  });
+
+  it('returns a tool error for files that exceed the read limit', async () => {
+    const cwd = createWorkspace();
+    writeFileSync(join(cwd, 'large.txt'), 'x'.repeat(513 * 1024));
+
+    await expect(readHashline({ path: 'large.txt' }, ctx(cwd))).resolves.toMatchObject({
+      isError: true,
+      content: [{ type: 'text', text: 'File is too large for read_hashline (524288 byte limit).' }],
+    });
+  });
+
+  it('returns a sanitized tool error when a file is missing', async () => {
+    const cwd = createWorkspace();
+
+    await expect(readHashline({ path: 'missing.txt' }, ctx(cwd))).resolves.toMatchObject({
+      isError: true,
+      content: [{ type: 'text', text: 'File not found. Check the path and run read_hashline again.' }],
+    });
   });
 });
