@@ -3241,7 +3241,7 @@ export function Layout() {
       </DesktopChromeContext.Provider>
 
       <Suspense fallback={null}>
-        <NotificationToaster />
+        <NotificationToaster suppress={notificationCenterOpen} />
       </Suspense>
       {notificationCenterOpen ? (
         <Suspense fallback={null}>

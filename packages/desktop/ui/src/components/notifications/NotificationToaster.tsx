@@ -38,7 +38,7 @@ const TYPE_BG_CLASS: Record<NotificationType, string> = {
   error: 'bg-red-50 dark:bg-red-950',
 };
 
-export function NotificationToaster() {
+export function NotificationToaster({ suppress = false }: { suppress?: boolean }) {
   const { notifications, markRead } = useNotificationStore();
   const [toasts, setToasts] = useState<ToastDisplay[]>([]);
   const seenCounts = useRef(new Map<string, number>());
@@ -84,7 +84,7 @@ export function NotificationToaster() {
 
   // Sync non-dismissed error/warning notifications into the toast display.
   useEffect(() => {
-    const activeNotifications = notifications.filter((notif) => !notif.dismissed && !notif.read && notif.type !== 'info');
+    const activeNotifications = suppress ? [] : notifications.filter((notif) => !notif.dismissed && !notif.read && notif.type !== 'info');
     const activeById = new Map(activeNotifications.map((notif) => [notif.id, notif]));
     const activeIds = new Set(activeById.keys());
 
@@ -138,7 +138,7 @@ export function NotificationToaster() {
       seenCounts.current.set(notif.id, notif.count);
       scheduleAutoDismiss(notif.id, TOAST_DURATION_MS[notif.type]);
     }
-  }, [clearAutoDismissTimer, notifications, scheduleAutoDismiss]);
+  }, [clearAutoDismissTimer, notifications, scheduleAutoDismiss, suppress]);
 
   useEffect(
     () => () => {

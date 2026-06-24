@@ -76,4 +76,64 @@ describe('NotificationToaster', () => {
     expect(container.textContent).toContain('(2)');
     expect(markRead).not.toHaveBeenCalled();
   });
+
+  it('suppresses active toasts without marking notifications read', () => {
+    const markRead = vi.fn();
+    mocks.useNotificationStore.mockReturnValue({
+      notifications: [
+        {
+          id: 'notif-1',
+          type: 'warning' as const,
+          message: 'Build warning',
+          source: 'system',
+          timestamp: '2026-05-11T12:00:00.000Z',
+          count: 1,
+          read: false,
+          dismissed: false,
+        },
+      ],
+      markRead,
+    });
+
+    root = createRoot(container);
+    act(() => {
+      root?.render(<NotificationToaster suppress />);
+    });
+
+    expect(container.textContent).not.toContain('Build warning');
+    expect(markRead).not.toHaveBeenCalled();
+  });
+
+  it('clears already-rendered toasts while suppressed', () => {
+    const markRead = vi.fn();
+    mocks.useNotificationStore.mockReturnValue({
+      notifications: [
+        {
+          id: 'notif-1',
+          type: 'error' as const,
+          message: 'Build failed',
+          source: 'system',
+          timestamp: '2026-05-11T12:00:00.000Z',
+          count: 1,
+          read: false,
+          dismissed: false,
+        },
+      ],
+      markRead,
+    });
+
+    root = createRoot(container);
+    act(() => {
+      root?.render(<NotificationToaster />);
+    });
+
+    expect(container.textContent).toContain('Build failed');
+
+    act(() => {
+      root?.render(<NotificationToaster suppress />);
+    });
+
+    expect(container.textContent).not.toContain('Build failed');
+    expect(markRead).not.toHaveBeenCalled();
+  });
 });
