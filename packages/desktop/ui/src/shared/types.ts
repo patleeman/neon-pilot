@@ -846,6 +846,7 @@ export type AppEventTopic =
   | 'runs'
   | 'executions'
   | 'automation'
+  | 'routines'
   | 'daemon'
   | 'workspace'
   | 'knowledgeBase';

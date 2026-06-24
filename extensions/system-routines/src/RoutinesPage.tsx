@@ -341,26 +341,46 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const result = (await pa.extension.invoke('getState', {})) as StateResult;
-      setData(result);
-      const initialHookId = hookIdFromHash(context.hash) ?? selectedHookId;
-      const nextHookId = result.hooks.some((hook) => hook.id === initialHookId) ? initialHookId : (result.hooks[0]?.id ?? 'checkpoint');
-      setSelectedHookId(nextHookId);
-      setSelectedRoutineId(null);
-      setDraft(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [context.hash, pa, selectedHookId]);
+  const load = useCallback(
+    async (options?: { resetSelection?: boolean }) => {
+      setError(null);
+      try {
+        const result = (await pa.extension.invoke('getState', {})) as StateResult;
+        setData(result);
+        const initialHookId = hookIdFromHash(context.hash) ?? selectedHookId;
+        const nextHookId = result.hooks.some((hook) => hook.id === initialHookId) ? initialHookId : (result.hooks[0]?.id ?? 'checkpoint');
+        setSelectedHookId(nextHookId);
+        if (options?.resetSelection) {
+          setSelectedRoutineId(null);
+          setDraft(null);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [context.hash, pa, selectedHookId],
+  );
 
   useEffect(() => {
-    void load();
+    void load({ resetSelection: true });
   }, []);
+
+  useEffect(() => {
+    const subscription = pa.ui.subscribeInvalidations((event) => {
+      if (event.topics.some((topic) => topic === 'routines')) void load();
+    });
+    return () => subscription.unsubscribe();
+  }, [load, pa]);
+
+  useEffect(() => {
+    if (!showRuns) return;
+    const timer = window.setInterval(() => {
+      void load();
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [load, showRuns]);
 
   useEffect(() => {
     const nextHookId = hookIdFromHash(context.hash);

@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RoutinesPage } from './RoutinesPage.js';
-import type { Routine } from './types.js';
+import type { Routine, RoutineRunRecord } from './types.js';
 
 const baseState = {
   hooks: [
@@ -47,6 +47,7 @@ function cloneStateFrom(state: typeof baseState) {
 
 function createPa() {
   const state = cloneState();
+  let invalidationHandler: ((event: { topics: string[] }) => void) | null = null;
   const invoke = vi.fn(async (action: string, input: unknown) => {
     if (action === 'listSkills') return { skills: [{ id: 'autoreview', name: 'Autoreview' }] };
     if (action === 'saveRoutine') {
@@ -66,7 +67,7 @@ function createPa() {
       state.routines = state.routines.map((routine) => (routine.id === routineId ? { ...routine, position } : routine));
       return cloneStateFrom(state);
     }
-    return state;
+    return cloneStateFrom(state);
   });
   return {
     pa: {
@@ -75,9 +76,22 @@ function createPa() {
         { id: 'gpt-5.4', provider: 'openai-codex', name: 'GPT-5.4' },
         { id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash' },
       ]),
-      ui: { toast: vi.fn(), confirm: vi.fn(async () => true) },
+      ui: {
+        toast: vi.fn(),
+        confirm: vi.fn(async () => true),
+        subscribeInvalidations: vi.fn((handler: (event: { topics: string[] }) => void) => {
+          invalidationHandler = handler;
+          return {
+            unsubscribe: vi.fn(() => {
+              if (invalidationHandler === handler) invalidationHandler = null;
+            }),
+          };
+        }),
+      },
     } as never,
     invoke,
+    state,
+    emitInvalidation: (topics: string[]) => invalidationHandler?.({ topics }),
   };
 }
 
@@ -97,6 +111,10 @@ function editReviewRoutine() {
 describe('RoutinesPage', () => {
   beforeEach(() => {
     vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('renders the timeline with inline route lanes', async () => {
@@ -180,5 +198,79 @@ describe('RoutinesPage', () => {
     fireEvent.click(screen.getByLabelText('More actions for Temporary instruction'));
     fireEvent.click(screen.getByText('Delete routine'));
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('deleteRoutine', expect.objectContaining({ routineId: expect.any(String) })));
+  });
+
+  it('refreshes run history when routines are invalidated', async () => {
+    const { pa, state, emitInvalidation } = createPa();
+    render(<RoutinesPage {...props(pa)} />);
+    await screen.findByText('Checkpoint timeline');
+
+    fireEvent.click(screen.getByText('Runs'));
+    expect(screen.getByText('No routine runs yet.')).toBeTruthy();
+
+    state.runs.unshift({
+      id: 'run-qa',
+      hookId: 'checkpoint',
+      position: 'before',
+      status: 'blocked',
+      startedAt: '2026-01-01T00:01:00.000Z',
+      completedAt: '2026-01-01T00:01:00.000Z',
+      context: {},
+      steps: [
+        {
+          routineId: 'r1',
+          routineName: 'Review code changes',
+          status: 'blocked',
+          message: 'Blocked by QA',
+          skillRefs: [],
+        },
+      ],
+    } satisfies RoutineRunRecord);
+
+    await act(async () => {
+      emitInvalidation(['routines']);
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText(/Review code changes: blocked/)).toBeTruthy();
+    expect(screen.getByText(/Blocked by QA/)).toBeTruthy();
+  });
+
+  it('polls run history while the Runs view is open', async () => {
+    const { pa, state } = createPa();
+    render(<RoutinesPage {...props(pa)} />);
+    await screen.findByText('Checkpoint timeline');
+
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByText('Runs'));
+    expect(screen.getByText('No routine runs yet.')).toBeTruthy();
+
+    state.runs.unshift({
+      id: 'run-polled',
+      hookId: 'checkpoint',
+      position: 'before',
+      status: 'warned',
+      startedAt: '2026-01-01T00:02:00.000Z',
+      completedAt: '2026-01-01T00:02:00.000Z',
+      context: {},
+      steps: [
+        {
+          routineId: 'r1',
+          routineName: 'Review code changes',
+          status: 'warned',
+          message: 'Polled run',
+          skillRefs: [],
+        },
+      ],
+    } satisfies RoutineRunRecord);
+
+    await act(async () => {
+      vi.advanceTimersByTime(2500);
+      await Promise.resolve();
+    });
+    vi.useRealTimers();
+
+    expect(await screen.findByText(/Review code changes: warned/)).toBeTruthy();
+    expect(screen.getByText(/Polled run/)).toBeTruthy();
   });
 });
