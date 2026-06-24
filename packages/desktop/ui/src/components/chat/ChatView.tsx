@@ -84,6 +84,15 @@ export interface ChatViewProps {
   precomputedRenderItems?: TranscriptRenderItem[];
 }
 
+export function filterTranscriptReplyStarterActions(
+  selectionActions: ExtensionSelectionActionRegistration[] | undefined,
+): ExtensionSelectionActionRegistration[] {
+  return (selectionActions ?? []).filter(
+    (action) =>
+      action.action === 'composer.replyToSelection' && (action.kinds.includes('text') || action.kinds.includes('transcriptRange')),
+  );
+}
+
 function shouldFocusComposerFromTranscriptPointerDown(event: React.PointerEvent<HTMLDivElement>): boolean {
   if (event.defaultPrevented || event.button !== 0) {
     return false;
@@ -380,9 +389,7 @@ export const ChatView = memo(function ChatView({
     anchorToTail: anchorWindowingToTail,
   });
   const [selectedImage, setSelectedImage] = useState<InspectableImage | null>(null);
-  const transcriptSelectionActions = (selectionActions ?? []).filter(
-    (action) => action.kinds.includes('text') || action.kinds.includes('transcriptRange'),
-  );
+  const transcriptSelectionActions = filterTranscriptReplyStarterActions(selectionActions);
   const {
     selectionContextMenu,
     selectionContextMenuRef,

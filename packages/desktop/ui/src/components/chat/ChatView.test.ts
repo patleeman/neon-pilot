@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext } from '../../app/contexts.js';
-import { ChatView } from './ChatView.js';
+import { ChatView, filterTranscriptReplyStarterActions } from './ChatView.js';
 import { ErrorBlock } from './TraceBlocks.js';
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
@@ -1732,5 +1732,49 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('Load previous 10%');
     expect(html).not.toContain('windowing');
     expect(html).not.toContain('mounted');
+  });
+});
+
+describe('filterTranscriptReplyStarterActions', () => {
+  it('keeps only composer reply starter actions for transcript selections', () => {
+    expect(
+      filterTranscriptReplyStarterActions([
+        {
+          extensionId: 'system-reply-actions',
+          id: 'reply-agree',
+          title: 'Agree',
+          action: 'composer.replyToSelection',
+          kinds: ['text'],
+          icon: '👍',
+          args: { draftText: '👍 Agree' },
+        },
+        {
+          extensionId: 'custom-selection-tool',
+          id: 'use-selection',
+          title: 'Use selection',
+          action: 'useSelection',
+          kinds: ['text'],
+          icon: '⚙',
+        },
+        {
+          extensionId: 'file-selection-tool',
+          id: 'file-only',
+          title: 'File only',
+          action: 'composer.replyToSelection',
+          kinds: ['files'],
+          icon: '📄',
+        },
+      ]),
+    ).toEqual([
+      {
+        extensionId: 'system-reply-actions',
+        id: 'reply-agree',
+        title: 'Agree',
+        action: 'composer.replyToSelection',
+        kinds: ['text'],
+        icon: '👍',
+        args: { draftText: '👍 Agree' },
+      },
+    ]);
   });
 });

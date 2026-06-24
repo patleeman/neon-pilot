@@ -25,6 +25,7 @@ export interface ReplySelectionContextMenuState {
   x: number;
   y: number;
   text: string;
+  copyText?: string;
   replySelection: ReplySelectionState | null;
 }
 
@@ -393,7 +394,7 @@ export function useChatReplySelection({
 
   const copySelectedTranscriptText = useCallback(
     async (text: string | null | undefined) => {
-      const nextText = typeof text === 'string' ? text.trim() : '';
+      const nextText = typeof text === 'string' ? text : '';
 
       closeSelectionContextMenu();
       if (!nextText) {
@@ -437,7 +438,7 @@ export function useChatReplySelection({
           await handleReplySelection(activeMenuState.replySelection);
           return;
         case 'copy':
-          await copySelectedTranscriptText(activeMenuState.text);
+          await copySelectedTranscriptText(activeMenuState.copyText ?? activeMenuState.text);
           return;
       }
     },
@@ -456,7 +457,8 @@ export function useChatReplySelection({
         applyResolvedReplySelection(resolvedReplySelection);
       }
 
-      const selectionText = resolvedReplySelection?.selection.text ?? window.getSelection()?.toString().trim() ?? '';
+      const rawSelectionText = window.getSelection()?.toString() ?? '';
+      const selectionText = resolvedReplySelection?.selection.text ?? rawSelectionText.trim();
       if (!selectionText) {
         closeSelectionContextMenu();
         return;
@@ -467,6 +469,7 @@ export function useChatReplySelection({
         x: event.clientX,
         y: event.clientY,
         text: selectionText,
+        copyText: rawSelectionText || selectionText,
         replySelection: resolvedReplySelection?.selection ?? null,
       };
       openDomSelectionContextMenu(menuState);
