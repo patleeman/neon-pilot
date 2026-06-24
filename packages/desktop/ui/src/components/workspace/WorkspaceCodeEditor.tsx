@@ -5,7 +5,7 @@ import { json } from '@codemirror/lang-json';
 import { markdown } from '@codemirror/lang-markdown';
 import { python } from '@codemirror/lang-python';
 import { yaml } from '@codemirror/lang-yaml';
-import { defaultHighlightStyle, HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { EditorState, RangeSetBuilder, StateEffect, StateField } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, WidgetType } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
@@ -14,23 +14,42 @@ import { useCallback, useMemo } from 'react';
 
 import type { WorkspaceDiffOverlay } from '../../shared/types';
 
-const tokyoNightHighlightStyle = HighlightStyle.define([
-  { tag: t.keyword, color: '#bb9af7' },
-  { tag: [t.atom, t.bool, t.special(t.variableName)], color: '#ff9e64' },
-  { tag: [t.number, t.integer, t.float], color: '#ff9e64' },
-  { tag: [t.string, t.special(t.string), t.regexp], color: '#9ece6a' },
-  { tag: [t.escape, t.character], color: '#7dcfff' },
-  { tag: [t.definition(t.variableName), t.function(t.variableName), t.function(t.propertyName)], color: '#7aa2f7' },
-  { tag: [t.variableName, t.self], color: '#c0caf5' },
-  { tag: [t.className, t.typeName, t.namespace], color: '#2ac3de' },
-  { tag: [t.propertyName, t.attributeName], color: '#7dcfff' },
-  { tag: [t.operator, t.punctuation, t.bracket], color: '#89ddff' },
-  { tag: [t.comment, t.lineComment, t.blockComment], color: '#565f89', fontStyle: 'italic' },
-  { tag: [t.meta, t.labelName], color: '#bb9af7' },
-  { tag: [t.heading, t.strong], color: '#7aa2f7', fontWeight: '600' },
+const neonPilotDarkHighlightStyle = HighlightStyle.define([
+  { tag: t.keyword, color: '#b8a7d9' },
+  { tag: [t.atom, t.bool, t.special(t.variableName)], color: '#d3a17d' },
+  { tag: [t.number, t.integer, t.float], color: '#d3a17d' },
+  { tag: [t.string, t.special(t.string), t.regexp], color: '#94b98e' },
+  { tag: [t.escape, t.character], color: '#98b8d2' },
+  { tag: [t.definition(t.variableName), t.function(t.variableName), t.function(t.propertyName)], color: '#9fb7de' },
+  { tag: [t.variableName, t.self], color: '#d7d3c5' },
+  { tag: [t.className, t.typeName, t.namespace], color: '#8fbfc1' },
+  { tag: [t.propertyName, t.attributeName], color: '#a9bfd0' },
+  { tag: [t.operator, t.punctuation, t.bracket], color: '#c2bdad' },
+  { tag: [t.comment, t.lineComment, t.blockComment], color: '#7d7a6b', fontStyle: 'italic' },
+  { tag: [t.meta, t.labelName], color: '#b8a7d9' },
+  { tag: [t.heading, t.strong], color: '#f5f3e8', fontWeight: '600' },
   { tag: t.emphasis, fontStyle: 'italic' },
-  { tag: t.link, color: '#73daca', textDecoration: 'underline' },
-  { tag: t.invalid, color: '#f7768e' },
+  { tag: t.link, color: '#8ebcad', textDecoration: 'underline' },
+  { tag: t.invalid, color: '#e07f8b' },
+]);
+
+const neonPilotLightHighlightStyle = HighlightStyle.define([
+  { tag: t.keyword, color: '#6f5a9c' },
+  { tag: [t.atom, t.bool, t.special(t.variableName)], color: '#9a5f2d' },
+  { tag: [t.number, t.integer, t.float], color: '#9a5f2d' },
+  { tag: [t.string, t.special(t.string), t.regexp], color: '#4f7a44' },
+  { tag: [t.escape, t.character], color: '#34708e' },
+  { tag: [t.definition(t.variableName), t.function(t.variableName), t.function(t.propertyName)], color: '#315f9d' },
+  { tag: [t.variableName, t.self], color: '#33342e' },
+  { tag: [t.className, t.typeName, t.namespace], color: '#24747a' },
+  { tag: [t.propertyName, t.attributeName], color: '#3f667d' },
+  { tag: [t.operator, t.punctuation, t.bracket], color: '#62675e' },
+  { tag: [t.comment, t.lineComment, t.blockComment], color: '#777569', fontStyle: 'italic' },
+  { tag: [t.meta, t.labelName], color: '#6f5a9c' },
+  { tag: [t.heading, t.strong], color: '#20201a', fontWeight: '600' },
+  { tag: t.emphasis, fontStyle: 'italic' },
+  { tag: t.link, color: '#2d756a', textDecoration: 'underline' },
+  { tag: t.invalid, color: '#b43e4a' },
 ]);
 
 function extensionForPath(path: string) {
@@ -112,7 +131,15 @@ const diffDecorationsField = StateField.define<DecorationSet>({
   provide: (field) => EditorView.decorations.from(field),
 });
 
-function createWorkspaceEditorExtensions(path: string, theme: 'light' | 'dark') {
+function isDarkEditorTheme(theme: string): boolean {
+  const appearance = typeof document === 'undefined' ? null : document.documentElement.getAttribute('data-theme-appearance');
+  if (appearance === 'dark') return true;
+  if (appearance === 'light') return false;
+  return theme === 'dark' || theme.endsWith('-dark');
+}
+
+function createWorkspaceEditorExtensions(path: string, theme: string) {
+  const isDark = isDarkEditorTheme(theme);
   return [
     diffDecorationsField,
     EditorView.lineWrapping,
@@ -143,7 +170,7 @@ function createWorkspaceEditorExtensions(path: string, theme: 'light' | 'dark') 
         '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'rgb(var(--color-surface) / 0.55)' },
         '.cm-cursor': { borderLeftColor: 'rgb(var(--color-primary))' },
         '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
-          backgroundColor: theme === 'dark' ? 'rgb(var(--color-selection))' : 'rgb(var(--color-accent) / 0.24)',
+          backgroundColor: isDark ? 'rgb(var(--color-selection))' : 'rgb(var(--color-accent) / 0.24)',
         },
         '.cm-panels': {
           background: 'transparent',
@@ -227,8 +254,8 @@ function createWorkspaceEditorExtensions(path: string, theme: 'light' | 'dark') 
         },
         '.cm-panel.cm-search button[name="close"]': { display: 'none' },
         '::selection': {
-          backgroundColor: theme === 'dark' ? 'rgb(var(--color-selection))' : 'rgb(var(--color-accent) / 0.24)',
-          color: theme === 'dark' ? 'rgb(var(--color-primary))' : undefined,
+          backgroundColor: isDark ? 'rgb(var(--color-selection))' : 'rgb(var(--color-accent) / 0.24)',
+          color: isDark ? 'rgb(var(--color-primary))' : undefined,
         },
         '.workspace-added-line': { backgroundColor: 'rgba(34, 197, 94, 0.12)' },
         '.workspace-deleted-lines': {
@@ -242,9 +269,9 @@ function createWorkspaceEditorExtensions(path: string, theme: 'light' | 'dark') 
         '.workspace-deleted-line': { whiteSpace: 'pre', minHeight: '1.4em' },
         '.workspace-diff-marker': { display: 'inline-block', width: '1.5em', opacity: '0.75' },
       },
-      { dark: theme === 'dark' },
+      { dark: isDark },
     ),
-    syntaxHighlighting(theme === 'dark' ? tokyoNightHighlightStyle : defaultHighlightStyle),
+    syntaxHighlighting(isDark ? neonPilotDarkHighlightStyle : neonPilotLightHighlightStyle),
     extensionForPath(path),
   ];
 }
@@ -259,7 +286,7 @@ export function WorkspaceCodeEditor({
 }: {
   path: string;
   value: string;
-  theme: 'light' | 'dark';
+  theme: string;
   diffSpec: WorkspaceDiffOverlay;
   editable: boolean;
   onChange?: (value: string) => void;
