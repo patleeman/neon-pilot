@@ -61,7 +61,8 @@ vi.mock('./WorkspaceCodeEditor', () => ({
 }));
 
 vi.mock('@pierre/trees/react', () => ({
-  FileTree: () => React.createElement('div', { 'data-testid': 'mock-file-tree' }),
+  FileTree: ({ renderContextMenu }: { renderContextMenu?: (item: { path: string }, context: { close: () => void }) => React.ReactNode }) =>
+    React.createElement('div', { 'data-testid': 'mock-file-tree' }, renderContextMenu?.({ path: 'tmp/' }, { close: () => undefined })),
 }));
 
 vi.mock('../shared/useFileTreeModel', () => ({
@@ -632,6 +633,49 @@ describe('formatWorkspaceEntrySize', () => {
     expect(apiMocks.workspaceTree).toHaveBeenCalledTimes(1);
 
     vi.useRealTimers();
+  });
+
+  it('renders create path prompts from the rail-only file tree context menu', async () => {
+    apiMocks.workspaceTree.mockResolvedValue({
+      root: '/repo',
+      rootName: 'repo',
+      rootKind: 'git',
+      branch: 'main',
+      changes: [],
+      entries: [{ path: 'tmp', name: 'tmp', kind: 'directory', size: null, gitStatus: null, descendantGitStatusCount: null }],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(
+        React.createElement(WorkspaceExplorer, {
+          cwd: '/repo',
+          railOnly: true,
+          onDraftPrompt: vi.fn(),
+        }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const newFolderButton = await vi.waitFor(() => {
+      const button = Array.from(container.querySelectorAll('button')).find((entry) => entry.textContent?.includes('New Folder'));
+      expect(button).toBeTruthy();
+      return button as HTMLButtonElement;
+    });
+
+    act(() => {
+      newFolderButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('New folder');
+      expect(container.textContent).toContain('New folder name');
+    });
   });
 
   it('ignores stale forced file loads from "Open anyway" after switching to a different file', async () => {

@@ -17,8 +17,9 @@ File Explorer requires a conversation with a working directory (workspace). If t
 ## Navigation
 
 - **Expand** — click a folder to expand its contents
-- **Select** — click a file to select it (preview in the editor pane)
-- **Right-click** — context menu with actions (copy path, reveal in Finder)
+- **Select** — click a file to open it in the workbench detail pane
+- **Edit** — text files open in a CodeMirror editor and autosave changes back to disk
+- **Right-click** — context menu with file operations such as New File, New Folder, Open in Finder, Rename, Move, and Delete
 
 The tree follows the filesystem. Directories that match common ignore patterns (node_modules, .git) may be excluded from the view.
 
