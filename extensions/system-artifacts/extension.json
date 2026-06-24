@@ -103,5 +103,5 @@
       }
     ]
   },
-  "permissions": ["conversations:read"]
+  "permissions": ["conversations:read", "ui:invalidate"]
 }

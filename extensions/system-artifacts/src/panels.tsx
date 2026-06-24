@@ -1,8 +1,8 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
+  CardBody,
   CenteredLoadingState,
   CenteredMessage,
-  CardBody,
   CodeBlock,
   MetaLabel,
   PanelMessage,
@@ -101,6 +101,14 @@ function ErrorMessage({ message }: { message: string }) {
   return <PanelMessage tone="danger">{message}</PanelMessage>;
 }
 
+function formatArtifactLoadError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  if (/artifact .+ was not found/i.test(raw)) {
+    return 'This artifact was deleted or is no longer available.';
+  }
+  return raw;
+}
+
 function HtmlArtifactViewer({ artifact }: { artifact: ArtifactRecord }) {
   const srcDoc = useMemo(() => buildArtifactDocument(artifact.content), [artifact.content]);
   return (
@@ -192,7 +200,15 @@ export function ArtifactsPanel({ pa, context }: ExtensionSurfaceProps) {
   const [artifacts, setArtifacts] = useState<ArtifactSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
   const activeArtifactId = searchParams.get(ARTIFACT_PARAM) ?? null;
+
+  useEffect(() => {
+    const subscription = pa.ui.subscribeInvalidations((event) => {
+      if (event.topics.includes('artifacts')) setReloadToken((current) => current + 1);
+    });
+    return () => subscription.unsubscribe();
+  }, [pa.ui]);
 
   useEffect(() => {
     if (!context.conversationId) {
@@ -223,7 +239,7 @@ export function ArtifactsPanel({ pa, context }: ExtensionSurfaceProps) {
     return () => {
       cancelled = true;
     };
-  }, [context.conversationId, pa.extension]);
+  }, [context.conversationId, pa.extension, reloadToken]);
 
   const handleOpenArtifact = useCallback(
     (artifactId: string) => {
@@ -279,7 +295,9 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
   const [artifact, setArtifact] = useState<ArtifactRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const copyResetTimeoutRef = useRef<number | null>(null);
 
   useEffect(
@@ -293,6 +311,13 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
   );
 
   useEffect(() => {
+    const subscription = pa.ui.subscribeInvalidations((event) => {
+      if (event.topics.includes('artifacts')) setReloadToken((current) => current + 1);
+    });
+    return () => subscription.unsubscribe();
+  }, [pa.ui]);
+
+  useEffect(() => {
     if (!context.conversationId || !artifactId) {
       setArtifact(null);
       return;
@@ -300,6 +325,7 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setCopyError(null);
     setCopied(false);
     pa.extension
       .invoke('artifact', { action: 'get', conversationId: context.conversationId, artifactId })
@@ -307,7 +333,7 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
         if (!cancelled) setArtifact(readArtifactRecord(result));
       })
       .catch((error: unknown) => {
-        if (!cancelled) setError(error instanceof Error ? error.message : String(error));
+        if (!cancelled) setError(formatArtifactLoadError(error));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -315,7 +341,7 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
     return () => {
       cancelled = true;
     };
-  }, [artifactId, context.conversationId, pa.extension]);
+  }, [artifactId, context.conversationId, pa.extension, reloadToken]);
 
   if (!context.conversationId || !artifactId) {
     return (
@@ -325,6 +351,7 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
 
   async function copySource() {
     if (!artifact) return;
+    setCopyError(null);
     try {
       await navigator.clipboard.writeText(artifact.content);
       setCopied(true);
@@ -336,7 +363,8 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
         copyResetTimeoutRef.current = null;
       }, 1200);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Could not copy artifact source.');
+      setCopied(false);
+      setCopyError('Could not copy artifact source. Use the visible source text instead.');
     }
   }
 
@@ -359,9 +387,12 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
             {artifact ? <span className="hidden shrink-0 text-[11px] text-dim sm:inline">rev {artifact.revision}</span> : null}
           </div>
           {artifact ? (
-            <ToolbarButton onClick={() => void copySource()} className="shrink-0 px-2 py-1 text-[10px]">
-              {copied ? 'copied' : artifact.kind === 'latex' ? 'copy latex' : 'copy source'}
-            </ToolbarButton>
+            <div className="flex shrink-0 items-center gap-2">
+              {copyError ? <span className="max-w-[240px] truncate text-[11px] text-danger">{copyError}</span> : null}
+              <ToolbarButton onClick={() => void copySource()} className="shrink-0 px-2 py-1 text-[10px]">
+                {copied ? 'copied' : artifact.kind === 'latex' ? 'copy latex' : 'copy source'}
+              </ToolbarButton>
+            </div>
           ) : null}
         </div>
       </div>

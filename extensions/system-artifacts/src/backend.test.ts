@@ -91,6 +91,39 @@ describe('system-artifacts backend', () => {
       expect(mockInvalidate).toHaveBeenCalledWith('artifacts');
     });
 
+    it('waits for artifact invalidation before returning a saved artifact', async () => {
+      mockSave.mockReturnValue({
+        id: 'a1',
+        kind: 'html',
+        title: 'Report',
+        revision: 1,
+        updatedAt: '2025-01-01T00:00:00Z',
+        content: '<p>hello</p>',
+      });
+      let releaseInvalidate!: () => void;
+      mockInvalidate.mockReturnValueOnce(
+        new Promise<void>((resolve) => {
+          releaseInvalidate = resolve;
+        }),
+      );
+
+      let settled = false;
+      const resultPromise = artifact({ action: 'save', title: 'Report', kind: 'html', content: '<p>hello</p>' }, createCtx()).then(
+        (result) => {
+          settled = true;
+          return result;
+        },
+      );
+      await Promise.resolve();
+
+      expect(settled).toBe(false);
+      releaseInvalidate();
+
+      const result = await resultPromise;
+      expect(settled).toBe(true);
+      expect(result.artifactId).toBe('a1');
+    });
+
     it('preserves existing content when updating without content', async () => {
       mockGet.mockReturnValue({
         id: 'a1',
