@@ -91,6 +91,7 @@ import { formatConversationCwdLabel, hasDraftConversationCwd } from '../conversa
 import {
   nextDragOverStateForDragEnd,
   nextDragOverStateForDragOver,
+  readDroppedComposerWorkspacePath,
   shouldHandleDroppedComposerFiles,
 } from '../conversation/conversationDragDrop';
 import {
@@ -5905,6 +5906,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     const files = readComposerTransferFiles(e.dataTransfer.files);
     if (shouldHandleDroppedComposerFiles(files)) {
       void addComposerFiles(files);
+      return;
+    }
+
+    const workspacePath = readDroppedComposerWorkspacePath(e.dataTransfer);
+    if (workspacePath) {
+      void attachDroppedWorkspacePath(workspacePath);
     }
   }
   function removeAttachment(i: number) {
@@ -5943,6 +5950,36 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       await saveAttachedContextDocs(appendMentionedConversationContextDocs(attachedContextDocs, items));
     } catch (error) {
       showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+    }
+  }
+
+  async function attachDroppedWorkspacePath(path: string) {
+    if (!currentCwd) {
+      return;
+    }
+
+    try {
+      const result = await api.resolveWorkspacePathLinks(currentCwd, [path]);
+      const link = result.links.find(
+        (candidate) => candidate.input === path || candidate.targetPath === path || candidate.workspacePath === path,
+      );
+      if (!link || link.kind !== 'workspace' || link.entryKind !== 'file' || !link.workspacePath) {
+        return;
+      }
+
+      const title = link.workspacePath.split('/').pop()?.trim() || link.workspacePath;
+      await attachMentionedDocsToConversation([
+        {
+          id: `@${link.workspacePath}`,
+          label: link.workspacePath,
+          kind: 'file',
+          title,
+          summary: link.workspacePath,
+          path: link.workspacePath,
+        },
+      ]);
+    } catch {
+      showNotice('danger', 'Could not attach this workspace file. Refresh the workspace and try again.', 4000);
     }
   }
 
