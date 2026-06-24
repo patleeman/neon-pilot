@@ -21,7 +21,13 @@ interface AstGrepJsonMatch {
     start?: { line?: number; column?: number };
     end?: { line?: number; column?: number };
   };
-  metaVariables?: Record<string, string>;
+  metaVariables?: Record<string, unknown>;
+}
+
+interface ShellResultLike {
+  stdout?: unknown;
+  stderr?: unknown;
+  exitCode?: unknown;
 }
 
 function getCwd(ctx: BackendContext): string {
@@ -66,19 +72,28 @@ function parseMatches(stdout: string): AstGrepJsonMatch[] {
   return matches;
 }
 
+function collectMetaVariables(value: unknown, prefix = ''): string[] {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return prefix ? [`${prefix}=${String(value)}`] : [String(value)];
+  }
+  if (!value || typeof value !== 'object') return [];
+
+  const record = value as Record<string, unknown>;
+  if (typeof record.text === 'string') {
+    return prefix ? [`${prefix}=${record.text}`] : [record.text];
+  }
+
+  return Object.entries(record).flatMap(([key, nested]) => collectMetaVariables(nested, prefix ? `${prefix}.${key}` : key));
+}
+
 function formatMatch(match: AstGrepJsonMatch): string {
   const file = match.file ?? '(unknown file)';
   const startLine = match.range?.start?.line ?? 0;
   const startColumn = match.range?.start?.column ?? 0;
   const location = startLine > 0 ? `${file}:${startLine}:${startColumn}` : file;
   const body = (match.lines ?? match.text ?? '').trimEnd();
-  const meta =
-    match.metaVariables && Object.keys(match.metaVariables).length > 0
-      ? `\n  meta: ${Object.entries(match.metaVariables)
-          .sort(([left], [right]) => left.localeCompare(right))
-          .map(([key, value]) => `${key}=${value}`)
-          .join(', ')}`
-      : '';
+  const formattedMeta = collectMetaVariables(match.metaVariables).sort((left, right) => left.localeCompare(right));
+  const meta = formattedMeta.length > 0 ? `\n  meta: ${formattedMeta.join(', ')}` : '';
   return `${location}\n${body}${meta}`;
 }
 
@@ -89,6 +104,31 @@ async function findAstGrepBinary(ctx: BackendContext, cwd: string): Promise<stri
   } catch (error) {
     const stdout = typeof (error as { stdout?: unknown }).stdout === 'string' ? (error as { stdout: string }).stdout : '';
     return stdout.trim().split(/\r?\n/)[0] ?? '';
+  }
+}
+
+function readShellText(error: ShellResultLike, key: 'stdout' | 'stderr'): string {
+  const value = error[key];
+  return typeof value === 'string' ? value : '';
+}
+
+function readShellExitCode(error: ShellResultLike): number {
+  if (typeof error.exitCode === 'number') return error.exitCode;
+  const message = error instanceof Error ? error.message : '';
+  const match = /exit code (\d+)/i.exec(message);
+  return match ? Number(match[1]) : 1;
+}
+
+async function runAstGrepCommand(ctx: BackendContext, binary: string, args: string[], cwd: string) {
+  try {
+    return await ctx.shell.exec({ command: binary, args, cwd, maxBuffer: 16 * 1024 * 1024 });
+  } catch (error) {
+    const shellError = error as ShellResultLike;
+    return {
+      stdout: readShellText(shellError, 'stdout'),
+      stderr: readShellText(shellError, 'stderr'),
+      exitCode: readShellExitCode(shellError),
+    };
   }
 }
 
@@ -118,15 +158,20 @@ export async function astGrep(input: AstGrepInput, ctx: BackendContext) {
   if (input.glob?.trim()) args.push('--globs', input.glob.trim());
   args.push(...paths);
 
-  const result = await ctx.shell.exec({ command: binary, args, cwd, maxBuffer: 16 * 1024 * 1024 });
+  const result = await runAstGrepCommand(ctx, binary, args, cwd);
   const stdout = `${result.stdout ?? ''}`;
   const stderr = `${result.stderr ?? ''}`.trim();
   const matches = parseMatches(stdout);
   const visible = matches.slice(0, limit);
   const truncated = matches.length > visible.length;
 
-  if (result.exitCode && result.exitCode !== 0 && matches.length === 0) {
-    throw new Error(stderr || `ast-grep exited with code ${result.exitCode}`);
+  if (result.exitCode && result.exitCode !== 0 && matches.length === 0 && !(result.exitCode === 1 && !stderr)) {
+    const diagnostic = stderr || `ast-grep exited with code ${result.exitCode}`;
+    return {
+      content: [{ type: 'text', text: `ast-grep could not complete the search.\n\nDiagnostics:\n${diagnostic}` }],
+      isError: true,
+      details: { exitCode: result.exitCode, paths },
+    };
   }
 
   if (matches.length === 0) {

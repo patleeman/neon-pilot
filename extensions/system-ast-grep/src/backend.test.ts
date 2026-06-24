@@ -64,7 +64,16 @@ describe('system-ast-grep backend', () => {
             file: 'src/app.ts',
             lines: 'console.log(value);',
             range: { start: { line: 7, column: 3 } },
-            metaVariables: { VALUE: 'value' },
+            metaVariables: {
+              single: {
+                VALUE: {
+                  text: 'value',
+                  range: { start: { line: 7, column: 15 } },
+                },
+              },
+              multi: {},
+              transformed: {},
+            },
           },
           {
             file: 'src/other.ts',
@@ -83,7 +92,8 @@ describe('system-ast-grep backend', () => {
 
     expect(result.content[0]?.text).toContain('Found 2 structural matches (showing first 1).');
     expect(result.content[0]?.text).toContain('src/app.ts:7:3');
-    expect(result.content[0]?.text).toContain('meta: VALUE=value');
+    expect(result.content[0]?.text).toContain('meta: single.VALUE=value');
+    expect(result.content[0]?.text).not.toContain('[object Object]');
     expect(result.content[0]?.text).not.toContain('src/other.ts');
     expect(result.details).toEqual(
       expect.objectContaining({
@@ -124,6 +134,61 @@ describe('system-ast-grep backend', () => {
     await expect(astGrep({ pattern: 'useState($$$)' }, createCtx(exec))).resolves.toMatchObject({
       content: [{ type: 'text', text: expect.stringContaining('Diagnostics:\nparsed 3 files') }],
       details: { matchCount: 0, paths: ['.'] },
+    });
+  });
+
+  it('treats ast-grep exit code 1 with no output as a no-match result', async () => {
+    const exec = vi
+      .fn()
+      .mockResolvedValueOnce({ stdout: '/opt/homebrew/bin/sg\n', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 1 });
+
+    await expect(astGrep({ pattern: 'class DefinitelyMissing { $$$ }', paths: ['src'] }, createCtx(exec))).resolves.toMatchObject({
+      content: [{ type: 'text', text: 'No structural matches found.' }],
+      details: { matchCount: 0, paths: ['src'] },
+    });
+  });
+
+  it('treats host-thrown ast-grep exit code 1 with empty matches as a no-match result', async () => {
+    const exec = vi
+      .fn()
+      .mockResolvedValueOnce({ stdout: '/opt/homebrew/bin/sg\n', stderr: '', exitCode: 0 })
+      .mockRejectedValueOnce(Object.assign(new Error('Command failed with exit code 1.'), { stdout: '[]', stderr: '' }));
+
+    await expect(astGrep({ pattern: 'class DefinitelyMissing { $$$ }', paths: ['src'] }, createCtx(exec))).resolves.toMatchObject({
+      content: [{ type: 'text', text: 'No structural matches found.' }],
+      details: { matchCount: 0, paths: ['src'] },
+    });
+  });
+
+  it('returns user-facing diagnostics for ast-grep failures without throwing a route wrapper', async () => {
+    const exec = vi
+      .fn()
+      .mockResolvedValueOnce({ stdout: '/opt/homebrew/bin/sg\n', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({ stdout: '', stderr: 'ERROR: src/missing: No such file or directory', exitCode: 1 });
+
+    await expect(astGrep({ pattern: 'console.log($$$)', paths: ['src/missing'] }, createCtx(exec))).resolves.toMatchObject({
+      isError: true,
+      content: [{ type: 'text', text: expect.stringContaining('ast-grep could not complete the search.') }],
+      details: { exitCode: 1, paths: ['src/missing'] },
+    });
+  });
+
+  it('returns user-facing diagnostics for host-thrown ast-grep failures', async () => {
+    const exec = vi
+      .fn()
+      .mockResolvedValueOnce({ stdout: '/opt/homebrew/bin/sg\n', stderr: '', exitCode: 0 })
+      .mockRejectedValueOnce(
+        Object.assign(new Error('Command failed with exit code 1.'), {
+          stdout: '',
+          stderr: 'ERROR: src/missing: No such file or directory',
+        }),
+      );
+
+    await expect(astGrep({ pattern: 'console.log($$$)', paths: ['src/missing'] }, createCtx(exec))).resolves.toMatchObject({
+      isError: true,
+      content: [{ type: 'text', text: expect.stringContaining('ast-grep could not complete the search.') }],
+      details: { exitCode: 1, paths: ['src/missing'] },
     });
   });
 });
