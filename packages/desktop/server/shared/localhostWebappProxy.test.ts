@@ -1,11 +1,16 @@
-import { createServer, request, type Server } from 'node:http';
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs';
+import { createServer, request, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { buildOpenSslSpawnEnv, getLocalhostWebappProxyStatus, startLocalhostWebappProxy, type LocalhostWebappProxy } from './localhostWebappProxy.js';
+import {
+  buildOpenSslSpawnEnv,
+  getLocalhostWebappProxyStatus,
+  type LocalhostWebappProxy,
+  startLocalhostWebappProxy,
+} from './localhostWebappProxy.js';
 
 let proxy: LocalhostWebappProxy | null = null;
 let occupiedServer: Server | null = null;
@@ -16,6 +21,7 @@ function httpRequest(input: {
   host?: string;
   method?: string;
   body?: string;
+  headers?: Record<string, string>;
 }): Promise<{ statusCode: number; headers: Record<string, string | string[] | undefined>; body: string }> {
   return new Promise((resolve, reject) => {
     const req = request(
@@ -27,6 +33,7 @@ function httpRequest(input: {
         headers: {
           ...(input.host ? { Host: input.host } : {}),
           ...(input.body ? { 'Content-Type': 'text/plain', 'Content-Length': Buffer.byteLength(input.body) } : {}),
+          ...(input.headers ?? {}),
         },
       },
       (res) => {
@@ -82,13 +89,21 @@ describe('localhost webapp proxy', () => {
   it('dispatches .localhost requests through the local API boundary', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'np-localhost-proxy-'));
     try {
-      const seen: Array<{ path: string; host?: string; body?: unknown }> = [];
+      const seen: Array<{ path: string; host?: string; origin?: string; forwardedHost?: string; forwardedProto?: string; body?: unknown }> =
+        [];
       proxy = await startLocalhostWebappProxy({
         stateRoot,
         httpPort: 0,
         httpsPort: null,
         dispatch: async (input) => {
-          seen.push({ path: input.path, host: input.headers?.host, body: input.body });
+          seen.push({
+            path: input.path,
+            host: input.headers?.host,
+            origin: input.headers?.origin,
+            forwardedHost: input.headers?.['x-forwarded-host'],
+            forwardedProto: input.headers?.['x-forwarded-proto'],
+            body: input.body,
+          });
           return {
             statusCode: 200,
             headers: { 'content-type': 'text/html; charset=utf-8' },
@@ -111,7 +126,75 @@ describe('localhost webapp proxy', () => {
       expect(response.statusCode).toBe(200);
       expect(response.headers['x-neon-pilot-localhost-proxy']).toBe('1');
       expect(response.body).toContain('Sidecar');
-      expect(seen).toEqual([{ path: '/board?view=mine', host: 'board-agent-board.localhost', body: undefined }]);
+      expect(seen).toEqual([
+        {
+          path: '/board?view=mine',
+          host: 'board-agent-board.localhost',
+          origin: 'http://board-agent-board.localhost',
+          forwardedHost: 'board-agent-board.localhost',
+          forwardedProto: 'http',
+          body: undefined,
+        },
+      ]);
+    } finally {
+      rmSync(stateRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('synthesizes same-origin metadata for unsafe localhost webapp requests without replacing explicit origins', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'np-localhost-proxy-'));
+    try {
+      const seen: Array<{ origin?: string; forwardedHost?: string; forwardedProto?: string; body?: unknown }> = [];
+      proxy = await startLocalhostWebappProxy({
+        stateRoot,
+        httpPort: 0,
+        httpsPort: null,
+        dispatch: async (input) => {
+          seen.push({
+            origin: input.headers?.origin,
+            forwardedHost: input.headers?.['x-forwarded-host'],
+            forwardedProto: input.headers?.['x-forwarded-proto'],
+            body: input.body,
+          });
+          return {
+            statusCode: 204,
+            headers: {},
+            body: new Uint8Array(),
+          };
+        },
+      });
+
+      const status = proxy.status();
+      const missingOrigin = await httpRequest({
+        port: status.http.port,
+        path: '/echo',
+        host: 'board-agent-board.localhost',
+        method: 'POST',
+        body: 'payload',
+      });
+      const explicitOrigin = await httpRequest({
+        port: status.http.port,
+        path: '/echo',
+        host: 'board-agent-board.localhost',
+        method: 'POST',
+        body: 'payload',
+        headers: { Origin: 'https://evil.example' },
+      });
+
+      expect(missingOrigin.statusCode).toBe(204);
+      expect(explicitOrigin.statusCode).toBe(204);
+      expect(seen[0]).toEqual({
+        origin: 'http://board-agent-board.localhost',
+        forwardedHost: 'board-agent-board.localhost',
+        forwardedProto: 'http',
+        body: Buffer.from('payload'),
+      });
+      expect(seen[1]).toEqual({
+        origin: 'https://evil.example',
+        forwardedHost: 'board-agent-board.localhost',
+        forwardedProto: 'http',
+        body: Buffer.from('payload'),
+      });
     } finally {
       rmSync(stateRoot, { recursive: true, force: true });
     }

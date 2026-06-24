@@ -84,6 +84,22 @@ function normalizeRequestHeaders(headers: IncomingMessage['headers']): Record<st
   return normalized;
 }
 
+function requestProtocol(request: IncomingMessage): 'http' | 'https' {
+  return (request.socket as { encrypted?: boolean }).encrypted ? 'https' : 'http';
+}
+
+function buildDispatchHeadersForWebappRequest(request: IncomingMessage, hostname: string): Record<string, string> {
+  const headers = normalizeRequestHeaders(request.headers);
+  const proto = requestProtocol(request);
+  const host = headers.host || hostname;
+  headers['x-forwarded-host'] = host;
+  headers['x-forwarded-proto'] = proto;
+  if (!headers.origin) {
+    headers.origin = `${proto}://${host}`;
+  }
+  return headers;
+}
+
 function writeDispatchResponse(response: ServerResponse, result: Awaited<ReturnType<DispatchLocalRequest>>): void {
   const headers: Record<string, string> = { ...result.headers, [PROXY_HEADER]: '1' };
   delete headers['connection'];
@@ -326,7 +342,7 @@ export async function startLocalhostWebappProxy(options: {
       method: method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
       path: request.url ?? '/',
       body,
-      headers: normalizeRequestHeaders(request.headers),
+      headers: buildDispatchHeadersForWebappRequest(request, hostname),
       signal: abort.signal,
     });
     writeDispatchResponse(response, result);
