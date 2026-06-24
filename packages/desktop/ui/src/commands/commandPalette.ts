@@ -214,7 +214,11 @@ export function isCommandPaletteThreadDataLoading(options: {
   sessionsLoading: boolean;
   sessionsReady?: boolean;
 }): boolean {
-  return (options.sessionsReady === undefined ? options.sessions === null : !options.sessionsReady) || options.sessionsLoading;
+  if (options.sessionsReady !== undefined) {
+    return !options.sessionsReady;
+  }
+
+  return options.sessions === null || (options.sessionsLoading && options.sessions.length === 0);
 }
 
 function dedupeCommandPaletteItems<TAction>(items: CommandPaletteItem<TAction>[]): CommandPaletteItem<TAction>[] {

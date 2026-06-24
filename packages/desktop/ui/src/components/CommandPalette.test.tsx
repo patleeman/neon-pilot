@@ -198,6 +198,9 @@ describe('CommandPalette', () => {
     vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
     vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
     vi.spyOn(api, 'extensionQuickOpen').mockResolvedValue([]);
+    vi.spyOn(api, 'conversationContentSearch').mockResolvedValue({ matches: [] } as Awaited<
+      ReturnType<typeof api.conversationContentSearch>
+    >);
     Element.prototype.scrollIntoView = vi.fn();
     conversationMocks.state.tabs = [
       {
@@ -234,5 +237,49 @@ describe('CommandPalette', () => {
       expect(screen.getByTestId('location').textContent).toBe('/conversations/conv-route');
     });
     expect(screen.queryByRole('dialog', { name: 'Command palette' })).toBeNull();
+  });
+
+  it('does not show thread loading rows while refreshed conversation data is already rendered', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionQuickOpen').mockResolvedValue([]);
+    vi.spyOn(api, 'conversationContentSearch').mockResolvedValue({ matches: [] } as Awaited<
+      ReturnType<typeof api.conversationContentSearch>
+    >);
+    Element.prototype.scrollIntoView = vi.fn();
+    conversationMocks.state.loading = true;
+    conversationMocks.state.tabs = [
+      {
+        id: 'conv-visible',
+        title: 'Visible thread result',
+        file: '/tmp/conv-visible.jsonl',
+        timestamp: '2026-06-15T12:00:00.000Z',
+        cwd: '/repo',
+        cwdSlug: 'repo',
+        model: 'openai/gpt-5',
+        messageCount: 4,
+        isRunning: false,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/conversations/new']}>
+        <CommandPalette />
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'threads', query: 'visible thread' } }));
+    });
+
+    expect(await screen.findByText('Visible thread result')).toBeTruthy();
+
+    await waitFor(() => {
+      expect(api.conversationContentSearch).toHaveBeenCalledWith('visible thread', expect.any(Number));
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('Loading open threads…')).toBeNull();
+      expect(screen.queryByText('Loading archived threads…')).toBeNull();
+    });
   });
 });

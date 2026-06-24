@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { canExecuteExtensionCommand, type ExtensionCommandExecutorOptions, listHostCommands } from '../extensions/commands';
 import {
   type CommandPaletteItem,
   isCommandPaletteThreadDataLoading,
@@ -9,7 +10,6 @@ import {
   selectCommandPaletteScopedItems,
   shouldBootstrapCommandPaletteThreads,
 } from './commandPalette';
-import { canExecuteExtensionCommand, listHostCommands, type ExtensionCommandExecutorOptions } from '../extensions/commands';
 
 interface TestAction {
   kind: string;
@@ -1392,5 +1392,7 @@ describe('command palette search', () => {
     expect(isCommandPaletteThreadDataLoading({ sessions: null, sessionsLoading: false })).toBe(true);
     expect(isCommandPaletteThreadDataLoading({ sessions: [], sessionsLoading: true })).toBe(true);
     expect(isCommandPaletteThreadDataLoading({ sessions: [], sessionsLoading: false })).toBe(false);
+    expect(isCommandPaletteThreadDataLoading({ sessions: [], sessionsLoading: true, sessionsReady: true })).toBe(false);
+    expect(isCommandPaletteThreadDataLoading({ sessions: [], sessionsLoading: false, sessionsReady: false })).toBe(true);
   });
 });
