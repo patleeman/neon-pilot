@@ -506,7 +506,7 @@ async function readState(ctx: ExtensionBackendContext): Promise<RoutinesState> {
 async function writeState(ctx: ExtensionBackendContext, state: RoutinesState): Promise<RoutinesState> {
   const next = { ...state, runs: state.runs.slice(0, RUN_LIMIT) };
   await ctx.storage.put(STORE_KEY, next);
-  ctx.ui?.invalidate?.(['routines']);
+  await Promise.resolve(ctx.ui?.invalidate?.(['routines']));
   return next;
 }
 

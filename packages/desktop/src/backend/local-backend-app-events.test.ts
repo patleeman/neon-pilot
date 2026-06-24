@@ -19,10 +19,10 @@ describe('local backend app events', () => {
   });
 
   it('publishes sanitized invalidations into the bundled realtime runtime', () => {
-    publishBundledDesktopAppEvent({ type: 'invalidate', topics: ['tasks', 'sessions', 'not-a-topic' as never] });
+    publishBundledDesktopAppEvent({ type: 'invalidate', topics: ['tasks', 'sessions', 'routines', 'not-a-topic' as never] });
 
     expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(1);
-    expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks', 'sessions');
+    expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks', 'sessions', 'routines');
     expect(publishAppEventMock).not.toHaveBeenCalled();
   });
 
@@ -40,9 +40,9 @@ describe('local backend app events', () => {
 
     await expect(bridgeRawLocalApiAppEventsToBundledRuntime(localApi)).resolves.toBe(unsubscribe);
     listener?.({ type: 'open' });
-    listener?.({ type: 'event', event: { type: 'invalidate', topics: ['tasks', 'workspace'] } });
+    listener?.({ type: 'event', event: { type: 'invalidate', topics: ['tasks', 'workspace', 'routines'] } });
 
     expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(1);
-    expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks', 'workspace');
+    expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks', 'workspace', 'routines');
   });
 });

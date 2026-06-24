@@ -20,6 +20,7 @@ export function isAppEventTopic(value: unknown): value is AppEventTopic {
     value === 'runs' ||
     value === 'executions' ||
     value === 'automation' ||
+    value === 'routines' ||
     value === 'daemon' ||
     value === 'workspace' ||
     value === 'knowledgeBase' ||

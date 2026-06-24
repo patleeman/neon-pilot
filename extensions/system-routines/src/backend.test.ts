@@ -197,6 +197,25 @@ describe('system-routines backend', () => {
     expect(saved.routines.some((routine) => routine.name === 'Stop always')).toBe(true);
   });
 
+  it('waits for routine state invalidation before save completes', async () => {
+    const ctx = createCtx() as {
+      ui: { invalidate: ReturnType<typeof vi.fn> };
+    };
+    let invalidated = false;
+    ctx.ui.invalidate = vi.fn(async () => {
+      await Promise.resolve();
+      invalidated = true;
+    });
+
+    await saveRoutine(
+      { hookId: 'checkpoint', position: 'after', type: 'stop', name: 'Stop always', instruction: 'No', enabled: true },
+      ctx as never,
+    );
+
+    expect(ctx.ui.invalidate).toHaveBeenCalledWith(['routines']);
+    expect(invalidated).toBe(true);
+  });
+
   it('lets extensions register hook points', async () => {
     const ctx = createCtx();
     await registerHookPoint({ id: 'example.before', title: 'Example', group: 'Extensions', ownerExtensionId: 'example' }, ctx);

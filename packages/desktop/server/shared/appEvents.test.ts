@@ -22,6 +22,7 @@ const ALL_TOPICS = [
   'runs',
   'executions',
   'automation',
+  'routines',
   'daemon',
   'workspace',
   'knowledgeBase',
@@ -147,6 +148,42 @@ describe('app event monitor', () => {
 
     await waitFor(() => events.some((event) => event.type === 'invalidate' && event.topics.includes('sessionFiles')));
     await waitFor(() => events.some((event) => event.type === 'session_file_changed' && event.sessionId === 'conv-2'));
+    unsubscribe();
+  }, 15_000);
+
+  it('invalidates routines when extension state changes', async () => {
+    const repoRoot = createTempDir('neon-pilot-web-app-events-repo-');
+    const sessionsDir = getDurableSessionsDir();
+    const taskStateFile = join(getStateRoot(), 'daemon', 'task-state.json');
+    const profileConfigFile = join(getConfigRoot(), 'profile.json');
+    const appStateDbFile = join(getStateRoot(), 'app-state', 'app-state.sqlite');
+    mkdirSync(sessionsDir, { recursive: true });
+    mkdirSync(dirname(taskStateFile), { recursive: true });
+    mkdirSync(dirname(profileConfigFile), { recursive: true });
+    mkdirSync(dirname(appStateDbFile), { recursive: true });
+    writeFileSync(taskStateFile, '{}\n', 'utf-8');
+    writeFileSync(profileConfigFile, '{"defaultProfile":"assistant"}\n', 'utf-8');
+    writeFileSync(appStateDbFile, 'baseline', 'utf-8');
+
+    const events: AppEvent[] = [];
+    const unsubscribe = subscribeAppEvents((event) => {
+      events.push(event);
+    });
+
+    startAppEventMonitor({
+      repoRoot,
+      sessionsDir,
+      taskStateFile,
+      profileConfigFile,
+      getRuntimeScope: () => 'assistant',
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    events.length = 0;
+
+    appendFileSync(appStateDbFile, '\nchanged', 'utf-8');
+
+    await waitFor(() => events.some((event) => event.type === 'invalidate' && event.topics.includes('routines')));
     unsubscribe();
   }, 15_000);
 
