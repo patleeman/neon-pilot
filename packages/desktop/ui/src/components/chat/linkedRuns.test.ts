@@ -200,6 +200,35 @@ describe('linkedRuns', () => {
     });
   });
 
+  it('links legacy bash blocks whose output is only a durable run id', () => {
+    const block: Extract<MessageBlock, { type: 'tool_use' }> = {
+      type: 'tool_use',
+      ts: '2026-04-26T00:00:00.000Z',
+      tool: 'bash',
+      input: { command: 'echo run-ui-preview-check-2026-03-25T00-53-25-347Z-903aa31b' },
+      output: 'run-ui-preview-check-2026-03-25T00-53-25-347Z-903aa31b',
+    };
+
+    expect(buildToolPreview(block)).toBe('');
+    expect(readLinkedRuns(block)).toEqual({
+      scope: 'mentioned',
+      runs: [
+        {
+          runId: 'run-ui-preview-check-2026-03-25T00-53-25-347Z-903aa31b',
+          title: 'Ui preview check',
+          detail: 'background task',
+        },
+      ],
+    });
+    expect(collectTraceClusterLinkedRuns([block])).toEqual([
+      {
+        runId: 'run-ui-preview-check-2026-03-25T00-53-25-347Z-903aa31b',
+        title: 'Ui preview check',
+        detail: 'background task',
+      },
+    ]);
+  });
+
   it('links background shell starts to their inline run card', () => {
     const startBlock: Extract<MessageBlock, { type: 'tool_use' }> = {
       type: 'tool_use',

@@ -2,11 +2,12 @@ import { memo, useState } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
-import { useAllRuns } from '../../store';
+import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import { readTerminalBashToolPresentation } from '../../transcript/terminalBashBlock';
 import { Button, cx, Pill } from '../ui';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
 import { buildInlineRunExpansionKey } from './linkedRunPolling.js';
+import { resolveLinkedRunRecord } from './linkedRunResolution.js';
 import { readMentionedLinkedRunsFromText } from './linkedRuns.js';
 import { MessageActions } from './MessageActions.js';
 
@@ -40,8 +41,12 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
   const copyText = block.output ? `$ ${presentation.command}\n${block.output}` : `$ ${presentation.command}`;
   const footerBits: string[] = [];
   const runs = useAllRuns();
-  const knownRunIds = new Set((runs?.runs ?? []).map((run) => run.runId));
-  const linkedRuns = block.output ? readMentionedLinkedRunsFromText(block.output).filter((run) => knownRunIds.has(run.runId)) : [];
+  const tasks = useAllTasks();
+  const sessions = useAllSessions();
+  const runLookups = { tasks, sessions };
+  const linkedRuns = block.output
+    ? readMentionedLinkedRunsFromText(block.output).filter((run) => Boolean(resolveLinkedRunRecord(run, runs, runLookups)))
+    : [];
   const [expandedRunKeys, setExpandedRunKeys] = useState<Set<string>>(() => new Set());
 
   if (presentation.cancelled) {

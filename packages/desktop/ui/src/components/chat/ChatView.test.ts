@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext } from '../../app/contexts.js';
+import { runStore } from '../../store';
 import { ChatView, filterTranscriptReplyStarterActions } from './ChatView.js';
 import { ErrorBlock } from './TraceBlocks.js';
 
@@ -11,6 +12,7 @@ import { ErrorBlock } from './TraceBlocks.js';
 
 afterEach(() => {
   vi.useRealTimers();
+  runStore.replaceAll([]);
 });
 
 function renderAssistantText(
@@ -545,6 +547,48 @@ describe('chat view streaming disclosure', () => {
   });
 
   it('resolves legacy linked run ids to current durable run records using task slug', () => {
+    runStore.replaceAll([
+      {
+        runId: 'run-f1844efc-3748-49f9-aa62-d625fd1ccbe9-2026-04-14T01-23-19-371Z-3f40e1b4',
+        paths: {
+          root: '/tmp/runs/run-f1844efc-3748-49f9-aa62-d625fd1ccbe9-2026-04-14T01-23-19-371Z-3f40e1b4',
+          manifestPath: '/tmp/runs/run-f1844efc-3748-49f9-aa62-d625fd1ccbe9-2026-04-14T01-23-19-371Z-3f40e1b4/manifest.json',
+          statusPath: '/tmp/runs/run-f1844efc-3748-49f9-aa62-d625fd1ccbe9-2026-04-14T01-23-19-371Z-3f40e1b4/status.json',
+          checkpointPath: '/tmp/runs/run-f1844efc-3748-49f9-aa62-d625fd1ccbe9-2026-04-14T01-23-19-371Z-3f40e1b4/checkpoint.json',
+          eventsPath: '/tmp/runs/run-f1844efc-3748-49f9-aa62-d625fd1ccbe9-2026-04-14T01-23-19-371Z-3f40e1b4/events.jsonl',
+          outputLogPath: '/tmp/runs/run-f1844efc-3748-49f9-aa62-d625fd1ccbe9-2026-04-14T01-23-19-371Z-3f40e1b4/output.log',
+          resultPath: '/tmp/runs/run-f1844efc-3748-49f9-aa62-d625fd1ccbe9-2026-04-14T01-23-19-371Z-3f40e1b4/result.json',
+        },
+        manifest: {
+          version: 1,
+          id: 'run-f1844efc-3748-49f9-aa62-d625fd1ccbe9-2026-04-14T01-23-19-371Z-3f40e1b4',
+          kind: 'background-run',
+          resumePolicy: 'continue',
+          createdAt: '2026-04-14T01:23:19.371Z',
+          spec: {
+            metadata: {
+              taskSlug: 'ui-preview-check',
+            },
+          },
+          source: {
+            type: 'tool',
+            id: 'conv-123',
+          },
+        },
+        status: {
+          version: 1,
+          runId: 'run-f1844efc-3748-49f9-aa62-d625fd1ccbe9-2026-04-14T01-23-19-371Z-3f40e1b4',
+          status: 'running',
+          createdAt: '2026-04-14T01:23:19.371Z',
+          updatedAt: '2026-04-14T01:24:01.000Z',
+          activeAttempt: 1,
+          startedAt: '2026-04-14T01:23:19.900Z',
+        },
+        problems: [],
+        recoveryAction: 'none',
+      },
+    ]);
+
     const html = renderToStaticMarkup(
       createElement(
         AppDataContext.Provider,
@@ -625,7 +669,9 @@ describe('chat view streaming disclosure', () => {
       ),
     );
 
-    expect(html).not.toContain('ui-preview-check');
+    expect(html).toContain('Ui preview check');
+    expect(html).toContain('background_run:run-f1844efc-3748-49f9-aa62-d625fd1ccbe9-2026-04-14T01-23-19-371Z-3f40e1b4');
+    expect(html).not.toContain('run-ui-preview-check-2026-03-25T00-53-25-347Z-903aa31b');
     expect(html).not.toContain('linked Ui preview check');
   });
 

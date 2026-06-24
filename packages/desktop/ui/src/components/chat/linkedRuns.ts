@@ -192,7 +192,26 @@ function buildRunToolPreview(block: Extract<MessageBlock, { type: 'tool_use' }>)
   }
 }
 
+function readBareDurableRunOutput(block: Extract<MessageBlock, { type: 'tool_use' }>): string | null {
+  const output = typeof block.output === 'string' ? block.output.trim() : '';
+  if (!output) {
+    return null;
+  }
+
+  const runIds = extractDurableRunIdsFromBlock({
+    type: 'text',
+    ts: block.ts,
+    text: output,
+  });
+
+  return runIds.length === 1 && runIds[0] === output ? output : null;
+}
+
 export function buildToolPreview(block: Extract<MessageBlock, { type: 'tool_use' }>): string {
+  if (block.tool === 'bash' && readBareDurableRunOutput(block)) {
+    return '';
+  }
+
   if (block.tool === 'run') {
     const preview = buildRunToolPreview(block);
     if (preview) {
@@ -686,6 +705,13 @@ export function readLinkedRuns(block: Extract<MessageBlock, { type: 'tool_use' }
   if (isBackgroundShellStart(block)) {
     const runId = extractDurableRunIdsFromBlock(block)[0];
     return { scope: 'mentioned', runs: runId ? [presentLinkedRun(runId)] : [] };
+  }
+
+  if (block.tool === 'bash') {
+    const runId = readBareDurableRunOutput(block);
+    if (runId) {
+      return { scope: 'mentioned', runs: [presentLinkedRun(runId)] };
+    }
   }
 
   return {

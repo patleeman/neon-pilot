@@ -13,19 +13,22 @@ import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
 import { Button, cx, MetaLabel, Pill, SectionLabel } from '../ui';
 import { type FileChange, FileChangesToolDiff, readFileChangesForToolBlock } from './FileChangesToolDiff.js';
+import { InlineTraceRunCard } from './InlineTraceRunCard.js';
 import {
+  buildInlineRunExpansionKey,
   INLINE_RUN_LOG_TAIL_LINES,
   INLINE_RUN_POLL_INTERVAL_MS,
   shouldPollInlineRunSnapshot,
   usePolledDurableRunSnapshot,
 } from './linkedRunPolling.js';
+import { resolveLinkedRunRecord } from './linkedRunResolution.js';
 import { buildToolPreview, readLinkedRuns } from './linkedRuns.js';
 import { TerminalToolBlock } from './TerminalToolBlock.js';
 import {
   registerToolBlockLinkedRunsToggleCapability,
   registerToolBlockToggleCapability,
-  TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT,
   TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
+  TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT,
   type ToolBlockCommandDetail,
 } from './toolBlockCommands.js';
 import {
@@ -111,11 +114,12 @@ function BackgroundBashInlineOutput({
 }
 
 function getLinkedRunConversationRoute(
-  runId: string,
+  linkedRun: { runId: string; title: string; detail?: string },
   runRecords: readonly DurableRunRecord[],
   runLookups: RunPresentationLookups | undefined,
 ): string | undefined {
-  const run = runRecords.find((candidate) => candidate.runId === runId);
+  const run =
+    resolveLinkedRunRecord(linkedRun, runRecords, runLookups ?? {}) ?? runRecords.find((candidate) => candidate.runId === linkedRun.runId);
   if (!run) {
     return undefined;
   }
@@ -203,6 +207,7 @@ export function ToolBlock({
 }) {
   const [preference, setPreference] = useState<DisclosurePreference>('auto');
   const [showAllRuns, setShowAllRuns] = useState(false);
+  const [expandedMentionedRunKeys, setExpandedMentionedRunKeys] = useState<Set<string>>(() => new Set());
   const [pinnedDiffOpen, setPinnedDiffOpen] = useState(() => diffDisclosureMode === 'expanded');
   useEffect(() => {
     setPinnedDiffOpen(diffDisclosureMode === 'expanded');
@@ -241,7 +246,7 @@ export function ToolBlock({
   const subagentLinkedConversationRoute =
     block.tool === 'subagent'
       ? linkedRuns.runs
-          .map((linkedRun) => getLinkedRunConversationRoute(linkedRun.runId, runRecords, runLookups))
+          .map((linkedRun) => getLinkedRunConversationRoute(linkedRun, runRecords, runLookups))
           .find((route): route is string => Boolean(route))
       : undefined;
   const subagentConversationRoute = subagentConversationId
@@ -274,9 +279,16 @@ export function ToolBlock({
   };
 
   const preview = buildToolPreview(block);
+  const bareLinkedRunOnly =
+    agentBashTool &&
+    linkedRuns.scope === 'mentioned' &&
+    linkedRuns.runs.length === 1 &&
+    preview === '' &&
+    output.trim() === linkedRuns.runs[0]?.runId;
   const visualPreview = readToolInputString(block.input, 'prompt') ?? readToolInputString(block.input, 'tabId') ?? preview;
-  const displayPreview =
-    block.tool === 'subagent'
+  const displayPreview = bareLinkedRunOnly
+    ? linkedRuns.runs[0]?.title
+    : block.tool === 'subagent'
       ? (subagentTitle ?? subagentPrompt ?? preview)
       : block.tool === 'artifact'
         ? (artifactTitle ?? preview)
@@ -289,6 +301,7 @@ export function ToolBlock({
     setShowAllRuns((current) => !current);
   }, []);
   const canToggleLinkedRuns = hiddenRunCount > 0 && !pinnedTool && !backgroundShellStart;
+  const mentionedInlineRuns = bareLinkedRunOnly ? linkedRuns.runs : [];
   const visibleRuns = showAllRuns || hiddenRunCount === 0 ? displayedLinkedRuns : displayedLinkedRuns.slice(0, MAX_VISIBLE_LINKED_RUNS);
   const backgroundRunId = backgroundShellStart ? linkedRuns.runs[0]?.runId : undefined;
   const backgroundRun = backgroundRunId ? runRecords.find((candidate) => candidate.runId === backgroundRunId) : null;
@@ -503,7 +516,7 @@ export function ToolBlock({
           )}
           <div className="space-y-1.5">
             {visibleRuns.map((linkedRun) => {
-              const conversationRoute = getLinkedRunConversationRoute(linkedRun.runId, runRecords, runLookups);
+              const conversationRoute = getLinkedRunConversationRoute(linkedRun, runRecords, runLookups);
 
               return (
                 <div key={linkedRun.runId} className="w-full rounded-md px-2 py-1.5 text-left text-dim">
@@ -533,11 +546,38 @@ export function ToolBlock({
         </div>
       )}
 
+      {mentionedInlineRuns.length > 0 && !pinnedTool && !backgroundShellStart && (
+        <div className="space-y-1.5 border-t border-border-subtle/70 bg-black/5 px-2.5 py-2 font-sans">
+          {mentionedInlineRuns.map((run) => {
+            const inlineRunKey = buildInlineRunExpansionKey(messageIndex ?? 0, `${blockId || block.ts}:${run.runId}`);
+            const expanded = expandedMentionedRunKeys.has(inlineRunKey);
+            return (
+              <InlineTraceRunCard
+                key={inlineRunKey}
+                run={run}
+                expanded={expanded}
+                onToggle={() =>
+                  setExpandedMentionedRunKeys((current) => {
+                    const next = new Set(current);
+                    if (next.has(inlineRunKey)) {
+                      next.delete(inlineRunKey);
+                    } else {
+                      next.add(inlineRunKey);
+                    }
+                    return next;
+                  })
+                }
+              />
+            );
+          })}
+        </div>
+      )}
+
       {fileChanges.length > 0 && !isRunning && !isError && (!fileChangingTool || pinnedDiffOpen) ? (
         <FileChangesToolDiff fileChanges={fileChanges} />
       ) : null}
 
-      {open && !pinnedTool && agentBashTool && (
+      {open && !pinnedTool && agentBashTool && !bareLinkedRunOnly && (
         <div className="border-t border-border-subtle/70 bg-black/10 px-2.5 py-2 max-h-96 overflow-y-auto">
           <span className="sr-only">input</span>
           <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed opacity-80">

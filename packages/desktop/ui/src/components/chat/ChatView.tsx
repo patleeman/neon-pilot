@@ -5,6 +5,7 @@ import { measureClientPerfTiming, recordChatRenderTiming } from '../../client/pe
 import { type ExtensionSelectionActionRegistration, useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import { useApi } from '../../hooks/useApi';
 import type { LiveSessionToolDefinition, MessageBlock, TranscriptRenderItem } from '../../shared/types';
+import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../../transcript/askUserQuestions';
 import { spotlightTranscriptTarget, type TranscriptSpotlightTarget } from '../../transcript/spotlight';
 import { ChatRenderItemView } from './ChatRenderItemView.js';
@@ -18,6 +19,7 @@ import {
   registerInlineTraceRunToggleCapability,
 } from './inlineTraceRunCommands.js';
 import { buildInlineRunExpansionKey } from './linkedRunPolling.js';
+import { resolveLinkedRunRecord } from './linkedRunResolution.js';
 import { collectTraceClusterLinkedRuns } from './linkedRuns.js';
 import { ContextShelf, SystemPromptMessage } from './MessageBlocks.js';
 import {
@@ -208,6 +210,10 @@ export const ChatView = memo(function ChatView({
   const renderStartedAtRef = useRef(performance.now());
   renderStartedAtRef.current = performance.now();
   const extensionRegistry = useExtensionRegistry();
+  const tasks = useAllTasks();
+  const sessions = useAllSessions();
+  const runRecords = useAllRuns();
+  const runLookups = useMemo(() => ({ tasks, sessions }), [tasks, sessions]);
   const { data: settingsValues } = useApi<Record<string, unknown>>(api.settings as never, undefined, { notifyOnError: false });
   const transcriptDisclosureMode = normalizeConversationTranscriptDisclosureMode(
     settingsValues?.[CONVERSATION_TRANSCRIPT_DISCLOSURE_SETTING_KEY],
@@ -337,19 +343,25 @@ export const ChatView = memo(function ChatView({
       const runId = typeof detail?.runId === 'string' ? detail.runId.trim() : '';
       if (!runId) return;
 
-      const item = renderItems.find(
-        (candidate) =>
-          candidate.type === 'trace_cluster' && collectTraceClusterLinkedRuns(candidate.blocks).some((run) => run.runId === runId),
-      );
+      let focusRunId = runId;
+      const item = renderItems.find((candidate) => {
+        if (candidate.type !== 'trace_cluster') return false;
+        return collectTraceClusterLinkedRuns(candidate.blocks).some((run) => {
+          const resolvedRunId = resolveLinkedRunRecord(run, runRecords, runLookups)?.runId ?? run.runId;
+          if (run.runId !== runId && resolvedRunId !== runId) return false;
+          focusRunId = resolvedRunId;
+          return true;
+        });
+      });
       if (!item || item.type !== 'trace_cluster') return;
 
-      expandInlineRun(buildInlineRunExpansionKey(item.startIndex, runId));
+      expandInlineRun(buildInlineRunExpansionKey(item.startIndex, focusRunId));
       window.requestAnimationFrame(() => {
         const node = document.querySelector(`[data-trace-cluster-start-index="${messageIndexOffset + item.startIndex}"]`);
         node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         node?.querySelector<HTMLButtonElement>('button[aria-expanded="false"]')?.click();
         window.setTimeout(() => {
-          spotlightTranscriptTarget({ kind: 'background_run', runId });
+          spotlightTranscriptTarget({ kind: 'background_run', runId: focusRunId });
         }, 0);
       });
     }
@@ -360,7 +372,7 @@ export const ChatView = memo(function ChatView({
       window.removeEventListener('pa:transcript-spotlight', handleTranscriptSpotlight);
       window.removeEventListener('pa:focus-background-run', handleFocusBackgroundRun);
     };
-  }, [expandInlineRun, messageIndexOffset, renderItems]);
+  }, [expandInlineRun, messageIndexOffset, renderItems, runLookups, runRecords]);
 
   const streamingStatusLabel = isCompacting
     ? 'Compacting context…'

@@ -19,25 +19,26 @@ vi.mock('../../client/api', () => ({
 }));
 
 const RUN_ID = 'run-ui-preview-check-2026-03-25T00-53-25-347Z-903aa31b';
+const CURRENT_RUN_ID = 'run-f1844efc-3748-49f9-aa62-d625fd1ccbe9-2026-04-14T01-23-19-371Z-3f40e1b4';
 const mountedRoots: Root[] = [];
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
-function createRunRecord(): DurableRunRecord {
+function createRunRecord(runId = RUN_ID): DurableRunRecord {
   return {
-    runId: RUN_ID,
+    runId,
     paths: {
-      root: `/tmp/runs/${RUN_ID}`,
-      manifestPath: `/tmp/runs/${RUN_ID}/manifest.json`,
-      statusPath: `/tmp/runs/${RUN_ID}/status.json`,
-      checkpointPath: `/tmp/runs/${RUN_ID}/checkpoint.json`,
-      eventsPath: `/tmp/runs/${RUN_ID}/events.jsonl`,
-      outputLogPath: `/tmp/runs/${RUN_ID}/output.log`,
-      resultPath: `/tmp/runs/${RUN_ID}/result.json`,
+      root: `/tmp/runs/${runId}`,
+      manifestPath: `/tmp/runs/${runId}/manifest.json`,
+      statusPath: `/tmp/runs/${runId}/status.json`,
+      checkpointPath: `/tmp/runs/${runId}/checkpoint.json`,
+      eventsPath: `/tmp/runs/${runId}/events.jsonl`,
+      outputLogPath: `/tmp/runs/${runId}/output.log`,
+      resultPath: `/tmp/runs/${runId}/result.json`,
     },
     manifest: {
       version: 1,
-      id: RUN_ID,
+      id: runId,
       kind: 'background-run',
       resumePolicy: 'continue',
       createdAt: '2026-04-14T01:23:19.371Z',
@@ -53,7 +54,7 @@ function createRunRecord(): DurableRunRecord {
     },
     status: {
       version: 1,
-      runId: RUN_ID,
+      runId,
       status: 'running',
       createdAt: '2026-04-14T01:23:19.371Z',
       updatedAt: '2026-04-14T01:24:01.000Z',
@@ -65,12 +66,12 @@ function createRunRecord(): DurableRunRecord {
   };
 }
 
-function createShellRunRecord(): DurableRunRecord {
+function createShellRunRecord(runId = RUN_ID): DurableRunRecord {
   return {
-    ...createRunRecord(),
+    ...createRunRecord(runId),
     manifest: {
       version: 1,
-      id: RUN_ID,
+      id: runId,
       kind: 'raw-shell',
       resumePolicy: 'manual',
       createdAt: '2026-04-14T01:23:19.371Z',
@@ -446,6 +447,11 @@ describe('ChatView inline run cards', () => {
           status: 'ok',
           details: { action: 'start', runId: RUN_ID },
         },
+        {
+          type: 'text',
+          ts: '2026-03-11T18:00:01.000Z',
+          text: 'Background command started.',
+        },
       ],
       { listedRuns: [createShellRunRecord()] },
     );
@@ -558,6 +564,11 @@ describe('ChatView inline run cards', () => {
           status: 'ok',
           details: { action: 'start', runId: RUN_ID },
         },
+        {
+          type: 'text',
+          ts: '2026-03-11T18:00:01.000Z',
+          text: 'Background command started.',
+        },
       ],
       { listedRuns: [createShellRunRecord()] },
     );
@@ -581,6 +592,71 @@ describe('ChatView inline run cards', () => {
     expect(container.querySelector(`[data-transcript-target="background_run:${RUN_ID}"]`)).not.toBeNull();
     expect(container.textContent).toContain('echo background');
     expect(container.textContent).not.toContain('$ echo background');
+  });
+
+  it('focuses a legacy linked bash run when the caller uses the current durable run id', async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { container } = renderChatView(
+      [
+        {
+          type: 'tool_use',
+          ts: '2026-03-11T18:00:00.000Z',
+          tool: 'bash',
+          input: { command: `echo ${RUN_ID}` },
+          output: RUN_ID,
+          status: 'ok',
+        },
+        {
+          type: 'text',
+          ts: '2026-03-11T18:00:01.000Z',
+          text: 'Done.',
+        },
+      ],
+      { listedRuns: [createShellRunRecord(CURRENT_RUN_ID)] },
+    );
+
+    expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('false');
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('pa:focus-background-run', { detail: { runId: CURRENT_RUN_ID } }));
+      await flushAsyncWork();
+      await flushAnimationFrames();
+      await flushAsyncWork();
+    });
+
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('true');
+    expect(container.querySelector(`[data-transcript-target="background_run:${CURRENT_RUN_ID}"]`)).not.toBeNull();
+    expect(container.textContent).not.toContain(RUN_ID);
+  });
+
+  it('renders terminal bash legacy run mentions as inline run cards resolved to the current durable run', async () => {
+    const { container } = renderChatView(
+      [
+        {
+          type: 'tool_use',
+          ts: '2026-03-11T18:00:00.000Z',
+          tool: 'bash',
+          input: { command: 'npm run preview' },
+          output: `Started ${RUN_ID}`,
+          status: 'ok',
+          details: {
+            displayMode: 'terminal',
+            exitCode: 0,
+          },
+        },
+      ],
+      { listedRuns: [createShellRunRecord(CURRENT_RUN_ID)] },
+    );
+
+    await act(async () => {
+      await flushAsyncWork();
+    });
+
+    expect(container.querySelector('.ui-terminal-block')).not.toBeNull();
+    expect(findInlineRunButtons(container)).toHaveLength(1);
+    expect(container.querySelector(`[data-transcript-target="background_run:${CURRENT_RUN_ID}"]`)).not.toBeNull();
   });
 
   it('lets background completion tombstones spotlight their originating run card', async () => {

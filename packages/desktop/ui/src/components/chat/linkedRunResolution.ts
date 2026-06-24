@@ -17,7 +17,7 @@ export function extractLinkedTaskSlugFromRunId(runId: string): string | null {
   return taskSlug.length > 0 ? taskSlug : null;
 }
 
-export function pickBestResolvedLinkedRunCandidate(candidates: DurableRunRecord[]): DurableRunRecord | null {
+export function pickBestResolvedLinkedRunCandidate(candidates: readonly DurableRunRecord[]): DurableRunRecord | null {
   if (candidates.length === 0) {
     return null;
   }
@@ -39,7 +39,7 @@ export function pickBestResolvedLinkedRunCandidate(candidates: DurableRunRecord[
 
 export function resolveLinkedRunRecord(
   linkedRun: LinkedRunPresentation,
-  runs: DurableRunRecord[] | null | undefined,
+  runs: readonly DurableRunRecord[] | null | undefined,
   lookups: RunPresentationLookups,
 ): DurableRunRecord | null {
   if (!runs || runs.length === 0) {
