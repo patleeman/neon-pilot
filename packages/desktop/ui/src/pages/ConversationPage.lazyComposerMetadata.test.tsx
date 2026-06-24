@@ -719,6 +719,17 @@ describe('ConversationPage lazy composer metadata', () => {
     expect(apiMock.models).toHaveBeenCalledTimes(1);
   });
 
+  it('loads saved-conversation git metadata from the visible workspace cwd', async () => {
+    renderConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+      await Promise.resolve();
+    });
+
+    expect(apiMock.workspaceUncommittedDiff).toHaveBeenCalledWith('/tmp/project');
+  });
+
   it('defers remote conversation layout reads until composer metadata is non-critical', async () => {
     const animationFrameCallbacks: FrameRequestCallback[] = [];
     const requestAnimationFrameSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {

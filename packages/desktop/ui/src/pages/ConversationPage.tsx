@@ -1826,6 +1826,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   );
 
   const [liveSessionContext, setLiveSessionContext] = useState<LiveSessionContext | null>(null);
+  const [conversationWorkspaceGit, setConversationWorkspaceGit] = useState<{
+    branch: string | null;
+    changeCount: number;
+    linesAdded: number;
+    linesDeleted: number;
+  } | null>(null);
   const [draftWorkspaceGit, setDraftWorkspaceGit] = useState<{
     branch: string | null;
     changeCount: number;
@@ -2590,7 +2596,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     },
     [showNotice],
   );
-  const branchLabel = draft ? (draftWorkspaceGit?.branch ?? null) : (liveSessionContext?.branch ?? null);
+  const branchLabel = draft
+    ? (draftWorkspaceGit?.branch ?? null)
+    : (liveSessionContext?.branch ?? conversationWorkspaceGit?.branch ?? null);
   const extensionRegistry = useExtensionRegistry();
 
   useEffect(() => {
@@ -2809,6 +2817,36 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     }
   }, [conversationCwdEditorOpen, currentCwd, draft]);
   useEffect(() => {
+    if (draft || !currentCwd) {
+      setConversationWorkspaceGit(null);
+      return;
+    }
+
+    let cancelled = false;
+    api
+      .workspaceUncommittedDiff(currentCwd)
+      .then((result) => {
+        if (!cancelled) {
+          setConversationWorkspaceGit({
+            branch: result.branch,
+            changeCount: result.changeCount,
+            linesAdded: result.linesAdded,
+            linesDeleted: result.linesDeleted,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setConversationWorkspaceGit(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCwd, draft]);
+
+  useEffect(() => {
     if (!draft || !draftCwdValue) {
       setDraftWorkspaceGit(null);
       return;
@@ -2839,8 +2877,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [draft, draftCwdValue]);
 
   const gitSummaryPresentation = useMemo(
-    () => resolveConversationGitSummaryPresentation(draft ? draftWorkspaceGit : (liveSessionContext?.git ?? null)),
-    [draft, draftWorkspaceGit, liveSessionContext?.git],
+    () => resolveConversationGitSummaryPresentation(draft ? draftWorkspaceGit : (liveSessionContext?.git ?? conversationWorkspaceGit)),
+    [conversationWorkspaceGit, draft, draftWorkspaceGit, liveSessionContext?.git],
   );
   const hasGitSummary = gitSummaryPresentation.kind !== 'none';
   const showComposerMeta = shouldShowConversationComposerMeta({
@@ -3192,7 +3230,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [refetchConversationAttachments, shouldFetchConversationAttachmentsNow]);
 
   useEffect(() => {
-    if (conversationLiveDecision !== true) {
+    if (conversationLiveDecision === null) {
       setLiveSessionContext(null);
       return;
     }

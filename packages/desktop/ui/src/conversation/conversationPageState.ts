@@ -164,7 +164,7 @@ export function shouldFetchConversationLiveSessionGitContext(input: {
   return (
     !input.draft &&
     Boolean(input.conversationId) &&
-    input.conversationLiveDecision === true &&
+    input.conversationLiveDecision !== null &&
     !input.conversationBootstrapLoading &&
     !input.sessionLoading &&
     !input.isStreaming &&

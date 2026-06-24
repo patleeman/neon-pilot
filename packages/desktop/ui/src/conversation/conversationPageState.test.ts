@@ -115,6 +115,34 @@ describe('conversation page state helpers', () => {
     ).toBe(true);
 
     expect(
+      shouldFetchConversationLiveSessionGitContext({
+        draft: false,
+        conversationId: 'conv-1',
+        conversationLiveDecision: false,
+        conversationBootstrapLoading: false,
+        sessionLoading: false,
+        isStreaming: false,
+        hasPendingInitialPrompt: false,
+        pendingInitialPromptDispatching: false,
+        hasPendingInitialPromptInFlight: false,
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldFetchConversationLiveSessionGitContext({
+        draft: false,
+        conversationId: 'conv-1',
+        conversationLiveDecision: null,
+        conversationBootstrapLoading: false,
+        sessionLoading: false,
+        isStreaming: false,
+        hasPendingInitialPrompt: false,
+        pendingInitialPromptDispatching: false,
+        hasPendingInitialPromptInFlight: false,
+      }),
+    ).toBe(false);
+
+    expect(
       shouldLoadConversationModels({
         draft: false,
         hasPendingInitialPrompt: true,
