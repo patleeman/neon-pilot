@@ -96,6 +96,7 @@ import {
 import {
   buildBackgroundExecutionIndicatorText,
   buildScheduledTaskIndicatorText,
+  isConversationExecutionActive,
   selectConversationScheduledTasks,
 } from '../conversation/conversationExecutionActivity';
 import { buildComposerShelfContext, buildNewConversationPanelContext } from '../conversation/conversationExtensionContexts';
@@ -2815,7 +2816,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   );
   const orderedDeferredResumes = deferredResumePresentation.orderedResumes;
   const visibleActiveConversationBackgroundExecutions = activityBackgroundExecutions.filter(
-    (execution) => execution.id !== conversationRunId,
+    (execution) => execution.id !== conversationRunId && isConversationExecutionActive(execution),
   );
   const backgroundExecutionIndicatorText = buildBackgroundExecutionIndicatorText(visibleActiveConversationBackgroundExecutions);
   const showActiveBackgroundRunDetails = showBackgroundRunDetails;
@@ -5599,6 +5600,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }
 
   async function stopStreamAndRestoreQueuedPrompts() {
+    setPendingAssistantStatusLabel(null);
     await streamAbort();
 
     if (!id || visiblePendingQueue.length === 0) return;

@@ -21,7 +21,7 @@ export function summarizeConversationBackgroundWorkKind(executions: readonly Exe
   return 'other';
 }
 
-function isActiveExecution(execution: ExecutionRecord): boolean {
+export function isConversationExecutionActive(execution: ExecutionRecord): boolean {
   return (
     execution.status === 'queued' || execution.status === 'waiting' || execution.status === 'running' || execution.status === 'recovering'
   );
@@ -123,7 +123,7 @@ export function selectConversationActiveExecutions(input: {
       if (visibility === 'primary') return execution.visibility === 'primary';
       return execution.visibility !== 'hidden';
     })
-    .filter(isActiveExecution)
+    .filter(isConversationExecutionActive)
     .filter((execution) => !isStaleScheduledTaskExecution(execution, lookups, input.tasks))
     .sort((left, right) => executionSortTimestamp(right).localeCompare(executionSortTimestamp(left)));
 }

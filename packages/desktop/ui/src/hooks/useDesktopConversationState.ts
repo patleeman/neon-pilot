@@ -1029,7 +1029,11 @@ export function useDesktopConversationState(conversationId: string | null, optio
     }
 
     await api.abortSession(conversationId, surfaceId);
-  }, [conversationId, surfaceId]);
+    void refresh().catch((nextError) => {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+    });
+    setSubscriptionVersion((current) => current + 1);
+  }, [conversationId, refresh, surfaceId]);
 
   const takeover = useCallback(async () => {
     if (!conversationId) {
