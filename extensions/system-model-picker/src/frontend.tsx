@@ -1,6 +1,6 @@
 import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
 import { cx, MenuGroupLabel, MenuItem, MenuSeparator, PositionedMenu, SectionLabel } from '@neon-pilot/extensions/ui';
-import type React from 'react';
+import React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
 const INLINE_TRIGGER_CLASS =
@@ -701,6 +701,7 @@ export function ModelPreferencesComposerControl({
           </SectionLabel>
           <ThinkingSelect context={context} variant="menu" />
         </div>
+        <Ds4HealthIndicator health={ds4Health} variant="menu" active={ds4Health.isDs4 && context.streamIsStreaming} />
       </div>
     );
   }

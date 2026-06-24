@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+// @vitest-environment jsdom
 
-import { formatModelTriggerLabel, MODEL_PICKER_MENU_STYLE } from './frontend';
+import { render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
+import { describe, expect, it, vi } from 'vitest';
+
+import { formatModelTriggerLabel, MODEL_PICKER_MENU_STYLE, ModelPreferencesComposerControl } from './frontend';
 
 describe('formatModelTriggerLabel', () => {
   it('keeps the model menu scrollable when shared menu chrome clips overflow', () => {
@@ -22,5 +26,40 @@ describe('formatModelTriggerLabel', () => {
         models: [{ id: 'gpt-5.4', provider: 'openai-codex', name: 'GPT-5.4', context: 272000, input: ['text'] }],
       }),
     ).toBe('GPT-5.4');
+  });
+
+  it('keeps DS4 health visible when composer preferences collapse into the menu', async () => {
+    render(
+      React.createElement(ModelPreferencesComposerControl, {
+        pa: {
+          extensions: {
+            callAction: vi.fn(async () => ({
+              reachable: false,
+              runtime: { installed: true },
+              server: { managedRunning: false },
+            })),
+          },
+        },
+        controlContext: {
+          renderMode: 'menu',
+          composerDisabled: false,
+          streamIsStreaming: false,
+          composerHasContent: false,
+          openFilePicker: vi.fn(),
+          addFiles: vi.fn(),
+          insertText: vi.fn(),
+          appendText: vi.fn(),
+          models: [{ id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash', context: 200000, input: ['text'] }],
+          currentModel: 'deepseek-v4-flash',
+          currentThinkingLevel: 'off',
+          savingPreference: null,
+          selectModel: vi.fn(),
+          selectThinkingLevel: vi.fn(),
+        },
+      }),
+    );
+
+    expect(screen.getByLabelText(/DS4 (checking|offline) menu/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByLabelText('DS4 offline menu')).toBeTruthy());
   });
 });

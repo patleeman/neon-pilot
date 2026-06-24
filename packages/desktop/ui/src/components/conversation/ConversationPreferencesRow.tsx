@@ -11,6 +11,7 @@ import {
   COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT,
   COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT,
 } from './composerPreferenceCommands';
+import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
 
 function MoreHorizontalIcon({ className }: { className?: string }) {
   return (
@@ -28,10 +29,12 @@ export function ConversationPreferencesRow({
   composerControls = [],
   composerControlContext,
   inlineLimit,
+  respondToSettingsCommands = false,
 }: {
   composerControls: ExtensionComposerControlRegistration[];
   composerControlContext: Omit<ComposerControlContext, 'renderMode'>;
   inlineLimit: number;
+  respondToSettingsCommands?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -63,9 +66,21 @@ export function ConversationPreferencesRow({
   }, [hasMenuItems]);
 
   useEffect(() => {
+    if (!respondToSettingsCommands) return;
+    setExtensionCommandContext('composer.settingsAvailable', hasMenuItems);
+    return () => setExtensionCommandContext('composer.settingsAvailable', null);
+  }, [hasMenuItems, respondToSettingsCommands]);
+
+  useEffect(() => {
     setExtensionCommandContext('composer.preferencesOpen', menuOpen);
     return () => setExtensionCommandContext('composer.preferencesOpen', null);
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (!respondToSettingsCommands) return;
+    setExtensionCommandContext('composer.settingsOpen', menuOpen);
+    return () => setExtensionCommandContext('composer.settingsOpen', null);
+  }, [menuOpen, respondToSettingsCommands]);
 
   useEffect(() => {
     function handleOpenPreferencesCommand() {
@@ -75,6 +90,17 @@ export function ConversationPreferencesRow({
     window.addEventListener(COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT, handleOpenPreferencesCommand);
     return () => window.removeEventListener(COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT, handleOpenPreferencesCommand);
   }, [hasMenuItems, openMenu]);
+
+  useEffect(() => {
+    if (!respondToSettingsCommands) return;
+
+    function handleOpenSettingsCommand() {
+      if (hasMenuItems) openMenu();
+    }
+
+    window.addEventListener(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT, handleOpenSettingsCommand);
+    return () => window.removeEventListener(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT, handleOpenSettingsCommand);
+  }, [hasMenuItems, openMenu, respondToSettingsCommands]);
 
   useEffect(() => {
     function handleTogglePreferencesCommand() {
@@ -100,6 +126,17 @@ export function ConversationPreferencesRow({
     window.addEventListener(COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, handleClosePreferencesCommand);
     return () => window.removeEventListener(COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, handleClosePreferencesCommand);
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen || !respondToSettingsCommands) return;
+
+    function handleCloseSettingsCommand() {
+      setMenuOpen(false);
+    }
+
+    window.addEventListener(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, handleCloseSettingsCommand);
+    return () => window.removeEventListener(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, handleCloseSettingsCommand);
+  }, [menuOpen, respondToSettingsCommands]);
 
   return (
     <div className="flex min-w-0 flex-nowrap items-center gap-2">
@@ -131,6 +168,15 @@ export function ConversationPreferencesRow({
             aria-expanded={menuOpen}
             aria-haspopup="dialog"
             title="More composer settings"
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              event.preventDefault();
+              if (menuOpen) {
+                setMenuOpen(false);
+                return;
+              }
+              openMenu();
+            }}
           >
             <MoreHorizontalIcon />
           </IconButton>

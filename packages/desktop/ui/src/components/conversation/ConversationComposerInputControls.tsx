@@ -47,7 +47,8 @@ function getComposerPreferenceInlineLimit(composerShellWidth: number | null): nu
   return 0;
 }
 
-const CORE_COMPOSER_CONTROL_KEYS = new Set(['system-composer-attachments:attach-files', 'system-model-picker:model-preferences']);
+const MODEL_PREFERENCES_CONTROL_KEY = 'system-model-picker:model-preferences';
+const CORE_COMPOSER_CONTROL_KEYS = new Set(['system-composer-attachments:attach-files']);
 const CORE_COMPOSER_INPUT_TOOL_KEYS = new Set(['system-excalidraw-input:excalidraw']);
 const CORE_MODEL_PREFERENCE_MENU_WIDTH = 256;
 const CORE_MODEL_PREFERENCE_MENU_ESTIMATED_HEIGHT = 64;
@@ -592,8 +593,12 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
 
   const visibleLeadingControls = visibleComposerControls.filter((control) => control.slot === 'leading');
   const visiblePreferenceControls = visibleComposerControls.filter((control) => control.slot === 'preferences');
+  const hasExtensionModelPreferencesControl = visiblePreferenceControls.some(
+    (control) => composerRegistrationKey(control) === MODEL_PREFERENCES_CONTROL_KEY,
+  );
   const shouldKeepControlRowInline = composerShellWidth === null || composerShellWidth >= 420;
   const shouldCollapseCorePreferences = !shouldKeepControlRowInline;
+  const shouldRenderCoreModelPreferences = !hasExtensionModelPreferencesControl;
 
   return (
     <div className="px-3 pt-2.5 pb-2.5">
@@ -693,30 +698,33 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
                 }}
               />
             ))}
-            {shouldCollapseCorePreferences ? (
-              <CoreModelPreferenceOverflow
-                disabled={composerDisabled}
-                models={models}
-                currentModel={currentModel}
-                currentThinkingLevel={currentThinkingLevel}
-                onSelectModel={onSelectModel}
-                onSelectThinkingLevel={onSelectThinkingLevel}
-              />
-            ) : (
-              <CoreModelPreferenceControls
-                disabled={composerDisabled}
-                models={models}
-                currentModel={currentModel}
-                currentThinkingLevel={currentThinkingLevel}
-                compact={false}
-                onSelectModel={onSelectModel}
-                onSelectThinkingLevel={onSelectThinkingLevel}
-              />
-            )}
+            {shouldRenderCoreModelPreferences ? (
+              shouldCollapseCorePreferences ? (
+                <CoreModelPreferenceOverflow
+                  disabled={composerDisabled}
+                  models={models}
+                  currentModel={currentModel}
+                  currentThinkingLevel={currentThinkingLevel}
+                  onSelectModel={onSelectModel}
+                  onSelectThinkingLevel={onSelectThinkingLevel}
+                />
+              ) : (
+                <CoreModelPreferenceControls
+                  disabled={composerDisabled}
+                  models={models}
+                  currentModel={currentModel}
+                  currentThinkingLevel={currentThinkingLevel}
+                  compact={false}
+                  onSelectModel={onSelectModel}
+                  onSelectThinkingLevel={onSelectThinkingLevel}
+                />
+              )
+            ) : null}
             <ConversationPreferencesRow
               composerControls={visiblePreferenceControls}
               composerControlContext={composerControlContext}
               inlineLimit={getComposerPreferenceInlineLimit(composerShellWidth)}
+              respondToSettingsCommands={hasExtensionModelPreferencesControl && shouldCollapseCorePreferences}
             />
           </div>
 

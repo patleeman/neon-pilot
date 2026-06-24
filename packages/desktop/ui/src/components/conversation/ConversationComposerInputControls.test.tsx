@@ -59,8 +59,10 @@ vi.mock('../../extensions/ComposerButtonHost', () => ({
       const modelLabel = selectedModel?.name ?? (controlContext.currentModel.trim() || 'Select model');
       const thinkingLabel = controlContext.currentThinkingLevel === 'xhigh' ? 'Extra high' : controlContext.currentThinkingLevel || 'Unset';
       return (
-        <span>
-          {modelLabel} {thinkingLabel}
+        <span data-control-id="extension-model-preferences">
+          extension-model-preferences:{modelLabel}:{thinkingLabel}
+          <button aria-label="Conversation model">{modelLabel}</button>
+          <button aria-label="Conversation thinking level">{thinkingLabel}</button>
         </span>
       );
     }
@@ -195,7 +197,10 @@ describe('ConversationComposerInputControls', () => {
 
     expect(html).toContain('Message Neon Pilot');
     expect(html).toContain('Attach image or file');
+    expect(html).toContain('extension-model-preferences:');
     expect(html).toContain('Model A');
+    expect(html).toContain('medium');
+    expect(html).not.toContain('<select');
     expect(html).toContain('Create drawing');
     expect(html).toContain('aria-label="Send"');
   });
@@ -292,7 +297,8 @@ describe('ConversationComposerInputControls', () => {
       expect(menu).toBeTruthy();
       expect(menu?.className).toContain('ui-context-menu-shell');
       expect(menu?.querySelector('[aria-label="Conversation model"]')).toBeTruthy();
-      expect(menu?.querySelector('[aria-label="Thinking level"]')).toBeTruthy();
+      expect(menu?.querySelector('[aria-label="Conversation thinking level"]')).toBeTruthy();
+      expect(menu?.textContent).toContain('extension-model-preferences:Model A:medium');
       expect(menuButton?.getAttribute('aria-expanded')).toBe('true');
 
       act(() => {
@@ -356,7 +362,8 @@ describe('ConversationComposerInputControls', () => {
       const menuButton = rendered.container.querySelector<HTMLButtonElement>('button[aria-label="More composer settings"]');
       expect(menu).toBeTruthy();
       expect(menu?.querySelector('[aria-label="Conversation model"]')).toBeTruthy();
-      expect(menu?.querySelector('[aria-label="Thinking level"]')).toBeTruthy();
+      expect(menu?.querySelector('[aria-label="Conversation thinking level"]')).toBeTruthy();
+      expect(menu?.textContent).toContain('extension-model-preferences:Model A:medium');
       expect(menuButton?.getAttribute('aria-expanded')).toBe('true');
     } finally {
       rendered.unmount();
@@ -376,7 +383,7 @@ describe('ConversationComposerInputControls', () => {
       models: [],
     });
 
-    expect(html).toContain('Select model');
+    expect(html).toContain('openai/gpt-5.4');
     expect(html).toContain('Extra high');
   });
 
