@@ -1070,11 +1070,18 @@ export function CommandsSettingsSection() {
       .split(',')
       .map((key) => key.trim())
       .filter(Boolean);
+    const id = keybindingSettingId(keybinding);
     if (!keys.length) {
       setError('Shortcut cannot be blank. Disable the keybinding instead.');
+      setDrafts((current) => ({ ...current, [id]: keybinding.keys.join(', ') }));
       return;
     }
-    const id = keybindingSettingId(keybinding);
+    const conflict = findCommandShortcutConflict(rows, keybinding, keys);
+    if (conflict) {
+      setError(`${formatKeyboardShortcutLabel(conflict.shortcut)} is already assigned to ${conflict.title}.`);
+      setDrafts((current) => ({ ...current, [id]: keybinding.keys.join(', ') }));
+      return;
+    }
     setBusyId(id);
     setError(null);
     setNotice(null);
@@ -1204,6 +1211,31 @@ function commandDisplayId(command: CommandSettingsEntry): string {
 
 function keybindingSettingId(keybinding: Pick<CommandKeybindingSettingsEntry, 'extensionId' | 'surfaceId'>): string {
   return `${keybinding.extensionId}:${keybinding.surfaceId}`;
+}
+
+function commandKeybindingConflictScope(keybinding: Pick<CommandKeybindingSettingsEntry, 'extensionId' | 'scope'>): string {
+  return keybinding.scope === 'surface' ? `surface:${keybinding.extensionId}` : 'global';
+}
+
+function findCommandShortcutConflict(
+  rows: CommandWithKeybindings[],
+  target: CommandKeybindingSettingsEntry,
+  shortcuts: string[],
+): { shortcut: string; title: string } | null {
+  const targetId = keybindingSettingId(target);
+  const targetScope = commandKeybindingConflictScope(target);
+  const requestedShortcuts = new Map(shortcuts.map((shortcut) => [normalizeShortcutForConflict(shortcut), shortcut]));
+  for (const row of rows) {
+    for (const existing of row.keybindings) {
+      if (!existing.enabled || keybindingSettingId(existing) === targetId) continue;
+      if (commandKeybindingConflictScope(existing) !== targetScope) continue;
+      for (const existingShortcut of existing.keys) {
+        const requestedShortcut = requestedShortcuts.get(normalizeShortcutForConflict(existingShortcut));
+        if (requestedShortcut) return { shortcut: requestedShortcut, title: existing.title };
+      }
+    }
+  }
+  return null;
 }
 
 function keybindingMatchesCommandSetting(keybinding: CommandKeybindingSettingsEntry, command: CommandSettingsEntry): boolean {

@@ -540,6 +540,137 @@ describe('CommandsSettingsSection', () => {
     );
   });
 
+  it('rejects conflicting command shortcut edits before writing extension keybindings', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([
+      {
+        extensionId: 'system-browser',
+        id: 'open-browser',
+        title: 'Open browser',
+        action: 'rail.open',
+        args: { extensionId: 'system-browser', surfaceId: 'browser-tabs' },
+      },
+      {
+        extensionId: 'system-settings',
+        id: 'open-settings',
+        title: 'Open Settings',
+        action: 'settings.open',
+      },
+    ]);
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-browser',
+        surfaceId: 'open-browser',
+        title: 'Open browser',
+        keys: ['mod+shift+b'],
+        command: 'rail.open',
+        args: { extensionId: 'system-browser', surfaceId: 'browser-tabs' },
+        scope: 'global',
+        defaultKeys: ['mod+shift+b'],
+        enabled: true,
+      },
+    ]);
+    const updateSpy = vi.spyOn(api, 'updateExtensionKeybinding').mockResolvedValue({ ok: true });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<CommandsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    const shortcutButton = container.querySelector<HTMLButtonElement>(
+      '#settings-command-keybinding-system-settings\\:command\\:system-settings\\.open-settings',
+    );
+    if (!(shortcutButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected Open Settings shortcut capture button');
+    }
+
+    act(() => {
+      shortcutButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    act(() => {
+      shortcutButton.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          key: 'b',
+          code: 'KeyB',
+          metaKey: true,
+          shiftKey: true,
+        }),
+      );
+    });
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('⌘/Ctrl + Shift + B is already assigned to Open browser.');
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(shortcutButton.textContent).toContain('Click to record shortcut');
+  });
+
+  it('saves non-conflicting command shortcut edits', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([
+      {
+        extensionId: 'system-settings',
+        id: 'open-settings',
+        title: 'Open Settings',
+        action: 'settings.open',
+      },
+    ]);
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([]);
+    const updateSpy = vi.spyOn(api, 'updateExtensionKeybinding').mockResolvedValue({ ok: true });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<CommandsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    const shortcutButton = container.querySelector<HTMLButtonElement>(
+      '#settings-command-keybinding-system-settings\\:command\\:system-settings\\.open-settings',
+    );
+    if (!(shortcutButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected Open Settings shortcut capture button');
+    }
+
+    act(() => {
+      shortcutButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    act(() => {
+      shortcutButton.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          key: 'y',
+          code: 'KeyY',
+          metaKey: true,
+          altKey: true,
+          shiftKey: true,
+        }),
+      );
+    });
+    await flushAsyncWork();
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      'system-settings',
+      'command:system-settings.open-settings',
+      expect.objectContaining({
+        keys: ['CommandOrControl+Alt+Shift+Y'],
+        enabled: true,
+        title: 'Open Settings',
+        command: 'system-settings.open-settings',
+      }),
+    );
+  });
+
   it('keeps host commands out of the editable command shortcut catalog', async () => {
     installDesktopBridge();
     mocks.readDesktopAppPreferences.mockResolvedValue({
