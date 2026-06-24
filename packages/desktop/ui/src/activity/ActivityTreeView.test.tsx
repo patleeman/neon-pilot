@@ -2,7 +2,7 @@
 
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { ActivityTreeItem } from './activityTree';
 import { ActivityTreeView, getActivityTreeRowPaddingLeftRem } from './ActivityTreeView';
@@ -118,6 +118,40 @@ describe('ActivityTreeView', () => {
       expect(document.body.querySelector('[role="menu"]')).toBeNull();
     } finally {
       unmount();
+    }
+  });
+
+  it('keeps the context menu inside the viewport', () => {
+    const originalInnerWidth = window.innerWidth;
+    const originalInnerHeight = window.innerHeight;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 800 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 600 });
+    const boundsSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function getBounds() {
+      if ((this as HTMLElement).dataset.fileTreeContextMenuRoot === 'true') {
+        return { x: 0, y: 0, width: 224, height: 180, top: 0, right: 224, bottom: 180, left: 0, toJSON: () => ({}) };
+      }
+
+      return { x: 0, y: 0, width: 240, height: 20, top: 0, right: 240, bottom: 20, left: 0, toJSON: () => ({}) };
+    });
+    const { container, unmount } = renderTree();
+
+    try {
+      const row = container.querySelector<HTMLButtonElement>('[role="treeitem"]');
+      expect(row).not.toBeNull();
+
+      act(() => {
+        row?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 780, clientY: 590 }));
+      });
+
+      const menuRoot = document.body.querySelector<HTMLElement>('[data-file-tree-context-menu-root="true"]');
+      expect(menuRoot).not.toBeNull();
+      expect(menuRoot?.style.left).toBe('568px');
+      expect(menuRoot?.style.top).toBe('412px');
+    } finally {
+      unmount();
+      boundsSpy.mockRestore();
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth });
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight });
     }
   });
 

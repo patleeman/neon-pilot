@@ -34,7 +34,6 @@ import {
   summarizeConversationBackgroundWorkKind,
 } from '../conversation/conversationExecutionActivity';
 import {
-  buildConversationDeeplink,
   buildConversationSurfacePath,
   resolveConversationAdjacentPath,
   resolveConversationCloseRedirect,
@@ -1098,7 +1097,7 @@ function ConversationCwdGroupHeader({
   );
 }
 
-type ConversationCopyMenuAction = 'id' | 'working-directory' | 'deeplink';
+type ConversationCopyMenuAction = 'id' | 'working-directory';
 
 type ConversationCopyMenuState = {
   action: ConversationCopyMenuAction;
@@ -1115,14 +1114,12 @@ const OpenConversationRow = memo(function OpenConversationRow({
   locked = false,
   onPin,
   onUnpin,
-  onToggleLock,
   onClose,
   onArchive,
   onOpenInNewWindow,
   onDuplicate,
   onCopyWorkingDirectory,
   onCopyId,
-  onCopyDeeplink,
   onPrefetch,
   gatewayProviders = [],
   isAutomation = false,
@@ -1143,14 +1140,12 @@ const OpenConversationRow = memo(function OpenConversationRow({
   dropPosition?: OpenConversationDropPosition | null;
   onPin?: () => void;
   onUnpin?: () => void;
-  onToggleLock?: () => void;
   onClose?: () => void;
   onArchive?: () => boolean | Promise<boolean>;
   onOpenInNewWindow?: () => boolean | Promise<boolean>;
   onDuplicate?: () => boolean | Promise<boolean>;
   onCopyWorkingDirectory?: () => boolean | Promise<boolean>;
   onCopyId?: () => boolean | Promise<boolean>;
-  onCopyDeeplink?: () => boolean | Promise<boolean>;
   onPrefetch?: () => void;
   gatewayProviders?: string[];
   isAutomation?: boolean;
@@ -1184,14 +1179,14 @@ const OpenConversationRow = memo(function OpenConversationRow({
           case 'copyConversationId':
             return Boolean(onCopyId);
           case 'copyDeeplink':
-            return Boolean(onCopyDeeplink);
+            return false;
           default:
             return true;
         }
 
         return true;
       }),
-    [contextMenus, onCopyDeeplink, onCopyId, onCopyWorkingDirectory, onDuplicate, session.id],
+    [contextMenus, onCopyId, onCopyWorkingDirectory, onDuplicate, session.id],
   );
   const decoratorsByPosition = useMemo(() => {
     const byPos: Record<string, typeof conversationDecorators> = { 'before-title': [], 'after-title': [], subtitle: [] };
@@ -1208,12 +1203,9 @@ const OpenConversationRow = memo(function OpenConversationRow({
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [busyExtensionMenuId, setBusyExtensionMenuId] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<ConversationCopyMenuState | null>(null);
-  const hasContextMenuActions = Boolean(
-    onPin || onUnpin || onToggleLock || onArchive || onOpenInNewWindow || conversationExtensionMenuItems.length > 0,
-  );
+  const hasContextMenuActions = Boolean(onPin || onUnpin || onArchive || onOpenInNewWindow || conversationExtensionMenuItems.length > 0);
   const contextMenuItemCount =
     (pinned && onUnpin ? 1 : !pinned && onPin ? 1 : 0) +
-    Number(Boolean(onToggleLock)) +
     Number(Boolean(onArchive)) +
     Number(Boolean(onOpenInNewWindow)) +
     conversationExtensionMenuItems.length;
@@ -1303,8 +1295,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
           return 'Copy Working Directory';
         case 'id':
           return 'Copy Session ID';
-        case 'deeplink':
-          return 'Copy Deeplink';
       }
     }
 
@@ -1317,8 +1307,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
         return 'Copied Working Directory';
       case 'id':
         return 'Copied Session ID';
-      case 'deeplink':
-        return 'Copied Deeplink';
     }
   }
 
@@ -1337,8 +1325,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
         return 'working-directory';
       case 'copyConversationId':
         return 'id';
-      case 'copyDeeplink':
-        return 'deeplink';
       default:
         return null;
     }
@@ -1350,8 +1336,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
         return onCopyWorkingDirectory;
       case 'id':
         return onCopyId;
-      case 'deeplink':
-        return onCopyDeeplink;
     }
   }
 
@@ -1629,17 +1613,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
                     Pin
                   </MenuItem>
                 ) : null}
-                {onToggleLock ? (
-                  <MenuItem
-                    onClick={async () => {
-                      onToggleLock();
-                      setMenuOpen(false);
-                    }}
-                    disabled={busyExtensionMenuId !== null}
-                  >
-                    {locked ? 'Unlock' : 'Lock'}
-                  </MenuItem>
-                ) : null}
                 {onArchive ? (
                   <MenuItem
                     onClick={async () => {
@@ -1709,14 +1682,12 @@ const SessionRow = memo(function SessionRow({
   gatewayProviders,
   onPin,
   onUnpin,
-  onToggleLock,
   onClose,
   onArchive,
   onOpenInNewWindow,
   onDuplicate,
   onCopyWorkingDirectory,
   onCopyId,
-  onCopyDeeplink,
   onPrefetch,
   onDragStart,
   onDragOver,
@@ -1737,14 +1708,12 @@ const SessionRow = memo(function SessionRow({
   gatewayProviders?: string[];
   onPin?: () => void;
   onUnpin?: () => void;
-  onToggleLock?: () => void;
   onClose?: () => void;
   onArchive?: () => boolean | Promise<boolean>;
   onOpenInNewWindow?: () => boolean | Promise<boolean>;
   onDuplicate?: () => boolean | Promise<boolean>;
   onCopyWorkingDirectory?: () => boolean | Promise<boolean>;
   onCopyId?: () => boolean | Promise<boolean>;
-  onCopyDeeplink?: () => boolean | Promise<boolean>;
   onPrefetch?: () => void;
   onDragStart?: (event: DragEvent<HTMLDivElement>) => void;
   onDragOver?: (event: DragEvent<HTMLDivElement>) => void;
@@ -1780,14 +1749,12 @@ const SessionRow = memo(function SessionRow({
       gatewayProviders={gatewayProviders}
       onPin={onPin}
       onUnpin={onUnpin}
-      onToggleLock={onToggleLock}
       onClose={onClose}
       onArchive={onArchive}
       onOpenInNewWindow={onOpenInNewWindow}
       onDuplicate={onDuplicate}
       onCopyWorkingDirectory={onCopyWorkingDirectory}
       onCopyId={onCopyId}
-      onCopyDeeplink={onCopyDeeplink}
       onPrefetch={onPrefetch}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
@@ -3223,23 +3190,6 @@ export function Sidebar() {
     [copyTextToClipboard, showSidebarNotice],
   );
 
-  const handleCopyConversationDeeplink = useCallback(
-    async (conversationId: string) => {
-      if (typeof window === 'undefined') {
-        showSidebarNotice('danger', 'Could not build a deeplink for this conversation.', 4000);
-        return false;
-      }
-
-      try {
-        return copyTextToClipboard(buildConversationDeeplink(conversationId, window.location.href));
-      } catch {
-        showSidebarNotice('danger', 'Could not build a deeplink for this conversation.', 4000);
-        return false;
-      }
-    },
-    [copyTextToClipboard, showSidebarNotice],
-  );
-
   const handleOpenConversationInNewWindow = useCallback(
     async (conversationId: string) => {
       const desktopBridge = getDesktopBridge();
@@ -3878,7 +3828,6 @@ export function Sidebar() {
         dropPosition={dropPosition}
         onPin={!pinned && !isDraftTab ? () => handlePinConversation(session.id) : undefined}
         onUnpin={pinned ? () => handleUnpinConversation(session.id) : undefined}
-        onToggleLock={!isDraftTab ? () => toggleConversationLock(session.id) : undefined}
         onClose={isDraftTab ? handleCloseDraftTab : !pinned && !locked ? () => handleCloseConversation(session.id) : undefined}
         onArchive={
           !isDraftTab && !locked
@@ -3892,7 +3841,6 @@ export function Sidebar() {
         onDuplicate={!isDraftTab ? () => handleDuplicateConversation(session) : undefined}
         onCopyWorkingDirectory={!isDraftTab && session.cwd?.trim() ? () => handleCopyConversationWorkingDirectory(session.cwd) : undefined}
         onCopyId={!isDraftTab ? () => handleCopyConversationId(session.id) : undefined}
-        onCopyDeeplink={!isDraftTab ? () => handleCopyConversationDeeplink(session.id) : undefined}
         onPrefetch={!isDraftTab ? () => prefetchConversation(session.id) : undefined}
         onDragStart={canDrag ? (event) => handleTabDragStart(section, session.id, event) : undefined}
         onDragOver={canDrag ? (event) => handleTabDragOver(section, session.id, event) : undefined}
@@ -4106,16 +4054,6 @@ export function Sidebar() {
                           className="ui-menu-shell ui-context-menu-shell static bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
                           role="menu"
                         >
-                          {item.route ? (
-                            <MenuItem
-                              onClick={() => {
-                                context.close();
-                                navigate(item.route!);
-                              }}
-                            >
-                              Open
-                            </MenuItem>
-                          ) : null}
                           {isGroup ? (
                             <>
                               {conversationGroup.cwd ? (
@@ -4198,14 +4136,6 @@ export function Sidebar() {
                               >
                                 {conversationItem.pinned ? 'Unpin Thread' : 'Pin Thread'}
                               </MenuItem>
-                              <MenuItem
-                                onClick={() => {
-                                  context.close();
-                                  toggleConversationLock(conversationId);
-                                }}
-                              >
-                                {conversationLocked ? 'Unlock Thread' : 'Lock Thread'}
-                              </MenuItem>
                               {!conversationLocked ? (
                                 <MenuItem
                                   onClick={() => {
@@ -4245,14 +4175,6 @@ export function Sidebar() {
                                 }}
                               >
                                 Copy Session ID
-                              </MenuItem>
-                              <MenuItem
-                                onClick={() => {
-                                  context.close();
-                                  void handleCopyConversationDeeplink(conversationId);
-                                }}
-                              >
-                                Copy Deeplink
                               </MenuItem>
                               {conversationItem.session.cwd?.trim() ? (
                                 <MenuItem
