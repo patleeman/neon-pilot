@@ -292,6 +292,54 @@ export function removeTerminalWorkbenchTabs(
   return { nextTabs, nextActiveTabId, removed: true };
 }
 
+export function closeWorkbenchTabState(
+  tabs: WorkbenchTabInstance[],
+  activeTabId: string | null,
+  tabId: string,
+): {
+  nextTabs: WorkbenchTabInstance[];
+  nextActiveTabId: string | null;
+  removed: boolean;
+  closedMode: WorkbenchRailMode | null;
+  nextWouldHaveNoTabs: boolean;
+  shouldClearFileSelection: boolean;
+} {
+  const closingIndex = tabs.findIndex((tab) => tab.id === tabId);
+  if (closingIndex === -1) {
+    return {
+      nextTabs: tabs,
+      nextActiveTabId: activeTabId,
+      removed: false,
+      closedMode: null,
+      nextWouldHaveNoTabs: false,
+      shouldClearFileSelection: false,
+    };
+  }
+
+  const nextTabs = tabs.filter((tab) => tab.id !== tabId);
+  const closingTab = tabs[closingIndex];
+  const nextWouldHaveNoTabs = nextTabs.length === 0;
+
+  let nextActiveTabId: string | null = activeTabId;
+  if (activeTabId === tabId) {
+    if (nextTabs.length === 0) {
+      nextActiveTabId = null;
+    } else {
+      const replacementIndex = Math.min(closingIndex, nextTabs.length - 1);
+      nextActiveTabId = nextTabs[replacementIndex]?.id ?? null;
+    }
+  }
+
+  return {
+    nextTabs,
+    nextActiveTabId,
+    removed: true,
+    closedMode: closingTab.mode,
+    nextWouldHaveNoTabs,
+    shouldClearFileSelection: closingTab.mode === 'files',
+  };
+}
+
 export function clearSelectedWorkbenchTool(
   selectedToolByConversation: Record<string, WorkbenchRailMode>,
   tool: WorkbenchRailMode,
@@ -1947,32 +1995,17 @@ export function Layout() {
   const closeWorkbenchTab = useCallback(
     (tabId: string) => {
       const current = openWorkbenchTabsRef.current;
-      const closingIndex = current.findIndex((tab) => tab.id === tabId);
-      if (closingIndex === -1) return;
+      const closeState = closeWorkbenchTabState(current, activeWorkbenchTabId, tabId);
+      if (!closeState.removed) return;
 
-      const next = current.filter((tab) => tab.id !== tabId);
-      const closingTab = current.find((tab) => tab.id === tabId);
-      const nextWouldHaveNoTabs = next.length === 0;
+      setOpenWorkbenchTabs(closeState.nextTabs);
+      setActiveWorkbenchTabId(closeState.nextActiveTabId);
 
-      // Derive the next active tab ID.
-      let nextActiveTabId: string | null = activeWorkbenchTabId;
-      if (activeWorkbenchTabId === tabId) {
-        if (next.length === 0) {
-          nextActiveTabId = null;
-        } else {
-          const replacementIndex = Math.min(closingIndex, next.length - 1);
-          nextActiveTabId = next[replacementIndex]?.id ?? null;
-        }
-      }
-
-      setOpenWorkbenchTabs(next);
-      setActiveWorkbenchTabId(nextActiveTabId);
-
-      if (closingTab?.mode === 'terminal' && !next.some((tab) => tab.mode === 'terminal')) {
+      if (closeState.closedMode === 'terminal' && !closeState.nextTabs.some((tab) => tab.mode === 'terminal')) {
         setSelectedToolByConversation((current) => clearSelectedWorkbenchTool(current, 'terminal'));
       }
 
-      if (nextWouldHaveNoTabs) {
+      if (closeState.nextWouldHaveNoTabs) {
         setAppLayoutMode('compact');
         writeAppLayoutMode('compact');
         setSearchParams(
@@ -1985,7 +2018,7 @@ export function Layout() {
         );
       }
 
-      if (nextWouldHaveNoTabs && closingTab?.mode === 'files') {
+      if (closeState.shouldClearFileSelection) {
         clearActiveWorkbenchFileSelection();
       }
     },

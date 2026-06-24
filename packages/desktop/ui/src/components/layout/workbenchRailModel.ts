@@ -44,6 +44,9 @@ export function singletonWorkbenchToolTabId(
   _conversationId?: string | null,
 ): string | null {
   const surfaceToolSlot = surface ? inferSurfaceToolSlot(surface) : undefined;
+  if (mode === 'files' || surfaceToolSlot === 'files') {
+    return 'files';
+  }
   if (mode === 'scratchpad' || surfaceToolSlot === 'scratchpad') {
     return 'scratchpad';
   }

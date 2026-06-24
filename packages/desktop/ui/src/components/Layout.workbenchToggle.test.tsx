@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React, { act } from 'react';
-import { Link, MemoryRouter, Route, Routes, useParams } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
@@ -9,7 +9,7 @@ import { setExtensionCommandContext } from '../extensions/commands';
 import { SIDEBAR_WIDTH_STORAGE_KEY } from '../local/localSettings';
 import { sessionStore } from '../store';
 import { APP_LAYOUT_MODE_SESSION_STORAGE_KEY, APP_LAYOUT_MODE_STORAGE_KEY } from '../ui-state/appLayoutMode';
-import { Layout } from './Layout';
+import { closeWorkbenchTabState, Layout } from './Layout';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -46,10 +46,12 @@ function setViewportWidth(width: number) {
 
 function ConversationRouteFixture() {
   const { id } = useParams();
+  const location = useLocation();
   return (
     <div>
       <div>Conversation saved</div>
       <div>{`Conversation route ${id ?? 'missing'}`}</div>
+      <div data-testid="route-search">{location.search}</div>
       <Link to="/conversations/conv-2">Open second conversation</Link>
     </div>
   );
@@ -270,6 +272,42 @@ describe('Layout workbench toggle', () => {
     });
     expect(window.localStorage.getItem(APP_LAYOUT_MODE_STORAGE_KEY)).toBe('compact');
     expect(screen.getByRole('button', { name: 'Show workbench' })).toBeTruthy();
+  });
+
+  it('reuses the existing File Explorer tab from the new-tab launcher', async () => {
+    setWorkbenchModeForCurrentSession();
+    renderLayout('/conversations/conv-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'File Explorer' }));
+    await waitFor(() => {
+      expect(screen.queryByText('Open a tab')).toBeNull();
+    });
+    expect(screen.getAllByLabelText('Close File Explorer')).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'New tab' }));
+    const fileExplorerButtons = screen.getAllByRole('button', { name: 'File Explorer' });
+    fireEvent.click(fileExplorerButtons[fileExplorerButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Open a tab')).toBeNull();
+    });
+    expect(screen.getAllByLabelText('Close File Explorer')).toHaveLength(1);
+  });
+
+  it('marks file selection for cleanup when closing File Explorer while another tab remains', () => {
+    const state = closeWorkbenchTabState(
+      [
+        { id: 'files', mode: 'files' },
+        { id: 'scratchpad', mode: 'scratchpad' },
+      ],
+      'scratchpad',
+      'files',
+    );
+
+    expect(state.nextTabs).toEqual([{ id: 'scratchpad', mode: 'scratchpad' }]);
+    expect(state.nextActiveTabId).toBe('scratchpad');
+    expect(state.nextWouldHaveNoTabs).toBe(false);
+    expect(state.shouldClearFileSelection).toBe(true);
   });
 
   it('does not consume global keybindings for unavailable commands', async () => {
