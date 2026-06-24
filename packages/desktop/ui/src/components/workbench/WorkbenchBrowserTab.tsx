@@ -395,17 +395,10 @@ export function WorkbenchBrowserTab({
     }
   }
 
-  function handleCloseBrowser() {
-    closedRef.current = true;
+  function handleCloseCurrentBrowserTab() {
     setStatus('');
     setCommentDraft(null);
-    const currentTabs = tabsStateRef.current?.tabs ?? [];
-    for (const tab of currentTabs) {
-      void bridge
-        ?.setWorkbenchBrowserBounds({ visible: false, sessionKey: getTabSessionKey(tab.id), deactivate: true })
-        .catch(() => undefined);
-    }
-    onClose();
+    onCloseCurrentTab();
   }
 
   const handleUrlInputChange = useCallback((value: string) => {
@@ -491,7 +484,7 @@ export function WorkbenchBrowserTab({
           onChange={(event) => handleUrlInputChange(event.target.value)}
           placeholder="https://example.com"
         />
-        <IconButton compact size="sm" aria-label="Close browser" title="Close browser" onClick={handleCloseBrowser}>
+        <IconButton compact size="sm" aria-label="Close browser tab" title="Close browser tab" onClick={handleCloseCurrentBrowserTab}>
           ×
         </IconButton>
       </form>

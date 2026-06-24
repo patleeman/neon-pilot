@@ -39,6 +39,45 @@ describe('WorkbenchBrowserTab', () => {
     ).toBe('Enter a web address that starts with http:// or https://.');
   });
 
+  it('closes the active browser tab from the browser toolbar', async () => {
+    const browserTabsState: BrowserTabsState = readBrowserTabsState();
+    const activeBrowserTab: BrowserTabItem =
+      browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
+    const onClose = vi.fn();
+    const onCloseCurrentTab = vi.fn();
+    window.neonPilotDesktop = {
+      setWorkbenchBrowserBounds: vi.fn(async () => null),
+      navigateWorkbenchBrowser: vi.fn(async () => null),
+    } as unknown as typeof window.neonPilotDesktop;
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={onClose}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={onCloseCurrentTab}
+        />,
+      );
+    });
+    await flushAsyncWork();
+
+    const closeBrowserTabButton = container.querySelector<HTMLButtonElement>('[aria-label="Close browser tab"]');
+    expect(closeBrowserTabButton).not.toBeNull();
+    act(() => {
+      closeBrowserTabButton?.click();
+    });
+
+    expect(onCloseCurrentTab).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('uses a global session key independent of conversation', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => ({
       url: 'https://example.com/',
