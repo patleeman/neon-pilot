@@ -4,7 +4,7 @@ export const CONTEXT_MENU_SHELL_PADDING_PX = 6;
 export const CONTEXT_MENU_SEPARATOR_HEIGHT_PX = 5;
 
 function readSafeGeometryNumber(value: number, fallback: number): number {
-  return Number.isSafeInteger(value) ? value : fallback;
+  return Number.isFinite(value) ? value : fallback;
 }
 
 export function estimateContextMenuHeight(input: { itemCount: number; separatorCount?: number }): number {
@@ -30,4 +30,17 @@ export function clampViewportMenuPosition(
     x: Math.max(edgePadding, Math.min(x, viewportWidth - menuWidth - edgePadding)),
     y: Math.max(edgePadding, Math.min(y, viewportHeight - menuHeight - edgePadding)),
   };
+}
+
+export function getViewportMenuTranslation(
+  rect: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>,
+  viewport: { width: number; height: number },
+  edgePadding = CONTEXT_MENU_EDGE_PADDING_PX,
+): { x: number; y: number } {
+  const viewportWidth = readSafeGeometryNumber(viewport.width, edgePadding * 2);
+  const viewportHeight = readSafeGeometryNumber(viewport.height, edgePadding * 2);
+  const dx = rect.left < edgePadding ? edgePadding - rect.left : Math.min(0, viewportWidth - edgePadding - rect.right);
+  const dy = rect.top < edgePadding ? edgePadding - rect.top : Math.min(0, viewportHeight - edgePadding - rect.bottom);
+
+  return { x: dx, y: dy };
 }

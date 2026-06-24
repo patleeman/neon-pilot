@@ -29,7 +29,7 @@ import type {
   WorkspaceGitStatusChange,
 } from '../../shared/types';
 import { useTheme } from '../../ui-state/theme';
-import { clampViewportMenuPosition, estimateContextMenuHeight } from '../shared/contextMenuPosition';
+import { ContextMenu } from '../shared/ContextMenu';
 import { ContextMenuWrapper } from '../shared/ContextMenuWrapper';
 import { TextPromptDialog } from '../shared/TextPromptDialog';
 import { useFileTreeModel } from '../shared/useFileTreeModel';
@@ -1372,35 +1372,18 @@ export function WorkspaceFileDocument({
       return;
     }
 
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (target instanceof Node && selectionContextMenuRef.current?.contains(target)) {
-        return;
-      }
-
-      closeSelectionContextMenu();
-    };
     const handleSelectionChange = () => {
       if (!getSelectedTextWithin(editorContainerRef.current)) {
         closeSelectionContextMenu();
       }
     };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeSelectionContextMenu();
-      }
-    };
 
-    document.addEventListener('pointerdown', handlePointerDown, true);
     document.addEventListener('selectionchange', handleSelectionChange);
-    window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('blur', closeSelectionContextMenu);
     window.addEventListener('resize', closeSelectionContextMenu);
 
     return () => {
-      document.removeEventListener('pointerdown', handlePointerDown, true);
       document.removeEventListener('selectionchange', handleSelectionChange);
-      window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('blur', closeSelectionContextMenu);
       window.removeEventListener('resize', closeSelectionContextMenu);
     };
@@ -1446,19 +1429,7 @@ export function WorkspaceFileDocument({
 
       event.preventDefault();
       closeSelectionContextMenu();
-      const menuItemCount = 1 + Number(Boolean(onReplyWithSelection));
-      const position = clampViewportMenuPosition(
-        { x: event.clientX, y: event.clientY },
-        {
-          width: WORKSPACE_SELECTION_CONTEXT_MENU_WIDTH,
-          height: estimateContextMenuHeight({ itemCount: menuItemCount, separatorCount: menuItemCount > 1 ? 1 : 0 }),
-        },
-        {
-          width: typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerWidth,
-          height: typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerHeight,
-        },
-      );
-      setSelectionContextMenu({ ...position, text });
+      setSelectionContextMenu({ x: event.clientX, y: event.clientY, text });
     },
     [closeSelectionContextMenu, copySelectedText, onReplyWithSelection, replyWithSelectedText],
   );
@@ -1524,12 +1495,13 @@ export function WorkspaceFileDocument({
       </div>
       {saveState.error ? <div className="bg-danger/5 px-3 py-1 text-[11px] text-danger">{saveState.error}</div> : null}
       {selectionContextMenu ? (
-        <div
+        <ContextMenu
           ref={selectionContextMenuRef}
-          className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0"
-          style={{ left: selectionContextMenu.x, top: selectionContextMenu.y, minWidth: WORKSPACE_SELECTION_CONTEXT_MENU_WIDTH }}
-          role="menu"
           aria-label="Selected file text actions"
+          estimatedHeight={onReplyWithSelection ? 61 : 34}
+          minWidth={WORKSPACE_SELECTION_CONTEXT_MENU_WIDTH}
+          onClose={closeSelectionContextMenu}
+          position={selectionContextMenu}
         >
           <div className="space-y-px">
             {onReplyWithSelection ? (
@@ -1549,7 +1521,7 @@ export function WorkspaceFileDocument({
               Copy
             </MenuItem>
           </div>
-        </div>
+        </ContextMenu>
       ) : null}
     </div>
   );

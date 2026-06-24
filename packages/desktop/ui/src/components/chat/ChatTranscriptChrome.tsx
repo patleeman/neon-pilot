@@ -1,7 +1,9 @@
 import type { RefObject } from 'react';
 import React from 'react';
 
-import { IconButton, MenuItem, MenuSeparator, MenuShell, StatusDot } from '../ui';
+import { ContextMenu } from '../shared/ContextMenu';
+import { estimateContextMenuHeight } from '../shared/contextMenuPosition';
+import { IconButton, MenuItem, MenuSeparator, StatusDot } from '../ui';
 import type { ReplySelectionContextMenuState, TranscriptSelectionAction } from './useChatReplySelection.js';
 
 void React;
@@ -28,22 +30,17 @@ export function SelectionContextMenu({
   selectionActions?: TranscriptSelectionAction[];
   onAction: (action: 'reply' | 'copy' | TranscriptSelectionAction) => Promise<void> | void;
 }) {
+  const menuItemCount = 1 + Number(Boolean(menuState.replySelection));
+  const estimatedMenuHeight = estimateContextMenuHeight({ itemCount: menuItemCount, separatorCount: menuItemCount > 1 ? 1 : 0 });
+
   return (
-    <MenuShell
+    <ContextMenu
       ref={menuRef}
-      className=""
-      style={{
-        position: 'fixed',
-        left: menuState.x,
-        top: menuState.y,
-        minWidth: 224,
-        right: 'auto',
-        bottom: 'auto',
-        marginBottom: 0,
-        overflow: 'visible',
-      }}
       aria-label="Selected transcript text actions"
       data-selection-context-menu="true"
+      estimatedHeight={estimatedMenuHeight}
+      minWidth={224}
+      position={menuState}
     >
       <div className="space-y-px">
         {menuState.replySelection ? (
@@ -96,6 +93,6 @@ export function SelectionContextMenu({
           Copy
         </MenuItem>
       </div>
-    </MenuShell>
+    </ContextMenu>
   );
 }

@@ -4,25 +4,10 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  constrainSelectionContextMenuPosition,
-  parseReplySelectionMessageIndex,
-  type ReplySelectionContextMenuState,
-  useChatReplySelection,
-} from './useChatReplySelection.js';
+import { parseReplySelectionMessageIndex, useChatReplySelection } from './useChatReplySelection.js';
 
 (globalThis as typeof globalThis & { React?: typeof React; IS_REACT_ACT_ENVIRONMENT?: boolean }).React = React;
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-
-function menu(overrides: Partial<ReplySelectionContextMenuState> = {}): ReplySelectionContextMenuState {
-  return {
-    x: 100,
-    y: 100,
-    text: 'selected text',
-    replySelection: null,
-    ...overrides,
-  };
-}
 
 function Harness() {
   const { selectionContextMenu, handleTranscriptContextMenu } = useChatReplySelection({ onReplyToSelection: vi.fn() });
@@ -63,36 +48,6 @@ function selectElementText(element: HTMLElement) {
 }
 
 describe('useChatReplySelection helpers', () => {
-  it('keeps context menus within the viewport edge padding', () => {
-    expect(constrainSelectionContextMenuPosition(menu({ x: 1, y: 2 }), { width: 500, height: 300 })).toMatchObject({ x: 12, y: 12 });
-    expect(constrainSelectionContextMenuPosition(menu({ x: 490, y: 290 }), { width: 500, height: 300 })).toMatchObject({
-      x: 264,
-      y: 254,
-    });
-  });
-
-  it('falls back when context menu geometry is malformed', () => {
-    expect(
-      constrainSelectionContextMenuPosition(menu({ x: Number.NaN, y: Number.POSITIVE_INFINITY }), { width: 500, height: 300 }),
-    ).toMatchObject({ x: 12, y: 12 });
-    expect(
-      constrainSelectionContextMenuPosition(menu({ x: Number.MAX_SAFE_INTEGER + 1, y: 100 }), { width: 500, height: 300 }),
-    ).toMatchObject({ x: 12, y: 100 });
-    expect(constrainSelectionContextMenuPosition(menu({ x: 100.5, y: 120.5 }), { width: 500, height: 300 })).toMatchObject({
-      x: 12,
-      y: 12,
-    });
-  });
-
-  it('accounts for the taller menu when a reply action is available', () => {
-    expect(
-      constrainSelectionContextMenuPosition(menu({ x: 490, y: 290, replySelection: { text: 'selected text', messageIndex: 3 } }), {
-        width: 500,
-        height: 300,
-      }),
-    ).toMatchObject({ x: 264, y: 221 });
-  });
-
   it('rejects malformed reply selection message indexes', () => {
     expect(parseReplySelectionMessageIndex('12')).toBe(12);
     expect(parseReplySelectionMessageIndex('12abc')).toBeNull();

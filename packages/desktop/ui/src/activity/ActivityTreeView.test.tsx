@@ -145,8 +145,8 @@ describe('ActivityTreeView', () => {
 
       const menuRoot = document.body.querySelector<HTMLElement>('[data-file-tree-context-menu-root="true"]');
       expect(menuRoot).not.toBeNull();
-      expect(menuRoot?.style.left).toBe('568px');
-      expect(menuRoot?.style.top).toBe('412px');
+      expect(menuRoot?.style.left).toBe('564px');
+      expect(menuRoot?.style.top).toBe('408px');
     } finally {
       unmount();
       boundsSpy.mockRestore();

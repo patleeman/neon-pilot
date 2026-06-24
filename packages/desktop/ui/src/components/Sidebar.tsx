@@ -1,9 +1,7 @@
 import {
-  type CSSProperties,
   type DragEvent,
   memo,
   type MouseEvent as ReactMouseEvent,
-  type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -11,7 +9,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { type ActivityTreeItem, buildActivityTreeItems, buildConversationActivityId } from '../activity/activityTree';
@@ -113,7 +110,8 @@ import {
 } from '../store';
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
-import { clampViewportMenuPosition, CONTEXT_MENU_EDGE_PADDING_PX, estimateContextMenuHeight } from './shared/contextMenuPosition';
+import { ContextMenu } from './shared/ContextMenu';
+import { estimateContextMenuHeight } from './shared/contextMenuPosition';
 import { TextPromptDialog } from './shared/TextPromptDialog';
 import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
 import { cx, IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
@@ -606,23 +604,6 @@ function SidebarSettingsNav({ items, notice }: { items: SidebarExtensionNavItem[
   );
 }
 
-function renderSidebarMenuPortal(menu: ReactNode) {
-  if (typeof document === 'undefined') return menu;
-  return createPortal(menu, document.body);
-}
-
-function getSidebarMenuPositionStyle(position: { x: number; y: number }, minWidth: number): CSSProperties {
-  return {
-    bottom: 'auto',
-    left: position.x,
-    marginBottom: 0,
-    minWidth,
-    position: 'fixed',
-    right: 'auto',
-    top: position.y,
-  };
-}
-
 function ThreadsFilterButton({
   organizeMode,
   filterMode,
@@ -643,38 +624,6 @@ function ThreadsFilterButton({
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
-  useEffect(() => {
-    if (!menuOpen || typeof document === 'undefined') {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-      if (!(target instanceof Node)) {
-        return;
-      }
-
-      if (menuRootRef.current?.contains(target) || buttonRef.current?.contains(target)) {
-        return;
-      }
-
-      setMenuOpen(false);
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setMenuOpen(false);
-      }
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [menuOpen]);
-
   function openMenu() {
     const bounds = buttonRef.current?.getBoundingClientRect();
     if (!bounds) {
@@ -682,14 +631,10 @@ function ThreadsFilterButton({
     }
 
     const menuWidth = 172;
-    const menuHeight = 288;
-    const edgePadding = CONTEXT_MENU_EDGE_PADDING_PX;
-    const viewportWidth = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerWidth;
-    const viewportHeight = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerHeight;
 
     setMenuPosition({
-      x: Math.max(edgePadding, Math.min(bounds.right - menuWidth, viewportWidth - menuWidth - edgePadding)),
-      y: Math.max(edgePadding, Math.min(bounds.bottom + 6, viewportHeight - menuHeight - edgePadding)),
+      x: bounds.right - menuWidth,
+      y: bounds.bottom + 6,
     });
     setMenuOpen(true);
   }
@@ -740,73 +685,74 @@ function ThreadsFilterButton({
       >
         <Ico d={PATH.filter} size={12} />
       </IconButton>
-      {menuOpen && menuPosition
-        ? renderSidebarMenuPortal(
-            <div
-              ref={menuRootRef}
-              className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[172px]"
-              style={getSidebarMenuPositionStyle(menuPosition, 172)}
-              role="menu"
-              aria-label="Threads organization options"
-            >
-              <div className="space-y-px">
-                <div className="px-2.5 pt-2 pb-1 text-[12px] font-medium text-dim">Show</div>
-                {renderMenuItem({
-                  label: 'All threads',
-                  icon: PATH.list,
-                  checked: filterMode === 'all',
-                  onClick: () => onChangeFilterMode('all'),
-                })}
-                {renderMenuItem({
-                  label: 'Human threads',
-                  icon: PATH.conversations,
-                  checked: filterMode === 'human',
-                  onClick: () => onChangeFilterMode('human'),
-                })}
-                {renderMenuItem({
-                  label: 'Automation threads',
-                  icon: PATH.automations,
-                  checked: filterMode === 'automation',
-                  onClick: () => onChangeFilterMode('automation'),
-                })}
-                <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
-                <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Organize</div>
-                {renderMenuItem({
-                  label: 'By project',
-                  icon: PATH.workspace,
-                  checked: organizeMode === 'project',
-                  onClick: () => onChangeOrganizeMode('project'),
-                })}
-                {renderMenuItem({
-                  label: 'Chronological list',
-                  icon: PATH.list,
-                  checked: organizeMode === 'chronological',
-                  onClick: () => onChangeOrganizeMode('chronological'),
-                })}
-                <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
-                <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Order</div>
-                {renderMenuItem({
-                  label: 'Created',
-                  icon: PATH.clock,
-                  checked: sortMode === 'created',
-                  onClick: () => onChangeSortMode('created'),
-                })}
-                {renderMenuItem({
-                  label: 'Updated',
-                  icon: PATH.sparkles,
-                  checked: sortMode === 'updated',
-                  onClick: () => onChangeSortMode('updated'),
-                })}
-                {renderMenuItem({
-                  label: 'Manual order',
-                  icon: PATH.grip,
-                  checked: sortMode === 'manual',
-                  onClick: () => onChangeSortMode('manual'),
-                })}
-              </div>
-            </div>,
-          )
-        : null}
+      {menuOpen && menuPosition ? (
+        <ContextMenu
+          ref={menuRootRef}
+          aria-label="Threads organization options"
+          className="min-w-[172px]"
+          estimatedHeight={288}
+          ignoreRefs={[buttonRef]}
+          minWidth={172}
+          onClose={() => setMenuOpen(false)}
+          position={menuPosition}
+        >
+          <div className="space-y-px">
+            <div className="px-2.5 pt-2 pb-1 text-[12px] font-medium text-dim">Show</div>
+            {renderMenuItem({
+              label: 'All threads',
+              icon: PATH.list,
+              checked: filterMode === 'all',
+              onClick: () => onChangeFilterMode('all'),
+            })}
+            {renderMenuItem({
+              label: 'Human threads',
+              icon: PATH.conversations,
+              checked: filterMode === 'human',
+              onClick: () => onChangeFilterMode('human'),
+            })}
+            {renderMenuItem({
+              label: 'Automation threads',
+              icon: PATH.automations,
+              checked: filterMode === 'automation',
+              onClick: () => onChangeFilterMode('automation'),
+            })}
+            <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
+            <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Organize</div>
+            {renderMenuItem({
+              label: 'By project',
+              icon: PATH.workspace,
+              checked: organizeMode === 'project',
+              onClick: () => onChangeOrganizeMode('project'),
+            })}
+            {renderMenuItem({
+              label: 'Chronological list',
+              icon: PATH.list,
+              checked: organizeMode === 'chronological',
+              onClick: () => onChangeOrganizeMode('chronological'),
+            })}
+            <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
+            <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Order</div>
+            {renderMenuItem({
+              label: 'Created',
+              icon: PATH.clock,
+              checked: sortMode === 'created',
+              onClick: () => onChangeSortMode('created'),
+            })}
+            {renderMenuItem({
+              label: 'Updated',
+              icon: PATH.sparkles,
+              checked: sortMode === 'updated',
+              onClick: () => onChangeSortMode('updated'),
+            })}
+            {renderMenuItem({
+              label: 'Manual order',
+              icon: PATH.grip,
+              checked: sortMode === 'manual',
+              onClick: () => onChangeSortMode('manual'),
+            })}
+          </div>
+        </ContextMenu>
+      ) : null}
     </>
   );
 }
@@ -863,6 +809,7 @@ function ConversationCwdGroupHeader({
   const menuActionCount =
     Number(Boolean(onOpenInFinder)) + Number(Boolean(onEditName)) + Number(Boolean(onArchiveThreads)) + Number(Boolean(onRemove));
   const showMenuDivider = Boolean((onOpenInFinder || onEditName) && (onArchiveThreads || onRemove));
+  const estimatedMenuHeight = estimateContextMenuHeight({ itemCount: menuActionCount, separatorCount: showMenuDivider ? 1 : 0 });
   const toggleButtonClassName = [
     'min-w-0 flex-1 gap-2 rounded-md py-1 text-primary hover:bg-white/5',
     canDrag && (isDragging ? 'cursor-grabbing opacity-60' : 'cursor-grab'),
@@ -870,37 +817,13 @@ function ConversationCwdGroupHeader({
     .filter(Boolean)
     .join(' ');
 
-  useEffect(() => {
-    if (!menuOpen || typeof document === 'undefined') {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-      if (!(target instanceof Node) || !menuRootRef.current || menuRootRef.current.contains(target)) {
-        return;
-      }
-
-      setMenuOpen(false);
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [menuOpen]);
-
   function stopMenuEvent(event: { preventDefault: () => void; stopPropagation: () => void }) {
     event.preventDefault();
     event.stopPropagation();
   }
 
   function openDomContextMenu(x: number, y: number) {
-    const menuWidth = 214;
-    const menuHeight = estimateContextMenuHeight({ itemCount: menuActionCount, separatorCount: showMenuDivider ? 1 : 0 });
-    const viewportWidth = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerWidth;
-    const viewportHeight = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerHeight;
-    setMenuPosition(
-      clampViewportMenuPosition({ x, y }, { width: menuWidth, height: menuHeight }, { width: viewportWidth, height: viewportHeight }),
-    );
+    setMenuPosition({ x, y });
     setMenuOpen(true);
   }
 
@@ -1033,64 +956,58 @@ function ConversationCwdGroupHeader({
           <Ico d={PATH.plus} size={11} />
         </IconButton>
       </div>
-      {menuOpen && menuPosition
-        ? renderSidebarMenuPortal(
-            <div
-              ref={menuRootRef}
-              className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[214px]"
-              style={getSidebarMenuPositionStyle(menuPosition, 214)}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') {
-                  event.preventDefault();
-                  setMenuOpen(false);
-                }
-              }}
-              role="menu"
-              aria-label={`Workspace actions for ${label}`}
-            >
-              <div className="space-y-px">
-                {onOpenInFinder ? (
-                  <MenuItem
-                    onClick={() => {
-                      void runMenuHandler(onOpenInFinder);
-                    }}
-                  >
-                    Open in Finder
-                  </MenuItem>
-                ) : null}
-                {onEditName ? (
-                  <MenuItem
-                    onClick={() => {
-                      void runMenuHandler(onEditName);
-                    }}
-                  >
-                    Edit Name
-                  </MenuItem>
-                ) : null}
-                {showMenuDivider ? <MenuSeparator className="my-1" /> : null}
-                {onArchiveThreads ? (
-                  <MenuItem
-                    onClick={() => {
-                      void runMenuHandler(onArchiveThreads);
-                    }}
-                  >
-                    Archive Threads
-                  </MenuItem>
-                ) : null}
-                {onRemove ? (
-                  <MenuItem
-                    onClick={() => {
-                      void runMenuHandler(onRemove);
-                    }}
-                    tone="danger"
-                  >
-                    Remove
-                  </MenuItem>
-                ) : null}
-              </div>
-            </div>,
-          )
-        : null}
+      {menuOpen && menuPosition ? (
+        <ContextMenu
+          ref={menuRootRef}
+          aria-label={`Workspace actions for ${label}`}
+          className="min-w-[214px]"
+          estimatedHeight={estimatedMenuHeight}
+          minWidth={214}
+          onClose={() => setMenuOpen(false)}
+          position={menuPosition}
+        >
+          <div className="space-y-px">
+            {onOpenInFinder ? (
+              <MenuItem
+                onClick={() => {
+                  void runMenuHandler(onOpenInFinder);
+                }}
+              >
+                Open in Finder
+              </MenuItem>
+            ) : null}
+            {onEditName ? (
+              <MenuItem
+                onClick={() => {
+                  void runMenuHandler(onEditName);
+                }}
+              >
+                Edit Name
+              </MenuItem>
+            ) : null}
+            {showMenuDivider ? <MenuSeparator className="my-1" /> : null}
+            {onArchiveThreads ? (
+              <MenuItem
+                onClick={() => {
+                  void runMenuHandler(onArchiveThreads);
+                }}
+              >
+                Archive Threads
+              </MenuItem>
+            ) : null}
+            {onRemove ? (
+              <MenuItem
+                onClick={() => {
+                  void runMenuHandler(onRemove);
+                }}
+                tone="danger"
+              >
+                Remove
+              </MenuItem>
+            ) : null}
+          </div>
+        </ContextMenu>
+      ) : null}
     </div>
   );
 }
@@ -1207,24 +1124,7 @@ const OpenConversationRow = memo(function OpenConversationRow({
     Number(Boolean(onArchive)) +
     Number(Boolean(onOpenInNewWindow)) +
     conversationExtensionMenuItems.length;
-
-  useEffect(() => {
-    if (!menuOpen || typeof document === 'undefined') {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-      if (!(target instanceof Node) || !menuRootRef.current || menuRootRef.current.contains(target)) {
-        return;
-      }
-
-      setMenuOpen(false);
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [menuOpen]);
+  const estimatedContextMenuHeight = estimateContextMenuHeight({ itemCount: contextMenuItemCount });
 
   useEffect(
     () => () => {
@@ -1351,13 +1251,7 @@ const OpenConversationRow = memo(function OpenConversationRow({
   }
 
   function openDomContextMenu(x: number, y: number) {
-    const menuWidth = 224;
-    const menuHeight = estimateContextMenuHeight({ itemCount: contextMenuItemCount });
-    const viewportWidth = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerWidth;
-    const viewportHeight = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerHeight;
-    setMenuPosition(
-      clampViewportMenuPosition({ x, y }, { width: menuWidth, height: menuHeight }, { width: viewportWidth, height: viewportHeight }),
-    );
+    setMenuPosition({ x, y });
     setMenuOpen(true);
   }
 
@@ -1566,94 +1460,88 @@ const OpenConversationRow = memo(function OpenConversationRow({
           </span>
         )}
       </div>
-      {menuOpen && menuPosition
-        ? renderSidebarMenuPortal(
-            <div
-              ref={menuRootRef}
-              className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
-              style={getSidebarMenuPositionStyle(menuPosition, 224)}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') {
-                  event.preventDefault();
-                  setMenuOpen(false);
-                }
-              }}
-              role="menu"
-              aria-label={`Conversation actions for ${session.title}`}
-            >
-              <div className="space-y-px">
-                {pinned && onUnpin ? (
+      {menuOpen && menuPosition ? (
+        <ContextMenu
+          ref={menuRootRef}
+          aria-label={`Conversation actions for ${session.title}`}
+          className="min-w-[224px]"
+          estimatedHeight={estimatedContextMenuHeight}
+          minWidth={224}
+          onClose={() => setMenuOpen(false)}
+          position={menuPosition}
+        >
+          <div className="space-y-px">
+            {pinned && onUnpin ? (
+              <MenuItem
+                onClick={async () => {
+                  const succeeded = await onUnpin();
+                  if (succeeded !== false) {
+                    setMenuOpen(false);
+                  }
+                }}
+                disabled={busyExtensionMenuId !== null}
+              >
+                Unpin
+              </MenuItem>
+            ) : null}
+            {!pinned && onPin ? (
+              <MenuItem
+                onClick={async () => {
+                  const succeeded = await onPin();
+                  if (succeeded !== false) {
+                    setMenuOpen(false);
+                  }
+                }}
+                disabled={busyExtensionMenuId !== null}
+              >
+                Pin
+              </MenuItem>
+            ) : null}
+            {onArchive ? (
+              <MenuItem
+                onClick={async () => {
+                  const succeeded = await onArchive();
+                  if (succeeded !== false) {
+                    setMenuOpen(false);
+                  }
+                }}
+                disabled={busyExtensionMenuId !== null}
+              >
+                Archive
+              </MenuItem>
+            ) : null}
+            {onOpenInNewWindow ? (
+              <MenuItem
+                onClick={async () => {
+                  const succeeded = await onOpenInNewWindow?.();
+                  if (succeeded !== false) {
+                    setMenuOpen(false);
+                  }
+                }}
+                disabled={busyExtensionMenuId !== null}
+              >
+                Open in Separate Window
+              </MenuItem>
+            ) : null}
+            {conversationExtensionMenuItems.length > 0 && (
+              <>
+                <MenuSeparator className="mx-2 my-1" />
+                {conversationExtensionMenuItems.map((menu) => (
                   <MenuItem
-                    onClick={async () => {
-                      const succeeded = await onUnpin();
-                      if (succeeded !== false) {
-                        setMenuOpen(false);
-                      }
+                    key={menu.id}
+                    onClick={() => {
+                      void handleExtensionContextMenuClick(menu);
                     }}
                     disabled={busyExtensionMenuId !== null}
                   >
-                    Unpin
+                    {getExtensionContextMenuTitle(menu)}
                   </MenuItem>
-                ) : null}
-                {!pinned && onPin ? (
-                  <MenuItem
-                    onClick={async () => {
-                      const succeeded = await onPin();
-                      if (succeeded !== false) {
-                        setMenuOpen(false);
-                      }
-                    }}
-                    disabled={busyExtensionMenuId !== null}
-                  >
-                    Pin
-                  </MenuItem>
-                ) : null}
-                {onArchive ? (
-                  <MenuItem
-                    onClick={async () => {
-                      const succeeded = await onArchive();
-                      if (succeeded !== false) {
-                        setMenuOpen(false);
-                      }
-                    }}
-                    disabled={busyExtensionMenuId !== null}
-                  >
-                    Archive
-                  </MenuItem>
-                ) : null}
-                {onOpenInNewWindow ? (
-                  <MenuItem
-                    onClick={async () => {
-                      const succeeded = await onOpenInNewWindow?.();
-                      if (succeeded !== false) {
-                        setMenuOpen(false);
-                      }
-                    }}
-                    disabled={busyExtensionMenuId !== null}
-                  >
-                    Open in Separate Window
-                  </MenuItem>
-                ) : null}
-                {conversationExtensionMenuItems.length > 0 && (
-                  <>
-                    <MenuSeparator className="mx-2 my-1" />
-                    {conversationExtensionMenuItems.map((menu) => (
-                      <MenuItem
-                        key={menu.id}
-                        onClick={() => {
-                          void handleExtensionContextMenuClick(menu);
-                        }}
-                        disabled={busyExtensionMenuId !== null}
-                      >
-                        {getExtensionContextMenuTitle(menu)}
-                      </MenuItem>
-                    ))}
-                  </>
-                )}
-              </div>
-            </div>,
-          )
-        : null}
+                ))}
+              </>
+            )}
+          </div>
+        </ContextMenu>
+      ) : null}
     </div>
   );
 });

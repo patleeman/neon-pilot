@@ -13,7 +13,7 @@
 
 import { type CSSProperties, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
-import { CONTEXT_MENU_EDGE_PADDING_PX } from './contextMenuPosition';
+import { getViewportMenuTranslation } from './contextMenuPosition';
 
 interface ContextMenuWrapperProps {
   children: ReactNode;
@@ -26,16 +26,7 @@ export function ContextMenuWrapper({ children, className }: ContextMenuWrapperPr
 
   const measureAndClamp = useCallback((node: HTMLDivElement) => {
     const rect = node.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const dx =
-      rect.left < CONTEXT_MENU_EDGE_PADDING_PX
-        ? CONTEXT_MENU_EDGE_PADDING_PX - rect.left
-        : Math.min(0, viewportWidth - CONTEXT_MENU_EDGE_PADDING_PX - rect.right);
-    const dy =
-      rect.top < CONTEXT_MENU_EDGE_PADDING_PX
-        ? CONTEXT_MENU_EDGE_PADDING_PX - rect.top
-        : Math.min(0, viewportHeight - CONTEXT_MENU_EDGE_PADDING_PX - rect.bottom);
+    const { x: dx, y: dy } = getViewportMenuTranslation(rect, { width: window.innerWidth, height: window.innerHeight });
 
     setClampStyle(dx || dy ? { transform: `translate(${dx}px, ${dy}px)` } : undefined);
   }, []);

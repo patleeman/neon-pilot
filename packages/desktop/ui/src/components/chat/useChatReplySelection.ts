@@ -1,7 +1,6 @@
 import { type MouseEvent as ReactMouseEvent, type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 
 import { writeClipboardText } from '../../desktop/clipboard';
-import { clampViewportMenuPosition, estimateContextMenuHeight } from '../shared/contextMenuPosition';
 import { findSelectionReplyScopeElement, findSelectionReplyScopeElements, readSelectedTextWithinElement } from './replySelection.js';
 
 interface ReplySelectionState {
@@ -35,21 +34,6 @@ function clearWindowSelection() {
   }
 
   window.getSelection()?.removeAllRanges();
-}
-
-export function constrainSelectionContextMenuPosition(
-  menuState: ReplySelectionContextMenuState,
-  viewport: { width: number; height: number },
-): ReplySelectionContextMenuState {
-  const menuWidth = 224;
-  const menuItemCount = 1 + Number(Boolean(menuState.replySelection));
-  const menuHeight = estimateContextMenuHeight({ itemCount: menuItemCount, separatorCount: menuItemCount > 1 ? 1 : 0 });
-  const position = clampViewportMenuPosition(menuState, { width: menuWidth, height: menuHeight }, viewport);
-
-  return {
-    ...menuState,
-    ...position,
-  };
 }
 
 export function parseReplySelectionMessageIndex(value: string | undefined): number | null {
@@ -431,10 +415,8 @@ export function useChatReplySelection({
   );
 
   const openDomSelectionContextMenu = useCallback((menuState: ReplySelectionContextMenuState) => {
-    const viewportWidth = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerWidth;
-    const viewportHeight = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerHeight;
     selectionContextMenuOpenedAtRef.current = typeof performance === 'undefined' ? Date.now() : performance.now();
-    setSelectionContextMenu(constrainSelectionContextMenuPosition(menuState, { width: viewportWidth, height: viewportHeight }));
+    setSelectionContextMenu(menuState);
   }, []);
 
   const runSelectionContextMenuAction = useCallback(
