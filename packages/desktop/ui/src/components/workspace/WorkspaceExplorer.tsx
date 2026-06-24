@@ -76,6 +76,7 @@ const WORKSPACE_EXPLORER_OPEN_KEY = 'pa:workspace-explorer-open';
 const WORKSPACE_EXPLORER_DIFF_KEY = 'pa:workspace-explorer-diff-overlay';
 export const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
 export const WORKBENCH_TOGGLE_DIFF_EVENT = 'pa:workbench-toggle-diff';
+export const WORKBENCH_DIFF_STATE_EVENT = 'pa:workbench-diff-state';
 const WATCH_DEBOUNCE_MS = 180;
 const GIT_REFRESH_DEBOUNCE_MS = 450;
 const STATUS_LABELS: Record<WorkspaceGitStatusChange, string> = {
@@ -101,6 +102,28 @@ const STATUS_TITLES: Record<WorkspaceGitStatusChange, string> = {
 };
 
 const WorkspaceCodeEditor = lazy(() => import('./WorkspaceCodeEditor').then((module) => ({ default: module.WorkspaceCodeEditor })));
+
+function DiffOverlayIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0"
+      aria-hidden="true"
+    >
+      <circle cx="4" cy="3.5" r="1.6" />
+      <circle cx="4" cy="12.5" r="1.6" />
+      <circle cx="12" cy="8" r="1.6" />
+      <path d="M4 5.2v5.6M4 5.2c0 2.2 1.8 2.8 4 2.8h2.2" />
+    </svg>
+  );
+}
 
 function Ico({ d, size = 14 }: { d: string; size?: number }) {
   return (
@@ -820,7 +843,32 @@ export function WorkspaceExplorer({
   const workspaceTreeResetRef = useRef({ entryMap: workspaceEntryMap, paths: workspaceTreePaths });
   workspaceTreeResetRef.current = { entryMap: workspaceEntryMap, paths: workspaceTreePaths };
   const selectedFile = fileState.data;
+  const canToggleDiff = Boolean(selectedFile?.gitStatus && !selectedFile.binary && !selectedFile.tooLarge);
   const diffSpec = showDiff && diffState.data ? diffState.data : { addedLines: [], deletedBlocks: [] };
+  const pathPromptDialogs = (
+    <>
+      {createPathPrompt ? (
+        <TextPromptDialog
+          title={createPathPrompt.kind === 'file' ? 'New file' : 'New folder'}
+          label={createPathPrompt.kind === 'file' ? 'New file name' : 'New folder name'}
+          initialValue={createPathPrompt.kind === 'file' ? 'untitled.txt' : 'New Folder'}
+          onCancel={() => setCreatePathPrompt(null)}
+          onSubmit={(name) => void submitCreatePath(createPathPrompt.kind, createPathPrompt.directory, name)}
+        />
+      ) : null}
+      {movePathPrompt ? (
+        <TextPromptDialog
+          title={`Move ${movePathPrompt.path}`}
+          label="Move to folder (blank for workspace root)"
+          initialValue={parentDirectory(movePathPrompt.path)}
+          allowEmpty
+          confirmLabel="Move"
+          onCancel={() => setMovePathPrompt(null)}
+          onSubmit={(targetDir) => void submitMovePath(movePathPrompt, targetDir)}
+        />
+      ) : null}
+    </>
+  );
 
   useEffect(() => {
     writeStoredBoolean(WORKSPACE_EXPLORER_OPEN_KEY, open);
@@ -901,65 +949,68 @@ export function WorkspaceExplorer({
 
   if (railOnly) {
     return (
-      <div className="flex h-full flex-col bg-panel text-sm">
-        <div className="min-h-0 flex-1 overflow-hidden px-1.5 py-2">
-          {rootListing.status === 'loading' && !rootListing.data ? (
-            <PanelMessage className="animate-pulse px-3 py-2">Loading workspace…</PanelMessage>
-          ) : rootListing.error ? (
-            <EmptyState title="Workspace unavailable" body={rootListing.error} className="px-3 py-8" />
-          ) : (
-            <TreesFileTree
-              className="h-full rounded-none"
-              model={model}
-              {...(!useNativeWorkspaceContextMenu
-                ? {
-                    renderContextMenu: (item: FileTreeContextMenuItem, context: FileTreeContextMenuOpenContext) => {
-                      const entry = workspaceEntryMap.get(treePathToWorkspacePath(item.path));
-                      if (!entry) return null;
-                      const directory = entry.kind === 'directory' ? entry.path : parentDirectory(entry.path);
-                      const desktopBridge = getDesktopBridge();
-                      return (
-                        <WorkspaceTreeContextMenu
-                          onCreateFile={() => {
-                            context.close();
-                            void createPath('file', directory);
-                          }}
-                          onCreateFolder={() => {
-                            context.close();
-                            void createPath('folder', directory);
-                          }}
-                          onOpenInFinder={
-                            desktopBridge?.openPath
-                              ? () => {
-                                  context.close();
-                                  void desktopBridge.openPath(
-                                    entry.kind === 'directory' ? `${root ?? cwd}/${entry.path}` : `${root ?? cwd}/${directory}`,
-                                  );
-                                }
-                              : undefined
-                          }
-                          onRename={() => {
-                            context.close({ restoreFocus: false });
-                            window.setTimeout(() => model.startRenaming(workspaceEntryToTreePath(entry)), 0);
-                          }}
-                          onMove={() => {
-                            context.close();
-                            void movePath(entry);
-                          }}
-                          onDelete={() => {
-                            context.close();
-                            void deletePath(entry);
-                          }}
-                        />
-                      );
-                    },
-                  }
-                : {})}
-              style={TREE_HOST_STYLE}
-            />
-          )}
+      <>
+        <div className="flex h-full flex-col bg-panel text-sm">
+          <div className="min-h-0 flex-1 overflow-hidden px-1.5 py-2">
+            {rootListing.status === 'loading' && !rootListing.data ? (
+              <PanelMessage className="animate-pulse px-3 py-2">Loading workspace…</PanelMessage>
+            ) : rootListing.error ? (
+              <EmptyState title="Workspace unavailable" body={rootListing.error} className="px-3 py-8" />
+            ) : (
+              <TreesFileTree
+                className="h-full rounded-none"
+                model={model}
+                {...(!useNativeWorkspaceContextMenu
+                  ? {
+                      renderContextMenu: (item: FileTreeContextMenuItem, context: FileTreeContextMenuOpenContext) => {
+                        const entry = workspaceEntryMap.get(treePathToWorkspacePath(item.path));
+                        if (!entry) return null;
+                        const directory = entry.kind === 'directory' ? entry.path : parentDirectory(entry.path);
+                        const desktopBridge = getDesktopBridge();
+                        return (
+                          <WorkspaceTreeContextMenu
+                            onCreateFile={() => {
+                              context.close();
+                              void createPath('file', directory);
+                            }}
+                            onCreateFolder={() => {
+                              context.close();
+                              void createPath('folder', directory);
+                            }}
+                            onOpenInFinder={
+                              desktopBridge?.openPath
+                                ? () => {
+                                    context.close();
+                                    void desktopBridge.openPath(
+                                      entry.kind === 'directory' ? `${root ?? cwd}/${entry.path}` : `${root ?? cwd}/${directory}`,
+                                    );
+                                  }
+                                : undefined
+                            }
+                            onRename={() => {
+                              context.close({ restoreFocus: false });
+                              window.setTimeout(() => model.startRenaming(workspaceEntryToTreePath(entry)), 0);
+                            }}
+                            onMove={() => {
+                              context.close();
+                              void movePath(entry);
+                            }}
+                            onDelete={() => {
+                              context.close();
+                              void deletePath(entry);
+                            }}
+                          />
+                        );
+                      },
+                    }
+                  : {})}
+                style={TREE_HOST_STYLE}
+              />
+            )}
+          </div>
         </div>
-      </div>
+        {pathPromptDialogs}
+      </>
     );
   }
 
@@ -985,6 +1036,18 @@ export function WorkspaceExplorer({
               {changes.length}
             </Pill>
           )}
+          {canToggleDiff ? (
+            <IconButton
+              compact
+              className={cx('shrink-0', showDiff && 'text-accent')}
+              title={showDiff ? 'Hide diff overlay' : 'Show diff overlay'}
+              aria-label={showDiff ? 'Hide diff overlay' : 'Show diff overlay'}
+              aria-pressed={showDiff}
+              onClick={() => setShowDiff((value) => !value)}
+            >
+              <DiffOverlayIcon size={12} />
+            </IconButton>
+          ) : null}
           <IconButton
             compact
             title="Refresh workspace"
@@ -1046,11 +1109,6 @@ export function WorkspaceExplorer({
                   </div>
                 </div>
                 <WorkspaceStatusBadge status={selectedFile.gitStatus} />
-                {selectedFile.gitStatus && !selectedFile.binary && !selectedFile.tooLarge && (
-                  <ToolbarButton className={cx('text-[11px]', showDiff && 'text-accent')} onClick={() => setShowDiff((value) => !value)}>
-                    {showDiff ? 'Diff on' : 'Diff off'}
-                  </ToolbarButton>
-                )}
               </div>
               <div className="min-h-0 flex-1 overflow-hidden">
                 {selectedFile.binary || (selectedFile.tooLarge && !selectedFile.content) ? (
@@ -1115,26 +1173,7 @@ export function WorkspaceExplorer({
           ) : null}
         </div>
       )}
-      {createPathPrompt ? (
-        <TextPromptDialog
-          title={createPathPrompt.kind === 'file' ? 'New file' : 'New folder'}
-          label={createPathPrompt.kind === 'file' ? 'New file name' : 'New folder name'}
-          initialValue={createPathPrompt.kind === 'file' ? 'untitled.txt' : 'New Folder'}
-          onCancel={() => setCreatePathPrompt(null)}
-          onSubmit={(name) => void submitCreatePath(createPathPrompt.kind, createPathPrompt.directory, name)}
-        />
-      ) : null}
-      {movePathPrompt ? (
-        <TextPromptDialog
-          title={`Move ${movePathPrompt.path}`}
-          label="Move to folder (blank for workspace root)"
-          initialValue={parentDirectory(movePathPrompt.path)}
-          allowEmpty
-          confirmLabel="Move"
-          onCancel={() => setMovePathPrompt(null)}
-          onSubmit={(targetDir) => void submitMovePath(movePathPrompt, targetDir)}
-        />
-      ) : null}
+      {pathPromptDialogs}
     </div>
   );
 }
@@ -1243,6 +1282,24 @@ export function WorkspaceFileDocument({
     setExtensionCommandContext('workbench.canToggleDiff', canToggleDiff);
     return () => setExtensionCommandContext('workbench.canToggleDiff', null);
   }, [canToggleDiff]);
+
+  useEffect(() => {
+    const detail = { cwd, path, canToggleDiff, diffEnabled: showDiff };
+    const publish = () => {
+      window.dispatchEvent(new CustomEvent(WORKBENCH_DIFF_STATE_EVENT, { detail }));
+    };
+
+    publish();
+    const publishAfterHostEffects = window.setTimeout(publish, 0);
+    return () => {
+      window.clearTimeout(publishAfterHostEffects);
+      window.dispatchEvent(
+        new CustomEvent(WORKBENCH_DIFF_STATE_EVENT, {
+          detail: { cwd, path, canToggleDiff: false, diffEnabled: false },
+        }),
+      );
+    };
+  }, [canToggleDiff, cwd, path, showDiff]);
 
   // Debounced auto-save
   useEffect(() => {
@@ -1412,13 +1469,6 @@ export function WorkspaceFileDocument({
               {path}
             </div>
           </div>
-        </div>
-      )}
-      {canToggleDiff && (
-        <div className="flex items-center justify-end border-b border-border-subtle bg-surface px-3 py-1.5">
-          <ToolbarButton className={cx('px-2 text-[10px]', showDiff && 'text-accent')} onClick={() => setShowDiff((value) => !value)}>
-            {showDiff ? 'Diff on' : 'Diff off'}
-          </ToolbarButton>
         </div>
       )}
       <div

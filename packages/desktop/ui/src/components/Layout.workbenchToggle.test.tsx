@@ -348,6 +348,40 @@ describe('Layout workbench toggle', () => {
     window.removeEventListener('pa:workbench-toggle-diff', diffListener);
   });
 
+  it('renders the workbench diff toggle in the file toolbar', async () => {
+    setWorkbenchModeForCurrentSession();
+    sessionStore.upsert({
+      id: 'conv-1',
+      file: '/tmp/conv-1.jsonl',
+      timestamp: new Date().toISOString(),
+      cwd: '/repo',
+      cwdSlug: 'repo',
+      model: 'deepseek-v4-flash',
+      title: 'Workspace conversation',
+      messageCount: 0,
+    });
+    const diffListener = vi.fn();
+    window.addEventListener('pa:workbench-toggle-diff', diffListener);
+
+    renderLayout('/conversations/conv-1?workspaceFile=README.md');
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('pa:workbench-diff-state', {
+          detail: { cwd: '/repo', path: 'README.md', canToggleDiff: true, diffEnabled: true },
+        }),
+      );
+    });
+
+    const toggle = await screen.findByRole('button', { name: 'Hide diff overlay' });
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+
+    fireEvent.click(toggle);
+
+    expect(diffListener).toHaveBeenCalledTimes(1);
+    window.removeEventListener('pa:workbench-toggle-diff', diffListener);
+  });
+
   it('accepts command-only desktop shortcut events for composer stop', () => {
     const stopListener = vi.fn();
     window.addEventListener('neon-pilot:composer-stop', stopListener);

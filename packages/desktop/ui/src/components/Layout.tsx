@@ -158,6 +158,7 @@ const CommandPalette = lazyRouteWithRecovery('layout-command-palette', () =>
 const WORKBENCH_CLOSE_ACTIVE_FILE_EVENT = 'pa:workbench-close-active-file';
 const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
 const WORKBENCH_TOGGLE_DIFF_EVENT = 'pa:workbench-toggle-diff';
+const WORKBENCH_DIFF_STATE_EVENT = 'pa:workbench-diff-state';
 const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
 const NOTIFICATIONS_MARK_ALL_READ_EVENT = 'neon-pilot-notifications-mark-all-read';
 const NOTIFICATIONS_DISMISS_ALL_EVENT = 'neon-pilot-notifications-dismiss-all';
@@ -333,22 +334,50 @@ function getDisplayFileName(path: string): string {
   return parts.at(-1) ?? trimmed;
 }
 
+function DiffOverlayIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="4" cy="3.5" r="1.6" />
+      <circle cx="4" cy="12.5" r="1.6" />
+      <circle cx="12" cy="8" r="1.6" />
+      <path d="M4 5.2v5.6M4 5.2c0 2.2 1.8 2.8 4 2.8h2.2" />
+    </svg>
+  );
+}
+
 function FileDocumentBar({
   filePath,
   railOpen,
   canToggleRail,
+  canToggleDiff = false,
+  diffEnabled = false,
   collapseLabel = 'Collapse file tree',
   expandLabel = 'Show file tree',
   onRailOpenChange,
+  onDiffToggle,
 }: {
   filePath: string;
   railOpen: boolean;
   canToggleRail: boolean;
+  canToggleDiff?: boolean;
+  diffEnabled?: boolean;
   collapseLabel?: string;
   expandLabel?: string;
   onRailOpenChange: (open: boolean) => void;
+  onDiffToggle?: () => void;
 }) {
   const railLabel = railOpen ? collapseLabel : expandLabel;
+  const diffLabel = diffEnabled ? 'Hide diff overlay' : 'Show diff overlay';
 
   return (
     <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle bg-surface px-3 py-2 text-secondary">
@@ -376,6 +405,18 @@ function FileDocumentBar({
           </svg>
         </IconButton>
       ) : null}
+      {canToggleDiff ? (
+        <IconButton
+          compact
+          className={cx('shrink-0', diffEnabled && 'text-accent')}
+          title={diffLabel}
+          aria-label={diffLabel}
+          aria-pressed={diffEnabled}
+          onClick={onDiffToggle}
+        >
+          <DiffOverlayIcon />
+        </IconButton>
+      ) : null}
       <IconButton
         compact
         className="shrink-0"
@@ -398,6 +439,30 @@ function FileDocumentBar({
         </svg>
       </IconButton>
     </div>
+  );
+}
+
+type WorkbenchDiffState = {
+  canToggleDiff: boolean;
+  diffEnabled: boolean;
+};
+
+function isWorkbenchDiffStateDetail(value: unknown): value is { cwd: string; path: string; canToggleDiff: boolean; diffEnabled: boolean } {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const detail = value as {
+    cwd?: unknown;
+    path?: unknown;
+    canToggleDiff?: unknown;
+    diffEnabled?: unknown;
+  };
+  return (
+    typeof detail.cwd === 'string' &&
+    typeof detail.path === 'string' &&
+    typeof detail.canToggleDiff === 'boolean' &&
+    typeof detail.diffEnabled === 'boolean'
   );
 }
 
@@ -860,6 +925,7 @@ function WorkbenchDocumentPane({
   onStartSideChat?: () => Promise<string | void>;
 }) {
   const location = useLocation();
+  const [workbenchDiffState, setWorkbenchDiffState] = useState<WorkbenchDiffState>({ canToggleDiff: false, diffEnabled: false });
   const activeExtensionToolPanel = useMemo(() => {
     const parsed = parseExtensionToolPanelMode(activeTool);
     if (!parsed) return findExtensionToolPanelBySlot(extensionToolPanels, activeTool);
@@ -872,6 +938,27 @@ function WorkbenchDocumentPane({
       : location.search;
   const activeFilePath = activeToolSlot === 'knowledge' ? knowledgeFileId : workspaceFileId;
   const showFileBar = Boolean(activeFilePath && (activeToolSlot === 'files' || activeToolSlot === 'knowledge'));
+
+  useEffect(() => {
+    setWorkbenchDiffState({ canToggleDiff: false, diffEnabled: false });
+    if (!workspaceCwd || !workspaceFileId) {
+      return;
+    }
+
+    function handleDiffState(event: Event) {
+      const detail = (event as CustomEvent<unknown>).detail;
+      if (!isWorkbenchDiffStateDetail(detail)) {
+        return;
+      }
+      if (detail.cwd !== workspaceCwd || detail.path !== workspaceFileId) {
+        return;
+      }
+      setWorkbenchDiffState({ canToggleDiff: detail.canToggleDiff, diffEnabled: detail.diffEnabled });
+    }
+
+    window.addEventListener(WORKBENCH_DIFF_STATE_EVENT, handleDiffState);
+    return () => window.removeEventListener(WORKBENCH_DIFF_STATE_EVENT, handleDiffState);
+  }, [workspaceCwd, workspaceFileId]);
 
   let mainContent: ReactNode = null;
 
@@ -954,7 +1041,10 @@ function WorkbenchDocumentPane({
           filePath={activeFilePath ?? ''}
           railOpen={railOpen}
           canToggleRail={Boolean(extensionRailSurface)}
+          canToggleDiff={activeToolSlot === 'files' && workbenchDiffState.canToggleDiff}
+          diffEnabled={workbenchDiffState.diffEnabled}
           onRailOpenChange={onRailOpenChange}
+          onDiffToggle={() => window.dispatchEvent(new CustomEvent(WORKBENCH_TOGGLE_DIFF_EVENT))}
         />
       ) : null}
       <div className="flex min-h-0 flex-1 overflow-hidden">

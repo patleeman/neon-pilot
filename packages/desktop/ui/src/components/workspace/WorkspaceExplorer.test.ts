@@ -259,6 +259,43 @@ describe('formatWorkspaceEntrySize', () => {
     });
   });
 
+  it('publishes diff toolbar state without rendering the old text toggle', async () => {
+    const changed = deferred<ReturnType<typeof file>>();
+    const diff = deferred<{ addedLines: never[]; deletedBlocks: never[] }>();
+    apiMocks.workspaceFile.mockReturnValueOnce(changed.promise);
+    apiMocks.workspaceDiff.mockReturnValueOnce(diff.promise);
+    const diffStates: unknown[] = [];
+    const listener = (event: Event) => {
+      diffStates.push((event as CustomEvent<unknown>).detail);
+    };
+    window.addEventListener('pa:workbench-diff-state', listener);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(React.createElement(WorkspaceFileDocument, { cwd: '/repo', path: 'changed.ts' }));
+    });
+
+    await act(async () => {
+      changed.resolve(file('changed.ts', 'changed file', { gitStatus: 'modified' }));
+      await changed.promise;
+    });
+    await act(async () => {
+      diff.resolve({ addedLines: [], deletedBlocks: [] });
+      await diff.promise;
+    });
+
+    await vi.waitFor(() => {
+      expect(diffStates).toContainEqual({ cwd: '/repo', path: 'changed.ts', canToggleDiff: true, diffEnabled: true });
+    });
+    expect(container.textContent).not.toContain('Diff on');
+    expect(container.textContent).not.toContain('Diff off');
+    window.removeEventListener('pa:workbench-diff-state', listener);
+  });
+
   it('ignores stale auto-save completions after switching files', async () => {
     vi.useFakeTimers();
     const fileA = deferred<ReturnType<typeof file>>();
