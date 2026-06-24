@@ -45,7 +45,33 @@ describe('localApiConversationCwd', () => {
         resolveNeutralChatCwd: vi.fn(),
         resolveRequestedCwd: vi.fn(() => undefined),
       }),
-    ).toThrow('cwd required');
+    ).toThrow('Choose a working directory.');
+  });
+
+  it('maps resolver validation errors to user-facing cwd errors', () => {
+    expect(() =>
+      resolveDesktopConversationNextCwd({
+        cwd: './missing',
+        currentCwd: '/repo/current',
+        runtimeScope: 'shared',
+        resolveNeutralChatCwd: vi.fn(),
+        resolveRequestedCwd: vi.fn(() => {
+          throw new Error('Directory does not exist: /repo/missing');
+        }),
+      }),
+    ).toThrow('Choose an existing folder. /repo/missing could not be found.');
+
+    expect(() =>
+      resolveDesktopConversationNextCwd({
+        cwd: './file.txt',
+        currentCwd: '/repo/current',
+        runtimeScope: 'shared',
+        resolveNeutralChatCwd: vi.fn(),
+        resolveRequestedCwd: vi.fn(() => {
+          throw new Error('Not a directory: /repo/file.txt');
+        }),
+      }),
+    ).toThrow('Choose a folder, not a file. /repo/file.txt is not a folder.');
   });
 
   it('asserts cwd exists and is a directory', () => {
@@ -56,7 +82,7 @@ describe('localApiConversationCwd', () => {
     mkdirSync(dirPath);
 
     expect(() => assertDesktopConversationCwdDirectory(dirPath)).not.toThrow();
-    expect(() => assertDesktopConversationCwdDirectory(join(root, 'missing'))).toThrow('Directory does not exist');
-    expect(() => assertDesktopConversationCwdDirectory(filePath)).toThrow('Not a directory');
+    expect(() => assertDesktopConversationCwdDirectory(join(root, 'missing'))).toThrow('Choose an existing folder.');
+    expect(() => assertDesktopConversationCwdDirectory(filePath)).toThrow('Choose a folder, not a file.');
   });
 });

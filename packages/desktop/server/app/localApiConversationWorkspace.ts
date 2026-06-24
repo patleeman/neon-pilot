@@ -160,6 +160,26 @@ function listWorkspaceSessionIds(layout: DesktopConversationWorkspaceLayout): st
   return [...layout.pinnedSessionIds, ...layout.sessionIds];
 }
 
+export function filterDesktopConversationWorkspaceLayoutBySessionIds(
+  layout: DesktopConversationWorkspaceLayout,
+  sessionIds: ReadonlySet<string>,
+): DesktopConversationWorkspaceLayout {
+  const pinnedSessionIds = layout.pinnedSessionIds.filter((id) => sessionIds.has(id));
+  const pinnedIdSet = new Set(pinnedSessionIds);
+  const openSessionIds = layout.sessionIds.filter((id) => sessionIds.has(id) && !pinnedIdSet.has(id));
+  const workspaceIdSet = new Set([...pinnedSessionIds, ...openSessionIds]);
+  const archivedSessionIds = layout.archivedSessionIds.filter((id) => sessionIds.has(id) && !workspaceIdSet.has(id));
+  const knownLayoutIds = new Set([...workspaceIdSet, ...archivedSessionIds]);
+  return normalizeDesktopConversationWorkspaceLayout({
+    sessionIds: openSessionIds,
+    pinnedSessionIds,
+    archivedSessionIds,
+    lockedConversationIds: layout.lockedConversationIds.filter((id) => knownLayoutIds.has(id)),
+    activeConversationId:
+      layout.activeConversationId && workspaceIdSet.has(layout.activeConversationId) ? layout.activeConversationId : null,
+  });
+}
+
 function applyArchiveTransitions(
   current: DesktopConversationWorkspaceLayout,
   next: DesktopConversationWorkspaceLayout,

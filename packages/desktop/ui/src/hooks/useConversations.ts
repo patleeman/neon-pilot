@@ -349,12 +349,11 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   );
 
   useEffect(() => {
-    if (sessions && sessions.length > 0) {
-      return;
-    }
-
+    const currentLayout = readConversationLayout();
+    const currentWorkspaceIds = new Set([...currentLayout.pinnedSessionIds, ...currentLayout.sessionIds]);
     const missingIds = [...pinnedIds, ...openIds].filter(
       (id) =>
+        currentWorkspaceIds.has(id) &&
         !sessionsById.has(id) &&
         !liveTitles.has(id) &&
         !automationThreadTitleBySessionId.has(id) &&

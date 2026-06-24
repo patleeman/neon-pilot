@@ -181,6 +181,7 @@ import { buildDesktopConversationGoalState, validateDesktopConversationGoalInput
 import {
   applyDesktopConversationWorkspaceOperation,
   desktopConversationWorkspaceInvalidationTopics,
+  filterDesktopConversationWorkspaceLayoutBySessionIds,
   validateDesktopConversationWorkspaceOperation,
   validateDesktopConversationWorkspaceUpdate,
 } from './localApiConversationWorkspace.js';
@@ -978,6 +979,10 @@ function getDesktopLocalApiErrorStatus(error: unknown): number {
 
   if (error.name === 'ConversationAssetCapabilityNotFoundError' || error.name === 'ConversationDeferredResumeCapabilityNotFoundError') {
     return 404;
+  }
+
+  if (error.name === 'DesktopConversationCwdValidationError') {
+    return 400;
   }
 
   return /\bnot found\b/i.test(error.message) || error.message === '404 Not Found' ? 404 : 500;
@@ -1978,15 +1983,27 @@ export async function saveDesktopConversationWorkspace(input: {
   validateDesktopConversationWorkspaceUpdate(input);
 
   const context = await getLocalServerRouteContext();
+  const current = readSavedUiPreferences(context.getSettingsFile());
+  const knownSessionIds = new Set(readConversationSessionsCapability().map((session) => session.id));
+  const nextLayout = filterDesktopConversationWorkspaceLayoutBySessionIds(
+    {
+      sessionIds: sessionIds ?? current.openConversationIds,
+      pinnedSessionIds: pinnedSessionIds ?? current.pinnedConversationIds,
+      archivedSessionIds: archivedSessionIds ?? current.archivedConversationIds,
+      lockedConversationIds: lockedConversationIds ?? current.lockedConversationIds,
+      activeConversationId: activeConversationId === undefined ? current.activeConversationId : activeConversationId,
+    },
+    knownSessionIds,
+  );
   const saved = persistSettingsWrite(
     (settingsFile) =>
       writeSavedUiPreferences(
         {
-          openConversationIds: sessionIds,
-          pinnedConversationIds: pinnedSessionIds,
-          archivedConversationIds: archivedSessionIds,
-          lockedConversationIds,
-          activeConversationId,
+          openConversationIds: sessionIds === undefined ? undefined : nextLayout.sessionIds,
+          pinnedConversationIds: pinnedSessionIds === undefined ? undefined : nextLayout.pinnedSessionIds,
+          archivedConversationIds: archivedSessionIds === undefined ? undefined : nextLayout.archivedSessionIds,
+          lockedConversationIds: lockedConversationIds === undefined ? undefined : nextLayout.lockedConversationIds,
+          activeConversationId: activeConversationId === undefined ? undefined : nextLayout.activeConversationId,
           workspacePaths,
           conversationWorkspaceMigrated,
         },
@@ -2013,7 +2030,14 @@ export async function updateDesktopConversationWorkspaceByOperation(
 
   const context = await getLocalServerRouteContext();
   const current = readSavedUiPreferences(context.getSettingsFile());
-  const next = applyDesktopConversationWorkspaceOperation(
+  const knownSessionIds = new Set(readConversationSessionsCapability().map((session) => session.id));
+  if ('sessionId' in input && input.operation !== 'close') {
+    const sessionId = typeof input.sessionId === 'string' ? input.sessionId.trim() : '';
+    if (sessionId) {
+      knownSessionIds.add(sessionId);
+    }
+  }
+  const currentLayout = filterDesktopConversationWorkspaceLayoutBySessionIds(
     {
       sessionIds: current.openConversationIds,
       pinnedSessionIds: current.pinnedConversationIds,
@@ -2021,7 +2045,11 @@ export async function updateDesktopConversationWorkspaceByOperation(
       lockedConversationIds: current.lockedConversationIds,
       activeConversationId: current.activeConversationId,
     },
-    input,
+    knownSessionIds,
+  );
+  const next = filterDesktopConversationWorkspaceLayoutBySessionIds(
+    applyDesktopConversationWorkspaceOperation(currentLayout, input),
+    knownSessionIds,
   );
   const saved = persistSettingsWrite(
     (settingsFile) =>

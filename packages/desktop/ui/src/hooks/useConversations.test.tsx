@@ -632,6 +632,30 @@ describe('useConversations', () => {
     expect(latestHookResult?.tabs.map((session) => session.title)).toEqual(['Loaded open-one']);
   });
 
+  it('loads missing row metadata when a partial sessions snapshot already exists', async () => {
+    apiMocks.sidebarConversations.mockResolvedValue({
+      sessionIds: ['real-open', 'stale-but-known'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'stale-but-known',
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 2,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:01.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+    });
+
+    renderStatefulProbe({
+      sessions: [createSession({ id: 'real-open', title: 'Real open' })],
+      tasks: null,
+    });
+
+    await flushAsyncWork();
+
+    expect(apiMocks.sessionMeta).toHaveBeenCalledWith('stale-but-known');
+    expect(latestHookResult?.tabs.map((session) => session.title)).toEqual(['Real open', 'Loaded stale-but-known']);
+  });
+
   it('keeps a placeholder tab when row metadata fails before any full snapshot arrives', async () => {
     apiMocks.sidebarConversations.mockResolvedValue({
       sessionIds: ['open-missing-meta'],

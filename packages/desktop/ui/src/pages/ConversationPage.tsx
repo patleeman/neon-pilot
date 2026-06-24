@@ -405,6 +405,36 @@ const ConversationDrawingsPickerModal = lazy(() =>
 const loadChatView = () => import('../components/chat/ChatView').then((module) => ({ default: module.ChatView }));
 const ChatView = lazy(loadChatView);
 const EMPTY_TOOL_DEFINITIONS: LiveSessionToolDefinition[] = [];
+
+function formatConversationCwdError(error: unknown): string {
+  const fallback = 'Could not change the working directory.';
+  if (!(error instanceof Error)) {
+    return fallback;
+  }
+
+  let message = error.message.trim();
+  if (!message) {
+    return fallback;
+  }
+
+  const apiPreviewMatch = /^(?:400|500) [^:]+ from \/api\/conversations\/[^/]+\/cwd:\s*(.+)$/i.exec(message);
+  if (apiPreviewMatch?.[1]?.trim()) {
+    message = apiPreviewMatch[1].trim();
+  }
+
+  const missingDirectoryMatch = /^Directory does not exist:\s*(.+)$/i.exec(message);
+  if (missingDirectoryMatch?.[1]?.trim()) {
+    return `Choose an existing folder. ${missingDirectoryMatch[1].trim()} could not be found.`;
+  }
+
+  const notDirectoryMatch = /^Not a directory:\s*(.+)$/i.exec(message);
+  if (notDirectoryMatch?.[1]?.trim()) {
+    return `Choose a folder, not a file. ${notDirectoryMatch[1].trim()} is not a folder.`;
+  }
+
+  return message;
+}
+
 const ConversationActivityShelf = lazy(() =>
   import('../components/conversation/ConversationActivityShelf').then((module) => ({ default: module.ConversationActivityShelf })),
 );
@@ -3871,7 +3901,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         closeConversationTab(id);
         navigate(`/conversations/${result.id}`);
       } catch (error) {
-        setConversationCwdError(error instanceof Error ? error.message : 'Could not change the working directory.');
+        setConversationCwdError(formatConversationCwdError(error));
       } finally {
         setConversationCwdBusy(false);
       }

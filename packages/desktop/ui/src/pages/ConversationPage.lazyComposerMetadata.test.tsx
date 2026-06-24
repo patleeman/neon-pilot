@@ -1036,6 +1036,116 @@ describe('ConversationPage lazy composer metadata', () => {
     expect(screen.getByRole('button', { name: '/tmp/next-project' }).getAttribute('title')).toBe('Working directory: /tmp/next-project');
   });
 
+  it('shows clean validation copy when a saved conversation working directory is unavailable', async () => {
+    regressionBootstrapData.liveSession = {
+      live: true,
+      id: 'conv-regression',
+      cwd: '/tmp/project',
+      sessionFile: '/tmp/conv-regression.jsonl',
+      title: 'Regression conversation',
+      isStreaming: false,
+      hasStaleTurnState: false,
+    };
+    regressionBootstrapData.sessionDetail = {
+      ...regressionBootstrapData.sessionDetail,
+      meta: {
+        ...regressionBootstrapData.sessionDetail.meta,
+        cwd: '/tmp/project',
+        cwdSlug: 'project',
+        isLive: true,
+      },
+    };
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = createDesktopStateFromRegressionBootstrap();
+    apiMock.changeConversationCwd.mockRejectedValue(
+      new Error(
+        '400 Bad Request from /api/conversations/conv-regression/cwd: Choose an existing folder. /tmp/missing-project could not be found.',
+      ),
+    );
+    window.localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify(['/tmp/project', '/tmp/missing-project']));
+
+    renderConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '/tmp/project' }));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox', { name: 'Conversation working directory' }), {
+        target: { value: '/tmp/missing-project' },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('Choose an existing folder. /tmp/missing-project could not be found.')).toBeTruthy();
+    expect(screen.queryByText(/Bad Request from \/api/)).toBeNull();
+    expect(screen.queryByText(/Internal Server Error/)).toBeNull();
+  });
+
+  it.each([
+    ['Directory does not exist: /tmp/missing-project'],
+    ['500 Internal Server Error from /api/conversations/conv-regression/cwd: Directory does not exist: /tmp/missing-project'],
+  ])('shows clean validation copy for legacy working directory resolver errors: %s', async (errorMessage) => {
+    regressionBootstrapData.liveSession = {
+      live: true,
+      id: 'conv-regression',
+      cwd: '/tmp/project',
+      sessionFile: '/tmp/conv-regression.jsonl',
+      title: 'Regression conversation',
+      isStreaming: false,
+      hasStaleTurnState: false,
+    };
+    regressionBootstrapData.sessionDetail = {
+      ...regressionBootstrapData.sessionDetail,
+      meta: {
+        ...regressionBootstrapData.sessionDetail.meta,
+        cwd: '/tmp/project',
+        cwdSlug: 'project',
+        isLive: true,
+      },
+    };
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = createDesktopStateFromRegressionBootstrap();
+    apiMock.changeConversationCwd.mockRejectedValue(new Error(errorMessage));
+    window.localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify(['/tmp/project', '/tmp/missing-project']));
+
+    renderConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '/tmp/project' }));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox', { name: 'Conversation working directory' }), {
+        target: { value: '/tmp/missing-project' },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('Choose an existing folder. /tmp/missing-project could not be found.')).toBeTruthy();
+    expect(screen.queryByText(/Directory does not exist/)).toBeNull();
+  });
+
   it('switches the saved conversation working directory after choosing a folder', async () => {
     regressionBootstrapData.liveSession = {
       live: true,

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyDesktopConversationWorkspaceOperation,
   desktopConversationWorkspaceInvalidationTopics,
+  filterDesktopConversationWorkspaceLayoutBySessionIds,
   validateDesktopConversationWorkspaceOperation,
   validateDesktopConversationWorkspaceUpdate,
 } from './localApiConversationWorkspace';
@@ -56,6 +57,27 @@ describe('localApiConversationWorkspace', () => {
       'workspace',
     ]);
     expect(desktopConversationWorkspaceInvalidationTopics({ workspacePaths: [] })).toEqual(['workspace']);
+  });
+
+  it('filters stale workspace ids before returning a backend-backed layout', () => {
+    expect(
+      filterDesktopConversationWorkspaceLayoutBySessionIds(
+        {
+          sessionIds: ['open-a', 'stale-open', 'pinned-a'],
+          pinnedSessionIds: ['pinned-a', 'stale-pinned'],
+          archivedSessionIds: ['archived-a', 'stale-archived', 'open-a'],
+          lockedConversationIds: ['open-a', 'archived-a', 'stale-open'],
+          activeConversationId: 'stale-open',
+        },
+        new Set(['open-a', 'pinned-a', 'archived-a']),
+      ),
+    ).toEqual({
+      sessionIds: ['open-a'],
+      pinnedSessionIds: ['pinned-a'],
+      archivedSessionIds: ['archived-a'],
+      lockedConversationIds: ['open-a', 'archived-a'],
+      activeConversationId: null,
+    });
   });
 
   it('applies a multi-action workspace operation flow on the backend layout', () => {
