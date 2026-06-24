@@ -80,7 +80,7 @@ vi.mock('../shared/useFileTreeModel', () => ({
   }),
 }));
 
-import { formatWorkspaceEntrySize, WorkspaceExplorer, WorkspaceFileDocument } from './WorkspaceExplorer.js';
+import { buildWorkspaceTreePaths, formatWorkspaceEntrySize, WorkspaceExplorer, WorkspaceFileDocument } from './WorkspaceExplorer.js';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -155,6 +155,48 @@ describe('formatWorkspaceEntrySize', () => {
   it('omits unsafe file sizes', () => {
     expect(formatWorkspaceEntrySize(Number.MAX_SAFE_INTEGER + 1)).toBe('');
     expect(formatWorkspaceEntrySize(1.5)).toBe('');
+  });
+
+  it('adds a friendly synthetic child row for rail folder load failures', () => {
+    const paths = buildWorkspaceTreePaths(
+      [
+        {
+          path: 'tmp',
+          name: 'tmp',
+          kind: 'directory',
+          size: null,
+          modifiedAt: null,
+          gitStatus: null,
+          descendantGitStatusCount: 0,
+        },
+        {
+          path: 'tmp/visible.txt',
+          name: 'visible.txt',
+          kind: 'file',
+          size: 7,
+          modifiedAt: null,
+          gitStatus: null,
+          descendantGitStatusCount: 0,
+        },
+      ],
+      {
+        'tmp/locked': {
+          expanded: true,
+          error: "EACCES: permission denied, scandir '/repo/tmp/locked'",
+        },
+        'tmp/collapsed': {
+          expanded: false,
+          error: "EACCES: permission denied, scandir '/repo/tmp/collapsed'",
+        },
+      },
+    );
+
+    expect(paths).toContain('tmp/');
+    expect(paths).toContain('tmp/visible.txt');
+    expect(paths).toContain('tmp/locked/Could not load this folder');
+    expect(paths).not.toContain('tmp/collapsed/Could not load this folder');
+    expect(paths.join('\n')).not.toContain('EACCES');
+    expect(paths.join('\n')).not.toContain('/repo/tmp/locked');
   });
 
   it('does not render internal workspace tree route failures in the file explorer', async () => {

@@ -68,6 +68,7 @@ const WORKSPACE_EXPLORER_DIFF_KEY = 'pa:workspace-explorer-diff-overlay';
 export const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
 export const WORKBENCH_TOGGLE_DIFF_EVENT = 'pa:workbench-toggle-diff';
 export const WORKBENCH_DIFF_STATE_EVENT = 'pa:workbench-diff-state';
+const WORKSPACE_TREE_ERROR_ROW_NAME = 'Could not load this folder';
 const WATCH_DEBOUNCE_MS = 180;
 const GIT_REFRESH_DEBOUNCE_MS = 450;
 const STATUS_LABELS: Record<WorkspaceGitStatusChange, string> = {
@@ -306,6 +307,27 @@ function buildPrompt(root: string | null, action: string, path: string): string 
 
 function workspaceEntryToTreePath(entry: WorkspaceEntry): string {
   return entry.kind === 'directory' ? `${entry.path}/` : entry.path;
+}
+
+function workspaceDirectoryErrorToTreePath(path: string): string {
+  return `${treePathToWorkspacePath(path)}/${WORKSPACE_TREE_ERROR_ROW_NAME}`;
+}
+
+function isWorkspaceTreeErrorPath(path: string): boolean {
+  return treePathToWorkspacePath(path).endsWith(`/${WORKSPACE_TREE_ERROR_ROW_NAME}`);
+}
+
+export function buildWorkspaceTreePaths(
+  entries: Iterable<WorkspaceEntry>,
+  directoryStates: Record<string, { expanded: boolean; error: string | null }>,
+): string[] {
+  const paths = [...entries].map(workspaceEntryToTreePath);
+  for (const [path, state] of Object.entries(directoryStates)) {
+    if (state.expanded && state.error) {
+      paths.push(workspaceDirectoryErrorToTreePath(path));
+    }
+  }
+  return paths;
 }
 
 function treePathToWorkspacePath(path: string): string {
@@ -549,9 +571,13 @@ export function WorkspaceExplorer({
   const useNativeWorkspaceContextMenu = shouldUseNativeAppContextMenus();
   const { model, resetTree, nativeContextMenuOpenRef } = useFileTreeModel({
     useNativeContextMenu: useNativeWorkspaceContextMenu,
+    dragAndDrop: {
+      canDrag: (paths) => paths.every((path) => !isWorkspaceTreeErrorPath(path)),
+    },
     onSelectionChange: (paths) => {
       const selected = paths[0];
       if (!selected) return;
+      if (isWorkspaceTreeErrorPath(selected)) return;
       const workspacePath = treePathToWorkspacePath(selected);
       const entry = workspaceEntryMap.get(workspacePath);
       if (!entry || entry.kind === 'directory') return;
@@ -875,7 +901,7 @@ export function WorkspaceExplorer({
     }
     return map;
   }, [nodes, rootListing.data?.entries]);
-  const workspaceTreePaths = useMemo(() => [...workspaceEntryMap.values()].map(workspaceEntryToTreePath), [workspaceEntryMap]);
+  const workspaceTreePaths = useMemo(() => buildWorkspaceTreePaths(workspaceEntryMap.values(), nodes), [nodes, workspaceEntryMap]);
   const workspaceTreePathSignature = useMemo(() => workspaceTreePaths.join('\n'), [workspaceTreePaths]);
   const workspaceTreeResetRef = useRef({ entryMap: workspaceEntryMap, paths: workspaceTreePaths });
   workspaceTreeResetRef.current = { entryMap: workspaceEntryMap, paths: workspaceTreePaths };
