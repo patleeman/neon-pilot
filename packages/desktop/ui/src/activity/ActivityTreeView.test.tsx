@@ -175,12 +175,43 @@ describe('ActivityTreeView', () => {
 
       const expander = container.querySelector<HTMLElement>('[aria-label="Expand Parent thread"]');
       expect(expander).not.toBeNull();
+      expect(expander?.getAttribute('aria-expanded')).toBe('false');
 
       act(() => {
         expander?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
       });
 
+      expect(container.querySelector<HTMLElement>('[aria-label="Collapse Parent thread"]')?.getAttribute('aria-expanded')).toBe('true');
       expect(container.textContent).toContain('Child branch');
+    } finally {
+      unmount();
+    }
+  });
+
+  it('exposes expanded state on workspace group controls', () => {
+    const group: ActivityTreeItem = { id: 'group:project', kind: 'group', title: 'Project', status: 'idle' };
+    const child: ActivityTreeItem = {
+      ...items[0]!,
+      id: 'conversation:project-thread',
+      parentId: group.id,
+      title: 'Project thread',
+    };
+    const { container, unmount } = renderTree([group, child]);
+
+    try {
+      const collapse = container.querySelector<HTMLElement>('[aria-label="Collapse Project"]');
+      expect(collapse).not.toBeNull();
+      expect(collapse?.getAttribute('aria-expanded')).toBe('true');
+      expect(container.textContent).toContain('Project thread');
+
+      act(() => {
+        collapse?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      });
+
+      const expand = container.querySelector<HTMLElement>('[aria-label="Expand Project"]');
+      expect(expand).not.toBeNull();
+      expect(expand?.getAttribute('aria-expanded')).toBe('false');
+      expect(container.textContent).not.toContain('Project thread');
     } finally {
       unmount();
     }

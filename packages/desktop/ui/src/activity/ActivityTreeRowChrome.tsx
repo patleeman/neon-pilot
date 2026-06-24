@@ -268,6 +268,7 @@ function ExpanderButton({
       tabIndex={-1}
       className="-ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-dim hover:text-primary"
       aria-label={label}
+      aria-expanded={expanded}
       title={title}
       onClick={onClick}
     >
