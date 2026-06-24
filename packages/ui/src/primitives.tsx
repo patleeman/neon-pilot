@@ -2533,6 +2533,8 @@ export interface TextPromptDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   allowEmpty?: boolean;
+  error?: string | null;
+  submitting?: boolean;
   className?: string;
   backdropClassName?: string;
   backdropStyle?: CSSProperties;
@@ -2548,6 +2550,8 @@ export function TextPromptDialog({
   confirmLabel = 'Continue',
   cancelLabel = 'Cancel',
   allowEmpty = false,
+  error = null,
+  submitting = false,
   className,
   backdropClassName,
   backdropStyle,
@@ -2557,7 +2561,7 @@ export function TextPromptDialog({
   const [value, setValue] = useState(initialValue);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const titleId = useId();
-  const canSubmit = allowEmpty || value.trim().length > 0;
+  const canSubmit = !submitting && (allowEmpty || value.trim().length > 0);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -2582,8 +2586,15 @@ export function TextPromptDialog({
         <DialogHeader title={title} titleId={titleId} />
         <DialogBody>
           <Field label={label}>
-            <TextInput ref={inputRef} value={value} onChange={(event) => setValue(event.target.value)} placeholder={placeholder} />
+            <TextInput
+              ref={inputRef}
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              placeholder={placeholder}
+              disabled={submitting}
+            />
           </Field>
+          {error ? <div className="mt-2 text-[12px] leading-5 text-danger">{error}</div> : null}
         </DialogBody>
         <DialogFooter>
           <Button variant="ghost" onClick={onCancel}>

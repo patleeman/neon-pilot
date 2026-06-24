@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   __workspaceExplorerInternals,
+  createWorkspaceFile,
   createWorkspaceFolder,
   deleteWorkspacePath,
   listWorkspaceDirectory,
@@ -150,8 +151,14 @@ describe('workspace explorer', () => {
     expect(written.path).toBe('notes/todo.txt');
     expect(readFileSync(join(repo, 'notes', 'todo.txt'), 'utf-8')).toBe('ship it\n');
 
+    const created = await createWorkspaceFile(repo, 'notes/new.txt', 'fresh\r\n');
+    expect(created.path).toBe('notes/new.txt');
+    expect(readFileSync(join(repo, 'notes', 'new.txt'), 'utf-8')).toBe('fresh\n');
+    await expect(createWorkspaceFile(repo, 'notes/new.txt', 'overwrite')).rejects.toThrow(/file already exists/i);
+
     const folder = await createWorkspaceFolder(repo, 'docs');
     expect(folder.kind).toBe('directory');
+    await expect(createWorkspaceFolder(repo, 'docs')).rejects.toThrow(/folder already exists/i);
 
     const renamed = await renameWorkspacePath(repo, 'notes/todo.txt', 'done.txt');
     expect(renamed.path).toBe('notes/done.txt');

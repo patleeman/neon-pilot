@@ -756,26 +756,38 @@ export function WorkspaceExplorer({
 
   const [createPathPrompt, setCreatePathPrompt] = useState<{ kind: 'file' | 'folder'; directory: string } | null>(null);
   const [movePathPrompt, setMovePathPrompt] = useState<WorkspaceEntry | null>(null);
+  const [pathPromptError, setPathPromptError] = useState<string | null>(null);
+  const [pathPromptSubmitting, setPathPromptSubmitting] = useState(false);
 
   const createPath = useCallback((kind: 'file' | 'folder', directory: string) => {
+    setPathPromptError(null);
+    setPathPromptSubmitting(false);
     setCreatePathPrompt({ kind, directory });
   }, []);
 
   const submitCreatePath = useCallback(
     async (kind: 'file' | 'folder', directory: string, name: string) => {
       if (!cwd) return;
-      setCreatePathPrompt(null);
       const trimmedName = name.trim();
       if (!trimmedName) return;
       const path = [directory, trimmedName].filter(Boolean).join('/');
-      if (kind === 'file') {
-        await api.createWorkspaceFile(cwd, path, '');
-        openWorkspaceFile(path);
-      } else {
-        await api.createWorkspaceFolder(cwd, path);
+      setPathPromptError(null);
+      setPathPromptSubmitting(true);
+      try {
+        if (kind === 'file') {
+          await api.createWorkspaceFile(cwd, path, '');
+          openWorkspaceFile(path);
+        } else {
+          await api.createWorkspaceFolder(cwd, path);
+        }
+        await loadRoot();
+        if (directory) await loadDirectory(directory);
+        setCreatePathPrompt(null);
+      } catch (error) {
+        setPathPromptError(formatWorkspaceLoadError(error, 'Could not create this item. Try a different name.'));
+      } finally {
+        setPathPromptSubmitting(false);
       }
-      await loadRoot();
-      if (directory) await loadDirectory(directory);
     },
     [cwd, loadDirectory, loadRoot, openWorkspaceFile],
   );
@@ -799,23 +811,37 @@ export function WorkspaceExplorer({
   );
 
   const movePath = useCallback((entry: WorkspaceEntry) => {
+    setPathPromptError(null);
+    setPathPromptSubmitting(false);
     setMovePathPrompt(entry);
   }, []);
 
   const submitMovePath = useCallback(
     async (entry: WorkspaceEntry, targetDir: string) => {
       if (!cwd) return;
-      setMovePathPrompt(null);
       const normalizedTargetDir = targetDir.trim();
-      const moved = await api.moveWorkspacePath(cwd, entry.path, normalizedTargetDir);
-      const current = readWorkspaceOpenFiles(cwd, openFilesScope);
-      const next = current.map((path) =>
-        path === entry.path ? moved.path : path.startsWith(`${entry.path}/`) ? `${moved.path}/${path.slice(entry.path.length + 1)}` : path,
-      );
-      writeWorkspaceOpenFiles(cwd, next, openFilesScope);
-      await loadRoot();
-      await loadDirectory(parentDirectory(entry.path));
-      if (normalizedTargetDir) await loadDirectory(normalizedTargetDir);
+      setPathPromptError(null);
+      setPathPromptSubmitting(true);
+      try {
+        const moved = await api.moveWorkspacePath(cwd, entry.path, normalizedTargetDir);
+        const current = readWorkspaceOpenFiles(cwd, openFilesScope);
+        const next = current.map((path) =>
+          path === entry.path
+            ? moved.path
+            : path.startsWith(`${entry.path}/`)
+              ? `${moved.path}/${path.slice(entry.path.length + 1)}`
+              : path,
+        );
+        writeWorkspaceOpenFiles(cwd, next, openFilesScope);
+        await loadRoot();
+        await loadDirectory(parentDirectory(entry.path));
+        if (normalizedTargetDir) await loadDirectory(normalizedTargetDir);
+        setMovePathPrompt(null);
+      } catch (error) {
+        setPathPromptError(formatWorkspaceLoadError(error, 'Could not move this item. Check the destination and try again.'));
+      } finally {
+        setPathPromptSubmitting(false);
+      }
     },
     [cwd, loadDirectory, loadRoot, openFilesScope],
   );
@@ -848,7 +874,13 @@ export function WorkspaceExplorer({
           title={createPathPrompt.kind === 'file' ? 'New file' : 'New folder'}
           label={createPathPrompt.kind === 'file' ? 'New file name' : 'New folder name'}
           initialValue={createPathPrompt.kind === 'file' ? 'untitled.txt' : 'New Folder'}
-          onCancel={() => setCreatePathPrompt(null)}
+          error={pathPromptError}
+          submitting={pathPromptSubmitting}
+          onCancel={() => {
+            setCreatePathPrompt(null);
+            setPathPromptError(null);
+            setPathPromptSubmitting(false);
+          }}
           onSubmit={(name) => void submitCreatePath(createPathPrompt.kind, createPathPrompt.directory, name)}
         />
       ) : null}
@@ -859,7 +891,13 @@ export function WorkspaceExplorer({
           initialValue={parentDirectory(movePathPrompt.path)}
           allowEmpty
           confirmLabel="Move"
-          onCancel={() => setMovePathPrompt(null)}
+          error={pathPromptError}
+          submitting={pathPromptSubmitting}
+          onCancel={() => {
+            setMovePathPrompt(null);
+            setPathPromptError(null);
+            setPathPromptSubmitting(false);
+          }}
           onSubmit={(targetDir) => void submitMovePath(movePathPrompt, targetDir)}
         />
       ) : null}

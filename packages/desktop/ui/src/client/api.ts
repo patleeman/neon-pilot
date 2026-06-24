@@ -822,7 +822,7 @@ export const api = {
   writeWorkspaceFile: async (cwd: string, path: string, content: string) =>
     put<WorkspaceFileContent>('/workspace/file', { cwd, path, content }),
   createWorkspaceFile: async (cwd: string, path: string, content = '') =>
-    put<WorkspaceFileContent>('/workspace/file', { cwd, path, content }),
+    put<WorkspaceFileContent>('/workspace/file', { cwd, path, content, overwrite: false }),
   createWorkspaceFolder: async (cwd: string, path: string) => post<WorkspaceEntry>('/workspace/folder', { cwd, path }),
   deleteWorkspacePath: async (cwd: string, path: string) => {
     const params = new URLSearchParams({ cwd, path });

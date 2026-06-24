@@ -356,11 +356,26 @@ export async function writeWorkspaceFile(cwd: string, relativePath: string, cont
   return readWorkspaceFile(cwd, path, true);
 }
 
+export async function createWorkspaceFile(cwd: string, relativePath: string, content = ''): Promise<WorkspaceFileContent> {
+  const snapshot = readWorkspaceRootSnapshot(cwd);
+  const path = normalizeRelativePath(relativePath);
+  if (!path) throw new Error('path required');
+  const workspaceRoot = await createCoreWorkspaceRoot(snapshot.root, 'create workspace file', ['read', 'write', 'metadata']);
+  if (await workspaceRoot.exists(path)) {
+    throw new Error(`File already exists: ${path}`);
+  }
+  await workspaceRoot.writeText(path, content.replace(/\r\n?/g, '\n'));
+  return readWorkspaceFile(cwd, path, true);
+}
+
 export async function createWorkspaceFolder(cwd: string, relativePath: string): Promise<WorkspaceEntry> {
   const snapshot = readWorkspaceRootSnapshot(cwd);
   const path = normalizeRelativePath(relativePath);
   if (!path) throw new Error('path required');
   const workspaceRoot = await createCoreWorkspaceRoot(snapshot.root, 'create workspace folder', ['write', 'metadata']);
+  if (await workspaceRoot.exists(path)) {
+    throw new Error(`Folder already exists: ${path}`);
+  }
   await workspaceRoot.createDirectory(path);
   return workspaceEntryForPath(snapshot, path);
 }

@@ -5,6 +5,7 @@ import type { Express } from 'express';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { logError } from '../shared/logging.js';
 import {
+  createWorkspaceFile,
   createWorkspaceFolder,
   deleteWorkspacePath,
   listWorkspaceDirectory,
@@ -34,7 +35,11 @@ function readQueryString(value: unknown): string | null {
 
 function writeWorkspaceError(res: { status: (code: number) => { json: (body: unknown) => void } }, error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
-  const status = /escapes workspace root|not a directory|no such file|ENOENT/i.test(message) ? 400 : 500;
+  const status = /already exists|EEXIST/i.test(message)
+    ? 409
+    : /escapes workspace root|not a directory|no such file|ENOENT/i.test(message)
+      ? 400
+      : 500;
   res.status(status).json({ error: message });
 }
 
@@ -105,8 +110,9 @@ export function registerWorkspaceExplorerRoutes(
         res.status(400).json({ error: 'cwd, path, and content required' });
         return;
       }
-      const result = await writeWorkspaceFile(cwd, path, content);
-      publishHostEvent('workspaceFiles', { action: 'write', cwd, path });
+      const overwrite = req.body?.overwrite !== false;
+      const result = overwrite ? await writeWorkspaceFile(cwd, path, content) : await createWorkspaceFile(cwd, path, content);
+      publishHostEvent('workspaceFiles', { action: overwrite ? 'write' : 'createFile', cwd, path });
       res.json(result);
     } catch (error) {
       logError('workspace file write failed', { message: error instanceof Error ? error.message : String(error) });

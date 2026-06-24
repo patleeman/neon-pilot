@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { watch } from 'node:fs';
+
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('node:fs', () => ({ watch: vi.fn() }));
 
@@ -9,6 +10,7 @@ vi.mock('../workspace/workspaceExplorer.js', () => ({
   listWorkspaceDirectory: vi.fn(),
   readWorkspaceFile: vi.fn(),
   resolveWorkspacePathLinks: vi.fn(),
+  createWorkspaceFile: vi.fn(),
   writeWorkspaceFile: vi.fn(),
   deleteWorkspacePath: vi.fn(),
   createWorkspaceFolder: vi.fn(),
@@ -152,7 +154,35 @@ describe('registerWorkspaceExplorerRoutes', () => {
       const h = getHandler(router, 'put', '/api/workspace/file');
       const res = mockRes();
       await h({ body: { cwd: '/repo', path: 'src/test.txt', content: 'hi' } }, res);
+      expect(workspace.writeWorkspaceFile).toHaveBeenCalledWith('/repo', 'src/test.txt', 'hi');
       expect(res.json).toHaveBeenCalledWith({ ok: true });
+    });
+
+    it('creates files without overwriting when requested', async () => {
+      vi.mocked(workspace.createWorkspaceFile).mockReturnValue({ path: 'src/test.txt' } as unknown);
+      const router = mockRouter();
+      registerWorkspaceExplorerRoutes(router as unknown, mockContext());
+      const h = getHandler(router, 'put', '/api/workspace/file');
+      const res = mockRes();
+
+      await h({ body: { cwd: '/repo', path: 'src/test.txt', content: '', overwrite: false } }, res);
+
+      expect(workspace.createWorkspaceFile).toHaveBeenCalledWith('/repo', 'src/test.txt', '');
+      expect(workspace.writeWorkspaceFile).not.toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({ path: 'src/test.txt' });
+    });
+
+    it('returns 409 when create would overwrite an existing file', async () => {
+      vi.mocked(workspace.createWorkspaceFile).mockRejectedValue(new Error('File already exists: src/test.txt'));
+      const router = mockRouter();
+      registerWorkspaceExplorerRoutes(router as unknown, mockContext());
+      const h = getHandler(router, 'put', '/api/workspace/file');
+      const res = mockRes();
+
+      await h({ body: { cwd: '/repo', path: 'src/test.txt', content: '', overwrite: false } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith({ error: 'File already exists: src/test.txt' });
     });
 
     it('returns 400 when path or content missing', async () => {

@@ -8,6 +8,9 @@ const apiMocks = vi.hoisted(() => ({
   workspaceFile: vi.fn(),
   workspaceDiff: vi.fn(),
   writeWorkspaceFile: vi.fn(),
+  createWorkspaceFile: vi.fn(),
+  createWorkspaceFolder: vi.fn(),
+  moveWorkspacePath: vi.fn(),
 }));
 
 const commandContextMocks = vi.hoisted(() => ({
@@ -124,6 +127,12 @@ function setTextAreaValue(textarea: HTMLTextAreaElement, value: string) {
   const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
   setter?.call(textarea, value);
   textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function setInputValue(input: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+  setter?.call(input, value);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 describe('formatWorkspaceEntrySize', () => {
@@ -675,6 +684,80 @@ describe('formatWorkspaceEntrySize', () => {
     await vi.waitFor(() => {
       expect(container.textContent).toContain('New folder');
       expect(container.textContent).toContain('New folder name');
+    });
+  });
+
+  it('keeps create file prompts open with a readable error when the name already exists', async () => {
+    apiMocks.workspaceTree.mockResolvedValue({
+      root: '/repo',
+      rootName: 'repo',
+      rootKind: 'git',
+      branch: 'main',
+      changes: [],
+      entries: [{ path: 'tmp', name: 'tmp', kind: 'directory', size: null, gitStatus: null, descendantGitStatusCount: null }],
+    });
+    const createFile = deferred<never>();
+    apiMocks.createWorkspaceFile.mockReturnValue(createFile.promise);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(
+        React.createElement(WorkspaceExplorer, {
+          cwd: '/repo',
+          railOnly: true,
+          onDraftPrompt: vi.fn(),
+        }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const newFileButton = await vi.waitFor(() => {
+      const button = Array.from(container.querySelectorAll('button')).find((entry) => entry.textContent?.includes('New File'));
+      expect(button).toBeTruthy();
+      return button as HTMLButtonElement;
+    });
+
+    act(() => {
+      newFileButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const input = await vi.waitFor(() => {
+      const field = container.querySelector('input');
+      expect(field).toBeTruthy();
+      return field as HTMLInputElement;
+    });
+
+    act(() => {
+      setInputValue(input, 'codex-duplicate-target.txt');
+    });
+
+    const continueButton = Array.from(container.querySelectorAll('button')).find((entry) => entry.textContent?.includes('Continue'));
+    expect(continueButton).toBeTruthy();
+    await act(async () => {
+      continueButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiMocks.createWorkspaceFile).toHaveBeenCalledWith('/repo', 'tmp/codex-duplicate-target.txt', '');
+    expect(apiMocks.workspaceFile).not.toHaveBeenCalled();
+    await act(async () => {
+      createFile.reject(new Error('File already exists: tmp/codex-duplicate-target.txt'));
+      try {
+        await createFile.promise;
+      } catch {
+        /* expected */
+      }
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('New file');
+      expect(container.textContent).toContain('File already exists: tmp/codex-duplicate-target.txt');
     });
   });
 
