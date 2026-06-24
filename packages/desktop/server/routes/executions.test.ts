@@ -16,8 +16,12 @@ const {
   followUpExecutionMock: vi.fn(),
   getExecutionLogMock: vi.fn(),
   getExecutionMock: vi.fn(),
-  isExecutionActiveMock: vi.fn((execution: { status?: string }) =>
-    execution.status === 'queued' || execution.status === 'waiting' || execution.status === 'running' || execution.status === 'recovering',
+  isExecutionActiveMock: vi.fn(
+    (execution: { status?: string }) =>
+      execution.status === 'queued' ||
+      execution.status === 'waiting' ||
+      execution.status === 'running' ||
+      execution.status === 'recovering',
   ),
   invalidateAppTopicsMock: vi.fn(),
   listConversationExecutionsMock: vi.fn(),
@@ -161,5 +165,23 @@ describe('registerExecutionRoutes', () => {
 
     expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(3);
     expect(invalidateAppTopicsMock).toHaveBeenCalledWith('executions', 'runs');
+  });
+
+  it('returns recoverable rerun and follow-up rejections as conflict responses', async () => {
+    const { followUpHandler, rerunHandler } = createHarness();
+    rerunExecutionMock.mockRejectedValue(new Error('Run run-1 is still active.'));
+    followUpExecutionMock.mockRejectedValue(new Error('Run run-2 does not support follow-up prompts.'));
+
+    const rerunRes = createJsonResponse();
+    await rerunHandler({ params: { id: 'run-1' } }, rerunRes);
+    expect(rerunRes.status).toHaveBeenCalledWith(409);
+    expect(rerunRes.json).toHaveBeenCalledWith({ error: 'This execution is still running.' });
+
+    const followUpRes = createJsonResponse();
+    await followUpHandler({ params: { id: 'run-2' }, body: { prompt: 'Continue' } }, followUpRes);
+    expect(followUpRes.status).toHaveBeenCalledWith(409);
+    expect(followUpRes.json).toHaveBeenCalledWith({ error: 'This execution does not support follow-up prompts.' });
+    expect(logErrorMock).not.toHaveBeenCalled();
+    expect(invalidateAppTopicsMock).not.toHaveBeenCalled();
   });
 });

@@ -251,9 +251,47 @@ describe('linkedRuns', () => {
       scope: 'mentioned',
       runs: [{ runId: 'run-desktop-dev-abc123', title: 'Desktop dev', detail: 'background task' }],
     });
-    expect(readLinkedRuns(inspectBlock)).toEqual({ scope: 'mentioned', runs: [] });
+    expect(readLinkedRuns(inspectBlock)).toEqual({
+      scope: 'mentioned',
+      runs: [{ runId: 'run-desktop-dev-abc123', title: 'Desktop dev', detail: 'log view' }],
+    });
     expect(collectTraceClusterLinkedRuns([startBlock, inspectBlock])).toEqual([
-      { runId: 'run-desktop-dev-abc123', title: 'Desktop dev', detail: 'background task' },
+      { runId: 'run-desktop-dev-abc123', title: 'Desktop dev', detail: 'log view' },
+    ]);
+  });
+
+  it('links background command reruns to the new run card', () => {
+    const sourceRunId = 'run-desktop-dev-2026-04-26T00-00-00-000Z-oldabc';
+    const runId = 'run-desktop-dev-2026-04-26T00-05-00-000Z-newdef';
+    const rerunBlock: Extract<MessageBlock, { type: 'tool_use' }> = {
+      type: 'tool_use',
+      ts: '2026-04-26T00:00:00.000Z',
+      tool: 'background_bash',
+      input: { action: 'rerun', runId: sourceRunId },
+      output: `Rerun started ${runId} from ${sourceRunId}.`,
+      details: {
+        action: 'rerun',
+        runId,
+        sourceRunId,
+      },
+    };
+
+    expect(readLinkedRuns(rerunBlock)).toEqual({
+      scope: 'mentioned',
+      runs: [
+        {
+          runId,
+          title: 'Desktop dev',
+          detail: 'rerun · from Desktop dev',
+        },
+      ],
+    });
+    expect(collectTraceClusterLinkedRuns([rerunBlock])).toEqual([
+      {
+        runId,
+        title: 'Desktop dev',
+        detail: 'rerun · from Desktop dev',
+      },
     ]);
   });
 

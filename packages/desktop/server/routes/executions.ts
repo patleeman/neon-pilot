@@ -49,6 +49,20 @@ function handleError(res: Response, err: unknown): void {
   res.status(500).json({ error: String(err) });
 }
 
+function formatExecutionActionRejection(err: unknown, action: 'rerun' | 'follow-up'): string | null {
+  const message = err instanceof Error ? err.message : String(err);
+  if (/run not found/i.test(message)) return 'Execution not found.';
+  if (/still active/i.test(message)) return 'This execution is still running.';
+  if (/not a replayable background run/i.test(message)) return 'This execution cannot be rerun.';
+  if (/does not contain its original (?:agent prompt|shell command)/i.test(message)) {
+    return 'This execution cannot be rerun because its original command is unavailable.';
+  }
+  if (/does not support follow-up prompts/i.test(message)) return 'This execution does not support follow-up prompts.';
+  if (/follow-up prompt must be non-empty/i.test(message)) return 'Follow-up prompt is required.';
+  if (action === 'follow-up' && /cannot be rerun/i.test(message)) return 'This execution does not support follow-up prompts.';
+  return null;
+}
+
 export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): void {
   router.get('/api/executions', async (_req, res) => {
     try {
@@ -248,6 +262,11 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
       invalidateAppTopics('executions', 'runs');
       res.json(result);
     } catch (err) {
+      const rejection = formatExecutionActionRejection(err, 'rerun');
+      if (rejection) {
+        res.status(409).json({ error: rejection });
+        return;
+      }
       handleError(res, err);
     }
   });
@@ -263,6 +282,11 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
       invalidateAppTopics('executions', 'runs');
       res.json(result);
     } catch (err) {
+      const rejection = formatExecutionActionRejection(err, 'follow-up');
+      if (rejection) {
+        res.status(409).json({ error: rejection });
+        return;
+      }
       handleError(res, err);
     }
   });

@@ -632,6 +632,77 @@ function readRunToolLinkedRun(block: Extract<MessageBlock, { type: 'tool_use' }>
   };
 }
 
+function readBackgroundCommandToolLinkedRun(block: Extract<MessageBlock, { type: 'tool_use' }>): LinkedRunPresentation | null {
+  if (block.tool !== 'background_command' && block.tool !== 'background_bash') {
+    return null;
+  }
+
+  const details = isRecord(block.details) ? block.details : null;
+  const input = isRecord(block.input) ? block.input : null;
+  const action = readRunField(details, 'action') ?? readRunField(input, 'action');
+  if (!action || action === 'list') {
+    return null;
+  }
+
+  const sourceRunId = readRunField(details, 'sourceRunId');
+  const extractedRunIds = extractDurableRunIdsFromBlock(block);
+  const runId = readRunField(details, 'runId') ?? extractedRunIds.find((candidate) => candidate !== sourceRunId) ?? sourceRunId;
+  if (!runId) {
+    return null;
+  }
+
+  const descriptor = describeLinkedRun(runId);
+  const taskSlug = readRunField(details, 'taskSlug') ?? readRunField(input, 'taskSlug');
+  const command = excerptLinkedRunText(readRunField(details, 'command') ?? readRunField(input, 'command'));
+  const cwd = summarizeWorkspaceTail(readRunField(details, 'cwd') ?? readRunField(input, 'cwd'));
+  const status = readRunField(details, 'status') ?? (typeof block.status === 'string' ? block.status : null);
+  const title = command ?? taskSlug ?? descriptor.detail ?? descriptor.title;
+  const detailBits: string[] = [];
+
+  if (status && status !== 'unknown') {
+    pushRunDetail(detailBits, normalizeRunLabel(status));
+  }
+
+  switch (action) {
+    case 'start':
+      pushRunDetail(detailBits, 'background command');
+      break;
+    case 'rerun':
+      pushRunDetail(detailBits, 'rerun');
+      break;
+    case 'logs':
+      pushRunDetail(detailBits, 'log view');
+      break;
+    case 'get':
+      pushRunDetail(detailBits, 'command details');
+      break;
+    case 'cancel':
+      pushRunDetail(detailBits, 'cancelled');
+      break;
+    default:
+      pushRunDetail(detailBits, action.replace(/_/g, ' '));
+      break;
+  }
+
+  if (taskSlug && normalizeRunLabel(taskSlug) !== normalizeRunLabel(title)) {
+    pushRunDetail(detailBits, taskSlug);
+  }
+
+  if (cwd) {
+    pushRunDetail(detailBits, `cwd ${cwd}`);
+  }
+
+  if (sourceRunId) {
+    pushRunDetail(detailBits, `from ${summarizeLinkedRunTail(sourceRunId.replace(/^(?:run|task)-/, '')) ?? sourceRunId}`);
+  }
+
+  return {
+    runId,
+    title,
+    detail: detailBits.length > 0 ? detailBits.join(' · ') : null,
+  };
+}
+
 function readSubagentToolLinkedRun(block: Extract<MessageBlock, { type: 'tool_use' }>): LinkedRunPresentation | null {
   if (block.tool !== 'subagent') {
     return null;
@@ -691,6 +762,14 @@ export function readLinkedRuns(block: Extract<MessageBlock, { type: 'tool_use' }
     return {
       scope: 'mentioned',
       runs: [runToolLinkedRun],
+    };
+  }
+
+  const backgroundCommandToolLinkedRun = readBackgroundCommandToolLinkedRun(block);
+  if (backgroundCommandToolLinkedRun) {
+    return {
+      scope: 'mentioned',
+      runs: [backgroundCommandToolLinkedRun],
     };
   }
 
