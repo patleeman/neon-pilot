@@ -71,6 +71,22 @@ describe('TelemetryPage', () => {
           cacheHitRate: 0.2,
           toolErrors: 1,
         },
+        agentLoop: {
+          turnsPerRun: 2,
+          stepsPerTurn: 3,
+          toolCallsPerRun: 4,
+          toolCallsP95: 8,
+          toolErrorRatePct: 0,
+          avgTokensPerRun: 1200,
+          subagentsPerRun: 1,
+          avgDurationMs: 65_000,
+          runsOver20Turns: 1,
+          stuckRuns: 0,
+          stuckRunPct: 0,
+          durationP50Ms: 30_000,
+          durationP95Ms: 60_000,
+          durationP99Ms: 90_000,
+        },
         refetch,
       }),
     );
@@ -83,6 +99,9 @@ describe('TelemetryPage', () => {
     expect(screen.getByText('Tools')).toBeTruthy();
     expect(screen.getByText('App activity')).toBeTruthy();
     expect(screen.getByText('Runs Today')).toBeTruthy();
+    expect(screen.getByText('Runs > 20 Turns')).toBeTruthy();
+    expect(screen.getByText('Stuck >10 Min')).toBeTruthy();
+    expect(screen.queryByText(/&gt;/)).toBeNull();
     expect(refetch).toHaveBeenCalled();
   });
 });

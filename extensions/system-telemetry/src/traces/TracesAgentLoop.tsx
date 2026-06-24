@@ -49,10 +49,10 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
           <LoopStat value={formatDuration(loop.avgDurationMs)} label="Avg Run Duration" tone="success" />
           <LoopStat
             value={formatNumber(loop.runsOver20Turns)}
-            label="Runs &gt; 20 Turns"
+            label="Runs > 20 Turns"
             tone={loop.runsOver20Turns > 0 ? 'warning' : 'muted'}
           />
-          <LoopStat value={formatNumber(loop.stuckRuns)} label="Stuck Runs (&gt;10m)" tone={loop.stuckRuns > 0 ? 'danger' : 'muted'} />
+          <LoopStat value={formatNumber(loop.stuckRuns)} label="Stuck >10 Min" tone={loop.stuckRuns > 0 ? 'danger' : 'muted'} />
           <LoopStat value={formatPercent(loop.stuckRunPct)} label="Stuck Run Rate" tone={loop.stuckRunPct > 0 ? 'danger' : 'muted'} />
         </StatGrid>
 
