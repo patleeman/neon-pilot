@@ -2,6 +2,7 @@ import type { NavigateFunction } from 'react-router-dom';
 
 import { api } from '../client/api';
 import type { ExtensionSurfaceSummary } from '../extensions/types';
+import { executeBrowserTabsCommand } from '../local/workbenchBrowserTabs';
 import { readAppLayoutMode } from '../ui-state/appLayoutMode';
 import type { CommandPaletteItem } from './commandPalette';
 import { buildCommandPaletteFileOpenRoute } from './commandPaletteNavigation';
@@ -24,6 +25,16 @@ export interface ActivateCommandPaletteItemContext {
 }
 
 export function executePaletteCommand(command: string, args: unknown): Promise<boolean> {
+  if (command === 'browser.newTab') {
+    return Promise.resolve(executeBrowserTabsCommand('newTab'));
+  }
+  if (command === 'browser.reopenTab') {
+    return Promise.resolve(executeBrowserTabsCommand('reopenTab'));
+  }
+  if (command === 'browser.closeTab') {
+    return Promise.resolve(executeBrowserTabsCommand('closeTab'));
+  }
+
   if (typeof window === 'undefined') {
     return api.executeExtensionCommand(command, args).then(() => true);
   }
@@ -100,7 +111,12 @@ export async function activateCommandPaletteItem(
         if (typedAction.kind === 'navigate' && typeof typedAction.to === 'string') {
           context.navigate(typedAction.to);
         } else if (typedAction.kind === 'command' && typeof typedAction.command === 'string') {
-          handled = await executeDeclaredPaletteCommand(context.commandItems, typedAction.command, typedAction.args ?? {}, executeExtensionCommand);
+          handled = await executeDeclaredPaletteCommand(
+            context.commandItems,
+            typedAction.command,
+            typedAction.args ?? {},
+            executeExtensionCommand,
+          );
         }
       } else if (searchAction && typeof searchAction === 'object' && 'command' in searchAction) {
         handled = await executeDeclaredPaletteCommand(

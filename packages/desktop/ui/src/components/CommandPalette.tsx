@@ -148,7 +148,7 @@ export function CommandPalette() {
       action: { kind: 'command' as const, command: `${command.extensionId}.${command.surfaceId}`, args: command.args },
     }));
     return [...hostItems, ...extensionItems];
-  }, [commandContextRevision, extensionCommands, location.pathname, navigate]);
+  }, [commandContextRevision, extensionCommands, location.pathname, navigate, open]);
   const fileItems = scope === COMMANDS_COMMAND_PALETTE_SCOPE ? commandItems : quickOpenItems;
   const searchedFileItems = quickOpenSearchItems;
   const quickOpenScopes = useMemo(

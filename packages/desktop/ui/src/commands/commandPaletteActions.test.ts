@@ -1,11 +1,25 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CommandPaletteItem } from './commandPalette';
-import { activateCommandPaletteItem, executePaletteCommand, type CommandPaletteAction } from './commandPaletteActions';
+import { activateCommandPaletteItem, type CommandPaletteAction, executePaletteCommand } from './commandPaletteActions';
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
+
+function installLocalStorageShim() {
+  const items = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    clear: () => items.clear(),
+    getItem: (key: string) => items.get(key) ?? null,
+    key: (index: number) => Array.from(items.keys())[index] ?? null,
+    removeItem: (key: string) => items.delete(key),
+    setItem: (key: string, value: string) => items.set(key, String(value)),
+    get length() {
+      return items.size;
+    },
+  });
+}
 
 function item(
   action: CommandPaletteAction,
@@ -52,6 +66,22 @@ describe('activateCommandPaletteItem', () => {
     window.removeEventListener('neon-pilot-extension-command-execute', listener);
   });
 
+  it('executes browser tab commands through shared browser tab state', async () => {
+    installLocalStorageShim();
+    vi.stubGlobal('crypto', {
+      randomUUID: vi.fn().mockReturnValueOnce('tab-1').mockReturnValueOnce('tab-2'),
+    });
+
+    await expect(executePaletteCommand('browser.newTab', {})).resolves.toBe(true);
+
+    const state = JSON.parse(localStorage.getItem('pa:workbench-browser-tabs') ?? 'null') as {
+      tabs?: Array<{ id?: string }>;
+      activeTabId?: string;
+    } | null;
+    expect(state?.tabs).toEqual([expect.objectContaining({ id: 'tab-1' }), expect.objectContaining({ id: 'tab-2' })]);
+    expect(state?.activeTabId).toBe('tab-2');
+  });
+
   it('ignores disabled items', async () => {
     const ctx = context();
 
@@ -73,7 +103,9 @@ describe('activateCommandPaletteItem', () => {
   it('restores archived conversations before navigating', async () => {
     const ctx = context();
 
-    await expect(activateCommandPaletteItem(item({ kind: 'restoreArchivedConversation', conversationId: 'conv 1' }), ctx)).resolves.toBe(true);
+    await expect(activateCommandPaletteItem(item({ kind: 'restoreArchivedConversation', conversationId: 'conv 1' }), ctx)).resolves.toBe(
+      true,
+    );
 
     expect(ctx.openSession).toHaveBeenCalledWith('conv 1');
     expect(ctx.navigate).toHaveBeenCalledWith('/conversations/conv%201');
@@ -116,7 +148,11 @@ describe('activateCommandPaletteItem', () => {
 
     await expect(
       activateCommandPaletteItem(
-        item({ kind: 'extensionSearchAction', extensionId: 'ext', action: { kind: 'command', command: 'declared.command', args: { x: 1 } } }),
+        item({
+          kind: 'extensionSearchAction',
+          extensionId: 'ext',
+          action: { kind: 'command', command: 'declared.command', args: { x: 1 } },
+        }),
         ctx,
       ),
     ).resolves.toBe(true);
@@ -132,7 +168,11 @@ describe('activateCommandPaletteItem', () => {
 
     await expect(
       activateCommandPaletteItem(
-        item({ kind: 'extensionSearchAction', extensionId: 'ext', action: { kind: 'command', command: 'declared.command', args: { x: 1 } } }),
+        item({
+          kind: 'extensionSearchAction',
+          extensionId: 'ext',
+          action: { kind: 'command', command: 'declared.command', args: { x: 1 } },
+        }),
         ctx,
       ),
     ).resolves.toBe(false);

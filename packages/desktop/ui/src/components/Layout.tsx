@@ -43,7 +43,12 @@ import {
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { primeDesktopConversationStateCache, primeReservedDesktopConversationStateCache } from '../hooks/useDesktopConversationState';
 import { SIDEBAR_WIDTH_STORAGE_KEY } from '../local/localSettings';
-import { type BrowserTabsState, readBrowserTabsState } from '../local/workbenchBrowserTabs';
+import {
+  BROWSER_TABS_CHANGED_EVENT,
+  type BrowserTabsState,
+  executeBrowserTabsCommand,
+  readBrowserTabsState,
+} from '../local/workbenchBrowserTabs';
 import { attemptLazyRouteRecovery, isRecoverableLazyRouteError, lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
 import { routeIsKnowledge, routeMatchesPrefix, routeSupportsWorkbench } from '../navigation/routeRegistry';
 import { CONVERSATION_LAYOUT_CHANGED_EVENT, ensureConversationTabOpen, readConversationLayout } from '../session/sessionTabs';
@@ -240,7 +245,6 @@ const WORKBENCH_OPEN_TOOL_TAB_EVENT = 'pa:workbench-open-tool-tab';
 const WORKBENCH_OPEN_ARTIFACT_TAB_EVENT = 'pa:workbench-open-artifact-tab';
 const WORKBENCH_OPEN_WORKSPACE_FILE_EVENT = 'pa:workbench-open-workspace-file';
 const WORKBENCH_CLOSE_TAB_EVENT = 'pa:workbench-close-tab';
-const BROWSER_TABS_CHANGED_EVENT = 'pa:system-browser-tabs-changed';
 const DESKTOP_SHORTCUT_ACTIONS = {
   closeConversation: 'close-conversation',
   reopenClosedConversation: 'reopen-closed-conversation',
@@ -1756,9 +1760,8 @@ export function Layout() {
   }, []);
 
   useEffect(() => {
-    function handleBrowserTabsChanged(event: Event) {
-      const next = (event as CustomEvent<BrowserTabsState>).detail;
-      setBrowserTabsState(next ?? readBrowserTabsState());
+    function handleBrowserTabsChanged() {
+      setBrowserTabsState(readBrowserTabsState());
     }
 
     window.addEventListener(BROWSER_TABS_CHANGED_EVENT, handleBrowserTabsChanged);
@@ -1992,6 +1995,18 @@ export function Layout() {
     setActiveWorkbenchTabId(null);
   }, []);
 
+  const createBrowserTabFromCommand = useCallback(() => {
+    return executeBrowserTabsCommand('newTab');
+  }, []);
+
+  const reopenBrowserTabFromCommand = useCallback(() => {
+    return executeBrowserTabsCommand('reopenTab');
+  }, []);
+
+  const closeBrowserTabFromCommand = useCallback(() => {
+    return executeBrowserTabsCommand('closeTab');
+  }, []);
+
   const closeWorkbenchTab = useCallback(
     (tabId: string) => {
       const current = openWorkbenchTabsRef.current;
@@ -2047,10 +2062,12 @@ export function Layout() {
     setExtensionCommandContext('workbench.hasActiveChatTab', Boolean(activeWorkbenchChatConversationId));
     setExtensionCommandContext('workbench.hasActiveFile', hasActiveWorkbenchFile);
     setExtensionCommandContext('workbench.canToggleExplorer', canToggleWorkbenchExplorer);
+    setExtensionCommandContext('browser.active', activeWorkbenchToolSlot === 'browser');
   }, [
     activeConversationId,
     activeWorkbenchChatConversationId,
     activeWorkbenchTabId,
+    activeWorkbenchToolSlot,
     appLayoutMode,
     canToggleWorkbenchExplorer,
     hasActiveWorkbenchFile,
@@ -2499,16 +2516,13 @@ export function Layout() {
         return true;
       },
       browserNewTab() {
-        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'newTab' } }));
-        return true;
+        return createBrowserTabFromCommand();
       },
       browserReopenTab() {
-        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'reopenTab' } }));
-        return true;
+        return reopenBrowserTabFromCommand();
       },
       browserCloseTab() {
-        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'closeTab' } }));
-        return true;
+        return closeBrowserTabFromCommand();
       },
       browserGoBack() {
         window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'goBack' } }));
@@ -2802,6 +2816,8 @@ export function Layout() {
       canToggleWorkbenchExplorer,
       canToggleWorkbench,
       closeWorkbenchTab,
+      closeBrowserTabFromCommand,
+      createBrowserTabFromCommand,
       extensionCommands,
       extensionRightToolPanels,
       handleAppLayoutModeChange,
@@ -2813,6 +2829,7 @@ export function Layout() {
       openWorkbenchNewTab,
       openWorkbenchToolTab,
       promoteWorkbenchChatTab,
+      reopenBrowserTabFromCommand,
       setActiveConversationTool,
       startNewConversationFromLayout,
       handleToggleWorkbenchExplorer,

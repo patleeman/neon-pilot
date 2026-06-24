@@ -5,7 +5,7 @@ import { Link, MemoryRouter, Route, Routes, useLocation, useParams } from 'react
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
-import { setExtensionCommandContext } from '../extensions/commands';
+import { evaluateCommandEnablement, setExtensionCommandContext } from '../extensions/commands';
 import { SIDEBAR_WIDTH_STORAGE_KEY } from '../local/localSettings';
 import { sessionStore } from '../store';
 import { APP_LAYOUT_MODE_SESSION_STORAGE_KEY, APP_LAYOUT_MODE_STORAGE_KEY } from '../ui-state/appLayoutMode';
@@ -108,6 +108,7 @@ describe('Layout workbench toggle', () => {
     setExtensionCommandContext('system-local-dictation.toggleAvailable', null);
     setExtensionCommandContext('workbench.hasActiveFile', null);
     setExtensionCommandContext('workbench.canToggleDiff', null);
+    setExtensionCommandContext('browser.active', null);
     delete document.documentElement.dataset.neonPilotDesktop;
     delete (window as { ResizeObserver?: unknown }).ResizeObserver;
     delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
@@ -318,6 +319,55 @@ describe('Layout workbench toggle', () => {
       expect(screen.queryByText('Open a tab')).toBeNull();
     });
     expect(screen.getAllByLabelText('Close File Explorer')).toHaveLength(1);
+  });
+
+  it('publishes browser command context when the browser workbench tab is active', async () => {
+    setWorkbenchModeForCurrentSession();
+    renderLayout('/conversations/conv-1');
+
+    expect(evaluateCommandEnablement('browser.active')).toBe(false);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('pa:workbench-open-tool-tab', { detail: { tool: 'browser' } }));
+    });
+
+    await waitFor(() => {
+      expect(evaluateCommandEnablement('browser.active')).toBe(true);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'New tab' }));
+    const fileExplorerButtons = screen.getAllByRole('button', { name: 'File Explorer' });
+    fireEvent.click(fileExplorerButtons[fileExplorerButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(evaluateCommandEnablement('browser.active')).toBe(false);
+    });
+  });
+
+  it('executes browser tab commands through shared workbench browser state', async () => {
+    setWorkbenchModeForCurrentSession();
+    renderLayout('/conversations/conv-1');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('pa:workbench-open-tool-tab', { detail: { tool: 'browser' } }));
+    });
+
+    await waitFor(() => {
+      expect(evaluateCommandEnablement('browser.active')).toBe(true);
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'browser.newTab' } }));
+    });
+
+    await waitFor(() => {
+      const state = JSON.parse(window.localStorage.getItem('pa:workbench-browser-tabs') ?? 'null') as {
+        tabs?: unknown[];
+        activeTabId?: string;
+      } | null;
+      expect(state?.tabs).toHaveLength(2);
+      expect(state?.activeTabId).toBe((state?.tabs?.[1] as { id?: string } | undefined)?.id);
+    });
   });
 
   it('marks file selection for cleanup when closing File Explorer while another tab remains', () => {

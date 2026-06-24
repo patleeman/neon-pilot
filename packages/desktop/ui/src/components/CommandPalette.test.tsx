@@ -41,6 +41,7 @@ describe('CommandPalette', () => {
     vi.restoreAllMocks();
     delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
     setExtensionCommandContext('composer.canSubmit', null);
+    setExtensionCommandContext('browser.active', null);
     conversationMocks.state.pinnedSessions = [];
     conversationMocks.state.tabs = [];
     conversationMocks.state.archivedSessions = [];
@@ -78,6 +79,29 @@ describe('CommandPalette', () => {
     await waitFor(() => {
       expect(sendButton?.disabled).toBe(false);
     });
+  });
+
+  it('uses command context that changed before the palette opens', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionQuickOpen').mockResolvedValue([]);
+    Element.prototype.scrollIntoView = vi.fn();
+    setExtensionCommandContext('browser.active', true);
+
+    render(
+      <MemoryRouter initialEntries={['/conversations/conv-1']}>
+        <CommandPalette />
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'commands', query: 'new browser tab' } }));
+    });
+
+    const command = await screen.findByText('New Browser Tab');
+    const button = command.closest('button');
+    expect(button).toBeTruthy();
+    expect(button?.disabled).toBe(false);
   });
 
   it('shows an unavailable message when a command action is not handled', async () => {
