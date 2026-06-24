@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { addNotification } from '../components/notifications/notificationStore';
 import { ExtensionPage } from './ExtensionPage';
 import { useExtensionRegistry } from './useExtensionRegistry';
 
@@ -105,7 +106,12 @@ describe('ExtensionPage', () => {
       surfaces: [],
       routes: [
         { route: '/extensions', extensionId: 'system-extension-manager', surfaceId: 'extensions-page', packageType: 'system' },
-        { route: '/extensions/search-paths', extensionId: 'system-extension-manager', surfaceId: 'extension-search-paths', packageType: 'system' },
+        {
+          route: '/extensions/search-paths',
+          extensionId: 'system-extension-manager',
+          surfaceId: 'extension-search-paths',
+          packageType: 'system',
+        },
       ],
       extensions: [
         {
@@ -145,5 +151,19 @@ describe('ExtensionPage', () => {
     const host = screen.getByTestId('surface-host');
     expect(host.getAttribute('data-extension-id')).toBe('system-extension-manager');
     expect(host.getAttribute('data-surface-id')).toBe('extension-search-paths');
+  });
+
+  it('shows a calm recovery state for unknown extension routes without warning toasts', () => {
+    render(
+      <MemoryRouter initialEntries={['/missing-extension-route']}>
+        <ExtensionPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('No page is registered here')).toBeTruthy();
+    expect(screen.getByText('This address does not match a conversation, setting, or installed extension page.')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Go to Chat' }).getAttribute('href')).toBe('/conversations/new');
+    expect(screen.queryByText(/Extension surface unavailable/i)).toBeNull();
+    expect(addNotification).not.toHaveBeenCalled();
   });
 });

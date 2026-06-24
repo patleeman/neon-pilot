@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 
 import { addNotification } from '../components/notifications/notificationStore';
-import { ErrorState, LoadingState } from '../components/ui';
+import { ButtonLink, CenteredMessage, ErrorState, LoadingState } from '../components/ui';
 import { NativeExtensionSurfaceHost } from './NativeExtensionSurfaceHost';
 import { isNativeExtensionPageSurface, type NativeExtensionViewSummary } from './types';
 import { type ExtensionRegistryEntry, useExtensionRegistry } from './useExtensionRegistry';
@@ -81,12 +81,6 @@ export function ExtensionPage() {
     }
   }, [registry.error]);
 
-  useEffect(() => {
-    if (!registry.loading && !registry.error && !nativeSurface && !staleExtensionRoute) {
-      addNotification({ type: 'warning', message: `No extension registered for route: ${location.pathname}`, source: 'core' });
-    }
-  }, [location.pathname, nativeSurface, registry.loading, registry.error, staleExtensionRoute]);
-
   if (registry.loading && !nativeSurface) {
     return <LoadingState label="Loading extension…" />;
   }
@@ -105,5 +99,16 @@ export function ExtensionPage() {
     return <Navigate to="/conversations/new" replace />;
   }
 
-  return <ErrorState message="Extension surface unavailable: no native extension page is registered for this route." />;
+  return (
+    <CenteredMessage
+      eyebrow="Route unavailable"
+      title="No page is registered here"
+      body="This address does not match a conversation, setting, or installed extension page."
+      actions={
+        <ButtonLink href="/conversations/new" variant="action">
+          Go to Chat
+        </ButtonLink>
+      }
+    />
+  );
 }
