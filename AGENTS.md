@@ -11,6 +11,7 @@
 - Do not introduce environment variables for app/runtime configuration. Pass state explicitly through typed config/context APIs; keep env reads only for unavoidable external-process compatibility with existing legacy variables.
 - For web UI, prefer server-pushed updates over polling when the backend can publish events.
 - Multiple agents may be working here. Do targeted changes and targeted checkpoints; stop if unrelated edits conflict with your work.
+- For desktop app UI, use shared primitives from `@neon-pilot/ui`/`@neon-pilot/ui/shared` instead of hand-rolled Tailwind component chrome. For first-party extension UI and settings surfaces, use `@neon-pilot/extensions/ui` and `@neon-pilot/extensions/settings`. If a raw HTML/Tailwind pattern is genuinely needed, keep the exception narrow and update the UI-pattern guardrail or docs so future agents do not silently bypass the design system.
 
 ## Prompt and knowledge rules
 
