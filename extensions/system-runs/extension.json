@@ -69,9 +69,7 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "command"
-          ],
+          "required": ["command"],
           "additionalProperties": false
         }
       },
@@ -86,14 +84,7 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": [
-                "list",
-                "get",
-                "logs",
-                "start",
-                "rerun",
-                "cancel"
-              ]
+              "enum": ["list", "get", "logs", "start", "rerun", "cancel"]
             },
             "runId": {
               "type": "string"
@@ -116,9 +107,7 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "action"
-          ],
+          "required": ["action"],
           "additionalProperties": false
         }
       },
@@ -133,15 +122,7 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": [
-                "list",
-                "get",
-                "logs",
-                "start",
-                "rerun",
-                "follow_up",
-                "cancel"
-              ]
+              "enum": ["list", "get", "logs", "start", "rerun", "follow_up", "cancel"]
             },
             "runId": {
               "type": "string"
@@ -165,6 +146,18 @@
             },
             "deliverResultToConversation": {
               "type": "boolean"
+            },
+            "defer": {
+              "type": "string",
+              "description": "Delay before running, for example 30s, 10m, 2h, 1d."
+            },
+            "cron": {
+              "type": "string",
+              "description": "Cron expression for recurring runs, for example \"0 9 * * 1-5\"."
+            },
+            "at": {
+              "type": "string",
+              "description": "ISO timestamp to run at."
             },
             "loop": {
               "type": "boolean"
@@ -190,9 +183,7 @@
               ]
             }
           },
-          "required": [
-            "action"
-          ],
+          "required": ["action"],
           "additionalProperties": false
         }
       }
@@ -214,10 +205,7 @@
         "inputAction": "list",
         "jsonDefault": true,
         "usage": "background-commands list [--json]",
-        "examples": [
-          "neon-pilot background-commands list",
-          "neon-pilot background-commands list --json"
-        ],
+        "examples": ["neon-pilot background-commands list", "neon-pilot background-commands list --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -241,15 +229,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "background-commands",
-            "list"
-          ],
+          "argv": ["background-commands", "list"],
           "expectJsonFields": []
         }
       },
@@ -261,10 +243,7 @@
         "inputAction": "get",
         "jsonDefault": true,
         "usage": "background-commands get <id> [--json]",
-        "examples": [
-          "neon-pilot background-commands get example-id",
-          "neon-pilot background-commands get example-id --json"
-        ],
+        "examples": ["neon-pilot background-commands get example-id", "neon-pilot background-commands get example-id --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -289,10 +268,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "background-commands-logs",
@@ -337,10 +313,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "background-commands-start",
@@ -388,9 +361,7 @@
               "description": "Optional stable label for the run."
             }
           },
-          "required": [
-            "command"
-          ],
+          "required": ["command"],
           "additionalProperties": true
         },
         "mode": "background",
@@ -399,10 +370,7 @@
         "idempotent": false,
         "startsBackgroundWork": true,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "background-commands-rerun",
@@ -412,10 +380,7 @@
         "inputAction": "rerun",
         "jsonDefault": true,
         "usage": "background-commands rerun <id> [--json]",
-        "examples": [
-          "neon-pilot background-commands rerun example-id",
-          "neon-pilot background-commands rerun example-id --json"
-        ],
+        "examples": ["neon-pilot background-commands rerun example-id", "neon-pilot background-commands rerun example-id --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -444,10 +409,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "background-commands-cancel",
@@ -457,10 +419,7 @@
         "inputAction": "cancel",
         "jsonDefault": true,
         "usage": "background-commands cancel <id> [--json]",
-        "examples": [
-          "neon-pilot background-commands cancel example-id",
-          "neon-pilot background-commands cancel example-id --json"
-        ],
+        "examples": ["neon-pilot background-commands cancel example-id", "neon-pilot background-commands cancel example-id --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -489,10 +448,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       }
     ],
     "skills": [
@@ -504,11 +460,5 @@
       }
     ]
   },
-  "permissions": [
-    "executions:read",
-    "executions:start",
-    "executions:cancel",
-    "shell:execute",
-    "telemetry:write"
-  ]
+  "permissions": ["executions:read", "executions:start", "executions:cancel", "shell:execute", "telemetry:write"]
 }

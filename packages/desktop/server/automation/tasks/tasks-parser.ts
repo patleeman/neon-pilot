@@ -38,6 +38,7 @@ export interface ParsedTaskDefinition {
   profile: string;
   modelRef?: string;
   thinkingLevel?: string;
+  allowedTools?: string[];
   cwd?: string;
   timeoutSeconds: number;
 }

@@ -641,6 +641,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
           ...(task.conversationBehavior ? { conversationBehavior: task.conversationBehavior } : {}),
           cwd: task.cwd,
           modelRef: task.modelRef,
+          allowedTools: task.allowedTools,
           ...(task.threadConversationId ? { threadConversationId: task.threadConversationId } : {}),
           ...(task.threadSessionFile ? { threadSessionFile: task.threadSessionFile } : {}),
         },

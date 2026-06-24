@@ -46,7 +46,7 @@ export const DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS = 15 * 60;
 // ── Schema migrations ────────────────────────────────────────────────────────
 
 /** Current schema version for the automation database. */
-const AUTOMATION_SCHEMA_VERSION = 4;
+const AUTOMATION_SCHEMA_VERSION = 5;
 
 const AUTOMATION_MIGRATIONS: Migration[] = [
   {
@@ -339,6 +339,16 @@ const AUTOMATION_MIGRATIONS: Migration[] = [
       db.exec('DROP TABLE IF EXISTS legacy_automation_imports');
     },
   },
+  {
+    version: 5,
+    description: 'Store allowed tool restrictions for scheduled background agents',
+    up: (db) => {
+      const columnNames = readTableColumnNames(db, 'automations');
+      if (!columnNames.has('allowed_tools_json')) {
+        db.exec('ALTER TABLE automations ADD COLUMN allowed_tools_json TEXT');
+      }
+    },
+  },
 ];
 
 export interface StoredAutomation extends ParsedTaskDefinition {
@@ -364,6 +374,7 @@ export interface AutomationMutationInput {
   at?: string | null;
   modelRef?: string | null;
   thinkingLevel?: string | null;
+  allowedTools?: string[] | null;
   cwd?: string | null;
   timeoutSeconds?: number | null;
   catchUpWindowSeconds?: number | null;
@@ -399,6 +410,7 @@ type StoredAutomationRow = {
   thread_mode: string | null;
   thread_session_file: string | null;
   thread_conversation_id: string | null;
+  allowed_tools_json: string | null;
 };
 
 type AutomationStateRow = {
@@ -561,6 +573,41 @@ function serializeAutomationPolicies(policies: AutomationPolicy[]): string {
   return JSON.stringify(normalizeAutomationPolicies(policies));
 }
 
+function normalizeAllowedToolsInput(input: string[] | null | undefined): string[] | undefined {
+  if (!Array.isArray(input)) {
+    return undefined;
+  }
+
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const entry of input) {
+    if (typeof entry !== 'string') continue;
+    const tool = entry.trim();
+    if (!tool || seen.has(tool)) continue;
+    seen.add(tool);
+    normalized.push(tool);
+  }
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function serializeAllowedTools(input: string[] | undefined): string | null {
+  return input && input.length > 0 ? JSON.stringify(input) : null;
+}
+
+function parseAllowedToolsJson(value: string | null | undefined): string[] | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return normalizeAllowedToolsInput(Array.isArray(parsed) ? parsed : undefined);
+  } catch {
+    return undefined;
+  }
+}
+
 function slugifyTitle(title: string): string {
   const normalized = title
     .toLowerCase()
@@ -596,6 +643,7 @@ function openAutomationDb(dbPath: string = getAutomationDbPath()): SqliteDatabas
       cwd TEXT,
       model_ref TEXT,
       thinking_level TEXT,
+      allowed_tools_json TEXT,
       timeout_seconds INTEGER NOT NULL,
       catch_up_window_seconds INTEGER,
       policies_json TEXT,
@@ -713,6 +761,7 @@ function rowToStoredAutomation(row: StoredAutomationRow): StoredAutomation {
     profile: row.runtime_scope,
     modelRef: readOptionalString(row.model_ref),
     thinkingLevel: readOptionalString(row.thinking_level),
+    allowedTools: parseAllowedToolsJson(row.allowed_tools_json),
     cwd: readOptionalString(row.cwd),
     timeoutSeconds: row.timeout_seconds,
     catchUpWindowSeconds: readOptionalPositiveInteger(row.catch_up_window_seconds),
@@ -785,7 +834,7 @@ function readStoredAutomationRows(db: SqliteDatabase, runtimeScope?: string): St
     return db
       .prepare(
         `
-      SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, thread_mode, thread_session_file, thread_conversation_id
+      SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, allowed_tools_json, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, thread_mode, thread_session_file, thread_conversation_id
       FROM automations
       WHERE runtime_scope = ?
       ORDER BY title COLLATE NOCASE ASC, created_at ASC, id ASC
@@ -797,7 +846,7 @@ function readStoredAutomationRows(db: SqliteDatabase, runtimeScope?: string): St
   return db
     .prepare(
       `
-    SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, thread_mode, thread_session_file, thread_conversation_id
+    SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, allowed_tools_json, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, thread_mode, thread_session_file, thread_conversation_id
     FROM automations
     ORDER BY runtime_scope ASC, title COLLATE NOCASE ASC, created_at ASC, id ASC
   `,
@@ -835,6 +884,7 @@ function normalizeMutationInput(input: AutomationMutationInput): Required<Pick<A
   at?: string;
   modelRef?: string;
   thinkingLevel?: string;
+  allowedTools?: string[];
   cwd?: string;
   timeoutSeconds: number;
   catchUpWindowSeconds?: number;
@@ -893,6 +943,7 @@ function normalizeMutationInput(input: AutomationMutationInput): Required<Pick<A
     at: normalizedAt,
     modelRef: readOptionalString(input.modelRef ?? undefined),
     thinkingLevel: readOptionalString(input.thinkingLevel ?? undefined),
+    allowedTools: normalizeAllowedToolsInput(input.allowedTools ?? undefined),
     cwd: readOptionalString(input.cwd ?? undefined),
     timeoutSeconds,
     catchUpWindowSeconds,
@@ -916,7 +967,7 @@ export function getStoredAutomation(id: string, options: { runtimeScope?: string
   const row = db
     .prepare(
       `
-    SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, thread_mode, thread_session_file, thread_conversation_id
+    SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, allowed_tools_json, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, thread_mode, thread_session_file, thread_conversation_id
     FROM automations
     WHERE id = ?
   `,
@@ -940,8 +991,8 @@ export function createStoredAutomation(input: AutomationMutationInput & { dbPath
   db.prepare(
     `
     INSERT INTO automations (
-      id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, thread_mode, thread_session_file, thread_conversation_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'dedicated', NULL, NULL)
+      id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, allowed_tools_json, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, thread_mode, thread_session_file, thread_conversation_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'dedicated', NULL, NULL)
   `,
   ).run(
     id,
@@ -955,6 +1006,7 @@ export function createStoredAutomation(input: AutomationMutationInput & { dbPath
     normalized.cwd ?? null,
     normalized.modelRef ?? null,
     normalized.thinkingLevel ?? null,
+    serializeAllowedTools(normalized.allowedTools),
     normalized.timeoutSeconds,
     normalized.catchUpWindowSeconds ?? null,
     serializeAutomationPolicies(normalized.policies),
@@ -992,6 +1044,7 @@ export function updateStoredAutomation(
     at: input.at !== undefined ? input.at : existing.schedule.type === 'at' ? existing.schedule.at : undefined,
     modelRef: input.modelRef !== undefined ? input.modelRef : existing.modelRef,
     thinkingLevel: input.thinkingLevel !== undefined ? input.thinkingLevel : existing.thinkingLevel,
+    allowedTools: input.allowedTools !== undefined ? input.allowedTools : existing.allowedTools,
     cwd: input.cwd !== undefined ? input.cwd : existing.cwd,
     timeoutSeconds: input.timeoutSeconds !== undefined ? input.timeoutSeconds : existing.timeoutSeconds,
     catchUpWindowSeconds: input.catchUpWindowSeconds !== undefined ? input.catchUpWindowSeconds : existing.catchUpWindowSeconds,
@@ -1006,7 +1059,7 @@ export function updateStoredAutomation(
   db.prepare(
     `
     UPDATE automations
-    SET title = ?, enabled = ?, schedule_type = ?, cron = ?, at = ?, prompt = ?, cwd = ?, model_ref = ?, thinking_level = ?, timeout_seconds = ?, catch_up_window_seconds = ?, policies_json = ?, target_type = ?, conversation_behavior = ?, updated_at = ?
+    SET title = ?, enabled = ?, schedule_type = ?, cron = ?, at = ?, prompt = ?, cwd = ?, model_ref = ?, thinking_level = ?, allowed_tools_json = ?, timeout_seconds = ?, catch_up_window_seconds = ?, policies_json = ?, target_type = ?, conversation_behavior = ?, updated_at = ?
     WHERE id = ?
   `,
   ).run(
@@ -1019,6 +1072,7 @@ export function updateStoredAutomation(
     normalized.cwd ?? null,
     normalized.modelRef ?? null,
     normalized.thinkingLevel ?? null,
+    serializeAllowedTools(normalized.allowedTools),
     normalized.timeoutSeconds,
     normalized.catchUpWindowSeconds ?? null,
     serializeAutomationPolicies(normalized.policies),

@@ -375,6 +375,7 @@ async function runTaskWithStandaloneAgent(input: {
   const argv = buildBackgroundAgentArgv({
     prompt: task.prompt,
     ...(task.modelRef ? { model: task.modelRef } : {}),
+    ...(task.allowedTools && task.allowedTools.length > 0 ? { allowedTools: task.allowedTools } : {}),
     ...(!shouldWriteSession ? { noSession: true } : {}),
   });
   argv.push('--cwd', task.cwd ?? process.cwd());

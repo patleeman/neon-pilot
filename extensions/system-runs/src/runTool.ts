@@ -113,6 +113,9 @@ const SubagentParams = {
     cwd: { type: 'string', description: 'Working directory for start. Defaults to the current conversation cwd.' },
     tail: { type: 'number', minimum: 1, maximum: 1000, description: 'Number of log lines to include for logs.' },
     deliverResultToConversation: { type: 'boolean', description: 'Whether completion should wake this conversation.' },
+    defer: { type: 'string', description: 'Delay before running, for example 30s, 10m, 2h, 1d.' },
+    cron: { type: 'string', description: 'Cron expression for recurring runs, for example "0 9 * * 1-5".' },
+    at: { type: 'string', description: 'ISO timestamp to run at.' },
     loop: { type: 'boolean', description: 'Enable loop mode - agent schedules its own next iteration.' },
     loopDelay: { type: 'string', description: 'Default delay between loop iterations, for example 1h.' },
     loopMaxIterations: { type: 'number', description: 'Maximum number of loop iterations.' },
@@ -464,6 +467,7 @@ export function createRunAgentExtension(options: {
                   cwd,
                   prompt,
                   targetType: 'background-agent',
+                  ...(allowedTools ? { allowedTools } : {}),
                 });
 
                 const task = await applyScheduledTaskThreadBinding(

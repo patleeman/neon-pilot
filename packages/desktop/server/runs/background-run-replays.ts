@@ -16,6 +16,15 @@ function readOptionalBoolean(value: unknown): boolean | undefined {
   return typeof value === 'boolean' ? value : undefined;
 }
 
+function readOptionalStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const normalized = value.flatMap((entry) => (typeof entry === 'string' && entry.trim().length > 0 ? [entry.trim()] : []));
+  return normalized.length > 0 ? normalized : undefined;
+}
+
 function readSpec(run: ScannedDurableRun): Record<string, unknown> | undefined {
   return isRecord(run.manifest?.spec) ? run.manifest.spec : isRecord(run.checkpoint?.payload) ? run.checkpoint.payload : undefined;
 }
@@ -103,11 +112,13 @@ function readAgentSpec(run: ScannedDurableRun): StartBackgroundRunInput['agent']
 
   const model = readOptionalString(target?.model);
   const noSession = target?.noSession === true;
+  const allowedTools = readOptionalStringArray(target?.allowedTools);
 
   return {
     prompt,
     ...(model ? { model } : {}),
     ...(noSession ? { noSession: true } : {}),
+    ...(allowedTools ? { allowedTools } : {}),
   };
 }
 

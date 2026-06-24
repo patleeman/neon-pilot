@@ -24,11 +24,11 @@ vi.mock('@neon-pilot/extensions/backend/telemetry', () => telemetry);
 import { createRunAgentExtension } from './runTool.js';
 
 function registerTools() {
-  type RegisteredTool = { execute: (...args: Parameters<ReturnType<typeof vi.fn>>) => Promise<unknown> };
+  type RegisteredTool = { execute: (...args: Parameters<ReturnType<typeof vi.fn>>) => Promise<unknown>; parameters?: unknown };
   const registered: Record<string, RegisteredTool> = {};
   createRunAgentExtension({ getRuntimeScope: () => 'runtime', repoRoot: '/repo', runtimeConfigRoot: '/runtime' })({
-    registerTool(tool: { name: string; execute: RegisteredTool['execute'] }) {
-      registered[tool.name] = { execute: tool.execute };
+    registerTool(tool: { name: string; execute: RegisteredTool['execute']; parameters?: unknown }) {
+      registered[tool.name] = { execute: tool.execute, parameters: tool.parameters };
     },
   } as never);
   return registered;
@@ -102,10 +102,9 @@ describe('runTool', () => {
       }),
     );
     expect(result.details).toMatchObject({ action: 'start', runId: 'run-1', deliverResultToConversation: true });
-    expect(telemetry.recordTelemetryEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'start', status: 202 }),
-      { extensionId: 'system-runs' },
-    );
+    expect(telemetry.recordTelemetryEvent).toHaveBeenCalledWith(expect.objectContaining({ name: 'start', status: 202 }), {
+      extensionId: 'system-runs',
+    });
   });
 
   it('validates scheduled subagent trigger combinations and loop iteration counts', async () => {
@@ -130,5 +129,46 @@ describe('runTool', () => {
         ctx,
       ),
     ).resolves.toMatchObject({ isError: true, content: [{ text: 'loopMaxIterations must be a positive integer.' }] });
+  });
+
+  it('preserves allowed tools when saving scheduled subagent runs', async () => {
+    runs.parseDeferredResumeDelayMs.mockReturnValue(60 * 60 * 1000);
+    runs.createStoredAutomation.mockReturnValue({ id: 'agent', title: 'agent' });
+    runs.applyScheduledTaskThreadBinding.mockResolvedValue({ id: 'agent', title: 'agent' });
+
+    const result = await registerTools().subagent.execute(
+      'call-1',
+      { action: 'start', taskSlug: 'agent', prompt: 'work', defer: '1h', allowedTools: ['read', 'bash'] },
+      undefined,
+      undefined,
+      ctx,
+    );
+
+    expect(runs.createStoredAutomation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'agent',
+        title: 'agent',
+        prompt: 'work',
+        targetType: 'background-agent',
+        allowedTools: ['read', 'bash'],
+      }),
+    );
+    expect(result).toMatchObject({
+      details: {
+        action: 'start_agent',
+        scheduled: true,
+        automationId: 'agent',
+      },
+    });
+  });
+
+  it('exposes scheduling fields on the subagent tool schema', () => {
+    const parameters = registerTools().subagent.parameters as { properties?: Record<string, unknown> };
+
+    expect(parameters.properties).toMatchObject({
+      defer: expect.objectContaining({ type: 'string' }),
+      cron: expect.objectContaining({ type: 'string' }),
+      at: expect.objectContaining({ type: 'string' }),
+    });
   });
 });

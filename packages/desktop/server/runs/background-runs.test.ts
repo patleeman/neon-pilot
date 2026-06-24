@@ -123,6 +123,7 @@ describe('background runs', () => {
         prompt: 'Review the latest diff',
         profile: 'datadog',
         model: 'openai-codex/gpt-5.4',
+        allowedTools: ['read', 'bash'],
       },
       createdAt: '2026-03-19T20:00:00.000Z',
     });
@@ -135,6 +136,7 @@ describe('background runs', () => {
     expect(record.argv).not.toContain('--profile');
     expect(record.argv).toContain('--model');
     expect(record.argv).toContain('openai-codex/gpt-5.4');
+    expect(record.argv).toEqual(expect.arrayContaining(['--tools', 'read,bash']));
     expect(record.argv).toContain('--prompt');
     expect(record.argv).toContain('Review the latest diff');
 
@@ -149,6 +151,7 @@ describe('background runs', () => {
     expect(target?.prompt).toBe('Review the latest diff');
     expect(target).not.toHaveProperty('profile');
     expect(target?.model).toBe('openai-codex/gpt-5.4');
+    expect(target?.allowedTools).toEqual(['read', 'bash']);
 
     const metadata = manifest?.spec.metadata as Record<string, unknown>;
     expect(metadata?.taskSlug).toBe('code-review');
@@ -157,6 +160,7 @@ describe('background runs', () => {
     const payload = checkpoint?.payload as Record<string, unknown>;
     const payloadTarget = payload?.target as Record<string, unknown>;
     expect(payloadTarget?.prompt).toBe('Review the latest diff');
+    expect(payloadTarget?.allowedTools).toEqual(['read', 'bash']);
     expect(metadata?.taskSlug).toBe('code-review');
   });
 

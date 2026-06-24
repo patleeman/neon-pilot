@@ -216,6 +216,7 @@ function buildScheduleRunInputFromBackgroundRun(
       prompt: agent.prompt,
       ...(agent.model ? { model: agent.model } : {}),
       ...(agent.noSession === true ? { noSession: true } : {}),
+      ...(agent.allowedTools && agent.allowedTools.length > 0 ? { allowedTools: agent.allowedTools } : {}),
     };
   } else if (argv) {
     target = {

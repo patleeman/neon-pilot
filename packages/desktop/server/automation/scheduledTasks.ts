@@ -30,6 +30,7 @@ export interface ScheduledTaskFileMetadata {
   at?: string;
   model?: string;
   thinkingLevel?: string;
+  allowedTools?: string[];
   profile?: string;
   cwd?: string;
   timeoutSeconds?: number;
@@ -83,6 +84,7 @@ function hydrateMetadata(task: StoredAutomation): ScheduledTaskFileMetadata {
     at: task.schedule.type === 'at' ? task.schedule.at : undefined,
     model: task.modelRef,
     thinkingLevel: task.thinkingLevel,
+    ...(task.allowedTools ? { allowedTools: task.allowedTools } : {}),
     profile: task.profile,
     cwd: task.cwd,
     timeoutSeconds: task.timeoutSeconds,

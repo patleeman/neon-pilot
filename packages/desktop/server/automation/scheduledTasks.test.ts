@@ -56,6 +56,7 @@ describe('scheduledTasks', () => {
       prompt: 'Daily task\nInclude blockers.',
       modelRef: 'openai-codex/gpt-5.4',
       thinkingLevel: 'medium',
+      allowedTools: ['read', 'bash'],
       cwd: '/tmp/workspace',
       timeoutSeconds: 900,
     });
@@ -77,6 +78,7 @@ describe('scheduledTasks', () => {
       profile: 'shared',
       model: 'openai-codex/gpt-5.4',
       thinkingLevel: 'medium',
+      allowedTools: ['read', 'bash'],
       cwd: '/tmp/workspace',
       timeoutSeconds: 900,
       catchUpWindowSeconds: 900,

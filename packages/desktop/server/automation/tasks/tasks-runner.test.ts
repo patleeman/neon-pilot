@@ -242,7 +242,7 @@ describe('runTaskInIsolatedPi', () => {
     mocks.resolveCompanionRuntime.mockResolvedValue(runtime);
 
     const result = await runTaskInIsolatedPi({
-      task: createTask({ cwd: '/repo' }),
+      task: createTask({ cwd: '/repo', allowedTools: ['read', 'bash'] }),
       attempt: 1,
       runsRoot,
     });
@@ -303,7 +303,7 @@ describe('runTaskInIsolatedPi', () => {
     });
 
     const result = await runTaskInIsolatedPi({
-      task: createTask({ cwd: '/repo' }),
+      task: createTask({ targetType: 'background-agent', cwd: '/repo', allowedTools: ['read', 'bash'] }),
       attempt: 1,
       runsRoot,
     });
@@ -315,7 +315,16 @@ describe('runTaskInIsolatedPi', () => {
     });
     expect(mocks.spawn).toHaveBeenCalledWith(
       process.execPath,
-      expect.arrayContaining(['--prompt', 'Run nightly checks', '--cwd', '/repo', '--session-file', '/sessions/nightly.jsonl']),
+      expect.arrayContaining([
+        '--prompt',
+        'Run nightly checks',
+        '--tools',
+        'read,bash',
+        '--cwd',
+        '/repo',
+        '--session-file',
+        '/sessions/nightly.jsonl',
+      ]),
       expect.objectContaining({ cwd: '/repo', env: expect.objectContaining({ ELECTRON_RUN_AS_NODE: '1' }) }),
     );
     const log = readFileSync(result.logPath, 'utf-8');

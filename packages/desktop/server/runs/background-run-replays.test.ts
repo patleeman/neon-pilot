@@ -169,6 +169,7 @@ describe('background run replay helpers', () => {
         prompt: 'Initial prompt',
         profile: 'datadog',
         model: 'openai-codex/gpt-5.4',
+        allowedTools: ['read', 'bash'],
       },
     });
     const sessionDir = resolveBackgroundRunSessionDir(run.runId);
@@ -181,6 +182,7 @@ describe('background run replay helpers', () => {
       agent: {
         prompt: 'Continue from the failing deploy step.',
         model: 'openai-codex/gpt-5.4',
+        allowedTools: ['read', 'bash'],
       },
       source: {
         type: 'tool',

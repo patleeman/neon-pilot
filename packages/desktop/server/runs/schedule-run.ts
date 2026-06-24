@@ -56,6 +56,7 @@ export interface TargetAgent {
   prompt: string;
   model?: string;
   noSession?: boolean;
+  allowedTools?: string[];
 }
 
 export interface TargetShell {
@@ -228,6 +229,7 @@ function buildRunSpec(input: ScheduleRunInput): Record<string, unknown> {
       ...('argv' in input.target ? { argv: input.target.argv } : {}),
       ...('model' in input.target ? { model: input.target.model } : {}),
       ...('noSession' in input.target ? { noSession: input.target.noSession } : {}),
+      ...('allowedTools' in input.target ? { allowedTools: input.target.allowedTools } : {}),
     },
     callback: resolveCallback(input.callback),
   };
