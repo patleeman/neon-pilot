@@ -1321,16 +1321,14 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   }, [activeFilter, extensionHasIssue, installedExtensions, query]);
 
   const visibleCatalogExtensions = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
     const installedIds = new Set(extensions.map((extension) => extension.id));
     const items = catalog?.extensions ?? [];
     return items.filter((item) => {
       if (installedIds.has(item.id) || item.installed) return false;
       if (item.packageType && item.packageType !== 'extension') return false;
-      if (!normalizedQuery) return true;
-      return `${item.name} ${item.id} ${item.description ?? ''}`.toLowerCase().includes(normalizedQuery);
+      return true;
     });
-  }, [catalog, extensions, query]);
+  }, [catalog, extensions]);
 
   const visiblePlatformExtensionCount = installedExtensions.filter(isLocked).length;
   const sectionSummary = [

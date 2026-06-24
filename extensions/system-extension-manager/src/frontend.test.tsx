@@ -447,6 +447,38 @@ describe('ExtensionManagerPage', () => {
     expect(await screen.findByText('Available Only')).toBeTruthy();
   });
 
+  it('does not let the main extension search hide installable catalog items', async () => {
+    const callAction = vi.fn().mockResolvedValue({
+      ok: true,
+      version: '0.9.1-rc.6',
+      tag: 'v0.9.1-rc.6',
+      extensions: [
+        {
+          id: 'available-only',
+          name: 'Available Only',
+          description: 'Catalog-only extension.',
+          version: '1.0.0',
+          tag: 'v1.0.0',
+        },
+      ],
+    });
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByPlaceholderText('Search extensions…'), { target: { value: 'Menu Test' } });
+    expect(screen.getByText('Menu Test')).toBeTruthy();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
+    const dialog = await screen.findByRole('dialog', { name: 'Install extension' });
+
+    expect(within(dialog).getByText('Available Only')).toBeTruthy();
+  });
+
   it('does not offer catalog items already marked installed by the catalog', async () => {
     const callAction = vi.fn().mockResolvedValue({
       ok: true,

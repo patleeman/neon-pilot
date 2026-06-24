@@ -13,6 +13,7 @@ describe('system-extension-manager manifest', () => {
     expect(manifest.id).toBe('system-extension-manager');
     expect(manifest.name).toBe('Extension Manager');
     expect(manifest.packageType).toBe('system');
+    expect(manifest.description).toBe('Inspect, install, update, enable, disable, validate, reload, snapshot, and delete extensions.');
   });
 
   it('has a valid schema version', () => {

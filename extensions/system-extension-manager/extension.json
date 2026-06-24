@@ -3,7 +3,7 @@
   "id": "system-extension-manager",
   "name": "Extension Manager",
   "packageType": "system",
-  "description": "Inspect, validate, reload, enable, disable, snapshot, import, and export extensions.",
+  "description": "Inspect, install, update, enable, disable, validate, reload, snapshot, and delete extensions.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
