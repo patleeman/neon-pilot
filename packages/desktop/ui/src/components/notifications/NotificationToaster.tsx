@@ -27,15 +27,15 @@ interface ToastDisplay {
 }
 
 const TYPE_BORDER_CLASS: Record<NotificationType, string> = {
-  info: 'border-border-subtle',
-  warning: 'border-warning/30',
-  error: 'border-red-500/30',
+  info: 'ui-notification-toast-info',
+  warning: 'ui-notification-toast-warning',
+  error: 'ui-notification-toast-error',
 };
 
 const TYPE_BG_CLASS: Record<NotificationType, string> = {
-  info: 'bg-surface',
-  warning: 'bg-warning/10',
-  error: 'bg-red-50 dark:bg-red-950',
+  info: '',
+  warning: '',
+  error: '',
 };
 
 export function NotificationToaster({ suppress = false }: { suppress?: boolean }) {
@@ -162,7 +162,7 @@ export function NotificationToaster({ suppress = false }: { suppress?: boolean }
         <div
           key={toast.id}
           className={cx(
-            'pointer-events-auto cursor-pointer max-h-[45vh] w-[min(720px,calc(100vw-32px))] overflow-auto rounded-lg border px-3 py-2 text-[12px] leading-5 shadow-2xl transition-all duration-300',
+            'ui-notification-toast',
             TYPE_BORDER_CLASS[toast.type],
             TYPE_BG_CLASS[toast.type],
             toast.type === 'error' ? 'text-red-600 dark:text-red-400' : 'text-primary',

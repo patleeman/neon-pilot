@@ -594,13 +594,13 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 </DataTableCell>
                 <DataTableCell>
                   <div className="min-w-0">
-                    <button
-                      type="button"
-                      className="block max-w-full truncate text-left font-medium text-primary hover:text-accent focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+                    <Button
+                      variant="ghost"
+                      className="max-w-full justify-start truncate px-0 py-0 text-left font-medium text-primary"
                       onClick={() => openEdit(task)}
                     >
                       {taskTitle(task)}
-                    </button>
+                    </Button>
                     {task.prompt ? <div className="mt-0.5 truncate text-[12px] text-dim">{task.prompt}</div> : null}
                   </div>
                 </DataTableCell>

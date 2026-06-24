@@ -28,6 +28,32 @@ User-reachable UI actions should be command-backed when they may need a shortcut
 
 When auditing an extension or app surface, search first for repeated local recipes such as `rounded-md border border-border-subtle`, `bg-elevated p-`, `ui-toolbar-button`, local `BUTTON_CLASS` constants, `details`/`summary`, and hand-written empty/error/loading text. Most of those should collapse into an existing primitive.
 
+The UI-pattern guardrail is blocking by default:
+
+```sh
+pnpm run check:ui-patterns
+```
+
+The scan covers desktop UI, first-party extensions, extension webapps, and docs extension templates. It allows zero findings unless a finding is narrowly documented. Use report-only mode only for exploratory audits:
+
+```sh
+pnpm run check:ui-patterns -- --report-only
+UI_PATTERN_MAX_FINDINGS=unbounded pnpm run check:ui-patterns
+```
+
+Inline exceptions must be structured and rule-specific:
+
+```tsx
+{
+  /* ui-pattern-ok raw-control reason="embedded third-party editor requires native file input semantics" */
+}
+<input type="file" />;
+```
+
+Bare `ui-pattern-ok` comments do not suppress findings and are reported as invalid. Prefer moving the surface to `@neon-pilot/ui` or `@neon-pilot/extensions/ui`; use an exception only when a narrow host, browser, or third-party constraint makes a shared primitive the wrong tool.
+
+The committed/default check must not hide live migration debt behind a broad allowlist. If you add an allowlist entry for local investigation, keep it out of the default path and verify the default audit still matches an allowlist-free audit. Desktop host CSS is not a blanket design-system escape hatch: app-level component recipes in `packages/desktop/ui/src/app/index.css` need selector-level `ui-pattern-ok` reasons unless they move into `packages/ui` primitive styling.
+
 ## Commands
 
 Run the component package build:
@@ -148,5 +174,6 @@ Before introducing local UI markup in an app page or extension:
 3. Choose the friendliest control before defaulting to text: dropdowns, toggles, segmented controls, pickers, key/value editors, and structured rows should replace raw inputs or JSON textareas whenever practical.
 4. Back meaningful user actions with commands so they can be discovered, automated, and hot-keyed.
 5. Keep domain behavior local, but move generic chrome, spacing, state color, empty/error/loading presentation, and modal/list/table shells to shared primitives.
-6. When adding a new primitive, update `packages/ui/src/index.ts`, `packages/desktop/ui/src/extensions/ui.ts` or settings exports if extensions need it, `packages/ui/README.md`, Storybook, and tests where behavior is non-trivial.
-7. Validate the actual touched surface: build the package or extension, run `pnpm run check:extensions:static` for extension boundary work, and perform browser/app QA when user-visible UI changes.
+6. Run `pnpm run check:ui-patterns` before handoff; do not use report-only or an allowlist as proof that first-party UI is migrated.
+7. When adding a new primitive, update `packages/ui/src/index.ts`, `packages/desktop/ui/src/extensions/ui.ts` or settings exports if extensions need it, `packages/ui/README.md`, Storybook, and tests where behavior is non-trivial.
+8. Validate the actual touched surface: build the package or extension, run `pnpm run check:extensions:static` for extension boundary work, and perform browser/app QA when user-visible UI changes.

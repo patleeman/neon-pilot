@@ -91,7 +91,7 @@ function NotificationRow({
     <div
       className={cx(
         'group -mx-1.5 rounded-md px-2 py-1.5 transition-colors cursor-pointer',
-        item.read ? 'opacity-50' : 'bg-steel/8 hover:bg-steel/12',
+        item.read ? 'opacity-50' : 'ui-notification-row-unread',
       )}
       onClick={() => {
         if (!item.read) onMarkRead(item.id);
@@ -205,14 +205,12 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
       aria-modal="false"
       aria-label="Notifications"
     >
-      <div className="absolute right-3 top-9 flex max-h-[min(440px,calc(100vh-56px))] w-[360px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-xl border border-border-default bg-surface shadow-2xl animate-notification-dropdown-in">
+      <div className="ui-notification-dropdown">
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-border-subtle px-3 py-2">
           <div className="flex items-center gap-2">
             <h2 className="text-[12px] font-semibold text-primary">Notifications</h2>
-            {hasUnread ? (
-              <span className="rounded-full bg-red-500 px-1.5 py-[1px] text-[9px] font-semibold text-white">{unreadCount}</span>
-            ) : null}
+            {hasUnread ? <span className="ui-notification-badge">{unreadCount}</span> : null}
           </div>
           <div className="flex items-center gap-1">
             {hasNotifications && (

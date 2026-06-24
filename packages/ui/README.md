@@ -69,6 +69,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 
 - Use `Button` for semantic app actions. `variant="toolbar"` is quiet chrome, `variant="action"` is stronger and works for compact transcript/tool action controls, and `variant="ghost"` is best for selectable cards or low-emphasis row actions.
 - Use `Button tone="danger"` for destructive actions such as delete, remove, revoke, and reset instead of local danger button classes.
+- Use `Button tone="success"` for positive state actions such as enabled, connected, complete, and active when the action is not destructive.
 - Use `ButtonLink` when the same text-button treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - Use `TextLink` for inline prose links in notices, hints, setup copy, help text, and empty states. Prefer it over handwritten `text-accent underline` anchors.
 - Use `TextButton` for inline detail actions in rows, key-value lists, and compact headers where bordered button chrome would add visual noise.

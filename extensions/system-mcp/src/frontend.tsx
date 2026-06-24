@@ -1,16 +1,15 @@
+import { api, SettingsRow, useApi } from '@neon-pilot/extensions/settings';
 import {
-  api,
   Field,
   Notice,
   Pill,
   RailSubsection,
+  RowButton,
   Select,
-  SettingsRow,
   SupportingText,
   TextInput,
   ToolbarButton,
-  useApi,
-} from '@neon-pilot/extensions/settings';
+} from '@neon-pilot/extensions/ui';
 import React, { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 type McpServerConfig = {
@@ -350,14 +349,11 @@ export function McpSettingsPanel() {
                 const selected = selectedServerName === name;
                 return (
                   <div key={name} className="space-y-2 border-t border-border-subtle/60 pt-3 first:border-t-0 first:pt-0">
-                    <button
+                    <RowButton
                       type="button"
                       aria-pressed={selected}
-                      className={`w-full rounded-md border px-3 py-2 text-left transition ${
-                        selected
-                          ? 'border-accent/60 bg-accent/10'
-                          : 'border-border-subtle/70 bg-surface-muted/20 hover:border-border-subtle'
-                      }`}
+                      selected={selected}
+                      className="block px-3 py-2"
                       onClick={() => selectServer(name, rawServer, server)}
                     >
                       <span className="flex flex-wrap items-center gap-2">
@@ -369,7 +365,7 @@ export function McpSettingsPanel() {
                       <span className="ui-supporting-text mt-1 block break-all">
                         {server ? formatMcpServerCommand(server) : disabled ? 'Disabled server' : 'Unparsed server config'}
                       </span>
-                    </button>
+                    </RowButton>
                   </div>
                 );
               })

@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react';
 
-import { Button } from '../ui';
+import { Button, Select, TextInput } from '../ui';
 
 interface MissionTask {
   id: string;
@@ -39,7 +39,7 @@ export function ConversationRunModePanel({
     return (
       <section aria-label="Run mode" className="space-y-2">
         <span>Tasks</span>
-        <input
+        <TextInput
           aria-label="Mission goal"
           defaultValue={mission?.goal ?? ''}
           onBlur={(event) => onDraftMissionChange?.({ goal: event.currentTarget.value })}
@@ -50,7 +50,7 @@ export function ConversationRunModePanel({
           ))}
         </ul>
         <form onSubmit={submitTask}>
-          <input aria-label="Add mission task" value={taskInput} onChange={(event) => setTaskInput(event.currentTarget.value)} />
+          <TextInput aria-label="Add mission task" value={taskInput} onChange={(event) => setTaskInput(event.currentTarget.value)} />
           <Button type="submit" variant="secondary" disabled={!taskInput.trim()}>
             Add
           </Button>
@@ -65,12 +65,12 @@ export function ConversationRunModePanel({
         <span>Run</span>
         <label>
           Prompt to repeat each iteration
-          <input aria-label="Loop prompt" defaultValue={activeLoop.prompt} />
+          <TextInput aria-label="Loop prompt" defaultValue={activeLoop.prompt} />
         </label>
-        <input aria-label="Loop max iterations" defaultValue={activeLoop.maxIterations} />
-        <select aria-label="Loop delay" value={activeLoop.delay} readOnly>
+        <TextInput aria-label="Loop max iterations" defaultValue={activeLoop.maxIterations} />
+        <Select aria-label="Loop delay" value={activeLoop.delay} onChange={() => undefined}>
           <option value={activeLoop.delay}>{activeLoop.delay}</option>
-        </select>
+        </Select>
       </section>
     );
   }

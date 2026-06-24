@@ -148,7 +148,7 @@ function ToolCard({ tool }: { tool: TraceToolHealth }) {
   const okCalls = tool.calls - tool.errors;
 
   return (
-    <SurfacePanel muted className={hasTrouble ? 'border-danger/20 bg-danger/[0.03] p-3' : 'border-transparent p-3'}>
+    <SurfacePanel muted className={hasTrouble ? 'ui-surface-danger-soft p-3' : 'border-transparent p-3'}>
       <div className="mb-2.5 flex min-w-0 items-center gap-2">
         <StatusDot tone={dotTone} size="xs" className="shrink-0" />
         <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{tool.toolName}</span>
@@ -167,10 +167,14 @@ function ToolCard({ tool }: { tool: TraceToolHealth }) {
         <Stat label="Max Latency" value={formatDuration(tool.maxLatencyMs)} />
       </div>
       <div className="mt-2.5 pt-2 border-t border-border-subtle/50">
-        <div className="flex h-2 overflow-hidden rounded-md bg-surface">
-          <div className="bg-success/70" style={{ width: `${tool.calls > 0 ? (okCalls / tool.calls) * 100 : 0}%` }} />
-          {tool.errors > 0 && <div className="bg-danger" style={{ width: `${(tool.errors / tool.calls) * 100}%` }} />}
-        </div>
+        <ProgressBar
+          value={okCalls}
+          max={Math.max(tool.calls, 1)}
+          minPercent={tool.calls > 0 ? 2 : 0}
+          tone={hasTrouble ? 'danger' : tool.errors > 0 ? 'warning' : 'success'}
+          className="h-2"
+          label={`${tool.toolName} successful calls`}
+        />
         <div className="flex justify-between text-[9px] text-dim mt-1">
           <span>{okCalls} ok</span>
           {tool.errors > 0 && <span className="text-danger">{tool.errors} err</span>}

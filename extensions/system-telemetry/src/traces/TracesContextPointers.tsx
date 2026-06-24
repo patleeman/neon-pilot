@@ -6,7 +6,7 @@
  */
 
 import type { ContextPointerUsageResult } from '@neon-pilot/extensions/data';
-import { DashboardGrid, MetricTile, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { DashboardGrid, MetricTile, PanelHeader, ProgressRow, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
 export function TracesContextPointers({ data }: { data: ContextPointerUsageResult | null }) {
@@ -77,28 +77,24 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
 }
 
 function DailyBars({ daily }: { daily: { date: string; suggested: number; inspected: number }[] }) {
-  const maxSuggested = Math.max(...daily.map((d) => d.suggested), 1);
-
   return (
-    <div className="flex items-end gap-1" style={{ height: 64 }}>
+    <div className="space-y-1.5">
       {daily.map((d) => {
-        const sugH = Math.round((d.suggested / maxSuggested) * 56);
-        const inpH = d.suggested > 0 ? Math.round((d.inspected / d.suggested) * sugH) : 0;
         const label = d.date.slice(5); // MM-DD
         return (
-          <div
+          <ProgressRow
             key={d.date}
-            className="flex flex-col items-center gap-0.5 flex-1"
+            label={label}
+            value={`${d.inspected}/${d.suggested}`}
+            progressValue={d.inspected}
+            max={Math.max(d.suggested, 1)}
+            minPercent={2}
+            labelWidth="3rem"
+            valueWidth="4rem"
+            tone="accent"
+            progressLabel={`${d.date} inspected pointers`}
             title={`${d.date}: ${d.suggested} suggested, ${d.inspected} inspected`}
-          >
-            <div className="w-full relative flex flex-col justify-end" style={{ height: 56 }}>
-              {/* suggested bar (background) */}
-              <div className="w-full rounded-sm bg-elevated" style={{ height: Math.max(sugH, 2) }} />
-              {/* inspected bar (overlay, positioned at bottom of suggested bar) */}
-              {inpH > 0 && <div className="w-full rounded-sm bg-accent absolute bottom-0" style={{ height: inpH }} />}
-            </div>
-            <div className="text-[8px] text-dim leading-none">{label}</div>
-          </div>
+          />
         );
       })}
     </div>

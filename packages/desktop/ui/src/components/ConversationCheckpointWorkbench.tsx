@@ -192,7 +192,7 @@ export function ConversationDiffRailContent({
             type="button"
             onClick={() => onOpenCheckpoint(activeCheckpointId)}
             selected
-            className="rounded-xl bg-elevated px-3 py-2.5 text-primary"
+            className="px-3 py-2.5 text-primary"
             title={activeCheckpointId}
           >
             <div className="flex min-w-0 items-start justify-between gap-2">
@@ -245,7 +245,7 @@ export function ConversationDiffRailContent({
           const files = filesByCheckpoint[checkpoint.id];
           const showFiles = selected || (!activeCheckpointId && checkpoint.id === latestCheckpointId);
           return (
-            <div key={checkpoint.id} className={cx('rounded-lg', selected && 'bg-elevated/70')}>
+            <div key={checkpoint.id}>
               <RowButton
                 type="button"
                 onClick={() => onOpenCheckpoint(checkpoint.id)}
@@ -354,7 +354,7 @@ function UncommittedRailEntry({
 }) {
   const files = result.files;
   return (
-    <div className={cx('rounded-lg', selected && 'bg-elevated/70')}>
+    <div>
       <RowButton
         type="button"
         onClick={onSelect}

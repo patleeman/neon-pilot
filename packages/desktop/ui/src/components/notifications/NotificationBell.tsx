@@ -31,9 +31,7 @@ export function NotificationBell({ onClick }: { onClick: () => void }) {
         <path d="M13.73 21a2 2 0 0 1-3.46 0" />
       </svg>
       {unreadCount > 0 ? (
-        <span className="absolute -right-0.5 -top-0.5 flex min-w-[14px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-semibold leading-4 text-white">
-          {unreadCount > 99 ? '99+' : unreadCount}
-        </span>
+        <span className="ui-notification-badge absolute -right-0.5 -top-0.5">{unreadCount > 99 ? '99+' : unreadCount}</span>
       ) : null}
     </ToolbarButton>
   );

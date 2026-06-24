@@ -107,7 +107,7 @@ export function CheckpointDiffSection({
       data-checkpoint-file-path={file.path}
       className={cx(
         'mb-2 scroll-mt-3 overflow-hidden border-b border-border-subtle/70 bg-base/80 last:mb-0 last:border-b-0',
-        active && 'border-accent/30',
+        active && 'border-accent',
         sectionClassName,
       )}
     >
@@ -115,7 +115,7 @@ export function CheckpointDiffSection({
         onClick={handleToggleCollapse}
         className={cx(
           'justify-between gap-3 rounded-none border-b border-border-subtle/50 bg-elevated/25 px-3 py-2',
-          stickyHeader && 'sticky top-0 z-10 backdrop-blur supports-[backdrop-filter]:bg-elevated/80',
+          stickyHeader && 'sticky top-0 z-10 bg-elevated/95',
         )}
       >
         <div className="min-w-0 flex-1">
@@ -134,11 +134,11 @@ export function CheckpointDiffSection({
             >
               <path d="m9 18 6-6-6-6" />
             </svg>
-            <p className="truncate font-mono text-[12px] text-primary" title={fileDisplayPath(file)}>
+            <p className="truncate font-mono text-xs text-primary" title={fileDisplayPath(file)}>
               {fileDisplayPath(file)}
             </p>
           </div>
-          <p className="mt-0.5 flex flex-wrap items-center gap-2 pl-[18px] text-[10px] text-secondary">
+          <p className="mt-0.5 flex flex-wrap items-center gap-2 pl-[18px] text-xs text-secondary">
             <MetaLabel>{statusLabel(file)}</MetaLabel>
             <span className="font-mono tabular-nums">
               <span className="text-success">+{file.additions}</span> <span className="text-danger">-{file.deletions}</span>
@@ -149,7 +149,7 @@ export function CheckpointDiffSection({
       </RowButton>
       {!collapsed ? (
         <div className="overflow-hidden bg-[rgb(var(--color-terminal-surface))]">
-          <Suspense fallback={<div className="px-3 py-2 text-[11px] text-dim">Loading diff...</div>}>
+          <Suspense fallback={<div className="px-3 py-2 text-xs text-dim">Loading diff…</div>}>
             <PatchDiff key={`${file.path}:${view}`} patch={file.patch} options={diffOptions} style={checkpointDiffStyle} />
           </Suspense>
         </div>

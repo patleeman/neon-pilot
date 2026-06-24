@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from '
 
 import { recordClientPerfTimingOnce } from '../client/perfDiagnostics';
 import { Layout } from '../components/Layout';
-import { Button, ButtonLink, CenteredLoadingState, SectionLabel } from '../components/ui';
+import { Button, ButtonLink, CenteredLoadingState, Notice, SectionLabel, SurfacePanel } from '../components/ui';
 import { resolveConversationIndexRedirect } from '../conversation/conversationRoutes';
 import {
   hasDraftConversationAttachments,
@@ -66,19 +66,19 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBounda
 
     return (
       <main className="flex min-h-screen items-center justify-center bg-base px-6">
-        <div className="max-w-lg rounded-2xl border border-border-subtle bg-surface px-6 py-6 shadow-sm">
+        <SurfacePanel className="max-w-lg px-6 py-6">
           <SectionLabel tone="muted">Something went wrong</SectionLabel>
           <h1 className="mt-2 text-[22px] font-semibold text-primary">Neon Pilot encountered an error</h1>
           <p className="mt-2 text-[13px] leading-6 text-secondary">
             The application crashed unexpectedly. You can try reloading, or start a new conversation.
           </p>
           {this.state.errorMessage ? (
-            <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3">
+            <Notice tone="warning" className="mt-4">
               <SectionLabel tone="muted">Error details</SectionLabel>
               <p className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap break-words font-mono text-[12px] leading-5 text-primary">
                 {this.state.errorMessage}
               </p>
-            </div>
+            </Notice>
           ) : null}
           <div className="mt-5 flex flex-wrap gap-2">
             <Button variant="action" onClick={() => window.location.reload()}>
@@ -88,7 +88,7 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBounda
               New conversation
             </ButtonLink>
           </div>
-        </div>
+        </SurfacePanel>
       </main>
     );
   }

@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
-import { Button, MetaLabel, Pill, RowButton, SectionLabel, SurfacePanel, TextButton } from '../ui';
+import { Button, MetaLabel, Notice, Pill, RowButton, SectionLabel, SurfacePanel, TextButton } from '../ui';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { readLinkedRuns } from './linkedRuns.js';
 import { ContextShelf } from './MessageBlocks.js';
@@ -66,7 +66,7 @@ export const ThinkingBlock = memo(function ThinkingBlock({
   }, [toggleThinkingBlock]);
 
   return (
-    <SurfacePanel muted className="overflow-hidden border-transparent bg-elevated/35 text-[12px] shadow-none">
+    <SurfacePanel muted className="overflow-hidden border-transparent bg-elevated/35 text-[12px]">
       <RowButton onClick={toggleThinkingBlock} className="px-2.5 py-2">
         <Pill tone="muted">Thinking</Pill>
         {!open && preview ? <span className="min-w-0 flex-1 truncate text-secondary italic">{preview}</span> : <span className="flex-1" />}
@@ -93,10 +93,10 @@ export const SubagentBlock = memo(function SubagentBlock({ block }: { block: Ext
   const toggleSubagentBlock = useCallback(() => {
     setOpen((current) => !current);
   }, []);
-  const clr = {
-    running: 'text-steel bg-steel/8 border-steel/20',
-    complete: 'text-success bg-success/8 border-success/20',
-    failed: 'text-danger bg-danger/8 border-danger/20',
+  const colorClassName = {
+    running: 'text-steel',
+    complete: 'text-success',
+    failed: 'text-danger',
   }[block.status];
   const tone = { running: 'steel', complete: 'success', failed: 'danger' }[block.status] as 'steel' | 'success' | 'danger';
 
@@ -114,8 +114,8 @@ export const SubagentBlock = memo(function SubagentBlock({ block }: { block: Ext
   }, [toggleSubagentBlock]);
 
   return (
-    <div className={`rounded-lg overflow-hidden text-[12px] ${clr}`}>
-      <RowButton onClick={toggleSubagentBlock} className="px-2.5 py-2 hover:bg-black/5">
+    <SurfacePanel muted className={`overflow-hidden text-[12px] ${colorClassName}`}>
+      <RowButton onClick={toggleSubagentBlock} className="px-2.5 py-2">
         <Pill tone={tone} mono>
           subagent
         </Pill>
@@ -141,7 +141,7 @@ export const SubagentBlock = memo(function SubagentBlock({ block }: { block: Ext
           )}
         </div>
       )}
-    </div>
+    </SurfacePanel>
   );
 });
 
@@ -464,8 +464,8 @@ export function TraceClusterBlock({
           aria-expanded={open}
           className={
             compact
-              ? 'flex min-w-0 max-w-full flex-1 flex-wrap items-center gap-1.5 p-0 text-dim/70 hover:bg-transparent'
-              : 'flex min-w-0 max-w-[78vw] items-center gap-1.5 p-0 text-dim/70 hover:bg-transparent sm:max-w-[42rem]'
+              ? 'flex min-w-0 max-w-full flex-1 flex-wrap items-center gap-1.5 bg-transparent p-0 text-dim/70'
+              : 'flex min-w-0 max-w-[78vw] items-center gap-1.5 bg-transparent p-0 text-dim/70 sm:max-w-[42rem]'
           }
         >
           <span className="shrink-0 font-medium text-primary">{title}</span>
@@ -610,7 +610,7 @@ function ResumeConversationAction({
   const compactClassName =
     'shrink-0 text-[11px] font-medium text-secondary transition-colors hover:text-primary disabled:cursor-default disabled:text-dim';
   const inlineClassName =
-    'group inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-secondary transition-colors hover:bg-elevated hover:text-primary disabled:cursor-default disabled:text-dim disabled:hover:bg-transparent sm:self-center';
+    'group inline-flex shrink-0 items-center gap-1.5 self-start px-2 py-1 text-[11px] font-medium text-secondary disabled:cursor-default disabled:text-dim sm:self-center';
 
   return (
     <TextButton
@@ -664,7 +664,7 @@ export const ErrorBlock = memo(function ErrorBlock({
   const message = presentTraceErrorMessage(block.message);
 
   return (
-    <SurfacePanel className="border-danger/30 bg-danger/5 px-3 py-2.5 text-[12px] font-mono">
+    <Notice tone="danger" className="text-[12px] font-mono">
       <div className="min-w-0 space-y-2">
         <div {...replySelectionScopeProps}>
           {block.tool && <span className="text-danger/70 font-semibold">{block.tool} ·</span>}
@@ -675,7 +675,7 @@ export const ErrorBlock = memo(function ErrorBlock({
           <ResumeConversationAction onResume={onResume} busy={resumeBusy} title={resumeTitle} label={resumeLabel} variant="inline" />
         </div>
       </div>
-    </SurfacePanel>
+    </Notice>
   );
 });
 

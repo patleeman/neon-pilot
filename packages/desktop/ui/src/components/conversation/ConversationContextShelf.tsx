@@ -1,6 +1,6 @@
 import type { MentionItem } from '../../conversation/conversationMentions';
 import type { ConversationContextDocRef } from '../../shared/types';
-import { IconButton, MetaLabel, SectionLabel, TextButton } from '../ui';
+import { IconButton, MetaLabel, Pill, SectionLabel, TextButton } from '../ui';
 
 export function ConversationContextShelf({
   attachedContextDocs,
@@ -23,11 +23,7 @@ export function ConversationContextShelf({
         <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle px-3 pt-3 pb-2.5">
           <SectionLabel>Attached context</SectionLabel>
           {attachedContextDocs.map((doc) => (
-            <span
-              key={doc.path}
-              className="inline-flex items-center gap-1.5 rounded-full bg-elevated px-2 py-1 text-[11px] text-secondary"
-              title={doc.summary ? `${doc.path}\n\n${doc.summary}` : doc.path}
-            >
+            <Pill key={doc.path} className="gap-1.5" title={doc.summary ? `${doc.path}\n\n${doc.summary}` : doc.path}>
               <MetaLabel tone="muted">{doc.kind}</MetaLabel>
               <span className="max-w-[18rem] truncate text-secondary">{doc.title}</span>
               <IconButton
@@ -42,7 +38,7 @@ export function ConversationContextShelf({
               >
                 ×
               </IconButton>
-            </span>
+            </Pill>
           ))}
         </div>
       )}
@@ -58,20 +54,16 @@ export function ConversationContextShelf({
               }}
               disabled={contextDocsBusy}
               tone="accent"
-              className="text-[11px] disabled:cursor-default disabled:opacity-50"
+              className="disabled:cursor-default disabled:opacity-50"
             >
               {contextDocsBusy ? 'attaching…' : `attach ${unattachedDraftMentionItems.length}`}
             </TextButton>
           )}
           {draftMentionItems.map((item) => (
-            <span
-              key={`${item.kind}:${item.id}`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-elevated px-2 py-1 text-[11px] text-secondary"
-              title={item.summary || item.title || item.id}
-            >
+            <Pill key={`${item.kind}:${item.id}`} className="gap-1.5" title={item.summary || item.title || item.id}>
               <MetaLabel tone="muted">{item.kind}</MetaLabel>
               <span className="font-mono text-accent">{item.id}</span>
-            </span>
+            </Pill>
           ))}
         </div>
       )}

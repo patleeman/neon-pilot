@@ -60,7 +60,7 @@ export interface UseFileTreeModelOptions {
   onRename?: (event: FileTreeRenameEvent) => void;
   /** Optional lightweight row decoration renderer. */
   renderRowDecoration?: FileTreeRowDecorationRenderer;
-  /** Optional CSS injected into the tree shadow root. Prefer tokens and keep this narrow. */
+  /** Optional CSS injected into the isolated tree root. Prefer tokens and keep this narrow. */
   unsafeCSS?: string;
 }
 

@@ -2,7 +2,7 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 
 import { DESKTOP_SHORTCUT_EVENT } from '../commands/desktopShortcutEvents';
 import { setExtensionCommandContext } from '../extensions/commands';
-import { cx, IconButton, Keycap } from './ui';
+import { CardMeta, cx, IconButton, Keycap, MenuShell, SearchInput } from './ui';
 
 const PAGE_SEARCH_MATCH_HIGHLIGHT = 'pa-page-search-match';
 const PAGE_SEARCH_ACTIVE_HIGHLIGHT = 'pa-page-search-active';
@@ -577,9 +577,9 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
 
   return (
     <div className={cx('pointer-events-none fixed right-4 z-40', topClassName)} data-page-search-ignore="true">
-      <div className="pointer-events-auto ui-context-menu-shell flex min-w-[19rem] items-center gap-2 px-2.5 py-2 shadow-2xl">
+      <MenuShell role="group" className="pointer-events-auto flex min-w-[19rem] items-center gap-2 px-2.5 py-2">
         <label
-          className="ui-input-shell flex min-w-0 flex-1 items-center gap-2 px-2.5 py-1.5 focus-within:border-accent/50 focus-within:bg-base/90"
+          className="ui-input-shell flex min-w-0 flex-1 items-center gap-2 px-2.5 py-1.5 focus-within:bg-base/90"
           aria-label="Page search"
         >
           <svg
@@ -597,9 +597,8 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
             <circle cx="11" cy="11" r="7" />
             <path d="m20 20-3.5-3.5" />
           </svg>
-          <input
+          <SearchInput
             ref={inputRef}
-            type="text"
             value={query}
             onChange={(event) => {
               pendingScrollToMatchRef.current = true;
@@ -618,7 +617,7 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
                 moveToMatch(event.shiftKey ? -1 : 1);
               }
             }}
-            className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] text-primary outline-none placeholder:text-dim/70"
+            className="min-w-0 flex-1 !border-0 !bg-transparent !p-0 text-sm text-primary outline-none placeholder:text-dim/70 hover:!bg-transparent focus:!border-0 focus:!bg-transparent"
             placeholder="Find on page…"
             aria-label="Find on page"
             autoComplete="off"
@@ -627,9 +626,9 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
           />
         </label>
 
-        <div className="min-w-[4.25rem] text-right text-[11px] font-medium tabular-nums text-dim" aria-live="polite">
+        <CardMeta as="div" className="min-w-[4.25rem] text-right font-medium tabular-nums" aria-live="polite">
           {statusLabel}
-        </div>
+        </CardMeta>
 
         <div className="flex items-center gap-0.5">
           <IconButton
@@ -652,10 +651,10 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
           </IconButton>
         </div>
 
-        <div className="hidden items-center gap-1 pl-1 text-[10px] text-dim md:flex">
+        <CardMeta as="div" className="hidden items-center gap-1 pl-1 md:flex">
           <Keycap>{nextMatchModifierLabel}</Keycap>
           <Keycap>G</Keycap>
-        </div>
+        </CardMeta>
 
         <IconButton compact onClick={closeSearch} aria-label="Close page search" title="Close">
           <svg
@@ -673,7 +672,7 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
             <path d="m6 6 12 12" />
           </svg>
         </IconButton>
-      </div>
+      </MenuShell>
     </div>
   );
 }

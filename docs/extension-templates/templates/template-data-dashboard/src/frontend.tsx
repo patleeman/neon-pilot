@@ -1,5 +1,20 @@
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
-import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, IconButton, LoadingState } from '@neon-pilot/extensions/ui';
+import {
+  AppPageIntro,
+  AppPageLayout,
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+  EmptyState,
+  ErrorState,
+  IconButton,
+  LoadingState,
+  Notice,
+  StatusDot,
+} from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useState } from 'react';
 
 // Mirror the shape returned by src/backend.ts
@@ -13,16 +28,12 @@ interface Item {
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function statusDotClass(status: Item['status']) {
-  return status === 'ok' ? 'bg-success border-success' : status === 'warn' ? 'bg-warning border-warning' : 'bg-danger border-danger';
-}
-
 function statusLabel(status: Item['status']) {
   return status === 'ok' ? 'OK' : status === 'warn' ? 'Warning' : 'Error';
 }
 
-function statusTextClass(status: Item['status']) {
-  return status === 'ok' ? 'text-success' : status === 'warn' ? 'text-warning' : 'text-danger';
+function statusTone(status: Item['status']) {
+  return status === 'ok' ? 'success' : status === 'warn' ? 'warning' : 'danger';
 }
 
 function RefreshIcon() {
@@ -107,46 +118,46 @@ export function DataDashboardPage({ pa }: { pa: NativeExtensionClient }) {
           }
         />
 
-        {error ? <div className="rounded-lg bg-danger/10 px-3 py-2 text-[13px] text-danger">{error}</div> : null}
+        {error ? <Notice tone="danger">{error}</Notice> : null}
 
         {items.length === 0 ? (
           <EmptyState title="No items" body="Nothing to show yet." className="py-10" />
         ) : (
           // ── data table ────────────────────────────────────────────────────
           // Replace columns and row content with your domain data.
-          <section className="min-w-0 overflow-x-auto">
-            <table className="w-full min-w-[40rem] table-fixed border-collapse text-left text-[13px]">
+          <DataTable
+            columns={
               <colgroup>
                 <col className="w-[40%]" />
                 <col className="w-[15%]" />
                 <col className="w-[45%]" />
               </colgroup>
-              <thead className="sticky top-0 z-10 bg-base/95 backdrop-blur">
-                <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
-                  <th className="py-2 pr-4 font-semibold">Name</th>
-                  <th className="py-2 px-3 font-semibold">Status</th>
-                  <th className="py-2 pl-3 font-semibold">Detail</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id} className="border-t border-border-subtle/70 transition-colors hover:bg-surface/30">
-                    <td className="min-w-0 py-3 pr-4 align-middle">
-                      <div className="flex items-center gap-2">
-                        <span className={cx('h-2.5 w-2.5 shrink-0 rounded-full border', statusDotClass(item.status))} />
-                        <span className="truncate text-[14px] font-semibold text-primary">{item.name}</span>
-                      </div>
-                      <div className="mt-0.5 text-[11px] text-dim">{item.id}</div>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3 align-middle">
-                      <span className={cx('text-[12px]', statusTextClass(item.status))}>{statusLabel(item.status)}</span>
-                    </td>
-                    <td className="pl-3 py-3 align-middle text-[13px] text-secondary">{item.detail}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+            }
+            tableClassName="min-w-[40rem] table-fixed"
+          >
+            <DataTableHead>
+              <DataTableRow>
+                <DataTableHeaderCell className="pr-4">Name</DataTableHeaderCell>
+                <DataTableHeaderCell className="px-3">Status</DataTableHeaderCell>
+                <DataTableHeaderCell className="pl-3">Detail</DataTableHeaderCell>
+              </DataTableRow>
+            </DataTableHead>
+            <DataTableBody>
+              {items.map((item) => (
+                <DataTableRow key={item.id}>
+                  <DataTableCell className="min-w-0 pr-4">
+                    <div className="flex items-center gap-2">
+                      <StatusDot tone={statusTone(item.status)} />
+                      <span className="truncate text-[14px] font-semibold text-primary">{item.name}</span>
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-dim">{item.id}</div>
+                  </DataTableCell>
+                  <DataTableCell className="whitespace-nowrap px-3">{statusLabel(item.status)}</DataTableCell>
+                  <DataTableCell className="pl-3 text-[13px] text-secondary">{item.detail}</DataTableCell>
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
         )}
       </AppPageLayout>
     </div>

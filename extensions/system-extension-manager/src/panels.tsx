@@ -37,6 +37,7 @@ import {
   SectionLabel,
   Stat,
   StatGrid,
+  StatusDot,
   Switch,
   TabButton,
   TabList,
@@ -1430,7 +1431,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       return (
         <DataTableRow
           key={`installed:${extension.id}`}
-          className={cx('group cursor-default', selected ? 'bg-accent/10' : '')}
+          className={cx('group cursor-default', selected && 'ui-selected-row-accent')}
           onClick={() => setDetailsExtensionId(extension.id)}
         >
           <DataTableCell className="min-w-0 py-3 pl-0 pr-6">
@@ -1494,7 +1495,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         return (
           <div
             key={`installed-card:${extension.id}`}
-            className={cx('space-y-3 py-4', selected ? 'bg-accent/10 px-3' : '')}
+            className={cx('space-y-3 py-4', selected && 'ui-selected-row-accent px-3')}
             onClick={() => setDetailsExtensionId(extension.id)}
           >
             <div className="flex min-w-0 items-start justify-between gap-3">
@@ -1567,7 +1568,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           <col className="w-40" />
         </colgroup>
         <DataTableHead>
-          <DataTableRow className="hover:bg-transparent">
+          <DataTableRow>
             <DataTableHeaderCell className="pl-0">Extension</DataTableHeaderCell>
             <DataTableHeaderCell>Status</DataTableHeaderCell>
             <DataTableHeaderCell>Appears in</DataTableHeaderCell>
@@ -1622,7 +1623,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                     </IconButton>
                     {updatableExtensions.length ? (
                       <Button
-                        className="min-h-9 rounded-lg px-3 py-2 text-[13px]"
+                        className="min-h-9 px-3 py-2 text-[13px]"
                         disabled={busyId !== null}
                         onClick={() => void updateAllExtensions()}
                       >
@@ -1632,7 +1633,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                     <Button
                       variant="action"
                       tone="accent"
-                      className="min-h-9 rounded-lg border-accent/40 bg-accent/15 px-3 py-2 text-[13px] hover:bg-accent/20"
+                      className="min-h-9 px-3 py-2 text-[13px]"
                       disabled={busyId === 'update-all'}
                       onClick={() => setInstallModalOpen(true)}
                     >
@@ -1658,7 +1659,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             </TabList>
 
             {notice ? (
-              <div className="sticky top-0 z-20 bg-base/95 py-2 backdrop-blur">
+              <div className="sticky top-0 z-20 bg-base py-2">
                 <ExtensionNoticeBox notice={notice} />
               </div>
             ) : null}
@@ -1687,18 +1688,14 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                   <RefreshIcon />
                 </IconButton>
                 {updatableExtensions.length ? (
-                  <Button
-                    className="min-h-9 rounded-lg px-3 py-2 text-[13px]"
-                    disabled={busyId !== null}
-                    onClick={() => void updateAllExtensions()}
-                  >
+                  <Button className="min-h-9 px-3 py-2 text-[13px]" disabled={busyId !== null} onClick={() => void updateAllExtensions()}>
                     {busyId === 'update-all' ? 'Updating...' : `Update all (${updatableExtensions.length})`}
                   </Button>
                 ) : null}
                 <Button
                   variant="action"
                   tone="accent"
-                  className="min-h-9 rounded-lg border-accent/40 bg-accent/15 px-3 py-2 text-[13px] hover:bg-accent/20"
+                  className="min-h-9 px-3 py-2 text-[13px]"
                   disabled={busyId === 'update-all'}
                   onClick={() => setInstallModalOpen(true)}
                 >
@@ -2074,12 +2071,7 @@ function ExtensionDetailsContent({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="truncate text-[20px] font-semibold tracking-tight text-primary">{extension.name}</h3>
-              <span
-                className={cx(
-                  'h-1.5 w-1.5 rounded-full',
-                  extension.status === 'invalid' ? 'bg-danger' : extension.enabled ? 'bg-success' : 'bg-dim',
-                )}
-              />
+              <StatusDot tone={extension.status === 'invalid' ? 'danger' : extension.enabled ? 'success' : 'muted'} size="xs" />
             </div>
             <p className="mt-1 font-mono text-[11px] text-dim">{extension.id}</p>
           </div>

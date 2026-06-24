@@ -4,7 +4,7 @@ import type { ConversationContextUsageTokensPresentation } from '../../conversat
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import { StatusBarItemHost } from '../../extensions/StatusBarItemHost';
 import { type ExtensionStatusBarItemRegistration, useExtensionRegistry } from '../../extensions/useExtensionRegistry';
-import { IconButton, RowButton, TextButton } from '../ui';
+import { IconButton, RowButton, Select, TextButton } from '../ui';
 import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
 
 export type ConversationGitSummaryPresentation =
@@ -83,7 +83,7 @@ export function ConversationComposerMeta({
               Workspace folder
             </label>
             <div className="relative min-w-0 flex-1 xl:max-w-[22rem]">
-              <select
+              <Select
                 id="draft-composer-cwd"
                 value={draftCwdValue}
                 onChange={(event) => {
@@ -94,7 +94,7 @@ export function ConversationComposerMeta({
                   }
                   onSelectDraftWorkspace(nextWorkspacePath);
                 }}
-                className="h-7 w-full min-w-0 truncate appearance-none rounded-md bg-transparent pl-1 pr-6 text-[11px] font-mono text-secondary outline-none transition-colors hover:bg-surface/45 hover:text-primary focus-visible:bg-surface/55 focus-visible:text-primary"
+                className="h-7 w-full min-w-0 truncate appearance-none border-transparent bg-transparent py-0 pl-1 pr-6 text-xs font-mono text-secondary"
               >
                 <option value="">Chat</option>
                 {availableDraftWorkspacePaths.map((workspacePath) => (
@@ -102,7 +102,7 @@ export function ConversationComposerMeta({
                     {workspacePath}
                   </option>
                 ))}
-              </select>
+              </Select>
               <svg
                 aria-hidden="true"
                 width="10"
@@ -139,7 +139,7 @@ export function ConversationComposerMeta({
               Conversation working directory
             </label>
             <div className="relative min-w-0 flex-1 xl:max-w-[22rem]">
-              <select
+              <Select
                 id="conversation-composer-cwd"
                 autoFocus
                 value={conversationCwdDraft}
@@ -150,7 +150,7 @@ export function ConversationComposerMeta({
                   }
                 }}
                 aria-label="Conversation working directory"
-                className="h-7 w-full min-w-0 truncate appearance-none rounded-md border border-border-subtle bg-surface/45 pl-2 pr-6 text-[11px] font-mono text-primary outline-none transition-colors hover:bg-surface/55 focus:border-accent/50 disabled:opacity-50"
+                className="h-7 w-full min-w-0 truncate py-0 pl-2 pr-6 text-[11px] font-mono text-primary"
                 disabled={conversationCwdBusy || conversationCwdPickBusy || availableConversationWorkspacePaths.length === 0}
               >
                 {availableConversationWorkspacePaths.length === 0 ? <option value="">Choose a working directory</option> : null}
@@ -159,7 +159,7 @@ export function ConversationComposerMeta({
                     {workspacePath}
                   </option>
                 ))}
-              </select>
+              </Select>
               <svg
                 aria-hidden="true"
                 width="10"
@@ -201,7 +201,7 @@ export function ConversationComposerMeta({
             title={neutralChatCwd ? 'Chat - no workspace' : currentCwd ? `Working directory: ${currentCwd}` : 'Set working directory'}
           >
             {neutralChatCwd ? <ChatBubbleIcon className="shrink-0 text-dim/70" /> : <FolderIcon className="shrink-0 text-dim/70" />}
-            <span className="ui-truncate-start min-w-0 flex-1 font-mono text-[11px]">{currentCwdLabel || 'Set working directory'}</span>
+            <span className="ui-truncate-start min-w-0 flex-1 font-mono text-xs">{currentCwdLabel || 'Set working directory'}</span>
           </RowButton>
         )}
 

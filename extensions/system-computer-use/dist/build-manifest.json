@@ -1,6 +1,6 @@
 {
   "extensionId": "system-computer-use",
-  "builtAt": "2026-06-24T17:38:35.433Z",
+  "builtAt": "2026-06-24T18:01:15.581Z",
   "frontendEntry": null,
   "backendEntry": "dist/backend.mjs",
   "sourceHashes": [
@@ -25,7 +25,7 @@
       "imports": []
     },
     {
-      "path": "extensions/system-computer-use/.dist.tmp-71913-1782322715422/backend.mjs",
+      "path": "extensions/system-computer-use/.dist.tmp-22155-1782324075570/backend.mjs",
       "bytes": 11601,
       "imports": [
         "node:fs",

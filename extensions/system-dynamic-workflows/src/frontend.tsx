@@ -12,6 +12,7 @@ import {
   PanelHeader,
   Pill,
   ResourceListItem,
+  RowButton,
   SectionLabel,
   SurfacePanel,
   Textarea,
@@ -185,7 +186,7 @@ function WorkflowCard({ workflow, selected, onSelect }: { workflow: WorkflowSumm
       meta={<Pill tone={statusTone(workflow.status)}>{workflow.status}</Pill>}
       detail={workflow.activePhase || workflow.cwd}
       selected={selected}
-      className={cx('px-3 py-2', selected && 'bg-accent/10')}
+      className={cx('px-3 py-2', selected && 'ui-selected-row-accent')}
       onClick={onSelect}
     >
       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-dim">
@@ -515,40 +516,42 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                 </div>
               ) : null}
               {savedWorkflows.map((item) => (
-                <button
+                <RowButton
                   key={item.id}
                   type="button"
-                  className={cx(
-                    'grid w-full grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2 border-b border-border-subtle py-1.5 text-left text-[12px] hover:bg-surface-hover',
-                    selectedId === null && selectedTemplate?.id === item.id && 'bg-accent/10',
-                  )}
+                  selected={selectedId === null && selectedTemplate?.id === item.id}
+                  compact
+                  className="rounded-none border-b border-border-subtle px-0 py-0"
                   onClick={() => {
                     setSelectedId(null);
                     setSelectedTemplateId(item.id);
                   }}
                 >
-                  <span className="text-dim">Saved</span>
-                  <span className="min-w-0 truncate font-medium text-primary">{item.name}</span>
-                  <span className="text-right text-secondary">ready</span>
-                </button>
+                  <span className="grid w-full grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2 py-1.5 text-[12px]">
+                    <span className="text-dim">Saved</span>
+                    <span className="min-w-0 truncate font-medium text-primary">{item.name}</span>
+                    <span className="text-right text-secondary">ready</span>
+                  </span>
+                </RowButton>
               ))}
               {templates.map((item) => (
-                <button
+                <RowButton
                   key={item.id}
                   type="button"
-                  className={cx(
-                    'grid w-full grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2 border-b border-border-subtle py-1.5 text-left text-[12px] hover:bg-surface-hover',
-                    selectedId === null && selectedTemplate?.id === item.id && 'bg-accent/10',
-                  )}
+                  selected={selectedId === null && selectedTemplate?.id === item.id}
+                  compact
+                  className="rounded-none border-b border-border-subtle px-0 py-0"
                   onClick={() => {
                     setSelectedId(null);
                     setSelectedTemplateId(item.id);
                   }}
                 >
-                  <span className="text-dim">Template</span>
-                  <span className="min-w-0 truncate font-medium text-primary">{item.name}</span>
-                  <span className="text-right text-secondary">stock</span>
-                </button>
+                  <span className="grid w-full grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2 py-1.5 text-[12px]">
+                    <span className="text-dim">Template</span>
+                    <span className="min-w-0 truncate font-medium text-primary">{item.name}</span>
+                    <span className="text-right text-secondary">stock</span>
+                  </span>
+                </RowButton>
               ))}
             </div>
             {draftOpen ? (

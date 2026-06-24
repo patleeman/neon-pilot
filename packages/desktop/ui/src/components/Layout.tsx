@@ -148,8 +148,10 @@ import {
   CenteredMessage,
   cx,
   IconButton,
+  Notice,
   PanelMessage,
   SectionLabel,
+  SurfacePanel,
   WorkbenchTab,
   WorkbenchTabActionButton,
   WorkbenchTabButton,
@@ -170,6 +172,7 @@ const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
 const NOTIFICATIONS_MARK_ALL_READ_EVENT = 'neon-pilot-notifications-mark-all-read';
 const NOTIFICATIONS_DISMISS_ALL_EVENT = 'neon-pilot-notifications-dismiss-all';
 const NOTIFICATIONS_CLOSE_EVENT = 'neon-pilot-notifications-close';
+const SIDEBAR_AUTO_COLLAPSE_WIDTH = 720;
 
 const WorkspaceExplorer = lazyRouteWithRecovery('layout-workspace-explorer', () =>
   import('./workspace/WorkspaceExplorer').then((module) => ({ default: module.WorkspaceExplorer })),
@@ -894,22 +897,22 @@ class RouteContentBoundary extends Component<
     return (
       <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden select-text">
         <div className="flex h-full items-center justify-center px-8 py-10">
-          <div className="max-w-lg rounded-2xl border border-border-subtle bg-surface px-6 py-6 shadow-sm">
+          <SurfacePanel className="max-w-lg px-6 py-6">
             <SectionLabel tone="muted">Recovered from render error</SectionLabel>
             <h1 className="mt-2 text-[22px] font-semibold text-primary">{title}</h1>
             <p className="mt-2 text-[13px] leading-6 text-secondary">{body}</p>
             {errorMessage ? (
-              <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3">
+              <Notice tone="warning" className="mt-4">
                 <SectionLabel tone="muted">Error details</SectionLabel>
                 <p className="mt-2 whitespace-pre-wrap break-words font-mono text-[12px] leading-5 text-primary">{errorMessage}</p>
-              </div>
+              </Notice>
             ) : null}
             <div className="mt-5 flex flex-wrap gap-2">
               <Link to="/conversations/new" className="ui-action-button">
                 New conversation
               </Link>
             </div>
-          </div>
+          </SurfacePanel>
         </div>
       </main>
     );
@@ -1682,6 +1685,11 @@ export function Layout() {
   const viewportWidth = useViewportWidth();
   const sidebar = useResize({ initial: 224, min: 160, max: 320, storageKey: SIDEBAR_WIDTH_STORAGE_KEY, side: 'left' });
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  useEffect(() => {
+    if (viewportWidth < SIDEBAR_AUTO_COLLAPSE_WIDTH) {
+      setSidebarOpen(false);
+    }
+  }, [viewportWidth]);
   const railMinWidth = 160;
   const railMaxWidth = getRailMaxWidth({
     viewportWidth,

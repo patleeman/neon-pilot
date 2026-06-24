@@ -34,7 +34,7 @@ import { ChatBubbleIcon, FolderIcon } from '../conversation/ConversationComposer
 import { ConversationComposerInputControls } from '../conversation/ConversationComposerInputControls';
 import { MentionMenu, ModelPicker, SlashMenu } from '../conversation/ConversationComposerMenus';
 import { addNotification } from '../notifications/notificationStore';
-import { cx } from '../ui';
+import { cx, Notice } from '../ui';
 import { ComposerAttachmentShelf } from './ComposerAttachmentShelf';
 
 function readForkPromptDraft(conversationId: string): string | null {
@@ -372,7 +372,7 @@ export function ChatRailComposer({
       className={cx(
         'min-w-0 bg-gradient-to-t from-base via-base to-transparent pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-colors',
         layout === 'compact' ? 'px-1.5 sm:px-2' : 'px-8 sm:px-10',
-        dragOver && 'bg-accent/5',
+        dragOver && 'bg-elevated/60',
       )}
       childrenClassName="relative min-w-0 w-full"
       dragOver={dragOver}
@@ -397,7 +397,9 @@ export function ChatRailComposer({
       shellRef={composerShellRef}
       dragOverlay={
         dragOver ? (
-          <div className="px-4 py-3 text-center text-[12px] text-accent border-b border-accent/20">📎 Drop files to attach</div>
+          <Notice tone="info" className="rounded-none border-x-0 border-t-0 text-center">
+            Drop files to attach
+          </Notice>
         ) : null
       }
       hasInteractiveOverlay={showModelPicker || showSlash || showMention}

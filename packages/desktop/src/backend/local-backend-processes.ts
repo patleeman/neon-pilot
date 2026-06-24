@@ -514,6 +514,12 @@ export class LocalBackendProcesses {
     const path = url.pathname;
     const jsonBody = input.body && typeof input.body === 'object' ? (input.body as Record<string, unknown>) : {};
 
+    if (input.method === 'GET' && path === '/api/health') {
+      return this.makeJsonResponse(await this.callLocalApiMethod('readDesktopLocalApiHealth', []), 'backend-rpc');
+    }
+    if (input.method === 'GET' && path === '/api/session-state') {
+      return this.makeJsonResponse(await this.callLocalApiMethod('readDesktopSessionState', []), 'backend-rpc');
+    }
     if (input.method === 'POST' && path === '/api/live-sessions') {
       const result = await this.callLocalApiMethod('createDesktopLiveSession', [jsonBody]);
       if (result && typeof result === 'object' && typeof (result as { id?: unknown }).id === 'string') {

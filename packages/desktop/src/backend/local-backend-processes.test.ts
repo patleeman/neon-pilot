@@ -404,6 +404,38 @@ describe('LocalBackendProcesses', () => {
       method: 'createDesktopLiveSession',
       args: [{ cwd: '/repo' }],
     });
+    const healthResponse = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/health',
+    });
+
+    expect(healthResponse.statusCode).toBe(200);
+    expect(JSON.parse(healthResponse.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'backend-rpc',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(healthResponse.body))).toEqual({
+      ok: true,
+      method: 'readDesktopLocalApiHealth',
+      args: [],
+    });
+    const sessionStateResponse = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/session-state',
+    });
+
+    expect(sessionStateResponse.statusCode).toBe(200);
+    expect(JSON.parse(sessionStateResponse.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'backend-rpc',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(sessionStateResponse.body))).toEqual({
+      ok: true,
+      method: 'readDesktopSessionState',
+      args: [],
+    });
     const sessionsResponse = await backend.dispatchApiRequest({
       method: 'GET',
       path: '/api/sessions',
@@ -529,11 +561,16 @@ describe('LocalBackendProcesses', () => {
     });
     expect(backend.calls).toEqual([
       { method: 'createDesktopLiveSession', args: [{ cwd: '/repo' }] },
+      { method: 'readDesktopLocalApiHealth', args: [] },
+      { method: 'readDesktopSessionState', args: [] },
       { method: 'readDesktopSessions', args: [{}] },
       { method: 'resumeDesktopLiveSession', args: [{ sessionFile: '/sessions/one.jsonl', cwd: '/repo' }] },
       { method: 'readDesktopLiveSession', args: ['conversation 1'] },
       { method: 'readDesktopLiveSessionForkEntries', args: ['conversation 1'] },
-      { method: 'forkDesktopLiveSession', args: [{ conversationId: 'conversation 1', entryId: 'entry-1', beforeEntry: true }] },
+      {
+        method: 'forkDesktopLiveSession',
+        args: [{ conversationId: 'conversation 1', entryId: 'entry-1', beforeEntry: true, preserveSource: undefined }],
+      },
     ]);
   });
 

@@ -36,7 +36,7 @@ export function TracesHeatmap({ data }: { data: TraceTokenDaily[] }) {
     return 4;
   };
 
-  const cellColors = ['bg-elevated', 'bg-accent/25', 'bg-accent/45', 'bg-accent/65', 'bg-accent'];
+  const cellColors = ['ui-heatmap-cell-0', 'ui-heatmap-cell-1', 'ui-heatmap-cell-2', 'ui-heatmap-cell-3', 'ui-heatmap-cell-4'];
 
   const total = data.reduce((a, d) => a + d.tokensInput + d.tokensOutput + d.tokensCached + d.tokensCachedWrite, 0);
   const avg = total / Math.max(data.length, 1);

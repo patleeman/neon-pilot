@@ -1,5 +1,5 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { CenteredMessage, IconButton, Notice, TextButton } from '@neon-pilot/extensions/ui';
+import { CenteredMessage, IconButton, Notice, Textarea, TextButton } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ScratchpadState {
@@ -150,8 +150,8 @@ export function ScratchpadPanel({ pa, context }: ExtensionSurfaceProps) {
             {savedMessage}
           </Notice>
         ) : null}
-        <textarea
-          className="min-h-0 flex-1 resize-none rounded-md border border-border-subtle bg-surface px-3 py-2 font-mono text-[12px] leading-5 text-primary outline-none focus:border-accent"
+        <Textarea
+          className="min-h-0 flex-1 resize-none font-mono text-[12px] leading-5"
           value={draft}
           onChange={(event) => {
             setDraft(event.target.value);

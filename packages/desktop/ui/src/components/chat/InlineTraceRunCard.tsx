@@ -17,7 +17,7 @@ import {
 import { timeAgo } from '../../shared/utils';
 import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import { transcriptTargetAttributes } from '../../transcript/spotlight';
-import { cx, MetaLabel, Pill, RowButton, SectionLabel, StatusDot, TextButton } from '../ui';
+import { cx, Disclosure, MetaLabel, Pill, RowButton, SectionLabel, StatusDot, SurfacePanel, TextButton } from '../ui';
 import {
   INLINE_RUN_LOG_TAIL_LINES,
   INLINE_RUN_POLL_INTERVAL_MS,
@@ -119,17 +119,17 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
   return (
     <div
       ref={cardRef}
-      className="rounded-lg border border-border-subtle/70 bg-elevated/35 overflow-hidden"
+      className="ui-panel-muted overflow-hidden bg-elevated/35"
       tabIndex={-1}
       {...transcriptTargetAttributes({ kind: 'background_run', runId: resolvedRunId })}
     >
-      <div className="flex items-start gap-3 px-2.5 py-2 hover:bg-elevated/70 transition-colors">
-        <RowButton compact onClick={onToggle} aria-expanded={expanded} className="min-w-0 flex-1 p-0 hover:bg-transparent">
+      <div className="flex items-start gap-3 px-2.5 py-2">
+        <RowButton compact onClick={onToggle} aria-expanded={expanded} className="min-w-0 flex-1 bg-transparent p-0">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {detailRun && (
-              <MetaLabel tone="accent" className={cx('rounded-md border border-accent/20 px-1.5 py-0.5', runIsShell && 'font-mono')}>
+              <Pill tone="accent" mono={runIsShell}>
                 {runIsShell ? '›_ Shell' : '✦ Agent'}
-              </MetaLabel>
+              </Pill>
             )}
             <Pill tone={status.tone}>{status.text}</Pill>
             <span className="truncate text-[12px] font-medium text-primary">{headline.title}</span>
@@ -178,7 +178,7 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
           )}
 
           {(detailRun || snapshot.log) && (
-            <div className="rounded-md border border-border-subtle/70 bg-elevated/40 overflow-hidden">
+            <SurfacePanel muted className="overflow-hidden bg-elevated/40">
               <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle/60 px-2 py-1.5 text-dim">
                 <StatusDot tone={runStreaming ? 'accent' : 'muted'} className={runStreaming ? 'animate-pulse' : 'opacity-40'} />
                 <MetaLabel tone="muted">{outputLabel}</MetaLabel>
@@ -200,56 +200,55 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
                   <p className="text-[11px] italic leading-relaxed text-dim">{emptyOutputLabel}</p>
                 )}
               </div>
-            </div>
+            </SurfacePanel>
           )}
 
           {detailRun && (
-            <details className="ui-disclosure">
-              <summary className="ui-disclosure-summary">
-                <span>Details</span>
-                <span className="ui-disclosure-meta">Command details</span>
-              </summary>
-              <div className="ui-disclosure-body">
-                <div className="space-y-2.5">
-                  {taskSlug && <InlineRunMetadataRow label="Task" value={taskSlug} />}
-                  {targetPrompt && (
-                    <InlineRunMetadataRow label="Prompt" value={<span className="whitespace-pre-wrap break-words">{targetPrompt}</span>} />
+            <Disclosure
+              summary={
+                <>
+                  <span>Details</span>
+                  <span className="ui-disclosure-meta">Command details</span>
+                </>
+              }
+            >
+              <div className="space-y-2.5">
+                {taskSlug && <InlineRunMetadataRow label="Task" value={taskSlug} />}
+                {targetPrompt && (
+                  <InlineRunMetadataRow label="Prompt" value={<span className="whitespace-pre-wrap break-words">{targetPrompt}</span>} />
+                )}
+                {targetCommand && <InlineRunMetadataRow label="Command" value={<span className="font-mono">{targetCommand}</span>} />}
+                {targetCwd && <InlineRunMetadataRow label="Working dir" value={<span className="font-mono">{targetCwd}</span>} />}
+                {targetModel && <InlineRunMetadataRow label="Model" value={targetModel} />}
+                {targetProfile && <InlineRunMetadataRow label="Profile" value={targetProfile} />}
+                <InlineRunMetadataRow label="Type" value={detailRun.manifest?.kind ?? 'unknown'} />
+                <InlineRunMetadataRow label="Started by" value={detailRun.manifest?.source?.type ?? 'unknown'} />
+                <InlineRunMetadataRow label="Attempt" value={String(detailRun.status?.activeAttempt ?? 0)} />
+                {detailRun.checkpoint?.step && <InlineRunMetadataRow label="Checkpoint" value={detailRun.checkpoint.step} />}
+                {snapshot.log?.path && <InlineRunMetadataRow label="Log" value={<span className="font-mono">{snapshot.log.path}</span>} />}
+              </div>
+
+              {(detailRun.status?.lastError || detailRun.problems.length > 0) && (
+                <div className="mt-3 space-y-2 border-t border-border-subtle/60 pt-2.5">
+                  {detailRun.status?.lastError && (
+                    <div className="space-y-1">
+                      <SectionLabel tone="muted">Last error</SectionLabel>
+                      <p className="whitespace-pre-wrap break-words text-[11px] text-danger/90">{detailRun.status.lastError}</p>
+                    </div>
                   )}
-                  {targetCommand && <InlineRunMetadataRow label="Command" value={<span className="font-mono">{targetCommand}</span>} />}
-                  {targetCwd && <InlineRunMetadataRow label="Working dir" value={<span className="font-mono">{targetCwd}</span>} />}
-                  {targetModel && <InlineRunMetadataRow label="Model" value={targetModel} />}
-                  {targetProfile && <InlineRunMetadataRow label="Profile" value={targetProfile} />}
-                  <InlineRunMetadataRow label="Type" value={detailRun.manifest?.kind ?? 'unknown'} />
-                  <InlineRunMetadataRow label="Started by" value={detailRun.manifest?.source?.type ?? 'unknown'} />
-                  <InlineRunMetadataRow label="Attempt" value={String(detailRun.status?.activeAttempt ?? 0)} />
-                  {detailRun.checkpoint?.step && <InlineRunMetadataRow label="Checkpoint" value={detailRun.checkpoint.step} />}
-                  {snapshot.log?.path && (
-                    <InlineRunMetadataRow label="Log" value={<span className="font-mono">{snapshot.log.path}</span>} />
+                  {detailRun.problems.length > 0 && (
+                    <div className="space-y-1">
+                      <SectionLabel tone="muted">Problems</SectionLabel>
+                      <div className="space-y-1 text-[11px] text-danger/90">
+                        {detailRun.problems.map((problem) => (
+                          <p key={problem}>• {problem}</p>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
-
-                {(detailRun.status?.lastError || detailRun.problems.length > 0) && (
-                  <div className="mt-3 space-y-2 border-t border-border-subtle/60 pt-2.5">
-                    {detailRun.status?.lastError && (
-                      <div className="space-y-1">
-                        <SectionLabel tone="muted">Last error</SectionLabel>
-                        <p className="whitespace-pre-wrap break-words text-[11px] text-danger/90">{detailRun.status.lastError}</p>
-                      </div>
-                    )}
-                    {detailRun.problems.length > 0 && (
-                      <div className="space-y-1">
-                        <SectionLabel tone="muted">Problems</SectionLabel>
-                        <div className="space-y-1 text-[11px] text-danger/90">
-                          {detailRun.problems.map((problem) => (
-                            <p key={problem}>• {problem}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </details>
+              )}
+            </Disclosure>
           )}
 
           {snapshot.error && detailRun && <p className="text-[11px] text-warning">{snapshot.error}</p>}

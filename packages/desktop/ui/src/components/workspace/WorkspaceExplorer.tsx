@@ -33,7 +33,19 @@ import { ContextMenu, ContextMenuSection, ContextMenuSections } from '../shared/
 import { ContextMenuWrapper } from '../shared/ContextMenuWrapper';
 import { TextPromptDialog } from '../shared/TextPromptDialog';
 import { useFileTreeModel } from '../shared/useFileTreeModel';
-import { Button, cx, EmptyState, IconButton, LoadingState, MenuItem, PanelMessage, Pill, TextButton, ToolbarButton } from '../ui';
+import {
+  Button,
+  cx,
+  EmptyState,
+  IconButton,
+  LoadingState,
+  MenuItem,
+  PanelMessage,
+  Pill,
+  RowButton,
+  TextButton,
+  ToolbarButton,
+} from '../ui';
 import { addWorkspaceOpenFile, readWorkspaceOpenFiles, removeWorkspaceOpenFile, writeWorkspaceOpenFiles } from './openWorkspaceFiles';
 import {
   beginWorkspaceDirectoryRequest,
@@ -443,12 +455,9 @@ function WorkspaceStatusBadge({ status, count }: { status: WorkspaceGitStatusCha
     );
   }
   return (
-    <span
-      className="rounded-sm bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent"
-      title={`${count} changed descendant${count === 1 ? '' : 's'}`}
-    >
+    <Pill tone="accent" mono className="px-1.5 py-0 text-[10px]" title={`${count} changed descendant${count === 1 ? '' : 's'}`}>
       {count}
-    </span>
+    </Pill>
   );
 }
 
@@ -477,32 +486,26 @@ function WorkspaceTreeRow({
   const isDirectory = entry.kind === 'directory';
   return (
     <div>
-      <div
-        className={cx(
-          'group flex min-h-7 min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-[12px] text-secondary hover:bg-surface/70 hover:text-primary',
-          selected && 'bg-accent/10 text-primary',
-        )}
-        style={{ paddingLeft: `${8 + depth * 14}px` }}
-        onClick={() => (isDirectory ? onToggle(entry) : onSelect(entry))}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            isDirectory ? onToggle(entry) : onSelect(entry);
-          }
-        }}
-      >
-        <span className={cx('w-3 shrink-0 text-dim transition-transform', isDirectory && node?.expanded && 'rotate-90')}>
-          {fileIcon(entry)}
-        </span>
-        <span className={cx('min-w-0 flex-1 truncate', isDirectory ? 'font-medium' : 'font-mono')}>{entry.name}</span>
-        {entry.size !== null && (
-          <span className="hidden shrink-0 text-[10px] text-dim group-hover:inline">{formatWorkspaceEntrySize(entry.size)}</span>
-        )}
-        <WorkspaceStatusBadge status={entry.gitStatus} count={entry.descendantGitStatusCount} />
+      <div className="group flex min-w-0 items-center">
+        <RowButton
+          role="button"
+          compact
+          selected={selected}
+          className="min-h-7 flex-1 gap-1 py-1 pr-1.5 text-[12px]"
+          style={{ paddingLeft: `${8 + depth * 14}px` }}
+          onClick={() => (isDirectory ? onToggle(entry) : onSelect(entry))}
+        >
+          <span className={cx('w-3 shrink-0 text-dim transition-transform', isDirectory && node?.expanded && 'rotate-90')}>
+            {fileIcon(entry)}
+          </span>
+          <span className={cx('min-w-0 flex-1 truncate', isDirectory ? 'font-medium' : 'font-mono')}>{entry.name}</span>
+          {entry.size !== null && (
+            <span className="hidden shrink-0 text-[10px] text-dim group-hover:inline">{formatWorkspaceEntrySize(entry.size)}</span>
+          )}
+          <WorkspaceStatusBadge status={entry.gitStatus} count={entry.descendantGitStatusCount} />
+        </RowButton>
         <TextButton
-          className="hidden shrink-0 rounded px-1 py-0.5 text-[10px] text-dim hover:bg-elevated hover:text-primary group-hover:inline"
+          className="mr-1 hidden shrink-0 px-1 py-0.5 text-[10px] text-dim group-hover:inline-flex group-focus-within:inline-flex"
           title="Draft an agent prompt for this path"
           onClick={(event) => {
             event.stopPropagation();
@@ -556,7 +559,8 @@ export function WorkspaceExplorer({
   openFilesScope = null,
   railOnly = false,
 }: WorkspaceExplorerProps) {
-  const { theme } = useTheme();
+  const { theme, availableThemes = [] } = useTheme();
+  const themeAppearance = availableThemes.find((candidate) => candidate.id === theme)?.appearance ?? (theme === 'dark' ? 'dark' : 'light');
   const [open, setOpen] = useState(() => readStoredBoolean(WORKSPACE_EXPLORER_OPEN_KEY, true));
   const [showDiff, setShowDiff] = useState(() => readStoredBoolean(WORKSPACE_EXPLORER_DIFF_KEY, true));
   const [rootListing, setRootListing] = useState<LoadState<WorkspaceDirectoryListing>>({ status: 'idle', data: null, error: null });
@@ -1013,10 +1017,7 @@ export function WorkspaceExplorer({
 
   if (!open && !railOnly) {
     return (
-      <ToolbarButton
-        className="absolute right-3 top-3 z-40 rounded-md border border-border-subtle bg-base/90 px-2 py-1 text-[11px] text-secondary shadow-sm hover:text-primary"
-        onClick={() => setOpen(true)}
-      >
+      <ToolbarButton className="absolute right-3 top-3 z-40 px-2 py-1 text-[11px] text-secondary" onClick={() => setOpen(true)}>
         Files
       </ToolbarButton>
     );
@@ -1093,9 +1094,7 @@ export function WorkspaceExplorer({
     <div
       className={cx(
         'flex h-full bg-base/96 text-sm',
-        railOnly
-          ? 'w-full flex-col'
-          : 'w-[min(42vw,560px)] min-w-[360px] shrink-0 border-l border-border-subtle shadow-[-12px_0_28px_rgba(0,0,0,0.08)]',
+        railOnly ? 'w-full flex-col' : 'w-[min(42vw,560px)] min-w-[360px] shrink-0 border-l border-border-subtle',
       )}
     >
       <div className={cx('flex h-full flex-col bg-panel', railOnly ? 'w-full' : 'w-[45%] min-w-[180px] border-r border-border-subtle')}>
@@ -1217,7 +1216,7 @@ export function WorkspaceExplorer({
                     <WorkspaceCodeEditor
                       path={selectedFile.path}
                       value={selectedFile.content ?? ''}
-                      theme={theme}
+                      theme={themeAppearance}
                       diffSpec={diffSpec}
                       editable={false}
                     />
@@ -1264,7 +1263,8 @@ export function WorkspaceFileDocument({
   onReplyWithSelection?: (selection: { filePath: string; text: string }) => void;
   hideHeader?: boolean;
 }) {
-  const { theme } = useTheme();
+  const { theme, availableThemes = [] } = useTheme();
+  const themeAppearance = availableThemes.find((candidate) => candidate.id === theme)?.appearance ?? (theme === 'dark' ? 'dark' : 'light');
   const [showDiff, setShowDiff] = useState(() => readStoredBoolean(WORKSPACE_EXPLORER_DIFF_KEY, true));
   const [fileState, setFileState] = useState<LoadState<WorkspaceFileContent>>({ status: 'loading', data: null, error: null });
   const [diffState, setDiffState] = useState<LoadState<WorkspaceDiffOverlay>>({ status: 'idle', data: null, error: null });
@@ -1557,7 +1557,7 @@ export function WorkspaceFileDocument({
             <WorkspaceCodeEditor
               path={selectedFile.path}
               value={draftContent}
-              theme={theme}
+              theme={themeAppearance}
               diffSpec={diffSpec}
               editable
               onChange={setDraftContent}
@@ -1565,7 +1565,7 @@ export function WorkspaceFileDocument({
           </Suspense>
         )}
       </div>
-      {saveState.error ? <div className="bg-danger/5 px-3 py-1 text-[11px] text-danger">{saveState.error}</div> : null}
+      {saveState.error ? <div className="ui-surface-danger-soft px-3 py-1 text-[11px] text-danger">{saveState.error}</div> : null}
       {selectionContextMenu ? (
         <ContextMenu
           ref={selectionContextMenuRef}

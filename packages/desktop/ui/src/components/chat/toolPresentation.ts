@@ -6,18 +6,33 @@ const TOOL_META: Record<
   string,
   { icon: string; label: string; color: string; tone: 'steel' | 'teal' | 'accent' | 'success' | 'warning' | 'muted' }
 > = {
-  bash: { icon: '$', label: 'bash', color: 'text-steel bg-steel/5', tone: 'steel' },
-  background_bash: { icon: '$', label: 'background task', color: 'text-steel bg-steel/5', tone: 'steel' },
-  read: { icon: '≡', label: 'read', color: 'text-teal bg-teal/5', tone: 'teal' },
-  write: { icon: '✎', label: 'write', color: 'text-accent bg-accent/5', tone: 'accent' },
-  edit: { icon: '✎', label: 'edit', color: 'text-accent bg-accent/5', tone: 'accent' },
-  web_fetch: { icon: '⌕', label: 'web_fetch', color: 'text-success bg-success/5', tone: 'success' },
-  web_search: { icon: '⌕', label: 'web_search', color: 'text-success bg-success/5', tone: 'success' },
-  image: { icon: '◌', label: 'image', color: 'text-accent bg-accent/5', tone: 'accent' },
+  bash: { icon: '$', label: 'bash', color: 'border border-border-subtle/70 bg-elevated/25 text-steel', tone: 'steel' },
+  background_bash: {
+    icon: '$',
+    label: 'background task',
+    color: 'border border-border-subtle/70 bg-elevated/25 text-steel',
+    tone: 'steel',
+  },
+  read: { icon: '≡', label: 'read', color: 'border border-border-subtle/70 bg-elevated/25 text-teal', tone: 'teal' },
+  write: { icon: '✎', label: 'write', color: 'border border-border-subtle/70 bg-elevated/25 text-accent', tone: 'accent' },
+  edit: { icon: '✎', label: 'edit', color: 'border border-border-subtle/70 bg-elevated/25 text-accent', tone: 'accent' },
+  web_fetch: {
+    icon: '⌕',
+    label: 'web_fetch',
+    color: 'border border-border-subtle/70 bg-elevated/25 text-success',
+    tone: 'success',
+  },
+  web_search: {
+    icon: '⌕',
+    label: 'web_search',
+    color: 'border border-border-subtle/70 bg-elevated/25 text-success',
+    tone: 'success',
+  },
+  image: { icon: '◌', label: 'image', color: 'border border-border-subtle/70 bg-elevated/25 text-accent', tone: 'accent' },
   screenshot: { icon: '⊡', label: 'screenshot', color: 'text-secondary bg-elevated', tone: 'muted' },
-  artifact: { icon: '◫', label: 'artifact', color: 'text-accent bg-accent/5', tone: 'accent' },
-  checkpoint: { icon: '✓', label: 'checkpoint', color: 'text-success bg-success/5', tone: 'success' },
-  conversation: { icon: '◆', label: 'conversation', color: 'text-warning bg-warning/5', tone: 'warning' },
+  artifact: { icon: '◫', label: 'artifact', color: 'border border-border-subtle/70 bg-elevated/25 text-accent', tone: 'accent' },
+  checkpoint: { icon: '✓', label: 'checkpoint', color: 'border border-border-subtle/70 bg-elevated/25 text-success', tone: 'success' },
+  conversation: { icon: '◆', label: 'conversation', color: 'border border-border-subtle/70 bg-elevated/25 text-warning', tone: 'warning' },
 };
 export function toolMeta(t: string) {
   return TOOL_META[t] ?? { icon: '⚙', label: t, color: 'text-secondary bg-elevated', tone: 'muted' as const };

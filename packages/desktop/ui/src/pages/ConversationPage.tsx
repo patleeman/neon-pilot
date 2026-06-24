@@ -34,6 +34,7 @@ import {
   PageHeader,
   SectionLabel,
   TextButton,
+  TextInput,
   ToolbarButton,
 } from '../components/ui';
 import type { ExcalidrawSceneData } from '../content/excalidrawUtils';
@@ -6521,7 +6522,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                         void saveTitleEdit();
                       }}
                     >
-                      <input
+                      <TextInput
                         ref={titleInputRef}
                         value={titleDraft}
                         onChange={(event) => setTitleDraft(event.target.value)}
@@ -6540,13 +6541,13 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                           void saveTitleEdit();
                         }}
                         placeholder="Name this conversation"
-                        className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-1.5 text-[32px] font-semibold leading-[1.08] tracking-[-0.018em] text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 sm:text-[36px]"
+                        className="ui-conversation-title-input !border-transparent !bg-transparent !px-3 !py-1.5 !text-[2rem] !font-[650] !leading-[1.08] hover:!bg-base/35 focus:!bg-base/35"
                         disabled={titleSaving}
                       />
                       <IconButton
                         shape="circle"
                         size="sm"
-                        className="h-8 w-8 text-secondary hover:bg-surface-hover hover:text-primary focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="h-8 w-8 text-secondary disabled:cursor-not-allowed disabled:opacity-50"
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={cancelTitleEdit}
                         disabled={titleSaving}
@@ -6570,15 +6571,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                       </IconButton>
                     </form>
                   ) : draft ? (
-                    <h1 className="ui-conversation-title-clamp max-w-4xl break-words pr-4 text-[32px] font-semibold leading-[1.08] tracking-[-0.018em] text-primary sm:text-[36px]">
-                      {title}
-                    </h1>
+                    <h1 className="ui-conversation-title-clamp ui-conversation-title-display max-w-4xl break-words pr-4">{title}</h1>
                   ) : (
-                    <Suspense
-                      fallback={
-                        <h1 className="ui-conversation-title-clamp text-[32px] font-semibold leading-[1.08] sm:text-[36px]">{title}</h1>
-                      }
-                    >
+                    <Suspense fallback={<h1 className="ui-conversation-title-clamp ui-conversation-title-display">{title}</h1>}>
                       <ConversationSavedHeader title={title} onTitleClick={!renameConversationDisabled ? beginTitleEdit : undefined} />
                     </Suspense>
                   )}
@@ -6662,7 +6657,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                   visibleTranscriptHasOlderBlocks ? (
                     <div className="relative my-2 flex items-center gap-3 py-3 text-[11px] text-secondary/80">
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border-subtle to-border-subtle" aria-hidden />
-                      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full bg-surface/90 px-3 py-1.5 shadow-sm">
+                      <div className="ui-conversation-status-strip">
                         <span>Earlier conversation hidden</span>
                         <span className="text-dim" aria-hidden>
                           ·
@@ -6696,7 +6691,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
               contentClassName={showNewConversationSetup ? `${DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS} text-left` : undefined}
               icon={
                 showNewConversationSetup ? undefined : (
-                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mx-auto">
+                  <div className="ui-empty-state-icon-accent">
                     <svg
                       width="20"
                       height="20"
@@ -6744,7 +6739,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           </TextButton>
         )}
         {showInlineConversationLoadingState && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-base/85 px-6 py-4 backdrop-blur-sm">
+          <div className="ui-composer-bottom-fade">
             <LoadingState label={renderingStaleTranscript ? 'Loading new messages…' : 'Loading messages…'} className="justify-center" />
           </div>
         )}
@@ -6980,10 +6975,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {pendingBrowserComments.map((entry) => (
-                          <div
-                            key={entry.id}
-                            className="group flex max-w-full items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2 py-1 text-[11px] text-secondary"
-                          >
+                          <div key={entry.id} className="ui-browser-comment-chip group">
                             <span className="max-w-[26rem] truncate text-primary">{formatBrowserCommentTargetLabel(entry.target)}</span>
                             <span className="max-w-[20rem] truncate">{entry.comment}</span>
                             <IconButton

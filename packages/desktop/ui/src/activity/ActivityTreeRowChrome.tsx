@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react';
 
 import { ConversationStatusText } from '../components/ConversationStatusText';
+import { IconButton } from '../components/ui';
 import { timeAgoCompact } from '../shared/utils';
 import type { ActivityTreeItem } from './activityTree';
 import type { ActivityTreeRowModel } from './activityTreeRowModel';
@@ -14,7 +15,7 @@ export function ActivityTreeDropMarker({ position }: { position: ActivityTreeDro
     <span
       aria-hidden="true"
       className={[
-        'pointer-events-none absolute left-2 right-2 z-10 h-0.5 rounded-full bg-accent/80',
+        'pointer-events-none absolute left-2 right-2 z-10 h-0.5 rounded-sm bg-accent opacity-80',
         position === 'before' ? 'top-0' : 'bottom-0',
       ].join(' ')}
     />
@@ -97,7 +98,7 @@ export function ActivityTreeTrailingStatus({
   }
 
   if (item.status !== 'idle' && item.kind !== 'conversation') {
-    return <span className="shrink-0 text-[10px] text-dim">{formatActivityTreeStatus(item.status)}</span>;
+    return <span className="ui-card-meta shrink-0">{formatActivityTreeStatus(item.status)}</span>;
   }
 
   return null;
@@ -125,10 +126,10 @@ export function ActivityTreeRowActions({
   return (
     <>
       {item.kind === 'group' && renderContextMenu ? (
-        <span
-          role="button"
+        <IconButton
           tabIndex={-1}
-          className="shrink-0 rounded px-1 text-[16px] leading-none text-dim hover:bg-surface-hover hover:text-primary"
+          compact
+          className="h-5 w-5 shrink-0"
           aria-label={`Workspace actions for ${item.title}`}
           title={
             typeof item.metadata?.cwd === 'string' ? `Workspace actions for ${item.metadata.cwd}` : `Workspace actions for ${item.title}`
@@ -140,14 +141,14 @@ export function ActivityTreeRowActions({
             onOpenContextMenu?.(item, rect.left, rect.bottom + 4);
           }}
         >
-          …
-        </span>
+          <MoreActionsIcon />
+        </IconButton>
       ) : null}
       {rowModel.canCreateChild ? (
-        <span
-          role="button"
+        <IconButton
           tabIndex={-1}
-          className="shrink-0 rounded px-1 text-[14px] leading-none text-dim hover:bg-surface-hover hover:text-primary"
+          compact
+          className="h-5 w-5 shrink-0"
           aria-label={`New conversation in ${item.title}`}
           title={typeof item.metadata?.cwd === 'string' ? `New conversation in ${item.metadata.cwd}` : `New conversation in ${item.title}`}
           onClick={(event) => {
@@ -156,15 +157,15 @@ export function ActivityTreeRowActions({
             onCreateChildItem?.(item);
           }}
         >
-          +
-        </span>
+          <PlusIcon />
+        </IconButton>
       ) : null}
       {inlineActions.map((action) => (
-        <span
+        <IconButton
           key={action.id}
-          role="button"
           tabIndex={-1}
-          className="shrink-0 rounded px-1 text-[12px] leading-none text-dim opacity-0 hover:bg-surface-hover hover:text-primary group-hover:opacity-100 group-focus-within:opacity-100"
+          compact
+          className="h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
           aria-label={action.title}
           title={action.title}
           onClick={(event) => {
@@ -174,13 +175,13 @@ export function ActivityTreeRowActions({
           }}
         >
           {action.icon ?? '•'}
-        </span>
+        </IconButton>
       ))}
       {rowModel.canArchive ? (
-        <span
-          role="button"
+        <IconButton
           tabIndex={-1}
-          className="shrink-0 rounded px-1 text-[14px] leading-none text-dim opacity-0 hover:bg-surface-hover hover:text-primary group-hover:opacity-100 group-focus-within:opacity-100"
+          compact
+          className="h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
           aria-label="Archive conversation"
           title="Archive conversation"
           onClick={(event) => {
@@ -189,10 +190,57 @@ export function ActivityTreeRowActions({
             onArchiveItem?.(item);
           }}
         >
-          ×
-        </span>
+          <CloseIcon />
+        </IconButton>
       ) : null}
     </>
+  );
+}
+
+function MoreActionsIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+      <circle cx="2" cy="6" r="1.15" />
+      <circle cx="6" cy="6" r="1.15" />
+      <circle cx="10" cy="6" r="1.15" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
   );
 }
 
@@ -260,20 +308,20 @@ function ExpanderButton({
   expanded: boolean;
   label: string;
   title?: string;
-  onClick: (event: MouseEvent<HTMLSpanElement>) => void;
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
   return (
-    <span
-      role="button"
+    <IconButton
       tabIndex={-1}
-      className="-ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-dim hover:text-primary"
+      compact
+      className="-ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border-0 bg-transparent !p-0 text-dim hover:text-primary"
       aria-label={label}
       aria-expanded={expanded}
       title={title}
       onClick={onClick}
     >
       {expanded ? '▾' : '▸'}
-    </span>
+    </IconButton>
   );
 }
 

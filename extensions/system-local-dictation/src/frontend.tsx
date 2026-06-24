@@ -69,7 +69,7 @@ function DictationWaveform({ samples, startedAt }: { samples: number[]; startedA
         {visibleSamples.slice(-32).map((sample, index) => {
           const height = Math.max(2, Math.round(3 + sample * 22));
           const opacity = 0.28 + Math.min(0.72, sample * 1.4);
-          return <span key={index} className="w-[2px] shrink-0 rounded-full bg-current" style={{ height: `${height}px`, opacity }} />;
+          return <span key={index} className="ui-waveform-bar" style={{ height: `${height}px`, opacity }} />;
         })}
       </div>
       <span className="shrink-0 font-mono text-[12px] text-secondary">{formatElapsed(startedAt, now)}</span>
@@ -288,7 +288,7 @@ export function DictationButton({
         className={cx(
           'touch-none transition-colors disabled:cursor-default disabled:opacity-40',
           state === 'recording'
-            ? 'bg-danger/15 text-danger hover:bg-danger/25'
+            ? 'ui-button-danger-soft'
             : busy
               ? 'bg-elevated text-accent'
               : 'text-secondary hover:bg-elevated/60 hover:text-primary',

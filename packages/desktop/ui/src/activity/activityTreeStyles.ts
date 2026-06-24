@@ -19,10 +19,11 @@ function buildActivityTreeItemCssRule(path: string, item: ActivityTreeItem): str
   if (!accentColor && !backgroundColor) return null;
 
   const declarations: string[] = [];
-  if (accentColor) {
-    declarations.push(`box-shadow: inset 2px 0 0 ${accentColor};`);
-  }
-  if (backgroundColor) {
+  if (accentColor && backgroundColor) {
+    declarations.push(`background: linear-gradient(to right, ${accentColor} 0 2px, transparent 2px), ${backgroundColor};`);
+  } else if (accentColor) {
+    declarations.push(`background-image: linear-gradient(to right, ${accentColor} 0 2px, transparent 2px);`);
+  } else if (backgroundColor) {
     declarations.push(`background: ${backgroundColor};`);
   }
 

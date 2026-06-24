@@ -1,12 +1,10 @@
 import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
-import { cx, MenuGroupLabel, MenuItem, MenuSeparator, PositionedMenu, SectionLabel } from '@neon-pilot/extensions/ui';
+import { cx, MenuGroupLabel, MenuItem, MenuSeparator, PositionedMenu, SectionLabel, StatusDot } from '@neon-pilot/extensions/ui';
 import React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
-const INLINE_TRIGGER_CLASS =
-  'h-8 min-w-0 truncate rounded-md border border-transparent bg-transparent px-1.5 text-[11px] font-medium text-secondary outline-none transition-colors hover:bg-surface/45 hover:text-primary focus-visible:border-border-subtle focus-visible:bg-surface/55 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-accent/20 disabled:cursor-default disabled:opacity-40';
-const MENU_TRIGGER_CLASS =
-  'h-9 w-full min-w-0 rounded-lg border border-border-subtle bg-surface/45 px-2.5 text-[12px] font-medium text-primary outline-none transition-colors hover:bg-surface/65 focus-visible:border-accent/50 focus-visible:bg-surface/65 disabled:cursor-default disabled:opacity-40';
+const INLINE_TRIGGER_CLASS = 'ui-menu-trigger-inline truncate disabled:cursor-default disabled:opacity-40';
+const MENU_TRIGGER_CLASS = 'ui-menu-trigger-block truncate disabled:cursor-default disabled:opacity-40';
 export const MODEL_PICKER_MENU_STYLE = {
   maxHeight: 'min(20rem, calc(100vh - 7rem))',
   overflowY: 'auto',
@@ -409,84 +407,88 @@ function Ds4HealthIndicator({
     description.tone === 'warn' ||
     'canSetup' in description ||
     description.canStart;
-  const dotClass =
+  const dotTone =
     description.tone === 'active'
-      ? 'bg-accent shadow-[0_0_10px_rgba(96,165,250,0.65)] animate-pulse'
+      ? 'success'
       : description.tone === 'ok'
-        ? 'bg-emerald-400'
+        ? 'success'
         : description.tone === 'danger'
-          ? 'bg-danger'
+          ? 'danger'
           : description.tone === 'warn'
-            ? 'bg-amber-400'
-            : 'bg-dim';
+            ? 'warning'
+            : 'muted';
   const compactStatus = (
     <span className="relative flex h-3 w-3 shrink-0 items-center justify-center">
       {setupProgress !== null ? (
         <span className="font-mono text-[10px] leading-none text-amber-300">{setupProgress}%</span>
       ) : (
         <>
-          {active ? <span className="absolute h-3 w-3 rounded-full bg-accent/25 animate-ping" /> : null}
-          <span className={cx('relative h-1.5 w-1.5 rounded-full', dotClass)} />
+          {active ? <span className="ui-status-dot-active-ping" /> : null}
+          <StatusDot tone={dotTone} size="xs" className="relative" />
         </>
       )}
     </span>
   );
   return (
-    <details
-      data-model-picker-menu
-      className={cx(
-        'group relative flex min-w-0 items-center gap-1.5 text-[11px] text-dim',
-        variant === 'menu' ? 'mt-1.5 justify-between' : 'max-w-[8.5rem]',
-      )}
-      title={description.title}
-      onToggle={(event) => {
-        if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
-      }}
-    >
-      <summary
-        className="flex min-w-0 cursor-pointer list-none items-center gap-1.5 rounded px-1 py-0.5 hover:bg-surface/55 hover:text-primary [&::-webkit-details-marker]:hidden"
-        aria-label={`${description.label} menu`}
+    <>
+      {/* ui-pattern-ok raw-details-summary reason="details keeps composer popover open state anchored to its trigger" */}
+      <details
+        data-model-picker-menu
+        className={cx(
+          'group relative flex min-w-0 items-center gap-1.5 text-[11px] text-dim',
+          variant === 'menu' ? 'mt-1.5 justify-between' : 'max-w-[8.5rem]',
+        )}
+        title={description.title}
+        onToggle={(event) => {
+          if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
+        }}
       >
-        {compactStatus}
-        {needsLabel ? <span className="min-w-0 truncate">{setupProgress !== null ? 'DS4 setup' : description.label}</span> : null}
-      </summary>
-      <PositionedMenu placement="absolute" position={{ right: 0, bottom: '100%' }} className="mb-2 w-64 bg-base p-1.5">
-        <MenuButton onClick={() => void health.refresh()} disabled={health.checking}>
-          {health.checking ? 'Refreshing' : 'Refresh status'}
-        </MenuButton>
-        {'canSetup' in description && description.canSetup ? (
-          <MenuButton onClick={() => void health.setup()} disabled={health.settingUp}>
-            {health.settingUp ? 'Setting up' : 'Run setup'}
-          </MenuButton>
-        ) : null}
-        <MenuButton
-          onClick={() => void health.start()}
-          disabled={health.starting || (health.status?.reachable === true && !health.selectedModelMismatch)}
+        {/* ui-pattern-ok raw-details-summary reason="summary is the native trigger for this anchored composer popover" */}
+        <summary
+          className="ui-menu-trigger-inline flex cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden"
+          aria-label={`${description.label} menu`}
         >
-          {health.starting ? 'Starting' : 'startLabel' in description ? description.startLabel : 'Start server'}
-        </MenuButton>
-        <MenuButton onClick={() => void health.stop()} disabled={health.stopping || health.status?.server?.managedRunning !== true}>
-          {health.stopping ? 'Stopping' : 'Stop server'}
-        </MenuButton>
-        <MenuButton onClick={() => void health.restart()} disabled={health.restarting || health.status?.runtime?.installed === false}>
-          {health.restarting ? 'Restarting' : 'Restart server'}
-        </MenuButton>
-        <MenuSeparator />
-        <MenuGroupLabel>Interventions</MenuGroupLabel>
-        {interventionItems.map((item) => (
-          <MenuCheckbox
-            key={item.key}
-            checked={item.checked}
-            disabled={health.savingSetting !== null}
-            label={item.label}
-            saving={health.savingSetting === item.key}
-            onChange={(checked) => void health.saveIntervention(item.key, checked)}
-          />
-        ))}
-        <MenuSeparator />
-        <MenuButton onClick={() => void health.openSettings()}>Open DS4 settings</MenuButton>
-      </PositionedMenu>
-    </details>
+          {compactStatus}
+          {needsLabel ? <span className="min-w-0 truncate">{setupProgress !== null ? 'DS4 setup' : description.label}</span> : null}
+        </summary>
+        <PositionedMenu placement="absolute" position={{ right: 0, bottom: '100%' }} className="mb-2 w-64 bg-base p-1.5">
+          <MenuButton onClick={() => void health.refresh()} disabled={health.checking}>
+            {health.checking ? 'Refreshing' : 'Refresh status'}
+          </MenuButton>
+          {'canSetup' in description && description.canSetup ? (
+            <MenuButton onClick={() => void health.setup()} disabled={health.settingUp}>
+              {health.settingUp ? 'Setting up' : 'Run setup'}
+            </MenuButton>
+          ) : null}
+          <MenuButton
+            onClick={() => void health.start()}
+            disabled={health.starting || (health.status?.reachable === true && !health.selectedModelMismatch)}
+          >
+            {health.starting ? 'Starting' : 'startLabel' in description ? description.startLabel : 'Start server'}
+          </MenuButton>
+          <MenuButton onClick={() => void health.stop()} disabled={health.stopping || health.status?.server?.managedRunning !== true}>
+            {health.stopping ? 'Stopping' : 'Stop server'}
+          </MenuButton>
+          <MenuButton onClick={() => void health.restart()} disabled={health.restarting || health.status?.runtime?.installed === false}>
+            {health.restarting ? 'Restarting' : 'Restart server'}
+          </MenuButton>
+          <MenuSeparator />
+          <MenuGroupLabel>Interventions</MenuGroupLabel>
+          {interventionItems.map((item) => (
+            <MenuCheckbox
+              key={item.key}
+              checked={item.checked}
+              disabled={health.savingSetting !== null}
+              label={item.label}
+              saving={health.savingSetting === item.key}
+              onChange={(checked) => void health.saveIntervention(item.key, checked)}
+            />
+          ))}
+          <MenuSeparator />
+          <MenuButton onClick={() => void health.openSettings()}>Open DS4 settings</MenuButton>
+        </PositionedMenu>
+      </details>
+    </>
   );
 }
 
@@ -515,9 +517,7 @@ function MenuButton({
       }}
     >
       {checked !== undefined ? (
-        <span className="flex w-3 shrink-0 justify-center">
-          {checked ? <span className="h-1.5 w-1.5 rounded-full bg-current" /> : null}
-        </span>
+        <span className="flex w-3 shrink-0 justify-center">{checked ? <span className="ui-radio-dot" /> : null}</span>
       ) : null}
       {children}
     </MenuItem>
@@ -563,47 +563,51 @@ function ModelSelect({ context, variant }: { context: ComposerControlContext; va
   const disabled = context.savingPreference !== null || context.models.length === 0;
   const triggerClass = variant === 'menu' ? MENU_TRIGGER_CLASS : cx(INLINE_TRIGGER_CLASS, 'max-w-[11.5rem] min-w-[8.25rem]');
   return (
-    <details
-      data-model-picker-menu
-      className={variant === 'menu' ? 'relative min-w-0' : 'relative inline-flex min-w-0 items-center'}
-      onToggle={(event) => {
-        if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
-      }}
-    >
-      <summary
-        className={cx(
-          'flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden',
-          triggerClass,
-          disabled && 'pointer-events-none opacity-40',
-        )}
-        aria-label="Conversation model"
-        aria-disabled={disabled}
+    <>
+      {/* ui-pattern-ok raw-details-summary reason="details keeps model menu open state anchored to the composer trigger" */}
+      <details
+        data-model-picker-menu
+        className={variant === 'menu' ? 'relative min-w-0' : 'relative inline-flex min-w-0 items-center'}
+        onToggle={(event) => {
+          if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
+        }}
       >
-        <span className="min-w-0 truncate">{selectedLabel}</span>
-        <Chevron className="static shrink-0" />
-      </summary>
-      <PositionedMenu
-        placement="absolute"
-        position={{ left: 0, bottom: '100%' }}
-        className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'left-0 w-full min-w-56' : 'left-0 w-64')}
-        style={MODEL_PICKER_MENU_STYLE}
-      >
-        {groupModels(context.models).map(([provider, providerModels]) => (
-          <div key={provider} className="py-1">
-            <MenuGroupLabel className="pb-1">{provider}</MenuGroupLabel>
-            {providerModels.map((model) => {
-              const value = modelSelectionValue(model, context.models);
-              const checked = selectedModel?.provider === model.provider && selectedModel.id === model.id;
-              return (
-                <MenuButton key={value} onClick={() => context.selectModel(value)} checked={checked}>
-                  <span className="min-w-0 truncate">{model.name}</span>
-                </MenuButton>
-              );
-            })}
-          </div>
-        ))}
-      </PositionedMenu>
-    </details>
+        {/* ui-pattern-ok raw-details-summary reason="summary is the native trigger for this anchored model menu" */}
+        <summary
+          className={cx(
+            'flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden',
+            triggerClass,
+            disabled && 'pointer-events-none opacity-40',
+          )}
+          aria-label="Conversation model"
+          aria-disabled={disabled}
+        >
+          <span className="min-w-0 truncate">{selectedLabel}</span>
+          <Chevron className="static shrink-0" />
+        </summary>
+        <PositionedMenu
+          placement="absolute"
+          position={{ left: 0, bottom: '100%' }}
+          className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'left-0 w-full min-w-56' : 'left-0 w-64')}
+          style={MODEL_PICKER_MENU_STYLE}
+        >
+          {groupModels(context.models).map(([provider, providerModels]) => (
+            <div key={provider} className="py-1">
+              <MenuGroupLabel className="pb-1">{provider}</MenuGroupLabel>
+              {providerModels.map((model) => {
+                const value = modelSelectionValue(model, context.models);
+                const checked = selectedModel?.provider === model.provider && selectedModel.id === model.id;
+                return (
+                  <MenuButton key={value} onClick={() => context.selectModel(value)} checked={checked}>
+                    <span className="min-w-0 truncate">{model.name}</span>
+                  </MenuButton>
+                );
+              })}
+            </div>
+          ))}
+        </PositionedMenu>
+      </details>
+    </>
   );
 }
 
@@ -614,41 +618,45 @@ function ThinkingSelect({ context, variant }: { context: ComposerControlContext;
   const disabled = context.savingPreference !== null;
   const triggerClass = variant === 'menu' ? MENU_TRIGGER_CLASS : cx(INLINE_TRIGGER_CLASS, 'max-w-[6.5rem] min-w-[5.75rem]');
   return (
-    <details
-      data-model-picker-menu
-      className={variant === 'menu' ? 'relative min-w-0' : 'relative inline-flex min-w-0 items-center'}
-      onToggle={(event) => {
-        if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
-      }}
-    >
-      <summary
-        className={cx(
-          'flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden',
-          triggerClass,
-          disabled && 'pointer-events-none opacity-40',
-        )}
-        aria-label="Conversation thinking level"
-        aria-disabled={disabled}
+    <>
+      {/* ui-pattern-ok raw-details-summary reason="details keeps thinking menu open state anchored to the composer trigger" */}
+      <details
+        data-model-picker-menu
+        className={variant === 'menu' ? 'relative min-w-0' : 'relative inline-flex min-w-0 items-center'}
+        onToggle={(event) => {
+          if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
+        }}
       >
-        <span className="min-w-0 truncate">{selected?.label ?? 'Unset'}</span>
-        <Chevron className="static shrink-0" />
-      </summary>
-      <PositionedMenu
-        placement="absolute"
-        position={{ left: 0, bottom: '100%' }}
-        className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'w-full min-w-44' : 'w-40')}
-      >
-        {options.map((option) => (
-          <MenuButton
-            key={option.value || 'unset'}
-            onClick={() => context.selectThinkingLevel(option.value)}
-            checked={option.value === context.currentThinkingLevel}
-          >
-            {option.label}
-          </MenuButton>
-        ))}
-      </PositionedMenu>
-    </details>
+        {/* ui-pattern-ok raw-details-summary reason="summary is the native trigger for this anchored thinking menu" */}
+        <summary
+          className={cx(
+            'flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden',
+            triggerClass,
+            disabled && 'pointer-events-none opacity-40',
+          )}
+          aria-label="Conversation thinking level"
+          aria-disabled={disabled}
+        >
+          <span className="min-w-0 truncate">{selected?.label ?? 'Unset'}</span>
+          <Chevron className="static shrink-0" />
+        </summary>
+        <PositionedMenu
+          placement="absolute"
+          position={{ left: 0, bottom: '100%' }}
+          className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'w-full min-w-44' : 'w-40')}
+        >
+          {options.map((option) => (
+            <MenuButton
+              key={option.value || 'unset'}
+              onClick={() => context.selectThinkingLevel(option.value)}
+              checked={option.value === context.currentThinkingLevel}
+            >
+              {option.label}
+            </MenuButton>
+          ))}
+        </PositionedMenu>
+      </details>
+    </>
   );
 }
 

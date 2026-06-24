@@ -1,5 +1,27 @@
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
-import { AppPageIntro, AppPageLayout, EmptyState, ErrorState, IconButton, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
+import {
+  AppPageIntro,
+  AppPageLayout,
+  Checkbox,
+  DataTable,
+  DataTableActionGroup,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+  EmptyState,
+  ErrorState,
+  Field,
+  IconButton,
+  LoadingState,
+  Notice,
+  Textarea,
+  TextButton,
+  TextInput,
+  ToolbarButton,
+} from '@neon-pilot/extensions/ui';
+import type { FormEvent } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -23,22 +45,6 @@ const emptyForm: FormState = { name: '', description: '', enabled: true };
 
 function formFromItem(item: Item): FormState {
   return { name: item.name, description: item.description, enabled: item.enabled };
-}
-
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-function fieldClass() {
-  return 'w-full rounded-lg border border-border-subtle bg-surface/70 px-3 py-2 text-[13px] text-primary shadow-none outline-none transition-colors placeholder:text-dim focus:border-accent/50 focus:bg-surface';
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <label className="grid gap-1.5 text-[12px] text-secondary">
-      <span className="font-medium text-primary">{label}</span>
-      {children}
-      {hint ? <span className="text-[11px] leading-5 text-dim">{hint}</span> : null}
-    </label>
-  );
 }
 
 function EditIcon() {
@@ -119,7 +125,7 @@ export function CrudPage({ pa }: { pa: NativeExtensionClient }) {
   }, []);
 
   const save = useCallback(
-    async (event: React.FormEvent) => {
+    async (event: FormEvent) => {
       event.preventDefault();
       setBusy('save');
       try {
@@ -196,9 +202,9 @@ export function CrudPage({ pa }: { pa: NativeExtensionClient }) {
             {/* Editor header */}
             <div className="flex items-start justify-between gap-4 pb-10">
               <div className="min-w-0">
-                <button type="button" className="text-[13px] text-secondary hover:text-primary" onClick={closeEditor}>
+                <TextButton type="button" onClick={closeEditor}>
                   ← Items
-                </button>
+                </TextButton>
                 <h2 className="mt-6 text-[32px] font-semibold tracking-tight text-primary">{editingId ? 'Edit item' : 'New item'}</h2>
               </div>
               <div className="flex shrink-0 flex-wrap gap-2">
@@ -219,29 +225,13 @@ export function CrudPage({ pa }: { pa: NativeExtensionClient }) {
               </div>
               <div className="grid gap-4">
                 <Field label="Name">
-                  <input
-                    className={fieldClass()}
-                    required
-                    autoComplete="off"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  />
+                  <TextInput required autoComplete="off" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </Field>
                 <Field label="Description" hint="Optional. One sentence about what this item does.">
-                  <textarea
-                    className={fieldClass()}
-                    rows={4}
-                    value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  />
+                  <Textarea rows={4} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
                 </Field>
                 <label className="flex items-center gap-2 text-[13px] text-secondary">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-border-default bg-base text-accent focus:outline-none"
-                    checked={form.enabled}
-                    onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-                  />
+                  <Checkbox checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} />
                   Enabled
                 </label>
               </div>
@@ -295,57 +285,59 @@ export function CrudPage({ pa }: { pa: NativeExtensionClient }) {
           }
         />
 
-        {notice ? <div className="rounded-lg bg-surface/35 px-3 py-2 text-[13px] text-secondary">{notice}</div> : null}
+        {notice ? <Notice tone="success">{notice}</Notice> : null}
 
-        {error ? <div className="rounded-lg bg-danger/10 px-3 py-2 text-[13px] text-danger">{error}</div> : null}
+        {error ? <Notice tone="danger">{error}</Notice> : null}
 
         {items.length === 0 ? (
           <EmptyState title="No items yet" body="Create one to get started." className="py-10" />
         ) : (
-          <section className="min-w-0 overflow-x-auto">
-            <table className="w-full min-w-[36rem] table-fixed border-collapse text-left text-[13px]">
+          <DataTable
+            columns={
               <colgroup>
                 <col className="w-[45%]" />
                 <col className="w-[40%]" />
                 <col className="w-[15%]" />
               </colgroup>
-              <thead className="sticky top-0 z-10 bg-base/95 backdrop-blur">
-                <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
-                  <th className="py-2 pr-4 font-semibold">Name</th>
-                  <th className="py-2 px-3 font-semibold">Description</th>
-                  <th className="py-2 pl-3 text-right font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id} className="group border-t border-border-subtle/70 transition-colors hover:bg-surface/30">
-                    <td className="min-w-0 py-3 pr-4 align-middle">
-                      <div className="truncate text-[14px] font-semibold text-primary">{item.name}</div>
-                      <div className="mt-0.5 text-[11px] text-dim">
-                        {item.enabled ? 'Enabled' : 'Disabled'} · {item.id}
-                      </div>
-                    </td>
-                    <td className="min-w-0 px-3 py-3 align-middle">
-                      <span className="line-clamp-2 text-[13px] text-secondary">{item.description || '—'}</span>
-                    </td>
-                    <td className="py-3 pl-3 align-middle">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <IconButton
-                          compact
-                          title={`Edit ${item.name}`}
-                          aria-label={`Edit ${item.name}`}
-                          disabled={!!busy}
-                          onClick={() => openEditor(item)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+            }
+            tableClassName="min-w-[36rem] table-fixed"
+          >
+            <DataTableHead>
+              <DataTableRow>
+                <DataTableHeaderCell className="pr-4">Name</DataTableHeaderCell>
+                <DataTableHeaderCell className="px-3">Description</DataTableHeaderCell>
+                <DataTableHeaderCell className="pl-3 text-right">Actions</DataTableHeaderCell>
+              </DataTableRow>
+            </DataTableHead>
+            <DataTableBody>
+              {items.map((item) => (
+                <DataTableRow key={item.id} className="group">
+                  <DataTableCell className="min-w-0 pr-4">
+                    <div className="truncate text-[14px] font-semibold text-primary">{item.name}</div>
+                    <div className="mt-0.5 text-[11px] text-dim">
+                      {item.enabled ? 'Enabled' : 'Disabled'} · {item.id}
+                    </div>
+                  </DataTableCell>
+                  <DataTableCell className="min-w-0 px-3">
+                    <span className="line-clamp-2 text-[13px] text-secondary">{item.description || '—'}</span>
+                  </DataTableCell>
+                  <DataTableCell className="pl-3">
+                    <DataTableActionGroup>
+                      <IconButton
+                        compact
+                        title={`Edit ${item.name}`}
+                        aria-label={`Edit ${item.name}`}
+                        disabled={!!busy}
+                        onClick={() => openEditor(item)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </DataTableActionGroup>
+                  </DataTableCell>
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
         )}
       </AppPageLayout>
     </div>

@@ -60,20 +60,20 @@ export function resolveConversationComposerShellStateClassName({
   runMode,
 }: ConversationComposerShellState): string {
   if (dragOver) {
-    return 'border-accent/50 ring-2 ring-accent/20 bg-accent/5';
+    return 'ui-composer-state-focus';
   }
 
   if (hasInteractiveOverlay) {
-    return 'border-accent/40 ring-1 ring-accent/15';
+    return 'ui-composer-state-drag';
   }
 
   if (streamIsStreaming) {
-    return 'border-accent/20 ring-1 ring-accent/8 ui-input-shell-streaming';
+    return 'ui-composer-state-streaming ui-input-shell-streaming';
   }
 
   if (autoModeEnabled) {
     return cx(
-      'border-accent/20 ring-1 ring-accent/8 ui-input-shell-auto-mode',
+      'ui-composer-state-auto ui-input-shell-auto-mode',
       runMode === 'mission' && 'ui-input-shell-mission',
       runMode === 'loop' && 'ui-input-shell-loop',
     );

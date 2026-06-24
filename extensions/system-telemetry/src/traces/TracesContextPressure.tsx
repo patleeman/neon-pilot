@@ -3,7 +3,7 @@
  */
 
 import type { TraceCompactionAggs, TraceCompactionEvent, TraceContextSession } from '@neon-pilot/extensions/data';
-import { DashboardGrid, DashboardGridCell, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { DashboardGrid, DashboardGridCell, PanelHeader, ProgressBar, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
 export function TracesContextPressure({
@@ -72,10 +72,7 @@ export function TracesContextPressure({
                 <span className="w-[100px] text-[11px] text-secondary truncate shrink-0">
                   {s.sessionId.length > 12 ? s.sessionId.slice(0, 12) + '…' : s.sessionId}
                 </span>
-                <div className="flex-1 h-2 bg-elevated rounded-md overflow-hidden flex">
-                  <div className="h-full bg-accent rounded-md transition-all" style={{ width: `${Math.max(s.pct, 2)}%` }} />
-                  <div className="h-full bg-elevated-hover flex-1" />
-                </div>
+                <ProgressBar value={s.pct} minPercent={2} className="h-2 flex-1" label={`${s.sessionId} context fill`} />
                 <span
                   className={`text-[10px] font-mono w-[30px] text-right ${
                     s.pct > 90 ? 'text-danger' : s.pct > 70 ? 'text-warning' : 'text-success'

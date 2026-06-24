@@ -123,7 +123,7 @@ import {
   getAvailableModelObjects,
   updateLiveSessionModelPreferences,
 } from '../conversations/liveSessions.js';
-import { listConversationExecutions, listExecutions } from '../executions/executionService.js';
+import { getExecution, getExecutionLog, listConversationExecutions, listExecutions } from '../executions/executionService.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import { notifyExtensionStartupStatus } from '../extensions/extensionNotifications.js';
@@ -988,6 +988,32 @@ function getDesktopLocalApiErrorStatus(error: unknown): number {
   return /\bnot found\b/i.test(error.message) || error.message === '404 Not Found' ? 404 : 500;
 }
 
+function parseDesktopLocalApiBooleanQuery(value: string | null): boolean | undefined {
+  if (value === null) return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true' || normalized === '1') return true;
+  if (normalized === 'false' || normalized === '0') return false;
+  return undefined;
+}
+
+function parseDesktopLocalApiExecutionVisibilityQuery(
+  value: string | null,
+): 'primary' | 'system' | 'hidden' | 'visible' | 'all' | undefined {
+  if (value === null) return undefined;
+  const normalized = value.trim();
+  return normalized === 'primary' || normalized === 'system' || normalized === 'hidden' || normalized === 'visible' || normalized === 'all'
+    ? normalized
+    : undefined;
+}
+
+function parseDesktopLocalApiLogTail(value: string | null): number | undefined {
+  if (value === null) return undefined;
+  const normalized = value.trim();
+  if (!/^\d+$/.test(normalized)) return undefined;
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? Math.min(1000, parsed) : undefined;
+}
+
 async function readExtensionInstallSummariesWithRuntimeStateForLocalApi() {
   const [{ installSummaries }, runningServices] = await Promise.all([
     getExtensionHostClient().readRegistryPresentation(),
@@ -1014,6 +1040,14 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   const path = input.url.pathname;
   const method = input.method;
 
+  if (method === 'GET' && path === '/api/health') return createDesktopLocalApiJsonResponse(await readDesktopLocalApiHealth());
+  if (method === 'GET' && path === '/api/session-state') return createDesktopLocalApiJsonResponse(await readDesktopSessionState());
+  if (method === 'GET' && path === '/api/executions') return createDesktopLocalApiJsonResponse(await listExecutions());
+  if (method === 'POST' && path === '/api/conversation-summaries') {
+    return createDesktopLocalApiJsonResponse(
+      readConversationSummaryIndexCapability((input.body && typeof input.body === 'object' ? input.body : {}) as { sessionIds?: unknown }),
+    );
+  }
   if (method === 'GET' && path === '/api/status') return createDesktopLocalApiJsonResponse(await readDesktopAppStatus());
   if (method === 'GET' && path === '/api/daemon') return createDesktopLocalApiJsonResponse(await readDesktopDaemonState());
   if (method === 'GET' && path === '/api/tools') {
@@ -1097,6 +1131,29 @@ async function dispatchDesktopLocalProductApiRequest(input: {
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
       }),
     );
+  }
+
+  const conversationExecutionsMatch = /^\/api\/conversations\/([^/]+)\/executions$/.exec(path);
+  if (method === 'GET' && conversationExecutionsMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await listConversationExecutions(decodeURIComponent(conversationExecutionsMatch[1] ?? ''), {
+        active: parseDesktopLocalApiBooleanQuery(input.url.searchParams.get('active')),
+        visibility: parseDesktopLocalApiExecutionVisibilityQuery(input.url.searchParams.get('visibility')),
+      }),
+    );
+  }
+  const executionLogMatch = /^\/api\/executions\/([^/]+)\/log$/.exec(path);
+  if (method === 'GET' && executionLogMatch) {
+    const result = await getExecutionLog(
+      decodeURIComponent(executionLogMatch[1] ?? ''),
+      parseDesktopLocalApiLogTail(input.url.searchParams.get('tail')),
+    );
+    return result ? createDesktopLocalApiJsonResponse(result) : createDesktopLocalApiJsonResponse({ error: 'Execution not found' }, 404);
+  }
+  const executionDetailMatch = /^\/api\/executions\/([^/]+)$/.exec(path);
+  if (method === 'GET' && executionDetailMatch) {
+    const result = await getExecution(decodeURIComponent(executionDetailMatch[1] ?? ''));
+    return result ? createDesktopLocalApiJsonResponse(result) : createDesktopLocalApiJsonResponse({ error: 'Execution not found' }, 404);
   }
 
   if (method === 'GET' && path === '/api/models') return createDesktopLocalApiJsonResponse(await readDesktopModels());
@@ -1854,6 +1911,34 @@ export async function readDesktopAppStatus() {
     profile: 'shared',
     repoRoot: context.getRepoRoot(),
     appRevision: process.env.NEON_PILOT_APP_REVISION,
+  };
+}
+
+export async function readDesktopLocalApiHealth() {
+  const status = await readDesktopAppStatus();
+  return {
+    ok: true,
+    status: 'ready',
+    profile: status.profile,
+    repoRoot: status.repoRoot,
+    appRevision: status.appRevision,
+  };
+}
+
+export async function readDesktopSessionState() {
+  const sessions = await readDesktopSessions();
+  const liveSessions = getLocalLiveSessions().map((session) => ({
+    id: session.id,
+    live: true,
+    isStreaming: session.isStreaming,
+    cwd: session.cwd,
+    sessionFile: session.sessionFile,
+  }));
+
+  return {
+    ok: true,
+    sessions,
+    liveSessions,
   };
 }
 

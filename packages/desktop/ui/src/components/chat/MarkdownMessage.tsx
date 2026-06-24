@@ -16,7 +16,7 @@ import remarkGfm from 'remark-gfm';
 
 import { type ParsedSkillBlock, parseSkillBlock } from '../../markdown/markdownExtensions';
 import { extractMarkdownTextContent, InlineMarkdownCode } from '../MarkdownInlineCode';
-import { cx, InlineCode, InlineCodeButton } from '../ui';
+import { Checkbox, cx, Disclosure, InlineCode, InlineCodeButton } from '../ui';
 import {
   looksLikeTranscriptPath,
   normalizeTranscriptPathTarget,
@@ -466,8 +466,7 @@ const MarkdownText = memo(function MarkdownText({
           input: ({ type, checked }) => {
             if (type === 'checkbox') {
               return (
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={Boolean(checked)}
                   disabled
                   readOnly
@@ -476,7 +475,12 @@ const MarkdownText = memo(function MarkdownText({
               );
             }
 
-            return <input type={type} checked={checked} readOnly disabled />;
+            return (
+              <>
+                {/* ui-pattern-ok raw-control reason="ReactMarkdown may emit non-checkbox input types from user-authored markdown; unknown renderer fallbacks stay inert and disabled." */}
+                <input type={type} checked={checked} readOnly disabled />
+              </>
+            );
           },
         }}
       >
@@ -586,16 +590,20 @@ export function SkillInvocationCard({
   const { relativeTo, body } = parseSkillContentSections(skillBlock.content);
 
   return (
-    <details className={cx('ui-skill-invocation', className)}>
-      <summary className="ui-skill-invocation-summary">
-        <span className="ui-skill-invocation-label">skill</span>
-        <span className="ui-skill-invocation-name">{skillBlock.name}</span>
-      </summary>
-      <div className="ui-skill-invocation-body">
-        {relativeTo && <p className="ui-skill-invocation-meta">References resolve relative to {relativeTo}</p>}
-        {renderMarkdownText(`**${skillBlock.name}**\n\n${body}`, { onOpenFilePath, validatedFilePathTargets })}
-      </div>
-    </details>
+    <Disclosure
+      className={cx('ui-skill-invocation', className)}
+      summaryClassName="ui-skill-invocation-summary"
+      bodyClassName="ui-skill-invocation-body"
+      summary={
+        <>
+          <span className="ui-skill-invocation-label">skill</span>
+          <span className="ui-skill-invocation-name">{skillBlock.name}</span>
+        </>
+      }
+    >
+      {relativeTo && <p className="ui-skill-invocation-meta">References resolve relative to {relativeTo}</p>}
+      {renderMarkdownText(`**${skillBlock.name}**\n\n${body}`, { onOpenFilePath, validatedFilePathTargets })}
+    </Disclosure>
   );
 }
 

@@ -21,6 +21,7 @@ const apiMock = vi.hoisted(() => ({
   runs: vi.fn(),
   settings: vi.fn(),
   sessionDetail: vi.fn(),
+  tasks: vi.fn(),
   liveSession: vi.fn(),
   liveSessionContext: vi.fn(),
   conversationAttachments: vi.fn(),
@@ -593,6 +594,7 @@ beforeEach(() => {
   apiMock.runs.mockResolvedValue({ runs: [] });
   apiMock.settings.mockResolvedValue({});
   apiMock.sessionDetail.mockRejectedValue(new Error('Conversation not found'));
+  apiMock.tasks.mockResolvedValue([]);
   apiMock.liveSession.mockResolvedValue({ live: false, hasStaleTurnState: false });
   apiMock.liveSessionContext.mockResolvedValue({
     cwd: '/tmp/project',

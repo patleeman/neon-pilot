@@ -7,7 +7,7 @@ import { setExtensionCommandContext } from '../extensions/commands';
 import { TopBarElementHost } from '../extensions/TopBarElementHost';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import type { DesktopAppPreferencesState, DesktopEnvironmentState, DesktopNavigationState } from '../shared/types';
-import { cx, ToolbarButton } from './ui';
+import { cx, Keycap, Pill, SearchInput, ToolbarButton } from './ui';
 
 function LeftSidebarToggleIcon({ open }: { open: boolean }) {
   return (
@@ -41,11 +41,7 @@ function UpdateReadyIcon() {
 
 function NeonPilotMarkIcon() {
   return (
-    <svg
-      className="h-[18px] w-[18px] text-accent drop-shadow-[0_0_8px_rgb(var(--color-accent)/0.35)]"
-      viewBox="0 0 240 240"
-      aria-hidden="true"
-    >
+    <svg className="h-[18px] w-[18px] text-accent" viewBox="0 0 240 240" aria-hidden="true">
       <g fill="none" stroke="currentColor">
         <circle
           cx="120"
@@ -364,22 +360,19 @@ export function DesktopTopBar({
           </span>
         </div>
         {environmentBadgeLabel ? (
-          <div className="ui-desktop-top-bar__mode-badge" title={environmentBadgeTitle}>
+          <Pill tone="muted" className="ui-desktop-top-bar__mode-badge" title={environmentBadgeTitle}>
             {environmentBadgeLabel}
-          </div>
+          </Pill>
         ) : null}
       </div>
       <div className="ui-desktop-top-bar__center flex items-center justify-center gap-2" style={dragStyle}>
         <div
           ref={searchShellRef}
-          className={cx(
-            'flex h-7 w-full max-w-[560px] items-center gap-2 rounded-md border border-border-subtle bg-elevated px-2.5 text-left text-[11px] text-dim shadow-sm transition-colors focus-within:border-accent/35 focus-within:bg-surface hover:border-accent/25 hover:bg-surface hover:text-secondary',
-            paletteOpen && 'pointer-events-none opacity-0',
-          )}
+          className={cx('ui-command-search-trigger', paletteOpen && 'pointer-events-none opacity-0')}
           style={noDragStyle}
         >
           <span aria-hidden="true">⌕</span>
-          <input
+          <SearchInput
             ref={searchInputRef}
             value={searchQuery}
             onFocus={() => openPaletteFromSearch()}
@@ -389,9 +382,9 @@ export function DesktopTopBar({
             }}
             placeholder="Search threads, models, settings…"
             aria-label="Search threads, models, settings"
-            className="min-w-0 flex-1 bg-transparent font-mono tracking-[0.05em] text-secondary placeholder:text-dim outline-none"
+            className="h-6 min-w-0 flex-1 border-0 bg-transparent px-0 py-0 font-mono text-[11px] tracking-[0.05em] text-secondary placeholder:text-dim"
           />
-          <span className="ui-kbd">⌘K</span>
+          <Keycap>⌘K</Keycap>
         </div>
       </div>
       <div className="ui-desktop-top-bar__trailing" style={noDragStyle}>

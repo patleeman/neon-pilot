@@ -316,10 +316,11 @@ import {
   ExtensionChatRail,
   ChatView,
   ResourcePickerDialog,
+  TextInput,
 } from '@neon-pilot/extensions/ui';
 import { api, timeAgo, useAppData } from '@neon-pilot/extensions/data';
 import { WorkbenchBrowserTab, WorkspaceExplorer } from '@neon-pilot/extensions/workbench';
-import { SettingsPage } from '@neon-pilot/extensions/settings';
+import { SettingsPanel, SettingsRow } from '@neon-pilot/extensions/settings';
 ```
 
 ### Frontend UI components
@@ -330,16 +331,16 @@ Start with the smallest shared primitive that fits the job, then compose upward:
 
 - Page chrome: `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageEmptyState`
 - Actions: `Button`, `ToolbarButton`, `IconButton`, `TextButton`, `CheckButton`
-- Forms: `Field`, `TextInput`, `TextAreaInput`, `SelectInput`, `CheckboxInput`, `SegmentedControl`, `Switch`, `ToggleRow`
-- Feedback: `LoadingState`, `ErrorState`, `EmptyState`, `InlineStatus`, `StatusBadge`
-- Lists and tables: `DataTable`, `DataTableEmptyRow`, `DataTableActionGroup`, `ResourceList`, `ResourceListRow`
-- Runtime pages: `RuntimePage`, `RuntimeStatusStrip`, `RuntimeHeaderControls`, `MetricTile`, `DashboardGrid`
-- Rails, sidebars, and settings panels: `RailSubsection`, `SidebarSection`, `SidebarActionHeader`, `SidebarList`, `SidebarTemplateList`, `SidebarRow`, `SidebarMessage`, `SidebarTreeSection`, `ActivityTreeView`, `SettingsPanel`, `SettingsRow`, `SettingsField`, `Switch`, `Select`, `TextInput`, `Textarea`, `ToolbarButton`
+- Forms: `Field`, `TextInput`, `Textarea`, `Select`, `Checkbox`, `SegmentedControl`, `Switch`, `SettingToggleRow`
+- Feedback: `LoadingState`, `CenteredLoadingState`, `PanelMessage`, `Notice`, `ErrorState`, `EmptyState`, `StatusDot`, `Pill`
+- Lists and tables: `DataTable`, `DataTableEmptyRow`, `DataTableActionGroup`, `ResourceList`, `ResourceListRow`, `ResourceListItem`
+- Runtime pages: `RuntimePage`, `RuntimeStrip`, `RuntimeHeaderControls`, `RuntimeSection`, `MetricTile`, `DashboardGrid`
+- Rails, sidebars, and settings panels: `RailSection`, `RailSubsection`, `SidebarSection`, `SidebarActionHeader`, `SidebarList`, `SidebarTemplateList`, `SidebarRow`, `SidebarMessage`, `SidebarTreeSection`, `ActivityTreeView`, `SettingsPanel`, `SettingsRow`, `Switch`, `Select`, `TextInput`, `Textarea`, `ToolbarButton`
 - Chat and files: `ChatView`, `ChatRailComposer`, `ExtensionChatRail`, `ResourcePickerDialog`
 
 Use local markup for product-specific layout and content, but extract repeated chrome, action groups, pickers, chat surfaces, table actions, runtime summaries, and settings rows into shared UI instead of creating extension-local lookalikes. See [Design system](../../docs/design-system.md) and [`packages/ui`](../ui/README.md) for the full component catalog, Storybook guidance, and replacement checklist.
 
-Settings components are not standalone app pages. When contributing `contributes.settingsComponent`, import from `@neon-pilot/extensions/settings` and render compact `SettingsPanel` groups containing `SettingsRow` controls. The host owns the page title, outer width, scroll anchor, and section spacing. Normal preferences should autosave on change, blur, or debounce; reserve visible buttons for explicit commands such as refresh, install, sync, test connection, or destructive actions.
+Settings components are not standalone app pages. When contributing `contributes.settingsComponent`, import settings-specific host pieces such as `SettingsPanel`, `SettingsRow`, `SettingsField`, and settings data helpers from `@neon-pilot/extensions/settings`; import generic controls such as `TextInput`, `Textarea`, `Select`, `Switch`, `ToolbarButton`, and `RowButton` from `@neon-pilot/extensions/ui`. The host owns the page title, outer width, scroll anchor, and section spacing. Normal preferences should autosave on change, blur, or debounce; reserve visible buttons for explicit commands such as refresh, install, sync, test connection, or destructive actions.
 
 Prefer returning `SettingsPanel` elements directly from the settings component instead of wrapping the whole component in a generic layout div. The Settings host normalizes direct panels into the shared row-list visual grammar, including spacing, borders, and padding.
 

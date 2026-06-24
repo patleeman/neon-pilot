@@ -9,11 +9,11 @@ const keybindings: ExtensionKeybindingRegistration[] = [
     surfaceId: 'open-thread-palette',
     packageType: 'system',
     title: 'Open thread palette',
-    keys: ['mod+p'],
+    keys: ['mod+k', 'mod+p'],
     command: 'palette.open',
     args: { scope: 'threads' },
     scope: 'global',
-    defaultKeys: ['mod+p'],
+    defaultKeys: ['mod+k', 'mod+p'],
     enabled: true,
   },
   {
@@ -57,6 +57,10 @@ const keybindings: ExtensionKeybindingRegistration[] = [
 describe('extension keybindings', () => {
   it('keeps Cmd+P and Cmd+Shift+P distinct', () => {
     expect(
+      findMatchingExtensionKeybinding({ key: 'k', metaKey: true, ctrlKey: false, altKey: false, shiftKey: false }, keybindings)?.args,
+    ).toEqual({ scope: 'threads' });
+
+    expect(
       findMatchingExtensionKeybinding({ key: 'p', metaKey: true, ctrlKey: false, altKey: false, shiftKey: false }, keybindings)?.args,
     ).toEqual({ scope: 'threads' });
 
@@ -75,8 +79,12 @@ describe('extension keybindings', () => {
   it('does not collapse explicit ctrl/meta modifiers into mod', () => {
     const specificOnly = keybindings.filter((keybinding) => keybinding.surfaceId === 'open-specific');
 
-    expect(findMatchingExtensionKeybinding({ key: 'p', metaKey: true, ctrlKey: false, altKey: false, shiftKey: false }, specificOnly)).toBeNull();
-    expect(findMatchingExtensionKeybinding({ key: 'p', metaKey: false, ctrlKey: true, altKey: false, shiftKey: false }, specificOnly)).toBeNull();
+    expect(
+      findMatchingExtensionKeybinding({ key: 'p', metaKey: true, ctrlKey: false, altKey: false, shiftKey: false }, specificOnly),
+    ).toBeNull();
+    expect(
+      findMatchingExtensionKeybinding({ key: 'p', metaKey: false, ctrlKey: true, altKey: false, shiftKey: false }, specificOnly),
+    ).toBeNull();
     expect(
       findMatchingExtensionKeybinding({ key: 'p', metaKey: true, ctrlKey: true, altKey: false, shiftKey: false }, specificOnly)?.args,
     ).toEqual({ scope: 'specific' });
@@ -84,10 +92,9 @@ describe('extension keybindings', () => {
 
   it('ignores disabled registrations even when callers pass them through', () => {
     expect(
-      findMatchingExtensionKeybinding(
-        { key: 'p', metaKey: true, ctrlKey: false, altKey: false, shiftKey: false },
-        [{ ...keybindings[0]!, enabled: false }],
-      ),
+      findMatchingExtensionKeybinding({ key: 'p', metaKey: true, ctrlKey: false, altKey: false, shiftKey: false }, [
+        { ...keybindings[0]!, enabled: false },
+      ]),
     ).toBeNull();
   });
 });

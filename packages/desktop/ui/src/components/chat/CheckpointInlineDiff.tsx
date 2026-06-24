@@ -57,10 +57,7 @@ export function CheckpointInlineDiff({ conversationId, checkpointId }: { convers
 
   return (
     <div className="mt-3 border-t border-border-subtle/50 pt-2">
-      <div
-        className={cx('relative overflow-hidden rounded-lg bg-base/40', hasFiles && 'border border-border-subtle/60')}
-        style={{ height: INLINE_DIFF_HEIGHT }}
-      >
+      <div className={cx('ui-panel-muted relative overflow-hidden', !hasFiles && 'bg-surface/45')} style={{ height: INLINE_DIFF_HEIGHT }}>
         {loading && !checkpoint ? (
           <LoadingState label="Loading diff…" className="h-full justify-center" />
         ) : error || !checkpoint ? (
