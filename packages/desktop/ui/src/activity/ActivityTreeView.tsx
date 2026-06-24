@@ -334,12 +334,11 @@ export function ActivityTreeView({
         <ContextMenu
           ref={contextMenuRootRef}
           data-file-tree-context-menu-root="true"
-          className="fixed z-[1000]"
+          className="z-[1000]"
+          minWidth={224}
           onClose={closeContextMenu}
           onClick={(event) => event.stopPropagation()}
           position={contextMenu}
-          shell={false}
-          role="group"
         >
           {renderContextMenu(contextMenu.item, {
             anchorElement: document.body,

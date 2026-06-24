@@ -1,6 +1,8 @@
 import {
+  Children,
   type CSSProperties,
   forwardRef,
+  Fragment,
   type HTMLAttributes,
   type MutableRefObject,
   type ReactNode,
@@ -13,7 +15,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 
-import { MenuShell } from '../ui';
+import { MenuGroupLabel, MenuSeparator, MenuShell } from '../ui';
 import { clampViewportMenuPosition } from './contextMenuPosition';
 
 type ContextMenuRole = 'menu' | 'listbox' | 'group';
@@ -21,6 +23,30 @@ type ContextMenuRole = 'menu' | 'listbox' | 'group';
 type ContextMenuRef = RefObject<HTMLElement | null>;
 
 const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
+export function ContextMenuSections({ children }: { children: ReactNode }) {
+  const sections = Children.toArray(children).filter(Boolean);
+
+  return (
+    <div className="space-y-px">
+      {sections.map((section, index) => (
+        <Fragment key={typeof section === 'object' && section && 'key' in section ? section.key : index}>
+          {index > 0 ? <MenuSeparator /> : null}
+          {section}
+        </Fragment>
+      ))}
+    </div>
+  );
+}
+
+export function ContextMenuSection({ children, label }: { children: ReactNode; label?: ReactNode }) {
+  return (
+    <div className="space-y-px">
+      {label ? <MenuGroupLabel>{label}</MenuGroupLabel> : null}
+      {children}
+    </div>
+  );
+}
 
 export interface ContextMenuProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'onClose' | 'role'> {
   children: ReactNode;

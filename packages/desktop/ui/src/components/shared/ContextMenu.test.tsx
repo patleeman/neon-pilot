@@ -4,7 +4,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ContextMenu } from './ContextMenu';
+import { ContextMenu, ContextMenuSection, ContextMenuSections } from './ContextMenu';
 
 (globalThis as typeof globalThis & { React?: typeof React; IS_REACT_ACT_ENVIRONMENT?: boolean }).React = React;
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -78,6 +78,49 @@ describe('ContextMenu', () => {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     });
     expect(onClose).toHaveBeenCalledTimes(2);
+
+    act(() => root.unmount());
+  });
+
+  it('renders separators only between context menu sections', async () => {
+    const rootElement = document.createElement('div');
+    document.body.appendChild(rootElement);
+    const root = createRoot(rootElement);
+
+    await act(async () => {
+      root.render(
+        <ContextMenu aria-label="Actions" position={{ x: 12, y: 12 }}>
+          <ContextMenuSections>
+            <ContextMenuSection label="One">
+              <button type="button">First</button>
+            </ContextMenuSection>
+            <ContextMenuSection>
+              <button type="button">Second</button>
+            </ContextMenuSection>
+            <ContextMenuSection>
+              <button type="button">Third</button>
+            </ContextMenuSection>
+          </ContextMenuSections>
+        </ContextMenu>,
+      );
+    });
+
+    expect(document.body.querySelectorAll('[role="separator"]')).toHaveLength(2);
+    expect(document.body.querySelector('.ui-menu-group-label')?.textContent).toBe('One');
+
+    await act(async () => {
+      root.render(
+        <ContextMenu aria-label="Actions" position={{ x: 12, y: 12 }}>
+          <ContextMenuSections>
+            <ContextMenuSection>
+              <button type="button">Only</button>
+            </ContextMenuSection>
+          </ContextMenuSections>
+        </ContextMenu>,
+      );
+    });
+
+    expect(document.body.querySelectorAll('[role="separator"]')).toHaveLength(0);
 
     act(() => root.unmount());
   });

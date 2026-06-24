@@ -110,11 +110,11 @@ import {
 } from '../store';
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
-import { ContextMenu } from './shared/ContextMenu';
+import { ContextMenu, ContextMenuSection, ContextMenuSections } from './shared/ContextMenu';
 import { estimateContextMenuHeight } from './shared/contextMenuPosition';
 import { TextPromptDialog } from './shared/TextPromptDialog';
 import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
-import { cx, IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
+import { cx, IconButton, MenuItem, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
 import { useSidebarConversationScope } from './useSidebarConversationScope';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 
@@ -696,61 +696,62 @@ function ThreadsFilterButton({
           onClose={() => setMenuOpen(false)}
           position={menuPosition}
         >
-          <div className="space-y-px">
-            <div className="px-2.5 pt-2 pb-1 text-[12px] font-medium text-dim">Show</div>
-            {renderMenuItem({
-              label: 'All threads',
-              icon: PATH.list,
-              checked: filterMode === 'all',
-              onClick: () => onChangeFilterMode('all'),
-            })}
-            {renderMenuItem({
-              label: 'Human threads',
-              icon: PATH.conversations,
-              checked: filterMode === 'human',
-              onClick: () => onChangeFilterMode('human'),
-            })}
-            {renderMenuItem({
-              label: 'Automation threads',
-              icon: PATH.automations,
-              checked: filterMode === 'automation',
-              onClick: () => onChangeFilterMode('automation'),
-            })}
-            <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
-            <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Organize</div>
-            {renderMenuItem({
-              label: 'By project',
-              icon: PATH.workspace,
-              checked: organizeMode === 'project',
-              onClick: () => onChangeOrganizeMode('project'),
-            })}
-            {renderMenuItem({
-              label: 'Chronological list',
-              icon: PATH.list,
-              checked: organizeMode === 'chronological',
-              onClick: () => onChangeOrganizeMode('chronological'),
-            })}
-            <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
-            <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Order</div>
-            {renderMenuItem({
-              label: 'Created',
-              icon: PATH.clock,
-              checked: sortMode === 'created',
-              onClick: () => onChangeSortMode('created'),
-            })}
-            {renderMenuItem({
-              label: 'Updated',
-              icon: PATH.sparkles,
-              checked: sortMode === 'updated',
-              onClick: () => onChangeSortMode('updated'),
-            })}
-            {renderMenuItem({
-              label: 'Manual order',
-              icon: PATH.grip,
-              checked: sortMode === 'manual',
-              onClick: () => onChangeSortMode('manual'),
-            })}
-          </div>
+          <ContextMenuSections>
+            <ContextMenuSection label="Show">
+              {renderMenuItem({
+                label: 'All threads',
+                icon: PATH.list,
+                checked: filterMode === 'all',
+                onClick: () => onChangeFilterMode('all'),
+              })}
+              {renderMenuItem({
+                label: 'Human threads',
+                icon: PATH.conversations,
+                checked: filterMode === 'human',
+                onClick: () => onChangeFilterMode('human'),
+              })}
+              {renderMenuItem({
+                label: 'Automation threads',
+                icon: PATH.automations,
+                checked: filterMode === 'automation',
+                onClick: () => onChangeFilterMode('automation'),
+              })}
+            </ContextMenuSection>
+            <ContextMenuSection label="Organize">
+              {renderMenuItem({
+                label: 'By project',
+                icon: PATH.workspace,
+                checked: organizeMode === 'project',
+                onClick: () => onChangeOrganizeMode('project'),
+              })}
+              {renderMenuItem({
+                label: 'Chronological list',
+                icon: PATH.list,
+                checked: organizeMode === 'chronological',
+                onClick: () => onChangeOrganizeMode('chronological'),
+              })}
+            </ContextMenuSection>
+            <ContextMenuSection label="Order">
+              {renderMenuItem({
+                label: 'Created',
+                icon: PATH.clock,
+                checked: sortMode === 'created',
+                onClick: () => onChangeSortMode('created'),
+              })}
+              {renderMenuItem({
+                label: 'Updated',
+                icon: PATH.sparkles,
+                checked: sortMode === 'updated',
+                onClick: () => onChangeSortMode('updated'),
+              })}
+              {renderMenuItem({
+                label: 'Manual order',
+                icon: PATH.grip,
+                checked: sortMode === 'manual',
+                onClick: () => onChangeSortMode('manual'),
+              })}
+            </ContextMenuSection>
+          </ContextMenuSections>
         </ContextMenu>
       ) : null}
     </>
@@ -966,46 +967,53 @@ function ConversationCwdGroupHeader({
           onClose={() => setMenuOpen(false)}
           position={menuPosition}
         >
-          <div className="space-y-px">
-            {onOpenInFinder ? (
-              <MenuItem
-                onClick={() => {
-                  void runMenuHandler(onOpenInFinder);
-                }}
-              >
-                Open in Finder
-              </MenuItem>
+          <ContextMenuSections>
+            {onOpenInFinder || onEditName ? (
+              <ContextMenuSection>
+                {onOpenInFinder ? (
+                  <MenuItem
+                    onClick={() => {
+                      void runMenuHandler(onOpenInFinder);
+                    }}
+                  >
+                    Open in Finder
+                  </MenuItem>
+                ) : null}
+                {onEditName ? (
+                  <MenuItem
+                    onClick={() => {
+                      void runMenuHandler(onEditName);
+                    }}
+                  >
+                    Edit Name
+                  </MenuItem>
+                ) : null}
+              </ContextMenuSection>
             ) : null}
-            {onEditName ? (
-              <MenuItem
-                onClick={() => {
-                  void runMenuHandler(onEditName);
-                }}
-              >
-                Edit Name
-              </MenuItem>
+            {onArchiveThreads || onRemove ? (
+              <ContextMenuSection>
+                {onArchiveThreads ? (
+                  <MenuItem
+                    onClick={() => {
+                      void runMenuHandler(onArchiveThreads);
+                    }}
+                  >
+                    Archive Threads
+                  </MenuItem>
+                ) : null}
+                {onRemove ? (
+                  <MenuItem
+                    onClick={() => {
+                      void runMenuHandler(onRemove);
+                    }}
+                    tone="danger"
+                  >
+                    Remove
+                  </MenuItem>
+                ) : null}
+              </ContextMenuSection>
             ) : null}
-            {showMenuDivider ? <MenuSeparator className="my-1" /> : null}
-            {onArchiveThreads ? (
-              <MenuItem
-                onClick={() => {
-                  void runMenuHandler(onArchiveThreads);
-                }}
-              >
-                Archive Threads
-              </MenuItem>
-            ) : null}
-            {onRemove ? (
-              <MenuItem
-                onClick={() => {
-                  void runMenuHandler(onRemove);
-                }}
-                tone="danger"
-              >
-                Remove
-              </MenuItem>
-            ) : null}
-          </div>
+          </ContextMenuSections>
         </ContextMenu>
       ) : null}
     </div>
@@ -1118,13 +1126,14 @@ const OpenConversationRow = memo(function OpenConversationRow({
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [busyExtensionMenuId, setBusyExtensionMenuId] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<ConversationCopyMenuState | null>(null);
-  const hasContextMenuActions = Boolean(onPin || onUnpin || onArchive || onOpenInNewWindow || conversationExtensionMenuItems.length > 0);
-  const contextMenuItemCount =
-    (pinned && onUnpin ? 1 : !pinned && onPin ? 1 : 0) +
-    Number(Boolean(onArchive)) +
-    Number(Boolean(onOpenInNewWindow)) +
-    conversationExtensionMenuItems.length;
-  const estimatedContextMenuHeight = estimateContextMenuHeight({ itemCount: contextMenuItemCount });
+  const builtInContextMenuItemCount =
+    (pinned && onUnpin ? 1 : !pinned && onPin ? 1 : 0) + Number(Boolean(onArchive)) + Number(Boolean(onOpenInNewWindow));
+  const hasContextMenuActions = Boolean(builtInContextMenuItemCount || conversationExtensionMenuItems.length > 0);
+  const contextMenuItemCount = builtInContextMenuItemCount + conversationExtensionMenuItems.length;
+  const estimatedContextMenuHeight = estimateContextMenuHeight({
+    itemCount: contextMenuItemCount,
+    separatorCount: builtInContextMenuItemCount > 0 && conversationExtensionMenuItems.length > 0 ? 1 : 0,
+  });
 
   useEffect(
     () => () => {
@@ -1470,62 +1479,65 @@ const OpenConversationRow = memo(function OpenConversationRow({
           onClose={() => setMenuOpen(false)}
           position={menuPosition}
         >
-          <div className="space-y-px">
-            {pinned && onUnpin ? (
-              <MenuItem
-                onClick={async () => {
-                  const succeeded = await onUnpin();
-                  if (succeeded !== false) {
-                    setMenuOpen(false);
-                  }
-                }}
-                disabled={busyExtensionMenuId !== null}
-              >
-                Unpin
-              </MenuItem>
+          <ContextMenuSections>
+            {builtInContextMenuItemCount > 0 ? (
+              <ContextMenuSection>
+                {pinned && onUnpin ? (
+                  <MenuItem
+                    onClick={async () => {
+                      const succeeded = await onUnpin();
+                      if (succeeded !== false) {
+                        setMenuOpen(false);
+                      }
+                    }}
+                    disabled={busyExtensionMenuId !== null}
+                  >
+                    Unpin
+                  </MenuItem>
+                ) : null}
+                {!pinned && onPin ? (
+                  <MenuItem
+                    onClick={async () => {
+                      const succeeded = await onPin();
+                      if (succeeded !== false) {
+                        setMenuOpen(false);
+                      }
+                    }}
+                    disabled={busyExtensionMenuId !== null}
+                  >
+                    Pin
+                  </MenuItem>
+                ) : null}
+                {onArchive ? (
+                  <MenuItem
+                    onClick={async () => {
+                      const succeeded = await onArchive();
+                      if (succeeded !== false) {
+                        setMenuOpen(false);
+                      }
+                    }}
+                    disabled={busyExtensionMenuId !== null}
+                  >
+                    Archive
+                  </MenuItem>
+                ) : null}
+                {onOpenInNewWindow ? (
+                  <MenuItem
+                    onClick={async () => {
+                      const succeeded = await onOpenInNewWindow?.();
+                      if (succeeded !== false) {
+                        setMenuOpen(false);
+                      }
+                    }}
+                    disabled={busyExtensionMenuId !== null}
+                  >
+                    Open in Separate Window
+                  </MenuItem>
+                ) : null}
+              </ContextMenuSection>
             ) : null}
-            {!pinned && onPin ? (
-              <MenuItem
-                onClick={async () => {
-                  const succeeded = await onPin();
-                  if (succeeded !== false) {
-                    setMenuOpen(false);
-                  }
-                }}
-                disabled={busyExtensionMenuId !== null}
-              >
-                Pin
-              </MenuItem>
-            ) : null}
-            {onArchive ? (
-              <MenuItem
-                onClick={async () => {
-                  const succeeded = await onArchive();
-                  if (succeeded !== false) {
-                    setMenuOpen(false);
-                  }
-                }}
-                disabled={busyExtensionMenuId !== null}
-              >
-                Archive
-              </MenuItem>
-            ) : null}
-            {onOpenInNewWindow ? (
-              <MenuItem
-                onClick={async () => {
-                  const succeeded = await onOpenInNewWindow?.();
-                  if (succeeded !== false) {
-                    setMenuOpen(false);
-                  }
-                }}
-                disabled={busyExtensionMenuId !== null}
-              >
-                Open in Separate Window
-              </MenuItem>
-            ) : null}
-            {conversationExtensionMenuItems.length > 0 && (
-              <>
-                <MenuSeparator className="mx-2 my-1" />
+            {conversationExtensionMenuItems.length > 0 ? (
+              <ContextMenuSection>
                 {conversationExtensionMenuItems.map((menu) => (
                   <MenuItem
                     key={menu.id}
@@ -1537,9 +1549,9 @@ const OpenConversationRow = memo(function OpenConversationRow({
                     {getExtensionContextMenuTitle(menu)}
                   </MenuItem>
                 ))}
-              </>
-            )}
-          </div>
+              </ContextMenuSection>
+            ) : null}
+          </ContextMenuSections>
         </ContextMenu>
       ) : null}
     </div>
@@ -3932,143 +3944,150 @@ export function Sidebar() {
                       const groupIncludesDraft = Boolean(
                         conversationGroup?.items.some(({ session }) => session.id === DRAFT_CONVERSATION_ID),
                       );
-                      return (
-                        <div
-                          className="ui-menu-shell ui-context-menu-shell static bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
-                          role="menu"
-                        >
-                          {isGroup ? (
-                            <>
-                              {conversationGroup.cwd ? (
-                                <MenuItem
-                                  onClick={() => {
-                                    context.close();
-                                    void handleOpenConversationGroupInFinder(conversationGroup.cwd!, conversationGroup.label);
-                                  }}
-                                >
-                                  Open in Finder
-                                </MenuItem>
-                              ) : null}
+                      return isGroup ? (
+                        <ContextMenuSections>
+                          <ContextMenuSection>
+                            {conversationGroup.cwd ? (
                               <MenuItem
                                 onClick={() => {
                                   context.close();
-                                  handleRenameConversationGroup(
-                                    conversationGroup.key,
-                                    conversationGroup.defaultLabel,
-                                    conversationGroup.label,
-                                  );
+                                  void handleOpenConversationGroupInFinder(conversationGroup.cwd!, conversationGroup.label);
                                 }}
                               >
-                                Edit Name
+                                Open in Finder
                               </MenuItem>
-                              {groupSessionIds && groupSessionIds.length > 0 ? (
-                                <MenuItem
-                                  onClick={() => {
-                                    context.close();
-                                    void handleArchiveConversationGroup(conversationGroup.label, groupSessionIds);
-                                  }}
-                                >
-                                  Archive Threads
-                                </MenuItem>
-                              ) : null}
-                              <MenuItem
-                                tone="danger"
-                                onClick={() => {
-                                  context.close();
-                                  handleRemoveConversationGroup(
-                                    conversationGroup.key,
-                                    conversationGroup.label,
-                                    conversationGroup.cwd,
-                                    groupSessionIds ?? [],
-                                    groupIncludesDraft,
-                                  );
-                                }}
-                              >
-                                Remove
-                              </MenuItem>
-                            </>
-                          ) : isConversation ? (
-                            <>
-                              {parentConversation ? (
-                                <MenuItem
-                                  onClick={() => {
-                                    context.close();
-                                    navigate(`/conversations/${encodeURIComponent(parentConversation.session.id)}`);
-                                  }}
-                                >
-                                  Go to Parent Thread
-                                </MenuItem>
-                              ) : null}
+                            ) : null}
+                            <MenuItem
+                              onClick={() => {
+                                context.close();
+                                handleRenameConversationGroup(
+                                  conversationGroup.key,
+                                  conversationGroup.defaultLabel,
+                                  conversationGroup.label,
+                                );
+                              }}
+                            >
+                              Edit Name
+                            </MenuItem>
+                          </ContextMenuSection>
+                          <ContextMenuSection>
+                            {groupSessionIds && groupSessionIds.length > 0 ? (
                               <MenuItem
                                 onClick={() => {
                                   context.close();
-                                  handleRenameConversation(conversationId, conversationItem.session.title);
+                                  void handleArchiveConversationGroup(conversationGroup.label, groupSessionIds);
                                 }}
                               >
-                                Rename Thread
+                                Archive Threads
                               </MenuItem>
+                            ) : null}
+                            <MenuItem
+                              tone="danger"
+                              onClick={() => {
+                                context.close();
+                                handleRemoveConversationGroup(
+                                  conversationGroup.key,
+                                  conversationGroup.label,
+                                  conversationGroup.cwd,
+                                  groupSessionIds ?? [],
+                                  groupIncludesDraft,
+                                );
+                              }}
+                            >
+                              Remove
+                            </MenuItem>
+                          </ContextMenuSection>
+                        </ContextMenuSections>
+                      ) : isConversation ? (
+                        <ContextMenuSections>
+                          {parentConversation ? (
+                            <ContextMenuSection>
+                              <MenuItem
+                                onClick={() => {
+                                  context.close();
+                                  navigate(`/conversations/${encodeURIComponent(parentConversation.session.id)}`);
+                                }}
+                              >
+                                Go to Parent Thread
+                              </MenuItem>
+                            </ContextMenuSection>
+                          ) : null}
+                          <ContextMenuSection>
+                            <MenuItem
+                              onClick={() => {
+                                context.close();
+                                handleRenameConversation(conversationId, conversationItem.session.title);
+                              }}
+                            >
+                              Rename Thread
+                            </MenuItem>
+                            <MenuItem
+                              onClick={() => {
+                                context.close();
+                                if (conversationItem.pinned) {
+                                  unpinSession(conversationId);
+                                } else {
+                                  pinSession(conversationId);
+                                }
+                              }}
+                            >
+                              {conversationItem.pinned ? 'Unpin Thread' : 'Pin Thread'}
+                            </MenuItem>
+                            {!conversationLocked ? (
                               <MenuItem
                                 onClick={() => {
                                   context.close();
                                   if (conversationItem.pinned) {
-                                    unpinSession(conversationId);
+                                    handleClosePinnedConversation(conversationId);
                                   } else {
-                                    pinSession(conversationId);
+                                    handleCloseConversation(conversationId);
                                   }
                                 }}
                               >
-                                {conversationItem.pinned ? 'Unpin Thread' : 'Pin Thread'}
+                                Close Thread
                               </MenuItem>
-                              {!conversationLocked ? (
-                                <MenuItem
-                                  onClick={() => {
-                                    context.close();
-                                    if (conversationItem.pinned) {
-                                      handleClosePinnedConversation(conversationId);
-                                    } else {
-                                      handleCloseConversation(conversationId);
-                                    }
-                                  }}
-                                >
-                                  Close Thread
-                                </MenuItem>
-                              ) : null}
+                            ) : null}
+                            <MenuItem
+                              onClick={() => {
+                                context.close();
+                                void handleDuplicateConversation(conversationItem.session);
+                              }}
+                            >
+                              Duplicate Thread
+                            </MenuItem>
+                            {!conversationLocked ? (
                               <MenuItem
                                 onClick={() => {
                                   context.close();
-                                  void handleDuplicateConversation(conversationItem.session);
+                                  handleArchiveConversation(conversationId);
                                 }}
                               >
-                                Duplicate Thread
+                                Archive Thread
                               </MenuItem>
-                              {!conversationLocked ? (
-                                <MenuItem
-                                  onClick={() => {
-                                    context.close();
-                                    handleArchiveConversation(conversationId);
-                                  }}
-                                >
-                                  Archive Thread
-                                </MenuItem>
-                              ) : null}
+                            ) : null}
+                          </ContextMenuSection>
+                          <ContextMenuSection>
+                            <MenuItem
+                              onClick={() => {
+                                context.close();
+                                void handleCopyConversationId(conversationId);
+                              }}
+                            >
+                              Copy Session ID
+                            </MenuItem>
+                            {conversationItem.session.cwd?.trim() ? (
                               <MenuItem
                                 onClick={() => {
                                   context.close();
-                                  void handleCopyConversationId(conversationId);
+                                  void handleCopyConversationWorkingDirectory(conversationItem.session.cwd);
                                 }}
                               >
-                                Copy Session ID
+                                Copy Working Directory
                               </MenuItem>
-                              {conversationItem.session.cwd?.trim() ? (
-                                <MenuItem
-                                  onClick={() => {
-                                    context.close();
-                                    void handleCopyConversationWorkingDirectory(conversationItem.session.cwd);
-                                  }}
-                                >
-                                  Copy Working Directory
-                                </MenuItem>
-                              ) : null}
+                            ) : null}
+                          </ContextMenuSection>
+                          {activityTreeExtensionContextMenus.length > 0 ? (
+                            <ContextMenuSection>
                               {activityTreeExtensionContextMenus.map((menu) => (
                                 <MenuItem
                                   key={`${menu.extensionId}:${menu.id}`}
@@ -4084,10 +4103,10 @@ export function Sidebar() {
                                   {menu.title}
                                 </MenuItem>
                               ))}
-                            </>
+                            </ContextMenuSection>
                           ) : null}
-                        </div>
-                      );
+                        </ContextMenuSections>
+                      ) : null;
                     }}
                   />
                 ) : threadsOrganizeMode === 'project' ? (

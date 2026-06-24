@@ -1,9 +1,9 @@
 import type { RefObject } from 'react';
 import React from 'react';
 
-import { ContextMenu } from '../shared/ContextMenu';
+import { ContextMenu, ContextMenuSection, ContextMenuSections } from '../shared/ContextMenu';
 import { estimateContextMenuHeight } from '../shared/contextMenuPosition';
-import { IconButton, MenuItem, MenuSeparator, StatusDot } from '../ui';
+import { IconButton, MenuItem, StatusDot } from '../ui';
 import type { ReplySelectionContextMenuState, TranscriptSelectionAction } from './useChatReplySelection.js';
 
 void React;
@@ -42,39 +42,38 @@ export function SelectionContextMenu({
       minWidth={224}
       position={menuState}
     >
-      <div className="space-y-px">
+      <ContextMenuSections>
+        {menuState.replySelection && selectionActions.length > 0 ? (
+          <ContextMenuSection>
+            <div className="flex items-center gap-1 px-2 py-1" role="group" aria-label="Selection reply starters">
+              {selectionActions.map((action) => (
+                <IconButton
+                  key={`${action.extensionId}:${action.id}`}
+                  compact
+                  title={action.title}
+                  aria-label={action.title}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onClick={() => {
+                    void onAction(action);
+                  }}
+                  className="text-base"
+                  role="menuitem"
+                >
+                  {action.icon ?? action.title}
+                </IconButton>
+              ))}
+            </div>
+          </ContextMenuSection>
+        ) : null}
         {menuState.replySelection ? (
-          <>
-            {selectionActions.length > 0 ? (
-              <>
-                <div className="flex items-center gap-1 px-2 py-1" role="group" aria-label="Selection reply starters">
-                  {selectionActions.map((action) => (
-                    <IconButton
-                      key={`${action.extensionId}:${action.id}`}
-                      compact
-                      title={action.title}
-                      aria-label={action.title}
-                      onPointerDown={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                      }}
-                      onMouseDown={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                      }}
-                      onClick={() => {
-                        void onAction(action);
-                      }}
-                      className="text-base"
-                      role="menuitem"
-                    >
-                      {action.icon ?? action.title}
-                    </IconButton>
-                  ))}
-                </div>
-                <MenuSeparator />
-              </>
-            ) : null}
+          <ContextMenuSection>
             <MenuItem
               onClick={() => {
                 void onAction('reply');
@@ -82,17 +81,18 @@ export function SelectionContextMenu({
             >
               Reply with Selection
             </MenuItem>
-            <MenuSeparator />
-          </>
+          </ContextMenuSection>
         ) : null}
-        <MenuItem
-          onClick={() => {
-            void onAction('copy');
-          }}
-        >
-          Copy
-        </MenuItem>
-      </div>
+        <ContextMenuSection>
+          <MenuItem
+            onClick={() => {
+              void onAction('copy');
+            }}
+          >
+            Copy
+          </MenuItem>
+        </ContextMenuSection>
+      </ContextMenuSections>
     </ContextMenu>
   );
 }

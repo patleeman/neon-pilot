@@ -29,23 +29,11 @@ import type {
   WorkspaceGitStatusChange,
 } from '../../shared/types';
 import { useTheme } from '../../ui-state/theme';
-import { ContextMenu } from '../shared/ContextMenu';
+import { ContextMenu, ContextMenuSection, ContextMenuSections } from '../shared/ContextMenu';
 import { ContextMenuWrapper } from '../shared/ContextMenuWrapper';
 import { TextPromptDialog } from '../shared/TextPromptDialog';
 import { useFileTreeModel } from '../shared/useFileTreeModel';
-import {
-  Button,
-  cx,
-  EmptyState,
-  IconButton,
-  LoadingState,
-  MenuItem,
-  MenuSeparator,
-  PanelMessage,
-  Pill,
-  TextButton,
-  ToolbarButton,
-} from '../ui';
+import { Button, cx, EmptyState, IconButton, LoadingState, MenuItem, PanelMessage, Pill, TextButton, ToolbarButton } from '../ui';
 import { addWorkspaceOpenFile, readWorkspaceOpenFiles, removeWorkspaceOpenFile, writeWorkspaceOpenFiles } from './openWorkspaceFiles';
 import {
   beginWorkspaceDirectoryRequest,
@@ -351,38 +339,43 @@ function WorkspaceTreeContextMenu({
 }) {
   return (
     <ContextMenuWrapper className="ui-menu-shell ui-context-menu-shell absolute bottom-auto left-0 right-auto top-0 mb-0 min-w-[224px]">
-      <div className="space-y-px" role="menu" aria-label="Workspace entry actions">
-        <MenuItem className="gap-2" onClick={onCreateFile}>
-          <Ico d={ICON.file} size={12} />
-          New File
-        </MenuItem>
-        <MenuItem className="gap-2" onClick={onCreateFolder}>
-          <Ico d={ICON.folderPlus} size={12} />
-          New Folder
-        </MenuItem>
-        <MenuSeparator />
-        {onOpenInFinder ? (
-          <>
-            <MenuItem className="gap-2" onClick={onOpenInFinder}>
-              <Ico d={ICON.folderOpen} size={12} />
-              Open in Finder
+      <div role="menu" aria-label="Workspace entry actions">
+        <ContextMenuSections>
+          <ContextMenuSection>
+            <MenuItem className="gap-2" onClick={onCreateFile}>
+              <Ico d={ICON.file} size={12} />
+              New File
             </MenuItem>
-            <MenuSeparator />
-          </>
-        ) : null}
-        <MenuItem className="gap-2" onClick={onRename}>
-          <Ico d={ICON.pencil} size={12} />
-          Rename
-        </MenuItem>
-        <MenuItem className="gap-2" onClick={onMove}>
-          <Ico d={ICON.move} size={12} />
-          Move to…
-        </MenuItem>
-        <MenuSeparator />
-        <MenuItem className="gap-2" tone="danger" onClick={onDelete}>
-          <Ico d={ICON.trash} size={12} />
-          Delete
-        </MenuItem>
+            <MenuItem className="gap-2" onClick={onCreateFolder}>
+              <Ico d={ICON.folderPlus} size={12} />
+              New Folder
+            </MenuItem>
+          </ContextMenuSection>
+          {onOpenInFinder ? (
+            <ContextMenuSection>
+              <MenuItem className="gap-2" onClick={onOpenInFinder}>
+                <Ico d={ICON.folderOpen} size={12} />
+                Open in Finder
+              </MenuItem>
+            </ContextMenuSection>
+          ) : null}
+          <ContextMenuSection>
+            <MenuItem className="gap-2" onClick={onRename}>
+              <Ico d={ICON.pencil} size={12} />
+              Rename
+            </MenuItem>
+            <MenuItem className="gap-2" onClick={onMove}>
+              <Ico d={ICON.move} size={12} />
+              Move to…
+            </MenuItem>
+          </ContextMenuSection>
+          <ContextMenuSection>
+            <MenuItem className="gap-2" tone="danger" onClick={onDelete}>
+              <Ico d={ICON.trash} size={12} />
+              Delete
+            </MenuItem>
+          </ContextMenuSection>
+        </ContextMenuSections>
       </div>
     </ContextMenuWrapper>
   );
@@ -1503,24 +1496,25 @@ export function WorkspaceFileDocument({
           onClose={closeSelectionContextMenu}
           position={selectionContextMenu}
         >
-          <div className="space-y-px">
+          <ContextMenuSections>
             {onReplyWithSelection ? (
-              <>
+              <ContextMenuSection>
                 <MenuItem onClick={() => replyWithSelectedText(selectionContextMenu.text)} role="menuitem">
                   Reply with Selection
                 </MenuItem>
-                <MenuSeparator className="mx-1 my-1" />
-              </>
+              </ContextMenuSection>
             ) : null}
-            <MenuItem
-              onClick={() => {
-                void copySelectedText(selectionContextMenu.text);
-              }}
-              role="menuitem"
-            >
-              Copy
-            </MenuItem>
-          </div>
+            <ContextMenuSection>
+              <MenuItem
+                onClick={() => {
+                  void copySelectedText(selectionContextMenu.text);
+                }}
+                role="menuitem"
+              >
+                Copy
+              </MenuItem>
+            </ContextMenuSection>
+          </ContextMenuSections>
         </ContextMenu>
       ) : null}
     </div>
