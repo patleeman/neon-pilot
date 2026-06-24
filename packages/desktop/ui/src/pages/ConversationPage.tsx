@@ -335,6 +335,7 @@ import type {
   MessageBlock,
   PromptAttachmentRefInput,
   SessionMeta,
+  WorkspaceEntry,
 } from '../shared/types';
 import type { ConversationSummaryRecord } from '../shared/types';
 import {
@@ -447,6 +448,42 @@ const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-adde
 const WORKBENCH_OPEN_WORKSPACE_FILE_EVENT = 'pa:workbench-open-workspace-file';
 const TRANSCRIPT_PATH_LINK_TARGET_SETTING_KEY = 'systemFiles.transcriptPathLinkTarget';
 const MAX_TRANSCRIPT_PATH_LINK_TARGETS = 400;
+const WORKSPACE_MENTION_MAX_ENTRIES = 200;
+const WORKSPACE_MENTION_MAX_DIRECTORIES = 24;
+const WORKSPACE_MENTION_SKIP_DIRECTORIES = new Set(['.git', 'node_modules', 'dist']);
+
+async function loadWorkspaceMentionEntries(cwd: string): Promise<WorkspaceEntry[]> {
+  const entries: WorkspaceEntry[] = [];
+  const queue = [''];
+  let visitedDirectories = 0;
+
+  while (queue.length > 0 && entries.length < WORKSPACE_MENTION_MAX_ENTRIES && visitedDirectories < WORKSPACE_MENTION_MAX_DIRECTORIES) {
+    const path = queue.shift() ?? '';
+    visitedDirectories += 1;
+    const listing = await api.workspaceTree(cwd, path);
+
+    for (const entry of listing.entries) {
+      if (entry.kind !== 'file' && entry.kind !== 'directory') {
+        continue;
+      }
+
+      entries.push(entry);
+      if (entries.length >= WORKSPACE_MENTION_MAX_ENTRIES) {
+        break;
+      }
+
+      if (
+        entry.kind === 'directory' &&
+        !WORKSPACE_MENTION_SKIP_DIRECTORIES.has(entry.name) &&
+        queue.length < WORKSPACE_MENTION_MAX_DIRECTORIES
+      ) {
+        queue.push(entry.path);
+      }
+    }
+  }
+
+  return entries;
+}
 
 type TranscriptPathLinkTarget = 'fileExplorer' | 'desktop';
 
@@ -1715,6 +1752,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const [extensionSlashCommands, setExtensionSlashCommands] = useState<ExtensionSlashCommandRegistration[]>([]);
   const [extensionMentionRegistrations, setExtensionMentionRegistrations] = useState<ExtensionMentionRegistration[]>([]);
   const [extensionMentionItems, setExtensionMentionItems] = useState<MentionItem[]>([]);
+  const [workspaceMentionEntries, setWorkspaceMentionEntries] = useState<WorkspaceEntry[]>([]);
 
   useEffect(() => {
     const hasAutocompleteDemand = Boolean(parseSlashInput(input)) || /(^|.*\s)(@[\w./-]*)$/.test(input);
@@ -2394,9 +2432,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     () =>
       buildMentionItems({
         tasks: tasks ?? [],
+        memoryDocs: memoryData?.memoryDocs ?? [],
+        workspaceEntries: workspaceMentionEntries,
         extensionItems: extensionMentionItems,
       }),
-    [tasks, extensionMentionItems],
+    [tasks, memoryData?.memoryDocs, workspaceMentionEntries, extensionMentionItems],
   );
   const composerPlaceholder = useMemo(
     () => formatConversationComposerPlaceholder(extensionMentionRegistrations),
@@ -2431,6 +2471,28 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       }),
     [draft, draftCwdValue, liveSessionContext?.cwd, currentSessionMeta?.cwd],
   );
+  useEffect(() => {
+    if (!currentCwd || currentCwd === 'Chat') {
+      setWorkspaceMentionEntries([]);
+      return;
+    }
+    if (!autocompleteCatalogDemand.needsKnowledgeFiles) {
+      return;
+    }
+
+    let cancelled = false;
+    void loadWorkspaceMentionEntries(currentCwd)
+      .then((entries) => {
+        if (!cancelled) setWorkspaceMentionEntries(entries);
+      })
+      .catch(() => {
+        if (!cancelled) setWorkspaceMentionEntries([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [autocompleteCatalogDemand.needsKnowledgeFiles, currentCwd]);
   const [transcriptPathLinkTarget, setTranscriptPathLinkTarget] = useState<TranscriptPathLinkTarget>('fileExplorer');
   useEffect(() => {
     let cancelled = false;

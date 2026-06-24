@@ -1,4 +1,4 @@
-import type { KnowledgeFileSummary, MemoryDocItem, ScheduledTaskSummary } from '../shared/types';
+import type { KnowledgeFileSummary, MemoryDocItem, ScheduledTaskSummary, WorkspaceEntry } from '../shared/types';
 
 export const MAX_MENTION_MENU_ITEMS = 12;
 
@@ -61,10 +61,12 @@ export function buildMentionItems(input: {
   tasks: ScheduledTaskSummary[];
   memoryDocs?: MemoryDocItem[];
   knowledgeFiles?: KnowledgeFileSummary[];
+  workspaceEntries?: WorkspaceEntry[];
   extensionItems?: MentionItem[];
 }): MentionItem[] {
   const memoryDocs = input.memoryDocs ?? [];
   const knowledgeFiles = input.knowledgeFiles ?? [];
+  const workspaceEntries = input.workspaceEntries ?? [];
   const items: MentionItem[] = [
     ...input.tasks.map((task) => ({
       id: `@${task.id}`,
@@ -89,6 +91,16 @@ export function buildMentionItems(input: {
       summary: file.path,
       path: file.path,
     })),
+    ...workspaceEntries
+      .filter((entry) => entry.kind === 'file' || entry.kind === 'directory')
+      .map((entry) => ({
+        id: `@${entry.path}`,
+        label: entry.path,
+        kind: (entry.kind === 'directory' ? 'folder' : 'file') as const,
+        title: entry.name,
+        summary: entry.path,
+        path: entry.path,
+      })),
     ...(input.extensionItems ?? []),
   ];
 

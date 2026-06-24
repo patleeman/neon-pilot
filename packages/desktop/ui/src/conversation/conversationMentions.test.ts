@@ -83,6 +83,26 @@ describe('conversationMentions', () => {
           updatedAt: '2026-03-11T12:00:00.000Z',
         },
       ],
+      workspaceEntries: [
+        {
+          name: 'README.md',
+          path: 'README.md',
+          kind: 'file',
+          size: 42,
+          modifiedAt: '2026-03-11T12:00:00.000Z',
+          gitStatus: null,
+          descendantGitStatusCount: 0,
+        },
+        {
+          name: 'components',
+          path: 'packages/desktop/ui/src/components',
+          kind: 'directory',
+          size: null,
+          modifiedAt: null,
+          gitStatus: null,
+          descendantGitStatusCount: 0,
+        },
+      ],
     });
 
     expect(filterMentionItems(items, '@daily').map((item) => item.id)).toEqual(['@daily-review']);
@@ -90,6 +110,8 @@ describe('conversationMentions', () => {
     expect(filterMentionItems(items, '@stored').map((item) => item.id)).toEqual(['@project-state-model']);
     expect(filterMentionItems(items, '@index').map((item) => item.id)).toEqual(['@notes/reference/INDEX.md']);
     expect(filterMentionItems(items, '@reference').map((item) => item.id)).toEqual(['@notes/reference/INDEX.md']);
+    expect(filterMentionItems(items, '@readme').map((item) => item.id)).toEqual(['@README.md']);
+    expect(filterMentionItems(items, '@components').map((item) => item.id)).toEqual(['@packages/desktop/ui/src/components']);
   });
 
   it('caps unqualified mention menus to a fixed number of items', () => {
