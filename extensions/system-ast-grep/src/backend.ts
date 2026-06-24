@@ -82,6 +82,16 @@ function formatMatch(match: AstGrepJsonMatch): string {
   return `${location}\n${body}${meta}`;
 }
 
+async function findAstGrepBinary(ctx: BackendContext, cwd: string): Promise<string> {
+  try {
+    const result = await ctx.shell.exec({ command: 'sh', args: ['-lc', 'command -v sg || command -v ast-grep || true'], cwd });
+    return `${result.stdout ?? ''}`.trim().split(/\r?\n/)[0] ?? '';
+  } catch (error) {
+    const stdout = typeof (error as { stdout?: unknown }).stdout === 'string' ? (error as { stdout: string }).stdout : '';
+    return stdout.trim().split(/\r?\n/)[0] ?? '';
+  }
+}
+
 export async function astGrep(input: AstGrepInput, ctx: BackendContext) {
   const cwd = getCwd(ctx);
   const pattern = input.pattern?.trim();
@@ -89,8 +99,7 @@ export async function astGrep(input: AstGrepInput, ctx: BackendContext) {
   const limit = clampLimit(input.limit);
   const paths = normalizeSearchPaths(cwd, input.paths);
 
-  const hasSg = await ctx.shell.exec({ command: 'sh', args: ['-lc', 'command -v sg || command -v ast-grep'], cwd });
-  const binary = `${hasSg.stdout ?? ''}`.trim().split(/\r?\n/)[0];
+  const binary = await findAstGrepBinary(ctx, cwd);
   if (!binary) {
     return {
       content: [

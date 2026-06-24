@@ -18,7 +18,31 @@ describe('system-ast-grep backend', () => {
       details: { missingBinary: true },
       content: [{ type: 'text', text: expect.stringContaining('brew install ast-grep') }],
     });
-    expect(exec).toHaveBeenCalledWith(expect.objectContaining({ command: 'sh', args: ['-lc', 'command -v sg || command -v ast-grep'] }));
+    expect(exec).toHaveBeenCalledWith(
+      expect.objectContaining({ command: 'sh', args: ['-lc', 'command -v sg || command -v ast-grep || true'] }),
+    );
+  });
+
+  it('returns setup guidance when the host shell throws during binary discovery', async () => {
+    const exec = vi.fn().mockRejectedValue(Object.assign(new Error('Command failed with exit code 1.'), { stdout: '', stderr: '' }));
+
+    await expect(astGrep({ pattern: 'console.log($$$)' }, createCtx(exec))).resolves.toMatchObject({
+      isError: true,
+      details: { missingBinary: true },
+      content: [{ type: 'text', text: expect.stringContaining('ast_grep requires the ast-grep CLI') }],
+    });
+  });
+
+  it('uses binary stdout when the host shell throws after finding a binary', async () => {
+    const exec = vi
+      .fn()
+      .mockRejectedValueOnce(Object.assign(new Error('Command failed with exit code 1.'), { stdout: '/usr/local/bin/sg\n', stderr: '' }))
+      .mockResolvedValueOnce({ stdout: '[]', stderr: '', exitCode: 0 });
+
+    const result = await astGrep({ pattern: 'console.log($$$)' }, createCtx(exec));
+
+    expect(result.details).toEqual({ matchCount: 0, paths: ['.'] });
+    expect(exec).toHaveBeenLastCalledWith(expect.objectContaining({ command: '/usr/local/bin/sg' }));
   });
 
   it('rejects search paths outside the active workspace', async () => {
