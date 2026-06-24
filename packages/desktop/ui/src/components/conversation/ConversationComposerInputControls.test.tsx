@@ -288,8 +288,9 @@ describe('ConversationComposerInputControls', () => {
         menuButton!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       });
 
-      const menu = rendered.container.querySelector('[aria-label="Composer settings"]');
+      const menu = document.body.querySelector('[aria-label="Composer settings"]');
       expect(menu).toBeTruthy();
+      expect(menu?.className).toContain('ui-context-menu-shell');
       expect(menu?.querySelector('[aria-label="Conversation model"]')).toBeTruthy();
       expect(menu?.querySelector('[aria-label="Thinking level"]')).toBeTruthy();
       expect(menuButton?.getAttribute('aria-expanded')).toBe('true');
@@ -298,7 +299,7 @@ describe('ConversationComposerInputControls', () => {
         window.dispatchEvent(new CustomEvent(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT));
       });
 
-      expect(rendered.container.querySelector('[aria-label="Composer settings"]')).toBeNull();
+      expect(document.body.querySelector('[aria-label="Composer settings"]')).toBeNull();
       expect(menuButton?.getAttribute('aria-expanded')).toBe('false');
     } finally {
       rendered.unmount();
@@ -345,13 +346,13 @@ describe('ConversationComposerInputControls', () => {
     );
 
     try {
-      expect(rendered.container.querySelector('[aria-label="Composer settings"]')).toBeNull();
+      expect(document.body.querySelector('[aria-label="Composer settings"]')).toBeNull();
 
       act(() => {
         window.dispatchEvent(new CustomEvent(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT));
       });
 
-      const menu = rendered.container.querySelector('[aria-label="Composer settings"]');
+      const menu = document.body.querySelector('[aria-label="Composer settings"]');
       const menuButton = rendered.container.querySelector<HTMLButtonElement>('button[aria-label="More composer settings"]');
       expect(menu).toBeTruthy();
       expect(menu?.querySelector('[aria-label="Conversation model"]')).toBeTruthy();

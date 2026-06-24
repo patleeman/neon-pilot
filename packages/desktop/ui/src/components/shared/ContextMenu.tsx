@@ -18,7 +18,7 @@ import { createPortal } from 'react-dom';
 import { MenuGroupLabel, MenuSeparator, MenuShell } from '../ui';
 import { clampViewportMenuPosition } from './contextMenuPosition';
 
-type ContextMenuRole = 'menu' | 'listbox' | 'group';
+type ContextMenuRole = 'menu' | 'listbox' | 'group' | 'dialog';
 
 type ContextMenuRef = RefObject<HTMLElement | null>;
 

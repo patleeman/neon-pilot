@@ -5,12 +5,12 @@ import { createRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ConversationPreferencesRow } from './ConversationPreferencesRow';
 import {
   COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT,
   COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT,
   COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT,
 } from './composerPreferenceCommands';
+import { ConversationPreferencesRow } from './ConversationPreferencesRow';
 
 vi.mock('../../extensions/ComposerButtonHost', () => ({
   ComposerButtonHost: ({ registration, controlContext }: { registration: { id: string }; controlContext: { renderMode: string } }) => (
@@ -103,10 +103,10 @@ describe('ConversationPreferencesRow', () => {
       const moreButton = container.querySelector<HTMLButtonElement>('button[aria-label="More composer settings"]');
       expect(moreButton).not.toBeNull();
       act(() => moreButton?.click());
-      const menu = container.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]');
-      expect(menu?.className).toContain('left-1/2');
-      expect(menu?.className).toContain('w-[min(13rem,calc(100vw-1rem))]');
-      expect(container.textContent).toContain('goal-mode:menu');
+      const menu = document.body.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]');
+      expect(menu?.className).toContain('ui-context-menu-shell');
+      expect(menu?.style.position).toBe('fixed');
+      expect(document.body.textContent).toContain('goal-mode:menu');
     } finally {
       unmount();
     }
@@ -122,61 +122,61 @@ describe('ConversationPreferencesRow', () => {
       const moreButton = container.querySelector<HTMLButtonElement>('button[aria-label="More composer settings"]');
       expect(moreButton).not.toBeNull();
       act(() => moreButton?.click());
-      expect(container.textContent).toContain('model-preferences:menu');
-      expect(container.textContent).toContain('goal-mode:menu');
+      expect(document.body.textContent).toContain('model-preferences:menu');
+      expect(document.body.textContent).toContain('goal-mode:menu');
     } finally {
       unmount();
     }
   });
 
   it('opens and closes the overflow menu from shared composer preference commands', () => {
-    const { container, unmount } = renderInteractive({ inlineLimit: 1 });
+    const { unmount } = renderInteractive({ inlineLimit: 1 });
 
     try {
-      expect(container.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
+      expect(document.body.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
 
       act(() => {
         window.dispatchEvent(new CustomEvent(COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT));
       });
-      expect(container.textContent).toContain('goal-mode:menu');
+      expect(document.body.textContent).toContain('goal-mode:menu');
 
       act(() => {
         window.dispatchEvent(new CustomEvent(COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT));
       });
-      expect(container.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
+      expect(document.body.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
     } finally {
       unmount();
     }
   });
 
   it('toggles the overflow menu from the shared composer preference command', () => {
-    const { container, unmount } = renderInteractive({ inlineLimit: 1 });
+    const { unmount } = renderInteractive({ inlineLimit: 1 });
 
     try {
-      expect(container.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
+      expect(document.body.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
 
       act(() => {
         window.dispatchEvent(new CustomEvent(COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT));
       });
-      expect(container.textContent).toContain('goal-mode:menu');
+      expect(document.body.textContent).toContain('goal-mode:menu');
 
       act(() => {
         window.dispatchEvent(new CustomEvent(COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT));
       });
-      expect(container.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
+      expect(document.body.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
     } finally {
       unmount();
     }
   });
 
   it('ignores the open preference command when no overflow controls are available', () => {
-    const { container, unmount } = renderInteractive();
+    const { unmount } = renderInteractive();
 
     try {
       act(() => {
         window.dispatchEvent(new CustomEvent(COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT));
       });
-      expect(container.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
+      expect(document.body.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
     } finally {
       unmount();
     }

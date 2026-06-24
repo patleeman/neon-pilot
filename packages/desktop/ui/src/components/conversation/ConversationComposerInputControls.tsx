@@ -19,9 +19,9 @@ import {
 } from 'react';
 
 import type { ComposerDrawingAttachment } from '../../conversation/promptAttachments';
+import { setExtensionCommandContext } from '../../extensions/commands';
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
-import { setExtensionCommandContext } from '../../extensions/commands';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import {
   getModelSelectionValue,
@@ -30,10 +30,11 @@ import {
   THINKING_LEVEL_OPTIONS,
 } from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
+import { ContextMenu } from '../shared/ContextMenu';
 import { cx, IconButton } from '../ui';
-import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
 import { COMPOSER_CREATE_DRAWING_COMMAND_EVENT } from './composerInputCommands';
 import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
+import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
 import { ConversationPreferencesRow } from './ConversationPreferencesRow';
 
 function getComposerPreferenceInlineLimit(composerShellWidth: number | null): number {
@@ -48,6 +49,8 @@ function getComposerPreferenceInlineLimit(composerShellWidth: number | null): nu
 
 const CORE_COMPOSER_CONTROL_KEYS = new Set(['system-composer-attachments:attach-files', 'system-model-picker:model-preferences']);
 const CORE_COMPOSER_INPUT_TOOL_KEYS = new Set(['system-excalidraw-input:excalidraw']);
+const CORE_MODEL_PREFERENCE_MENU_WIDTH = 256;
+const CORE_MODEL_PREFERENCE_MENU_ESTIMATED_HEIGHT = 64;
 
 function composerRegistrationKey(registration: { extensionId: string; id: string }): string {
   return `${registration.extensionId}:${registration.id}`;
@@ -253,8 +256,24 @@ function CoreModelPreferenceOverflow({
   onSelectThinkingLevel: (thinkingLevel: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const settingsAvailable = !(disabled && models.length === 0);
+
+  const openMenu = useCallback(() => {
+    const bounds = buttonRef.current?.getBoundingClientRect();
+    if (!bounds) {
+      setMenuPosition({ x: 12, y: 12 });
+      setOpen(true);
+      return;
+    }
+
+    setMenuPosition({
+      x: bounds.left + bounds.width / 2 - CORE_MODEL_PREFERENCE_MENU_WIDTH / 2,
+      y: bounds.top - CORE_MODEL_PREFERENCE_MENU_ESTIMATED_HEIGHT - 8,
+    });
+    setOpen(true);
+  }, []);
 
   useEffect(() => {
     setExtensionCommandContext('composer.settingsAvailable', settingsAvailable);
@@ -272,7 +291,7 @@ function CoreModelPreferenceOverflow({
 
   useEffect(() => {
     function handleOpenSettings() {
-      if (settingsAvailable) setOpen(true);
+      if (settingsAvailable) openMenu();
     }
 
     window.addEventListener(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT, handleOpenSettings);
@@ -292,25 +311,10 @@ function CoreModelPreferenceOverflow({
     return () => window.removeEventListener(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, handleCloseSettings);
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    function handlePointerDown(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node | null)) setOpen(false);
-    }
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false);
-    }
-    window.addEventListener('mousedown', handlePointerDown);
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open]);
-
   return (
-    <div ref={menuRef} className="relative shrink-0">
+    <div className="relative shrink-0">
       <IconButton
+        ref={buttonRef}
         shape="circle"
         type="button"
         title="More composer settings"
@@ -320,23 +324,37 @@ function CoreModelPreferenceOverflow({
         disabled={!settingsAvailable}
         onPointerDown={(event) => {
           event.preventDefault();
-          if ((event.pointerType && event.pointerType !== 'mouse') || event.button === 0) setOpen((current) => !current);
+          if (!((event.pointerType && event.pointerType !== 'mouse') || event.button === 0)) return;
+          if (open) {
+            setOpen(false);
+            return;
+          }
+          openMenu();
         }}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            setOpen((current) => !current);
+            if (open) {
+              setOpen(false);
+              return;
+            }
+            openMenu();
           }
         }}
       >
         <CoreComposerDotsIcon />
       </IconButton>
-      {open ? (
-        <div
-          className="ui-context-menu-shell absolute bottom-full z-50 mb-2 grid gap-2 p-2.5"
-          style={{ left: '50%', width: 'min(16rem, calc(100vw - 1rem))', transform: 'translateX(-50%)' }}
-          role="dialog"
+      {open && menuPosition ? (
+        <ContextMenu
           aria-label="Composer settings"
+          className="z-50 grid gap-2 p-2.5"
+          estimatedHeight={CORE_MODEL_PREFERENCE_MENU_ESTIMATED_HEIGHT}
+          ignoreRefs={[buttonRef]}
+          minWidth={CORE_MODEL_PREFERENCE_MENU_WIDTH}
+          onClose={() => setOpen(false)}
+          position={menuPosition}
+          role="dialog"
+          style={{ width: `min(${CORE_MODEL_PREFERENCE_MENU_WIDTH / 16}rem, calc(100vw - 1rem))` }}
         >
           <CoreModelPreferenceControls
             disabled={disabled}
@@ -347,7 +365,7 @@ function CoreModelPreferenceOverflow({
             onSelectModel={onSelectModel}
             onSelectThinkingLevel={onSelectThinkingLevel}
           />
-        </div>
+        </ContextMenu>
       ) : null}
     </div>
   );

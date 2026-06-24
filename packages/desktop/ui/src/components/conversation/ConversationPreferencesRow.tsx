@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-
 import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { setExtensionCommandContext } from '../../extensions/commands';
+import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import type { ExtensionComposerControlRegistration } from '../../extensions/useExtensionRegistry';
+import { ContextMenu } from '../shared/ContextMenu';
 import { cx, IconButton } from '../ui';
 import {
   COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT,
@@ -22,6 +22,8 @@ function MoreHorizontalIcon({ className }: { className?: string }) {
   );
 }
 
+const COMPOSER_PREFERENCES_MENU_WIDTH = 208;
+
 export function ConversationPreferencesRow({
   composerControls = [],
   composerControlContext,
@@ -32,11 +34,28 @@ export function ConversationPreferencesRow({
   inlineLimit: number;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const inlineCount = Math.max(0, inlineLimit);
   const inlineControls = composerControls.slice(0, inlineCount);
   const menuControls = composerControls.slice(inlineCount);
   const hasMenuItems = menuControls.length > 0;
+  const estimatedMenuHeight = Math.max(56, menuControls.length * 40 + 20);
+
+  const openMenu = useCallback(() => {
+    const bounds = buttonRef.current?.getBoundingClientRect();
+    if (!bounds) {
+      setMenuPosition({ x: 12, y: 12 });
+      setMenuOpen(true);
+      return;
+    }
+
+    setMenuPosition({
+      x: bounds.left + bounds.width / 2 - COMPOSER_PREFERENCES_MENU_WIDTH / 2,
+      y: bounds.top - estimatedMenuHeight - 8,
+    });
+    setMenuOpen(true);
+  }, [estimatedMenuHeight]);
 
   useEffect(() => {
     setExtensionCommandContext('composer.preferencesAvailable', hasMenuItems);
@@ -50,21 +69,26 @@ export function ConversationPreferencesRow({
 
   useEffect(() => {
     function handleOpenPreferencesCommand() {
-      if (hasMenuItems) setMenuOpen(true);
+      if (hasMenuItems) openMenu();
     }
 
     window.addEventListener(COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT, handleOpenPreferencesCommand);
     return () => window.removeEventListener(COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT, handleOpenPreferencesCommand);
-  }, [hasMenuItems]);
+  }, [hasMenuItems, openMenu]);
 
   useEffect(() => {
     function handleTogglePreferencesCommand() {
-      if (hasMenuItems) setMenuOpen((current) => !current);
+      if (!hasMenuItems) return;
+      if (menuOpen) {
+        setMenuOpen(false);
+        return;
+      }
+      openMenu();
     }
 
     window.addEventListener(COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT, handleTogglePreferencesCommand);
     return () => window.removeEventListener(COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT, handleTogglePreferencesCommand);
-  }, [hasMenuItems]);
+  }, [hasMenuItems, menuOpen, openMenu]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -75,26 +99,6 @@ export function ConversationPreferencesRow({
 
     window.addEventListener(COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, handleClosePreferencesCommand);
     return () => window.removeEventListener(COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, handleClosePreferencesCommand);
-  }, [menuOpen]);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    function handlePointerDown(event: MouseEvent) {
-      if (menuRef.current?.contains(event.target as Node)) return;
-      setMenuOpen(false);
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setMenuOpen(false);
-    }
-
-    window.addEventListener('mousedown', handlePointerDown);
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
   }, [menuOpen]);
 
   return (
@@ -108,10 +112,17 @@ export function ConversationPreferencesRow({
       ))}
 
       {hasMenuItems && (
-        <div ref={menuRef} className="relative">
+        <div className="relative">
           <IconButton
+            ref={buttonRef}
             type="button"
-            onClick={() => setMenuOpen((current) => !current)}
+            onClick={() => {
+              if (menuOpen) {
+                setMenuOpen(false);
+                return;
+              }
+              openMenu();
+            }}
             className={cx(
               'h-8 w-8 rounded-md border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base',
               menuOpen && 'bg-surface/55 text-primary',
@@ -123,11 +134,17 @@ export function ConversationPreferencesRow({
           >
             <MoreHorizontalIcon />
           </IconButton>
-          {menuOpen && (
-            <div
-              className="ui-context-menu-shell absolute bottom-full left-1/2 z-50 mb-2 w-[min(13rem,calc(100vw-1rem))] -translate-x-1/2 p-2.5"
-              role="dialog"
+          {menuOpen && menuPosition ? (
+            <ContextMenu
               aria-label="Composer settings"
+              className="z-50 grid gap-2 p-2.5"
+              estimatedHeight={estimatedMenuHeight}
+              ignoreRefs={[buttonRef]}
+              minWidth={COMPOSER_PREFERENCES_MENU_WIDTH}
+              onClose={() => setMenuOpen(false)}
+              position={menuPosition}
+              role="dialog"
+              style={{ width: `min(${COMPOSER_PREFERENCES_MENU_WIDTH / 16}rem, calc(100vw - 1rem))` }}
             >
               <div className="flex flex-col gap-2">
                 {menuControls.map((control) => (
@@ -138,8 +155,8 @@ export function ConversationPreferencesRow({
                   />
                 ))}
               </div>
-            </div>
-          )}
+            </ContextMenu>
+          ) : null}
         </div>
       )}
     </div>
