@@ -59,8 +59,10 @@ function renderControl(entry: UnifiedSettingsEntry, currentValue: unknown, onCha
   }
 
   switch (entry.type) {
-    case 'boolean':
-      return <Switch checked={Boolean(currentValue)} label="Enabled" onClick={() => onChange(!currentValue)} />;
+    case 'boolean': {
+      const checked = Boolean(currentValue);
+      return <Switch checked={checked} label={checked ? 'Enabled' : 'Disabled'} onClick={() => onChange(!currentValue)} />;
+    }
 
     case 'select':
       return (

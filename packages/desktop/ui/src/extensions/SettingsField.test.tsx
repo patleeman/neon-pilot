@@ -44,6 +44,16 @@ const selectEntry: UnifiedSettingsEntry = {
   order: 30,
 };
 
+const booleanEntry: UnifiedSettingsEntry = {
+  extensionId: 'system-caffeinate',
+  key: 'caffeinate.autoStart',
+  type: 'boolean',
+  default: false,
+  description: 'Start macOS caffeinate automatically when Neon Pilot starts.',
+  group: 'Caffeinate',
+  order: 40,
+};
+
 describe('SettingsField', () => {
   it('separates setting labels from inline descriptions in text content', () => {
     const onChange = vi.fn();
@@ -59,6 +69,17 @@ describe('SettingsField', () => {
 
     expect(getByText('Start collapsed')).toBeTruthy();
     expect(getByText('Always expanded')).toBeTruthy();
+  });
+
+  it('labels boolean settings by their current state', () => {
+    const onChange = vi.fn();
+    const { getByText, rerender } = render(<SettingsField entry={booleanEntry} value={false} onChange={onChange} />);
+
+    expect(getByText('Disabled')).toBeTruthy();
+
+    rerender(<SettingsField entry={booleanEntry} value={true} onChange={onChange} />);
+
+    expect(getByText('Enabled')).toBeTruthy();
   });
 
   it('renders emoji label lists as separate emoji and label controls', () => {
