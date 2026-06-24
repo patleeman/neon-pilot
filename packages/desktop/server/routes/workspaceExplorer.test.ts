@@ -281,7 +281,7 @@ describe('registerWorkspaceExplorerRoutes', () => {
       const h = getHandler(router, 'get', '/api/workspace/uncommitted-diff');
       const res = mockRes();
       await h({ query: { cwd: '/repo' } }, res);
-      expect(res.json).toHaveBeenCalledWith({ branch: null, changeCount: 0, linesAdded: 0, linesDeleted: 0, files: [] });
+      expect(res.json).toHaveBeenCalledWith({ branch: null, changeCount: 0, linesAdded: 0, linesDeleted: 0, files: [], isGitRepo: false });
     });
   });
 

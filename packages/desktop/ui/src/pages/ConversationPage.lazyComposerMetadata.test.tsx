@@ -60,7 +60,15 @@ const emptyExtensionRegistry = {
   contextMenus: [],
   selectionActions: [],
   threadHeaderActions: [],
-  statusBarItems: [],
+  statusBarItems: [] as Array<{
+    extensionId: string;
+    id: string;
+    label: string;
+    component: string;
+    alignment: 'left' | 'right';
+    priority?: number;
+    frontendEntry?: string | null;
+  }>,
   conversationHeaderElements: [],
   conversationDecorators: [],
   activityTreeItemElements: [],
@@ -242,6 +250,30 @@ vi.mock('../client/api', () => ({
 
 vi.mock('../extensions/useExtensionRegistry', () => ({
   useExtensionRegistry: () => emptyExtensionRegistry,
+}));
+
+vi.mock('../extensions/StatusBarItemHost', () => ({
+  StatusBarItemHost: ({
+    statusBarContext,
+  }: {
+    statusBarContext: {
+      branchLabel?: string | null;
+      gitSummary?: { kind: 'none' } | { kind: 'summary'; text: string } | { kind: 'diff'; added: string; deleted: string };
+    };
+  }) => {
+    const branchLabel = statusBarContext.branchLabel?.trim() || null;
+    const gitSummary = statusBarContext.gitSummary;
+    if (!branchLabel && (!gitSummary || gitSummary.kind === 'none')) {
+      return null;
+    }
+    return (
+      <div aria-label="Git status">
+        {branchLabel}
+        {gitSummary?.kind === 'summary' ? gitSummary.text : null}
+        {gitSummary?.kind === 'diff' ? `${gitSummary.added}/${gitSummary.deleted}` : null}
+      </div>
+    );
+  },
 }));
 
 vi.mock('../components/chat/ChatView', () => ({
@@ -509,7 +541,9 @@ function renderSwitchableConversationPage() {
 beforeEach(() => {
   vi.useFakeTimers();
   window.localStorage.clear();
+  window.sessionStorage.clear();
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  emptyExtensionRegistry.statusBarItems.length = 0;
   desktopConversationState.mode = 'disabled';
   desktopConversationState.active = false;
   desktopConversationState.loading = false;
@@ -896,6 +930,51 @@ describe('ConversationPage lazy composer metadata', () => {
 
     listbox = screen.getByRole('listbox', { name: 'Saved workspaces' });
     expect(within(listbox).getByText('late-picked-workspace')).toBeTruthy();
+  });
+
+  it('hides stale draft git status when the selected workspace is not a git repo', async () => {
+    vi.useRealTimers();
+    emptyExtensionRegistry.statusBarItems.push({
+      extensionId: 'system-git-status',
+      id: 'git-status',
+      label: 'Git status',
+      component: 'GitStatusIndicator',
+      alignment: 'right',
+      priority: 100,
+      frontendEntry: null,
+    });
+    apiMock.savedWorkspacePaths.mockResolvedValue(['/tmp/project', '/tmp/non-git-workspace']);
+    apiMock.workspaceUncommittedDiff.mockImplementation(async (cwd: string) => {
+      if (cwd === '/tmp/non-git-workspace') {
+        return { branch: null, changeCount: 0, linesAdded: 0, linesDeleted: 0, files: [], isGitRepo: false };
+      }
+
+      return { branch: 'main', changeCount: 0, linesAdded: 0, linesDeleted: 0, files: [], isGitRepo: true };
+    });
+
+    renderDraftConversationPage();
+
+    await waitFor(() => {
+      expect(apiMock.savedWorkspacePaths).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Saved workspace' }));
+
+    const listbox = await screen.findByRole('listbox', { name: 'Saved workspaces' });
+    fireEvent.click(within(listbox).getByText('project'));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Git status').textContent).toBe('mainclean');
+    });
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Workspace folder' }), {
+      target: { value: '/tmp/non-git-workspace' },
+    });
+
+    await waitFor(() => {
+      expect(apiMock.workspaceUncommittedDiff).toHaveBeenCalledWith('/tmp/non-git-workspace');
+      expect(screen.queryByLabelText('Git status')).toBeNull();
+    });
   });
 
   it('routes a submitted draft prompt to the reserved conversation before live-session creation settles', async () => {

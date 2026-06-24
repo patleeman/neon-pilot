@@ -1683,6 +1683,7 @@ export interface UncommittedDiffResult {
   linesAdded: number;
   linesDeleted: number;
   files: ConversationCommitCheckpointFile[];
+  isGitRepo?: boolean;
 }
 
 // ── Traces / Telemetry ─────────────────────────────────────────────────────

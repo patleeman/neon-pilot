@@ -2823,16 +2823,21 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     }
 
     let cancelled = false;
+    setConversationWorkspaceGit(null);
     api
       .workspaceUncommittedDiff(currentCwd)
       .then((result) => {
         if (!cancelled) {
-          setConversationWorkspaceGit({
-            branch: result.branch,
-            changeCount: result.changeCount,
-            linesAdded: result.linesAdded,
-            linesDeleted: result.linesDeleted,
-          });
+          setConversationWorkspaceGit(
+            result.isGitRepo === false
+              ? null
+              : {
+                  branch: result.branch,
+                  changeCount: result.changeCount,
+                  linesAdded: result.linesAdded,
+                  linesDeleted: result.linesDeleted,
+                },
+          );
         }
       })
       .catch(() => {
@@ -2853,16 +2858,21 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     }
 
     let cancelled = false;
+    setDraftWorkspaceGit(null);
     api
       .workspaceUncommittedDiff(draftCwdValue)
       .then((result) => {
         if (!cancelled) {
-          setDraftWorkspaceGit({
-            branch: result.branch,
-            changeCount: result.changeCount,
-            linesAdded: result.linesAdded,
-            linesDeleted: result.linesDeleted,
-          });
+          setDraftWorkspaceGit(
+            result.isGitRepo === false
+              ? null
+              : {
+                  branch: result.branch,
+                  changeCount: result.changeCount,
+                  linesAdded: result.linesAdded,
+                  linesDeleted: result.linesDeleted,
+                },
+          );
         }
       })
       .catch(() => {

@@ -210,10 +210,10 @@ export function registerWorkspaceExplorerRoutes(
       const cwd = resolveRequestCwd(context, req.query.cwd);
       const result = await readUncommittedDiffAsync(cwd);
       if (!result) {
-        res.json({ branch: null, changeCount: 0, linesAdded: 0, linesDeleted: 0, files: [] });
+        res.json({ branch: null, changeCount: 0, linesAdded: 0, linesDeleted: 0, files: [], isGitRepo: false });
         return;
       }
-      res.json(result);
+      res.json({ ...result, isGitRepo: true });
     } catch (error) {
       logError('workspace uncommitted diff request failed', { message: error instanceof Error ? error.message : String(error) });
       writeWorkspaceError(res, error);
