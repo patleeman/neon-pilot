@@ -150,6 +150,7 @@ function areChatViewPropsEqual(previous: ChatViewProps, next: ChatViewProps): bo
     (previous.remoteControlled ?? false) === (next.remoteControlled ?? false) &&
     (previous.remoteControlStatus ?? null) === (next.remoteControlStatus ?? null) &&
     previous.precomputedRenderItems === next.precomputedRenderItems &&
+    previous.onOpenFilePath === next.onOpenFilePath &&
     previous.validatedFilePathTargets === next.validatedFilePathTargets
   );
 }

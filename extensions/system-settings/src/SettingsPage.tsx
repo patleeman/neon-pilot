@@ -97,6 +97,10 @@ const SETTINGS_SELECT_LABELS: Record<string, Record<string, string>> = {
     collapsed: 'Start collapsed',
     expanded: 'Always expanded',
   },
+  'systemFiles.transcriptPathLinkTarget': {
+    fileExplorer: 'File Explorer',
+    desktop: 'Desktop',
+  },
 };
 const SETTINGS_ROW_GROUP_CLASS = 'settings-page-row-group';
 

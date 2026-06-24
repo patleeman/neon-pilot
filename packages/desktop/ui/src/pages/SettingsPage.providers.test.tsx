@@ -550,6 +550,33 @@ describe('SettingsPage provider model editor', () => {
     expect(updateSettingsMock).toHaveBeenCalledWith({ 'sample.label': 'New label' });
   });
 
+  it('renders File Explorer path link target options as human labels', async () => {
+    settingsResult = buildUseApiResult({ 'systemFiles.transcriptPathLinkTarget': 'fileExplorer' });
+    settingsSchemaResult = buildUseApiResult([
+      {
+        extensionId: 'system-files',
+        key: 'systemFiles.transcriptPathLinkTarget',
+        type: 'select',
+        default: 'fileExplorer',
+        enum: ['fileExplorer', 'desktop'],
+        description: 'Where validated transcript file path links open.',
+        group: 'File Explorer',
+        order: 20,
+      },
+    ]);
+
+    const { container } = renderPage('settings-extensions');
+    await flushAsyncWork();
+
+    const select = container.querySelector('select');
+    if (!(select instanceof HTMLSelectElement)) {
+      throw new Error('Expected File Explorer path link target select');
+    }
+
+    expect(Array.from(select.options).map((option) => option.textContent)).toEqual(['File Explorer', 'Desktop']);
+    expect(container.textContent).not.toContain('fileExplorer');
+  });
+
   it('adds a model directly to a picked built-in provider without saving the provider first', async () => {
     const { container } = renderPage('settings-providers');
     await flushAsyncWork();

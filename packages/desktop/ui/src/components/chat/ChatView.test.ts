@@ -258,8 +258,8 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('packages/desktop/ui/src/app/main.tsx');
     expect(html).toContain('relative file');
     expect(html.match(/href="file:\/\/packages\/desktop\/ui\/src\/app\//g)).toHaveLength(2);
-    expect(html).toContain('title="Open packages/desktop/ui/src/app/App.tsx in File Explorer"');
-    expect(html).toContain('title="Open packages/desktop/ui/src/app/main.tsx in File Explorer"');
+    expect(html).toContain('title="Open packages/desktop/ui/src/app/App.tsx"');
+    expect(html).toContain('title="Open packages/desktop/ui/src/app/main.tsx"');
     expect(html).not.toContain('href="packages/desktop/ui/src/content/latexArtifacts.ts"');
   });
 
@@ -270,7 +270,7 @@ describe('chat view streaming disclosure', () => {
     });
 
     expect(html).toContain('packages/desktop/ui/src/app/App.tsx');
-    expect(html).not.toContain('title="Open packages/desktop/ui/src/app/App.tsx in File Explorer"');
+    expect(html).not.toContain('title="Open packages/desktop/ui/src/app/App.tsx"');
   });
 
   it('renders commit hashes as clickable transcript controls when a checkpoint opener is available', () => {

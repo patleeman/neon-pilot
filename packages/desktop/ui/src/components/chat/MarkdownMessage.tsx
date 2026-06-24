@@ -95,7 +95,7 @@ function FilePathLink({ path, targetPath, onOpenFilePath }: { path: string; targ
     <a
       href={`file://${encodeURI(targetPath)}`}
       className="font-mono text-[0.82em] text-accent underline decoration-accent/35 underline-offset-2 transition-colors hover:decoration-accent"
-      title={`Open ${targetPath} in File Explorer`}
+      title={`Open ${targetPath}`}
       onClick={(event) => {
         if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) {
           return;
