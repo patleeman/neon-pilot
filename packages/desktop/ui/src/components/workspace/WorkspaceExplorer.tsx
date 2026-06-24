@@ -29,6 +29,7 @@ import type {
   WorkspaceGitStatusChange,
 } from '../../shared/types';
 import { useTheme } from '../../ui-state/theme';
+import { clampViewportMenuPosition, estimateContextMenuHeight } from '../shared/contextMenuPosition';
 import { ContextMenuWrapper } from '../shared/ContextMenuWrapper';
 import { TextPromptDialog } from '../shared/TextPromptDialog';
 import { useFileTreeModel } from '../shared/useFileTreeModel';
@@ -64,6 +65,8 @@ interface WorkspaceExplorerProps {
 }
 
 type LoadState<T> = { status: 'idle' | 'loading'; data: T | null; error: string | null };
+
+const WORKSPACE_SELECTION_CONTEXT_MENU_WIDTH = 224;
 
 type TreeNodeState = {
   expanded: boolean;
@@ -1443,7 +1446,19 @@ export function WorkspaceFileDocument({
 
       event.preventDefault();
       closeSelectionContextMenu();
-      setSelectionContextMenu({ x: event.clientX, y: event.clientY, text });
+      const menuItemCount = 1 + Number(Boolean(onReplyWithSelection));
+      const position = clampViewportMenuPosition(
+        { x: event.clientX, y: event.clientY },
+        {
+          width: WORKSPACE_SELECTION_CONTEXT_MENU_WIDTH,
+          height: estimateContextMenuHeight({ itemCount: menuItemCount, separatorCount: menuItemCount > 1 ? 1 : 0 }),
+        },
+        {
+          width: typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerWidth,
+          height: typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerHeight,
+        },
+      );
+      setSelectionContextMenu({ ...position, text });
     },
     [closeSelectionContextMenu, copySelectedText, onReplyWithSelection, replyWithSelectedText],
   );
@@ -1511,8 +1526,8 @@ export function WorkspaceFileDocument({
       {selectionContextMenu ? (
         <div
           ref={selectionContextMenuRef}
-          className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
-          style={{ left: selectionContextMenu.x, top: selectionContextMenu.y }}
+          className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0"
+          style={{ left: selectionContextMenu.x, top: selectionContextMenu.y, minWidth: WORKSPACE_SELECTION_CONTEXT_MENU_WIDTH }}
           role="menu"
           aria-label="Selected file text actions"
         >

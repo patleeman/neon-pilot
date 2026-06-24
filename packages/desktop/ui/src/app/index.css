@@ -207,11 +207,19 @@
   }
 
   .ui-context-menu-shell {
-    @apply rounded-xl border border-border-default bg-surface p-1 shadow-2xl;
+    @apply rounded-lg border border-border-default bg-surface p-0.5 shadow-2xl;
+  }
+
+  .ui-menu-group-label {
+    @apply px-2 pb-[3px] pt-1 text-[11px] font-semibold leading-[14px] text-dim;
+  }
+
+  .ui-menu-separator {
+    @apply mx-1 my-0.5 h-px bg-border-subtle;
   }
 
   .ui-context-menu-item {
-    @apply flex w-full items-center rounded-md px-2.5 py-1.5 text-left text-[13px] font-medium leading-5 text-primary transition-colors hover:bg-elevated/70 focus-visible:outline-none focus-visible:bg-elevated/70 disabled:cursor-default disabled:opacity-40;
+    @apply flex w-full items-center rounded-[5px] px-2 py-1 text-left text-[13px] font-medium leading-[18px] text-primary transition-colors hover:bg-elevated/70 focus-visible:outline-none focus-visible:bg-elevated/70 disabled:cursor-default disabled:opacity-40;
   }
 
   .ui-overlay-backdrop {

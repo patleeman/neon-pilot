@@ -1,6 +1,7 @@
 import { type MouseEvent as ReactMouseEvent, type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 
 import { writeClipboardText } from '../../desktop/clipboard';
+import { clampViewportMenuPosition, estimateContextMenuHeight } from '../shared/contextMenuPosition';
 import { findSelectionReplyScopeElement, findSelectionReplyScopeElements, readSelectedTextWithinElement } from './replySelection.js';
 
 interface ReplySelectionState {
@@ -36,27 +37,18 @@ function clearWindowSelection() {
   window.getSelection()?.removeAllRanges();
 }
 
-function readSafeGeometryNumber(value: number, fallback: number): number {
-  return Number.isSafeInteger(value) ? value : fallback;
-}
-
 export function constrainSelectionContextMenuPosition(
   menuState: ReplySelectionContextMenuState,
   viewport: { width: number; height: number },
 ): ReplySelectionContextMenuState {
   const menuWidth = 224;
   const menuItemCount = 1 + Number(Boolean(menuState.replySelection));
-  const menuHeight = menuItemCount * 33 + (menuItemCount > 1 ? 11 : 10);
-  const edgePadding = 12;
-  const viewportWidth = readSafeGeometryNumber(viewport.width, menuWidth + edgePadding * 2);
-  const viewportHeight = readSafeGeometryNumber(viewport.height, menuHeight + edgePadding * 2);
-  const x = readSafeGeometryNumber(menuState.x, edgePadding);
-  const y = readSafeGeometryNumber(menuState.y, edgePadding);
+  const menuHeight = estimateContextMenuHeight({ itemCount: menuItemCount, separatorCount: menuItemCount > 1 ? 1 : 0 });
+  const position = clampViewportMenuPosition(menuState, { width: menuWidth, height: menuHeight }, viewport);
 
   return {
     ...menuState,
-    x: Math.max(edgePadding, Math.min(x, viewportWidth - menuWidth - edgePadding)),
-    y: Math.max(edgePadding, Math.min(y, viewportHeight - menuHeight - edgePadding)),
+    ...position,
   };
 }
 

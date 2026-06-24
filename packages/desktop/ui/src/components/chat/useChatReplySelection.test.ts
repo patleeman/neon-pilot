@@ -67,7 +67,7 @@ describe('useChatReplySelection helpers', () => {
     expect(constrainSelectionContextMenuPosition(menu({ x: 1, y: 2 }), { width: 500, height: 300 })).toMatchObject({ x: 12, y: 12 });
     expect(constrainSelectionContextMenuPosition(menu({ x: 490, y: 290 }), { width: 500, height: 300 })).toMatchObject({
       x: 264,
-      y: 245,
+      y: 254,
     });
   });
 
@@ -90,7 +90,7 @@ describe('useChatReplySelection helpers', () => {
         width: 500,
         height: 300,
       }),
-    ).toMatchObject({ x: 264, y: 211 });
+    ).toMatchObject({ x: 264, y: 221 });
   });
 
   it('rejects malformed reply selection message indexes', () => {

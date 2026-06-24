@@ -113,6 +113,7 @@ import {
 } from '../store';
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
+import { clampViewportMenuPosition, CONTEXT_MENU_EDGE_PADDING_PX, estimateContextMenuHeight } from './shared/contextMenuPosition';
 import { TextPromptDialog } from './shared/TextPromptDialog';
 import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
 import { cx, IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
@@ -681,8 +682,8 @@ function ThreadsFilterButton({
     }
 
     const menuWidth = 172;
-    const menuHeight = 320;
-    const edgePadding = 12;
+    const menuHeight = 288;
+    const edgePadding = CONTEXT_MENU_EDGE_PADDING_PX;
     const viewportWidth = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerWidth;
     const viewportHeight = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerHeight;
 
@@ -894,15 +895,12 @@ function ConversationCwdGroupHeader({
 
   function openDomContextMenu(x: number, y: number) {
     const menuWidth = 214;
-    const menuHeight = Math.max(1, menuActionCount) * 33 + (showMenuDivider ? 9 : 0) + 10;
+    const menuHeight = estimateContextMenuHeight({ itemCount: menuActionCount, separatorCount: showMenuDivider ? 1 : 0 });
     const viewportWidth = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerWidth;
     const viewportHeight = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerHeight;
-    const edgePadding = 12;
-
-    setMenuPosition({
-      x: Math.max(edgePadding, Math.min(x, viewportWidth - menuWidth - edgePadding)),
-      y: Math.max(edgePadding, Math.min(y, viewportHeight - menuHeight - edgePadding)),
-    });
+    setMenuPosition(
+      clampViewportMenuPosition({ x, y }, { width: menuWidth, height: menuHeight }, { width: viewportWidth, height: viewportHeight }),
+    );
     setMenuOpen(true);
   }
 
@@ -1354,15 +1352,12 @@ const OpenConversationRow = memo(function OpenConversationRow({
 
   function openDomContextMenu(x: number, y: number) {
     const menuWidth = 224;
-    const menuHeight = Math.max(1, contextMenuItemCount) * 33 + 10;
+    const menuHeight = estimateContextMenuHeight({ itemCount: contextMenuItemCount });
     const viewportWidth = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerWidth;
     const viewportHeight = typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerHeight;
-    const edgePadding = 12;
-
-    setMenuPosition({
-      x: Math.max(edgePadding, Math.min(x, viewportWidth - menuWidth - edgePadding)),
-      y: Math.max(edgePadding, Math.min(y, viewportHeight - menuHeight - edgePadding)),
-    });
+    setMenuPosition(
+      clampViewportMenuPosition({ x, y }, { width: menuWidth, height: menuHeight }, { width: viewportWidth, height: viewportHeight }),
+    );
     setMenuOpen(true);
   }
 
