@@ -142,7 +142,7 @@ export function SkillSearchSettingsView({
         <div className="space-y-1">
           <h3 className="text-base font-medium text-primary">Skill Search</h3>
           <SupportingText>
-            Upstream skill repositories are searched on demand. Trusted skills install after vetting; community skills require approval.
+            Searches use an isolated no-tools reviewer. Trusted skills install after vetting; community skills require approval.
           </SupportingText>
         </div>
         <ToolbarButton onClick={onRefresh} disabled={loading} aria-label="Refresh Skill Search state">

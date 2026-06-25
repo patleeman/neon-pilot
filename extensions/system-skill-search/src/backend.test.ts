@@ -190,18 +190,117 @@ describe('system-skill-search backend', () => {
     );
     const { ctx, store } = createCtx();
 
-    const result = (await searchSkills({ query: 'review', limit: 10 }, ctx as never)) as {
-      candidates: Array<{ id: string; title: string; trustLevel: string }>;
-      recommendedCandidate: { candidateId: string; candidate: { title: string; trustLevel: string }; reason: string };
+    const result = (await searchSkills({ intent: 'review pull requests', limit: 10 }, ctx as never)) as {
+      candidates: Array<{ candidateId: string; title: string; trustLevel: string; riskSummary: string }>;
+      discovery: { status: string; reviewer: string; tools: string };
+      rawCandidateCount: number;
     };
 
     expect(result.candidates.map((candidate) => candidate.title)).toContain('Review Helper');
     expect(result.candidates.map((candidate) => candidate.title)).toContain('Reviewer');
     expect(result.candidates.map((candidate) => candidate.title)).toContain('Evil Review');
-    expect(result.recommendedCandidate.candidateId).toBeTruthy();
-    expect(result.recommendedCandidate.candidate.trustLevel).toBe('trusted');
-    expect(result.recommendedCandidate.reason).toContain('Selected');
+    expect(result.discovery).toMatchObject({ reviewer: 'isolated-no-tools-agent', tools: 'none' });
+    expect(result.rawCandidateCount).toBeGreaterThan(0);
+    expect(result).not.toHaveProperty('recommendedCandidate');
+    expect(runAgentTaskMock).toHaveBeenCalledWith(expect.objectContaining({ tools: 'none' }), expect.anything());
     expect([...store.keys()].filter((key) => key.startsWith('candidates/')).length).toBeGreaterThan(0);
+  });
+
+  it('uses the isolated discovery reviewer shortlist when it returns candidate ids', async () => {
+    const archive = createTarGz({
+      'safe-skill-main/skills/reviewer/SKILL.md':
+        '---\nname: reviewer\ndescription: Review pull requests.\n---\nUse this when reviewing code.',
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const textUrl = String(url);
+        if (textUrl.includes('skills-index.json')) {
+          return jsonResponse({
+            skills: [
+              {
+                name: 'reviewer',
+                description: 'Review pull requests.',
+                trust_level: 'community',
+                repo: 'example/safe-skill',
+                path: 'skills/reviewer',
+              },
+            ],
+          });
+        }
+        if (textUrl.includes('codeload.github.com/example/safe-skill/tar.gz/refs/heads/main')) {
+          return bufferResponse(archive);
+        }
+        if (textUrl.includes('/repos/example/safe-skill')) {
+          return jsonResponse({ default_branch: 'main', tree: [] });
+        }
+        if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
+        return jsonResponse({});
+      }),
+    );
+    const { ctx } = createCtx();
+    const candidateId = 'f8e8198bea1cf624';
+    runAgentTaskMock.mockResolvedValueOnce({
+      text: JSON.stringify({
+        summary: 'Reviewer is the closest fit.',
+        candidates: [
+          {
+            candidateId,
+            fitReason: 'Directly covers pull request review.',
+            riskSummary: 'Community source; approval required.',
+            previewSummary: 'Review workflow.',
+          },
+        ],
+      }),
+    });
+
+    const result = (await searchSkills({ intent: 'review pull requests', limit: 10 }, ctx as never)) as {
+      candidates: Array<{ candidateId: string; fitReason: string; requiresApproval: boolean }>;
+      discovery: { status: string; tools: string };
+    };
+
+    expect(result.discovery).toMatchObject({ status: 'reviewed', tools: 'none' });
+    expect(result.candidates).toEqual([
+      expect.objectContaining({
+        candidateId,
+        fitReason: 'Directly covers pull request review.',
+        requiresApproval: true,
+      }),
+    ]);
+    expect(runAgentTaskMock).toHaveBeenCalledTimes(1);
+    expect(runAgentTaskMock.mock.calls[0]?.[0]).toMatchObject({ tools: 'none' });
+    expect(runAgentTaskMock.mock.calls[0]?.[0].prompt).toContain('You cannot fetch, write files, read the local machine, run bash');
+  });
+
+  it('searches trusted GitHub archives when API tree fetches are rate-limited', async () => {
+    const archive = createTarGz({
+      'skills-main/skills/pdf/SKILL.md':
+        '---\nname: pdf\ndescription: Read, extract, and process PDF documents.\n---\nUse this for PDF parsing.',
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const textUrl = String(url);
+        if (textUrl.includes('skills-index.json')) return jsonResponse({ skills: [] });
+        if (textUrl.includes('api.github.com/repos/anthropics/skills')) {
+          return jsonResponse({ message: 'API rate limit exceeded' }, 403);
+        }
+        if (textUrl.includes('codeload.github.com/anthropics/skills/tar.gz/refs/heads/main')) {
+          return bufferResponse(archive);
+        }
+        if (textUrl.includes('/repos/')) return jsonResponse({ tree: [] });
+        return jsonResponse({});
+      }),
+    );
+    const { ctx } = createCtx();
+
+    const result = (await searchSkills({ intent: 'read and extract PDF files', limit: 10 }, ctx as never)) as {
+      candidates: Array<{ title: string; sourceLabel: string; trustLevel: string }>;
+    };
+
+    expect(result.candidates).toContainEqual(
+      expect.objectContaining({ title: 'Pdf', sourceLabel: 'Anthropic Skills', trustLevel: 'trusted' }),
+    );
   });
 
   it('installs trusted vetted candidates without prompting for approval', async () => {
@@ -326,50 +425,44 @@ describe('system-skill-search backend', () => {
     expect(ctx.runtime.refreshSkillMcpConfig).not.toHaveBeenCalled();
   });
 
-  it('selects and installs the best matching skill from a query without user candidate selection', async () => {
-    const archive = createTarGz({
-      'safe-skill-main/skills/reviewer/SKILL.md':
-        '---\nname: reviewer\ndescription: Review pull requests.\n---\nUse this when reviewing code.',
+  it('requires install callers to pass an explicit candidate id', async () => {
+    const { ctx } = createCtx();
+
+    await expect(installSkill({ query: 'review pull requests', limit: 10 }, ctx as never)).rejects.toThrow('candidateId is required.');
+
+    expect(ctx.ui.confirm).not.toHaveBeenCalled();
+    expect(ctx.runtime.refreshSkillMcpConfig).not.toHaveBeenCalled();
+  });
+
+  it('uses user-facing model review unavailable copy in community approval details', async () => {
+    installFetchMock({
+      'SKILL.md': '---\nname: reviewer\ndescription: Review pull requests.\n---\nUse this when reviewing code.',
     });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => {
-        const textUrl = String(url);
-        if (textUrl.includes('skills-index.json')) {
-          return jsonResponse({
-            skills: [
-              {
-                name: 'reviewer',
-                description: 'Review pull requests.',
-                trust_level: 'community',
-                repo: 'example/safe-skill',
-                path: 'skills/reviewer',
-              },
-            ],
-          });
-        }
-        if (textUrl.includes('codeload.github.com/example/safe-skill/tar.gz/refs/heads/main')) {
-          return bufferResponse(archive);
-        }
-        if (textUrl.includes('/repos/example/safe-skill')) {
-          return jsonResponse({ default_branch: 'main' });
-        }
-        if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
-        return jsonResponse({});
-      }),
-    );
-    const { ctx, files } = createCtx();
+    const { ctx } = createCtx();
+    runAgentTaskMock.mockRejectedValueOnce(new Error('No API key for provider: openai-codex'));
+    ctx.ui.confirm.mockResolvedValueOnce({ confirmed: false, status: 'declined' });
+    await ctx.storage.put('candidates/community-unavailable-review', {
+      id: 'community-unavailable-review',
+      name: 'reviewer',
+      title: 'Reviewer',
+      description: 'Review pull requests.',
+      sourceId: 'hermes-index',
+      sourceLabel: 'Hermes Skills Index',
+      sourceKind: 'hermes-index',
+      trustLevel: 'community',
+      identifier: 'example/safe-skill/skills/reviewer',
+      repo: 'example/safe-skill',
+      path: 'skills/reviewer',
+      tags: [],
+      url: 'https://github.com/example/safe-skill/tree/main/skills/reviewer',
+    });
 
-    const result = (await installSkill({ query: 'review pull requests', limit: 10 }, ctx as never)) as {
-      ok: boolean;
-      installed: { title: string; trustLevel: string };
-    };
+    await installSkill({ candidateId: 'community-unavailable-review' }, ctx as never);
 
-    expect(result.ok).toBe(true);
-    expect(result.installed).toMatchObject({ title: 'Reviewer', trustLevel: 'community' });
-    expect(files.get('installed-skills/reviewer/SKILL.md')).toContain('Review pull requests');
-    expect(ctx.ui.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'Install community skill' }));
-    expect(ctx.runtime.refreshSkillMcpConfig).toHaveBeenCalled();
+    const confirmOptions = ctx.ui.confirm.mock.calls[0]?.[0] as { details?: Array<{ label: string; value: string }> };
+    const vettingDetail = confirmOptions.details?.find((detail) => detail.label === 'Vetting')?.value;
+    expect(vettingDetail).toBe('Deterministic scan found no blocking issues. Model review unavailable: no reviewer API key is saved.');
+    expect(vettingDetail).not.toContain('openai-codex');
   });
 
   it('cancels community installs when approval times out', async () => {

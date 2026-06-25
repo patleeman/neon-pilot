@@ -4,20 +4,20 @@ Searches upstream skill repositories, previews fetched skills through a quaranti
 
 ## Agent tools
 
-| Tool            | Purpose                                                                                       |
-| --------------- | --------------------------------------------------------------------------------------------- |
-| `skill_search`  | Search upstream catalogs and repositories and return the recommended best-fit skill.          |
-| `skill_preview` | Fetch a candidate into quarantine, run deterministic checks, and run a no-tool model review.  |
-| `skill_install` | Select from a query or install a chosen candidate, then vet, approve when required, and save. |
+| Tool            | Purpose                                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
+| `skill_search`  | Search upstream catalogs and repositories, then return a ranked shortlist from a no-tool discovery reviewer. |
+| `skill_preview` | Fetch a candidate into quarantine, run deterministic checks, and run a no-tool model review.                 |
+| `skill_install` | Install a chosen candidate id, then vet, approve when required, and save.                                    |
 
 Agents should not show users a list of candidates or ask them which skill to install. The intended flow is:
 
 1. Search for the needed capability.
-2. Read the returned candidates and recommendation.
-3. Select the best fit, or call `skill_install` with a query so the tool selects the best match.
-4. Let `skill_install` handle vetting, trusted-source installation, and community approval.
+2. Read the returned shortlist and choose the best fit as the agent.
+3. Call `skill_install` with the chosen `candidateId`.
+4. Let `skill_install` handle authoritative re-fetching, vetting, trusted-source installation, and community approval.
 
-`skill_install` does not accept an approval flag. Community candidates trigger the host approval shelf after vetting passes; declined or timed-out approvals cancel installation.
+`skill_search` runs the discovery review through a no-tools agent task. That reviewer receives only host-fetched upstream previews and metadata; it cannot run bash, read the local filesystem, write files, inspect secrets, or call general tools. `skill_install` does not accept a query or approval flag. Community candidates trigger the host approval shelf after vetting passes; declined or timed-out approvals cancel installation.
 
 ## Sources
 

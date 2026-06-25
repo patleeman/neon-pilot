@@ -65,6 +65,7 @@ describe('SkillSearchSettingsPanel', () => {
     const html = renderToStaticMarkup(<SkillSearchSettingsView state={LOADED_STATE} />);
 
     expect(html).toContain('Sources');
+    expect(html).toContain('isolated no-tools reviewer');
     expect(html).toContain('Hermes Skills Index');
     expect(html).toContain('Community');
     expect(html).toContain('Recent Previews');

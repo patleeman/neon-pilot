@@ -63,6 +63,43 @@ interface PreviewRecord {
   previewedAt: string;
 }
 
+interface DiscoveryPreview {
+  candidate: SkillCandidate;
+  fetched: boolean;
+  files: string[];
+  totalBytes?: number;
+  contentHash?: string;
+  skillMarkdown?: string;
+  deterministicFindings: VetFinding[];
+  fetchError?: string;
+}
+
+interface DiscoveryCandidateSummary {
+  candidateId: string;
+  title: string;
+  description: string;
+  sourceLabel: string;
+  trustLevel: TrustLevel;
+  identifier: string;
+  url: string;
+  rank: number;
+  fitReason: string;
+  riskSummary: string;
+  previewSummary: string;
+  requiresApproval: boolean;
+  files: string[];
+  totalBytes?: number;
+  contentHash?: string;
+}
+
+interface DiscoveryReviewResult {
+  status: 'reviewed' | 'fallback';
+  reviewer: 'isolated-no-tools-agent';
+  tools: 'none';
+  summary: string;
+  raw?: string;
+}
+
 interface InstalledSkillRecord {
   id: string;
   candidateId: string;
@@ -78,13 +115,6 @@ interface InstalledSkillRecord {
   contentHash: string;
   installedAt: string;
   vetting: VetResult;
-}
-
-interface SkillRecommendation {
-  candidateId: string;
-  candidate: SkillCandidate;
-  reason: string;
-  score: number;
 }
 
 interface GitHubSource {
@@ -112,6 +142,9 @@ const QUARANTINE_DIR = 'quarantine';
 const SEARCH_TIMEOUT_MS = 25_000;
 const FETCH_TIMEOUT_MS = 20_000;
 const VET_TIMEOUT_MS = 20_000;
+const DISCOVERY_REVIEW_TIMEOUT_MS = 20_000;
+const DISCOVERY_PREVIEW_LIMIT = 8;
+const DISCOVERY_SHORTLIST_LIMIT = 5;
 const MAX_SEARCH_RESULTS = 20;
 const MAX_TREE_SKILL_FILES_PER_SOURCE = 80;
 const MAX_BUNDLE_FILES = 120;
@@ -123,16 +156,20 @@ const COMMUNITY_APPROVAL_TIMEOUT_MS = 60_000;
 
 export async function searchSkills(input: unknown, ctx: ExtensionBackendContext) {
   const body = asRecord(input);
-  const query = readString(body.query);
-  if (!query) throw new Error('query is required.');
+  const intent = readString(body.intent) || readString(body.query);
+  if (!intent) throw new Error('intent is required.');
+  const context = readString(body.context);
+  const query = buildSearchQuery(intent, context);
   const limit = clampInteger(body.limit, 8, 1, MAX_SEARCH_RESULTS);
-  const candidates = await searchAndStoreCandidates(query, limit, ctx);
-  const recommendation = selectBestCandidate(query, candidates);
+  const discoveredCandidates = await searchAndStoreCandidates(query, limit, ctx);
+  const discovery = await discoverSkillShortlist({ intent, context, candidates: discoveredCandidates, ctx });
   return {
     ok: true,
+    intent,
     query,
-    candidates,
-    recommendedCandidate: recommendation,
+    candidates: discovery.candidates,
+    discovery: discovery.review,
+    rawCandidateCount: discoveredCandidates.length,
     searchedSources: ['hermes-index', ...TRUSTED_GITHUB_SOURCES.map((source) => source.id)],
     omittedSources: ['skills.sh', 'well-known endpoints', 'direct URLs', 'ClawHub', 'LobeHub', 'browse.sh'],
   };
@@ -153,7 +190,7 @@ export async function previewSkill(input: unknown, ctx: ExtensionBackendContext)
 }
 
 export async function installSkill(input: unknown, ctx: ExtensionBackendContext) {
-  const candidate = await resolveInstallCandidate(input, ctx);
+  const candidate = await requireCandidate(input, ctx);
   const preview = await prepareSkill(candidate, ctx, 'Vet and install upstream skill.');
   if (!preview.vetting.allowed) throw new Error(`Skill did not pass vetting: ${preview.vetting.summary}`);
 
@@ -270,20 +307,6 @@ export async function listState(_input: unknown, ctx: ExtensionBackendContext) {
   };
 }
 
-async function resolveInstallCandidate(input: unknown, ctx: ExtensionBackendContext): Promise<SkillCandidate> {
-  const body = asRecord(input);
-  const candidateId = readString(body.candidateId);
-  if (candidateId) return requireCandidateId(candidateId, ctx);
-
-  const query = readString(body.query);
-  if (!query) throw new Error('candidateId or query is required.');
-  const limit = clampInteger(body.limit, 8, 1, MAX_SEARCH_RESULTS);
-  const candidates = await searchAndStoreCandidates(query, limit, ctx);
-  const recommendation = selectBestCandidate(query, candidates);
-  if (!recommendation) throw new Error(`No matching skill found for "${query}".`);
-  return recommendation.candidate;
-}
-
 async function requireCandidate(input: unknown, ctx: ExtensionBackendContext): Promise<SkillCandidate> {
   const body = asRecord(input);
   const candidateId = readString(body.candidateId);
@@ -304,9 +327,252 @@ async function searchAndStoreCandidates(query: string, limit: number, ctx: Exten
     ...TRUSTED_GITHUB_SOURCES.map((source) => searchGitHubSource(source, query, limit, deadline).catch(() => [])),
   ];
   const settled = await Promise.allSettled(tasks);
-  const candidates = dedupeCandidates(settled.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))).slice(0, limit);
+  const candidates = rankCandidatesForQuery(
+    query,
+    dedupeCandidates(settled.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))),
+  ).slice(0, limit);
   await Promise.all(candidates.map((candidate) => ctx.storage.put(`${CANDIDATE_KEY}${candidate.id}`, candidate)));
   return candidates;
+}
+
+async function discoverSkillShortlist({
+  intent,
+  context,
+  candidates,
+  ctx,
+}: {
+  intent: string;
+  context: string;
+  candidates: SkillCandidate[];
+  ctx: ExtensionBackendContext;
+}): Promise<{ candidates: DiscoveryCandidateSummary[]; review: DiscoveryReviewResult }> {
+  if (candidates.length === 0) {
+    return {
+      candidates: [],
+      review: {
+        status: 'fallback',
+        reviewer: 'isolated-no-tools-agent',
+        tools: 'none',
+        summary: 'No upstream skill candidates matched the requested intent.',
+      },
+    };
+  }
+
+  const previews = await Promise.all(candidates.slice(0, DISCOVERY_PREVIEW_LIMIT).map((candidate) => fetchDiscoveryPreview(candidate)));
+  const modelReview = await runDiscoveryReview(intent, context, previews, ctx);
+  if (modelReview.candidates.length > 0) return modelReview;
+
+  return {
+    candidates: rankDiscoveryFallback(intent, previews),
+    review: modelReview.review,
+  };
+}
+
+async function fetchDiscoveryPreview(candidate: SkillCandidate): Promise<DiscoveryPreview> {
+  try {
+    const bundle = await fetchCandidateBundle(candidate);
+    const findings = deterministicScan(bundle);
+    return {
+      candidate,
+      fetched: true,
+      files: Object.keys(bundle.files).sort(),
+      totalBytes: bundle.totalBytes,
+      contentHash: bundle.contentHash,
+      skillMarkdown: bundle.files['SKILL.md'] ?? '',
+      deterministicFindings: findings.slice(0, 12),
+    };
+  } catch (error) {
+    return {
+      candidate,
+      fetched: false,
+      files: [],
+      deterministicFindings: [],
+      fetchError: readErrorMessage(error),
+    };
+  }
+}
+
+async function runDiscoveryReview(
+  intent: string,
+  context: string,
+  previews: DiscoveryPreview[],
+  ctx: ExtensionBackendContext,
+): Promise<{ candidates: DiscoveryCandidateSummary[]; review: DiscoveryReviewResult }> {
+  const prompt = [
+    'You are an isolated skill discovery reviewer.',
+    'You have no tools. You cannot fetch, write files, read the local machine, run bash, inspect secrets, or call other tools.',
+    'Review only the candidate metadata and fetched preview text below.',
+    'Choose the 1 to 5 best skill candidates for the main agent to consider. Prefer trusted sources when fit is comparable.',
+    'Do not ask the user to choose. Do not approve installation. Installation will re-fetch and re-vet the chosen candidate.',
+    'Return compact JSON only: {"summary":"...","candidates":[{"candidateId":"...","fitReason":"...","riskSummary":"...","previewSummary":"..."}]}',
+    '',
+    `Intent: ${intent}`,
+    context ? `Context: ${context}` : 'Context: none provided',
+    '',
+    truncateForReview(JSON.stringify(previews.map(renderDiscoveryPreviewForReview), null, 2), 42_000),
+  ].join('\n');
+
+  try {
+    const result = await runAgentTask({ prompt, tools: 'none', timeoutMs: DISCOVERY_REVIEW_TIMEOUT_MS }, ctx);
+    const parsed = parseJsonObject(result.text);
+    const candidateRows = Array.isArray(parsed.candidates) ? parsed.candidates : [];
+    const summaries = summarizeDiscoveryRows(previews, candidateRows, DISCOVERY_SHORTLIST_LIMIT);
+    if (summaries.length > 0) {
+      return {
+        candidates: summaries,
+        review: {
+          status: 'reviewed',
+          reviewer: 'isolated-no-tools-agent',
+          tools: 'none',
+          summary: readString(parsed.summary) || 'Isolated no-tools discovery reviewer returned a ranked shortlist.',
+          raw: result.text,
+        },
+      };
+    }
+    return {
+      candidates: [],
+      review: {
+        status: 'fallback',
+        reviewer: 'isolated-no-tools-agent',
+        tools: 'none',
+        summary: 'Isolated no-tools discovery reviewer did not return usable candidate ids; using metadata fallback ranking.',
+        raw: result.text,
+      },
+    };
+  } catch (error) {
+    return {
+      candidates: [],
+      review: {
+        status: 'fallback',
+        reviewer: 'isolated-no-tools-agent',
+        tools: 'none',
+        summary: `${formatModelReviewUnavailableSummary(error)} Using metadata fallback ranking.`,
+      },
+    };
+  }
+}
+
+function summarizeDiscoveryRows(previews: DiscoveryPreview[], rows: unknown[], limit: number): DiscoveryCandidateSummary[] {
+  const byId = new Map(previews.map((preview) => [preview.candidate.id, preview]));
+  const seen = new Set<string>();
+  const summaries: DiscoveryCandidateSummary[] = [];
+  for (const row of rows) {
+    const record = asRecord(row);
+    const candidateId = readString(record.candidateId);
+    const preview = byId.get(candidateId);
+    if (!preview || seen.has(candidateId)) continue;
+    seen.add(candidateId);
+    summaries.push(
+      createDiscoverySummary(preview, summaries.length + 1, {
+        fitReason: readString(record.fitReason),
+        riskSummary: readString(record.riskSummary),
+        previewSummary: readString(record.previewSummary),
+      }),
+    );
+    if (summaries.length >= limit) break;
+  }
+  return summaries;
+}
+
+function rankDiscoveryFallback(intent: string, previews: DiscoveryPreview[]): DiscoveryCandidateSummary[] {
+  return [...previews]
+    .sort(
+      (left, right) =>
+        scoreDiscoveryPreview(intent, right) - scoreDiscoveryPreview(intent, left) ||
+        trustRank(right.candidate.trustLevel) - trustRank(left.candidate.trustLevel) ||
+        left.candidate.sourceLabel.localeCompare(right.candidate.sourceLabel) ||
+        left.candidate.title.localeCompare(right.candidate.title),
+    )
+    .slice(0, DISCOVERY_SHORTLIST_LIMIT)
+    .map((preview, index) => createDiscoverySummary(preview, index + 1, {}));
+}
+
+function createDiscoverySummary(
+  preview: DiscoveryPreview,
+  rank: number,
+  model: { fitReason?: string; riskSummary?: string; previewSummary?: string },
+): DiscoveryCandidateSummary {
+  const candidate = preview.candidate;
+  return {
+    candidateId: candidate.id,
+    title: candidate.title,
+    description: candidate.description,
+    sourceLabel: candidate.sourceLabel,
+    trustLevel: candidate.trustLevel,
+    identifier: candidate.identifier,
+    url: candidate.url,
+    rank,
+    fitReason: model.fitReason || fallbackFitReason(candidate),
+    riskSummary: model.riskSummary || fallbackRiskSummary(preview),
+    previewSummary: model.previewSummary || fallbackPreviewSummary(preview),
+    requiresApproval: candidate.trustLevel === 'community',
+    files: preview.files,
+    totalBytes: preview.totalBytes,
+    contentHash: preview.contentHash,
+  };
+}
+
+function renderDiscoveryPreviewForReview(preview: DiscoveryPreview) {
+  return {
+    candidateId: preview.candidate.id,
+    title: preview.candidate.title,
+    description: preview.candidate.description,
+    sourceLabel: preview.candidate.sourceLabel,
+    trustLevel: preview.candidate.trustLevel,
+    identifier: preview.candidate.identifier,
+    url: preview.candidate.url,
+    fetched: preview.fetched,
+    fetchError: preview.fetchError,
+    files: preview.files.slice(0, 24),
+    totalBytes: preview.totalBytes,
+    contentHash: preview.contentHash,
+    deterministicFindings: preview.deterministicFindings,
+    skillMarkdown: preview.skillMarkdown ? truncateForReview(preview.skillMarkdown, 8_000) : '',
+  };
+}
+
+function scoreDiscoveryPreview(intent: string, preview: DiscoveryPreview): number {
+  const tokens = tokenizeQuery(intent);
+  const candidate = preview.candidate;
+  const searchable = [
+    candidate.title,
+    candidate.name,
+    candidate.description,
+    candidate.identifier,
+    candidate.tags.join(' '),
+    preview.skillMarkdown ?? '',
+  ]
+    .join(' ')
+    .toLowerCase();
+  let score = trustRank(candidate.trustLevel) * 30;
+  if (preview.fetched) score += 10;
+  if (preview.deterministicFindings.some((finding) => finding.severity === 'critical' || finding.severity === 'high')) score -= 100;
+  for (const token of tokens) {
+    if (searchable.includes(token)) score += 8;
+  }
+  return score;
+}
+
+function fallbackFitReason(candidate: SkillCandidate): string {
+  return candidate.description
+    ? `Matches by upstream metadata: ${candidate.description.slice(0, 180)}`
+    : `Matches by upstream name and source metadata from ${candidate.sourceLabel}.`;
+}
+
+function fallbackRiskSummary(preview: DiscoveryPreview): string {
+  if (preview.fetchError) return `Preview fetch failed: ${preview.fetchError.slice(0, 180)} Install will retry and re-vet before use.`;
+  if (preview.deterministicFindings.length > 0) {
+    const highest = preview.deterministicFindings[0];
+    return `Preliminary deterministic scan found ${preview.deterministicFindings.length} issue(s); highest shown: ${highest.severity} ${highest.category}.`;
+  }
+  return preview.candidate.trustLevel === 'community'
+    ? 'Preliminary scan found no blocking issues. Community install still requires approval after authoritative vetting.'
+    : 'Preliminary scan found no blocking issues. Install will re-run authoritative vetting.';
+}
+
+function fallbackPreviewSummary(preview: DiscoveryPreview): string {
+  const frontmatter = parseFrontmatter(preview.skillMarkdown ?? '');
+  return readString(frontmatter.description) || firstBodySentence(preview.skillMarkdown ?? '') || preview.candidate.description;
 }
 
 async function prepareSkill(candidate: SkillCandidate, ctx: ExtensionBackendContext, reason: string): Promise<PreviewRecord> {
@@ -366,7 +632,8 @@ async function searchHermesIndex(query: string, limit: number, deadline: number)
 }
 
 async function searchGitHubSource(source: GitHubSource, query: string, limit: number, deadline: number): Promise<SkillCandidate[]> {
-  const tree = await fetchGitHubTree(source.repo, deadline);
+  const tree = await fetchGitHubTree(source.repo, deadline).catch(() => null);
+  if (!tree) return searchGitHubSourceFromArchive(source, query, limit, deadline).catch(() => []);
   const queryLower = query.toLowerCase();
   const skillPaths = tree
     .filter((item) => item.type === 'blob' && item.path.endsWith('/SKILL.md') && source.paths.some((base) => item.path.startsWith(base)))
@@ -399,6 +666,51 @@ async function searchGitHubSource(source: GitHubSource, query: string, limit: nu
     if (candidates.length >= limit) break;
   }
   return candidates;
+}
+
+async function searchGitHubSourceFromArchive(
+  source: GitHubSource,
+  query: string,
+  limit: number,
+  deadline: number,
+): Promise<SkillCandidate[]> {
+  const queryLower = query.toLowerCase();
+  const branches = ['main', 'master'];
+  let lastError: unknown = null;
+  for (const branch of branches) {
+    try {
+      const skillFiles = await fetchGitHubArchiveSkillMarkdownFiles(source.repo, branch, source.paths, deadline);
+      const candidates: SkillCandidate[] = [];
+      for (const item of skillFiles) {
+        const skillDir = item.path.slice(0, -'/SKILL.md'.length);
+        const frontmatter = parseFrontmatter(item.content);
+        const name = readString(frontmatter.name) || skillDir.split('/').pop() || skillDir;
+        const description = readString(frontmatter.description) || firstBodySentence(item.content) || `Skill from ${source.label}.`;
+        const tags = readStringArray(asRecord(frontmatter.metadata).tags ?? frontmatter.tags);
+        const searchable = `${name} ${description} ${skillDir} ${tags.join(' ')}`.toLowerCase();
+        if (!queryMatches(searchable, queryLower)) continue;
+        candidates.push(
+          createCandidate({
+            name,
+            description,
+            sourceId: source.id,
+            sourceLabel: source.label,
+            sourceKind: 'github',
+            trustLevel: source.trustLevel,
+            identifier: `${source.repo}/${skillDir}`,
+            repo: source.repo,
+            path: skillDir,
+            tags,
+          }),
+        );
+        if (candidates.length >= limit) break;
+      }
+      return candidates;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('GitHub archive source search failed.');
 }
 
 async function fetchCandidateBundle(candidate: SkillCandidate): Promise<SkillBundle> {
@@ -462,6 +774,24 @@ async function fetchGitHubArchiveSkillFiles(
   return extractSkillFilesFromTar(unpacked, candidatePath);
 }
 
+async function fetchGitHubArchiveSkillMarkdownFiles(
+  repo: string,
+  branch: string,
+  sourcePaths: string[],
+  deadline: number,
+): Promise<Array<{ path: string; content: string }>> {
+  const url = `https://codeload.github.com/${repo}/tar.gz/refs/heads/${encodeURIComponent(branch)}`;
+  const response = await fetchWithDeadline(url, deadline, { accept: 'application/gzip' });
+  if (!response.ok) throw new Error(`GitHub archive fetch failed with HTTP ${response.status}.`);
+  const archive = Buffer.from(await response.arrayBuffer());
+  if (archive.byteLength > MAX_ARCHIVE_BYTES) throw new Error(`GitHub archive exceeds ${formatBytes(MAX_ARCHIVE_BYTES)}.`);
+  const unpacked = gunzipSync(archive);
+  if (unpacked.byteLength > MAX_ARCHIVE_UNPACKED_BYTES) {
+    throw new Error(`GitHub archive expands beyond ${formatBytes(MAX_ARCHIVE_UNPACKED_BYTES)}.`);
+  }
+  return extractSkillMarkdownFilesFromTar(unpacked, sourcePaths);
+}
+
 function extractSkillFilesFromTar(archive: Buffer, candidatePath: string): Record<string, string> {
   const prefix = `${candidatePath.replace(/\/+$/, '')}/`;
   const files: Record<string, string> = {};
@@ -489,6 +819,34 @@ function extractSkillFilesFromTar(archive: Buffer, candidatePath: string): Recor
           throw new Error(`Skill bundle has too many files; maximum is ${MAX_BUNDLE_FILES}.`);
         files[relPath] = content;
       }
+    }
+    offset = nextOffset;
+  }
+  return files;
+}
+
+function extractSkillMarkdownFilesFromTar(archive: Buffer, sourcePaths: string[]): Array<{ path: string; content: string }> {
+  const normalizedSourcePaths = sourcePaths.map((sourcePath) => sourcePath.replace(/\/+$/, '') + '/');
+  const files: Array<{ path: string; content: string }> = [];
+  for (let offset = 0; offset + 512 <= archive.byteLength; ) {
+    const header = archive.subarray(offset, offset + 512);
+    if (isZeroBlock(header)) break;
+    const name = tarString(header, 0, 100);
+    const prefixName = tarString(header, 345, 155);
+    const path = normalizeBundlePath(stripArchiveRoot(prefixName ? `${prefixName}/${name}` : name));
+    const typeFlag = String.fromCharCode(header[156] || 0);
+    const size = parseInt(tarString(header, 124, 12).trim() || '0', 8) || 0;
+    const contentOffset = offset + 512;
+    const nextOffset = contentOffset + Math.ceil(size / 512) * 512;
+    if (nextOffset > archive.byteLength) throw new Error('GitHub archive is truncated.');
+    if (
+      (typeFlag === '0' || typeFlag === '\0') &&
+      path.endsWith('/SKILL.md') &&
+      normalizedSourcePaths.some((sourcePath) => path.startsWith(sourcePath))
+    ) {
+      if (size > MAX_FILE_BYTES) throw new Error(`Skill file ${path} exceeds ${formatBytes(MAX_FILE_BYTES)}.`);
+      files.push({ path, content: archive.subarray(contentOffset, contentOffset + size).toString('utf8') });
+      if (files.length >= MAX_TREE_SKILL_FILES_PER_SOURCE) break;
     }
     offset = nextOffset;
   }
@@ -557,8 +915,19 @@ async function runModelReview(
     }
     return { status: 'unavailable', summary: 'Model review returned an unrecognized verdict.', raw: result.text };
   } catch (error) {
-    return { status: 'unavailable', summary: `Model review unavailable: ${error instanceof Error ? error.message : String(error)}` };
+    return { status: 'unavailable', summary: formatModelReviewUnavailableSummary(error) };
   }
+}
+
+function formatModelReviewUnavailableSummary(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/api key|provider|credential|auth/i.test(message)) {
+    return 'Model review unavailable: no reviewer API key is saved.';
+  }
+  if (/timeout|timed out|aborted/i.test(message)) {
+    return 'Model review unavailable: the reviewer timed out.';
+  }
+  return 'Model review unavailable: the model reviewer could not complete.';
 }
 
 function deterministicScan(bundle: SkillBundle): VetFinding[] {
@@ -748,61 +1117,35 @@ function dedupeCandidates(candidates: SkillCandidate[]): SkillCandidate[] {
   );
 }
 
-function selectBestCandidate(query: string, candidates: SkillCandidate[]): SkillRecommendation | null {
-  if (candidates.length === 0) return null;
-  const scored = candidates.map((candidate) => ({ candidate, score: scoreCandidateForQuery(query, candidate) }));
-  scored.sort(
+function rankCandidatesForQuery(query: string, candidates: SkillCandidate[]): SkillCandidate[] {
+  return [...candidates].sort(
     (left, right) =>
-      right.score - left.score ||
-      trustRank(right.candidate.trustLevel) - trustRank(left.candidate.trustLevel) ||
-      left.candidate.sourceLabel.localeCompare(right.candidate.sourceLabel) ||
-      left.candidate.title.localeCompare(right.candidate.title),
+      scoreCandidateRelevance(query, right) - scoreCandidateRelevance(query, left) ||
+      trustRank(right.trustLevel) - trustRank(left.trustLevel) ||
+      left.sourceLabel.localeCompare(right.sourceLabel) ||
+      left.title.localeCompare(right.title),
   );
-  const best = scored[0];
-  return {
-    candidateId: best.candidate.id,
-    candidate: best.candidate,
-    score: best.score,
-    reason: buildRecommendationReason(query, best.candidate),
-  };
 }
 
-function scoreCandidateForQuery(query: string, candidate: SkillCandidate): number {
-  const tokens = tokenizeQuery(query);
-  const exactQuery = query.trim().toLowerCase();
+function scoreCandidateRelevance(query: string, candidate: SkillCandidate): number {
+  const tokens = tokenizeQuery(query).filter(isUsefulSearchToken);
+  const exactQuery = query.toLowerCase();
   const title = candidate.title.toLowerCase();
   const name = candidate.name.toLowerCase();
   const description = candidate.description.toLowerCase();
   const identifier = candidate.identifier.toLowerCase();
   const tags = candidate.tags.join(' ').toLowerCase();
-  let score = trustRank(candidate.trustLevel) * 100;
-
-  if (exactQuery && title.includes(exactQuery)) score += 50;
-  if (exactQuery && name.includes(exactQuery)) score += 35;
-  if (exactQuery && description.includes(exactQuery)) score += 20;
-  if (exactQuery && tags.includes(exactQuery)) score += 18;
-  if (exactQuery && identifier.includes(exactQuery)) score += 8;
-
+  let score = 0;
+  if (exactQuery && title.includes(exactQuery)) score += 80;
+  if (exactQuery && description.includes(exactQuery)) score += 40;
   for (const token of tokens) {
-    if (title.includes(token)) score += 12;
-    if (name.includes(token)) score += 10;
-    if (description.includes(token)) score += 6;
-    if (tags.includes(token)) score += 5;
-    if (identifier.includes(token)) score += 2;
+    if (title.includes(token)) score += 24;
+    if (name.includes(token)) score += 20;
+    if (description.includes(token)) score += 12;
+    if (tags.includes(token)) score += 8;
+    if (identifier.includes(token)) score += 4;
   }
-
   return score;
-}
-
-function buildRecommendationReason(query: string, candidate: SkillCandidate): string {
-  const trust =
-    candidate.trustLevel === 'community'
-      ? 'it is the strongest community match and will require approval before install'
-      : `it comes from trusted source ${candidate.sourceLabel}`;
-  const match = candidate.description
-    ? `matches "${query}" with description: ${candidate.description.slice(0, 160)}`
-    : `matches "${query}" by name and source metadata`;
-  return `Selected ${candidate.title} because ${trust} and ${match}.`;
 }
 
 function trustRank(trustLevel: TrustLevel): number {
@@ -817,6 +1160,39 @@ function tokenizeQuery(query: string): string[] {
     .split(/[^a-z0-9_.-]+/i)
     .map((token) => token.trim())
     .filter(Boolean);
+}
+
+function buildSearchQuery(intent: string, context: string): string {
+  return (
+    uniqueStrings([...tokenizeQuery(`${intent} ${context}`)].filter(isUsefulSearchToken))
+      .slice(0, 12)
+      .join(' ') || intent
+  );
+}
+
+function isUsefulSearchToken(token: string): boolean {
+  const stopwords = new Set([
+    'and',
+    'are',
+    'file',
+    'files',
+    'for',
+    'from',
+    'how',
+    'into',
+    'like',
+    'need',
+    'that',
+    'the',
+    'this',
+    'skill',
+    'skills',
+    'tool',
+    'use',
+    'with',
+    'work',
+  ]);
+  return token.length > 2 && !stopwords.has(token);
 }
 
 function parseFrontmatter(content: string): Record<string, unknown> {
@@ -844,12 +1220,10 @@ function firstBodySentence(content: string): string {
 }
 
 function queryMatches(searchable: string, queryLower: string): boolean {
-  const tokens = queryLower
-    .split(/[^a-z0-9_.-]+/i)
-    .map((token) => token.trim())
-    .filter(Boolean);
+  const tokens = tokenizeQuery(queryLower).filter(isUsefulSearchToken).slice(0, 12);
   if (tokens.length === 0) return false;
-  return tokens.every((token) => searchable.includes(token));
+  const hits = tokens.filter((token) => searchable.includes(token)).length;
+  return hits >= Math.min(2, tokens.length) || (hits > 0 && tokens.some((token) => token.length >= 5 && searchable.includes(token)));
 }
 
 function parseGitHubIdentifier(identifier: string): { repo: string; path: string } | null {
@@ -938,6 +1312,10 @@ function parseJsonObject(text: string): Record<string, unknown> {
 
 function readString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function readErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function readStringArray(value: unknown): string[] {

@@ -16,7 +16,7 @@
         "id": "searchSkills",
         "handler": "searchSkills",
         "title": "Search upstream skills",
-        "worker": { "enabled": true, "timeoutMs": 30000 }
+        "worker": { "enabled": true, "timeoutMs": 90000 }
       },
       {
         "id": "previewSkill",
@@ -50,20 +50,21 @@
         "id": "skill-search",
         "name": "skill_search",
         "title": "Search Skills",
-        "description": "Search upstream skill repositories and return the best matching skill recommendation before hand-writing a workflow.",
+        "description": "Search upstream skill repositories with an isolated no-tools discovery reviewer and return a ranked shortlist for the agent to choose from.",
         "action": "searchSkills",
         "promptGuidelines": [
-          "Use this before inventing a new recurring workflow skill; search results are metadata only and include source trust level.",
-          "Do not ask the user to choose from the candidate list. Read the candidates, select the best fit yourself, and use recommendedCandidate.candidateId when it is suitable.",
-          "If a suitable skill exists, call skill_install for the chosen candidate. Only the host approval shelf should ask the user to approve community installs."
+          "Call with the capability intent and relevant task context before inventing a recurring workflow skill.",
+          "The tool performs upstream search, host-controlled preview fetching, and isolated no-tools discovery review; it returns a ranked shortlist, not a user decision.",
+          "Read the shortlist, choose the best candidate yourself, and call skill_install with that candidateId. Do not ask the user to pick from the list."
         ],
         "inputSchema": {
           "type": "object",
           "properties": {
-            "query": { "type": "string", "description": "Skill topic, workflow, product, or capability to search for." },
+            "intent": { "type": "string", "description": "Capability, workflow, or product context the agent needs a skill for." },
+            "context": { "type": "string", "description": "Optional task context that helps the isolated discovery reviewer judge fit." },
             "limit": { "type": "number", "description": "Maximum results, capped at 20." }
           },
-          "required": ["query"],
+          "required": ["intent"],
           "additionalProperties": false
         }
       },
@@ -90,8 +91,7 @@
         "description": "Fetch, vet, and install the selected upstream skill. Trusted sources install directly; community sources trigger host approval.",
         "action": "installSkill",
         "promptGuidelines": [
-          "Prefer calling with a query when you know the needed capability; the tool will search, select the best matching candidate, vet it, and install it.",
-          "Call with a candidateId only when you have already selected the best candidate from skill_search results.",
+          "Call only after you have selected the best candidate from skill_search results.",
           "Do not ask the user to choose a skill or to approve in chat. Community approvals are handled by the host approval shelf."
         ],
         "inputSchema": {
@@ -100,13 +100,9 @@
             "candidateId": {
               "type": "string",
               "description": "Candidate id returned by skill_search after the agent selected the best fit."
-            },
-            "query": {
-              "type": "string",
-              "description": "Capability or workflow needed; the tool searches and installs the best matching skill."
-            },
-            "limit": { "type": "number", "description": "Maximum search results to consider when query is provided, capped at 20." }
+            }
           },
+          "required": ["candidateId"],
           "additionalProperties": false
         }
       }
