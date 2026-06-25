@@ -363,6 +363,13 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('Related Views');
   });
 
+  it('right-aligns appearance accent choices within the settings action column', () => {
+    const html = renderPage('/settings', ['settings-appearance']);
+
+    expect(html).toContain('aria-label="Accent color"');
+    expect(html).toContain('class="flex w-full flex-wrap justify-end gap-2"');
+  });
+
   it('shows a desktop bridge warning instead of hiding desktop connections when preload is unavailable', () => {
     vi.stubGlobal('window', {
       neonPilotDesktop: undefined,

@@ -3437,7 +3437,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                     </Select>
                   </SettingsControlRow>
                   <SettingsControlRow title="Accent">
-                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Accent color">
+                    <div className="flex w-full flex-wrap justify-end gap-2" role="radiogroup" aria-label="Accent color">
                       {availableAccents.map((entry) => {
                         const isSelected = accent === entry.id;
                         const currentTokens = theme.includes('dark') ? entry.dark : entry.light;
