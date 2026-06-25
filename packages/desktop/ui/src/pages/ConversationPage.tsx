@@ -13,6 +13,7 @@ import {
 import { buildSlashMenuItems, parseSlashInput, type SlashMenuItem } from '../commands/slashMenu';
 import { ComposerAttachmentShelf } from '../components/chat/ComposerAttachmentShelf';
 import { detectTranscriptPathCandidates, normalizeTranscriptPathTarget } from '../components/chat/transcriptPathLinks';
+import { ConversationApprovalShelf } from '../components/conversation/ConversationApprovalShelf';
 import { ConversationComposer } from '../components/conversation/ConversationComposer';
 import { ConversationComposerInputControls } from '../components/conversation/ConversationComposerInputControls';
 import { MentionMenu, ModelPicker, SlashMenu } from '../components/conversation/ConversationComposerMenus';
@@ -292,6 +293,7 @@ import { buildExtensionMentionItems } from '../extensions/extensionMentions';
 import { createNativeExtensionClient } from '../extensions/nativePaClient';
 import { NewConversationPanelHost } from '../extensions/NewConversationPanelHost';
 import type { ExtensionMentionRegistration, ExtensionSlashCommandRegistration } from '../extensions/types';
+import { useExtensionBackendConfirmations } from '../extensions/useExtensionBackendConfirmations';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { INITIAL_STREAM_STATE, retryLiveSessionActionAfterTakeover } from '../hooks/sessionStream';
 import { useConversationEventVersion } from '../hooks/useConversationEventVersion';
@@ -1397,6 +1399,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   });
   const pendingAskUserQuestion = useMemo(() => findPendingAskUserQuestion(realMessages), [realMessages]);
   const pendingAskUserQuestionKey = useMemo(() => buildPendingAskUserQuestionKey(pendingAskUserQuestion), [pendingAskUserQuestion]);
+  const {
+    confirm: pendingExtensionApproval,
+    remainingMs: extensionApprovalRemainingMs,
+    confirmApproval,
+    declineApproval,
+  } = useExtensionBackendConfirmations();
   const composerQuestionAnswersStorageKey = useMemo(
     () => buildComposerQuestionAnswersStorageKey(id, pendingAskUserQuestionKey),
     [id, pendingAskUserQuestionKey],
@@ -7064,6 +7072,15 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                     }}
                   />
                 </Suspense>
+              )}
+
+              {pendingExtensionApproval && (
+                <ConversationApprovalShelf
+                  confirm={pendingExtensionApproval}
+                  remainingMs={extensionApprovalRemainingMs}
+                  onCancel={declineApproval}
+                  onConfirm={confirmApproval}
+                />
               )}
 
               {pendingAskUserQuestion && composerActiveQuestion && (

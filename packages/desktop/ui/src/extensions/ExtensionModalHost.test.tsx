@@ -9,24 +9,15 @@ import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from './extensionModalCommands';
 import { ExtensionModalHost, resolveExtensionModalSizeClasses } from './ExtensionModalHost';
 import { systemExtensionModules } from './systemExtensionModules';
 
-vi.mock('../client/api', () => ({
-  api: {
-    resolveExtensionUiConfirmation: vi.fn(async () => ({ ok: true, acknowledged: true })),
-  },
-}));
-
 vi.mock('./commands', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./commands')>()),
   setExtensionCommandContext: vi.fn(),
 }));
 
-const { api } = await import('../client/api');
-
 describe('ExtensionModalHost confirm bridge', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.mocked(setExtensionCommandContext).mockClear();
-    vi.mocked(api.resolveExtensionUiConfirmation).mockClear();
     vi.useRealTimers();
   });
 
@@ -84,7 +75,7 @@ describe('ExtensionModalHost confirm bridge', () => {
     await expect(result).resolves.toBe(false);
   });
 
-  it('answers backend UI confirmations through the host approval popup', async () => {
+  it('does not render backend UI confirmations as dialogs', () => {
     render(<ExtensionModalHost />);
 
     act(() => {
@@ -98,50 +89,13 @@ describe('ExtensionModalHost confirm bridge', () => {
             confirmLabel: 'Install',
             cancelLabel: 'Cancel',
             timeoutMs: 60_000,
-            details: [
-              { label: 'Skill', value: 'Reviewer' },
-              { label: 'Source', value: 'Community Skills' },
-            ],
           },
         }),
       );
     });
 
-    expect(await screen.findByRole('dialog')).not.toBeNull();
-    expect(screen.getByText('Install Reviewer from Community Skills?')).not.toBeNull();
-    expect(screen.getByText('Community Skills')).not.toBeNull();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Install' }));
-
-    await waitFor(() => expect(api.resolveExtensionUiConfirmation).toHaveBeenCalledWith('confirm-1', 'confirmed'));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  });
-
-  it('reports timeout for backend UI confirmations', async () => {
-    vi.useFakeTimers();
-    render(<ExtensionModalHost />);
-
-    act(() => {
-      window.dispatchEvent(
-        new CustomEvent('neon-pilot-extension-ui-confirm', {
-          detail: {
-            requestId: 'confirm-timeout',
-            extensionId: 'system-skill-search',
-            title: 'Install community skill',
-            message: 'Install Reviewer?',
-            timeoutMs: 5_000,
-          },
-        }),
-      );
-    });
-
-    expect(screen.getByRole('dialog')).not.toBeNull();
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(5_250);
-    });
-
-    expect(api.resolveExtensionUiConfirmation).toHaveBeenCalledWith('confirm-timeout', 'timeout');
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByText('Install Reviewer from Community Skills?')).toBeNull();
   });
 });
 
