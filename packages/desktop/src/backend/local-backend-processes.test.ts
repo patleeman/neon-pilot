@@ -351,6 +351,63 @@ describe('LocalBackendProcesses', () => {
     });
   });
 
+  it('routes extension-host UI confirmations through the local backend child and returns the response', async () => {
+    const extensionHost = new FakeChildProcess();
+    const backendChild = new FakeChildProcess();
+    childProcessMocks.spawn
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => extensionHost.emit('message', { type: 'ready', port: 4101, token: 'extension-host-token' }));
+        return extensionHost;
+      })
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => backendChild.emit('message', { type: 'ready', port: 5101, token: 'backend-token' }));
+        return backendChild;
+      });
+
+    const backend = new LocalBackendProcesses();
+    await backend.ensureStarted();
+
+    extensionHost.emit('message', {
+      type: 'extension-ui-confirm-request',
+      id: 'confirm-1',
+      extensionId: 'system-skill-search',
+      input: { message: 'Install community skill?', timeoutMs: 60_000 },
+    });
+
+    let request: { id?: string; method?: string; args?: unknown[] } | undefined;
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      request = backendChild.send.mock.calls
+        .map((call) => call[0] as typeof request)
+        .find((message) => message?.method === 'requestExtensionUiConfirmFromExtensionHost');
+      if (request) break;
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
+
+    expect(request).toMatchObject({
+      type: 'local-api-rpc-request',
+      method: 'requestExtensionUiConfirmFromExtensionHost',
+      args: [
+        {
+          extensionId: 'system-skill-search',
+          input: { message: 'Install community skill?', timeoutMs: 60_000 },
+        },
+      ],
+    });
+
+    backendChild.emit('message', { type: 'local-api-rpc-response', id: request?.id, ok: true, result: { approved: true } });
+
+    let response: { type?: string; id?: string; ok?: boolean; result?: unknown } | undefined;
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      response = extensionHost.send.mock.calls
+        .map((call) => call[0] as typeof response)
+        .find((message) => message?.type === 'extension-ui-confirm-response');
+      if (response) break;
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
+
+    expect(response).toMatchObject({ type: 'extension-ui-confirm-response', id: 'confirm-1', ok: true, result: { approved: true } });
+  });
+
   it('preserves packaged app roots without synthesizing a repo root for child processes', () => {
     const originalEnv = { ...process.env };
     try {

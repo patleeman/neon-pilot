@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
+import { gunzipSync } from 'node:zlib';
 
 import type { ExtensionBackendContext, ExtensionScopedFileSystem } from '@neon-pilot/extensions';
 import { runAgentTask } from '@neon-pilot/extensions/backend/agent';
@@ -109,6 +110,8 @@ const MAX_TREE_SKILL_FILES_PER_SOURCE = 80;
 const MAX_BUNDLE_FILES = 120;
 const MAX_FILE_BYTES = 256 * 1024;
 const MAX_BUNDLE_BYTES = 1024 * 1024;
+const MAX_ARCHIVE_BYTES = 25 * 1024 * 1024;
+const MAX_ARCHIVE_UNPACKED_BYTES = 100 * 1024 * 1024;
 const COMMUNITY_APPROVAL_TIMEOUT_MS = 60_000;
 
 export async function searchSkills(input: unknown, ctx: ExtensionBackendContext) {
@@ -369,6 +372,9 @@ async function searchGitHubSource(source: GitHubSource, query: string, limit: nu
 
 async function fetchCandidateBundle(candidate: SkillCandidate): Promise<SkillBundle> {
   if (!candidate.repo || !candidate.path) throw new Error('Candidate does not include a fetchable GitHub path.');
+  const archiveBundle = await fetchCandidateBundleFromArchive(candidate).catch(() => null);
+  if (archiveBundle) return archiveBundle;
+
   const deadline = Date.now() + FETCH_TIMEOUT_MS;
   const tree = await fetchGitHubTree(candidate.repo, deadline);
   const prefix = `${candidate.path.replace(/\/+$/, '')}/`;
@@ -391,6 +397,83 @@ async function fetchCandidateBundle(candidate: SkillCandidate): Promise<SkillBun
   return { candidate, files, totalBytes, contentHash };
 }
 
+async function fetchCandidateBundleFromArchive(candidate: SkillCandidate): Promise<SkillBundle> {
+  if (!candidate.repo || !candidate.path) throw new Error('Candidate does not include a fetchable GitHub path.');
+  const deadline = Date.now() + FETCH_TIMEOUT_MS;
+  const branches = uniqueStrings([branchFromCandidate(candidate), 'main', 'master']);
+  let lastError: unknown = null;
+  for (const branch of branches) {
+    try {
+      const files = await fetchGitHubArchiveSkillFiles(candidate.repo, branch, candidate.path, deadline);
+      return buildSkillBundle(candidate, files);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('GitHub archive fetch failed.');
+}
+
+async function fetchGitHubArchiveSkillFiles(
+  repo: string,
+  branch: string,
+  candidatePath: string,
+  deadline: number,
+): Promise<Record<string, string>> {
+  const url = `https://codeload.github.com/${repo}/tar.gz/refs/heads/${encodeURIComponent(branch)}`;
+  const response = await fetchWithDeadline(url, deadline, { accept: 'application/gzip' });
+  if (!response.ok) throw new Error(`GitHub archive fetch failed with HTTP ${response.status}.`);
+  const archive = Buffer.from(await response.arrayBuffer());
+  if (archive.byteLength > MAX_ARCHIVE_BYTES) throw new Error(`GitHub archive exceeds ${formatBytes(MAX_ARCHIVE_BYTES)}.`);
+  const unpacked = gunzipSync(archive);
+  if (unpacked.byteLength > MAX_ARCHIVE_UNPACKED_BYTES) {
+    throw new Error(`GitHub archive expands beyond ${formatBytes(MAX_ARCHIVE_UNPACKED_BYTES)}.`);
+  }
+  return extractSkillFilesFromTar(unpacked, candidatePath);
+}
+
+function extractSkillFilesFromTar(archive: Buffer, candidatePath: string): Record<string, string> {
+  const prefix = `${candidatePath.replace(/\/+$/, '')}/`;
+  const files: Record<string, string> = {};
+  let totalBytes = 0;
+  for (let offset = 0; offset + 512 <= archive.byteLength; ) {
+    const header = archive.subarray(offset, offset + 512);
+    if (isZeroBlock(header)) break;
+    const name = tarString(header, 0, 100);
+    const prefixName = tarString(header, 345, 155);
+    const path = normalizeBundlePath(stripArchiveRoot(prefixName ? `${prefixName}/${name}` : name));
+    const typeFlag = String.fromCharCode(header[156] || 0);
+    const size = parseInt(tarString(header, 124, 12).trim() || '0', 8) || 0;
+    const contentOffset = offset + 512;
+    const nextOffset = contentOffset + Math.ceil(size / 512) * 512;
+    if (nextOffset > archive.byteLength) throw new Error('GitHub archive is truncated.');
+    if ((typeFlag === '0' || typeFlag === '\0') && path.startsWith(prefix)) {
+      const relPath = normalizeBundlePath(path.slice(prefix.length));
+      if (relPath) {
+        const content = archive.subarray(contentOffset, contentOffset + size).toString('utf8');
+        const bytes = Buffer.byteLength(content, 'utf8');
+        if (bytes > MAX_FILE_BYTES) throw new Error(`Skill file ${relPath} exceeds ${formatBytes(MAX_FILE_BYTES)}.`);
+        totalBytes += bytes;
+        if (totalBytes > MAX_BUNDLE_BYTES) throw new Error(`Skill bundle exceeds ${formatBytes(MAX_BUNDLE_BYTES)}.`);
+        if (Object.keys(files).length >= MAX_BUNDLE_FILES)
+          throw new Error(`Skill bundle has too many files; maximum is ${MAX_BUNDLE_FILES}.`);
+        files[relPath] = content;
+      }
+    }
+    offset = nextOffset;
+  }
+  return files;
+}
+
+function buildSkillBundle(candidate: SkillCandidate, files: Record<string, string>): SkillBundle {
+  if (!files['SKILL.md']) throw new Error('Skill bundle does not contain SKILL.md.');
+  return {
+    candidate,
+    files,
+    totalBytes: Object.values(files).reduce((sum, content) => sum + Buffer.byteLength(content, 'utf8'), 0),
+    contentHash: hashObject(files),
+  };
+}
+
 async function vetBundle(bundle: SkillBundle, ctx: ExtensionBackendContext): Promise<VetResult> {
   const findings = deterministicScan(bundle);
   const deterministicVerdict = findingsToVerdict(findings);
@@ -398,13 +481,17 @@ async function vetBundle(bundle: SkillBundle, ctx: ExtensionBackendContext): Pro
   const modelVerdict: VetVerdict = modelReview.status === 'rejected' ? 'dangerous' : modelReview.status === 'caution' ? 'caution' : 'safe';
   const verdict = maxVerdict(deterministicVerdict, modelVerdict);
   const allowed = verdict !== 'dangerous';
+  const safeSummary =
+    modelReview.status === 'unavailable'
+      ? `Deterministic scan found no blocking issues. ${modelReview.summary}`
+      : 'Vetting found no blocking issues.';
   return {
     verdict,
     allowed,
     summary: allowed
       ? verdict === 'caution'
         ? 'Vetting found caution-level issues. Install only if the user accepts the risk.'
-        : 'Vetting found no blocking issues.'
+        : safeSummary
       : 'Vetting found dangerous issues and blocked installation.',
     findings,
     modelReview,
@@ -667,6 +754,32 @@ function parseGitHubIdentifier(identifier: string): { repo: string; path: string
   const parts = identifier.split('/').filter(Boolean);
   if (parts.length < 3) return null;
   return { repo: `${parts[0]}/${parts[1]}`, path: parts.slice(2).join('/') };
+}
+
+function branchFromCandidate(candidate: SkillCandidate): string {
+  const match = candidate.url.match(/\/tree\/([^/]+)\//);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
+function isZeroBlock(buffer: Buffer): boolean {
+  return buffer.every((byte) => byte === 0);
+}
+
+function tarString(buffer: Buffer, offset: number, length: number): string {
+  const slice = buffer.subarray(offset, offset + length);
+  const end = slice.indexOf(0);
+  return slice
+    .subarray(0, end >= 0 ? end : slice.length)
+    .toString('utf8')
+    .trim();
+}
+
+function stripArchiveRoot(path: string): string {
+  return path.split('/').filter(Boolean).slice(1).join('/');
 }
 
 function normalizeBundlePath(path: string): string {

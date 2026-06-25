@@ -127,6 +127,7 @@ import { getExecution, getExecutionLog, listConversationExecutions, listExecutio
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import { notifyExtensionStartupStatus } from '../extensions/extensionNotifications.js';
+import { requestExtensionUiConfirm } from '../extensions/extensionUiConfirmBridge.js';
 import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../extensions/workbenchBrowserToolHost.js';
 import { listMemoryDocs, listSkillsForProfile } from '../knowledge/memoryDocs.js';
 import type { ProviderDesktopCapabilityContext } from '../models/providerDesktopCapability.js';
@@ -924,6 +925,38 @@ export async function publishDesktopAppEventFromExtensionHost(event: unknown): P
 
   publishAppEvent(event as AppEvent);
   return { ok: true };
+}
+
+export async function requestExtensionUiConfirmFromExtensionHost(request: unknown): Promise<unknown> {
+  await getLocalRoutes();
+  if (!isRecord(request) || typeof request.extensionId !== 'string' || !isRecord(request.input)) {
+    throw new Error('Invalid extension UI confirmation request.');
+  }
+
+  const input = request.input;
+  if (typeof input.message !== 'string') {
+    throw new Error('Extension UI confirmation message is required.');
+  }
+
+  const details = input.details;
+  if (details !== undefined) {
+    if (!Array.isArray(details)) throw new Error('Extension UI confirmation details must be an array.');
+    for (const detail of details) {
+      if (!isRecord(detail) || typeof detail.label !== 'string' || typeof detail.value !== 'string') {
+        throw new Error('Extension UI confirmation details must include string labels and values.');
+      }
+    }
+  }
+
+  return requestExtensionUiConfirm({
+    extensionId: request.extensionId,
+    message: input.message,
+    ...(typeof input.title === 'string' ? { title: input.title } : {}),
+    ...(typeof input.confirmLabel === 'string' ? { confirmLabel: input.confirmLabel } : {}),
+    ...(typeof input.cancelLabel === 'string' ? { cancelLabel: input.cancelLabel } : {}),
+    ...(typeof input.timeoutMs === 'number' ? { timeoutMs: input.timeoutMs } : {}),
+    ...(Array.isArray(details) ? { details: details as Array<{ label: string; value: string }> } : {}),
+  });
 }
 
 export async function subscribeDesktopLocalApiStream(

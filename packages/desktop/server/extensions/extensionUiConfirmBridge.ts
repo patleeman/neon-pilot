@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { publishAppEvent } from '../shared/appEvents.js';
+import { type AppEvent, publishAppEvent } from '../shared/appEvents.js';
 
 export type ExtensionUiConfirmStatus = 'confirmed' | 'declined' | 'timeout';
 
@@ -17,7 +17,11 @@ export interface ExtensionUiConfirmInput {
 interface PendingUiConfirm {
   resolve: (result: { status: ExtensionUiConfirmStatus; confirmed: boolean }) => void;
   timer: NodeJS.Timeout;
+  event: AppEvent;
+  replayTimer: NodeJS.Timeout;
 }
+
+type ExtensionUiConfirmEvent = Extract<AppEvent, { type: 'extension_ui_confirm' }>;
 
 const pendingConfirms = new Map<string, PendingUiConfirm>();
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -30,7 +34,7 @@ export function requestExtensionUiConfirm(
   const requestId = randomUUID();
   const timeoutMs = clampTimeout(input.timeoutMs);
   const details = normalizeDetails(input.details);
-  publishAppEvent({
+  const event: AppEvent = {
     type: 'extension_ui_confirm',
     requestId,
     extensionId: input.extensionId,
@@ -40,7 +44,7 @@ export function requestExtensionUiConfirm(
     ...(input.confirmLabel ? { confirmLabel: input.confirmLabel } : {}),
     ...(input.cancelLabel ? { cancelLabel: input.cancelLabel } : {}),
     ...(details ? { details } : {}),
-  });
+  };
 
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
@@ -48,7 +52,12 @@ export function requestExtensionUiConfirm(
       resolve({ status: 'timeout', confirmed: false });
     }, timeoutMs);
     timer.unref?.();
-    pendingConfirms.set(requestId, { resolve, timer });
+    const replayTimer = setTimeout(() => {
+      if (pendingConfirms.has(requestId)) publishAppEvent(event);
+    }, 500);
+    replayTimer.unref?.();
+    pendingConfirms.set(requestId, { resolve, timer, event, replayTimer });
+    publishAppEvent(event);
   });
 }
 
@@ -57,8 +66,13 @@ export function resolveExtensionUiConfirm(requestId: string, status: ExtensionUi
   if (!pending) return false;
   pendingConfirms.delete(requestId);
   clearTimeout(pending.timer);
+  clearTimeout(pending.replayTimer);
   pending.resolve({ status, confirmed: status === 'confirmed' });
   return true;
+}
+
+export function listPendingExtensionUiConfirms(): ExtensionUiConfirmEvent[] {
+  return [...pendingConfirms.values()].map((pending) => pending.event as ExtensionUiConfirmEvent);
 }
 
 function clampTimeout(value: unknown): number {

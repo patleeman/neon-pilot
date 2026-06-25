@@ -28,7 +28,7 @@
         "id": "installSkill",
         "handler": "installSkill",
         "title": "Install upstream skill",
-        "worker": { "enabled": true, "timeoutMs": 60000 }
+        "worker": { "enabled": true, "timeoutMs": 120000 }
       },
       {
         "id": "listState",

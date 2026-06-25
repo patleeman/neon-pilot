@@ -317,6 +317,17 @@ export interface LocalApiModule {
     excludeFromContext?: boolean;
   }): Promise<{ ok: true; result: unknown }>;
   abortDesktopLiveSession(conversationId: string): Promise<{ ok: true }>;
+  requestExtensionUiConfirmFromExtensionHost(request: {
+    extensionId: string;
+    input: {
+      title?: string;
+      message: string;
+      confirmLabel?: string;
+      cancelLabel?: string;
+      timeoutMs?: number;
+      details?: Array<{ label: string; value: string }>;
+    };
+  }): Promise<unknown>;
   subscribeDesktopLocalApiStream(path: string, onEvent: (event: DesktopApiStreamEvent) => void): Promise<() => void>;
   subscribeDesktopAppEvents(onEvent: (event: DesktopAppBridgeEvent) => void): Promise<() => void>;
   setDesktopWorkbenchBrowserToolHost?(

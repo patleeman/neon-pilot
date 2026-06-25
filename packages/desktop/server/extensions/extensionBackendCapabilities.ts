@@ -349,7 +349,7 @@ interface ExtensionBackendCapabilitySecrets {
   get(extensionId: string, secretId: string): string | undefined;
 }
 
-interface ExtensionBackendCapabilityUi {
+export interface ExtensionBackendCapabilityUi {
   invalidate(topics: string | string[]): unknown;
   confirm(
     extensionId: string,

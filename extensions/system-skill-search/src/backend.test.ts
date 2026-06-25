@@ -1,3 +1,5 @@
+import { gzipSync } from 'node:zlib';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { runAgentTaskMock } = vi.hoisted(() => ({ runAgentTaskMock: vi.fn() }));
@@ -15,6 +17,10 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 function textResponse(body: string, status = 200): Response {
+  return new Response(body, { status });
+}
+
+function bufferResponse(body: Buffer, status = 200): Response {
   return new Response(body, { status });
 }
 
@@ -66,10 +72,16 @@ function createCtx() {
 }
 
 function installFetchMock(filesByPath: Record<string, string>) {
+  const archive = createTarGz({
+    ...Object.fromEntries(Object.entries(filesByPath).map(([path, content]) => [`safe-skill-main/skills/reviewer/${path}`, content])),
+  });
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
       const textUrl = String(url);
+      if (textUrl.includes('codeload.github.com/example/safe-skill/tar.gz/refs/heads/main')) {
+        return bufferResponse(archive);
+      }
       if (textUrl.includes('/repos/example/safe-skill/git/trees/main')) {
         return jsonResponse({
           tree: Object.keys(filesByPath).map((path) => ({ path: `skills/reviewer/${path}`, type: 'blob' })),
@@ -85,6 +97,48 @@ function installFetchMock(filesByPath: Record<string, string>) {
       return jsonResponse({ tree: [] });
     }),
   );
+}
+
+function installArchiveOnlyFetchMock(filesByPath: Record<string, string>) {
+  const archive = createTarGz({
+    ...Object.fromEntries(Object.entries(filesByPath).map(([path, content]) => [`safe-skill-main/skills/reviewer/${path}`, content])),
+  });
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) => {
+      const textUrl = String(url);
+      if (textUrl.includes('codeload.github.com/example/safe-skill/tar.gz/refs/heads/main')) {
+        return bufferResponse(archive);
+      }
+      if (textUrl.includes('api.github.com/repos/example/safe-skill')) {
+        return jsonResponse({ message: 'API rate limit exceeded' }, 403);
+      }
+      return jsonResponse({ tree: [] });
+    }),
+  );
+}
+
+function createTarGz(files: Record<string, string>): Buffer {
+  const chunks: Buffer[] = [];
+  for (const [path, content] of Object.entries(files)) {
+    const body = Buffer.from(content, 'utf8');
+    const header = Buffer.alloc(512);
+    header.write(path, 0, 100, 'utf8');
+    header.write('0000644\0', 100, 8, 'ascii');
+    header.write('0000000\0', 108, 8, 'ascii');
+    header.write('0000000\0', 116, 8, 'ascii');
+    header.write(body.length.toString(8).padStart(11, '0') + '\0', 124, 12, 'ascii');
+    header.write('00000000000\0', 136, 12, 'ascii');
+    header.fill(' ', 148, 156);
+    header.write('0', 156, 1, 'ascii');
+    header.write('ustar\0', 257, 6, 'ascii');
+    header.write('00', 263, 2, 'ascii');
+    const checksum = [...header].reduce((sum, byte) => sum + byte, 0);
+    header.write(checksum.toString(8).padStart(6, '0') + '\0 ', 148, 8, 'ascii');
+    chunks.push(header, body, Buffer.alloc((512 - (body.length % 512)) % 512));
+  }
+  chunks.push(Buffer.alloc(1024));
+  return gzipSync(Buffer.concat(chunks));
 }
 
 beforeEach(() => {
@@ -173,6 +227,36 @@ describe('system-skill-search backend', () => {
     expect(result.message).toContain('Downloaded trusted skill');
     expect(files.get('installed-skills/reviewer/SKILL.md')).toContain('Review pull requests');
     expect(ctx.ui.confirm).not.toHaveBeenCalled();
+  });
+
+  it('installs from GitHub archives when API tree fetches are rate-limited', async () => {
+    installArchiveOnlyFetchMock({
+      'SKILL.md': '---\nname: reviewer\ndescription: Review pull requests.\n---\nUse this when reviewing code.',
+      'references/checklist.md': 'Focus on bugs and missing tests.',
+    });
+    const { ctx, files } = createCtx();
+    await ctx.storage.put('candidates/safe', {
+      id: 'safe',
+      name: 'reviewer',
+      title: 'Reviewer',
+      description: 'Review pull requests.',
+      sourceId: 'openai-skills-curated',
+      sourceLabel: 'OpenAI Skills',
+      sourceKind: 'github',
+      trustLevel: 'trusted',
+      identifier: 'example/safe-skill/skills/reviewer',
+      repo: 'example/safe-skill',
+      path: 'skills/reviewer',
+      tags: [],
+      url: 'https://github.com/example/safe-skill/tree/main/skills/reviewer',
+    });
+
+    const result = (await installSkill({ candidateId: 'safe' }, ctx as never)) as { ok: boolean; message: string };
+
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain('Downloaded trusted skill');
+    expect(files.get('installed-skills/reviewer/SKILL.md')).toContain('Review pull requests');
+    expect(files.get('installed-skills/reviewer/references/checklist.md')).toContain('Focus on bugs');
   });
 
   it('blocks dangerous preview findings from install', async () => {

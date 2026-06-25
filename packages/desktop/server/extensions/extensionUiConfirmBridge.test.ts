@@ -5,7 +5,8 @@ const publishAppEvent = vi.fn();
 vi.mock('../shared/appEvents.js', () => ({ publishAppEvent }));
 vi.mock('node:crypto', () => ({ randomUUID: () => 'confirm-request-1' }));
 
-const { requestExtensionUiConfirm, resolveExtensionUiConfirm } = await import('./extensionUiConfirmBridge.js');
+const { listPendingExtensionUiConfirms, requestExtensionUiConfirm, resolveExtensionUiConfirm } =
+  await import('./extensionUiConfirmBridge.js');
 
 describe('extensionUiConfirmBridge', () => {
   beforeEach(() => {
@@ -33,8 +34,16 @@ describe('extensionUiConfirmBridge', () => {
       timeoutMs: 30_000,
       details: [{ label: 'Source', value: 'Community Skills' }],
     });
+    expect(listPendingExtensionUiConfirms()).toEqual([
+      expect.objectContaining({
+        type: 'extension_ui_confirm',
+        requestId: 'confirm-request-1',
+        message: 'Install Reviewer?',
+      }),
+    ]);
     expect(resolveExtensionUiConfirm('confirm-request-1', 'confirmed')).toBe(true);
     await expect(promise).resolves.toEqual({ status: 'confirmed', confirmed: true });
+    expect(listPendingExtensionUiConfirms()).toEqual([]);
   });
 
   it('resolves timeout and clears stale responses', async () => {

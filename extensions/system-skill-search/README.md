@@ -1,6 +1,6 @@
 # Skill Search
 
-Searches upstream skill repositories, previews fetched skills through a quarantine and vetting flow, and installs vetted skills into extension-owned storage. Trusted sources install directly after vetting. Community sources require a host-owned timed approval popup.
+Searches upstream skill repositories, previews fetched skills through a quarantine and vetting flow, and installs vetted skills into extension-owned storage. Trusted sources install directly after vetting. Community sources require a host-owned timed approval in the conversation composer area.
 
 ## Agent tools
 
@@ -10,7 +10,7 @@ Searches upstream skill repositories, previews fetched skills through a quaranti
 | `skill_preview` | Fetch a candidate into quarantine, run deterministic checks, and run a no-tool model review. |
 | `skill_install` | Fetch, vet, approve when required, and install a candidate.                                  |
 
-`skill_install` does not accept an approval flag. Community candidates trigger the host approval popup after vetting passes; declined or timed-out approvals cancel installation.
+`skill_install` does not accept an approval flag. Community candidates trigger the host approval shelf after vetting passes; declined or timed-out approvals cancel installation.
 
 ## Sources
 

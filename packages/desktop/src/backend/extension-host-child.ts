@@ -5,6 +5,8 @@ import { PassThrough, Writable } from 'node:stream';
 
 import { setLocalBackendBaseUrl } from '../../server/app/localBackendBaseUrl.js';
 import { createDesktopRealtimeUpgradeHandler } from '../../server/app/realtime.js';
+import type { ExtensionBackendCapabilityUi } from '../../server/extensions/extensionBackendCapabilities.js';
+import { setExtensionHostCapabilityDispatcherOptions } from '../../server/extensions/extensionBackendRunner.js';
 import { setDefaultExtensionBackendWorkerUrl } from '../../server/extensions/extensionBackendWorkerClient.js';
 import {
   createInProcessExtensionHostClient,
@@ -33,6 +35,21 @@ interface ExtensionHostDesktopAppEventMessage {
   event: AppEvent;
 }
 
+interface ExtensionHostUiConfirmRequestMessage {
+  type: 'extension-ui-confirm-request';
+  id: string;
+  extensionId: string;
+  input: Parameters<ExtensionBackendCapabilityUi['confirm']>[1];
+}
+
+interface ExtensionHostUiConfirmResponseMessage {
+  type: 'extension-ui-confirm-response';
+  id: string;
+  ok: boolean;
+  result?: unknown;
+  error?: string;
+}
+
 interface ExtensionHostRequestBody {
   request?: ExtensionHostRequest;
 }
@@ -50,15 +67,56 @@ interface ExtensionHostProtocolRequestBody {
 }
 
 let shuttingDown = false;
+const uiConfirmResponses = new Map<string, (message: ExtensionHostUiConfirmResponseMessage) => void>();
 
 function sendParentMessage(
-  message: ExtensionHostReadyMessage | ExtensionHostDesktopAppEventMessage | { type: 'fatal'; error: string },
+  message:
+    | ExtensionHostReadyMessage
+    | ExtensionHostDesktopAppEventMessage
+    | ExtensionHostUiConfirmRequestMessage
+    | { type: 'fatal'; error: string },
 ): void {
   if (typeof process.send === 'function') {
     process.send(message);
     return;
   }
   process.stdout.write(`${JSON.stringify(message)}\n`);
+}
+
+function isExtensionHostUiConfirmResponse(value: unknown): value is ExtensionHostUiConfirmResponseMessage {
+  return (
+    Boolean(value && typeof value === 'object') &&
+    (value as { type?: unknown }).type === 'extension-ui-confirm-response' &&
+    typeof (value as { id?: unknown }).id === 'string'
+  );
+}
+
+async function requestLocalBackendUiConfirm(
+  extensionId: string,
+  input: Parameters<ExtensionBackendCapabilityUi['confirm']>[1],
+): Promise<unknown> {
+  if (typeof process.send !== 'function') {
+    throw new Error('Extension UI confirmation bridge is unavailable.');
+  }
+
+  const id = randomUUID();
+  const timeoutMs = Math.max(1_000, Math.min(180_000, (typeof input.timeoutMs === 'number' ? input.timeoutMs : 60_000) + 10_000));
+
+  return await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      uiConfirmResponses.delete(id);
+      reject(new Error('Extension UI confirmation bridge timed out.'));
+    }, timeoutMs);
+    timeout.unref?.();
+
+    uiConfirmResponses.set(id, (message) => {
+      clearTimeout(timeout);
+      if (message.ok) resolve(message.result);
+      else reject(new Error(message.error || 'Extension UI confirmation bridge failed.'));
+    });
+
+    sendParentMessage({ type: 'extension-ui-confirm-request', id, extensionId, input });
+  });
 }
 
 function assertAuthorized(request: IncomingMessage, token: string): void {
@@ -222,6 +280,15 @@ async function shutdown(server: ReturnType<typeof createServer>): Promise<void> 
 
 async function main(): Promise<void> {
   setDefaultExtensionBackendWorkerUrl(new URL('../../server/dist/extensions/extensionBackendWorker.js', import.meta.url));
+  setExtensionHostCapabilityDispatcherOptions({
+    ui: {
+      invalidate: (topics) => {
+        const items = Array.isArray(topics) ? topics : [topics];
+        sendParentMessage({ type: 'desktop-app-event', event: { type: 'invalidate', topics: items } as AppEvent });
+      },
+      confirm: requestLocalBackendUiConfirm,
+    },
+  });
   setExtensionHostClient(createInProcessExtensionHostClient());
   installSharedConversationServiceContext();
   subscribeAppEvents((event) => {
@@ -348,6 +415,11 @@ async function main(): Promise<void> {
   sendParentMessage({ type: 'ready', port: address.port, token });
 
   process.on('message', (message) => {
+    if (isExtensionHostUiConfirmResponse(message)) {
+      uiConfirmResponses.get(message.id)?.(message);
+      uiConfirmResponses.delete(message.id);
+      return;
+    }
     if (message && typeof message === 'object' && (message as { type?: unknown }).type === 'shutdown') {
       void shutdown(server);
     }

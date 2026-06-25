@@ -343,6 +343,21 @@ export const api = {
     ),
   acknowledgeExtensionCommand: async (requestId: string, handled: boolean) =>
     extensionPost<{ ok: true; acknowledged: boolean }>(`/extensions/commands/acks/${encodeURIComponent(requestId)}`, { handled }),
+  extensionUiConfirmations: async () =>
+    extensionGet<{
+      ok: true;
+      confirmations: Array<{
+        type: 'extension_ui_confirm';
+        requestId: string;
+        extensionId: string;
+        title: string;
+        message: string;
+        confirmLabel?: string;
+        cancelLabel?: string;
+        timeoutMs: number;
+        details?: Array<{ label: string; value: string }>;
+      }>;
+    }>('/extensions/ui-confirmations'),
   resolveExtensionUiConfirmation: async (requestId: string, status: 'confirmed' | 'declined' | 'timeout') =>
     extensionPost<{ ok: true; acknowledged: boolean }>(`/extensions/ui-confirmations/${encodeURIComponent(requestId)}`, { status }),
   extensionKeybindings: async () => extensionGet<ExtensionKeybindingRegistration[]>('/extensions/keybindings'),

@@ -30,7 +30,7 @@ import {
 import type { ExtensionManifest } from '../extensions/extensionManifest.js';
 import { getAggregatedBadgeCount } from '../extensions/extensionNotifications.js';
 import { createExtensionRunsCapability } from '../extensions/extensionRuns.js';
-import { resolveExtensionUiConfirm } from '../extensions/extensionUiConfirmBridge.js';
+import { listPendingExtensionUiConfirms, resolveExtensionUiConfirm } from '../extensions/extensionUiConfirmBridge.js';
 import { logError } from '../middleware/index.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
 import { getLocalhostWebappProxyStatus, trustLocalhostWebappProxyCertificate } from '../shared/localhostWebappProxy.js';
@@ -1039,6 +1039,14 @@ export function registerExtensionRoutes(
       res.json({ ok: true, acknowledged: resolveExtensionUiConfirm(req.params.requestId, status) });
     } catch (err) {
       sendRouteError(res, 'extension UI confirmation error', err);
+    }
+  });
+
+  router.get('/api/extensions/ui-confirmations', (_req, res) => {
+    try {
+      res.json({ ok: true, confirmations: listPendingExtensionUiConfirms() });
+    } catch (err) {
+      sendRouteError(res, 'extension UI confirmation list error', err);
     }
   });
 

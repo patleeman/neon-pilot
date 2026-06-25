@@ -1,14 +1,19 @@
 import { pathToFileURL } from 'node:url';
 
-import { createExtensionBackendCapabilityDispatcher } from './extensionBackendCapabilities.js';
+import {
+  createExtensionBackendCapabilityDispatcher,
+  type ExtensionBackendCapabilityDispatcherOptions,
+} from './extensionBackendCapabilities.js';
 import { ExtensionBackendWorkerPool } from './extensionBackendWorkerClient.js';
 import { recordExtensionHostAuditEvent } from './extensionHostAudit.js';
 import { assertExtensionBackendNativeImportsAllowed, withExtensionProcessGuard } from './extensionProcessGuard.js';
 
 const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
+const EXTENSION_HOST_CAPABILITY_DISPATCHER_OPTIONS = Symbol.for('neon-pilot.extensionHostCapabilityDispatcherOptions');
 
 type ExtensionBackendRunnerGlobal = typeof globalThis & {
   [EXTENSION_HOST_CAPABILITY_BRIDGE]?: (capability: string, operation: string, input?: unknown) => Promise<unknown> | unknown;
+  [EXTENSION_HOST_CAPABILITY_DISPATCHER_OPTIONS]?: ExtensionBackendCapabilityDispatcherOptions;
 };
 
 export type ExtensionBackendModule = Record<string, unknown>;
@@ -129,6 +134,20 @@ export function serializeExtensionBackendOperation(operation: ExtensionBackendOp
 
 const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
 
+export function setExtensionHostCapabilityDispatcherOptions(options: ExtensionBackendCapabilityDispatcherOptions | undefined): void {
+  if (options) {
+    (globalThis as ExtensionBackendRunnerGlobal)[EXTENSION_HOST_CAPABILITY_DISPATCHER_OPTIONS] = options;
+  } else {
+    delete (globalThis as ExtensionBackendRunnerGlobal)[EXTENSION_HOST_CAPABILITY_DISPATCHER_OPTIONS];
+  }
+}
+
+function createExtensionHostCapabilityDispatcher(): ReturnType<typeof createExtensionBackendCapabilityDispatcher> {
+  return createExtensionBackendCapabilityDispatcher(
+    (globalThis as ExtensionBackendRunnerGlobal)[EXTENSION_HOST_CAPABILITY_DISPATCHER_OPTIONS],
+  );
+}
+
 async function auditBackendOperation<T>(extensionId: string, operation: ExtensionBackendOperation, handler: () => Promise<T>): Promise<T> {
   const serializedOperation = serializeExtensionBackendOperation(operation);
   const started = Date.now();
@@ -221,7 +240,7 @@ export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner 
       return auditBackendOperation(extensionId, operation, () => {
         const target = globalThis as ExtensionBackendRunnerGlobal;
         const previousBridge = target[EXTENSION_HOST_CAPABILITY_BRIDGE];
-        capabilityDispatcher ??= createExtensionBackendCapabilityDispatcher();
+        capabilityDispatcher ??= createExtensionHostCapabilityDispatcher();
         const dispatcher = capabilityDispatcher;
         target[EXTENSION_HOST_CAPABILITY_BRIDGE] = (capability, capabilityOperation, input) =>
           dispatcher({ id: 0, kind: 'capabilityRequest', extensionId, capability, operation: capabilityOperation, input });
@@ -237,7 +256,7 @@ export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner 
 
 export function createWorkerImportExtensionBackendRunner(
   client: ExtensionBackendWorkerImportClient = new ExtensionBackendWorkerPool({
-    capabilityDispatcher: createExtensionBackendCapabilityDispatcher(),
+    capabilityDispatcher: createExtensionHostCapabilityDispatcher(),
   }),
 ): ExtensionBackendWorkerExportRunner {
   return {

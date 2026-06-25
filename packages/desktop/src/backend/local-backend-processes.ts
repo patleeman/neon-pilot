@@ -42,6 +42,21 @@ interface ExtensionHostDesktopAppEventMessage {
   event: AppEvent;
 }
 
+interface ExtensionHostUiConfirmRequestMessage {
+  type: 'extension-ui-confirm-request';
+  id: string;
+  extensionId: string;
+  input: unknown;
+}
+
+interface ExtensionHostUiConfirmResponseMessage {
+  type: 'extension-ui-confirm-response';
+  id: string;
+  ok: boolean;
+  result?: unknown;
+  error?: string;
+}
+
 const nativeWorkbenchBrowserMethods = new Set(['isActive', 'listTabs', 'snapshot', 'screenshot', 'cdp']);
 const NATIVE_WORKBENCH_BROWSER_SLOW_MS = 1_000;
 
@@ -960,6 +975,10 @@ export class LocalBackendProcesses {
       }
       if (this.isExtensionHostDesktopAppEvent(message)) {
         void this.forwardExtensionHostDesktopAppEvent(message.event);
+        return;
+      }
+      if (this.isExtensionHostUiConfirmRequest(message)) {
+        void this.handleExtensionHostUiConfirmRequest(child, message);
       }
     });
     child.once('exit', () => {
@@ -1001,6 +1020,16 @@ export class LocalBackendProcesses {
     );
   }
 
+  private isExtensionHostUiConfirmRequest(value: unknown): value is ExtensionHostUiConfirmRequestMessage {
+    return (
+      Boolean(value && typeof value === 'object') &&
+      (value as { type?: unknown }).type === 'extension-ui-confirm-request' &&
+      typeof (value as { id?: unknown }).id === 'string' &&
+      typeof (value as { extensionId?: unknown }).extensionId === 'string' &&
+      Boolean((value as { input?: unknown }).input && typeof (value as { input?: unknown }).input === 'object')
+    );
+  }
+
   private async forwardExtensionHostDesktopAppEvent(event: AppEvent): Promise<void> {
     try {
       const child = this.child;
@@ -1012,6 +1041,22 @@ export class LocalBackendProcesses {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       process.stderr.write(`[extension-host] failed to forward desktop app event: ${message}\n`);
+    }
+  }
+
+  private async handleExtensionHostUiConfirmRequest(child: ChildProcess, request: ExtensionHostUiConfirmRequestMessage): Promise<void> {
+    const respond = (message: Omit<ExtensionHostUiConfirmResponseMessage, 'type' | 'id'>) => {
+      if (child.killed || !child.connected || typeof child.send !== 'function') return;
+      child.send({ type: 'extension-ui-confirm-response', id: request.id, ...message } satisfies ExtensionHostUiConfirmResponseMessage);
+    };
+
+    try {
+      const result = await this.callLocalApiMethod('requestExtensionUiConfirmFromExtensionHost', [
+        { extensionId: request.extensionId, input: request.input },
+      ]);
+      respond({ ok: true, result });
+    } catch (error) {
+      respond({ ok: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
