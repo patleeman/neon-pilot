@@ -370,6 +370,14 @@ describe('SettingsPage', () => {
     expect(html).toContain('class="flex w-full flex-wrap justify-end gap-2"');
   });
 
+  it('right-aligns workspace folder controls within the settings action column', () => {
+    const html = renderPage('/settings', ['settings-workspace']);
+
+    expect(html).toContain('Default project folder');
+    expect(html).toContain('class="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end"');
+    expect(html).toContain('aria-label="Choose default working directory"');
+  });
+
   it('shows a desktop bridge warning instead of hiding desktop connections when preload is unavailable', () => {
     vi.stubGlobal('window', {
       neonPilotDesktop: undefined,

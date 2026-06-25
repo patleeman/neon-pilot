@@ -168,9 +168,16 @@
 }
 
 .settings-page-control-actions.ui-settings-row-actions {
+  display: flex;
+  align-items: center;
   justify-content: flex-end;
   min-width: 13rem;
   max-width: 22rem;
+}
+
+.settings-page-control-actions.ui-settings-row-actions > .flex {
+  width: 100%;
+  justify-content: flex-end;
 }
 
 .settings-page-control-actions .ui-select,
@@ -187,8 +194,28 @@
   max-width: none;
 }
 
+.settings-page-cwd-actions.ui-settings-row-actions {
+  width: min(100%, 24rem);
+}
+
 .settings-page-command-actions.ui-settings-row-actions {
   min-width: 20rem;
+  width: min(100%, 34rem);
+}
+
+.settings-page-secret-actions.ui-settings-row-actions {
+  width: min(100%, 32rem);
+}
+
+.settings-page-shortcut-actions.ui-settings-row-actions,
+.settings-page-provider-add-actions.ui-settings-row-actions {
+  width: min(100%, 28rem);
+}
+
+.settings-page-shortcut-actions .ui-shortcut-capture {
+  flex: 1 1 14rem;
+  width: auto;
+  min-width: 12rem;
 }
 
 .settings-page-provider-editor {
@@ -398,9 +425,15 @@
   }
 
   .settings-page-control-actions.ui-settings-row-actions {
+    align-items: stretch;
     justify-content: flex-start;
     min-width: 0;
+    width: 100%;
     max-width: none;
+  }
+
+  .settings-page-control-actions.ui-settings-row-actions > .flex {
+    justify-content: flex-start;
   }
 
   .settings-page-command-actions.ui-settings-row-actions {

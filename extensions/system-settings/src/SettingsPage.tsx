@@ -3563,7 +3563,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                           }
                           actionsClassName="settings-page-cwd-actions"
                         >
-                          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                          <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                             <TextInput
                               id="settings-default-cwd"
                               value={defaultCwdDraft}
