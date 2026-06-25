@@ -16,7 +16,8 @@
   }
 
   .ui-desktop-top-bar {
-    @apply relative z-[100] flex h-10 shrink-0 items-center gap-2 border-b border-border-default bg-panel px-3;
+    @apply relative z-[100] grid h-10 shrink-0 items-center gap-2 border-b border-border-subtle bg-panel px-3;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, min(35rem, 42vw)) minmax(0, 1fr);
   }
 
   .ui-desktop-top-bar--remote {
@@ -24,7 +25,7 @@
   }
 
   .ui-desktop-top-bar__leading {
-    @apply relative z-10 flex min-w-0 items-center gap-1.5;
+    @apply relative z-10 flex min-w-0 items-center gap-1.5 justify-self-start overflow-hidden;
   }
 
   .ui-desktop-top-bar__traffic-light-gap {
@@ -34,16 +35,16 @@
   }
 
   .ui-desktop-top-bar__controls {
-    @apply flex -translate-y-px items-center gap-0.5;
+    @apply flex items-center gap-0.5;
   }
 
   .ui-desktop-top-bar__mode-badge {
-    @apply rounded-sm border border-border-default bg-elevated px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-secondary;
+    @apply rounded-sm border border-border-subtle bg-surface/45 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-normal text-secondary;
   }
 
   .ui-toolbar-button.ui-desktop-top-bar__icon-button,
   .ui-icon-button.ui-desktop-top-bar__icon-button {
-    @apply h-7 min-h-0 min-w-[26px] rounded-sm border-0 bg-transparent px-1.5 text-[11px] leading-none text-secondary shadow-none transition-colors hover:border-0 hover:bg-elevated hover:text-primary disabled:border-0 disabled:bg-transparent disabled:text-dim disabled:opacity-100;
+    @apply h-7 min-h-0 min-w-7 rounded-sm border-0 bg-transparent px-0 text-[11px] leading-none text-secondary shadow-none transition-colors hover:border-0 hover:bg-elevated hover:text-primary disabled:border-0 disabled:bg-transparent disabled:text-dim disabled:opacity-100;
   }
 
   .ui-icon-button.ui-desktop-top-bar__connections-button--off {
@@ -73,16 +74,42 @@
   }
 
   .ui-desktop-top-bar__center {
-    @apply relative z-10 flex-1 self-stretch;
+    @apply relative z-10 self-stretch justify-self-stretch;
   }
 
   .ui-desktop-top-bar__trailing {
-    @apply relative z-10 flex items-center justify-end gap-1;
+    @apply relative z-10 flex min-w-0 items-center justify-end gap-1 justify-self-end overflow-hidden;
+  }
+
+  .ui-desktop-top-bar__brand {
+    @apply ml-1 flex h-6 min-w-0 items-center gap-1.5 border-l border-border-subtle/70 pl-2;
+  }
+
+  .ui-desktop-top-bar__brand-label {
+    @apply inline-block truncate text-[12.5px] font-semibold leading-none tracking-normal text-primary;
+  }
+
+  .ui-command-search-trigger.ui-desktop-top-bar__search {
+    height: 1.625rem;
+    border-color: rgb(var(--color-border-subtle) / 0.72);
+    background: rgb(var(--color-surface) / 0.42);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+  }
+
+  .ui-command-search-trigger.ui-desktop-top-bar__search:hover,
+  .ui-command-search-trigger.ui-desktop-top-bar__search:focus-within {
+    border-color: rgb(var(--color-border-default) / 0.86);
+    background: rgb(var(--color-surface) / 0.68);
+  }
+
+  .ui-kbd.ui-desktop-top-bar__search-keycap {
+    @apply shrink-0 rounded-sm border-border-subtle/70 bg-transparent px-1 text-[10px] text-dim;
   }
 
   @media (max-width: 640px) {
     .ui-desktop-top-bar {
       @apply gap-1 px-2;
+      grid-template-columns: minmax(0, 1fr) auto;
     }
 
     .ui-desktop-top-bar__traffic-light-gap {

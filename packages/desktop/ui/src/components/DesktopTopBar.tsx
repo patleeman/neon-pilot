@@ -353,11 +353,9 @@ export function DesktopTopBar({
             →
           </ToolbarButton>
         </div>
-        <div className="ml-1 flex h-6 items-center gap-1.5 border-l border-border-subtle pl-2" style={noDragStyle}>
+        <div className="ui-desktop-top-bar__brand" style={noDragStyle}>
           <NeonPilotMarkIcon />
-          <span className="inline-block translate-y-px text-[12.5px] font-semibold leading-none tracking-[-0.012em] text-primary">
-            Neon Pilot
-          </span>
+          <span className="ui-desktop-top-bar__brand-label">Neon Pilot</span>
         </div>
         {environmentBadgeLabel ? (
           <Pill tone="muted" className="ui-desktop-top-bar__mode-badge" title={environmentBadgeTitle}>
@@ -368,7 +366,7 @@ export function DesktopTopBar({
       <div className="ui-desktop-top-bar__center flex items-center justify-center gap-2" style={dragStyle}>
         <div
           ref={searchShellRef}
-          className={cx('ui-command-search-trigger', paletteOpen && 'pointer-events-none opacity-0')}
+          className={cx('ui-command-search-trigger ui-desktop-top-bar__search', paletteOpen && 'pointer-events-none opacity-0')}
           style={noDragStyle}
         >
           <span aria-hidden="true">⌕</span>
@@ -382,9 +380,9 @@ export function DesktopTopBar({
             }}
             placeholder="Search threads, models, settings…"
             aria-label="Search threads, models, settings"
-            className="h-6 min-w-0 flex-1 border-0 bg-transparent px-0 py-0 font-mono text-[11px] tracking-[0.05em] text-secondary placeholder:text-dim"
+            className="h-6 min-w-0 flex-1 border-0 bg-transparent px-0 py-0 font-mono text-[11px] tracking-normal text-secondary placeholder:text-dim"
           />
-          <Keycap>⌘K</Keycap>
+          <Keycap className="ui-desktop-top-bar__search-keycap">⌘K</Keycap>
         </div>
       </div>
       <div className="ui-desktop-top-bar__trailing" style={noDragStyle}>
