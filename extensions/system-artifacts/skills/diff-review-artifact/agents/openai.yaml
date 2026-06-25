@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Diff Review Artifact'
+  short_description: 'Review workspace changes as an artifact'
+  default_prompt: 'Use $diff-review-artifact to create a visual review of the current changes.'

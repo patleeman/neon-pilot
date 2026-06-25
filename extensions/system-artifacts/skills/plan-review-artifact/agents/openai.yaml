@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Plan Review Artifact'
+  short_description: 'Review a plan with a visual matrix'
+  default_prompt: 'Use $plan-review-artifact to review this plan as a visual artifact.'

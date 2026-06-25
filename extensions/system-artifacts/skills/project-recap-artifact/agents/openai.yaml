@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Project Recap Artifact'
+  short_description: 'Summarize project state as an artifact'
+  default_prompt: 'Use $project-recap-artifact to create a context-switching project recap.'

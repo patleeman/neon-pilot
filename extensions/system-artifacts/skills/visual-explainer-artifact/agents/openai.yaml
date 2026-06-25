@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Visual Explainer Artifact'
+  short_description: 'Create typed visual explainer artifacts'
+  default_prompt: 'Use $visual-explainer-artifact to turn this topic into a visual explainer artifact.'

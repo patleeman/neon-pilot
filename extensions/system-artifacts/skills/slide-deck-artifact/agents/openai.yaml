@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Slide Deck Artifact'
+  short_description: 'Create viewport-based slide artifacts'
+  default_prompt: 'Use $slide-deck-artifact to turn this source into a slide deck artifact.'

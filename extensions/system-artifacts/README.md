@@ -80,6 +80,16 @@ Slash commands generate prompts that create typed artifacts through the normal a
 | `/project-recap` | `project-recap`    | `technical-report` |
 | `/slides`        | `slides`           | `slide-deck`       |
 
+Each command also has a matching agent skill so natural-language requests can trigger the same workflow:
+
+| Skill                       | Command          |
+| --------------------------- | ---------------- |
+| `visual-explainer-artifact` | `/visualize`     |
+| `diff-review-artifact`      | `/diff-review`   |
+| `plan-review-artifact`      | `/plan-review`   |
+| `project-recap-artifact`    | `/project-recap` |
+| `slide-deck-artifact`       | `/slides`        |
+
 Users can override the defaults in the prompt. Agents should pass those constraints through `styleOverrides` and reflect them in the generated HTML while preserving readability, contrast, and source coverage.
 
 ## Viewing Artifacts
