@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 describe('automation run transcript context', () => {
-  it('renders automation run entries as collapsed system context instead of assistant prose', async () => {
+  it('renders automation run entries as a collapsed user-like automation card', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -42,9 +42,12 @@ describe('automation run transcript context', () => {
       );
     });
 
-    expect(container.querySelector('[data-automation-run-block="1"]')).not.toBeNull();
-    expect(container.textContent).toContain('Automation');
-    expect(container.textContent).toContain('Completed: test-heartbeat');
+    const automationBlock = container.querySelector('[data-automation-run-block="1"]');
+    expect(automationBlock).not.toBeNull();
+    expect(automationBlock?.querySelector('.ui-message-card-user')).not.toBeNull();
+    expect(automationBlock?.querySelector('.ui-disclosure')).toBeNull();
+    expect(container.textContent).toContain('Automation completed');
+    expect(container.textContent).toContain('test-heartbeat');
     expect(container.textContent).not.toContain('This is the agent output.');
   });
 });

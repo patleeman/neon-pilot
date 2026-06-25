@@ -184,19 +184,20 @@ function summarizeSystemEventText(text: string): string {
   return normalized.length > 140 ? `${normalized.slice(0, 137).trimEnd()}…` : normalized;
 }
 
-function automationRunSummary(text: string): { title: string; tone: 'running' | 'success' | 'danger' | 'muted' } {
+function automationRunSummary(text: string): { action: string; title: string; tone: 'running' | 'success' | 'danger' | 'muted' } {
   const firstLine =
     text
       .replace(/\r\n/g, '\n')
       .split('\n')
       .map((line) => line.trim())
       .find(Boolean) ?? 'Automation run';
-  const normalized = firstLine.replace(/^Automation\s+/i, '');
-  const title = normalized.charAt(0).toUpperCase() + normalized.slice(1);
-  if (/\bstarted\b/i.test(firstLine)) return { title, tone: 'running' };
-  if (/\bcompleted\b/i.test(firstLine)) return { title, tone: 'success' };
-  if (/\bfailed\b|cancelled|could not start/i.test(firstLine)) return { title, tone: 'danger' };
-  return { title, tone: 'muted' };
+  const match = firstLine.match(/^Automation\s+([^:]+):\s*(.*)$/i);
+  const action = match?.[1]?.trim().toLowerCase() || 'run';
+  const title = match?.[2]?.trim() || firstLine.replace(/^Automation\s+/i, '').trim() || 'Run';
+  if (/\bstarted\b/i.test(action)) return { action: 'started', title, tone: 'running' };
+  if (/\bcompleted\b/i.test(action)) return { action: 'completed', title, tone: 'success' };
+  if (/\bfailed\b|cancelled|could not start/i.test(action)) return { action, title, tone: 'danger' };
+  return { action, title, tone: 'muted' };
 }
 
 function AutomationRunContextBlock({
@@ -215,31 +216,58 @@ function AutomationRunContextBlock({
   const summary = automationRunSummary(block.text);
   const statusTone =
     summary.tone === 'running' ? 'accent' : summary.tone === 'success' ? 'success' : summary.tone === 'danger' ? 'danger' : 'muted';
+  const blockId = optionalTrimmedString(block.id);
+  const transcriptTargetAttrs = blockId ? transcriptTargetAttributes({ kind: 'block', blockId }) : {};
+  const [openedOnce, setOpenedOnce] = useState(false);
 
   return (
-    <LazyDetails
-      className="group/item w-full text-[12px] text-secondary"
-      dataAttrs={{ 'data-context-type': 'automation_run', 'data-automation-run-block': '1' }}
-      summaryClassName={contextShelfSummaryClassName}
-      summary={
-        <>
-          <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
-            <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
-              ›
-            </span>
-            <StatusDot tone={statusTone} size="xs" />
-            <span className="shrink-0 font-medium text-primary/90">Automation</span>
-            <span className="min-w-0 truncate text-dim/90">{summary.title}</span>
-            {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
-          </span>
-          <span className="h-px bg-border-subtle" aria-hidden="true" />
-        </>
-      }
+    <div
+      className="group flex w-full flex-col items-end gap-1.5"
+      data-context-type="automation_run"
+      data-automation-run-block="1"
+      {...transcriptTargetAttrs}
+      tabIndex={blockId ? -1 : undefined}
     >
-      <div {...replySelectionScopeProps} className={contextShelfBodyClassName}>
-        {renderText(block.text, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}
+      <div className="ml-auto min-w-0 max-w-[86%]">
+        {/* ui-pattern-ok raw-details-summary reason="Automation run context must use the user-message lane; shared Disclosure adds the full-width context frame this renderer intentionally avoids." */}
+        <details
+          className="group/item"
+          onToggle={(event) => {
+            if (event.currentTarget.open) {
+              setOpenedOnce(true);
+            }
+          }}
+        >
+          {/* ui-pattern-ok raw-details-summary reason="Native summary lets the user-message card be the disclosure trigger without shared Disclosure frame chrome." */}
+          <summary className="block cursor-pointer list-none marker:hidden before:!content-none after:!content-none [&::-webkit-details-marker]:hidden">
+            <MessageCard role="user" className="space-y-2">
+              <div className="flex min-w-0 items-start gap-2 px-1.5 pb-0.5">
+                <StatusDot tone={statusTone} size="xs" className="mt-[0.45rem] shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span className="shrink-0 text-[12px] font-medium text-primary/90">Automation {summary.action}</span>
+                  </div>
+                  <div className="mt-0.5 truncate text-[13px] leading-relaxed text-primary">{summary.title}</div>
+                </div>
+                <span className="mt-0.5 shrink-0 text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+                  ›
+                </span>
+              </div>
+            </MessageCard>
+          </summary>
+          {openedOnce ? (
+            <div {...replySelectionScopeProps} className="mt-1.5 px-2 pb-1 pr-3 text-[12px] leading-relaxed text-secondary">
+              {renderText(block.text, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}
+            </div>
+          ) : null}
+        </details>
+        {block.ts ? (
+          <div className="flex flex-wrap items-center gap-2 pt-1 pr-1">
+            <MessageMeta>{timeAgo(block.ts)}</MessageMeta>
+          </div>
+        ) : null}
       </div>
-    </LazyDetails>
+    </div>
   );
 }
 
