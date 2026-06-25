@@ -8,6 +8,7 @@ import {
   deleteConversationArtifact,
   getConversationArtifact,
   listConversationArtifacts,
+  normalizeConversationArtifactMetadata,
   resolveConversationArtifactPath,
   resolveConversationArtifactsDir,
   resolveProfileConversationArtifactsDir,
@@ -116,6 +117,66 @@ describe('conversation artifact storage', () => {
     expect(listConversationArtifacts({ stateRoot, profile: 'datadog', conversationId: 'conv-123' }).map((artifact) => artifact.id)).toEqual(
       [other.id, first.id],
     );
+  });
+
+  it('persists visual artifact metadata and keeps it in summaries', () => {
+    const stateRoot = createTempStateRoot();
+
+    const artifact = saveConversationArtifact({
+      stateRoot,
+      profile: 'datadog',
+      conversationId: 'conv-123',
+      title: 'Review deck',
+      kind: 'html',
+      content: '<!doctype html><html><body>slides</body></html>',
+      metadata: {
+        type: 'slides',
+        stylePreset: 'slide-deck',
+        styleOverrides: {
+          theme: 'paper',
+          accent: 'emerald',
+          density: 'roomy',
+          notes: 'Use more screenshots.',
+        },
+        source: {
+          kind: 'command',
+          label: '/slides release review',
+          paths: ['docs/release-cycle.md'],
+          command: 'slides',
+        },
+        templateVersion: 'visual-explainer-v1',
+        generator: 'system-artifacts',
+      },
+    });
+
+    expect(artifact.metadata).toMatchObject({
+      type: 'slides',
+      stylePreset: 'slide-deck',
+      styleOverrides: { accent: 'emerald' },
+      source: { command: 'slides', paths: ['docs/release-cycle.md'] },
+      templateVersion: 'visual-explainer-v1',
+    });
+    expect(
+      getConversationArtifact({
+        stateRoot,
+        profile: 'datadog',
+        conversationId: 'conv-123',
+        artifactId: artifact.id,
+      })?.metadata,
+    ).toMatchObject({ type: 'slides', stylePreset: 'slide-deck' });
+    expect(listConversationArtifacts({ stateRoot, profile: 'datadog', conversationId: 'conv-123' })[0]?.metadata).toMatchObject({
+      type: 'slides',
+    });
+  });
+
+  it('normalizes blank artifact metadata away for old records', () => {
+    expect(normalizeConversationArtifactMetadata(undefined)).toBeUndefined();
+    expect(normalizeConversationArtifactMetadata({ type: '  ', stylePreset: '' })).toBeUndefined();
+  });
+
+  it('rejects invalid artifact metadata slugs and oversized override text', () => {
+    expect(() => normalizeConversationArtifactMetadata({ type: 'Visual Plan' })).toThrow('Invalid artifact type');
+    expect(() => normalizeConversationArtifactMetadata({ styleOverrides: { notes: 'x'.repeat(801) } })).toThrow('styleOverrides.notes');
   });
 
   it('skips unreadable artifact files while listing', () => {

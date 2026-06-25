@@ -14,7 +14,7 @@ vi.mock('@neon-pilot/extensions/backend/artifacts', () => ({
   ConversationArtifactKind: undefined,
 }));
 
-import { artifact } from './backend.js';
+import { artifact, handleArtifactSlashCommand } from './backend.js';
 
 function createCtx(overrides?: Record<string, unknown>) {
   return {
@@ -43,7 +43,14 @@ describe('system-artifacts backend', () => {
   describe('list action', () => {
     it('returns formatted list when artifacts exist', async () => {
       mockList.mockReturnValue([
-        { id: 'a1', kind: 'html', title: 'Report', revision: 2, updatedAt: '2025-01-01T00:00:00Z' },
+        {
+          id: 'a1',
+          kind: 'html',
+          metadata: { type: 'diff-review', stylePreset: 'review-matrix' },
+          title: 'Report',
+          revision: 2,
+          updatedAt: '2025-01-01T00:00:00Z',
+        },
         { id: 'a2', kind: 'mermaid', title: 'Diagram', revision: 1, updatedAt: '2025-01-02T00:00:00Z' },
       ]);
 
@@ -54,7 +61,7 @@ describe('system-artifacts backend', () => {
       expect(result.artifactCount).toBe(2);
       expect(result.artifactIds).toEqual(['a1', 'a2']);
       expect(result.text).toContain('Artifacts for conversation conv-1');
-      expect(result.text).toContain('a1 [html] Report (rev 2');
+      expect(result.text).toContain('a1 [Diff review] Report (rev 2');
       expect(result.text).toContain('a2 [mermaid] Diagram (rev 1');
       expect(mockList).toHaveBeenCalledWith({ profile: 'test-profile', conversationId: 'conv-1' });
     });
@@ -75,20 +82,46 @@ describe('system-artifacts backend', () => {
       mockSave.mockReturnValue({
         id: 'a1',
         kind: 'html',
+        metadata: { type: 'visual-explainer', stylePreset: 'visual-explainer' },
         title: 'Report',
         revision: 1,
         updatedAt: '2025-01-01T00:00:00Z',
         content: '<p>hello</p>',
       });
 
-      const result = await artifact({ action: 'save', title: 'Report', kind: 'html', content: '<p>hello</p>' }, createCtx());
+      const result = await artifact(
+        {
+          action: 'save',
+          title: 'Report',
+          kind: 'html',
+          content: '<p>hello</p>',
+          artifactType: 'visual-explainer',
+          stylePreset: 'visual-explainer',
+          styleOverrides: { accent: 'sage' },
+          source: { kind: 'command', command: 'visualize' },
+          templateVersion: 'visual-explainer-v1',
+        },
+        createCtx(),
+      );
 
       expect(result.action).toBe('save');
-      expect(result.text).toContain('Saved artifact a1 [html] "Report".');
+      expect(result.text).toContain('Saved artifact a1 [Visual explainer] "Report".');
+      expect(result.metadata).toMatchObject({ type: 'visual-explainer', stylePreset: 'visual-explainer' });
       expect(result.openRequested).toBe(true);
       expect(result.revision).toBe(1);
       expect(result.artifactId).toBe('a1');
       expect(mockInvalidate).toHaveBeenCalledWith('artifacts');
+      expect(mockSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            type: 'visual-explainer',
+            stylePreset: 'visual-explainer',
+            styleOverrides: { accent: 'sage' },
+            source: { kind: 'command', command: 'visualize' },
+            templateVersion: 'visual-explainer-v1',
+          }),
+        }),
+      );
     });
 
     it('waits for artifact invalidation before returning a saved artifact', async () => {
@@ -208,6 +241,7 @@ describe('system-artifacts backend', () => {
       mockGet.mockReturnValue({
         id: 'a1',
         kind: 'html',
+        metadata: { type: 'slides', stylePreset: 'slide-deck' },
         title: 'Report',
         revision: 2,
         updatedAt: '2025-01-01T00:00:00Z',
@@ -220,6 +254,8 @@ describe('system-artifacts backend', () => {
       expect(result.title).toBe('Report');
       expect(result.text).toContain('Artifact a1');
       expect(result.text).toContain('Kind: html');
+      expect(result.text).toContain('Type: Slide deck');
+      expect(result.text).toContain('Style: Slide deck');
       expect(result.text).toContain('Revision: 2');
       expect(result.text).toContain('<p>hello world</p>');
     });
@@ -266,6 +302,29 @@ describe('system-artifacts backend', () => {
 
     it('throws when artifactId is missing for delete', async () => {
       await expect(artifact({ action: 'delete' } as never, createCtx())).rejects.toThrow('artifactId is required');
+    });
+  });
+
+  describe('slash commands', () => {
+    it('builds a typed visual artifact prompt for slides', async () => {
+      const result = await handleArtifactSlashCommand({
+        commandName: 'slides',
+        argument: 'release readiness',
+        cwd: '/repo',
+      });
+
+      expect(result.prompt).toContain('Create a Slide deck artifact for: release readiness');
+      expect(result.prompt).toContain('artifactType: "slides"');
+      expect(result.prompt).toContain('stylePreset: "slide-deck"');
+      expect(result.prompt).toContain('Current working directory: /repo');
+      expect(result.prompt).toContain('Save the result with the artifact tool');
+    });
+
+    it('falls back to visualize when the slash command name is unknown', async () => {
+      const result = await handleArtifactSlashCommand({ commandName: 'other', argument: '' });
+
+      expect(result.prompt).toContain('Create a Visual explainer artifact for: the current conversation');
+      expect(result.prompt).toContain('artifactType: "visual-explainer"');
     });
   });
 });

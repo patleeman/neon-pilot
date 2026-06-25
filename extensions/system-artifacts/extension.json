@@ -20,6 +20,14 @@
           "enabled": true,
           "inputActions": ["save", "get", "list", "delete"]
         }
+      },
+      {
+        "id": "handleArtifactSlashCommand",
+        "handler": "handleArtifactSlashCommand",
+        "title": "Handle artifact slash command",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
@@ -57,11 +65,74 @@
             "open": {
               "type": "boolean",
               "description": "Whether the artifact panel should open after saving. Defaults to true."
+            },
+            "artifactType": {
+              "type": "string",
+              "description": "Semantic artifact type such as visual-explainer, visual-plan, diff-review, plan-review, project-recap, slides, architecture, data-table, fact-check, or report."
+            },
+            "stylePreset": {
+              "type": "string",
+              "description": "Named visual style preset such as visual-explainer, technical-report, architecture-map, review-matrix, or slide-deck."
+            },
+            "styleOverrides": {
+              "type": "object",
+              "description": "Optional style override notes for the artifact, such as theme, accent, density, or notes.",
+              "properties": {
+                "theme": { "type": "string" },
+                "accent": { "type": "string" },
+                "density": { "type": "string" },
+                "notes": { "type": "string" }
+              },
+              "additionalProperties": false
+            },
+            "source": {
+              "type": "object",
+              "description": "Optional source metadata describing where the artifact came from.",
+              "properties": {
+                "kind": { "type": "string" },
+                "label": { "type": "string" },
+                "messageId": { "type": "string" },
+                "selection": { "type": "string" },
+                "paths": { "type": "array", "items": { "type": "string" } },
+                "command": { "type": "string" }
+              },
+              "additionalProperties": false
+            },
+            "templateVersion": {
+              "type": "string",
+              "description": "Template or visual default version used to generate this artifact."
             }
           },
           "required": ["action"],
           "additionalProperties": false
         }
+      }
+    ],
+    "slashCommands": [
+      {
+        "name": "visualize",
+        "description": "Create a typed visual explainer artifact. Usage: /visualize <topic or style override>",
+        "action": "handleArtifactSlashCommand"
+      },
+      {
+        "name": "diff-review",
+        "description": "Create a visual diff review artifact for the current workspace changes.",
+        "action": "handleArtifactSlashCommand"
+      },
+      {
+        "name": "plan-review",
+        "description": "Create a visual plan review artifact. Usage: /plan-review <plan file or scope>",
+        "action": "handleArtifactSlashCommand"
+      },
+      {
+        "name": "project-recap",
+        "description": "Create a visual project recap artifact for context switching.",
+        "action": "handleArtifactSlashCommand"
+      },
+      {
+        "name": "slides",
+        "description": "Create a slide deck artifact. Usage: /slides <topic or source>",
+        "action": "handleArtifactSlashCommand"
       }
     ],
     "transcriptRenderers": [

@@ -1,9 +1,35 @@
 export type ConversationArtifactKind = 'html' | 'mermaid' | 'latex';
 
+export interface ConversationArtifactStyleOverrides {
+  theme?: string;
+  accent?: string;
+  density?: string;
+  notes?: string;
+}
+
+export interface ConversationArtifactSourceMetadata {
+  kind?: string;
+  label?: string;
+  messageId?: string;
+  selection?: string;
+  paths?: string[];
+  command?: string;
+}
+
+export interface ConversationArtifactMetadata {
+  type?: string;
+  stylePreset?: string;
+  styleOverrides?: ConversationArtifactStyleOverrides;
+  source?: ConversationArtifactSourceMetadata;
+  templateVersion?: string;
+  generator?: string;
+}
+
 export interface ConversationArtifactRecord {
   id: string;
   title: string;
   kind: ConversationArtifactKind;
+  metadata?: ConversationArtifactMetadata;
   content: string;
   createdAt: string;
   updatedAt: string;
@@ -14,6 +40,7 @@ export interface ConversationArtifactSummary {
   id: string;
   title: string;
   kind: ConversationArtifactKind;
+  metadata?: ConversationArtifactMetadata;
   createdAt: string;
   updatedAt: string;
   revision: number;
@@ -47,6 +74,7 @@ export function saveConversationArtifact(
     title: string;
     kind: ConversationArtifactKind;
     content: string;
+    metadata?: ConversationArtifactMetadata;
   },
 ): ConversationArtifactRecord {
   return hostResolved();

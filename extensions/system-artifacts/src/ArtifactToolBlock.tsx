@@ -2,6 +2,37 @@ import { timeAgo } from '@neon-pilot/extensions/data';
 import { cx, InlineMeta, Pill, Spinner, TextButton, ToolResultCard } from '@neon-pilot/extensions/ui';
 import { memo } from 'react';
 
+interface ArtifactMetadata {
+  type?: string;
+  stylePreset?: string;
+}
+
+const ARTIFACT_TYPE_LABELS: Record<string, string> = {
+  architecture: 'Architecture explainer',
+  'data-table': 'Data table',
+  'diff-review': 'Diff review',
+  'fact-check': 'Fact check',
+  'plan-review': 'Plan review',
+  'project-recap': 'Project recap',
+  report: 'Report',
+  slides: 'Slide deck',
+  'visual-explainer': 'Visual explainer',
+  'visual-plan': 'Visual plan',
+};
+
+function labelFromSlug(value: string): string {
+  return value
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function artifactTypeLabel(artifact: { kind?: string; metadata?: ArtifactMetadata }): string {
+  const type = artifact.metadata?.type;
+  return type ? (ARTIFACT_TYPE_LABELS[type] ?? labelFromSlug(type)) : (artifact.kind ?? 'artifact');
+}
+
 export const ArtifactToolBlock = memo(function ArtifactToolBlock({
   block,
   artifact,
@@ -9,7 +40,7 @@ export const ArtifactToolBlock = memo(function ArtifactToolBlock({
   activeArtifactId,
 }: {
   block: { status?: string; running?: boolean; error?: boolean | string; output?: string };
-  artifact: { artifactId?: string; title?: string; kind?: string; revision?: number; updatedAt?: string };
+  artifact: { artifactId?: string; title?: string; kind?: string; metadata?: ArtifactMetadata; revision?: number; updatedAt?: string };
   onOpenArtifact?: (artifactId: string) => void;
   activeArtifactId?: string | null;
 }) {
@@ -30,8 +61,9 @@ export const ArtifactToolBlock = memo(function ArtifactToolBlock({
       badges={
         <>
           <Pill tone={isError ? 'danger' : 'accent'} mono>
-            {artifact.kind}
+            {artifactTypeLabel(artifact)}
           </Pill>
+          {artifact.metadata?.stylePreset && <InlineMeta>{labelFromSlug(artifact.metadata.stylePreset)}</InlineMeta>}
           {artifact.revision !== undefined && <InlineMeta>rev {artifact.revision}</InlineMeta>}
         </>
       }

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
+import { artifactDetailLabel, artifactTypeLabel } from '../conversation/artifactLabels';
 import { writeClipboardText } from '../desktop/clipboard';
 import type { ConversationArtifactRecord, ConversationArtifactSummary } from '../shared/types';
 import { formatDate } from '../shared/utils';
@@ -55,7 +56,7 @@ export function ConversationArtifactRailContent({
               onClick={() => onOpenArtifact(artifact.id)}
               selected={selected}
               label={artifact.title}
-              meta={artifact.kind}
+              meta={artifactTypeLabel(artifact)}
               detail={artifact.id}
               title={`${artifact.title} · ${artifact.id} · rev ${artifact.revision}`}
             />
@@ -163,8 +164,14 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
       header={
         <WorkbenchHeader
           title={<span title={artifactTitle}>{artifact?.title ?? artifactId}</span>}
-          meta={artifact ? <span className="hidden sm:inline">rev {artifact.revision}</span> : null}
-          leading={<MetaLabel>{artifact?.kind ?? 'artifact'}</MetaLabel>}
+          meta={
+            artifact ? (
+              <span className="hidden sm:inline">
+                {artifactDetailLabel(artifact)} · rev {artifact.revision}
+              </span>
+            ) : null
+          }
+          leading={<MetaLabel>{artifact ? artifactTypeLabel(artifact) : 'artifact'}</MetaLabel>}
           titleClassName="text-[14px]"
           actions={
             artifact ? (

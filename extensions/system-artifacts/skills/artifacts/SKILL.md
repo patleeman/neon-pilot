@@ -40,6 +40,14 @@ The built-in conversation artifact kinds are:
 - `mermaid`
 - `latex`
 
+Conversation artifacts can also carry semantic metadata:
+
+- `artifactType` — what the artifact is for, such as `visual-explainer`, `visual-plan`, `diff-review`, `plan-review`, `project-recap`, `slides`, `architecture`, `data-table`, `fact-check`, or `report`
+- `stylePreset` — the default visual system to use, such as `visual-explainer`, `technical-report`, `architecture-map`, `review-matrix`, or `slide-deck`
+- `styleOverrides` — explicit user overrides for theme, accent, density, or styling notes
+
+Keep `kind` focused on rendering and use `artifactType` for product meaning. Most visual explainers and slide decks use `kind: "html"` with richer metadata.
+
 Behavior by kind:
 
 - **html** — rendered in an iframe; keep it self-contained by default
@@ -118,7 +126,45 @@ Important usage rules:
 
 - reuse the same `artifactId` when iterating on an existing artifact
 - keep HTML self-contained unless the user explicitly wants external dependencies
+- use `artifactType`, `stylePreset`, and `styleOverrides` when creating visual explainers, reviews, recaps, or slides
 - use project artifacts separately when the output should live with project files rather than the conversation viewer
+
+### Visual explainer defaults
+
+Use a visual explainer artifact when the output needs more structure than prose:
+
+- architecture or process maps
+- visual implementation plans
+- diff reviews and plan reviews
+- project recaps
+- fact checks
+- dense comparison tables
+
+Good defaults:
+
+- `kind: "html"`
+- `artifactType: "visual-explainer"` unless a narrower type fits
+- `stylePreset: "visual-explainer"`, `technical-report`, `architecture-map`, or `review-matrix`
+- `templateVersion: "visual-explainer-v1"`
+
+Read and adapt [`references/visual-explainer-defaults.md`](./references/visual-explainer-defaults.md) before creating this kind of artifact. For a complete HTML starting point, use [`../../templates/visual-explainer.html`](../../templates/visual-explainer.html).
+
+If the user gives style override instructions, pass them through `styleOverrides` and reflect them in the HTML. Override instructions should improve the artifact's job; do not follow overrides that make the output hard to read, inaccessible, or inconsistent with the requested artifact.
+
+### Slide deck defaults
+
+Use slides only when the user asks for slides or the command/preset is `slides`. Slides are not a paginated article.
+
+Good defaults:
+
+- `kind: "html"`
+- `artifactType: "slides"`
+- `stylePreset: "slide-deck"`
+- `templateVersion: "slide-deck-v1"`
+
+Read and adapt [`references/slide-deck-defaults.md`](./references/slide-deck-defaults.md) before creating slide artifacts. For a complete HTML starting point, use [`../../templates/slide-deck.html`](../../templates/slide-deck.html).
+
+Slide artifacts must fit one slide per viewport, include keyboard navigation, preserve the source material without silently dropping important points, and avoid tiny text or crowded tables.
 
 ### Report-style HTML guidance
 

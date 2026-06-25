@@ -1,4 +1,4 @@
-import type { ConversationArtifactToolDetails, MessageBlock } from '../shared/types';
+import type { ConversationArtifactMetadata, ConversationArtifactToolDetails, MessageBlock } from '../shared/types';
 
 const CONVERSATION_ARTIFACT_QUERY_PARAM = 'artifact';
 const MAX_ARTIFACT_REVISION = 1_000_000;
@@ -8,6 +8,7 @@ interface ConversationArtifactPresentation {
   artifactId: string;
   title: string;
   kind: 'html' | 'mermaid' | 'latex';
+  metadata?: ConversationArtifactMetadata;
   revision?: number;
   updatedAt?: string;
   openRequested: boolean;
@@ -89,6 +90,7 @@ export function readArtifactPresentation(block: Extract<MessageBlock, { type: 't
     artifactId,
     title,
     kind,
+    ...(details?.metadata ? { metadata: details.metadata } : {}),
     revision:
       typeof details?.revision === 'number' &&
       Number.isSafeInteger(details.revision) &&

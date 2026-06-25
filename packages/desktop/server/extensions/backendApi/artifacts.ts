@@ -1,13 +1,24 @@
 import type {
   ConversationArtifactKind,
+  ConversationArtifactMetadata,
   ConversationArtifactRecord,
   ConversationArtifactSelector,
+  ConversationArtifactSourceMetadata,
+  ConversationArtifactStyleOverrides,
   ConversationArtifactSummary,
 } from '@neon-pilot/extensions/backend/artifacts';
 
 import { callServerModuleExport } from './serverModuleResolver.js';
 
-export type { ConversationArtifactKind, ConversationArtifactRecord, ConversationArtifactSelector, ConversationArtifactSummary };
+export type {
+  ConversationArtifactKind,
+  ConversationArtifactMetadata,
+  ConversationArtifactRecord,
+  ConversationArtifactSelector,
+  ConversationArtifactSourceMetadata,
+  ConversationArtifactStyleOverrides,
+  ConversationArtifactSummary,
+};
 
 export async function deleteConversationArtifact(...args: unknown[]) {
   return callServerModuleExport<boolean>('@neon-pilot/core', 'deleteConversationArtifact', ...args);

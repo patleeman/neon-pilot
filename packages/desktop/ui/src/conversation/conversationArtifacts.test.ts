@@ -28,4 +28,24 @@ describe('conversationArtifacts', () => {
       } as never)?.revision,
     ).toBeUndefined();
   });
+
+  it('preserves semantic artifact metadata from tool details', () => {
+    expect(
+      readArtifactPresentation({
+        type: 'tool_use',
+        id: 'tool-1',
+        tool: 'artifact',
+        input: { action: 'save', artifactId: 'artifact-1', title: 'Artifact', kind: 'html' },
+        details: {
+          action: 'save',
+          artifactId: 'artifact-1',
+          title: 'Artifact',
+          kind: 'html',
+          metadata: { type: 'slides', stylePreset: 'slide-deck' },
+          revision: 2,
+        },
+        status: 'done',
+      } as never)?.metadata,
+    ).toEqual({ type: 'slides', stylePreset: 'slide-deck' });
+  });
 });

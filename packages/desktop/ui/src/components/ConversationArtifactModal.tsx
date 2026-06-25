@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
+import { artifactDetailLabel, artifactTypeLabel } from '../conversation/artifactLabels';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
 import { writeClipboardText } from '../desktop/clipboard';
 import { setExtensionCommandContext } from '../extensions/commands';
@@ -219,7 +220,7 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
         <div className="border-b border-border-subtle px-4 py-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0 flex flex-1 items-center gap-2.5">
-              <MetaLabel>{artifact?.kind ?? 'artifact'}</MetaLabel>
+              <MetaLabel>{artifact ? artifactTypeLabel(artifact) : 'artifact'}</MetaLabel>
               <h2
                 className="min-w-0 truncate text-[14px] font-medium text-primary"
                 title={
@@ -230,7 +231,11 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
               >
                 {artifact?.title ?? artifactId}
               </h2>
-              {artifact ? <span className="hidden shrink-0 text-[11px] text-dim sm:inline">rev {artifact.revision}</span> : null}
+              {artifact ? (
+                <span className="hidden shrink-0 text-[11px] text-dim sm:inline">
+                  {artifactDetailLabel(artifact)} · rev {artifact.revision}
+                </span>
+              ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {artifact ? (
@@ -286,7 +291,7 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
                       <RowButton key={item.id} onClick={() => openArtifact(item.id)} selected={selected} className="px-3 py-2.5">
                         <div className="flex items-center gap-2">
                           <span className="truncate text-[12px] font-medium">{item.title}</span>
-                          <MetaLabel tone="muted">{item.kind}</MetaLabel>
+                          <MetaLabel tone="muted">{artifactTypeLabel(item)}</MetaLabel>
                         </div>
                         <div className="mt-0.5 text-[10px] text-dim font-mono">{item.id}</div>
                       </RowButton>

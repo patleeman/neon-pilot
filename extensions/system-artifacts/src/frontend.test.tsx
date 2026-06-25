@@ -73,6 +73,24 @@ describe('ArtifactDetailPanel', () => {
     expect(screen.queryByText(/Write permission denied/i)).toBeNull();
   });
 
+  it('shows semantic type and style preset for typed html artifacts', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      id: 'latex-1',
+      kind: 'html',
+      metadata: { type: 'slides', stylePreset: 'slide-deck' },
+      title: 'Release review',
+      revision: 1,
+      updatedAt: '2026-06-24T00:00:00.000Z',
+      content: '<!doctype html><html><body><main>Deck</main></body></html>',
+    });
+
+    renderDetailPanel(invoke);
+
+    expect(await screen.findByText('Release review')).toBeTruthy();
+    expect(screen.getAllByText('Slide deck').length).toBeGreaterThan(0);
+    expect(screen.getByText('Slide deck · html · rev 1')).toBeTruthy();
+  });
+
   it('refreshes an open artifact when artifacts are invalidated', async () => {
     const invoke = vi
       .fn()
@@ -103,7 +121,7 @@ describe('ArtifactDetailPanel', () => {
     });
 
     expect(await screen.findByText('After notes')).toBeTruthy();
-    expect(screen.getByText('rev 2')).toBeTruthy();
+    expect(screen.getByText('latex · rev 2')).toBeTruthy();
     expect(screen.getByText('after content')).toBeTruthy();
     expect(screen.queryByText('before content')).toBeNull();
     expect(invoke).toHaveBeenCalledTimes(2);

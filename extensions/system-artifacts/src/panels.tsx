@@ -17,9 +17,19 @@ import { ArtifactToolBlock } from './ArtifactToolBlock.js';
 
 type ArtifactKind = 'html' | 'mermaid' | 'latex';
 
+interface ArtifactMetadata {
+  type?: string;
+  stylePreset?: string;
+  styleOverrides?: { theme?: string; accent?: string; density?: string; notes?: string };
+  source?: { kind?: string; label?: string; messageId?: string; selection?: string; paths?: string[]; command?: string };
+  templateVersion?: string;
+  generator?: string;
+}
+
 interface ArtifactSummary {
   id: string;
   kind: ArtifactKind;
+  metadata?: ArtifactMetadata;
   title: string;
   revision: number;
   updatedAt: string;
@@ -30,6 +40,26 @@ interface ArtifactRecord extends ArtifactSummary {
 }
 
 const ARTIFACT_PARAM = 'artifact';
+const ARTIFACT_TYPE_LABELS: Record<string, string> = {
+  architecture: 'Architecture explainer',
+  'data-table': 'Data table',
+  'diff-review': 'Diff review',
+  'fact-check': 'Fact check',
+  'plan-review': 'Plan review',
+  'project-recap': 'Project recap',
+  report: 'Report',
+  slides: 'Slide deck',
+  'visual-explainer': 'Visual explainer',
+  'visual-plan': 'Visual plan',
+};
+
+const STYLE_PRESET_LABELS: Record<string, string> = {
+  'architecture-map': 'Architecture map',
+  'review-matrix': 'Review matrix',
+  'slide-deck': 'Slide deck',
+  'technical-report': 'Technical report',
+  'visual-explainer': 'Visual explainer',
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -39,10 +69,46 @@ function readArtifactSummary(value: unknown): ArtifactSummary | null {
   if (!isRecord(value)) return null;
   const id = typeof value.id === 'string' ? value.id : typeof value.artifactId === 'string' ? value.artifactId : '';
   const kind = value.kind === 'html' || value.kind === 'mermaid' || value.kind === 'latex' ? value.kind : null;
+  const metadata = readArtifactMetadata(value.metadata);
   const title = typeof value.title === 'string' ? value.title : '';
   const revision = typeof value.revision === 'number' && Number.isFinite(value.revision) ? value.revision : 1;
   const updatedAt = typeof value.updatedAt === 'string' ? value.updatedAt : '';
-  return id && kind && title ? { id, kind, title, revision, updatedAt } : null;
+  return id && kind && title ? { id, kind, ...(metadata ? { metadata } : {}), title, revision, updatedAt } : null;
+}
+
+function readArtifactMetadata(value: unknown): ArtifactMetadata | undefined {
+  if (!isRecord(value)) return undefined;
+  const metadata: ArtifactMetadata = {};
+  if (typeof value.type === 'string' && value.type.trim()) metadata.type = value.type.trim();
+  if (typeof value.stylePreset === 'string' && value.stylePreset.trim()) metadata.stylePreset = value.stylePreset.trim();
+  if (isRecord(value.styleOverrides)) {
+    const overrides: ArtifactMetadata['styleOverrides'] = {};
+    if (typeof value.styleOverrides.theme === 'string' && value.styleOverrides.theme.trim())
+      overrides.theme = value.styleOverrides.theme.trim();
+    if (typeof value.styleOverrides.accent === 'string' && value.styleOverrides.accent.trim())
+      overrides.accent = value.styleOverrides.accent.trim();
+    if (typeof value.styleOverrides.density === 'string' && value.styleOverrides.density.trim())
+      overrides.density = value.styleOverrides.density.trim();
+    if (typeof value.styleOverrides.notes === 'string' && value.styleOverrides.notes.trim())
+      overrides.notes = value.styleOverrides.notes.trim();
+    if (Object.keys(overrides).length) metadata.styleOverrides = overrides;
+  }
+  if (isRecord(value.source)) {
+    const source: ArtifactMetadata['source'] = {};
+    if (typeof value.source.kind === 'string' && value.source.kind.trim()) source.kind = value.source.kind.trim();
+    if (typeof value.source.label === 'string' && value.source.label.trim()) source.label = value.source.label.trim();
+    if (typeof value.source.messageId === 'string' && value.source.messageId.trim()) source.messageId = value.source.messageId.trim();
+    if (typeof value.source.selection === 'string' && value.source.selection.trim()) source.selection = value.source.selection.trim();
+    if (Array.isArray(value.source.paths)) {
+      const paths = value.source.paths.filter((path): path is string => typeof path === 'string' && path.trim().length > 0);
+      if (paths.length) source.paths = paths;
+    }
+    if (typeof value.source.command === 'string' && value.source.command.trim()) source.command = value.source.command.trim();
+    if (Object.keys(source).length) metadata.source = source;
+  }
+  if (typeof value.templateVersion === 'string' && value.templateVersion.trim()) metadata.templateVersion = value.templateVersion.trim();
+  if (typeof value.generator === 'string' && value.generator.trim()) metadata.generator = value.generator.trim();
+  return Object.keys(metadata).length ? metadata : undefined;
 }
 
 function readArtifactRecord(value: unknown): ArtifactRecord | null {
@@ -53,15 +119,17 @@ function readArtifactRecord(value: unknown): ArtifactRecord | null {
 
 function readArtifactPresentation(
   block: unknown,
-): { artifactId?: string; title?: string; kind?: string; revision?: number; updatedAt?: string } | null {
+): { artifactId?: string; title?: string; kind?: string; metadata?: ArtifactMetadata; revision?: number; updatedAt?: string } | null {
   if (!isRecord(block)) return null;
   const details = isRecord(block.details) ? block.details : isRecord(block.result) ? block.result : block;
   const artifactId = typeof details.artifactId === 'string' ? details.artifactId : undefined;
   if (!artifactId) return null;
+  const metadata = readArtifactMetadata(details.metadata);
   return {
     artifactId,
     title: typeof details.title === 'string' ? details.title : artifactId,
     kind: typeof details.kind === 'string' ? details.kind : 'artifact',
+    ...(metadata ? { metadata } : {}),
     revision: typeof details.revision === 'number' ? details.revision : undefined,
     updatedAt: typeof details.updatedAt === 'string' ? details.updatedAt : undefined,
   };
@@ -70,6 +138,25 @@ function readArtifactPresentation(
 function formatDate(value: string): string {
   const date = Date.parse(value);
   return Number.isFinite(date) ? new Date(date).toLocaleString() : value;
+}
+
+function labelFromSlug(value: string): string {
+  return value
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function artifactTypeLabel(artifact: { kind: string; metadata?: ArtifactMetadata }): string {
+  const type = artifact.metadata?.type;
+  return type ? (ARTIFACT_TYPE_LABELS[type] ?? labelFromSlug(type)) : artifact.kind;
+}
+
+function artifactDetailLabel(artifact: { kind: string; metadata?: ArtifactMetadata }): string {
+  const preset = artifact.metadata?.stylePreset;
+  const presetLabel = preset ? (STYLE_PRESET_LABELS[preset] ?? labelFromSlug(preset)) : null;
+  return [presetLabel, artifact.kind].filter(Boolean).join(' · ');
 }
 
 function buildArtifactDocument(content: string): string {
@@ -270,7 +357,7 @@ export function ArtifactsPanel({ pa, context }: ExtensionSurfaceProps) {
               onClick={() => handleOpenArtifact(artifact.id)}
               selected={selected}
               label={artifact.title}
-              meta={artifact.kind}
+              meta={artifactTypeLabel(artifact)}
               detail={artifact.id}
               title={`${artifact.title} · ${artifact.id} · rev ${artifact.revision}`}
             />
@@ -373,7 +460,7 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
       <div className="shrink-0 border-b border-border-subtle px-4 py-2.5">
         <div className="flex min-w-0 items-center justify-between gap-2">
           <div className="min-w-0 flex flex-1 items-center gap-2.5">
-            <MetaLabel>{artifact?.kind ?? 'artifact'}</MetaLabel>
+            <MetaLabel>{artifact ? artifactTypeLabel(artifact) : 'artifact'}</MetaLabel>
             <h2
               className="min-w-0 truncate text-[14px] font-medium text-primary"
               title={
@@ -384,7 +471,11 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
             >
               {artifact?.title ?? artifactId}
             </h2>
-            {artifact ? <span className="hidden shrink-0 text-[11px] text-dim sm:inline">rev {artifact.revision}</span> : null}
+            {artifact ? (
+              <span className="hidden shrink-0 text-[11px] text-dim sm:inline">
+                {artifactDetailLabel(artifact)} · rev {artifact.revision}
+              </span>
+            ) : null}
           </div>
           {artifact ? (
             <div className="flex shrink-0 items-center gap-2">
