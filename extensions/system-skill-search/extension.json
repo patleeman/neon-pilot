@@ -50,10 +50,12 @@
         "id": "skill-search",
         "name": "skill_search",
         "title": "Search Skills",
-        "description": "Search upstream skill repositories for a reusable skill before hand-writing a workflow.",
+        "description": "Search upstream skill repositories and return the best matching skill recommendation before hand-writing a workflow.",
         "action": "searchSkills",
         "promptGuidelines": [
-          "Use this before inventing a new recurring workflow skill; search results are metadata only and include source trust level."
+          "Use this before inventing a new recurring workflow skill; search results are metadata only and include source trust level.",
+          "Do not ask the user to choose from the candidate list. Read the candidates, select the best fit yourself, and use recommendedCandidate.candidateId when it is suitable.",
+          "If a suitable skill exists, call skill_install for the chosen candidate. Only the host approval shelf should ask the user to approve community installs."
         ],
         "inputSchema": {
           "type": "object",
@@ -85,17 +87,26 @@
         "id": "skill-install",
         "name": "skill_install",
         "title": "Install Skill",
-        "description": "Fetch, vet, and install an upstream skill. Trusted sources install directly; community sources trigger host approval.",
+        "description": "Fetch, vet, and install the selected upstream skill. Trusted sources install directly; community sources trigger host approval.",
         "action": "installSkill",
         "promptGuidelines": [
-          "Call with a candidateId returned by skill_search. Do not ask for approval yourself; community approvals are handled by the host."
+          "Prefer calling with a query when you know the needed capability; the tool will search, select the best matching candidate, vet it, and install it.",
+          "Call with a candidateId only when you have already selected the best candidate from skill_search results.",
+          "Do not ask the user to choose a skill or to approve in chat. Community approvals are handled by the host approval shelf."
         ],
         "inputSchema": {
           "type": "object",
           "properties": {
-            "candidateId": { "type": "string", "description": "Candidate id returned by skill_search." }
+            "candidateId": {
+              "type": "string",
+              "description": "Candidate id returned by skill_search after the agent selected the best fit."
+            },
+            "query": {
+              "type": "string",
+              "description": "Capability or workflow needed; the tool searches and installs the best matching skill."
+            },
+            "limit": { "type": "number", "description": "Maximum search results to consider when query is provided, capped at 20." }
           },
-          "required": ["candidateId"],
           "additionalProperties": false
         }
       }

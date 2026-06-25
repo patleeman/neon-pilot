@@ -80,6 +80,13 @@ interface InstalledSkillRecord {
   vetting: VetResult;
 }
 
+interface SkillRecommendation {
+  candidateId: string;
+  candidate: SkillCandidate;
+  reason: string;
+  score: number;
+}
+
 interface GitHubSource {
   id: string;
   label: string;
@@ -119,19 +126,13 @@ export async function searchSkills(input: unknown, ctx: ExtensionBackendContext)
   const query = readString(body.query);
   if (!query) throw new Error('query is required.');
   const limit = clampInteger(body.limit, 8, 1, MAX_SEARCH_RESULTS);
-  const deadline = Date.now() + SEARCH_TIMEOUT_MS;
-  const tasks = [
-    searchHermesIndex(query, limit, deadline).catch(() => []),
-    ...TRUSTED_GITHUB_SOURCES.map((source) => searchGitHubSource(source, query, limit, deadline).catch(() => [])),
-  ];
-  const settled = await Promise.allSettled(tasks);
-  const candidates = dedupeCandidates(settled.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))).slice(0, limit);
-
-  await Promise.all(candidates.map((candidate) => ctx.storage.put(`${CANDIDATE_KEY}${candidate.id}`, candidate)));
+  const candidates = await searchAndStoreCandidates(query, limit, ctx);
+  const recommendation = selectBestCandidate(query, candidates);
   return {
     ok: true,
     query,
     candidates,
+    recommendedCandidate: recommendation,
     searchedSources: ['hermes-index', ...TRUSTED_GITHUB_SOURCES.map((source) => source.id)],
     omittedSources: ['skills.sh', 'well-known endpoints', 'direct URLs', 'ClawHub', 'LobeHub', 'browse.sh'],
   };
@@ -152,7 +153,7 @@ export async function previewSkill(input: unknown, ctx: ExtensionBackendContext)
 }
 
 export async function installSkill(input: unknown, ctx: ExtensionBackendContext) {
-  const candidate = await requireCandidate(input, ctx);
+  const candidate = await resolveInstallCandidate(input, ctx);
   const preview = await prepareSkill(candidate, ctx, 'Vet and install upstream skill.');
   if (!preview.vetting.allowed) throw new Error(`Skill did not pass vetting: ${preview.vetting.summary}`);
 
@@ -269,13 +270,43 @@ export async function listState(_input: unknown, ctx: ExtensionBackendContext) {
   };
 }
 
+async function resolveInstallCandidate(input: unknown, ctx: ExtensionBackendContext): Promise<SkillCandidate> {
+  const body = asRecord(input);
+  const candidateId = readString(body.candidateId);
+  if (candidateId) return requireCandidateId(candidateId, ctx);
+
+  const query = readString(body.query);
+  if (!query) throw new Error('candidateId or query is required.');
+  const limit = clampInteger(body.limit, 8, 1, MAX_SEARCH_RESULTS);
+  const candidates = await searchAndStoreCandidates(query, limit, ctx);
+  const recommendation = selectBestCandidate(query, candidates);
+  if (!recommendation) throw new Error(`No matching skill found for "${query}".`);
+  return recommendation.candidate;
+}
+
 async function requireCandidate(input: unknown, ctx: ExtensionBackendContext): Promise<SkillCandidate> {
   const body = asRecord(input);
   const candidateId = readString(body.candidateId);
   if (!candidateId) throw new Error('candidateId is required.');
+  return requireCandidateId(candidateId, ctx);
+}
+
+async function requireCandidateId(candidateId: string, ctx: ExtensionBackendContext): Promise<SkillCandidate> {
   const candidate = await ctx.storage.get<SkillCandidate>(`${CANDIDATE_KEY}${candidateId}`);
   if (!candidate) throw new Error(`Unknown skill candidate: ${candidateId}. Run skill_search first.`);
   return candidate;
+}
+
+async function searchAndStoreCandidates(query: string, limit: number, ctx: ExtensionBackendContext): Promise<SkillCandidate[]> {
+  const deadline = Date.now() + SEARCH_TIMEOUT_MS;
+  const tasks = [
+    searchHermesIndex(query, limit, deadline).catch(() => []),
+    ...TRUSTED_GITHUB_SOURCES.map((source) => searchGitHubSource(source, query, limit, deadline).catch(() => [])),
+  ];
+  const settled = await Promise.allSettled(tasks);
+  const candidates = dedupeCandidates(settled.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))).slice(0, limit);
+  await Promise.all(candidates.map((candidate) => ctx.storage.put(`${CANDIDATE_KEY}${candidate.id}`, candidate)));
+  return candidates;
 }
 
 async function prepareSkill(candidate: SkillCandidate, ctx: ExtensionBackendContext, reason: string): Promise<PreviewRecord> {
@@ -715,6 +746,77 @@ function dedupeCandidates(candidates: SkillCandidate[]): SkillCandidate[] {
       left.sourceLabel.localeCompare(right.sourceLabel) ||
       left.title.localeCompare(right.title),
   );
+}
+
+function selectBestCandidate(query: string, candidates: SkillCandidate[]): SkillRecommendation | null {
+  if (candidates.length === 0) return null;
+  const scored = candidates.map((candidate) => ({ candidate, score: scoreCandidateForQuery(query, candidate) }));
+  scored.sort(
+    (left, right) =>
+      right.score - left.score ||
+      trustRank(right.candidate.trustLevel) - trustRank(left.candidate.trustLevel) ||
+      left.candidate.sourceLabel.localeCompare(right.candidate.sourceLabel) ||
+      left.candidate.title.localeCompare(right.candidate.title),
+  );
+  const best = scored[0];
+  return {
+    candidateId: best.candidate.id,
+    candidate: best.candidate,
+    score: best.score,
+    reason: buildRecommendationReason(query, best.candidate),
+  };
+}
+
+function scoreCandidateForQuery(query: string, candidate: SkillCandidate): number {
+  const tokens = tokenizeQuery(query);
+  const exactQuery = query.trim().toLowerCase();
+  const title = candidate.title.toLowerCase();
+  const name = candidate.name.toLowerCase();
+  const description = candidate.description.toLowerCase();
+  const identifier = candidate.identifier.toLowerCase();
+  const tags = candidate.tags.join(' ').toLowerCase();
+  let score = trustRank(candidate.trustLevel) * 100;
+
+  if (exactQuery && title.includes(exactQuery)) score += 50;
+  if (exactQuery && name.includes(exactQuery)) score += 35;
+  if (exactQuery && description.includes(exactQuery)) score += 20;
+  if (exactQuery && tags.includes(exactQuery)) score += 18;
+  if (exactQuery && identifier.includes(exactQuery)) score += 8;
+
+  for (const token of tokens) {
+    if (title.includes(token)) score += 12;
+    if (name.includes(token)) score += 10;
+    if (description.includes(token)) score += 6;
+    if (tags.includes(token)) score += 5;
+    if (identifier.includes(token)) score += 2;
+  }
+
+  return score;
+}
+
+function buildRecommendationReason(query: string, candidate: SkillCandidate): string {
+  const trust =
+    candidate.trustLevel === 'community'
+      ? 'it is the strongest community match and will require approval before install'
+      : `it comes from trusted source ${candidate.sourceLabel}`;
+  const match = candidate.description
+    ? `matches "${query}" with description: ${candidate.description.slice(0, 160)}`
+    : `matches "${query}" by name and source metadata`;
+  return `Selected ${candidate.title} because ${trust} and ${match}.`;
+}
+
+function trustRank(trustLevel: TrustLevel): number {
+  if (trustLevel === 'builtin') return 3;
+  if (trustLevel === 'trusted') return 2;
+  return 1;
+}
+
+function tokenizeQuery(query: string): string[] {
+  return query
+    .toLowerCase()
+    .split(/[^a-z0-9_.-]+/i)
+    .map((token) => token.trim())
+    .filter(Boolean);
 }
 
 function parseFrontmatter(content: string): Record<string, unknown> {

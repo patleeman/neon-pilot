@@ -191,12 +191,16 @@ describe('system-skill-search backend', () => {
     const { ctx, store } = createCtx();
 
     const result = (await searchSkills({ query: 'review', limit: 10 }, ctx as never)) as {
-      candidates: Array<{ title: string; trustLevel: string }>;
+      candidates: Array<{ id: string; title: string; trustLevel: string }>;
+      recommendedCandidate: { candidateId: string; candidate: { title: string; trustLevel: string }; reason: string };
     };
 
     expect(result.candidates.map((candidate) => candidate.title)).toContain('Review Helper');
     expect(result.candidates.map((candidate) => candidate.title)).toContain('Reviewer');
     expect(result.candidates.map((candidate) => candidate.title)).toContain('Evil Review');
+    expect(result.recommendedCandidate.candidateId).toBeTruthy();
+    expect(result.recommendedCandidate.candidate.trustLevel).toBe('trusted');
+    expect(result.recommendedCandidate.reason).toContain('Selected');
     expect([...store.keys()].filter((key) => key.startsWith('candidates/')).length).toBeGreaterThan(0);
   });
 
@@ -320,6 +324,52 @@ describe('system-skill-search backend', () => {
     expect(result).toMatchObject({ ok: false, requiresApproval: true, status: 'declined' });
     expect(ctx.ui.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'Install community skill' }));
     expect(ctx.runtime.refreshSkillMcpConfig).not.toHaveBeenCalled();
+  });
+
+  it('selects and installs the best matching skill from a query without user candidate selection', async () => {
+    const archive = createTarGz({
+      'safe-skill-main/skills/reviewer/SKILL.md':
+        '---\nname: reviewer\ndescription: Review pull requests.\n---\nUse this when reviewing code.',
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const textUrl = String(url);
+        if (textUrl.includes('skills-index.json')) {
+          return jsonResponse({
+            skills: [
+              {
+                name: 'reviewer',
+                description: 'Review pull requests.',
+                trust_level: 'community',
+                repo: 'example/safe-skill',
+                path: 'skills/reviewer',
+              },
+            ],
+          });
+        }
+        if (textUrl.includes('codeload.github.com/example/safe-skill/tar.gz/refs/heads/main')) {
+          return bufferResponse(archive);
+        }
+        if (textUrl.includes('/repos/example/safe-skill')) {
+          return jsonResponse({ default_branch: 'main' });
+        }
+        if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
+        return jsonResponse({});
+      }),
+    );
+    const { ctx, files } = createCtx();
+
+    const result = (await installSkill({ query: 'review pull requests', limit: 10 }, ctx as never)) as {
+      ok: boolean;
+      installed: { title: string; trustLevel: string };
+    };
+
+    expect(result.ok).toBe(true);
+    expect(result.installed).toMatchObject({ title: 'Reviewer', trustLevel: 'community' });
+    expect(files.get('installed-skills/reviewer/SKILL.md')).toContain('Review pull requests');
+    expect(ctx.ui.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'Install community skill' }));
+    expect(ctx.runtime.refreshSkillMcpConfig).toHaveBeenCalled();
   });
 
   it('cancels community installs when approval times out', async () => {

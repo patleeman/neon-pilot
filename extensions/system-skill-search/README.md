@@ -4,11 +4,18 @@ Searches upstream skill repositories, previews fetched skills through a quaranti
 
 ## Agent tools
 
-| Tool            | Purpose                                                                                      |
-| --------------- | -------------------------------------------------------------------------------------------- |
-| `skill_search`  | Search upstream catalogs and repositories for reusable skills.                               |
-| `skill_preview` | Fetch a candidate into quarantine, run deterministic checks, and run a no-tool model review. |
-| `skill_install` | Fetch, vet, approve when required, and install a candidate.                                  |
+| Tool            | Purpose                                                                                       |
+| --------------- | --------------------------------------------------------------------------------------------- |
+| `skill_search`  | Search upstream catalogs and repositories and return the recommended best-fit skill.          |
+| `skill_preview` | Fetch a candidate into quarantine, run deterministic checks, and run a no-tool model review.  |
+| `skill_install` | Select from a query or install a chosen candidate, then vet, approve when required, and save. |
+
+Agents should not show users a list of candidates or ask them which skill to install. The intended flow is:
+
+1. Search for the needed capability.
+2. Read the returned candidates and recommendation.
+3. Select the best fit, or call `skill_install` with a query so the tool selects the best match.
+4. Let `skill_install` handle vetting, trusted-source installation, and community approval.
 
 `skill_install` does not accept an approval flag. Community candidates trigger the host approval shelf after vetting passes; declined or timed-out approvals cancel installation.
 
