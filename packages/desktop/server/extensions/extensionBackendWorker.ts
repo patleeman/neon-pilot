@@ -16,10 +16,12 @@ import type {
   ExtensionBackendWorkerRequest,
   ExtensionBackendWorkerResponse,
 } from './extensionBackendWorkerProtocol.js';
+import { type ExtensionHostClient, setExtensionHostClient } from './extensionHostClient.js';
 import { assertExtensionBackendNativeImportsAllowed, withExtensionProcessGuard } from './extensionProcessGuard.js';
 
 const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
 const pendingCapabilities = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+const requestAbortControllers = new Map<number, AbortController>();
 const shellHandleCallbacks = new Map<
   string,
   {
@@ -57,6 +59,64 @@ if (!parentPort) {
   }
   return callHostCapability(scope.extensionId, capability, operation, input, scope.contextOptions);
 };
+
+function callScopedHostCapability(capability: string, operation: string, input?: unknown): Promise<unknown> {
+  const scope = extensionCapabilityScope.getStore();
+  if (!scope) {
+    throw new Error('Extension host client is unavailable outside an active extension backend worker request.');
+  }
+  return callHostCapability(scope.extensionId, capability, operation, input, scope.contextOptions);
+}
+
+function unsupportedExtensionHostClientMethod(method: string): () => Promise<never> {
+  return async () => {
+    throw new Error(`Extension host client method ${method} is unavailable in extension backend workers.`);
+  };
+}
+
+setExtensionHostClient({
+  health: unsupportedExtensionHostClientMethod('health'),
+  checkBackendHealth: unsupportedExtensionHostClientMethod('checkBackendHealth'),
+  invokeAction(input) {
+    return callScopedHostCapability('extensions', 'invokeAction', input) as Promise<
+      Awaited<ReturnType<ExtensionHostClient['invokeAction']>>
+    >;
+  },
+  installSubscriptions: unsupportedExtensionHostClientMethod('installSubscriptions'),
+  uninstallSubscriptions: unsupportedExtensionHostClientMethod('uninstallSubscriptions'),
+  listServices: unsupportedExtensionHostClientMethod('listServices'),
+  startServices: unsupportedExtensionHostClientMethod('startServices'),
+  stopServices: unsupportedExtensionHostClientMethod('stopServices'),
+  listPromptAssemblyContributions() {
+    return callScopedHostCapability('extensions', 'listPromptAssemblyContributions') as Promise<
+      Awaited<ReturnType<ExtensionHostClient['listPromptAssemblyContributions']>>
+    >;
+  },
+  listStaticContributions() {
+    return callScopedHostCapability('extensions', 'listStaticContributions') as Promise<
+      Awaited<ReturnType<ExtensionHostClient['listStaticContributions']>>
+    >;
+  },
+  listEventSubscriptions: unsupportedExtensionHostClientMethod('listEventSubscriptions'),
+  stateOperation: unsupportedExtensionHostClientMethod('stateOperation'),
+  registryMaintenance: unsupportedExtensionHostClientMethod('registryMaintenance'),
+  readRegistryPresentation: unsupportedExtensionHostClientMethod('readRegistryPresentation'),
+  resolveFilePath: unsupportedExtensionHostClientMethod('resolveFilePath'),
+  resolveModelProfile: unsupportedExtensionHostClientMethod('resolveModelProfile'),
+  resolvePromptReferences: unsupportedExtensionHostClientMethod('resolvePromptReferences'),
+  invokeProtocolEntrypoint: unsupportedExtensionHostClientMethod('invokeProtocolEntrypoint'),
+  invokeRoute: unsupportedExtensionHostClientMethod('invokeRoute'),
+  listActionTelemetry: unsupportedExtensionHostClientMethod('listActionTelemetry'),
+  listAuditEvents: unsupportedExtensionHostClientMethod('listAuditEvents'),
+  reloadBackend: unsupportedExtensionHostClientMethod('reloadBackend'),
+  runSelfTest: unsupportedExtensionHostClientMethod('runSelfTest'),
+  setEnabled: unsupportedExtensionHostClientMethod('setEnabled'),
+  setKeybinding: unsupportedExtensionHostClientMethod('setKeybinding'),
+  beginStartupGuard: unsupportedExtensionHostClientMethod('beginStartupGuard'),
+  completeStartupGuard: unsupportedExtensionHostClientMethod('completeStartupGuard'),
+  startStartupActions: unsupportedExtensionHostClientMethod('startStartupActions'),
+  publishEvent: unsupportedExtensionHostClientMethod('publishEvent'),
+} as ExtensionHostClient);
 
 function loadModule(extensionId: string, compiled: { path: string; hash: string }): Promise<ExtensionBackendModule> {
   const cacheKey = `${compiled.path}:${compiled.hash}`;
@@ -282,6 +342,12 @@ function createWorkerBackendContext(
         callHostCapability(extensionId, 'conversations', 'rollback', { conversationId, count }),
       ensureLive: (conversationId: string, options?: { cwd?: string }) =>
         callHostCapability(extensionId, 'conversations', 'ensureLive', { conversationId, ...(options?.cwd ? { cwd: options.cwd } : {}) }),
+      requestWorkingDirectoryChange: (conversationId: string, cwd: string, options?: { continuePrompt?: string }) =>
+        callHostCapability(extensionId, 'conversations', 'requestWorkingDirectoryChange', {
+          conversationId,
+          cwd,
+          ...(options?.continuePrompt ? { continuePrompt: options.continuePrompt } : {}),
+        }),
       sendMessage: (
         conversationId: string,
         text: string,
@@ -321,8 +387,10 @@ function createWorkerBackendContext(
         callHostCapability(extensionId, 'conversations', 'fork', input),
       setTitle: (conversationId: string, title: string) =>
         callHostCapability(extensionId, 'conversations', 'setTitle', { conversationId, title }),
+      delete: (input: { conversationIds: string[] }) =>
+        callHostCapability(extensionId, 'conversations', 'delete', { ...input, runtimeScope, runtimeSettingsFilePath }),
       prune: (input: { olderThanMs: number; archivedOnly?: boolean | null; dryRun?: boolean | null }) =>
-        callHostCapability(extensionId, 'conversations', 'prune', input),
+        callHostCapability(extensionId, 'conversations', 'prune', { ...input, runtimeScope, runtimeSettingsFilePath }),
       metadata: {
         get: (input: { conversationId: string; namespace?: string }) =>
           callHostCapability(extensionId, 'conversations', 'metadata.get', { ...input, runtimeScope }),
@@ -336,7 +404,11 @@ function createWorkerBackendContext(
       },
     },
     extensions: {
+      invokeAction: (input: { extensionId: string; actionId: string; input?: unknown; signal?: AbortSignal }) =>
+        callHostCapability(extensionId, 'extensions', 'invokeAction', input),
       listActions: () => callHostCapability(extensionId, 'extensions', 'listActions'),
+      listPromptAssemblyContributions: () => callHostCapability(extensionId, 'extensions', 'listPromptAssemblyContributions'),
+      listStaticContributions: () => callHostCapability(extensionId, 'extensions', 'listStaticContributions'),
       getStatus: (targetExtensionId: string) =>
         callHostCapability(extensionId, 'extensions', 'getStatus', { extensionId: targetExtensionId }),
       setEnabled: (targetExtensionId: string, enabled: boolean) =>
@@ -446,12 +518,30 @@ function createWorkerBackendContext(
     },
     ui: {
       invalidate: (topics: string | string[]) => callHostCapability(extensionId, 'ui', 'invalidate', { topics }),
+      confirm: (options: unknown) => callHostCapability(extensionId, 'ui', 'confirm', options),
     },
     workspace: {
       readText: (input: unknown) => callHostCapability(extensionId, 'workspace', 'readText', input),
       writeText: (input: unknown) => callHostCapability(extensionId, 'workspace', 'writeText', input),
       list: (input: unknown) => callHostCapability(extensionId, 'workspace', 'list', input),
     },
+  };
+}
+
+function attachWorkerAbortSignal(
+  contextOptions: ExtensionBackendWorkerBackendContextOptions | undefined,
+  signal: AbortSignal,
+): ExtensionBackendWorkerBackendContextOptions | undefined {
+  if (!contextOptions) return undefined;
+  const agentToolContext =
+    contextOptions.agentToolContext &&
+    typeof contextOptions.agentToolContext === 'object' &&
+    !Array.isArray(contextOptions.agentToolContext)
+      ? { ...(contextOptions.agentToolContext as Record<string, unknown>), signal }
+      : contextOptions.agentToolContext;
+  return {
+    ...contextOptions,
+    ...(agentToolContext ? { agentToolContext } : {}),
   };
 }
 
@@ -559,12 +649,19 @@ async function handleRequest(request: ExtensionBackendWorkerRequest): Promise<Ex
       if (typeof handler !== 'function') {
         throw new Error(`Extension backend export not found: ${request.exportName}`);
       }
-      const contextOptions = typeof request.context === 'object' ? request.context : undefined;
-      const args = request.context ? [...request.args, createWorkerBackendContext(request.extensionId, contextOptions)] : request.args;
-      const result = await extensionCapabilityScope.run({ extensionId: request.extensionId, contextOptions }, () =>
-        (handler as (...args: unknown[]) => unknown)(...args),
-      );
-      return { id: request.id, ok: true, result: serializeRouteStreamResult(result) };
+      const abortController = new AbortController();
+      requestAbortControllers.set(request.id, abortController);
+      try {
+        const contextOptions =
+          typeof request.context === 'object' ? attachWorkerAbortSignal(request.context, abortController.signal) : undefined;
+        const args = request.context ? [...request.args, createWorkerBackendContext(request.extensionId, contextOptions)] : request.args;
+        const result = await extensionCapabilityScope.run({ extensionId: request.extensionId, contextOptions }, () =>
+          (handler as (...args: unknown[]) => unknown)(...args),
+        );
+        return { id: request.id, ok: true, result: serializeRouteStreamResult(result) };
+      } finally {
+        requestAbortControllers.delete(request.id);
+      }
     }
 
     if (request.type === 'clearModule') {
@@ -590,6 +687,10 @@ parentPort.on('message', (message: ExtensionBackendWorkerParentMessage) => {
   }
   if ('kind' in message && message.kind === 'routeStreamCancel') {
     void cancelRouteStream(message.handleId);
+    return;
+  }
+  if ('kind' in message && message.kind === 'abortRequest') {
+    requestAbortControllers.get(message.requestId)?.abort();
     return;
   }
 

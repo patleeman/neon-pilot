@@ -98,6 +98,7 @@ export const EXTENSION_PERMISSIONS = [
   'network:listen',
   'telemetry:read',
   'telemetry:write',
+  'ui:confirm',
   'ui:invalidate',
   'ui:notify',
 ] as const;

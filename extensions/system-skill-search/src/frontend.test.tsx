@@ -8,7 +8,7 @@ import { SkillSearchSettingsPanel, SkillSearchSettingsView, type SkillSearchStat
 
 const LOADED_STATE: SkillSearchState = {
   sources: [
-    { id: 'hermes-index', label: 'Hermes trusted index', kind: 'hermes-index', trustLevel: 'trusted', enabled: true },
+    { id: 'hermes-index', label: 'Hermes Skills Index', kind: 'hermes-index', trustLevel: 'community', enabled: true },
     { id: 'openai-skills-curated', label: 'OpenAI Skills', kind: 'github', trustLevel: 'trusted', enabled: true },
   ],
   previews: [
@@ -61,11 +61,12 @@ describe('SkillSearchSettingsPanel', () => {
     expect(html).toContain('Loading Skill Search');
   });
 
-  it('renders trusted sources, vetted previews, and installed skills', () => {
+  it('renders sources, vetted previews, and installed skills', () => {
     const html = renderToStaticMarkup(<SkillSearchSettingsView state={LOADED_STATE} />);
 
-    expect(html).toContain('Trusted Sources');
-    expect(html).toContain('Hermes trusted index');
+    expect(html).toContain('Sources');
+    expect(html).toContain('Hermes Skills Index');
+    expect(html).toContain('Community');
     expect(html).toContain('Recent Previews');
     expect(html).toContain('Installed Upstream Skills');
     expect(html).toContain('Reviewer');
@@ -76,7 +77,7 @@ describe('SkillSearchSettingsPanel', () => {
 
     render(<SkillSearchSettingsPanel pa={pa as never} />);
 
-    await waitFor(() => expect(screen.getByText('Hermes trusted index')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Hermes Skills Index')).toBeTruthy());
     expect(pa.extension.invoke).toHaveBeenCalledWith('listState', {});
     expect(screen.getByText('Installed Upstream Skills')).toBeTruthy();
   });

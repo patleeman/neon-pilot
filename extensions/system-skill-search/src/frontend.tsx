@@ -94,6 +94,12 @@ function trustTone(trustLevel: TrustLevel): 'success' | 'warning' | 'muted' {
   return 'warning';
 }
 
+function trustLabel(trustLevel: TrustLevel): string {
+  if (trustLevel === 'builtin') return 'Built-in';
+  if (trustLevel === 'trusted') return 'Trusted';
+  return 'Community';
+}
+
 function verdictTone(verdict: VetVerdict): 'success' | 'warning' | 'danger' {
   if (verdict === 'safe') return 'success';
   if (verdict === 'caution') return 'warning';
@@ -136,7 +142,7 @@ export function SkillSearchSettingsView({
         <div className="space-y-1">
           <h3 className="text-base font-medium text-primary">Skill Search</h3>
           <SupportingText>
-            Trusted upstream skill repositories are searched on demand. Installs require a vetted preview and explicit approval.
+            Upstream skill repositories are searched on demand. Trusted skills install after vetting; community skills require approval.
           </SupportingText>
         </div>
         <ToolbarButton onClick={onRefresh} disabled={loading} aria-label="Refresh Skill Search state">
@@ -149,7 +155,7 @@ export function SkillSearchSettingsView({
 
       <section className="space-y-2">
         <div className="flex items-center justify-between gap-3">
-          <h4 className="text-sm font-medium text-primary">Trusted Sources</h4>
+          <h4 className="text-sm font-medium text-primary">Sources</h4>
           <SupportingText>{normalized.sources.length} enabled</SupportingText>
         </div>
         <DataTable>
@@ -171,7 +177,7 @@ export function SkillSearchSettingsView({
                   </DataTableCell>
                   <DataTableCell>{source.kind === 'hermes-index' ? 'Index' : 'Repository'}</DataTableCell>
                   <DataTableCell>
-                    <Pill tone={trustTone(source.trustLevel)}>{source.trustLevel === 'builtin' ? 'Built-in' : 'Trusted'}</Pill>
+                    <Pill tone={trustTone(source.trustLevel)}>{trustLabel(source.trustLevel)}</Pill>
                   </DataTableCell>
                 </DataTableRow>
               ))

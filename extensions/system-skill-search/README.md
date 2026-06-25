@@ -1,20 +1,20 @@
 # Skill Search
 
-Searches trusted upstream skill repositories, previews fetched skills through a quarantine and vetting flow, and installs approved skills into extension-owned storage.
+Searches upstream skill repositories, previews fetched skills through a quarantine and vetting flow, and installs vetted skills into extension-owned storage. Trusted sources install directly after vetting. Community sources require a host-owned timed approval popup.
 
 ## Agent tools
 
 | Tool            | Purpose                                                                                      |
 | --------------- | -------------------------------------------------------------------------------------------- |
-| `skill_search`  | Search trusted upstream catalogs and repositories for reusable skills.                       |
+| `skill_search`  | Search upstream catalogs and repositories for reusable skills.                               |
 | `skill_preview` | Fetch a candidate into quarantine, run deterministic checks, and run a no-tool model review. |
-| `skill_install` | Install a vetted candidate after explicit user approval.                                     |
+| `skill_install` | Fetch, vet, approve when required, and install a candidate.                                  |
 
-`skill_install` refuses to install unless `approved: true` is supplied. The agent is expected to ask the user before passing that flag.
+`skill_install` does not accept an approval flag. Community candidates trigger the host approval popup after vetting passes; declined or timed-out approvals cancel installation.
 
 ## Sources
 
-The first version searches:
+The default trusted source set is intentionally conservative:
 
 - `openai/skills`
 - `anthropics/skills`
@@ -22,7 +22,7 @@ The first version searches:
 - `NVIDIA/skills`
 - Hermes Skills Index entries marked `builtin` or `trusted`
 
-Community sources such as skills.sh, browse.sh, ClawHub, LobeHub, direct URLs, and arbitrary well-known endpoints are intentionally out of the default search path.
+Hermes Skills Index community entries are returned as community candidates and are approval-gated at install time. Community sources such as skills.sh, browse.sh, ClawHub, LobeHub, direct URLs, and arbitrary well-known endpoints are intentionally out of the default search path until they have a source policy.
 
 ## Validation
 

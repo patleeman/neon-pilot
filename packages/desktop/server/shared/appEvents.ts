@@ -44,6 +44,17 @@ export type AppEvent =
   | { type: 'conversation_state_changed'; conversation: ConversationRuntimeState }
   | { type: 'notification'; extensionId: string; message: string; severity: string; details?: string }
   | { type: 'extension_command'; command: string; args?: unknown; sourceExtensionId?: string; requestId?: string }
+  | {
+      type: 'extension_ui_confirm';
+      requestId: string;
+      extensionId: string;
+      title: string;
+      message: string;
+      confirmLabel?: string;
+      cancelLabel?: string;
+      timeoutMs: number;
+      details?: Array<{ label: string; value: string }>;
+    }
   | { type: 'session_meta_changed'; sessionId: string }
   | { type: 'session_file_changed'; sessionId: string }
   | {

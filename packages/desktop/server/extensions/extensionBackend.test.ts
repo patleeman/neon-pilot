@@ -439,6 +439,21 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires UI confirm permission for host-run UI confirmation helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'ui-confirm-helper-ext');
+    const context = createBackendContext('ui-confirm-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    await expect(context.ui.confirm({ message: 'Install skill?' })).rejects.toThrow(
+      'Extension "ui-confirm-helper-ext" requires permission ui:confirm to use ui.confirm.',
+    );
+  });
+
   it('requires conversation permissions for host-run conversation helpers', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
@@ -528,6 +543,50 @@ describe('extension backend action invocation', () => {
           stateRoot: '/state-root',
         }),
       }),
+    );
+  });
+
+  it('passes action abort signals into worker action invocations', async () => {
+    const signal = new AbortController().signal;
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ ok: true })),
+      run: vi.fn(),
+    };
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction(
+        'system-runs',
+        'bash',
+        { command: 'sleep 60' },
+        {
+          getRuntimeScope: () => 'shared',
+          getRepoRoot: () => '/repo',
+        },
+        {
+          conversationId: 'conv-1',
+          cwd: '/repo',
+        },
+        {
+          conversationId: 'conv-1',
+          cwd: '/repo',
+        },
+        signal,
+      ),
+    ).resolves.toEqual({ ok: true, result: { ok: true } });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-runs',
+      expect.any(Object),
+      'bash',
+      expect.any(Object),
+      [{ command: 'sleep 60' }],
+      expect.objectContaining({ signal }),
     );
   });
 

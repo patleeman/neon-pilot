@@ -50,13 +50,20 @@ import { assertExtensionAnyPermission } from './extensionPermissions.js';
 import {
   findExtensionCommandRegistration,
   findExtensionEntry,
+  listEnabledExtensionEntries,
+  listExtensionAssemblyProviderRegistrations,
   listExtensionCommandRegistrations,
   listExtensionInstallSummaries,
+  listExtensionPromptAssemblyHookRegistrations,
+  listExtensionPromptContextProviderRegistrations,
+  listExtensionSkillRegistrations,
+  listExtensionToolRegistrations,
   setExtensionEnabled,
 } from './extensionRegistry.js';
 import { type ExtensionRuntimeRefreshSkillMcpConfigInput, refreshHostSkillMcpConfig } from './extensionRuntimeCapability.js';
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
+import { requestExtensionUiConfirm } from './extensionUiConfirmBridge.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
 import { isKnownHostCommand } from './hostCommands.js';
 import {
@@ -173,6 +180,12 @@ interface ExtensionBackendCapabilityConversations {
     },
   ): Promise<unknown> | unknown;
   ensureLive?(extensionId: string, conversationId: string, options?: { cwd?: string }): Promise<unknown> | unknown;
+  requestWorkingDirectoryChange?(
+    extensionId: string,
+    conversationId: string,
+    cwd: string,
+    options?: { continuePrompt?: string },
+  ): Promise<unknown> | unknown;
   sendMessage?(
     extensionId: string,
     conversationId: string,
@@ -198,6 +211,7 @@ interface ExtensionBackendCapabilityConversations {
     input: { conversationId: string; targetCwd?: string; cwd?: string; title?: string },
   ): Promise<unknown> | unknown;
   setTitle?(extensionId: string, conversationId: string, title: string): Promise<unknown> | unknown;
+  delete?(extensionId: string, input: { conversationIds: string[] }): Promise<unknown> | unknown;
   rollback?(extensionId: string, conversationId: string, count: number): Promise<unknown> | unknown;
   prune?(
     extensionId: string,
@@ -222,7 +236,10 @@ interface ExtensionBackendCapabilityConversations {
 }
 
 interface ExtensionBackendCapabilityExtensions {
+  invokeAction(input: { extensionId: string; actionId: string; input?: unknown; signal?: AbortSignal }): unknown;
   listActions(): unknown;
+  listPromptAssemblyContributions(): unknown;
+  listStaticContributions(): unknown;
   getStatus(extensionId: string): unknown;
   setEnabled(extensionId: string, enabled: boolean): unknown;
 }
@@ -334,6 +351,17 @@ interface ExtensionBackendCapabilitySecrets {
 
 interface ExtensionBackendCapabilityUi {
   invalidate(topics: string | string[]): unknown;
+  confirm(
+    extensionId: string,
+    input: {
+      title?: string;
+      message: string;
+      confirmLabel?: string;
+      cancelLabel?: string;
+      timeoutMs?: number;
+      details?: Array<{ label: string; value: string }>;
+    },
+  ): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendCapabilityWorkspace {
@@ -471,6 +499,7 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
       'compact',
       'fork',
       'setTitle',
+      'delete',
       'prune',
       'metadata.set',
     ]);
@@ -518,7 +547,7 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
   }
 
   if (request.capability === 'ui') {
-    return ['ui:invalidate'];
+    return request.operation === 'confirm' ? ['ui:confirm'] : ['ui:invalidate'];
   }
 
   if (request.capability === 'models') {
@@ -838,6 +867,20 @@ function dispatchConversationsCapability(
     );
   }
 
+  if (request.operation === 'requestWorkingDirectoryChange') {
+    if (!conversations.requestWorkingDirectoryChange) {
+      throw new Error('Conversation working directory change capability is unavailable.');
+    }
+    return conversations.requestWorkingDirectoryChange(
+      request.extensionId,
+      requireString(input.conversationId, 'Conversation id'),
+      requireString(input.cwd, 'Conversation cwd'),
+      input.continuePrompt !== undefined
+        ? { continuePrompt: optionalString(input.continuePrompt, 'Conversation continue prompt') }
+        : undefined,
+    );
+  }
+
   if (request.operation === 'sendMessage') {
     if (!conversations.sendMessage) {
       throw new Error('Conversation sendMessage capability is unavailable.');
@@ -945,6 +988,19 @@ function dispatchConversationsCapability(
     );
   }
 
+  if (request.operation === 'delete') {
+    if (!conversations.delete) {
+      throw new Error('Conversation delete capability is unavailable.');
+    }
+    return conversations.delete(request.extensionId, {
+      conversationIds: requireStringArray(input.conversationIds, 'Conversation ids'),
+      ...(input.runtimeScope !== undefined ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation runtime scope') } : {}),
+      ...(input.runtimeSettingsFilePath !== undefined
+        ? { runtimeSettingsFilePath: optionalString(input.runtimeSettingsFilePath, 'Conversation runtime settings file') }
+        : {}),
+    });
+  }
+
   if (request.operation === 'prune') {
     if (!conversations.prune) {
       throw new Error('Conversation prune capability is unavailable.');
@@ -955,6 +1011,10 @@ function dispatchConversationsCapability(
         ? { archivedOnly: optionalBoolean(input.archivedOnly, 'Conversation retention archivedOnly') }
         : {}),
       ...(input.dryRun !== undefined ? { dryRun: optionalBoolean(input.dryRun, 'Conversation retention dryRun') } : {}),
+      ...(input.runtimeScope !== undefined ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation runtime scope') } : {}),
+      ...(input.runtimeSettingsFilePath !== undefined
+        ? { runtimeSettingsFilePath: optionalString(input.runtimeSettingsFilePath, 'Conversation runtime settings file') }
+        : {}),
     });
   }
 
@@ -1000,8 +1060,25 @@ function dispatchExtensionsCapability(
   extensions: ExtensionBackendCapabilityExtensions,
   request: ExtensionBackendWorkerCapabilityRequest,
 ): unknown {
+  if (request.operation === 'invokeAction') {
+    const input = normalizeRecordInput(request.input, 'Extensions invoke action');
+    return extensions.invokeAction({
+      extensionId: requireString(input.extensionId, 'Extension id'),
+      actionId: requireString(input.actionId, 'Action id'),
+      ...(input.input !== undefined ? { input: input.input } : {}),
+    });
+  }
+
   if (request.operation === 'listActions') {
     return extensions.listActions();
+  }
+
+  if (request.operation === 'listPromptAssemblyContributions') {
+    return extensions.listPromptAssemblyContributions();
+  }
+
+  if (request.operation === 'listStaticContributions') {
+    return extensions.listStaticContributions();
   }
 
   const input = normalizeRecordInput(request.input, 'Extensions');
@@ -1707,15 +1784,46 @@ async function dispatchBrowserCapability(request: ExtensionBackendWorkerCapabili
 }
 
 function dispatchUiCapability(ui: ExtensionBackendCapabilityUi, request: ExtensionBackendWorkerCapabilityRequest): unknown {
-  if (request.operation !== 'invalidate') {
-    throw new Error(`Unsupported ui capability operation: ${request.operation}`);
-  }
   const input = normalizeRecordInput(request.input, 'UI');
-  const topics = input.topics;
-  if (typeof topics !== 'string' && (!Array.isArray(topics) || topics.some((topic) => typeof topic !== 'string'))) {
-    throw new Error('UI topics must be a string or array of strings.');
+  if (request.operation === 'invalidate') {
+    const topics = input.topics;
+    if (typeof topics !== 'string' && (!Array.isArray(topics) || topics.some((topic) => typeof topic !== 'string'))) {
+      throw new Error('UI topics must be a string or array of strings.');
+    }
+    return ui.invalidate(topics);
   }
-  return ui.invalidate(topics);
+  if (request.operation === 'confirm') {
+    const details = input.details;
+    if (details !== undefined) {
+      if (!Array.isArray(details)) throw new Error('UI confirmation details must be an array when provided.');
+      for (const detail of details) {
+        if (!detail || typeof detail !== 'object' || Array.isArray(detail)) {
+          throw new Error('UI confirmation details must be objects.');
+        }
+        const record = detail as Record<string, unknown>;
+        if (typeof record.label !== 'string' || typeof record.value !== 'string') {
+          throw new Error('UI confirmation detail labels and values must be strings.');
+        }
+      }
+    }
+    const timeoutMs = input.timeoutMs;
+    if (timeoutMs !== undefined && typeof timeoutMs !== 'number') {
+      throw new Error('UI confirmation timeoutMs must be a number when provided.');
+    }
+    return ui.confirm(request.extensionId, {
+      message: requireString(input.message, 'UI confirmation message'),
+      ...(optionalString(input.title, 'UI confirmation title') ? { title: optionalString(input.title, 'UI confirmation title') } : {}),
+      ...(optionalString(input.confirmLabel, 'UI confirmation label')
+        ? { confirmLabel: optionalString(input.confirmLabel, 'UI confirmation label') }
+        : {}),
+      ...(optionalString(input.cancelLabel, 'UI cancellation label')
+        ? { cancelLabel: optionalString(input.cancelLabel, 'UI cancellation label') }
+        : {}),
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
+      ...(Array.isArray(details) ? { details: details as Array<{ label: string; value: string }> } : {}),
+    });
+  }
+  throw new Error(`Unsupported ui capability operation: ${request.operation}`);
 }
 
 function dispatchWorkspaceCapability(
@@ -1992,6 +2100,8 @@ export function createExtensionBackendCapabilityDispatcher(
       createExtensionConversationsCapability().rollback(conversationId, count),
     ensureLive: (_extensionId: string, conversationId: string, options?: { cwd?: string }) =>
       createExtensionConversationsCapability().ensureLive(conversationId, options),
+    requestWorkingDirectoryChange: (_extensionId: string, conversationId: string, cwd: string, options?: { continuePrompt?: string }) =>
+      createExtensionConversationsCapability().requestWorkingDirectoryChange(conversationId, cwd, options),
     sendMessage: (
       _extensionId: string,
       conversationId: string,
@@ -2017,8 +2127,36 @@ export function createExtensionBackendCapabilityDispatcher(
       createExtensionConversationsCapability().fork(input),
     setTitle: (_extensionId: string, conversationId: string, title: string) =>
       createExtensionConversationsCapability().setTitle(conversationId, title),
-    prune: (_extensionId: string, input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['prune']>[0]) =>
-      createExtensionConversationsCapability().prune(input),
+    delete: (
+      _extensionId: string,
+      input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['delete']>[0] & {
+        runtimeScope?: string;
+        runtimeSettingsFilePath?: string;
+      },
+    ) =>
+      createExtensionConversationsCapability(
+        input.runtimeSettingsFilePath
+          ? {
+              getRuntimeScope: () => input.runtimeScope ?? 'shared',
+              getSettingsFile: () => input.runtimeSettingsFilePath!,
+            }
+          : undefined,
+      ).delete(input),
+    prune: (
+      _extensionId: string,
+      input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['prune']>[0] & {
+        runtimeScope?: string;
+        runtimeSettingsFilePath?: string;
+      },
+    ) =>
+      createExtensionConversationsCapability(
+        input.runtimeSettingsFilePath
+          ? {
+              getRuntimeScope: () => input.runtimeScope ?? 'shared',
+              getSettingsFile: () => input.runtimeSettingsFilePath!,
+            }
+          : undefined,
+      ).prune(input),
     metadata: {
       get: (extensionId: string, input: { conversationId: string; namespace?: string; runtimeScope?: string }) =>
         readConversationMetadata({ ...input, extensionId }),
@@ -2051,6 +2189,10 @@ export function createExtensionBackendCapabilityDispatcher(
     processDue: processDueEvents,
   };
   const extensions = options.extensions ?? {
+    invokeAction: async (input: { extensionId: string; actionId: string; input?: unknown }) => {
+      const { invokeExtensionAction } = await import('./extensionBackend.js');
+      return invokeExtensionAction(input.extensionId, input.actionId, input.input);
+    },
     listActions: () =>
       listExtensionInstallSummaries()
         .filter((summary) => summary.status === 'enabled' && (summary.backendActions?.length ?? 0) > 0)
@@ -2063,6 +2205,19 @@ export function createExtensionBackendCapabilityDispatcher(
             description: action.description,
           })),
         })),
+    listPromptAssemblyContributions: () => ({
+      contextProviders: listExtensionPromptContextProviderRegistrations(),
+      assemblyProviders: listExtensionAssemblyProviderRegistrations(),
+      hooks: listExtensionPromptAssemblyHookRegistrations(),
+    }),
+    listStaticContributions: () => ({
+      tools: listExtensionToolRegistrations(),
+      skills: listExtensionSkillRegistrations(),
+      modelDiscovery: listEnabledExtensionEntries().flatMap((entry) => {
+        const action = entry.manifest.contributes?.modelDiscovery?.action;
+        return typeof action === 'string' ? [{ extensionId: entry.manifest.id, action }] : [];
+      }),
+    }),
     getStatus: (extensionId: string) => {
       const summary = listExtensionInstallSummaries().find((item) => item.id === extensionId);
       if (!summary) return { enabled: false, healthy: false };
@@ -2128,6 +2283,17 @@ export function createExtensionBackendCapabilityDispatcher(
       const items = Array.isArray(topics) ? topics : [topics];
       invalidateAppTopics(...(items as AppEventTopic[]));
     },
+    confirm: (
+      extensionId: string,
+      input: {
+        title?: string;
+        message: string;
+        confirmLabel?: string;
+        cancelLabel?: string;
+        timeoutMs?: number;
+        details?: Array<{ label: string; value: string }>;
+      },
+    ) => requestExtensionUiConfirm({ extensionId, ...input }),
   };
   const workspace = options.workspace ?? {
     readText: (extensionId: string, input: { cwd: string; path: string; maxBytes?: number }) =>

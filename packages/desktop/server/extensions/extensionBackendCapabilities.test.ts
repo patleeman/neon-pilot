@@ -17,6 +17,7 @@ const findExtensionEntry = vi.hoisted(() =>
         'storage:readwrite',
         'automations:readwrite',
         'telemetry:write',
+        'ui:confirm',
         'ui:invalidate',
         'ui:notify',
         'workspace:readwrite',
@@ -68,6 +69,7 @@ describe('extension backend capability dispatcher', () => {
           'storage:readwrite',
           'automations:readwrite',
           'telemetry:write',
+          'ui:confirm',
           'ui:invalidate',
           'ui:notify',
           'workspace:readwrite',
@@ -88,11 +90,13 @@ describe('extension backend capability dispatcher', () => {
       updateWorkspace: vi.fn(async () => ({ openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' })),
       rollback: vi.fn(async () => ({ rolledBackTo: 'entry-1' })),
       ensureLive: vi.fn(async () => ({ id: 'conv-1', conversationId: 'conv-1' })),
+      requestWorkingDirectoryChange: vi.fn(async () => ({ conversationId: 'conv-1', cwd: '/next', queued: true })),
       sendMessage: vi.fn(async () => ({ accepted: true })),
       abort: vi.fn(async () => ({ ok: true })),
       compact: vi.fn(async () => ({ ok: true })),
       fork: vi.fn(async () => ({ id: 'conv-fork', conversationId: 'conv-fork' })),
       setTitle: vi.fn(async () => ({ ok: true })),
+      delete: vi.fn(async () => ({ ok: true, deleted: [{ id: 'conv-old' }] })),
       metadata: {
         get: vi.fn(),
         set: vi.fn(),
@@ -228,6 +232,21 @@ describe('extension backend capability dispatcher', () => {
           kind: 'capabilityRequest',
           extensionId: 'system-conversation-tools',
           capability: 'conversations',
+          operation: 'requestWorkingDirectoryChange',
+          input: { conversationId: 'conv-1', cwd: '/next', continuePrompt: 'Continue there.' },
+        }),
+      ),
+    ).resolves.toEqual({ conversationId: 'conv-1', cwd: '/next', queued: true });
+    expect(conversations.requestWorkingDirectoryChange).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', '/next', {
+      continuePrompt: 'Continue there.',
+    });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 12,
+          kind: 'capabilityRequest',
+          extensionId: 'system-conversation-tools',
+          capability: 'conversations',
           operation: 'sendMessage',
           input: {
             conversationId: 'conv-1',
@@ -241,7 +260,7 @@ describe('extension backend capability dispatcher', () => {
     await expect(
       Promise.resolve(
         dispatch({
-          id: 12,
+          id: 13,
           kind: 'capabilityRequest',
           extensionId: 'system-conversation-tools',
           capability: 'conversations',
@@ -286,6 +305,22 @@ describe('extension backend capability dispatcher', () => {
         }),
       ),
     ).resolves.toEqual({ ok: true });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 16,
+          kind: 'capabilityRequest',
+          extensionId: 'system-conversation-tools',
+          capability: 'conversations',
+          operation: 'delete',
+          input: {
+            conversationIds: ['conv-old'],
+            runtimeScope: 'shared',
+            runtimeSettingsFilePath: '/runtime/settings.json',
+          },
+        }),
+      ),
+    ).resolves.toEqual({ ok: true, deleted: [{ id: 'conv-old' }] });
 
     expect(conversations.get).toHaveBeenCalledWith('system-conversation-tools', 'conv-1');
     expect(conversations.setActiveTools).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', ['read']);
@@ -325,6 +360,11 @@ describe('extension backend capability dispatcher', () => {
       title: 'Fork',
     });
     expect(conversations.setTitle).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 'New Title');
+    expect(conversations.delete).toHaveBeenCalledWith('system-conversation-tools', {
+      conversationIds: ['conv-old'],
+      runtimeScope: 'shared',
+      runtimeSettingsFilePath: '/runtime/settings.json',
+    });
   });
 
   it('returns final run-turn text from agent_end when no text deltas are emitted', async () => {
@@ -1829,7 +1869,7 @@ describe('extension backend capability dispatcher', () => {
   });
 
   it('dispatches UI invalidation capability calls', async () => {
-    const ui = { invalidate: vi.fn() };
+    const ui = { invalidate: vi.fn(), confirm: vi.fn() };
     const dispatch = createExtensionBackendCapabilityDispatcher({ ui });
 
     await expect(
@@ -1848,9 +1888,43 @@ describe('extension backend capability dispatcher', () => {
     expect(ui.invalidate).toHaveBeenCalledWith(['sessions', 'checkpoints']);
   });
 
+  it('dispatches host-owned UI confirmation capability calls', async () => {
+    const ui = { invalidate: vi.fn(), confirm: vi.fn(async () => ({ confirmed: true, status: 'confirmed' })) };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ ui });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'ui',
+          operation: 'confirm',
+          input: {
+            title: 'Install community skill',
+            message: 'Install Reviewer from Community Skills?',
+            confirmLabel: 'Install',
+            cancelLabel: 'Cancel',
+            timeoutMs: 60_000,
+            details: [{ label: 'Source', value: 'Community Skills' }],
+          },
+        }),
+      ),
+    ).resolves.toEqual({ confirmed: true, status: 'confirmed' });
+
+    expect(ui.confirm).toHaveBeenCalledWith('ext', {
+      title: 'Install community skill',
+      message: 'Install Reviewer from Community Skills?',
+      confirmLabel: 'Install',
+      cancelLabel: 'Cancel',
+      timeoutMs: 60_000,
+      details: [{ label: 'Source', value: 'Community Skills' }],
+    });
+  });
+
   it('requires UI invalidate permission before dispatching UI invalidation capability calls', async () => {
     findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
-    const ui = { invalidate: vi.fn() };
+    const ui = { invalidate: vi.fn(), confirm: vi.fn() };
     const dispatch = createExtensionBackendCapabilityDispatcher({ ui });
 
     await expect(async () =>
@@ -1865,6 +1939,25 @@ describe('extension backend capability dispatcher', () => {
     ).rejects.toThrow('Extension "ext" requires permission ui:invalidate to use ui.invalidate.');
 
     expect(ui.invalidate).not.toHaveBeenCalled();
+  });
+
+  it('requires UI confirm permission before dispatching UI confirmation capability calls', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['ui:invalidate'] } });
+    const ui = { invalidate: vi.fn(), confirm: vi.fn() };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ ui });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'ui',
+        operation: 'confirm',
+        input: { message: 'Install skill?' },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission ui:confirm to use ui.confirm.');
+
+    expect(ui.confirm).not.toHaveBeenCalled();
   });
 
   it('dispatches host-owned image generation capability calls', async () => {
@@ -1917,7 +2010,7 @@ describe('extension backend capability dispatcher', () => {
   });
 
   it('rejects malformed UI invalidation inputs', async () => {
-    const dispatch = createExtensionBackendCapabilityDispatcher({ ui: { invalidate: vi.fn() } });
+    const dispatch = createExtensionBackendCapabilityDispatcher({ ui: { invalidate: vi.fn(), confirm: vi.fn() } });
 
     await expect(async () =>
       dispatch({
@@ -1929,6 +2022,21 @@ describe('extension backend capability dispatcher', () => {
         input: { topics: ['sessions', 1] },
       }),
     ).rejects.toThrow('UI topics must be a string or array of strings.');
+  });
+
+  it('rejects malformed UI confirmation inputs', async () => {
+    const dispatch = createExtensionBackendCapabilityDispatcher({ ui: { invalidate: vi.fn(), confirm: vi.fn() } });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'ui',
+        operation: 'confirm',
+        input: { message: 'Install skill?', details: [{ label: 'Source', value: 7 }] },
+      }),
+    ).rejects.toThrow('UI confirmation detail labels and values must be strings.');
   });
 
   it('dispatches host-owned runtime refresh capability calls', async () => {

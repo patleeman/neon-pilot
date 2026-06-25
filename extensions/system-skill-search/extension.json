@@ -3,7 +3,7 @@
   "id": "system-skill-search",
   "name": "Skill Search",
   "packageType": "system",
-  "description": "Search trusted upstream skill repositories and install vetted skills with approval.",
+  "description": "Search upstream skill repositories and install vetted skills with trusted-source provenance and community approval.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -15,19 +15,19 @@
       {
         "id": "searchSkills",
         "handler": "searchSkills",
-        "title": "Search trusted skills",
+        "title": "Search upstream skills",
         "worker": { "enabled": true, "timeoutMs": 30000 }
       },
       {
         "id": "previewSkill",
         "handler": "previewSkill",
-        "title": "Preview trusted skill",
+        "title": "Preview upstream skill",
         "worker": { "enabled": true, "timeoutMs": 60000 }
       },
       {
         "id": "installSkill",
         "handler": "installSkill",
-        "title": "Install trusted skill",
+        "title": "Install upstream skill",
         "worker": { "enabled": true, "timeoutMs": 60000 }
       },
       {
@@ -50,10 +50,10 @@
         "id": "skill-search",
         "name": "skill_search",
         "title": "Search Skills",
-        "description": "Search trusted upstream skill repositories for a reusable skill before hand-writing a workflow.",
+        "description": "Search upstream skill repositories for a reusable skill before hand-writing a workflow.",
         "action": "searchSkills",
         "promptGuidelines": [
-          "Use this before inventing a new recurring workflow skill; search results are metadata only and are safe to inspect."
+          "Use this before inventing a new recurring workflow skill; search results are metadata only and include source trust level."
         ],
         "inputSchema": {
           "type": "object",
@@ -69,9 +69,9 @@
         "id": "skill-preview",
         "name": "skill_preview",
         "title": "Preview Skill",
-        "description": "Fetch and vet one trusted skill candidate before asking the user to approve installation.",
+        "description": "Fetch and vet one skill candidate for body and risk inspection without installing it.",
         "action": "previewSkill",
-        "promptGuidelines": ["Preview does not install. Read the risk summary and ask the user before calling skill_install."],
+        "promptGuidelines": ["Preview does not install. Use skill_install to perform the enforced vetting, approval, and install path."],
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -85,16 +85,17 @@
         "id": "skill-install",
         "name": "skill_install",
         "title": "Install Skill",
-        "description": "Install a vetted upstream skill after explicit user approval.",
+        "description": "Fetch, vet, and install an upstream skill. Trusted sources install directly; community sources trigger host approval.",
         "action": "installSkill",
-        "promptGuidelines": ["Only call with approved=true after the user explicitly approves the exact candidate and risk summary."],
+        "promptGuidelines": [
+          "Call with a candidateId returned by skill_search. Do not ask for approval yourself; community approvals are handled by the host."
+        ],
         "inputSchema": {
           "type": "object",
           "properties": {
-            "candidateId": { "type": "string", "description": "Candidate id returned by skill_search." },
-            "approved": { "type": "boolean", "description": "Must be true only after explicit user approval." }
+            "candidateId": { "type": "string", "description": "Candidate id returned by skill_search." }
           },
-          "required": ["candidateId", "approved"],
+          "required": ["candidateId"],
           "additionalProperties": false
         }
       }
@@ -112,7 +113,7 @@
       "component": "SkillSearchSettingsPanel",
       "sectionId": "settings-skill-search",
       "label": "Skill Search",
-      "description": "Trusted upstream skill search, vetting, and installed skill provenance.",
+      "description": "Upstream skill search, vetting, and installed skill provenance.",
       "order": 47
     },
     "commands": [
@@ -120,12 +121,12 @@
         "id": "open-skill-search-settings",
         "title": "Open Skill Search Settings",
         "category": "Settings",
-        "description": "Open trusted upstream skill search settings.",
+        "description": "Open upstream skill search settings.",
         "action": "app.navigate",
         "args": { "to": "/settings#settings-skill-search" },
         "icon": "sparkle"
       }
     ]
   },
-  "permissions": ["network:read", "storage:readwrite", "filesystem:readwrite", "agent:run", "ui:invalidate", "mcp:write"]
+  "permissions": ["network:read", "storage:readwrite", "filesystem:readwrite", "agent:run", "ui:confirm", "ui:invalidate", "mcp:write"]
 }

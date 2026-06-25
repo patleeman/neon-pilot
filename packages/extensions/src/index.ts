@@ -256,6 +256,7 @@ export type ExtensionPermission =
   | 'network:listen'
   | 'telemetry:read'
   | 'telemetry:write'
+  | 'ui:confirm'
   | 'ui:invalidate'
   | 'ui:notify';
 
@@ -1523,6 +1524,11 @@ export interface ExtensionBackendContext {
     rollback(conversationId: string, count: number): Promise<{ rolledBackTo: string | null }>;
     create(input?: ExtensionConversationCreateInput): Promise<ExtensionConversationResult>;
     ensureLive(conversationId: string, options?: { cwd?: string; runtimeId?: string }): Promise<ExtensionConversationResult>;
+    requestWorkingDirectoryChange(
+      conversationId: string,
+      cwd: string,
+      options?: { continuePrompt?: string },
+    ): Promise<{ conversationId: string; cwd: string; queued: boolean; unchanged?: boolean }>;
     fork(input: ExtensionConversationForkInput): Promise<ExtensionConversationResult>;
     appendTranscriptBlock(input: ExtensionTranscriptBlockWriteInput): Promise<{ blockId: string }>;
     updateTranscriptBlock(input: ExtensionTranscriptBlockWriteInput & { blockId: string }): Promise<{ blockId: string }>;
@@ -1630,7 +1636,17 @@ export interface ExtensionBackendContext {
     /** Resolve a secret registered in this extension's manifest. */
     get(secretId: string): string | undefined;
   };
-  ui: { invalidate(topics: string | string[]): void };
+  ui: {
+    invalidate(topics: string | string[]): void;
+    confirm(options: {
+      title?: string;
+      message: string;
+      confirmLabel?: string;
+      cancelLabel?: string;
+      timeoutMs?: number;
+      details?: Array<{ label: string; value: string }>;
+    }): Promise<{ confirmed: boolean; status: 'confirmed' | 'declined' | 'timeout' }>;
+  };
   telemetry: {
     record(event: {
       source?: 'server' | 'renderer' | 'agent' | 'system';

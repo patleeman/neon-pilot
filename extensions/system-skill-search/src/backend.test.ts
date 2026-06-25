@@ -59,6 +59,7 @@ function createCtx() {
       },
       ui: {
         invalidate: vi.fn(),
+        confirm: vi.fn(async () => ({ confirmed: true, status: 'confirmed' })),
       },
     },
   };
@@ -93,7 +94,7 @@ beforeEach(() => {
 });
 
 describe('system-skill-search backend', () => {
-  it('searches only trusted upstream records and stores candidates', async () => {
+  it('searches trusted and community upstream records and stores candidates', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) => {
@@ -141,12 +142,15 @@ describe('system-skill-search backend', () => {
 
     expect(result.candidates.map((candidate) => candidate.title)).toContain('Review Helper');
     expect(result.candidates.map((candidate) => candidate.title)).toContain('Reviewer');
-    expect(result.candidates.some((candidate) => candidate.title === 'Evil Review')).toBe(false);
+    expect(result.candidates.map((candidate) => candidate.title)).toContain('Evil Review');
     expect([...store.keys()].filter((key) => key.startsWith('candidates/')).length).toBeGreaterThan(0);
   });
 
-  it('requires explicit approval before installing a candidate', async () => {
-    const { ctx } = createCtx();
+  it('installs trusted vetted candidates without prompting for approval', async () => {
+    installFetchMock({
+      'SKILL.md': '---\nname: reviewer\ndescription: Review pull requests.\n---\nUse this when reviewing code.',
+    });
+    const { ctx, files } = createCtx();
     await ctx.storage.put('candidates/safe', {
       id: 'safe',
       name: 'reviewer',
@@ -163,11 +167,12 @@ describe('system-skill-search backend', () => {
       url: 'https://github.com/example/safe-skill/tree/main/skills/reviewer',
     });
 
-    const result = (await installSkill({ candidateId: 'safe' }, ctx as never)) as { ok: boolean; requiresApproval: boolean };
+    const result = (await installSkill({ candidateId: 'safe' }, ctx as never)) as { ok: boolean; message: string };
 
-    expect(result.ok).toBe(false);
-    expect(result.requiresApproval).toBe(true);
-    expect(ctx.filesystem.app).not.toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain('Downloaded trusted skill');
+    expect(files.get('installed-skills/reviewer/SKILL.md')).toContain('Review pull requests');
+    expect(ctx.ui.confirm).not.toHaveBeenCalled();
   });
 
   it('blocks dangerous preview findings from install', async () => {
@@ -196,23 +201,25 @@ describe('system-skill-search backend', () => {
     };
 
     expect(preview.vetting).toMatchObject({ verdict: 'dangerous', allowed: false });
-    await expect(installSkill({ candidateId: 'dangerous', approved: true }, ctx as never)).rejects.toThrow('Skill did not pass vetting');
+    await expect(installSkill({ candidateId: 'dangerous' }, ctx as never)).rejects.toThrow('Skill did not pass vetting');
+    expect(ctx.ui.confirm).not.toHaveBeenCalled();
   });
 
-  it('expires preview approval windows before install', async () => {
+  it('prompts before installing community skills and cancels declined approvals', async () => {
     installFetchMock({
       'SKILL.md': '---\nname: reviewer\ndescription: Review pull requests.\n---\nUse this when reviewing code.',
     });
-    const { ctx, store } = createCtx();
-    await ctx.storage.put('candidates/safe', {
-      id: 'safe',
+    const { ctx } = createCtx();
+    ctx.ui.confirm.mockResolvedValueOnce({ confirmed: false, status: 'declined' });
+    await ctx.storage.put('candidates/community', {
+      id: 'community',
       name: 'reviewer',
       title: 'Reviewer',
       description: 'Review pull requests.',
-      sourceId: 'openai-skills-curated',
-      sourceLabel: 'OpenAI Skills',
-      sourceKind: 'github',
-      trustLevel: 'trusted',
+      sourceId: 'hermes-index',
+      sourceLabel: 'Hermes Skills Index',
+      sourceKind: 'hermes-index',
+      trustLevel: 'community',
       identifier: 'example/safe-skill/skills/reviewer',
       repo: 'example/safe-skill',
       path: 'skills/reviewer',
@@ -220,16 +227,47 @@ describe('system-skill-search backend', () => {
       url: 'https://github.com/example/safe-skill/tree/main/skills/reviewer',
     });
 
-    await previewSkill({ candidateId: 'safe' }, ctx as never);
-    const preview = store.get('previews/safe') as Record<string, unknown>;
-    store.set('previews/safe', { ...preview, approvalExpiresAt: '2020-01-01T00:00:00.000Z' });
-
-    const result = (await installSkill({ candidateId: 'safe', approved: true }, ctx as never)) as {
+    const result = (await installSkill({ candidateId: 'community' }, ctx as never)) as {
       ok: boolean;
       requiresApproval: boolean;
+      status: string;
     };
 
-    expect(result).toMatchObject({ ok: false, requiresApproval: true });
+    expect(result).toMatchObject({ ok: false, requiresApproval: true, status: 'declined' });
+    expect(ctx.ui.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'Install community skill' }));
+    expect(ctx.runtime.refreshSkillMcpConfig).not.toHaveBeenCalled();
+  });
+
+  it('cancels community installs when approval times out', async () => {
+    installFetchMock({
+      'SKILL.md': '---\nname: reviewer\ndescription: Review pull requests.\n---\nUse this when reviewing code.',
+    });
+    const { ctx } = createCtx();
+    ctx.ui.confirm.mockResolvedValueOnce({ confirmed: false, status: 'timeout' });
+    await ctx.storage.put('candidates/community-timeout', {
+      id: 'community-timeout',
+      name: 'reviewer',
+      title: 'Reviewer',
+      description: 'Review pull requests.',
+      sourceId: 'hermes-index',
+      sourceLabel: 'Hermes Skills Index',
+      sourceKind: 'hermes-index',
+      trustLevel: 'community',
+      identifier: 'example/safe-skill/skills/reviewer',
+      repo: 'example/safe-skill',
+      path: 'skills/reviewer',
+      tags: [],
+      url: 'https://github.com/example/safe-skill/tree/main/skills/reviewer',
+    });
+
+    const result = (await installSkill({ candidateId: 'community-timeout' }, ctx as never)) as {
+      ok: boolean;
+      status: string;
+      message: string;
+    };
+
+    expect(result).toMatchObject({ ok: false, status: 'timeout' });
+    expect(result.message).toContain('timed out');
     expect(ctx.runtime.refreshSkillMcpConfig).not.toHaveBeenCalled();
   });
 
@@ -256,7 +294,7 @@ describe('system-skill-search backend', () => {
     });
 
     await previewSkill({ candidateId: 'safe' }, ctx as never);
-    const installed = (await installSkill({ candidateId: 'safe', approved: true }, ctx as never)) as {
+    const installed = (await installSkill({ candidateId: 'safe' }, ctx as never)) as {
       ok: boolean;
       installed: { skillPath: string };
     };

@@ -31,6 +31,7 @@ import type {
   ConversationContextDocRef,
   ConversationSummaryRecord,
   DefaultCwdState,
+  DeferredResumeSummary,
   FilePickerResult,
   GatewayProviderId,
   GatewayState,
@@ -342,6 +343,8 @@ export const api = {
     ),
   acknowledgeExtensionCommand: async (requestId: string, handled: boolean) =>
     extensionPost<{ ok: true; acknowledged: boolean }>(`/extensions/commands/acks/${encodeURIComponent(requestId)}`, { handled }),
+  resolveExtensionUiConfirmation: async (requestId: string, status: 'confirmed' | 'declined' | 'timeout') =>
+    extensionPost<{ ok: true; acknowledged: boolean }>(`/extensions/ui-confirmations/${encodeURIComponent(requestId)}`, { status }),
   extensionKeybindings: async () => extensionGet<ExtensionKeybindingRegistration[]>('/extensions/keybindings'),
   updateExtensionKeybinding: async (
     extensionId: string,
@@ -949,13 +952,13 @@ export const api = {
   deferredResumes: async (id: string) =>
     get<{ conversationId: string; resumes: DeferredResumeSummary[] }>(`/conversations/${encodeURIComponent(id)}/deferred-resumes`),
   scheduleDeferredResume: async (id: string, input: { delay: string; prompt?: string; behavior?: 'steer' | 'followUp' }) => {
-    return post<{ conversationId: string; resumes: DeferredResumeSummary[] }>(
+    return post<{ conversationId: string; resume: DeferredResumeSummary; resumes: DeferredResumeSummary[] }>(
       `/conversations/${encodeURIComponent(id)}/deferred-resumes`,
       input,
     );
   },
   fireDeferredResumeNow: async (id: string, resumeId: string) => {
-    return post<{ conversationId: string; firedId: string; resumes: DeferredResumeSummary[] }>(
+    return post<{ conversationId: string; resume: DeferredResumeSummary; resumes: DeferredResumeSummary[] }>(
       `/conversations/${encodeURIComponent(id)}/deferred-resumes/${encodeURIComponent(resumeId)}/fire`,
     );
   },

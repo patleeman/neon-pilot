@@ -1,7 +1,20 @@
 import { type ComponentType, useCallback, useEffect, useRef, useState } from 'react';
 
+import { api } from '../client/api';
 import { buildApiPath } from '../client/apiBase';
-import { ConfirmDialog, Dialog, DialogBody, DialogHeader, IconButton } from '../components/ui';
+import {
+  Button,
+  ChoiceRow,
+  ConfirmDialog,
+  cx,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+  IconButton,
+  MetaLabel,
+  Pill,
+} from '../components/ui';
 import { setExtensionCommandContext } from './commands';
 import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from './extensionModalCommands';
 import { createNativeExtensionClient } from './nativePaClient';
@@ -52,9 +65,25 @@ interface ConfirmState {
   resolve: (value: boolean) => void;
 }
 
+type BackendConfirmStatus = 'confirmed' | 'declined' | 'timeout';
+
+interface BackendConfirmState {
+  requestId: string;
+  extensionId: string;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  timeoutMs: number;
+  details?: Array<{ label: string; value: string }>;
+  requestedAt: number;
+}
+
 export function ExtensionModalHost() {
   const [modal, setModal] = useState<ModalState | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [backendConfirm, setBackendConfirm] = useState<BackendConfirmState | null>(null);
+  const [backendConfirmNow, setBackendConfirmNow] = useState(Date.now());
   const [Component, setComponent] = useState<ComponentType<{
     pa: ReturnType<typeof createNativeExtensionClient>;
     props: Record<string, unknown>;
@@ -63,6 +92,7 @@ export function ExtensionModalHost() {
   const resolveRef = useRef<((value: unknown) => void) | null>(null);
   const rejectRef = useRef<((error: Error) => void) | null>(null);
   const confirmResolveRef = useRef<((value: boolean) => void) | null>(null);
+  const backendConfirmRef = useRef<BackendConfirmState | null>(null);
 
   useEffect(() => {
     function handleModal(event: CustomEvent) {
@@ -99,14 +129,44 @@ export function ExtensionModalHost() {
     return () => window.removeEventListener('neon-pilot-extension-confirm', handleConfirm as EventListener);
   }, []);
 
+  useEffect(() => {
+    function handleBackendConfirm(event: CustomEvent) {
+      const detail = event.detail as Omit<BackendConfirmState, 'requestedAt'>;
+      if (backendConfirmRef.current) {
+        void api.resolveExtensionUiConfirmation(backendConfirmRef.current.requestId, 'declined');
+      }
+      const next: BackendConfirmState = {
+        requestId: detail.requestId,
+        extensionId: detail.extensionId,
+        title: detail.title,
+        message: detail.message,
+        timeoutMs: detail.timeoutMs,
+        requestedAt: Date.now(),
+        ...(detail.confirmLabel ? { confirmLabel: detail.confirmLabel } : {}),
+        ...(detail.cancelLabel ? { cancelLabel: detail.cancelLabel } : {}),
+        ...(detail.details?.length ? { details: detail.details } : {}),
+      };
+      backendConfirmRef.current = next;
+      setBackendConfirm(next);
+      setBackendConfirmNow(next.requestedAt);
+    }
+
+    window.addEventListener('neon-pilot-extension-ui-confirm', handleBackendConfirm as EventListener);
+    return () => window.removeEventListener('neon-pilot-extension-ui-confirm', handleBackendConfirm as EventListener);
+  }, []);
+
   // Reject the promise if the host unmounts while a modal is open
   useEffect(() => {
     return () => {
       rejectRef.current?.(new Error('Extension modal host unmounted'));
       confirmResolveRef.current?.(false);
+      if (backendConfirmRef.current) {
+        void api.resolveExtensionUiConfirmation(backendConfirmRef.current.requestId, 'declined');
+      }
       resolveRef.current = null;
       rejectRef.current = null;
       confirmResolveRef.current = null;
+      backendConfirmRef.current = null;
     };
   }, []);
 
@@ -125,6 +185,26 @@ export function ExtensionModalHost() {
     confirmResolveRef.current = null;
     setConfirm(null);
   }, []);
+
+  const handleBackendConfirmClose = useCallback((status: BackendConfirmStatus) => {
+    const current = backendConfirmRef.current;
+    if (!current) return;
+    backendConfirmRef.current = null;
+    setBackendConfirm(null);
+    void api.resolveExtensionUiConfirmation(current.requestId, status);
+  }, []);
+
+  useEffect(() => {
+    if (!backendConfirm) return;
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      setBackendConfirmNow(now);
+      if (now - backendConfirm.requestedAt >= backendConfirm.timeoutMs) {
+        handleBackendConfirmClose('timeout');
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [backendConfirm, handleBackendConfirmClose]);
 
   useEffect(() => {
     if (!modal) {
@@ -209,13 +289,30 @@ export function ExtensionModalHost() {
     />
   ) : null;
 
-  if (!modal || !Component) return confirmDialog;
+  const backendConfirmDialog = backendConfirm ? (
+    <ExtensionBackendConfirmDialog
+      confirm={backendConfirm}
+      remainingMs={Math.max(0, backendConfirm.timeoutMs - (backendConfirmNow - backendConfirm.requestedAt))}
+      onCancel={() => handleBackendConfirmClose('declined')}
+      onConfirm={() => handleBackendConfirmClose('confirmed')}
+    />
+  ) : null;
+
+  if (!modal || !Component)
+    return (
+      <>
+        {confirmDialog}
+        {backendConfirmDialog}
+      </>
+    );
 
   const pa = createNativeExtensionClient(modal.extensionId);
   const modalSizeClasses = resolveExtensionModalSizeClasses(modal.size);
 
   return (
     <>
+      {confirmDialog}
+      {backendConfirmDialog}
       <Dialog
         onClose={() => handleClose()}
         labelledBy={modal.title ? 'extension-modal-title' : undefined}
@@ -253,7 +350,56 @@ export function ExtensionModalHost() {
           <Component pa={pa} props={modal.props} close={handleClose} />
         </DialogBody>
       </Dialog>
-      {confirmDialog}
     </>
+  );
+}
+
+function ExtensionBackendConfirmDialog({
+  confirm,
+  remainingMs,
+  onCancel,
+  onConfirm,
+}: {
+  confirm: BackendConfirmState;
+  remainingMs: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const seconds = Math.max(0, Math.ceil(remainingMs / 1000));
+  return (
+    <Dialog onClose={onCancel} labelledBy="extension-backend-confirm-title" className="max-w-lg">
+      <DialogHeader title={confirm.title} titleId="extension-backend-confirm-title" />
+      <DialogBody>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <MetaLabel>{confirm.extensionId}</MetaLabel>
+            <Pill tone={seconds <= 10 ? 'warning' : 'muted'}>{seconds}s</Pill>
+          </div>
+          <p className="text-[13px] leading-6 text-secondary">{confirm.message}</p>
+          {confirm.details?.length ? (
+            <div className="space-y-2">
+              {confirm.details.map((detail) => (
+                <ChoiceRow
+                  key={`${detail.label}:${detail.value}`}
+                  label={detail.label}
+                  details={detail.value}
+                  indicator="?"
+                  className={cx('cursor-default text-left')}
+                  disabled
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </DialogBody>
+      <DialogFooter>
+        <Button variant="ghost" onClick={onCancel}>
+          {confirm.cancelLabel ?? 'Cancel'}
+        </Button>
+        <Button variant="action" tone="accent" onClick={onConfirm}>
+          {confirm.confirmLabel ?? 'Approve'}
+        </Button>
+      </DialogFooter>
+    </Dialog>
   );
 }

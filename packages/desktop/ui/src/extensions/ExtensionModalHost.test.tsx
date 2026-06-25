@@ -9,15 +9,25 @@ import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from './extensionModalCommands';
 import { ExtensionModalHost, resolveExtensionModalSizeClasses } from './ExtensionModalHost';
 import { systemExtensionModules } from './systemExtensionModules';
 
+vi.mock('../client/api', () => ({
+  api: {
+    resolveExtensionUiConfirmation: vi.fn(async () => ({ ok: true, acknowledged: true })),
+  },
+}));
+
 vi.mock('./commands', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./commands')>()),
   setExtensionCommandContext: vi.fn(),
 }));
 
+const { api } = await import('../client/api');
+
 describe('ExtensionModalHost confirm bridge', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.mocked(setExtensionCommandContext).mockClear();
+    vi.mocked(api.resolveExtensionUiConfirmation).mockClear();
+    vi.useRealTimers();
   });
 
   function dispatchConfirm(detail: {
@@ -73,6 +83,66 @@ describe('ExtensionModalHost confirm bridge', () => {
 
     await expect(result).resolves.toBe(false);
   });
+
+  it('answers backend UI confirmations through the host approval popup', async () => {
+    render(<ExtensionModalHost />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('neon-pilot-extension-ui-confirm', {
+          detail: {
+            requestId: 'confirm-1',
+            extensionId: 'system-skill-search',
+            title: 'Install community skill',
+            message: 'Install Reviewer from Community Skills?',
+            confirmLabel: 'Install',
+            cancelLabel: 'Cancel',
+            timeoutMs: 60_000,
+            details: [
+              { label: 'Skill', value: 'Reviewer' },
+              { label: 'Source', value: 'Community Skills' },
+            ],
+          },
+        }),
+      );
+    });
+
+    expect(await screen.findByRole('dialog')).not.toBeNull();
+    expect(screen.getByText('Install Reviewer from Community Skills?')).not.toBeNull();
+    expect(screen.getByText('Community Skills')).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Install' }));
+
+    await waitFor(() => expect(api.resolveExtensionUiConfirmation).toHaveBeenCalledWith('confirm-1', 'confirmed'));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('reports timeout for backend UI confirmations', async () => {
+    vi.useFakeTimers();
+    render(<ExtensionModalHost />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('neon-pilot-extension-ui-confirm', {
+          detail: {
+            requestId: 'confirm-timeout',
+            extensionId: 'system-skill-search',
+            title: 'Install community skill',
+            message: 'Install Reviewer?',
+            timeoutMs: 5_000,
+          },
+        }),
+      );
+    });
+
+    expect(screen.getByRole('dialog')).not.toBeNull();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_250);
+    });
+
+    expect(api.resolveExtensionUiConfirmation).toHaveBeenCalledWith('confirm-timeout', 'timeout');
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
 });
 
 describe('ExtensionModalHost modal bridge', () => {
@@ -122,16 +192,14 @@ describe('resolveExtensionModalSizeClasses', () => {
   it('keeps default extension modals compact', () => {
     const classes = resolveExtensionModalSizeClasses(undefined);
 
-    expect(classes.dialogClassName).toContain('max-w-2xl');
-    expect(classes.dialogClassName).toContain('max-h-[85vh]');
+    expect(classes.dialogClassName).toContain('ui-extension-modal-default');
     expect(classes.bodyClassName).toBeUndefined();
   });
 
   it('provides an intermediate large modal size', () => {
     const classes = resolveExtensionModalSizeClasses('large');
 
-    expect(classes.dialogClassName).toContain('w-[min(78rem,calc(100vw-2rem))]');
-    expect(classes.dialogClassName).toContain('h-[min(86vh,calc(100vh-2rem))]');
+    expect(classes.dialogClassName).toContain('ui-extension-modal-large');
     expect(classes.bodyClassName).toContain('overflow-auto');
   });
 
@@ -139,8 +207,7 @@ describe('resolveExtensionModalSizeClasses', () => {
     const classes = resolveExtensionModalSizeClasses('fullscreen');
 
     expect(classes.backdropClassName).toContain('!pt-[calc(2.75rem+0.5rem)]');
-    expect(classes.dialogClassName).toContain('!w-[calc(100vw-1.5rem)]');
-    expect(classes.dialogClassName).toContain('!h-[calc(100vh-4rem)]');
+    expect(classes.dialogClassName).toContain('ui-extension-modal-fullscreen');
     expect(classes.bodyClassName).toContain('overflow-hidden');
     expect(classes.bodyClassName).toContain('flex-1');
     expect(classes.bodyClassName).toContain('p-0');

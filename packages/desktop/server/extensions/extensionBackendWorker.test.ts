@@ -526,20 +526,22 @@ export async function doThing(_input, ctx) {
   const workspaceAfter = await ctx.conversations.updateWorkspace({ openConversationIds: ['conv-1', created.conversationId] });
   const rollback = await ctx.conversations.rollback('conv-1', 2);
   const ensured = await ctx.conversations.ensureLive('conv-1', { cwd: '/repo' });
+  const cwdQueued = await ctx.conversations.requestWorkingDirectoryChange('conv-1', '/next', { continuePrompt: 'Continue there.' });
   const sent = await ctx.conversations.sendMessage('conv-1', 'Go', { steer: true });
   const aborted = await ctx.conversations.abort('conv-1');
   const compacted = await ctx.conversations.compact('conv-1', 'short');
   const forked = await ctx.conversations.fork({ conversationId: 'conv-1', targetCwd: '/fork', title: 'Fork' });
   const titled = await ctx.conversations.setTitle('conv-1', 'New Title');
+  const deleted = await ctx.conversations.delete({ conversationIds: ['conv-old'] });
   const connections = await ctx.conversations.connections('conv-1', { kind: 'state', surface: 'cli' });
-  return { before, created, tools, entry, block, updated, workspaceBefore, workspaceAfter, rollback, ensured, sent, aborted, compacted, forked, titled, connections };
+  return { before, created, tools, entry, block, updated, workspaceBefore, workspaceAfter, rollback, ensured, cwdQueued, sent, aborted, compacted, forked, titled, deleted, connections };
 }
 `,
     );
 
     await loadWorker();
     workerThreads.messageHandler?.({
-      id: 17,
+      id: 19,
       type: 'runExport',
       extensionId: 'worker-ext',
       compiled: { path: backendPath, hash: 'hash-live-conversations' },
@@ -682,28 +684,33 @@ export async function doThing(_input, ctx) {
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
-      operation: 'sendMessage',
-      input: { conversationId: 'conv-1', text: 'Go', steer: true },
+      operation: 'requestWorkingDirectoryChange',
+      input: { conversationId: 'conv-1', cwd: '/next', continuePrompt: 'Continue there.' },
     });
-    workerThreads.messageHandler?.({ id: 11, kind: 'capabilityResponse', ok: true, result: { accepted: true } });
+    workerThreads.messageHandler?.({
+      id: 11,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { conversationId: 'conv-1', cwd: '/next', queued: true },
+    });
 
     await waitForPostMessage({
       id: 12,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
-      operation: 'abort',
-      input: { conversationId: 'conv-1' },
+      operation: 'sendMessage',
+      input: { conversationId: 'conv-1', text: 'Go', steer: true },
     });
-    workerThreads.messageHandler?.({ id: 12, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+    workerThreads.messageHandler?.({ id: 12, kind: 'capabilityResponse', ok: true, result: { accepted: true } });
 
     await waitForPostMessage({
       id: 13,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
-      operation: 'compact',
-      input: { conversationId: 'conv-1', customInstructions: 'short' },
+      operation: 'abort',
+      input: { conversationId: 'conv-1' },
     });
     workerThreads.messageHandler?.({ id: 13, kind: 'capabilityResponse', ok: true, result: { ok: true } });
 
@@ -712,28 +719,57 @@ export async function doThing(_input, ctx) {
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
-      operation: 'fork',
-      input: { conversationId: 'conv-1', targetCwd: '/fork', title: 'Fork' },
+      operation: 'compact',
+      input: { conversationId: 'conv-1', customInstructions: 'short' },
     });
-    workerThreads.messageHandler?.({
-      id: 14,
-      kind: 'capabilityResponse',
-      ok: true,
-      result: { id: 'conv-fork', conversationId: 'conv-fork' },
-    });
+    workerThreads.messageHandler?.({ id: 14, kind: 'capabilityResponse', ok: true, result: { ok: true } });
 
     await waitForPostMessage({
       id: 15,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
-      operation: 'setTitle',
-      input: { conversationId: 'conv-1', title: 'New Title' },
+      operation: 'fork',
+      input: { conversationId: 'conv-1', targetCwd: '/fork', title: 'Fork' },
     });
-    workerThreads.messageHandler?.({ id: 15, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+    workerThreads.messageHandler?.({
+      id: 15,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { id: 'conv-fork', conversationId: 'conv-fork' },
+    });
 
     await waitForPostMessage({
       id: 16,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'setTitle',
+      input: { conversationId: 'conv-1', title: 'New Title' },
+    });
+    workerThreads.messageHandler?.({ id: 16, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+
+    await waitForPostMessage({
+      id: 17,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'delete',
+      input: {
+        conversationIds: ['conv-old'],
+        runtimeScope: 'shared',
+        runtimeSettingsFilePath: expect.stringMatching(/neon-pilot-runtime\/settings\.json$/),
+      },
+    });
+    workerThreads.messageHandler?.({
+      id: 17,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { ok: true, deleted: [{ id: 'conv-old' }] },
+    });
+
+    await waitForPostMessage({
+      id: 18,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
@@ -741,14 +777,14 @@ export async function doThing(_input, ctx) {
       input: { conversationId: 'conv-1', kind: 'state', surface: 'cli' },
     });
     workerThreads.messageHandler?.({
-      id: 16,
+      id: 18,
       kind: 'capabilityResponse',
       ok: true,
       result: { items: [{ id: 'system-todo:todos', kind: 'state' }] },
     });
 
     await waitForPostMessage({
-      id: 17,
+      id: 19,
       ok: true,
       result: {
         before: { id: 'conv-1', toolNames: ['read'] },
@@ -761,11 +797,13 @@ export async function doThing(_input, ctx) {
         workspaceAfter: { openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' },
         rollback: { rolledBackTo: 'entry-1' },
         ensured: { id: 'conv-1', conversationId: 'conv-1' },
+        cwdQueued: { conversationId: 'conv-1', cwd: '/next', queued: true },
         sent: { accepted: true },
         aborted: { ok: true },
         compacted: { ok: true },
         forked: { id: 'conv-fork', conversationId: 'conv-fork' },
         titled: { ok: true },
+        deleted: { ok: true, deleted: [{ id: 'conv-old' }] },
         connections: { items: [{ id: 'system-todo:todos', kind: 'state' }] },
       },
     });
@@ -1591,6 +1629,53 @@ export async function doThing(_input, ctx) {
     });
   });
 
+  it('exposes a worker-local abort signal to agent tool contexts', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  const abortPromise = new Promise((resolve) => {
+    ctx.agentToolContext.signal.addEventListener('abort', () => {
+      resolve({ aborted: ctx.agentToolContext.signal.aborted });
+    }, { once: true });
+  });
+  await ctx.log.info('abort-ready');
+  return await abortPromise;
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 171,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-abort-context' },
+      exportName: 'doThing',
+      args: [{}],
+      context: {
+        type: 'backend',
+        toolContext: { cwd: '/repo' },
+        agentToolContext: { cwd: '/repo' },
+      },
+    });
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'log',
+      operation: 'info',
+      input: { message: 'abort-ready', fields: undefined },
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true });
+    workerThreads.messageHandler?.({ kind: 'abortRequest', requestId: 171 });
+
+    await waitForPostMessage({ id: 171, ok: true, result: { aborted: true } });
+  });
+
   it('runs backend exports with host-mediated secrets reads', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });
@@ -1702,5 +1787,42 @@ export async function doThing(_input, ctx) {
     workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true });
 
     await waitForPostMessage({ id: 60, ok: true, result: { ok: true } });
+  });
+
+  it('runs backend exports with host-mediated UI confirmation', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  return await ctx.ui.confirm({ message: 'Install community skill?', timeoutMs: 60000 });
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 61,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-ui-confirm' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'ui',
+      operation: 'confirm',
+      input: { message: 'Install community skill?', timeoutMs: 60000 },
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: { confirmed: true, status: 'confirmed' } });
+
+    await waitForPostMessage({ id: 61, ok: true, result: { confirmed: true, status: 'confirmed' } });
   });
 });

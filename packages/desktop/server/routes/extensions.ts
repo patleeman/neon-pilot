@@ -16,6 +16,7 @@ import {
 import { pingDaemon, startBackgroundRun } from '../daemon/index.js';
 import { acknowledgeHostCommand, executeHostCommandInRenderer } from '../extensions/extensionCommandBridge.js';
 import { findExtensionCommandRegistration } from '../extensions/extensionCommandLookup.js';
+import { createExtensionConversationsCapability } from '../extensions/extensionConversations.js';
 import { validateExtensionPackage } from '../extensions/extensionDoctor.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
@@ -29,6 +30,7 @@ import {
 import type { ExtensionManifest } from '../extensions/extensionManifest.js';
 import { getAggregatedBadgeCount } from '../extensions/extensionNotifications.js';
 import { createExtensionRunsCapability } from '../extensions/extensionRuns.js';
+import { resolveExtensionUiConfirm } from '../extensions/extensionUiConfirmBridge.js';
 import { logError } from '../middleware/index.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
 import { getLocalhostWebappProxyStatus, trustLocalhostWebappProxyCertificate } from '../shared/localhostWebappProxy.js';
@@ -74,6 +76,42 @@ type ExtensionWebappSummary = {
   packageType: 'system' | 'user';
   localhostName: string;
 };
+
+function optionalStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const ids = value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean);
+  return ids.length > 0 ? ids : undefined;
+}
+
+async function syncSystemConversationToolMutation(input: {
+  extensionId: string;
+  actionId: string;
+  body: unknown;
+  result: unknown;
+  context?: Pick<ServerRouteContext, 'getRuntimeScope'> & Partial<Pick<ServerRouteContext, 'getStateRoot' | 'getServerPort'>>;
+}): Promise<void> {
+  if (input.extensionId !== 'system-conversation-tools' || input.actionId !== 'conversationTool') return;
+  if (!input.body || typeof input.body !== 'object' || Array.isArray(input.body)) return;
+  const body = input.body as Record<string, unknown>;
+  const action = typeof body.action === 'string' ? body.action : '';
+  const actionResult = input.result && typeof input.result === 'object' ? (input.result as { ok?: unknown }) : {};
+  if (actionResult.ok !== true) return;
+  if (!input.context || !('resolveRequestedCwd' in input.context)) return;
+
+  const conversations = createExtensionConversationsCapability(input.context as ServerRouteContext, input.extensionId);
+  if (action === 'delete') {
+    await conversations.delete({ conversationIds: optionalStringArray(body.conversationIds) ?? [] });
+    return;
+  }
+  if (action === 'retention_prune' && body.dryRun !== true) {
+    const olderThanMs = Number(body.olderThanMs);
+    await conversations.prune({
+      olderThanMs,
+      archivedOnly: body.archivedOnly === true,
+      dryRun: false,
+    });
+  }
+}
 
 function normalizeHostHeader(value: string | undefined): string {
   const host = (value ?? '').trim().toLowerCase();
@@ -288,7 +326,12 @@ function buildProxyRequestBody(req: Request): BodyInit | undefined {
   return JSON.stringify(req.body);
 }
 
-async function dispatchExtensionWebappRequest(webapp: ExtensionWebappSummary, req: Request, res: Response, requestPath: string): Promise<void> {
+async function dispatchExtensionWebappRequest(
+  webapp: ExtensionWebappSummary,
+  req: Request,
+  res: Response,
+  requestPath: string,
+): Promise<void> {
   if (webapp.target) {
     await proxyExtensionWebapp(webapp, req, res, requestPath);
     return;
@@ -990,6 +1033,15 @@ export function registerExtensionRoutes(
     }
   });
 
+  router.post('/api/extensions/ui-confirmations/:requestId', (req, res) => {
+    try {
+      const status = req.body?.status === 'confirmed' || req.body?.status === 'timeout' ? req.body.status : 'declined';
+      res.json({ ok: true, acknowledged: resolveExtensionUiConfirm(req.params.requestId, status) });
+    } catch (err) {
+      sendRouteError(res, 'extension UI confirmation error', err);
+    }
+  });
+
   router.get('/api/extensions/keybindings', async (_req, res) => {
     try {
       res.json((await getExtensionHostClient().readRegistryPresentation()).keybindingRegistrations);
@@ -1195,15 +1247,21 @@ export function registerExtensionRoutes(
         res.status(404).json({ error: `Extension "${req.params.id}" not found or is disabled.` });
         return;
       }
-      res.json(
-        await getExtensionHostClient().invokeAction({
-          extensionId: req.params.id,
-          actionId: req.params.actionId,
-          input: req.body,
-          serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
-          signal,
-        }),
-      );
+      const result = await getExtensionHostClient().invokeAction({
+        extensionId: req.params.id,
+        actionId: req.params.actionId,
+        input: req.body,
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+        signal,
+      });
+      await syncSystemConversationToolMutation({
+        extensionId: req.params.id,
+        actionId: req.params.actionId,
+        body: req.body,
+        result,
+        context,
+      });
+      res.json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const status = /not found/i.test(message) ? 404 : 500;

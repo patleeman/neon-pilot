@@ -60,7 +60,6 @@ interface PreviewRecord {
   vetting: VetResult;
   quarantinePath: string;
   previewedAt: string;
-  approvalExpiresAt: string;
 }
 
 interface InstalledSkillRecord {
@@ -110,7 +109,7 @@ const MAX_TREE_SKILL_FILES_PER_SOURCE = 80;
 const MAX_BUNDLE_FILES = 120;
 const MAX_FILE_BYTES = 256 * 1024;
 const MAX_BUNDLE_BYTES = 1024 * 1024;
-const APPROVAL_WINDOW_MS = 10 * 60 * 1000;
+const COMMUNITY_APPROVAL_TIMEOUT_MS = 60_000;
 
 export async function searchSkills(input: unknown, ctx: ExtensionBackendContext) {
   const body = asRecord(input);
@@ -137,59 +136,48 @@ export async function searchSkills(input: unknown, ctx: ExtensionBackendContext)
 
 export async function previewSkill(input: unknown, ctx: ExtensionBackendContext) {
   const candidate = await requireCandidate(input, ctx);
-  const bundle = await fetchCandidateBundle(candidate);
-  const appFs = await ctx.filesystem.app({ access: ['read', 'write'], reason: 'Store quarantined upstream skill preview.' });
-  const quarantinePath = `${QUARANTINE_DIR}/${candidate.id}`;
-  await writeBundle(appFs, quarantinePath, bundle.files);
-  const vetting = await vetBundle(bundle, ctx);
-  const preview: PreviewRecord = {
-    candidate: { ...candidate, fetchedAt: new Date().toISOString() },
-    bundle,
-    vetting,
-    quarantinePath,
-    previewedAt: new Date().toISOString(),
-    approvalExpiresAt: new Date(Date.now() + APPROVAL_WINDOW_MS).toISOString(),
-  };
-  await ctx.storage.put(`${PREVIEW_KEY}${candidate.id}`, preview);
-  ctx.ui.invalidate(['extensions', 'skills']);
+  const preview = await prepareSkill(candidate, ctx, 'Store quarantined upstream skill preview.');
   return {
     ok: true,
     candidate: preview.candidate,
-    vetting,
-    contentHash: bundle.contentHash,
-    files: Object.keys(bundle.files).sort(),
-    totalBytes: bundle.totalBytes,
-    requiresApproval: true,
-    approvalExpiresAt: preview.approvalExpiresAt,
-    approvalInstruction: 'Ask the user to approve this exact skill before calling skill_install with approved=true.',
+    vetting: preview.vetting,
+    contentHash: preview.bundle.contentHash,
+    files: Object.keys(preview.bundle.files).sort(),
+    totalBytes: preview.bundle.totalBytes,
+    requiresApproval: preview.candidate.trustLevel === 'community',
   };
 }
 
 export async function installSkill(input: unknown, ctx: ExtensionBackendContext) {
-  const body = asRecord(input);
   const candidate = await requireCandidate(input, ctx);
-  if (body.approved !== true) {
-    return {
-      ok: false,
-      requiresApproval: true,
-      message: 'Skill install requires explicit user approval. Ask the user, then call skill_install with approved=true.',
-    };
-  }
-
-  let preview = await ctx.storage.get<PreviewRecord>(`${PREVIEW_KEY}${candidate.id}`);
-  if (!preview) {
-    const previewResult = (await previewSkill({ candidateId: candidate.id }, ctx)) as { ok: boolean };
-    if (!previewResult.ok) throw new Error('Unable to preview skill before install.');
-    preview = await ctx.storage.get<PreviewRecord>(`${PREVIEW_KEY}${candidate.id}`);
-  }
-  if (!preview) throw new Error('Skill preview was not stored.');
+  const preview = await prepareSkill(candidate, ctx, 'Vet and install upstream skill.');
   if (!preview.vetting.allowed) throw new Error(`Skill did not pass vetting: ${preview.vetting.summary}`);
-  if (!preview.approvalExpiresAt || Date.now() > Date.parse(preview.approvalExpiresAt)) {
-    return {
-      ok: false,
-      requiresApproval: true,
-      message: 'The vetted preview approval window expired. Run skill_preview again and ask the user to approve the fresh preview.',
-    };
+
+  if (preview.candidate.trustLevel === 'community') {
+    const approval = await ctx.ui.confirm({
+      title: 'Install community skill',
+      message: `Install ${preview.candidate.title} from ${preview.candidate.sourceLabel}?`,
+      confirmLabel: 'Install skill',
+      cancelLabel: 'Cancel',
+      timeoutMs: COMMUNITY_APPROVAL_TIMEOUT_MS,
+      details: [
+        { label: 'Skill', value: preview.candidate.title },
+        { label: 'Source', value: preview.candidate.sourceLabel },
+        { label: 'Repository', value: preview.candidate.identifier },
+        { label: 'Vetting', value: preview.vetting.summary },
+      ],
+    });
+    if (!approval.confirmed) {
+      return {
+        ok: false,
+        requiresApproval: true,
+        status: approval.status,
+        message:
+          approval.status === 'timeout'
+            ? `Skill install timed out before approval. ${preview.candidate.title} was not installed.`
+            : `Skill install cancelled. ${preview.candidate.title} was not installed.`,
+      };
+    }
   }
 
   const appFs = await ctx.filesystem.app({ access: ['read', 'write'], reason: 'Install approved upstream skill.' });
@@ -219,7 +207,10 @@ export async function installSkill(input: unknown, ctx: ExtensionBackendContext)
   return {
     ok: true,
     installed: record,
-    message: `Installed ${record.title} from ${record.sourceLabel}. It is now available through Prompt Assembly skills.`,
+    message:
+      record.trustLevel === 'community'
+        ? `Installed ${record.title} from community source ${record.sourceLabel}. It is now available through Prompt Assembly skills.`
+        : `Downloaded trusted skill ${record.title} from ${record.sourceLabel}. It is now available through Prompt Assembly skills.`,
   };
 }
 
@@ -259,7 +250,7 @@ export async function listState(_input: unknown, ctx: ExtensionBackendContext) {
   return {
     ok: true,
     sources: [
-      { id: 'hermes-index', label: 'Hermes trusted index', kind: 'hermes-index', trustLevel: 'trusted', enabled: true },
+      { id: 'hermes-index', label: 'Hermes Skills Index', kind: 'hermes-index', trustLevel: 'community', enabled: true },
       ...TRUSTED_GITHUB_SOURCES.map((source) => ({ ...source, kind: 'github', enabled: true })),
     ],
     candidates: candidateRows.map((row) => row.value),
@@ -284,6 +275,24 @@ async function requireCandidate(input: unknown, ctx: ExtensionBackendContext): P
   return candidate;
 }
 
+async function prepareSkill(candidate: SkillCandidate, ctx: ExtensionBackendContext, reason: string): Promise<PreviewRecord> {
+  const bundle = await fetchCandidateBundle(candidate);
+  const appFs = await ctx.filesystem.app({ access: ['read', 'write'], reason });
+  const quarantinePath = `${QUARANTINE_DIR}/${candidate.id}`;
+  await writeBundle(appFs, quarantinePath, bundle.files);
+  const vetting = await vetBundle(bundle, ctx);
+  const preview: PreviewRecord = {
+    candidate: { ...candidate, fetchedAt: new Date().toISOString() },
+    bundle,
+    vetting,
+    quarantinePath,
+    previewedAt: new Date().toISOString(),
+  };
+  await ctx.storage.put(`${PREVIEW_KEY}${candidate.id}`, preview);
+  ctx.ui.invalidate(['extensions', 'skills']);
+  return preview;
+}
+
 async function searchHermesIndex(query: string, limit: number, deadline: number): Promise<SkillCandidate[]> {
   const response = await fetchWithDeadline(HERMES_INDEX_URL, deadline, { accept: 'application/json' });
   if (!response.ok) return [];
@@ -294,7 +303,6 @@ async function searchHermesIndex(query: string, limit: number, deadline: number)
   for (const record of records) {
     const item = asRecord(record);
     const trustLevel = readTrustLevel(item.trust_level ?? item.trustLevel);
-    if (trustLevel !== 'builtin' && trustLevel !== 'trusted') continue;
     const name = readString(item.name) || readString(item.title) || '';
     const description = readString(item.description) || '';
     const identifier = readString(item.resolved_github_id) || readString(item.identifier) || '';
@@ -309,7 +317,7 @@ async function searchHermesIndex(query: string, limit: number, deadline: number)
         name,
         description,
         sourceId: 'hermes-index',
-        sourceLabel: 'Hermes trusted index',
+        sourceLabel: 'Hermes Skills Index',
         sourceKind: 'hermes-index',
         trustLevel,
         identifier: `${repo}/${path}`,

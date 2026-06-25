@@ -329,6 +329,9 @@ export function useDesktopAppEventRuntime() {
             }),
           );
           return;
+        case 'extension_ui_confirm':
+          window.dispatchEvent(new CustomEvent('neon-pilot-extension-ui-confirm', { detail: payload }));
+          return;
         case 'invalidate':
           refreshInvalidatedSnapshots(payload.topics);
           setEventVersions((prev) => incrementAppEventVersionsForTopics(prev, payload.topics));

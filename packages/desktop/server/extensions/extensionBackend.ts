@@ -25,8 +25,8 @@ import {
 import { executeHostCommandInRenderer } from './extensionCommandBridge.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { createExtensionDatabaseManager } from './extensionDatabase.js';
-import { publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
 import { isLockedExtensionId } from './extensionEnabledConfig.js';
+import { publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
 import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
 import { createExtensionKnowledgeCapability } from './extensionKnowledge.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
@@ -40,9 +40,15 @@ import {
   findExtensionEntry,
   invalidateExtensionRegistryReadCaches,
   isExtensionEnabled,
+  listEnabledExtensionEntries,
+  listExtensionAssemblyProviderRegistrations,
   listExtensionCommandRegistrations,
   listExtensionInstallSummaries,
+  listExtensionPromptAssemblyHookRegistrations,
+  listExtensionPromptContextProviderRegistrations,
   listExtensionRuntimeProviderRegistrations,
+  listExtensionSkillRegistrations,
+  listExtensionToolRegistrations,
   markExtensionStartupActive,
   recordExtensionFailure,
   setExtensionEnabled,
@@ -52,6 +58,7 @@ import { createExtensionExecutionsCapability } from './extensionRuns.js';
 import { refreshHostSkillMcpConfig } from './extensionRuntimeCapability.js';
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
+import { requestExtensionUiConfirm } from './extensionUiConfirmBridge.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
 import { isKnownHostCommand } from './hostCommands.js';
 import { buildLiveSessionResourceOptionsForRuntime } from './runtimeAgentHooks.js';
@@ -149,12 +156,23 @@ export interface ExtensionBackendContext {
   extensions: {
     /** Invoke an action on another extension by its id and action id. */
     callAction(extensionId: string, actionId: string, input?: unknown): Promise<unknown>;
+    invokeAction(input: { extensionId: string; actionId: string; input?: unknown; signal?: AbortSignal }): Promise<unknown>;
     /** List all installed extensions and their actions. */
     listActions(): Array<{
       extensionId: string;
       extensionName: string;
       actions: Array<{ id: string; title?: string; description?: string }>;
     }>;
+    listPromptAssemblyContributions(): {
+      contextProviders: unknown[];
+      assemblyProviders: unknown[];
+      hooks: unknown[];
+    };
+    listStaticContributions(): {
+      tools: unknown[];
+      skills: unknown[];
+      modelDiscovery: unknown[];
+    };
     getStatus(extensionId: string): { enabled: boolean; healthy: boolean; errors?: string[] };
     /** Enable or disable an extension by ID. */
     setEnabled(extensionId: string, enabled: boolean): void;
@@ -165,6 +183,14 @@ export interface ExtensionBackendContext {
   };
   ui: {
     invalidate(topics: string | string[]): void;
+    confirm(options: {
+      title?: string;
+      message: string;
+      confirmLabel?: string;
+      cancelLabel?: string;
+      timeoutMs?: number;
+      details?: Array<{ label: string; value: string }>;
+    }): Promise<{ confirmed: boolean; status: 'confirmed' | 'declined' | 'timeout' }>;
   };
   telemetry: {
     record(event: {
@@ -522,6 +548,10 @@ export function createBackendContext(
         if (!actionResult.ok) throw new Error(actionResult.error);
         return actionResult.result;
       },
+      invokeAction: async (input) => {
+        assertExtensionPermission(extensionId, 'extensions:read', 'extensions.invokeAction');
+        return invokeExtensionAction(input.extensionId, input.actionId, input.input, serverContext, toolContext, agentToolContext);
+      },
       listActions: () => {
         assertExtensionPermission(extensionId, 'extensions:read', 'extensions.listActions');
         return listExtensionInstallSummaries()
@@ -535,6 +565,25 @@ export function createBackendContext(
               description: action.description,
             })),
           }));
+      },
+      listPromptAssemblyContributions: () => {
+        assertExtensionPermission(extensionId, 'extensions:read', 'extensions.listPromptAssemblyContributions');
+        return {
+          contextProviders: listExtensionPromptContextProviderRegistrations(),
+          assemblyProviders: listExtensionAssemblyProviderRegistrations(),
+          hooks: listExtensionPromptAssemblyHookRegistrations(),
+        };
+      },
+      listStaticContributions: () => {
+        assertExtensionPermission(extensionId, 'extensions:read', 'extensions.listStaticContributions');
+        return {
+          tools: listExtensionToolRegistrations(),
+          skills: listExtensionSkillRegistrations(),
+          modelDiscovery: listEnabledExtensionEntries().flatMap((entry) => {
+            const action = entry.manifest.contributes?.modelDiscovery?.action;
+            return typeof action === 'string' ? [{ extensionId: entry.manifest.id, action }] : [];
+          }),
+        };
       },
       getStatus: (targetExtensionId) => {
         assertExtensionPermission(extensionId, 'extensions:read', 'extensions.getStatus');
@@ -563,6 +612,10 @@ export function createBackendContext(
         assertExtensionPermission(extensionId, 'ui:invalidate', 'ui.invalidate');
         const items = Array.isArray(topics) ? topics : [topics];
         invalidateAppTopics(...(items as import('../shared/appEvents.js').AppEventTopic[]));
+      },
+      confirm: async (options) => {
+        assertExtensionPermission(extensionId, 'ui:confirm', 'ui.confirm');
+        return requestExtensionUiConfirm({ extensionId, ...options });
       },
     },
     telemetry: {
@@ -851,6 +904,7 @@ async function runExtensionBackendActionInWorker(
   serverContext?: ExtensionBackendServerContext,
   toolContext?: ExtensionBackendContext['toolContext'],
   agentToolContext?: unknown,
+  signal?: AbortSignal,
 ): Promise<unknown> {
   const runner = getWorkerImportBackendRunner();
   const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId);
@@ -872,6 +926,7 @@ async function runExtensionBackendActionInWorker(
       {
         context: workerBackendContextOptions(serverContext, toolContext, agentToolContext, updateHandleId),
         ...(timeoutMs ? { timeoutMs } : {}),
+        ...(signal ? { signal } : {}),
       },
     );
   } finally {
@@ -1102,6 +1157,7 @@ export async function invokeExtensionAction(
   serverContext?: ExtensionBackendServerContext,
   toolContext?: ExtensionBackendContext['toolContext'],
   agentToolContext?: unknown,
+  signal?: AbortSignal,
 ): Promise<ExtensionActionInvokeResult> {
   const started = Date.now();
   let actionHandlerStarted = false;
@@ -1140,6 +1196,7 @@ export async function invokeExtensionAction(
       serverContext,
       toolContext ?? toolContextFromAgentToolContext(agentToolContext),
       agentToolContext,
+      signal,
     );
     recordActionTelemetry({ extensionId, actionId, ok: true, durationMs: Date.now() - started, at: new Date().toISOString() });
     return { ok: true, result };
