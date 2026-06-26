@@ -318,7 +318,7 @@ export function DesktopTopBar({
   const readyUpdateVersion = appPreferences?.update.status === 'ready' ? appPreferences.update.downloadedVersion : undefined;
 
   return (
-    <div className="ui-desktop-top-bar">
+    <div className="ui-desktop-top-bar" style={dragStyle}>
       <div className="ui-desktop-top-bar__leading">
         <div className="ui-desktop-top-bar__traffic-light-gap" aria-hidden="true" style={dragStyle} />
         <div className="ui-desktop-top-bar__controls" style={noDragStyle}>
@@ -353,7 +353,7 @@ export function DesktopTopBar({
             →
           </ToolbarButton>
         </div>
-        <div className="ui-desktop-top-bar__brand" style={noDragStyle}>
+        <div className="ui-desktop-top-bar__brand">
           <NeonPilotMarkIcon />
           <span className="ui-desktop-top-bar__brand-label">Neon Pilot</span>
         </div>

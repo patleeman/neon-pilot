@@ -181,6 +181,23 @@ describe('DesktopTopBar', () => {
     expect(html.indexOf('Go forward')).toBeLessThan(html.indexOf('Hide workbench'));
   });
 
+  it('keeps the top bar chrome draggable except for interactive controls', () => {
+    const html = renderTopBar({
+      isElectron: true,
+      activeHostId: 'local',
+      activeHostLabel: 'Local',
+      activeHostKind: 'local',
+      activeHostSummary: 'Local runtime is healthy.',
+      launchMode: 'stable',
+      launchLabel: null,
+    });
+
+    expect(html).toContain('class="ui-desktop-top-bar" style="-webkit-app-region:drag"');
+    expect(html).toContain('class="ui-desktop-top-bar__controls" style="-webkit-app-region:no-drag"');
+    expect(html).toContain('ui-command-search-trigger ui-desktop-top-bar__search" style="-webkit-app-region:no-drag"');
+    expect(html).not.toContain('class="ui-desktop-top-bar__brand" style="-webkit-app-region:no-drag"');
+  });
+
   it('keeps the right sidebar toggle disabled when no right sidebar is available', () => {
     const html = renderTopBar({
       isElectron: true,
