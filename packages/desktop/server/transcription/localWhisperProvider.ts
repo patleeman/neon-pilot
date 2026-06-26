@@ -8,6 +8,7 @@ import type {
   TranscriptionInstallResult,
   TranscriptionModelStatus,
   TranscriptionResult,
+  TranscriptionSegment,
 } from '@neon-pilot/extensions/backend/transcription';
 
 const DEFAULT_LOCAL_WHISPER_MODEL = 'base.en';
@@ -206,10 +207,51 @@ function readWhisperSegmentText(segment: WhisperSegment): string {
   return Array.isArray(segment) ? segment[2] : segment.text;
 }
 
+function readWhisperSegmentStart(segment: WhisperSegment): string | undefined {
+  return Array.isArray(segment) ? segment[0] : segment.start;
+}
+
+function readWhisperSegmentEnd(segment: WhisperSegment): string | undefined {
+  return Array.isArray(segment) ? segment[1] : segment.end;
+}
+
+export function parseWhisperTimestampMs(value: string | undefined): number | undefined {
+  const normalized = value?.trim().replace(',', '.');
+  if (!normalized) return undefined;
+
+  const parts = normalized.split(':');
+  if (parts.length > 3 || parts.some((part) => part.trim() === '')) return undefined;
+
+  let seconds = 0;
+  for (const part of parts) {
+    const parsed = Number(part);
+    if (!Number.isFinite(parsed) || parsed < 0) return undefined;
+    seconds = seconds * 60 + parsed;
+  }
+
+  return Math.round(seconds * 1000);
+}
+
+export function normalizeWhisperSegments(segments: WhisperSegment[]): TranscriptionSegment[] {
+  return segments.flatMap((segment) => {
+    const text = readWhisperSegmentText(segment).trim().replace(/\s+/g, ' ');
+    if (!text) return [];
+
+    const startMs = parseWhisperTimestampMs(readWhisperSegmentStart(segment));
+    const endMs = parseWhisperTimestampMs(readWhisperSegmentEnd(segment));
+    return [
+      {
+        ...(startMs !== undefined ? { startMs } : {}),
+        ...(endMs !== undefined && (startMs === undefined || endMs >= startMs) ? { endMs } : {}),
+        text,
+      },
+    ];
+  });
+}
+
 export function formatWhisperSegments(segments: WhisperSegment[]): string {
-  return segments
-    .map((segment) => readWhisperSegmentText(segment).trim())
-    .filter(Boolean)
+  return normalizeWhisperSegments(segments)
+    .map((segment) => segment.text)
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -299,10 +341,11 @@ export class LocalWhisperTranscriptionProvider {
     const result = await whisperModule.transcribeAsync(ctx, {
       pcmf32: audio.pcmf32,
       language: options.language === 'auto' ? undefined : options.language,
-      no_timestamps: true,
+      no_timestamps: false,
       no_prints: true,
     });
 
+    const segments = normalizeWhisperSegments(result.segments);
     const text = formatWhisperSegments(result.segments);
     if (!text) {
       throw new Error('Local Whisper returned an empty transcript. Try speaking longer or check microphone input.');
@@ -314,6 +357,7 @@ export class LocalWhisperTranscriptionProvider {
       model: this.model,
       ...(options.language ? { language: options.language } : {}),
       durationMs: Math.round((audio.pcmf32.length / audio.sampleRate) * 1000),
+      segments,
     };
   }
 }

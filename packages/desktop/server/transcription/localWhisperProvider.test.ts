@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   buildWhisperRequireCandidatePaths,
   formatWhisperSegments,
+  normalizeWhisperSegments,
+  parseWhisperTimestampMs,
   resolveCustomHuggingFaceUrl,
   resolveModelDownloadUrl,
   resolveModelFileName,
@@ -60,5 +62,27 @@ describe('local whisper provider', () => {
         { start: '00:00:01.000', end: '00:00:02.000', text: 'world' },
       ]),
     ).toBe('hello world');
+  });
+
+  it('parses Whisper timestamps into milliseconds', () => {
+    expect(parseWhisperTimestampMs('00:00:01.250')).toBe(1250);
+    expect(parseWhisperTimestampMs('00:02:03,500')).toBe(123500);
+    expect(parseWhisperTimestampMs('01:02:03.400')).toBe(3723400);
+    expect(parseWhisperTimestampMs('bad')).toBeUndefined();
+  });
+
+  it('normalizes timestamped segments for transcription callers', () => {
+    expect(
+      normalizeWhisperSegments([
+        ['00:00:00.000', '00:00:01.000', ' hello  there '],
+        { start: '00:00:01.000', end: '00:00:03.250', text: ' world ' },
+        ['00:00:05.000', '00:00:04.000', 'odd range'],
+        ['00:00:06.000', '00:00:07.000', '   '],
+      ]),
+    ).toEqual([
+      { startMs: 0, endMs: 1000, text: 'hello there' },
+      { startMs: 1000, endMs: 3250, text: 'world' },
+      { startMs: 5000, text: 'odd range' },
+    ]);
   });
 });
