@@ -51,6 +51,19 @@ describe('ConversationComposerMeta', () => {
     expect(html).toContain('Workspace folder');
   });
 
+  it('does not render raw internal draft cwd picker details when given sanitized error copy', () => {
+    const html = renderToString(
+      <ConversationComposerMeta {...baseProps} draftCwdValue="~/repo" draftCwdError="Could not change the working directory." />,
+    );
+
+    expect(html).toContain('Could not change the working directory.');
+    expect(html).not.toContain('Local API route did not complete');
+    expect(html).not.toContain('/api/file-picker');
+    expect(html).not.toContain('file://');
+    expect(html).not.toContain('localApi.js');
+    expect(html).not.toContain('Module.ep');
+  });
+
   it('renders saved conversation cwd metadata', () => {
     const html = renderToString(
       <ConversationComposerMeta

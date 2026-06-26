@@ -4447,7 +4447,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       setConversationCwdEditorOpen(true);
       await submitConversationCwdChange(result.path);
     } catch (error) {
-      setConversationCwdError(error instanceof Error ? error.message : 'Could not choose a folder.');
+      setConversationCwdError(formatConversationCwdError(error));
     } finally {
       setConversationCwdPickBusy(false);
     }
@@ -4493,7 +4493,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       void api.setSavedWorkspacePaths(nextSavedWorkspacePaths);
       await submitConversationCwdChange(result.path);
     } catch (error) {
-      setConversationCwdError(error instanceof Error ? error.message : 'Could not choose a folder.');
+      setConversationCwdError(formatConversationCwdError(error));
     } finally {
       setConversationCwdPickBusy(false);
     }
@@ -5481,7 +5481,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       });
       setDraftConversationCwd(result.path);
     } catch (error) {
-      setDraftCwdError(error instanceof Error ? error.message : 'Could not choose a folder.');
+      setDraftCwdError(formatConversationCwdError(error));
     } finally {
       setDraftCwdPickBusy(false);
     }

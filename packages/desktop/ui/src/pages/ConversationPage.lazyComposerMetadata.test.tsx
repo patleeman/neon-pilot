@@ -1869,6 +1869,63 @@ describe('ConversationPage lazy composer metadata', () => {
     expect(apiMock.changeConversationCwd).toHaveBeenCalledWith('conv-regression', '/tmp/picked-workspace', 'surface-test');
   });
 
+  it('hides internal folder picker failures when choosing a saved conversation working directory', async () => {
+    regressionBootstrapData.liveSession = {
+      live: true,
+      id: 'conv-regression',
+      cwd: '/tmp/project',
+      sessionFile: '/tmp/conv-regression.jsonl',
+      title: 'Regression conversation',
+      isStreaming: false,
+      hasStaleTurnState: false,
+    };
+    regressionBootstrapData.sessionDetail = {
+      ...regressionBootstrapData.sessionDetail,
+      meta: {
+        ...regressionBootstrapData.sessionDetail.meta,
+        cwd: '/tmp/project',
+        cwdSlug: 'project',
+        isLive: true,
+      },
+    };
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = createDesktopStateFromRegressionBootstrap();
+    apiMock.pickFolder.mockRejectedValue(
+      new Error(
+        'Error: Local API route did not complete for POST /api/file-picker/folder at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/localApi.js:132:20)',
+      ),
+    );
+
+    renderConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Working directory: project'));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Choose folder' }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiMock.pickFolder).toHaveBeenCalledWith({ cwd: '/tmp/project', prompt: 'Choose a working directory' });
+    expect(screen.getByText('Could not change the working directory.')).toBeTruthy();
+    expect(screen.queryByText(/Local API route did not complete/)).toBeNull();
+    expect(screen.queryByText(/\/api\/file-picker/)).toBeNull();
+    expect(screen.queryByText(/file:\/\//)).toBeNull();
+    expect(screen.queryByText(/localApi\.js/)).toBeNull();
+    expect(screen.queryByText(/Module\.ep/)).toBeNull();
+    expect(screen.queryByText(/packages\/desktop/)).toBeNull();
+  });
+
   it('opens the saved drawing picker from its conversation command path', async () => {
     vi.useRealTimers();
     apiMock.conversationAttachments.mockResolvedValue({
