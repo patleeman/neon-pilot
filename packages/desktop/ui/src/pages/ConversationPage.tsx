@@ -2443,6 +2443,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     conversationNeedsTakeover,
     preparingRelatedThreadContext,
     wholeLineBashRunning,
+    hasAvailableModel: models.length > 0,
   });
 
   useEffect(() => {
@@ -7645,7 +7646,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
               composerShellWidth={composerShellWidth}
               streamIsStreaming={composerRunState.streamControlsActive}
               models={models}
-              currentModel={currentModel || model || defaultModel}
+              currentModel={models.length > 0 ? currentModel || model || defaultModel : ''}
               currentThinkingLevel={currentThinkingLevel}
               savingPreference={savingPreference}
               conversationNeedsTakeover={conversationNeedsTakeover}

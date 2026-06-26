@@ -3911,6 +3911,9 @@ describe('submitPromptSession', () => {
   });
 
   it('returns prompt startup failures through the detached completion', async () => {
+    const appendMessage = vi.fn();
+    const sessionState = { messages: [] as unknown[], streamingMessage: null };
+
     setLiveEntry('session-submit-error', {
       sessionId: 'session-submit-error',
       cwd: '/tmp/workspace',
@@ -3920,18 +3923,36 @@ describe('submitPromptSession', () => {
       lastContextUsageJson: null,
       lastQueueStateJson: null,
       session: {
-        state: { messages: [], streamingMessage: null },
+        state: sessionState,
+        sessionManager: { appendMessage },
         getContextUsage: () => null,
         isStreaming: false,
         subscribe: () => () => {},
         prompt: vi.fn(async () => {
-          throw new Error('Codex error: upstream overloaded');
+          throw new Error('No API key found for the selected model. Configure a provider in Neon Pilot, then try again.');
         }),
       },
     });
 
     const submitted = await submitPromptSession('session-submit-error', 'hello there');
-    await expect(submitted.completion).rejects.toThrow('Codex error: upstream overloaded');
+    await expect(submitted.completion).rejects.toThrow('No API key found');
+    expect(appendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        role: 'user',
+        content: [{ type: 'text', text: 'hello there' }],
+      }),
+    );
+    expect(appendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        role: 'assistant',
+        stopReason: 'error',
+        errorMessage: 'No API key found for the selected model. Configure a provider in Neon Pilot, then try again.',
+      }),
+    );
+    expect(sessionState.messages).toEqual([
+      expect.objectContaining({ role: 'user' }),
+      expect.objectContaining({ role: 'assistant', stopReason: 'error' }),
+    ]);
   });
 });
 

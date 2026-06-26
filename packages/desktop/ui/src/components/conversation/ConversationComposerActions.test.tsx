@@ -40,6 +40,13 @@ describe('ConversationComposerActions', () => {
     expect(renderActions({ composerHasContent: true, composerSubmitLabel: 'Follow up' })).toContain('followup');
   });
 
+  it('uses setup guidance for disabled send with content', () => {
+    const html = renderActions({ composerHasContent: true, composerDisabled: true, composerSubmitLabel: 'Send' });
+
+    expect(html).toContain('aria-label="Configure a model provider before sending"');
+    expect(html).toContain('disabled=""');
+  });
+
   it('renders streaming stop and steer controls', () => {
     const html = renderActions({
       streamIsStreaming: true,

@@ -13,6 +13,8 @@ describe('conversationComposerDisabled', () => {
     expect(isConversationComposerDisabled({ ...base, conversationNeedsTakeover: true })).toBe(true);
     expect(isConversationComposerDisabled({ ...base, preparingRelatedThreadContext: true })).toBe(true);
     expect(isConversationComposerDisabled({ ...base, wholeLineBashRunning: true })).toBe(true);
+    expect(isConversationComposerDisabled({ ...base, hasAvailableModel: false })).toBe(true);
+    expect(isConversationComposerDisabled({ ...base, hasAvailableModel: true })).toBe(false);
   });
 
   it('resolves simple composer cleanup predicates', () => {

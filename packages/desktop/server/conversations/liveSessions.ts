@@ -69,6 +69,7 @@ import {
   updateLiveSessionModelPreferences as updateLiveSessionModelPreferencesWithCallbacks,
 } from './liveSessionMaintenanceOps.js';
 import {
+  appendDetachedLiveSessionAssistantError,
   appendDetachedLiveSessionBashExecution,
   appendDetachedLiveSessionUserMessage,
   appendParallelImportedLiveSessionMessage,
@@ -125,6 +126,7 @@ import { subscribeLiveSession } from './liveSessionSubscription.js';
 import { resolveStableSessionTitle } from './liveSessionTitle.js';
 import { type BeforeAgentStartProbeMessage, inspectAvailableLiveSessionTools } from './liveSessionToolInspection.js';
 import { repairLiveSessionTranscriptTail as repairLiveSessionTranscriptTailWithCallbacks } from './liveSessionTranscriptRepair.js';
+import { getAssistantErrorDisplayMessage } from './sessionAssistantErrors.js';
 
 export { registerLiveSessionLifecycleHandler };
 
@@ -883,6 +885,31 @@ async function runPromptOnLiveEntry(
       repairLiveSessionTranscriptTail,
       broadcastQueueState,
     });
+  } catch (error) {
+    if (behavior === undefined) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendDetachedLiveSessionAssistantError(
+        entry,
+        {
+          promptText: text,
+          errorMessage:
+            getAssistantErrorDisplayMessage({ stopReason: 'error', errorMessage: message }) ??
+            'The model could not start. Configure a model provider, then try again.',
+        },
+        {
+          broadcastTitle: (entry) => broadcastTitle(entry, { resolveEntryTitle, publishSessionMetaChanged }),
+          publishSessionMetaChanged,
+        },
+      );
+      broadcastSnapshot(entry, {
+        buildLiveSessionSnapshot: (() => {
+          const fn = buildLiveSessionSnapshot;
+          return (e: Parameters<typeof fn>[0], t?: number) => fn(e, t) as unknown as Record<string, unknown>;
+        })(),
+        ensureStaleTurnState,
+      });
+    }
+    throw error;
   } finally {
     if (behavior === undefined) {
       syncPromptRunningState(entry);

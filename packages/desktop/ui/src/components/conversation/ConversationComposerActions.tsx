@@ -193,8 +193,10 @@ export function ConversationComposerActions({
           disabled={composerDisabled}
           size={composerSubmitLabel === 'Send' ? 'icon' : 'label'}
           tone={composerSubmitLabel === 'Send' ? 'accent' : composerSubmitLabel === 'Steer' ? 'warning' : 'neutral'}
-          title={composerSubmitLabel}
-          aria-label={composerSubmitLabel}
+          title={composerDisabled && composerSubmitLabel === 'Send' ? 'Configure a model provider before sending' : composerSubmitLabel}
+          aria-label={
+            composerDisabled && composerSubmitLabel === 'Send' ? 'Configure a model provider before sending' : composerSubmitLabel
+          }
         >
           {composerSubmitLabel === 'Send' ? (
             <svg

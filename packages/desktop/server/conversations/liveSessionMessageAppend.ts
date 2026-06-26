@@ -88,6 +88,72 @@ export async function appendDetachedLiveSessionUserMessage<TEntry extends LiveSe
   callbacks.publishSessionMetaChanged(entry.sessionId);
 }
 
+function extractTextContent(content: unknown): string {
+  if (typeof content === 'string') return content.trim();
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((part) => {
+      if (typeof part === 'string') return part;
+      if (!isRecord(part)) return '';
+      return typeof part.text === 'string' ? part.text : '';
+    })
+    .join('')
+    .trim();
+}
+
+export function appendDetachedLiveSessionAssistantError<TEntry extends LiveSessionMessageAppendHost>(
+  entry: TEntry,
+  input: { promptText: string; errorMessage: string },
+  callbacks: {
+    broadcastTitle: (entry: TEntry) => void;
+    publishSessionMetaChanged: (sessionId: string) => void;
+  },
+): void {
+  if (entry.session.isStreaming) {
+    throw new Error(`Session ${entry.sessionId} is currently streaming`);
+  }
+
+  const normalizedPrompt = input.promptText.trim();
+  const normalizedError = input.errorMessage.trim() || 'The model could not start. Configure a model provider, then try again.';
+  if (!normalizedPrompt && !normalizedError) {
+    return;
+  }
+
+  const messages = Array.isArray(entry.session.state?.messages) ? entry.session.state.messages : [];
+  const lastUser = [...messages].reverse().find((message) => isRecord(message) && message.role === 'user');
+  const shouldAppendUser =
+    normalizedPrompt.length > 0 && (!lastUser || extractTextContent((lastUser as { content?: unknown }).content) !== normalizedPrompt);
+
+  if (shouldAppendUser) {
+    const userMessage = {
+      role: 'user' as const,
+      content: [{ type: 'text' as const, text: normalizedPrompt }],
+      timestamp: Date.now(),
+    };
+    entry.session.state.messages = [...entry.session.state.messages, userMessage];
+    entry.session.sessionManager?.appendMessage?.(userMessage);
+
+    if (!entry.session.sessionName?.trim() && isPlaceholderConversationTitle(entry.title)) {
+      const fallbackTitle = buildFallbackTitleFromContent(userMessage.content);
+      if (fallbackTitle) {
+        entry.title = fallbackTitle;
+        callbacks.broadcastTitle(entry);
+      }
+    }
+  }
+
+  const assistantMessage = {
+    role: 'assistant' as const,
+    content: [] as Array<{ type: 'text'; text: string }>,
+    stopReason: 'error' as const,
+    errorMessage: normalizedError,
+    timestamp: Date.now(),
+  };
+  entry.session.state.messages = [...entry.session.state.messages, assistantMessage];
+  entry.session.sessionManager?.appendMessage?.(assistantMessage);
+  callbacks.publishSessionMetaChanged(entry.sessionId);
+}
+
 export function appendDetachedLiveSessionBashExecution<TEntry extends LiveSessionMessageAppendHost>(
   entry: TEntry,
   command: string,
