@@ -84,7 +84,9 @@ describe('system-conversation-tools manifest', () => {
     const conversationTool = (manifest.backend.actions ?? []).find((action: { id: string }) => action.id === 'conversationTool') as
       | { worker?: { inputActions?: string[]; timeoutMs?: number } }
       | undefined;
-    expect(conversationTool?.worker?.inputActions).toEqual(expect.arrayContaining(['inspect', 'create', 'create_and_run', 'run_turn']));
+    expect(conversationTool?.worker?.inputActions).toEqual(
+      expect.arrayContaining(['cli', 'inspect', 'create', 'create_and_run', 'run_turn']),
+    );
     expect(conversationTool?.worker?.timeoutMs).toBeGreaterThanOrEqual(900_000);
   });
 

@@ -1705,6 +1705,7 @@
           "timeoutMs": 900000,
           "inputActions": [
             "activity",
+            "cli",
             "connections",
             "inspect",
             "create",

@@ -2296,7 +2296,8 @@ describe('extension backend action invocation', () => {
       loadAgentFactory: vi.fn(),
       runExport: vi.fn(),
       runWorkerExport: vi.fn(async (_extensionId, _compiled, _exportName, _operation, args) => {
-        const action = (args[0] as { action?: string }).action ?? 'create';
+        const input = args[0] as { action?: string; cli?: unknown };
+        const action = input.action ?? (input.cli ? 'cli' : 'create');
         return {
           content: [{ type: 'text', text: `${action} complete.` }],
           details:
@@ -2455,6 +2456,17 @@ describe('extension backend action invocation', () => {
       result: {
         content: [{ type: 'text', text: 'rollback complete.' }],
         details: { rolledBackTo: 'entry-1' },
+      },
+    });
+    await expect(
+      invokeExtensionAction('system-conversation-tools', 'conversationTool', {
+        cli: { command: 'conversations delete', args: ['conv-1'] },
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        content: [{ type: 'text', text: 'cli complete.' }],
+        details: { blockId: 'block-1' },
       },
     });
 
