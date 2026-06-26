@@ -120,4 +120,77 @@ describe('transcript render items', () => {
       expect.objectContaining({ type: 'message', index: 2, block: expect.objectContaining({ id: 'a2' }) }),
     ]);
   });
+
+  it('keeps persisted image blocks and user attachment images visible in saved-route render items', () => {
+    const blocks: DisplayBlock[] = [
+      {
+        type: 'user',
+        id: 'u-image',
+        ts,
+        text: 'Inspect this screenshot',
+        images: [
+          {
+            alt: 'Attached image: screenshot.png',
+            src: 'data:image/png;base64,c2NyZWVuc2hvdA==',
+            mimeType: 'image/png',
+            caption: 'screenshot.png',
+          },
+        ],
+      },
+      {
+        type: 'image',
+        id: 'assistant-image',
+        ts,
+        alt: 'Latest desktop build',
+        src: 'data:image/png;base64,YnVpbGQ=',
+        mimeType: 'image/png',
+        width: 640,
+        height: 360,
+        caption: 'Latest desktop build',
+      },
+      {
+        type: 'summary',
+        id: 'compact-1',
+        ts,
+        kind: 'compaction',
+        title: 'Overflow recovery compaction',
+        text: '## Goal\nKeep image context after reload.',
+      },
+    ];
+
+    const items = buildTranscriptRenderItemsFromDisplayBlocks(blocks);
+
+    expect(items).toEqual([
+      expect.objectContaining({
+        type: 'message',
+        index: 0,
+        block: expect.objectContaining({
+          type: 'user',
+          id: 'u-image',
+          images: [
+            expect.objectContaining({
+              alt: 'Attached image: screenshot.png',
+              src: 'data:image/png;base64,c2NyZWVuc2hvdA==',
+              mimeType: 'image/png',
+            }),
+          ],
+        }),
+      }),
+      expect.objectContaining({
+        type: 'message',
+        index: 1,
+        block: expect.objectContaining({
+          type: 'image',
+          id: 'assistant-image',
+          src: 'data:image/png;base64,YnVpbGQ=',
+          caption: 'Latest desktop build',
+        }),
+      }),
+      expect.objectContaining({
+        type: 'message',
+        index: 2,
+        block: expect.objectContaining({ type: 'summary', kind: 'compaction', id: 'compact-1' }),
+      }),
+    ]);
+  });
 });

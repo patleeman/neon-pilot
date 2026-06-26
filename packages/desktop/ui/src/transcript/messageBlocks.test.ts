@@ -106,6 +106,50 @@ describe('message block hydration helpers', () => {
     ).toEqual([text, tool]);
   });
 
+  it('preserves saved-route image messages, user attachment images, and compaction markers', () => {
+    const userWithImage: Extract<MessageBlock, { type: 'user' }> = {
+      type: 'user',
+      id: 'user-image',
+      ts: '2026-04-01T00:00:00.000Z',
+      text: 'Review this screenshot',
+      images: [
+        {
+          alt: 'Attached image: screenshot.png',
+          src: 'data:image/png;base64,c2NyZWVuc2hvdA==',
+          mimeType: 'image/png',
+          caption: 'screenshot.png',
+        },
+      ],
+    };
+    const generatedImage: Extract<MessageBlock, { type: 'image' }> = {
+      type: 'image',
+      id: 'assistant-image',
+      ts: '2026-04-01T00:00:01.000Z',
+      alt: 'Latest desktop build',
+      src: 'data:image/png;base64,YnVpbGQ=',
+      mimeType: 'image/png',
+      width: 640,
+      height: 360,
+      caption: 'Latest desktop build',
+    };
+    const summary: Extract<MessageBlock, { type: 'summary' }> = {
+      type: 'summary',
+      id: 'compact-1',
+      ts: '2026-04-01T00:00:02.000Z',
+      kind: 'compaction',
+      title: 'Overflow recovery compaction',
+      text: '## Goal\nKeep image context after reload.',
+    };
+    const renderItems = [
+      { type: 'message' as const, block: userWithImage, index: 0 },
+      { type: 'message' as const, block: generatedImage, index: 1 },
+      { type: 'message' as const, block: summary, index: 2 },
+    ];
+
+    expect(transcriptRenderItemsToMessageBlocks(renderItems)).toEqual([userWithImage, generatedImage, summary]);
+    expect(hydrateTranscriptRenderItems(renderItems, {})).toEqual(renderItems);
+  });
+
   it('hydrates precomputed message render items by block id', () => {
     const preview: Extract<MessageBlock, { type: 'tool_use' }> = {
       type: 'tool_use',
