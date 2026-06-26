@@ -13,6 +13,7 @@ import type {
   DisplayBlock,
   PromptAttachmentRefInput,
   PromptImageInput,
+  PromptVideoInput,
   SseEvent,
   ThreadGoal,
 } from '../shared/types';
@@ -1306,6 +1307,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       text: string,
       behavior?: 'steer' | 'followUp',
       images?: PromptImageInput[],
+      videos?: PromptVideoInput[],
       attachmentRefs?: PromptAttachmentRefInput[],
       contextMessages?: Array<{ customType: string; content: string }>,
       relatedConversationIds?: string[],
@@ -1344,6 +1346,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         text,
         behavior,
         images,
+        videos,
         attachmentRefs,
         surfaceId,
         contextMessages,

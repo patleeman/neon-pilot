@@ -3,10 +3,17 @@
  * Wraps @earendil-works/pi-coding-agent SDK sessions in-process and
  * exposes a pub/sub SSE event layer for the web server.
  */
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { AgentSession } from '@earendil-works/pi-coding-agent';
-import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
+import {
+  type ConversationArtifactRecord,
+  getConversationArtifact,
+  getDurableSessionsDir,
+  getPiAgentRuntimeDir,
+  listConversationArtifacts,
+} from '@neon-pilot/core';
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { publishAppEvent, publishConversationRuntimeState } from '../shared/appEvents.js';
@@ -93,7 +100,12 @@ import { resolveLiveSessionFile } from './liveSessionPersistence.js';
 import { createLiveSessionPresenceHost, type LiveSessionPresenceState, type LiveSessionSurfaceType } from './liveSessionPresence.js';
 import { ensureLiveSessionSurfaceCanControl, takeOverLiveSessionControl } from './liveSessionPresenceFacade.js';
 import { runPromptOnLiveEntry as runPromptOnLiveEntryWithCallbacks, submitPromptOnLiveEntry } from './liveSessionPromptOps.js';
-import { normalizeQueuedPromptBehavior, type PromptImageAttachment, type QueuedPromptPreview } from './liveSessionQueue.js';
+import {
+  normalizeQueuedPromptBehavior,
+  type PromptImageAttachment,
+  type PromptVideoAttachment,
+  type QueuedPromptPreview,
+} from './liveSessionQueue.js';
 import {
   cancelLiveSessionQueuedPrompt,
   clearLiveSessionQueuedPrompts,
@@ -142,7 +154,7 @@ export {
   type LiveSessionPresenceState,
   type LiveSessionSurfaceType,
 } from './liveSessionPresence.js';
-export { type PromptImageAttachment, type QueuedPromptPreview } from './liveSessionQueue.js';
+export { type PromptImageAttachment, type PromptVideoAttachment, type QueuedPromptPreview } from './liveSessionQueue.js';
 export { isPlaceholderConversationTitle, resolveStableSessionTitle } from './liveSessionTitle.js';
 
 export function prewarmLiveSessionToolSelection(): void {
@@ -183,6 +195,92 @@ export type { LiveSessionStateSnapshot } from './liveSessionStateSnapshot.js';
 
 export const registry = new Map<string, LiveEntry>();
 const pendingConversationWorkingDirectoryChanges = new Map<string, PendingConversationWorkingDirectoryChange>();
+
+function escapeExportHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case '&':
+        return '&amp;';
+      case '<':
+        return '&lt;';
+      case '>':
+        return '&gt;';
+      case '"':
+        return '&quot;';
+      case "'":
+        return '&#39;';
+      default:
+        return char;
+    }
+  });
+}
+
+function renderExportArtifactPreview(artifact: ConversationArtifactRecord): string {
+  if (artifact.kind === 'html') {
+    return `<iframe class="neon-export-artifact-frame" title="${escapeExportHtml(artifact.title)} preview" sandbox="" srcdoc="${escapeExportHtml(
+      artifact.content,
+    )}"></iframe>`;
+  }
+
+  return `<pre class="neon-export-artifact-source"><code>${escapeExportHtml(artifact.content)}</code></pre>`;
+}
+
+function buildConversationArtifactsExportSection(conversationId: string): string {
+  const summaries = listConversationArtifacts({ profile: 'shared', conversationId });
+  const artifacts = summaries.flatMap((summary) => {
+    const artifact = getConversationArtifact({ profile: 'shared', conversationId, artifactId: summary.id });
+    return artifact ? [artifact] : [];
+  });
+
+  if (artifacts.length === 0) {
+    return '';
+  }
+
+  const artifactItems = artifacts
+    .map(
+      (artifact) => `<article class="neon-export-artifact">
+  <header>
+    <p class="neon-export-artifact-kind">${escapeExportHtml(artifact.kind)} · rev ${artifact.revision}</p>
+    <h3>${escapeExportHtml(artifact.title)}</h3>
+    <p class="neon-export-artifact-id">${escapeExportHtml(artifact.id)}</p>
+  </header>
+  ${renderExportArtifactPreview(artifact)}
+</article>`,
+    )
+    .join('\n');
+
+  return `<section class="neon-export-artifacts" aria-label="Saved artifacts">
+<style>
+.neon-export-artifacts{margin:2rem auto;padding:1.25rem;max-width:1100px;border-top:1px solid rgba(148,163,184,.35);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.neon-export-artifacts h2{margin:0 0 1rem;font-size:1.25rem}
+.neon-export-artifact{margin:1rem 0;padding:1rem;border:1px solid rgba(148,163,184,.35);border-radius:8px}
+.neon-export-artifact header{margin-bottom:.75rem}
+.neon-export-artifact h3{margin:.15rem 0;font-size:1rem}
+.neon-export-artifact-kind,.neon-export-artifact-id{margin:0;color:#64748b;font-size:.8rem}
+.neon-export-artifact-frame{width:100%;min-height:320px;border:1px solid rgba(148,163,184,.35);border-radius:6px;background:white}
+.neon-export-artifact-source{overflow:auto;white-space:pre-wrap;padding:1rem;border-radius:6px;background:#0f172a;color:#e2e8f0}
+</style>
+<h2>Saved artifacts</h2>
+${artifactItems}
+</section>`;
+}
+
+function appendConversationArtifactsToExportHtml(conversationId: string, exportPath: string): void {
+  if (!exportPath || !existsSync(exportPath)) {
+    return;
+  }
+
+  const section = buildConversationArtifactsExportSection(conversationId);
+  if (!section) {
+    return;
+  }
+
+  const html = readFileSync(exportPath, 'utf-8');
+  const insertAt = html.search(/<\/body\s*>/i);
+  const nextHtml =
+    insertAt >= 0 ? `${html.slice(0, insertAt)}\n${section}\n${html.slice(insertAt)}` : `${html.replace(/\s*$/, '')}\n${section}\n`;
+  writeFileSync(exportPath, nextHtml, 'utf-8');
+}
 
 function notifyEntryLifecycleHandlers(entry: LiveEntry, trigger: 'turn_end' | 'auto_compaction_end'): void {
   notifyLiveSessionLifecycleHandlers({
@@ -791,6 +889,7 @@ export async function startParallelPromptSession(
   input: {
     text: string;
     images?: PromptImageAttachment[];
+    videos?: PromptVideoAttachment[];
     attachmentRefs?: string[];
     contextMessages?: Array<{ customType: string; content: string }>;
   },
@@ -874,13 +973,14 @@ async function runPromptOnLiveEntry(
   text: string,
   behavior: 'steer' | 'followUp' | undefined,
   images?: PromptImageAttachment[],
+  videos?: PromptVideoAttachment[],
 ): Promise<void> {
   if (behavior === undefined) {
     publishOptimisticPromptRunningState(entry);
   }
 
   try {
-    await runPromptOnLiveEntryWithCallbacks(entry, text, behavior, images, {
+    await runPromptOnLiveEntryWithCallbacks(entry, text, behavior, images, videos, {
       repairLiveSessionTranscriptTail,
       broadcastQueueState,
     });
@@ -921,6 +1021,7 @@ export async function promptSession(
   text: string,
   behavior?: 'steer' | 'followUp',
   images?: PromptImageAttachment[],
+  videos?: PromptVideoAttachment[],
   _surfaceId?: string,
   injectedTurn?: InjectedTurnEnvelopeOptions,
 ): Promise<void> {
@@ -931,7 +1032,7 @@ export async function promptSession(
   // clicked send continue even if this surface disconnects a moment later.
   const normalizedBehavior = resolvePromptBehavior(entry, behavior);
   const submittedText = injectedTurn ? wrapInjectedTurnMessage(text, { ...injectedTurn, delivery: normalizedBehavior ?? 'started' }) : text;
-  await runPromptOnLiveEntry(entry, submittedText, normalizedBehavior, images);
+  await runPromptOnLiveEntry(entry, submittedText, normalizedBehavior, images, videos);
 }
 
 export async function submitPromptSession(
@@ -939,13 +1040,14 @@ export async function submitPromptSession(
   text: string,
   behavior?: 'steer' | 'followUp',
   images?: PromptImageAttachment[],
+  videos?: PromptVideoAttachment[],
   _surfaceId?: string,
 ): Promise<{ acceptedAs: 'started' | 'queued'; completion: Promise<void> }> {
   const entry = registry.get(sessionId);
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
 
   const normalizedBehavior = resolvePromptBehavior(entry, behavior);
-  const submitted = await submitPromptOnLiveEntry(entry, text, normalizedBehavior, images, {
+  const submitted = await submitPromptOnLiveEntry(entry, text, normalizedBehavior, images, videos, {
     runPromptOnLiveEntry,
   });
   if (submitted.acceptedAs === 'started') {
@@ -1080,7 +1182,9 @@ export async function reloadSessionResources(sessionId: string): Promise<void> {
 export async function exportSessionHtml(sessionId: string, outputPath?: string): Promise<string> {
   const entry = registry.get(sessionId);
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
-  return entry.session.exportToHtml(outputPath);
+  const exportPath = await entry.session.exportToHtml(outputPath);
+  appendConversationArtifactsToExportHtml(sessionId, exportPath);
+  return exportPath;
 }
 
 export function renameSession(sessionId: string, name: string): void {

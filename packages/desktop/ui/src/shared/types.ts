@@ -15,6 +15,13 @@ export interface PromptImageInput {
   previewUrl?: string;
 }
 
+export interface PromptVideoInput {
+  name?: string;
+  mimeType: string;
+  path: string;
+  sizeBytes?: number;
+}
+
 export interface PromptAttachmentRefInput {
   attachmentId: string;
   revision?: number;

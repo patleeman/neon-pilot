@@ -37,6 +37,10 @@ describe('live session routes', () => {
             { data: 'abc', mimeType: 'image/png', name: 'pic.png' },
             { data: 1, mimeType: null },
           ],
+          videos: [
+            { path: '/tmp/screen.mp4', mimeType: 'video/mp4', name: 'screen.mp4', sizeBytes: 123 },
+            { path: 1, mimeType: null },
+          ],
           attachmentRefs: [{ id: 'att-1' }],
           contextMessages: [{ role: 'user', content: 'ctx' }],
           relatedConversationIds: ['conv-2'],
@@ -54,6 +58,10 @@ describe('live session routes', () => {
         images: [
           { data: 'abc', mimeType: 'image/png', name: 'pic.png' },
           { data: '', mimeType: '' },
+        ],
+        videos: [
+          { path: '/tmp/screen.mp4', mimeType: 'video/mp4', name: 'screen.mp4', sizeBytes: 123 },
+          { path: '', mimeType: '' },
         ],
         attachmentRefs: [{ id: 'att-1' }],
         contextMessages: [{ role: 'user', content: 'ctx' }],

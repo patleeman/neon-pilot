@@ -42,4 +42,5 @@ export * from './telemetry.js';
 export * from './terminal.js';
 export * from './tools.js';
 export * from './transcription.js';
+export * from './videos.js';
 export type { ExtensionBackendContext } from '@neon-pilot/extensions';

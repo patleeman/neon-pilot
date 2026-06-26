@@ -244,6 +244,7 @@ export type ExtensionPermission =
   | 'models:readwrite'
   | 'images:read'
   | 'images:write'
+  | 'videos:read'
   | 'knowledge:read'
   | 'knowledge:write'
   | 'knowledge:readwrite'

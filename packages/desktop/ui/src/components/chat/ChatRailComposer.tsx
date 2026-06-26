@@ -17,18 +17,21 @@ import { parseConversationSlashCommand } from '../../conversation/conversationSl
 import {
   buildComposerFilePreparationNotices,
   buildPromptImages,
+  buildPromptVideos,
   type ComposerDrawingAttachment,
   type ComposerImageAttachment,
+  type ComposerVideoAttachment,
   drawingAttachmentToPromptImage,
   drawingAttachmentToPromptRef,
   prepareComposerFiles,
   removeComposerDrawingAttachmentByLocalId,
   removeComposerImageFileAtIndex,
+  removeComposerVideoFileAtIndex,
 } from '../../conversation/promptAttachments';
 import { useComposerController } from '../../conversation/useComposerController';
 import { useConversationComposerMenus, type UseConversationComposerMenusState } from '../../conversation/useConversationComposerMenus';
 import { useComposerModifierKeys } from '../../conversation/useConversationKeyboardState';
-import type { ModelInfo, PromptAttachmentRefInput, PromptImageInput, SessionContextUsage } from '../../shared/types';
+import type { ModelInfo, PromptAttachmentRefInput, PromptImageInput, PromptVideoInput, SessionContextUsage } from '../../shared/types';
 import { ConversationComposer } from '../conversation/ConversationComposer';
 import { ChatBubbleIcon, FolderIcon } from '../conversation/ConversationComposerChrome';
 import { ConversationComposerInputControls } from '../conversation/ConversationComposerInputControls';
@@ -69,6 +72,7 @@ export interface ChatRailComposerProps {
     text: string,
     behavior?: 'steer' | 'followUp',
     images?: PromptImageInput[],
+    videos?: PromptVideoInput[],
     attachmentRefs?: PromptAttachmentRefInput[],
   ) => void | Promise<void>;
   onAbortStream: () => void;
@@ -100,6 +104,7 @@ export function ChatRailComposer({
 }: ChatRailComposerProps) {
   const [input, setInput] = useState(() => (conversationId ? (readForkPromptDraft(conversationId) ?? '') : ''));
   const [attachments, setAttachments] = useState<ComposerImageAttachment[]>([]);
+  const [videoAttachments, setVideoAttachments] = useState<ComposerVideoAttachment[]>([]);
   const [drawingAttachments, setDrawingAttachments] = useState<ComposerDrawingAttachment[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [composerShellWidth, setComposerShellWidth] = useState<number | null>(null);
@@ -228,20 +233,22 @@ export function ChatRailComposer({
 
   composerMenuStateRef.current = composerMenus;
 
-  const hasContent = input.trim().length > 0 || attachments.length > 0 || drawingAttachments.length > 0;
+  const hasContent = input.trim().length > 0 || attachments.length > 0 || videoAttachments.length > 0 || drawingAttachments.length > 0;
   const composerDisabled = !conversationId;
 
   const buildSubmitPayload = useCallback(() => {
     const promptImages = [...buildPromptImages(attachments), ...drawingAttachments.map(drawingAttachmentToPromptImage)];
+    const promptVideos = buildPromptVideos(videoAttachments);
     const attachmentRefs = drawingAttachments
       .map(drawingAttachmentToPromptRef)
       .filter((ref): ref is PromptAttachmentRefInput => ref !== null);
-    return { promptImages, attachmentRefs };
-  }, [attachments, drawingAttachments]);
+    return { promptImages, promptVideos, attachmentRefs };
+  }, [attachments, drawingAttachments, videoAttachments]);
 
   const clearComposerAfterSubmit = useCallback(() => {
     setInput('');
     setAttachments([]);
+    setVideoAttachments([]);
     setDrawingAttachments([]);
   }, []);
 
@@ -254,8 +261,8 @@ export function ChatRailComposer({
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
         if (hasContent) {
-          const { promptImages, attachmentRefs } = buildSubmitPayload();
-          await onSubmit(input.trim(), isStreaming ? 'steer' : undefined, promptImages, attachmentRefs);
+          const { promptImages, promptVideos, attachmentRefs } = buildSubmitPayload();
+          await onSubmit(input.trim(), isStreaming ? 'steer' : undefined, promptImages, promptVideos, attachmentRefs);
           clearComposerAfterSubmit();
         }
       }
@@ -282,6 +289,9 @@ export function ChatRailComposer({
     if (prepared.imageAttachments.length > 0) {
       setAttachments((current) => [...current, ...prepared.imageAttachments]);
     }
+    if (prepared.videoAttachments.length > 0) {
+      setVideoAttachments((current) => [...current, ...prepared.videoAttachments]);
+    }
     if (prepared.drawingAttachments.length > 0) {
       setDrawingAttachments((current) => [...current, ...prepared.drawingAttachments]);
     }
@@ -302,12 +312,13 @@ export function ChatRailComposer({
   const handleSubmitForModifiers = useCallback(
     (altKeyHeld: boolean) => {
       if (!hasContent) return;
-      const { promptImages, attachmentRefs } = buildSubmitPayload();
+      const { promptImages, promptVideos, attachmentRefs } = buildSubmitPayload();
       void Promise.resolve(
         onSubmit(
           input.trim(),
           isStreaming ? (altKeyHeld ? 'followUp' : 'steer') : altKeyHeld ? 'followUp' : undefined,
           promptImages,
+          promptVideos,
           attachmentRefs,
         ),
       ).then(clearComposerAfterSubmit);
@@ -346,12 +357,14 @@ export function ChatRailComposer({
   );
 
   const shelves =
-    attachments.length > 0 || drawingAttachments.length > 0 ? (
+    attachments.length > 0 || videoAttachments.length > 0 || drawingAttachments.length > 0 ? (
       <div className="max-h-[min(34vh,20rem)] overflow-y-auto overscroll-contain">
         <ComposerAttachmentShelf
           attachments={attachments}
+          videoAttachments={videoAttachments}
           drawingAttachments={drawingAttachments}
           onRemoveAttachment={(index) => setAttachments((current) => removeComposerImageFileAtIndex(current, index))}
+          onRemoveVideoAttachment={(index) => setVideoAttachments((current) => removeComposerVideoFileAtIndex(current, index))}
           onEditDrawing={() => {}}
           onRemoveDrawingAttachment={(localId) =>
             setDrawingAttachments((current) => removeComposerDrawingAttachmentByLocalId(current, localId))

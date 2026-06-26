@@ -40,6 +40,8 @@ Images, PDFs, and other binary files can be attached to individual messages:
 
 Images are sent to image-capable models as image content. The composer downscales large images before upload, and text-only image probing caps each prompt at 8 images / 8 MiB per image. For text-only models, Neon Pilot saves the images locally, assigns stable `img_<hash>` IDs, and injects the `probe_image` tool only when a preferred vision model is configured in Settings. The agent calls `probe_image` with one or more image IDs and a focused question; multi-image calls handle comparisons. Other binary formats are stored as conversation attachments but may not be visible to all models.
 
+Videos are attached by local file path rather than copied into prompt storage. Neon Pilot records path-backed metadata, assigns stable `vid_<hash>` IDs, and injects a video attachment notice into the prompt. Agents inspect video content with `extract_video_frame`, `sample_video_frames`, and `transcribe_video`; transcript segment timestamps remain absolute to the original video.
+
 Existing conversations can also reopen saved drawings through the `Open Drawing Picker` conversation command, then attach the latest revision or a specific saved revision back into the composer.
 
 ## Context Loading Order

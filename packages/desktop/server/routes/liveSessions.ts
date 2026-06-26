@@ -147,6 +147,23 @@ function readPromptImages(value: unknown): Array<{ data: string; mimeType: strin
     }));
 }
 
+function readPromptVideos(value: unknown): Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }> | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value
+    .filter(
+      (video): video is { path?: unknown; mimeType?: unknown; name?: unknown; sizeBytes?: unknown } => !!video && typeof video === 'object',
+    )
+    .map((video) => ({
+      path: typeof video.path === 'string' ? video.path : '',
+      mimeType: typeof video.mimeType === 'string' ? video.mimeType : '',
+      ...(typeof video.name === 'string' ? { name: video.name } : {}),
+      ...(Number.isSafeInteger(video.sizeBytes) && Number(video.sizeBytes) >= 0 ? { sizeBytes: Number(video.sizeBytes) } : {}),
+    }));
+}
+
 export async function handleLiveSessionPrompt(req: Request, res: Response): Promise<void> {
   try {
     const result = await submitLiveSessionPromptCapability(
@@ -155,6 +172,7 @@ export async function handleLiveSessionPrompt(req: Request, res: Response): Prom
         text: typeof req.body?.text === 'string' ? req.body.text : '',
         behavior: req.body?.behavior,
         images: readPromptImages(req.body?.images),
+        videos: readPromptVideos(req.body?.videos),
         attachmentRefs: req.body?.attachmentRefs,
         contextMessages: req.body?.contextMessages,
         relatedConversationIds: req.body?.relatedConversationIds,

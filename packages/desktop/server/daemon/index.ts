@@ -107,6 +107,7 @@ export type {
   WebLiveConversationPendingOperation,
   WebLiveConversationPreludeMessage,
   WebLiveConversationPromptImage,
+  WebLiveConversationPromptVideo,
   WebLiveConversationRunState,
 } from '../runs/web-live-conversations.js';
 export {

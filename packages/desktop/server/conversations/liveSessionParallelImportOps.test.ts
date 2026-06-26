@@ -147,7 +147,7 @@ describe('live session parallel import operations', () => {
     };
 
     await expect(startParallelPromptSession(entry() as never, { text: '   ' }, {} as never, baseCallbacks)).rejects.toThrow(
-      'text or images required',
+      'text, images, or videos required',
     );
     await expect(
       startParallelPromptSession(

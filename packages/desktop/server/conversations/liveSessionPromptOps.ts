@@ -1,9 +1,10 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
 import { rememberImageProbeAttachments, type StoredImageProbeAttachment } from '../extensions/imageProbeAttachmentStore.js';
+import { rememberVideoProbeAttachments, type StoredVideoProbeAttachment } from '../extensions/videoProbeAttachmentStore.js';
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
 import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
-import type { PromptImageAttachment } from './liveSessionQueue.js';
+import type { PromptImageAttachment, PromptVideoAttachment } from './liveSessionQueue.js';
 
 export interface LiveSessionPromptHost {
   sessionId: string;
@@ -14,7 +15,11 @@ export type LiveSessionPromptBehavior = 'steer' | 'followUp' | undefined;
 
 const pendingPromptStartupByEntry = new WeakMap<LiveSessionPromptHost, { key: string; completion: Promise<void> }>();
 
-function buildPromptStartupKey(text: string, images: PromptImageAttachment[] | undefined): string {
+function buildPromptStartupKey(
+  text: string,
+  images: PromptImageAttachment[] | undefined,
+  videos: PromptVideoAttachment[] | undefined,
+): string {
   return JSON.stringify({
     text,
     images: (images ?? []).map((image) => ({
@@ -22,6 +27,13 @@ function buildPromptStartupKey(text: string, images: PromptImageAttachment[] | u
       mimeType: image.mimeType,
       name: image.name ?? '',
       data: image.data,
+    })),
+    videos: (videos ?? []).map((video) => ({
+      type: video.type,
+      mimeType: video.mimeType,
+      name: video.name ?? '',
+      path: video.path,
+      sizeBytes: video.sizeBytes ?? 0,
     })),
   });
 }
@@ -116,11 +128,41 @@ function appendImageProbeNotice(text: string, images: StoredImageProbeAttachment
   return `${text.trim()}\n\n${notice}`.trim();
 }
 
+function formatVideoDuration(durationMs: number | undefined): string {
+  if (!Number.isFinite(durationMs)) return 'duration unknown';
+  return `${(Number(durationMs) / 1000).toFixed(3)}s`;
+}
+
+function formatVideoResolution(video: StoredVideoProbeAttachment): string {
+  return video.width && video.height ? `${video.width}x${video.height}` : 'resolution unknown';
+}
+
+function appendVideoProbeNotice(text: string, videos: StoredVideoProbeAttachment[]): string {
+  if (videos.length === 0) return text;
+  const names = videos
+    .map((video) => {
+      const label = video.name?.trim() || 'unnamed video';
+      const audio = video.hasAudio === true ? 'audio track' : video.hasAudio === false ? 'no detected audio track' : 'audio unknown';
+      return `- ${video.id}: ${label} (${video.mimeType}, ${formatVideoDuration(video.durationMs)}, ${formatVideoResolution(video)}, ${audio})`;
+    })
+    .join('\n');
+  const notice = [
+    '[Video attachments received]',
+    `The user attached ${videos.length} local video${videos.length === 1 ? '' : 's'}. You cannot view videos directly.`,
+    'Use extract_video_frame or sample_video_frames to inspect visuals. Use transcribe_video to inspect speech/audio. Transcript segment timestamps are absolute to the original video.',
+    names ? `Attached video IDs:\n${names}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return `${text.trim()}\n\n${notice}`.trim();
+}
+
 export async function runPromptOnLiveEntry<TEntry extends LiveSessionPromptHost>(
   entry: TEntry,
   text: string,
   behavior: LiveSessionPromptBehavior,
   images: PromptImageAttachment[] | undefined,
+  videos: PromptVideoAttachment[] | undefined,
   callbacks: {
     repairLiveSessionTranscriptTail: (sessionId: string) => unknown;
     broadcastQueueState: (entry: TEntry, force?: boolean) => void;
@@ -128,10 +170,13 @@ export async function runPromptOnLiveEntry<TEntry extends LiveSessionPromptHost>
 ): Promise<void> {
   const { session } = entry;
   const hasImages = Boolean(images && images.length > 0);
+  const hasVideos = Boolean(videos && videos.length > 0);
   const shouldUseTextOnlyImageHandling = hasImages && !liveSessionModelAcceptsImages(session.model);
   const preferredVisionModel = shouldUseTextOnlyImageHandling ? getPreferredVisionModel() : '';
   const storedImages = hasImages && images ? rememberImageProbeAttachments(entry.sessionId, images) : [];
-  const promptText = shouldUseTextOnlyImageHandling ? appendImageProbeNotice(text, storedImages, preferredVisionModel) : text;
+  const storedVideos = hasVideos && videos ? await rememberVideoProbeAttachments(entry.sessionId, videos) : [];
+  const imagePromptText = shouldUseTextOnlyImageHandling ? appendImageProbeNotice(text, storedImages, preferredVisionModel) : text;
+  const promptText = appendVideoProbeNotice(imagePromptText, storedVideos);
 
   if (behavior === undefined || !session.isStreaming) {
     callbacks.repairLiveSessionTranscriptTail(entry.sessionId);
@@ -174,16 +219,23 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
   text: string,
   behavior: LiveSessionPromptBehavior,
   images: PromptImageAttachment[] | undefined,
+  videos: PromptVideoAttachment[] | undefined,
   callbacks: {
     runPromptOnLiveEntry: (
       entry: TEntry,
       text: string,
       behavior: LiveSessionPromptBehavior,
       images?: PromptImageAttachment[],
+      videos?: PromptVideoAttachment[],
     ) => Promise<void>;
   },
 ): Promise<{ acceptedAs: 'started' | 'queued'; completion: Promise<void> }> {
-  if (behavior === 'followUp' && (!images || images.length === 0) && hasActivePromptText(entry.session, text)) {
+  if (
+    behavior === 'followUp' &&
+    (!images || images.length === 0) &&
+    (!videos || videos.length === 0) &&
+    hasActivePromptText(entry.session, text)
+  ) {
     return {
       acceptedAs: 'queued',
       completion: Promise.resolve(),
@@ -191,14 +243,14 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
   }
 
   if (behavior === 'steer' || behavior === 'followUp') {
-    await callbacks.runPromptOnLiveEntry(entry, text, behavior, images);
+    await callbacks.runPromptOnLiveEntry(entry, text, behavior, images, videos);
     return {
       acceptedAs: 'queued',
       completion: Promise.resolve(),
     };
   }
 
-  const startupKey = buildPromptStartupKey(text, images);
+  const startupKey = buildPromptStartupKey(text, images, videos);
   const pendingStartup = pendingPromptStartupByEntry.get(entry);
   if (pendingStartup?.key === startupKey) {
     return {
@@ -206,7 +258,7 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
       completion: pendingStartup.completion,
     };
   }
-  if ((!images || images.length === 0) && hasActivePromptText(entry.session, text)) {
+  if ((!images || images.length === 0) && (!videos || videos.length === 0) && hasActivePromptText(entry.session, text)) {
     return {
       acceptedAs: 'started',
       completion: Promise.resolve(),
@@ -215,7 +267,7 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
 
   const completion = new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
-      void callbacks.runPromptOnLiveEntry(entry, text, behavior, images).then(resolve, reject);
+      void callbacks.runPromptOnLiveEntry(entry, text, behavior, images, videos).then(resolve, reject);
     }, 250);
     timer.unref?.();
   });

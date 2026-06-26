@@ -128,7 +128,13 @@ async function continueRecoveredConversation(input: {
       await queuePromptContext(input.conversationId, message.customType, message.content);
     }
 
-    promptSession(input.conversationId, promptOperation.text, promptOperation.behavior, promptOperation.images).catch(async (error) => {
+    promptSession(
+      input.conversationId,
+      promptOperation.text,
+      promptOperation.behavior,
+      promptOperation.images,
+      promptOperation.videos,
+    ).catch(async (error) => {
       const displayMessage = presentTranscriptErrorMessage(error instanceof Error ? error.message : String(error));
       if (sessionFile) {
         await syncWebLiveConversationRun({

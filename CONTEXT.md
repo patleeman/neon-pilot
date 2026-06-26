@@ -91,6 +91,12 @@ The host-owned speech-to-text capability used by extensions for dictation, voice
 
 Use **transcription service** for the shared host boundary and **dictation** only for the composer microphone workflow.
 
+### Video probe
+
+The host-backed agent capability for inspecting local video attachments by stable `vid_<hash>` IDs.
+
+Use **video probe** for deterministic frame sampling and video transcription tools. Do not use it for model-backed whole-video analysis.
+
 ### Required system extension
 
 A bundled extension that owns a platform repair, configuration, routing, prompt assembly, terminal, or background-work surface that must stay available for the app to manage itself.

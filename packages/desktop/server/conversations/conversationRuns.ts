@@ -10,6 +10,7 @@ import {
   type WebLiveConversationPendingOperation,
   type WebLiveConversationPreludeMessage,
   type WebLiveConversationPromptImage,
+  type WebLiveConversationPromptVideo,
   type WebLiveConversationRunState,
 } from '@neon-pilot/daemon';
 
@@ -18,6 +19,7 @@ export type {
   WebLiveConversationPendingOperation,
   WebLiveConversationPreludeMessage,
   WebLiveConversationPromptImage,
+  WebLiveConversationPromptVideo,
   WebLiveConversationRunState,
 };
 

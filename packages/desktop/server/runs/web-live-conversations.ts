@@ -31,11 +31,20 @@ export interface WebLiveConversationPromptImage {
   name?: string;
 }
 
+export interface WebLiveConversationPromptVideo {
+  type: 'video';
+  path: string;
+  mimeType: string;
+  name?: string;
+  sizeBytes?: number;
+}
+
 export interface WebLiveConversationPendingOperation {
   type: 'prompt';
   text: string;
   behavior?: 'steer' | 'followUp';
   images?: WebLiveConversationPromptImage[];
+  videos?: WebLiveConversationPromptVideo[];
   contextMessages?: WebLiveConversationPreludeMessage[];
   enqueuedAt: string;
 }
@@ -101,6 +110,31 @@ export function parsePendingOperation(value: unknown): WebLiveConversationPendin
       })
     : undefined;
 
+  const videos = Array.isArray(value.videos)
+    ? value.videos.flatMap((video) => {
+        if (!isRecord(video) || video.type !== 'video' || typeof video.path !== 'string' || typeof video.mimeType !== 'string') {
+          return [];
+        }
+
+        const path = video.path.trim();
+        const mimeType = video.mimeType.trim();
+        if (!path || !mimeType.toLowerCase().startsWith('video/')) {
+          return [];
+        }
+
+        const sizeBytes = video.sizeBytes;
+        return [
+          {
+            type: 'video' as const,
+            path,
+            mimeType,
+            ...(typeof video.name === 'string' && video.name.trim().length > 0 ? { name: video.name.trim() } : {}),
+            ...(Number.isSafeInteger(sizeBytes) && Number(sizeBytes) >= 0 ? { sizeBytes: Number(sizeBytes) } : {}),
+          },
+        ];
+      })
+    : undefined;
+
   const contextMessages = Array.isArray(value.contextMessages)
     ? value.contextMessages.flatMap((message) => {
         if (!isRecord(message) || typeof message.customType !== 'string' || typeof message.content !== 'string') {
@@ -122,6 +156,7 @@ export function parsePendingOperation(value: unknown): WebLiveConversationPendin
     text: value.text,
     ...(behavior ? { behavior } : {}),
     ...(images && images.length > 0 ? { images } : {}),
+    ...(videos && videos.length > 0 ? { videos } : {}),
     ...(contextMessages && contextMessages.length > 0 ? { contextMessages } : {}),
     enqueuedAt,
   };

@@ -160,7 +160,7 @@ export interface ChatRailComposerProps {
   currentThinkingLevel: string;
   tokens: ExtensionChatTokenUsage | null;
   contextUsage: ExtensionChatContextUsage | null;
-  onSubmit: (text: string, behavior?: 'steer' | 'followUp', images?: unknown[], attachmentRefs?: unknown[]) => void;
+  onSubmit: (text: string, behavior?: 'steer' | 'followUp', images?: unknown[], videos?: unknown[], attachmentRefs?: unknown[]) => void;
   onAbortStream: () => void;
   onSelectModel: (modelId: string) => void;
   onSelectThinkingLevel: (thinkingLevel: string) => void;

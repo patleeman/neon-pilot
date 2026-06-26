@@ -41,6 +41,7 @@ export default defineConfig({
       '@neon-pilot/extensions/backend/telemetry': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/telemetry.ts'),
       '@neon-pilot/extensions/backend/terminal': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/terminal.ts'),
       '@neon-pilot/extensions/backend/transcription': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/transcription.ts'),
+      '@neon-pilot/extensions/backend/videos': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/videos.ts'),
       '@neon-pilot/extensions/backend/webContent': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/webContent.ts'),
       '@neon-pilot/extensions/backend': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/index.ts'),
       '@neon-pilot/extensions': resolve(repoRoot, 'packages/extensions/src/index.ts'),

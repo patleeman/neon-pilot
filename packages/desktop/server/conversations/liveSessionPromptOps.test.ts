@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { rememberImageProbeAttachmentsMock, readSavedModelPreferencesMock } = vi.hoisted(() => ({
+const { rememberImageProbeAttachmentsMock, rememberVideoProbeAttachmentsMock, readSavedModelPreferencesMock } = vi.hoisted(() => ({
   rememberImageProbeAttachmentsMock: vi.fn(),
+  rememberVideoProbeAttachmentsMock: vi.fn(),
   readSavedModelPreferencesMock: vi.fn(() => ({ currentVisionModel: 'openai/gpt-4o' })),
 }));
 
 vi.mock('../extensions/imageProbeAttachmentStore.js', () => ({
   rememberImageProbeAttachments: rememberImageProbeAttachmentsMock,
+}));
+
+vi.mock('../extensions/videoProbeAttachmentStore.js', () => ({
+  rememberVideoProbeAttachments: rememberVideoProbeAttachmentsMock,
 }));
 
 vi.mock('../models/modelPreferences.js', () => ({
@@ -39,6 +44,8 @@ const callbacks = {
 describe('runPromptOnLiveEntry image probing', () => {
   beforeEach(() => {
     rememberImageProbeAttachmentsMock.mockReset();
+    rememberVideoProbeAttachmentsMock.mockReset();
+    rememberVideoProbeAttachmentsMock.mockResolvedValue([]);
     rememberImageProbeAttachmentsMock.mockImplementation((_sessionId, images) =>
       images.map((image: { name?: string; mimeType: string }, index: number) => ({
         ...image,
@@ -57,7 +64,7 @@ describe('runPromptOnLiveEntry image probing', () => {
     const entry = createEntry({ id: 'text-model', input: ['text'] });
     const images = [{ type: 'image' as const, data: 'aGVsbG8=', mimeType: 'image/png', name: 'screen.png' }];
 
-    await runPromptOnLiveEntry(entry, 'What is wrong here?', undefined, images, callbacks);
+    await runPromptOnLiveEntry(entry, 'What is wrong here?', undefined, images, undefined, callbacks);
 
     expect(rememberImageProbeAttachmentsMock).toHaveBeenCalledWith('session-1', images);
     expect(entry.session.prompt).toHaveBeenCalledTimes(1);
@@ -70,7 +77,7 @@ describe('runPromptOnLiveEntry image probing', () => {
     const entry = createEntry({ id: 'text-model', input: ['text'] });
     const images = [{ type: 'image' as const, data: 'aGVsbG8=', mimeType: 'image/png', name: 'screen.png' }];
 
-    await runPromptOnLiveEntry(entry, 'What is wrong here?', undefined, images, callbacks);
+    await runPromptOnLiveEntry(entry, 'What is wrong here?', undefined, images, undefined, callbacks);
 
     expect(rememberImageProbeAttachmentsMock).toHaveBeenCalledWith('session-1', images);
     expect(entry.session.prompt).toHaveBeenCalledWith(expect.stringContaining('No preferred vision model is configured'));
@@ -80,7 +87,7 @@ describe('runPromptOnLiveEntry image probing', () => {
     const entry = createEntry({ id: 'vision-model', input: ['text', 'image'] });
     const images = [{ type: 'image' as const, data: 'aGVsbG8=', mimeType: 'image/png', name: 'screen.png' }];
 
-    await runPromptOnLiveEntry(entry, 'What is wrong here?', undefined, images, callbacks);
+    await runPromptOnLiveEntry(entry, 'What is wrong here?', undefined, images, undefined, callbacks);
 
     expect(rememberImageProbeAttachmentsMock).toHaveBeenCalledWith('session-1', images);
     expect(entry.session.prompt).toHaveBeenCalledWith('What is wrong here?', { images });
@@ -90,7 +97,7 @@ describe('runPromptOnLiveEntry image probing', () => {
     const entry = createEntry({ id: 'text-model', input: ['text'] });
     Object.assign(entry.session, { isStreaming: false });
 
-    await runPromptOnLiveEntry(entry, 'continue', 'followUp', undefined, callbacks);
+    await runPromptOnLiveEntry(entry, 'continue', 'followUp', undefined, undefined, callbacks);
 
     expect(callbacks.repairLiveSessionTranscriptTail).toHaveBeenCalledWith('session-1');
     expect(entry.session.followUp).toHaveBeenCalledWith('continue');
@@ -100,7 +107,7 @@ describe('runPromptOnLiveEntry image probing', () => {
     const entry = createEntry({ id: 'text-model', input: ['text'] });
     Object.assign(entry.session, { isStreaming: true });
 
-    await runPromptOnLiveEntry(entry, 'continue', 'followUp', undefined, callbacks);
+    await runPromptOnLiveEntry(entry, 'continue', 'followUp', undefined, undefined, callbacks);
 
     expect(callbacks.repairLiveSessionTranscriptTail).not.toHaveBeenCalled();
     expect(entry.session.followUp).toHaveBeenCalledWith('continue');
@@ -114,10 +121,10 @@ describe('submitPromptOnLiveEntry', () => {
       const entry = createEntry({ id: 'text-model', input: ['text'] });
       const runPromptOnLiveEntryMock = vi.fn(async () => undefined);
 
-      const first = await submitPromptOnLiveEntry(entry, 'hello', undefined, undefined, {
+      const first = await submitPromptOnLiveEntry(entry, 'hello', undefined, undefined, undefined, {
         runPromptOnLiveEntry: runPromptOnLiveEntryMock,
       });
-      const second = await submitPromptOnLiveEntry(entry, 'hello', undefined, undefined, {
+      const second = await submitPromptOnLiveEntry(entry, 'hello', undefined, undefined, undefined, {
         runPromptOnLiveEntry: runPromptOnLiveEntryMock,
       });
 
@@ -129,7 +136,7 @@ describe('submitPromptOnLiveEntry', () => {
       await first.completion;
 
       expect(runPromptOnLiveEntryMock).toHaveBeenCalledTimes(1);
-      expect(runPromptOnLiveEntryMock).toHaveBeenCalledWith(entry, 'hello', undefined, undefined);
+      expect(runPromptOnLiveEntryMock).toHaveBeenCalledWith(entry, 'hello', undefined, undefined, undefined);
     } finally {
       vi.useRealTimers();
     }
@@ -143,7 +150,7 @@ describe('submitPromptOnLiveEntry', () => {
     });
     const runPromptOnLiveEntryMock = vi.fn(async () => undefined);
 
-    const submitted = await submitPromptOnLiveEntry(entry, 'hello', undefined, undefined, {
+    const submitted = await submitPromptOnLiveEntry(entry, 'hello', undefined, undefined, undefined, {
       runPromptOnLiveEntry: runPromptOnLiveEntryMock,
     });
 
@@ -160,7 +167,7 @@ describe('submitPromptOnLiveEntry', () => {
     });
     const runPromptOnLiveEntryMock = vi.fn(async () => undefined);
 
-    const submitted = await submitPromptOnLiveEntry(entry, 'hello', 'followUp', undefined, {
+    const submitted = await submitPromptOnLiveEntry(entry, 'hello', 'followUp', undefined, undefined, {
       runPromptOnLiveEntry: runPromptOnLiveEntryMock,
     });
 

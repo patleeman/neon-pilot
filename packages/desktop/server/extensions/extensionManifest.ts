@@ -86,6 +86,7 @@ export const EXTENSION_PERMISSIONS = [
   'models:readwrite',
   'images:read',
   'images:write',
+  'videos:read',
   'knowledge:read',
   'knowledge:write',
   'knowledge:readwrite',

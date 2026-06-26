@@ -3059,6 +3059,7 @@ export async function createDesktopLiveSession(input: {
   prompt?: string;
   behavior?: 'steer' | 'followUp';
   images?: Array<{ data: string; mimeType: string; name?: string }>;
+  videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;
@@ -3124,6 +3125,7 @@ export async function submitDesktopLiveSessionPrompt(input: {
   text?: string;
   behavior?: 'steer' | 'followUp';
   images?: Array<{ data: string; mimeType: string; name?: string }>;
+  videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;
@@ -3145,6 +3147,7 @@ export async function submitDesktopConversationMessage(input: {
   text?: string;
   behavior?: 'steer' | 'followUp';
   images?: Array<{ data: string; mimeType: string; name?: string }>;
+  videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;
@@ -3181,6 +3184,7 @@ export async function submitDesktopLiveSessionParallelPrompt(input: {
   conversationId: string;
   text?: string;
   images?: Array<{ data: string; mimeType: string; name?: string }>;
+  videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;

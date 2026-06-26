@@ -42,6 +42,7 @@ import {
   manageParallelPromptJob,
   prewarmLiveSessionLoader,
   type PromptImageAttachment,
+  type PromptVideoAttachment,
   queuePromptContext,
   registry as liveRegistry,
   reloadSessionResources as reloadLiveSessionResources,
@@ -93,6 +94,7 @@ export interface CreateLiveSessionCapabilityInput {
   prompt?: string;
   behavior?: 'steer' | 'followUp';
   images?: Array<{ data: string; mimeType: string; name?: string }>;
+  videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: unknown;
   relatedConversationIds?: unknown;
@@ -154,6 +156,7 @@ export interface SubmitLiveSessionPromptCapabilityInput {
   text?: string;
   behavior?: 'steer' | 'followUp';
   images?: Array<{ data: string; mimeType: string; name?: string }>;
+  videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: unknown;
   relatedConversationIds?: unknown;
@@ -165,6 +168,7 @@ export interface SubmitLiveSessionParallelPromptCapabilityInput {
   conversationId: string;
   text?: string;
   images?: Array<{ data: string; mimeType: string; name?: string }>;
+  videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: unknown;
   relatedConversationIds?: unknown;
@@ -221,7 +225,12 @@ export class LiveSessionCapabilityInputError extends Error {}
 
 function hasInitialPromptPayload(input: CreateLiveSessionCapabilityInput): boolean {
   const text = typeof input.prompt === 'string' ? input.prompt.trim() : '';
-  return text.length > 0 || (Array.isArray(input.images) && input.images.length > 0) || input.attachmentRefs !== undefined;
+  return (
+    text.length > 0 ||
+    (Array.isArray(input.images) && input.images.length > 0) ||
+    (Array.isArray(input.videos) && input.videos.length > 0) ||
+    input.attachmentRefs !== undefined
+  );
 }
 
 async function submitInitialPromptForCreatedSession(
@@ -238,6 +247,7 @@ async function submitInitialPromptForCreatedSession(
       text: input.prompt,
       behavior: input.behavior,
       images: input.images,
+      videos: input.videos,
       attachmentRefs: input.attachmentRefs,
       contextMessages: input.contextMessages,
       relatedConversationIds: input.relatedConversationIds,
@@ -446,6 +456,39 @@ function normalizePromptImages(value: unknown): PromptImageAttachment[] | undefi
   });
 
   return images.length > 0 ? images : undefined;
+}
+
+function normalizePromptVideos(value: unknown): PromptVideoAttachment[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const videos = value.flatMap((video) => {
+    if (!video || typeof video !== 'object') {
+      return [];
+    }
+
+    const path = typeof (video as { path?: unknown }).path === 'string' ? (video as { path: string }).path.trim() : '';
+    const mimeType = typeof (video as { mimeType?: unknown }).mimeType === 'string' ? (video as { mimeType: string }).mimeType.trim() : '';
+    if (!path || !mimeType.toLowerCase().startsWith('video/')) {
+      return [];
+    }
+
+    const sizeBytes = (video as { sizeBytes?: unknown }).sizeBytes;
+    return [
+      {
+        type: 'video' as const,
+        path,
+        mimeType,
+        ...(typeof (video as { name?: unknown }).name === 'string' && (video as { name: string }).name.trim().length > 0
+          ? { name: (video as { name: string }).name.trim() }
+          : {}),
+        ...(Number.isSafeInteger(sizeBytes) && Number(sizeBytes) >= 0 ? { sizeBytes: Number(sizeBytes) } : {}),
+      },
+    ];
+  });
+
+  return videos.length > 0 ? videos : undefined;
 }
 
 function normalizePromptBehavior(value: unknown): 'steer' | 'followUp' | undefined {
@@ -717,6 +760,7 @@ interface PreparedLiveSessionPrompt {
   referencedAttachments: ReturnType<typeof resolveConversationAttachmentPromptFiles>;
   normalizedContextMessages: Array<{ customType: string; content: string }>;
   promptImages: PromptImageAttachment[] | undefined;
+  promptVideos: PromptVideoAttachment[] | undefined;
   backgroundRunContextEntries: Array<{ id: string; prompt: string }>;
   sourceSessionFile?: string;
 }
@@ -756,6 +800,7 @@ async function prepareLiveSessionPrompt(
     conversationId: string;
     text?: string;
     images?: Array<{ data: string; mimeType: string; name?: string }>;
+    videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
     attachmentRefs?: unknown;
     contextMessages?: unknown;
     surfaceId?: string;
@@ -771,8 +816,14 @@ async function prepareLiveSessionPrompt(
   const normalizedAttachmentRefs = normalizePromptAttachmentRefs(input.attachmentRefs);
   const promptContextMessages = normalizePromptContextMessages(input.contextMessages);
   const promptImages = normalizePromptImages(input.images);
-  if (!text && (!promptImages || promptImages.length === 0) && normalizedAttachmentRefs.length === 0) {
-    throw new LiveSessionCapabilityInputError('text, images, or attachmentRefs required');
+  const promptVideos = normalizePromptVideos(input.videos);
+  if (
+    !text &&
+    (!promptImages || promptImages.length === 0) &&
+    (!promptVideos || promptVideos.length === 0) &&
+    normalizedAttachmentRefs.length === 0
+  ) {
+    throw new LiveSessionCapabilityInputError('text, images, videos, or attachmentRefs required');
   }
 
   const surfaceId = typeof input.surfaceId === 'string' && input.surfaceId.trim().length > 0 ? input.surfaceId.trim() : undefined;
@@ -886,6 +937,7 @@ async function prepareLiveSessionPrompt(
     referencedAttachments,
     normalizedContextMessages,
     promptImages,
+    promptVideos,
     backgroundRunContextEntries,
     sourceSessionFile: sessionFile,
   };
@@ -933,6 +985,7 @@ export async function submitLiveSessionPromptCapability(
       behavior,
       promptLength: prepared.text.length,
       imageCount: prepared.promptImages?.length ?? 0,
+      videoCount: prepared.promptVideos?.length ?? 0,
       contextMessageCount: promptContextMessages.length,
       relatedConversationCount: (input.relatedConversationIds as string[] | undefined)?.length ?? 0,
       referencedTaskCount: prepared.promptReferences.taskIds.length,
@@ -974,6 +1027,7 @@ export async function submitLiveSessionPromptCapability(
           text: prepared.text,
           ...(behavior ? { behavior } : {}),
           ...(prepared.promptImages && prepared.promptImages.length > 0 ? { images: prepared.promptImages } : {}),
+          ...(prepared.promptVideos && prepared.promptVideos.length > 0 ? { videos: prepared.promptVideos } : {}),
           ...(promptContextMessages.length > 0
             ? {
                 contextMessages: promptContextMessages,
@@ -1003,6 +1057,7 @@ export async function submitLiveSessionPromptCapability(
     submittedText,
     behavior,
     prepared.promptImages,
+    prepared.promptVideos,
     prepared.surfaceId,
   );
   const submittedAtMs = performance.now();
@@ -1117,6 +1172,7 @@ export async function submitLiveSessionParallelPromptCapability(
     {
       text: prepared.text,
       images: prepared.promptImages,
+      videos: prepared.promptVideos,
       attachmentRefs: prepared.referencedAttachments.map((attachment) => `${attachment.attachmentId} (rev ${attachment.revision})`),
       contextMessages: promptContextMessages,
     },

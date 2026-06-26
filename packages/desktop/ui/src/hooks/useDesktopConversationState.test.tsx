@@ -1168,6 +1168,7 @@ describe('useDesktopConversationState', () => {
       'followUp',
       undefined,
       undefined,
+      undefined,
       expect.any(String),
       undefined,
       undefined,
@@ -1658,6 +1659,7 @@ describe('useDesktopConversationState', () => {
       undefined,
       undefined,
       undefined,
+      undefined,
       expect.any(String),
       undefined,
       undefined,
@@ -1772,6 +1774,7 @@ describe('useDesktopConversationState', () => {
     expect(sendConversationMessage).toHaveBeenCalledWith(
       'conv-1',
       'send while switching',
+      undefined,
       undefined,
       undefined,
       undefined,
@@ -1907,6 +1910,7 @@ describe('useDesktopConversationState', () => {
     expect(sendConversationMessage).toHaveBeenCalledWith(
       'conv-reserved',
       'Follow up',
+      undefined,
       undefined,
       undefined,
       undefined,

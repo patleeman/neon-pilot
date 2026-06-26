@@ -71,14 +71,6 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     tag: 'v0.10.2',
   },
   {
-    id: 'system-video-probe',
-    name: 'Video Probe',
-    description:
-      'Analyze video files using a video-capable model. Manages a local mlx-vlm runtime (Apple Silicon) or routes to OpenRouter.',
-    version: '0.1.0',
-    tag: 'v0.10.2',
-  },
-  {
     id: 'system-writing-studio',
     name: 'Writing Studio',
     description: 'Document-first collaborative markdown editor with CRDT replay, agent annotations, reactions, suggestions, and chat.',

@@ -15,7 +15,7 @@ function renderControl(overrides?: { composerDisabled?: boolean; openFilePicker?
       }}
     />,
   );
-  return { button: screen.getByRole('button', { name: 'Attach image or drawing' }), openFilePicker };
+  return { button: screen.getByRole('button', { name: 'Attach file' }), openFilePicker };
 }
 
 describe('AttachFilesComposerControl', () => {

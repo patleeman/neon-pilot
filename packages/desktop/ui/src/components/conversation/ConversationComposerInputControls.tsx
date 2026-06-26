@@ -646,7 +646,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*,.excalidraw,application/json"
+        accept="image/*,video/*,.excalidraw,application/json"
         multiple
         className="hidden"
         onChange={(event) => {

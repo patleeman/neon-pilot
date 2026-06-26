@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import * as core from '@neon-pilot/core';
 import { getDurableSessionsDir } from '@neon-pilot/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -1505,8 +1506,8 @@ describe('live session subscriptions', () => {
       },
     });
 
-    await promptSession('session-prompt-control', 'from mirrored surface', undefined, undefined, 'mobile-1');
-    await promptSession('session-prompt-control', 'from controlling surface', undefined, undefined, 'desktop-1');
+    await promptSession('session-prompt-control', 'from mirrored surface', undefined, undefined, undefined, 'mobile-1');
+    await promptSession('session-prompt-control', 'from controlling surface', undefined, undefined, undefined, 'desktop-1');
 
     expect(prompt).toHaveBeenNthCalledWith(1, 'from mirrored surface');
     expect(prompt).toHaveBeenNthCalledWith(2, 'from controlling surface');
@@ -3864,7 +3865,14 @@ describe('submitPromptSession', () => {
     takeOverSessionControl('session-submit-detached-surface', 'desktop-1');
     unsubscribe?.();
 
-    const submitted = await submitPromptSession('session-submit-detached-surface', 'send this anyway', undefined, undefined, 'desktop-1');
+    const submitted = await submitPromptSession(
+      'session-submit-detached-surface',
+      'send this anyway',
+      undefined,
+      undefined,
+      undefined,
+      'desktop-1',
+    );
 
     expect(submitted.acceptedAs).toBe('started');
     await submitted.completion;
@@ -4438,6 +4446,71 @@ describe('session actions', () => {
     expect(abort).toHaveBeenCalledTimes(1);
     expect(dispose).toHaveBeenCalledTimes(1);
     expect(isLive('session-actions')).toBe(false);
+  });
+
+  it('embeds saved artifact content into exported HTML', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pa-export-artifacts-'));
+    tempDirs.push(dir);
+    const outputPath = join(dir, 'conversation.html');
+    writeFileSync(outputPath, '<html><body><main>Transcript</main></body></html>');
+    const exportToHtml = vi.fn(async () => outputPath);
+    const listArtifacts = vi.spyOn(core, 'listConversationArtifacts').mockReturnValue([
+      {
+        id: 'artifact-html',
+        conversationId: 'session-artifact-export',
+        title: 'Artifact export visual fixture',
+        kind: 'html',
+        createdAt: '2026-06-26T00:00:00.000Z',
+        updatedAt: '2026-06-26T00:00:00.000Z',
+        revision: 2,
+      },
+    ]);
+    const getArtifact = vi.spyOn(core, 'getConversationArtifact').mockReturnValue({
+      id: 'artifact-html',
+      conversationId: 'session-artifact-export',
+      title: 'Artifact export visual fixture',
+      kind: 'html',
+      content: '<button>Fixture button</button><script>alert("nope")</script>',
+      createdAt: '2026-06-26T00:00:00.000Z',
+      updatedAt: '2026-06-26T00:00:00.000Z',
+      revision: 2,
+    });
+
+    try {
+      setLiveEntry('session-artifact-export', {
+        sessionId: 'session-artifact-export',
+        cwd: '/tmp/workspace',
+        listeners: new Set(),
+        title: 'Artifact export',
+        autoTitleRequested: false,
+        lastContextUsageJson: null,
+        lastQueueStateJson: null,
+        contextUsageTimer: setTimeout(() => undefined, 10_000),
+        session: {
+          getContextUsage: () => null,
+          isStreaming: false,
+          exportToHtml,
+        },
+      });
+
+      await expect(exportSessionHtml('session-artifact-export', outputPath)).resolves.toBe(outputPath);
+      const html = readFileSync(outputPath, 'utf-8');
+      expect(html).toContain('Saved artifacts');
+      expect(html).toContain('Artifact export visual fixture');
+      expect(html).toContain('artifact-html');
+      expect(html).toContain('Fixture button');
+      expect(html).toContain('&lt;script&gt;alert(&quot;nope&quot;)&lt;/script&gt;');
+      expect(html).toContain('</section>\n</body>');
+      expect(listArtifacts).toHaveBeenCalledWith({ profile: 'shared', conversationId: 'session-artifact-export' });
+      expect(getArtifact).toHaveBeenCalledWith({
+        profile: 'shared',
+        conversationId: 'session-artifact-export',
+        artifactId: 'artifact-html',
+      });
+    } finally {
+      listArtifacts.mockRestore();
+      getArtifact.mockRestore();
+    }
   });
 
   it('updates live session model preferences with the current session state', async () => {

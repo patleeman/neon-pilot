@@ -107,6 +107,7 @@ Bundled system extensions:
 - [Goal Mode](../extensions/system-auto-mode/README.md) — persisted goal tracking and automatic continuation
 - [Host view components](host-view-components.md) — host-owned UI components reusable by extensions
 - [Image Probe](../extensions/system-image-probe/README.md) — image attachment inspection with a vision agent
+- [Video Probe](../extensions/system-video-probe/README.md) — local video frame sampling and transcription tools
 - [Local Dictation](../extensions/system-local-dictation/README.md) — Whisper.cpp dictation controls and settings
 - [MCP](../extensions/system-mcp/README.md) — configured MCP server inspection, auth, and calls
 - [AI Gateway](../extensions/system-model-gateway/README.md) — opt-in local Responses API proxy for external coding agents
@@ -134,7 +135,6 @@ Optional first-party extensions from [`patleeman/neon-pilot-extensions`](https:/
 - [Exa Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-exa-search) — Exa web search
 - [Knowledge](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge) — knowledge base browsing, editing, references, and sync
 - [Suggested Context](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context) — related conversation suggestions
-- [Video Probe](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-video-probe) — video analysis via local or remote video-capable models
 - [Writing Studio](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-writing-studio) — document-first collaborative writing surface
 
 ## Docs maintenance checklist

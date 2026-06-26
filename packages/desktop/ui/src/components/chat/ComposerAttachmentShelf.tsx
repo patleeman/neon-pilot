@@ -28,6 +28,13 @@ interface ComposerImageAttachment {
   previewUrl?: string;
 }
 
+interface ComposerVideoAttachment {
+  localId: string;
+  name?: string;
+  mimeType: string;
+  size: number;
+}
+
 interface ComposerPreviewImage {
   alt: string;
   src: string;
@@ -37,10 +44,12 @@ interface ComposerPreviewImage {
 
 interface ComposerAttachmentShelfProps {
   attachments: ComposerImageAttachment[];
+  videoAttachments?: ComposerVideoAttachment[];
   drawingAttachments: ComposerAttachmentShelfDrawingAttachment[];
   drawingsBusy?: boolean;
   drawingsError?: string | null;
   onRemoveAttachment: (index: number) => void;
+  onRemoveVideoAttachment?: (index: number) => void;
   onEditDrawing: (localId: string) => void;
   onRemoveDrawingAttachment: (localId: string) => void;
 }
@@ -168,10 +177,12 @@ function ComposerImagePreviewModal({ image, onClose }: { image: ComposerPreviewI
 
 export function ComposerAttachmentShelf({
   attachments,
+  videoAttachments = [],
   drawingAttachments,
   drawingsBusy = false,
   drawingsError = null,
   onRemoveAttachment,
+  onRemoveVideoAttachment,
   onEditDrawing,
   onRemoveDrawingAttachment,
 }: ComposerAttachmentShelfProps) {
@@ -277,9 +288,9 @@ export function ComposerAttachmentShelf({
 
   return (
     <>
-      {(attachments.length > 0 || drawingAttachments.length > 0 || drawingsBusy || drawingsError) && (
+      {(attachments.length > 0 || videoAttachments.length > 0 || drawingAttachments.length > 0 || drawingsBusy || drawingsError) && (
         <div className="border-b border-border-subtle/60 bg-base/20 px-4 py-3">
-          {attachments.length > 0 && (
+          {(attachments.length > 0 || videoAttachments.length > 0) && (
             <div className="flex flex-wrap gap-1.5">
               {attachments.map((file, index) => {
                 const fileName = file.name || 'Image attachment';
@@ -318,11 +329,36 @@ export function ComposerAttachmentShelf({
                   </AttachmentChip>
                 );
               })}
+              {videoAttachments.map((file, index) => {
+                const fileName = file.name || 'Video attachment';
+                const summary = (
+                  <>
+                    <span className="shrink-0">{fileIcon(file.mimeType)}</span>
+                    <span className="truncate text-secondary">{fileName}</span>
+                    <span className="shrink-0 text-dim">{formatBytes(file.size)}</span>
+                  </>
+                );
+
+                return (
+                  <AttachmentChip key={file.localId || `${fileName}-${file.size}-${index}`} className="max-w-[240px]">
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1">{summary}</div>
+                    <IconButton
+                      compact
+                      onClick={() => onRemoveVideoAttachment?.(index)}
+                      className="mr-1 shrink-0 leading-none"
+                      title={`Remove ${fileName}`}
+                      aria-label={`Remove ${fileName}`}
+                    >
+                      ×
+                    </IconButton>
+                  </AttachmentChip>
+                );
+              })}
             </div>
           )}
 
           {drawingAttachments.length > 0 && (
-            <div className={cx('flex flex-wrap gap-1.5', attachments.length > 0 && 'mt-2')}>
+            <div className={cx('flex flex-wrap gap-1.5', (attachments.length > 0 || videoAttachments.length > 0) && 'mt-2')}>
               {drawingAttachments.map((attachment) => {
                 const label = buildDrawingPreviewTitle(attachment);
                 return (

@@ -123,6 +123,12 @@ interface ExtensionBackendCapabilityImage {
   ): Promise<unknown>;
 }
 
+interface ExtensionBackendCapabilityVideo {
+  extractFrame(input: unknown): Promise<unknown>;
+  sampleFrames(input: unknown): Promise<unknown>;
+  transcribe(input: unknown): Promise<unknown>;
+}
+
 interface ExtensionBackendCapabilityConversations {
   list?(extensionId: string, input?: { runtimeScope?: string; runtimeSettingsFilePath?: string }): Promise<unknown> | unknown;
   activity?(
@@ -463,6 +469,7 @@ export interface ExtensionBackendCapabilityDispatcherOptions {
   filesystem?: ExtensionBackendCapabilityFilesystem;
   git?: ExtensionBackendCapabilityGit;
   image?: ExtensionBackendCapabilityImage;
+  video?: ExtensionBackendCapabilityVideo;
   log?: ExtensionBackendCapabilityLogger;
   models?: ExtensionBackendCapabilityModels;
   notify?: ExtensionBackendCapabilityNotify;
@@ -630,6 +637,10 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
 
   if (request.capability === 'image') {
     return request.operation === 'generate' ? ['images:write'] : [];
+  }
+
+  if (request.capability === 'video') {
+    return ['videos:read'];
   }
 
   if (request.capability === 'runtime') {
@@ -1258,6 +1269,13 @@ function dispatchImageCapability(image: ExtensionBackendCapabilityImage, request
       ? { toolContext: input.toolContext as { preferredVisionModel?: string; sessionFile?: string } }
       : {}),
   });
+}
+
+function dispatchVideoCapability(video: ExtensionBackendCapabilityVideo, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  if (request.operation === 'extractFrame') return video.extractFrame(request.input);
+  if (request.operation === 'sampleFrames') return video.sampleFrames(request.input);
+  if (request.operation === 'transcribe') return video.transcribe(request.input);
+  throw new Error(`Unsupported video capability operation: ${request.operation}`);
 }
 
 function normalizeModelWriteContext(input: Record<string, unknown>): ExtensionBackendModelWriteContext {
@@ -2325,6 +2343,22 @@ export function createExtensionBackendCapabilityDispatcher(
   };
   const git = options.git ?? createExtensionGitCapability();
   const image = options.image ?? { generate: generateImageWithInstalledExtension };
+  const video =
+    options.video ??
+    ({
+      extractFrame: async (input: unknown) => {
+        const module = await import('./videoProbeAttachmentStore.js');
+        return module.extractVideoFrame(input);
+      },
+      sampleFrames: async (input: unknown) => {
+        const module = await import('./videoProbeAttachmentStore.js');
+        return module.sampleVideoFrames(input);
+      },
+      transcribe: async (input: unknown) => {
+        const module = await import('./videoProbeAttachmentStore.js');
+        return module.transcribeVideo(input);
+      },
+    } satisfies ExtensionBackendCapabilityVideo);
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
   const models = options.models ?? {
     list: () => createExtensionModelsCapability().list(),
@@ -2442,6 +2476,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'image') {
       return dispatchImageCapability(image, request);
+    }
+    if (request.capability === 'video') {
+      return dispatchVideoCapability(video, request);
     }
     if (request.capability === 'log') {
       return dispatchLogCapability(logger, request);

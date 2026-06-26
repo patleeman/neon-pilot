@@ -5,6 +5,7 @@ import {
   buildComposerFilePreparationNotices,
   type ComposerDrawingAttachment,
   type ComposerImageAttachment,
+  type ComposerVideoAttachment,
   constrainPromptImageDimensions,
   drawingAttachmentToPromptImage,
   drawingAttachmentToPromptRef,
@@ -15,6 +16,7 @@ import {
   readComposerTransferFiles,
   removeComposerDrawingAttachmentByLocalId,
   removeComposerImageFileAtIndex,
+  removeComposerVideoFileAtIndex,
   restoreComposerImageFiles,
   restoreQueuedImageFiles,
   screenshotCaptureImageToFile,
@@ -113,10 +115,19 @@ describe('promptAttachments', () => {
     } satisfies ComposerImageAttachment;
     const parsedDrawing = new File(['{}'], 'sketch.excalidraw', { type: '' });
     const brokenDrawing = new File(['bad'], 'broken.excalidraw', { type: '' });
+    const video = new File(['video'], 'screen.mp4', { type: 'video/mp4' });
+    const videoAttachment = {
+      localId: 'video-1',
+      name: 'screen.mp4',
+      mimeType: 'video/mp4',
+      path: '/tmp/screen.mp4',
+      size: 5,
+      sizeBytes: 5,
+    } satisfies ComposerVideoAttachment;
     const rejected = new File(['notes'], 'notes.txt', { type: 'text/plain' });
 
     const result = await prepareComposerFiles(
-      [image, parsedDrawing, brokenDrawing, rejected],
+      [image, video, parsedDrawing, brokenDrawing, rejected],
       async (file) => {
         if (file.name === 'broken.excalidraw') {
           throw new Error('Invalid scene');
@@ -124,9 +135,11 @@ describe('promptAttachments', () => {
         return drawing;
       },
       async () => imageAttachment,
+      () => videoAttachment,
     );
 
     expect(result.imageAttachments).toEqual([imageAttachment]);
+    expect(result.videoAttachments).toEqual([videoAttachment]);
     expect(result.drawingAttachments).toEqual([drawing]);
     expect(result.drawingParseFailures).toEqual([{ fileName: 'broken.excalidraw', message: 'Invalid scene' }]);
     expect(result.rejectedFileNames).toEqual(['notes.txt']);
@@ -318,6 +331,7 @@ describe('promptAttachments', () => {
 
     expect(removeComposerImageFileAtIndex([firstImage, secondImage], 0)).toEqual([secondImage]);
     expect(removeComposerImageFileAtIndex([firstImage, secondImage], 9)).toEqual([firstImage, secondImage]);
+    expect(removeComposerVideoFileAtIndex([{ localId: 'video-1', mimeType: 'video/mp4', path: '/tmp/a.mp4', size: 1 }], 0)).toEqual([]);
     expect(removeComposerDrawingAttachmentByLocalId([firstDrawing, secondDrawing], 'drawing-2')).toEqual([firstDrawing]);
     expect(removeComposerDrawingAttachmentByLocalId([firstDrawing], 'missing')).toEqual([firstDrawing]);
   });
@@ -328,10 +342,13 @@ describe('promptAttachments', () => {
         drawingAttachments: [{ localId: 'drawing-1', title: 'One' } as ComposerDrawingAttachment],
         drawingParseFailures: [{ fileName: 'broken.excalidraw', message: 'Invalid scene' }],
         imageReadFailures: [{ fileName: 'gone.png', message: 'Could not read image attachment "gone.png": missing' }],
+        videoAttachments: [{ localId: 'video-1', name: 'screen.mp4', mimeType: 'video/mp4', path: '/tmp/screen.mp4', size: 5 }],
+        videoReadFailures: [],
         rejectedFileNames: ['a.txt', 'b.mov', 'c.zip', 'd.bin'],
       }),
     ).toEqual([
       { tone: 'accent', text: 'Attached 1 drawing.' },
+      { tone: 'accent', text: 'Attached 1 video.' },
       { tone: 'danger', text: 'Failed to parse broken.excalidraw: Invalid scene', durationMs: 4000 },
       { tone: 'danger', text: 'Could not read image attachment "gone.png": missing', durationMs: 4000 },
       { tone: 'danger', text: 'Unsupported file type: a.txt, b.mov, c.zip, +1 more', durationMs: 4000 },

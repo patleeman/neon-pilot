@@ -64,7 +64,6 @@ Current first-party optional packages:
 | Exa Search        | Exa-backed agent web search with extension-managed secrets            |
 | Knowledge         | knowledge base file browsing, editing, references, and sync           |
 | Suggested Context | related conversation suggestions for new prompts                      |
-| Video Probe       | video analysis through local mlx-vlm or a remote video-capable model  |
 | Writing Studio    | document-first collaborative markdown writing surface                 |
 
 ## Extension package format

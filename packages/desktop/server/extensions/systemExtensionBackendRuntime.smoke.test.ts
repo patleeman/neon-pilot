@@ -558,8 +558,7 @@ const smokes = {
     await expectReject(() => module.probeImage({ imageIds: [], question: 'what is this?' }, ctx), /at least one image ID/i);
   },
   async 'system-video-probe'() {
-    const result = await module.readSettings({}, ctx);
-    assert(result.ok === true && result.settings && typeof result.settings.backend === 'string', 'readSettings failed');
+    await expectReject(() => module.sampleVideoFramesAction({ videoId: 'bad', startSec: 0, endSec: 1, count: 1 }, ctx), /valid videoId/i);
   },
   async 'system-knowledge'() {
     const list = await module.knowledgeListFiles({}, ctx);

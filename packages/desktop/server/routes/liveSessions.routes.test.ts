@@ -482,12 +482,12 @@ describe('live session routes', () => {
     const emptyRes = createResponse();
     await handleLiveSessionPrompt(createRequest({ params: { id: 'live-1' }, body: {} }), emptyRes);
     expect(emptyRes.status).toHaveBeenCalledWith(400);
-    expect(emptyRes.json).toHaveBeenCalledWith({ error: 'text, images, or attachmentRefs required' });
+    expect(emptyRes.json).toHaveBeenCalledWith({ error: 'text, images, videos, or attachmentRefs required' });
 
     const blankTextRes = createResponse();
     await handleLiveSessionPrompt(createRequest({ params: { id: 'live-1' }, body: { text: '   ' } }), blankTextRes);
     expect(blankTextRes.status).toHaveBeenCalledWith(400);
-    expect(blankTextRes.json).toHaveBeenCalledWith({ error: 'text, images, or attachmentRefs required' });
+    expect(blankTextRes.json).toHaveBeenCalledWith({ error: 'text, images, videos, or attachmentRefs required' });
 
     const invalidImageRes = createResponse();
     await handleLiveSessionPrompt(
@@ -509,7 +509,7 @@ describe('live session routes', () => {
       invalidImageRes,
     );
     expect(invalidImageRes.status).toHaveBeenCalledWith(400);
-    expect(invalidImageRes.json).toHaveBeenCalledWith({ error: 'text, images, or attachmentRefs required' });
+    expect(invalidImageRes.json).toHaveBeenCalledWith({ error: 'text, images, videos, or attachmentRefs required' });
 
     const unsafeAttachmentRefRes = createResponse();
     await handleLiveSessionPrompt(
@@ -520,7 +520,7 @@ describe('live session routes', () => {
       unsafeAttachmentRefRes,
     );
     expect(unsafeAttachmentRefRes.status).toHaveBeenCalledWith(400);
-    expect(unsafeAttachmentRefRes.json).toHaveBeenCalledWith({ error: 'text, images, or attachmentRefs required' });
+    expect(unsafeAttachmentRefRes.json).toHaveBeenCalledWith({ error: 'text, images, videos, or attachmentRefs required' });
 
     const absurdAttachmentRefRes = createResponse();
     await handleLiveSessionPrompt(
@@ -531,7 +531,7 @@ describe('live session routes', () => {
       absurdAttachmentRefRes,
     );
     expect(absurdAttachmentRefRes.status).toHaveBeenCalledWith(400);
-    expect(absurdAttachmentRefRes.json).toHaveBeenCalledWith({ error: 'text, images, or attachmentRefs required' });
+    expect(absurdAttachmentRefRes.json).toHaveBeenCalledWith({ error: 'text, images, videos, or attachmentRefs required' });
 
     isLiveMock.mockReturnValueOnce(true);
     const invalidBehaviorRes = createResponse();

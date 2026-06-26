@@ -276,6 +276,7 @@ describe('createLiveSessionCapability', () => {
       undefined,
       undefined,
       undefined,
+      undefined,
     );
   });
 
@@ -284,7 +285,14 @@ describe('createLiveSessionCapability', () => {
 
     await createLiveSessionCapability({ prompt: 'Hello from companion.', surfaceId: 'surface-1' }, createContext());
 
-    expect(submitLocalPromptSessionMock).toHaveBeenCalledWith('test-session', 'Hello from companion.', undefined, undefined, 'surface-1');
+    expect(submitLocalPromptSessionMock).toHaveBeenCalledWith(
+      'test-session',
+      'Hello from companion.',
+      undefined,
+      undefined,
+      undefined,
+      'surface-1',
+    );
   });
 
   it('calls appendConversationWorkspaceMetadata in the reserved flow', async () => {

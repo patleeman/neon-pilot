@@ -47,6 +47,7 @@ import type {
   ModelState,
   PromptAttachmentRefInput,
   PromptImageInput,
+  PromptVideoInput,
   ProviderAuthState,
   ProviderConnectionTestResult,
   SecretsState,
@@ -1062,6 +1063,7 @@ export const api = {
       serviceTier?: string | null;
       behavior?: 'steer' | 'followUp';
       images?: Array<{ data: string; mimeType: string; name?: string }>;
+      videos?: PromptVideoInput[];
       attachmentRefs?: unknown;
       contextMessages?: Array<{ customType: string; content: string }>;
       relatedConversationIds?: unknown;
@@ -1079,6 +1081,7 @@ export const api = {
       ...(text !== undefined ? { prompt: text } : {}),
       ...(options?.behavior !== undefined ? { behavior: options.behavior } : {}),
       ...(options?.images !== undefined ? { images: options.images } : {}),
+      ...(options?.videos !== undefined ? { videos: options.videos } : {}),
       ...(options?.attachmentRefs !== undefined ? { attachmentRefs: options.attachmentRefs } : {}),
       ...(options?.contextMessages !== undefined ? { contextMessages: options.contextMessages } : {}),
       ...(options?.relatedConversationIds !== undefined ? { relatedConversationIds: options.relatedConversationIds } : {}),
@@ -1115,6 +1118,7 @@ export const api = {
     text: string,
     behavior?: 'steer' | 'followUp',
     images?: PromptImageInput[],
+    videos?: PromptVideoInput[],
     attachmentRefs?: PromptAttachmentRefInput[],
     surfaceId?: string,
     contextMessages?: Array<Pick<InjectedPromptMessage, 'customType' | 'content'>>,
@@ -1136,6 +1140,7 @@ export const api = {
       behavior,
       ...(surfaceId ? { surfaceId } : {}),
       images,
+      videos,
       attachmentRefs,
       contextMessages,
       relatedConversationIds,
@@ -1147,6 +1152,7 @@ export const api = {
         conversationId: id,
         promptLength: text.length,
         imageCount: images?.length ?? 0,
+        videoCount: videos?.length ?? 0,
         contextMessageCount: contextMessages?.length ?? 0,
         relatedConversationCount: relatedConversationIds?.length ?? 0,
         serverPerf: result.perf ?? null,
@@ -1160,6 +1166,7 @@ export const api = {
     text: string,
     behavior?: 'steer' | 'followUp',
     images?: PromptImageInput[],
+    videos?: PromptVideoInput[],
     attachmentRefs?: PromptAttachmentRefInput[],
     surfaceId?: string,
     contextMessages?: Array<Pick<InjectedPromptMessage, 'customType' | 'content'>>,
@@ -1181,6 +1188,7 @@ export const api = {
       behavior,
       ...(surfaceId ? { surfaceId } : {}),
       images,
+      videos,
       attachmentRefs,
       contextMessages,
       relatedConversationIds,
@@ -1192,6 +1200,7 @@ export const api = {
         conversationId: id,
         promptLength: text.length,
         imageCount: images?.length ?? 0,
+        videoCount: videos?.length ?? 0,
         contextMessageCount: contextMessages?.length ?? 0,
         relatedConversationCount: relatedConversationIds?.length ?? 0,
         serverPerf: result.perf ?? null,

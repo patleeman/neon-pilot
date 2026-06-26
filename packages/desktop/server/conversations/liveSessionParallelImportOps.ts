@@ -11,7 +11,7 @@ import {
   replacePersistedParallelJob,
   type ResolveParallelChildSession,
 } from './liveSessionParallelReconciliation.js';
-import type { PromptImageAttachment } from './liveSessionQueue.js';
+import type { PromptImageAttachment, PromptVideoAttachment } from './liveSessionQueue.js';
 
 export interface LiveSessionParallelImportHost {
   sessionId: string;
@@ -56,6 +56,7 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
   input: {
     text: string;
     images?: PromptImageAttachment[];
+    videos?: PromptVideoAttachment[];
     attachmentRefs?: string[];
     contextMessages?: Array<{ customType: string; content: string }>;
   },
@@ -74,6 +75,7 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
       text: string,
       behavior?: 'steer' | 'followUp',
       images?: PromptImageAttachment[],
+      videos?: PromptVideoAttachment[],
     ) => Promise<{ acceptedAs: 'started' | 'queued'; completion: Promise<void> }>;
     resolveDefaultServiceTier: (entry: TEntry) => LiveSessionLoaderOptions['initialServiceTier'];
     hasQueuedOrActiveStaleTurn: (entry: TEntry) => boolean;
@@ -85,8 +87,8 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
   },
 ): Promise<{ jobId: string; childConversationId: string }> {
   const text = input.text.trim();
-  if (!text && (!input.images || input.images.length === 0)) {
-    throw new Error('text or images required');
+  if (!text && (!input.images || input.images.length === 0) && (!input.videos || input.videos.length === 0)) {
+    throw new Error('text, images, or videos required');
   }
 
   const sourceSessionFile = entry.session.sessionFile?.trim();
@@ -137,7 +139,7 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
       await callbacks.queuePromptContext(childConversationId, message.customType, message.content);
     }
 
-    const submitted = await callbacks.submitPromptSession(childConversationId, text, undefined, input.images);
+    const submitted = await callbacks.submitPromptSession(childConversationId, text, undefined, input.images, input.videos);
     const completionInput = {
       sourceSessionFile,
       jobId: job.id,

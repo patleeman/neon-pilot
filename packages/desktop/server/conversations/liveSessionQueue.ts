@@ -15,6 +15,14 @@ export interface PromptImageAttachment {
   name?: string;
 }
 
+export interface PromptVideoAttachment {
+  type: 'video';
+  path: string;
+  mimeType: string;
+  name?: string;
+  sizeBytes?: number;
+}
+
 export interface InternalQueuedAgentMessage {
   role?: string;
   content?: unknown;

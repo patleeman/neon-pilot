@@ -4,12 +4,17 @@ import {
   loadExcalidrawSceneFromBlob,
   serializeExcalidrawScene,
 } from '../content/excalidrawUtils';
-import type { PromptAttachmentRefInput, PromptImageInput } from '../shared/types';
+import type { PromptAttachmentRefInput, PromptImageInput, PromptVideoInput } from '../shared/types';
 import type { DraftConversationDrawingAttachment } from './draftConversation';
 
 export type ComposerDrawingAttachment = DraftConversationDrawingAttachment;
 
 export interface ComposerImageAttachment extends PromptImageInput {
+  localId: string;
+  size: number;
+}
+
+export interface ComposerVideoAttachment extends PromptVideoInput {
   localId: string;
   size: number;
 }
@@ -227,6 +232,41 @@ async function preparePromptImage(file: File): Promise<ComposerImageAttachment> 
   }
 }
 
+function isPromptVideoFile(file: File): boolean {
+  if (file.type.startsWith('video/')) {
+    return true;
+  }
+  return /\.(mp4|mov|m4v|webm|mkv|avi|mpeg|mpg)$/i.test(file.name.trim());
+}
+
+function readLocalFilePath(file: File): string {
+  const candidate = (file as File & { path?: unknown }).path;
+  if (typeof candidate !== 'string' || !candidate.trim()) {
+    throw new Error(
+      `Video attachment "${file.name || 'Unnamed file'}" needs a local file path. Attach a file from the desktop picker so Neon Pilot can probe it locally.`,
+    );
+  }
+  return candidate.trim();
+}
+
+function normalizePromptVideoMimeType(file: File): string {
+  if (file.type.startsWith('video/')) {
+    return file.type;
+  }
+  return 'video/*';
+}
+
+function preparePromptVideo(file: File): ComposerVideoAttachment {
+  return {
+    localId: createComposerVideoLocalId(),
+    name: file.name,
+    mimeType: normalizePromptVideoMimeType(file),
+    path: readLocalFilePath(file),
+    size: file.size,
+    sizeBytes: file.size,
+  };
+}
+
 export function fileExtensionForMimeType(mimeType: string): string {
   const normalized = mimeType.trim().toLowerCase();
   if (normalized === 'image/jpeg') {
@@ -318,12 +358,23 @@ export function buildPromptImages(attachments: ComposerImageAttachment[]): Promp
   }));
 }
 
+export function buildPromptVideos(attachments: ComposerVideoAttachment[]): PromptVideoInput[] {
+  return attachments.map(({ name, mimeType, path, sizeBytes }) => ({
+    ...(name ? { name } : {}),
+    mimeType,
+    path,
+    ...(Number.isSafeInteger(sizeBytes) && Number(sizeBytes) >= 0 ? { sizeBytes } : {}),
+  }));
+}
+
 export interface PreparedComposerFiles {
   imageAttachments: ComposerImageAttachment[];
+  videoAttachments: ComposerVideoAttachment[];
   drawingAttachments: ComposerDrawingAttachment[];
   rejectedFileNames: string[];
   drawingParseFailures: Array<{ fileName: string; message: string }>;
   imageReadFailures: Array<{ fileName: string; message: string }>;
+  videoReadFailures: Array<{ fileName: string; message: string }>;
 }
 
 export interface ComposerFilePreparationNotice {
@@ -346,12 +397,15 @@ export async function prepareComposerFiles(
   files: File[],
   buildDrawing: (file: File) => Promise<ComposerDrawingAttachment> = buildComposerDrawingFromFile,
   buildImage: (file: File) => Promise<ComposerImageAttachment> = preparePromptImage,
+  buildVideo: (file: File) => ComposerVideoAttachment = preparePromptVideo,
 ): Promise<PreparedComposerFiles> {
   const imageAttachments: ComposerImageAttachment[] = [];
+  const videoAttachments: ComposerVideoAttachment[] = [];
   const drawingAttachments: ComposerDrawingAttachment[] = [];
   const rejectedFileNames: string[] = [];
   const drawingParseFailures: PreparedComposerFiles['drawingParseFailures'] = [];
   const imageReadFailures: PreparedComposerFiles['imageReadFailures'] = [];
+  const videoReadFailures: PreparedComposerFiles['videoReadFailures'] = [];
 
   for (const file of files) {
     if (isPotentialExcalidrawFile(file)) {
@@ -382,31 +436,63 @@ export async function prepareComposerFiles(
       continue;
     }
 
+    if (isPromptVideoFile(file)) {
+      try {
+        videoAttachments.push(buildVideo(file));
+      } catch (error) {
+        videoReadFailures.push({
+          fileName: file.name || 'Unnamed file',
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+      continue;
+    }
+
     rejectedFileNames.push(file.name || 'Unnamed file');
   }
 
   return {
     imageAttachments,
+    videoAttachments,
     drawingAttachments,
     rejectedFileNames,
     drawingParseFailures,
     imageReadFailures,
+    videoReadFailures,
   };
 }
 
 export function buildComposerFilePreparationNotices(
-  prepared: Pick<PreparedComposerFiles, 'drawingAttachments' | 'drawingParseFailures' | 'imageReadFailures' | 'rejectedFileNames'>,
+  prepared: Partial<
+    Pick<
+      PreparedComposerFiles,
+      'drawingAttachments' | 'drawingParseFailures' | 'imageReadFailures' | 'videoAttachments' | 'videoReadFailures' | 'rejectedFileNames'
+    >
+  >,
 ): ComposerFilePreparationNotice[] {
   const notices: ComposerFilePreparationNotice[] = [];
+  const drawingAttachments = prepared.drawingAttachments ?? [];
+  const videoAttachments = prepared.videoAttachments ?? [];
+  const drawingParseFailures = prepared.drawingParseFailures ?? [];
+  const imageReadFailures = prepared.imageReadFailures ?? [];
+  const videoReadFailures = prepared.videoReadFailures ?? [];
+  const rejectedFileNames = prepared.rejectedFileNames ?? [];
 
-  if (prepared.drawingAttachments.length > 0) {
+  if (drawingAttachments.length > 0) {
     notices.push({
       tone: 'accent',
-      text: `Attached ${prepared.drawingAttachments.length} drawing${prepared.drawingAttachments.length === 1 ? '' : 's'}.`,
+      text: `Attached ${drawingAttachments.length} drawing${drawingAttachments.length === 1 ? '' : 's'}.`,
     });
   }
 
-  for (const failure of prepared.drawingParseFailures) {
+  if (videoAttachments.length > 0) {
+    notices.push({
+      tone: 'accent',
+      text: `Attached ${videoAttachments.length} video${videoAttachments.length === 1 ? '' : 's'}.`,
+    });
+  }
+
+  for (const failure of drawingParseFailures) {
     notices.push({
       tone: 'danger',
       text: `Failed to parse ${failure.fileName}: ${failure.message}`,
@@ -414,7 +500,7 @@ export function buildComposerFilePreparationNotices(
     });
   }
 
-  for (const failure of prepared.imageReadFailures) {
+  for (const failure of imageReadFailures) {
     notices.push({
       tone: 'danger',
       text: failure.message.includes(failure.fileName) ? failure.message : `Could not read ${failure.fileName}: ${failure.message}`,
@@ -422,9 +508,17 @@ export function buildComposerFilePreparationNotices(
     });
   }
 
-  if (prepared.rejectedFileNames.length > 0) {
-    const preview = prepared.rejectedFileNames.slice(0, 3).join(', ');
-    const suffix = prepared.rejectedFileNames.length > 3 ? `, +${prepared.rejectedFileNames.length - 3} more` : '';
+  for (const failure of videoReadFailures) {
+    notices.push({
+      tone: 'danger',
+      text: failure.message.includes(failure.fileName) ? failure.message : `Could not attach ${failure.fileName}: ${failure.message}`,
+      durationMs: 4000,
+    });
+  }
+
+  if (rejectedFileNames.length > 0) {
+    const preview = rejectedFileNames.slice(0, 3).join(', ');
+    const suffix = rejectedFileNames.length > 3 ? `, +${rejectedFileNames.length - 3} more` : '';
     notices.push({
       tone: 'danger',
       text: `Unsupported file type: ${preview}${suffix}`,
@@ -439,6 +533,10 @@ export function removeComposerImageFileAtIndex(attachments: ComposerImageAttachm
   return attachments.filter((_, index) => index !== indexToRemove);
 }
 
+export function removeComposerVideoFileAtIndex(attachments: ComposerVideoAttachment[], indexToRemove: number): ComposerVideoAttachment[] {
+  return attachments.filter((_, index) => index !== indexToRemove);
+}
+
 export function removeComposerDrawingAttachmentByLocalId(
   attachments: ComposerDrawingAttachment[],
   localId: string,
@@ -448,6 +546,10 @@ export function removeComposerDrawingAttachmentByLocalId(
 
 function createComposerImageLocalId(): string {
   return `image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createComposerVideoLocalId(): string {
+  return `video-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export function createComposerDrawingLocalId(): string {

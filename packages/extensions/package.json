@@ -159,6 +159,10 @@
       "types": "./dist/backend/transcription.d.ts",
       "default": "./dist/backend/transcription.js"
     },
+    "./backend/videos": {
+      "types": "./dist/backend/videos.d.ts",
+      "default": "./dist/backend/videos.js"
+    },
     "./backend/webContent": {
       "types": "./dist/backend/webContent.d.ts",
       "default": "./dist/backend/webContent.js"
