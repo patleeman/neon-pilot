@@ -2673,6 +2673,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     isStreaming: scrollBinding.isStreaming,
     initialScrollKey: scrollBinding.initialScrollKey,
     prependRestoreKey: historicalBlockOffset,
+    messageIndexOffset,
   });
   const showInitialHistoricalWarmupLoader = shouldShowConversationInitialHistoricalWarmupLoader({
     warmupActive: initialHistoricalWarmupActive,

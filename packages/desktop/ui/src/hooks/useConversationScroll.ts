@@ -4,9 +4,13 @@ import { recordClientPerfTiming } from '../client/perfDiagnostics';
 import {
   getConversationBottomScrollTop,
   getConversationPrependRestoreScrollTop,
+  getConversationStreamingTurnAnchorMessageIndex,
+  getConversationTailBlockKey,
   isConversationScrolledToBottom,
   isConversationScrollOverflowing,
   isConversationTailVisibleAtBottom,
+  scrollConversationMessageIntoView,
+  shouldAutoScrollToStreamingTail,
 } from '../conversation/conversationScroll';
 import type { MessageBlock } from '../shared/types';
 
@@ -21,6 +25,7 @@ interface UseConversationScrollOptions {
   isStreaming: boolean;
   initialScrollKey: string | null;
   prependRestoreKey?: string | number | null;
+  messageIndexOffset?: number;
 }
 
 interface UseConversationScrollResult {
@@ -61,17 +66,44 @@ function setBottom(el: HTMLDivElement, behavior: ScrollBehavior = 'auto') {
   el.scrollTop = top;
 }
 
+function isReaderKeyboardIntent(event: KeyboardEvent): boolean {
+  if (
+    event.defaultPrevented ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.altKey ||
+    event.target instanceof HTMLInputElement ||
+    event.target instanceof HTMLTextAreaElement ||
+    event.target instanceof HTMLSelectElement ||
+    (event.target instanceof HTMLElement && event.target.isContentEditable)
+  ) {
+    return false;
+  }
+
+  return new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ']).has(event.key);
+}
+
+function selectionTouchesElement(selection: Selection, el: HTMLElement): boolean {
+  const anchorNode = selection.anchorNode;
+  const focusNode = selection.focusNode;
+  return Boolean((anchorNode && el.contains(anchorNode)) || (focusNode && el.contains(focusNode)));
+}
+
 export function useConversationScroll({
   conversationId,
   messages,
   scrollRef,
+  isStreaming,
   initialScrollKey,
   prependRestoreKey,
+  messageIndexOffset = 0,
 }: UseConversationScrollOptions): UseConversationScrollResult {
   const [atBottom, setAtBottom] = useState(true);
   const pinnedToBottomRef = useRef(true);
+  const tailFollowingRef = useRef(false);
   const completedInitialScrollKeyRef = useRef<string | null>(null);
   const lastMessageCountRef = useRef(0);
+  const lastTailKeyRef = useRef<string | null>(null);
   const pendingPrependRestoreRef = useRef<{
     conversationId: string;
     scrollHeight: number;
@@ -92,6 +124,9 @@ export function useConversationScroll({
     const el = scrollRef.current;
     const nextAtBottom = el ? readAtBottom(el) : true;
     pinnedToBottomRef.current = nextAtBottom;
+    if (nextAtBottom) {
+      tailFollowingRef.current = true;
+    }
     setAtBottom(nextAtBottom);
   }, [scrollRef]);
 
@@ -107,6 +142,9 @@ export function useConversationScroll({
       }
 
       pinnedToBottomRef.current = true;
+      if (options?.force) {
+        tailFollowingRef.current = true;
+      }
       setAtBottom(true);
       cancelScheduledScroll();
       scrollFrameRef.current = window.requestAnimationFrame(() => {
@@ -144,8 +182,10 @@ export function useConversationScroll({
     pendingPrependRestoreRef.current = null;
     completedInitialScrollKeyRef.current = null;
     lastMessageCountRef.current = messages?.length ?? 0;
+    lastTailKeyRef.current = getConversationTailBlockKey(messages?.[Math.max(0, (messages?.length ?? 0) - 1)]);
     lastScrollHeightRef.current = scrollRef.current?.scrollHeight ?? 0;
     pinnedToBottomRef.current = true;
+    tailFollowingRef.current = false;
     setAtBottom(true);
 
     const frame = window.requestAnimationFrame(() => {
@@ -180,6 +220,7 @@ export function useConversationScroll({
       }
 
       pinnedToBottomRef.current = false;
+      tailFollowingRef.current = false;
       setAtBottom(false);
       cancelScheduledScroll();
     };
@@ -202,11 +243,36 @@ export function useConversationScroll({
       detach();
     };
 
+    const handleTouchStart = () => {
+      if (pinnedToBottomRef.current) {
+        detach();
+      }
+    };
+
+    const handleSelectionChange = () => {
+      const selection = window.getSelection?.();
+      if (selection && !selection.isCollapsed && selectionTouchesElement(selection, el)) {
+        detach();
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (pinnedToBottomRef.current && isReaderKeyboardIntent(event)) {
+        detach();
+      }
+    };
+
     el.addEventListener('wheel', handleWheel, { passive: true });
     el.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    el.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('selectionchange', handleSelectionChange);
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
       el.removeEventListener('wheel', handleWheel);
       el.removeEventListener('pointerdown', handlePointerDown);
+      el.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [cancelScheduledScroll, scrollRef]);
 
@@ -259,29 +325,60 @@ export function useConversationScroll({
   useConversationScrollLayoutEffect(() => {
     const messageCount = messages?.length ?? 0;
     const el = scrollRef.current;
-    if (!el) {
+    const tailBlock = messages?.[Math.max(0, messageCount - 1)] ?? null;
+    const nextTailKey = getConversationTailBlockKey(tailBlock);
+    const previousTailKey = lastTailKeyRef.current;
+    const finishSync = () => {
       lastMessageCountRef.current = messageCount;
+      lastTailKeyRef.current = nextTailKey;
+      lastScrollHeightRef.current = el?.scrollHeight ?? 0;
+    };
+
+    if (!el) {
+      finishSync();
       return;
     }
 
     if (initialScrollKey && messageCount > 0 && completedInitialScrollKeyRef.current !== initialScrollKey) {
       completedInitialScrollKeyRef.current = initialScrollKey;
       scrollToBottom();
-      lastMessageCountRef.current = messageCount;
+      finishSync();
       return;
     }
 
     const scrollHeightChanged = el.scrollHeight !== lastScrollHeightRef.current;
-    if ((messageCount > lastMessageCountRef.current || scrollHeightChanged) && pinnedToBottomRef.current) {
+    const messageCountIncreased = messageCount > lastMessageCountRef.current;
+    const streamingTurnAnchorIndex = getConversationStreamingTurnAnchorMessageIndex(messages, messageIndexOffset);
+    if (
+      isStreaming &&
+      messageCountIncreased &&
+      pinnedToBottomRef.current &&
+      !tailFollowingRef.current &&
+      streamingTurnAnchorIndex !== null &&
+      scrollConversationMessageIntoView(el, streamingTurnAnchorIndex, { block: 'start' })
+    ) {
+      pinnedToBottomRef.current = false;
+      tailFollowingRef.current = false;
+      setAtBottom(false);
+      finishSync();
+      return;
+    }
+
+    const shouldKeepFollowingTail =
+      pinnedToBottomRef.current &&
+      (!isStreaming || tailFollowingRef.current || shouldAutoScrollToStreamingTail(previousTailKey, tailBlock));
+
+    if ((messageCountIncreased || scrollHeightChanged) && shouldKeepFollowingTail) {
       setBottom(el);
       setAtBottom(true);
+    } else if (!pinnedToBottomRef.current) {
+      setAtBottom(false);
     } else {
       setAtBottom(readAtBottom(el));
     }
 
-    lastMessageCountRef.current = messageCount;
-    lastScrollHeightRef.current = el.scrollHeight;
-  }, [initialScrollKey, messages, scrollRef, scrollToBottom]);
+    finishSync();
+  }, [initialScrollKey, isStreaming, messageIndexOffset, messages, scrollRef, scrollToBottom]);
 
   return {
     atBottom,

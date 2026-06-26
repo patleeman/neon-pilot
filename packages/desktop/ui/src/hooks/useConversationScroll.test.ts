@@ -107,7 +107,7 @@ describe('useConversationScroll', () => {
     expect(result.current.atBottom).toBe(true);
   });
 
-  it('preserves the bottom-relative position when the pinned streaming tail grows', () => {
+  it('does not move the viewport when an implicitly placed streaming tail grows', () => {
     const scrollEl = document.createElement('div');
     setScrollMetrics(scrollEl, { scrollHeight: 1000, clientHeight: 400, scrollTop: 600 });
     scrollEl.querySelector = vi.fn().mockReturnValue(null);
@@ -134,6 +134,88 @@ describe('useConversationScroll', () => {
     rerender({ isStreaming: true, messages: [{ type: 'text' as const, ts: '1', text: 'hello' }] });
     setScrollMetrics(scrollEl, { scrollHeight: 1120, clientHeight: 400, scrollTop: 600 });
     rerender({ isStreaming: true, messages: [{ type: 'text' as const, ts: '1', text: 'hello streamed text' }] });
+
+    expect(scrollEl.scrollTop).toBe(600);
+    expect(result.current.atBottom).toBe(false);
+  });
+
+  it('anchors a new streaming assistant turn to the preceding user message', () => {
+    const scrollEl = document.createElement('div');
+    const scrollIntoView = vi.fn();
+    setScrollMetrics(scrollEl, { scrollHeight: 1000, clientHeight: 400, scrollTop: 600 });
+    scrollEl.querySelector = vi.fn((selector: string) =>
+      selector === '[data-message-index="4"]'
+        ? {
+            scrollIntoView,
+          }
+        : null,
+    );
+    const scrollRef = { current: scrollEl };
+    const userMessage = { type: 'user' as const, ts: '1', text: 'Explain this.' };
+
+    const { result, rerender } = renderHook(
+      ({ messages, isStreaming }) =>
+        useConversationScroll({
+          conversationId: 'conversation-1',
+          messages,
+          scrollRef,
+          sessionLoading: false,
+          isStreaming,
+          initialScrollKey: null,
+          messageIndexOffset: 4,
+        }),
+      {
+        initialProps: {
+          isStreaming: true,
+          messages: [userMessage],
+        },
+      },
+    );
+
+    rerender({
+      isStreaming: true,
+      messages: [userMessage, { type: 'text' as const, ts: '2', text: 'Streaming answer starts.' }],
+    });
+
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      block: 'start',
+      inline: 'nearest',
+    });
+    expect(result.current.atBottom).toBe(false);
+  });
+
+  it('resumes following streaming tail growth after an explicit jump to latest', async () => {
+    const scrollEl = document.createElement('div');
+    setScrollMetrics(scrollEl, { scrollHeight: 1000, clientHeight: 400, scrollTop: 600 });
+    scrollEl.querySelector = vi.fn().mockReturnValue(null);
+    const scrollRef = { current: scrollEl };
+    const messages = [{ type: 'text' as const, ts: '1', text: 'hello' }];
+
+    const { result, rerender } = renderHook(
+      ({ currentMessages }) =>
+        useConversationScroll({
+          conversationId: 'conversation-1',
+          messages: currentMessages,
+          scrollRef,
+          sessionLoading: false,
+          isStreaming: true,
+          initialScrollKey: null,
+        }),
+      {
+        initialProps: {
+          currentMessages: messages,
+        },
+      },
+    );
+
+    act(() => {
+      result.current.scrollToBottom({ force: true });
+    });
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    });
+    setScrollMetrics(scrollEl, { scrollHeight: 1120, clientHeight: 400, scrollTop: 600 });
+    rerender({ currentMessages: [{ type: 'text' as const, ts: '1', text: 'hello streamed text' }] });
 
     expect(scrollEl.scrollTop).toBe(720);
     expect(result.current.atBottom).toBe(true);
@@ -207,5 +289,30 @@ describe('useConversationScroll', () => {
 
     expect(scrollEl.scrollTop).toBe(600);
     expect(result.current.atBottom).toBe(true);
+  });
+
+  it('treats transcript keyboard navigation as reader intent to stop following', () => {
+    const scrollEl = document.createElement('div');
+    setScrollMetrics(scrollEl, { scrollHeight: 1000, clientHeight: 400, scrollTop: 600 });
+    scrollEl.querySelector = vi.fn().mockReturnValue(null);
+    const scrollRef = { current: scrollEl };
+    const messages = [{ type: 'text' as const, ts: '1', text: 'hello' }];
+
+    const { result } = renderHook(() =>
+      useConversationScroll({
+        conversationId: 'conversation-1',
+        messages,
+        scrollRef,
+        sessionLoading: false,
+        isStreaming: true,
+        initialScrollKey: null,
+      }),
+    );
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp' }));
+    });
+
+    expect(result.current.atBottom).toBe(false);
   });
 });

@@ -4,10 +4,12 @@ import {
   getConversationBottomScrollTop,
   getConversationInitialScrollKey,
   getConversationPrependRestoreScrollTop,
+  getConversationStreamingTurnAnchorMessageIndex,
   getConversationTailBlockKey,
   isConversationScrolledToBottom,
   isConversationScrollOverflowing,
   isConversationTailVisibleAtBottom,
+  scrollConversationMessageIntoView,
   scrollConversationTailIntoView,
   shouldAutoScrollToStreamingTail,
   shouldContinueConversationBottomSettle,
@@ -127,6 +129,45 @@ describe('conversation scroll helpers', () => {
 
     expect(scrollConversationTailIntoView(root as unknown as Pick<ParentNode, 'querySelector'>, { behavior: 'smooth' })).toBe(false);
     expect(root.querySelector).toHaveBeenCalledWith('[data-chat-tail="1"]');
+  });
+
+  it('scrolls a transcript message anchor by absolute message index', () => {
+    const scrollIntoView = vi.fn();
+    const root = {
+      querySelector: vi.fn().mockReturnValue({
+        scrollIntoView,
+      }),
+    };
+
+    expect(scrollConversationMessageIntoView(root as unknown as Pick<ParentNode, 'querySelector'>, 12)).toBe(true);
+    expect(root.querySelector).toHaveBeenCalledWith('[data-message-index="12"]');
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      block: 'start',
+      inline: 'nearest',
+    });
+  });
+
+  it('finds the user message that starts a streaming turn', () => {
+    expect(
+      getConversationStreamingTurnAnchorMessageIndex(
+        [
+          { type: 'text', ts: '1', text: 'Earlier reply' },
+          { type: 'user', ts: '2', text: 'Explain the scroll behavior.' },
+          { type: 'text', ts: '3', text: 'Streaming answer' },
+        ],
+        40,
+      ),
+    ).toBe(41);
+
+    expect(
+      getConversationStreamingTurnAnchorMessageIndex(
+        [
+          { type: 'user', ts: '2', text: 'Explain the scroll behavior.' },
+          { type: 'user', ts: '3', text: 'Follow-up before assistant starts' },
+        ],
+        10,
+      ),
+    ).toBeNull();
   });
 
   it('treats a visible tail anchor near the viewport bottom as pinned', () => {

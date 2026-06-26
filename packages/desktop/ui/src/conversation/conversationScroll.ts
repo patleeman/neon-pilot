@@ -2,6 +2,7 @@ import type { MessageBlock } from '../shared/types';
 
 const DEFAULT_SCROLL_TO_BOTTOM_THRESHOLD_PX = 40;
 const CONVERSATION_TAIL_SELECTOR = '[data-chat-tail="1"]';
+const CONVERSATION_MESSAGE_INDEX_ATTRIBUTE = 'data-message-index';
 const DEFAULT_BOTTOM_SETTLE_STABLE_FRAME_COUNT = 2;
 const DEFAULT_BOTTOM_SETTLE_MAX_FRAMES = 45;
 
@@ -99,6 +100,53 @@ export function scrollConversationTailIntoView(
     ...(options?.behavior ? { behavior: options.behavior } : {}),
   });
   return true;
+}
+
+export function scrollConversationMessageIntoView(
+  root: TailQueryRoot | null | undefined,
+  messageIndex: number | null | undefined,
+  options?: Pick<ScrollIntoViewOptions, 'behavior' | 'block'>,
+): boolean {
+  if (messageIndex === null || messageIndex === undefined || !Number.isSafeInteger(messageIndex) || messageIndex < 0) {
+    return false;
+  }
+
+  const message = root?.querySelector(`[${CONVERSATION_MESSAGE_INDEX_ATTRIBUTE}="${messageIndex}"]`) as
+    | { scrollIntoView?: (options?: ScrollIntoViewOptions) => void }
+    | null
+    | undefined;
+  if (!message || typeof message.scrollIntoView !== 'function') {
+    return false;
+  }
+
+  message.scrollIntoView({
+    block: options?.block ?? 'start',
+    inline: 'nearest',
+    ...(options?.behavior ? { behavior: options.behavior } : {}),
+  });
+  return true;
+}
+
+export function getConversationStreamingTurnAnchorMessageIndex(
+  messages: MessageBlock[] | undefined,
+  messageIndexOffset = 0,
+): number | null {
+  if (!messages || messages.length < 2) {
+    return null;
+  }
+
+  const tailBlock = messages[messages.length - 1];
+  if (!tailBlock || tailBlock.type === 'user') {
+    return null;
+  }
+
+  for (let index = messages.length - 2; index >= 0; index -= 1) {
+    if (messages[index]?.type === 'user') {
+      return messageIndexOffset + index;
+    }
+  }
+
+  return null;
 }
 
 export function isConversationTailVisibleAtBottom(

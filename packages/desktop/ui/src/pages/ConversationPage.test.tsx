@@ -540,6 +540,15 @@ describe('desktop conversation state fallback', () => {
       shouldUseHealthyDesktopConversationState({
         draft: false,
         conversationId: 'conv-123',
+        desktopMode: 'local',
+        desktopError: 'Realtime event exceeded payload limit.',
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldUseHealthyDesktopConversationState({
+        draft: false,
+        conversationId: 'conv-123',
         desktopMode: 'checking',
         desktopError: null,
       }),

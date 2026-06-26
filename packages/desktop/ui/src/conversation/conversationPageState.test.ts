@@ -264,6 +264,14 @@ describe('conversation page state helpers', () => {
         desktopError: null,
       }),
     ).toBe(true);
+    expect(
+      shouldUseHealthyDesktopConversationState({
+        draft: false,
+        conversationId: 'conv-1',
+        desktopMode: 'local',
+        desktopError: 'Realtime event exceeded payload limit.',
+      }),
+    ).toBe(false);
 
     expect(
       shouldFetchConversationAttachments({
