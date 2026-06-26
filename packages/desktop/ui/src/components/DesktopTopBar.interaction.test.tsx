@@ -49,7 +49,7 @@ describe('DesktopTopBar interactions', () => {
   });
 
   it('opens the command palette from top-bar search focus and typed queries', () => {
-    const openEvents: Array<{ query?: string; anchorRect?: unknown }> = [];
+    const openEvents: Array<{ query?: string; scope?: string; anchorRect?: unknown }> = [];
     const listener = vi.fn((event: Event) => {
       openEvents.push((event as CustomEvent).detail ?? {});
     });
@@ -61,13 +61,13 @@ describe('DesktopTopBar interactions', () => {
     fireEvent.focus(input);
 
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(openEvents.at(-1)).toMatchObject({ query: '' });
+    expect(openEvents.at(-1)).toMatchObject({ query: '', scope: 'all' });
 
     fireEvent.change(input, { target: { value: 'toggle left sidebar' } });
 
     expect(input.value).toBe('toggle left sidebar');
     expect(listener).toHaveBeenCalledTimes(2);
-    expect(openEvents.at(-1)).toMatchObject({ query: 'toggle left sidebar' });
+    expect(openEvents.at(-1)).toMatchObject({ query: 'toggle left sidebar', scope: 'all' });
 
     window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
   });

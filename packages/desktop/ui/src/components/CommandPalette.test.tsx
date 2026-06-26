@@ -280,6 +280,51 @@ describe('CommandPalette', () => {
     expect(screen.queryByRole('dialog', { name: 'Command palette' })).toBeNull();
   });
 
+  it('shows thread and command results in the top-bar all scope', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionQuickOpen').mockResolvedValue([]);
+    vi.spyOn(api, 'conversationContentSearch').mockResolvedValue({ matches: [] } as Awaited<
+      ReturnType<typeof api.conversationContentSearch>
+    >);
+    Element.prototype.scrollIntoView = vi.fn();
+    conversationMocks.state.tabs = [
+      {
+        id: 'settings-thread',
+        title: 'Settings migration notes',
+        file: '/tmp/settings-thread.jsonl',
+        timestamp: '2026-06-15T12:00:00.000Z',
+        cwd: '/repo',
+        cwdSlug: 'repo',
+        model: 'openai/gpt-5',
+        messageCount: 4,
+        isRunning: false,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/conversations/settings-thread']}>
+        <CommandPalette />
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, {
+          detail: {
+            scope: 'all',
+            query: 'settings',
+            anchorRect: { left: 300, top: 42, width: 520, height: 28 },
+          },
+        }),
+      );
+    });
+
+    expect(await screen.findByText('Settings migration notes')).toBeTruthy();
+    expect(await screen.findByText('Open Composer Settings')).toBeTruthy();
+    expect(screen.getByDisplayValue('settings').getAttribute('placeholder')).toBe('Search threads, models, settings…');
+  });
+
   it('activates the highest scoring thread result on Enter even when it is archived', async () => {
     vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
     vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);

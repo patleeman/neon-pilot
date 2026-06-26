@@ -5,6 +5,7 @@ export type CommandPaletteSection = string;
 export type CommandPaletteScope = string;
 
 export const THREADS_COMMAND_PALETTE_SCOPE = 'threads';
+export const ALL_COMMAND_PALETTE_SCOPE = 'all';
 
 export interface CommandPaletteItem<TAction = unknown> {
   id: string;
@@ -37,6 +38,7 @@ export const COMMAND_PALETTE_SECTION_LABELS: Record<CommandPaletteSection, strin
 };
 
 export const COMMAND_PALETTE_SCOPE_OPTIONS: Array<{ value: CommandPaletteScope; label: string }> = [
+  { value: ALL_COMMAND_PALETTE_SCOPE, label: 'All' },
   { value: THREADS_COMMAND_PALETTE_SCOPE, label: 'Threads' },
 ];
 
@@ -206,7 +208,7 @@ export function shouldBootstrapCommandPaletteThreads(options: {
     return false;
   }
 
-  return options.scope === THREADS_COMMAND_PALETTE_SCOPE;
+  return options.scope === THREADS_COMMAND_PALETTE_SCOPE || options.scope === ALL_COMMAND_PALETTE_SCOPE;
 }
 
 export function isCommandPaletteThreadDataLoading(options: {
@@ -251,6 +253,8 @@ export function selectCommandPaletteScopedItems<TAction>(input: {
   const fileItems = [...input.fileItems, ...(hasQuery ? input.searchedFileItems : [])];
 
   switch (input.scope) {
+    case ALL_COMMAND_PALETTE_SCOPE:
+      return dedupeCommandPaletteItems([...conversationItems, ...fileItems]);
     case THREADS_COMMAND_PALETTE_SCOPE:
       return dedupeCommandPaletteItems(conversationItems);
     default:
@@ -265,6 +269,28 @@ const EMPTY_QUERY_LIMITS: Record<string, number> = {
 const DEFAULT_QUICK_OPEN_EMPTY_QUERY_LIMIT = 30;
 const MAX_EMPTY_QUERY_LIMIT = 100;
 const MAX_QUERY_RESULTS_PER_SECTION = 80;
+
+function readVisibleCommandPaletteSections<TAction>(
+  items: CommandPaletteItem<TAction>[],
+  scope: CommandPaletteScope,
+): CommandPaletteSection[] {
+  if (scope === THREADS_COMMAND_PALETTE_SCOPE) {
+    return THREAD_COMMAND_PALETTE_SECTIONS;
+  }
+
+  if (scope !== ALL_COMMAND_PALETTE_SCOPE) {
+    return [scope];
+  }
+
+  const sections = new Set<CommandPaletteSection>();
+  for (const threadSection of THREAD_COMMAND_PALETTE_SECTIONS) {
+    sections.add(threadSection);
+  }
+  for (const item of items) {
+    sections.add(item.section);
+  }
+  return [...sections];
+}
 
 function readEmptyQueryLimit(section: CommandPaletteSection, value: number | undefined): number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
@@ -366,8 +392,7 @@ export function searchCommandPaletteItems<TAction>(
 ): CommandPaletteSectionResult<TAction>[] {
   const query = options.query.trim();
   const emptyQuery = query.length === 0;
-  const visibleSections =
-    options.scopeSections ?? (options.scope === THREADS_COMMAND_PALETTE_SCOPE ? THREAD_COMMAND_PALETTE_SECTIONS : [options.scope]);
+  const visibleSections = options.scopeSections ?? readVisibleCommandPaletteSections(items, options.scope);
 
   return visibleSections.flatMap((section) => {
     const sectionItems = items.filter((item) => item.section === section);

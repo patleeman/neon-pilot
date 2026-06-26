@@ -1,6 +1,7 @@
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { ALL_COMMAND_PALETTE_SCOPE } from '../commands/commandPalette';
 import { COMMAND_PALETTE_STATE_EVENT, type CommandPaletteStateDetail, OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents';
 import { getDesktopBridge, isDesktopShell } from '../desktop/desktopBridge';
 import { setExtensionCommandContext } from '../extensions/commands';
@@ -270,6 +271,7 @@ export function DesktopTopBar({
       new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, {
         detail: {
           query,
+          scope: ALL_COMMAND_PALETTE_SCOPE,
           anchorRect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : undefined,
         },
       }),

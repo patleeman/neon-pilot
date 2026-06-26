@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { api } from '../client/api';
 import {
+  ALL_COMMAND_PALETTE_SCOPE,
   COMMAND_PALETTE_SCOPE_OPTIONS,
   COMMAND_PALETTE_SECTION_LABELS,
   type CommandPaletteItem,
@@ -154,7 +155,12 @@ export function CommandPalette() {
     }));
     return [...hostItems, ...extensionItems];
   }, [commandContextRevision, extensionCommands, location.pathname, navigate, open]);
-  const fileItems = scope === COMMANDS_COMMAND_PALETTE_SCOPE ? commandItems : quickOpenItems;
+  const fileItems =
+    scope === ALL_COMMAND_PALETTE_SCOPE
+      ? [...commandItems, ...quickOpenItems]
+      : scope === COMMANDS_COMMAND_PALETTE_SCOPE
+        ? commandItems
+        : quickOpenItems;
   const searchedFileItems = quickOpenSearchItems;
   const quickOpenScopes = useMemo(
     () =>
@@ -238,7 +244,7 @@ export function CommandPalette() {
 
   const openPalette = useCallback((options: OpenCommandPaletteDetail = {}) => {
     setQuery(options.query ?? '');
-    setScope(options.scope ?? THREADS_COMMAND_PALETTE_SCOPE);
+    setScope(options.scope ?? (options.anchorRect ? ALL_COMMAND_PALETTE_SCOPE : THREADS_COMMAND_PALETTE_SCOPE));
     setAnchorRect(options.anchorRect ?? null);
     setCursor(0);
     setBusyItemId(null);
@@ -356,7 +362,7 @@ export function CommandPalette() {
   const archivedGroup = useMemo(() => groups.find((group) => group.section === 'archived') ?? null, [groups]);
   const canLoadMoreArchivedThreads = Boolean(
     open &&
-    scope === THREADS_COMMAND_PALETTE_SCOPE &&
+    (scope === THREADS_COMMAND_PALETTE_SCOPE || scope === ALL_COMMAND_PALETTE_SCOPE) &&
     query.trim().length === 0 &&
     archivedGroup &&
     archivedGroup.total > archivedGroup.items.length,
@@ -381,10 +387,15 @@ export function CommandPalette() {
 
   const activeSearchProvider = extensionSearchProviders.find((provider) => provider.id === scope) ?? null;
   const shouldSearchExtensionProvider = open && Boolean(activeSearchProvider) && query.trim().length > 0;
-  const quickOpenScopeActive = scope !== THREADS_COMMAND_PALETTE_SCOPE && scope !== COMMANDS_COMMAND_PALETTE_SCOPE && !activeSearchProvider;
+  const quickOpenScopeActive =
+    scope !== ALL_COMMAND_PALETTE_SCOPE &&
+    scope !== THREADS_COMMAND_PALETTE_SCOPE &&
+    scope !== COMMANDS_COMMAND_PALETTE_SCOPE &&
+    !activeSearchProvider;
   const shouldSearchQuickOpenByContent = open && quickOpenScopeActive && query.trim().length > 0;
 
-  const shouldSearchConversationsByContent = open && scope === THREADS_COMMAND_PALETTE_SCOPE && query.trim().length > 0;
+  const shouldSearchConversationsByContent =
+    open && (scope === THREADS_COMMAND_PALETTE_SCOPE || scope === ALL_COMMAND_PALETTE_SCOPE) && query.trim().length > 0;
 
   useEffect(() => {
     if (!shouldSearchConversationsByContent) {
@@ -699,14 +710,14 @@ export function CommandPalette() {
     });
 
     if (threadSessionsLoading) {
-      if (scope === THREADS_COMMAND_PALETTE_SCOPE) {
+      if (scope === THREADS_COMMAND_PALETTE_SCOPE || scope === ALL_COMMAND_PALETTE_SCOPE) {
         for (const section of THREAD_COMMAND_PALETTE_SECTIONS) {
           sections.add(section);
         }
       }
     }
 
-    if (conversationContentSearchLoading && scope === THREADS_COMMAND_PALETTE_SCOPE) {
+    if (conversationContentSearchLoading && (scope === THREADS_COMMAND_PALETTE_SCOPE || scope === ALL_COMMAND_PALETTE_SCOPE)) {
       sections.add('open');
       sections.add('archived');
     }
@@ -740,7 +751,12 @@ export function CommandPalette() {
     (section: CommandPaletteSection) => quickOpenSectionLabels[section] ?? COMMAND_PALETTE_SECTION_LABELS[section] ?? section,
     [quickOpenSectionLabels],
   );
-  const searchPlaceholder = scope === THREADS_COMMAND_PALETTE_SCOPE ? 'Search threads…' : `Open ${labelForSection(scope).toLowerCase()}…`;
+  const searchPlaceholder =
+    scope === ALL_COMMAND_PALETTE_SCOPE
+      ? 'Search threads, models, settings…'
+      : scope === THREADS_COMMAND_PALETTE_SCOPE
+        ? 'Search threads…'
+        : `Open ${labelForSection(scope).toLowerCase()}…`;
 
   if (!open) {
     return null;
@@ -795,7 +811,7 @@ export function CommandPalette() {
                 setActionError(null);
                 setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
               }}
-              placeholder={anchorRect ? 'Search threads, models, settings…' : searchPlaceholder}
+              placeholder={searchPlaceholder}
               aria-label="Search command palette"
               className={cx(
                 'ui-command-palette-input',
