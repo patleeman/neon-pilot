@@ -487,6 +487,11 @@ describe('api desktop transport', () => {
           recentResults: [],
           visibleResults: [{ sessionId: 'conversation-1', title: 'Related', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' }],
         });
+      if (path === '/api/conversation-summaries')
+        return createJsonResponse({
+          received: JSON.parse(String(init?.body)),
+          summaries: {},
+        });
       if (path === '/api/models') return createJsonResponse(await readModels());
       if (path === '/api/model-preferences' && init?.method === 'PATCH')
         return createJsonResponse(await updateModelPreferences(JSON.parse(String(init?.body))));
@@ -591,6 +596,21 @@ describe('api desktop transport', () => {
       selectedRelatedThreadIds: ['conversation-1'],
       limit: 5,
     });
+    const conversationSummaries = await api.conversationSummaries(
+      ['conversation-1'],
+      [
+        {
+          id: 'conversation-1',
+          file: '/sessions/conversation-1.jsonl',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          cwd: '/repo',
+          cwdSlug: 'repo',
+          model: 'test-model',
+          title: 'Conversation 1',
+          messageCount: 2,
+        },
+      ],
+    );
     const models = await api.models();
     const globalModelPreferences = await api.modelPreferences();
     const modelPreferenceUpdate = await api.updateModelPreferences({ thinkingLevel: 'medium' });
@@ -750,6 +770,24 @@ describe('api desktop transport', () => {
     expect(sessionMeta).toEqual({ id: 'conversation-1', title: 'Conversation 1' });
     expect(sessionSearchIndex).toEqual({ index: { 'conversation-1': 'hello world' } });
     expect(relatedConversationResults.visibleResults.map((result) => result.sessionId)).toEqual(['conversation-1']);
+    expect(conversationSummaries).toEqual({
+      received: {
+        sessionIds: ['conversation-1'],
+        sessions: [
+          {
+            id: 'conversation-1',
+            file: '/sessions/conversation-1.jsonl',
+            timestamp: '2026-01-01T00:00:00.000Z',
+            cwd: '/repo',
+            cwdSlug: 'repo',
+            model: 'test-model',
+            title: 'Conversation 1',
+            messageCount: 2,
+          },
+        ],
+      },
+      summaries: {},
+    });
     expect(models).toEqual({
       currentModel: 'gpt-5.4',
       currentThinkingLevel: 'high',

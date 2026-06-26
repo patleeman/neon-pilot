@@ -276,6 +276,10 @@ function saveConversationSummary(record: ConversationSummaryRecord): void {
     );
 }
 
+export function saveConversationSummaryForTests(record: ConversationSummaryRecord): void {
+  saveConversationSummary(record);
+}
+
 function isSummaryFresh(meta: SessionMeta): boolean {
   const fingerprint = buildConversationSummaryFingerprint(meta);
   if (!fingerprint) {
@@ -714,12 +718,57 @@ export function closeConversationSummariesDb(): void {
   }
 }
 
-export function readConversationSummaryIndexCapability(input: { sessionIds?: unknown } = {}) {
+function normalizeSummaryRefreshSession(value: unknown): SessionMeta | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as Partial<SessionMeta>;
+  if (
+    typeof candidate.id !== 'string' ||
+    typeof candidate.file !== 'string' ||
+    typeof candidate.timestamp !== 'string' ||
+    typeof candidate.cwd !== 'string' ||
+    typeof candidate.cwdSlug !== 'string' ||
+    typeof candidate.model !== 'string' ||
+    typeof candidate.title !== 'string' ||
+    typeof candidate.messageCount !== 'number'
+  ) {
+    return null;
+  }
+
+  return {
+    id: candidate.id,
+    file: candidate.file,
+    timestamp: candidate.timestamp,
+    cwd: candidate.cwd,
+    cwdSlug: candidate.cwdSlug,
+    model: candidate.model,
+    title: candidate.title,
+    messageCount: candidate.messageCount,
+    ...(typeof candidate.lastActivityAt === 'string' ? { lastActivityAt: candidate.lastActivityAt } : {}),
+    ...(candidate.isRunning !== undefined ? { isRunning: candidate.isRunning === true } : {}),
+    ...(candidate.isLive !== undefined ? { isLive: candidate.isLive === true } : {}),
+  };
+}
+
+export function readConversationSummaryIndexCapability(input: { sessionIds?: unknown; sessions?: unknown } = {}) {
   const rawSessionIds = Array.isArray(input.sessionIds) ? input.sessionIds : [];
   const sessionIds = rawSessionIds
     .filter((value): value is string => typeof value === 'string')
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
+  const summaries = readConversationSummaries([...new Set(sessionIds)]);
 
-  return { summaries: readConversationSummaries([...new Set(sessionIds)]) };
+  const refreshCandidates = Array.isArray(input.sessions)
+    ? input.sessions.map(normalizeSummaryRefreshSession).filter((meta): meta is SessionMeta => meta !== null)
+    : [];
+  for (const session of refreshCandidates) {
+    if (!sessionIds.includes(session.id)) {
+      continue;
+    }
+    queueConversationSummaryRefresh(session);
+  }
+
+  return { summaries };
 }

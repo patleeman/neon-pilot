@@ -290,7 +290,6 @@ import {
   pruneRelatedThreadSelectionIds,
   resolveRelatedThreadPreselectionUpdate,
   selectMissingRelatedThreadSearchIndexIds,
-  selectMissingRelatedThreadSummaryIds,
   toggleRelatedThreadSelectionIds,
 } from '../conversation/relatedThreadSelection';
 import { collectCompletedToolAutoOpenBlockKeys, findRequestedToolPresentationToOpen } from '../conversation/toolAutoOpen';
@@ -2292,6 +2291,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const [relatedThreadSummaries, setRelatedThreadSummaries] = useState<Record<string, ConversationSummaryRecord>>({});
   const [relatedThreadSearchLoading, setRelatedThreadSearchLoading] = useState(false);
   const [relatedThreadSearchError, setRelatedThreadSearchError] = useState<string | null>(null);
+  const relatedThreadSummaryRequestKeyRef = useRef('');
   const [selectedRelatedThreadIds, setSelectedRelatedThreadIds] = useState<string[]>([]);
   const [autoSelectedRelatedThreadIds, setAutoSelectedRelatedThreadIds] = useState<string[]>([]);
   const [preparingRelatedThreadContext, setPreparingRelatedThreadContext] = useState(false);
@@ -3185,18 +3185,23 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   ]);
 
   useEffect(() => {
-    const missingSessionIds = selectMissingRelatedThreadSummaryIds({
-      draft: showNewConversationSetup,
-      candidateIds: relatedThreadCandidateIds,
-      summaries: relatedThreadSummaries,
-    });
-    if (missingSessionIds.length === 0) {
+    if (!showNewConversationSetup || relatedThreadCandidateIds.length === 0) {
+      relatedThreadSummaryRequestKeyRef.current = '';
       return;
     }
 
+    const requestKey = relatedThreadCandidates
+      .map((session) => [session.id, session.messageCount, session.lastActivityAt ?? session.timestamp, session.file].join(':'))
+      .join('\n');
+    if (relatedThreadSummaryRequestKeyRef.current === requestKey) {
+      return;
+    }
+    relatedThreadSummaryRequestKeyRef.current = requestKey;
+
     let cancelled = false;
+
     api
-      .conversationSummaries(missingSessionIds)
+      .conversationSummaries(relatedThreadCandidateIds, relatedThreadCandidates)
       .then((result) => {
         if (cancelled || Object.keys(result.summaries).length === 0) {
           return;
@@ -3211,7 +3216,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     return () => {
       cancelled = true;
     };
-  }, [relatedThreadCandidateIds, relatedThreadSummaries, showNewConversationSetup]);
+  }, [relatedThreadCandidateIds, relatedThreadCandidates, showNewConversationSetup]);
 
   useEffect(() => {
     const update = resolveRelatedThreadPreselectionUpdate({

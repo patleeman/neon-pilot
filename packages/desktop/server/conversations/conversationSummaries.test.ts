@@ -10,6 +10,7 @@ import {
   queueConversationSummaryBackfill,
   readConversationSummaryBackfillStateForTests,
   readConversationSummaryIndexCapability,
+  saveConversationSummaryForTests,
   setConversationSummaryJobRunnerForTests,
   startConversationSummaryBackfillLoop,
   stopConversationSummaryBackfillLoop,
@@ -205,11 +206,41 @@ describe('startConversationSummaryBackfillLoop', () => {
     expect(readConversationSummaryBackfillStateForTests()).toMatchObject({ active: 1, pending: 1, queued: 1 });
   });
 
-  it('summary reads are cache-only and do not enqueue work', () => {
+  it('summary reads without session metadata are cache-only and do not enqueue work', () => {
     const before = readConversationSummaryBackfillStateForTests();
     const result = readConversationSummaryIndexCapability({ sessionIds: ['missing-a', 'missing-b'] });
     expect(result).toEqual({ summaries: {} });
     expect(readConversationSummaryBackfillStateForTests()).toEqual(before);
+  });
+
+  it('returns cached summaries immediately while queueing stale candidate metadata for refresh', () => {
+    const session = meta('stale-summary');
+    saveConversationSummaryForTests({
+      sessionId: session.id,
+      fingerprint: 'old-fingerprint',
+      title: session.title,
+      cwd: session.cwd,
+      displaySummary: 'Old cached summary',
+      outcome: 'Old outcome',
+      status: 'unknown',
+      promptSummary: 'Old prompt summary',
+      searchText: 'old cached summary',
+      keyTerms: [],
+      filesTouched: [],
+      updatedAt: '2026-05-01T00:00:00.000Z',
+    });
+
+    setConversationSummaryJobRunnerForTests(
+      () =>
+        new Promise<void>(() => {
+          // Keep the job active so the queue state is observable without timing races.
+        }),
+    );
+
+    const result = readConversationSummaryIndexCapability({ sessionIds: [session.id], sessions: [session] });
+
+    expect(result.summaries[session.id]?.displaySummary).toBe('Old cached summary');
+    expect(readConversationSummaryBackfillStateForTests()).toMatchObject({ active: 1 });
   });
 });
 

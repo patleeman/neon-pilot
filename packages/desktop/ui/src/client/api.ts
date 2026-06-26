@@ -492,8 +492,11 @@ export const api = {
     }>('/related-conversations/results', input),
   conversationContentSearch: async (query: string, limit = 80) =>
     post<ConversationContentSearchResult>('/sessions/search', { query, limit: normalizeConversationContentSearchLimit(limit) }),
-  conversationSummaries: async (sessionIds: string[]) =>
-    post<{ summaries: Record<string, ConversationSummaryRecord> }>('/conversation-summaries', { sessionIds }),
+  conversationSummaries: async (sessionIds: string[], sessions?: SessionMeta[]) =>
+    post<{ summaries: Record<string, ConversationSummaryRecord> }>('/conversation-summaries', {
+      sessionIds,
+      ...(sessions ? { sessions } : {}),
+    }),
 
   skillFolders: async () => get<SkillFoldersState>('/skill-folders'),
   updateSkillFolders: async (skillDirs: string[]) => patch<SkillFoldersState>('/skill-folders', { skillDirs }),
