@@ -657,6 +657,23 @@ function formatProviderCredentialError(error: unknown, action: 'save' | 'remove'
   return trimmed;
 }
 
+function formatProviderOAuthError(error: unknown, action: 'start' | 'submit' | 'cancel' | 'open' | 'copy' | 'failed'): string {
+  const fallbackByAction: Record<typeof action, string> = {
+    start: 'Could not start provider login. Try again.',
+    submit: 'Could not continue provider login. Try again.',
+    cancel: 'Could not cancel provider login. Try again.',
+    open: 'Could not open the provider login page. Copy the link and open it in your browser.',
+    copy: 'Could not copy the provider login details. Try again.',
+    failed: 'Provider login failed. Try again.',
+  };
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const trimmed = message.trim();
+  if (!trimmed || hasInternalProviderCredentialFailureDetails(trimmed)) {
+    return fallbackByAction[action];
+  }
+  return trimmed;
+}
+
 function formatProviderAuthStatus(provider: ProviderAuthSummary | null): string {
   if (!provider) {
     return 'No provider selected.';
@@ -2960,7 +2977,16 @@ export function SettingsPage({
 
     const desktopBridge = getDesktopBridge();
     if (desktopBridge) {
-      void desktopBridge.openExternalUrl(authUrl);
+      void desktopBridge
+        .openExternalUrl(authUrl)
+        .then((result) => {
+          if (!result.opened && result.error) {
+            setOauthError(formatProviderOAuthError(result.error, 'open'));
+          }
+        })
+        .catch((error: unknown) => {
+          setOauthError(formatProviderOAuthError(error, 'open'));
+        });
       return;
     }
 
@@ -2995,7 +3021,7 @@ export function SettingsPage({
     }
 
     if (oauthLoginState.status === 'failed') {
-      setOauthError(oauthLoginState.error || `OAuth login failed for ${oauthLoginState.provider}.`);
+      setOauthError(formatProviderOAuthError(oauthLoginState.error || `OAuth login failed for ${oauthLoginState.provider}.`, 'failed'));
     }
   }, [oauthLoginState, refetchModels, refetchProviderAuth]);
 
@@ -3539,7 +3565,7 @@ export function SettingsPage({
         await Promise.all([refetchProviderAuth({ resetLoading: false }), refetchModels({ resetLoading: false })]);
       }
     } catch (error) {
-      setOauthError(error instanceof Error ? error.message : String(error));
+      setOauthError(formatProviderOAuthError(error, 'start'));
     } finally {
       setOauthAction(null);
     }
@@ -3563,7 +3589,7 @@ export function SettingsPage({
       setOauthLoginState(login);
       setOauthInputValue('');
     } catch (error) {
-      setOauthError(error instanceof Error ? error.message : String(error));
+      setOauthError(formatProviderOAuthError(error, 'submit'));
     } finally {
       setOauthAction(null);
     }
@@ -3582,7 +3608,7 @@ export function SettingsPage({
       setOauthLoginState(login);
       setProviderCredentialNotice(`Cancelled OAuth login for ${login.providerName}.`);
     } catch (error) {
-      setOauthError(error instanceof Error ? error.message : String(error));
+      setOauthError(formatProviderOAuthError(error, 'cancel'));
     } finally {
       setOauthAction(null);
     }
@@ -3598,7 +3624,7 @@ export function SettingsPage({
     if (desktopBridge) {
       const result = await desktopBridge.openExternalUrl(normalizedUrl);
       if (!result.opened && result.error) {
-        setOauthError(result.error);
+        setOauthError(formatProviderOAuthError(result.error, 'open'));
       }
       return;
     }
@@ -3628,7 +3654,7 @@ export function SettingsPage({
       setOauthError(null);
       setProviderCredentialNotice('Copied OAuth login details.');
     } catch (error) {
-      setOauthError(error instanceof Error ? error.message : String(error));
+      setOauthError(formatProviderOAuthError(error, 'copy'));
     }
   }
 
@@ -4734,7 +4760,7 @@ export function SettingsPage({
                                                         setOauthInputValue('');
                                                       })
                                                       .catch((error: unknown) => {
-                                                        setOauthError(error instanceof Error ? error.message : String(error));
+                                                        setOauthError(formatProviderOAuthError(error, 'submit'));
                                                       })
                                                       .finally(() => {
                                                         setOauthAction(null);
@@ -4805,7 +4831,7 @@ export function SettingsPage({
                               {providerCredentialError && <p className="text-[12px] text-danger">{providerCredentialError}</p>}
                               {oauthError && <p className="text-[12px] text-danger">{oauthError}</p>}
                               {selectedProviderLogin?.status === 'failed' && selectedProviderLogin.error && (
-                                <p className="text-[12px] text-danger">OAuth login failed: {selectedProviderLogin.error}</p>
+                                <p className="text-[12px] text-danger">{formatProviderOAuthError(selectedProviderLogin.error, 'failed')}</p>
                               )}
                             </div>
                           </div>

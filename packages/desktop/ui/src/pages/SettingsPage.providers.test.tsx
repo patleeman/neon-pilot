@@ -165,6 +165,24 @@ function click(button: HTMLButtonElement) {
   });
 }
 
+function selectProviderByText(container: HTMLElement, providerId: string): HTMLButtonElement {
+  const providerButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes(providerId));
+  if (!(providerButton instanceof HTMLButtonElement)) {
+    throw new Error(`Expected ${providerId} provider button`);
+  }
+  click(providerButton);
+  return providerButton;
+}
+
+function expectNoInternalProviderErrorDetails(container: HTMLElement) {
+  expect(container.textContent).not.toContain('Local API route did not complete');
+  expect(container.textContent).not.toContain('/api/provider-auth');
+  expect(container.textContent).not.toContain('file:///');
+  expect(container.textContent).not.toContain('localApi.js');
+  expect(container.textContent).not.toContain('Module.ep');
+  expect(container.textContent).not.toContain('packages/desktop');
+}
+
 function updateInputValue(input: HTMLInputElement, value: string) {
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
   if (!descriptor?.set) {
@@ -925,6 +943,27 @@ describe('SettingsPage provider model editor', () => {
     expect(container.textContent).not.toContain('packages/desktop');
   });
 
+  it('hides internal OAuth start failures for provider login', async () => {
+    startProviderOAuthLoginMock.mockRejectedValue(
+      new Error(
+        'Local API route did not complete for POST /api/provider-auth/openai-codex/oauth/start at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/localApi.js:132:20)',
+      ),
+    );
+
+    const { container } = renderPage('settings-providers');
+    await flushAsyncWork();
+
+    selectProviderByText(container, 'openai-codex');
+    await flushAsyncWork();
+
+    click(queryButtonByLabel(container, 'Start OAuth login (openai-codex)'));
+    await flushAsyncWork();
+
+    expect(startProviderOAuthLoginMock).toHaveBeenCalledWith('openai-codex');
+    expect(container.textContent).toContain('Could not start provider login. Try again.');
+    expectNoInternalProviderErrorDetails(container);
+  });
+
   it('opens OAuth login URLs through the desktop shell bridge', async () => {
     const openExternalUrl = vi.fn().mockResolvedValue({ url: 'https://auth.openai.com/oauth', opened: true });
     const writeClipboardText = vi.fn().mockResolvedValue({ ok: true });
@@ -995,11 +1034,7 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderPage('settings-providers');
     await flushAsyncWork();
 
-    const providerButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('openai-codex'));
-    if (!(providerButton instanceof HTMLButtonElement)) {
-      throw new Error('Expected openai-codex provider button');
-    }
-    click(providerButton);
+    selectProviderByText(container, 'openai-codex');
     await flushAsyncWork();
 
     const oauthButton = queryButtonByLabel(container, 'Start OAuth login (openai-codex)');
@@ -1017,6 +1052,117 @@ describe('SettingsPage provider model editor', () => {
     await flushAsyncWork();
 
     expect(writeClipboardText).toHaveBeenCalledWith('ABCD-1234');
+  });
+
+  it('hides internal OAuth browser-open failures for provider login', async () => {
+    const openExternalUrl = vi.fn().mockResolvedValue({
+      url: 'https://auth.openai.com/oauth',
+      opened: false,
+      error:
+        'Local API route did not complete for POST /api/provider-auth/open-external at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/localApi.js:132:20)',
+    });
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
+        getEnvironment: vi.fn().mockImplementation(() => new Promise(() => {})),
+        readDesktopAppPreferences: vi.fn().mockResolvedValue({
+          available: true,
+          supportsStartOnSystemStart: true,
+          autoInstallUpdates: false,
+          updatePath: 'stable',
+          startOnSystemStart: false,
+          keyboardShortcuts: {
+            showApp: 'CommandOrControl+Shift+A',
+            newConversation: 'CommandOrControl+N',
+            closeTab: 'CommandOrControl+W',
+            reopenClosedTab: 'Command+Shift+N',
+            previousConversation: 'CommandOrControl+[',
+            nextConversation: 'CommandOrControl+]',
+            togglePinned: 'CommandOrControl+Alt+P',
+            archiveRestoreConversation: 'CommandOrControl+Alt+A',
+            renameConversation: 'CommandOrControl+Alt+R',
+            focusComposer: 'CommandOrControl+L',
+            editWorkingDirectory: 'CommandOrControl+Shift+L',
+            findOnPage: 'CommandOrControl+F',
+            settings: 'CommandOrControl+,',
+            quit: 'CommandOrControl+Q',
+            conversationMode: 'F1',
+            workbenchMode: 'F2',
+            newWorkbenchTab: 'CommandOrControl+T',
+            closeWorkbenchTab: 'CommandOrControl+Shift+W',
+            closeWorkbenchFile: 'CommandOrControl+Alt+W',
+            refreshWorkbenchFile: 'F5',
+            toggleWorkbenchExplorer: 'CommandOrControl+B',
+            toggleWorkbenchDiff: 'CommandOrControl+Shift+D',
+            toggleSidebar: 'CommandOrControl+/',
+            toggleRightRail: 'CommandOrControl+\\',
+          },
+          update: { supported: false, status: 'idle', currentVersion: '0.0.0' },
+        }),
+        updateDesktopAppPreferences: vi.fn(),
+        startProviderOAuthLogin: vi.fn(),
+        subscribeProviderOAuthLogin: vi.fn().mockResolvedValue({ subscriptionId: 'oauth-sub-1' }),
+        unsubscribeProviderOAuthLogin: vi.fn().mockResolvedValue(undefined),
+        openExternalUrl,
+        writeClipboardText: vi.fn().mockResolvedValue({ ok: true }),
+      },
+    });
+    startProviderOAuthLoginMock.mockResolvedValue({
+      id: 'login-1',
+      provider: 'openai-codex',
+      providerName: 'OpenAI',
+      status: 'running',
+      authUrl: 'https://auth.openai.com/oauth',
+      authInstructions: 'A browser window should open.',
+      deviceCode: null,
+      prompt: null,
+      progress: [],
+      error: '',
+      createdAt: '2026-05-07T00:00:00.000Z',
+      updatedAt: '2026-05-07T00:00:00.000Z',
+    });
+
+    const { container } = renderPage('settings-providers');
+    await flushAsyncWork();
+
+    selectProviderByText(container, 'openai-codex');
+    await flushAsyncWork();
+
+    click(queryButtonByLabel(container, 'Start OAuth login (openai-codex)'));
+    await flushAsyncWork();
+
+    expect(openExternalUrl).toHaveBeenCalledWith('https://auth.openai.com/oauth');
+    expect(container.textContent).toContain('Could not open the provider login page. Copy the link and open it in your browser.');
+    expectNoInternalProviderErrorDetails(container);
+  });
+
+  it('hides internal terminal OAuth login failures', async () => {
+    startProviderOAuthLoginMock.mockResolvedValue({
+      id: 'login-1',
+      provider: 'openai-codex',
+      providerName: 'OpenAI',
+      status: 'failed',
+      authUrl: '',
+      authInstructions: '',
+      deviceCode: null,
+      prompt: null,
+      progress: [],
+      error:
+        'OAuth login failed for /api/provider-auth/openai-codex/oauth/start at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/localApi.js:132:20)',
+      createdAt: '2026-05-07T00:00:00.000Z',
+      updatedAt: '2026-05-07T00:00:00.000Z',
+    });
+
+    const { container } = renderPage('settings-providers');
+    await flushAsyncWork();
+
+    selectProviderByText(container, 'openai-codex');
+    await flushAsyncWork();
+
+    click(queryButtonByLabel(container, 'Start OAuth login (openai-codex)'));
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('Provider login failed. Try again.');
+    expectNoInternalProviderErrorDetails(container);
   });
 
   it('auto-opens OAuth login URLs while showing manual callback recovery input', async () => {
