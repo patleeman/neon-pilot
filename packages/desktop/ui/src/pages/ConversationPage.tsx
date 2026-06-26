@@ -536,6 +536,40 @@ function formatConversationTitleFailure(error: unknown): string {
   return fallback;
 }
 
+function hasInternalConversationPreferenceFailureDetails(message: string): boolean {
+  return (
+    /^Extension "[^"]+" action "[^"]+" failed/i.test(message) ||
+    /requires permission [\w:-]+ to use/i.test(message) ||
+    /must declare worker\.enabled/i.test(message) ||
+    /Local API route did not complete/i.test(message) ||
+    /\/api\//i.test(message) ||
+    /file:\/\//i.test(message) ||
+    /\bENOENT\b|\bEACCES\b|\bENOTDIR\b|permission denied|no such file or directory/i.test(message) ||
+    /\s+at\s+\S+/i.test(message) ||
+    /\bModule\.[A-Za-z_$][\w$]*/.test(message) ||
+    /packages\/desktop\//i.test(message)
+  );
+}
+
+function formatConversationPreferenceSaveFailure(error: unknown, preferenceLabel: string): string {
+  const fallback = `Could not save the ${preferenceLabel} preference. Try again.`;
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const trimmed = message.trim();
+  const extensionActionMatch = /^Extension "[^"]+" action "[^"]+" failed:\s*(.+)$/i.exec(trimmed);
+  if (extensionActionMatch) {
+    const innerMessage = extensionActionMatch[1]?.trim() ?? '';
+    if (innerMessage && !hasInternalConversationPreferenceFailureDetails(innerMessage)) {
+      return innerMessage;
+    }
+  }
+
+  if (trimmed && !hasInternalConversationPreferenceFailureDetails(trimmed)) {
+    return trimmed;
+  }
+
+  return fallback;
+}
+
 const ConversationActivityShelf = lazy(() =>
   import('../components/conversation/ConversationActivityShelf').then((module) => ({ default: module.ConversationActivityShelf })),
 );
@@ -4967,7 +5001,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         showNotice('accent', selectedModelNotice);
       }
     } catch (error) {
-      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+      showNotice('danger', formatConversationPreferenceSaveFailure(error, 'model'), 4000);
     } finally {
       setSavingPreference(null);
     }
@@ -5009,7 +5043,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
       showNotice('accent', `Thinking level set to ${formatThinkingLevelLabel(savedThinkingLevel)}.`);
     } catch (error) {
-      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+      showNotice('danger', formatConversationPreferenceSaveFailure(error, 'thinking level'), 4000);
     } finally {
       setSavingPreference(null);
     }
@@ -5040,7 +5074,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         setHasExplicitServiceTier(next.hasExplicitServiceTier);
       }
     } catch (error) {
-      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+      showNotice('danger', formatConversationPreferenceSaveFailure(error, 'service tier'), 4000);
     } finally {
       setSavingPreference(null);
     }

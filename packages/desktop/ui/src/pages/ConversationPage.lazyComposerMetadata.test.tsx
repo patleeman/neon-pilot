@@ -26,6 +26,7 @@ const apiMock = vi.hoisted(() => ({
   liveSessionContext: vi.fn(),
   conversationAttachments: vi.fn(),
   conversationModelPreferences: vi.fn(),
+  updateConversationModelPreferences: vi.fn(),
   savedWorkspacePaths: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
   pickFolder: vi.fn(),
@@ -618,6 +619,12 @@ beforeEach(() => {
     currentServiceTier: '',
     hasExplicitServiceTier: false,
   });
+  apiMock.updateConversationModelPreferences.mockResolvedValue({
+    currentModel: 'openai/gpt-5.4',
+    currentThinkingLevel: 'medium',
+    currentServiceTier: '',
+    hasExplicitServiceTier: false,
+  });
   apiMock.memory.mockResolvedValue({ memoryDocs: [], skills: [] });
   apiMock.runs.mockResolvedValue({ runs: [] });
   apiMock.settings.mockResolvedValue({});
@@ -833,6 +840,50 @@ describe('ConversationPage lazy composer metadata', () => {
     });
 
     expect(apiMock.models).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides internal model preference save failures from the visible composer controls', async () => {
+    apiMock.models.mockResolvedValue({
+      models: [
+        { id: 'openai/gpt-5.4', name: 'GPT-5.4', provider: 'openai' },
+        { id: 'openai/gpt-5.5', name: 'GPT-5.5', provider: 'openai' },
+      ],
+      currentModel: 'openai/gpt-5.4',
+      currentVisionModel: '',
+      currentThinkingLevel: 'medium',
+      currentServiceTier: '',
+    });
+    apiMock.updateConversationModelPreferences.mockRejectedValue(
+      new Error(
+        'Error: Local API route did not complete for PATCH /api/conversations/conv-regression/model-preferences at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/app/localApi.js:132:20)',
+      ),
+    );
+
+    renderConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole('button', { name: 'More composer settings' }), { key: 'Enter' });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox', { name: 'Conversation model' }), {
+        target: { value: 'openai/gpt-5.5' },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiMock.updateConversationModelPreferences).toHaveBeenCalledWith('conv-regression', { model: 'openai/gpt-5.5' }, '');
+    expect(screen.getByText('Could not save the model preference. Try again.')).toBeTruthy();
+    expect(document.body.textContent ?? '').not.toMatch(
+      /Local API route did not complete|\/api\/conversations|file:\/\/|localApi\.js|Module\.ep|packages\/desktop/i,
+    );
   });
 
   it('loads saved-conversation git metadata from the visible workspace cwd', async () => {
