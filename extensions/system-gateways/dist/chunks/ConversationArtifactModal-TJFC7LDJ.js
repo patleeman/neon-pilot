@@ -8,7 +8,7 @@ import {
   useApi,
   useAppEvents,
   writeClipboardText
-} from "./chunk-ATHL2BJA.js";
+} from "./chunk-FFNJHG7W.js";
 import {
   formatDate
 } from "./chunk-DP4YXAPY.js";

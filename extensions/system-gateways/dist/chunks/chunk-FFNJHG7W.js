@@ -527,6 +527,7 @@ var api = {
       ...pinnedSessionIds !== void 0 ? { pinnedSessionIds } : {},
       ...archivedSessionIds !== void 0 ? { archivedSessionIds } : {},
       ...options.lockedConversationIds !== void 0 ? { lockedConversationIds: options.lockedConversationIds } : {},
+      ...options.remoteControlledConversationIds !== void 0 ? { remoteControlledConversationIds: options.remoteControlledConversationIds } : {},
       ...workspacePaths !== void 0 ? { workspacePaths } : {},
       ...activeConversationId !== void 0 ? { activeConversationId } : {},
       ...options.conversationWorkspaceMigrated !== void 0 ? { conversationWorkspaceMigrated: options.conversationWorkspaceMigrated } : {}

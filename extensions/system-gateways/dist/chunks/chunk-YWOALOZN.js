@@ -18,7 +18,7 @@ import {
   recordExtensionRegistryUsability,
   useApi,
   writeClipboardText
-} from "./chunk-ATHL2BJA.js";
+} from "./chunk-FFNJHG7W.js";
 import {
   timeAgo
 } from "./chunk-DP4YXAPY.js";
@@ -15047,39 +15047,11 @@ function renderMarkdownText(text7, options) {
     }
   );
 }
-var STREAMING_MARKDOWN_UPDATE_INTERVAL_MS = 100;
-function useThrottledStreamingMarkdownText(text7) {
-  const [renderedText, setRenderedText] = useState(text7);
-  const latestTextRef = useRef(text7);
-  const lastRenderedAtRef = useRef(0);
-  useEffect(() => {
-    latestTextRef.current = text7;
-    const now = Date.now();
-    const elapsed = now - lastRenderedAtRef.current;
-    if (elapsed >= STREAMING_MARKDOWN_UPDATE_INTERVAL_MS) {
-      lastRenderedAtRef.current = now;
-      setRenderedText(text7);
-      return void 0;
-    }
-    const timeout = window.setTimeout(() => {
-      lastRenderedAtRef.current = Date.now();
-      setRenderedText(latestTextRef.current);
-    }, STREAMING_MARKDOWN_UPDATE_INTERVAL_MS - elapsed);
-    return () => window.clearTimeout(timeout);
-  }, [text7]);
-  return renderedText;
+function renderPlainText(text7) {
+  return /* @__PURE__ */ jsx("div", { className: "whitespace-pre-wrap break-words", children: text7 });
 }
-function StreamingMarkdownText({
-  text: text7,
-  onOpenFilePath,
-  onOpenCheckpoint,
-  validatedFilePathTargets
-}) {
-  const renderedText = useThrottledStreamingMarkdownText(text7);
-  return renderMarkdownText(renderedText, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets });
-}
-function renderStreamingMarkdownText(text7, options) {
-  return /* @__PURE__ */ jsx(StreamingMarkdownText, { text: text7, ...options });
+function renderStreamingMarkdownText(text7, _options) {
+  return renderPlainText(text7);
 }
 function parseSkillContentSections(content3) {
   const match = content3.match(/^References are relative to (.+?)\.\n\n([\s\S]*)$/);

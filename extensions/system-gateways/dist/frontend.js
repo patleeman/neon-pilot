@@ -8,13 +8,13 @@ import {
   getExtensionRegistryRevision,
   systemExtensionModules,
   useExtensionRegistry
-} from "./chunks/chunk-TRDT6LOF.js";
+} from "./chunks/chunk-YWOALOZN.js";
 import "./chunks/chunk-4YPGCSK5.js";
 import "./chunks/chunk-24DU7J3C.js";
 import {
   buildApiPath,
   recordActivityTreeRowRender
-} from "./chunks/chunk-ATHL2BJA.js";
+} from "./chunks/chunk-FFNJHG7W.js";
 import "./chunks/chunk-WY4PXDOC.js";
 import "./chunks/chunk-RUG6BXWL.js";
 import {
@@ -1629,8 +1629,8 @@ function CoreAttachControl({ disabled, onOpenFilePicker }) {
         }
       },
       disabled,
-      title: "Attach image or drawing",
-      "aria-label": "Attach image or drawing",
+      title: "Attach file",
+      "aria-label": "Attach file",
       children: /* @__PURE__ */ jsx(CoreComposerIcon, { path: "M12 5v14M5 12h14" })
     }
   );
@@ -2296,12 +2296,12 @@ var useConversationScrollLayoutEffect = typeof window === "undefined" || /\b(jsd
 
 // packages/desktop/ui/src/pages/ConversationPage.tsx
 var ConversationArtifactModal = lazy(
-  () => import("./chunks/ConversationArtifactModal-OB3FEIAL.js").then((module) => ({ default: module.ConversationArtifactModal }))
+  () => import("./chunks/ConversationArtifactModal-TJFC7LDJ.js").then((module) => ({ default: module.ConversationArtifactModal }))
 );
 var ConversationDrawingsPickerModal = lazy(
   () => import("./chunks/ConversationDrawingsPickerModal-O2ZQLINY.js").then((module) => ({ default: module.ConversationDrawingsPickerModal }))
 );
-var loadChatView = () => import("./chunks/ChatView-ARMO4AQA.js").then((module) => ({ default: module.ChatView }));
+var loadChatView = () => import("./chunks/ChatView-MJAN44FH.js").then((module) => ({ default: module.ChatView }));
 var ChatView = lazy(loadChatView);
 var ConversationActivityShelf = lazy(
   () => import("./chunks/ConversationActivityShelf-5ERBADU4.js").then((module) => ({ default: module.ConversationActivityShelf }))
