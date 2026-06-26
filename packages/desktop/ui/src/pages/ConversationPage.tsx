@@ -4264,10 +4264,20 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     };
   }, [id, realMessages, scrollToBottom]);
 
-  // Focus input on navigation
+  // Focus input on navigation once the composer is actually ready.
   useEffect(() => {
-    textareaRef.current?.focus();
-  }, [id]);
+    const focusComposer = () => {
+      const composer = textareaRef.current;
+      if (!composer || composer.disabled || composerDisabled) {
+        return;
+      }
+      composer.focus();
+    };
+
+    focusComposer();
+    const frame = window.requestAnimationFrame(focusComposer);
+    return () => window.cancelAnimationFrame(frame);
+  }, [composerDisabled, draft, id]);
 
   useEffect(() => {
     const shouldFocus =

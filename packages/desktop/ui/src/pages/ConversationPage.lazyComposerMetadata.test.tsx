@@ -688,6 +688,17 @@ afterEach(() => {
 });
 
 describe('ConversationPage lazy composer metadata', () => {
+  it('focuses the composer when the draft new conversation route opens', async () => {
+    vi.useRealTimers();
+    renderDraftConversationPage();
+
+    const textarea = await screen.findByPlaceholderText(/Message Neon Pilot/i);
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(textarea);
+    });
+  });
+
   it('removes a missing conversation route from the workspace tabs without opening a placeholder row', async () => {
     vi.useRealTimers();
     renderMissingConversationPage();
