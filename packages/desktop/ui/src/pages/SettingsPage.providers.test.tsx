@@ -1077,7 +1077,7 @@ describe('SettingsPage provider model editor', () => {
       click(removeButton);
       await flushAsyncWork();
 
-      expect(confirmMock).toHaveBeenCalledWith('Remove the stored credential for openai-codex from auth.json?');
+      expect(confirmMock).toHaveBeenCalledWith('Remove the stored credential for openai-codex?');
       expect(removeProviderCredentialMock).toHaveBeenCalledWith('openai-codex');
     } finally {
       confirmMock.mockRestore();

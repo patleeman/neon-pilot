@@ -43,6 +43,42 @@ type ActivityTreeRowProps = {
   rowDropPosition: ActivityTreeDropPosition | null;
 };
 
+export function focusAdjacentActivityTreeRow(currentRow: HTMLElement, key: string): boolean {
+  const tree = currentRow.closest('[role="tree"]');
+  if (!tree) {
+    return false;
+  }
+
+  const rows = currentRow.hasAttribute('data-sidebar-session-id')
+    ? Array.from(tree.querySelectorAll<HTMLElement>('[role="treeitem"][data-sidebar-session-id]'))
+    : Array.from(tree.querySelectorAll<HTMLElement>('[role="treeitem"]'));
+  const currentIndex = rows.indexOf(currentRow);
+  if (currentIndex === -1) {
+    return false;
+  }
+
+  let nextIndex = currentIndex;
+  switch (key) {
+    case 'ArrowDown':
+      nextIndex = Math.min(rows.length - 1, currentIndex + 1);
+      break;
+    case 'ArrowUp':
+      nextIndex = Math.max(0, currentIndex - 1);
+      break;
+    case 'Home':
+      nextIndex = 0;
+      break;
+    case 'End':
+      nextIndex = rows.length - 1;
+      break;
+    default:
+      return false;
+  }
+
+  rows[nextIndex]?.focus();
+  return true;
+}
+
 function ActivityTreeRowComponent({
   active,
   canArchive,
@@ -124,6 +160,10 @@ function ActivityTreeRowComponent({
       title={canDrag ? 'Drag to reorder conversations' : rowModel.title}
       onClick={openOrToggleItem}
       onKeyDown={(event) => {
+        if (focusAdjacentActivityTreeRow(event.currentTarget, event.key)) {
+          event.preventDefault();
+          return;
+        }
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
         openOrToggleItem();

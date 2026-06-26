@@ -100,6 +100,48 @@ describe('ActivityTreeView', () => {
     expect(getActivityTreeRowPaddingLeftRem(child, 3)).toBe(1.375);
   });
 
+  it('moves focus between visible rows with keyboard navigation', () => {
+    const treeItems: ActivityTreeItem[] = [
+      { id: 'conversation:alpha', kind: 'conversation', title: 'Alpha thread', status: 'idle', metadata: { conversationId: 'alpha' } },
+      { id: 'group:project', kind: 'group', title: 'Project group', status: 'idle' },
+      { id: 'conversation:beta', kind: 'conversation', title: 'Beta thread', status: 'idle', metadata: { conversationId: 'beta' } },
+      { id: 'conversation:gamma', kind: 'conversation', title: 'Gamma thread', status: 'idle', metadata: { conversationId: 'gamma' } },
+    ];
+    const { container, unmount } = renderTree(treeItems, 'conversation:alpha');
+
+    try {
+      const rows = Array.from(container.querySelectorAll<HTMLElement>('[role="treeitem"]'));
+      expect(rows).toHaveLength(4);
+      const [alpha, group, beta, gamma] = rows;
+
+      alpha?.focus();
+      expect(document.activeElement).toBe(alpha);
+
+      act(() => {
+        alpha?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'ArrowDown' }));
+      });
+      expect(document.activeElement).not.toBe(group);
+      expect(document.activeElement).toBe(beta);
+
+      act(() => {
+        beta?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'End' }));
+      });
+      expect(document.activeElement).toBe(gamma);
+
+      act(() => {
+        gamma?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'ArrowUp' }));
+      });
+      expect(document.activeElement).toBe(beta);
+
+      act(() => {
+        beta?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Home' }));
+      });
+      expect(document.activeElement).toBe(alpha);
+    } finally {
+      unmount();
+    }
+  });
+
   it('closes the context menu when clicking outside the tree', () => {
     const { container, unmount } = renderTree();
 

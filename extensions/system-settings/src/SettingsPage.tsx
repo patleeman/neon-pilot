@@ -591,7 +591,7 @@ function formatProviderAuthStatus(provider: ProviderAuthSummary | null): string 
     case 'api_key':
       return provider.hasStoredCredential ? 'Stored API key in secure provider secrets.' : 'API key is available.';
     case 'oauth':
-      return provider.hasStoredCredential ? 'Logged in with OAuth credentials saved in auth.json.' : 'OAuth credentials are available.';
+      return provider.hasStoredCredential ? 'Logged in with saved OAuth credentials.' : 'OAuth credentials are available.';
     case 'environment':
       return 'Credentials resolved from environment or external provider config.';
     default:
@@ -3418,7 +3418,7 @@ export function SettingsPage({
       return;
     }
 
-    const confirmed = window.confirm(`Remove the stored credential for ${modalProviderAuth.id} from auth.json?`);
+    const confirmed = window.confirm(`Remove the stored credential for ${modalProviderAuth.id}?`);
     if (!confirmed) {
       return;
     }
