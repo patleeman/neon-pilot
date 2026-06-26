@@ -166,7 +166,7 @@ describe('OnboardingBootstrap', () => {
     expect(invoke).toHaveBeenCalledWith('update', { status: 'skipped', stepIndex: 1 });
   });
 
-  it('finishes by drafting an extension-building prompt in a new conversation', async () => {
+  it('finishes by drafting a first-message prompt in a new conversation', async () => {
     const { pa, invoke, execute } = createPa({
       ensureResult: {
         state: { status: 'active', stepIndex: 4, updatedAt: '2026-06-25T00:00:00.000Z' },
@@ -190,7 +190,7 @@ describe('OnboardingBootstrap', () => {
     );
 
     await advanceEnsureTimer();
-    await clickButton('Draft extension prompt');
+    await clickButton('Draft first message');
     await act(async () => {
       await vi.advanceTimersByTimeAsync(100);
     });
@@ -199,7 +199,8 @@ describe('OnboardingBootstrap', () => {
     expect(invoke).toHaveBeenCalledWith('update', { status: 'completed', stepIndex: 4 });
     expect(execute).not.toHaveBeenCalled();
     expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
-    expect(appendedTexts.join('\n')).toContain('Help me build a small Neon Pilot extension');
+    expect(appendedTexts.join('\n')).toContain("Hi, I'm new to Neon Pilot");
+    expect(appendedTexts.join('\n')).toContain('what I can do here');
     window.removeEventListener('neon-pilot:composer-append-text', appendListener);
   });
 });

@@ -7,8 +7,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 const ONBOARDING_ENSURE_DELAY_MS = 900;
 const COMPOSER_DRAFT_RETRY_MS = 100;
 const COMPOSER_DRAFT_MAX_ATTEMPTS = 20;
-const EXTENSION_PROMPT =
-  'Help me build a small Neon Pilot extension for something I do often. Ask me what workflow I want to improve, then propose the simplest useful version before changing anything.';
+const HELLO_AGENT_PROMPT =
+  "Hi, I'm new to Neon Pilot. Can you give me a quick tour of what I can do here, then help me choose a good first thing to try?";
 
 type OnboardingTourStatus = 'unseen' | 'active' | 'completed' | 'skipped';
 
@@ -67,9 +67,9 @@ const TOUR_STEPS: TourStep[] = [
     id: 'first-extension-prompt',
     route: '/conversations/new',
     target: 'textarea',
-    title: 'Try your first change',
-    body: 'A good first prompt is: build a small extension for something I do often. The agent can ask questions, make the first version, and help you refine it.',
-    detail: 'The button below drafts that prompt so you can edit it before sending.',
+    title: 'Say hello to the agent',
+    body: 'The easiest way to start is to ask what Neon Pilot can do. The agent can explain the main workflows, suggest a useful first task, and help you from there.',
+    detail: 'The button below drafts a first message. You can edit it before sending.',
   },
 ];
 
@@ -401,7 +401,7 @@ export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
       await updateTour('completed', stepIndex);
       navigate('/conversations/new');
       window.setTimeout(() => {
-        draftComposerTextWhenReady(EXTENSION_PROMPT);
+        draftComposerTextWhenReady(HELLO_AGENT_PROMPT);
       }, COMPOSER_DRAFT_RETRY_MS);
     } finally {
       setBusy(false);
@@ -466,7 +466,7 @@ export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
                     onClick={() => void finishTour()}
                     disabled={busy}
                   >
-                    Draft extension prompt
+                    Draft first message
                   </button>
                 </>
               ) : (
