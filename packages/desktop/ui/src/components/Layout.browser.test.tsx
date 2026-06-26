@@ -59,6 +59,32 @@ describe('WorkbenchBrowserTab', () => {
     ).toBe('Page failed to load. Check the address or connection and try again.');
   });
 
+  it('formats local API browser failures without leaking route or file details', () => {
+    const message = formatWorkbenchBrowserError(
+      new Error(
+        "Error invoking remote method 'neon-pilot-desktop:workbench-browser-reload': Error: Local API route did not complete for POST /api/workbench/browser/reload",
+      ),
+    );
+
+    expect(message).toBe('Browser action failed. Check the address and try again.');
+    expect(message).not.toContain('Local API route did not complete');
+    expect(message).not.toContain('/api/workbench/browser');
+  });
+
+  it('formats browser action stack failures without leaking local file paths', () => {
+    const message = formatWorkbenchBrowserError(
+      new Error(
+        "Error invoking remote method 'neon-pilot-desktop:workbench-browser-stop': Error: browser stop failed at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/localApi.js:132:20)",
+      ),
+    );
+
+    expect(message).toBe('Browser action failed. Check the address and try again.');
+    expect(message).not.toContain('file://');
+    expect(message).not.toContain('localApi.js');
+    expect(message).not.toContain('Module.ep');
+    expect(message).not.toContain('packages/desktop');
+  });
+
   it('closes the active browser tab from the browser toolbar', async () => {
     const browserTabsState: BrowserTabsState = readBrowserTabsState();
     const activeBrowserTab: BrowserTabItem =

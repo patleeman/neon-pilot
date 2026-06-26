@@ -38,7 +38,17 @@ export function formatWorkbenchBrowserError(error: unknown): string {
   if (/ERR_[A-Z_]+/i.test(message) || /\(-\d+\)\s+loading/i.test(message)) {
     return 'Page failed to load. Check the address or connection and try again.';
   }
-  if (!message || raw.includes('\n') || /file:\/\//i.test(raw) || /\s+at\s+\S+/i.test(raw)) {
+  if (
+    !message ||
+    raw.includes('\n') ||
+    /Local API route did not complete/i.test(raw) ||
+    /\/api\//i.test(raw) ||
+    /file:\/\//i.test(raw) ||
+    /localApi\.js/i.test(raw) ||
+    /\bModule\.[A-Za-z_$][\w$]*/.test(raw) ||
+    /packages\/desktop\//i.test(raw) ||
+    /\s+at\s+\S+/i.test(raw)
+  ) {
     return 'Browser action failed. Check the address and try again.';
   }
   if (/only supports http\(s\) URLs/i.test(message)) {
