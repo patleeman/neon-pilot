@@ -8,7 +8,7 @@ const ONBOARDING_ENSURE_DELAY_MS = 900;
 const COMPOSER_DRAFT_RETRY_MS = 100;
 const COMPOSER_DRAFT_MAX_ATTEMPTS = 20;
 const EXTENSION_PROMPT =
-  'Build me a Neon Pilot extension for a workflow I repeat often. Start by asking what the workflow is, then inspect the app extension docs and propose the smallest useful version.';
+  'Help me build a small Neon Pilot extension for something I do often. Ask me what workflow I want to improve, then propose the simplest useful version before changing anything.';
 
 type OnboardingTourStatus = 'unseen' | 'active' | 'completed' | 'skipped';
 
@@ -37,39 +37,39 @@ const TOUR_STEPS: TourStep[] = [
     id: 'provider',
     route: '/settings/providers',
     target: '#settings-providers',
-    title: 'Connect the model Neon Pilot will use',
-    body: 'Provider setup is the only required first-run gate. Save a credential, test it, then choose the default model for new conversations.',
-    detail: 'This is a real Settings page. You can come back here any time.',
+    title: 'Choose your AI model',
+    body: 'Neon Pilot needs a model before it can chat. Pick the provider you use, sign in or add a key, then choose the model to use for new chats.',
+    detail: 'You can change this later in Settings.',
   },
   {
     id: 'extensions',
     route: '/extensions',
-    title: 'Most of Neon Pilot is extensions',
-    body: 'The small core runs conversations, tools, routing, and the extension host. Product features live as extensions: files, terminal, artifacts, automations, settings, model tools, and more.',
-    detail: 'Extensions can add pages, workbench views, commands, settings, tools, and agent context.',
+    title: 'Features live in Extensions',
+    body: 'Extensions are the parts of Neon Pilot you can turn on, replace, or change. They add things like Files, Terminal, Artifacts, Automations, and Settings.',
+    detail: 'This is where you manage them.',
   },
   {
     id: 'extension-authoring',
     route: '/extensions',
-    title: 'You can add or change features by talking',
-    body: 'If you want a feature, ask the agent to build an extension. Then iterate with it until the page, command, automation, or tool behaves the way you want.',
-    detail: 'Examples: release checklist, branch diff command, customer log workbench, writing review panel, internal API tool.',
+    title: 'Ask for the app you want',
+    body: 'If Neon Pilot is missing something, ask the agent to build it as an extension. Start small, try it, then keep asking for changes until it fits how you work.',
+    detail: 'Examples: a release checklist, a PR summary button, a notes panel, or a tool for your internal API.',
   },
   {
     id: 'conversation',
     route: '/conversations/new',
     target: '[aria-label="Saved workspace"]',
-    title: 'Start with chat or attach a folder',
-    body: 'A new conversation can be plain Chat, or it can run in a folder when the task needs files, shell commands, or repo context.',
-    detail: 'Use @ for files and notes, / for commands, and ! for shell commands.',
+    title: 'Start a chat, or choose a folder',
+    body: 'Use a normal chat for questions. Choose a folder when you want Neon Pilot to read files, edit code, or run commands for a project.',
+    detail: 'You can mention files with @ and use / for commands.',
   },
   {
     id: 'first-extension-prompt',
     route: '/conversations/new',
     target: 'textarea',
-    title: 'Try changing the app itself',
-    body: 'The useful first move is not learning every screen. It is asking Neon Pilot to add a capability, then shaping that extension with the agent.',
-    detail: 'The finish button drafts a safe starter prompt in a new conversation.',
+    title: 'Try your first change',
+    body: 'A good first prompt is: build a small extension for something I do often. The agent can ask questions, make the first version, and help you refine it.',
+    detail: 'The button below drafts that prompt so you can edit it before sending.',
   },
 ];
 

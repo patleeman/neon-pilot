@@ -88,7 +88,7 @@ describe('OnboardingBootstrap', () => {
     await advanceEnsureTimer();
 
     expect(screen.getByTestId('onboarding-tour')).toBeTruthy();
-    expect(screen.getByText('Connect the model Neon Pilot will use')).toBeTruthy();
+    expect(screen.getByText('Choose your AI model')).toBeTruthy();
     expect(screen.getByTestId('location').textContent).toBe('/settings/providers');
     expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
     expect(invoke).toHaveBeenCalledWith('update', { status: 'active', stepIndex: 0 });
@@ -136,7 +136,7 @@ describe('OnboardingBootstrap', () => {
     await clickButton('Next');
 
     expect(screen.getByTestId('location').textContent).toBe('/extensions');
-    expect(screen.getByText('Most of Neon Pilot is extensions')).toBeTruthy();
+    expect(screen.getByText('Features live in Extensions')).toBeTruthy();
     expect(invoke).toHaveBeenCalledWith('update', { status: 'active', stepIndex: 1 });
 
     await clickButton('Back');
@@ -199,7 +199,7 @@ describe('OnboardingBootstrap', () => {
     expect(invoke).toHaveBeenCalledWith('update', { status: 'completed', stepIndex: 4 });
     expect(execute).not.toHaveBeenCalled();
     expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
-    expect(appendedTexts.join('\n')).toContain('Build me a Neon Pilot extension');
+    expect(appendedTexts.join('\n')).toContain('Help me build a small Neon Pilot extension');
     window.removeEventListener('neon-pilot:composer-append-text', appendListener);
   });
 });
