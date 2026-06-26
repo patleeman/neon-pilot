@@ -3,7 +3,7 @@
   "id": "system-onboarding",
   "name": "Onboarding",
   "packageType": "system",
-  "description": "Creates a one-time onboarding conversation for new Neon Pilot installs.",
+  "description": "Runs the first-run guided tour over real Neon Pilot app pages.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -16,7 +16,15 @@
       {
         "id": "ensure",
         "handler": "ensure",
-        "title": "Ensure onboarding conversation",
+        "title": "Ensure onboarding tour",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "update",
+        "handler": "update",
+        "title": "Update onboarding tour",
         "worker": {
           "enabled": true
         }
@@ -32,7 +40,7 @@
       }
     ]
   },
-  "permissions": ["storage:readwrite", "conversations:readwrite", "extensions:write"],
+  "permissions": ["storage:readwrite"],
   "compatibility": {
     "neonPilot": ">=0.10.0",
     "extensionApi": "^2"

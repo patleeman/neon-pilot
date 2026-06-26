@@ -633,7 +633,9 @@ const smokes = {
   },
   async 'system-onboarding'() {
     const result = await module.ensure({}, ctx);
-    assert(result.created === true && conversations.length === 1, 'onboarding ensure failed');
+    assert(result.state?.status === 'unseen' && conversations.length === 0, 'onboarding ensure failed');
+    const updated = await module.update({ status: 'active', stepIndex: 1 }, ctx);
+    assert(updated.state?.status === 'active' && updated.state?.stepIndex === 1, 'onboarding update failed');
   },
   async 'system-prompt-assembly'() {
     const result = await module.inspectPromptAssembly({}, ctx);

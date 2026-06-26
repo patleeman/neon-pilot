@@ -16,7 +16,7 @@ Use `--channel rc` when you want the release-candidate app.
 
 ## Configure a model provider
 
-Open **Neon Pilot.app**. The desktop app manages the local daemon automatically.
+Open **Neon Pilot.app**. The desktop app manages the local daemon automatically. On a fresh install, Neon Pilot starts a short guided tour over the real app pages instead of a separate setup wizard.
 
 In the app, open **Settings** and confirm the model provider and default model you want to use. If you installed the CLI, you can do the same setup from a terminal:
 
@@ -49,12 +49,13 @@ The setup is healthy when `doctor` passes, the conversation view loads, and the 
 
 ## First run checklist
 
-1. Open **Settings** and confirm your model provider and default model.
+1. Follow the guided tour, or open **Settings** and confirm your model provider and default model.
 2. Start a new conversation and verify the agent replies to a small prompt.
 3. Attach a file or folder when the task needs project context.
 4. Ask for a bounded first task, such as summarizing a file, explaining a code path, or drafting a plan.
-5. Use the Workbench to inspect files, artifacts, browser views, extensions, and other surfaces beside the conversation.
-6. If you want durable notes or instructions, configure [Knowledge base sync](knowledge-base.md) after the first conversation works.
+5. Open **Extensions** to inspect built-in capabilities and install or build workflow-specific extensions.
+6. Use the Workbench to inspect files, artifacts, browser views, extensions, and other surfaces beside the conversation.
+7. If you want durable notes or instructions, configure [Knowledge base sync](knowledge-base.md) after the first conversation works.
 
 ## What to try next
 

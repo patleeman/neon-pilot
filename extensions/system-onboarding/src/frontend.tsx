@@ -1,70 +1,476 @@
 import type { NeonPilotClient } from '@neon-pilot/extensions';
-import { useEffect, useRef } from 'react';
+import React from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-const ONBOARDING_ENSURE_DELAY_MS = 2_000;
+const ONBOARDING_ENSURE_DELAY_MS = 900;
+const COMPOSER_DRAFT_RETRY_MS = 100;
+const COMPOSER_DRAFT_MAX_ATTEMPTS = 20;
+const EXTENSION_PROMPT =
+  'Build me a Neon Pilot extension for a workflow I repeat often. Start by asking what the workflow is, then inspect the app extension docs and propose the smallest useful version.';
 
-interface EnsureResult {
-  created?: boolean;
-  conversationId?: string;
-  shouldOpen?: boolean;
+type OnboardingTourStatus = 'unseen' | 'active' | 'completed' | 'skipped';
+
+interface OnboardingTourState {
+  status: OnboardingTourStatus;
+  stepIndex: number;
+  updatedAt: string;
 }
 
-function canAutoOpenOnboarding(pathname: string): boolean {
-  return pathname === '/' || pathname === '/conversations';
+interface EnsureResult {
+  state?: OnboardingTourState;
+  shouldStart?: boolean;
+}
+
+interface TourStep {
+  id: string;
+  route: string;
+  target?: string;
+  title: string;
+  body: string;
+  detail: string;
+}
+
+const TOUR_STEPS: TourStep[] = [
+  {
+    id: 'provider',
+    route: '/settings/providers',
+    target: '#settings-providers',
+    title: 'Connect the model Neon Pilot will use',
+    body: 'Provider setup is the only required first-run gate. Save a credential, test it, then choose the default model for new conversations.',
+    detail: 'This is a real Settings page. You can come back here any time.',
+  },
+  {
+    id: 'extensions',
+    route: '/extensions',
+    title: 'Most of Neon Pilot is extensions',
+    body: 'The small core runs conversations, tools, routing, and the extension host. Product features live as extensions: files, terminal, artifacts, automations, settings, model tools, and more.',
+    detail: 'Extensions can add pages, workbench views, commands, settings, tools, and agent context.',
+  },
+  {
+    id: 'extension-authoring',
+    route: '/extensions',
+    title: 'You can add or change features by talking',
+    body: 'If you want a feature, ask the agent to build an extension. Then iterate with it until the page, command, automation, or tool behaves the way you want.',
+    detail: 'Examples: release checklist, branch diff command, customer log workbench, writing review panel, internal API tool.',
+  },
+  {
+    id: 'conversation',
+    route: '/conversations/new',
+    target: '[aria-label="Saved workspace"]',
+    title: 'Start with chat or attach a folder',
+    body: 'A new conversation can be plain Chat, or it can run in a folder when the task needs files, shell commands, or repo context.',
+    detail: 'Use @ for files and notes, / for commands, and ! for shell commands.',
+  },
+  {
+    id: 'first-extension-prompt',
+    route: '/conversations/new',
+    target: 'textarea',
+    title: 'Try changing the app itself',
+    body: 'The useful first move is not learning every screen. It is asking Neon Pilot to add a capability, then shaping that extension with the agent.',
+    detail: 'The finish button drafts a safe starter prompt in a new conversation.',
+  },
+];
+
+function canAutoStartOnboarding(pathname: string): boolean {
+  return pathname === '/' || pathname === '/conversations' || pathname === '/conversations/new';
+}
+
+function clampStepIndex(index: number): number {
+  if (!Number.isFinite(index)) return 0;
+  return Math.min(Math.max(0, Math.floor(index)), TOUR_STEPS.length - 1);
+}
+
+function readEnsureState(result: unknown): OnboardingTourState | null {
+  const maybe = result && typeof result === 'object' ? (result as EnsureResult).state : null;
+  if (!maybe || typeof maybe !== 'object') return null;
+  if (maybe.status !== 'unseen' && maybe.status !== 'active' && maybe.status !== 'completed' && maybe.status !== 'skipped') {
+    return null;
+  }
+  return {
+    status: maybe.status,
+    stepIndex: clampStepIndex(maybe.stepIndex),
+    updatedAt: typeof maybe.updatedAt === 'string' ? maybe.updatedAt : new Date().toISOString(),
+  };
+}
+
+function shouldStartFromEnsure(result: unknown): boolean {
+  return Boolean(result && typeof result === 'object' && (result as EnsureResult).shouldStart === true);
+}
+
+function draftComposerTextWhenReady(text: string, attempt = 0): void {
+  const textarea = document.querySelector('textarea');
+  const currentValue = textarea instanceof HTMLTextAreaElement ? textarea.value : '';
+  if (currentValue.includes(text)) {
+    return;
+  }
+
+  if (textarea) {
+    window.dispatchEvent(new CustomEvent('neon-pilot:composer-append-text', { detail: { text } }));
+    window.dispatchEvent(new CustomEvent('neon-pilot:composer-focus'));
+  }
+
+  if (attempt + 1 < COMPOSER_DRAFT_MAX_ATTEMPTS) {
+    window.setTimeout(() => draftComposerTextWhenReady(text, attempt + 1), COMPOSER_DRAFT_RETRY_MS);
+  }
+}
+
+function useTargetRect(selector: string | undefined, routeKey: string, active: boolean): DOMRect | null {
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  useEffect(() => {
+    if (!active || !selector || typeof document === 'undefined') {
+      setRect(null);
+      return;
+    }
+
+    let frame: number | null = null;
+    let cancelled = false;
+    const update = () => {
+      if (cancelled) return;
+      const element = document.querySelector(selector);
+      setRect(element ? element.getBoundingClientRect() : null);
+    };
+    frame = window.requestAnimationFrame(update);
+    const timers = [window.setTimeout(update, 250), window.setTimeout(update, 700)];
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      cancelled = true;
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      timers.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [active, routeKey, selector]);
+
+  return rect;
+}
+
+function OnboardingStyles() {
+  return (
+    <style>{`
+      .np-onboarding-highlight {
+        position: fixed;
+        z-index: 120;
+        pointer-events: none;
+        border: 1px solid color-mix(in srgb, #d6a85d 75%, transparent);
+        border-radius: 10px;
+      }
+      .np-onboarding-panel {
+        position: fixed;
+        z-index: 121;
+        width: min(25rem, calc(100vw - 2rem));
+        border: 1px solid #30343a;
+        border-radius: 8px;
+        background: #101112;
+        color: #ebe7df;
+      }
+      .np-onboarding-panel-inner {
+        padding: 14px;
+      }
+      .np-onboarding-kicker {
+        margin: 0 0 7px;
+        color: #79736b;
+        font: 600 10px/1.3 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .np-onboarding-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 680;
+        line-height: 1.25;
+      }
+      .np-onboarding-body {
+        margin: 8px 0 0;
+        color: #b2aba0;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .np-onboarding-detail {
+        margin: 9px 0 0;
+        color: #79736b;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .np-onboarding-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .np-onboarding-action-group {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .np-onboarding-button {
+        min-height: 30px;
+        border: 1px solid #30343a;
+        border-radius: 6px;
+        background: #202327;
+        color: #ebe7df;
+        padding: 5px 9px;
+        font: inherit;
+        font-size: 12px;
+      }
+      .np-onboarding-button:hover {
+        background: #272b30;
+      }
+      .np-onboarding-button-primary {
+        border-color: color-mix(in srgb, #d6a85d 48%, #30343a);
+        background: color-mix(in srgb, #d6a85d 24%, #101112);
+        color: #ebe7df;
+      }
+      .np-onboarding-link-button {
+        border-color: transparent;
+        background: transparent;
+        color: #79736b;
+      }
+      .np-onboarding-link-button:hover {
+        background: transparent;
+        color: #ebe7df;
+      }
+      @media (max-width: 720px) {
+        .np-onboarding-panel {
+          left: 1rem !important;
+          right: 1rem !important;
+          top: auto !important;
+          bottom: 1rem !important;
+          width: auto;
+        }
+      }
+    `}</style>
+  );
+}
+
+function resolvePanelPosition(rect: DOMRect | null): { left: number; top: number } {
+  const panelWidth = Math.min(400, Math.max(320, window.innerWidth - 32));
+  const panelHeight = 260;
+  if (!rect) {
+    return {
+      left: Math.max(16, window.innerWidth - panelWidth - 24),
+      top: Math.max(16, window.innerHeight - panelHeight - 24),
+    };
+  }
+
+  const rightSpace = window.innerWidth - rect.right;
+  const left = rightSpace >= panelWidth + 28 ? rect.right + 14 : Math.max(16, Math.min(rect.left, window.innerWidth - panelWidth - 16));
+  const below = rect.bottom + 14;
+  const top = below + panelHeight < window.innerHeight ? below : Math.max(16, Math.min(rect.top, window.innerHeight - panelHeight - 16));
+  return { left, top };
 }
 
 export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
   const navigate = useNavigate();
-  const navigateRef = useRef(navigate);
   const location = useLocation();
+  const startedPathnameRef = useRef(location.pathname);
   const pathnameRef = useRef(location.pathname);
+  const [state, setState] = useState<OnboardingTourState | null>(null);
+  const [busy, setBusy] = useState(false);
+  const active = state?.status === 'active';
+  const stepIndex = clampStepIndex(state?.stepIndex ?? 0);
+  const step = TOUR_STEPS[stepIndex];
+  const targetRect = useTargetRect(step?.target, `${location.pathname}${location.search}`, active);
+  const panelPosition = useMemo(() => (active ? resolvePanelPosition(targetRect) : { left: 0, top: 0 }), [active, targetRect]);
 
-  useEffect(() => {
-    navigateRef.current = navigate;
-  }, [navigate]);
+  const navigateToStep = useCallback(
+    (nextIndex: number, replace = false) => {
+      const nextStep = TOUR_STEPS[clampStepIndex(nextIndex)];
+      navigate(nextStep.route, { replace });
+    },
+    [navigate],
+  );
+
+  const updateTour = useCallback(
+    async (nextStatus: OnboardingTourStatus, nextIndex: number) => {
+      const clampedIndex = clampStepIndex(nextIndex);
+      const optimistic: OnboardingTourState = {
+        status: nextStatus,
+        stepIndex: clampedIndex,
+        updatedAt: new Date().toISOString(),
+      };
+      setState(optimistic);
+      const result = await pa.extension.invoke('update', { status: nextStatus, stepIndex: clampedIndex });
+      const persisted = readEnsureState(result);
+      if (persisted) {
+        setState(persisted);
+      }
+    },
+    [pa],
+  );
+
+  const startTour = useCallback(
+    async (replace = true) => {
+      setBusy(true);
+      try {
+        navigateToStep(0, replace);
+        await updateTour('active', 0);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [navigateToStep, updateTour],
+  );
 
   useEffect(() => {
     pathnameRef.current = location.pathname;
+    startedPathnameRef.current = location.pathname;
   }, [location.pathname]);
 
   useEffect(() => {
-    const startedPathname = pathnameRef.current;
     let cancelled = false;
+    const startedPathname = startedPathnameRef.current;
     const timer = window.setTimeout(() => {
-      const currentBeforeEnsure = pathnameRef.current;
-      if (!canAutoOpenOnboarding(startedPathname) || !canAutoOpenOnboarding(currentBeforeEnsure)) {
-        return;
-      }
       void pa.extension
         .invoke('ensure', { source: 'frontend' })
         .then((result) => {
           if (cancelled) return;
-          const ensureResult = result as EnsureResult;
-          if (!ensureResult.conversationId || ensureResult.shouldOpen !== true) {
+          const ensuredState = readEnsureState(result);
+          if (ensuredState?.status === 'active') {
+            setState(ensuredState);
+            navigateToStep(ensuredState.stepIndex, true);
             return;
           }
-          const target = `/conversations/${encodeURIComponent(ensureResult.conversationId)}`;
+          if (ensuredState) {
+            setState(ensuredState);
+          }
+          if (!shouldStartFromEnsure(result)) {
+            return;
+          }
           const currentPathname = pathnameRef.current;
-          if (!canAutoOpenOnboarding(startedPathname) && startedPathname !== target) {
+          if (!canAutoStartOnboarding(startedPathname) || !canAutoStartOnboarding(currentPathname)) {
             return;
           }
-          if (currentPathname !== startedPathname && currentPathname !== target) {
-            return;
-          }
-          if (currentPathname !== target) {
-            navigateRef.current(target, { replace: true });
-          }
+          void startTour(true);
         })
         .catch((error) => {
-          console.warn('[system-onboarding] failed to ensure onboarding conversation', error);
+          console.warn('[system-onboarding] failed to ensure onboarding tour', error);
         });
     }, ONBOARDING_ENSURE_DELAY_MS);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [pa]);
+  }, [navigateToStep, pa, startTour]);
 
-  return null;
+  const moveToStep = useCallback(
+    async (nextIndex: number) => {
+      setBusy(true);
+      try {
+        navigateToStep(nextIndex);
+        await updateTour('active', nextIndex);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [navigateToStep, updateTour],
+  );
+
+  const skipTour = useCallback(async () => {
+    setBusy(true);
+    try {
+      await updateTour('skipped', stepIndex);
+    } finally {
+      setBusy(false);
+    }
+  }, [stepIndex, updateTour]);
+
+  const finishTour = useCallback(async () => {
+    setBusy(true);
+    try {
+      await updateTour('completed', stepIndex);
+      navigate('/conversations/new');
+      window.setTimeout(() => {
+        draftComposerTextWhenReady(EXTENSION_PROMPT);
+      }, COMPOSER_DRAFT_RETRY_MS);
+    } finally {
+      setBusy(false);
+    }
+  }, [navigate, stepIndex, updateTour]);
+
+  if (!active || typeof document === 'undefined') {
+    return null;
+  }
+
+  const isLastStep = stepIndex >= TOUR_STEPS.length - 1;
+  const highlightStyle = targetRect
+    ? {
+        left: Math.max(8, targetRect.left - 6),
+        top: Math.max(8, targetRect.top - 6),
+        width: targetRect.width + 12,
+        height: targetRect.height + 12,
+      }
+    : null;
+
+  return createPortal(
+    <>
+      <OnboardingStyles />
+      {highlightStyle ? <div className="np-onboarding-highlight" style={highlightStyle} aria-hidden="true" /> : null}
+      <section
+        className="np-onboarding-panel"
+        style={{ left: panelPosition.left, top: panelPosition.top }}
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="np-onboarding-title"
+        data-testid="onboarding-tour"
+      >
+        <div className="np-onboarding-panel-inner">
+          <p className="np-onboarding-kicker">
+            Tour {stepIndex + 1} of {TOUR_STEPS.length}
+          </p>
+          <h2 className="np-onboarding-title" id="np-onboarding-title">
+            {step.title}
+          </h2>
+          <p className="np-onboarding-body">{step.body}</p>
+          <p className="np-onboarding-detail">{step.detail}</p>
+          <div className="np-onboarding-actions">
+            {/* ui-pattern-ok raw-control reason="First-run top-bar bootstrap must stay standalone and avoid loading the full extension UI chunk before the tour renders." */}
+            <button type="button" className="np-onboarding-button np-onboarding-link-button" onClick={skipTour} disabled={busy}>
+              Skip tour
+            </button>
+            <div className="np-onboarding-action-group">
+              {stepIndex > 0 ? (
+                <>
+                  {/* ui-pattern-ok raw-control reason="First-run top-bar bootstrap must stay standalone and avoid loading the full extension UI chunk before the tour renders." */}
+                  <button type="button" className="np-onboarding-button" onClick={() => void moveToStep(stepIndex - 1)} disabled={busy}>
+                    Back
+                  </button>
+                </>
+              ) : null}
+              {isLastStep ? (
+                <>
+                  {/* ui-pattern-ok raw-control reason="First-run top-bar bootstrap must stay standalone and avoid loading the full extension UI chunk before the tour renders." */}
+                  <button
+                    type="button"
+                    className="np-onboarding-button np-onboarding-button-primary"
+                    onClick={() => void finishTour()}
+                    disabled={busy}
+                  >
+                    Draft extension prompt
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* ui-pattern-ok raw-control reason="First-run top-bar bootstrap must stay standalone and avoid loading the full extension UI chunk before the tour renders." */}
+                  <button
+                    type="button"
+                    className="np-onboarding-button np-onboarding-button-primary"
+                    onClick={() => void moveToStep(stepIndex + 1)}
+                    disabled={busy}
+                  >
+                    Next
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+    </>,
+    document.body,
+  );
 }

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,6 +11,56 @@ function LocationProbe() {
   return <div data-testid="location">{location.pathname}</div>;
 }
 
+function createPa({
+  ensureResult,
+  updateResult,
+  commandHandled = true,
+}: {
+  ensureResult: unknown;
+  updateResult?: unknown;
+  commandHandled?: boolean;
+}) {
+  const invoke = vi.fn((action: string, input: unknown) => {
+    if (action === 'ensure') return Promise.resolve(ensureResult);
+    if (action === 'update') {
+      const body = input as { status?: string; stepIndex?: number };
+      return Promise.resolve(
+        updateResult ?? {
+          state: {
+            status: body.status,
+            stepIndex: body.stepIndex ?? 0,
+            updatedAt: '2026-06-25T00:00:00.000Z',
+          },
+          shouldStart: false,
+        },
+      );
+    }
+    return Promise.reject(new Error(`Unexpected action ${action}`));
+  });
+  const execute = vi.fn().mockResolvedValue(commandHandled);
+  return {
+    pa: {
+      extension: { invoke },
+      commands: { execute },
+    } as never,
+    invoke,
+    execute,
+  };
+}
+
+async function advanceEnsureTimer() {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(900);
+  });
+}
+
+async function clickButton(name: string) {
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name }));
+    await Promise.resolve();
+  });
+}
+
 describe('OnboardingBootstrap', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -20,118 +70,136 @@ describe('OnboardingBootstrap', () => {
     vi.useRealTimers();
   });
 
-  it('navigates to the onboarding conversation with client-side routing', async () => {
-    const invoke = vi.fn().mockResolvedValue({ conversationId: 'conv-1', shouldOpen: true });
-    const pa = {
-      extension: {
-        invoke,
+  it('starts the guided tour from the new conversation route', async () => {
+    const { pa, invoke } = createPa({
+      ensureResult: {
+        state: { status: 'unseen', stepIndex: 0, updatedAt: '2026-06-25T00:00:00.000Z' },
+        shouldStart: true,
       },
-    } as never;
+    });
 
     render(
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter initialEntries={['/conversations/new']}>
         <OnboardingBootstrap pa={pa} />
         <LocationProbe />
       </MemoryRouter>,
     );
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
-    });
-    expect(screen.getByTestId('location').textContent).toBe('/conversations/conv-1');
+    await advanceEnsureTimer();
+
+    expect(screen.getByTestId('onboarding-tour')).toBeTruthy();
+    expect(screen.getByText('Connect the model Neon Pilot will use')).toBeTruthy();
+    expect(screen.getByTestId('location').textContent).toBe('/settings/providers');
     expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
+    expect(invoke).toHaveBeenCalledWith('update', { status: 'active', stepIndex: 0 });
   });
 
-  it('does not invoke onboarding from non-landing pages', async () => {
-    const invoke = vi.fn().mockResolvedValue({ conversationId: 'conv-1', shouldOpen: true });
-    const pa = {
-      extension: {
-        invoke,
+  it('does not auto-start from unrelated routes', async () => {
+    const { pa, invoke } = createPa({
+      ensureResult: {
+        state: { status: 'unseen', stepIndex: 0, updatedAt: '2026-06-25T00:00:00.000Z' },
+        shouldStart: true,
       },
-    } as never;
+    });
 
     render(
-      <MemoryRouter initialEntries={['/knowledge']}>
+      <MemoryRouter initialEntries={['/extensions']}>
         <OnboardingBootstrap pa={pa} />
         <LocationProbe />
       </MemoryRouter>,
     );
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
-    });
-    expect(invoke).not.toHaveBeenCalled();
-    expect(screen.getByTestId('location').textContent).toBe('/knowledge');
+    await advanceEnsureTimer();
+
+    expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
+    expect(invoke).not.toHaveBeenCalledWith('update', expect.anything());
+    expect(screen.queryByTestId('onboarding-tour')).toBeNull();
+    expect(screen.getByTestId('location').textContent).toBe('/extensions');
   });
 
-  it('does not invoke onboarding from settings', async () => {
-    const invoke = vi.fn().mockResolvedValue({ created: false, skipped: 'completed' });
-    const pa = {
-      extension: {
-        invoke,
+  it('moves through real app routes with next and back', async () => {
+    const { pa, invoke } = createPa({
+      ensureResult: {
+        state: { status: 'active', stepIndex: 0, updatedAt: '2026-06-25T00:00:00.000Z' },
+        shouldStart: false,
       },
-    } as never;
+    });
 
     render(
-      <MemoryRouter initialEntries={['/settings']}>
+      <MemoryRouter initialEntries={['/settings/providers']}>
         <OnboardingBootstrap pa={pa} />
         <LocationProbe />
       </MemoryRouter>,
     );
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
-    });
-    expect(invoke).not.toHaveBeenCalled();
-    expect(screen.getByTestId('location').textContent).toBe('/settings');
+    await advanceEnsureTimer();
+    await clickButton('Next');
+
+    expect(screen.getByTestId('location').textContent).toBe('/extensions');
+    expect(screen.getByText('Most of Neon Pilot is extensions')).toBeTruthy();
+    expect(invoke).toHaveBeenCalledWith('update', { status: 'active', stepIndex: 1 });
+
+    await clickButton('Back');
+
+    expect(screen.getByTestId('location').textContent).toBe('/settings/providers');
+    expect(invoke).toHaveBeenCalledWith('update', { status: 'active', stepIndex: 0 });
   });
 
-  it('does not invoke onboarding from the draft route after it was already consumed', async () => {
-    const invoke = vi.fn().mockResolvedValue({
-      created: false,
-      conversationId: 'conv-1',
-      skipped: 'completed',
-      shouldOpen: false,
-    });
-    const pa = {
-      extension: {
-        invoke,
+  it('persists skipped tours and hides the overlay', async () => {
+    const { pa, invoke } = createPa({
+      ensureResult: {
+        state: { status: 'active', stepIndex: 1, updatedAt: '2026-06-25T00:00:00.000Z' },
+        shouldStart: false,
       },
-    } as never;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/extensions']}>
+        <OnboardingBootstrap pa={pa} />
+      </MemoryRouter>,
+    );
+
+    await advanceEnsureTimer();
+    await clickButton('Skip tour');
+
+    expect(screen.queryByTestId('onboarding-tour')).toBeNull();
+    expect(invoke).toHaveBeenCalledWith('update', { status: 'skipped', stepIndex: 1 });
+  });
+
+  it('finishes by drafting an extension-building prompt in a new conversation', async () => {
+    const { pa, invoke, execute } = createPa({
+      ensureResult: {
+        state: { status: 'active', stepIndex: 4, updatedAt: '2026-06-25T00:00:00.000Z' },
+        shouldStart: false,
+      },
+    });
+    const appendedTexts: string[] = [];
+    const appendListener = (event: Event) => {
+      if (event instanceof CustomEvent && typeof event.detail?.text === 'string') {
+        appendedTexts.push(event.detail.text);
+      }
+    };
+    window.addEventListener('neon-pilot:composer-append-text', appendListener);
 
     render(
       <MemoryRouter initialEntries={['/conversations/new']}>
         <OnboardingBootstrap pa={pa} />
         <LocationProbe />
+        <textarea aria-label="Composer" />
       </MemoryRouter>,
     );
 
+    await advanceEnsureTimer();
+    await clickButton('Draft extension prompt');
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
+      await vi.advanceTimersByTimeAsync(100);
     });
-    expect(invoke).not.toHaveBeenCalled();
+
+    expect(screen.queryByTestId('onboarding-tour')).toBeNull();
+    expect(invoke).toHaveBeenCalledWith('update', { status: 'completed', stepIndex: 4 });
+    expect(execute).not.toHaveBeenCalled();
     expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
-  });
-
-  it('does not invoke onboarding over an empty draft composer', async () => {
-    const invoke = vi.fn().mockResolvedValue({ conversationId: 'conv-1', shouldOpen: true });
-    const pa = {
-      extension: {
-        invoke,
-      },
-    } as never;
-
-    render(
-      <MemoryRouter initialEntries={['/conversations/new']}>
-        <OnboardingBootstrap pa={pa} />
-        <LocationProbe />
-      </MemoryRouter>,
-    );
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
-    });
-    expect(invoke).not.toHaveBeenCalled();
-    expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
+    expect(appendedTexts.join('\n')).toContain('Build me a Neon Pilot extension');
+    window.removeEventListener('neon-pilot:composer-append-text', appendListener);
   });
 });

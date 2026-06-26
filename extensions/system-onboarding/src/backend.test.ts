@@ -1,38 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mockSetExtensionEnabled = vi.fn();
-
-import { ensure } from './backend.js';
+import { ensure, update } from './backend.js';
 
 function createCtx(overrides: Record<string, unknown> = {}) {
   const storage = {
     get: vi.fn().mockResolvedValue(null),
     put: vi.fn().mockResolvedValue({ ok: true }),
-    delete: vi.fn().mockResolvedValue({ ok: true, deleted: false }),
-  };
-  const conversations = {
-    create: vi.fn().mockResolvedValue({ id: 'conv-1', conversationId: 'conv-1' }),
-    setTitle: vi.fn().mockResolvedValue(undefined),
-    appendVisibleCustomMessage: vi.fn().mockResolvedValue(undefined),
-    appendTranscriptBlock: vi.fn().mockResolvedValue({ blockId: 'onboarding-block' }),
-  };
-  const runtime = {
-    getRepoRoot: vi.fn(() => '/repo'),
-  };
-  const ui = {
-    invalidate: vi.fn(),
   };
 
   return {
     extensionId: 'system-onboarding',
-    extensions: { setEnabled: mockSetExtensionEnabled },
     runtimeScope: 'shared',
     storage,
-    conversations,
-    runtime,
-    ui,
     ...overrides,
-  } as never;
+  };
 }
 
 describe('system-onboarding backend', () => {
@@ -40,114 +21,85 @@ describe('system-onboarding backend', () => {
     vi.clearAllMocks();
   });
 
-  it('de-duplicates concurrent ensure calls', async () => {
-    let resolveCreate: ((value: { id: string }) => void) | null = null;
-    const conversations = {
-      create: vi.fn().mockImplementation(
-        () =>
-          new Promise<{ id: string }>((resolve) => {
-            resolveCreate = resolve;
-          }),
-      ),
-      setTitle: vi.fn().mockResolvedValue(undefined),
-      appendVisibleCustomMessage: vi.fn().mockResolvedValue(undefined),
-      appendTranscriptBlock: vi.fn().mockResolvedValue({ blockId: 'onboarding-block' }),
-    };
-    const storage = {
-      get: vi.fn().mockResolvedValue(null),
-      put: vi.fn().mockResolvedValue({ ok: true }),
-      delete: vi.fn().mockResolvedValue({ ok: true, deleted: false }),
-    };
-    const ctx = createCtx({ conversations, storage });
+  it('initializes unseen tour state without creating a conversation', async () => {
+    const ctx = createCtx();
 
-    const first = ensure({ source: 'frontend' }, ctx);
-    const second = ensure({ source: 'frontend' }, ctx);
+    const result = await ensure({ source: 'frontend' }, ctx as never);
 
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(conversations.create).toHaveBeenCalledTimes(1);
-
-    resolveCreate?.({ id: 'conv-1' });
-    const [firstResult, secondResult] = await Promise.all([first, second]);
-
-    expect(firstResult).toEqual({ created: true, conversationId: 'conv-1', shouldOpen: true });
-    expect(secondResult).toEqual({ created: true, conversationId: 'conv-1', shouldOpen: true });
-    expect(storage.put).toHaveBeenCalledTimes(1);
-    expect(conversations.create).toHaveBeenCalledWith({
-      cwd: '/repo',
-      title: 'Welcome to Neon Pilot',
-      live: false,
+    expect(result).toMatchObject({
+      state: { status: 'unseen', stepIndex: 0 },
+      shouldStart: true,
     });
-    expect(conversations.setTitle).not.toHaveBeenCalled();
-    expect(conversations.appendVisibleCustomMessage).not.toHaveBeenCalled();
-    expect(conversations.appendTranscriptBlock).toHaveBeenCalledTimes(1);
-    expect(mockSetExtensionEnabled).toHaveBeenCalledWith('system-onboarding', false);
+    expect(ctx.storage.put).toHaveBeenCalledWith('onboarding:tour:v1', expect.objectContaining({ status: 'unseen', stepIndex: 0 }));
   });
 
-  it('returns the existing onboarding conversation once completed', async () => {
-    const conversations = {
-      create: vi.fn().mockResolvedValue({ id: 'conv-2' }),
-      setTitle: vi.fn().mockResolvedValue(undefined),
-      appendVisibleCustomMessage: vi.fn().mockResolvedValue(undefined),
-      appendTranscriptBlock: vi.fn().mockResolvedValue({ blockId: 'onboarding-block' }),
-    };
-    const storage = {
-      get: vi.fn().mockResolvedValue({
-        completed: true,
-        conversationId: 'conv-1',
-        completedAt: '2026-05-12T00:00:00.000Z',
-        openedInUi: false,
-      }),
-      put: vi.fn().mockResolvedValue({ ok: true }),
-      delete: vi.fn().mockResolvedValue({ ok: true, deleted: false }),
-    };
-    const ui = { invalidate: vi.fn() };
-    const ctx = createCtx({ conversations, storage, ui });
-
-    await expect(ensure({ source: 'frontend' }, ctx)).resolves.toEqual({
-      created: false,
-      conversationId: 'conv-1',
-      skipped: 'completed',
-      shouldOpen: true,
+  it('does not request auto-start for completed tours', async () => {
+    const ctx = createCtx({
+      storage: {
+        get: vi.fn().mockResolvedValue({
+          status: 'completed',
+          stepIndex: 4,
+          completedAt: '2026-06-25T00:00:00.000Z',
+          updatedAt: '2026-06-25T00:00:00.000Z',
+        }),
+        put: vi.fn(),
+      },
     });
 
-    expect(conversations.create).not.toHaveBeenCalled();
-    expect(storage.put).toHaveBeenCalledTimes(1);
-    expect(storage.delete).not.toHaveBeenCalled();
-    expect(mockSetExtensionEnabled).toHaveBeenCalledWith('system-onboarding', false);
-    expect(ui.invalidate).toHaveBeenCalledWith(['extensions']);
+    await expect(ensure({ source: 'frontend' }, ctx as never)).resolves.toMatchObject({
+      state: { status: 'completed', stepIndex: 4 },
+      shouldStart: false,
+    });
+    expect(ctx.storage.put).not.toHaveBeenCalled();
   });
 
-  it('does not re-open onboarding once the UI already consumed it', async () => {
+  it('updates status and clamps invalid step indexes', async () => {
     const storage = {
       get: vi.fn().mockResolvedValue({
-        completed: true,
-        conversationId: 'conv-1',
-        completedAt: '2026-05-12T00:00:00.000Z',
-        openedInUi: true,
+        status: 'unseen',
+        stepIndex: 0,
+        updatedAt: '2026-06-25T00:00:00.000Z',
       }),
       put: vi.fn().mockResolvedValue({ ok: true }),
-      delete: vi.fn().mockResolvedValue({ ok: true, deleted: false }),
     };
     const ctx = createCtx({ storage });
 
-    await expect(ensure({ source: 'frontend' }, ctx)).resolves.toEqual({
-      created: false,
-      conversationId: 'conv-1',
-      skipped: 'completed',
-      shouldOpen: false,
-    });
+    const result = await update({ status: 'active', stepIndex: 2.8 }, ctx as never);
 
-    expect(storage.put).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      state: { status: 'active', stepIndex: 2 },
+      shouldStart: false,
+    });
+    expect(storage.put).toHaveBeenCalledWith(
+      'onboarding:tour:v1',
+      expect.objectContaining({ status: 'active', stepIndex: 2, startedAt: expect.any(String) }),
+    );
   });
 
-  it('does not fail when UI invalidation is unavailable', async () => {
-    const ctx = createCtx({ ui: undefined });
+  it('de-duplicates concurrent ensure calls', async () => {
+    let resolveGet: ((value: null) => void) | null = null;
+    const storage = {
+      get: vi.fn().mockImplementation(
+        () =>
+          new Promise<null>((resolve) => {
+            resolveGet = resolve;
+          }),
+      ),
+      put: vi.fn().mockResolvedValue({ ok: true }),
+    };
+    const ctx = createCtx({ storage });
 
-    await expect(ensure({ source: 'frontend' }, ctx)).resolves.toEqual({
-      created: true,
-      conversationId: 'conv-1',
-      shouldOpen: true,
-    });
+    const first = ensure({ source: 'frontend' }, ctx as never);
+    const second = ensure({ source: 'frontend' }, ctx as never);
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(storage.get).toHaveBeenCalledTimes(1);
+
+    resolveGet?.(null);
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+
+    expect(firstResult).toEqual(secondResult);
+    expect(storage.put).toHaveBeenCalledTimes(1);
   });
 });

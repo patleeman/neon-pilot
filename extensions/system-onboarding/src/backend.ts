@@ -1,101 +1,114 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions/backend';
 
-const ONBOARDING_STATE_KEY = 'onboarding:v1';
-export const ONBOARDING_BACKEND_BUILD_MARKER = '2026-06-09';
+const ONBOARDING_STATE_KEY = 'onboarding:tour:v1';
+export const ONBOARDING_BACKEND_BUILD_MARKER = '2026-06-25';
 
-interface OnboardingState {
-  completed: boolean;
-  conversationId?: string;
-  completedAt: string;
-  openedInUi?: boolean;
+export type OnboardingTourStatus = 'unseen' | 'active' | 'completed' | 'skipped';
+
+export interface OnboardingTourState {
+  status: OnboardingTourStatus;
+  stepIndex: number;
+  startedAt?: string;
+  completedAt?: string;
+  skippedAt?: string;
+  updatedAt: string;
 }
 
 interface EnsureInput {
   source?: string;
 }
 
-interface EnsureResult {
-  created: boolean;
-  conversationId?: string;
-  skipped?: string;
-  shouldOpen?: boolean;
+interface UpdateInput {
+  status?: OnboardingTourStatus;
+  stepIndex?: number;
+}
+
+export interface EnsureResult {
+  state: OnboardingTourState;
+  shouldStart: boolean;
 }
 
 const ensureInFlightByRuntimeScope = new Map<string, Promise<EnsureResult>>();
 
-const onboardingMessage = `Welcome to Neon Pilot. This first conversation is here to get you unstuck before the app becomes a very expensive blank text box.
+function nowIso(): string {
+  return new Date().toISOString();
+}
 
-Start here:
+function normalizeStepIndex(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+}
 
-1. Open **Settings** and configure your model provider first. Neon Pilot needs a provider before normal agent conversations can run.
-2. Neon Pilot is extension-based. Most product features live as extensions, including tools, panels, automations, browser features, artifacts, and workflow helpers.
-3. Open **Settings → Extensions** to enable, disable, inspect, or manage extensions and imported plugin packages. System extensions ship with the app; user extensions are where your own workflows belong.
-4. After your provider is configured, start a new conversation and ask Neon Pilot to help with a real task. The app works best when you give it a concrete objective and let it use tools.
+function normalizeState(value: unknown): OnboardingTourState | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const record = value as Partial<OnboardingTourState>;
+  if (record.status !== 'unseen' && record.status !== 'active' && record.status !== 'completed' && record.status !== 'skipped') {
+    return null;
+  }
 
-Recommended first move: configure your provider, then come back and ask “what can you do in this repo?”`;
+  return {
+    status: record.status,
+    stepIndex: normalizeStepIndex(record.stepIndex),
+    ...(typeof record.startedAt === 'string' ? { startedAt: record.startedAt } : {}),
+    ...(typeof record.completedAt === 'string' ? { completedAt: record.completedAt } : {}),
+    ...(typeof record.skippedAt === 'string' ? { skippedAt: record.skippedAt } : {}),
+    updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : nowIso(),
+  };
+}
 
-function disableOnboarding(ctx: ExtensionBackendContext): void {
-  // Defer disable so it doesn't run inside the enable handler.
-  // Calling setEnabled from within the enable handler could cause
-  // recursion or undefined lifecycle behavior.
-  queueMicrotask(() => {
-    ctx.extensions?.setEnabled?.(ctx.extensionId, false);
-    ctx.ui?.invalidate?.(['extensions']);
-  });
+function createInitialState(): OnboardingTourState {
+  return {
+    status: 'unseen',
+    stepIndex: 0,
+    updatedAt: nowIso(),
+  };
+}
+
+async function readState(ctx: ExtensionBackendContext): Promise<OnboardingTourState> {
+  return normalizeState(await ctx.storage.get<OnboardingTourState>(ONBOARDING_STATE_KEY)) ?? createInitialState();
+}
+
+async function writeState(ctx: ExtensionBackendContext, state: OnboardingTourState): Promise<OnboardingTourState> {
+  await ctx.storage.put(ONBOARDING_STATE_KEY, state);
+  return state;
+}
+
+function transitionState(current: OnboardingTourState, input: UpdateInput): OnboardingTourState {
+  const nextStatus = input.status ?? current.status;
+  const timestamp = nowIso();
+  const next: OnboardingTourState = {
+    ...current,
+    status: nextStatus,
+    stepIndex: normalizeStepIndex(input.stepIndex ?? current.stepIndex),
+    updatedAt: timestamp,
+  };
+
+  if (nextStatus === 'active' && !next.startedAt) {
+    next.startedAt = timestamp;
+  }
+  if (nextStatus === 'completed') {
+    next.completedAt = timestamp;
+  }
+  if (nextStatus === 'skipped') {
+    next.skippedAt = timestamp;
+  }
+
+  return next;
 }
 
 async function ensureOnce(input: EnsureInput | undefined, ctx: ExtensionBackendContext): Promise<EnsureResult> {
-  const frontendRequest = input?.source === 'frontend';
-  const existingState = await ctx.storage.get<OnboardingState>(ONBOARDING_STATE_KEY);
-  if (existingState?.completed) {
-    if (frontendRequest && existingState.conversationId && !existingState.openedInUi) {
-      await ctx.storage.put(ONBOARDING_STATE_KEY, {
-        ...existingState,
-        openedInUi: true,
-      } satisfies OnboardingState);
-      disableOnboarding(ctx);
-      return {
-        created: false,
-        conversationId: existingState.conversationId,
-        skipped: 'completed',
-        shouldOpen: true,
-      };
-    }
-
-    disableOnboarding(ctx);
-    return {
-      created: false,
-      conversationId: existingState.conversationId,
-      skipped: 'completed',
-      shouldOpen: false,
-    };
+  const storedState = await ctx.storage.get<OnboardingTourState>(ONBOARDING_STATE_KEY);
+  const normalizedState = normalizeState(storedState);
+  const state = normalizedState ?? createInitialState();
+  if (!normalizedState) {
+    await writeState(ctx, state);
   }
 
-  const created = (await ctx.conversations.create({
-    cwd: ctx.runtime.getRepoRoot(),
-    title: 'Welcome to Neon Pilot',
-    live: false,
-  })) as { id?: string; conversationId?: string };
-  const conversationId = created.conversationId ?? created.id;
-  if (!conversationId) {
-    throw new Error('Onboarding conversation was not created.');
-  }
-  await ctx.conversations.appendTranscriptBlock({
-    conversationId,
-    blockType: 'onboarding_intro',
-    title: onboardingMessage,
-    data: { source: ctx.extensionId },
-  });
-
-  await ctx.storage.put(ONBOARDING_STATE_KEY, {
-    completed: true,
-    conversationId,
-    completedAt: new Date().toISOString(),
-    openedInUi: frontendRequest,
-  } satisfies OnboardingState);
-  disableOnboarding(ctx);
-
-  return { created: true, conversationId, shouldOpen: frontendRequest };
+  return {
+    state,
+    shouldStart: input?.source === 'frontend' && state.status === 'unseen',
+  };
 }
 
 export async function ensure(input: unknown, ctx: ExtensionBackendContext): Promise<EnsureResult> {
@@ -113,4 +126,11 @@ export async function ensure(input: unknown, ctx: ExtensionBackendContext): Prom
   });
   ensureInFlightByRuntimeScope.set(runtimeScope, task);
   return task;
+}
+
+export async function update(input: unknown, ctx: ExtensionBackendContext): Promise<EnsureResult> {
+  const body = input && typeof input === 'object' ? (input as UpdateInput) : {};
+  const nextState = transitionState(await readState(ctx), body);
+  const state = await writeState(ctx, nextState);
+  return { state, shouldStart: false };
 }

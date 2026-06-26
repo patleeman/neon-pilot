@@ -112,7 +112,7 @@ Bundled system extensions:
 - [AI Gateway](../extensions/system-model-gateway/README.md) — opt-in local Responses API proxy for external coding agents
 - [Model Picker](../extensions/system-model-picker/README.md) — composer model and thinking controls
 - [Neon Pilot CLI](../extensions/system-neon-pilot-admin-cli/README.md) — unified CLI control plane for internal agents and external callers
-- [Onboarding](../extensions/system-onboarding/README.md) — first-run onboarding bootstrap and conversation flow
+- [Onboarding](../extensions/system-onboarding/README.md) — first-run guided tour over real app pages
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
 - [Reply Actions](../extensions/system-reply-actions/README.md) — transcript selection actions and draft starters
 - [Scratchpad](../extensions/system-scratchpad/README.md) — conversation-scoped markdown scratchpad
