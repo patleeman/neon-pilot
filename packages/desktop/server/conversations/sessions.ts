@@ -810,13 +810,11 @@ function tryReadApproximateSessionTailBlocksByFile(filePath: string, meta: Sessi
   const blocksWithAssets = decorateSessionAssetUrls(rebasedBlocks, meta.id);
   const assetDecorateMs = elapsedMsSince(assetDecorateStartedAt);
 
-  // Fast-tail reads are the route-critical path for opening a conversation.
-  // Topology/backlink enrichment requires scanning every session meta, which is
-  // unrelated to showing the latest transcript page and can dominate large
-  // workspaces. Full reads still enrich topology when older context is loaded.
-  const blocksWithTopology = blocksWithAssets;
-  const totalBlocksWithTopology = totalBlocks;
-  const topologyMs = 0;
+  const topologyStartedAt = process.hrtime.bigint();
+  const blocksWithTopology = addFastTailParentBacklink(blocksWithAssets, meta);
+  const topologyBlockCount = Math.max(0, blocksWithTopology.length - blocksWithAssets.length);
+  const totalBlocksWithTopology = totalBlocks + topologyBlockCount;
+  const topologyMs = elapsedMsSince(topologyStartedAt);
 
   const deferStartedAt = process.hrtime.bigint();
   const blocks = deferHeavyBlockContent(blocksWithTopology, droppedVisibleBlockCount, totalBlocksWithTopology);
@@ -1396,6 +1394,18 @@ function addParentConversationBacklink(
     return [...contentBlocks, backlink];
   }
   return [backlink, ...contentBlocks];
+}
+
+function addFastTailParentBacklink(blocks: DisplayBlock[], meta: SessionMeta): DisplayBlock[] {
+  if (!meta.parentSessionId?.trim() && !meta.parentSessionFile) {
+    return blocks;
+  }
+
+  // Fast-tail reads are the route-critical path for opening a conversation.
+  // Avoid full child topology enrichment here, but keep the current child's own
+  // parent marker visible so fork/duplicate/rewind routes do not hydrate without
+  // their navigation affordance.
+  return addParentConversationBacklink(blocks, meta);
 }
 
 function findLastBlockIndex(blocks: DisplayBlock[], predicate: (block: DisplayBlock) => boolean): number {

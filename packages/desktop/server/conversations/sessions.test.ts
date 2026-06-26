@@ -2610,6 +2610,43 @@ describe('sessions', () => {
     );
   });
 
+  it('includes duplicate parent backlinks in fast-tail session detail reads', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'duplicate-fast-tail-parent',
+      title: 'Duplicate fast-tail parent',
+      assistantTexts: ['Parent reply'],
+    });
+    const childSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'duplicate-fast-tail-child',
+      title: 'Duplicate fast-tail child',
+      assistantTexts: ['Child reply'],
+      parentSession: parentSessionFile,
+    });
+
+    appendConversationOffshootMetadata({
+      sessionFile: childSessionFile,
+      kind: 'duplicate',
+      parentSessionFile,
+      parentSessionId: 'duplicate-fast-tail-parent',
+    });
+
+    const childRead = readSessionBlocksWithTelemetry('duplicate-fast-tail-child', { tailBlocks: 20 });
+    const childBlocks = childRead.detail?.blocks ?? [];
+    const backlink = childBlocks.find((block) => block.type === 'context' && block.customType === 'parent_conversation_backlink');
+
+    expect(childRead.telemetry?.loader).toBe('fast-tail');
+    expect(backlink).toEqual(
+      expect.objectContaining({
+        text: expect.stringContaining('Duplicate conversation from parent: Duplicate fast-tail parent'),
+      }),
+    );
+  });
+
   it('strips generated fork and rewind prefixes from offshoot conversation titles', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);
