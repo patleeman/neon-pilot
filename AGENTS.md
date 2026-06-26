@@ -19,6 +19,7 @@
 - Never modify the system prompt from extension `before_agent_start` handlers. Use file-based instruction layers instead: repo defaults, vault root `AGENTS.md`, machine-local `~/.config/agents/AGENTS.md`, or cwd `AGENTS.md`.
 - Docs are for agents. Update docs whenever behavior or workflow changes.
 - Before changing feature behavior, read the owning extension README plus relevant docs from `docs/README.md`.
+- For `system-skill-search`, preserve the product contract in `extensions/system-skill-search/README.md`: agents call `skill_search`, choose the best candidate themselves, then call `skill_install`; trusted sources install directly after vetting, while community sources use the host-owned timed approval shelf. Do not route approval through chat flags, ask the user to choose from raw candidates, or bypass vetting.
 
 ## Validation and checkpoints
 
