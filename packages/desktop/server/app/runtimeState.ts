@@ -17,6 +17,7 @@ import { listRuntimeExtensionBackendEntries } from '../extensions/extensionRunti
 import { createManifestToolAgentExtensions, listManifestToolAgentExtensionCacheEntries } from '../extensions/manifestToolAgentExtension.js';
 import { setRuntimeAgentHookBuilders } from '../extensions/runtimeAgentHooks.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
+import { buildInstructionPlan } from '../prompt-assembly/instructionInventory.js';
 import { buildPromptTemplatePlan, buildPromptTemplatePlanAsync } from '../prompts/promptTemplateInventory.js';
 import { LIVE_SESSION_RESOURCE_OPTIONS_PERF, type LiveSessionResourceOptions } from '../routes/context.js';
 import { registerProcessWrapper } from '../shared/processLauncher.js';
@@ -47,6 +48,21 @@ export interface RuntimeState {
 const DEFAULT_RUNTIME_SCOPE = 'shared';
 const LIVE_SESSION_HOT_CACHE_TTL_MS = 15_000;
 const skillRuntimeResourceRefreshers = new Map<string, () => void>();
+
+function renderExtensionInstructionSupplement(layers: unknown[]): string | undefined {
+  const content = layers
+    .flatMap((layer): string[] => {
+      if (!layer || typeof layer !== 'object' || Array.isArray(layer)) return [];
+      const record = layer as Record<string, unknown>;
+      const source = record.source;
+      const isExtensionSource = Boolean(
+        source && typeof source === 'object' && !Array.isArray(source) && (source as Record<string, unknown>).kind === 'extension',
+      );
+      return isExtensionSource && typeof record.content === 'string' && record.content.trim() ? [record.content.trim()] : [];
+    })
+    .join('\n\n');
+  return content || undefined;
+}
 
 function skillRuntimeResourceKey(input: { runtimeScope: string; agentDir: string }): string {
   return `${input.runtimeScope}\n${input.agentDir}`;
@@ -475,8 +491,11 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       const skillsDispatchedAtMs = performance.now();
       const promptTemplatesPromise = buildPromptTemplatePlanAsync(assemblyContext);
       const promptTemplatesDispatchedAtMs = performance.now();
-      const [skills, promptTemplates] = await Promise.all([skillsPromise, promptTemplatesPromise]);
+      const instructionsPromise = buildInstructionPlan(assemblyContext);
+      const instructionsDispatchedAtMs = performance.now();
+      const [skills, promptTemplates, instructions] = await Promise.all([skillsPromise, promptTemplatesPromise, instructionsPromise]);
       const plansAtMs = performance.now();
+      const systemPromptSupplement = renderExtensionInstructionSupplement(instructions.layers);
 
       const value = withResourceOptionsPerf(
         {
@@ -484,6 +503,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
           additionalSkillPaths: skills.skillPaths,
           additionalPromptTemplatePaths: promptTemplates.templatePaths,
           additionalThemePaths: resolved.themeEntries,
+          ...(systemPromptSupplement ? { systemPromptSupplement } : {}),
         },
         {
           cacheHit: 0,
@@ -494,7 +514,8 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
           materializeMs: Math.round(materializeAtMs - resourcesAtMs),
           skillDispatchMs: Math.round(skillsDispatchedAtMs - materializeAtMs),
           promptTemplateDispatchMs: Math.round(promptTemplatesDispatchedAtMs - skillsDispatchedAtMs),
-          planWaitMs: Math.round(plansAtMs - promptTemplatesDispatchedAtMs),
+          instructionDispatchMs: Math.round(instructionsDispatchedAtMs - promptTemplatesDispatchedAtMs),
+          planWaitMs: Math.round(plansAtMs - instructionsDispatchedAtMs),
           totalMs: Math.round(plansAtMs - startedAtMs),
         },
       );

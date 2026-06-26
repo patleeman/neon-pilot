@@ -56,6 +56,7 @@ describe('live session loader cache', () => {
       additionalSkillPaths: [' /skills '],
       additionalPromptTemplatePaths: [' /prompts '],
       additionalThemePaths: [' /themes '],
+      systemPromptSupplement: 'Extra style rules.',
       noThemes: true,
     });
 
@@ -76,6 +77,11 @@ describe('live session loader cache', () => {
     expect(agent.DefaultResourceLoader.instances[0].options).toEqual(
       expect.objectContaining({
         systemPrompt: expect.stringContaining('## Global user agent preferences'),
+      }),
+    );
+    expect(agent.DefaultResourceLoader.instances[0].options).toEqual(
+      expect.objectContaining({
+        systemPrompt: expect.stringContaining('Extra style rules.'),
       }),
     );
     expect(agent.DefaultResourceLoader.instances[0].options).toEqual(

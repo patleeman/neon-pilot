@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import codexCompatibilityExtension, { applyPatch } from './backend.js';
+import codexCompatibilityExtension, { applyPatch, codexInstructions } from './backend.js';
 
 function tempCwd(): string {
   return mkdtempSync(join(tmpdir(), 'pa-apply-patch-'));
@@ -54,6 +54,29 @@ describe('codex tool activation', () => {
 
     expect(added).toEqual([]);
     expect(removed).toEqual([]);
+  });
+});
+
+describe('codex instruction provider', () => {
+  it('adds response style instructions for Codex-compatible models', async () => {
+    await expect(codexInstructions({ modelRef: 'openai-codex/gpt-5.4' })).resolves.toEqual({
+      layers: [
+        expect.objectContaining({
+          id: 'system-codex-profile:response-style',
+          title: 'Codex response style',
+          content: expect.stringContaining('For anything longer than a quick response'),
+          source: { kind: 'extension', label: 'Codex Compatibility', extensionId: 'system-codex-profile' },
+          scope: 'runtime',
+          priority: 80,
+          mutable: false,
+          risk: 'normal',
+        }),
+      ],
+    });
+  });
+
+  it('skips response style instructions for non-Codex models', async () => {
+    await expect(codexInstructions({ modelRef: 'openai/gpt-4o' })).resolves.toEqual({ layers: [] });
   });
 });
 

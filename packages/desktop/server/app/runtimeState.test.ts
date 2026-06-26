@@ -20,6 +20,7 @@ const {
   buildSkillInjectionPlanMock,
   buildSkillInjectionPlanAsyncMock,
   buildPromptTemplatePlanAsyncMock,
+  buildInstructionPlanMock,
   listExtensionSkillRegistrationsMock,
   listRuntimeExtensionBackendEntriesMock,
   resolveManifestAgentLifecycleModelProfileMock,
@@ -48,6 +49,7 @@ const {
     buildSkillInjectionPlanMock: vi.fn(() => ({ skillPaths: ['/skills/sync'], inlineSkills: [], diagnostics: [] })),
     buildSkillInjectionPlanAsyncMock: vi.fn(async () => ({ skillPaths: ['/skills/async'], inlineSkills: [], diagnostics: [] })),
     buildPromptTemplatePlanAsyncMock: vi.fn(async () => ({ templatePaths: ['/prompts/async.md'], templates: [], diagnostics: [] })),
+    buildInstructionPlanMock: vi.fn(async () => ({ layers: [], finalSystemPrompt: '', diagnostics: [] })),
     listExtensionSkillRegistrationsMock: vi.fn(() => []),
     listRuntimeExtensionBackendEntriesMock: vi.fn(() => []),
     resolveManifestAgentLifecycleModelProfileMock: vi.fn(() => ({ kind: 'none' })),
@@ -97,6 +99,10 @@ vi.mock('../skills/skillInventory.js', () => ({
 vi.mock('../prompts/promptTemplateInventory.js', () => ({
   buildPromptTemplatePlan: vi.fn(() => ({ templatePaths: ['/prompts/sync.md'], templates: [], diagnostics: [] })),
   buildPromptTemplatePlanAsync: buildPromptTemplatePlanAsyncMock,
+}));
+
+vi.mock('../prompt-assembly/instructionInventory.js', () => ({
+  buildInstructionPlan: buildInstructionPlanMock,
 }));
 
 vi.mock('../ui/settingsPersistence.js', () => ({
@@ -332,12 +338,38 @@ describe('createRuntimeState', () => {
     expect(materializeRuntimeResourcesToAgentDirMock).toHaveBeenCalledWith(resolvedShared, '/agent-dir');
     expect(buildSkillInjectionPlanAsyncMock).toHaveBeenCalledTimes(1);
     expect(buildPromptTemplatePlanAsyncMock).toHaveBeenCalledTimes(1);
+    expect(buildInstructionPlanMock).toHaveBeenCalledTimes(1);
 
     await expect(state.buildLiveSessionResourceOptionsAsync()).resolves.toMatchObject({
       additionalSkillPaths: ['/skills/async'],
     });
     expect(buildSkillInjectionPlanAsyncMock).toHaveBeenCalledTimes(1);
     expect(buildPromptTemplatePlanAsyncMock).toHaveBeenCalledTimes(1);
+    expect(buildInstructionPlanMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds extension instruction layers to async live session resources', async () => {
+    buildInstructionPlanMock.mockResolvedValueOnce({
+      layers: [
+        {
+          id: 'extension-style',
+          content: 'Use concise conversational output.',
+          source: { kind: 'extension', label: 'Codex Compatibility', extensionId: 'system-codex-profile' },
+        },
+        {
+          id: 'runtime-template',
+          content: 'Runtime template should not be duplicated.',
+          source: { kind: 'runtime', label: 'Generated runtime instructions' },
+        },
+      ],
+      finalSystemPrompt: '',
+      diagnostics: [],
+    });
+    const state = createTestRuntimeState();
+
+    await expect(state.buildLiveSessionResourceOptionsAsync()).resolves.toMatchObject({
+      systemPromptSupplement: 'Use concise conversational output.',
+    });
   });
 
   it('seeds live session resource options while materializing runtime resources', async () => {

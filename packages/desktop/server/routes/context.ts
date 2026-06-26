@@ -10,6 +10,7 @@ export interface LiveSessionResourceOptions extends Record<string, unknown> {
   additionalSkillPaths: string[];
   additionalPromptTemplatePaths: string[];
   additionalThemePaths: string[];
+  systemPromptSupplement?: string;
   [LIVE_SESSION_RESOURCE_OPTIONS_PERF]?: Record<string, number>;
 }
 

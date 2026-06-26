@@ -19,8 +19,16 @@ Guidelines:
 - Load only relevant knowledge: AGENTS.md for standing context, skills for procedures, notes/projects for reference.
 - When a task matches an available skill, read that SKILL.md before using the workflow.`;
 
-function buildNeonSystemPrompt(input: { cwd: string; agentDir: string }): string {
-  return `${NEON_LIVE_SESSION_SYSTEM_PROMPT}${renderAgentsFiles(input.cwd, input.agentDir)}`;
+function renderSystemPromptSupplement(supplement: string | undefined): string {
+  const trimmed = supplement?.trim();
+  return trimmed ? `\n\n${trimmed}` : '';
+}
+
+function buildNeonSystemPrompt(input: { cwd: string; agentDir: string; systemPromptSupplement?: string }): string {
+  return `${NEON_LIVE_SESSION_SYSTEM_PROMPT}${renderSystemPromptSupplement(input.systemPromptSupplement)}${renderAgentsFiles(
+    input.cwd,
+    input.agentDir,
+  )}`;
 }
 
 function buildDs4SystemPrompt(input: { cwd: string; agentDir: string; skillPaths: string[] }): string {
@@ -82,6 +90,7 @@ export interface LiveSessionLoaderOptions {
   additionalSkillPaths?: string[];
   additionalPromptTemplatePaths?: string[];
   additionalThemePaths?: string[];
+  systemPromptSupplement?: string;
   initialModel?: string | null;
   initialThinkingLevel?: string | null;
   initialServiceTier?: string | null;
@@ -117,6 +126,7 @@ function buildLiveSessionLoaderCacheKey(cwd: string, options: LiveSessionLoaderO
     additionalSkillPaths: normalizeLiveSessionLoaderPaths(options.additionalSkillPaths),
     additionalPromptTemplatePaths: normalizeLiveSessionLoaderPaths(options.additionalPromptTemplatePaths),
     additionalThemePaths: normalizeLiveSessionLoaderPaths(options.additionalThemePaths),
+    systemPromptSupplement: options.systemPromptSupplement?.trim() ?? '',
     noSkills: options.noSkills ?? false,
     progressiveDisclosure: options.progressiveDisclosure ?? false,
     skillDiscoveryPaths: normalizeLiveSessionLoaderPaths(options.skillDiscoveryPaths),
@@ -139,7 +149,7 @@ function createLiveSessionLoader(cwd: string, options: LiveSessionLoaderOptions 
           agentDir,
           skillPaths: options.skillDiscoveryPaths ?? options.additionalSkillPaths ?? [],
         })
-      : buildNeonSystemPrompt({ cwd, agentDir }),
+      : buildNeonSystemPrompt({ cwd, agentDir, systemPromptSupplement: options.systemPromptSupplement }),
     noSkills: options.noSkills,
     noThemes: true,
     noContextFiles: true,

@@ -57,6 +57,11 @@ interface ImageBackendContext {
   agentToolContext?: unknown;
 }
 
+interface CodexInstructionContext {
+  modelRef?: string;
+  provider?: string;
+}
+
 interface RegisteredTool {
   execute?: (...args: unknown[]) => Promise<unknown> | unknown;
 }
@@ -87,6 +92,45 @@ export default function codexCompatibilityExtension(pi: ExtensionAPI): void {
   codexCompactionExtension(pi);
   pi.on('session_start', (_event, ctx) => activateCodexTools(ctx));
   pi.on('model_select', (_event, ctx) => activateCodexTools(ctx));
+}
+
+const CODEX_RESPONSE_STYLE_INSTRUCTIONS = `## Codex response style
+
+Use this style for day-to-day conversation and final answers when a Codex-compatible model is active.
+
+- Keep the voice concise, direct, friendly, and natural, like a coding partner handing off work.
+- For casual conversation, brainstorming, or quick questions, respond plainly without heavy structure.
+- For anything longer than a quick response, lead with the most useful point, then add only the detail needed for clarity.
+- Use short paragraphs by default. Use sections or bullets only when they make the answer easier to scan.
+- Group related points together and order from general outcome to specific details to supporting evidence.
+- Use present tense and active voice. Keep descriptions self-contained.
+- When work is complete, summarize the outcome, validation, and real risks without turning the answer into a file-by-file changelog.
+- Do not tell the user to save or copy files that already exist on their machine.
+- Respect higher-priority instructions, repo-specific output rules, citation requirements, and user-requested tone.`;
+
+function isCodexCompatibleContext(ctx: CodexInstructionContext): boolean {
+  const modelRef = ctx.modelRef?.trim().toLowerCase() ?? '';
+  const provider = ctx.provider?.trim().toLowerCase() ?? '';
+  return provider === 'openai-codex' || modelRef.startsWith('openai-codex/');
+}
+
+export async function codexInstructions(ctx: CodexInstructionContext) {
+  if (!isCodexCompatibleContext(ctx)) return { layers: [] };
+  return {
+    layers: [
+      {
+        id: 'system-codex-profile:response-style',
+        providerId: 'system-codex-profile',
+        title: 'Codex response style',
+        content: CODEX_RESPONSE_STYLE_INSTRUCTIONS,
+        source: { kind: 'extension', label: 'Codex Compatibility', extensionId: 'system-codex-profile' },
+        scope: 'runtime',
+        priority: 80,
+        mutable: false,
+        risk: 'normal',
+      },
+    ],
+  };
 }
 
 function readCwd(ctx: ToolContext): string {

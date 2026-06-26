@@ -26,6 +26,14 @@
           "enabled": true,
           "ignoreLiveContext": true
         }
+      },
+      {
+        "id": "codexInstructions",
+        "handler": "codexInstructions",
+        "title": "Codex response instructions",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
@@ -37,6 +45,14 @@
         "description": "Codex-compatible behavior for GPT coding models.",
         "match": ["openai-codex/*"],
         "priority": 100
+      }
+    ],
+    "instructionProviders": [
+      {
+        "id": "codex-response-style",
+        "handler": "codexInstructions",
+        "title": "Codex response style",
+        "priority": 80
       }
     ],
     "tools": [
