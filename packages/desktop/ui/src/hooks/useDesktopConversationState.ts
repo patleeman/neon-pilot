@@ -475,6 +475,41 @@ export function applyDesktopConversationStreamEvents(
   return next;
 }
 
+function streamingBlockSnapshotWouldJump(previousBlock: DisplayBlock | undefined, nextBlock: DisplayBlock | undefined): boolean {
+  if (!previousBlock || !nextBlock || previousBlock.type !== nextBlock.type) {
+    return false;
+  }
+
+  if (previousBlock.type === 'text' || previousBlock.type === 'thinking') {
+    const previousText = previousBlock.text ?? '';
+    const nextText = nextBlock.text ?? '';
+    return Boolean(previousText) && nextText.length > previousText.length && nextText.startsWith(previousText);
+  }
+
+  if (previousBlock.type === 'tool_use') {
+    const previousOutput = previousBlock.output ?? '';
+    const nextOutput = nextBlock.output ?? '';
+    return (
+      Boolean(previousOutput) &&
+      (previousBlock.running === true || nextBlock.running === true) &&
+      nextOutput.length > previousOutput.length &&
+      nextOutput.startsWith(previousOutput)
+    );
+  }
+
+  return false;
+}
+
+function liveSnapshotWouldJumpStreamingTail(
+  previousStream: DesktopConversationState['stream'],
+  nextStream: DesktopConversationState['stream'],
+): boolean {
+  if (previousStream.blockOffset !== nextStream.blockOffset || previousStream.blocks.length !== nextStream.blocks.length) {
+    return false;
+  }
+  return streamingBlockSnapshotWouldJump(previousStream.blocks.at(-1), nextStream.blocks.at(-1));
+}
+
 function mergeDesktopConversationState(
   previous: DesktopConversationState | null,
   next: DesktopConversationState,
@@ -504,7 +539,10 @@ function mergeDesktopConversationState(
         }
       : next;
   const nextWithPreservedLiveTail =
-    previousHasLiveTail && nextHasLiveTail && previous && previousStreamBlockEnd > nextStreamBlockEnd
+    previousHasLiveTail &&
+    nextHasLiveTail &&
+    previous &&
+    (previousStreamBlockEnd > nextStreamBlockEnd || liveSnapshotWouldJumpStreamingTail(previous.stream, next.stream))
       ? {
           ...nextWithPreservedOptimisticLive,
           stream: {

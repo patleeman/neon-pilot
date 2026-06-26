@@ -2070,6 +2070,98 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.state?.stream.blocks[2]).toEqual(expect.objectContaining({ type: 'text', text: 'Running...' }));
   });
 
+  it('keeps live text deltas smooth when a file refresh has a longer copy of the same block', async () => {
+    const frameCallbacks: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    const emptyLiveState = aggregateState('conv-live-chunk', []);
+    const longerSnapshotBase = aggregateState('conv-live-chunk', [
+      { type: 'text', id: 'text-1', text: 'Hello from the persisted session file', ts: '2026-05-30T00:00:01.000Z' },
+    ]);
+    const liveState = {
+      ...emptyLiveState,
+      liveSession: {
+        live: true,
+        id: 'conv-live-chunk',
+        cwd: '/repo',
+        sessionFile: '/repo/session.jsonl',
+        isStreaming: true,
+      },
+      stream: {
+        ...emptyLiveState.stream,
+        isStreaming: true,
+      },
+    } as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    const longerSnapshotState = {
+      ...longerSnapshotBase,
+      liveSession: {
+        live: true,
+        id: 'conv-live-chunk',
+        cwd: '/repo',
+        sessionFile: '/repo/session.jsonl',
+        isStreaming: true,
+      },
+      stream: {
+        ...longerSnapshotBase.stream,
+        isStreaming: true,
+      },
+    } as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    const conversationAggregate = vi
+      .spyOn(api, 'conversationAggregate')
+      .mockResolvedValueOnce(liveState)
+      .mockResolvedValueOnce(longerSnapshotState);
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-live-chunk" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    act(() => {
+      eventSources[0]?.send({ type: 'text_delta', delta: 'Hel' });
+    });
+
+    await act(async () => {
+      frameCallbacks[0]?.(performance.now());
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hel' })]);
+
+    await act(async () => {
+      eventSources[0]?.receive({ type: 'app_event', event: { type: 'session_file_changed', sessionId: 'conv-live-chunk' } });
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(conversationAggregate).toHaveBeenCalledTimes(2);
+    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hel' })]);
+
+    act(() => {
+      eventSources[0]?.send({ type: 'text_delta', delta: 'lo' });
+    });
+
+    await act(async () => {
+      frameCallbacks[1]?.(performance.now());
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hello' })]);
+  });
+
   it('flushes stream deltas on a fallback timer when animation frames stall', async () => {
     vi.useFakeTimers();
     const frameCallbacks: FrameRequestCallback[] = [];
