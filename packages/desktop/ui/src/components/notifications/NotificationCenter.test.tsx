@@ -106,5 +106,9 @@ describe('NotificationCenter', () => {
     rerender(<NotificationCenter onClose={onClose} />);
     fireEvent.keyDown(screen.getByRole('dialog', { name: 'Notifications' }), { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(3);
+
+    rerender(<NotificationCenter onClose={onClose} />);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(4);
   });
 });

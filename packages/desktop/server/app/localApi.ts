@@ -338,23 +338,24 @@ async function syncSystemConversationToolMutation(input: {
 }): Promise<unknown | undefined> {
   if (input.extensionId !== 'system-conversation-tools') return undefined;
   if (!isRecord(input.body)) return undefined;
-  const action = typeof input.body.action === 'string' ? input.body.action : '';
+  const body = input.body;
+  const action = typeof body.action === 'string' ? body.action : '';
   const actionResult = isRecord(input.result) ? input.result : {};
   if (actionResult.ok !== true) return undefined;
 
   const conversations = createExtensionConversationsCapability(await getLocalServerRouteContext(), input.extensionId);
   if (input.actionId === 'conversationTool' && action === 'delete') {
-    await conversations.delete({ conversationIds: optionalStringArray(input.body.conversationIds) ?? [] });
+    await conversations.delete({ conversationIds: optionalStringArray(body.conversationIds) ?? [] });
     return undefined;
   }
-  if (input.actionId === 'conversationTool' && action === 'retention_prune' && input.body.dryRun !== true) {
+  if (input.actionId === 'conversationTool' && action === 'retention_prune' && body.dryRun !== true) {
     await conversations.prune({
-      olderThanMs: Number(input.body.olderThanMs),
-      archivedOnly: input.body.archivedOnly === true,
+      olderThanMs: Number(body.olderThanMs),
+      archivedOnly: body.archivedOnly === true,
       dryRun: false,
     });
   }
-  return syncSystemConversationCwdAction(input);
+  return syncSystemConversationCwdAction({ actionId: input.actionId, body, result: input.result });
 }
 
 function readActionResultDetails(result: unknown): Record<string, unknown> | null {

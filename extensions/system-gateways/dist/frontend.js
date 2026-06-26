@@ -31,6 +31,7 @@ import {
   ComposerActionButton,
   ErrorState,
   IconButton,
+  Notice,
   Select,
   Spinner,
   StatusDot,
@@ -2484,8 +2485,8 @@ function GatewaysPage() {
         actions: /* @__PURE__ */ jsx(ToolbarButton, { type: "button", disabled: busy, onClick: () => void load(), children: "Refresh" })
       }
     ),
-    error ? /* @__PURE__ */ jsx("div", { className: "border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger", role: "alert", children: error }) : null,
-    notice ? /* @__PURE__ */ jsx("div", { className: "border border-success/30 bg-success/10 px-4 py-3 text-sm text-success", role: "status", children: notice }) : null,
+    error ? /* @__PURE__ */ jsx(Notice, { tone: "danger", children: error }) : null,
+    notice ? /* @__PURE__ */ jsx(Notice, { tone: "success", children: notice }) : null,
     /* @__PURE__ */ jsxs("section", { className: "grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.7fr)]", children: [
       /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
         /* @__PURE__ */ jsxs("div", { className: "border border-border bg-surface px-5 py-4", children: [
@@ -2620,7 +2621,13 @@ function GatewaysSidebar() {
     !state && !error ? /* @__PURE__ */ jsx("p", { className: "text-xs text-secondary", children: "Loading gateway status..." }) : null,
     state ? /* @__PURE__ */ jsxs("div", { className: "border border-border bg-surface px-3 py-3", children: [
       /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-        /* @__PURE__ */ jsx(StatusDot, { tone: statusDotTone(telegram?.status ?? "needs_config", state.token.configured, Boolean(telegram?.enabled)), size: "xs" }),
+        /* @__PURE__ */ jsx(
+          StatusDot,
+          {
+            tone: statusDotTone(telegram?.status ?? "needs_config", state.token.configured, Boolean(telegram?.enabled)),
+            size: "xs"
+          }
+        ),
         /* @__PURE__ */ jsx("span", { className: "text-sm font-medium text-primary", children: "Telegram" })
       ] }),
       /* @__PURE__ */ jsx("p", { className: "mt-2 text-xs text-secondary", children: state.token.configured ? formatGatewayStatus(telegram?.status ?? "needs_config") : "Token needed" })

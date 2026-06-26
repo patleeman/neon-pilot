@@ -371,7 +371,7 @@ export class LocalBackendProcesses {
       body: JSON.stringify({ request }),
       signal: input.signal,
     });
-    let body = new Uint8Array(await response.arrayBuffer());
+    let body = new Uint8Array((await response.arrayBuffer()) as ArrayBuffer);
     body = (await this.syncSystemConversationToolMutation(input, response.status, body)) ?? body;
     return {
       statusCode: response.status,
@@ -425,7 +425,7 @@ export class LocalBackendProcesses {
     },
     statusCode: number,
     responseBody: Uint8Array,
-  ): Promise<Uint8Array | undefined> {
+  ): Promise<Uint8Array<ArrayBuffer> | undefined> {
     if (input.method !== 'POST' || statusCode < 200 || statusCode >= 300) return undefined;
     const url = new URL(input.path, 'http://neon-pilot.local');
     const match = /^\/api\/extensions\/([^/]+)\/actions\/([^/]+)$/.exec(url.pathname);
@@ -454,7 +454,7 @@ export class LocalBackendProcesses {
   private async syncSystemConversationCwdMutation(
     requestBody: Record<string, unknown>,
     responseBody: Uint8Array,
-  ): Promise<Uint8Array | undefined> {
+  ): Promise<Uint8Array<ArrayBuffer> | undefined> {
     try {
       const parsed = JSON.parse(new TextDecoder().decode(responseBody)) as unknown;
       if (!parsed || typeof parsed !== 'object' || (parsed as { ok?: unknown }).ok !== true) return undefined;
@@ -488,7 +488,7 @@ export class LocalBackendProcesses {
           ok: true,
           result: queuedResult,
         }),
-      );
+      ) as Uint8Array<ArrayBuffer>;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       process.stderr.write(`[local-backend] failed to sync conversation cwd change: ${message}\n`);

@@ -4,6 +4,7 @@ import {
   Button,
   CenteredLoadingState,
   ErrorState,
+  Notice,
   StatusDot,
   TextInput,
   ToolbarButton,
@@ -241,16 +242,8 @@ export function GatewaysPage() {
           }
         />
 
-        {error ? (
-          <div className="border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
-            {error}
-          </div>
-        ) : null}
-        {notice ? (
-          <div className="border border-success/30 bg-success/10 px-4 py-3 text-sm text-success" role="status">
-            {notice}
-          </div>
-        ) : null}
+        {error ? <Notice tone="danger">{error}</Notice> : null}
+        {notice ? <Notice tone="success">{notice}</Notice> : null}
 
         <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.7fr)]">
           <div className="space-y-4">
@@ -292,9 +285,7 @@ export function GatewaysPage() {
                   Test bot
                 </Button>
               </div>
-              {telegramConnection?.statusMessage ? (
-                <p className="mt-3 text-xs text-secondary">{telegramConnection.statusMessage}</p>
-              ) : null}
+              {telegramConnection?.statusMessage ? <p className="mt-3 text-xs text-secondary">{telegramConnection.statusMessage}</p> : null}
             </div>
 
             <div className="border border-border bg-surface px-5 py-4">
@@ -429,7 +420,10 @@ export function GatewaysSidebar() {
         {state ? (
           <div className="border border-border bg-surface px-3 py-3">
             <div className="flex items-center gap-2">
-              <StatusDot tone={statusDotTone(telegram?.status ?? 'needs_config', state.token.configured, Boolean(telegram?.enabled))} size="xs" />
+              <StatusDot
+                tone={statusDotTone(telegram?.status ?? 'needs_config', state.token.configured, Boolean(telegram?.enabled))}
+                size="xs"
+              />
               <span className="text-sm font-medium text-primary">Telegram</span>
             </div>
             <p className="mt-2 text-xs text-secondary">
@@ -607,9 +601,7 @@ async function apiRequest<T = unknown>(path: string, init: { method?: string; bo
     headers: init.body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
   });
-  const payload = await response
-    .json()
-    .catch(async () => ({ error: await response.text().catch(() => '') })) as { error?: string };
+  const payload = (await response.json().catch(async () => ({ error: await response.text().catch(() => '') }))) as { error?: string };
   if (!response.ok) {
     throw new Error(payload.error || `Request failed with status ${response.status}`);
   }

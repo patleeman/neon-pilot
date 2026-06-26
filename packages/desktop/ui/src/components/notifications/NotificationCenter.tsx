@@ -192,6 +192,17 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
   const hasNotifications = notifications.some((n) => !n.dismissed);
   const hasUnread = unreadCount > 0;
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      event.preventDefault();
+      onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-[130]"
@@ -199,7 +210,10 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
         if (e.target === e.currentTarget) onClose();
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose();
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          onClose();
+        }
       }}
       role="dialog"
       aria-modal="false"
