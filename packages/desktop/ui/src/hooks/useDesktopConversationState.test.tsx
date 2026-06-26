@@ -1983,6 +1983,93 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hello' })]);
   });
 
+  it('preserves live stream blocks when an aggregate refresh returns a stale filtered snapshot', async () => {
+    const frameCallbacks: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    const emptyLiveState = aggregateState('conv-live-refresh', []);
+    const staleFilteredBase = aggregateState('conv-live-refresh', [
+      { type: 'user', id: 'user-1', text: 'run tests', ts: '2026-05-30T00:00:01.000Z' },
+    ]);
+    const liveState = {
+      ...emptyLiveState,
+      liveSession: {
+        live: true,
+        id: 'conv-live-refresh',
+        cwd: '/repo',
+        sessionFile: '/repo/session.jsonl',
+        isStreaming: true,
+      },
+      stream: {
+        ...emptyLiveState.stream,
+        isStreaming: true,
+      },
+    } as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    const staleFilteredState = {
+      ...staleFilteredBase,
+      liveSession: {
+        live: true,
+        id: 'conv-live-refresh',
+        cwd: '/repo',
+        sessionFile: '/repo/session.jsonl',
+        isStreaming: true,
+      },
+      stream: {
+        ...staleFilteredBase.stream,
+        isStreaming: true,
+      },
+    } as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    const conversationAggregate = vi
+      .spyOn(api, 'conversationAggregate')
+      .mockResolvedValueOnce(liveState)
+      .mockResolvedValueOnce(staleFilteredState);
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-live-refresh" includeToolBlocks={false} />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    act(() => {
+      eventSources[0]?.send({
+        type: 'user_message',
+        block: { type: 'user', id: 'user-1', text: 'run tests', ts: '2026-05-30T00:00:01.000Z' },
+      });
+      eventSources[0]?.send({ type: 'tool_start', toolCallId: 'tool-1', toolName: 'bash', args: { command: 'pnpm test' } });
+      eventSources[0]?.send({ type: 'text_delta', delta: 'Running...' });
+    });
+
+    await act(async () => {
+      frameCallbacks[0]?.(performance.now());
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks.map((block) => block.type)).toEqual(['user', 'tool_use', 'text']);
+
+    await act(async () => {
+      eventSources[0]?.receive({ type: 'app_event', event: { type: 'session_file_changed', sessionId: 'conv-live-refresh' } });
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(conversationAggregate).toHaveBeenCalledTimes(2);
+    expect(latestState?.state?.stream.blocks.map((block) => block.type)).toEqual(['user', 'tool_use', 'text']);
+    expect(latestState?.state?.stream.blocks[2]).toEqual(expect.objectContaining({ type: 'text', text: 'Running...' }));
+  });
+
   it('flushes stream deltas on a fallback timer when animation frames stall', async () => {
     vi.useFakeTimers();
     const frameCallbacks: FrameRequestCallback[] = [];

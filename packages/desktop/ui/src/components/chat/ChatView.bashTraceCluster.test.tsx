@@ -104,7 +104,24 @@ describe('ChatView bash trace clusters', () => {
     text: 'done',
   } satisfies Extract<MessageBlock, { type: 'text' }>;
 
-  it('keeps a tail internal-work cluster open until a response follows it', () => {
+  it('opens a tail internal-work cluster while it is streaming', () => {
+    const bashBlock = {
+      id: 'tool-1',
+      type: 'tool_use',
+      ts: '2026-05-13T10:56:49.000Z',
+      tool: 'bash',
+      input: { command: 'pwd' },
+      output: '/Users/patrick/workingdir/neon-pilot',
+      status: 'ok',
+    } satisfies Extract<MessageBlock, { type: 'tool_use' }>;
+
+    const { container } = renderChatView([bashBlock], { isStreaming: true });
+
+    expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('true');
+    expect(container.textContent).toContain('pwd');
+  });
+
+  it('keeps historical tail internal-work clusters collapsed by default', () => {
     const bashBlock = {
       id: 'tool-1',
       type: 'tool_use',
@@ -117,8 +134,9 @@ describe('ChatView bash trace clusters', () => {
 
     const { container } = renderChatView([bashBlock]);
 
-    expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('true');
-    expect(container.textContent).toContain('pwd');
+    expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('false');
+    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).not.toContain('pwd');
   });
 
   it('does not mount collapsed trace blocks until the cluster is expanded', () => {
@@ -189,9 +207,7 @@ describe('ChatView bash trace clusters', () => {
       internalWorkToggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    const toolHeader = Array.from(container.querySelectorAll('[role="button"]')).find((button) =>
-      button.textContent?.includes('src/app.ts'),
-    );
+    const toolHeader = container.querySelector('[role="button"][tabindex="0"]');
     expect(toolHeader).toBeTruthy();
 
     act(() => {

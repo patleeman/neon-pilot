@@ -94,6 +94,7 @@ export function ChatRenderItemView({
 
   if (item.type === 'trace_cluster') {
     const live = isStreaming && isTailItem;
+    const followedByTranscriptContent = !isTailItem;
     const deferredEntryHydrationId =
       item.blocks.length === 0 && item.deferredEntryIds ? buildDeferredEntryHydrationId(item.deferredEntryIds) : null;
 
@@ -115,7 +116,8 @@ export function ChatRenderItemView({
           }
           summary={item.summary}
           live={live}
-          keepOpenUntilFollowed={isTailItem}
+          keepOpenUntilFollowed={live}
+          followedByTranscriptContent={followedByTranscriptContent}
           onOpenArtifact={onOpenArtifact}
           activeArtifactId={activeArtifactId}
           onOpenCheckpoint={onOpenCheckpoint}

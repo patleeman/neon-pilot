@@ -165,7 +165,8 @@ describe('chat view extension transcript renderers', () => {
     );
 
     expect(html).toContain('artifact');
-    expect(html).toContain('list');
+    expect(html).toContain('Internal work');
+    expect(html).toContain('show');
     expect(html).not.toContain('Extension renderer unavailable');
     expect(html).not.toContain('019ea528');
     expect(html).not.toContain('data-extension-tool-host');

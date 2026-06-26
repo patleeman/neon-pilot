@@ -480,6 +480,12 @@ function mergeDesktopConversationState(
   next: DesktopConversationState,
 ): DesktopConversationState {
   const previousCwdChange = previous?.conversationId === next.conversationId ? previous.stream.cwdChange : null;
+  const previousHasLiveTail =
+    previous?.conversationId === next.conversationId &&
+    (previous.stream.isStreaming === true || (previous.liveSession.live === true && previous.liveSession.isStreaming === true));
+  const nextHasLiveTail = next.stream.isStreaming === true || (next.liveSession.live === true && next.liveSession.isStreaming === true);
+  const previousStreamBlockEnd = previous ? previous.stream.blockOffset + previous.stream.blocks.length : 0;
+  const nextStreamBlockEnd = next.stream.blockOffset + next.stream.blocks.length;
   const previousOptimisticLive =
     previous?.conversationId === next.conversationId &&
     previous.liveSession.live === true &&
@@ -497,15 +503,28 @@ function mergeDesktopConversationState(
           },
         }
       : next;
+  const nextWithPreservedLiveTail =
+    previousHasLiveTail && nextHasLiveTail && previous && previousStreamBlockEnd > nextStreamBlockEnd
+      ? {
+          ...nextWithPreservedOptimisticLive,
+          stream: {
+            ...nextWithPreservedOptimisticLive.stream,
+            blocks: previous.stream.blocks,
+            blockOffset: previous.stream.blockOffset,
+            totalBlocks: Math.max(nextWithPreservedOptimisticLive.stream.totalBlocks, previous.stream.totalBlocks, previousStreamBlockEnd),
+            hasSnapshot: nextWithPreservedOptimisticLive.stream.hasSnapshot || previous.stream.hasSnapshot,
+          },
+        }
+      : nextWithPreservedOptimisticLive;
 
-  if (!previousCwdChange || nextWithPreservedOptimisticLive.stream.cwdChange) {
-    return nextWithPreservedOptimisticLive;
+  if (!previousCwdChange || nextWithPreservedLiveTail.stream.cwdChange) {
+    return nextWithPreservedLiveTail;
   }
 
   return {
-    ...nextWithPreservedOptimisticLive,
+    ...nextWithPreservedLiveTail,
     stream: {
-      ...nextWithPreservedOptimisticLive.stream,
+      ...nextWithPreservedLiveTail.stream,
       cwdChange: previousCwdChange,
     },
   };

@@ -173,7 +173,7 @@ describe('ChatView rendering stability', () => {
     expect(container.textContent).toContain('Image attachment');
   });
 
-  it('keeps the tail trace cluster open until transcript content follows it', () => {
+  it('collapses live tool shelves as soon as assistant text follows them', () => {
     vi.useFakeTimers();
     const toolBlock = {
       id: 'tool-1',
@@ -190,25 +190,25 @@ describe('ChatView rendering stability', () => {
     expect(container.textContent).toContain('npm test -- --runInBand');
 
     act(() => {
-      root.render(<ChatView messages={[toolBlock]} isStreaming={false} />);
+      root.render(<ChatView messages={[toolBlock, createAssistantBlock()]} isStreaming />);
     });
 
-    expect(container.textContent).toContain('Working');
-    expect(container.textContent).toContain('npm test -- --runInBand');
+    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('Stable assistant reply');
+    expect(container.textContent).not.toContain('npm test -- --runInBand');
 
     act(() => {
       vi.advanceTimersByTime(899);
     });
 
-    expect(container.textContent).toContain('Working');
-    expect(container.textContent).toContain('npm test -- --runInBand');
+    expect(container.textContent).not.toContain('npm test -- --runInBand');
 
     act(() => {
       vi.advanceTimersByTime(1);
     });
 
     expect(container.textContent).toContain('Internal work');
-    expect(container.textContent).toContain('npm test -- --runInBand');
+    expect(container.textContent).not.toContain('npm test -- --runInBand');
 
     act(() => {
       root.render(<ChatView messages={[toolBlock, createAssistantBlock()]} isStreaming={false} />);
@@ -233,8 +233,14 @@ describe('ChatView rendering stability', () => {
     });
 
     expect(container.textContent).toContain('Internal work');
-    expect(container.textContent).toContain('The assistant is planning the answer.');
     expect(container.textContent).toContain('Stable assistant reply');
+    expect(container.textContent).not.toContain('The assistant is planning the answer.');
+
+    act(() => {
+      container.querySelector('button[aria-expanded="false"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('The assistant is planning the answer.');
     expect(container.textContent).not.toContain('live');
   });
 

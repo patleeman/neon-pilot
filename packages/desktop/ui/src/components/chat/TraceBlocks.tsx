@@ -288,7 +288,7 @@ function PinnedToolBlocks({
   );
 }
 
-function useGracefulTraceClusterActive(active: boolean): boolean {
+function useGracefulTraceClusterActive(active: boolean, immediateInactive: boolean): boolean {
   const [stableActive, setStableActive] = useState(active);
   const inactiveTimeoutRef = useRef<number | null>(null);
 
@@ -303,6 +303,11 @@ function useGracefulTraceClusterActive(active: boolean): boolean {
       return undefined;
     }
 
+    if (immediateInactive) {
+      setStableActive(false);
+      return undefined;
+    }
+
     inactiveTimeoutRef.current = window.setTimeout(() => {
       setStableActive(false);
       inactiveTimeoutRef.current = null;
@@ -314,7 +319,7 @@ function useGracefulTraceClusterActive(active: boolean): boolean {
         inactiveTimeoutRef.current = null;
       }
     };
-  }, [active]);
+  }, [active, immediateInactive]);
 
   return stableActive;
 }
@@ -325,6 +330,7 @@ export function TraceClusterBlock({
   summary,
   live,
   keepOpenUntilFollowed = false,
+  followedByTranscriptContent = false,
   onOpenArtifact,
   activeArtifactId,
   onOpenCheckpoint,
@@ -348,6 +354,7 @@ export function TraceClusterBlock({
   summary: TraceClusterSummary;
   live: boolean;
   keepOpenUntilFollowed?: boolean;
+  followedByTranscriptContent?: boolean;
   onOpenArtifact?: (artifactId: string) => void;
   activeArtifactId?: string | null;
   onOpenCheckpoint?: (checkpointId: string) => void;
@@ -373,12 +380,11 @@ export function TraceClusterBlock({
   const remainingCategoryCount = Math.max(0, summary.categories.length - expandedCategories.length);
   const durationLabel = summary.durationMs && summary.durationMs > 0 ? `${(summary.durationMs / 1000).toFixed(1)}s` : null;
   const isActive = live || summary.hasRunning;
-  const stableActive = useGracefulTraceClusterActive(isActive);
+  const stableActive = useGracefulTraceClusterActive(isActive, followedByTranscriptContent);
   const throughputLabel = useMemo(() => getStreamingThroughputLabel(blocks, stableActive), [blocks, stableActive]);
   const compact = layout === 'compact';
   const title = stableActive ? 'Working' : 'Internal work';
-  const autoOpen =
-    transcriptDisclosureMode === 'expanded' ? true : keepOpenUntilFollowed || shouldAutoOpenTraceCluster(stableActive, false);
+  const autoOpen = keepOpenUntilFollowed && shouldAutoOpenTraceCluster(stableActive, false);
   const open = resolveDisclosureOpen(autoOpen, preference);
   const toggleTraceCluster = useCallback(() => {
     setPreference((current) => toggleDisclosurePreference(autoOpen, current));
