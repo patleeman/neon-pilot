@@ -147,6 +147,28 @@ describe('conversation scroll helpers', () => {
     });
   });
 
+  it('scrolls a transcript message anchor with requested jump options', () => {
+    const scrollIntoView = vi.fn();
+    const root = {
+      querySelector: vi.fn().mockReturnValue({
+        scrollIntoView,
+      }),
+    };
+
+    expect(
+      scrollConversationMessageIntoView(root as unknown as Pick<ParentNode, 'querySelector'>, 42, {
+        behavior: 'smooth',
+        block: 'center',
+      }),
+    ).toBe(true);
+    expect(root.querySelector).toHaveBeenCalledWith('[data-message-index="42"]');
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'nearest',
+    });
+  });
+
   it('finds the user message that starts a streaming turn', () => {
     expect(
       getConversationStreamingTurnAnchorMessageIndex(

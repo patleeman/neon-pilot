@@ -191,6 +191,7 @@ import { shouldRefetchSavedWorkspacePaths, syncSavedWorkspacePathValues } from '
 import {
   getConversationInitialScrollKey,
   getConversationTailBlockKey,
+  scrollConversationMessageIntoView,
   shouldShowScrollToBottomControl,
 } from '../conversation/conversationScroll';
 import {
@@ -4155,11 +4156,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   // Jump to message by index
   const jumpToMessage = useCallback(
     (index: number) => {
-      const el = scrollRef.current?.querySelector(`#msg-${index}`);
-      if (el) {
+      if (scrollConversationMessageIntoView(scrollRef.current, index, { behavior: 'smooth', block: 'center' })) {
         pendingJumpMessageIndexRef.current = null;
         setRequestedFocusMessageIndex(null);
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
 
@@ -4178,14 +4177,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       return;
     }
 
-    const el = scrollRef.current?.querySelector(`#msg-${pendingIndex}`);
-    if (!el) {
+    if (!scrollConversationMessageIntoView(scrollRef.current, pendingIndex, { behavior: 'smooth', block: 'center' })) {
       return;
     }
 
     pendingJumpMessageIndexRef.current = null;
     setRequestedFocusMessageIndex(null);
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [historicalBlockOffset, realMessages]);
 
   useEffect(() => {
