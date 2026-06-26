@@ -2564,6 +2564,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const [wholeLineBashRunning, setWholeLineBashRunning] = useState(false);
   const wholeLineBashRunningRef = useRef(false);
   const pendingWholeLineBashRef = useRef<{ conversationId: string; command: string } | null>(null);
+  const pendingPostBashPromptRef = useRef<(PendingConversationPrompt & { conversationId: string }) | null>(null);
   const composerSubmitRunningRef = useRef(false);
   const [showBackgroundRunDetails, setShowBackgroundRunDetails] = useState(false);
 
@@ -5684,8 +5685,38 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     [composerController, input],
   );
 
+  async function drainQueuedPromptAfterWholeLineBash(conversationId: string) {
+    const queuedPrompt = pendingPostBashPromptRef.current;
+    if (!queuedPrompt || queuedPrompt.conversationId !== conversationId) {
+      return;
+    }
+
+    pendingPostBashPromptRef.current = null;
+    setPendingAssistantStatusLabel('Working…');
+    try {
+      await api.sendConversationMessage(
+        conversationId,
+        queuedPrompt.text,
+        queuedPrompt.behavior ?? 'followUp',
+        queuedPrompt.images,
+        queuedPrompt.attachmentRefs,
+        currentSurfaceId,
+        queuedPrompt.contextMessages,
+        queuedPrompt.relatedConversationIds,
+      );
+      notifyDesktopConversationStateRefresh(conversationId);
+      await desktopConversationRefresh().catch(() => null);
+    } catch (error) {
+      composerController.setText(queuedPrompt.text);
+      showNotice('danger', formatConversationMessageActionFailure('Queued follow-up', error), 4000);
+    } finally {
+      setPendingAssistantStatusLabel(null);
+    }
+  }
+
   async function runWholeLineBashCommand(inputSnapshot: string, command: { command: string; excludeFromContext: boolean }) {
     if (wholeLineBashRunningRef.current) {
+      showNotice('danger', 'A bash command is already running. Send a normal message to queue a follow-up.', 4000);
       return;
     }
 
@@ -5780,6 +5811,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         window.setTimeout(refreshAfterBash, 250);
         window.setTimeout(refreshAfterBash, 1_000);
       }
+
+      await drainQueuedPromptAfterWholeLineBash(conversationId);
 
       if (draft && !navigatedDraftConversation) {
         clearDraftConversationComposer();
@@ -5962,6 +5995,30 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         const result = await api.updateConversationContextDocs(conversationId, pendingAttachedContextDocs);
         return result.attachedContextDocs;
       };
+
+      if (wholeLineBashRunningRef.current) {
+        const pendingBash = pendingWholeLineBashRef.current;
+        if (!pendingBash) {
+          showNotice('danger', 'Bash is still finishing. Try sending again in a moment.', 4000);
+          await restoreComposerDraft(inputSnapshot, pendingImageAttachments, pendingDrawingAttachments);
+          setPendingBrowserComments(pendingBrowserCommentsSnapshot);
+          return;
+        }
+
+        const attachmentRefs = await persistPromptDrawings(pendingBash.conversationId);
+        await persistPromptContextDocs(pendingBash.conversationId);
+        pendingPostBashPromptRef.current = {
+          conversationId: pendingBash.conversationId,
+          text: textToSend,
+          behavior: queuedBehavior ?? 'followUp',
+          images: promptImages,
+          attachmentRefs,
+          contextMessages: browserContextMessages,
+        };
+        setPendingAssistantStatusLabel('Queued after bash…');
+        showNotice('accent', 'Queued follow-up after bash finishes.', 3000);
+        return;
+      }
 
       const waitForDraftPendingPromptPaint = () =>
         new Promise<void>((resolve) => {

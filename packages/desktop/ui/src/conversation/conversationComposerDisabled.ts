@@ -4,12 +4,7 @@ export function isConversationComposerDisabled(input: {
   wholeLineBashRunning: boolean;
   hasAvailableModel?: boolean;
 }): boolean {
-  return (
-    input.conversationNeedsTakeover ||
-    input.preparingRelatedThreadContext ||
-    input.wholeLineBashRunning ||
-    input.hasAvailableModel === false
-  );
+  return input.conversationNeedsTakeover || input.preparingRelatedThreadContext || input.hasAvailableModel === false;
 }
 
 export function shouldClearDraftPendingPrompt(draft: boolean): boolean {
