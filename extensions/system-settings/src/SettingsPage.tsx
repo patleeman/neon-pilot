@@ -12,8 +12,10 @@ import {
   EXTENSION_REGISTRY_CHANGED_EVENT,
   type ExtensionKeybindingRegistration,
   formatContextWindowLabel,
+  formatServiceTierLabel,
   formatThinkingLevelLabel,
   getDesktopBridge,
+  getModelSelectableServiceTierOptions,
   groupModelsByProvider,
   isDesktopShell,
   listHostCommands,
@@ -258,6 +260,21 @@ export function formatDefaultCwdSaveError(error: unknown): string {
     return 'The default project folder could not be saved.';
   }
   return message;
+}
+
+function formatModelPreferenceSaveError(error: unknown, field: 'model' | 'visionModel' | 'thinking' | 'serviceTier'): string {
+  const fallbackByField: Record<typeof field, string> = {
+    model: 'Could not save the default model. Try again.',
+    visionModel: 'Could not save the default image model. Try again.',
+    thinking: 'Could not save the default thinking level. Try again.',
+    serviceTier: 'Could not save the default service tier. Try again.',
+  };
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const trimmed = message.trim();
+  if (!trimmed || hasInternalProviderCredentialFailureDetails(trimmed)) {
+    return fallbackByField[field];
+  }
+  return trimmed;
 }
 
 export function scrollSettingsSectionIntoView(container: HTMLElement | null, sectionId: SettingsQuickLinkId) {
@@ -2757,6 +2774,10 @@ export function SettingsPage({
 
     return resolveSettingsModelOption(modelState.models, modelState.currentModel);
   }, [modelState]);
+  const selectedModelServiceTierOptions = useMemo(
+    () => getModelSelectableServiceTierOptions(selectedModel, { includeDefaultOption: true, defaultLabel: 'Use model default' }),
+    [selectedModel],
+  );
   const availableModelProviderIds = useMemo(
     () => listKnownModelProviderIds(modelProviderState, providerAuthState, modelState?.models),
     [modelProviderState, providerAuthState, modelState?.models],
@@ -3082,7 +3103,7 @@ export function SettingsPage({
       await api.updateModelPreferences(input);
       await refetchModels({ resetLoading: false });
     } catch (error) {
-      setModelError(error instanceof Error ? error.message : String(error));
+      setModelError(formatModelPreferenceSaveError(error, field));
     } finally {
       setSavingPreference(null);
     }
@@ -3820,6 +3841,36 @@ export function SettingsPage({
                             ))}
                           </Select>
                         </SettingsControlRow>
+
+                        {selectedModelServiceTierOptions.length > 0 ? (
+                          <SettingsControlRow
+                            title="Service tier"
+                            description={
+                              savingPreference === 'serviceTier'
+                                ? 'Saving...'
+                                : `Default for ${selectedModel?.name ?? 'the selected model'}: ${
+                                    modelState.currentServiceTier
+                                      ? formatServiceTierLabel(modelState.currentServiceTier)
+                                      : 'Use model default'
+                                  }`
+                            }
+                          >
+                            <Select
+                              id="settings-service-tier"
+                              value={modelState.currentServiceTier}
+                              onChange={(event) => {
+                                void handleModelPreferenceChange({ serviceTier: event.target.value }, 'serviceTier');
+                              }}
+                              disabled={savingPreference !== null}
+                            >
+                              {selectedModelServiceTierOptions.map((option) => (
+                                <option key={option.value || 'default'} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </Select>
+                          </SettingsControlRow>
+                        ) : null}
                       </>
                     ) : null}
 

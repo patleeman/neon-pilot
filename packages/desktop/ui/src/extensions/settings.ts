@@ -1,3 +1,4 @@
+export { CORE_KEYBOARD_SHORTCUT_REGISTRATIONS, DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS } from '../../../src/keyboard-shortcuts';
 export { api } from '../client/api';
 export {
   AppPageIntro,
@@ -78,8 +79,12 @@ export { subscribeDesktopProviderOAuthLogin } from '../desktop/desktopProviderOA
 export { useApi } from '../hooks/useApi';
 export { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 export { resetStoredConversationUiState, resetStoredLayoutPreferences } from '../local/localSettings';
-export { getModelSelectableServiceTierOptions, groupModelsByProvider, THINKING_LEVEL_OPTIONS } from '../model/modelPreferences';
-export { CORE_KEYBOARD_SHORTCUT_REGISTRATIONS, DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS } from '../../../src/keyboard-shortcuts';
+export {
+  formatServiceTierLabel,
+  getModelSelectableServiceTierOptions,
+  groupModelsByProvider,
+  THINKING_LEVEL_OPTIONS,
+} from '../model/modelPreferences';
 export {
   createModelEditorDraft,
   createProviderEditorDraft,
@@ -89,8 +94,8 @@ export {
   parseOptionalNonNegativeNumber,
   parseOptionalPositiveInteger,
   parseOptionalStringRecord,
-  readJsonObjectDraftEntries,
   type ProviderEditorDraft,
+  readJsonObjectDraftEntries,
   writeJsonObjectDraftEntries,
   writeStringRecordDraftEntries,
 } from '../model/modelProviderEditorDrafts';

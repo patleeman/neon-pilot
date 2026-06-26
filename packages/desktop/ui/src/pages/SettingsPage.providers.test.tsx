@@ -183,6 +183,15 @@ function expectNoInternalProviderErrorDetails(container: HTMLElement) {
   expect(container.textContent).not.toContain('packages/desktop');
 }
 
+function expectNoInternalModelPreferenceErrorDetails(container: HTMLElement) {
+  expect(container.textContent).not.toContain('Local API route did not complete');
+  expect(container.textContent).not.toContain('/api/model-preferences');
+  expect(container.textContent).not.toContain('file:///');
+  expect(container.textContent).not.toContain('localApi.js');
+  expect(container.textContent).not.toContain('Module.ep');
+  expect(container.textContent).not.toContain('packages/desktop');
+}
+
 function updateInputValue(input: HTMLInputElement, value: string) {
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
   if (!descriptor?.set) {
@@ -398,6 +407,11 @@ describe('SettingsPage provider model editor', () => {
     });
     settingsResult = buildUseApiResult({});
     settingsSchemaResult = buildUseApiResult([]);
+    updateModelPreferencesMock.mockResolvedValue({
+      currentModel: 'gpt-5.4',
+      currentThinkingLevel: 'medium',
+      currentServiceTier: 'priority',
+    });
 
     vi.mocked(useApi).mockImplementation((fetcher, key) => {
       if (fetcher === api.skillFolders) {
@@ -626,6 +640,52 @@ describe('SettingsPage provider model editor', () => {
 
     expect(section).toBeInstanceOf(HTMLElement);
     expect(heading?.textContent?.trim()).toBe('Conversation');
+  });
+
+  it('renders and saves default service tier choices for supported default models', async () => {
+    const { container } = renderPage(undefined, '/settings/conversation');
+    await flushAsyncWork();
+
+    const serviceTierSelect = container.querySelector('#settings-service-tier');
+    if (!(serviceTierSelect instanceof HTMLSelectElement)) {
+      throw new Error('Expected service tier select');
+    }
+
+    expect(Array.from(serviceTierSelect.options).map((option) => option.textContent)).toEqual([
+      'Use model default',
+      'Automatic',
+      'Priority',
+    ]);
+    expect(container.textContent).toContain('Service tier');
+    expect(container.textContent).toContain('Default for GPT-5.4: Use model default');
+    expect(container.textContent).not.toContain('priority');
+
+    updateSelectValue(serviceTierSelect, 'priority');
+    await flushAsyncWork();
+
+    expect(updateModelPreferencesMock).toHaveBeenCalledWith({ serviceTier: 'priority' });
+    expect(modelsRefetchMock).toHaveBeenCalledWith({ resetLoading: false });
+  });
+
+  it('hides raw model preference save failures in the conversation defaults section', async () => {
+    updateModelPreferencesMock.mockRejectedValueOnce(
+      new Error(
+        'Local API route did not complete for PATCH /api/model-preferences at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/localApi.js:132:20)',
+      ),
+    );
+    const { container } = renderPage(undefined, '/settings/conversation');
+    await flushAsyncWork();
+
+    const serviceTierSelect = container.querySelector('#settings-service-tier');
+    if (!(serviceTierSelect instanceof HTMLSelectElement)) {
+      throw new Error('Expected service tier select');
+    }
+
+    updateSelectValue(serviceTierSelect, 'priority');
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('Could not save the default service tier. Try again.');
+    expectNoInternalModelPreferenceErrorDetails(container);
   });
 
   it('falls back to browser pathname when context pathname is not a concrete settings route', async () => {
