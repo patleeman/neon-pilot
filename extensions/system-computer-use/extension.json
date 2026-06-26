@@ -78,11 +78,7 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": ["status", "doctor", "capture", "window_state", "click", "type", "key", "scroll", "drag", "focus_app", "raw"]
-            },
-            "tool": {
-              "type": "string",
-              "description": "Raw Cua MCP tool name. Required only for action=raw."
+              "enum": ["status", "doctor", "capture", "window_state", "click", "type", "key", "scroll", "drag", "focus_app"]
             },
             "arguments": {
               "type": "object",
@@ -112,10 +108,6 @@
             },
             "button": {
               "type": "string"
-            },
-            "capture_after": {
-              "type": "boolean",
-              "description": "Capture after the action when supported."
             }
           },
           "required": ["action"],

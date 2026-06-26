@@ -1,16 +1,16 @@
 {
   "extensionId": "system-computer-use",
-  "builtAt": "2026-06-26T00:59:56.619Z",
+  "builtAt": "2026-06-26T18:08:44.033Z",
   "frontendEntry": null,
   "backendEntry": "dist/backend.mjs",
   "sourceHashes": [
     {
       "path": "extension.json",
-      "sha256": "b01685c5dc5d20a616b7ef54128004bb8dbcebb95d5f2f502837a8ab7def0d69"
+      "sha256": "30daadaeeb46a27eb405bb3f6985a860948aa11fb2faa8bca8ca75c6b60af99b"
     },
     {
       "path": "src/backend.ts",
-      "sha256": "ca3fcbb123014e49c3c8b5d324531f117d5dc824c2f8b35e5f157648f4102953"
+      "sha256": "1bf212450ebf812ba3e3b9dbc758fbafb3007193669a9aeb5f54b101910006b4"
     }
   ],
   "outputs": [
@@ -25,8 +25,8 @@
       "imports": []
     },
     {
-      "path": "extensions/system-computer-use/.dist.tmp-40331-1782435596608/backend.mjs",
-      "bytes": 12075,
+      "path": "extensions/system-computer-use/.dist.tmp-12797-1782497324023/backend.mjs",
+      "bytes": 13755,
       "imports": [
         "node:fs",
         "node:path",

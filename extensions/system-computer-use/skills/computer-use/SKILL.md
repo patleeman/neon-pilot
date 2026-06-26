@@ -17,6 +17,8 @@ Rules:
 - Start with `computer_use(action="capture")` or `computer_use(action="status")`.
 - Use `window_state` for a specific `pid` and `window_id` before clicking UI elements.
 - Re-capture after state-changing actions; element indices are stale after UI changes.
+- On macOS, `focus_app` is informational only; Cua delivers input to the target pid without bringing the app to the foreground.
+- Use `type` for text fields. For app controls such as calculator operators, prefer `click` on the AX element; use `key` for single keys and hotkeys.
 - Never type passwords, recovery codes, API keys, or other secrets.
 - Never click OS permission prompts, payment confirmations, destructive deletion prompts, or login/logout/lock actions without explicit user instruction.
 - If the accessibility tree is sparse, use screenshot coordinates carefully or stop and ask.
@@ -24,5 +26,6 @@ Rules:
 Troubleshooting:
 
 - macOS needs Accessibility and Screen Recording permissions for the app/terminal running Neon Pilot.
+- Cua Driver is installed separately by the `Install Cua Driver` command. The currently tested public workflow uses `cua-driver 0.6.8`.
 - Windows over SSH may not have an interactive desktop; use an RDP/console session or Cua Driver's autostart pattern.
 - Linux needs a reachable display server and AT-SPI.

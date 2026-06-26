@@ -168,30 +168,47 @@ function mergeArgs(input) {
   }
   return args;
 }
+function normalizeCuaArgs(args) {
+  const normalized = { ...args };
+  if (typeof normalized.element === "number" && normalized.element_index === void 0) {
+    normalized.element_index = normalized.element;
+  }
+  delete normalized.element;
+  delete normalized.capture_after;
+  return normalized;
+}
+function keyToolFor(args) {
+  const normalized = normalizeCuaArgs(args);
+  const keys = normalized.keys;
+  if (typeof keys !== "string" || !keys.trim()) {
+    throw new Error("keys is required for action=key.");
+  }
+  const parts = keys.split(/[+,]/).map((part) => part.trim().toLowerCase()).filter(Boolean);
+  delete normalized.keys;
+  if (parts.length > 1) return { tool: "hotkey", args: { ...normalized, keys: parts } };
+  return { tool: "press_key", args: { ...normalized, key: parts[0] ?? keys.trim() } };
+}
 function mcpToolFor(input) {
   const args = mergeArgs(input);
   switch (input.action) {
     case "capture":
-      return { tool: "screenshot", args };
+      return { tool: "get_accessibility_tree", args: {} };
     case "window_state":
-      return { tool: "get_window_state", args };
+      return { tool: "get_window_state", args: normalizeCuaArgs(args) };
     case "click":
-      return { tool: "click", args };
+      return { tool: "click", args: normalizeCuaArgs(args) };
     case "type":
-      return { tool: "type", args };
+      return { tool: "type_text", args: normalizeCuaArgs(args) };
     case "key":
-      return { tool: "key", args };
+      return keyToolFor(args);
     case "scroll":
-      return { tool: "scroll", args };
+      return { tool: "scroll", args: normalizeCuaArgs(args) };
     case "drag":
-      return { tool: "drag", args };
+      return { tool: "drag", args: normalizeCuaArgs(args) };
     case "focus_app":
-      return { tool: "focus_app", args };
+      return { tool: "bring_to_front", args: normalizeCuaArgs(args) };
     case "doctor":
       return { tool: "health_report", args };
-    case "raw":
-      if (!input.tool || !input.tool.trim()) throw new Error("tool is required for action=raw.");
-      return { tool: input.tool.trim(), args };
     case "status":
       return { tool: "health_report", args };
     default:
@@ -225,6 +242,13 @@ async function computerUse(input, ctx) {
   if (!input || typeof input !== "object" || typeof input.action !== "string") throw new Error("action is required.");
   if (input.action === "status") return computerUseStatus({}, ctx);
   if (input.action === "doctor") return computerUseDoctor(input, ctx);
+  if (input.action === "focus_app" && process.platform === "darwin") {
+    return {
+      ok: true,
+      focused: false,
+      message: "Cua Driver does not bring macOS apps to the foreground; input actions are delivered directly to the target pid without focus."
+    };
+  }
   if (MUTATING_ACTIONS.has(input.action)) {
     assertSafeInput(input);
   }
@@ -267,12 +291,26 @@ async function computerUseInstall(_input, ctx) {
   const command = platform === "win32" ? "irm https://raw.githubusercontent.com/trycua/cua/main/libs/cua-driver/scripts/install.ps1 | iex" : '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/trycua/cua/main/libs/cua-driver/scripts/install.sh)"';
   const shell = platform === "win32" ? "powershell.exe" : "/bin/bash";
   const args = platform === "win32" ? ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command] : ["-lc", command];
-  const result = await ctx.shell.exec({ command: shell, args, timeoutMs: 12e4, maxBuffer: 1024 * 1024 });
+  let result;
+  try {
+    result = await ctx.shell.exec({ command: shell, args, timeoutMs: 12e4, maxBuffer: 1024 * 1024 });
+  } catch (error) {
+    return {
+      ok: false,
+      message: "Cua Driver installer failed.",
+      error: messageFrom(error),
+      installCommand: command
+    };
+  }
+  const version = await ctx.shell.exec({ command: "cua-driver", args: ["--version"], timeoutMs: 1e4 }).then((output) => output.stdout.trim() || output.stderr.trim()).catch((error) => `Unable to verify version: ${messageFrom(error)}`);
+  const health = await callCuaTool({ action: "status" }, ctx).catch((error) => ({ error: messageFrom(error) }));
   return {
     ok: true,
     stdout: result.stdout,
     stderr: result.stderr,
-    message: "Cua Driver installer finished. Run Computer Use doctor next to verify OS permissions."
+    version,
+    health,
+    message: "Cua Driver installer finished and version verification ran. Run Computer Use doctor next to verify OS permissions."
   };
 }
 export {
