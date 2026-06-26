@@ -6279,7 +6279,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     if (clearQueuedPromptsError) {
       showNotice(
         'danger',
-        clearQueuedPromptsError instanceof Error ? clearQueuedPromptsError.message : String(clearQueuedPromptsError),
+        formatConversationLocalActionFailure(clearQueuedPromptsError, 'Stopped, but could not restore queued prompts.'),
         4000,
       );
       return;

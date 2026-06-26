@@ -1016,6 +1016,82 @@ describe('ConversationPage lazy composer metadata', () => {
     expect((screen.getByPlaceholderText(/Message Neon Pilot/i) as HTMLTextAreaElement).value).toBe(queuedText);
   });
 
+  it('hides internal queued-prompt clear failures when stopping a stream', async () => {
+    vi.useRealTimers();
+    const queuedText = 'Queued follow-up should stay remote when clear fails';
+    apiMock.clearQueuedMessages.mockRejectedValue(
+      new Error(
+        'Error: Local API route did not complete for POST /api/live-sessions/conv-regression/clear-queued-messages at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/app/localApi.js:132:20)',
+      ),
+    );
+    desktopConversationState.abort.mockResolvedValue(undefined);
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = {
+      conversationId: 'conv-regression',
+      sessionDetail: regressionBootstrapData.sessionDetail,
+      liveSession: {
+        live: true,
+        id: 'conv-regression',
+        cwd: '/tmp/project',
+        sessionFile: '/tmp/conv-regression.jsonl',
+        isStreaming: true,
+        hasStaleTurnState: false,
+      },
+      stream: {
+        blocks: regressionBootstrapData.sessionDetail.blocks,
+        blockOffset: 0,
+        totalBlocks: 2,
+        hasSnapshot: true,
+        isStreaming: true,
+        isCompacting: false,
+        error: null,
+        title: null,
+        tokens: null,
+        cost: null,
+        contextUsage: null,
+        pendingQueue: {
+          steering: [],
+          followUp: [{ id: 'queued-follow-up-1', text: queuedText, imageCount: 0, restorable: true }],
+        },
+        presence: {
+          surfaces: [
+            {
+              surfaceId: 'surface-test',
+              surfaceType: 'desktop_web',
+              connectedAt: '2026-05-27T12:00:00.000Z',
+            },
+          ],
+          controllerSurfaceId: 'surface-test',
+          controllerSurfaceType: 'desktop_web',
+          controllerAcquiredAt: '2026-05-27T12:00:00.000Z',
+        },
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        cwdChange: null,
+      },
+    };
+
+    renderConversationPage();
+
+    expect(await screen.findByText(queuedText)).toBeTruthy();
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(desktopConversationState.abort).toHaveBeenCalledTimes(1));
+    expect(apiMock.clearQueuedMessages).toHaveBeenCalledWith('conv-regression', 'surface-test');
+    expect(await screen.findByText('Stopped, but could not restore queued prompts.')).toBeTruthy();
+    expect(document.body.textContent ?? '').not.toMatch(
+      /Local API route did not complete|\/api\/live-sessions|file:\/\/|localApi\.js|Module\.ep/i,
+    );
+  });
+
   it('refreshes desktop conversation state after an inline bash command completes', async () => {
     desktopConversationState.mode = 'local';
     desktopConversationState.active = true;
@@ -1439,7 +1515,7 @@ describe('ConversationPage lazy composer metadata', () => {
     expect(apiMock.liveSessionContext).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '/tmp/project' }));
+      fireEvent.click(screen.getByTitle('Working directory: project'));
       await Promise.resolve();
     });
 
@@ -1473,8 +1549,8 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
 
-    const workspaceButton = screen.getByRole('button', { name: '/tmp/next-project' });
-    expect(workspaceButton.getAttribute('title')).toBe('Working directory: /tmp/next-project');
+    const workspaceButton = screen.getByTitle('Working directory: next-project');
+    expect(workspaceButton.getAttribute('title')).toBe('Working directory: next-project');
 
     await act(async () => {
       liveSessionContextResolvers[0]?.({
@@ -1489,7 +1565,7 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByRole('button', { name: '/tmp/next-project' }).getAttribute('title')).toBe('Working directory: /tmp/next-project');
+    expect(screen.getByTitle('Working directory: next-project').getAttribute('title')).toBe('Working directory: next-project');
   });
 
   it('shows clean validation copy when a saved conversation working directory is unavailable', async () => {
@@ -1530,7 +1606,7 @@ describe('ConversationPage lazy composer metadata', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '/tmp/project' }));
+      fireEvent.click(screen.getByTitle('Working directory: project'));
       await Promise.resolve();
     });
 
@@ -1585,7 +1661,7 @@ describe('ConversationPage lazy composer metadata', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '/tmp/project' }));
+      fireEvent.click(screen.getByTitle('Working directory: project'));
       await Promise.resolve();
     });
 
@@ -1640,7 +1716,7 @@ describe('ConversationPage lazy composer metadata', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '/tmp/project' }));
+      fireEvent.click(screen.getByTitle('Working directory: project'));
       await Promise.resolve();
     });
 
