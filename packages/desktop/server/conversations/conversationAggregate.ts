@@ -104,6 +104,7 @@ export function subscribeConversationAggregate(input: SubscribeConversationAggre
   let closed = false;
   let activityRefreshInFlight = false;
   let activityRefreshQueued = false;
+  let liveUnsubscribe: (() => void) | null = null;
 
   const publishActivity = async () => {
     if (closed) {
@@ -131,32 +132,47 @@ export function subscribeConversationAggregate(input: SubscribeConversationAggre
     }
   };
 
-  const liveUnsubscribe =
-    subscribeLiveSession(
-      conversationId,
-      (event) => {
-        if (closed) {
-          return;
-        }
+  const attachLiveSession = () => {
+    if (closed || liveUnsubscribe) {
+      return;
+    }
+    liveUnsubscribe =
+      subscribeLiveSession(
+        conversationId,
+        (event) => {
+          if (closed) {
+            return;
+          }
 
-        input.onDelta({
-          type: 'stream_events',
-          conversationId,
-          revision: bumpRevision(conversationId),
-          events: [event],
-        });
+          input.onDelta({
+            type: 'stream_events',
+            conversationId,
+            revision: bumpRevision(conversationId),
+            events: [event],
+          });
 
-        if (event.type === 'queue_state' || event.type === 'agent_start' || event.type === 'agent_end' || event.type === 'turn_end') {
-          void publishActivity();
-        }
-      },
-      {
-        ...(input.tailBlocks ? { tailBlocks: input.tailBlocks } : {}),
-        ...(input.surface ? { surface: input.surface } : {}),
-      },
-    ) ?? null;
+          if (event.type === 'queue_state' || event.type === 'agent_start' || event.type === 'agent_end' || event.type === 'turn_end') {
+            void publishActivity();
+          }
+        },
+        {
+          ...(input.tailBlocks ? { tailBlocks: input.tailBlocks } : {}),
+          ...(input.surface ? { surface: input.surface } : {}),
+        },
+      ) ?? null;
+  };
+
+  attachLiveSession();
 
   const appUnsubscribe = subscribeAppEvents((event) => {
+    if (
+      (event.type === 'session_meta_changed' || event.type === 'session_file_changed') &&
+      event.sessionId === conversationId &&
+      !liveUnsubscribe
+    ) {
+      attachLiveSession();
+    }
+
     if (isActivityInvalidation(event)) {
       void publishActivity();
     }

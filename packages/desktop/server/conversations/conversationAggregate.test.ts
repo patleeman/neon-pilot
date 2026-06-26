@@ -155,4 +155,42 @@ describe('conversation aggregate', () => {
     );
     unsubscribe();
   });
+
+  it('attaches to a live runtime after a subscribed persisted conversation becomes live', async () => {
+    let appListener: ((event: { type: 'session_meta_changed'; sessionId: string }) => void) | null = null;
+    let liveListener: ((event: { type: 'text_delta'; delta: string }) => void) | null = null;
+    const liveUnsubscribe = vi.fn();
+    mocks.subscribeAppEvents.mockImplementation((listener) => {
+      appListener = listener;
+      return vi.fn();
+    });
+    mocks.subscribeLiveSession
+      .mockReturnValueOnce(null)
+      .mockImplementationOnce((_conversationId, listener) => {
+        liveListener = listener;
+        return liveUnsubscribe;
+      });
+    const onDelta = vi.fn();
+    const { subscribeConversationAggregate } = await import('./conversationAggregate.js');
+
+    const unsubscribe = subscribeConversationAggregate({ conversationId: 'conv-1', profile: 'shared', onDelta });
+    expect(mocks.subscribeLiveSession).toHaveBeenCalledTimes(1);
+
+    appListener?.({ type: 'session_meta_changed', sessionId: 'conv-1' });
+    expect(mocks.subscribeLiveSession).toHaveBeenCalledTimes(2);
+
+    liveListener?.({ type: 'text_delta', delta: 'Hello' });
+
+    expect(onDelta).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'stream_events',
+        conversationId: 'conv-1',
+        revision: 1,
+        events: [{ type: 'text_delta', delta: 'Hello' }],
+      }),
+    );
+
+    unsubscribe();
+    expect(liveUnsubscribe).toHaveBeenCalledOnce();
+  });
 });
