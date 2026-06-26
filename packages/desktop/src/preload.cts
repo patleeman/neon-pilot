@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 const CHANNEL_PREFIX = 'neon-pilot-desktop';
 const SHORTCUT_CHANNEL = `${CHANNEL_PREFIX}:shortcut`;
@@ -109,6 +109,7 @@ const desktopBridge = {
   checkForUpdates: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:check-for-updates`),
   installReadyUpdate: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:install-ready-update`),
   pickFolder: (input?: { cwd?: string | null; prompt?: string | null }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:pick-folder`, input),
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
   captureScreenshot: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:capture-screenshot`),
   goBack: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:go-back`),
   goForward: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:go-forward`),

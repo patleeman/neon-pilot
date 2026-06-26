@@ -4,6 +4,7 @@ import {
   loadExcalidrawSceneFromBlob,
   serializeExcalidrawScene,
 } from '../content/excalidrawUtils';
+import { getDesktopBridge } from '../desktop/desktopBridge';
 import type { PromptAttachmentRefInput, PromptImageInput, PromptVideoInput } from '../shared/types';
 import type { DraftConversationDrawingAttachment } from './draftConversation';
 
@@ -240,7 +241,19 @@ function isPromptVideoFile(file: File): boolean {
 }
 
 function readLocalFilePath(file: File): string {
-  const candidate = (file as File & { path?: unknown }).path;
+  const desktopBridge = getDesktopBridge();
+  let candidate: unknown;
+
+  try {
+    candidate = desktopBridge?.getPathForFile?.(file);
+  } catch {
+    candidate = undefined;
+  }
+
+  if (typeof candidate !== 'string' || !candidate.trim()) {
+    candidate = (file as File & { path?: unknown }).path;
+  }
+
   if (typeof candidate !== 'string' || !candidate.trim()) {
     throw new Error(
       `Video attachment "${file.name || 'Unnamed file'}" needs a local file path. Attach a file from the desktop picker so Neon Pilot can probe it locally.`,

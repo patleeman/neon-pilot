@@ -215,6 +215,34 @@ function normalizeFrameCount(value: unknown): number {
   return number;
 }
 
+function normalizeFrameTimestamps(input: { startSec: number; endSec: number; count: number; durationMs?: number; fps?: number }): number[] {
+  const durationSec = Number.isFinite(input.durationMs) && Number(input.durationMs) > 0 ? Number(input.durationMs) / 1000 : undefined;
+  const durationToleranceSec = 0.001;
+  if (durationSec !== undefined) {
+    if (input.startSec > durationSec + durationToleranceSec) {
+      throw new Error('startSec exceeds the video duration.');
+    }
+    if (input.endSec > durationSec + durationToleranceSec) {
+      throw new Error('endSec exceeds the video duration.');
+    }
+  }
+
+  const span = Math.max(0, input.endSec - input.startSec);
+  const requested =
+    input.count === 1
+      ? [input.startSec + span / 2]
+      : Array.from({ length: input.count }, (_, index) => input.startSec + (span * index) / Math.max(1, input.count - 1));
+
+  if (durationSec === undefined) {
+    return requested;
+  }
+
+  const frameDurationSec = Number.isFinite(input.fps) && Number(input.fps) > 0 ? 1 / Number(input.fps) : 0;
+  const lastFrameMarginSec = Math.max(0.1, frameDurationSec + 0.01);
+  const lastFrameSec = Math.max(0, durationSec - lastFrameMarginSec);
+  return requested.map((timestampSec) => Math.max(0, Math.min(timestampSec, lastFrameSec)));
+}
+
 function normalizeVideoId(value: unknown): string {
   if (typeof value !== 'string' || !/^vid_[a-f0-9]{12}$/.test(value.trim()))
     throw new Error('videoId must be a valid video attachment ID.');
@@ -320,9 +348,7 @@ export async function sampleVideoFrames(input: unknown): Promise<VideoProbeFrame
   const startSec = normalizeSeconds(record.startSec, 'startSec', 0);
   const endSec = normalizeSeconds(record.endSec, 'endSec', defaultEndSec);
   if (endSec < startSec) throw new Error('endSec must be greater than or equal to startSec.');
-  const span = Math.max(0, endSec - startSec);
-  const timestamps =
-    count === 1 ? [startSec + span / 2] : Array.from({ length: count }, (_, index) => startSec + (span * index) / Math.max(1, count - 1));
+  const timestamps = normalizeFrameTimestamps({ startSec, endSec, count, durationMs: video.durationMs, fps: video.fps });
 
   const tempRoot = await mkdtemp(join(tmpdir(), 'neon-pilot-video-probe-'));
   try {
@@ -331,6 +357,9 @@ export async function sampleVideoFrames(input: unknown): Promise<VideoProbeFrame
       const timestampSec = timestamps[index] ?? startSec;
       const outputPath = join(tempRoot, `frame-${index + 1}.png`);
       await runFfmpeg(['-y', '-ss', timestampSec.toFixed(3), '-i', video.path, '-frames:v', '1', '-f', 'image2', outputPath]);
+      if (!existsSync(outputPath)) {
+        throw new Error(`ffmpeg did not produce a frame at ${timestampSec.toFixed(3)}s.`);
+      }
       const data = await readFile(outputPath);
       frames.push({
         timestampMs: Math.round(timestampSec * 1000),
@@ -423,5 +452,6 @@ export const testExports = {
   parseDurationMs,
   parseFps,
   parseVideoDimensions,
+  normalizeFrameTimestamps,
   videoIdForFile,
 };

@@ -15,7 +15,7 @@
       {
         "id": "attach-files",
         "component": "AttachFilesComposerControl",
-        "title": "Attach image or drawing",
+        "title": "Attach file",
         "slot": "leading",
         "priority": 0
       }

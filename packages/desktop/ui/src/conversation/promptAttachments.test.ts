@@ -25,6 +25,9 @@ import {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  if (typeof window !== 'undefined') {
+    Reflect.deleteProperty(window, 'neonPilotDesktop');
+  }
 });
 
 describe('promptAttachments', () => {
@@ -144,6 +147,59 @@ describe('promptAttachments', () => {
     expect(result.drawingParseFailures).toEqual([{ fileName: 'broken.excalidraw', message: 'Invalid scene' }]);
     expect(result.rejectedFileNames).toEqual(['notes.txt']);
     expect(result.imageReadFailures).toEqual([]);
+  });
+
+  it('uses the desktop bridge to resolve local video file paths', async () => {
+    const getPathForFile = vi.fn(() => '/tmp/from-bridge.mp4');
+    vi.stubGlobal('window', { neonPilotDesktop: { getPathForFile } });
+    const video = new File(['video'], 'screen.mp4', { type: 'video/mp4' });
+
+    const result = await prepareComposerFiles([video]);
+
+    expect(getPathForFile).toHaveBeenCalledWith(video);
+    expect(result.videoAttachments).toEqual([
+      expect.objectContaining({
+        name: 'screen.mp4',
+        mimeType: 'video/mp4',
+        path: '/tmp/from-bridge.mp4',
+        size: 5,
+        sizeBytes: 5,
+      }),
+    ]);
+    expect(result.videoReadFailures).toEqual([]);
+  });
+
+  it('falls back to legacy file.path for local video file paths', async () => {
+    const video = new File(['video'], 'clip.mov', { type: '' });
+    Object.defineProperty(video, 'path', { value: '/tmp/legacy.mov' });
+
+    const result = await prepareComposerFiles([video]);
+
+    expect(result.videoAttachments).toEqual([
+      expect.objectContaining({
+        name: 'clip.mov',
+        mimeType: 'video/*',
+        path: '/tmp/legacy.mov',
+        size: 5,
+        sizeBytes: 5,
+      }),
+    ]);
+    expect(result.videoReadFailures).toEqual([]);
+  });
+
+  it('reports video path resolution failures as attachment read failures', async () => {
+    const video = new File(['video'], 'screen.mp4', { type: 'video/mp4' });
+
+    const result = await prepareComposerFiles([video]);
+
+    expect(result.videoAttachments).toEqual([]);
+    expect(result.videoReadFailures).toEqual([
+      {
+        fileName: 'screen.mp4',
+        message:
+          'Video attachment "screen.mp4" needs a local file path. Attach a file from the desktop picker so Neon Pilot can probe it locally.',
+      },
+    ]);
   });
 
   it('resizes large image attachments instead of attaching original bytes', async () => {
