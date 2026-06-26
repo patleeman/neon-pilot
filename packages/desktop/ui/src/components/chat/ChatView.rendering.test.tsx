@@ -1,4 +1,7 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -89,7 +92,7 @@ describe('ChatView rendering stability', () => {
     document.body.innerHTML = '';
   });
 
-  it('does not rerender stable transcript rows when only the streaming tail changes', async () => {
+  it('does not rerender stable transcript rows when only the streaming tail changes', () => {
     const userBlock = createUserBlock();
     const assistantBlock = createAssistantBlock();
     const initialTail = createStreamingTail('Tail draft');
@@ -107,21 +110,17 @@ describe('ChatView rendering stability', () => {
       root.render(<ChatView messages={[userBlock, assistantBlock, updatedTail]} isStreaming />);
     });
 
-    await act(async () => {
-      await new Promise((resolve) => window.setTimeout(resolve, 110));
-    });
-
     expect(container.textContent).toContain('Tail draft with more output');
     expect(timeAgoSpy).toHaveBeenCalledTimes(1);
     expect(timeAgoSpy).toHaveBeenCalledWith(updatedTail.ts);
   });
 
-  it('renders markdown in the streaming assistant tail before the stream settles', () => {
+  it('renders the streaming assistant tail as plain text until the stream settles', () => {
     const streamingTail = createStreamingTail('**streaming** tail');
     const { container, root } = renderChatView([streamingTail], { isStreaming: true });
 
-    expect(container.textContent).toContain('streaming tail');
-    expect(container.querySelector('strong')?.textContent).toBe('streaming');
+    expect(container.textContent).toContain('**streaming** tail');
+    expect(container.querySelector('strong')).toBeNull();
 
     act(() => {
       root.render(<ChatView messages={[streamingTail]} isStreaming={false} />);
@@ -131,14 +130,25 @@ describe('ChatView rendering stability', () => {
     expect(container.querySelector('strong')?.textContent).toBe('streaming');
   });
 
-  it('renders completed markdown-looking chunks while the stream is active', () => {
+  it('keeps completed markdown-looking chunks plain while the stream is active', () => {
     const streamingTail = createStreamingTail(['# Streaming title', '', '**active** tail'].join('\n'));
     const { container } = renderChatView([streamingTail], { isStreaming: true });
 
-    expect(container.textContent).toContain('Streaming title');
-    expect(container.textContent).toContain('active tail');
-    expect(container.querySelector('h1')?.textContent).toBe('Streaming title');
-    expect(container.querySelector('strong')?.textContent).toBe('active');
+    expect(container.textContent).toContain('# Streaming title');
+    expect(container.textContent).toContain('**active** tail');
+    expect(container.querySelector('h1')).toBeNull();
+    expect(container.querySelector('strong')).toBeNull();
+  });
+
+  it('keeps assistant ordered-list markers out of clipped overflow', () => {
+    const desktopCss = readFileSync(join(process.cwd(), 'packages/desktop/ui/src/app/index.css'), 'utf8');
+    const uiCss = readFileSync(join(process.cwd(), 'packages/ui/src/styles.css'), 'utf8');
+    const listRule = desktopCss.match(/\.ui-markdown ul,\s*\.ui-markdown ol\s*{[^}]+}/)?.[0];
+    const assistantCardRule = uiCss.match(/\.ui-message-card-assistant\s*{[^}]+}/)?.[0];
+
+    expect(listRule).toContain('padding-inline-start: 2rem');
+    expect(listRule).toContain('overflow: visible');
+    expect(assistantCardRule).toContain('overflow: visible');
   });
 
   it('does not install continuous reply-selection polling when selection replies are enabled', () => {

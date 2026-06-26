@@ -39,7 +39,7 @@ interface ChatRenderSample {
   meta: Record<string, unknown>;
 }
 
-type ConversationStreamCadencePhase = 'flush' | 'paint';
+type ConversationStreamCadencePhase = 'flush' | 'paint' | 'authoritative';
 
 interface ConversationStreamCadenceSample {
   conversationId: string;

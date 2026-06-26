@@ -1226,7 +1226,7 @@ body {
 .ui-message-card-assistant {
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
+  overflow: visible;
   border: 0;
   border-radius: 0;
   background: transparent;

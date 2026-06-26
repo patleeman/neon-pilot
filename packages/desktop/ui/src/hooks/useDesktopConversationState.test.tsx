@@ -1920,7 +1920,7 @@ describe('useDesktopConversationState', () => {
     );
   });
 
-  it('flushes text deltas on the next animation frame', async () => {
+  it('flushes text deltas before the next animation frame', async () => {
     const frameCallbacks: FrameRequestCallback[] = [];
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
       frameCallbacks.push(callback);
@@ -1973,15 +1973,13 @@ describe('useDesktopConversationState', () => {
 
     act(() => {
       eventSources[0]?.send({ type: 'text_delta', delta: 'Hel' });
-      eventSources[0]?.send({ type: 'text_delta', delta: 'lo' });
     });
 
     expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1);
-    expect(latestState?.state?.stream.blocks).toEqual([]);
+    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hel' })]);
 
-    await act(async () => {
-      frameCallbacks[0]?.(performance.now());
-      await flushPromises();
+    act(() => {
+      eventSources[0]?.send({ type: 'text_delta', delta: 'lo' });
     });
 
     expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hello' })]);
@@ -1996,9 +1994,9 @@ describe('useDesktopConversationState', () => {
     );
     expect(flushSamples.at(-1)).toEqual(
       expect.objectContaining({
-        eventCount: 2,
-        textDeltaCount: 2,
-        textDeltaChars: 5,
+        eventCount: 1,
+        textDeltaCount: 1,
+        textDeltaChars: 2,
       }),
     );
 
@@ -2012,9 +2010,9 @@ describe('useDesktopConversationState', () => {
     );
     expect(paintSamples.at(-1)).toEqual(
       expect.objectContaining({
-        eventCount: 2,
-        textDeltaCount: 2,
-        textDeltaChars: 5,
+        eventCount: 1,
+        textDeltaCount: 1,
+        textDeltaChars: 2,
       }),
     );
   });
@@ -2086,11 +2084,6 @@ describe('useDesktopConversationState', () => {
       });
       eventSources[0]?.send({ type: 'tool_start', toolCallId: 'tool-1', toolName: 'bash', args: { command: 'pnpm test' } });
       eventSources[0]?.send({ type: 'text_delta', delta: 'Running...' });
-    });
-
-    await act(async () => {
-      frameCallbacks[0]?.(performance.now());
-      await flushPromises();
     });
 
     expect(latestState?.state?.stream.blocks.map((block) => block.type)).toEqual(['user', 'tool_use', 'text']);
@@ -2170,11 +2163,6 @@ describe('useDesktopConversationState', () => {
       eventSources[0]?.send({ type: 'text_delta', delta: 'Hel' });
     });
 
-    await act(async () => {
-      frameCallbacks[0]?.(performance.now());
-      await flushPromises();
-    });
-
     expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hel' })]);
 
     await act(async () => {
@@ -2190,15 +2178,83 @@ describe('useDesktopConversationState', () => {
       eventSources[0]?.send({ type: 'text_delta', delta: 'lo' });
     });
 
-    await act(async () => {
-      frameCallbacks.at(-1)?.(performance.now());
-      await flushPromises();
-    });
-
     expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hello' })]);
   });
 
-  it('flushes stream deltas on a fallback timer when animation frames stall', async () => {
+  it('keeps authoritative refresh snapshots from replacing the active live stream tail', async () => {
+    const emptyLiveState = aggregateState('conv-live-refresh-tail', []);
+    const longerSnapshotBase = aggregateState('conv-live-refresh-tail', [
+      { type: 'text', id: 'text-1', text: 'Hello from the persisted session file', ts: '2026-05-30T00:00:01.000Z' },
+    ]);
+    const liveState = {
+      ...emptyLiveState,
+      liveSession: {
+        live: true,
+        id: 'conv-live-refresh-tail',
+        cwd: '/repo',
+        sessionFile: '/repo/session.jsonl',
+        isStreaming: true,
+      },
+      stream: {
+        ...emptyLiveState.stream,
+        isStreaming: true,
+      },
+    } as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    const longerSnapshotState = {
+      ...longerSnapshotBase,
+      liveSession: {
+        live: true,
+        id: 'conv-live-refresh-tail',
+        cwd: '/repo',
+        sessionFile: '/repo/session.jsonl',
+        isStreaming: true,
+      },
+      stream: {
+        ...longerSnapshotBase.stream,
+        isStreaming: true,
+      },
+    } as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    const conversationAggregate = vi
+      .spyOn(api, 'conversationAggregate')
+      .mockResolvedValueOnce(liveState)
+      .mockResolvedValueOnce(longerSnapshotState);
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-live-refresh-tail" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    act(() => {
+      eventSources[0]?.send({ type: 'text_delta', delta: 'Hel' });
+    });
+
+    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hel' })]);
+
+    await act(async () => {
+      notifyDesktopConversationStateRefresh('conv-live-refresh-tail');
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(conversationAggregate).toHaveBeenCalledTimes(2);
+    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hel' })]);
+    expect(latestState?.state?.stream.blocks[0]).not.toEqual(
+      expect.objectContaining({ text: 'Hello from the persisted session file' }),
+    );
+  });
+
+  it('flushes tool updates on a fallback timer when animation frames stall', async () => {
     vi.useFakeTimers();
     const frameCallbacks: FrameRequestCallback[] = [];
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
@@ -2212,9 +2268,21 @@ describe('useDesktopConversationState', () => {
       bootstrap: null,
       liveSession: { live: true, title: null, isStreaming: true, hasStaleTurnState: false },
       stream: {
-        blocks: [],
+        blocks: [
+          {
+            type: 'tool_use',
+            id: 'tool-1',
+            toolCallId: 'tool-1',
+            tool: 'bash',
+            input: { command: 'pnpm test' },
+            output: '',
+            status: 'running',
+            running: true,
+            ts: '2026-05-30T00:00:01.000Z',
+          },
+        ],
         blockOffset: 0,
-        totalBlocks: 0,
+        totalBlocks: 1,
         hasSnapshot: true,
         isStreaming: true,
         isCompacting: false,
@@ -2249,27 +2317,32 @@ describe('useDesktopConversationState', () => {
     });
 
     act(() => {
-      eventSources[0]?.send({ type: 'text_delta', delta: 'Fallback ' });
-      eventSources[0]?.send({ type: 'tool_update', toolCallId: 'missing-tool', partialResult: 'ignored' });
+      eventSources[0]?.send({ type: 'tool_update', toolCallId: 'tool-1', partialResult: 'installing' });
     });
 
     expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1);
     expect(frameCallbacks).toHaveLength(1);
-    expect(latestState?.state?.stream.blocks).toEqual([]);
+    expect(latestState?.state?.stream.blocks).toEqual([
+      expect.objectContaining({ type: 'tool_use', toolCallId: 'tool-1', output: '' }),
+    ]);
 
     await act(async () => {
       vi.advanceTimersByTime(99);
       await flushPromises();
     });
 
-    expect(latestState?.state?.stream.blocks).toEqual([]);
+    expect(latestState?.state?.stream.blocks).toEqual([
+      expect.objectContaining({ type: 'tool_use', toolCallId: 'tool-1', output: '' }),
+    ]);
 
     await act(async () => {
       vi.advanceTimersByTime(1);
       await flushPromises();
     });
 
-    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Fallback ' })]);
+    expect(latestState?.state?.stream.blocks).toEqual([
+      expect.objectContaining({ type: 'tool_use', toolCallId: 'tool-1', output: 'installing' }),
+    ]);
   });
 
   it('preserves state identity when a flushed stream event is a no-op', async () => {

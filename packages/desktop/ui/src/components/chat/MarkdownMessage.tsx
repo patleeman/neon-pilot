@@ -5,10 +5,7 @@ import React, {
   memo,
   type ReactElement,
   type ReactNode,
-  useEffect,
   useId,
-  useRef,
-  useState,
 } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
@@ -508,60 +505,19 @@ export function renderMarkdownText(
   );
 }
 
-const STREAMING_MARKDOWN_UPDATE_INTERVAL_MS = 100;
-
-function useThrottledStreamingMarkdownText(text: string): string {
-  const [renderedText, setRenderedText] = useState(text);
-  const latestTextRef = useRef(text);
-  const lastRenderedAtRef = useRef(0);
-
-  useEffect(() => {
-    latestTextRef.current = text;
-    const now = Date.now();
-    const elapsed = now - lastRenderedAtRef.current;
-
-    if (elapsed >= STREAMING_MARKDOWN_UPDATE_INTERVAL_MS) {
-      lastRenderedAtRef.current = now;
-      setRenderedText(text);
-      return undefined;
-    }
-
-    const timeout = window.setTimeout(() => {
-      lastRenderedAtRef.current = Date.now();
-      setRenderedText(latestTextRef.current);
-    }, STREAMING_MARKDOWN_UPDATE_INTERVAL_MS - elapsed);
-
-    return () => window.clearTimeout(timeout);
-  }, [text]);
-
-  return renderedText;
-}
-
-function StreamingMarkdownText({
-  text,
-  onOpenFilePath,
-  onOpenCheckpoint,
-  validatedFilePathTargets,
-}: {
-  text: string;
-  onOpenFilePath?: (path: string) => void;
-  onOpenCheckpoint?: (checkpointId: string) => void;
-  validatedFilePathTargets?: ReadonlySet<string>;
-}) {
-  const renderedText = useThrottledStreamingMarkdownText(text);
-
-  return renderMarkdownText(renderedText, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets });
+function renderPlainText(text: string) {
+  return <div className="whitespace-pre-wrap break-words">{text}</div>;
 }
 
 export function renderStreamingMarkdownText(
   text: string,
-  options?: {
+  _options?: {
     onOpenFilePath?: (path: string) => void;
     onOpenCheckpoint?: (checkpointId: string) => void;
     validatedFilePathTargets?: ReadonlySet<string>;
   },
 ) {
-  return <StreamingMarkdownText text={text} {...options} />;
+  return renderPlainText(text);
 }
 
 function parseSkillContentSections(content: string): { relativeTo: string | null; body: string } {

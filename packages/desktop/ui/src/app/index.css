@@ -1256,7 +1256,10 @@
 
   .ui-markdown ul,
   .ui-markdown ol {
-    @apply my-2 space-y-1 pl-5;
+    @apply my-2 space-y-1;
+    padding-inline-start: 2rem;
+    overflow: visible;
+    list-style-position: outside;
   }
 
   .ui-markdown ul {

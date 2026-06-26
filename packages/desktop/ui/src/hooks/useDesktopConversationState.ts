@@ -492,7 +492,6 @@ function mergeDesktopConversationState(
     (previous.stream.isStreaming === true || (previous.liveSession.live === true && previous.liveSession.isStreaming === true));
   const nextHasLiveTail = next.stream.isStreaming === true || (next.liveSession.live === true && next.liveSession.isStreaming === true);
   const previousStreamBlockEnd = previous ? previous.stream.blockOffset + previous.stream.blocks.length : 0;
-  const nextStreamBlockEnd = next.stream.blockOffset + next.stream.blocks.length;
   const previousOptimisticLive =
     previous?.conversationId === next.conversationId &&
     previous.liveSession.live === true &&
@@ -511,7 +510,7 @@ function mergeDesktopConversationState(
         }
       : next;
   const nextWithPreservedLiveTail =
-    previousHasLiveTail && nextHasLiveTail && previous && previousStreamBlockEnd > nextStreamBlockEnd
+    previousHasLiveTail && nextHasLiveTail && previous && previous.stream.blocks.length > 0
       ? {
           ...nextWithPreservedOptimisticLive,
           stream: {
@@ -987,10 +986,12 @@ export function useDesktopConversationState(conversationId: string | null, optio
       streamEvent.type === 'error' ||
       streamEvent.type === 'cwd_changed' ||
       streamEvent.type === 'agent_end' ||
-      streamEvent.type === 'turn_end';
+      streamEvent.type === 'turn_end' ||
+      streamEvent.type === 'text_delta' ||
+      streamEvent.type === 'thinking_delta';
 
     const shouldFlushStreamEventOnFrame = (streamEvent: SseEvent): boolean =>
-      streamEvent.type === 'text_delta' || streamEvent.type === 'thinking_delta' || streamEvent.type === 'tool_update';
+      streamEvent.type === 'tool_update';
 
     const enqueueStreamEvent = (streamEvent: SseEvent) => {
       if (closed) {
