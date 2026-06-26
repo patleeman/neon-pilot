@@ -657,6 +657,25 @@ function formatProviderCredentialError(error: unknown, action: 'save' | 'remove'
   return trimmed;
 }
 
+function formatProviderEditorActionError(
+  error: unknown,
+  action: 'saveProvider' | 'deleteProvider' | 'saveModel' | 'deleteModel' | 'testProvider',
+): string {
+  const fallbackByAction: Record<typeof action, string> = {
+    saveProvider: 'Could not save this provider. Check the settings and try again.',
+    deleteProvider: 'Could not remove this provider. Try again.',
+    saveModel: 'Could not save this model. Check the settings and try again.',
+    deleteModel: 'Could not remove this model. Try again.',
+    testProvider: 'Could not test this provider. Try again.',
+  };
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const trimmed = message.trim();
+  if (!trimmed || hasInternalProviderCredentialFailureDetails(trimmed)) {
+    return fallbackByAction[action];
+  }
+  return trimmed;
+}
+
 function formatProviderOAuthError(error: unknown, action: 'start' | 'submit' | 'cancel' | 'open' | 'copy' | 'failed'): string {
   const fallbackByAction: Record<typeof action, string> = {
     start: 'Could not start provider login. Try again.',
@@ -3109,7 +3128,7 @@ export function SettingsPage({
         await refetchModels({ resetLoading: false });
       }
     } catch (error) {
-      setProviderTestError(error instanceof Error ? error.message : String(error));
+      setProviderTestError(formatProviderEditorActionError(error, 'testProvider'));
     } finally {
       setProviderTestAction(false);
     }
@@ -3354,7 +3373,7 @@ export function SettingsPage({
       setModelProviderMessage(existed ? `Saved ${providerId}.` : `Created ${providerId}.`);
       await Promise.all([refetchModels({ resetLoading: false }), refetchProviderAuth({ resetLoading: false })]);
     } catch (error) {
-      setModelProviderEditorError(error instanceof Error ? error.message : String(error));
+      setModelProviderEditorError(formatProviderEditorActionError(error, 'saveProvider'));
     } finally {
       setModelProviderAction(null);
     }
@@ -3393,7 +3412,7 @@ export function SettingsPage({
       setModelProviderMessage(`Removed ${providerId}.`);
       await Promise.all([refetchModels({ resetLoading: false }), refetchProviderAuth({ resetLoading: false })]);
     } catch (error) {
-      setModelProviderEditorError(error instanceof Error ? error.message : String(error));
+      setModelProviderEditorError(formatProviderEditorActionError(error, 'deleteProvider'));
     } finally {
       setModelProviderAction(null);
     }
@@ -3455,7 +3474,7 @@ export function SettingsPage({
       setModelDraftMessage(existed ? `Saved ${modelId}.` : `Added ${modelId}.`);
       await Promise.all([refetchModels({ resetLoading: false }), refetchProviderAuth({ resetLoading: false })]);
     } catch (error) {
-      setModelDraftError(error instanceof Error ? error.message : String(error));
+      setModelDraftError(formatProviderEditorActionError(error, 'saveModel'));
     } finally {
       setModelDraftAction(null);
     }
@@ -3482,7 +3501,7 @@ export function SettingsPage({
       setModelDraftMessage(`Removed ${modelId}.`);
       await Promise.all([refetchModels({ resetLoading: false }), refetchProviderAuth({ resetLoading: false })]);
     } catch (error) {
-      setModelDraftError(error instanceof Error ? error.message : String(error));
+      setModelDraftError(formatProviderEditorActionError(error, 'deleteModel'));
     } finally {
       setModelDraftAction(null);
     }

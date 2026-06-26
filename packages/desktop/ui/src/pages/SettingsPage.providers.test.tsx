@@ -209,6 +209,8 @@ function updateSelectValue(select: HTMLSelectElement, value: string) {
 }
 
 describe('SettingsPage provider model editor', () => {
+  let saveModelProviderMock: ReturnType<typeof vi.spyOn>;
+  let deleteModelProviderMock: ReturnType<typeof vi.spyOn>;
   let saveModelProviderModelMock: ReturnType<typeof vi.spyOn>;
   let deleteModelProviderModelMock: ReturnType<typeof vi.spyOn>;
   let updateModelPreferencesMock: ReturnType<typeof vi.spyOn>;
@@ -225,6 +227,8 @@ describe('SettingsPage provider model editor', () => {
   let providerAuthResult: ReturnType<typeof buildUseApiResult<{ authFile: string; providers: Array<Record<string, unknown>> }>>;
 
   beforeEach(() => {
+    saveModelProviderMock = vi.spyOn(api, 'saveModelProvider');
+    deleteModelProviderMock = vi.spyOn(api, 'deleteModelProvider');
     saveModelProviderModelMock = vi.spyOn(api, 'saveModelProviderModel');
     deleteModelProviderModelMock = vi.spyOn(api, 'deleteModelProviderModel');
     updateModelPreferencesMock = vi.spyOn(api, 'updateModelPreferences');
@@ -478,7 +482,7 @@ describe('SettingsPage provider model editor', () => {
       trace: { dbPath: '/tmp/pa/observability/observability.db', maxRowsPerTable: 50000, deletedRows: { trace_stats: 2 }, vacuumed: true },
     });
 
-    saveModelProviderModelMock.mockResolvedValue({
+    const savedProviderState = {
       profile: 'assistant',
       filePath: '/tmp/assistant-models.json',
       providers: [
@@ -513,7 +517,10 @@ describe('SettingsPage provider model editor', () => {
           ],
         },
       ],
-    });
+    };
+    saveModelProviderMock.mockResolvedValue(savedProviderState);
+    deleteModelProviderMock.mockResolvedValue(savedProviderState);
+    saveModelProviderModelMock.mockResolvedValue(savedProviderState);
     deleteModelProviderModelMock.mockResolvedValue({
       profile: 'assistant',
       filePath: '/tmp/assistant-models.json',
@@ -552,6 +559,8 @@ describe('SettingsPage provider model editor', () => {
   });
 
   afterEach(() => {
+    saveModelProviderMock.mockRestore();
+    deleteModelProviderMock.mockRestore();
     saveModelProviderModelMock.mockRestore();
     deleteModelProviderModelMock.mockRestore();
     updateModelPreferencesMock.mockRestore();
@@ -768,6 +777,74 @@ describe('SettingsPage provider model editor', () => {
     );
   });
 
+  it('hides internal provider save failures in the provider editor', async () => {
+    saveModelProviderMock.mockRejectedValue(
+      new Error(
+        'Local API route did not complete for PUT /api/model-providers/qa-local at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/localApi.js:132:20)',
+      ),
+    );
+
+    const { container } = renderPage('settings-providers');
+    await flushAsyncWork();
+
+    const picker = queryProviderPicker(container);
+    const customOption = Array.from(picker.options).find((option) => option.textContent === 'Add custom provider...');
+    if (!customOption) {
+      throw new Error('Expected Add custom provider option');
+    }
+    updateSelectValue(picker, customOption.value);
+    click(queryButton(container, 'Continue'));
+
+    updateInputValue(queryInput(container, '#settings-model-provider-id'), 'qa-local');
+    updateInputValue(queryInput(container, '#settings-model-provider-base-url'), 'http://127.0.0.1:9/v1');
+    click(queryButton(container, 'Create provider'));
+    await flushAsyncWork();
+
+    expect(saveModelProviderMock).toHaveBeenCalledWith(
+      'qa-local',
+      expect.objectContaining({
+        baseUrl: 'http://127.0.0.1:9/v1',
+      }),
+    );
+    expect(container.textContent).toContain('Could not save this provider. Check the settings and try again.');
+    expectNoInternalProviderErrorDetails(container);
+  });
+
+  it('hides internal model save failures in the model editor', async () => {
+    saveModelProviderModelMock.mockRejectedValue(
+      new Error(
+        'Local API route did not complete for PUT /api/model-providers/anthropic/models/claude-fail at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/localApi.js:132:20)',
+      ),
+    );
+
+    const { container } = renderPage('settings-providers');
+    await flushAsyncWork();
+
+    updateSelectValue(queryProviderPicker(container), 'anthropic');
+    click(queryButton(container, 'Continue'));
+    click(queryButton(container, 'Add model'));
+
+    updateInputValue(queryInput(container, '#settings-provider-model-id'), 'claude-fail');
+    const modelForm = queryInput(container, '#settings-provider-model-id').closest('form');
+    if (!(modelForm instanceof HTMLFormElement)) {
+      throw new Error('Expected model editor form');
+    }
+
+    act(() => {
+      modelForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    await flushAsyncWork();
+
+    expect(saveModelProviderModelMock).toHaveBeenCalledWith(
+      'anthropic',
+      expect.objectContaining({
+        modelId: 'claude-fail',
+      }),
+    );
+    expect(container.textContent).toContain('Could not save this model. Check the settings and try again.');
+    expectNoInternalProviderErrorDetails(container);
+  });
+
   it('keeps the model management section open after removing a model', async () => {
     const confirmMock = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const { container } = renderPage('settings-providers');
@@ -842,6 +919,27 @@ describe('SettingsPage provider model editor', () => {
     expect(testModelProviderMock).toHaveBeenCalledWith('desktop');
     expect(container.textContent).toContain('Connected. Provider returned 1 models.');
     expect(container.textContent).toContain('Sample: qwen-reap.');
+  });
+
+  it('hides internal provider test failures in the provider editor', async () => {
+    testModelProviderMock.mockRejectedValue(
+      new Error(
+        'Local API route did not complete for POST /api/model-providers/desktop/test at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/localApi.js:132:20)',
+      ),
+    );
+
+    const { container } = renderPage('settings-providers');
+    await flushAsyncWork();
+
+    selectProviderByText(container, 'desktop');
+    await flushAsyncWork();
+
+    click(queryButton(container, 'Test'));
+    await flushAsyncWork();
+
+    expect(testModelProviderMock).toHaveBeenCalledWith('desktop');
+    expect(container.textContent).toContain('Could not test this provider. Try again.');
+    expectNoInternalProviderErrorDetails(container);
   });
 
   it('saves an API key for the provider shown in the credentials section', async () => {
