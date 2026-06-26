@@ -155,24 +155,29 @@ function OnboardingStyles() {
         position: fixed;
         z-index: 120;
         pointer-events: none;
-        border: 1px solid color-mix(in srgb, #d6a85d 75%, transparent);
+        border: 1px solid rgb(var(--color-accent) / 0.72);
         border-radius: 10px;
       }
       .np-onboarding-panel {
+        --np-onboarding-surface: rgb(var(--color-surface));
+        --np-onboarding-control: rgb(var(--color-elevated));
+        --np-onboarding-control-hover: rgb(var(--color-hover, var(--color-panel)));
+        --np-onboarding-primary-bg: rgb(var(--color-accent-bg, var(--color-selection)) / 0.72);
+        --np-onboarding-primary-hover: rgb(var(--color-accent-bg, var(--color-selection)));
         position: fixed;
         z-index: 121;
         width: min(25rem, calc(100vw - 2rem));
-        border: 1px solid #30343a;
+        border: 1px solid rgb(var(--color-border-default));
         border-radius: 8px;
-        background: #101112;
-        color: #ebe7df;
+        background: var(--np-onboarding-surface);
+        color: rgb(var(--color-primary));
       }
       .np-onboarding-panel-inner {
         padding: 14px;
       }
       .np-onboarding-kicker {
         margin: 0 0 7px;
-        color: #79736b;
+        color: rgb(var(--color-dim));
         font: 600 10px/1.3 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -185,13 +190,13 @@ function OnboardingStyles() {
       }
       .np-onboarding-body {
         margin: 8px 0 0;
-        color: #b2aba0;
+        color: rgb(var(--color-secondary));
         font-size: 13px;
         line-height: 1.55;
       }
       .np-onboarding-detail {
         margin: 9px 0 0;
-        color: #79736b;
+        color: rgb(var(--color-dim));
         font-size: 12px;
         line-height: 1.45;
       }
@@ -209,30 +214,41 @@ function OnboardingStyles() {
       }
       .np-onboarding-button {
         min-height: 30px;
-        border: 1px solid #30343a;
+        border: 1px solid rgb(var(--color-border-default));
         border-radius: 6px;
-        background: #202327;
-        color: #ebe7df;
+        background: var(--np-onboarding-control);
+        color: rgb(var(--color-primary));
         padding: 5px 9px;
         font: inherit;
         font-size: 12px;
       }
       .np-onboarding-button:hover {
-        background: #272b30;
+        background: var(--np-onboarding-control-hover);
+      }
+      .np-onboarding-button:focus-visible {
+        outline: 2px solid rgb(var(--color-accent) / 0.56);
+        outline-offset: 2px;
+      }
+      .np-onboarding-button:disabled {
+        cursor: default;
+        opacity: 0.58;
       }
       .np-onboarding-button-primary {
-        border-color: color-mix(in srgb, #d6a85d 48%, #30343a);
-        background: color-mix(in srgb, #d6a85d 24%, #101112);
-        color: #ebe7df;
+        border-color: rgb(var(--color-accent) / 0.42);
+        background: var(--np-onboarding-primary-bg);
+        color: rgb(var(--color-primary));
+      }
+      .np-onboarding-button-primary:hover {
+        background: var(--np-onboarding-primary-hover);
       }
       .np-onboarding-link-button {
         border-color: transparent;
         background: transparent;
-        color: #79736b;
+        color: rgb(var(--color-dim));
       }
       .np-onboarding-link-button:hover {
         background: transparent;
-        color: #ebe7df;
+        color: rgb(var(--color-primary));
       }
       @media (max-width: 720px) {
         .np-onboarding-panel {
