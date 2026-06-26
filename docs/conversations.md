@@ -255,4 +255,4 @@ The desktop app and system extensions register these routes:
 | `/automations`       | Automation list                                                               |
 | `/automations/:id`   | Automation detail                                                             |
 | `/telemetry`         | Telemetry traces                                                              |
-| `/gateways`          | Gateway connections when installed; otherwise redirects to a new conversation |
+| `/gateways`          | Gateway connections                                                           |

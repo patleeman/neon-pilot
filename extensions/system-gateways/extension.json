@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 2,
+  "id": "system-gateways",
+  "name": "Gateways",
+  "packageType": "system",
+  "description": "Configure messaging gateways that connect Neon Pilot to external chats.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "gateways.open",
+        "title": "Open Gateways",
+        "category": "Gateways",
+        "description": "Open messaging gateway setup.",
+        "action": "app.navigate",
+        "args": { "to": "/gateways" },
+        "icon": "app"
+      }
+    ],
+    "views": [
+      {
+        "id": "page",
+        "title": "Gateways",
+        "location": "main",
+        "route": "/gateways",
+        "placement": "primary",
+        "scope": "global",
+        "component": "GatewaysPage",
+        "icon": "app",
+        "activation": "on-route"
+      },
+      {
+        "id": "gateways-sidebar",
+        "title": "Gateways",
+        "location": "sidebar",
+        "placement": "primary",
+        "scope": "global",
+        "component": "GatewaysSidebar",
+        "icon": "app",
+        "activation": "on-route"
+      }
+    ],
+    "nav": [
+      {
+        "id": "gateways-nav",
+        "label": "Gateways",
+        "route": "/gateways",
+        "icon": "app",
+        "section": "primary",
+        "sidebarView": "gateways-sidebar"
+      }
+    ],
+    "gatewayProviders": [
+      {
+        "id": "telegram",
+        "label": "Telegram",
+        "description": "Run Neon Pilot from Telegram DMs, groups, and topics.",
+        "icon": "app",
+        "implemented": true,
+        "configurationLocation": "gateways",
+        "setupRoute": "/gateways",
+        "docsUrl": "https://core.telegram.org/bots/api",
+        "order": 10
+      }
+    ]
+  },
+  "permissions": []
+}
