@@ -772,7 +772,7 @@ export function CommandPalette() {
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
-        className="ui-dialog-shell"
+        className="ui-dialog-shell ui-command-palette-shell"
         style={{
           position: anchorRect ? 'fixed' : undefined,
           left: anchoredPanelLeft !== undefined ? `${anchoredPanelLeft}px` : undefined,
@@ -783,8 +783,8 @@ export function CommandPalette() {
           overscrollBehavior: 'contain',
         }}
       >
-        <div className={cx('border-b border-border-subtle px-4 py-3.5', anchorRect && 'px-2.5 pb-2 pt-0')}>
-          <div className={cx('ui-command-palette-search-row', anchorRect && 'h-7')}>
+        <div className={cx('ui-command-palette-header', anchorRect && 'ui-command-palette-header-anchored')}>
+          <div className={cx('ui-command-palette-search-row', anchorRect && 'ui-command-palette-search-row-anchored')}>
             <span className="ui-command-palette-search-icon">⌕</span>
             <SearchInput
               ref={inputRef}
@@ -802,15 +802,15 @@ export function CommandPalette() {
                 anchorRect ? 'ui-command-palette-input-compact' : 'ui-command-palette-input-default',
               )}
             />
-            <Keycap className="shrink-0 text-[10px] text-dim">{macPlatform ? '⌘K' : 'Ctrl+K'}</Keycap>
+            <Keycap className="ui-command-palette-keycap">{macPlatform ? '⌘K' : 'Ctrl+K'}</Keycap>
           </div>
 
-          <div className="mt-2.5 flex items-center justify-between gap-3">
+          <div className="ui-command-palette-toolbar">
             <SegmentedControl
               value={scope}
               options={scopeOptions}
               ariaLabel="Command palette scope"
-              className="font-mono text-[10px]"
+              className="ui-command-palette-scope-control font-mono text-[10px]"
               onChange={(nextScope) => {
                 setScope(nextScope);
                 setCursor(0);
@@ -836,7 +836,7 @@ export function CommandPalette() {
 
         <div
           ref={listRef}
-          className="flex-1 overflow-y-auto px-1.5 py-1.5"
+          className="ui-command-palette-list"
           style={{ overscrollBehavior: 'contain' }}
           onScroll={(event) => {
             if (!canLoadMoreArchivedThreads) {
@@ -881,11 +881,7 @@ export function CommandPalette() {
                     }}
                     disabled={item.disabled || isBusy}
                     selected={isSelected}
-                    className={cx(
-                      'group flex w-full items-start gap-2 px-2.5 py-1.5 disabled:cursor-not-allowed',
-                      isSelected && 'text-accent',
-                      item.disabled && 'opacity-55',
-                    )}
+                    className={cx('ui-command-palette-result group disabled:cursor-not-allowed', item.disabled && 'opacity-55')}
                     title={item.subtitle ?? item.meta ?? item.title}
                   >
                     <span
@@ -893,7 +889,7 @@ export function CommandPalette() {
                     />
 
                     <div className="min-w-0 flex-1">
-                      <p className={cx('truncate text-[13px] leading-[1.2]', isSelected ? 'text-accent' : 'text-primary')}>{item.title}</p>
+                      <p className="truncate text-[13px] leading-[1.2] text-primary">{item.title}</p>
                       {secondaryText && (
                         <p className="mt-px truncate text-[10.5px] leading-[1.15] text-secondary" title={secondaryText}>
                           {secondaryText}
@@ -964,7 +960,7 @@ export function CommandPalette() {
             !(quickOpenError && quickOpenScopeActive) &&
             !(quickOpenSearchError && quickOpenScopeActive) &&
             !(extensionSearchError && activeSearchProvider) && (
-              <PanelMessage align="center" className="px-4 py-10 font-mono text-[12px]">
+              <PanelMessage align="center" className="px-4 py-6 font-mono text-[12px]">
                 {emptyStateCopy(scope, query)}
               </PanelMessage>
             )}

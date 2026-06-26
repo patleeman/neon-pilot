@@ -282,6 +282,101 @@
       0 0 0 1px rgb(var(--color-accent) / 0.18);
   }
 
+  .ui-command-palette-shell {
+    @apply rounded-md border-border-default bg-panel shadow-none;
+    box-shadow:
+      0 18px 48px rgb(0 0 0 / 0.34),
+      0 0 0 1px rgb(var(--color-border-subtle) / 0.86);
+  }
+
+  .ui-command-palette-header {
+    @apply border-b border-border-subtle bg-panel px-3 py-2.5;
+  }
+
+  .ui-command-palette-header-anchored {
+    @apply px-2.5 pb-2 pt-1.5;
+  }
+
+  .ui-command-palette-search-row {
+    @apply min-h-7 rounded-sm border border-transparent bg-transparent px-1.5;
+  }
+
+  .ui-command-palette-search-row:focus-within {
+    @apply border-border-subtle bg-surface/35;
+  }
+
+  .ui-command-palette-search-row-anchored {
+    @apply h-7;
+  }
+
+  .ui-command-palette-search-icon {
+    @apply text-dim/75;
+  }
+
+  .ui-search-input.ui-command-palette-input {
+    @apply text-[13px] leading-5;
+  }
+
+  .ui-search-input.ui-command-palette-input-default {
+    @apply text-[13px];
+  }
+
+  .ui-command-palette-keycap {
+    @apply shrink-0 rounded-sm border-border-subtle/70 bg-surface/35 px-1 text-[10px] text-dim shadow-none;
+  }
+
+  .ui-command-palette-toolbar {
+    @apply mt-2 flex items-center justify-between gap-3;
+  }
+
+  .ui-command-palette-scope-control.ui-segmented-control {
+    @apply rounded-sm border-border-subtle bg-elevated/55 p-0.5;
+  }
+
+  .ui-command-palette-scope-control .ui-segmented-button {
+    @apply rounded-sm px-2 py-1 text-[10px] font-medium;
+  }
+
+  .ui-command-palette-scope-control .ui-segmented-button-active {
+    @apply bg-surface text-primary ring-0 shadow-none;
+    box-shadow: inset 0 0 0 1px rgb(var(--color-border-subtle) / 0.9);
+  }
+
+  .ui-command-palette-shortcuts {
+    @apply gap-1.5 text-[10px] text-dim/65;
+  }
+
+  .ui-command-palette-list {
+    @apply flex-1 overflow-y-auto px-1 py-1.5;
+  }
+
+  .ui-row-button.ui-command-palette-result {
+    @apply min-h-8 items-start gap-2 rounded-sm px-2.5 py-1.5;
+  }
+
+  .ui-row-button.ui-command-palette-result:hover {
+    @apply bg-elevated/55;
+  }
+
+  .ui-row-button.ui-command-palette-result.ui-row-button-selected {
+    @apply bg-elevated text-primary;
+  }
+
+  .ui-row-button.ui-command-palette-result.ui-row-button-selected:focus-visible {
+    box-shadow:
+      inset 0 0 0 1px rgb(var(--color-border-subtle) / 0.95),
+      0 0 0 2px rgb(var(--color-steel) / 0.18);
+  }
+
+  .ui-command-palette-result-accent {
+    @apply rounded-sm;
+    background: rgb(var(--color-border-subtle) / 0.7);
+  }
+
+  .ui-command-palette-result-accent-selected {
+    background: rgb(var(--color-steel));
+  }
+
   .ui-input-shell {
     @apply rounded-md border border-border-subtle bg-surface transition-[border-color,background-color,box-shadow];
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.24);
