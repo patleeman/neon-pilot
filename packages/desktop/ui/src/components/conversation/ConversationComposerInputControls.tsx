@@ -24,6 +24,7 @@ import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import {
+  formatServiceTierLabel,
   getModelSelectionValue,
   groupModelsByProvider,
   resolveSelectableModel,
@@ -184,24 +185,30 @@ function CoreModelPreferenceControls({
   models,
   currentModel,
   currentThinkingLevel,
+  currentServiceTier,
   compact,
   onSelectModel,
   onSelectThinkingLevel,
+  onSelectServiceTier,
 }: {
   disabled: boolean;
   models: ModelInfo[];
   currentModel: string;
   currentThinkingLevel: string;
+  currentServiceTier: string;
   compact: boolean;
   onSelectModel: (modelId: string) => void;
   onSelectThinkingLevel: (thinkingLevel: string) => void;
+  onSelectServiceTier: (serviceTier: string) => void;
 }) {
   const selectedModel = resolveSelectableModel(models, currentModel);
   const modelGroups = groupModelsByProvider(models);
+  const serviceTierOptions = selectedModel?.supportedServiceTiers ?? [];
   const selectBaseClassName =
     'h-8 min-w-0 truncate border-transparent bg-transparent px-2 text-xs font-medium text-secondary disabled:opacity-50';
   const modelSelectClassName = cx(selectBaseClassName, compact ? 'max-w-[8.25rem]' : 'max-w-[10rem]');
   const thinkingSelectClassName = cx(selectBaseClassName, compact ? 'max-w-[5.75rem]' : 'max-w-[7rem]');
+  const serviceTierSelectClassName = cx(selectBaseClassName, compact ? 'max-w-[5.75rem]' : 'max-w-[7rem]');
   return (
     <>
       <Select
@@ -237,6 +244,23 @@ function CoreModelPreferenceControls({
           </option>
         ))}
       </Select>
+      {serviceTierOptions.length > 0 ? (
+        <Select
+          aria-label="Service tier"
+          title="Service tier"
+          className={serviceTierSelectClassName}
+          disabled={disabled}
+          value={currentServiceTier}
+          onChange={(event) => onSelectServiceTier(event.target.value)}
+        >
+          <option value="">Automatic</option>
+          {serviceTierOptions.map((tier) => (
+            <option key={tier} value={tier}>
+              {formatServiceTierLabel(tier)}
+            </option>
+          ))}
+        </Select>
+      ) : null}
     </>
   );
 }
@@ -246,15 +270,19 @@ function CoreModelPreferenceOverflow({
   models,
   currentModel,
   currentThinkingLevel,
+  currentServiceTier,
   onSelectModel,
   onSelectThinkingLevel,
+  onSelectServiceTier,
 }: {
   disabled: boolean;
   models: ModelInfo[];
   currentModel: string;
   currentThinkingLevel: string;
+  currentServiceTier: string;
   onSelectModel: (modelId: string) => void;
   onSelectThinkingLevel: (thinkingLevel: string) => void;
+  onSelectServiceTier: (serviceTier: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -362,9 +390,11 @@ function CoreModelPreferenceOverflow({
             models={models}
             currentModel={currentModel}
             currentThinkingLevel={currentThinkingLevel}
+            currentServiceTier={currentServiceTier}
             compact={false}
             onSelectModel={onSelectModel}
             onSelectThinkingLevel={onSelectThinkingLevel}
+            onSelectServiceTier={onSelectServiceTier}
           />
         </ContextMenu>
       ) : null}
@@ -404,6 +434,7 @@ function inputControlsPropsAreEqual(prev: ConversationComposerInputControlsProps
     prev.onUpsertDrawingAttachment === next.onUpsertDrawingAttachment &&
     prev.onSelectModel === next.onSelectModel &&
     prev.onSelectThinkingLevel === next.onSelectThinkingLevel &&
+    prev.onSelectServiceTier === next.onSelectServiceTier &&
     prev.onInsertComposerText === next.onInsertComposerText &&
     prev.onAppendComposerText === next.onAppendComposerText &&
     prev.onSubmitComposerQuestion === next.onSubmitComposerQuestion &&
@@ -425,6 +456,7 @@ interface ConversationComposerInputControlsProps {
   models: ModelInfo[];
   currentModel: string;
   currentThinkingLevel: string;
+  currentServiceTier: string;
   savingPreference: 'model' | 'thinking' | 'serviceTier' | null;
   conversationNeedsTakeover: boolean;
   composerHasContent: boolean;
@@ -444,6 +476,7 @@ interface ConversationComposerInputControlsProps {
   onUpsertDrawingAttachment: (payload: Omit<ComposerDrawingAttachment, 'localId' | 'dirty'>) => void;
   onSelectModel: (modelId: string) => void;
   onSelectThinkingLevel: (thinkingLevel: string) => void;
+  onSelectServiceTier: (serviceTier: string) => void;
   onInsertComposerText: (text: string) => void;
   onAppendComposerText: (text: string) => void;
   onSubmitComposerQuestion: () => void;
@@ -462,6 +495,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   models,
   currentModel,
   currentThinkingLevel,
+  currentServiceTier,
   savingPreference,
   conversationNeedsTakeover,
   composerHasContent,
@@ -481,6 +515,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   onUpsertDrawingAttachment,
   onSelectModel,
   onSelectThinkingLevel,
+  onSelectServiceTier,
   onInsertComposerText,
   onAppendComposerText,
   onSubmitComposerQuestion,
@@ -586,9 +621,11 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
     models,
     currentModel,
     currentThinkingLevel,
+    currentServiceTier,
     savingPreference,
     selectModel: onSelectModel,
     selectThinkingLevel: onSelectThinkingLevel,
+    selectServiceTier: onSelectServiceTier,
   };
 
   const visibleLeadingControls = visibleComposerControls.filter((control) => control.slot === 'leading');
@@ -706,8 +743,10 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
                   models={models}
                   currentModel={currentModel}
                   currentThinkingLevel={currentThinkingLevel}
+                  currentServiceTier={currentServiceTier}
                   onSelectModel={onSelectModel}
                   onSelectThinkingLevel={onSelectThinkingLevel}
+                  onSelectServiceTier={onSelectServiceTier}
                 />
               ) : (
                 <CoreModelPreferenceControls
@@ -715,9 +754,11 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
                   models={models}
                   currentModel={currentModel}
                   currentThinkingLevel={currentThinkingLevel}
+                  currentServiceTier={currentServiceTier}
                   compact={false}
                   onSelectModel={onSelectModel}
                   onSelectThinkingLevel={onSelectThinkingLevel}
+                  onSelectServiceTier={onSelectServiceTier}
                 />
               )
             ) : null}

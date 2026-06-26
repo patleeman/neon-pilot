@@ -273,6 +273,27 @@ function thinkingOptions(model: Model | null): Array<{ value: string; label: str
   return model?.reasoning ? all : all.filter((option) => option.value === '' || option.value === 'off');
 }
 
+function formatServiceTierLabel(value: string): string {
+  switch (value) {
+    case 'auto':
+      return 'Automatic';
+    case 'default':
+      return 'Default';
+    case 'flex':
+      return 'Flex';
+    case 'priority':
+      return 'Priority';
+    case 'scale':
+      return 'Scale';
+    default:
+      return value
+        .split(/[-_]+/)
+        .filter(Boolean)
+        .map((part) => (part.length <= 3 ? part.toUpperCase() : `${part[0].toUpperCase()}${part.slice(1)}`))
+        .join(' ');
+  }
+}
+
 function describeDs4Health(health: ReturnType<typeof useDs4Health>, active: boolean) {
   if (!health.isDs4) return null;
   if (active) return { tone: 'active', label: 'DS4 active', title: 'DS4 is handling the current run.', canStart: false };
@@ -660,6 +681,58 @@ function ThinkingSelect({ context, variant }: { context: ComposerControlContext;
   );
 }
 
+function ServiceTierSelect({ context, variant }: { context: ComposerControlContext; variant: 'inline' | 'menu' }) {
+  const model = resolveModel(context.models, context.currentModel);
+  const serviceTiers = model?.supportedServiceTiers ?? [];
+  if (serviceTiers.length === 0) {
+    return null;
+  }
+
+  const selectedLabel = context.currentServiceTier ? formatServiceTierLabel(context.currentServiceTier) : 'Automatic';
+  const disabled = context.savingPreference !== null;
+  const triggerClass = variant === 'menu' ? MENU_TRIGGER_CLASS : cx(INLINE_TRIGGER_CLASS, 'max-w-[6.5rem] min-w-[5.75rem]');
+  return (
+    <>
+      {/* ui-pattern-ok raw-details-summary reason="details keeps service tier menu open state anchored to the composer trigger" */}
+      <details
+        data-model-picker-menu
+        className={variant === 'menu' ? 'relative min-w-0' : 'relative inline-flex min-w-0 items-center'}
+        onToggle={(event) => {
+          if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
+        }}
+      >
+        {/* ui-pattern-ok raw-details-summary reason="summary is the native trigger for this anchored service tier menu" */}
+        <summary
+          className={cx(
+            'flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden',
+            triggerClass,
+            disabled && 'pointer-events-none opacity-40',
+          )}
+          aria-label="Conversation service tier"
+          aria-disabled={disabled}
+        >
+          <span className="min-w-0 truncate">{selectedLabel}</span>
+          <Chevron className="static shrink-0" />
+        </summary>
+        <PositionedMenu
+          placement="absolute"
+          position={{ left: 0, bottom: '100%' }}
+          className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'w-full min-w-44' : 'w-40')}
+        >
+          <MenuButton onClick={() => context.selectServiceTier('')} checked={!context.currentServiceTier}>
+            Automatic
+          </MenuButton>
+          {serviceTiers.map((tier) => (
+            <MenuButton key={tier} onClick={() => context.selectServiceTier(tier)} checked={tier === context.currentServiceTier}>
+              {formatServiceTierLabel(tier)}
+            </MenuButton>
+          ))}
+        </PositionedMenu>
+      </details>
+    </>
+  );
+}
+
 function Chevron({ className }: { className?: string }) {
   return (
     <svg
@@ -709,6 +782,12 @@ export function ModelPreferencesComposerControl({
           </SectionLabel>
           <ThinkingSelect context={context} variant="menu" />
         </div>
+        <div>
+          <SectionLabel tone="muted" className="mb-1 block">
+            Service tier
+          </SectionLabel>
+          <ServiceTierSelect context={context} variant="menu" />
+        </div>
         <Ds4HealthIndicator health={ds4Health} variant="menu" active={ds4Health.isDs4 && context.streamIsStreaming} />
       </div>
     );
@@ -717,6 +796,7 @@ export function ModelPreferencesComposerControl({
     <>
       <ModelSelect context={context} variant="inline" />
       <ThinkingSelect context={context} variant="inline" />
+      <ServiceTierSelect context={context} variant="inline" />
       <Ds4HealthIndicator health={ds4Health} variant="inline" active={ds4Health.isDs4 && context.streamIsStreaming} />
     </>
   );

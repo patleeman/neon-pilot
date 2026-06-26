@@ -451,6 +451,7 @@ export function ChatRailComposer({
           models={models}
           currentModel={currentModel}
           currentThinkingLevel={currentThinkingLevel}
+          currentServiceTier=""
           savingPreference={null}
           conversationNeedsTakeover={false}
           composerHasContent={hasContent}
@@ -476,6 +477,7 @@ export function ChatRailComposer({
           onUpsertDrawingAttachment={handleUpsertDrawingAttachment}
           onSelectModel={onSelectModel}
           onSelectThinkingLevel={onSelectThinkingLevel}
+          onSelectServiceTier={() => {}}
           onInsertComposerText={insertTextIntoComposer}
           onAppendComposerText={appendTextToComposer}
           onSubmitComposerQuestion={() => {}}

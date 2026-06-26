@@ -222,6 +222,13 @@ export function listDeferredResumesForSessionFile(sessionFile: string): Deferred
   return getSessionDeferredResumeEntries(state, sessionFile).map(toDeferredResumeSummary);
 }
 
+export function listReadyDeferredResumes(): DeferredResumeSummary[] {
+  const state = loadDeferredResumeState();
+  return Object.values(state.resumes)
+    .filter((record) => record.status === 'ready')
+    .map(toDeferredResumeSummary);
+}
+
 export function activateDueDeferredResumesForSessionFile(input: { sessionFile: string; at?: Date }): DeferredResumeSummary[] {
   const activated = withDeferredResumeLock((state) => {
     return activateDueDeferredResumes(state, {

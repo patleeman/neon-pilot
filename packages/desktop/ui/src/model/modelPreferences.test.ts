@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  formatServiceTierLabel,
   getModelSelectableServiceTierOptions,
   getModelSelectionValue,
   groupModelsByProvider,
@@ -15,6 +16,12 @@ describe('model preferences helpers', () => {
     expect(THINKING_LEVEL_OPTIONS.map((option) => option.value)).toEqual(['', 'off', 'low', 'medium', 'high', 'xhigh']);
   });
 
+  it('formats service tier values for user-facing controls', () => {
+    expect(formatServiceTierLabel('auto')).toBe('Automatic');
+    expect(formatServiceTierLabel('priority')).toBe('Priority');
+    expect(formatServiceTierLabel('custom-tier')).toBe('Custom Tier');
+  });
+
   it('builds service tier options in UI order from the tiers supported by the selected model', () => {
     expect(
       getModelSelectableServiceTierOptions(
@@ -23,7 +30,7 @@ describe('model preferences helpers', () => {
       ),
     ).toEqual([
       { value: '', label: 'Default' },
-      { value: 'auto', label: 'Auto' },
+      { value: 'auto', label: 'Automatic' },
       { value: 'default', label: 'Default' },
       { value: 'flex', label: 'Flex' },
       { value: 'priority', label: 'Priority' },
@@ -36,12 +43,12 @@ describe('model preferences helpers', () => {
   it('builds selectable service tier options with an unset or default choice', () => {
     expect(getModelSelectableServiceTierOptions({ supportedServiceTiers: ['priority', 'auto'] })).toEqual([
       { value: '', label: 'Unset' },
-      { value: 'auto', label: 'Auto' },
+      { value: 'auto', label: 'Automatic' },
       { value: 'priority', label: 'Priority' },
     ]);
     expect(getModelSelectableServiceTierOptions({ supportedServiceTiers: ['priority', 'auto'] }, { includeDefaultOption: true })).toEqual([
       { value: '', label: 'Default' },
-      { value: 'auto', label: 'Auto' },
+      { value: 'auto', label: 'Automatic' },
       { value: 'priority', label: 'Priority' },
     ]);
   });

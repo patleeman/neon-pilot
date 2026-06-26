@@ -227,7 +227,7 @@ export function buildToolPreview(block: Extract<MessageBlock, { type: 'tool_use'
   return block.input.command !== undefined
     ? buildGenericInputPreview(block.input.command)
     : block.input.path !== undefined
-      ? buildGenericInputPreview(block.input.path)
+      ? buildGenericInputPreview(summarizeWorkspaceTail(String(block.input.path)) ?? block.input.path)
       : block.input.url !== undefined
         ? buildGenericInputPreview(block.input.url).replace('https://', '').slice(0, 60)
         : block.input.query !== undefined
@@ -362,7 +362,10 @@ function summarizePathList(value: unknown): string | null {
   if (!Array.isArray(value)) return null;
   const paths = value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
   if (paths.length === 0) return null;
-  const preview = paths.slice(0, 2).join(', ');
+  const preview = paths
+    .slice(0, 2)
+    .map((path) => summarizeWorkspaceTail(path) ?? path)
+    .join(', ');
   return paths.length > 2 ? `${preview}, …` : preview;
 }
 

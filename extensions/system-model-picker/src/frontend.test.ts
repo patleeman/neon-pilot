@@ -52,14 +52,55 @@ describe('formatModelTriggerLabel', () => {
           models: [{ id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash', context: 200000, input: ['text'] }],
           currentModel: 'deepseek-v4-flash',
           currentThinkingLevel: 'off',
+          currentServiceTier: '',
           savingPreference: null,
           selectModel: vi.fn(),
           selectThinkingLevel: vi.fn(),
+          selectServiceTier: vi.fn(),
         },
       }),
     );
 
     expect(screen.getByLabelText(/DS4 (checking|offline) menu/)).toBeTruthy();
     await waitFor(() => expect(screen.getByLabelText('DS4 offline menu')).toBeTruthy());
+  });
+
+  it('shows service tier choices for models that support them', () => {
+    render(
+      React.createElement(ModelPreferencesComposerControl, {
+        pa: { extensions: { callAction: vi.fn() } },
+        controlContext: {
+          renderMode: 'inline',
+          composerDisabled: false,
+          streamIsStreaming: false,
+          composerHasContent: false,
+          openFilePicker: vi.fn(),
+          addFiles: vi.fn(),
+          insertText: vi.fn(),
+          appendText: vi.fn(),
+          models: [
+            {
+              id: 'gpt-5.4',
+              provider: 'openai-codex',
+              name: 'GPT-5.4',
+              context: 272000,
+              input: ['text'],
+              supportedServiceTiers: ['priority'],
+            },
+          ],
+          currentModel: 'gpt-5.4',
+          currentThinkingLevel: '',
+          currentServiceTier: '',
+          savingPreference: null,
+          selectModel: vi.fn(),
+          selectThinkingLevel: vi.fn(),
+          selectServiceTier: vi.fn(),
+        },
+      }),
+    );
+
+    expect(screen.getByLabelText('Conversation service tier')).toBeTruthy();
+    expect(screen.getAllByText('Automatic').length).toBeGreaterThan(0);
+    expect(screen.getByText('Priority')).toBeTruthy();
   });
 });

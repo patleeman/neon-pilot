@@ -462,6 +462,57 @@ const COMMON_PROVIDER_IDS = ['anthropic', 'openai', 'opencode-go', 'google'];
 const NEW_MODEL_PROVIDER_ID = '__new-model-provider__';
 const NEW_MODEL_ID = '__new-model__';
 const ADD_CUSTOM_PROVIDER_ID = '__add-custom-provider__';
+
+const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  'azure-openai-responses': 'Azure OpenAI Responses',
+  'github-copilot': 'GitHub Copilot',
+  google: 'Google Gemini',
+  huggingface: 'Hugging Face',
+  'kimi-coding': 'Kimi Coding',
+  minimax: 'MiniMax',
+  'minimax-cn': 'MiniMax China',
+  openai: 'OpenAI',
+  'openai-codex': 'OpenAI Codex',
+  opencode: 'OpenCode',
+  'opencode-go': 'OpenCode Gateway',
+  openrouter: 'OpenRouter',
+  'vercel-ai-gateway': 'Vercel AI Gateway',
+  xai: 'xAI',
+};
+
+function formatProviderDisplayName(providerId: string, providerAuth?: ProviderAuthSummary | null): string {
+  const oauthName = providerAuth?.oauthProviderName?.trim();
+  if (oauthName) {
+    return oauthName;
+  }
+
+  const normalized = providerId.trim();
+  if (!normalized) {
+    return 'Provider';
+  }
+
+  return (
+    PROVIDER_DISPLAY_NAMES[normalized] ??
+    normalized
+      .split(/[-_]+/)
+      .filter(Boolean)
+      .map((part) => (part.length <= 3 ? part.toUpperCase() : `${part[0].toUpperCase()}${part.slice(1)}`))
+      .join(' ')
+  );
+}
+
+function formatProviderMenuLabel(
+  providerId: string,
+  providerAuth: ProviderAuthSummary | null | undefined,
+  providerIds: readonly string[],
+): string {
+  const label = formatProviderDisplayName(providerId, providerAuth);
+  const duplicateLabel = providerIds.some(
+    (candidate) => candidate !== providerId && formatProviderDisplayName(candidate).toLocaleLowerCase() === label.toLocaleLowerCase(),
+  );
+  return duplicateLabel || label === providerId ? `${label} (${providerId})` : label;
+}
+
 function formatModelProviderSummary(provider: ModelProviderConfig): string {
   if (provider.models.length === 0) {
     return 'Provider only';
@@ -2682,6 +2733,9 @@ export function SettingsPage({
 
     return [...summaries.values()].sort((left, right) => left.id.localeCompare(right.id));
   }, [modelProviderState?.providers, providerAuthState?.providers]);
+  const providerAuthById = useMemo(() => {
+    return new Map((providerAuthState?.providers ?? []).map((provider) => [provider.id, provider]));
+  }, [providerAuthState?.providers]);
 
   const selectedModelProvider = useMemo(() => {
     if (!modelProviderState || !selectedModelProviderId || selectedModelProviderId === NEW_MODEL_PROVIDER_ID) {
@@ -3842,7 +3896,7 @@ export function SettingsPage({
                                 <option value="">Choose provider...</option>
                                 {unconfiguredModelProviderIds.map((providerId) => (
                                   <option key={providerId} value={providerId}>
-                                    {providerId}
+                                    {formatProviderMenuLabel(providerId, providerAuthById.get(providerId), availableModelProviderIds)}
                                   </option>
                                 ))}
                                 <option value={ADD_CUSTOM_PROVIDER_ID}>Add custom provider...</option>
@@ -4741,6 +4795,11 @@ export function SettingsPage({
                             <div className="settings-page-provider-list">
                               {configuredProviderSummaries.map((provider) => {
                                 const selected = provider.id === selectedModelProviderId || provider.id === selectedProviderId;
+                                const providerLabel = formatProviderMenuLabel(
+                                  provider.id,
+                                  provider.auth,
+                                  configuredProviderSummaries.map((summary) => summary.id),
+                                );
                                 return (
                                   <RowButton
                                     key={provider.id}
@@ -4759,11 +4818,11 @@ export function SettingsPage({
                                     aria-pressed={selected}
                                   >
                                     <span className="min-w-0">
-                                      <span className="block truncate text-[13px] font-medium text-primary">{provider.id}</span>
+                                      <span className="block truncate text-[13px] font-medium text-primary">{providerLabel}</span>
                                       <span className="ui-card-meta block truncate">
                                         {provider.modelProvider
-                                          ? formatModelProviderSummary(provider.modelProvider)
-                                          : formatProviderAuthStatus(provider.auth)}
+                                          ? `Advanced name: ${provider.id} · ${formatModelProviderSummary(provider.modelProvider)}`
+                                          : `Advanced name: ${provider.id} · ${formatProviderAuthStatus(provider.auth)}`}
                                       </span>
                                     </span>
                                     {provider.modelProvider?.baseUrl && (

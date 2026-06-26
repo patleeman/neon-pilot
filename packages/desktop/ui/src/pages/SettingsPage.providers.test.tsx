@@ -695,6 +695,28 @@ describe('SettingsPage provider model editor', () => {
     expect(container.textContent).not.toContain('fileExplorer');
   });
 
+  it('renders provider choices and configured providers with readable labels plus advanced IDs', async () => {
+    const { container } = renderPage('settings-providers');
+    await flushAsyncWork();
+
+    const providerPicker = queryProviderPicker(container);
+    expect(Array.from(providerPicker.options).map((option) => option.textContent)).toEqual(
+      expect.arrayContaining(['Anthropic', 'Add custom provider...']),
+    );
+    expect(Array.from(providerPicker.options).map((option) => option.textContent)).not.toContain('anthropic');
+
+    const openAiCodexRow = Array.from(container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Advanced name: openai-codex'),
+    );
+    if (!(openAiCodexRow instanceof HTMLButtonElement)) {
+      throw new Error('Expected OpenAI Codex configured provider row');
+    }
+
+    expect(openAiCodexRow.textContent).toContain('OpenAI');
+    expect(openAiCodexRow.textContent).toContain('Advanced name: openai-codex');
+    expect(openAiCodexRow.textContent).toContain('Logged in with saved OAuth credentials.');
+  });
+
   it('adds a model directly to a picked built-in provider without saving the provider first', async () => {
     const { container } = renderPage('settings-providers');
     await flushAsyncWork();

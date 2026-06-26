@@ -118,6 +118,7 @@ import {
   isLive as isLiveSession,
   registry as liveRegistry,
   renameSession,
+  resumeSession,
 } from '../conversations/liveSessions.js';
 import {
   createSessionFromExisting,
@@ -612,6 +613,20 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     getRepoRoot: () => repoRoot,
     getStateRoot: () => stateRoot,
     resolveDaemonRoot,
+    getOpenConversationSessions: () =>
+      readSavedUiPreferences(settingsFile).openConversationIds.flatMap((conversationId) => {
+        const sessionFile = resolveConversationSessionFile(conversationId);
+        return sessionFile ? [{ conversationId, sessionFile }] : [];
+      }),
+    ensureLiveSessionForDeferredResume: async (sessionFile) => {
+      const resourceOptions = runtimeState.buildLiveSessionResourceOptionsAsync
+        ? await runtimeState.buildLiveSessionResourceOptionsAsync(runtimeState.getRuntimeScope())
+        : runtimeState.buildLiveSessionResourceOptions(runtimeState.getRuntimeScope());
+      await resumeSession(sessionFile, {
+        ...resourceOptions,
+        extensionFactories: runtimeState.buildLiveSessionExtensionFactories(),
+      });
+    },
     publishConversationSessionMetaChanged,
   });
 

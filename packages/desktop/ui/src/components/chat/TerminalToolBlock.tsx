@@ -105,7 +105,7 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
           {footerBits.map((bit) => (
             <span key={bit}>{bit}</span>
           ))}
-          {presentation.fullOutputPath && <span className="min-w-0 break-all opacity-80">{presentation.fullOutputPath}</span>}
+          {presentation.fullOutputPath && <span>full output saved</span>}
           {outputDeferred && blockId && (
             <Button
               variant="action"

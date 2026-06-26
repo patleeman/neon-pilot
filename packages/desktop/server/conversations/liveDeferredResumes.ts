@@ -19,6 +19,7 @@ import {
   backfillDeferredResumesToAttentionEvents,
   completeDeferredResumeForSessionFile,
   listDeferredResumesForSessionFile,
+  listReadyDeferredResumes,
   retryDeferredResumeForSessionFile,
 } from '../automation/deferredResumes.js';
 import { syncWebLiveConversationRun } from './conversationRuns.js';
@@ -255,9 +256,63 @@ export interface CreateAttentionEventFlusherOptions {
   getRepoRoot?: () => string | undefined;
   getStateRoot: () => string;
   resolveDaemonRoot: () => string;
+  getOpenConversationSessions?: () => Array<{ conversationId: string; sessionFile: string }>;
+  ensureLiveSessionForDeferredResume?: (sessionFile: string) => Promise<void>;
   publishConversationSessionMetaChanged: (...conversationIds: string[]) => void;
   retryDelayMs?: number;
   warn?: (message: string) => void;
+}
+
+async function ensureOpenReadyDeferredResumeSessions(options: CreateAttentionEventFlusherOptions, at: Date): Promise<void> {
+  if (!options.getOpenConversationSessions || !options.ensureLiveSessionForDeferredResume) {
+    return;
+  }
+
+  const openSessions = options.getOpenConversationSessions();
+  const daemonRoot = options.resolveDaemonRoot();
+  for (const session of openSessions) {
+    const activated = activateDueDeferredResumesForSessionFile({ at, sessionFile: session.sessionFile });
+    for (const entry of activated) {
+      await markDeferredResumeConversationRunReady({
+        daemonRoot,
+        deferredResumeId: entry.id,
+        sessionFile: entry.sessionFile,
+        prompt: entry.prompt,
+        dueAt: entry.dueAt,
+        createdAt: entry.createdAt,
+        readyAt: entry.readyAt ?? at.toISOString(),
+        conversationId: session.conversationId,
+      });
+
+      surfaceReadyDeferredResume({
+        entry,
+        repoRoot: options.getRepoRoot?.(),
+        profile: options.getRuntimeScope(),
+        stateRoot: options.getStateRoot(),
+        conversationId: session.conversationId,
+      });
+    }
+  }
+
+  const liveSessionFiles = new Set(
+    getLiveSessions()
+      .map((session) => session.sessionFile)
+      .filter(Boolean),
+  );
+  const readySessionFiles = new Set(
+    listReadyDeferredResumes()
+      .filter((entry) => entry.delivery?.autoResumeIfOpen !== false && !entry.delivery?.requireAck)
+      .map((entry) => entry.sessionFile),
+  );
+
+  for (const session of openSessions) {
+    if (liveSessionFiles.has(session.sessionFile) || !readySessionFiles.has(session.sessionFile)) {
+      continue;
+    }
+
+    await options.ensureLiveSessionForDeferredResume(session.sessionFile);
+    liveSessionFiles.add(session.sessionFile);
+  }
 }
 
 export function createAttentionEventFlusher(options: CreateAttentionEventFlusherOptions): () => Promise<void> {
@@ -271,10 +326,11 @@ export function createAttentionEventFlusher(options: CreateAttentionEventFlusher
     processingDeferredResumes = true;
 
     try {
-      const liveSessions = getLiveSessions().filter((session) => session.sessionFile);
       const now = new Date();
       const daemonRoot = options.resolveDaemonRoot();
       backfillDeferredResumesToAttentionEvents();
+      await ensureOpenReadyDeferredResumeSessions(options, now);
+      const liveSessions = getLiveSessions().filter((session) => session.sessionFile);
       let mutated = false;
       const mutatedConversationIds = new Set<string>();
 

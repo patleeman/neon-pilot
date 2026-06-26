@@ -1671,6 +1671,31 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('/bin/bash: npm: command not found');
   });
 
+  it('does not expose terminal full-output sidecar paths in the transcript', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        messages: [
+          {
+            type: 'tool_use',
+            ts: '2026-03-11T18:00:00.000Z',
+            tool: 'bash',
+            input: { command: 'seq 1 500', displayMode: 'terminal' },
+            output: '1\n2\n3',
+            status: 'done',
+            details: {
+              displayMode: 'terminal',
+              fullOutputPath: '/tmp/neon-pilot-bash-output.log',
+              truncated: true,
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(html).toContain('full output saved');
+    expect(html).not.toContain('/tmp/neon-pilot-bash-output.log');
+  });
+
   it('renders background bash starts like normal bash tool calls with a background modifier', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {

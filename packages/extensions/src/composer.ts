@@ -27,9 +27,11 @@ export interface ComposerControlContext {
   models: ComposerModelInfo[];
   currentModel: string;
   currentThinkingLevel: string;
+  currentServiceTier: string;
   savingPreference: 'model' | 'thinking' | 'serviceTier' | null;
   selectModel: (modelId: string) => void;
   selectThinkingLevel: (thinkingLevel: string) => void;
+  selectServiceTier: (serviceTier: string) => void;
 }
 
 export type ComposerButtonContext = ComposerControlContext;

@@ -15,12 +15,25 @@ export const THINKING_LEVEL_OPTIONS = [
 
 const SERVICE_TIER_OPTIONS = [
   { value: '', label: 'Unset' },
-  { value: 'auto', label: 'Auto' },
+  { value: 'auto', label: 'Automatic' },
   { value: 'default', label: 'Default' },
   { value: 'flex', label: 'Flex' },
   { value: 'priority', label: 'Priority' },
   { value: 'scale', label: 'Scale' },
 ] as const;
+
+export function formatServiceTierLabel(value: string): string {
+  const option = SERVICE_TIER_OPTIONS.find((candidate) => candidate.value === value);
+  if (option) {
+    return option.label;
+  }
+
+  return value
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => (part.length <= 3 ? part.toUpperCase() : `${part[0].toUpperCase()}${part.slice(1)}`))
+    .join(' ');
+}
 
 function getModelSupportedServiceTierOptions(model: Pick<ModelInfo, 'supportedServiceTiers'> | null | undefined) {
   const supportedTiers = Array.isArray(model?.supportedServiceTiers) ? model.supportedServiceTiers : [];

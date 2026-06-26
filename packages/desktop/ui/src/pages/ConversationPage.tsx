@@ -4923,6 +4923,37 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     }
   }
 
+  async function saveServiceTierPreference(serviceTier: string) {
+    if (serviceTier === currentServiceTier || savingPreference !== null) {
+      return;
+    }
+
+    setSavingPreference('serviceTier');
+    try {
+      if (draft) {
+        setCurrentServiceTier(serviceTier || defaultServiceTier);
+        setHasExplicitServiceTier(Boolean(serviceTier));
+      } else if (id) {
+        if (
+          shouldEnsureControlForPreferenceSave({ isLiveSession, conversationId: id }) &&
+          !ensureConversationCanControl('change the service tier')
+        ) {
+          return;
+        }
+
+        const next = await api.updateConversationModelPreferences(id, { serviceTier: serviceTier || null }, currentSurfaceId);
+        setCurrentModel(next.currentModel);
+        setCurrentThinkingLevel(next.currentThinkingLevel);
+        setCurrentServiceTier(next.currentServiceTier);
+        setHasExplicitServiceTier(next.hasExplicitServiceTier);
+      }
+    } catch (error) {
+      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+    } finally {
+      setSavingPreference(null);
+    }
+  }
+
   function selectModel(modelId: string) {
     if (shouldClearComposerForModelSelection(showModelPicker)) {
       composerController.clear();
@@ -7644,6 +7675,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
               onSelectModel={selectModel}
               onSelectThinkingLevel={(thinkingLevel) => {
                 void saveThinkingLevelPreference(thinkingLevel);
+              }}
+              onSelectServiceTier={(serviceTier) => {
+                void saveServiceTierPreference(serviceTier);
               }}
               onInsertComposerText={insertTextIntoComposer}
               onAppendComposerText={appendTextToComposer}

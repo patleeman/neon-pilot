@@ -134,7 +134,21 @@ describe('linkedRuns', () => {
         },
         output: '',
       }),
-    ).toBe('packages/desktop/ui/src/components/chat/linkedRuns.ts, packages/desktop/ui/src/components/chat/linkedRuns.fixture.ts');
+    ).toBe('linkedRuns.ts, linkedRuns.fixture.ts');
+  });
+
+  it('does not expose absolute local file paths in collapsed tool previews', () => {
+    const preview = buildToolPreview({
+      type: 'tool_use',
+      ts: '2026-04-26T00:00:00.000Z',
+      tool: 'read',
+      input: { path: '/Users/patrick/workingdir/neon-pilot/extensions/system-runs/README.md' },
+      output: '',
+    });
+
+    expect(preview).toBe('README.md');
+    expect(preview).not.toContain('/Users/');
+    expect(preview).not.toContain('workingdir/neon-pilot');
   });
 
   it('presents listed durable runs with kind and status detail', () => {

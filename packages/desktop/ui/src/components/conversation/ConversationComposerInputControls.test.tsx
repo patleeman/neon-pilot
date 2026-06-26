@@ -142,6 +142,7 @@ function renderControls(overrides: Partial<React.ComponentProps<typeof Conversat
       models={models}
       currentModel="model-a"
       currentThinkingLevel="medium"
+      currentServiceTier=""
       savingPreference={null}
       conversationNeedsTakeover={false}
       composerHasContent={false}
@@ -160,6 +161,7 @@ function renderControls(overrides: Partial<React.ComponentProps<typeof Conversat
       onUpsertDrawingAttachment={vi.fn()}
       onSelectModel={vi.fn()}
       onSelectThinkingLevel={vi.fn()}
+      onSelectServiceTier={vi.fn()}
       onInsertComposerText={vi.fn()}
       onAppendComposerText={vi.fn()}
       onSubmitComposerQuestion={vi.fn()}
@@ -259,6 +261,7 @@ describe('ConversationComposerInputControls', () => {
         models={models}
         currentModel="model-a"
         currentThinkingLevel="medium"
+        currentServiceTier=""
         savingPreference={null}
         conversationNeedsTakeover={false}
         composerHasContent={false}
@@ -277,6 +280,7 @@ describe('ConversationComposerInputControls', () => {
         onUpsertDrawingAttachment={vi.fn()}
         onSelectModel={vi.fn()}
         onSelectThinkingLevel={vi.fn()}
+        onSelectServiceTier={vi.fn()}
         onInsertComposerText={vi.fn()}
         onAppendComposerText={vi.fn()}
         onSubmitComposerQuestion={vi.fn()}
@@ -325,6 +329,7 @@ describe('ConversationComposerInputControls', () => {
         models={models}
         currentModel="model-a"
         currentThinkingLevel="medium"
+        currentServiceTier=""
         savingPreference={null}
         conversationNeedsTakeover={false}
         composerHasContent={false}
@@ -343,6 +348,7 @@ describe('ConversationComposerInputControls', () => {
         onUpsertDrawingAttachment={vi.fn()}
         onSelectModel={vi.fn()}
         onSelectThinkingLevel={vi.fn()}
+        onSelectServiceTier={vi.fn()}
         onInsertComposerText={vi.fn()}
         onAppendComposerText={vi.fn()}
         onSubmitComposerQuestion={vi.fn()}
@@ -413,6 +419,7 @@ describe('ConversationComposerInputControls', () => {
       models,
       currentModel: 'model-a',
       currentThinkingLevel: 'medium',
+      currentServiceTier: '',
       savingPreference: null,
       conversationNeedsTakeover: false,
       composerHasContent: false,
@@ -431,6 +438,7 @@ describe('ConversationComposerInputControls', () => {
       onUpsertDrawingAttachment: vi.fn(),
       onSelectModel: vi.fn(),
       onSelectThinkingLevel: vi.fn(),
+      onSelectServiceTier: vi.fn(),
       onInsertComposerText: vi.fn(),
       onAppendComposerText: vi.fn(),
       onSubmitComposerQuestion: vi.fn(),
@@ -474,6 +482,7 @@ describe('ConversationComposerInputControls', () => {
         models={models}
         currentModel="model-a"
         currentThinkingLevel="medium"
+        currentServiceTier=""
         savingPreference={null}
         conversationNeedsTakeover={false}
         composerHasContent={false}
@@ -492,6 +501,7 @@ describe('ConversationComposerInputControls', () => {
         onUpsertDrawingAttachment={vi.fn()}
         onSelectModel={vi.fn()}
         onSelectThinkingLevel={vi.fn()}
+        onSelectServiceTier={vi.fn()}
         onInsertComposerText={vi.fn()}
         onAppendComposerText={vi.fn()}
         onSubmitComposerQuestion={vi.fn()}
