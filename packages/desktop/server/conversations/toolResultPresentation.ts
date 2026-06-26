@@ -43,6 +43,19 @@ export function presentToolResultOutput(input: { text: string; isError: boolean 
   return message ? `Extension action failed: ${message}` : 'Extension action failed.';
 }
 
+export function presentTranscriptErrorMessage(message: string): string {
+  const trimmed = message.trim();
+  const providerMatch = /^Failed to resolve API key for provider\s+"([^"]+)"/i.exec(trimmed);
+  if (providerMatch || /find-generic-password/i.test(trimmed)) {
+    const provider = providerMatch?.[1]?.trim();
+    return provider
+      ? `No API key is available for provider "${provider}". Add one in Settings, then try again.`
+      : 'No API key is available for the selected provider. Add one in Settings, then try again.';
+  }
+
+  return message;
+}
+
 export function presentToolUseOutput(input: { output: string; status?: 'running' | 'ok' | 'error' }): {
   output: string;
   status?: 'running' | 'ok' | 'error';

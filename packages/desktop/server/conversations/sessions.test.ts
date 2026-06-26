@@ -3626,4 +3626,27 @@ describe('sessions', () => {
       },
     ]);
   });
+
+  it('hides keychain commands in assistant provider auth errors', () => {
+    const blocks = buildDisplayBlocksFromEntries([
+      {
+        id: 'assistant-provider-error',
+        timestamp: '2026-03-12T16:05:00.000Z',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'thinking', thinking: 'Checking provider credentials…' }],
+          stopReason: 'error',
+          errorMessage:
+            'Failed to resolve API key for provider "opencode-go" from shell command: security find-generic-password -a "provider:opencode-go:apiKey" -w',
+        },
+      },
+    ]);
+
+    expect(blocks.at(-1)).toEqual({
+      type: 'error',
+      id: 'assistant-provider-error-e1',
+      ts: '2026-03-12T16:05:00.000Z',
+      message: 'No API key is available for provider "opencode-go". Add one in Settings, then try again.',
+    });
+  });
 });

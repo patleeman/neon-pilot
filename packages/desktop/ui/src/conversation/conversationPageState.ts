@@ -23,14 +23,18 @@ export function resolveConversationLiveSession(input: {
 export function resolveConversationComposerRunState(input: {
   streamIsStreaming: boolean;
   sessionIsRunning?: boolean | null;
+  recoveredLiveSessionIsRunning?: boolean | null;
   bootstrapLiveSessionIsStreaming?: boolean | null;
   desktopLiveSessionIsStreaming?: boolean | null;
   hasStaleTurnState: boolean;
 }): { allowQueuedPrompts: boolean; defaultComposerBehavior: 'steer' | 'followUp' | undefined; streamControlsActive: boolean } {
   const liveSessionIsStreaming = input.bootstrapLiveSessionIsStreaming === true || input.desktopLiveSessionIsStreaming === true;
-  const explicitlyIdle = input.sessionIsRunning === false && !liveSessionIsStreaming && !input.hasStaleTurnState;
+  const recoveredLiveSessionIsRunning = input.recoveredLiveSessionIsRunning === true;
+  const sessionIsRunning = input.sessionIsRunning === true || recoveredLiveSessionIsRunning;
+  const explicitlyIdle =
+    input.sessionIsRunning === false && !recoveredLiveSessionIsRunning && !liveSessionIsStreaming && !input.hasStaleTurnState;
   const streamControlsActive =
-    !input.hasStaleTurnState && !explicitlyIdle && (input.streamIsStreaming || liveSessionIsStreaming || input.sessionIsRunning === true);
+    !input.hasStaleTurnState && !explicitlyIdle && (input.streamIsStreaming || liveSessionIsStreaming || sessionIsRunning);
 
   return {
     allowQueuedPrompts: streamControlsActive || input.hasStaleTurnState,
@@ -148,7 +152,9 @@ export function shouldDeferConversationFileRefresh(input: {
   return (
     !input.draft &&
     Boolean(input.conversationId) &&
-    (input.hasPendingInitialPrompt || input.pendingInitialPromptDispatching || input.hasPendingInitialPromptInFlight)
+    input.hasPendingInitialPromptInFlight &&
+    !input.pendingInitialPromptDispatching &&
+    !input.hasPendingInitialPrompt
   );
 }
 

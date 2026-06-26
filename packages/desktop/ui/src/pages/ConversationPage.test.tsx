@@ -304,11 +304,25 @@ describe('desktop conversation state fallback', () => {
     ).toEqual({ allowQueuedPrompts: true, defaultComposerBehavior: 'steer', streamControlsActive: true });
   });
 
+  it('treats recovered live-session running metadata as authoritative over stale idle session rows', () => {
+    expect(
+      resolveConversationComposerRunState({
+        streamIsStreaming: false,
+        sessionIsRunning: false,
+        recoveredLiveSessionIsRunning: true,
+        bootstrapLiveSessionIsStreaming: false,
+        desktopLiveSessionIsStreaming: false,
+        hasStaleTurnState: false,
+      }),
+    ).toEqual({ allowQueuedPrompts: true, defaultComposerBehavior: 'steer', streamControlsActive: true });
+  });
+
   it('clears run controls when every run-state source agrees the conversation is idle', () => {
     expect(
       resolveConversationComposerRunState({
         streamIsStreaming: false,
         sessionIsRunning: false,
+        recoveredLiveSessionIsRunning: false,
         bootstrapLiveSessionIsStreaming: false,
         desktopLiveSessionIsStreaming: false,
         hasStaleTurnState: false,
@@ -660,7 +674,7 @@ describe('conversation model loading', () => {
 });
 
 describe('conversation file refresh deferral', () => {
-  it('defers file-backed refreshes while the initial prompt is still pending or in flight', () => {
+  it('keeps file-backed transcript refreshes enabled while a pending initial prompt can be accepted', () => {
     expect(
       shouldDeferConversationFileRefresh({
         draft: false,
@@ -669,7 +683,7 @@ describe('conversation file refresh deferral', () => {
         pendingInitialPromptDispatching: false,
         hasPendingInitialPromptInFlight: false,
       }),
-    ).toBe(true);
+    ).toBe(false);
 
     expect(
       shouldDeferConversationFileRefresh({
@@ -679,7 +693,7 @@ describe('conversation file refresh deferral', () => {
         pendingInitialPromptDispatching: true,
         hasPendingInitialPromptInFlight: false,
       }),
-    ).toBe(true);
+    ).toBe(false);
 
     expect(
       shouldDeferConversationFileRefresh({

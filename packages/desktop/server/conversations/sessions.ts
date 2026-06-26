@@ -82,7 +82,7 @@ import {
 } from './sessionHeavyContent.js';
 import { readCurrentSessionLeafIdFromFile, readSessionIdFromSessionRecordFile } from './sessionIdentity.js';
 import { buildSessionImageAssets, imageMimeType, imageSrc } from './sessionImages.js';
-import { isToolResultOutputError, presentToolResultOutput } from './toolResultPresentation.js';
+import { isToolResultOutputError, presentToolResultOutput, presentTranscriptErrorMessage } from './toolResultPresentation.js';
 import {
   attachTranscriptRenderItems,
   buildTranscriptRenderItemsFromDisplayBlocks,
@@ -1150,7 +1150,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
           type: 'error',
           id: `${baseId}-e${blocks.length}`,
           ts,
-          message: errorMessage,
+          message: presentTranscriptErrorMessage(errorMessage),
         });
       }
       continue;

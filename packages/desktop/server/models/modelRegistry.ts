@@ -24,6 +24,14 @@ function applyNeonPilotModelMetadataOverrides(model: RegistryModel): RegistryMod
   return model;
 }
 
+function sanitizeProviderAuthError(provider: string, error: string): string {
+  if (/Failed to resolve API key for provider/i.test(error) || /find-generic-password/i.test(error)) {
+    return `No API key is available for provider "${provider}". Add one in Settings, then try again.`;
+  }
+
+  return error;
+}
+
 function applyNeonPilotRegistryOverrides(registry: ModelRegistry, authStorage: AuthStorage): ModelRegistry {
   if (typeof authStorage.setFallbackResolver === 'function') {
     authStorage.setFallbackResolver((provider) => resolveIndexedProviderApiKey(provider));
@@ -52,6 +60,9 @@ function applyNeonPilotRegistryOverrides(registry: ModelRegistry, authStorage: A
   registry.getApiKeyAndHeaders = async (model) => {
     const result = await originalGetApiKeyAndHeaders(model);
     const apiKey = resolveProviderApiKey(model.provider);
+    if (result.ok === false) {
+      result.error = sanitizeProviderAuthError(model.provider, result.error);
+    }
     if (!apiKey || (result.ok === false && !result.error.includes('No API key found'))) return result;
     return { ...result, ok: true, apiKey };
   };

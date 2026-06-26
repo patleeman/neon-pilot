@@ -963,6 +963,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   // We use a confirmed-live flag only for lightweight session-state labeling.
   const [confirmedLive, setConfirmedLive] = useState<boolean | null>(null);
   const [liveSessionHasStaleTurnState, setLiveSessionHasStaleTurnState] = useState(false);
+  const [recoveredLiveSessionIsRunning, setRecoveredLiveSessionIsRunning] = useState<boolean | null>(null);
   const [pendingInitialPrompt, setPendingInitialPrompt] = useState<PendingConversationPrompt | null>(() =>
     resolveConversationInitialPendingPromptState({ draft, conversationId: id, locationState: location.state }),
   );
@@ -1187,22 +1188,26 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     if (!id) {
       setConfirmedLive(false);
       setLiveSessionHasStaleTurnState(false);
+      setRecoveredLiveSessionIsRunning(false);
       return;
     }
 
     if (visibleConversationBootstrap?.liveSession?.live) {
       setConfirmedLive(true);
       setLiveSessionHasStaleTurnState(visibleConversationBootstrap.liveSession.hasStaleTurnState === true);
+      setRecoveredLiveSessionIsRunning(null);
       return;
     }
 
     if (visibleConversationBootstrap?.liveSession?.live === false || sessionSnapshot?.isLive === false) {
       setConfirmedLive(false);
       setLiveSessionHasStaleTurnState(false);
+      setRecoveredLiveSessionIsRunning(false);
       return;
     }
 
     setConfirmedLive(sessionSnapshot?.isLive === true ? true : null);
+    setRecoveredLiveSessionIsRunning(null);
     let cancelled = false;
 
     api
@@ -1214,6 +1219,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
         setConfirmedLive(response.live);
         setLiveSessionHasStaleTurnState(response.live && response.hasStaleTurnState === true);
+        setRecoveredLiveSessionIsRunning(response.live ? response.running === true || response.isStreaming === true : false);
       })
       .catch((error) => {
         if (cancelled) {
@@ -1225,6 +1231,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           setConfirmedLive(false);
         }
         setLiveSessionHasStaleTurnState(false);
+        setRecoveredLiveSessionIsRunning(false);
       });
 
     return () => {
@@ -1267,6 +1274,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const rawComposerRunState = resolveConversationComposerRunState({
     streamIsStreaming: stream.isStreaming,
     sessionIsRunning: conversationRuntimeIsRunning,
+    recoveredLiveSessionIsRunning,
     bootstrapLiveSessionIsStreaming:
       visibleConversationBootstrap?.liveSession?.live === true ? visibleConversationBootstrap.liveSession.isStreaming : false,
     desktopLiveSessionIsStreaming:

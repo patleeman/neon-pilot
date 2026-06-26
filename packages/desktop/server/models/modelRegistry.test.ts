@@ -194,4 +194,28 @@ describe('model registry helpers', () => {
       headers: { 'x-test': 'yes' },
     });
   });
+
+  it('hides keychain commands from provider auth errors', async () => {
+    const authStorage = { kind: 'auth-storage' };
+    const registry = {
+      getAll: vi.fn(() => []),
+      getAvailable: vi.fn(() => []),
+      find: vi.fn(),
+      getApiKeyAndHeaders: vi.fn(async () => ({
+        ok: false,
+        error:
+          'Failed to resolve API key for provider "opencode-go" from shell command: security find-generic-password -a "provider:opencode-go:apiKey" -w',
+      })),
+    };
+    getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
+    resolveProviderApiKeyMock.mockReturnValue(undefined);
+    modelRegistryCreateMock.mockReturnValue(registry);
+
+    const created = createRuntimeModelRegistry(authStorage as never);
+
+    await expect(created.getApiKeyAndHeaders({ provider: 'opencode-go' } as never)).resolves.toEqual({
+      ok: false,
+      error: 'No API key is available for provider "opencode-go". Add one in Settings, then try again.',
+    });
+  });
 });

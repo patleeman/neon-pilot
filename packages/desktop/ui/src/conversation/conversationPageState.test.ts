@@ -89,7 +89,7 @@ describe('conversation page state helpers', () => {
     ).toBe('latest assistant text');
   });
 
-  it('gates expensive conversation reads during pending initial prompt work', () => {
+  it('keeps transcript refreshes live while gating auxiliary reads during pending initial prompt work', () => {
     expect(
       shouldDeferConversationFileRefresh({
         draft: false,
@@ -97,6 +97,26 @@ describe('conversation page state helpers', () => {
         hasPendingInitialPrompt: false,
         pendingInitialPromptDispatching: true,
         hasPendingInitialPromptInFlight: false,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldDeferConversationFileRefresh({
+        draft: false,
+        conversationId: 'conv-1',
+        hasPendingInitialPrompt: true,
+        pendingInitialPromptDispatching: true,
+        hasPendingInitialPromptInFlight: false,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldDeferConversationFileRefresh({
+        draft: false,
+        conversationId: 'conv-1',
+        hasPendingInitialPrompt: false,
+        pendingInitialPromptDispatching: false,
+        hasPendingInitialPromptInFlight: true,
       }),
     ).toBe(true);
 
