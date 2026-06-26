@@ -312,6 +312,7 @@ export class LocalHostController implements HostController {
     lockedConversationIds?: string[];
     activeConversationId?: string | null;
     workspacePaths?: string[];
+    remoteControlledConversationIds?: string[];
     conversationWorkspaceMigrated?: boolean | null;
   }): Promise<unknown> {
     const module = await this.loadLocalApi();

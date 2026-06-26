@@ -1578,6 +1578,76 @@ describe('LocalBackendProcesses', () => {
     );
   });
 
+  it('routes conversation cwd actions through the host-owned live registry', async () => {
+    const staleResponse = {
+      ok: true,
+      result: {
+        content: [
+          {
+            type: 'text',
+            text: 'Cannot change the working directory because this conversation is not currently live. Start or resume the conversation in the UI, then try again.',
+          },
+        ],
+        details: {
+          action: 'unavailable',
+          reason: 'session_not_live',
+          conversationId: 'conversation-1',
+          cwd: '/next',
+          queued: false,
+        },
+      },
+    };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(staleResponse), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    class StartedBackend extends LocalBackendProcesses {
+      readonly rpcCalls: Array<{ method: string; args: unknown[] }> = [];
+
+      override async ensureStarted(): Promise<void> {}
+
+      override async callLocalApiMethod(method: string, args: unknown[]): Promise<unknown> {
+        this.rpcCalls.push({ method, args });
+        return { conversationId: 'conversation-1', cwd: '/next', queued: true };
+      }
+    }
+
+    const backend = new StartedBackend() as StartedBackend & { baseUrl: string; token: string };
+    backend.baseUrl = 'http://127.0.0.1:1234';
+    backend.token = 'token';
+
+    const response = await backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/extensions/system-conversation-tools/actions/conversationCwd',
+      body: {
+        conversationId: 'conversation-1',
+        cwd: '/next',
+        continuePrompt: 'Continue there.',
+      },
+    });
+    const body = JSON.parse(new TextDecoder().decode(response.body)) as {
+      result?: { content?: Array<{ text?: string }>; details?: Record<string, unknown> };
+    };
+
+    expect(backend.rpcCalls).toEqual([
+      {
+        method: 'requestDesktopConversationWorkingDirectoryChange',
+        args: [{ conversationId: 'conversation-1', cwd: '/next', continuePrompt: 'Continue there.' }],
+      },
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(body.result?.content?.[0]?.text).toBe(
+      'Queued working directory change to /next. This conversation will move there after this turn and continue automatically.',
+    );
+    expect(body.result?.details).toEqual(
+      expect.objectContaining({
+        action: 'queue',
+        conversationId: 'conversation-1',
+        cwd: '/next',
+        queued: true,
+        continuePrompt: true,
+      }),
+    );
+  });
+
   it('creates a reserved live session without waiting on reservation-time prewarm work', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);

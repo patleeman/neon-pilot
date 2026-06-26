@@ -121,6 +121,7 @@ import {
   isLive as isLiveSession,
   registry as liveRegistry,
   renameSession,
+  requestConversationWorkingDirectoryChange,
   resumeSession,
 } from '../conversations/liveSessions.js';
 import {
@@ -334,24 +335,149 @@ async function syncSystemConversationToolMutation(input: {
   actionId: string;
   body: unknown;
   result: unknown;
-}): Promise<void> {
-  if (input.extensionId !== 'system-conversation-tools' || input.actionId !== 'conversationTool') return;
-  if (!isRecord(input.body)) return;
+}): Promise<unknown | undefined> {
+  if (input.extensionId !== 'system-conversation-tools') return undefined;
+  if (!isRecord(input.body)) return undefined;
   const action = typeof input.body.action === 'string' ? input.body.action : '';
   const actionResult = isRecord(input.result) ? input.result : {};
-  if (actionResult.ok !== true) return;
+  if (actionResult.ok !== true) return undefined;
 
   const conversations = createExtensionConversationsCapability(await getLocalServerRouteContext(), input.extensionId);
-  if (action === 'delete') {
+  if (input.actionId === 'conversationTool' && action === 'delete') {
     await conversations.delete({ conversationIds: optionalStringArray(input.body.conversationIds) ?? [] });
-    return;
+    return undefined;
   }
-  if (action === 'retention_prune' && input.body.dryRun !== true) {
+  if (input.actionId === 'conversationTool' && action === 'retention_prune' && input.body.dryRun !== true) {
     await conversations.prune({
       olderThanMs: Number(input.body.olderThanMs),
       archivedOnly: input.body.archivedOnly === true,
       dryRun: false,
     });
+  }
+  return syncSystemConversationCwdAction(input);
+}
+
+function readActionResultDetails(result: unknown): Record<string, unknown> | null {
+  if (!isRecord(result) || result.ok !== true || !isRecord(result.result)) return null;
+  return isRecord(result.result.details) ? result.result.details : null;
+}
+
+function readActionString(primary: unknown, fallback: unknown): string | undefined {
+  const value = typeof primary === 'string' && primary.trim().length > 0 ? primary : fallback;
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+async function syncSystemConversationCwdAction(input: {
+  actionId: string;
+  body: Record<string, unknown>;
+  result: unknown;
+}): Promise<unknown | undefined> {
+  if (
+    input.actionId !== 'conversationCwd' &&
+    !(input.actionId === 'conversationTool' && input.body.action === 'change_working_directory')
+  ) {
+    return undefined;
+  }
+
+  const details = readActionResultDetails(input.result);
+  if (details?.reason !== 'session_not_live') {
+    return undefined;
+  }
+
+  const conversationId = readActionString(details.conversationId, input.body.conversationId);
+  const cwd = readActionString(details.cwd, input.body.cwd);
+  if (!conversationId || !cwd) {
+    return undefined;
+  }
+
+  const continuePrompt = readActionString(input.body.continuePrompt, undefined);
+  try {
+    const [liveContext, routeContext] = await Promise.all([getLocalLiveSessionCapabilityContext(), getLocalServerRouteContext()]);
+    const queued = await requestConversationWorkingDirectoryChange(
+      {
+        conversationId,
+        cwd,
+        ...(continuePrompt ? { continuePrompt } : {}),
+      },
+      {
+        ...liveContext.buildLiveSessionResourceOptions(routeContext.getRuntimeScope()),
+        extensionFactories: liveContext.buildLiveSessionExtensionFactories(),
+      },
+    );
+
+    const text = queued.unchanged
+      ? `Already using working directory ${queued.cwd}.`
+      : continuePrompt
+        ? `Queued working directory change to ${queued.cwd}. This conversation will move there after this turn and continue automatically.`
+        : `Queued working directory change to ${queued.cwd}. This conversation will move there after this turn.`;
+    return {
+      ok: true,
+      result: {
+        content: [{ type: 'text', text }],
+        details: {
+          action: queued.unchanged ? 'noop' : 'queue',
+          conversationId: queued.conversationId,
+          cwd: queued.cwd,
+          queued: queued.queued,
+          ...(queued.unchanged ? { unchanged: true } : {}),
+          ...(continuePrompt ? { continuePrompt: true } : {}),
+        },
+      },
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+async function handleSystemConversationCwdAction(input: { actionId: string; body: unknown }): Promise<unknown | undefined> {
+  if (!isRecord(input.body)) return undefined;
+  if (
+    input.actionId !== 'conversationCwd' &&
+    !(input.actionId === 'conversationTool' && input.body.action === 'change_working_directory')
+  ) {
+    return undefined;
+  }
+
+  const conversationId = readActionString(input.body.conversationId, undefined);
+  const cwd = readActionString(input.body.cwd, undefined);
+  if (!conversationId || !cwd) return undefined;
+
+  const continuePrompt = readActionString(input.body.continuePrompt, undefined);
+  try {
+    const [liveContext, routeContext] = await Promise.all([getLocalLiveSessionCapabilityContext(), getLocalServerRouteContext()]);
+    const queued = await requestConversationWorkingDirectoryChange(
+      {
+        conversationId,
+        cwd,
+        ...(continuePrompt ? { continuePrompt } : {}),
+      },
+      {
+        ...liveContext.buildLiveSessionResourceOptions(routeContext.getRuntimeScope()),
+        extensionFactories: liveContext.buildLiveSessionExtensionFactories(),
+      },
+    );
+
+    const text = queued.unchanged
+      ? `Already using working directory ${queued.cwd}.`
+      : continuePrompt
+        ? `Queued working directory change to ${queued.cwd}. This conversation will move there after this turn and continue automatically.`
+        : `Queued working directory change to ${queued.cwd}. This conversation will move there after this turn.`;
+    return {
+      ok: true,
+      result: {
+        content: [{ type: 'text', text }],
+        details: {
+          action: queued.unchanged ? 'noop' : 'queue',
+          conversationId: queued.conversationId,
+          cwd: queued.cwd,
+          queued: queued.queued,
+          ...(queued.unchanged ? { unchanged: true } : {}),
+          ...(continuePrompt ? { continuePrompt: true } : {}),
+        },
+      },
+    };
+  } catch {
+    return undefined;
   }
 }
 
@@ -1297,6 +1423,12 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   if (method === 'POST' && extensionActionMatch) {
     const extensionId = decodeURIComponent(extensionActionMatch[1] ?? '');
     const actionId = decodeURIComponent(extensionActionMatch[2] ?? '');
+    if (extensionId === 'system-conversation-tools') {
+      const hostResult = await handleSystemConversationCwdAction({ actionId, body: input.body });
+      if (hostResult) {
+        return createDesktopLocalApiJsonResponse(hostResult);
+      }
+    }
     const result = await getExtensionHostClient().invokeAction({
       extensionId,
       actionId,
@@ -1304,8 +1436,8 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       serverContextSnapshot: createExtensionHostServerContextSnapshot(await getLocalServerRouteContext()),
       signal: input.signal,
     });
-    await syncSystemConversationToolMutation({ extensionId, actionId, body: input.body, result });
-    return createDesktopLocalApiJsonResponse(result);
+    const syncedResult = await syncSystemConversationToolMutation({ extensionId, actionId, body: input.body, result });
+    return createDesktopLocalApiJsonResponse(syncedResult ?? result);
   }
   if (method === 'PATCH' && path === '/api/model-preferences')
     return createDesktopLocalApiJsonResponse(
@@ -2188,6 +2320,7 @@ export async function saveDesktopConversationWorkspace(input: {
   lockedConversationIds?: string[];
   activeConversationId?: string | null;
   workspacePaths?: string[];
+  remoteControlledConversationIds?: string[];
   conversationWorkspaceMigrated?: boolean | null;
 }) {
   const {
@@ -2197,6 +2330,7 @@ export async function saveDesktopConversationWorkspace(input: {
     lockedConversationIds,
     activeConversationId,
     workspacePaths,
+    remoteControlledConversationIds,
     conversationWorkspaceMigrated,
   } = input;
   validateDesktopConversationWorkspaceUpdate(input);
@@ -2224,6 +2358,7 @@ export async function saveDesktopConversationWorkspace(input: {
           lockedConversationIds: lockedConversationIds === undefined ? undefined : nextLayout.lockedConversationIds,
           activeConversationId: activeConversationId === undefined ? undefined : nextLayout.activeConversationId,
           workspacePaths,
+          remoteControlledConversationIds,
           conversationWorkspaceMigrated,
         },
         settingsFile,
@@ -2711,6 +2846,27 @@ export async function changeDesktopConversationCwd(input: {
 
   publishConversationSessionMetaChanged(conversationId, result.id);
   return buildChangedConversationCwdResponse({ id: result.id, sessionFile: result.sessionFile, cwd: nextCwd });
+}
+
+export async function requestDesktopConversationWorkingDirectoryChange(input: {
+  conversationId: string;
+  cwd: string;
+  continuePrompt?: string;
+}) {
+  const [liveContext, routeContext] = await Promise.all([getLocalLiveSessionCapabilityContext(), getLocalServerRouteContext()]);
+  return requestConversationWorkingDirectoryChange(
+    {
+      conversationId: readRequiredConversationId(input.conversationId),
+      cwd: input.cwd,
+      ...(typeof input.continuePrompt === 'string' && input.continuePrompt.trim().length > 0
+        ? { continuePrompt: input.continuePrompt.trim() }
+        : {}),
+    },
+    {
+      ...liveContext.buildLiveSessionResourceOptions(routeContext.getRuntimeScope()),
+      extensionFactories: liveContext.buildLiveSessionExtensionFactories(),
+    },
+  );
 }
 
 export async function updateDesktopConversationGoal(input: { conversationId: string; objective?: string }) {

@@ -9,10 +9,12 @@ const mocks = vi.hoisted(() => ({
   liveRegistry: new Map<string, { cwd: string; session: { sessionFile: string; isStreaming: boolean } }>(),
   createSessionFromExisting: vi.fn(),
   destroySession: vi.fn(),
+  requestConversationWorkingDirectoryChange: vi.fn(),
   readSessionBlocks: vi.fn(),
   appendConversationWorkspaceMetadata: vi.fn(),
   resolveNeutralChatCwd: vi.fn(() => '/tmp/neon-pilot-runtime/chat-workspaces/shared'),
   publishConversationSessionMetaChanged: vi.fn(),
+  invokeExtensionAction: vi.fn(),
   startKnowledgeBaseSyncLoop: vi.fn(),
   subscribeKnowledgeBaseState: vi.fn(() => vi.fn()),
 }));
@@ -42,8 +44,17 @@ vi.mock('../conversations/liveSessions.js', async () => {
     registry: mocks.liveRegistry,
     createSessionFromExisting: mocks.createSessionFromExisting,
     destroySession: mocks.destroySession,
+    requestConversationWorkingDirectoryChange: mocks.requestConversationWorkingDirectoryChange,
   };
 });
+
+vi.mock('../extensions/extensionHostClient.js', () => ({
+  getExtensionHostClient: () => ({
+    listPromptAssemblyContributions: async () => ({ assemblyProviders: [], contextProviders: [], hooks: [] }),
+    listStaticContributions: async () => ({ skills: [], tools: [], modelDiscovery: [] }),
+    invokeAction: mocks.invokeExtensionAction,
+  }),
+}));
 
 vi.mock('../conversations/sessions.js', async () => {
   const actual = await vi.importActual<typeof import('../conversations/sessions.js')>('../conversations/sessions.js');
@@ -76,10 +87,12 @@ describe('changeDesktopConversationCwd', () => {
     mocks.liveRegistry.clear();
     mocks.createSessionFromExisting.mockReset();
     mocks.destroySession.mockReset();
+    mocks.requestConversationWorkingDirectoryChange.mockReset();
     mocks.readSessionBlocks.mockReset();
     mocks.appendConversationWorkspaceMetadata.mockReset();
     mocks.resolveNeutralChatCwd.mockClear();
     mocks.publishConversationSessionMetaChanged.mockReset();
+    mocks.invokeExtensionAction.mockReset();
     mocks.startKnowledgeBaseSyncLoop.mockClear();
     mocks.subscribeKnowledgeBaseState.mockClear();
   });
@@ -199,5 +212,71 @@ describe('changeDesktopConversationCwd', () => {
       workspaceCwd: null,
       visibleMessage: true,
     });
+  }, 30000);
+
+  it('routes conversationCwd actions through the desktop live registry before the extension worker', async () => {
+    const targetCwd = await mkdtemp(join(tmpdir(), 'pa-local-cwd-target-'));
+    mocks.invokeExtensionAction.mockResolvedValueOnce({
+      ok: true,
+      result: {
+        content: [
+          {
+            type: 'text',
+            text: 'Cannot change the working directory because this conversation is not currently live. Start or resume the conversation in the UI, then try again.',
+          },
+        ],
+        details: {
+          action: 'unavailable',
+          reason: 'session_not_live',
+          conversationId: 'conversation-1',
+          cwd: targetCwd,
+          queued: false,
+        },
+      },
+    });
+    mocks.requestConversationWorkingDirectoryChange.mockResolvedValueOnce({
+      conversationId: 'conversation-1',
+      cwd: targetCwd,
+      queued: true,
+    });
+
+    const { dispatchDesktopLocalApiRequest } = await import('./localApi.js');
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'POST',
+      path: '/api/extensions/system-conversation-tools/actions/conversationCwd',
+      body: {
+        conversationId: 'conversation-1',
+        cwd: targetCwd,
+        continuePrompt: 'Continue there.',
+      },
+    });
+    const body = JSON.parse(Buffer.from(response.body).toString('utf-8')) as {
+      ok?: boolean;
+      result?: { content?: Array<{ text?: string }>; details?: Record<string, unknown> };
+    };
+
+    expect(response.statusCode).toBe(200);
+    expect(mocks.invokeExtensionAction).not.toHaveBeenCalled();
+    expect(mocks.requestConversationWorkingDirectoryChange).toHaveBeenCalledWith(
+      {
+        conversationId: 'conversation-1',
+        cwd: targetCwd,
+        continuePrompt: 'Continue there.',
+      },
+      expect.objectContaining({ extensionFactories: expect.any(Array) }),
+    );
+    expect(body.ok).toBe(true);
+    expect(body.result?.content?.[0]?.text).toBe(
+      `Queued working directory change to ${targetCwd}. This conversation will move there after this turn and continue automatically.`,
+    );
+    expect(body.result?.details).toEqual(
+      expect.objectContaining({
+        action: 'queue',
+        conversationId: 'conversation-1',
+        cwd: targetCwd,
+        queued: true,
+        continuePrompt: true,
+      }),
+    );
   }, 30000);
 });

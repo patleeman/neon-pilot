@@ -334,6 +334,7 @@ export interface HostController {
     lockedConversationIds?: string[];
     activeConversationId?: string | null;
     workspacePaths?: string[];
+    remoteControlledConversationIds?: string[];
     conversationWorkspaceMigrated?: boolean | null;
   }): Promise<unknown>;
   readModelProviders?(): Promise<unknown>;

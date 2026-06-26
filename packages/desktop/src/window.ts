@@ -362,7 +362,7 @@ export class DesktopWindowController {
     }
 
     const hostId = input.hostId?.trim() || this.hostManager.getActiveHostId();
-    await this.openWindowForHost(hostId, `/conversations/${encodeURIComponent(conversationId)}`, 'popout');
+    await this.openWindowForHost(hostId, `/conversations/${encodeURIComponent(conversationId)}`, 'popout', { conversationId });
   }
 
   async openStartupErrorWindow(input: { message: string; logsDir: string }): Promise<void> {
@@ -580,16 +580,26 @@ export class DesktopWindowController {
     targetWindow.webContents.send('neon-pilot-desktop:shortcut', action);
   }
 
-  private async openWindowForHost(hostId: string, pathname: string, role: ManagedWindowRole): Promise<void> {
+  private async openWindowForHost(
+    hostId: string,
+    pathname: string,
+    role: ManagedWindowRole,
+    metadata?: { conversationId?: string },
+  ): Promise<void> {
     const baseUrl = await this.hostManager.getHostBaseUrl(hostId);
     const targetUrl = new URL(pathname, baseUrl).toString();
-    await this.openWindowToUrl(hostId, targetUrl, role);
+    await this.openWindowToUrl(hostId, targetUrl, role, metadata);
   }
 
-  private async openWindowToUrl(hostId: string, url: string, role: ManagedWindowRole): Promise<void> {
+  private async openWindowToUrl(
+    hostId: string,
+    url: string,
+    role: ManagedWindowRole,
+    metadata?: { conversationId?: string },
+  ): Promise<void> {
     const host = this.hostManager.getHostRecord(hostId);
     const partition = getHostBrowserPartition(host.id);
-    const window = this.ensureWindow(host, partition, role);
+    const window = this.ensureWindow(host, partition, role, metadata);
     await this.loadWindowUrl(window, url);
   }
 
@@ -651,7 +661,12 @@ export class DesktopWindowController {
     return window.webContents;
   }
 
-  private ensureWindow(host: DesktopHostRecord, partition: string, role: ManagedWindowRole): BrowserWindow {
+  private ensureWindow(
+    host: DesktopHostRecord,
+    partition: string,
+    role: ManagedWindowRole,
+    metadata?: { conversationId?: string },
+  ): BrowserWindow {
     if (role === 'main') {
       return this.ensureMainWindow(host, partition);
     }
@@ -661,7 +676,7 @@ export class DesktopWindowController {
     }
 
     const window = this.createWindow(host, partition, role);
-    this.registerWindow(window, host.id, role);
+    this.registerWindow(window, host.id, role, metadata);
     return window;
   }
 
@@ -923,13 +938,25 @@ export class DesktopWindowController {
     });
   }
 
-  private registerWindow(window: BrowserWindow, hostId: string, role: ManagedWindowRole): void {
+  private registerWindow(window: BrowserWindow, hostId: string, role: ManagedWindowRole, metadata?: { conversationId?: string }): void {
     const webContentsId = window.webContents.id;
     this.trackedWindows.set(webContentsId, { hostId, role, window });
+    const popoutConversationId = role === 'popout' ? metadata?.conversationId?.trim() : '';
+    if (popoutConversationId) {
+      window.webContents.once('did-finish-load', () => {
+        void this.setRemoteControlledConversationViaLocalApi(hostId, popoutConversationId, true);
+      });
+      window.on('close', () => {
+        void this.setRemoteControlledConversationViaLocalApi(hostId, popoutConversationId, false);
+      });
+    }
 
     window.on('closed', () => {
       this.workbenchBrowser.destroy(webContentsId);
       this.trackedWindows.delete(webContentsId);
+      if (popoutConversationId) {
+        void this.setRemoteControlledConversationViaLocalApi(hostId, popoutConversationId, false);
+      }
       if (role === 'main' && this.mainWindow === window) {
         this.mainWindow = undefined;
         this.currentPartition = undefined;
@@ -939,6 +966,31 @@ export class DesktopWindowController {
       }
       this.syncAppModeForVisibleWindows();
     });
+  }
+
+  private async setRemoteControlledConversationViaLocalApi(hostId: string, conversationId: string, enabled: boolean): Promise<void> {
+    try {
+      const controller = this.hostManager.getHostController(hostId);
+      const workspace = await controller.invokeLocalApi('GET', '/api/conversation-workspace');
+      const currentIds = Array.isArray((workspace as { remoteControlledConversationIds?: unknown }).remoteControlledConversationIds)
+        ? (workspace as { remoteControlledConversationIds: unknown[] }).remoteControlledConversationIds.filter(
+            (value): value is string => typeof value === 'string' && value.trim().length > 0,
+          )
+        : [];
+      const currentSet = new Set(currentIds);
+      if (enabled) {
+        currentSet.add(conversationId);
+      } else {
+        currentSet.delete(conversationId);
+      }
+
+      await controller.invokeLocalApi('PATCH', '/api/conversation-workspace', {
+        remoteControlledConversationIds: [...currentSet],
+        conversationWorkspaceMigrated: true,
+      });
+    } catch (error) {
+      logDesktopEvent(`Could not update popout remote-control state: ${error instanceof Error ? error.message : String(error)}`, 'warn');
+    }
   }
 
   private async loadWindowUrl(window: BrowserWindow, url: string): Promise<void> {

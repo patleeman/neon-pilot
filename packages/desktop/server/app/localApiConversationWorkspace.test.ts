@@ -18,6 +18,7 @@ describe('localApiConversationWorkspace', () => {
         lockedConversationIds: ['one'],
         activeConversationId: null,
         workspacePaths: ['/repo'],
+        remoteControlledConversationIds: ['one'],
         conversationWorkspaceMigrated: true,
       }),
     ).not.toThrow();
@@ -42,11 +43,14 @@ describe('localApiConversationWorkspace', () => {
     expect(() => validateDesktopConversationWorkspaceUpdate({ workspacePaths: 'bad' as unknown as string[] })).toThrow(
       'workspacePaths must be an array when provided',
     );
+    expect(() => validateDesktopConversationWorkspaceUpdate({ remoteControlledConversationIds: 'bad' as unknown as string[] })).toThrow(
+      'remoteControlledConversationIds must be an array when provided',
+    );
     expect(() => validateDesktopConversationWorkspaceUpdate({ conversationWorkspaceMigrated: 'bad' as unknown as boolean })).toThrow(
       'conversationWorkspaceMigrated must be a boolean when provided',
     );
     expect(() => validateDesktopConversationWorkspaceUpdate({})).toThrow(
-      'sessionIds, pinnedSessionIds, archivedSessionIds, lockedConversationIds, activeConversationId, workspacePaths, or conversationWorkspaceMigrated required',
+      'sessionIds, pinnedSessionIds, archivedSessionIds, lockedConversationIds, activeConversationId, workspacePaths, remoteControlledConversationIds, or conversationWorkspaceMigrated required',
     );
   });
 
@@ -57,6 +61,7 @@ describe('localApiConversationWorkspace', () => {
       'workspace',
     ]);
     expect(desktopConversationWorkspaceInvalidationTopics({ workspacePaths: [] })).toEqual(['workspace']);
+    expect(desktopConversationWorkspaceInvalidationTopics({ remoteControlledConversationIds: ['remote-a'] })).toEqual(['sessions']);
   });
 
   it('filters stale workspace ids before returning a backend-backed layout', () => {

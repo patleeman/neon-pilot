@@ -7,6 +7,7 @@ export interface DesktopConversationWorkspaceUpdateInput {
   lockedConversationIds?: string[];
   activeConversationId?: string | null;
   workspacePaths?: string[];
+  remoteControlledConversationIds?: string[];
   conversationWorkspaceMigrated?: boolean | null;
 }
 
@@ -48,6 +49,7 @@ export function validateDesktopConversationWorkspaceUpdate(input: unknown): asse
     lockedConversationIds,
     activeConversationId,
     workspacePaths,
+    remoteControlledConversationIds,
     conversationWorkspaceMigrated,
   } = update;
 
@@ -75,6 +77,10 @@ export function validateDesktopConversationWorkspaceUpdate(input: unknown): asse
     throw new Error('workspacePaths must be an array when provided');
   }
 
+  if (remoteControlledConversationIds !== undefined && !Array.isArray(remoteControlledConversationIds)) {
+    throw new Error('remoteControlledConversationIds must be an array when provided');
+  }
+
   if (
     conversationWorkspaceMigrated !== undefined &&
     conversationWorkspaceMigrated !== null &&
@@ -90,10 +96,11 @@ export function validateDesktopConversationWorkspaceUpdate(input: unknown): asse
     lockedConversationIds === undefined &&
     activeConversationId === undefined &&
     workspacePaths === undefined &&
+    remoteControlledConversationIds === undefined &&
     conversationWorkspaceMigrated === undefined
   ) {
     throw new Error(
-      'sessionIds, pinnedSessionIds, archivedSessionIds, lockedConversationIds, activeConversationId, workspacePaths, or conversationWorkspaceMigrated required',
+      'sessionIds, pinnedSessionIds, archivedSessionIds, lockedConversationIds, activeConversationId, workspacePaths, remoteControlledConversationIds, or conversationWorkspaceMigrated required',
     );
   }
 }
@@ -105,7 +112,8 @@ export function desktopConversationWorkspaceInvalidationTopics(input: DesktopCon
     input.pinnedSessionIds !== undefined ||
     input.archivedSessionIds !== undefined ||
     input.lockedConversationIds !== undefined ||
-    input.activeConversationId !== undefined
+    input.activeConversationId !== undefined ||
+    input.remoteControlledConversationIds !== undefined
   ) {
     topics.push('sessions');
   }

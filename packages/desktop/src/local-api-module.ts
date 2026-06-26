@@ -158,6 +158,11 @@ export interface LocalApiModule {
     workspaceCwd?: string | null;
     surfaceId?: string;
   }): Promise<unknown>;
+  requestDesktopConversationWorkingDirectoryChange(input: {
+    conversationId: string;
+    cwd: string;
+    continuePrompt?: string;
+  }): Promise<unknown>;
   updateDesktopConversationGoal(input: { conversationId: string; objective?: string }): Promise<unknown>;
   readDesktopConversationDeferredResumes(conversationId: string): Promise<unknown>;
   scheduleDesktopConversationDeferredResume(input: {

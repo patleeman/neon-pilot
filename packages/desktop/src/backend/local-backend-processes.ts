@@ -197,6 +197,7 @@ async function saveConversationWorkspaceFastPath(input: unknown): Promise<unknow
     lockedConversationIds?: string[];
     activeConversationId?: string | null;
     workspacePaths?: string[];
+    remoteControlledConversationIds?: string[];
     conversationWorkspaceMigrated?: boolean | null;
   };
   const saved = persistSettingsWrite(
@@ -209,6 +210,7 @@ async function saveConversationWorkspaceFastPath(input: unknown): Promise<unknow
           lockedConversationIds: update.lockedConversationIds,
           activeConversationId: update.activeConversationId,
           workspacePaths: update.workspacePaths,
+          remoteControlledConversationIds: update.remoteControlledConversationIds,
           conversationWorkspaceMigrated: update.conversationWorkspaceMigrated,
         },
         settingsFile,
@@ -369,8 +371,8 @@ export class LocalBackendProcesses {
       body: JSON.stringify({ request }),
       signal: input.signal,
     });
-    const body = new Uint8Array(await response.arrayBuffer());
-    await this.syncSystemConversationToolMutation(input, response.status, body);
+    let body = new Uint8Array(await response.arrayBuffer());
+    body = (await this.syncSystemConversationToolMutation(input, response.status, body)) ?? body;
     return {
       statusCode: response.status,
       headers: Object.fromEntries(response.headers.entries()),
@@ -423,26 +425,126 @@ export class LocalBackendProcesses {
     },
     statusCode: number,
     responseBody: Uint8Array,
-  ): Promise<void> {
-    if (input.method !== 'POST' || statusCode < 200 || statusCode >= 300) return;
+  ): Promise<Uint8Array | undefined> {
+    if (input.method !== 'POST' || statusCode < 200 || statusCode >= 300) return undefined;
     const url = new URL(input.path, 'http://neon-pilot.local');
     const match = /^\/api\/extensions\/([^/]+)\/actions\/([^/]+)$/.exec(url.pathname);
-    if (!match) return;
-    if (decodeURIComponent(match[1] ?? '') !== 'system-conversation-tools') return;
-    if (decodeURIComponent(match[2] ?? '') !== 'conversationTool') return;
+    if (!match) return undefined;
+    if (decodeURIComponent(match[1] ?? '') !== 'system-conversation-tools') return undefined;
+    const actionId = decodeURIComponent(match[2] ?? '');
     const requestBody =
       input.body && typeof input.body === 'object' && !Array.isArray(input.body) ? (input.body as Record<string, unknown>) : {};
-    if (requestBody.action !== 'delete') return;
+    if (actionId === 'conversationCwd' || (actionId === 'conversationTool' && requestBody.action === 'change_working_directory')) {
+      return this.syncSystemConversationCwdMutation(requestBody, responseBody);
+    }
+    if (actionId !== 'conversationTool' || requestBody.action !== 'delete') return undefined;
     const conversationIds = optionalStringArray(requestBody.conversationIds);
-    if (!conversationIds) return;
+    if (!conversationIds) return undefined;
     try {
       const parsed = JSON.parse(new TextDecoder().decode(responseBody)) as unknown;
-      if (!parsed || typeof parsed !== 'object' || (parsed as { ok?: unknown }).ok !== true) return;
+      if (!parsed || typeof parsed !== 'object' || (parsed as { ok?: unknown }).ok !== true) return undefined;
       await this.callLocalApiMethod('syncDesktopDeletedConversations', [{ conversationIds }]);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       process.stderr.write(`[local-backend] failed to sync deleted conversations: ${message}\n`);
     }
+    return undefined;
+  }
+
+  private async syncSystemConversationCwdMutation(
+    requestBody: Record<string, unknown>,
+    responseBody: Uint8Array,
+  ): Promise<Uint8Array | undefined> {
+    try {
+      const parsed = JSON.parse(new TextDecoder().decode(responseBody)) as unknown;
+      if (!parsed || typeof parsed !== 'object' || (parsed as { ok?: unknown }).ok !== true) return undefined;
+      const result = (parsed as { result?: unknown }).result;
+      const details =
+        result && typeof result === 'object' && !Array.isArray(result) ? (result as { details?: unknown }).details : undefined;
+      const detailRecord = details && typeof details === 'object' && !Array.isArray(details) ? (details as Record<string, unknown>) : {};
+      if (detailRecord.reason !== 'session_not_live') return undefined;
+
+      const conversationId =
+        typeof detailRecord.conversationId === 'string' && detailRecord.conversationId.trim().length > 0
+          ? detailRecord.conversationId.trim()
+          : typeof requestBody.conversationId === 'string'
+            ? requestBody.conversationId.trim()
+            : '';
+      const cwd =
+        typeof detailRecord.cwd === 'string' && detailRecord.cwd.trim().length > 0
+          ? detailRecord.cwd.trim()
+          : typeof requestBody.cwd === 'string'
+            ? requestBody.cwd.trim()
+            : '';
+      if (!conversationId || !cwd) return undefined;
+
+      const continuePrompt =
+        typeof requestBody.continuePrompt === 'string' && requestBody.continuePrompt.trim().length > 0
+          ? requestBody.continuePrompt.trim()
+          : undefined;
+      const queuedResult = await this.queueSystemConversationCwdAction({ conversationId, cwd, continuePrompt });
+      return new TextEncoder().encode(
+        JSON.stringify({
+          ok: true,
+          result: queuedResult,
+        }),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`[local-backend] failed to sync conversation cwd change: ${message}\n`);
+      return undefined;
+    }
+  }
+
+  private async tryQueueSystemConversationCwdAction(requestBody: Record<string, unknown>): Promise<unknown | null> {
+    const conversationId = typeof requestBody.conversationId === 'string' ? requestBody.conversationId.trim() : '';
+    const cwd = typeof requestBody.cwd === 'string' ? requestBody.cwd.trim() : '';
+    if (!conversationId || !cwd) return null;
+
+    try {
+      return await this.queueSystemConversationCwdAction({
+        conversationId,
+        cwd,
+        continuePrompt:
+          typeof requestBody.continuePrompt === 'string' && requestBody.continuePrompt.trim().length > 0
+            ? requestBody.continuePrompt.trim()
+            : undefined,
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private async queueSystemConversationCwdAction(input: {
+    conversationId: string;
+    cwd: string;
+    continuePrompt?: string;
+  }): Promise<{ content: Array<{ type: 'text'; text: string }>; details: Record<string, unknown> }> {
+    const queued = (await this.callLocalApiMethod('requestDesktopConversationWorkingDirectoryChange', [
+      {
+        conversationId: input.conversationId,
+        cwd: input.cwd,
+        ...(input.continuePrompt ? { continuePrompt: input.continuePrompt } : {}),
+      },
+    ])) as { conversationId?: string; cwd?: string; queued?: boolean; unchanged?: boolean };
+    const queuedConversationId = typeof queued.conversationId === 'string' ? queued.conversationId : input.conversationId;
+    const queuedCwd = typeof queued.cwd === 'string' ? queued.cwd : input.cwd;
+    const text = queued.unchanged
+      ? `Already using working directory ${queuedCwd}.`
+      : input.continuePrompt
+        ? `Queued working directory change to ${queuedCwd}. This conversation will move there after this turn and continue automatically.`
+        : `Queued working directory change to ${queuedCwd}. This conversation will move there after this turn.`;
+    return {
+      content: [{ type: 'text', text }],
+      details: {
+        action: queued.unchanged ? 'noop' : 'queue',
+        conversationId: queuedConversationId,
+        cwd: queuedCwd,
+        queued: Boolean(queued.queued),
+        ...(queued.unchanged ? { unchanged: true } : {}),
+        ...(input.continuePrompt ? { continuePrompt: true } : {}),
+      },
+    };
   }
 
   async subscribeApiStream(path: string, onEvent: (event: DesktopApiStreamEvent) => void): Promise<() => void> {
@@ -578,6 +680,20 @@ export class LocalBackendProcesses {
         this.backendLiveConversationIds.add(String((result as { id: string }).id));
       }
       return this.makeJsonResponse(result, 'backend-rpc');
+    }
+    const conversationToolActionMatch = /^\/api\/extensions\/([^/]+)\/actions\/([^/]+)$/.exec(path);
+    if (input.method === 'POST' && conversationToolActionMatch) {
+      const extensionId = decodeURIComponent(conversationToolActionMatch[1] ?? '');
+      const actionId = decodeURIComponent(conversationToolActionMatch[2] ?? '');
+      if (
+        extensionId === 'system-conversation-tools' &&
+        (actionId === 'conversationCwd' || (actionId === 'conversationTool' && jsonBody.action === 'change_working_directory'))
+      ) {
+        const result = await this.tryQueueSystemConversationCwdAction(jsonBody);
+        if (result) {
+          return this.makeJsonResponse({ ok: true, result }, 'backend-rpc');
+        }
+      }
     }
     if (input.method === 'GET' && path === '/api/sessions' && !url.searchParams.has('limit')) {
       return this.makeJsonResponse(await this.callLocalApiMethod('readDesktopSessions', [{}]), 'backend-rpc');

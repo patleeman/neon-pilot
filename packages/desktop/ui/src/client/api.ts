@@ -606,13 +606,20 @@ export const api = {
     archivedSessionIds?: string[] | null,
     workspacePaths?: string[] | null,
     activeConversationId?: string | null,
-    options: { conversationWorkspaceMigrated?: boolean | null; lockedConversationIds?: string[] | null } = {},
+    options: {
+      conversationWorkspaceMigrated?: boolean | null;
+      lockedConversationIds?: string[] | null;
+      remoteControlledConversationIds?: string[] | null;
+    } = {},
   ) => {
     const request = {
       ...(sessionIds !== undefined ? { sessionIds } : {}),
       ...(pinnedSessionIds !== undefined ? { pinnedSessionIds } : {}),
       ...(archivedSessionIds !== undefined ? { archivedSessionIds } : {}),
       ...(options.lockedConversationIds !== undefined ? { lockedConversationIds: options.lockedConversationIds } : {}),
+      ...(options.remoteControlledConversationIds !== undefined
+        ? { remoteControlledConversationIds: options.remoteControlledConversationIds }
+        : {}),
       ...(workspacePaths !== undefined ? { workspacePaths } : {}),
       ...(activeConversationId !== undefined ? { activeConversationId } : {}),
       ...(options.conversationWorkspaceMigrated !== undefined
