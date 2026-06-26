@@ -60,6 +60,14 @@ describe('conversation session lifecycle helpers', () => {
     expect(formatConversationLocalActionFailure(new Error('Session conv-123 is not live'))).toBe(
       'Conversation is still reconnecting. Try again in a moment.',
     );
+    expect(
+      formatConversationLocalActionFailure(
+        new Error(
+          'Error: Local API route did not complete for POST /api/live-sessions/conv-123/compact at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/app/localApi.js:132:20)',
+        ),
+        'Could not compact this conversation.',
+      ),
+    ).toBe('Could not compact this conversation.');
     expect(formatConversationLocalActionFailure('', 'Could not compact.')).toBe('Could not compact.');
   });
 

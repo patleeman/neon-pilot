@@ -35,6 +35,10 @@ export function formatConversationLocalActionFailure(error: unknown, fallback = 
   }
 
   const routeErrorMatch = /^\d{3}\s+[^:]+ from \/api\/[^:]+:\s*(.+)$/i.exec(message);
+  if (!routeErrorMatch && /local api route did not complete|file:\/\/|localApi\.js|Module\./i.test(message)) {
+    return fallback;
+  }
+
   const visibleMessage = routeErrorMatch?.[1]?.trim() || message;
   return visibleMessage || fallback;
 }
