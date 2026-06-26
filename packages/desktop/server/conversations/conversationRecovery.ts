@@ -20,6 +20,7 @@ import {
   repairLiveSessionTranscriptTail,
   resumeSession,
 } from './liveSessions.js';
+import { presentTranscriptErrorMessage } from './toolResultPresentation.js';
 interface RecoveryLoaderOptions {
   extensionFactories?: ExtensionFactory[];
   additionalExtensionPaths?: string[];
@@ -128,6 +129,7 @@ async function continueRecoveredConversation(input: {
     }
 
     promptSession(input.conversationId, promptOperation.text, promptOperation.behavior, promptOperation.images).catch(async (error) => {
+      const displayMessage = presentTranscriptErrorMessage(error instanceof Error ? error.message : String(error));
       if (sessionFile) {
         await syncWebLiveConversationRun({
           conversationId: input.conversationId,
@@ -136,13 +138,13 @@ async function continueRecoveredConversation(input: {
           title: input.title,
           profile: input.profile,
           state: 'failed',
-          lastError: error instanceof Error ? error.message : String(error),
+          lastError: displayMessage,
         });
       }
 
       logError('conversation recovery error', {
         sessionId: input.conversationId,
-        message: error instanceof Error ? error.message : String(error),
+        message: displayMessage,
         stack: error instanceof Error ? error.stack : undefined,
       });
     });

@@ -175,8 +175,10 @@ describe('conversation recovery', () => {
     );
   });
 
-  it('marks recovered pending operation failed when prompt replay rejects', async () => {
-    const error = new Error('prompt failed');
+  it('marks recovered pending operation failed with sanitized prompt replay errors', async () => {
+    const error = new Error(
+      'No API key found for the selected model. See /Users/patrick/.opencode/doc/providers.md or run security find-generic-password -s OPENAI_API_KEY.',
+    );
     liveSessions.promptSession.mockRejectedValueOnce(error);
     durableRuns.getDurableRun.mockResolvedValueOnce({
       run: { checkpoint: { payload: { sessionFile: '/checkpoint/session.jsonl', cwd: '/cwd', pendingOperation: { text: 'continue' } } } },
@@ -186,11 +188,17 @@ describe('conversation recovery', () => {
     await Promise.resolve();
 
     expect(runs.syncWebLiveConversationRun).toHaveBeenLastCalledWith(
-      expect.objectContaining({ state: 'failed', lastError: 'prompt failed' }),
+      expect.objectContaining({
+        state: 'failed',
+        lastError: 'No API key found for the selected model. Configure a provider in Neon Pilot, then try again.',
+      }),
     );
     expect(middleware.logError).toHaveBeenCalledWith(
       'conversation recovery error',
-      expect.objectContaining({ sessionId: 'resumed-id', message: 'prompt failed' }),
+      expect.objectContaining({
+        sessionId: 'resumed-id',
+        message: 'No API key found for the selected model. Configure a provider in Neon Pilot, then try again.',
+      }),
     );
   });
 
