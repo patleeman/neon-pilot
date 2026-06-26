@@ -6,6 +6,18 @@ coverage method and measurement.
 
 Source pass date: 2026-06-24.
 
+- 2026-06-26, parent strict-row QA for `Create a new conversation from sidebar or /conversations/new` used rebuilt
+  desktop app on isolated CDP `9637` with evidence under
+  `/tmp/neon-pilot-qa/create-delete-row-1782479983/evidence/`. The pass opened `/conversations/new`, created disposable
+  conversation `019f0417-1f6f-7ace-88f2-334a5f53eda5` through the visible composer, verified the marker and full
+  viewport were clean, clicked the visible sidebar Archive control, then used the product `system-conversation-tools`
+  delete action for destructive cleanup because no visible destructive Delete control appeared in the sidebar or command
+  palette. `/api/sessions` no longer referenced the disposable ID, detail returned 404, and the deleted direct route
+  recovered with friendly `Conversation not found` copy and no raw API/path/stack text. The pass also clicked the
+  primary-sidebar `New chat` control, verified the fresh draft route had clean visible state, and deleted disposable shell
+  `019f0419-0a7e-7783-a4d0-31dc964cb6bd`. No source fix or new regression test was needed; `build-main.mjs` was run to
+  recreate the missing desktop main bundle before launch.
+
 ## How to Use This Inventory
 
 - **Owner** separates core platform surfaces from bundled system extensions.
