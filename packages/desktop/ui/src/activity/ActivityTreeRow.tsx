@@ -127,9 +127,12 @@ function ActivityTreeRowComponent({
       ...(accentColor ? { boxShadow: `inset 2px 0 0 ${accentColor}` } : {}),
     };
   }, [item.accentColor, item.backgroundColor, rowModel.rowPaddingLeftRem]);
+  const groupIsExpandable = item.kind === 'group' && childCount > 0;
   const openOrToggleItem = () => {
     if (item.kind === 'group') {
-      onToggleGroup(item);
+      if (groupIsExpandable) {
+        onToggleGroup(item);
+      }
       return;
     }
     onOpenItem?.(item);
@@ -140,7 +143,7 @@ function ActivityTreeRowComponent({
       role="treeitem"
       tabIndex={0}
       aria-selected={active ? 'true' : 'false'}
-      aria-expanded={item.kind === 'group' ? expanded : undefined}
+      aria-expanded={groupIsExpandable ? expanded : undefined}
       draggable={canDrag}
       onDragStart={canDrag ? (event) => onDragStart(item, event) : undefined}
       onDragOver={(event) => onDragOver(item, event)}
@@ -178,6 +181,7 @@ function ActivityTreeRowComponent({
       <ActivityTreeDropMarker position={rowDropPosition} />
       <ActivityTreeLeadingSlot
         expanded={expanded}
+        groupIsExpandable={groupIsExpandable}
         item={item}
         rowModel={rowModel}
         onToggleBranch={onToggleBranch}

@@ -24,18 +24,24 @@ export function ActivityTreeDropMarker({ position }: { position: ActivityTreeDro
 
 export function ActivityTreeLeadingSlot({
   expanded,
+  groupIsExpandable,
   item,
   rowModel,
   onToggleBranch,
   onToggleGroup,
 }: {
   expanded: boolean;
+  groupIsExpandable: boolean;
   item: ActivityTreeItem;
   rowModel: ActivityTreeRowModel;
   onToggleBranch: (itemId: string) => void;
   onToggleGroup: (item: ActivityTreeItem) => void;
 }) {
   if (item.kind === 'group') {
+    if (!groupIsExpandable) {
+      return <span className="h-4 w-4 shrink-0" aria-hidden="true" />;
+    }
+
     return (
       <ExpanderButton
         label={`${expanded ? 'Collapse' : 'Expand'} ${item.title}`}

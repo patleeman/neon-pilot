@@ -259,6 +259,29 @@ describe('ActivityTreeView', () => {
     }
   });
 
+  it('does not present empty workspace groups as expandable dropdowns', () => {
+    const group: ActivityTreeItem = { id: 'group:empty-project', kind: 'group', title: 'Empty project', status: 'idle' };
+    const { container, unmount } = renderTree([group]);
+
+    try {
+      const groupRow = container.querySelector<HTMLElement>('[role="treeitem"]');
+      expect(groupRow).not.toBeNull();
+      expect(groupRow?.getAttribute('aria-expanded')).toBeNull();
+      expect(container.querySelector('[aria-label="Collapse Empty project"]')).toBeNull();
+      expect(container.querySelector('[aria-label="Expand Empty project"]')).toBeNull();
+
+      act(() => {
+        groupRow?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      });
+
+      expect(groupRow?.getAttribute('aria-expanded')).toBeNull();
+      expect(container.querySelector('[aria-label="Collapse Empty project"]')).toBeNull();
+      expect(container.querySelector('[aria-label="Expand Empty project"]')).toBeNull();
+    } finally {
+      unmount();
+    }
+  });
+
   it('auto-expands every ancestor for a selected nested branch and keeps descendants visible after selecting the parent', () => {
     const nestedItems: ActivityTreeItem[] = [
       { id: 'conversation:root', kind: 'conversation', title: 'Root thread', status: 'idle', metadata: { conversationId: 'root' } },
