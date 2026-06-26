@@ -45,6 +45,10 @@ export function presentToolResultOutput(input: { text: string; isError: boolean 
 
 export function presentTranscriptErrorMessage(message: string): string {
   const trimmed = message.trim();
+  if (/No API key found for the selected model/i.test(trimmed)) {
+    return 'No API key found for the selected model. Configure a provider in Neon Pilot, then try again.';
+  }
+
   const providerMatch = /^Failed to resolve API key for provider\s+"([^"]+)"/i.exec(trimmed);
   if (providerMatch || /find-generic-password/i.test(trimmed)) {
     const provider = providerMatch?.[1]?.trim();

@@ -17,6 +17,17 @@ Source pass date: 2026-06-24.
   primary-sidebar `New chat` control, verified the fresh draft route had clean visible state, and deleted disposable shell
   `019f0419-0a7e-7783-a4d0-31dc964cb6bd`. No source fix or new regression test was needed; `build-main.mjs` was run to
   recreate the missing desktop main bundle before launch.
+- 2026-06-26, parent automated follow-up for `Send a message and stream an assistant response` closed a provider-error
+  hardening gap that affects interrupted or failed provider starts/streams. The live prompt capability logger already
+  sanitized local provider docs paths, but the transcript assistant-error path could still preserve raw provider setup
+  guidance such as `/node_modules/provider/docs/providers.md` or keychain commands. `sessionAssistantErrors` now routes
+  assistant error messages through `presentTranscriptErrorMessage`, and the presenter collapses `No API key found for the
+selected model` guidance to friendly setup copy. Focused coverage was added in
+  `sessionAssistantErrors.test.ts`; `liveSessions.test.ts` now proves the user-visible appended assistant error is
+  sanitized when `session.prompt` rejects with raw provider guidance. Validation passed:
+  `pnpm --dir packages/desktop exec vitest run server/conversations/sessionAssistantErrors.test.ts server/conversations/liveSessions.test.ts server/conversations/sessions.test.ts --reporter=dot`
+  and `pnpm --dir packages/desktop run build:server`. This is automated coverage only; live network interruption,
+  multi-window, image/model-action Stop, and in-app fake-model CI variants remain.
 
 ## How to Use This Inventory
 

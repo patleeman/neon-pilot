@@ -3929,7 +3929,14 @@ describe('submitPromptSession', () => {
         isStreaming: false,
         subscribe: () => () => {},
         prompt: vi.fn(async () => {
-          throw new Error('No API key found for the selected model. Configure a provider in Neon Pilot, then try again.');
+          throw new Error(
+            [
+              'No API key found for the selected model.',
+              '',
+              'Use /login to log into a provider via OAuth or API key. See:',
+              '  /Users/patrick/workingdir/neon-pilot/node_modules/provider/docs/providers.md',
+            ].join('\n'),
+          );
         }),
       },
     });
