@@ -1705,6 +1705,66 @@ describe('ConversationPage lazy composer metadata', () => {
     expect(screen.queryByText(/Directory does not exist/)).toBeNull();
   });
 
+  it('hides internal working directory change failures while keeping the editor usable', async () => {
+    regressionBootstrapData.liveSession = {
+      live: true,
+      id: 'conv-regression',
+      cwd: '/tmp/project',
+      sessionFile: '/tmp/conv-regression.jsonl',
+      title: 'Regression conversation',
+      isStreaming: false,
+      hasStaleTurnState: false,
+    };
+    regressionBootstrapData.sessionDetail = {
+      ...regressionBootstrapData.sessionDetail,
+      meta: {
+        ...regressionBootstrapData.sessionDetail.meta,
+        cwd: '/tmp/project',
+        cwdSlug: 'project',
+        isLive: true,
+      },
+    };
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = createDesktopStateFromRegressionBootstrap();
+    apiMock.changeConversationCwd.mockRejectedValue(
+      new Error(
+        'Error: Local API route did not complete for PATCH /api/conversations/conv-regression/cwd at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/localApi.js:132:20)',
+      ),
+    );
+    window.localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify(['/tmp/project', '/tmp/next-project']));
+
+    renderConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Working directory: project'));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox', { name: 'Conversation working directory' }), {
+        target: { value: '/tmp/next-project' },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('Could not change the working directory.')).toBeTruthy();
+    expect((screen.getByRole('combobox', { name: 'Conversation working directory' }) as HTMLSelectElement).value).toBe('/tmp/project');
+    expect(screen.queryByText(/Local API route did not complete/)).toBeNull();
+    expect(screen.queryByText(/\/api\/conversations/)).toBeNull();
+    expect(screen.queryByText(/file:\/\//)).toBeNull();
+    expect(screen.queryByText(/Module\.ep/)).toBeNull();
+    expect(screen.queryByText(/packages\/desktop/)).toBeNull();
+  });
+
   it('switches the saved conversation working directory after choosing a folder', async () => {
     regressionBootstrapData.liveSession = {
       live: true,

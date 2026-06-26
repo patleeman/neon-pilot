@@ -460,6 +460,11 @@ function formatConversationCwdError(error: unknown): string {
     return fallback;
   }
 
+  const extensionActionMatch = /^Extension "[^"]+" action "[^"]+" failed:\s*(.+)$/i.exec(message);
+  if (extensionActionMatch?.[1]?.trim()) {
+    message = extensionActionMatch[1].trim();
+  }
+
   const apiPreviewMatch = /^(?:400|500) [^:]+ from \/api\/conversations\/[^/]+\/cwd:\s*(.+)$/i.exec(message);
   if (apiPreviewMatch?.[1]?.trim()) {
     message = apiPreviewMatch[1].trim();
@@ -475,7 +480,26 @@ function formatConversationCwdError(error: unknown): string {
     return `Choose a folder, not a file. ${notDirectoryMatch[1].trim()} is not a folder.`;
   }
 
+  if (hasInternalConversationCwdFailureDetails(message)) {
+    return fallback;
+  }
+
   return message;
+}
+
+function hasInternalConversationCwdFailureDetails(message: string): boolean {
+  return (
+    /^Extension "[^"]+" action "[^"]+" failed/i.test(message) ||
+    /requires permission [\w:-]+ to use/i.test(message) ||
+    /must declare worker\.enabled/i.test(message) ||
+    /Local API route did not complete/i.test(message) ||
+    /\/api\//i.test(message) ||
+    /file:\/\//i.test(message) ||
+    /\bENOENT\b|\bEACCES\b|\bENOTDIR\b|permission denied|no such file or directory/i.test(message) ||
+    /\s+at\s+\S+/i.test(message) ||
+    /\bModule\.[A-Za-z_$][\w$]*/.test(message) ||
+    /packages\/desktop\//i.test(message)
+  );
 }
 
 function hasInternalConversationTitleFailureDetails(message: string): boolean {
