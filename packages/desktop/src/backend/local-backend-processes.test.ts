@@ -5,77 +5,97 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { bootstrapMocks, childProcessMocks, criticalRegistryMocks, readConversationSessionsCapabilityMock, reserveConversationSessionMock } =
-  vi.hoisted(() => ({
-    bootstrapMocks: {
-      inlineConversationBootstrapAssetsCapability: vi.fn((state: unknown) => state),
-      findConversationSessionDetailBlock: vi.fn(
-        (detail: { blocks?: unknown[] }, blockId: string) =>
-          detail.blocks?.find((block) => typeof block === 'object' && block !== null && (block as { id?: unknown }).id === blockId) ?? null,
-      ),
-      inlineConversationSessionBlockAssetsCapability: vi.fn((_sessionId: string, block: unknown) => block),
-      inlineConversationSessionDetailAppendOnlyAssetsCapability: vi.fn((_sessionId: string, detail: unknown) => detail),
-      inlineConversationSessionDetailAssetsCapability: vi.fn((_sessionId: string, detail: unknown) => detail),
-      isMissingConversationBootstrapState: vi.fn(() => false),
-      readConversationBootstrapState: vi.fn(async (input: { conversationId: string }) => ({
-        state: {
-          conversationId: input.conversationId,
-          sessionDetail: { id: input.conversationId, blocks: [] },
-          liveSession: { live: false },
-        },
-        telemetry: {
-          sessionRead: {
-            durationMs: 1,
-            cache: 'miss',
-            loader: 'fast-tail',
-          },
-          sessionDetailReused: false,
-          remoteMirror: { durationMs: 0 },
-          sessionSignatureMs: 0,
-          sessionSignature: {
-            liveLookupMs: 0,
-            liveFileExistsMs: 0,
-            ensureMs: 0,
-            ensuredLiveLookupMs: 0,
-            ensuredFileExistsMs: 0,
-            snapshotLookupMs: 0,
-            source: 'missing',
-            signatureFileExistsMs: 0,
-            signatureStatMs: 0,
-          },
-          liveSessionLookupMs: 0,
-        },
-      })),
-      readConversationSessionSignature: vi.fn(() => 'signature-1'),
-      readSessionDetailForRoute: vi.fn(async (input: { conversationId: string; tailBlocks?: number }) => ({
+const {
+  bootstrapMocks,
+  childProcessMocks,
+  criticalRegistryMocks,
+  readConversationSessionsCapabilityMock,
+  reserveConversationSessionMock,
+  searchIndexedConversationContentMock,
+} = vi.hoisted(() => ({
+  bootstrapMocks: {
+    inlineConversationBootstrapAssetsCapability: vi.fn((state: unknown) => state),
+    findConversationSessionDetailBlock: vi.fn(
+      (detail: { blocks?: unknown[] }, blockId: string) =>
+        detail.blocks?.find((block) => typeof block === 'object' && block !== null && (block as { id?: unknown }).id === blockId) ?? null,
+    ),
+    inlineConversationSessionBlockAssetsCapability: vi.fn((_sessionId: string, block: unknown) => block),
+    inlineConversationSessionDetailAppendOnlyAssetsCapability: vi.fn((_sessionId: string, detail: unknown) => detail),
+    inlineConversationSessionDetailAssetsCapability: vi.fn((_sessionId: string, detail: unknown) => detail),
+    isMissingConversationBootstrapState: vi.fn(() => false),
+    readConversationBootstrapState: vi.fn(async (input: { conversationId: string }) => ({
+      state: {
+        conversationId: input.conversationId,
+        sessionDetail: { id: input.conversationId, blocks: [] },
+        liveSession: { live: false },
+      },
+      telemetry: {
         sessionRead: {
-          detail: {
-            id: input.conversationId,
-            blocks: [],
-            blockOffset: 0,
-            totalBlocks: 0,
-            signature: 'signature-1',
-          },
+          durationMs: 1,
+          cache: 'miss',
+          loader: 'fast-tail',
         },
-        remoteMirror: { status: 'deferred', durationMs: 0 },
-      })),
-      setConversationServiceContext: vi.fn(),
+        sessionDetailReused: false,
+        remoteMirror: { durationMs: 0 },
+        sessionSignatureMs: 0,
+        sessionSignature: {
+          liveLookupMs: 0,
+          liveFileExistsMs: 0,
+          ensureMs: 0,
+          ensuredLiveLookupMs: 0,
+          ensuredFileExistsMs: 0,
+          snapshotLookupMs: 0,
+          source: 'missing',
+          signatureFileExistsMs: 0,
+          signatureStatMs: 0,
+        },
+        liveSessionLookupMs: 0,
+      },
+    })),
+    readConversationSessionSignature: vi.fn(() => 'signature-1'),
+    readSessionDetailForRoute: vi.fn(async (input: { conversationId: string; tailBlocks?: number }) => ({
+      sessionRead: {
+        detail: {
+          id: input.conversationId,
+          blocks: [],
+          blockOffset: 0,
+          totalBlocks: 0,
+          signature: 'signature-1',
+        },
+      },
+      remoteMirror: { status: 'deferred', durationMs: 0 },
+    })),
+    setConversationServiceContext: vi.fn(),
+  },
+  criticalRegistryMocks: {
+    moduleLoaded: vi.fn(),
+    readCriticalExtensionRegistryResponse: vi.fn(() => ({
+      extensions: [],
+      routes: [],
+      surfaces: [],
+      settings: {},
+    })),
+  },
+  childProcessMocks: {
+    spawn: vi.fn(),
+  },
+  readConversationSessionsCapabilityMock: vi.fn(() => [{ id: 'limited' }]),
+  reserveConversationSessionMock: vi.fn(() => ({ id: 'reserved-1', sessionFile: '/tmp/reserved-1.jsonl', cwd: '/repo' })),
+  searchIndexedConversationContentMock: vi.fn(() => [
+    {
+      conversationId: 'conv-search',
+      title: 'Suggested context release regression',
+      cwd: '/repo',
+      lastActivityAt: '2026-06-26T00:00:00.000Z',
+      isLive: false,
+      isRunning: false,
+      blockId: 'block-42',
+      blockType: 'text',
+      blockIndex: 42,
+      snippet: 'suggested context release regression',
     },
-    criticalRegistryMocks: {
-      moduleLoaded: vi.fn(),
-      readCriticalExtensionRegistryResponse: vi.fn(() => ({
-        extensions: [],
-        routes: [],
-        surfaces: [],
-        settings: {},
-      })),
-    },
-    childProcessMocks: {
-      spawn: vi.fn(),
-    },
-    readConversationSessionsCapabilityMock: vi.fn(() => [{ id: 'limited' }]),
-    reserveConversationSessionMock: vi.fn(() => ({ id: 'reserved-1', sessionFile: '/tmp/reserved-1.jsonl', cwd: '/repo' })),
-  }));
+  ]),
+}));
 
 vi.mock('node:child_process', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:child_process')>();
@@ -86,6 +106,9 @@ vi.mock('node:child_process', async (importOriginal) => {
 });
 vi.mock('../../server/conversations/conversationSessionCapability.js', () => ({
   readConversationSessionsCapability: readConversationSessionsCapabilityMock,
+}));
+vi.mock('../../server/conversations/conversationSearchIndex.js', () => ({
+  searchIndexedConversationContent: searchIndexedConversationContentMock,
 }));
 vi.mock('../../server/conversations/conversationBootstrap.js', () => ({
   isMissingConversationBootstrapState: bootstrapMocks.isMissingConversationBootstrapState,
@@ -754,11 +777,30 @@ describe('LocalBackendProcesses', () => {
         fastPath: 'main-process',
       },
     });
-    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+    expect(searchIndexedConversationContentMock).toHaveBeenCalledWith({
+      terms: ['suggested', 'context', 'release', 'regression'],
+      limit: 80,
+    });
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toEqual({
       query: 'suggested context release regression',
       mode: 'allTerms',
       scope: 'all',
-      matches: expect.any(Array),
+      totalMatching: 1,
+      returnedCount: 1,
+      matches: [
+        {
+          conversationId: 'conv-search',
+          title: 'Suggested context release regression',
+          cwd: '/repo',
+          lastActivityAt: '2026-06-26T00:00:00.000Z',
+          isLive: false,
+          isRunning: false,
+          blockId: 'block-42',
+          blockType: 'text',
+          blockIndex: 42,
+          snippet: 'suggested context release regression',
+        },
+      ],
     });
   });
 

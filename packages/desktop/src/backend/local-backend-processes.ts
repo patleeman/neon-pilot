@@ -665,7 +665,29 @@ export class LocalBackendProcesses {
       return this.makeJsonResponse(readConversationSessionsCapability(args[0]), 'main-process');
     }
     if (input.method === 'POST' && path === '/api/sessions/search') {
-      return this.makeJsonResponse({ query: jsonBody.query, mode: 'allTerms', scope: 'all', matches: [] }, 'main-process');
+      const terms =
+        typeof jsonBody.query === 'string'
+          ? jsonBody.query
+              .toLowerCase()
+              .split(/\s+/)
+              .map((term) => term.trim())
+              .filter((term) => term.length > 0)
+          : [];
+      const limitValue = typeof jsonBody.limit === 'number' && Number.isFinite(jsonBody.limit) ? Math.floor(jsonBody.limit) : 80;
+      const limit = Math.min(100, Math.max(1, limitValue));
+      const { searchIndexedConversationContent } = await import('../../server/conversations/conversationSearchIndex.js');
+      const matches = terms.length > 0 ? searchIndexedConversationContent({ terms, limit }) : [];
+      return this.makeJsonResponse(
+        {
+          query: terms.join(' '),
+          mode: 'allTerms',
+          scope: 'all',
+          totalMatching: matches.length,
+          returnedCount: matches.length,
+          matches,
+        },
+        'main-process',
+      );
     }
     if (input.method === 'GET' && path === '/api/desktop/perf-diagnostics') {
       return this.makeJsonResponse({ operations: { active: [], recent: [] } }, 'main-process');

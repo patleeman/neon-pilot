@@ -192,6 +192,7 @@ import {
   getConversationInitialScrollKey,
   getConversationTailBlockKey,
   scrollConversationMessageIntoView,
+  shouldRunSelectedMessageJump,
   shouldShowScrollToBottomControl,
 } from '../conversation/conversationScroll';
 import {
@@ -659,6 +660,15 @@ async function loadWorkspaceMentionEntries(cwd: string): Promise<WorkspaceEntry[
 
 type TranscriptPathLinkTarget = 'fileExplorer' | 'desktop';
 
+function getConversationMessageIndexFromSearch(search: string): number | null {
+  const value = new URLSearchParams(search).get('message')?.trim();
+  if (!value || !/^\d+$/.test(value)) {
+    return null;
+  }
+  const index = Number(value);
+  return Number.isSafeInteger(index) ? index : null;
+}
+
 function normalizeTranscriptPathLinkTargetSetting(value: unknown): TranscriptPathLinkTarget {
   return value === 'desktop' ? 'desktop' : 'fileExplorer';
 }
@@ -940,6 +950,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const selectedArtifactId = getConversationArtifactIdFromSearch(location.search);
   const selectedCheckpointId = getConversationCheckpointIdFromSearch(location.search);
   const selectedRunId = getConversationRunIdFromSearch(location.search);
+  const selectedMessageIndex = getConversationMessageIndexFromSearch(location.search);
   const previousSelectedRunIdRef = useRef<string | null | undefined>(undefined);
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
   const artifactOpensInWorkbenchPane = appLayoutMode === 'workbench';
@@ -4307,6 +4318,37 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     pendingJumpMessageIndexRef.current = null;
     setRequestedFocusMessageIndex(null);
   }, [historicalBlockOffset, realMessages]);
+
+  const selectedMessageJumpKey = selectedMessageIndex === null || !id ? null : `${id}:${selectedMessageIndex}`;
+  const lastSelectedMessageJumpKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (selectedMessageIndex === null || !selectedMessageJumpKey) {
+      lastSelectedMessageJumpKeyRef.current = null;
+      return;
+    }
+    const targetRendered = Boolean(scrollRef.current?.querySelector(`[data-message-index="${selectedMessageIndex}"]`));
+    if (
+      !shouldRunSelectedMessageJump({
+        lastJumpKey: lastSelectedMessageJumpKeyRef.current,
+        nextJumpKey: selectedMessageJumpKey,
+        targetRendered,
+      })
+    ) {
+      return;
+    }
+
+    lastSelectedMessageJumpKeyRef.current = selectedMessageJumpKey;
+    jumpToMessage(selectedMessageIndex);
+  }, [
+    historicalBlockOffset,
+    historicalTotalBlocks,
+    jumpToMessage,
+    realMessages,
+    selectedMessageIndex,
+    selectedMessageJumpKey,
+    sessionLoading,
+  ]);
 
   useEffect(() => {
     if (!isEditingTitle) {

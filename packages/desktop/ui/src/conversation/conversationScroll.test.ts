@@ -15,6 +15,7 @@ import {
   shouldContinueConversationBottomSettle,
   shouldPreservePinnedBottomDuringAutoScroll,
   shouldRunConversationInitialScroll,
+  shouldRunSelectedMessageJump,
   shouldShowScrollToBottomControl,
 } from './conversationScroll.js';
 
@@ -167,6 +168,13 @@ describe('conversation scroll helpers', () => {
       block: 'center',
       inline: 'nearest',
     });
+  });
+
+  it('keeps retrying a selected message jump until the target is rendered', () => {
+    expect(shouldRunSelectedMessageJump({ lastJumpKey: null, nextJumpKey: 'conv-1:40', targetRendered: false })).toBe(true);
+    expect(shouldRunSelectedMessageJump({ lastJumpKey: 'conv-1:40', nextJumpKey: 'conv-1:40', targetRendered: false })).toBe(true);
+    expect(shouldRunSelectedMessageJump({ lastJumpKey: 'conv-1:40', nextJumpKey: 'conv-1:40', targetRendered: true })).toBe(false);
+    expect(shouldRunSelectedMessageJump({ lastJumpKey: 'conv-1:40', nextJumpKey: null, targetRendered: false })).toBe(false);
   });
 
   it('finds the user message that starts a streaming turn', () => {

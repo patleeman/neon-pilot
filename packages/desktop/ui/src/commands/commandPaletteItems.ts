@@ -135,16 +135,19 @@ export function buildConversationContentSearchItems(
   results: ConversationContentSearchMatch[],
   query: string,
 ): CommandPaletteItem<CommandPaletteAction>[] {
-  return results.map((result, index) => ({
-    id: `conversation-search:${result.conversationId}:${result.blockId}`,
-    section: result.isLive ? ('open' as const) : ('archived' as const),
-    title: result.title,
-    subtitle: workspaceDisplayLabel(result.cwd),
-    meta: excerpt(result.snippet, 160),
-    keywords: [query, result.conversationId, result.cwd, result.snippet, result.blockId],
-    order: index,
-    action: result.isLive
-      ? { kind: 'navigate', to: `/conversations/${encodeURIComponent(result.conversationId)}` }
-      : { kind: 'restoreArchivedConversation', conversationId: result.conversationId },
-  }));
+  return results.map((result, index) => {
+    const messageSearch = Number.isSafeInteger(result.blockIndex) ? `?message=${result.blockIndex}` : '';
+    return {
+      id: `conversation-search:${result.conversationId}:${result.blockId}`,
+      section: result.isLive ? ('open' as const) : ('archived' as const),
+      title: result.title,
+      subtitle: workspaceDisplayLabel(result.cwd),
+      meta: excerpt(result.snippet, 160),
+      keywords: [query, result.conversationId, result.cwd, result.snippet, result.blockId],
+      order: index,
+      action: result.isLive
+        ? { kind: 'navigate', to: `/conversations/${encodeURIComponent(result.conversationId)}${messageSearch}` }
+        : { kind: 'restoreArchivedConversation', conversationId: result.conversationId, search: messageSearch },
+    };
+  });
 }

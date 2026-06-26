@@ -7,7 +7,11 @@ import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.j
 import { upsertConversationCatalogSession } from './conversationCatalog.js';
 import { ensureConversationsDbFile } from './conversationDbPaths.js';
 import { readConversationSummary } from './conversationSummaries.js';
-import { listTranscriptBackedConversationSessions, readTranscriptBackedConversationSearchText } from './conversationTranscriptOps.js';
+import {
+  listTranscriptBackedConversationSessions,
+  readTranscriptBackedConversationDetailByFile,
+  readTranscriptBackedConversationSearchText,
+} from './conversationTranscriptOps.js';
 import type { SessionMeta } from './conversationTypes.js';
 
 const SEARCH_INDEX_SCHEMA_VERSION = 1;
@@ -77,7 +81,88 @@ function getDb(): SqliteDatabase {
 }
 
 function hasInitializedSearchIndexDb(): boolean {
-  return db !== null;
+  return db !== null || existsSync(resolveSearchDbFile());
+}
+
+function readSearchableBlockText(block: unknown): string {
+  if (!block || typeof block !== 'object') {
+    return '';
+  }
+
+  const candidate = block as {
+    type?: unknown;
+    title?: unknown;
+    text?: unknown;
+    detail?: unknown;
+    tool?: unknown;
+    output?: unknown;
+    message?: unknown;
+    alt?: unknown;
+    caption?: unknown;
+  };
+  const parts = [
+    candidate.title,
+    candidate.text,
+    candidate.detail,
+    candidate.tool,
+    candidate.output,
+    candidate.message,
+    candidate.alt,
+    candidate.caption,
+  ]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .map((value) => value.trim());
+
+  return parts.join('\n');
+}
+
+function buildSearchSnippet(text: string, terms: string[], maxLength = 160): string {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return '';
+  }
+
+  const lower = normalized.toLowerCase();
+  const firstTermIndex = terms
+    .map((term) => lower.indexOf(term.toLowerCase()))
+    .filter((index) => index >= 0)
+    .sort((left, right) => left - right)[0];
+  const start = firstTermIndex === undefined ? 0 : Math.max(0, firstTermIndex - 40);
+  const end = Math.min(normalized.length, start + maxLength);
+  const prefix = start > 0 ? '…' : '';
+  const suffix = end < normalized.length ? '…' : '';
+
+  return `${prefix}${normalized.slice(start, end).trim()}${suffix}`;
+}
+
+function resolveConversationSearchMatch(input: { conversationId: string; file: string | undefined; title: string; terms: string[] }): {
+  blockId: string;
+  blockType: string;
+  blockIndex: number;
+  snippet: string;
+} {
+  if (!input.file) {
+    return { blockId: 'search-index', blockType: 'text', blockIndex: 0, snippet: input.title };
+  }
+
+  const detail = readTranscriptBackedConversationDetailByFile(input.file);
+  const blocks = detail?.blocks ?? [];
+  const terms = input.terms.map((term) => term.toLowerCase());
+  for (const [index, block] of blocks.entries()) {
+    const text = readSearchableBlockText(block);
+    const lower = text.toLowerCase();
+    if (terms.every((term) => lower.includes(term))) {
+      const candidate = block as { id?: unknown; type?: unknown };
+      return {
+        blockId: typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id : `message-${index}`,
+        blockType: typeof candidate.type === 'string' && candidate.type.trim() ? candidate.type : 'text',
+        blockIndex: index,
+        snippet: buildSearchSnippet(text, input.terms) || input.title,
+      };
+    }
+  }
+
+  return { blockId: 'search-index', blockType: 'text', blockIndex: 0, snippet: input.title };
 }
 
 function fileSignature(filePath: string): string | null {
@@ -368,18 +453,25 @@ export function searchIndexedConversationContent(input: { terms: string[]; limit
     lastActivityAt: string;
   }>;
 
-  return rows.map((row) => ({
-    conversationId: row.conversationId,
-    title: row.title,
-    cwd: row.cwd,
-    lastActivityAt: row.lastActivityAt,
-    isLive: false,
-    isRunning: false,
-    blockId: 'search-index',
-    blockType: 'text',
-    blockIndex: 0,
-    snippet: row.title,
-  }));
+  const metaById = new Map(listTranscriptBackedConversationSessions().map((meta) => [meta.id, meta]));
+
+  return rows.map((row) => {
+    const match = resolveConversationSearchMatch({
+      conversationId: row.conversationId,
+      file: metaById.get(row.conversationId)?.file,
+      title: row.title,
+      terms: input.terms,
+    });
+    return {
+      conversationId: row.conversationId,
+      title: row.title,
+      cwd: row.cwd,
+      lastActivityAt: row.lastActivityAt,
+      isLive: false,
+      isRunning: false,
+      ...match,
+    };
+  });
 }
 
 export function readIndexedConversationSearchText(sessionIds: string[]): Record<string, string> {

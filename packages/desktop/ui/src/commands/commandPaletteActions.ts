@@ -9,7 +9,7 @@ import { buildCommandPaletteFileOpenRoute } from './commandPaletteNavigation';
 
 export type CommandPaletteAction =
   | { kind: 'navigate'; to: string }
-  | { kind: 'restoreArchivedConversation'; conversationId: string }
+  | { kind: 'restoreArchivedConversation'; conversationId: string; search?: string }
   | { kind: 'openFile'; fileId: string; extensionSurfaces?: ExtensionSurfaceSummary[] }
   | { kind: 'command'; command: string; args?: unknown }
   | { kind: 'extensionSearchAction'; extensionId: string; action: unknown };
@@ -83,7 +83,7 @@ export async function activateCommandPaletteItem(
       return true;
     case 'restoreArchivedConversation':
       context.openSession(item.action.conversationId);
-      context.navigate(`/conversations/${encodeURIComponent(item.action.conversationId)}`);
+      context.navigate(`/conversations/${encodeURIComponent(item.action.conversationId)}${item.action.search ?? ''}`);
       context.closePalette();
       return true;
     case 'openFile':

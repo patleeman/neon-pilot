@@ -188,6 +188,14 @@ export function shouldRunConversationInitialScroll(input: {
   return Boolean(input.initialScrollKey) && input.hasMessages;
 }
 
+export function shouldRunSelectedMessageJump(input: {
+  lastJumpKey: string | null;
+  nextJumpKey: string | null;
+  targetRendered: boolean;
+}): boolean {
+  return Boolean(input.nextJumpKey) && (input.lastJumpKey !== input.nextJumpKey || !input.targetRendered);
+}
+
 export function shouldPreservePinnedBottomDuringAutoScroll(input: {
   wasPinnedToBottom: boolean;
   isAutoScrollActive: boolean;

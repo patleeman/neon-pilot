@@ -119,14 +119,23 @@ describe('command palette item builders', () => {
             cwd: '/Users/patrick/workingdir/neon-pilot',
             snippet: 'match',
             isLive: true,
+            blockIndex: 42,
           },
-          { conversationId: 'archived one', blockId: 'b2', title: 'Archived', cwd: '/repo', snippet: 'match', isLive: false },
+          {
+            conversationId: 'archived one',
+            blockId: 'b2',
+            title: 'Archived',
+            cwd: '/repo',
+            snippet: 'match',
+            isLive: false,
+            blockIndex: 7,
+          },
         ],
         'match',
       ).map((item) => ({ action: item.action, subtitle: item.subtitle })),
     ).toEqual([
-      { action: { kind: 'navigate', to: '/conversations/live%20one' }, subtitle: 'neon-pilot' },
-      { action: { kind: 'restoreArchivedConversation', conversationId: 'archived one' }, subtitle: 'repo' },
+      { action: { kind: 'navigate', to: '/conversations/live%20one?message=42' }, subtitle: 'neon-pilot' },
+      { action: { kind: 'restoreArchivedConversation', conversationId: 'archived one', search: '?message=7' }, subtitle: 'repo' },
     ]);
   });
 });

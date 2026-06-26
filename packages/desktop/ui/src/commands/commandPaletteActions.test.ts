@@ -103,12 +103,12 @@ describe('activateCommandPaletteItem', () => {
   it('restores archived conversations before navigating', async () => {
     const ctx = context();
 
-    await expect(activateCommandPaletteItem(item({ kind: 'restoreArchivedConversation', conversationId: 'conv 1' }), ctx)).resolves.toBe(
-      true,
-    );
+    await expect(
+      activateCommandPaletteItem(item({ kind: 'restoreArchivedConversation', conversationId: 'conv 1', search: '?message=42' }), ctx),
+    ).resolves.toBe(true);
 
     expect(ctx.openSession).toHaveBeenCalledWith('conv 1');
-    expect(ctx.navigate).toHaveBeenCalledWith('/conversations/conv%201');
+    expect(ctx.navigate).toHaveBeenCalledWith('/conversations/conv%201?message=42');
     expect(ctx.closePalette).toHaveBeenCalledOnce();
   });
 

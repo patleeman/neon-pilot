@@ -5,11 +5,13 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const listSessionsMock = vi.hoisted(() => vi.fn());
+const readSessionBlocksByFileMock = vi.hoisted(() => vi.fn());
 const readSessionSearchTextMock = vi.hoisted(() => vi.fn());
 const readConversationSummaryMock = vi.hoisted(() => vi.fn());
 
 vi.mock('./sessions.js', () => ({
   listSessions: listSessionsMock,
+  readSessionBlocksByFile: readSessionBlocksByFileMock,
   readSessionSearchText: readSessionSearchTextMock,
 }));
 
@@ -82,6 +84,18 @@ describe('conversationSearchIndex', () => {
       filesTouched: [],
     });
     readSessionSearchTextMock.mockReturnValue('apple credentials notarization');
+    readSessionBlocksByFileMock.mockReturnValue({
+      blocks: [
+        { id: 'user-0', type: 'user', text: 'setup', ts: '2026-04-21T10:00:00.000Z' },
+        { id: 'assistant-1', type: 'text', text: 'ordinary reply', ts: '2026-04-21T10:00:01.000Z' },
+        {
+          id: 'assistant-2',
+          type: 'text',
+          text: 'The notarization handoff is ready for release.',
+          ts: '2026-04-21T10:00:02.000Z',
+        },
+      ],
+    });
 
     const mod = await import('./conversationSearchIndex.js');
     expect(mod.indexConversationSearchBatch({ maxSessions: 10, maxDurationMs: 1000 })).toEqual({ indexed: 1, remaining: 0 });
@@ -104,9 +118,22 @@ describe('conversationSearchIndex', () => {
         .map((candidate) => candidate.sessionId),
     ).toEqual(['session-1']);
 
-    expect(
-      mod.searchIndexedConversationContent({ terms: ['notarization'], limit: 5 }).map((candidate) => candidate.conversationId),
-    ).toEqual(['session-1']);
+    expect(mod.searchIndexedConversationContent({ terms: ['notarization'], limit: 5 })).toEqual([
+      expect.objectContaining({
+        conversationId: 'session-1',
+        blockId: 'assistant-2',
+        blockType: 'text',
+        blockIndex: 2,
+        snippet: 'The notarization handoff is ready for release.',
+      }),
+    ]);
+    mod.resetConversationSearchIndexForTests();
+    expect(mod.searchIndexedConversationContent({ terms: ['notarization'], limit: 5 })).toEqual([
+      expect.objectContaining({
+        conversationId: 'session-1',
+        blockIndex: 2,
+      }),
+    ]);
 
     expect(
       mod.searchIndexedConversationContent({ terms: ['notarization', 'missing'], limit: 5 }).map((candidate) => candidate.conversationId),
