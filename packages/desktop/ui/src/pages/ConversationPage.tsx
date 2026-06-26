@@ -719,6 +719,9 @@ type DeferredResumeOperation = 'schedule' | 'fire' | 'cancel' | 'continue';
 
 function hasInternalDeferredResumeFailureDetails(message: string): boolean {
   return (
+    /^Extension "[^"]+" action "[^"]+" failed/i.test(message) ||
+    /requires permission [\w:-]+ to use/i.test(message) ||
+    /must declare worker\.enabled/i.test(message) ||
     /Local API route did not complete/i.test(message) ||
     /\/api\//i.test(message) ||
     /file:\/\//i.test(message) ||
@@ -732,6 +735,14 @@ function hasInternalDeferredResumeFailureDetails(message: string): boolean {
 export function formatDeferredResumeOperationFailure(operation: DeferredResumeOperation, error: unknown): string {
   const message = error instanceof Error ? error.message : String(error ?? '');
   const trimmed = message.trim();
+  const extensionActionMatch = /^Extension "[^"]+" action "[^"]+" failed:\s*(.+)$/i.exec(trimmed);
+  if (extensionActionMatch) {
+    const innerMessage = extensionActionMatch[1]?.trim() ?? '';
+    if (innerMessage && !hasInternalDeferredResumeFailureDetails(innerMessage)) {
+      return innerMessage;
+    }
+  }
+
   if (trimmed && !hasInternalDeferredResumeFailureDetails(trimmed)) {
     return trimmed;
   }

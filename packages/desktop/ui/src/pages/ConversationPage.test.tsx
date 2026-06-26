@@ -457,6 +457,34 @@ describe('desktop conversation state fallback', () => {
     );
   });
 
+  it('removes extension action wrappers from deferred resume notices without hiding validation copy', () => {
+    expect(
+      formatDeferredResumeOperationFailure(
+        'schedule',
+        new Error(
+          'Extension "system-conversation-tools" action "deferredResume" failed: Invalid delay. Use forms like 30s, 10m, 10 minutes, 2h, or 1d.',
+        ),
+      ),
+    ).toBe('Invalid delay. Use forms like 30s, 10m, 10 minutes, 2h, or 1d.');
+
+    const permissionMessage = formatDeferredResumeOperationFailure(
+      'schedule',
+      new Error(
+        'Extension "system-conversation-tools" action "deferredResume" failed: Extension "helper" requires permission automations:write to use automations.create.',
+      ),
+    );
+    expect(permissionMessage).toBe('Could not schedule the wakeup. Check the delay and try again.');
+    expect(permissionMessage).not.toContain('Extension "');
+    expect(permissionMessage).not.toContain('requires permission');
+
+    const workerGuardMessage = formatDeferredResumeOperationFailure(
+      'fire',
+      new Error('Extension "system-conversation-tools" action "deferredResume" must declare worker.enabled before it can run.'),
+    );
+    expect(workerGuardMessage).toBe('Could not start this wakeup. Refresh the conversation and try again.');
+    expect(workerGuardMessage).not.toContain('worker.enabled');
+  });
+
   it('syncs active conversation meta back into the session list', () => {
     const sessions = [
       {
