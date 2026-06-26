@@ -91,15 +91,25 @@
 
   .ui-command-search-trigger.ui-desktop-top-bar__search {
     height: 1.625rem;
-    border-color: rgb(var(--color-border-subtle) / 0.72);
-    background: rgb(var(--color-surface) / 0.42);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+    border-color: transparent;
+    background: rgb(var(--color-surface) / 0.34);
+    box-shadow: none;
   }
 
   .ui-command-search-trigger.ui-desktop-top-bar__search:hover,
   .ui-command-search-trigger.ui-desktop-top-bar__search:focus-within {
-    border-color: rgb(var(--color-border-default) / 0.86);
-    background: rgb(var(--color-surface) / 0.68);
+    border-color: transparent;
+    background: rgb(var(--color-surface) / 0.56);
+  }
+
+  .ui-search-input.ui-desktop-top-bar__search-input,
+  .ui-search-input.ui-desktop-top-bar__search-input:hover,
+  .ui-search-input.ui-desktop-top-bar__search-input:focus,
+  .ui-search-input.ui-desktop-top-bar__search-input:focus-visible {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
   }
 
   .ui-kbd.ui-desktop-top-bar__search-keycap {

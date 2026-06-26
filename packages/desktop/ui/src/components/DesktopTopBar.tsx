@@ -380,7 +380,7 @@ export function DesktopTopBar({
             }}
             placeholder="Search threads, models, settings…"
             aria-label="Search threads, models, settings"
-            className="h-6 min-w-0 flex-1 border-0 bg-transparent px-0 py-0 font-mono text-[11px] tracking-normal text-secondary placeholder:text-dim"
+            className="ui-desktop-top-bar__search-input h-6 min-w-0 flex-1 border-0 bg-transparent px-0 py-0 font-mono text-[11px] tracking-normal text-secondary placeholder:text-dim"
           />
           <Keycap className="ui-desktop-top-bar__search-keycap">⌘K</Keycap>
         </div>
