@@ -105,6 +105,43 @@ describe('formatModelTriggerLabel', () => {
     expect(screen.getByText('Priority')).toBeTruthy();
   });
 
+  it('labels an inherited visible service tier instead of the default placeholder', () => {
+    render(
+      React.createElement(ModelPreferencesComposerControl, {
+        pa: { extensions: { callAction: vi.fn() } },
+        controlContext: {
+          renderMode: 'inline',
+          composerDisabled: false,
+          streamIsStreaming: false,
+          composerHasContent: false,
+          openFilePicker: vi.fn(),
+          addFiles: vi.fn(),
+          insertText: vi.fn(),
+          appendText: vi.fn(),
+          models: [
+            {
+              id: 'gpt-5.4-mini',
+              provider: 'openai-codex',
+              name: 'GPT-5.4 mini',
+              context: 272000,
+              input: ['text'],
+              supportedServiceTiers: ['priority'],
+            },
+          ],
+          currentModel: 'gpt-5.4-mini',
+          currentThinkingLevel: 'high',
+          currentServiceTier: 'priority',
+          savingPreference: null,
+          selectModel: vi.fn(),
+          selectThinkingLevel: vi.fn(),
+          selectServiceTier: vi.fn(),
+        },
+      }),
+    );
+
+    expect(screen.getByLabelText('Conversation service tier').textContent).toContain('Priority');
+  });
+
   it('uses readable provider group labels in the composer model picker', () => {
     render(
       React.createElement(ModelPreferencesComposerControl, {

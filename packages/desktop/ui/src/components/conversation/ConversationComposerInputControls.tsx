@@ -417,6 +417,7 @@ function inputControlsPropsAreEqual(prev: ConversationComposerInputControlsProps
     prev.models === next.models &&
     prev.currentModel === next.currentModel &&
     prev.currentThinkingLevel === next.currentThinkingLevel &&
+    prev.currentServiceTier === next.currentServiceTier &&
     prev.savingPreference === next.savingPreference &&
     prev.conversationNeedsTakeover === next.conversationNeedsTakeover &&
     prev.composerHasContent === next.composerHasContent &&

@@ -842,6 +842,43 @@ describe('ConversationPage lazy composer metadata', () => {
     expect(apiMock.models).toHaveBeenCalledTimes(1);
   });
 
+  it('passes the inherited default service tier into visible draft composer controls', async () => {
+    apiMock.models.mockResolvedValue({
+      models: [
+        {
+          id: 'openai/gpt-5.4-mini',
+          name: 'GPT-5.4 mini',
+          provider: 'openai',
+          supportedServiceTiers: ['priority'],
+        },
+      ],
+      currentModel: 'openai/gpt-5.4-mini',
+      currentVisionModel: '',
+      currentThinkingLevel: 'high',
+      currentServiceTier: 'priority',
+    });
+    apiMock.modelPreferences.mockResolvedValue({
+      currentModel: 'openai/gpt-5.4-mini',
+      currentVisionModel: '',
+      currentThinkingLevel: 'high',
+      currentServiceTier: 'priority',
+    });
+
+    renderDraftConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole('button', { name: 'More composer settings' }), { key: 'Enter' });
+      await Promise.resolve();
+    });
+
+    expect((screen.getByRole('combobox', { name: 'Service tier' }) as HTMLSelectElement).value).toBe('priority');
+  });
+
   it('hides internal model preference save failures from the visible composer controls', async () => {
     apiMock.models.mockResolvedValue({
       models: [

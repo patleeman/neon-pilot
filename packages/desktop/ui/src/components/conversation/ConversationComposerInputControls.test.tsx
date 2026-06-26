@@ -240,6 +240,98 @@ describe('ConversationComposerInputControls', () => {
     expect(html).toContain('Priority');
   });
 
+  it('updates core service tier controls when the inherited tier changes after metadata loads', () => {
+    extensionRegistryState.composerControls = [];
+    extensionRegistryState.composerInputTools = [];
+
+    const view = renderInteractive(
+      <ConversationComposerInputControls
+        fileInputRef={{ current: null }}
+        textareaRef={{ current: null }}
+        input=""
+        pendingAskUserQuestion={false}
+        composerDisabled={false}
+        composerShellWidth={800}
+        streamIsStreaming={false}
+        models={models}
+        currentModel="model-a"
+        currentThinkingLevel="medium"
+        currentServiceTier=""
+        savingPreference={null}
+        conversationNeedsTakeover={false}
+        composerHasContent={false}
+        composerShowsQuestionSubmit={false}
+        composerQuestionCanSubmit={false}
+        composerQuestionRemainingCount={0}
+        composerQuestionSubmitting={false}
+        composerSubmitLabel="Send"
+        composerAltHeld={false}
+        onFilesSelected={vi.fn()}
+        onInputChange={vi.fn()}
+        onRememberComposerSelection={vi.fn()}
+        onKeyDown={vi.fn()}
+        onPaste={vi.fn()}
+        onOpenFilePicker={vi.fn()}
+        onUpsertDrawingAttachment={vi.fn()}
+        onSelectModel={vi.fn()}
+        onSelectThinkingLevel={vi.fn()}
+        onSelectServiceTier={vi.fn()}
+        onInsertComposerText={vi.fn()}
+        onAppendComposerText={vi.fn()}
+        onSubmitComposerQuestion={vi.fn()}
+        onSubmitComposerActionForModifiers={vi.fn()}
+        onAbortStream={vi.fn()}
+      />,
+    );
+
+    const select = view.container.querySelector('select[aria-label="Service tier"]');
+    expect(select).toBeInstanceOf(HTMLSelectElement);
+    expect((select as HTMLSelectElement).value).toBe('');
+
+    view.rerender(
+      <ConversationComposerInputControls
+        fileInputRef={{ current: null }}
+        textareaRef={{ current: null }}
+        input=""
+        pendingAskUserQuestion={false}
+        composerDisabled={false}
+        composerShellWidth={800}
+        streamIsStreaming={false}
+        models={models}
+        currentModel="model-a"
+        currentThinkingLevel="medium"
+        currentServiceTier="priority"
+        savingPreference={null}
+        conversationNeedsTakeover={false}
+        composerHasContent={false}
+        composerShowsQuestionSubmit={false}
+        composerQuestionCanSubmit={false}
+        composerQuestionRemainingCount={0}
+        composerQuestionSubmitting={false}
+        composerSubmitLabel="Send"
+        composerAltHeld={false}
+        onFilesSelected={vi.fn()}
+        onInputChange={vi.fn()}
+        onRememberComposerSelection={vi.fn()}
+        onKeyDown={vi.fn()}
+        onPaste={vi.fn()}
+        onOpenFilePicker={vi.fn()}
+        onUpsertDrawingAttachment={vi.fn()}
+        onSelectModel={vi.fn()}
+        onSelectThinkingLevel={vi.fn()}
+        onSelectServiceTier={vi.fn()}
+        onInsertComposerText={vi.fn()}
+        onAppendComposerText={vi.fn()}
+        onSubmitComposerQuestion={vi.fn()}
+        onSubmitComposerActionForModifiers={vi.fn()}
+        onAbortStream={vi.fn()}
+      />,
+    );
+
+    expect((view.container.querySelector('select[aria-label="Service tier"]') as HTMLSelectElement | null)?.value).toBe('priority');
+    view.unmount();
+  });
+
   it('segments core model options by provider', () => {
     extensionRegistryState.composerControls = [];
     extensionRegistryState.composerInputTools = [];

@@ -1951,6 +1951,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       }),
     [currentThinkingLevel, currentServiceTier, hasExplicitServiceTier, resolvedCurrentModelId],
   );
+  const displayedCurrentServiceTier = hasExplicitServiceTier ? currentServiceTier : currentServiceTier || defaultServiceTier;
   const initialModelPreferenceState = useMemo(
     () =>
       resolveConversationInitialModelPreferenceState({
@@ -2035,6 +2036,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       window.removeEventListener(DRAFT_CONVERSATION_STATE_CHANGED_EVENT, syncDraftPreferences);
     };
   }, [defaultModel, defaultThinkingLevel, defaultServiceTier, draft, models]);
+
+  useEffect(() => {
+    if (!draft || hasExplicitServiceTier || currentServiceTier === defaultServiceTier) {
+      return;
+    }
+
+    setCurrentServiceTier(defaultServiceTier);
+  }, [currentServiceTier, defaultServiceTier, draft, hasExplicitServiceTier]);
 
   useEffect(() => {
     if (!draft || models.length === 0) {
@@ -7835,6 +7844,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
               models={models}
               currentModel={models.length > 0 ? currentModel || model || defaultModel : ''}
               currentThinkingLevel={currentThinkingLevel}
+              currentServiceTier={displayedCurrentServiceTier}
               savingPreference={savingPreference}
               conversationNeedsTakeover={conversationNeedsTakeover}
               composerHasContent={composerHasContent}
