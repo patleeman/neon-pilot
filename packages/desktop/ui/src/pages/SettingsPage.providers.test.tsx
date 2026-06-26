@@ -882,6 +882,49 @@ describe('SettingsPage provider model editor', () => {
     expect(setProviderApiKeyMock).toHaveBeenCalledWith('desktop', 'sk-test-visible-provider');
   });
 
+  it('hides internal API key save failures for provider credentials', async () => {
+    setProviderApiKeyMock.mockRejectedValue(
+      new Error(
+        'Local API route did not complete for PATCH /api/provider-auth/desktop/api-key at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/app/localApi.js:132:20)',
+      ),
+    );
+    providerAuthResult.data.providers = [
+      {
+        id: 'desktop',
+        modelCount: 1,
+        authType: 'none',
+        hasStoredCredential: false,
+        apiKeySupported: true,
+        oauthSupported: false,
+        oauthProviderName: '',
+        oauthUsesCallbackServer: false,
+      },
+    ];
+
+    const { container } = renderPage('settings-providers');
+    await flushAsyncWork();
+
+    const desktopRow = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('desktop'));
+    if (!(desktopRow instanceof HTMLButtonElement)) {
+      throw new Error('Expected configured desktop provider row');
+    }
+    click(desktopRow);
+    await flushAsyncWork();
+
+    updateInputValue(queryInput(container, '#settings-provider-api-key-modal'), 'sk-test-visible-provider');
+    click(queryButtonByLabel(container, 'Save API key'));
+    await flushAsyncWork();
+
+    expect(setProviderApiKeyMock).toHaveBeenCalledWith('desktop', 'sk-test-visible-provider');
+    expect(container.textContent).toContain('Could not save this provider credential. Try again.');
+    expect(container.textContent).not.toContain('Local API route did not complete');
+    expect(container.textContent).not.toContain('/api/provider-auth');
+    expect(container.textContent).not.toContain('file:///');
+    expect(container.textContent).not.toContain('localApi.js');
+    expect(container.textContent).not.toContain('Module.ep');
+    expect(container.textContent).not.toContain('packages/desktop');
+  });
+
   it('opens OAuth login URLs through the desktop shell bridge', async () => {
     const openExternalUrl = vi.fn().mockResolvedValue({ url: 'https://auth.openai.com/oauth', opened: true });
     const writeClipboardText = vi.fn().mockResolvedValue({ ok: true });

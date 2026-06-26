@@ -633,6 +633,30 @@ function canProviderUseApiKey(provider: ProviderAuthSummary | null): boolean {
   return provider.apiKeySupported || provider.authType === 'api_key';
 }
 
+function hasInternalProviderCredentialFailureDetails(message: string): boolean {
+  return (
+    /Local API route did not complete/i.test(message) ||
+    /\/api\//i.test(message) ||
+    /file:\/\//i.test(message) ||
+    /localApi\.js/i.test(message) ||
+    /\bModule\.[A-Za-z_$][\w$]*/.test(message) ||
+    /\s+at\s+\S+/i.test(message) ||
+    /packages\/desktop\//i.test(message) ||
+    /\bENOENT\b|\bEACCES\b|\bENOTDIR\b|permission denied|no such file or directory/i.test(message)
+  );
+}
+
+function formatProviderCredentialError(error: unknown, action: 'save' | 'remove'): string {
+  const fallback =
+    action === 'save' ? 'Could not save this provider credential. Try again.' : 'Could not remove this provider credential. Try again.';
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const trimmed = message.trim();
+  if (!trimmed || hasInternalProviderCredentialFailureDetails(trimmed)) {
+    return fallback;
+  }
+  return trimmed;
+}
+
 function formatProviderAuthStatus(provider: ProviderAuthSummary | null): string {
   if (!provider) {
     return 'No provider selected.';
@@ -3461,7 +3485,7 @@ export function SettingsPage({
       setProviderCredentialNotice(`Saved API key for ${modalProviderAuth.id}.`);
       await Promise.all([refetchProviderAuth({ resetLoading: false }), refetchModels({ resetLoading: false })]);
     } catch (error) {
-      setProviderCredentialError(error instanceof Error ? error.message : String(error));
+      setProviderCredentialError(formatProviderCredentialError(error, 'save'));
     } finally {
       setProviderCredentialAction(null);
     }
@@ -3488,7 +3512,7 @@ export function SettingsPage({
       setProviderCredentialNotice(`Removed stored credential for ${modalProviderAuth.id}.`);
       await Promise.all([refetchProviderAuth({ resetLoading: false }), refetchModels({ resetLoading: false })]);
     } catch (error) {
-      setProviderCredentialError(error instanceof Error ? error.message : String(error));
+      setProviderCredentialError(formatProviderCredentialError(error, 'remove'));
     } finally {
       setProviderCredentialAction(null);
     }

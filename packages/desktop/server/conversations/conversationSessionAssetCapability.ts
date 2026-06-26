@@ -1,7 +1,10 @@
 import type { ReadConversationBootstrapStateResult } from './conversationBootstrap.js';
-import { readConversationSessionEntryBlocks, readConversationSessionImageAsset } from './conversationService.js';
+import {
+  readConversationSessionBlock,
+  readConversationSessionEntryBlocks,
+  readConversationSessionImageAsset,
+} from './conversationService.js';
 import type { DisplayBlock, SessionDetail, SessionDetailAppendOnlyResponse, SessionImageAsset } from './conversationTypes.js';
-import { readSessionBlock } from './sessions.js';
 
 export function readConversationSessionImageAssetCapability(
   sessionId: string,
@@ -173,7 +176,7 @@ export async function readConversationSessionBlockWithInlineAssetsCapability(
     return null;
   }
 
-  const block = readSessionBlock(normalizedSessionId, normalizedBlockId);
+  const block = readConversationSessionBlock({ conversationId: normalizedSessionId, blockId: normalizedBlockId });
   if (!block) {
     return null;
   }

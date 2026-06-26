@@ -6,11 +6,8 @@ const { readSessionBlockMock, readSessionImageAssetMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('./conversationService.js', () => ({
+  readConversationSessionBlock: readSessionBlockMock,
   readConversationSessionImageAsset: readSessionImageAssetMock,
-}));
-
-vi.mock('./sessions.js', () => ({
-  readSessionBlock: readSessionBlockMock,
 }));
 
 import {
@@ -303,7 +300,7 @@ describe('conversationSessionAssetCapability', () => {
       ts: '2026-04-10T12:00:00.000Z',
       images: [{ alt: 'First', src: 'data:image/png;base64,Zmlyc3QtaW1hZ2U=', mimeType: 'image/png' }],
     });
-    expect(readSessionBlockMock).toHaveBeenCalledWith('conversation-1', 'user-block-1');
+    expect(readSessionBlockMock).toHaveBeenCalledWith({ conversationId: 'conversation-1', blockId: 'user-block-1' });
   });
 
   it('resolves blocks from a route session detail using generated display ids', () => {
@@ -353,7 +350,7 @@ describe('conversationSessionAssetCapability', () => {
       output: 'full output',
       ts: '2026-04-10T12:00:00.000Z',
     });
-    expect(readSessionBlockMock).toHaveBeenCalledWith('conversation-1', 'assistant-1-c2');
+    expect(readSessionBlockMock).toHaveBeenCalledWith({ conversationId: 'conversation-1', blockId: 'assistant-1-c2' });
   });
 
   it('returns null when the block id is blank or not found', async () => {
@@ -362,6 +359,6 @@ describe('conversationSessionAssetCapability', () => {
     await expect(readConversationSessionBlockWithInlineAssetsCapability('conversation-1', '   ')).resolves.toBeNull();
     expect(readSessionBlockMock).not.toHaveBeenCalled();
     await expect(readConversationSessionBlockWithInlineAssetsCapability('conversation-1', 'missing')).resolves.toBeNull();
-    expect(readSessionBlockMock).toHaveBeenCalledWith('conversation-1', 'missing');
+    expect(readSessionBlockMock).toHaveBeenCalledWith({ conversationId: 'conversation-1', blockId: 'missing' });
   });
 });

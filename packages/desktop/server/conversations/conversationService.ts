@@ -50,6 +50,7 @@ import {
   listSessions,
   readGoalFromEntries,
   readKnownSessionIdByFilePath,
+  readSessionBlock,
   readSessionBlocksByFileWithTelemetry,
   readSessionBlocksWithTelemetry,
   readSessionEntryBlocks,
@@ -770,6 +771,10 @@ export function readConversationSessionDetail(input: { conversationId: string; t
 
 export function readConversationSessionEntryBlocks(input: { conversationId: string; entryIds: string[] }) {
   return readSessionEntryBlocks(input.conversationId, input.entryIds);
+}
+
+export function readConversationSessionBlock(input: { conversationId: string; blockId: string }) {
+  return readSessionBlock(input.conversationId, input.blockId);
 }
 
 export async function readSessionDetailForRoute(input: { conversationId: string; profile: string; tailBlocks?: number }): Promise<{
