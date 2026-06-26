@@ -1,4 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { clearCacheMock, setProxyMock, sessionProtocolHandleMock, rootProtocolHandleMock } = vi.hoisted(() => ({
   clearCacheMock: vi.fn().mockResolvedValue(undefined),
@@ -8,14 +12,31 @@ const { clearCacheMock, setProxyMock, sessionProtocolHandleMock, rootProtocolHan
 }));
 
 vi.mock('electron', () => ({
-  app: { name: 'Neon Pilot' },
+  app: { name: 'Neon Pilot', isPackaged: false, getAppPath: () => '/Applications/Neon Pilot.app/Contents/Resources/app.asar' },
   protocol: { registerSchemesAsPrivileged: vi.fn(), handle: rootProtocolHandleMock },
   session: {
     fromPartition: () => ({ protocol: { handle: sessionProtocolHandleMock }, setProxy: setProxyMock, clearCache: clearCacheMock }),
   },
 }));
 
-import { buildDesktopProtocolErrorResponse, ensureDesktopAppProtocolForHost, getDesktopAppBaseUrl } from './app-protocol.js';
+import {
+  buildDesktopProtocolErrorResponse,
+  ensureDesktopAppProtocolForHost,
+  getDesktopAppBaseUrl,
+  resetDesktopWebDistDirCacheForTests,
+  resolveDesktopWebDistDirForTests,
+} from './app-protocol.js';
+
+const originalRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
+
+afterEach(() => {
+  if (originalRepoRoot === undefined) {
+    delete process.env.NEON_PILOT_REPO_ROOT;
+  } else {
+    process.env.NEON_PILOT_REPO_ROOT = originalRepoRoot;
+  }
+  resetDesktopWebDistDirCacheForTests();
+});
 
 // ── app-protocol — helper functions ──────────────────────────────────────
 
@@ -30,6 +51,22 @@ describe('buildDesktopProtocolErrorResponse', () => {
     const response = buildDesktopProtocolErrorResponse(new Error('Run not found'));
 
     expect(response.status).toBe(404);
+  });
+});
+
+describe('resolveDesktopWebDistDir', () => {
+  it('ignores main-process dist directories that do not contain the web app index', () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-web-dist-'));
+    const mainDist = join(repoRoot, 'packages', 'desktop', 'dist');
+    const uiDist = join(repoRoot, 'packages', 'desktop', 'ui', 'dist');
+    mkdirSync(mainDist, { recursive: true });
+    mkdirSync(uiDist, { recursive: true });
+    writeFileSync(join(uiDist, 'index.html'), '<!doctype html><html><body>app</body></html>');
+
+    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
+    resetDesktopWebDistDirCacheForTests();
+
+    expect(resolveDesktopWebDistDirForTests()).toBe(uiDist);
   });
 });
 

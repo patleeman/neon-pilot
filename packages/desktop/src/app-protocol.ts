@@ -72,7 +72,7 @@ function resolveDesktopWebDistDir(): string {
 
   if (app.isPackaged) {
     const packagedDistDir = resolve(app.getAppPath(), 'ui', 'dist');
-    if (existsSync(packagedDistDir)) {
+    if (existsSync(join(packagedDistDir, 'index.html'))) {
       cachedDesktopWebDistDir = packagedDistDir;
       return packagedDistDir;
     }
@@ -85,7 +85,7 @@ function resolveDesktopWebDistDir(): string {
   const candidates = [resolve(repoRoot, 'packages', 'desktop', 'ui', 'dist'), resolve(repoRoot, 'packages', 'desktop', 'dist')];
 
   for (const candidate of candidates) {
-    if (existsSync(candidate)) {
+    if (existsSync(join(candidate, 'index.html'))) {
       cachedDesktopWebDistDir = candidate;
       return candidate;
     }
@@ -93,6 +93,14 @@ function resolveDesktopWebDistDir(): string {
 
   cachedDesktopWebDistDir = candidates[0];
   return candidates[0];
+}
+
+export function resetDesktopWebDistDirCacheForTests(): void {
+  cachedDesktopWebDistDir = null;
+}
+
+export function resolveDesktopWebDistDirForTests(): string {
+  return resolveDesktopWebDistDir();
 }
 
 function resolveStaticFilePath(requestPath: string): string {
