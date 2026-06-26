@@ -74,13 +74,16 @@ import {
   publishConversationSessionMetaChanged,
   readConversationModelPreferenceStateById,
   readConversationSessionMeta,
+  readSessionDetailForRoute,
   renameStoredConversation,
   resolveConversationSessionFile,
   setConversationServiceContext,
   toggleConversationAttention,
 } from '../conversations/conversationService.js';
 import {
+  findConversationSessionDetailBlock,
   inlineConversationBootstrapAssetsCapability,
+  inlineConversationSessionBlockAssetsCapability,
   readConversationSessionBlockWithInlineAssetsCapability,
   readConversationSessionEntryBlocksWithInlineAssetsCapability,
 } from '../conversations/conversationSessionAssetCapability.js';
@@ -3001,7 +3004,16 @@ export async function readDesktopSessionDetail(input: {
 export async function readDesktopSessionBlock(input: { sessionId: string; blockId: string }) {
   await getLocalRoutes();
 
-  const result = await readConversationSessionBlockWithInlineAssetsCapability(input.sessionId, input.blockId);
+  let result = await readConversationSessionBlockWithInlineAssetsCapability(input.sessionId, input.blockId);
+  if (!result) {
+    const context = await getLocalLiveSessionCapabilityContext();
+    const { sessionRead } = await readSessionDetailForRoute({
+      conversationId: input.sessionId,
+      profile: context.getRuntimeScope(),
+    });
+    const block = sessionRead.detail ? findConversationSessionDetailBlock(sessionRead.detail, input.blockId) : null;
+    result = block ? inlineConversationSessionBlockAssetsCapability(input.sessionId, block) : null;
+  }
   assertSessionFound(Boolean(result), 'Session block not found');
 
   return result;

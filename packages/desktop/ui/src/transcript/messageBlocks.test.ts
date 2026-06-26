@@ -4,6 +4,7 @@ import type { DisplayBlock, MessageBlock } from '../shared/types';
 import {
   addHydratingHistoricalBlockId,
   buildHydratingHistoricalBlockIdSet,
+  hydrateTranscriptRenderItems,
   mergeHistoricalAndStreamBlocks,
   mergeHydratedHistoricalBlocks,
   mergeHydratedStreamBlocks,
@@ -103,6 +104,30 @@ describe('message block hydration helpers', () => {
         },
       ]),
     ).toEqual([text, tool]);
+  });
+
+  it('hydrates precomputed message render items by block id', () => {
+    const preview: Extract<MessageBlock, { type: 'tool_use' }> = {
+      type: 'tool_use',
+      id: 'tool-1',
+      ts: '2026-04-01T00:00:01.000Z',
+      tool: 'bash',
+      input: {},
+      output: 'preview',
+      outputDeferred: true,
+    };
+    const hydrated: Extract<MessageBlock, { type: 'tool_use' }> = {
+      ...preview,
+      output: 'full output',
+      outputDeferred: undefined,
+    };
+
+    expect(transcriptRenderItemsToMessageBlocks([{ type: 'message', block: preview, index: 0 }], { 'tool-1': hydrated })).toEqual([
+      hydrated,
+    ]);
+    expect(hydrateTranscriptRenderItems([{ type: 'message', block: preview, index: 0 }], { 'tool-1': hydrated })).toEqual([
+      { type: 'message', block: hydrated, index: 0 },
+    ]);
   });
 
   it('does not duplicate historical blocks when live stream bootstrap overlaps', () => {

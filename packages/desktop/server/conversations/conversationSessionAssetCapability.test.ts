@@ -1,16 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { readSessionDetailForRouteMock, readSessionImageAssetMock } = vi.hoisted(() => ({
-  readSessionDetailForRouteMock: vi.fn(),
+const { readSessionBlockMock, readSessionImageAssetMock } = vi.hoisted(() => ({
+  readSessionBlockMock: vi.fn(),
   readSessionImageAssetMock: vi.fn(),
 }));
 
 vi.mock('./conversationService.js', () => ({
   readConversationSessionImageAsset: readSessionImageAssetMock,
-  readSessionDetailForRoute: readSessionDetailForRouteMock,
+}));
+
+vi.mock('./sessions.js', () => ({
+  readSessionBlock: readSessionBlockMock,
 }));
 
 import {
+  findConversationSessionDetailBlock,
   inlineConversationBootstrapAssetsCapability,
   inlineConversationSessionBlockAssetsCapability,
   inlineConversationSessionBlocksAssetsCapability,
@@ -21,7 +25,7 @@ import {
 } from './conversationSessionAssetCapability.js';
 
 beforeEach(() => {
-  readSessionDetailForRouteMock.mockReset();
+  readSessionBlockMock.mockReset();
   readSessionImageAssetMock.mockReset();
 });
 
@@ -283,20 +287,12 @@ describe('conversationSessionAssetCapability', () => {
   });
 
   it('reads session blocks and inlines their assets for local desktop hydration', async () => {
-    readSessionDetailForRouteMock.mockResolvedValueOnce({
-      sessionRead: {
-        detail: {
-          blocks: [
-            {
-              id: 'user-block-1',
-              type: 'user',
-              text: 'with images',
-              ts: '2026-04-10T12:00:00.000Z',
-              images: [{ alt: 'First', src: '/api/sessions/conversation-1/blocks/user-block-1/images/0' }],
-            },
-          ],
-        },
-      },
+    readSessionBlockMock.mockReturnValueOnce({
+      id: 'user-block-1',
+      type: 'user',
+      text: 'with images',
+      ts: '2026-04-10T12:00:00.000Z',
+      images: [{ alt: 'First', src: '/api/sessions/conversation-1/blocks/user-block-1/images/0' }],
     });
     readSessionImageAssetMock.mockReturnValueOnce({ mimeType: 'image/png', data: Buffer.from('first-image') });
 
@@ -307,15 +303,65 @@ describe('conversationSessionAssetCapability', () => {
       ts: '2026-04-10T12:00:00.000Z',
       images: [{ alt: 'First', src: 'data:image/png;base64,Zmlyc3QtaW1hZ2U=', mimeType: 'image/png' }],
     });
-    expect(readSessionDetailForRouteMock).toHaveBeenCalledWith({ conversationId: 'conversation-1', profile: 'shared' });
+    expect(readSessionBlockMock).toHaveBeenCalledWith('conversation-1', 'user-block-1');
+  });
+
+  it('resolves blocks from a route session detail using generated display ids', () => {
+    const detail = {
+      id: 'conversation-1',
+      title: 'Conversation',
+      cwd: '/tmp/project',
+      timestamp: '2026-04-10T12:00:00.000Z',
+      updatedAt: '2026-04-10T12:00:00.000Z',
+      file: '/tmp/session.jsonl',
+      blocks: [
+        { id: 'u-big', type: 'user', text: 'run command', ts: '2026-04-10T12:00:00.000Z' },
+        {
+          id: 'a-big-c1',
+          type: 'tool_use',
+          tool: 'bash',
+          input: { command: 'printf long' },
+          output: 'full output',
+          ts: '2026-04-10T12:00:01.000Z',
+        },
+      ],
+      blockOffset: 1,
+      totalBlocks: 3,
+      signature: 'sig',
+    } as const;
+
+    expect(findConversationSessionDetailBlock(detail, 'a-big-c1')).toEqual(detail.blocks[1]);
+    expect(findConversationSessionDetailBlock(detail, 'a-big-c2')).toEqual(detail.blocks[1]);
+    expect(findConversationSessionDetailBlock(detail, 'missing-c2')).toBeNull();
+  });
+
+  it('uses the session block resolver for generated display block ids', async () => {
+    readSessionBlockMock.mockReturnValueOnce({
+      id: 'assistant-1-c2',
+      type: 'tool_use',
+      tool: 'bash',
+      input: { command: 'printf long' },
+      output: 'full output',
+      ts: '2026-04-10T12:00:00.000Z',
+    });
+
+    await expect(readConversationSessionBlockWithInlineAssetsCapability(' conversation-1 ', ' assistant-1-c2 ')).resolves.toEqual({
+      id: 'assistant-1-c2',
+      type: 'tool_use',
+      tool: 'bash',
+      input: { command: 'printf long' },
+      output: 'full output',
+      ts: '2026-04-10T12:00:00.000Z',
+    });
+    expect(readSessionBlockMock).toHaveBeenCalledWith('conversation-1', 'assistant-1-c2');
   });
 
   it('returns null when the block id is blank or not found', async () => {
-    readSessionDetailForRouteMock.mockResolvedValueOnce({ sessionRead: { detail: null } });
+    readSessionBlockMock.mockReturnValueOnce(null);
 
     await expect(readConversationSessionBlockWithInlineAssetsCapability('conversation-1', '   ')).resolves.toBeNull();
-    expect(readSessionDetailForRouteMock).not.toHaveBeenCalled();
+    expect(readSessionBlockMock).not.toHaveBeenCalled();
     await expect(readConversationSessionBlockWithInlineAssetsCapability('conversation-1', 'missing')).resolves.toBeNull();
-    expect(readSessionDetailForRouteMock).toHaveBeenCalledWith({ conversationId: 'conversation-1', profile: 'shared' });
+    expect(readSessionBlockMock).toHaveBeenCalledWith('conversation-1', 'missing');
   });
 });

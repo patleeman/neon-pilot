@@ -1016,6 +1016,13 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const visibleDesktopSessionDetail = visibleDesktopConversationState?.sessionDetail ?? null;
   const desktopSessionDetailNeedsRequestedTail =
     visibleDesktopSessionDetail !== null && !hasConversationLoadedHistoricalTailBlocks(visibleDesktopSessionDetail, historicalTailBlocks);
+  const shouldFetchSavedDesktopSessionDetailFallback =
+    useDesktopConversation &&
+    Boolean(id) &&
+    visibleDesktopConversationState?.liveSession?.live === false &&
+    !visibleDesktopSessionDetail &&
+    visibleDesktopConversationState.stream.hasSnapshot === false &&
+    visibleDesktopConversationState.stream.blocks.length === 0;
   const conversationVersionKey = `${effectiveConversationEventVersion}`;
   const webConversationBootstrap = null;
   const webConversationBootstrapLoading = false;
@@ -1315,10 +1322,17 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     detail: webSessionDetail,
     loading: webSessionLoading,
     error: webSessionError,
-  } = useSessionDetail(bootstrapPendingInitialSessionDetail || useDesktopConversation || desktopConversationChecking ? undefined : id, {
-    tailBlocks: historicalTailBlocks,
-    version: effectiveConversationEventVersion,
-  });
+  } = useSessionDetail(
+    bootstrapPendingInitialSessionDetail ||
+      (useDesktopConversation && !shouldFetchSavedDesktopSessionDetailFallback) ||
+      desktopConversationChecking
+      ? undefined
+      : id,
+    {
+      tailBlocks: historicalTailBlocks,
+      version: effectiveConversationEventVersion,
+    },
+  );
   const sessionDetail = useDesktopConversation
     ? shouldUseWebBootstrapForDesktopTail
       ? (bootstrapSessionDetail ?? visibleDesktopSessionDetail ?? webSessionDetail)
@@ -1392,6 +1406,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           setHydratedHistoricalBlocks((current) => ({
             ...current,
             [normalizedBlockId]: messageBlock,
+            ...(messageBlock.id && messageBlock.id !== normalizedBlockId ? { [messageBlock.id]: messageBlock } : {}),
           }));
         }
       } catch (error) {

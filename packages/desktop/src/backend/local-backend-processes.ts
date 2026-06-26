@@ -759,6 +759,26 @@ export class LocalBackendProcesses {
       const result = await readSessionDetailForRoute({ conversationId: sessionId, profile: 'shared', tailBlocks });
       return this.makeJsonResponse(result.sessionRead.detail, 'main-process');
     }
+    const sessionBlockMatch = path.match(/^\/api\/sessions\/([^/]+)\/blocks\/([^/]+)$/);
+    if (input.method === 'GET' && sessionBlockMatch) {
+      const sessionId = decodeURIComponent(sessionBlockMatch[1] ?? '');
+      const blockId = decodeURIComponent(sessionBlockMatch[2] ?? '');
+      if (this.backendLiveConversationIds.has(sessionId)) {
+        return this.makeJsonResponse(await this.callLocalApiMethod('readDesktopSessionBlock', [{ sessionId, blockId }]), 'backend-rpc');
+      }
+      const { readSessionDetailForRoute } = await import('../../server/conversations/conversationService.js');
+      const { findConversationSessionDetailBlock, inlineConversationSessionBlockAssetsCapability } =
+        await import('../../server/conversations/conversationSessionAssetCapability.js');
+      const result = await readSessionDetailForRoute({ conversationId: sessionId, profile: 'shared' });
+      const block = result.sessionRead.detail ? findConversationSessionDetailBlock(result.sessionRead.detail, blockId) : null;
+      return block
+        ? this.makeJsonResponse(inlineConversationSessionBlockAssetsCapability(sessionId, block), 'main-process')
+        : {
+            statusCode: 404,
+            headers: { 'content-type': 'application/json' },
+            body: Buffer.from(JSON.stringify({ error: 'Session block not found' })),
+          };
+    }
 
     return null;
   }

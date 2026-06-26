@@ -1,6 +1,7 @@
 import type { ReadConversationBootstrapStateResult } from './conversationBootstrap.js';
-import { readConversationSessionEntryBlocks, readConversationSessionImageAsset, readSessionDetailForRoute } from './conversationService.js';
+import { readConversationSessionEntryBlocks, readConversationSessionImageAsset } from './conversationService.js';
 import type { DisplayBlock, SessionDetail, SessionDetailAppendOnlyResponse, SessionImageAsset } from './conversationTypes.js';
+import { readSessionBlock } from './sessions.js';
 
 export function readConversationSessionImageAssetCapability(
   sessionId: string,
@@ -135,6 +136,33 @@ export function inlineConversationSessionSnapshotAssetsCapability<
   return blocks === event.blocks ? event : { ...event, blocks };
 }
 
+export function findConversationSessionDetailBlock(detail: SessionDetail, blockId: string): DisplayBlock | null {
+  const normalizedBlockId = blockId.trim();
+  if (!normalizedBlockId) {
+    return null;
+  }
+
+  const exactBlock = detail.blocks.find((block) => block.id === normalizedBlockId);
+  if (exactBlock) {
+    return exactBlock;
+  }
+
+  const rebasedMatch = /^(.+)-([mtxcei])(\d+)$/.exec(normalizedBlockId);
+  if (!rebasedMatch) {
+    return null;
+  }
+
+  const [, blockPrefix, blockKind, absoluteIndexText] = rebasedMatch;
+  const absoluteIndex = Number.parseInt(absoluteIndexText ?? '', 10);
+  const indexedBlock =
+    Number.isSafeInteger(absoluteIndex) && absoluteIndex >= 0 ? detail.blocks[absoluteIndex - detail.blockOffset] : undefined;
+  if (indexedBlock && indexedBlock.id.startsWith(`${blockPrefix}-${blockKind}`)) {
+    return indexedBlock;
+  }
+
+  return detail.blocks.find((block) => block.id.startsWith(`${blockPrefix}-${blockKind}`)) ?? null;
+}
+
 export async function readConversationSessionBlockWithInlineAssetsCapability(
   sessionId: string,
   blockId: string,
@@ -145,8 +173,7 @@ export async function readConversationSessionBlockWithInlineAssetsCapability(
     return null;
   }
 
-  const { sessionRead } = await readSessionDetailForRoute({ conversationId: normalizedSessionId, profile: 'shared' });
-  const block = sessionRead.detail?.blocks.find((candidate) => candidate.id === normalizedBlockId) ?? null;
+  const block = readSessionBlock(normalizedSessionId, normalizedBlockId);
   if (!block) {
     return null;
   }

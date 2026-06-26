@@ -104,7 +104,8 @@ export function transcriptRenderItemsToMessageBlocks(
   const messages: MessageBlock[] = [];
   for (const item of renderItems) {
     if (item.type === 'message') {
-      messages.push(item.block);
+      const normalizedId = typeof item.block.id === 'string' ? item.block.id.trim() : '';
+      messages.push(normalizedId ? (hydratedBlocks[normalizedId] ?? item.block) : item.block);
     } else if (item.type === 'trace_cluster' && item.deferredEntryIds?.length) {
       const hydrationId = buildDeferredEntryHydrationId(item.deferredEntryIds);
       messages.push(...(hydrationId ? (hydratedEntryClusters[hydrationId] ?? []) : []));
@@ -129,6 +130,12 @@ export function hydrateTranscriptRenderItems(
   }
 
   return renderItems.map((item) => {
+    if (item.type === 'message') {
+      const normalizedId = typeof item.block.id === 'string' ? item.block.id.trim() : '';
+      const hydratedBlock = normalizedId ? hydratedBlocks[normalizedId] : undefined;
+      return hydratedBlock ? { ...item, block: hydratedBlock } : item;
+    }
+
     if (item.type === 'trace_cluster' && item.deferredEntryIds?.length) {
       const hydrationId = buildDeferredEntryHydrationId(item.deferredEntryIds);
       const hydratedTraceBlocks = hydrationId ? (hydratedEntryClusters[hydrationId] ?? []) : [];

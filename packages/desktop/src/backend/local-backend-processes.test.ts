@@ -9,6 +9,11 @@ const { bootstrapMocks, childProcessMocks, criticalRegistryMocks, readConversati
   vi.hoisted(() => ({
     bootstrapMocks: {
       inlineConversationBootstrapAssetsCapability: vi.fn((state: unknown) => state),
+      findConversationSessionDetailBlock: vi.fn(
+        (detail: { blocks?: unknown[] }, blockId: string) =>
+          detail.blocks?.find((block) => typeof block === 'object' && block !== null && (block as { id?: unknown }).id === blockId) ?? null,
+      ),
+      inlineConversationSessionBlockAssetsCapability: vi.fn((_sessionId: string, block: unknown) => block),
       inlineConversationSessionDetailAppendOnlyAssetsCapability: vi.fn((_sessionId: string, detail: unknown) => detail),
       inlineConversationSessionDetailAssetsCapability: vi.fn((_sessionId: string, detail: unknown) => detail),
       isMissingConversationBootstrapState: vi.fn(() => false),
@@ -93,7 +98,9 @@ vi.mock('../../server/conversations/conversationService.js', () => ({
   setConversationServiceContext: bootstrapMocks.setConversationServiceContext,
 }));
 vi.mock('../../server/conversations/conversationSessionAssetCapability.js', () => ({
+  findConversationSessionDetailBlock: bootstrapMocks.findConversationSessionDetailBlock,
   inlineConversationBootstrapAssetsCapability: bootstrapMocks.inlineConversationBootstrapAssetsCapability,
+  inlineConversationSessionBlockAssetsCapability: bootstrapMocks.inlineConversationSessionBlockAssetsCapability,
   inlineConversationSessionDetailAppendOnlyAssetsCapability: bootstrapMocks.inlineConversationSessionDetailAppendOnlyAssetsCapability,
   inlineConversationSessionDetailAssetsCapability: bootstrapMocks.inlineConversationSessionDetailAssetsCapability,
 }));
@@ -580,6 +587,42 @@ describe('LocalBackendProcesses', () => {
       tailBlocks: 40,
     });
     expect(bootstrapMocks.readConversationSessionSignature).not.toHaveBeenCalled();
+    bootstrapMocks.readSessionDetailForRoute.mockResolvedValueOnce({
+      sessionRead: {
+        detail: {
+          id: 'conversation 1',
+          blocks: [{ id: 'a-big-c2', type: 'tool_use', output: 'full output' }],
+          blockOffset: 0,
+          totalBlocks: 1,
+          signature: 'signature-1',
+        },
+      },
+      remoteMirror: { status: 'deferred', durationMs: 0 },
+    });
+    const sessionBlockResponse = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/sessions/conversation%201/blocks/a-big-c2',
+    });
+
+    expect(sessionBlockResponse.statusCode).toBe(200);
+    expect(JSON.parse(sessionBlockResponse.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'main-process',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(sessionBlockResponse.body))).toEqual({
+      id: 'a-big-c2',
+      type: 'tool_use',
+      output: 'full output',
+    });
+    expect(bootstrapMocks.readSessionDetailForRoute).toHaveBeenLastCalledWith({
+      conversationId: 'conversation 1',
+      profile: 'shared',
+    });
+    expect(bootstrapMocks.findConversationSessionDetailBlock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 'conversation 1' }),
+      'a-big-c2',
+    );
     const resumeResponse = await backend.dispatchApiRequest({
       method: 'POST',
       path: '/api/live-sessions/resume',
