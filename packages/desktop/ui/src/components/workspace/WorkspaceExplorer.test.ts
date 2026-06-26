@@ -10,7 +10,9 @@ const apiMocks = vi.hoisted(() => ({
   writeWorkspaceFile: vi.fn(),
   createWorkspaceFile: vi.fn(),
   createWorkspaceFolder: vi.fn(),
+  renameWorkspacePath: vi.fn(),
   moveWorkspacePath: vi.fn(),
+  deleteWorkspacePath: vi.fn(),
 }));
 
 const commandContextMocks = vi.hoisted(() => ({
@@ -892,6 +894,88 @@ describe('formatWorkspaceEntrySize', () => {
 
     expect(onOpenFile).toHaveBeenCalledWith({ cwd: '/repo', path: 'notes.md' });
     expect(apiMocks.workspaceFile).not.toHaveBeenCalled();
+  });
+
+  it('opens a rail-only row context menu and renames files from the visible operation flow', async () => {
+    apiMocks.workspaceTree.mockResolvedValue({
+      root: '/repo',
+      rootName: 'repo',
+      rootKind: 'git',
+      branch: 'main',
+      changes: [],
+      entries: [{ path: 'notes.md', name: 'notes.md', kind: 'file', size: 11, gitStatus: null, descendantGitStatusCount: null }],
+    });
+    apiMocks.renameWorkspacePath.mockResolvedValue({
+      path: 'renamed.md',
+      name: 'renamed.md',
+      kind: 'file',
+      size: 11,
+      gitStatus: null,
+      descendantGitStatusCount: null,
+    });
+    const onActiveFilePathChange = vi.fn();
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(
+        React.createElement(WorkspaceExplorer, {
+          cwd: '/repo',
+          railOnly: true,
+          activeFilePath: 'notes.md',
+          onDraftPrompt: vi.fn(),
+          onActiveFilePathChange,
+          onOpenFile: vi.fn(),
+        }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const fileButton = await vi.waitFor(() => {
+      const button = Array.from(container.querySelectorAll('button')).find((entry) => entry.textContent?.includes('notes.md'));
+      expect(button).toBeTruthy();
+      return button as HTMLButtonElement;
+    });
+
+    act(() => {
+      fileButton.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 42, clientY: 64 }));
+    });
+
+    await vi.waitFor(() => {
+      expect(document.body.textContent).toContain('Rename');
+      expect(document.body.textContent).toContain('Delete');
+    });
+
+    const renameButton = Array.from(document.body.querySelectorAll('button')).find((entry) => entry.textContent?.includes('Rename'));
+    expect(renameButton).toBeTruthy();
+    act(() => {
+      renameButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const input = await vi.waitFor(() => {
+      const field = document.body.querySelector('input');
+      expect(field).toBeTruthy();
+      return field as HTMLInputElement;
+    });
+
+    act(() => {
+      setInputValue(input, 'renamed.md');
+    });
+
+    const confirmButton = Array.from(document.body.querySelectorAll('button')).find((entry) => entry.textContent?.includes('Rename'));
+    expect(confirmButton).toBeTruthy();
+    await act(async () => {
+      confirmButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiMocks.renameWorkspacePath).toHaveBeenCalledWith('/repo', 'notes.md', 'renamed.md');
+    expect(onActiveFilePathChange).toHaveBeenCalledWith('renamed.md');
   });
 
   it('keeps create file prompts open with a readable error when the name already exists', async () => {

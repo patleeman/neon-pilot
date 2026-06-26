@@ -41,6 +41,24 @@ Primary validation command families found during the audit:
 
 ## Strict QA Evidence Addenda
 
+- 2026-06-26, parent follow-up core file-operations QA reran the remaining visible File Explorer operation gap in an
+  isolated Testing app on CDP `9615` with state under `/tmp/neon-pilot-qa/core-fileops-context-parent`. The pre-fix
+  probe (`visible-ops-probe-summary.json`, `02-src-right-click.png`, `03-file-right-click.png`, `04-src-hover.png`)
+  showed that normal rail rows did not open the documented right-click file-operation menu, and hover controls exposed
+  New File/New Folder/Move but not Rename/Delete. Parent fixed the custom rail row path in
+  `packages/desktop/ui/src/components/workspace/WorkspaceExplorer.tsx` by adding row context-menu handling, a visible
+  Rename prompt backed by `renameWorkspacePath`, and remapping for active/open files after rename; regression coverage
+  in `WorkspaceExplorer.test.ts` verifies right-click menu Rename/Delete visibility and the rename callback path.
+  Post-fix rebuilt live evidence includes `05-postfix-file-explorer-open.png`, `06-postfix-file-context-menu.png`,
+  `07-postfix-rename-dialog.png`, `08-postfix-after-rename.png`, `09-postfix-new-folder-dialog.png`,
+  `10-postfix-after-new-folder.png`, `11-postfix-delete-menu.png`, `12-postfix-after-delete.png`,
+  `13-postfix-after-reload.png`, and `visible-fileops-postfix-summary.json`. The summary proves the UI menu renamed
+  `seed.txt` to `renamed-seed.txt`, removed the old path, created `src/qa-visible-folder` from the visible New Folder
+  control, deleted `renamed-seed.txt` through the menu/confirmation, survived reload, and kept every visible viewport
+  scan clean of raw `/api`, stack, `file://`, local path, filesystem error, and extension-action wrapper markers.
+  Validation passed `pnpm --dir packages/desktop exec vitest run ui/src/components/workspace/WorkspaceExplorer.test.ts --reporter=dot`
+  and `pnpm --dir packages/desktop run build:ui`. Remaining file/workspace gaps are native picker/Finder variants and
+  the ignored-dir policy decision.
 - 2026-06-26, parent core workspace/file-path QA reran `system-files` / File Explorer in an isolated Testing app on CDP
   `9614` with state under `/tmp/neon-pilot-qa/core-files-parent`. The first live pass reproduced a real user-visible
   failure: opening Workbench > File Explorer showed `notes.md`, but clicking it only selected metadata in the rail and

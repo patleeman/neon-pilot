@@ -490,6 +490,7 @@ function WorkspaceTreeRow({
   onToggle,
   onSelect,
   onDraftPrompt,
+  onContextMenu,
   onCreateFile,
   onCreateFolder,
   onMove,
@@ -503,6 +504,7 @@ function WorkspaceTreeRow({
   onToggle: (entry: WorkspaceEntry) => void;
   onSelect: (entry: WorkspaceEntry) => void;
   onDraftPrompt: (prompt: string) => void;
+  onContextMenu?: (entry: WorkspaceEntry, event: ReactMouseEvent<HTMLElement>) => void;
   onCreateFile?: (entry: WorkspaceEntry) => void;
   onCreateFolder?: (entry: WorkspaceEntry) => void;
   onMove?: (entry: WorkspaceEntry) => void;
@@ -520,6 +522,7 @@ function WorkspaceTreeRow({
           className="min-h-7 flex-1 gap-1 py-1 pr-1.5 text-[12px]"
           style={{ paddingLeft: `${8 + depth * 14}px` }}
           onClick={() => (isDirectory ? onToggle(entry) : onSelect(entry))}
+          onContextMenu={(event) => onContextMenu?.(entry, event)}
         >
           <span className={cx('w-3 shrink-0 text-dim transition-transform', isDirectory && node?.expanded && 'rotate-90')}>
             {fileIcon(entry)}
@@ -597,6 +600,7 @@ function WorkspaceTreeRow({
               onToggle={onToggle}
               onSelect={onSelect}
               onDraftPrompt={onDraftPrompt}
+              onContextMenu={onContextMenu}
               onCreateFile={onCreateFile}
               onCreateFolder={onCreateFolder}
               onMove={onMove}
@@ -856,7 +860,9 @@ export function WorkspaceExplorer({
   );
 
   const [createPathPrompt, setCreatePathPrompt] = useState<{ kind: 'file' | 'folder'; directory: string } | null>(null);
+  const [renamePathPrompt, setRenamePathPrompt] = useState<WorkspaceEntry | null>(null);
   const [movePathPrompt, setMovePathPrompt] = useState<WorkspaceEntry | null>(null);
+  const [entryContextMenu, setEntryContextMenu] = useState<{ entry: WorkspaceEntry; x: number; y: number } | null>(null);
   const [pathPromptError, setPathPromptError] = useState<string | null>(null);
   const [pathPromptSubmitting, setPathPromptSubmitting] = useState(false);
 
@@ -898,6 +904,48 @@ export function WorkspaceExplorer({
     [cwd, loadDirectory, loadRoot, openWorkspaceFile],
   );
 
+  const renamePath = useCallback((entry: WorkspaceEntry) => {
+    setPathPromptError(null);
+    setPathPromptSubmitting(false);
+    setRenamePathPrompt(entry);
+  }, []);
+
+  const submitRenamePath = useCallback(
+    async (entry: WorkspaceEntry, newName: string) => {
+      if (!cwd) return;
+      const normalizedName = newName.trim();
+      if (!normalizedName || normalizedName === entry.name) {
+        setRenamePathPrompt(null);
+        return;
+      }
+      if (normalizedName.includes('/')) {
+        setPathPromptError('Use a name only, without slashes.');
+        return;
+      }
+      setPathPromptError(null);
+      setPathPromptSubmitting(true);
+      try {
+        const renamed = await api.renameWorkspacePath(cwd, entry.path, normalizedName);
+        const current = readWorkspaceOpenFiles(cwd, openFilesScope);
+        const next = current.map((path) => remapWorkspacePathAfterEntryMove(path, entry.path, renamed.path) ?? path);
+        writeWorkspaceOpenFiles(cwd, next, openFilesScope);
+        const remappedActiveFilePath = remapWorkspacePathAfterEntryMove(activeFilePath, entry.path, renamed.path);
+        if (remappedActiveFilePath !== activeFilePath) {
+          onActiveFilePathChange?.(remappedActiveFilePath);
+        }
+        await loadRoot();
+        const parent = parentDirectory(entry.path);
+        if (parent) await loadDirectory(parent);
+        setRenamePathPrompt(null);
+      } catch (error) {
+        setPathPromptError(formatWorkspaceLoadError(error, 'Could not rename this item. Try a different name.'));
+      } finally {
+        setPathPromptSubmitting(false);
+      }
+    },
+    [activeFilePath, cwd, loadDirectory, loadRoot, onActiveFilePathChange, openFilesScope],
+  );
+
   const deletePath = useCallback(
     async (entry: WorkspaceEntry) => {
       if (!cwd) return;
@@ -924,6 +972,16 @@ export function WorkspaceExplorer({
     setPathPromptError(null);
     setPathPromptSubmitting(false);
     setMovePathPrompt(entry);
+  }, []);
+
+  const openEntryContextMenu = useCallback((entry: WorkspaceEntry, event: ReactMouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setEntryContextMenu({ entry, x: event.clientX, y: event.clientY });
+  }, []);
+
+  const closeEntryContextMenu = useCallback(() => {
+    setEntryContextMenu(null);
   }, []);
 
   const submitMovePath = useCallback(
@@ -992,6 +1050,22 @@ export function WorkspaceExplorer({
           onSubmit={(name) => void submitCreatePath(createPathPrompt.kind, createPathPrompt.directory, name)}
         />
       ) : null}
+      {renamePathPrompt ? (
+        <TextPromptDialog
+          title={`Rename ${renamePathPrompt.path}`}
+          label="New name"
+          initialValue={renamePathPrompt.name}
+          confirmLabel="Rename"
+          error={pathPromptError}
+          submitting={pathPromptSubmitting}
+          onCancel={() => {
+            setRenamePathPrompt(null);
+            setPathPromptError(null);
+            setPathPromptSubmitting(false);
+          }}
+          onSubmit={(name) => void submitRenamePath(renamePathPrompt, name)}
+        />
+      ) : null}
       {movePathPrompt ? (
         <TextPromptDialog
           title={`Move ${movePathPrompt.path}`}
@@ -1008,6 +1082,82 @@ export function WorkspaceExplorer({
           }}
           onSubmit={(targetDir) => void submitMovePath(movePathPrompt, targetDir)}
         />
+      ) : null}
+      {entryContextMenu ? (
+        <ContextMenu
+          estimatedHeight={entryContextMenu.entry.kind === 'directory' ? 178 : 144}
+          minWidth={224}
+          onClose={closeEntryContextMenu}
+          position={{ x: entryContextMenu.x, y: entryContextMenu.y }}
+        >
+          <ContextMenuSections>
+            <ContextMenuSection>
+              <MenuItem
+                className="gap-2"
+                onClick={() => {
+                  const directory =
+                    entryContextMenu.entry.kind === 'directory'
+                      ? entryContextMenu.entry.path
+                      : parentDirectory(entryContextMenu.entry.path);
+                  closeEntryContextMenu();
+                  createPath('file', directory);
+                }}
+              >
+                <Ico d={ICON.file} size={12} />
+                New File
+              </MenuItem>
+              <MenuItem
+                className="gap-2"
+                onClick={() => {
+                  const directory =
+                    entryContextMenu.entry.kind === 'directory'
+                      ? entryContextMenu.entry.path
+                      : parentDirectory(entryContextMenu.entry.path);
+                  closeEntryContextMenu();
+                  createPath('folder', directory);
+                }}
+              >
+                <Ico d={ICON.folderPlus} size={12} />
+                New Folder
+              </MenuItem>
+            </ContextMenuSection>
+            <ContextMenuSection>
+              <MenuItem
+                className="gap-2"
+                onClick={() => {
+                  closeEntryContextMenu();
+                  renamePath(entryContextMenu.entry);
+                }}
+              >
+                <Ico d={ICON.pencil} size={12} />
+                Rename
+              </MenuItem>
+              <MenuItem
+                className="gap-2"
+                onClick={() => {
+                  closeEntryContextMenu();
+                  movePath(entryContextMenu.entry);
+                }}
+              >
+                <Ico d={ICON.move} size={12} />
+                Move to…
+              </MenuItem>
+            </ContextMenuSection>
+            <ContextMenuSection>
+              <MenuItem
+                className="gap-2"
+                tone="danger"
+                onClick={() => {
+                  closeEntryContextMenu();
+                  void deletePath(entryContextMenu.entry);
+                }}
+              >
+                <Ico d={ICON.trash} size={12} />
+                Delete
+              </MenuItem>
+            </ContextMenuSection>
+          </ContextMenuSections>
+        </ContextMenu>
       ) : null}
     </>
   );
@@ -1112,6 +1262,7 @@ export function WorkspaceExplorer({
                         onToggle={toggleDirectory}
                         onSelect={(entry) => openWorkspaceFile(entry.path)}
                         onDraftPrompt={onDraftPrompt}
+                        onContextMenu={openEntryContextMenu}
                         onCreateFile={(entry) => createPath('file', entry.path)}
                         onCreateFolder={(entry) => createPath('folder', entry.path)}
                         onMove={(entry) => movePath(entry)}
