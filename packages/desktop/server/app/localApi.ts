@@ -131,7 +131,8 @@ import {
 } from '../conversations/liveSessions.js';
 import { getExecution, getExecutionLog, listConversationExecutions, listExecutions } from '../executions/executionService.js';
 import { createExtensionConversationsCapability } from '../extensions/extensionConversations.js';
-import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { getExtensionHostClient, setExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { createExtensionHostRpcClient } from '../extensions/extensionHostRpcClient.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import { notifyExtensionStartupStatus } from '../extensions/extensionNotifications.js';
 import { requestExtensionUiConfirm } from '../extensions/extensionUiConfirmBridge.js';
@@ -204,6 +205,7 @@ import { normalizeDesktopScheduledTaskCreateInput, withDesktopScheduledTaskMutat
 import { normalizeFastConversationSearchLimit, normalizeFastConversationSearchTerms } from './localApiSearch.js';
 import { buildDesktopSidebarConversationSnapshot } from './localApiSidebarConversations.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
+import { setLocalBackendBaseUrl } from './localBackendBaseUrl.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { buildDesktopAppBridgeEvent, shouldProcessDesktopAppEvent } from './localApiAppEvents.js';
 import { buildAttachmentAssetResponse } from './localApiAttachmentAssetResponse.js';
@@ -250,6 +252,7 @@ import { assertRollbackLiveSessionNotStreaming, buildRollbackConversationRespons
 import { noopLocalApiUse, shouldRegisterLocalApiRoute } from './localApiRouteCollector.js';
 import { readSessionDetailRouteResponse } from './localApiSessionDetailResponse.js';
 import { buildDesktopCloseEvent, markSubscriptionClosed, shouldCloseSubscription } from './localApiSubscriptionClose.js';
+import { createDesktopRealtimeUpgradeHandler, type DesktopRealtimeUpgradeHandlerOptions } from './realtime.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
 
@@ -354,6 +357,24 @@ async function syncSystemConversationToolMutation(input: {
 
 export function setDesktopWorkbenchBrowserToolHost(host: WorkbenchBrowserToolHost | null): void {
   setWorkbenchBrowserToolHost(host);
+}
+
+export function setDesktopLocalBackendBaseUrl(baseUrl: string | undefined): { ok: true } {
+  setLocalBackendBaseUrl(baseUrl);
+  return { ok: true };
+}
+
+export function configureDesktopExtensionHostClient(input: { baseUrl?: string | null; token?: string | null }): { ok: true } {
+  const baseUrl = typeof input.baseUrl === 'string' ? input.baseUrl.trim() : '';
+  const token = typeof input.token === 'string' ? input.token.trim() : '';
+  setExtensionHostClient(baseUrl && token ? createExtensionHostRpcClient({ baseUrl, token }) : undefined);
+  return { ok: true };
+}
+
+export function createDesktopLocalRealtimeUpgradeHandler(
+  options: Pick<DesktopRealtimeUpgradeHandlerOptions, 'getRuntimeScope' | 'subscribeLocalApiStreamByUrl'> = {},
+): ReturnType<typeof createDesktopRealtimeUpgradeHandler> {
+  return createDesktopRealtimeUpgradeHandler(options);
 }
 
 export async function startDesktopLocalhostWebappProxy(options: Omit<Parameters<typeof startLocalhostWebappProxy>[0], 'dispatch'>) {

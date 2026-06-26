@@ -8,17 +8,8 @@ import type { Duplex } from 'node:stream';
 import { getStateRoot } from '@neon-pilot/core';
 import { bindInProcessDaemonClient, NeonPilotDaemon } from '@neon-pilot/daemon';
 
-import { setLocalBackendBaseUrl } from '../../server/app/localBackendBaseUrl.js';
-import { createDesktopRealtimeUpgradeHandler } from '../../server/app/realtime.js';
-import { setExtensionHostClient } from '../../server/extensions/extensionHostClient.js';
-import { createExtensionHostRpcClient } from '../../server/extensions/extensionHostRpcClient.js';
 import { loadRawLocalApiModule, type LocalApiModule } from '../local-api-module.js';
-import { installSharedConversationServiceContext, SHARED_CHILD_RUNTIME_SCOPE } from './conversation-service-context.js';
-import {
-  bridgeRawLocalApiAppEventsToBundledRuntime,
-  isDesktopAppEventBridgeMessage,
-  publishBundledDesktopAppEvent,
-} from './local-backend-app-events.js';
+import { isDesktopAppEventBridgeMessage } from './local-backend-app-events.js';
 import { proxyDesktopLocalApiStream } from './local-backend-stream-proxy.js';
 
 interface BackendReadyMessage {
@@ -74,6 +65,7 @@ let daemonLogStream: WriteStream | undefined;
 let localhostWebappProxy: Awaited<ReturnType<LocalApiModule['startDesktopLocalhostWebappProxy']>> | undefined;
 let shuttingDown = false;
 const nativeWorkbenchBrowserResponses = new Map<string, (message: NativeWorkbenchBrowserResponse) => void>();
+const SHARED_CHILD_RUNTIME_SCOPE = 'shared';
 
 function sendParentMessage(message: BackendReadyMessage | LocalApiRpcResponse | { type: 'fatal'; error: string }): void {
   if (typeof process.send === 'function') {
@@ -287,10 +279,6 @@ async function main(): Promise<void> {
   const token = process.env.NEON_PILOT_BACKEND_TOKEN?.trim() || randomUUID();
   const extensionHostBaseUrl = process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL?.trim();
   const extensionHostToken = process.env.NEON_PILOT_EXTENSION_HOST_TOKEN?.trim();
-  installSharedConversationServiceContext();
-  if (extensionHostBaseUrl && extensionHostToken) {
-    setExtensionHostClient(createExtensionHostRpcClient({ baseUrl: extensionHostBaseUrl, token: extensionHostToken }));
-  }
   await startDaemon();
 
   // ── Load the API module ────────────────────────────────────────────
@@ -300,11 +288,10 @@ async function main(): Promise<void> {
   // first paint on this import.
   let localApiReady = false;
   let localApi: LocalApiModule | null = null;
-  let unsubscribeRawLocalApiAppEvents: (() => void) | undefined;
   try {
     localApi = await loadRawLocalApiModule();
+    localApi.configureDesktopExtensionHostClient({ baseUrl: extensionHostBaseUrl, token: extensionHostToken });
     installNativeWorkbenchBrowserBridge(localApi);
-    unsubscribeRawLocalApiAppEvents = await bridgeRawLocalApiAppEventsToBundledRuntime(localApi);
     localApiReady = true;
     localhostWebappProxy = await localApi.startDesktopLocalhostWebappProxy({
       stateRoot: getStateRoot(),
@@ -374,7 +361,7 @@ async function main(): Promise<void> {
       }
     })();
   });
-  const handleRealtimeUpgrade = createDesktopRealtimeUpgradeHandler({
+  const handleRealtimeUpgrade = localApi?.createDesktopLocalRealtimeUpgradeHandler({
     getRuntimeScope: () => SHARED_CHILD_RUNTIME_SCOPE,
     subscribeLocalApiStreamByUrl: async (url, onEvent) => {
       if (!localApi) {
@@ -402,7 +389,7 @@ async function main(): Promise<void> {
       rejectUpgrade(socket, 503, 'Service Unavailable');
       return;
     }
-    handleRealtimeUpgrade(request, socket as Socket, head);
+    handleRealtimeUpgrade?.(request, socket as Socket, head);
   });
 
   await new Promise<void>((resolve) => {
@@ -414,7 +401,7 @@ async function main(): Promise<void> {
     throw new Error('Backend child did not bind a TCP port.');
   }
 
-  setLocalBackendBaseUrl(`http://127.0.0.1:${String(address.port)}`);
+  localApi?.setDesktopLocalBackendBaseUrl(`http://127.0.0.1:${String(address.port)}`);
   sendParentMessage({ type: 'ready', port: address.port, token });
 
   process.on('message', (message) => {
@@ -431,19 +418,15 @@ async function main(): Promise<void> {
     }
 
     if (isDesktopAppEventBridgeMessage(message)) {
-      publishBundledDesktopAppEvent(message.event);
-      if (localApi)
-        void handleLocalApiRpcRequest(localApi, {
-          type: 'local-api-rpc-request',
-          id: randomUUID(),
-          method: 'publishDesktopAppEventFromExtensionHost',
-          args: [message.event],
-        });
+      void localApi?.publishDesktopAppEventFromExtensionHost(message.event).catch((error) => {
+        process.stderr.write(
+          `[desktop-backend] failed to publish extension-host app event: ${error instanceof Error ? error.message : String(error)}\n`,
+        );
+      });
       return;
     }
 
     if (message && typeof message === 'object' && (message as { type?: unknown }).type === 'shutdown') {
-      unsubscribeRawLocalApiAppEvents?.();
       void shutdown(server);
     }
   });

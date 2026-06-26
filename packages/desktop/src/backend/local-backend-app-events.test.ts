@@ -1,54 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-const { invalidateAppTopicsMock, publishAppEventMock } = vi.hoisted(() => ({
-  invalidateAppTopicsMock: vi.fn(),
-  publishAppEventMock: vi.fn(),
-}));
-const sessions = vi.hoisted(() => ({
-  clearSessionCaches: vi.fn(),
-}));
-
-vi.mock('../../server/shared/appEvents.js', () => ({
-  invalidateAppTopics: invalidateAppTopicsMock,
-  publishAppEvent: publishAppEventMock,
-}));
-vi.mock('../../server/conversations/sessions.js', () => sessions);
-
-import { bridgeRawLocalApiAppEventsToBundledRuntime, publishBundledDesktopAppEvent } from './local-backend-app-events.js';
+import { isDesktopAppEventBridgeMessage } from './local-backend-app-events.js';
 
 describe('local backend app events', () => {
-  beforeEach(() => {
-    invalidateAppTopicsMock.mockReset();
-    publishAppEventMock.mockReset();
-    sessions.clearSessionCaches.mockReset();
-  });
-
-  it('publishes sanitized invalidations into the bundled realtime runtime', () => {
-    publishBundledDesktopAppEvent({ type: 'invalidate', topics: ['tasks', 'sessions', 'routines', 'not-a-topic' as never] });
-
-    expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(1);
-    expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks', 'sessions', 'routines');
-    expect(sessions.clearSessionCaches).toHaveBeenCalledTimes(1);
-    expect(publishAppEventMock).not.toHaveBeenCalled();
-  });
-
-  it('bridges raw local API app events into the bundled realtime runtime', async () => {
-    const unsubscribe = vi.fn();
-    let listener:
-      | ((event: { type: 'open' } | { type: 'event'; event: unknown } | { type: 'error'; message: string } | { type: 'close' }) => void)
-      | undefined;
-    const localApi = {
-      subscribeDesktopAppEvents: vi.fn(async (onEvent) => {
-        listener = onEvent;
-        return unsubscribe;
+  it('recognizes extension-host app event bridge messages', () => {
+    expect(
+      isDesktopAppEventBridgeMessage({
+        type: 'desktop-app-event',
+        event: { type: 'invalidate', topics: ['tasks'] },
       }),
-    };
-
-    await expect(bridgeRawLocalApiAppEventsToBundledRuntime(localApi)).resolves.toBe(unsubscribe);
-    listener?.({ type: 'open' });
-    listener?.({ type: 'event', event: { type: 'invalidate', topics: ['tasks', 'workspace', 'routines'] } });
-
-    expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(1);
-    expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks', 'workspace', 'routines');
+    ).toBe(true);
+    expect(isDesktopAppEventBridgeMessage({ type: 'desktop-app-event' })).toBe(false);
+    expect(isDesktopAppEventBridgeMessage({ type: 'other', event: { type: 'invalidate', topics: ['tasks'] } })).toBe(false);
   });
 });

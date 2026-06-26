@@ -1,4 +1,6 @@
 import { existsSync } from 'node:fs';
+import type { IncomingMessage } from 'node:http';
+import type { Socket } from 'node:net';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -338,6 +340,18 @@ export interface LocalApiModule {
   }): Promise<unknown>;
   subscribeDesktopLocalApiStream(path: string, onEvent: (event: DesktopApiStreamEvent) => void): Promise<() => void>;
   subscribeDesktopAppEvents(onEvent: (event: DesktopAppBridgeEvent) => void): Promise<() => void>;
+  publishDesktopAppEventFromExtensionHost(event: unknown): Promise<{ ok: true }>;
+  setDesktopLocalBackendBaseUrl(baseUrl: string | undefined): { ok: true };
+  configureDesktopExtensionHostClient(input: { baseUrl?: string | null; token?: string | null }): { ok: true };
+  createDesktopLocalRealtimeUpgradeHandler(options?: {
+    getRuntimeScope?: () => string;
+    subscribeLocalApiStreamByUrl?: (
+      url: URL,
+      onEvent: (
+        event: { type: 'message'; data: string } | { type: 'error'; message: string } | { type: 'open' } | { type: 'close' },
+      ) => void,
+    ) => Promise<() => void>;
+  }): (request: IncomingMessage, socket: Socket, head: Buffer) => void;
   setDesktopWorkbenchBrowserToolHost?(
     host: {
       isActive(conversationId: string): Promise<boolean>;
@@ -358,6 +372,10 @@ const MAIN_PROCESS_LOCAL_API_METHODS = new Set<keyof LocalApiModule>([
   'subscribeDesktopLocalApiStream',
   'subscribeDesktopAppEvents',
   'subscribeDesktopProviderOAuthLogin',
+  'publishDesktopAppEventFromExtensionHost',
+  'setDesktopLocalBackendBaseUrl',
+  'configureDesktopExtensionHostClient',
+  'createDesktopLocalRealtimeUpgradeHandler',
   'setDesktopWorkbenchBrowserToolHost',
 ]);
 
