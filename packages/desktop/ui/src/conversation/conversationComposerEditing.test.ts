@@ -6,6 +6,7 @@ import {
   resolveComposerClearShortcut,
   resolveComposerHistoryNavigation,
   shouldRestoreFirstQueuedPromptFromComposerShortcut,
+  shouldSubmitComposerFromEnter,
 } from './conversationComposerEditing';
 
 describe('conversation composer editing helpers', () => {
@@ -124,6 +125,13 @@ describe('conversation composer editing helpers', () => {
         isComposing: false,
       }),
     ).toBe(false);
+  });
+
+  it('submits only plain non-composing Enter', () => {
+    expect(shouldSubmitComposerFromEnter({ key: 'Enter', shiftKey: false, isComposing: false })).toBe(true);
+    expect(shouldSubmitComposerFromEnter({ key: 'Enter', shiftKey: true, isComposing: false })).toBe(false);
+    expect(shouldSubmitComposerFromEnter({ key: 'Enter', shiftKey: false, isComposing: true })).toBe(false);
+    expect(shouldSubmitComposerFromEnter({ key: 'a', shiftKey: false, isComposing: false })).toBe(false);
   });
 
   it('inserts trimmed text at the current selection with readable spacing', () => {

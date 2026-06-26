@@ -49,6 +49,10 @@ export function shouldRestoreFirstQueuedPromptFromComposerShortcut(input: {
   return input.key === 'ArrowUp' && input.altKey && !input.ctrlKey && !input.metaKey && !input.shiftKey && !input.isComposing;
 }
 
+export function shouldSubmitComposerFromEnter(input: { key: string; shiftKey: boolean; isComposing: boolean }): boolean {
+  return input.key === 'Enter' && !input.shiftKey && !input.isComposing;
+}
+
 export function canNavigateComposerHistoryValue(input: {
   value: string;
   selectionStart: number;

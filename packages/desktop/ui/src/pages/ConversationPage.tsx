@@ -74,6 +74,7 @@ import {
   resolveComposerClearShortcut,
   resolveComposerHistoryNavigation,
   shouldRestoreFirstQueuedPromptFromComposerShortcut,
+  shouldSubmitComposerFromEnter,
 } from '../conversation/conversationComposerEditing';
 import { shouldShowConversationComposerMeta } from '../conversation/conversationComposerMetaVisibility';
 import {
@@ -6496,7 +6497,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       }
     }
 
-    if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
+    if (shouldSubmitComposerFromEnter({ key: e.key, shiftKey: e.shiftKey, isComposing })) {
       e.preventDefault();
       const altKeyHeld = e.altKey || e.nativeEvent.getModifierState('Alt') || composerAltHeld;
       await submitComposerActionForModifiers(altKeyHeld);
