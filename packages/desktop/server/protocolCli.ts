@@ -17,6 +17,7 @@ import {
   getStateRoot,
   NEON_PILOT_CLI_EXIT_CODES,
   type NeonPilotCliCommandDefinition,
+  type NeonPilotCliValidationResult,
   renderCliCommandGroupHelp,
   renderCliCommandHelp,
   renderCliCommandList,
@@ -49,6 +50,25 @@ interface CliCommandRegistration extends NeonPilotCliCommandDefinition {
   surfaceId: string;
   action: string;
   inputAction?: string;
+}
+
+function formatCliCommandForError(argv: string[]): string {
+  const display: string[] = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index] ?? '';
+    if (token.startsWith('--')) {
+      const [flag, inlineValue] = token.split('=', 2);
+      display.push(inlineValue === undefined ? flag : `${flag}=<redacted>`);
+      const next = argv[index + 1] ?? '';
+      if (inlineValue === undefined && next && !next.startsWith('-')) {
+        display.push('<redacted>');
+        index += 1;
+      }
+      continue;
+    }
+    display.push(token);
+  }
+  return display.join(' ');
 }
 
 function resolveCliRepoRoot(): string {
@@ -371,7 +391,7 @@ function writeCliActionResult(
 }
 
 function formatCliStreamUpdate(update: unknown, format: 'text' | 'json' | 'jsonl'): string {
-  if (format === 'jsonl') return `${JSON.stringify({ event: 'update', data: update })}\n`;
+  if (format === 'jsonl') return `${JSON.stringify({ event: 'update', data: sanitizeCliStreamUpdate(update) })}\n`;
   if (format === 'json') return '';
   const record = update && typeof update === 'object' && !Array.isArray(update) ? (update as Record<string, unknown>) : {};
   const content = Array.isArray(record.content) ? record.content : [];
@@ -383,8 +403,45 @@ function formatCliStreamUpdate(update: unknown, format: 'text' | 'json' | 'jsonl
   return text ? `${text}\n` : '';
 }
 
+function sanitizeCliStreamUpdate(update: unknown): Record<string, unknown> {
+  const record = update && typeof update === 'object' && !Array.isArray(update) ? (update as Record<string, unknown>) : {};
+  const content = Array.isArray(record.content)
+    ? record.content.filter(
+        (item): item is Record<string, unknown> =>
+          Boolean(item) &&
+          typeof item === 'object' &&
+          !Array.isArray(item) &&
+          (item as Record<string, unknown>).type === 'text' &&
+          typeof (item as Record<string, unknown>).text === 'string',
+      )
+    : [];
+  const details = record.details && typeof record.details === 'object' && !Array.isArray(record.details) ? record.details : {};
+  const event = (details as Record<string, unknown>).event;
+  const eventRecord = event && typeof event === 'object' && !Array.isArray(event) ? (event as Record<string, unknown>) : {};
+  const safeEvent = typeof eventRecord.type === 'string' ? { type: eventRecord.type } : undefined;
+  return {
+    content,
+    ...(safeEvent ? { details: { event: safeEvent } } : {}),
+  };
+}
+
 function cliGlobalFlagArgs(argv: string[]): string[] {
   return argv.filter((arg) => ['--json', '--quiet', '--verbose', '--no-color'].includes(arg));
+}
+
+function validateContributedCliInvocation(invocation: Awaited<ReturnType<typeof buildCliInvocation>>): NeonPilotCliValidationResult {
+  const validation = validateCliInvocation(invocation);
+  if (invocation.definition.command !== 'ask') return validation;
+
+  const prompt = [invocation.flags.text, invocation.flags.prompt, invocation.args.join(' ')]
+    .filter((value): value is string => typeof value === 'string')
+    .find((value) => value.trim().length > 0);
+  if (prompt) return validation;
+
+  return {
+    ok: false,
+    errors: [...validation.errors, 'Prompt text is required. Pass a prompt argument, --text, or --prompt.'],
+  };
 }
 
 export async function runProtocolCli(argv: string[], options?: { signal?: AbortSignal }): Promise<number> {
@@ -470,6 +527,14 @@ export async function runProtocolCli(argv: string[], options?: { signal?: AbortS
   return invokeContributedCliCommand(argv, options);
 }
 
+function formatCliUserShellLinkStatus(result: ReturnType<typeof readNeonPilotCliInstallStatus>): string {
+  if (result.globallyInstalled) return result.linkPath;
+  if (!result.linkConflict) return 'not installed';
+  return result.linkTarget
+    ? `used by another install: ${result.linkPath} -> ${result.linkTarget}`
+    : `used by another install: ${result.linkPath}`;
+}
+
 async function manageCliInstall(args: string[], rawArgs = args): Promise<number> {
   const [action = 'status'] = args;
   const repoRoot = resolveCliRepoRoot();
@@ -481,7 +546,7 @@ async function manageCliInstall(args: string[], rawArgs = args): Promise<number>
         process.stdout.write(
           wantsJson(rawArgs)
             ? `${JSON.stringify(result, null, 2)}\n`
-            : `Neon Pilot CLI: ${result.target}\nUser shell link: ${result.globallyInstalled ? result.linkPath : 'not installed'}\n`,
+            : `Neon Pilot CLI: ${result.target}\nUser shell link: ${formatCliUserShellLinkStatus(result)}\n`,
         );
       return 0;
     }
@@ -795,7 +860,7 @@ async function printCliDoctor(args: string[], rawArgs = args): Promise<number> {
     {
       name: 'userShellLink',
       ok: installStatus.globallyInstalled,
-      detail: installStatus.globallyInstalled ? installStatus.linkPath : 'not installed',
+      detail: formatCliUserShellLinkStatus(installStatus),
     },
     { name: 'appConnection', ok: appConnected, detail: appConnected ? 'connected' : (appError ?? 'not running') },
     { name: 'stateRoot', ok: true, detail: String(paths.stateRoot) },
@@ -946,7 +1011,7 @@ async function invokeContributedCliCommand(argv: string[], options?: { signal?: 
     const match = selected.match;
     const rawArgs = [...commandArgv.slice(match.length), ...cliGlobalFlagArgs(argv)];
     const invocation = await buildCliInvocation(match.definition, rawArgs);
-    const validation = validateCliInvocation(invocation);
+    const validation = validateContributedCliInvocation(invocation);
     if (!validation.ok) {
       writeCliError(
         {
@@ -1045,11 +1110,25 @@ async function invokeContributedCliCommand(argv: string[], options?: { signal?: 
       signal: options?.signal,
     });
     if (!invokeResult.ok) throw new Error('error' in invokeResult ? invokeResult.error : 'Extension CLI command failed.');
+    const resultRecord =
+      invokeResult.result && typeof invokeResult.result === 'object' && !Array.isArray(invokeResult.result)
+        ? (invokeResult.result as Record<string, unknown>)
+        : null;
+    if (match.definition.requiresApp && resultRecord?.ok === false) {
+      throw new Error(
+        typeof resultRecord.error === 'string'
+          ? resultRecord.error
+          : `${match.definition.command} requires the running app, but the app did not execute the command.`,
+      );
+    }
     writeCliActionResult(invokeResult.result, invocation);
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    writeCliError({ code: 'command_error', category: classifyErrorCategory(error), message, command: argv.join(' ') }, wantsJson(argv));
+    writeCliError(
+      { code: 'command_error', category: classifyErrorCategory(error), message, command: formatCliCommandForError(argv) },
+      wantsJson(argv),
+    );
     return classifyError(error);
   }
 }

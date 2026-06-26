@@ -9,6 +9,11 @@ const EXTENSION_JSON_PATH = resolve(PKG_ROOT, 'extension.json');
 describe('system-neon-pilot-admin-cli manifest', () => {
   const manifest = JSON.parse(readFileSync(EXTENSION_JSON_PATH, 'utf-8'));
 
+  it('declares capabilities used by CLI protocol entrypoints', () => {
+    expect(manifest.permissions).toContain('storage:readwrite');
+    expect(manifest.permissions).toContain('ui:invalidate');
+  });
+
   it('keeps admin CLI positional and required flag schemas aligned with backend normalization', () => {
     const commands = new Map(manifest.contributes.cliCommands.map((command: { command: string }) => [command.command, command]));
 

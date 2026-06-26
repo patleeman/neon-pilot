@@ -157,12 +157,13 @@ export async function inspectAgentRuntime(input: unknown, ctx: ExtensionBackendC
 
 export const inspectPromptAssembly = inspectAgentRuntime;
 
-export async function updateSkillEnabled(input: unknown, _ctx: ExtensionBackendContext) {
+export async function updateSkillEnabled(input: unknown, ctx: ExtensionBackendContext) {
   const body = asRecord(input);
   const id = typeof body.id === 'string' ? body.id.trim() : '';
   if (!id) throw new Error('skill id is required.');
   const enabled = body.enabled !== false;
   await setSkillEnabled(id, enabled);
+  await ctx.runtime.refreshSkillMcpConfig();
   return { ok: true, id, enabled };
 }
 
@@ -174,6 +175,7 @@ export async function updateRuntimeCapability(input: unknown, ctx: ExtensionBack
   if (!id) throw new Error('capability id is required.');
   if (kind === 'skill') {
     await setSkillEnabled(id, enabled);
+    await ctx.runtime.refreshSkillMcpConfig();
   } else if (kind === 'extension') {
     const extension = (await listExtensionInstallSummaries()).find((candidate) => candidate.id === id);
     if (!enabled && extension?.required === true) {

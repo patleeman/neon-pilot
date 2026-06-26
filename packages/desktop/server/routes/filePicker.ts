@@ -1,5 +1,6 @@
 import type { Express } from 'express';
 
+import { logError } from '../shared/logging.js';
 import { pickFilesCapability } from '../workspace/workspaceDesktopCapability.js';
 import type { ServerRouteContext } from './context.js';
 
@@ -17,15 +18,20 @@ export function registerFilePickerRoutes(
 ): void {
   initializeFilePickerRoutesContext(context);
   router.post('/api/file-picker', (req, res) => {
-    const { cwd } = req.body as { cwd?: string | null };
-    res.json(
-      pickFilesCapability(
-        { cwd },
-        {
-          getDefaultWebCwd: _getDefaultWebCwd,
-          resolveRequestedCwd: _resolveRequestedCwd,
-        },
-      ),
-    );
+    try {
+      const { cwd } = req.body as { cwd?: string | null };
+      res.json(
+        pickFilesCapability(
+          { cwd },
+          {
+            getDefaultWebCwd: _getDefaultWebCwd,
+            resolveRequestedCwd: _resolveRequestedCwd,
+          },
+        ),
+      );
+    } catch (error) {
+      logError('file picker request failed', { message: error instanceof Error ? error.message : String(error) });
+      res.status(500).json({ error: 'Could not open the file picker. Try again or enter the path manually.' });
+    }
   });
 }

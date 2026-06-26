@@ -97,7 +97,14 @@ afterEach(() => {
 });
 
 describe('ChatView bash trace clusters', () => {
-  it('does not mount collapsed trace blocks until the cluster is expanded', () => {
+  const followedByAssistantMessage = {
+    id: 'assistant-1',
+    type: 'text',
+    ts: '2026-05-13T10:56:50.000Z',
+    text: 'done',
+  } satisfies Extract<MessageBlock, { type: 'text' }>;
+
+  it('keeps a tail internal-work cluster open until a response follows it', () => {
     const bashBlock = {
       id: 'tool-1',
       type: 'tool_use',
@@ -109,6 +116,23 @@ describe('ChatView bash trace clusters', () => {
     } satisfies Extract<MessageBlock, { type: 'tool_use' }>;
 
     const { container } = renderChatView([bashBlock]);
+
+    expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('true');
+    expect(container.textContent).toContain('pwd');
+  });
+
+  it('does not mount collapsed trace blocks until the cluster is expanded', () => {
+    const bashBlock = {
+      id: 'tool-1',
+      type: 'tool_use',
+      ts: '2026-05-13T10:56:49.000Z',
+      tool: 'bash',
+      input: { command: 'pwd' },
+      output: '/Users/patrick/workingdir/neon-pilot',
+      status: 'ok',
+    } satisfies Extract<MessageBlock, { type: 'tool_use' }>;
+
+    const { container } = renderChatView([bashBlock, followedByAssistantMessage]);
 
     expect(container.textContent).toContain('Internal work');
     expect(container.textContent).not.toContain('pwd');
@@ -126,7 +150,7 @@ describe('ChatView bash trace clusters', () => {
       status: 'ok',
     } satisfies Extract<MessageBlock, { type: 'tool_use' }>;
 
-    const { container } = renderChatView([bashBlock]);
+    const { container } = renderChatView([bashBlock, followedByAssistantMessage]);
 
     expect(container.textContent).toContain('Internal work');
     expect(container.textContent).not.toContain('pwd');
@@ -156,7 +180,7 @@ describe('ChatView bash trace clusters', () => {
       status: 'ok',
     } satisfies Extract<MessageBlock, { type: 'tool_use' }>;
 
-    const { container } = renderChatView([toolBlock], { onHydrateMessage });
+    const { container } = renderChatView([toolBlock, followedByAssistantMessage], { onHydrateMessage });
 
     const internalWorkToggle = container.querySelector('button[aria-expanded="false"]');
     expect(internalWorkToggle).toBeTruthy();
@@ -248,7 +272,7 @@ describe('ChatView bash trace clusters', () => {
       },
     } satisfies Extract<MessageBlock, { type: 'tool_use' }>;
 
-    const { container } = renderChatView([editBlock]);
+    const { container } = renderChatView([editBlock, followedByAssistantMessage]);
 
     expect(container.textContent).toContain('Internal work');
     expect(container.textContent).not.toContain('src/app.ts');

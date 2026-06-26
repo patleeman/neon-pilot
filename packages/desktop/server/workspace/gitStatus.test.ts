@@ -9,6 +9,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   countGitStatusEntries,
   parseGitNumstat,
+  parseGitStatusBranch,
+  parseGitStatusChanges,
   readGitRepoInfo,
   readGitStatusSummary,
   readGitStatusSummaryWithTelemetry,
@@ -55,6 +57,33 @@ describe('parseGitNumstat', () => {
 describe('countGitStatusEntries', () => {
   it('counts non-empty porcelain lines', () => {
     expect(countGitStatusEntries(' M tracked.txt\nMM staged-and-unstaged.ts\n?? new-file.txt\n')).toBe(3);
+  });
+});
+
+describe('parseGitStatusBranch', () => {
+  it('keeps detached HEAD visible for the composer git indicator', () => {
+    expect(parseGitStatusBranch('## HEAD (no branch)\n M tracked.txt\n')).toBe('detached HEAD');
+  });
+});
+
+describe('parseGitStatusChanges', () => {
+  it('normalizes rename, copy, and add/delete conflict porcelain statuses', () => {
+    expect(
+      parseGitStatusChanges(
+        [
+          '## main',
+          'AA conflict-added.txt',
+          'DD conflict-deleted.txt',
+          'C  source.txt -> copied.txt',
+          'R  old-name.txt -> new-name.txt',
+        ].join('\n'),
+      ),
+    ).toEqual([
+      { relativePath: 'conflict-added.txt', change: 'conflicted' },
+      { relativePath: 'conflict-deleted.txt', change: 'conflicted' },
+      { relativePath: 'copied.txt', change: 'copied' },
+      { relativePath: 'new-name.txt', change: 'renamed' },
+    ]);
   });
 });
 
@@ -174,5 +203,54 @@ describe('readGitStatusSummary', () => {
       ]),
     });
     expect(summary?.branch).toEqual(expect.any(String));
+  });
+
+  it('reports detached HEAD as a visible branch label', () => {
+    const dir = createTempDir('neon-pilot-web-git-detached-');
+    runGit(['init'], dir);
+
+    writeFileSync(join(dir, 'tracked.txt'), 'one\n');
+    runGit(['add', '.'], dir);
+    runGit(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', 'commit', '-m', 'init'], dir);
+    runGit(['checkout', '--detach', 'HEAD'], dir);
+    writeFileSync(join(dir, 'tracked.txt'), 'one\ntwo\n');
+
+    const summary = readGitStatusSummary(dir);
+
+    expect(summary).toMatchObject({
+      branch: 'detached HEAD',
+      changeCount: 1,
+      linesAdded: 1,
+      linesDeleted: 0,
+    });
+  });
+
+  it('summarizes real conflicted merge entries without raw git error output', () => {
+    const dir = createTempDir('neon-pilot-web-git-conflict-');
+    runGit(['init', '-b', 'main'], dir);
+
+    writeFileSync(join(dir, 'tracked.txt'), 'base\n');
+    runGit(['add', '.'], dir);
+    runGit(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', 'commit', '-m', 'init'], dir);
+    runGit(['checkout', '-b', 'other'], dir);
+    writeFileSync(join(dir, 'tracked.txt'), 'other\n');
+    runGit(['add', '.'], dir);
+    runGit(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', 'commit', '-m', 'other'], dir);
+    runGit(['checkout', 'main'], dir);
+    writeFileSync(join(dir, 'tracked.txt'), 'main\n');
+    runGit(['add', '.'], dir);
+    runGit(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', 'commit', '-m', 'main'], dir);
+
+    expect(() => runGit(['merge', 'other'], dir)).toThrow();
+
+    const summary = readGitStatusSummary(dir);
+
+    expect(summary).toMatchObject({
+      branch: 'main',
+      changeCount: 1,
+      changes: [{ relativePath: 'tracked.txt', change: 'conflicted' }],
+    });
+    expect(JSON.stringify(summary)).not.toContain('CONFLICT');
+    expect(JSON.stringify(summary)).not.toContain('Automatic merge failed');
   });
 });

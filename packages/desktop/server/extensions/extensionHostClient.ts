@@ -121,6 +121,7 @@ export type ExtensionHostStateOperationInput = DistributiveOmit<ExtensionHostSta
 
 export interface ExtensionHostClient {
   health(): Promise<{ status: 'ready' }>;
+  abortConversationResources(conversationId: string): Promise<{ ok: true; killed: number }>;
   checkBackendHealth(): Promise<ExtensionHostBackendOperationResult[]>;
   invokeAction(input: ExtensionHostInvokeActionInput): Promise<ExtensionHostActionInvokeResult>;
   installSubscriptions(input: ExtensionHostInstallSubscriptionsInput): Promise<void>;
@@ -188,6 +189,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('status' in response)) throw new Error('Extension host returned an invalid health response.');
       return { status: response.status };
+    },
+    async abortConversationResources(conversationId) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'abortConversationResources', conversationId });
+      if (!response.ok) throw new Error(response.error);
+      if (!('abortedResources' in response)) throw new Error('Extension host returned an invalid abort resources response.');
+      return response.abortedResources;
     },
     async checkBackendHealth() {
       const response = await handleInProcessExtensionHostRequest({ type: 'checkBackendHealth' });
@@ -373,21 +380,27 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
     if (request.type === 'health') {
       return { ok: true, status: 'ready' };
     }
+    if (request.type === 'abortConversationResources') {
+      const { abortExtensionShellSpawnHandlesForConversation } = await import('./extensionBackendCapabilities.js');
+      return { ok: true, abortedResources: await abortExtensionShellSpawnHandlesForConversation(request.conversationId) };
+    }
     const { invokeExtensionAction } = await import('./extensionBackend.js');
     if (request.type === 'invokeAction') {
       const { createExtensionBackendToolContextFromSnapshot } = await import('./extensionHostToolContext.js');
+      const actionArgs: Parameters<typeof invokeExtensionAction> = [
+        request.extensionId,
+        request.actionId,
+        request.input,
+        await resolveRequestServerContext(request),
+        request.toolContext
+          ? { ...createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot), ...request.toolContext }
+          : createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot),
+        request.agentToolContext,
+      ];
+      if (request.signal) actionArgs.push(request.signal);
       return {
         ok: true,
-        result: await invokeExtensionAction(
-          request.extensionId,
-          request.actionId,
-          request.input,
-          await resolveRequestServerContext(request),
-          request.toolContext
-            ? { ...createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot), ...request.toolContext }
-            : createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot),
-          request.agentToolContext,
-        ),
+        result: await invokeExtensionAction(...actionArgs),
       };
     }
     if (request.type === 'invokeProtocolEntrypoint') {

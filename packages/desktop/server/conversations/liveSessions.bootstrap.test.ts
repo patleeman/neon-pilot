@@ -547,6 +547,7 @@ describe('liveSessions bootstrap helpers', () => {
       '/tmp/workspace',
       expect.objectContaining({
         commandPrefix: 'PREFIX',
+        operations: expect.objectContaining({ exec: expect.any(Function) }),
         spawnHook: expect.any(Function),
       }),
     );
@@ -804,6 +805,7 @@ describe('liveSessions bootstrap helpers', () => {
     expect(sessionManagerOpenMock).toHaveBeenNthCalledWith(1, '/tmp/source-session.jsonl', undefined, '/tmp/source-workspace');
     expect(sessionManagerOpenMock).toHaveBeenNthCalledWith(2, '/tmp/branch-session.jsonl', undefined, '/tmp/source-workspace');
     expect(registry.has('session-fork-source')).toBe(false);
+    expect(publishAppEventMock).toHaveBeenCalledWith({ type: 'session_file_changed', sessionId: 'session-branch-source' });
   });
 
   it('rewinds to a blank session when the selected entry is the first turn', async () => {
@@ -857,5 +859,6 @@ describe('liveSessions bootstrap helpers', () => {
     );
 
     expect(sourceManager.createBranchedSession).not.toHaveBeenCalled();
+    expect(publishAppEventMock).toHaveBeenCalledWith({ type: 'session_file_changed', sessionId: 'session-rewind-source' });
   });
 });

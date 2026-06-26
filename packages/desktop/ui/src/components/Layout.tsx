@@ -18,7 +18,11 @@ import {
   buildConversationSurfacePath,
   readConversationIdFromPathname,
 } from '../conversation/conversationRoutes';
-import { DRAFT_CONVERSATION_ROUTE } from '../conversation/draftConversation';
+import {
+  DRAFT_CONVERSATION_ROUTE,
+  DRAFT_CONVERSATION_STATE_CHANGED_EVENT,
+  readDraftConversationCwd,
+} from '../conversation/draftConversation';
 import { startNewConversation } from '../conversation/newConversationNavigation';
 import { writeClipboardText } from '../desktop/clipboard';
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
@@ -54,7 +58,7 @@ import { attemptLazyRouteRecovery, isRecoverableLazyRouteError, lazyRouteWithRec
 import { routeIsKnowledge, routeMatchesPrefix, routeSupportsWorkbench } from '../navigation/routeRegistry';
 import { CONVERSATION_LAYOUT_CHANGED_EVENT, ensureConversationTabOpen, readConversationLayout } from '../session/sessionTabs';
 import type { DesktopEnvironmentState, SessionMeta } from '../shared/types';
-import { useAllSessions, useSession } from '../store';
+import { useAllSessions } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
@@ -138,6 +142,7 @@ import {
   parseExtensionToolPanelMode,
   resolveActiveExtensionWorkbenchSurface,
   shouldKeepActiveToolWhenConversationHasNoSavedSelection,
+  shouldOpenRailForWorkbenchTool,
   singletonWorkbenchToolTabId,
   type WorkbenchRailMode,
 } from './layout/workbenchRailModel';
@@ -245,6 +250,7 @@ const PageSearchBar = lazyRouteWithRecovery('layout-page-search-bar', () =>
 const WORKBENCH_DOCUMENT_WIDTH_STORAGE_KEY = 'pa:workbench-document-width';
 const WORKBENCH_EXPLORER_WIDTH_STORAGE_KEY = 'pa:workbench-explorer-width';
 const WORKBENCH_EXPLORER_OPEN_STORAGE_KEY = 'pa:workbench-explorer-open';
+const WORKBENCH_TABS_STORAGE_KEY = 'pa:workbench-tabs';
 const WORKBENCH_OPEN_TOOL_TAB_EVENT = 'pa:workbench-open-tool-tab';
 const WORKBENCH_OPEN_ARTIFACT_TAB_EVENT = 'pa:workbench-open-artifact-tab';
 const WORKBENCH_OPEN_WORKSPACE_FILE_EVENT = 'pa:workbench-open-workspace-file';
@@ -268,6 +274,59 @@ interface WorkbenchTabInstance {
   mode: WorkbenchRailMode;
   artifactId?: string | null;
   conversationId?: string | null;
+}
+
+interface StoredWorkbenchTabsState {
+  tabs: WorkbenchTabInstance[];
+  activeTabId: string | null;
+}
+
+function isStoredWorkbenchRailMode(value: unknown): value is WorkbenchRailMode {
+  if (typeof value === 'string' && /^[A-Za-z0-9:_-]{1,200}$/.test(value)) return true;
+  return (
+    value === 'new' ||
+    value === 'files' ||
+    value === 'artifacts' ||
+    value === 'browser' ||
+    value === 'chat' ||
+    value === 'terminal' ||
+    (typeof value === 'string' && parseExtensionToolPanelMode(value as WorkbenchRailMode) !== null)
+  );
+}
+
+function normalizeStoredWorkbenchTab(value: unknown): WorkbenchTabInstance | null {
+  if (!value || typeof value !== 'object') return null;
+  const candidate = value as Record<string, unknown>;
+  if (typeof candidate.id !== 'string' || !candidate.id.trim()) return null;
+  if (!isStoredWorkbenchRailMode(candidate.mode)) return null;
+  return {
+    id: candidate.id,
+    mode: candidate.mode,
+    ...(typeof candidate.artifactId === 'string' ? { artifactId: candidate.artifactId } : {}),
+    ...(typeof candidate.conversationId === 'string' ? { conversationId: candidate.conversationId } : {}),
+  };
+}
+
+export function readStoredWorkbenchTabs(storage: Pick<Storage, 'getItem'> = localStorage): StoredWorkbenchTabsState {
+  try {
+    const raw = storage.getItem(WORKBENCH_TABS_STORAGE_KEY);
+    if (!raw) return { tabs: [], activeTabId: null };
+    const parsed = JSON.parse(raw) as { tabs?: unknown; activeTabId?: unknown };
+    const tabs = Array.isArray(parsed.tabs) ? parsed.tabs.map(normalizeStoredWorkbenchTab).filter((tab) => tab !== null) : [];
+    const activeTabId =
+      typeof parsed.activeTabId === 'string' && tabs.some((tab) => tab.id === parsed.activeTabId) ? parsed.activeTabId : null;
+    return { tabs, activeTabId };
+  } catch {
+    return { tabs: [], activeTabId: null };
+  }
+}
+
+function writeStoredWorkbenchTabs(state: StoredWorkbenchTabsState, storage: Pick<Storage, 'setItem' | 'removeItem'> = localStorage): void {
+  if (state.tabs.length === 0 && state.activeTabId === null) {
+    storage.removeItem(WORKBENCH_TABS_STORAGE_KEY);
+    return;
+  }
+  storage.setItem(WORKBENCH_TABS_STORAGE_KEY, JSON.stringify(state));
 }
 
 export function removeTerminalWorkbenchTabs(
@@ -579,8 +638,8 @@ function desktopLayoutShortcutCommand(action: DesktopLayoutShortcutAction): { co
   }
 }
 
-function dispatchDesktopShortcutAction(action: string): void {
-  window.dispatchEvent(new CustomEvent(DESKTOP_SHORTCUT_EVENT, { detail: { action } }));
+function dispatchDesktopShortcutAction(action: string, source?: string | null): void {
+  window.dispatchEvent(new CustomEvent(DESKTOP_SHORTCUT_EVENT, { detail: { action, ...(source ? { source } : {}) } }));
 }
 
 function isDesktopNavigateDetail(value: unknown): value is { route: string; replace?: boolean } {
@@ -600,7 +659,12 @@ function isDesktopNavigateDetail(value: unknown): value is { route: string; repl
 export function resolveActiveWorkspaceCwd(
   sessions: SessionMeta[] | null | undefined,
   activeConversationId: string | null | undefined,
+  options: { pathname?: string | null; draftCwd?: string | null } = {},
 ): string | null {
+  if (options.pathname === DRAFT_CONVERSATION_ROUTE) {
+    return options.draftCwd?.trim() || null;
+  }
+
   if (!activeConversationId) {
     return null;
   }
@@ -1663,11 +1727,12 @@ export function Layout() {
   const { versions } = useAppEvents();
   const activeConversationId = getActiveConversationId(location.pathname);
   const layoutSessions = useAllSessions();
-  const activeSessionCwd = useSession(activeConversationId)?.cwd ?? null;
+  const [draftConversationCwd, setDraftConversationCwd] = useState(() => readDraftConversationCwd().trim());
+  const activeExtensionCommandSourceRef = useRef<string | null>(null);
   const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
-  const [activeWorkbenchTabId, setActiveWorkbenchTabId] = useState<string | null>(null);
-  const [openWorkbenchTabs, setOpenWorkbenchTabs] = useState<WorkbenchTabInstance[]>([]);
+  const [activeWorkbenchTabId, setActiveWorkbenchTabId] = useState<string | null>(() => readStoredWorkbenchTabs().activeTabId);
+  const [openWorkbenchTabs, setOpenWorkbenchTabs] = useState<WorkbenchTabInstance[]>(() => readStoredWorkbenchTabs().tabs);
   const openWorkbenchTabsRef = useRef(openWorkbenchTabs);
   openWorkbenchTabsRef.current = openWorkbenchTabs;
   const [browserTabsState, setBrowserTabsState] = useState<BrowserTabsState>(() => readBrowserTabsState());
@@ -1735,6 +1800,9 @@ export function Layout() {
   const extensionRegistry = useExtensionRegistry();
   const [extensionKeybindings, setExtensionKeybindings] = useState<ExtensionKeybindingRegistration[]>([]);
   const [extensionCommands, setExtensionCommands] = useState<ExtensionCommandRegistration[]>([]);
+  useEffect(() => {
+    writeStoredWorkbenchTabs({ tabs: openWorkbenchTabs, activeTabId: activeWorkbenchTabId });
+  }, [activeWorkbenchTabId, openWorkbenchTabs]);
   useEffect(() => {
     let cancelled = false;
 
@@ -1815,7 +1883,21 @@ export function Layout() {
   const hasActiveWorkbenchFile = Boolean(activeWorkbenchArtifactId || activeWorkbenchKnowledgeFileId || activeWorkbenchWorkspaceFileId);
   const previousActiveConversationIdRef = useRef<string | null>(activeConversationId);
   const prewarmedLiveSessionWorkspaceCwdsRef = useRef(new Map<string, number>());
-  const activeWorkspaceCwd = activeSessionCwd;
+  useEffect(() => {
+    const refreshDraftConversationCwd = () => {
+      setDraftConversationCwd(readDraftConversationCwd().trim());
+    };
+
+    refreshDraftConversationCwd();
+    window.addEventListener(DRAFT_CONVERSATION_STATE_CHANGED_EVENT, refreshDraftConversationCwd);
+    return () => {
+      window.removeEventListener(DRAFT_CONVERSATION_STATE_CHANGED_EVENT, refreshDraftConversationCwd);
+    };
+  }, []);
+  const activeWorkspaceCwd = resolveActiveWorkspaceCwd(layoutSessions, activeConversationId, {
+    pathname: location.pathname,
+    draftCwd: draftConversationCwd,
+  });
   useEffect(() => {
     if (!activeWorkspaceCwd) {
       return;
@@ -1961,12 +2043,20 @@ export function Layout() {
               : null;
         if (existing) {
           setActiveWorkbenchTabId(existing.id);
+          if (shouldOpenRailForWorkbenchTool(tool, surface)) {
+            setWorkbenchExplorerOpen(true);
+            writeStoredWorkbenchExplorerOpen(true);
+          }
           return;
         }
       }
       const tab = createWorkbenchTabInstance(tool, normalizedOptions);
       setOpenWorkbenchTabs([...current, tab]);
       setActiveWorkbenchTabId(tab.id);
+      if (shouldOpenRailForWorkbenchTool(tool, surface)) {
+        setWorkbenchExplorerOpen(true);
+        writeStoredWorkbenchExplorerOpen(true);
+      }
 
       if (activeConversationId && tool !== 'browser') {
         setSelectedToolByConversation((current) => ({
@@ -2257,7 +2347,7 @@ export function Layout() {
         route: location.pathname,
         'layout.mode': appLayoutMode,
         'conversation.hasActive': Boolean(activeConversationId),
-        'conversation.hasCwd': Boolean(activeSessionCwd?.trim()),
+        'conversation.hasCwd': Boolean(activeWorkspaceCwd?.trim()),
         'workbench.hasActiveTab': Boolean(activeWorkbenchTabId),
         'workbench.hasActiveChatTab': Boolean(activeWorkbenchChatConversationId),
         'workbench.hasActiveFile': hasActiveWorkbenchFile,
@@ -2342,27 +2432,27 @@ export function Layout() {
         return true;
       },
       closeConversation() {
-        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.closeConversation);
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.closeConversation, activeExtensionCommandSourceRef.current);
         return true;
       },
       reopenClosedConversation() {
-        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.reopenClosedConversation);
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.reopenClosedConversation, activeExtensionCommandSourceRef.current);
         return true;
       },
       toggleConversationPin() {
-        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.toggleConversationPin);
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.toggleConversationPin, activeExtensionCommandSourceRef.current);
         return true;
       },
       toggleConversationLock() {
-        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.toggleConversationLock);
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.toggleConversationLock, activeExtensionCommandSourceRef.current);
         return true;
       },
       toggleConversationArchive() {
-        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.toggleConversationArchive);
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.toggleConversationArchive, activeExtensionCommandSourceRef.current);
         return true;
       },
       renameConversation() {
-        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.renameConversation);
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.renameConversation, activeExtensionCommandSourceRef.current);
         return true;
       },
       async duplicateConversation() {
@@ -2381,7 +2471,7 @@ export function Layout() {
         }
       },
       async copyConversationWorkingDirectory() {
-        const cwd = activeSessionCwd?.trim();
+        const cwd = activeWorkspaceCwd?.trim();
         if (!cwd) return false;
         try {
           await writeClipboardText(cwd);
@@ -2412,23 +2502,23 @@ export function Layout() {
         }
       },
       saveConversationTitle() {
-        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.saveConversationTitle);
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.saveConversationTitle, activeExtensionCommandSourceRef.current);
         return true;
       },
       cancelConversationTitleEdit() {
-        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.cancelConversationTitleEdit);
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.cancelConversationTitleEdit, activeExtensionCommandSourceRef.current);
         return true;
       },
       editConversationCwd() {
-        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.editConversationCwd);
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.editConversationCwd, activeExtensionCommandSourceRef.current);
         return true;
       },
       saveConversationCwd() {
-        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.saveConversationCwd);
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.saveConversationCwd, activeExtensionCommandSourceRef.current);
         return true;
       },
       cancelConversationCwdEdit() {
-        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.cancelConversationCwdEdit);
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.cancelConversationCwdEdit, activeExtensionCommandSourceRef.current);
         return true;
       },
       cancelConversationGoal() {
@@ -2823,7 +2913,7 @@ export function Layout() {
     [
       activeRightRailControl,
       activeConversationId,
-      activeSessionCwd,
+      activeWorkspaceCwd,
       activeWorkbenchArtifactId,
       activeWorkbenchChatConversationId,
       activeWorkbenchKnowledgeFileId,
@@ -2896,12 +2986,24 @@ export function Layout() {
     }
 
     function handleExtensionCommandExecute(event: CustomEvent) {
-      const detail = event.detail as { command?: string; args?: unknown; requestId?: string; resolve?: (handled: boolean) => void };
+      const detail = event.detail as {
+        command?: string;
+        args?: unknown;
+        requestId?: string;
+        resolve?: (handled: boolean) => void;
+        source?: unknown;
+      };
       if (!detail.command) return;
-      void executeExtensionCommand(detail.command, detail.args, executeCommandOptions).then((handled) => {
-        detail.resolve?.(handled);
-        if (detail.requestId) void api.acknowledgeExtensionCommand(detail.requestId, handled).catch(() => undefined);
-      });
+      const previousSource = activeExtensionCommandSourceRef.current;
+      activeExtensionCommandSourceRef.current = typeof detail.source === 'string' ? detail.source : null;
+      void executeExtensionCommand(detail.command, detail.args, executeCommandOptions)
+        .then((handled) => {
+          detail.resolve?.(handled);
+          if (detail.requestId) void api.acknowledgeExtensionCommand(detail.requestId, handled).catch(() => undefined);
+        })
+        .finally(() => {
+          activeExtensionCommandSourceRef.current = previousSource;
+        });
     }
 
     window.addEventListener('keydown', handleExtensionKeybinding, true);

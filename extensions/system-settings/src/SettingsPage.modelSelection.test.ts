@@ -61,8 +61,20 @@ describe('settings hash section parsing', () => {
   });
 
   it('maps direct settings routes to their concrete section ids', () => {
+    expect(readSettingsSectionIdFromPathname('/settings/appearance')).toBe('settings-appearance');
+    expect(readSettingsSectionIdFromPathname('/settings/appearance/')).toBe('settings-appearance');
+    expect(readSettingsSectionIdFromPathname('/settings/conversation')).toBe('settings-conversation');
+    expect(readSettingsSectionIdFromPathname('/settings/conversation/')).toBe('settings-conversation');
     expect(readSettingsSectionIdFromPathname('/settings/providers')).toBe('settings-providers');
     expect(readSettingsSectionIdFromPathname('/settings/providers/')).toBe('settings-providers');
+    expect(readSettingsSectionIdFromPathname('/settings/workspace')).toBe('settings-workspace');
+    expect(readSettingsSectionIdFromPathname('/settings/workspace/')).toBe('settings-workspace');
+    expect(readSettingsSectionIdFromPathname('/settings/commands')).toBe('settings-commands');
+    expect(readSettingsSectionIdFromPathname('/settings/commands/')).toBe('settings-commands');
+    expect(readSettingsSectionIdFromPathname('/settings/security')).toBe('settings-security');
+    expect(readSettingsSectionIdFromPathname('/settings/security/')).toBe('settings-security');
+    expect(readSettingsSectionIdFromPathname('/settings/extensions')).toBe('settings-extensions');
+    expect(readSettingsSectionIdFromPathname('/settings/extensions/')).toBe('settings-extensions');
     expect(readSettingsSectionIdFromPathname('/settings/desktop')).toBe('settings-desktop');
     expect(readSettingsSectionIdFromPathname('/settings')).toBe('');
   });

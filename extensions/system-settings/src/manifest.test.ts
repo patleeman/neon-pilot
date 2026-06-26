@@ -25,6 +25,20 @@ describe('system-settings manifest', () => {
     expect(views.find((v: { id: string }) => v.id === 'settings')).toBeDefined();
     expect(views.find((v: { id: string }) => v.id === 'providers')).toBeDefined();
     expect(views.find((v: { id: string }) => v.id === 'desktop')).toBeDefined();
+    expect(
+      Object.fromEntries(
+        views
+          .filter((v: { route?: string }) =>
+            ['/settings/workspace', '/settings/commands', '/settings/security', '/settings/extensions'].includes(v.route ?? ''),
+          )
+          .map((v: { route: string; component: string }) => [v.route, v.component]),
+      ),
+    ).toEqual({
+      '/settings/workspace': 'WorkspaceSettingsPage',
+      '/settings/commands': 'CommandsSettingsPage',
+      '/settings/security': 'SecuritySettingsPage',
+      '/settings/extensions': 'ExtensionsSettingsPage',
+    });
     expect(views.find((v: { id: string; location?: string }) => v.id === 'settings-sidebar')).toMatchObject({
       location: 'sidebar',
       component: 'SettingsSidebar',

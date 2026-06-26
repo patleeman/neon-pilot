@@ -63,6 +63,21 @@ function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function isCuaDriverUnavailable(error: unknown): boolean {
+  const message = messageFrom(error);
+  return /\bENOENT\b/.test(message) || /not found/i.test(message) || /command not found/i.test(message);
+}
+
+function cuaDriverUnavailableResult(error: unknown): Record<string, unknown> {
+  return {
+    ok: false,
+    message: 'Cua Driver is not installed or is not on PATH.',
+    error: messageFrom(error),
+    installHint:
+      'Run the “Install Cua Driver” command, then grant Accessibility and Screen Recording permissions when prompted by your OS.',
+  };
+}
+
 function mergeArgs(input: ComputerUseInput): Record<string, unknown> {
   const args = isRecord(input.arguments) ? { ...input.arguments } : {};
   for (const key of ['pid', 'window_id', 'element', 'x', 'y', 'text', 'keys', 'button', 'capture_after'] as const) {
@@ -136,7 +151,12 @@ export async function computerUse(input: ComputerUseInput, ctx: ExtensionBackend
     // The extension host/tool approval layer should be used for explicit confirmation; this guard keeps the handler safe too.
     assertSafeInput(input);
   }
-  return callCuaTool(input, ctx);
+  try {
+    return await callCuaTool(input, ctx);
+  } catch (error) {
+    if (isCuaDriverUnavailable(error)) return cuaDriverUnavailableResult(error);
+    throw error;
+  }
 }
 
 export async function computerUseStatus(_input: unknown, ctx: ExtensionBackendContext): Promise<unknown> {
@@ -151,14 +171,7 @@ export async function computerUseStatus(_input: unknown, ctx: ExtensionBackendCo
       health,
     };
   } catch (error) {
-    return {
-      ok: false,
-      installed: false,
-      message: 'Cua Driver is not installed or is not on PATH.',
-      error: messageFrom(error),
-      installHint:
-        'Run the “Install Cua Driver” command, then grant Accessibility and Screen Recording permissions when prompted by your OS.',
-    };
+    return { installed: false, ...cuaDriverUnavailableResult(error) };
   }
 }
 
@@ -166,13 +179,15 @@ export async function computerUseDoctor(input: ComputerUseInput, ctx: ExtensionB
   try {
     return await callCuaTool({ ...input, action: 'doctor' }, ctx);
   } catch (error) {
-    return {
-      ok: false,
-      message: 'Cua Driver doctor could not run.',
-      error: messageFrom(error),
-      installHint:
-        'Run the “Install Cua Driver” command, then grant Accessibility and Screen Recording permissions when prompted by your OS.',
-    };
+    return isCuaDriverUnavailable(error)
+      ? cuaDriverUnavailableResult(error)
+      : {
+          ok: false,
+          message: 'Cua Driver doctor could not run.',
+          error: messageFrom(error),
+          installHint:
+            'Run the “Install Cua Driver” command, then grant Accessibility and Screen Recording permissions when prompted by your OS.',
+        };
   }
 }
 

@@ -1,3 +1,5 @@
+import './frontend.css';
+
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
 import {
   DataTable,
@@ -16,8 +18,6 @@ import {
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-
-import './frontend.css';
 
 interface GatewayLogEntry {
   id: string;
@@ -62,6 +62,14 @@ const DEFAULT_STATUS: GatewayStatus = {
 
 function readError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function readClipboardCopyError(error: unknown): string {
+  const message = readError(error);
+  if (/clipboard/i.test(message) || /writeText/i.test(message) || error instanceof DOMException) {
+    return 'Could not copy the config. Copy the setup values manually from the rows below.';
+  }
+  return message;
 }
 
 function formatTime(value: string): string {
@@ -172,7 +180,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
         copyResetTimeoutRef.current = null;
       }, 1600);
     } catch (copyError) {
-      setError(readError(copyError));
+      setError(readClipboardCopyError(copyError));
     }
   }
 

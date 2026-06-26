@@ -23,6 +23,7 @@ import {
   DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS,
 } from '../components/conversation/ConversationDraftEmptyAction';
 import { ConversationGoalPanel } from '../components/conversation/ConversationGoalPanel';
+import { CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT } from '../components/conversation/conversationQueueCommands';
 import { DRAWING_PICKER_OPEN_COMMAND_EVENT } from '../components/conversation/drawingPickerCommands';
 import { addNotification } from '../components/notifications/notificationStore';
 import {
@@ -55,6 +56,7 @@ import {
   activityExecutions,
   activityQueuedPrompts,
   activityScheduledTasks,
+  mergeCanonicalDeferredResumesWithActivity,
 } from '../conversation/conversationActivityPresentation';
 import { getConversationArtifactIdFromSearch, readArtifactPresentation } from '../conversation/conversationArtifacts';
 import { appendIfPresent } from '../conversation/conversationAttachments';
@@ -71,6 +73,7 @@ import {
   canNavigateComposerHistoryValue,
   resolveComposerClearShortcut,
   resolveComposerHistoryNavigation,
+  shouldRestoreFirstQueuedPromptFromComposerShortcut,
 } from '../conversation/conversationComposerEditing';
 import { shouldShowConversationComposerMeta } from '../conversation/conversationComposerMetaVisibility';
 import {
@@ -89,7 +92,7 @@ import {
   resolveConversationComposerSubmitState,
   shouldShowQuestionSubmitAsPrimaryComposerAction,
 } from '../conversation/conversationComposerSubmit';
-import { formatConversationCwdLabel, hasDraftConversationCwd } from '../conversation/conversationCwdPresentation';
+import { formatConversationCwdLabel, hasDraftConversationCwd, isNeutralChatCwdPath } from '../conversation/conversationCwdPresentation';
 import {
   nextDragOverStateForDragEnd,
   nextDragOverStateForDragOver,
@@ -189,11 +192,25 @@ import {
   getConversationTailBlockKey,
   shouldShowScrollToBottomControl,
 } from '../conversation/conversationScroll';
-import { isConversationSessionNotLiveError, primeCreatedConversationOpenCaches } from '../conversation/conversationSessionLifecycle';
-import { type ConversationSlashCommand, parseConversationSlashCommand } from '../conversation/conversationSlashCommand';
+import {
+  formatConversationLocalActionFailure,
+  formatConversationMessageActionFailure,
+  isConversationSessionNotLiveError,
+  primeCreatedConversationOpenCaches,
+  retryConversationActionAfterNotLive,
+} from '../conversation/conversationSessionLifecycle';
+import {
+  type ConversationSlashCommand,
+  parseConversationSlashCommand,
+  resolveConversationSlashCommandExecution,
+} from '../conversation/conversationSlashCommand';
 import { buildSuggestedContextShelfState } from '../conversation/conversationSuggestedContextShelf';
 import { NEW_CONVERSATION_TITLE } from '../conversation/conversationTitle';
-import { INITIAL_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS } from '../conversation/conversationTranscriptPaging';
+import {
+  INITIAL_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS,
+  resolveNextConversationTranscriptTailBlocks,
+  shouldResetConversationTranscriptTailBlocksForLiveTransition,
+} from '../conversation/conversationTranscriptPaging';
 import { buildOpenArtifactSearch, buildOpenKnowledgeFileSearch } from '../conversation/conversationWorkbenchNavigation';
 import {
   buildAvailableDraftWorkspacePaths,
@@ -227,7 +244,10 @@ import {
   readDraftConversationModel,
   readDraftConversationThinkingLevel,
 } from '../conversation/draftConversation';
-import { startReservedDraftConversationLiveSessionCreate } from '../conversation/draftConversationCreateFlow';
+import {
+  resolveReservedDraftConversationCreateCwd,
+  startReservedDraftConversationLiveSessionCreate,
+} from '../conversation/draftConversationCreateFlow';
 import {
   type ExtensionSlashCommandResult,
   findExtensionSlashCommand as findExtensionSlashCommandMatch,
@@ -282,8 +302,14 @@ import { useInitialDraftAttachmentHydration } from '../conversation/useInitialDr
 import { MAX_RELATED_THREAD_HOTKEYS, useRelatedThreadHotkeys } from '../conversation/useRelatedThreadHotkeys';
 import { useWorkspaceComposerEvents } from '../conversation/useWorkspaceComposerEvents';
 import { shouldAutoResumeDeferredResumes } from '../deferred-resume/deferredResumeAutoResume';
-import { describeDeferredResumeStatus, resolveDeferredResumePresentationState } from '../deferred-resume/deferredResumeIndicator';
+import {
+  buildDeferredResumeScheduleTimerKey,
+  buildOverdueScheduledDeferredResumeRefreshKey,
+  describeDeferredResumeStatus,
+  resolveDeferredResumePresentationState,
+} from '../deferred-resume/deferredResumeIndicator';
 import { parseDeferredResumeSlashCommand } from '../deferred-resume/deferredResumeSlashCommand';
+import { writeClipboardText } from '../desktop/clipboard';
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, getDesktopBridge } from '../desktop/desktopBridge';
 import { setExtensionCommandContext } from '../extensions/commands';
 import { ComposerShelfHost } from '../extensions/ComposerShelfHost';
@@ -295,10 +321,18 @@ import { NewConversationPanelHost } from '../extensions/NewConversationPanelHost
 import type { ExtensionMentionRegistration, ExtensionSlashCommandRegistration } from '../extensions/types';
 import { useExtensionBackendConfirmations } from '../extensions/useExtensionBackendConfirmations';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
-import { INITIAL_STREAM_STATE, retryLiveSessionActionAfterTakeover } from '../hooks/sessionStream';
+import {
+  INITIAL_STREAM_STATE,
+  resolveControllableConversationSurfaceId,
+  retryLiveSessionActionAfterTakeover,
+} from '../hooks/sessionStream';
 import { useConversationEventVersion } from '../hooks/useConversationEventVersion';
 import { useConversationScroll } from '../hooks/useConversationScroll';
-import { primeReservedDesktopConversationStateCache, useDesktopConversationState } from '../hooks/useDesktopConversationState';
+import {
+  notifyDesktopConversationStateRefresh,
+  primeReservedDesktopConversationStateCache,
+  useDesktopConversationState,
+} from '../hooks/useDesktopConversationState';
 import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 import { primeSessionDetailCache, useSessionDetail } from '../hooks/useSessions';
 import { useReloadState } from '../local/reloadState';
@@ -325,6 +359,7 @@ import {
   closeConversationTab,
   ensureConversationTabOpen,
   fetchRemoteConversationLayout,
+  forgetConversationTab,
   setActiveConversationTab,
 } from '../session/sessionTabs';
 import type {
@@ -343,8 +378,10 @@ import type {
 } from '../shared/types';
 import type { ConversationSummaryRecord } from '../shared/types';
 import {
+  conversationRuntimeStore,
   runStore,
   sessionStore,
+  taskStore,
   useAllRuns,
   useAllSessions,
   useAllTasks,
@@ -478,7 +515,6 @@ const MAX_VISIBLE_RELATED_THREAD_RESULTS = 10;
 const RELATED_THREAD_RECENT_WINDOW_DAYS = 3;
 const MAX_RELATED_THREAD_CANDIDATES = 24;
 
-const HISTORICAL_TAIL_BLOCKS_JUMP_PADDING = 40;
 const MAX_RENDERED_BLOCKS = 300;
 const HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX = 700;
 const HISTORICAL_PREFETCH_COOLDOWN_MS = 800;
@@ -579,6 +615,27 @@ function collectTranscriptPathCandidateTargets(messages: MessageBlock[] | undefi
 
   return Array.from(targets).sort();
 }
+
+function findLastAssistantMessageText(messages: MessageBlock[] | undefined): string | null {
+  if (!messages?.length) {
+    return null;
+  }
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.type !== 'text') {
+      continue;
+    }
+
+    const text = message.text.trim();
+    if (text) {
+      return text;
+    }
+  }
+
+  return null;
+}
+
 const EMPTY_PENDING_BROWSER_COMMENTS: PendingBrowserComment[] = [];
 
 export { shouldEnableMessageForkControls };
@@ -596,6 +653,16 @@ export function shouldMountComposerShelvesImmediately(input: {
   return input.composerChromeReady && !input.showConversationLoadingState;
 }
 
+export function shouldPrepareConversationComposerChrome(input: {
+  draft: boolean;
+  conversationId: string | null | undefined;
+  composerChromeReady: boolean;
+  showConversationLoadingState: boolean;
+}): boolean {
+  if (input.draft) return false;
+  return Boolean(input.conversationId) && !input.composerChromeReady && !input.showConversationLoadingState;
+}
+
 export function shouldShowNewConversationSetup(input: {
   draft: boolean;
   hasRenderableMessages: boolean;
@@ -604,6 +671,154 @@ export function shouldShowNewConversationSetup(input: {
 }): boolean {
   if (input.draft) return true;
   return !input.hasRenderableMessages && !input.showConversationLoadingState && !input.hasSessionError;
+}
+
+export function shouldReleaseWholeLineBashLock(input: { messages: MessageBlock[] | undefined; command: string | null }): boolean {
+  if (!input.command || !input.messages?.length) {
+    return false;
+  }
+
+  return input.messages.some((message) => {
+    if (message.type !== 'tool_use' || message.tool !== 'bash') {
+      return false;
+    }
+    if (message.input?.command !== input.command) {
+      return false;
+    }
+    if (message.status === 'running' || message.running === true) {
+      return false;
+    }
+    return message.status === 'ok' || message.status === 'error' || message.durationMs !== undefined || message.details !== undefined;
+  });
+}
+
+export async function cancelConversationGoalViaApi(input: {
+  conversationId: string | null | undefined;
+  updateGoal: (conversationId: string, payload: { objective?: string }) => Promise<unknown>;
+  refreshConversation: () => Promise<unknown>;
+  showNotice: (tone: 'accent' | 'danger', text: string, durationMs?: number) => void;
+}): Promise<void> {
+  if (!input.conversationId) {
+    input.showNotice('danger', 'Open a conversation before cancelling a goal.', 4000);
+    return;
+  }
+
+  try {
+    await input.updateGoal(input.conversationId, {});
+    await input.refreshConversation().catch(() => {});
+    input.showNotice('accent', 'Goal cancelled.');
+  } catch (error) {
+    input.showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+  }
+}
+
+type DeferredResumeOperation = 'schedule' | 'fire' | 'cancel' | 'continue';
+
+function hasInternalDeferredResumeFailureDetails(message: string): boolean {
+  return (
+    /Local API route did not complete/i.test(message) ||
+    /\/api\//i.test(message) ||
+    /file:\/\//i.test(message) ||
+    /\bENOENT\b|\bEACCES\b|\bENOTDIR\b|permission denied|no such file or directory/i.test(message) ||
+    /\s+at\s+\S+/i.test(message) ||
+    /\bModule\.[A-Za-z_$][\w$]*/.test(message) ||
+    /packages\/desktop\//i.test(message)
+  );
+}
+
+export function formatDeferredResumeOperationFailure(operation: DeferredResumeOperation, error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const trimmed = message.trim();
+  if (trimmed && !hasInternalDeferredResumeFailureDetails(trimmed)) {
+    return trimmed;
+  }
+
+  switch (operation) {
+    case 'schedule':
+      return 'Could not schedule the wakeup. Check the delay and try again.';
+    case 'fire':
+      return 'Could not start this wakeup. Refresh the conversation and try again.';
+    case 'cancel':
+      return 'Could not cancel this wakeup. Refresh the conversation and try again.';
+    case 'continue':
+      return 'Could not resume deferred work. Refresh the conversation and try again.';
+  }
+}
+
+export async function loadDeferredResumesAfterConversationRefresh(input: {
+  refreshConversation: () => Promise<unknown>;
+  loadDeferredResumes: () => Promise<{ resumes: DeferredResumeSummary[] }>;
+}): Promise<DeferredResumeSummary[]> {
+  await input.refreshConversation().catch(() => {});
+  const data = await input.loadDeferredResumes();
+  return data.resumes;
+}
+
+export type ComposerQuestionHotkeyAction =
+  | { kind: 'none' }
+  | { kind: 'moveOption'; direction: -1 | 1 }
+  | { kind: 'selectOption'; optionIndex: number }
+  | { kind: 'moveQuestion'; direction: -1 | 1 }
+  | { kind: 'submitOrSelect' };
+
+export function resolveComposerQuestionHotkeyAction(input: {
+  key: string;
+  shiftKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+  isComposing: boolean;
+  hasPendingQuestion: boolean;
+  questionSubmitting: boolean;
+  composerInputLength: number;
+  attachmentCount: number;
+  drawingAttachmentCount: number;
+  activeOptionCount: number;
+}): ComposerQuestionHotkeyAction {
+  if (
+    !input.hasPendingQuestion ||
+    input.questionSubmitting ||
+    input.composerInputLength > 0 ||
+    input.attachmentCount > 0 ||
+    input.drawingAttachmentCount > 0 ||
+    input.ctrlKey ||
+    input.metaKey ||
+    input.altKey ||
+    input.isComposing
+  ) {
+    return { kind: 'none' };
+  }
+
+  if (input.key === 'ArrowDown' && !input.shiftKey && input.activeOptionCount > 0) {
+    return { kind: 'moveOption', direction: 1 };
+  }
+
+  if (input.key === 'ArrowUp' && !input.shiftKey && input.activeOptionCount > 0) {
+    return { kind: 'moveOption', direction: -1 };
+  }
+
+  const optionHotkeyIndex = resolveAskUserQuestionOptionHotkey(input.key);
+  if (optionHotkeyIndex >= 0 && optionHotkeyIndex < input.activeOptionCount) {
+    return { kind: 'selectOption', optionIndex: optionHotkeyIndex };
+  }
+
+  if (input.key === 'Tab') {
+    return { kind: 'moveQuestion', direction: input.shiftKey ? -1 : 1 };
+  }
+
+  if (!input.shiftKey && input.key === 'ArrowRight') {
+    return { kind: 'moveQuestion', direction: 1 };
+  }
+
+  if (!input.shiftKey && input.key === 'ArrowLeft') {
+    return { kind: 'moveQuestion', direction: -1 };
+  }
+
+  if ((input.key === 'Enter' || input.key === ' ') && !input.shiftKey) {
+    return { kind: 'submitOrSelect' };
+  }
+
+  return { kind: 'none' };
 }
 
 export function ConversationPage({ draft = false, conversationId }: { draft?: boolean; conversationId?: string | null }) {
@@ -777,9 +992,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const [historicalTailBlocks, setHistoricalTailBlocks] = useState(INITIAL_HISTORICAL_TAIL_BLOCKS);
   const [initialHistoricalWarmupConversationId, setInitialHistoricalWarmupConversationId] = useState<string | null>(null);
   const [autoAnchorTranscriptTail, setAutoAnchorTranscriptTail] = useState(true);
+  const previousConversationLiveDecisionRef = useRef<{
+    conversationId: string | null;
+    isLive: boolean | null;
+  }>({ conversationId: null, isLive: null });
   const desktopConversation = useDesktopConversationState(id ?? null, {
     tailBlocks: historicalTailBlocks,
     includeToolBlocks: false,
+    version: effectiveConversationEventVersion,
     enabled: shouldSubscribeToDesktopConversationState({ draft }),
   });
   const desktopConversationChecking = false;
@@ -907,7 +1127,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const streamReconnect = stream.reconnect;
   const streamTakeover = stream.takeover;
   const desktopConversationRefresh = desktopConversation.refresh;
-  const currentSurfaceId = stream.surfaceId;
+  const currentSurfaceId = resolveControllableConversationSurfaceId(stream.surfaceId, stream.presence);
 
   useEffect(() => {
     const cwdChangeAction = resolveConversationCwdChangeAction({
@@ -1012,6 +1232,28 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     visibleConversationBootstrap?.liveSession?.live ??
     sessionSnapshot?.isLive ??
     (useDesktopConversation ? confirmedLiveValue : confirmedLive);
+  useEffect(() => {
+    const previous = previousConversationLiveDecisionRef.current;
+    const currentIsLive = conversationLiveDecision === true ? true : conversationLiveDecision === false ? false : null;
+
+    if (
+      shouldResetConversationTranscriptTailBlocksForLiveTransition({
+        conversationId: id,
+        currentTailBlocks: historicalTailBlocks,
+        isLive: currentIsLive === true,
+        previousConversationId: previous.conversationId,
+        previousIsLive: previous.isLive,
+      })
+    ) {
+      setHistoricalTailBlocks(INITIAL_HISTORICAL_TAIL_BLOCKS);
+      setAutoAnchorTranscriptTail(true);
+    }
+
+    previousConversationLiveDecisionRef.current = {
+      conversationId: id ?? null,
+      isLive: currentIsLive,
+    };
+  }, [conversationLiveDecision, historicalTailBlocks, id]);
   const conversationNeedsTakeover = false;
   const rawComposerRunState = resolveConversationComposerRunState({
     streamIsStreaming: stream.isStreaming,
@@ -1098,14 +1340,16 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     }
 
     const hasConfirmedConversation =
-      Boolean(sessionSnapshot) || Boolean(visibleSessionDetail) || visibleConversationBootstrap?.liveSession?.live === true;
+      Boolean(sessionSnapshot) ||
+      (!sessionsLoaded && Boolean(visibleSessionDetail)) ||
+      visibleConversationBootstrap?.liveSession?.live === true;
     if (!hasConfirmedConversation) {
       return;
     }
 
     ensureConversationTabOpen(id);
     setActiveConversationTab(id);
-  }, [draft, id, sessionSnapshot, visibleConversationBootstrap?.liveSession?.live, visibleSessionDetail]);
+  }, [draft, id, sessionSnapshot, sessionsLoaded, visibleConversationBootstrap?.liveSession?.live, visibleSessionDetail]);
 
   const [hydratedHistoricalBlocks, setHydratedHistoricalBlocks] = useState<Record<string, MessageBlock>>({});
   const [hydratedHistoricalEntryClusters, setHydratedHistoricalEntryClusters] = useState<Record<string, MessageBlock[]>>({});
@@ -1398,13 +1642,13 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     isStreaming: stream.isStreaming,
   });
   const pendingAskUserQuestion = useMemo(() => findPendingAskUserQuestion(realMessages), [realMessages]);
-  const pendingAskUserQuestionKey = useMemo(() => buildPendingAskUserQuestionKey(pendingAskUserQuestion), [pendingAskUserQuestion]);
   const {
     confirm: pendingExtensionApproval,
     remainingMs: extensionApprovalRemainingMs,
     confirmApproval,
     declineApproval,
   } = useExtensionBackendConfirmations();
+  const pendingAskUserQuestionKey = useMemo(() => buildPendingAskUserQuestionKey(pendingAskUserQuestion), [pendingAskUserQuestion]);
   const composerQuestionAnswersStorageKey = useMemo(
     () => buildComposerQuestionAnswersStorageKey(id, pendingAskUserQuestionKey),
     [id, pendingAskUserQuestionKey],
@@ -1612,6 +1856,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const appliedInitialModelPreferenceLocationKeyRef = useRef<string | null>(null);
   const skippedInitialDeferredResumeLocationKeyRef = useRef<string | null>(null);
   const attemptedDeferredResumeAutoResumeKeyRef = useRef<string | null>(null);
+  const overdueDeferredResumeRefreshRef = useRef<{ key: string; atMs: number } | null>(null);
   const liveSessionContextLifecycleRef = useRef({
     disposed: false,
     latestRequestId: 0,
@@ -1867,6 +2112,17 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       }, durationMs);
     }
   }, []);
+
+  const cancelConversationGoal = useCallback(
+    () =>
+      cancelConversationGoalViaApi({
+        conversationId: id,
+        updateGoal: api.updateGoal,
+        refreshConversation: desktopConversationRefresh,
+        showNotice,
+      }),
+    [desktopConversationRefresh, id, showNotice],
+  );
 
   const ensureConversationCanControl = useCallback((_action: string): boolean => {
     return true;
@@ -2178,6 +2434,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const [pendingAssistantStatusLabel, setPendingAssistantStatusLabel] = useState<string | null>(null);
   const [wholeLineBashRunning, setWholeLineBashRunning] = useState(false);
   const wholeLineBashRunningRef = useRef(false);
+  const pendingWholeLineBashRef = useRef<{ conversationId: string; command: string } | null>(null);
   const composerSubmitRunningRef = useRef(false);
   const [showBackgroundRunDetails, setShowBackgroundRunDetails] = useState(false);
 
@@ -2191,6 +2448,21 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     setPendingAssistantStatusLabel(null);
     setShowBackgroundRunDetails(false);
   }, [id]);
+
+  useEffect(() => {
+    const pending = pendingWholeLineBashRef.current;
+    if (!pending || pending.conversationId !== id) {
+      return;
+    }
+    if (!shouldReleaseWholeLineBashLock({ messages: realMessages, command: pending.command })) {
+      return;
+    }
+
+    pendingWholeLineBashRef.current = null;
+    wholeLineBashRunningRef.current = false;
+    setWholeLineBashRunning(false);
+    setPendingAssistantStatusLabel(null);
+  }, [id, realMessages]);
 
   useEffect(() => {
     if (!shouldClearPendingAssistantStatus(stream.isStreaming)) {
@@ -2263,6 +2535,26 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       setShouldLoadMemoryData(true);
     }
   }, [autocompleteCatalogDemand.needsMemoryData]);
+
+  useEffect(() => {
+    if (!autocompleteCatalogDemand.needsTaskData) {
+      return;
+    }
+
+    let cancelled = false;
+    void api
+      .tasks()
+      .then((items) => {
+        if (!cancelled) {
+          taskStore.replaceAll(items);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [autocompleteCatalogDemand.needsTaskData]);
 
   useEffect(() => {
     if (!shouldLoadMemoryData || requestedMemoryDataRef.current) {
@@ -2445,16 +2737,13 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         capturePrependRestore();
       }
 
-      const requestedTailBlockStep = Math.max(1, Math.ceil(options?.tailBlockStep ?? HISTORICAL_TAIL_BLOCKS_STEP));
-      const tailBlockStep =
-        typeof targetMessageIndex === 'number' ? requestedTailBlockStep : Math.min(requestedTailBlockStep, HISTORICAL_TAIL_BLOCKS_STEP);
-
       setHistoricalTailBlocks((currentTailBlocks) => {
-        const minimumTailBlocks =
-          typeof targetMessageIndex === 'number'
-            ? Math.max(currentTailBlocks + tailBlockStep, historicalTotalBlocks - targetMessageIndex + HISTORICAL_TAIL_BLOCKS_JUMP_PADDING)
-            : currentTailBlocks + tailBlockStep;
-        const nextTailBlocks = Math.min(historicalTotalBlocks, minimumTailBlocks);
+        const nextTailBlocks = resolveNextConversationTranscriptTailBlocks({
+          currentTailBlocks,
+          requestedTailBlockStep: Math.max(1, Math.ceil(options?.tailBlockStep ?? HISTORICAL_TAIL_BLOCKS_STEP)),
+          targetMessageIndex,
+          totalBlocks: historicalTotalBlocks,
+        });
 
         return nextTailBlocks > currentTailBlocks ? nextTailBlocks : currentTailBlocks;
       });
@@ -2953,10 +3242,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   );
   const visibleDeferredResumes = useMemo(() => {
     if (draft) return deferredResumes;
-    if (activityDeferredResumeItems.length === 0) return deferredResumes;
-    const byId = new Map(deferredResumes.map((resume) => [resume.id, resume]));
-    for (const resume of activityDeferredResumeItems) byId.set(resume.id, resume);
-    return Array.from(byId.values());
+    return mergeCanonicalDeferredResumesWithActivity({ canonical: deferredResumes, activity: activityDeferredResumeItems });
   }, [activityDeferredResumeItems, deferredResumes, draft]);
   const deferredResumePresentation = useMemo(
     () =>
@@ -2969,6 +3255,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     [deferredResumeNowMs, isLiveSession, savedConversationSessionFile, visibleDeferredResumes],
   );
   const orderedDeferredResumes = deferredResumePresentation.orderedResumes;
+  const deferredResumeScheduleTimerKey = useMemo(
+    () => buildDeferredResumeScheduleTimerKey(orderedDeferredResumes),
+    [orderedDeferredResumes],
+  );
+  const overdueScheduledDeferredResumeRefreshKey = useMemo(
+    () => buildOverdueScheduledDeferredResumeRefreshKey(orderedDeferredResumes, deferredResumeNowMs),
+    [deferredResumeNowMs, orderedDeferredResumes],
+  );
   const visibleActiveConversationBackgroundExecutions = activityBackgroundExecutions.filter(
     (execution) => execution.id !== conversationRunId && isConversationExecutionActive(execution),
   );
@@ -3115,11 +3409,31 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       return [] as DeferredResumeSummary[];
     }
 
-    const data = await api.deferredResumes(id);
-    setDeferredResumes(data.resumes);
-    await desktopConversationRefresh().catch(() => {});
-    return data.resumes;
+    const resumes = await loadDeferredResumesAfterConversationRefresh({
+      refreshConversation: desktopConversationRefresh,
+      loadDeferredResumes: () => api.deferredResumes(id),
+    });
+    setDeferredResumes(resumes);
+    return resumes;
   }, [desktopConversationRefresh, id]);
+
+  useEffect(() => {
+    if (draft || !overdueScheduledDeferredResumeRefreshKey) {
+      return;
+    }
+
+    const nowMs = Date.now();
+    const lastRefresh = overdueDeferredResumeRefreshRef.current;
+    if (lastRefresh?.key === overdueScheduledDeferredResumeRefreshKey && nowMs - lastRefresh.atMs < 5_000) {
+      return;
+    }
+
+    overdueDeferredResumeRefreshRef.current = {
+      key: overdueScheduledDeferredResumeRefreshKey,
+      atMs: nowMs,
+    };
+    void refetchDeferredResumes().catch(() => {});
+  }, [deferredResumeNowMs, draft, overdueScheduledDeferredResumeRefreshKey, refetchDeferredResumes]);
 
   const refetchLiveSessionContext = useCallback(async () => {
     if (draft || !id) {
@@ -3303,11 +3617,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [id, initialDeferredResumeState, location.key, refetchDeferredResumes]);
 
   useEffect(() => {
-    if (orderedDeferredResumes.length === 0) {
+    if (!deferredResumeScheduleTimerKey) {
       setShowDeferredResumeDetails(false);
       return;
     }
 
+    setDeferredResumeNowMs(Date.now());
     const intervalHandle = window.setInterval(() => {
       setDeferredResumeNowMs(Date.now());
     }, 1000);
@@ -3315,7 +3630,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     return () => {
       window.clearInterval(intervalHandle);
     };
-  }, [orderedDeferredResumes.length]);
+  }, [deferredResumeScheduleTimerKey]);
 
   useEffect(() => {
     if (
@@ -3429,15 +3744,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
   const handleComposerSlashMenuSelect = useCallback(
     async (item: SlashMenuItem) => {
-      const parsedConversationSlash = parseConversationSlashCommand(item.displayCmd.trim());
-      if (parsedConversationSlash?.kind === 'command') {
-        await executeConversationSlashCommand(parsedConversationSlash.command);
-        return;
-      }
-
       composerController.setText(item.insertText);
     },
-    [composerController, executeConversationSlashCommand],
+    [composerController],
   );
 
   const handleComposerMentionSelect = useCallback(
@@ -3732,7 +4041,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [handleScroll]);
 
   useEscapeAbortStream({
-    isStreaming: stream.isStreaming,
+    isStreaming: composerRunState.streamControlsActive,
     abort: stopStreamAndRestoreQueuedPrompts,
     hasBlockingOverlay: () => hasBlockingOverlayOpen(hasBlockingConversationOverlay),
   });
@@ -3996,7 +4305,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
     try {
       const result = await api.pickFolder({
-        cwd: conversationCwdDraft.trim() || currentCwd || undefined,
+        cwd: conversationCwdDraft.trim() || (currentCwdLabel === 'Chat' ? undefined : currentCwd || undefined),
         prompt: 'Choose a working directory',
       });
       if (result.cancelled || !result.path) {
@@ -4021,6 +4330,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     conversationCwdDraft,
     conversationCwdPickBusy,
     currentCwd,
+    currentCwdLabel,
     draft,
     ensureConversationCanControl,
     id,
@@ -4087,16 +4397,16 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       return;
     }
 
-    setConversationCwdDraft(currentCwd ?? '');
+    setConversationCwdDraft(currentCwdLabel === 'Chat' ? '' : (currentCwd ?? ''));
     setConversationCwdError(null);
     setConversationCwdEditorOpen(true);
-  }, [conversationCwdBusy, currentCwd, draft, ensureConversationCanControl, id, showNotice, stream.isStreaming]);
+  }, [conversationCwdBusy, currentCwd, currentCwdLabel, draft, ensureConversationCanControl, id, showNotice, stream.isStreaming]);
 
   const cancelConversationCwdEdit = useCallback(() => {
-    setConversationCwdDraft(currentCwd ?? '');
+    setConversationCwdDraft(currentCwdLabel === 'Chat' ? '' : (currentCwd ?? ''));
     setConversationCwdError(null);
     setConversationCwdEditorOpen(false);
-  }, [currentCwd]);
+  }, [currentCwd, currentCwdLabel]);
 
   useEffect(() => {
     setExtensionCommandContext(
@@ -4238,12 +4548,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   ]);
 
   const ensureConversationIsLive = useCallback(
-    async (actionDescription = 'continue') => {
+    async (actionDescription = 'continue', options?: { forceResume?: boolean }) => {
       if (!id) {
         throw new Error('Conversation unavailable.');
       }
 
-      if (isLiveSession) {
+      if (isLiveSession && !options?.forceResume) {
         return id;
       }
 
@@ -4308,16 +4618,20 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           return;
         }
 
-        const forked = await api.forkSession(
-          liveConversationId,
-          target.entryId,
-          {
-            preserveSource: true,
-            beforeEntry: target.beforeEntry,
-            branchKind: 'rewind',
-          },
-          currentSurfaceId,
-        );
+        const forked = await retryLiveSessionActionAfterTakeover({
+          attemptAction: () =>
+            api.forkSession(
+              liveConversationId,
+              target.entryId,
+              {
+                preserveSource: true,
+                beforeEntry: target.beforeEntry,
+                branchKind: 'rewind',
+              },
+              currentSurfaceId,
+            ),
+          takeOverSessionControl: () => streamTakeover(),
+        });
         const { newSessionId } = forked;
         primeForkedConversationOpenCaches(forked);
         if (target.promptDraft) {
@@ -4329,7 +4643,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           }),
         );
       } catch (error) {
-        showNotice('danger', `Rewind failed: ${(error as Error).message}`);
+        showNotice('danger', formatConversationMessageActionFailure('Rewind', error));
       }
     },
     [
@@ -4341,6 +4655,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       primeForkedConversationOpenCaches,
       realMessages,
       showNotice,
+      streamTakeover,
     ],
   );
 
@@ -4389,16 +4704,20 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         }
 
         setPendingAssistantStatusLabel('Rerunning from edited prompt…');
-        const forked = await api.forkSession(
-          liveConversationId,
-          entryId,
-          {
-            preserveSource: false,
-            beforeEntry: true,
-            branchKind: 'rewind',
-          },
-          currentSurfaceId,
-        );
+        const forked = await retryLiveSessionActionAfterTakeover({
+          attemptAction: () =>
+            api.forkSession(
+              liveConversationId,
+              entryId,
+              {
+                preserveSource: false,
+                beforeEntry: true,
+                branchKind: 'rewind',
+              },
+              currentSurfaceId,
+            ),
+          takeOverSessionControl: () => streamTakeover(),
+        });
         const { newSessionId } = forked;
         primeForkedConversationOpenCaches(forked);
         window.dispatchEvent(
@@ -4409,7 +4728,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         await api.promptSession(newSessionId, editedText, undefined, undefined, undefined, currentSurfaceId);
         showNotice('accent', 'Conversation rerunning from edited prompt.');
       } catch (error) {
-        showNotice('danger', `Edit failed: ${(error as Error).message}`);
+        showNotice('danger', formatConversationMessageActionFailure('Edit', error));
       } finally {
         setPendingAssistantStatusLabel(null);
       }
@@ -4423,6 +4742,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       primeForkedConversationOpenCaches,
       realMessages,
       showNotice,
+      streamTakeover,
     ],
   );
 
@@ -4467,20 +4787,27 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
         let newSessionId: string;
         if (clickedBlock.type === 'user') {
-          const forked = await api.forkSession(
-            liveConversationId,
-            entryId,
-            {
-              preserveSource: true,
-              beforeEntry: true,
-              branchKind: 'fork',
-            },
-            currentSurfaceId,
-          );
+          const forked = await retryLiveSessionActionAfterTakeover({
+            attemptAction: () =>
+              api.forkSession(
+                liveConversationId,
+                entryId,
+                {
+                  preserveSource: true,
+                  beforeEntry: true,
+                  branchKind: 'fork',
+                },
+                currentSurfaceId,
+              ),
+            takeOverSessionControl: () => streamTakeover(),
+          });
           primeForkedConversationOpenCaches(forked);
           newSessionId = forked.newSessionId;
         } else {
-          const branched = await api.branchSession(liveConversationId, entryId, currentSurfaceId);
+          const branched = await retryLiveSessionActionAfterTakeover({
+            attemptAction: () => api.branchSession(liveConversationId, entryId, currentSurfaceId),
+            takeOverSessionControl: () => streamTakeover(),
+          });
           primeForkedConversationOpenCaches(branched);
           newSessionId = branched.newSessionId;
         }
@@ -4496,7 +4823,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           }),
         );
       } catch (error) {
-        showNotice('danger', `Fork failed: ${(error as Error).message}`);
+        showNotice('danger', formatConversationMessageActionFailure('Fork', error));
       }
     },
     [
@@ -4509,6 +4836,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       realMessages,
       rewindConversationFromMessage,
       showNotice,
+      streamTakeover,
     ],
   );
 
@@ -4851,7 +5179,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         `Wakeup scheduled${behavior === 'followUp' ? ' as follow-up' : ''} for ${describeDeferredResumeStatus(result.resume)}.`,
       );
     } catch (error) {
-      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+      showNotice('danger', formatDeferredResumeOperationFailure('schedule', error), 4000);
     } finally {
       setDeferredResumesBusy(false);
     }
@@ -4869,7 +5197,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       await desktopConversationRefresh().catch(() => {});
       showNotice('accent', 'Wakeup firing…');
     } catch (error) {
-      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+      showNotice('danger', formatDeferredResumeOperationFailure('fire', error), 4000);
     } finally {
       setDeferredResumesBusy(false);
     }
@@ -4887,7 +5215,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       await desktopConversationRefresh().catch(() => {});
       showNotice('accent', 'Wakeup cancelled.');
     } catch (error) {
-      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+      showNotice('danger', formatDeferredResumeOperationFailure('cancel', error), 4000);
     } finally {
       setDeferredResumesBusy(false);
     }
@@ -4898,16 +5226,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       return;
     }
 
-    if (isLiveSession) {
-      await refetchDeferredResumes().catch(() => {});
-      return;
-    }
-
     try {
-      await resumeDeferredConversation();
+      await resumeDeferredConversation('resume deferred work', { forceResume: true });
       showNotice('accent', 'Resuming deferred work…');
     } catch (error) {
-      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+      showNotice('danger', formatDeferredResumeOperationFailure('continue', error), 4000);
     }
   }
 
@@ -5097,6 +5420,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   async function executeConversationSlashCommand(
     command: ConversationSlashCommand,
   ): Promise<{ kind: 'handled' } | { kind: 'send'; text: string }> {
+    const execution = resolveConversationSlashCommandExecution(command);
+    if (execution.kind === 'send') {
+      return execution;
+    }
+
     switch (command.action) {
       case 'compact': {
         if (draft) {
@@ -5113,11 +5441,64 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           });
           showNotice('accent', 'Manual compaction complete.');
         } catch (error) {
+          showNotice('danger', formatConversationLocalActionFailure(error, 'Could not compact this conversation.'), 4000);
+        }
+        return { kind: 'handled' };
+      }
+      case 'export': {
+        if (draft) {
+          showNotice('danger', 'Export requires an existing conversation.', 4000);
+          return { kind: 'handled' };
+        }
+
+        composerController.clear();
+        try {
+          let liveConversationId = await ensureConversationIsLive('be exported');
+          const exported = await retryConversationActionAfterNotLive({
+            attemptAction: () => api.exportSession(liveConversationId, command.outputPath),
+            recoverLiveSession: async () => {
+              setConfirmedLive(false);
+              liveConversationId = await ensureConversationIsLive('be exported', { forceResume: true });
+            },
+          });
+          showNotice('accent', exported.path ? `Conversation exported to ${exported.path}.` : 'Conversation exported.');
+        } catch (error) {
+          showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+        }
+        return { kind: 'handled' };
+      }
+      case 'name': {
+        const nextTitle = command.name?.trim();
+        if (!nextTitle) {
+          showNotice('danger', 'Usage: /name <title>', 4000);
+          return { kind: 'handled' };
+        }
+
+        composerController.clear();
+        await renameConversationTo(nextTitle);
+        return { kind: 'handled' };
+      }
+      case 'copy': {
+        const actionState = visibleTranscriptActionStateRef.current;
+        const messages = actionState?.conversationId === id && actionState.messages.length > 0 ? actionState.messages : realMessages;
+        const text = findLastAssistantMessageText(messages);
+        if (!text) {
+          showNotice('danger', 'No assistant message is available to copy.', 4000);
+          return { kind: 'handled' };
+        }
+
+        composerController.clear();
+        try {
+          await writeClipboardText(text);
+          showNotice('accent', 'Copied last assistant message.');
+        } catch (error) {
           showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
         }
         return { kind: 'handled' };
       }
     }
+
+    return { kind: 'handled' };
   }
 
   const handleReplyToSelection = useCallback(
@@ -5161,27 +5542,87 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
     try {
       let conversationId = id ?? null;
+      let navigatedDraftConversation = false;
 
       if (!conversationId) {
         const draftOptions = await buildDraftCreateLiveSessionOptions();
         const created = await api.createLiveSession(draftCwdValue || undefined, undefined, draftOptions);
         conversationId = created.id;
+
+        if (draft) {
+          clearDraftConversationComposer();
+          clearDraftConversationAttachments();
+          clearDraftConversationCwd();
+          clearDraftConversationModelPreferences();
+          ensureConversationTabOpen(conversationId);
+          navigate(`/conversations/${conversationId}`, {
+            replace: true,
+            state: {
+              initialModelPreferenceState: buildConversationInitialModelPreferenceState({
+                conversationId,
+                currentModel,
+                currentThinkingLevel,
+                currentServiceTier,
+                hasExplicitServiceTier,
+                defaultModel,
+                defaultThinkingLevel,
+                defaultServiceTier,
+              }),
+              initialDeferredResumeState: {
+                conversationId,
+                resumes: [],
+              },
+            },
+          });
+          navigatedDraftConversation = true;
+        }
       } else {
         conversationId = await ensureConversationIsLive('run bash commands');
       }
 
-      await api.executeLiveSessionBash(conversationId, normalizedCommand, {
-        excludeFromContext: command.excludeFromContext,
+      pendingWholeLineBashRef.current = { conversationId, command: normalizedCommand };
+      await retryConversationActionAfterNotLive({
+        attemptAction: () =>
+          api.executeLiveSessionBash(conversationId, normalizedCommand, {
+            excludeFromContext: command.excludeFromContext,
+          }),
+        recoverLiveSession: async () => {
+          setConfirmedLive(false);
+          conversationId = await ensureConversationIsLive('run bash commands', { forceResume: true });
+          pendingWholeLineBashRef.current = { conversationId, command: normalizedCommand };
+        },
       });
 
-      if (draft) {
+      pendingWholeLineBashRef.current = null;
+      wholeLineBashRunningRef.current = false;
+      setWholeLineBashRunning(false);
+      setPendingAssistantStatusLabel(null);
+      const currentRuntime = conversationRuntimeStore.get(conversationId);
+      conversationRuntimeStore.apply({
+        id: conversationId,
+        running: false,
+        revision: (currentRuntime?.revision ?? 0) + 1,
+        updatedAt: new Date().toISOString(),
+      });
+
+      if (conversationId === id || navigatedDraftConversation) {
+        notifyDesktopConversationStateRefresh(conversationId);
+        if (navigatedDraftConversation) {
+          window.requestAnimationFrame(() => notifyDesktopConversationStateRefresh(conversationId));
+          window.setTimeout(() => notifyDesktopConversationStateRefresh(conversationId), 250);
+          window.setTimeout(() => notifyDesktopConversationStateRefresh(conversationId), 1_000);
+        }
+        await desktopConversationRefresh();
+      }
+
+      if (draft && !navigatedDraftConversation) {
         clearDraftConversationComposer();
         clearDraftConversationAttachments();
         clearDraftConversationCwd();
         clearDraftConversationModelPreferences();
       }
 
-      if (conversationId !== id) {
+      if (conversationId !== id && !navigatedDraftConversation) {
         ensureConversationTabOpen(conversationId);
         navigate(`/conversations/${conversationId}`, {
           replace: draft,
@@ -5209,12 +5650,15 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         scrollToBottom();
       }, 50);
     } catch (error) {
+      pendingWholeLineBashRef.current = null;
       composerController.setText(inputSnapshot);
-      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+      showNotice('danger', formatConversationMessageActionFailure('Bash command', error), 4000);
     } finally {
-      wholeLineBashRunningRef.current = false;
-      setWholeLineBashRunning(false);
-      setPendingAssistantStatusLabel(null);
+      if (!pendingWholeLineBashRef.current) {
+        wholeLineBashRunningRef.current = false;
+        setWholeLineBashRunning(false);
+        setPendingAssistantStatusLabel(null);
+      }
     }
   }
 
@@ -5537,6 +5981,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                 ? null
                 : window.sessionStorage.getItem(`pa:reload:conversation:${newId}:pending-prompt`) !== null,
           });
+          const reservedCreateCwd = resolveReservedDraftConversationCreateCwd({
+            reserved,
+            draftCwdValue,
+            isNeutralChatCwdPath,
+          });
           const { createdPromise } = await startReservedDraftConversationLiveSessionCreate({
             reserved,
             initialPrompt,
@@ -5546,8 +5995,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                 conversationId: newId,
                 delivery: 'createLiveSession',
               });
-              return api.createLiveSession(draftCwdValue || undefined, prompt?.text, {
+              return api.createLiveSession(reservedCreateCwd, prompt?.text, {
                 ...draftOptions,
+                workspaceCwd: reservedCreateCwd ?? null,
                 ...(prompt?.behavior !== undefined ? { behavior: prompt.behavior } : {}),
                 ...(prompt?.images !== undefined ? { images: prompt.images } : {}),
                 ...(prompt?.attachmentRefs !== undefined ? { attachmentRefs: prompt.attachmentRefs } : {}),
@@ -5746,12 +6196,41 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
   async function stopStreamAndRestoreQueuedPrompts() {
     setPendingAssistantStatusLabel(null);
-    await streamAbort();
+    let clearedQueuedPrompts: Awaited<ReturnType<typeof api.clearQueuedMessages>> | null = null;
+    let clearQueuedPromptsError: unknown = null;
 
-    if (!id || visiblePendingQueue.length === 0) return;
+    if (id && visiblePendingQueue.length > 0) {
+      try {
+        clearedQueuedPrompts = await api.clearQueuedMessages(id, currentSurfaceId);
+      } catch (error) {
+        clearQueuedPromptsError = error;
+      }
+    }
+
+    await streamAbort();
+    if (id) {
+      const currentRuntime = conversationRuntimeStore.get(id);
+      conversationRuntimeStore.apply({
+        id,
+        running: false,
+        revision: (currentRuntime?.revision ?? 0) + 1,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    if (clearQueuedPromptsError) {
+      showNotice(
+        'danger',
+        clearQueuedPromptsError instanceof Error ? clearQueuedPromptsError.message : String(clearQueuedPromptsError),
+        4000,
+      );
+      return;
+    }
+
+    if (!clearedQueuedPrompts || clearedQueuedPrompts.items.length === 0) return;
 
     try {
-      const cleared = await api.clearQueuedMessages(id, currentSurfaceId);
+      const cleared = clearedQueuedPrompts;
       const restoredText = cleared.items
         .map((item) => {
           const text = item.text.trim();
@@ -5899,46 +6378,61 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       return;
     }
 
-    const canUseComposerQuestionHotkeys =
-      Boolean(pendingAskUserQuestion) &&
-      !composerQuestionSubmitting &&
-      composerInput.length === 0 &&
-      attachments.length === 0 &&
-      drawingAttachments.length === 0 &&
-      !e.ctrlKey &&
-      !e.metaKey &&
-      !e.altKey &&
-      !isComposing;
+    if (
+      shouldRestoreFirstQueuedPromptFromComposerShortcut({
+        key: e.key,
+        altKey: e.altKey,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        shiftKey: e.shiftKey,
+        isComposing,
+      })
+    ) {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent(CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT));
+      return;
+    }
 
-    if (canUseComposerQuestionHotkeys) {
-      if (e.key === 'ArrowDown' && composerActiveQuestion) {
+    const composerQuestionHotkeyAction = resolveComposerQuestionHotkeyAction({
+      key: e.key,
+      shiftKey: e.shiftKey,
+      ctrlKey: e.ctrlKey,
+      metaKey: e.metaKey,
+      altKey: e.altKey,
+      isComposing,
+      hasPendingQuestion: Boolean(pendingAskUserQuestion),
+      questionSubmitting: composerQuestionSubmitting,
+      composerInputLength: composerInput.length,
+      attachmentCount: attachments.length,
+      drawingAttachmentCount: drawingAttachments.length,
+      activeOptionCount: composerActiveQuestion?.options.length ?? 0,
+    });
+
+    if (composerQuestionHotkeyAction.kind !== 'none') {
+      if (composerQuestionHotkeyAction.kind === 'moveOption' && composerActiveQuestion) {
         e.preventDefault();
-        setComposerQuestionOptionIndex((current) => moveAskUserQuestionIndex(current, composerActiveQuestion.options.length, 1));
+        setComposerQuestionOptionIndex((current) =>
+          moveAskUserQuestionIndex(current, composerActiveQuestion.options.length, composerQuestionHotkeyAction.direction),
+        );
         return;
       }
 
-      if (e.key === 'ArrowUp' && composerActiveQuestion) {
-        e.preventDefault();
-        setComposerQuestionOptionIndex((current) => moveAskUserQuestionIndex(current, composerActiveQuestion.options.length, -1));
+      if (composerQuestionHotkeyAction.kind === 'selectOption') {
+        if (composerActiveQuestion) {
+          e.preventDefault();
+          handleComposerQuestionOptionSelect(composerQuestionIndex, composerQuestionHotkeyAction.optionIndex);
+        }
         return;
       }
 
-      const optionHotkeyIndex = resolveAskUserQuestionOptionHotkey(e.key);
-      if (composerActiveQuestion && optionHotkeyIndex >= 0 && optionHotkeyIndex < composerActiveQuestion.options.length) {
-        e.preventDefault();
-        handleComposerQuestionOptionSelect(composerQuestionIndex, optionHotkeyIndex);
-        return;
-      }
-
-      const questionDirection = e.key === 'Tab' ? (e.shiftKey ? -1 : 1) : e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-      if (questionDirection !== 0) {
+      if (composerQuestionHotkeyAction.kind === 'moveQuestion') {
         const pendingPresentation = pendingAskUserQuestion?.presentation;
         if (!pendingPresentation) {
           return;
         }
 
         e.preventDefault();
-        if (questionDirection > 0) {
+        if (composerQuestionHotkeyAction.direction > 0) {
           if (composerQuestionIndex < pendingPresentation.questions.length - 1) {
             activateComposerQuestion(composerQuestionIndex + 1);
           }
@@ -5948,7 +6442,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         return;
       }
 
-      if ((e.key === 'Enter' || e.key === ' ') && !e.shiftKey) {
+      if (composerQuestionHotkeyAction.kind === 'submitOrSelect') {
         e.preventDefault();
         if (composerQuestionCanSubmit) {
           await submitComposerQuestionIfReady();
@@ -6233,7 +6727,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       return;
     }
 
-    if (!id || composerChromeReady || !hasRenderableMessages || showConversationLoadingState) {
+    if (!shouldPrepareConversationComposerChrome({ draft, conversationId: id, composerChromeReady, showConversationLoadingState })) {
       return;
     }
 
@@ -6244,7 +6738,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [composerChromeReady, draft, hasRenderableMessages, id, showConversationLoadingState]);
+  }, [composerChromeReady, draft, id, showConversationLoadingState]);
 
   useEffect(() => {
     if (composerShelvesReady) return;
@@ -6838,6 +7332,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     sessionsLoaded,
     confirmedLive,
     sessionLoading,
+    hasAuthoritativeSessionSnapshot: Boolean(sessionSnapshot),
     hasVisibleSessionDetail: Boolean(visibleSessionDetail),
     hasSavedConversationSessionFile: Boolean(savedConversationSessionFile),
     hasPendingInitialPrompt: Boolean(pendingInitialPrompt),
@@ -6848,7 +7343,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       return;
     }
 
-    closeConversationTab(id);
+    forgetConversationTab(id);
   }, [id, missingConversation]);
 
   if (missingConversation) {
@@ -6965,7 +7460,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
               )}
 
               {composerChromeReady ? (
-                <ConversationGoalPanel goal={stream.goalState} onCancel={() => void streamSend('/goal clear')} />
+                <ConversationGoalPanel goal={stream.goalState} onCancel={() => void cancelConversationGoal()} />
               ) : null}
 
               {hasComposerShelfContent ? (

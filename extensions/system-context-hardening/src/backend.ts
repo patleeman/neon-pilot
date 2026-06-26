@@ -5,8 +5,9 @@ const MARKER = '[Neon Pilot truncated oversized tool output';
 
 type TextContent = { type: 'text'; text: string };
 type ToolResultMessage = {
-  role: 'toolResult';
+  role: 'toolResult' | 'bashExecution';
   content?: Array<TextContent | Record<string, unknown>> | string;
+  output?: string;
   details?: Record<string, unknown>;
   truncated?: boolean;
 };
@@ -51,6 +52,15 @@ export function truncateToolResultMessage(message: ToolResultMessage): boolean {
     }
   }
 
+  if (typeof message.output === 'string') {
+    const result = truncateMiddle(message.output);
+    if (result.truncated) {
+      message.output = result.text;
+      truncated = true;
+      originalChars += result.originalChars;
+    }
+  }
+
   if (truncated) {
     message.truncated = true;
     message.details = {
@@ -84,6 +94,32 @@ function truncateResponsesPayload(value: unknown): boolean {
       }
     }
 
+    if (node.role === 'tool' && typeof node.content === 'string') {
+      const result = truncateMiddle(node.content);
+      if (result.truncated) {
+        node.content = result.text;
+        truncated = true;
+      }
+    }
+
+    if (node.type === 'tool_result') {
+      if (typeof node.content === 'string') {
+        const result = truncateMiddle(node.content);
+        if (result.truncated) {
+          node.content = result.text;
+          truncated = true;
+        }
+      } else if (Array.isArray(node.content)) {
+        for (const part of node.content) {
+          if (!isRecord(part) || part.type !== 'text' || typeof part.text !== 'string') continue;
+          const result = truncateMiddle(part.text);
+          if (!result.truncated) continue;
+          part.text = result.text;
+          truncated = true;
+        }
+      }
+    }
+
     for (const value of Object.values(node)) visit(value);
   };
 
@@ -94,7 +130,9 @@ function truncateResponsesPayload(value: unknown): boolean {
 export function createContextHardeningAgentExtension(): (pi: ExtensionAPI) => void {
   return (pi: ExtensionAPI) => {
     pi.on('message_end', async (event) => {
-      if (!isRecord(event) || !isRecord(event.message) || event.message.role !== 'toolResult') return;
+      if (!isRecord(event) || !isRecord(event.message) || (event.message.role !== 'toolResult' && event.message.role !== 'bashExecution')) {
+        return;
+      }
       truncateToolResultMessage(event.message as ToolResultMessage);
     });
 

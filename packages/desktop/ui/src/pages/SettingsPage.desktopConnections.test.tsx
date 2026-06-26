@@ -95,6 +95,17 @@ describe('DesktopConnectionsSettingsPanel', () => {
         currentVersion: '0.3.7',
       },
     });
+    vi.spyOn(api, 'invokeExtensionAction').mockResolvedValue({
+      ok: true,
+      result: {
+        target: '/Users/patrick/.local/state/neon-pilot-testing/bin/neon-pilot',
+        binDir: '/Users/patrick/.local/state/neon-pilot-testing/bin',
+        linkPath: '/Users/patrick/.local/bin/neon-pilot',
+        globallyInstalled: false,
+        linkExists: false,
+        linkConflict: false,
+      },
+    });
   });
 
   afterEach(() => {
@@ -106,6 +117,7 @@ describe('DesktopConnectionsSettingsPanel', () => {
     document.body.innerHTML = '';
     document.documentElement.dataset.neonPilotDesktop = '';
     delete window.neonPilotDesktop;
+    vi.restoreAllMocks();
   });
 
   it('renders app behavior settings', async () => {
@@ -212,6 +224,29 @@ describe('DesktopConnectionsSettingsPanel', () => {
     expect(mocks.updateDesktopAppPreferences).toHaveBeenCalledWith({ startOnSystemStart: true });
     expect(mocks.readDesktopAppPreferences).toHaveBeenCalledTimes(4);
   });
+
+  it('shows occupied CLI links without offering an unsafe install action', async () => {
+    vi.spyOn(api, 'invokeExtensionAction').mockResolvedValue({
+      ok: true,
+      result: {
+        target: '/Users/patrick/.local/state/neon-pilot-testing/bin/neon-pilot',
+        binDir: '/Users/patrick/.local/state/neon-pilot-testing/bin',
+        linkPath: '/Users/patrick/.local/bin/neon-pilot',
+        globallyInstalled: false,
+        linkExists: true,
+        linkConflict: true,
+        linkTarget: '/Users/patrick/.local/state/neon-pilot/bin/neon-pilot',
+      },
+    });
+
+    const { container } = renderPanel();
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('Used by another install');
+    expect(container.textContent).toContain('The shell command is already linked to another Neon Pilot install.');
+    expect(container.textContent).toContain('/Users/patrick/.local/state/neon-pilot/bin/neon-pilot');
+    expect(container.querySelector('button[aria-label="Install Neon Pilot CLI"]')).toBeNull();
+  });
 });
 
 describe('DesktopKeyboardShortcutsSettingsSection', () => {
@@ -259,6 +294,41 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
     document.body.innerHTML = '';
     document.documentElement.dataset.neonPilotDesktop = '';
     delete window.neonPilotDesktop;
+  });
+
+  it('renders extension shortcut ownership without internal extension IDs', async () => {
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-browser',
+        surfaceId: 'open-browser',
+        packageType: 'system',
+        title: 'Open browser',
+        keys: ['mod+shift+b'],
+        command: 'rail.open',
+        args: { extensionId: 'system-browser', surfaceId: 'browser-tabs' },
+        scope: 'global',
+        defaultKeys: ['mod+shift+b'],
+        enabled: true,
+      },
+    ]);
+    vi.spyOn(api, 'updateExtensionKeybinding').mockResolvedValue({ ok: true });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<DesktopKeyboardShortcutsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    const row = Array.from(container.querySelectorAll('.settings-page-control-row')).find((candidate) =>
+      candidate.textContent?.includes('Open browser'),
+    );
+    expect(row?.textContent).toContain('Built-in extension · Global shortcut');
+    expect(row?.textContent).not.toContain('system-browser');
+    expect(row?.textContent).not.toContain('browser-tabs');
   });
 
   it('captures arbitrary shortcut chords and auto-saves every desktop shortcut', async () => {
@@ -353,6 +423,118 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
 
     expect(container.textContent).toContain('Duplicate shortcut: CommandOrControl+N is already assigned.');
     expect(mocks.updateDesktopAppPreferences).not.toHaveBeenCalled();
+  });
+
+  it('rejects desktop shortcut edits that conflict with extension keybindings before writing preferences', async () => {
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-browser',
+        surfaceId: 'open-browser',
+        packageType: 'system',
+        title: 'Open browser',
+        keys: ['mod+shift+b'],
+        command: 'rail.open',
+        args: { extensionId: 'system-browser', surfaceId: 'browser-tabs' },
+        scope: 'global',
+        defaultKeys: ['mod+shift+b'],
+        enabled: true,
+      },
+    ]);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<DesktopKeyboardShortcutsSettingsSection />);
+    });
+    await flushAsyncWork();
+    mocks.updateDesktopAppPreferences.mockClear();
+
+    const shortcutButton = container.querySelector('#settings-keyboard-conversationMode');
+    if (!(shortcutButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected conversation mode shortcut capture button');
+    }
+
+    act(() => {
+      shortcutButton.focus();
+      shortcutButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    act(() => {
+      shortcutButton.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          key: 'b',
+          code: 'KeyB',
+          metaKey: true,
+          shiftKey: true,
+        }),
+      );
+    });
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('Duplicate shortcut: CommandOrControl+Shift+B is already assigned.');
+    expect(container.textContent).toContain('Open browser already uses it.');
+    expect(container.textContent).toContain('⌘/Ctrl + Shift + b is assigned to both Conversation mode and Open browser.');
+    expect(mocks.updateDesktopAppPreferences).not.toHaveBeenCalled();
+  });
+
+  it('rejects extension shortcut edits that conflict with desktop shortcuts before writing keybindings', async () => {
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-browser',
+        surfaceId: 'open-browser',
+        packageType: 'system',
+        title: 'Open browser',
+        keys: ['mod+shift+b'],
+        command: 'rail.open',
+        args: { extensionId: 'system-browser', surfaceId: 'browser-tabs' },
+        scope: 'global',
+        defaultKeys: ['mod+shift+b'],
+        enabled: true,
+      },
+    ]);
+    const updateSpy = vi.spyOn(api, 'updateExtensionKeybinding').mockResolvedValue({ ok: true });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<DesktopKeyboardShortcutsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    const shortcutButton = container.querySelector('#settings-keyboard-system-browser\\:open-browser');
+    if (!(shortcutButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected Open browser shortcut capture button');
+    }
+
+    act(() => {
+      shortcutButton.focus();
+      shortcutButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    act(() => {
+      shortcutButton.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          key: 'n',
+          code: 'KeyN',
+          metaKey: true,
+        }),
+      );
+    });
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('Duplicate shortcut: CommandOrControl+N is already assigned.');
+    expect(container.textContent).toContain('New conversation already uses it.');
+    expect(updateSpy).not.toHaveBeenCalled();
   });
 
   it('detects shortcut conflicts even when modifiers are declared in a different order', async () => {
@@ -533,11 +715,179 @@ describe('CommandsSettingsSection', () => {
     });
     await flushAsyncWork();
 
-    expect(api.updateExtensionKeybinding).toHaveBeenCalledWith(
-      'system-conversation-tools',
-      'open-command-palette',
-      expect.objectContaining({ enabled: false, when: 'workspace.open' }),
-    );
+    expect(api.updateExtensionKeybinding).toHaveBeenCalledWith('system-conversation-tools', 'open-command-palette', { enabled: false });
+  });
+
+  it('does not render internal command IDs in command shortcut descriptions', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([
+      {
+        extensionId: 'system-settings',
+        id: 'open-settings',
+        title: 'Open Settings',
+        action: 'open-settings',
+        category: 'Settings',
+        packageType: 'system',
+      },
+    ]);
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-settings',
+        surfaceId: 'open-settings',
+        title: 'Open Settings',
+        keys: ['mod+,'],
+        command: 'system-settings.open-settings',
+        scope: 'global',
+        defaultKeys: ['mod+,'],
+        enabled: true,
+      },
+    ]);
+    vi.spyOn(api, 'updateExtensionKeybinding').mockResolvedValue({ ok: true });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<CommandsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    const rows = Array.from(container.querySelectorAll('.settings-page-control-row'));
+    const toggleSidebarRow = rows.find((row) => row.textContent?.includes('Toggle Left Sidebar'));
+    const openSettingsRow = rows.find((row) => row.textContent?.includes('Open Settings'));
+
+    expect(toggleSidebarRow?.textContent).toContain('App · Built-in');
+    expect(toggleSidebarRow?.textContent).not.toContain('layout.toggleSidebar');
+    expect(openSettingsRow?.textContent).toContain('Settings · Built-in extension');
+    expect(openSettingsRow?.textContent).not.toContain('system-settings.open-settings');
+  });
+
+  it('cancels capture mode on Escape without saving', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([
+      {
+        extensionId: 'system-settings',
+        id: 'open-settings',
+        title: 'Open Settings',
+        action: 'settings.open',
+      },
+    ]);
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-settings',
+        surfaceId: 'open-settings',
+        title: 'Open Settings',
+        keys: ['mod+,'],
+        command: 'settings.open',
+        scope: 'global',
+        defaultKeys: ['mod+,'],
+        enabled: true,
+      },
+    ]);
+    const updateSpy = vi.spyOn(api, 'updateExtensionKeybinding').mockResolvedValue({ ok: true });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<CommandsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    const rows = Array.from(container.querySelectorAll('.settings-page-control-row'));
+    const openSettingsRow = rows.find((row) => row.textContent?.includes('Open Settings'));
+    const shortcutButton = openSettingsRow?.querySelector<HTMLButtonElement>('button.ui-shortcut-capture');
+    if (!(shortcutButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected Open Settings shortcut capture button in extension row');
+    }
+
+    act(() => {
+      shortcutButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(shortcutButton.textContent).toContain('Press shortcut...');
+    await flushAsyncWork();
+
+    act(() => {
+      shortcutButton.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          key: 'Escape',
+          code: 'Escape',
+        }),
+      );
+    });
+    await flushAsyncWork();
+
+    expect(shortcutButton.textContent).toContain('⌘/Ctrl + ,');
+    expect(shortcutButton.textContent).not.toContain('Press shortcut...');
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  it('cancels capture mode when clicking outside', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([
+      {
+        extensionId: 'system-settings',
+        id: 'open-settings',
+        title: 'Open Settings',
+        action: 'settings.open',
+      },
+    ]);
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-settings',
+        surfaceId: 'open-settings',
+        title: 'Open Settings',
+        keys: ['mod+shift+s'],
+        command: 'settings.open',
+        scope: 'global',
+        defaultKeys: ['mod+shift+s'],
+        enabled: true,
+      },
+    ]);
+    const updateSpy = vi.spyOn(api, 'updateExtensionKeybinding').mockResolvedValue({ ok: true });
+
+    const container = document.createElement('div');
+    const outsideButton = document.createElement('button');
+    outsideButton.textContent = 'Outside';
+    document.body.appendChild(container);
+    document.body.appendChild(outsideButton);
+
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(
+        <div>
+          <CommandsSettingsSection />
+        </div>,
+      );
+    });
+    await flushAsyncWork();
+
+    const rows = Array.from(container.querySelectorAll('.settings-page-control-row'));
+    const openSettingsRow = rows.find((row) => row.textContent?.includes('Open Settings'));
+    const shortcutButton = openSettingsRow?.querySelector<HTMLButtonElement>('button.ui-shortcut-capture');
+    if (!(shortcutButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected Open Settings shortcut capture button in extension row');
+    }
+
+    act(() => {
+      shortcutButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(shortcutButton.textContent).toContain('Press shortcut...');
+    await flushAsyncWork();
+
+    act(() => {
+      outsideButton.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      outsideButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    expect(shortcutButton.textContent).toContain('⌘/Ctrl + Shift + s');
+    expect(shortcutButton.textContent).not.toContain('Press shortcut...');
+    expect(updateSpy).not.toHaveBeenCalled();
   });
 
   it('rejects conflicting command shortcut edits before writing extension keybindings', async () => {
@@ -609,6 +959,145 @@ describe('CommandsSettingsSection', () => {
     expect(container.textContent).toContain('⌘/Ctrl + Shift + B is already assigned to Open browser.');
     expect(updateSpy).not.toHaveBeenCalled();
     expect(shortcutButton.textContent).toContain('Click to record shortcut');
+  });
+
+  it('restores the visible shortcut when a declared command shortcut save fails', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([
+      {
+        extensionId: 'system-scratchpad',
+        id: 'scratchpad.open',
+        title: 'Open Scratchpad',
+        action: 'rail.open',
+        args: { extensionId: 'system-scratchpad', surfaceId: 'scratchpad' },
+      },
+    ]);
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-scratchpad',
+        surfaceId: 'scratchpad.open',
+        title: 'Open Scratchpad',
+        keys: ['mod+shift+s'],
+        command: 'rail.open',
+        args: { extensionId: 'system-scratchpad', surfaceId: 'scratchpad' },
+        scope: 'global',
+        defaultKeys: ['mod+shift+s'],
+        enabled: true,
+      },
+    ]);
+    vi.spyOn(api, 'updateExtensionKeybinding').mockRejectedValue(new Error('Cannot create keybinding for unknown command: rail.open'));
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<CommandsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    const shortcutButton = container.querySelector<HTMLButtonElement>('#settings-command-keybinding-system-scratchpad\\:scratchpad\\.open');
+    if (!(shortcutButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected Open Scratchpad shortcut capture button');
+    }
+
+    act(() => {
+      shortcutButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    act(() => {
+      shortcutButton.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          key: 's',
+          code: 'KeyS',
+          metaKey: true,
+          altKey: true,
+          shiftKey: true,
+        }),
+      );
+    });
+    await flushAsyncWork();
+
+    expect(api.updateExtensionKeybinding).toHaveBeenCalledWith('system-scratchpad', 'scratchpad.open', {
+      keys: ['CommandOrControl+Alt+Shift+S'],
+      enabled: true,
+    });
+    expect(shortcutButton.textContent).toContain('⌘/Ctrl + Shift + s');
+    expect(shortcutButton.textContent).not.toContain('⌘/Ctrl + Alt + Shift + S');
+    expect(container.textContent).toContain('Could not save shortcut because its command is no longer available.');
+  });
+
+  it('sanitizes internal command shortcut save failures', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([
+      {
+        extensionId: 'system-scratchpad',
+        id: 'scratchpad.open',
+        title: 'Open Scratchpad',
+        action: 'rail.open',
+        args: { extensionId: 'system-scratchpad', surfaceId: 'scratchpad' },
+      },
+    ]);
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-scratchpad',
+        surfaceId: 'scratchpad.open',
+        title: 'Open Scratchpad',
+        keys: ['mod+shift+s'],
+        command: 'rail.open',
+        args: { extensionId: 'system-scratchpad', surfaceId: 'scratchpad' },
+        scope: 'global',
+        defaultKeys: ['mod+shift+s'],
+        enabled: true,
+      },
+    ]);
+    vi.spyOn(api, 'updateExtensionKeybinding').mockRejectedValue(
+      new Error(
+        'Local API route did not complete for PATCH /api/extensions/keybindings/system-scratchpad/scratchpad.open at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/app/localApi.js:132:20)',
+      ),
+    );
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<CommandsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    const shortcutButton = container.querySelector<HTMLButtonElement>('#settings-command-keybinding-system-scratchpad\\:scratchpad\\.open');
+    if (!(shortcutButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected Open Scratchpad shortcut capture button');
+    }
+
+    act(() => {
+      shortcutButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    act(() => {
+      shortcutButton.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          key: 's',
+          code: 'KeyS',
+          metaKey: true,
+          altKey: true,
+          shiftKey: true,
+        }),
+      );
+    });
+    await flushAsyncWork();
+
+    expect(shortcutButton.textContent).toContain('⌘/Ctrl + Shift + s');
+    expect(container.textContent).toContain('Could not save shortcut. Reload extensions and try again.');
+    expect(container.textContent).not.toContain('/api/extensions/keybindings');
+    expect(container.textContent).not.toContain('localApi.js');
+    expect(container.textContent).not.toContain('file://');
+    expect(container.textContent).not.toContain('Module.ep');
   });
 
   it('saves non-conflicting command shortcut edits', async () => {

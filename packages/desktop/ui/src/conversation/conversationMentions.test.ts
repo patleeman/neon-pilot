@@ -134,6 +134,35 @@ describe('conversationMentions', () => {
     expect(filterMentionItems(items, '@', { limit: 5000 }).map((item) => item.id)).toHaveLength(MAX_MENTION_MENU_ITEMS);
   });
 
+  it('ranks exact and shorter file mention matches ahead of nested path contains matches', () => {
+    const items = buildMentionItems({
+      tasks: [],
+      workspaceEntries: [
+        {
+          name: 'README.md',
+          path: 'docs/README.md',
+          kind: 'file',
+          size: 42,
+          modifiedAt: '2026-03-11T12:00:00.000Z',
+          gitStatus: null,
+          descendantGitStatusCount: 0,
+        },
+        {
+          name: 'README.md',
+          path: 'README.md',
+          kind: 'file',
+          size: 42,
+          modifiedAt: '2026-03-11T12:00:00.000Z',
+          gitStatus: null,
+          descendantGitStatusCount: 0,
+        },
+      ],
+    });
+
+    expect(filterMentionItems(items, '@README.md').map((item) => item.id)).toEqual(['@README.md', '@docs/README.md']);
+    expect(filterMentionItems(items, '@readme').map((item) => item.id)).toEqual(['@README.md', '@docs/README.md']);
+  });
+
   it('resolves mentioned items in encounter order for path-style file and folder references', () => {
     const items = buildMentionItems({
       tasks: [

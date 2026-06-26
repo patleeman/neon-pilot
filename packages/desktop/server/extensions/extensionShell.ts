@@ -11,10 +11,14 @@ import { assertExtensionPermission } from './extensionPermissions.js';
 const spawnedExtensionProcesses = new Set<ChildProcess>();
 let shutdownHooksInstalled = false;
 
-function terminateSpawnedExtensionProcesses(): void {
+export function terminateSpawnedExtensionProcesses(): number {
+  let killed = 0;
   for (const child of spawnedExtensionProcesses) {
+    spawnedExtensionProcesses.delete(child);
+    killed += 1;
     terminateProcessGroup(child);
   }
+  return killed;
 }
 
 function installShutdownHooks(): void {

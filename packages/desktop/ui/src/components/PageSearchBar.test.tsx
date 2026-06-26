@@ -152,6 +152,21 @@ describe('PageSearchBar', () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it('keeps the floating search controls positioned inside the viewport', async () => {
+    const { container } = renderHarness();
+
+    dispatchDesktopShortcutCommand('page.find');
+    await flushAsyncWork();
+
+    const wrapper = container.querySelector('[data-page-search-ignore="true"]');
+    const shell = container.querySelector('[role="group"]');
+
+    expect(wrapper?.className).toContain('w-[min(32rem,calc(100vw-2rem))]');
+    expect(shell?.className).toContain('!static');
+    expect(shell?.className).toContain('!inset-auto');
+    expect(shell?.className).toContain('w-full');
+  });
+
   it('navigates and closes from command-only desktop shortcut events', async () => {
     const { container } = renderHarness();
 

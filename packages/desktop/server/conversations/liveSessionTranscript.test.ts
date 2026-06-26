@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   applyLatestCompactionSummaryTitle,
+  buildLiveStateBlocks,
   mergeConversationHistoryBlocks,
   resolveCompactionSummaryTitle,
 } from './liveSessionTranscript.js';
@@ -113,6 +114,39 @@ describe('liveSessionTranscript', () => {
     const liveTool = toolBlock({ id: 'tool-live', toolCallId: 'call-1', output: '' });
 
     expect(mergeConversationHistoryBlocks([persistedTool], [liveTool])).toEqual([persistedTool]);
+  });
+
+  it('marks live snapshot tool result errors and hides extension-host abort internals', () => {
+    const blocks = buildLiveStateBlocks({
+      state: {
+        messages: [
+          {
+            role: 'assistant',
+            content: [{ type: 'toolCall', id: 'call-aborted', name: 'bash', arguments: { command: 'sleep 30' } }],
+          },
+          {
+            role: 'toolResult',
+            toolCallId: 'call-aborted',
+            toolName: 'bash',
+            content: [
+              {
+                type: 'text',
+                text: 'Extension host RPC request action:system-runs/bash failed at http://127.0.0.1:55183/action: This operation was aborted',
+              },
+            ],
+          },
+        ],
+      },
+    } as never);
+
+    expect(blocks.at(-1)).toEqual(
+      expect.objectContaining({
+        type: 'tool_use',
+        tool: 'bash',
+        status: 'error',
+        output: 'Stopped before finishing. The tool call was interrupted or cancelled.',
+      }),
+    );
   });
 
   it('does not let malformed persisted timestamps hide newer live blocks', () => {

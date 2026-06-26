@@ -33,6 +33,7 @@ import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import {
+  deleteConversationCatalogSessions,
   readConversationAssetCache,
   readConversationDetailCache,
   upsertConversationCatalogSession,
@@ -81,6 +82,7 @@ import {
 } from './sessionHeavyContent.js';
 import { readCurrentSessionLeafIdFromFile, readSessionIdFromSessionRecordFile } from './sessionIdentity.js';
 import { buildSessionImageAssets, imageMimeType, imageSrc } from './sessionImages.js';
+import { isToolResultOutputError, presentToolResultOutput } from './toolResultPresentation.js';
 import {
   attachTranscriptRenderItems,
   buildTranscriptRenderItemsFromDisplayBlocks,
@@ -372,6 +374,7 @@ export type DisplayBlock =
       input: Record<string, unknown>;
       output: string;
       durationMs?: number;
+      status?: 'running' | 'ok' | 'error';
       toolCallId: string;
       details?: unknown;
       outputDeferred?: boolean;
@@ -1081,13 +1084,16 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
     if (role === 'bashExecution') {
       const commandText = typeof msg.message.command === 'string' ? msg.message.command : '';
       const outputText = typeof msg.message.output === 'string' ? msg.message.output : '';
+      const outputDisplayLimit = 8000;
+      const displayOutput = outputText.slice(0, outputDisplayLimit);
+      const outputWasDisplayTruncated = outputText.length > displayOutput.length;
       const executionWrappers = readExecutionWrappers(msg.message.details);
       const bashDetails = {
         displayMode: 'terminal',
         ...(executionWrappers.length > 0 ? { executionWrappers } : {}),
         ...(typeof msg.message.exitCode === 'number' ? { exitCode: msg.message.exitCode } : {}),
         ...(msg.message.cancelled === true ? { cancelled: true } : {}),
-        ...(msg.message.truncated === true ? { truncated: true } : {}),
+        ...(msg.message.truncated === true || outputWasDisplayTruncated ? { truncated: true } : {}),
         ...(typeof msg.message.fullOutputPath === 'string' && msg.message.fullOutputPath.trim().length > 0
           ? { fullOutputPath: msg.message.fullOutputPath }
           : {}),
@@ -1101,7 +1107,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
         ts,
         tool: 'bash',
         input: { command: commandText },
-        output: outputText.slice(0, 8000),
+        output: displayOutput,
         toolCallId: baseId,
         ...(Object.keys(bashDetails).length > 0 ? { details: bashDetails } : {}),
       });
@@ -1152,11 +1158,13 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
 
     if (role === 'toolResult' && toolCallId) {
       const idx = toolCallIndex.get(toolCallId);
-      const resultText = contentBlocks
+      const rawResultText = contentBlocks
         .filter((block) => block.type === 'text')
         .map((block) => block.text ?? '')
         .join('\n')
         .slice(0, 8000);
+      const isError = (msg.message as { isError?: unknown }).isError === true || isToolResultOutputError(rawResultText);
+      const resultText = presentToolResultOutput({ text: rawResultText, isError });
 
       if (idx !== undefined) {
         const existing = blocks[idx] as DisplayBlock & { type: 'tool_use' };
@@ -1167,6 +1175,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
         const nextBlock = {
           ...existing,
           output: resultText,
+          ...(isError ? { status: 'error' as const } : {}),
           durationMs: duration,
           details: imageCount > 0 ? { ...(details && typeof details === 'object' ? details : {}), imageCount } : details,
         };
@@ -1183,6 +1192,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
           input: {},
           output: resultText,
           toolCallId,
+          ...(isError ? { status: 'error' as const } : {}),
           ...(details ? { details } : {}),
         });
       }
@@ -2250,20 +2260,26 @@ export interface DeleteSessionsResult {
 export function deleteSessions(sessionIds: string[]): DeleteSessionsResult {
   const deleted: Array<{ id: string; file: string }> = [];
   const missing: string[] = [];
-  for (const sessionId of [...new Set(sessionIds.map((id) => id.trim()).filter(Boolean))]) {
+  const normalizedSessionIds = [...new Set(sessionIds.map((id) => id.trim()).filter(Boolean))];
+  for (const sessionId of normalizedSessionIds) {
     const meta = resolveSessionMeta(sessionId);
-    if (!meta?.file || !existsSync(meta.file)) {
+    if (!meta?.file) {
       missing.push(sessionId);
       continue;
     }
-    rmSync(meta.file, { force: true });
+    if (existsSync(meta.file)) {
+      rmSync(meta.file, { force: true });
+      deleted.push({ id: sessionId, file: meta.file });
+    } else {
+      missing.push(sessionId);
+    }
     sessionMetaCache.delete(meta.file);
     sessionSearchTextCache.clear();
     sessionDetailCache.delete(meta.file);
     sessionFileById.delete(sessionId);
     sessionCacheDirty = true;
-    deleted.push({ id: sessionId, file: meta.file });
   }
+  deleteConversationCatalogSessions(normalizedSessionIds);
   persistSessionIndex();
   return { deleted, missing };
 }

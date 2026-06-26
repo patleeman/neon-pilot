@@ -131,9 +131,7 @@ export function ActivityTreeRowActions({
           compact
           className="h-5 w-5 shrink-0"
           aria-label={`Workspace actions for ${item.title}`}
-          title={
-            typeof item.metadata?.cwd === 'string' ? `Workspace actions for ${item.metadata.cwd}` : `Workspace actions for ${item.title}`
-          }
+          title={`Workspace actions for ${item.title}`}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -150,7 +148,7 @@ export function ActivityTreeRowActions({
           compact
           className="h-5 w-5 shrink-0"
           aria-label={`New conversation in ${item.title}`}
-          title={typeof item.metadata?.cwd === 'string' ? `New conversation in ${item.metadata.cwd}` : `New conversation in ${item.title}`}
+          title={`New conversation in ${item.title}`}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();

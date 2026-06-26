@@ -2,7 +2,7 @@
 
 This extension owns internal prompt assembly actions for editing the system prompt template and inspecting the capabilities that shape an agent run: instruction layers, prompt templates, runtime context blocks, skills, tools, MCP servers, and diagnostics.
 
-The product surface is **Extensions**. Prompt assembly should not contribute its own navigation item or standalone route; expose user-facing controls through Settings → Extensions and the Extension Manager page.
+The product surface is **Settings → Prompt Assembly**. Prompt assembly should not contribute its own left-navigation item or standalone route; expose user-facing controls through its Settings panel.
 
 App-control configuration does not belong here. Commands, keyboard shortcuts, and extensions live in **Settings → Commands** and **Settings → Extensions**.
 
@@ -23,4 +23,4 @@ Capability rows expose:
 - Do not show app-control surfaces here: commands, keybindings, extension enablement, and extension settings belong in Settings.
 - Prefer filters/search over nested pages.
 - Show concrete runtime state: what the agent can see if a turn starts now.
-- Visually inspect Settings → Extensions after layout or interaction changes.
+- Visually inspect Settings → Prompt Assembly after layout or interaction changes.

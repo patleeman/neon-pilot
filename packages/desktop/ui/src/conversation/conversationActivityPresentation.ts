@@ -33,6 +33,23 @@ export function activityDeferredResumes(items: readonly ConversationActivityItem
     .filter((payload): payload is DeferredResumeSummary => isRecord(payload) && typeof payload.id === 'string');
 }
 
+export function mergeCanonicalDeferredResumesWithActivity(input: {
+  canonical: readonly DeferredResumeSummary[];
+  activity: readonly DeferredResumeSummary[];
+}): DeferredResumeSummary[] {
+  if (input.canonical.length === 0 || input.activity.length === 0) {
+    return [...input.canonical];
+  }
+
+  const byId = new Map(input.canonical.map((resume) => [resume.id, resume]));
+  for (const resume of input.activity) {
+    if (byId.has(resume.id)) {
+      byId.set(resume.id, resume);
+    }
+  }
+  return Array.from(byId.values());
+}
+
 export function activityScheduledTasks(items: readonly ConversationActivityItem[]): ScheduledTaskSummary[] {
   return items
     .filter((item) => item.kind === 'scheduled-task')
@@ -49,7 +66,7 @@ export function activityQueuedPrompts(items: readonly ConversationActivityItem[]
       const queueIndex = typeof payload.queueIndex === 'number' && Number.isSafeInteger(payload.queueIndex) ? payload.queueIndex : 0;
       const preview: QueuedPromptPreview = {
         id: typeof payload.id === 'string' ? payload.id : item.source.id,
-        text: typeof payload.text === 'string' ? payload.text : item.subtitle ?? '',
+        text: typeof payload.text === 'string' ? payload.text : (item.subtitle ?? ''),
         imageCount: typeof payload.imageCount === 'number' && Number.isSafeInteger(payload.imageCount) ? payload.imageCount : 0,
         restorable: payload.restorable === false ? false : true,
       };

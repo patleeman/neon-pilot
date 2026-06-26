@@ -24,6 +24,7 @@ function createMockCallbacks() {
     broadcastContextUsage: vi.fn(),
     broadcastSnapshot: vi.fn(),
     publishSessionMetaChanged: vi.fn(),
+    publishSessionFileChanged: vi.fn(),
   };
 }
 
@@ -126,5 +127,6 @@ describe('finalizeLiveSessionBashExecution', () => {
     expect(callbacks.broadcastContextUsage).toHaveBeenCalledWith(entry, true);
     expect(callbacks.broadcastSnapshot).toHaveBeenCalledWith(entry);
     expect(callbacks.publishSessionMetaChanged).toHaveBeenCalledWith('test-session-1');
+    expect(callbacks.publishSessionFileChanged).toHaveBeenCalledWith('test-session-1');
   });
 });

@@ -23,6 +23,10 @@ interface NativeBackendContext {
   };
   agentToolContext?: { signal?: AbortSignal };
   ui?: { invalidate?(topics: string | string[]): void };
+  extensions?: {
+    callAction?(extensionId: string, actionId: string, input: unknown): Promise<unknown>;
+    invokeAction?(input: { extensionId: string; actionId: string; input?: unknown }): Promise<unknown>;
+  };
   shell: {
     exec(input: { command: string; args?: string[]; cwd?: string; timeoutMs?: number; signal?: AbortSignal }): Promise<{
       stdout?: string;
@@ -37,7 +41,7 @@ interface NativeBackendContext {
       onStdout?: (chunk: string) => void;
       onStderr?: (chunk: string) => void;
       onExit?: (event: { code: number | null; signal: NodeJS.Signals | null }) => void;
-    }): Promise<{ pid: number | null; executionWrappers: Array<{ id: string; label?: string }>; kill: () => void }>;
+    }): Promise<{ pid: number | null; executionWrappers: Array<{ id: string; label?: string }>; kill: () => Promise<void> | void }>;
   };
 }
 
@@ -54,6 +58,12 @@ interface ToolExecutionResult {
   content?: Array<{ type?: string; text?: string }>;
   details?: Record<string, unknown>;
   isError?: boolean;
+}
+
+interface RoutineHookResult {
+  blocked?: boolean;
+  message?: string;
+  status?: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -176,7 +186,7 @@ async function runStreamingForegroundBash(
   let timeout: NodeJS.Timeout | undefined;
   let settled = false;
   let killedByTimeout = false;
-  let killProcess: (() => void) | undefined;
+  let killProcess: (() => Promise<void> | void) | undefined;
   let executionWrappers: Array<{ id: string; label?: string }> = [];
   const abortSignal = readAbortSignal(ctx.agentToolContext?.signal);
 
@@ -195,9 +205,20 @@ async function runStreamingForegroundBash(
       resolve(result);
     };
 
+    const stopProcess = async () => {
+      try {
+        await killProcess?.();
+      } catch {
+        // The host may already have torn down the shell handle; the abort path
+        // still needs to settle the tool call instead of leaving the UI running.
+      }
+    };
+
     const onAbort = () => {
-      killProcess?.();
-      finish({ content: [{ type: 'text', text: output.trimEnd() || 'cancelled' }], isError: true });
+      void (async () => {
+        await stopProcess();
+        finish({ content: [{ type: 'text', text: output.trimEnd() || 'cancelled' }], isError: true });
+      })();
     };
 
     void (async () => {
@@ -234,7 +255,7 @@ async function runStreamingForegroundBash(
         if (timeoutSeconds) {
           timeout = setTimeout(() => {
             killedByTimeout = true;
-            killProcess?.();
+            void stopProcess();
           }, timeoutSeconds * 1000);
         }
       } catch (error) {
@@ -389,6 +410,45 @@ function deriveBackgroundCommandTaskSlug(command: string): string {
   );
 }
 
+function isRoutineHookUnavailable(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /not found|disabled|requires permission/i.test(message);
+}
+
+async function runBackgroundCommandRoutineHook(
+  ctx: NativeBackendContext,
+  input: { command: string; cwd: string; taskSlug: string },
+): Promise<RoutineHookResult | null> {
+  if (!ctx.extensions?.callAction && !ctx.extensions?.invokeAction) return null;
+  const hookInput = {
+    hookId: 'background.command',
+    position: 'before',
+    context: {
+      command: input.command,
+      cwd: input.cwd,
+      taskSlug: input.taskSlug,
+      status: 'starting',
+    },
+  };
+  try {
+    if (ctx.extensions.callAction) {
+      return (await ctx.extensions.callAction('system-routines', 'runHook', hookInput)) as RoutineHookResult;
+    }
+    const result = await ctx.extensions.invokeAction?.({
+      extensionId: 'system-routines',
+      actionId: 'runHook',
+      input: hookInput,
+    });
+    if (isRecord(result) && result.ok === true && 'result' in result) {
+      return result.result as RoutineHookResult;
+    }
+    return result as RoutineHookResult;
+  } catch (error) {
+    if (isRoutineHookUnavailable(error)) return null;
+    throw error;
+  }
+}
+
 async function startBackgroundCommand(input: unknown, ctx: NativeBackendContext) {
   const params = isRecord(input) ? input : {};
   const command = readRequiredString(params.command, 'command');
@@ -403,6 +463,11 @@ async function startBackgroundCommand(input: unknown, ctx: NativeBackendContext)
 
   if (!(await pingDaemon())) {
     throw new Error('Daemon is not responding. Ensure the desktop app is running.');
+  }
+
+  const routineHook = await runBackgroundCommandRoutineHook(ctx, { command, cwd, taskSlug });
+  if (routineHook?.blocked) {
+    throw new Error(routineHook.message ?? 'A routine blocked this background command.');
   }
 
   const result = await startBackgroundRun({
@@ -458,8 +523,7 @@ export async function bash(input: unknown, ctx: NativeBackendContext) {
   }
 
   if (params.background === true) {
-    const taskSlug =
-      readString(params.taskSlug) ?? deriveBackgroundCommandTaskSlug(command);
+    const taskSlug = readString(params.taskSlug) ?? deriveBackgroundCommandTaskSlug(command);
     return startBackgroundCommand(
       {
         taskSlug,

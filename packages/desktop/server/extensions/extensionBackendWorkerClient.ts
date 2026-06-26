@@ -18,6 +18,7 @@ interface PendingRequest {
   resolve: (response: ExtensionBackendWorkerResponse & { ok: true }) => void;
   reject: (error: Error) => void;
   timeout: NodeJS.Timeout;
+  cleanup?: () => void;
 }
 
 export interface ExtensionBackendWorkerClientOptions {
@@ -78,9 +79,14 @@ export class ExtensionBackendWorkerClient {
     compiled: ExtensionBackendLoadTarget,
     exportName: string,
     args: unknown[],
-    options: { timeoutMs?: number; context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions) } = {},
+    options: {
+      timeoutMs?: number;
+      signal?: AbortSignal;
+      context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions);
+    } = {},
   ): Promise<unknown> {
-    const response = await this.send({ id: 0, type: 'runExport', extensionId, compiled, exportName, args, ...options });
+    const { signal, ...requestOptions } = options;
+    const response = await this.send({ id: 0, type: 'runExport', extensionId, compiled, exportName, args, ...requestOptions }, { signal });
     return this.deserializeWorkerResult(response.result);
   }
 
@@ -112,27 +118,57 @@ export class ExtensionBackendWorkerClient {
     return worker;
   }
 
-  private send(request: ExtensionBackendWorkerRequest): Promise<ExtensionBackendWorkerResponse & { ok: true }> {
+  private send(
+    request: ExtensionBackendWorkerRequest,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<ExtensionBackendWorkerResponse & { ok: true }> {
     const worker = this.ensureWorker();
     this.bindExtensionId(request.extensionId);
     const id = ++this.nextRequestId;
     const outbound = { ...request, id };
+    const signal = options.signal;
 
     return new Promise((resolve, reject) => {
+      const abortListener = () => {
+        worker.postMessage({ kind: 'abortRequest', requestId: id });
+        if (this.options.capabilityDispatcher) {
+          void Promise.resolve(
+            this.options.capabilityDispatcher(
+              {
+                id: 0,
+                kind: 'capabilityRequest',
+                extensionId: request.extensionId,
+                capability: 'shell',
+                operation: 'abortOwner',
+                input: { workerRequestId: id },
+                context: { workerRequestId: id },
+              },
+              (event) => this.worker?.postMessage(event),
+            ),
+          ).catch(() => undefined);
+        }
+      };
+      const cleanup = () => {
+        signal?.removeEventListener('abort', abortListener);
+      };
       const timeout = setTimeout(
         () => {
           this.pending.delete(id);
+          cleanup();
           reject(new Error(`Extension backend worker ${request.type} timed out.`));
         },
         ('timeoutMs' in request && request.timeoutMs ? request.timeoutMs : undefined) ?? this.options.timeoutMs ?? 30_000,
       );
 
-      this.pending.set(id, { resolve, reject, timeout });
+      signal?.addEventListener('abort', abortListener, { once: true });
+      this.pending.set(id, { resolve, reject, timeout, cleanup });
       try {
         worker.postMessage(outbound);
+        if (signal?.aborted) abortListener();
       } catch (error) {
         clearTimeout(timeout);
         this.pending.delete(id);
+        cleanup();
         reject(error instanceof Error ? error : new Error(String(error)));
       }
     });
@@ -154,6 +190,7 @@ export class ExtensionBackendWorkerClient {
     if (!pending) return;
     this.pending.delete(response.id);
     clearTimeout(pending.timeout);
+    pending.cleanup?.();
 
     if (response.ok) pending.resolve(response);
     else pending.reject(new Error(response.error));
@@ -213,6 +250,7 @@ export class ExtensionBackendWorkerClient {
   private rejectAll(error: Error): void {
     for (const [, pending] of this.pending) {
       clearTimeout(pending.timeout);
+      pending.cleanup?.();
       pending.reject(error);
     }
     this.pending.clear();
@@ -310,7 +348,11 @@ export class ExtensionBackendWorkerPool {
     compiled: ExtensionBackendLoadTarget,
     exportName: string,
     args: unknown[],
-    options: { timeoutMs?: number; context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions) } = {},
+    options: {
+      timeoutMs?: number;
+      signal?: AbortSignal;
+      context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions);
+    } = {},
   ): Promise<unknown> {
     return this.getClient(extensionId).runExport(extensionId, compiled, exportName, args, options);
   }

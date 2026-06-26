@@ -35,6 +35,7 @@ import {
   startPeriodicWalCheckpoint,
   stopPeriodicWalCheckpoint,
 } from '../shared/sqliteDbLifecycle.js';
+import { attachExtensionHostEnvForTrustedBackgroundAgent } from './background-agent-env.js';
 import { looksLikeBackgroundAgentRunnerEntryPath } from './background-run-agent.js';
 import { DaemonCompanionServer } from './companion/server.js';
 import { type CompanionRuntimeProvider, DEFAULT_COMPANION_HOST } from './companion/types.js';
@@ -1012,6 +1013,12 @@ export class NeonPilotDaemon {
           }
         : {}),
     });
+    if (isBackgroundAgentRunner) {
+      // resolveChildProcessEnv strips internal RPC credentials for arbitrary
+      // child processes. The daemon-owned background agent runner is trusted
+      // runtime code and needs this client to execute extension tools.
+      attachExtensionHostEnvForTrustedBackgroundAgent(childEnv);
+    }
 
     const { child } = spawnInput.argv
       ? spawnProcess({

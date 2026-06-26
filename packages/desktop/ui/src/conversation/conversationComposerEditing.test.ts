@@ -5,6 +5,7 @@ import {
   insertTextAtComposerSelection,
   resolveComposerClearShortcut,
   resolveComposerHistoryNavigation,
+  shouldRestoreFirstQueuedPromptFromComposerShortcut,
 } from './conversationComposerEditing';
 
 describe('conversation composer editing helpers', () => {
@@ -86,6 +87,41 @@ describe('conversation composer editing helpers', () => {
         selectionStart: 3,
         selectionEnd: 7,
         key: 'ArrowDown',
+      }),
+    ).toBe(false);
+  });
+
+  it('resolves Alt+ArrowUp as queued prompt restore without colliding with history navigation', () => {
+    expect(
+      shouldRestoreFirstQueuedPromptFromComposerShortcut({
+        key: 'ArrowUp',
+        altKey: true,
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+        isComposing: false,
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldRestoreFirstQueuedPromptFromComposerShortcut({
+        key: 'ArrowUp',
+        altKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+        isComposing: false,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldRestoreFirstQueuedPromptFromComposerShortcut({
+        key: 'ArrowUp',
+        altKey: true,
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: true,
+        isComposing: false,
       }),
     ).toBe(false);
   });

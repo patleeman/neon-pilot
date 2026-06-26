@@ -116,6 +116,7 @@ function isTrustedRealtimeUpgrade(request: IncomingMessage): boolean {
 
 export interface DesktopRealtimeUpgradeHandlerOptions {
   getRuntimeScope?: () => string;
+  subscribeLocalApiStreamByUrl?: typeof subscribeDesktopLocalApiStreamByUrl;
 }
 
 export function createDesktopRealtimeUpgradeHandler(
@@ -315,7 +316,8 @@ export function createDesktopRealtimeUpgradeHandler(
 
         const subscriptionId = `rt:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
         try {
-          const unsubscribe = await subscribeDesktopLocalApiStreamByUrl(new URL(path, 'http://desktop.local'), (event) => {
+          const subscribeLocalApiStreamByUrl = options.subscribeLocalApiStreamByUrl ?? subscribeDesktopLocalApiStreamByUrl;
+          const unsubscribe = await subscribeLocalApiStreamByUrl(new URL(path, 'http://desktop.local'), (event) => {
             sendRealtimeMessage({ type: 'stream', subscriptionId, event });
           });
           if (cleanedUp || websocket.readyState !== websocket.OPEN) {

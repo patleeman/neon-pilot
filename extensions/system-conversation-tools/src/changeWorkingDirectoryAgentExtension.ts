@@ -29,6 +29,59 @@ export interface RequestConversationWorkingDirectoryChangeResult {
   unchanged?: boolean;
 }
 
+function isAbsoluteLikeCwd(cwd: string): boolean {
+  return /^(?:~(?:\/|$)|\/|[a-zA-Z]:[\\/])/.test(cwd.trim());
+}
+
+function readSessionRecordCwd(session: unknown, conversationId: string): string | undefined {
+  if (!session || typeof session !== 'object') {
+    return undefined;
+  }
+
+  const record = session as { id?: unknown; conversationId?: unknown; cwd?: unknown };
+  const id = typeof record.id === 'string' ? record.id : typeof record.conversationId === 'string' ? record.conversationId : '';
+  if (id !== conversationId) {
+    return undefined;
+  }
+
+  return typeof record.cwd === 'string' && record.cwd.trim().length > 0 ? record.cwd : undefined;
+}
+
+function readSessionList(value: unknown): unknown[] | undefined {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (value && typeof value === 'object' && Array.isArray((value as { sessions?: unknown }).sessions)) {
+    return (value as { sessions: unknown[] }).sessions;
+  }
+
+  return undefined;
+}
+
+async function readTargetConversationCwd(
+  conversationId: string,
+  readConversationSessions?: () => Promise<unknown>,
+): Promise<string | undefined> {
+  if (!readConversationSessions) {
+    return undefined;
+  }
+
+  const sessions = readSessionList(await readConversationSessions());
+  if (!sessions) {
+    return undefined;
+  }
+
+  for (const session of sessions) {
+    const cwd = readSessionRecordCwd(session, conversationId);
+    if (cwd) {
+      return cwd;
+    }
+  }
+
+  return undefined;
+}
+
 function readRequiredString(value: string | undefined, label: string): string {
   const normalized = value?.trim();
   if (!normalized) {
@@ -39,14 +92,28 @@ function readRequiredString(value: string | undefined, label: string): string {
 }
 
 export async function executeChangeWorkingDirectory(
-  params: { cwd?: string; continuePrompt?: string },
-  ctx: { sessionManager: { getSessionId(): string }; cwd?: string },
+  params: { conversationId?: string; cwd?: string; continuePrompt?: string },
+  ctx: { sessionManager: { getSessionId(): string }; cwd?: string; readConversationSessions?: () => Promise<unknown> },
   requestConversationWorkingDirectoryChange: (
     input: RequestConversationWorkingDirectoryChangeInput,
   ) => Promise<RequestConversationWorkingDirectoryChangeResult>,
 ) {
-  const conversationId = readRequiredString(ctx.sessionManager.getSessionId(), 'conversationId');
-  const nextCwd = await resolveExistingConversationDirectory(readRequiredString(params.cwd, 'cwd'), ctx.cwd);
+  const currentConversationId = ctx.sessionManager.getSessionId()?.trim() ?? '';
+  const conversationId =
+    typeof params.conversationId === 'string' && params.conversationId.trim().length > 0
+      ? params.conversationId.trim()
+      : readRequiredString(currentConversationId, 'conversationId');
+  const requestedCwd = readRequiredString(params.cwd, 'cwd');
+  let baseCwd = ctx.cwd;
+  if ((!baseCwd || conversationId !== currentConversationId) && !isAbsoluteLikeCwd(requestedCwd)) {
+    baseCwd = await readTargetConversationCwd(conversationId, ctx.readConversationSessions);
+    if (!baseCwd) {
+      throw new Error(
+        `Could not resolve the current working directory for conversation ${conversationId}. Use an absolute path or choose a live conversation.`,
+      );
+    }
+  }
+  const nextCwd = await resolveExistingConversationDirectory(requestedCwd, baseCwd);
 
   const continuePrompt =
     typeof params.continuePrompt === 'string' && params.continuePrompt.trim().length > 0 ? params.continuePrompt.trim() : undefined;

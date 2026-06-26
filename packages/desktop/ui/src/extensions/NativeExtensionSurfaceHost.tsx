@@ -69,11 +69,11 @@ function lazyExtensionComponent(surface: NativeExtensionViewSummary, revision: n
   return lazy(async () => {
     const module = await loadExtensionModuleWithRetry(surface, revision);
     if (typeof surface.component !== 'string') {
-      throw new Error(`Extension component export is only available for custom component references.`);
+      return { default: ExtensionSurfaceError as ExtensionComponent };
     }
     const component = module[surface.component];
     if (typeof component !== 'function') {
-      throw new Error(`Extension component not found: ${surface.component}`);
+      return { default: ExtensionSurfaceError as ExtensionComponent };
     }
     return { default: component as ExtensionComponent };
   });
@@ -126,8 +126,10 @@ function lazyHostViewSurfaceComponent(surface: NativeExtensionViewSummary, revis
   });
 }
 
-function ExtensionSurfaceError({ message }: { message: string }) {
-  return <ErrorState message={message} className="m-6" />;
+const EXTENSION_SURFACE_ERROR_MESSAGE = 'This extension surface could not be loaded.';
+
+function ExtensionSurfaceError() {
+  return <ErrorState message={EXTENSION_SURFACE_ERROR_MESSAGE} className="m-6" />;
 }
 
 export function NativeExtensionSurfaceHost({
@@ -195,20 +197,20 @@ class ExtensionErrorBoundary extends React.Component<{ children: React.ReactNode
   state = { message: null };
 
   static getDerivedStateFromError(error: unknown) {
-    return { message: error instanceof Error ? error.message : String(error) };
+    void error;
+    return { message: EXTENSION_SURFACE_ERROR_MESSAGE };
   }
 
   componentDidCatch(error: unknown, _errorInfo: { componentStack?: string }) {
-    const message = error instanceof Error ? error.message : String(error);
     addNotification({
       type: 'error',
-      message: `Extension surface error: ${message}`,
+      message: EXTENSION_SURFACE_ERROR_MESSAGE,
       details: error instanceof Error ? error.stack : undefined,
       source: this.props.extensionId,
     });
   }
 
   render() {
-    return this.state.message ? <ExtensionSurfaceError message={this.state.message} /> : this.props.children;
+    return this.state.message ? <ExtensionSurfaceError /> : this.props.children;
   }
 }

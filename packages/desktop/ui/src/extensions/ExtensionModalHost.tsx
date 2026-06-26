@@ -1,6 +1,7 @@
-import { type ComponentType, useCallback, useEffect, useRef, useState } from 'react';
+import React, { type ComponentType, useCallback, useEffect, useRef, useState } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
+import { addNotification } from '../components/notifications/notificationStore';
 import { ConfirmDialog, Dialog, DialogBody, DialogHeader, IconButton } from '../components/ui';
 import { setExtensionCommandContext } from './commands';
 import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from './extensionModalCommands';
@@ -18,6 +19,13 @@ interface ModalState {
 }
 
 type ExtensionModalSize = 'default' | 'large' | 'fullscreen';
+const EXTENSION_MODAL_ERROR_MESSAGE = 'This extension dialog could not be loaded.';
+
+function FailedExtensionModalBody() {
+  return (
+    <div className="flex h-full items-center justify-center px-6 text-center text-[12px] text-danger">{EXTENSION_MODAL_ERROR_MESSAGE}</div>
+  );
+}
 
 export function resolveExtensionModalSizeClasses(size: ExtensionModalSize | undefined): {
   dialogClassName: string;
@@ -126,6 +134,18 @@ export function ExtensionModalHost() {
     setConfirm(null);
   }, []);
 
+  const handleModalLoadFailure = useCallback((extensionId: string) => {
+    resolveRef.current?.(null);
+    rejectRef.current = null;
+    resolveRef.current = null;
+    setComponent(() => FailedExtensionModalBody);
+    addNotification({
+      type: 'error',
+      message: EXTENSION_MODAL_ERROR_MESSAGE,
+      source: extensionId,
+    });
+  }, []);
+
   useEffect(() => {
     if (!modal) {
       return;
@@ -159,7 +179,7 @@ export function ExtensionModalHost() {
           const module = await systemLoader();
           const comp = module[modal.component] as ComponentType | undefined;
           if (typeof comp !== 'function') {
-            rejectRef.current?.(new Error(`Component "${modal.component}" not found in extension "${modal.extensionId}"`));
+            handleModalLoadFailure(modal.extensionId);
             return;
           }
           setComponent(
@@ -178,7 +198,7 @@ export function ExtensionModalHost() {
           const remoteModule = await import(/* @vite-ignore */ url);
           const comp = remoteModule[modal.component.split('/').pop() ?? modal.component] as ComponentType | undefined;
           if (typeof comp !== 'function') {
-            rejectRef.current?.(new Error(`Component "${modal.component}" not found in extension "${modal.extensionId}"`));
+            handleModalLoadFailure(modal.extensionId);
             return;
           }
           setComponent(
@@ -190,13 +210,13 @@ export function ExtensionModalHost() {
               }>,
           );
         }
-      } catch (err) {
-        rejectRef.current?.(err instanceof Error ? err : new Error(String(err)));
+      } catch {
+        handleModalLoadFailure(modal.extensionId);
       }
     }
 
     load();
-  }, [modal]);
+  }, [handleModalLoadFailure, modal]);
 
   const confirmDialog = confirm ? (
     <ConfirmDialog
@@ -251,9 +271,49 @@ export function ExtensionModalHost() {
           />
         ) : null}
         <DialogBody className={modalSizeClasses.bodyClassName}>
-          <Component pa={pa} props={modal.props} close={handleClose} />
+          <ExtensionModalErrorBoundary
+            extensionId={modal.extensionId}
+            onError={() => {
+              resolveRef.current?.(null);
+              rejectRef.current = null;
+              resolveRef.current = null;
+            }}
+          >
+            <Component pa={pa} props={modal.props} close={handleClose} />
+          </ExtensionModalErrorBoundary>
         </DialogBody>
       </Dialog>
     </>
   );
+}
+
+class ExtensionModalErrorBoundary extends React.Component<
+  { children: React.ReactNode; extensionId: string; onError: () => void },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch() {
+    this.props.onError();
+    addNotification({
+      type: 'error',
+      message: EXTENSION_MODAL_ERROR_MESSAGE,
+      source: this.props.extensionId,
+    });
+  }
+
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="flex h-full items-center justify-center px-6 text-center text-[12px] text-danger">
+          {EXTENSION_MODAL_ERROR_MESSAGE}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }

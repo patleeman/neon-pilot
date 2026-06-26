@@ -24,7 +24,7 @@ export function __resetLoadedStylesForTest(): void {
 const RESOLVE_CACHE = new Map<string, string>();
 
 function resolveExtensionStyleUrl(extensionId: string, stylePath: string, revision: string | undefined): string {
-  const cacheKey = `${extensionId}:${stylePath}`;
+  const cacheKey = `${extensionId}:${stylePath}:${revision ?? ''}`;
   const cached = RESOLVE_CACHE.get(cacheKey);
   if (cached) return cached;
   let url = buildApiPath(`/extensions/${encodeURIComponent(extensionId)}/files/${stylePath.split('/').map(encodeURIComponent).join('/')}`);

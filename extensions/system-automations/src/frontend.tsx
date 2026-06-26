@@ -126,6 +126,10 @@ export function shouldOpenNewAutomationFromSearch(search?: string): boolean {
   return params.get('action') === 'new' || params.get('new') === '1';
 }
 
+export function ownerThreadHint(conversation?: Pick<ConversationOption, 'cwd'>): string | undefined {
+  return conversation?.cwd ? 'Uses the owner thread working directory.' : undefined;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -740,11 +744,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 )}
               </div>
 
-              <Field
-                label="Owner thread"
-                className="shrink-0"
-                hint={ownerConversation?.cwd ? `Working from ${ownerConversation.cwd}` : undefined}
-              >
+              <Field label="Owner thread" className="shrink-0" hint={ownerThreadHint(ownerConversation)}>
                 <Select
                   name="automation-owner-thread"
                   value={form.ownerThreadId}

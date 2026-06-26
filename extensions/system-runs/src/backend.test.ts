@@ -108,6 +108,52 @@ describe('system-runs backend', () => {
       expect(onUpdate).toHaveBeenCalledWith({ content: [{ type: 'text', text: 'ok\n' }] });
     });
 
+    it('waits for asynchronous streaming process kill before resolving an aborted command', async () => {
+      const controller = new AbortController();
+      const onUpdate = vi.fn();
+      let releaseKill!: () => void;
+      let resolved = false;
+      const kill = vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            releaseKill = resolve;
+          }),
+      );
+      const spawn = vi.fn(
+        async (input: { onStdout?: (chunk: string) => void; onExit?: (event: { code: number | null; signal: null }) => void }) => {
+          void input.onExit;
+          input.onStdout?.('started\n');
+          return { pid: 123, executionWrappers: [], kill };
+        },
+      );
+      const ctx = createCtx({
+        agentToolContext: { signal: controller.signal },
+        toolContext: { cwd: '/tmp/repo', onUpdate },
+        shell: { exec: vi.fn(), spawn },
+      });
+
+      const resultPromise = bash({ command: 'sleep 120' }, ctx).then((result) => {
+        resolved = true;
+        return result;
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      controller.abort();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(kill).toHaveBeenCalledOnce();
+      expect(resolved).toBe(false);
+
+      releaseKill();
+      await expect(resultPromise).resolves.toMatchObject({
+        text: 'started',
+        isError: true,
+      });
+      expect(resolved).toBe(true);
+    });
+
     it('ignores non-AbortSignal values from serialized agent tool context', async () => {
       const onUpdate = vi.fn();
       const ctx = createCtx({ agentToolContext: { signal: { aborted: false } }, toolContext: { cwd: '/tmp/repo', onUpdate } });
@@ -140,6 +186,59 @@ describe('system-runs backend', () => {
       expect(mocks.pingDaemon).toHaveBeenCalled();
       expect(mocks.startBackgroundRun).toHaveBeenCalled();
       expect(result.text).toBe('Started background command run-123 for sleep-1.');
+    });
+
+    it('runs background command routines before starting daemon work', async () => {
+      mocks.startBackgroundRun.mockResolvedValue({ accepted: true, runId: 'run-123', logPath: '/tmp/run.log' });
+      const callAction = vi.fn().mockResolvedValue({ blocked: false, status: 'passed' });
+
+      await bash({ command: 'sleep 1', background: true, taskSlug: 'sleep-check' }, createCtx({ extensions: { callAction } }));
+
+      expect(callAction).toHaveBeenCalledWith('system-routines', 'runHook', {
+        hookId: 'background.command',
+        position: 'before',
+        context: {
+          command: 'sleep 1',
+          cwd: '/tmp/repo',
+          taskSlug: 'sleep-check',
+          status: 'starting',
+        },
+      });
+      expect(mocks.startBackgroundRun).toHaveBeenCalled();
+    });
+
+    it('runs background command routines through worker invokeAction contexts', async () => {
+      mocks.startBackgroundRun.mockResolvedValue({ accepted: true, runId: 'run-123', logPath: '/tmp/run.log' });
+      const invokeAction = vi.fn().mockResolvedValue({ ok: true, result: { blocked: false, status: 'passed' } });
+
+      await bash({ command: 'sleep 1', background: true, taskSlug: 'sleep-check' }, createCtx({ extensions: { invokeAction } }));
+
+      expect(invokeAction).toHaveBeenCalledWith({
+        extensionId: 'system-routines',
+        actionId: 'runHook',
+        input: {
+          hookId: 'background.command',
+          position: 'before',
+          context: {
+            command: 'sleep 1',
+            cwd: '/tmp/repo',
+            taskSlug: 'sleep-check',
+            status: 'starting',
+          },
+        },
+      });
+      expect(mocks.startBackgroundRun).toHaveBeenCalled();
+    });
+
+    it('does not start a background command when a routine blocks it', async () => {
+      mocks.startBackgroundRun.mockResolvedValue({ accepted: true, runId: 'run-123', logPath: '/tmp/run.log' });
+      const callAction = vi.fn().mockResolvedValue({ blocked: true, message: 'Command needs approval.' });
+
+      await expect(bash({ command: 'sleep 1', background: true }, createCtx({ extensions: { callAction } }))).rejects.toThrow(
+        'Command needs approval.',
+      );
+
+      expect(mocks.startBackgroundRun).not.toHaveBeenCalled();
     });
   });
 

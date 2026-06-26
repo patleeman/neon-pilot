@@ -40,6 +40,29 @@ describe('parseDeferredResumeSlashCommand', () => {
     });
   });
 
+  it('parses documented delays with a separated unit', () => {
+    expect(parseDeferredResumeSlashCommand('/resume 10 minutes check the logs')).toEqual({
+      kind: 'command',
+      command: {
+        action: 'schedule',
+        delay: '10 minutes',
+        prompt: 'check the logs',
+      },
+    });
+  });
+
+  it('parses separated-unit delays before the follow-up scheduling flag', () => {
+    expect(parseDeferredResumeSlashCommand('/resume 10 minutes --follow-up keep going')).toEqual({
+      kind: 'command',
+      command: {
+        action: 'schedule',
+        delay: '10 minutes',
+        behavior: 'followUp',
+        prompt: 'keep going',
+      },
+    });
+  });
+
   it('returns usage for invalid resume commands', () => {
     expect(parseDeferredResumeSlashCommand('/resume')).toEqual({
       kind: 'invalid',

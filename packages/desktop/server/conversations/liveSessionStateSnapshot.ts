@@ -69,6 +69,7 @@ export interface LiveSessionSnapshot {
   blockOffset: number;
   totalBlocks: number;
   isStreaming: boolean;
+  isCompacting: boolean;
 }
 
 async function readSessionModelProfile(session: AgentSession): Promise<LiveSessionStateSnapshot['modelProfile']> {
@@ -109,12 +110,14 @@ function isLiveSessionSnapshotStreaming(entry: LiveSessionSnapshotHost): boolean
 
 export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlocks?: number): LiveSessionSnapshot {
   const isStreaming = isLiveSessionSnapshotStreaming(entry);
+  const isCompacting = entry.isCompacting === true;
   if (!isStreaming && !entry.isCompacting && hasNoLiveSessionEntries(entry.session)) {
     return {
       blocks: [],
       blockOffset: 0,
       totalBlocks: 0,
       isStreaming,
+      isCompacting,
     };
   }
 
@@ -128,6 +131,7 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
       blockOffset: 0,
       totalBlocks: liveBlocks.length,
       isStreaming,
+      isCompacting,
     };
   }
 
@@ -137,6 +141,7 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
       blockOffset: 0,
       totalBlocks: 0,
       isStreaming,
+      isCompacting,
     };
   }
 
@@ -147,6 +152,7 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
       blockOffset: 0,
       totalBlocks: liveBlocks.length,
       isStreaming,
+      isCompacting,
     };
   }
 
@@ -159,6 +165,7 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
       blockOffset: persisted.blockOffset,
       totalBlocks: persisted.totalBlocks,
       isStreaming,
+      isCompacting,
     };
   }
 
@@ -168,6 +175,7 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
     blockOffset: persisted.blockOffset,
     totalBlocks: persisted.blockOffset + blocks.length,
     isStreaming,
+    isCompacting,
   };
 }
 
@@ -191,7 +199,7 @@ export async function readLiveSessionStateSnapshotFromEntry(
       ...snapshot,
       hasSnapshot: true,
       isStreaming,
-      isCompacting: false,
+      isCompacting: snapshot.isCompacting,
       hasStaleTurnState: false,
       goalState: null,
       systemPrompt: null,
@@ -224,7 +232,7 @@ export async function readLiveSessionStateSnapshotFromEntry(
     ...snapshot,
     hasSnapshot: true,
     isStreaming,
-    isCompacting: entry.isCompacting === true,
+    isCompacting: snapshot.isCompacting,
     hasStaleTurnState: hasQueuedOrActiveStaleTurn(entry),
     goalState: readGoalFromEntries(entry.session.sessionManager.getEntries()),
     systemPrompt: entry.session.systemPrompt?.trim() || null,

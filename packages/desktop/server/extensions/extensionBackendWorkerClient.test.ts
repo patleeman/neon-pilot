@@ -119,6 +119,36 @@ describe('ExtensionBackendWorkerClient', () => {
     await expect(run).resolves.toEqual({ ran: true });
   });
 
+  it('notifies the worker and host-owned shell handles when a running backend export is aborted', async () => {
+    const capabilityDispatcher = vi.fn(async () => ({ ok: true, killed: 1 }));
+    const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js'), capabilityDispatcher });
+    const controller = new AbortController();
+    const run = client.runExport('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' }, 'doThing', [], {
+      context: 'backend',
+      signal: controller.signal,
+    });
+    const worker = workerThreads.instances[0]!;
+
+    controller.abort();
+
+    expect(worker.postMessage).toHaveBeenLastCalledWith({ kind: 'abortRequest', requestId: 1 });
+    await flushPromises();
+    expect(capabilityDispatcher).toHaveBeenCalledWith(
+      {
+        id: 0,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'shell',
+        operation: 'abortOwner',
+        input: { workerRequestId: 1 },
+        context: { workerRequestId: 1 },
+      },
+      expect.any(Function),
+    );
+    worker.emit('message', { id: 1, ok: true, result: { aborted: true } });
+    await expect(run).resolves.toEqual({ aborted: true });
+  });
+
   it('cancels worker route streams when the host iterator is closed', async () => {
     const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js') });
     const run = client.runExport('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' }, 'stream', []);

@@ -1,6 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { addItem, clearItems, deleteItem, getState, listTodoConnections, provideTurnContext, setPlan, todoTool, updateItem } from './backend';
+import {
+  addItem,
+  clearItems,
+  deleteItem,
+  getState,
+  listTodoConnections,
+  provideTurnContext,
+  setPlan,
+  todoTool,
+  updateItem,
+} from './backend';
 
 function createCtx() {
   const store = new Map<string, unknown>();
@@ -84,6 +94,36 @@ describe('system-todo backend', () => {
       { text: 'Implement change', status: 'doing' },
       { text: 'Run validation', status: 'todo' },
     ]);
+  });
+
+  it('rejects plans above the item limit before mutating state', async () => {
+    const ctx = createCtx();
+    await addItem({ text: 'Keep existing item' }, ctx);
+
+    await expect(
+      setPlan(
+        {
+          items: Array.from({ length: 201 }, (_, index) => ({ text: `Item ${index + 1}`, status: 'todo' })),
+        },
+        ctx,
+      ),
+    ).rejects.toThrow('items must contain at most 200 entries');
+
+    await expect(getState({}, ctx)).resolves.toMatchObject({ items: [expect.objectContaining({ text: 'Keep existing item' })] });
+  });
+
+  it('trims long item text and notes in tool-visible prompt context', async () => {
+    const ctx = createCtx();
+    const longText = `Task ${'x'.repeat(600)}`;
+    const longNote = `Note ${'y'.repeat(600)}`;
+
+    await todoTool({ action: 'add', text: longText, note: longNote }, ctx);
+    const context = await provideTurnContext({}, ctx);
+
+    expect(context.blocks[0]!.content).toContain(`Task ${'x'.repeat(495)}`);
+    expect(context.blocks[0]!.content).not.toContain('x'.repeat(501));
+    expect(context.blocks[0]!.content).toContain(`Note ${'y'.repeat(495)}`);
+    expect(context.blocks[0]!.content).not.toContain('y'.repeat(501));
   });
 
   it('supports the todo tool action surface', async () => {

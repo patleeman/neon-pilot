@@ -6,6 +6,11 @@ const extensionHostClient = vi.hoisted(() => ({
   setExtensionHostClient: vi.fn(),
   createExtensionHostRpcClient: vi.fn((input: unknown) => ({ kind: 'rpc-client', input })),
 }));
+const cliControlPlane = vi.hoisted(() => ({
+  readNeonPilotCliControlPlaneRecord: vi.fn(),
+}));
+
+vi.mock('../cliControlPlane.js', () => cliControlPlane);
 
 vi.mock('../extensions/extensionHostClient.js', () => ({
   setExtensionHostClient: extensionHostClient.setExtensionHostClient,
@@ -18,6 +23,7 @@ vi.mock('../extensions/extensionHostRpcClient.js', () => ({
 import {
   collectAssistantErrorMessages,
   collectAssistantTexts,
+  configureExtensionHostClientForBackgroundAgent,
   configureExtensionHostClientFromEnv,
   extractTextContent,
   shouldRunBackgroundAgentMain,
@@ -64,6 +70,7 @@ describe('background agent runner output capture', () => {
   it('configures extension-host RPC for daemon-spawned background agents', () => {
     extensionHostClient.setExtensionHostClient.mockClear();
     extensionHostClient.createExtensionHostRpcClient.mockClear();
+    cliControlPlane.readNeonPilotCliControlPlaneRecord.mockReset();
 
     expect(
       configureExtensionHostClientFromEnv({
@@ -82,10 +89,34 @@ describe('background agent runner output capture', () => {
   it('leaves the extension-host client unset when RPC env is missing', () => {
     extensionHostClient.setExtensionHostClient.mockClear();
     extensionHostClient.createExtensionHostRpcClient.mockClear();
+    cliControlPlane.readNeonPilotCliControlPlaneRecord.mockReset();
 
     expect(configureExtensionHostClientFromEnv({})).toBe(false);
 
     expect(extensionHostClient.createExtensionHostRpcClient).not.toHaveBeenCalled();
     expect(extensionHostClient.setExtensionHostClient).not.toHaveBeenCalled();
+  });
+
+  it('discovers extension-host RPC from the app control-plane file when env is missing', () => {
+    extensionHostClient.setExtensionHostClient.mockClear();
+    extensionHostClient.createExtensionHostRpcClient.mockClear();
+    cliControlPlane.readNeonPilotCliControlPlaneRecord.mockReset();
+    cliControlPlane.readNeonPilotCliControlPlaneRecord.mockReturnValueOnce({
+      version: 1,
+      pid: 123,
+      updatedAt: '2026-06-06T00:00:00.000Z',
+      extensionHost: { baseUrl: 'http://127.0.0.1:9876', token: 'control-token' },
+    });
+
+    expect(configureExtensionHostClientForBackgroundAgent({})).toBe(true);
+
+    expect(extensionHostClient.createExtensionHostRpcClient).toHaveBeenCalledWith({
+      baseUrl: 'http://127.0.0.1:9876',
+      token: 'control-token',
+    });
+    expect(extensionHostClient.setExtensionHostClient).toHaveBeenCalledWith({
+      kind: 'rpc-client',
+      input: { baseUrl: 'http://127.0.0.1:9876', token: 'control-token' },
+    });
   });
 });

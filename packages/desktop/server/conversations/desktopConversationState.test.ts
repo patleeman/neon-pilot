@@ -4,6 +4,7 @@ const readLiveSessionStateSnapshotMock = vi.fn();
 const readConversationSessionMetaCapabilityMock = vi.fn();
 const inlineConversationSessionDetailAssetsCapabilityMock = vi.fn();
 const readSessionDetailForRouteMock = vi.fn();
+const readConversationGoalStateByFileMock = vi.fn(() => null);
 
 vi.mock('./liveSessions.js', () => ({
   readLiveSessionStateSnapshot: readLiveSessionStateSnapshotMock,
@@ -19,6 +20,7 @@ vi.mock('./conversationSessionAssetCapability.js', () => ({
 
 vi.mock('./conversationService.js', () => ({
   readSessionDetailForRoute: readSessionDetailForRouteMock,
+  readConversationGoalStateByFile: readConversationGoalStateByFileMock,
 }));
 
 afterEach(() => {
@@ -786,5 +788,45 @@ describe('readDesktopConversationState', () => {
       },
       perf: expect.any(Object),
     });
+  });
+
+  it('hydrates stored conversation goal state from custom entries', async () => {
+    const sessionFile = '/tmp/conversation.jsonl';
+    const goalState = {
+      objective: 'Hydrate stored goal',
+      status: 'active',
+      tasks: [],
+      stopReason: null,
+      startedAt: '2026-06-24T12:00:00.000Z',
+      updatedAt: '2026-06-24T12:01:00.000Z',
+    };
+    readConversationGoalStateByFileMock.mockReturnValue(goalState);
+
+    readConversationSessionMetaCapabilityMock.mockReturnValue({
+      id: 'conv-stored-goal',
+      isLive: false,
+      file: sessionFile,
+    });
+    readSessionDetailForRouteMock.mockResolvedValue({
+      sessionRead: {
+        detail: {
+          meta: { id: 'conv-stored-goal', title: 'Stored goal conversation', file: sessionFile },
+          blocks: [],
+          blockOffset: 0,
+          totalBlocks: 0,
+          contextUsage: null,
+        },
+      },
+    });
+    inlineConversationSessionDetailAssetsCapabilityMock.mockImplementation((_conversationId, detail) => detail);
+
+    const { readDesktopConversationState } = await import('./desktopConversationState.js');
+    const state = await readDesktopConversationState({
+      conversationId: 'conv-stored-goal',
+      profile: 'default',
+    });
+
+    expect(readConversationGoalStateByFileMock).toHaveBeenCalledWith(sessionFile);
+    expect(state.stream.goalState).toEqual(goalState);
   });
 });

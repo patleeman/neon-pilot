@@ -3,6 +3,9 @@ export interface NeonPilotCliInstallStatus {
   binDir: string;
   linkPath: string;
   globallyInstalled: boolean;
+  linkExists: boolean;
+  linkConflict: boolean;
+  linkTarget?: string;
   removed?: boolean;
 }
 

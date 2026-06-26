@@ -39,6 +39,26 @@ describe('WorkbenchBrowserTab', () => {
     ).toBe('Enter a web address that starts with http:// or https://.');
   });
 
+  it('formats stopped native navigations without leaking Chromium abort details', () => {
+    expect(
+      formatWorkbenchBrowserError(
+        new Error(
+          "Error invoking remote method 'neon-pilot-desktop:workbench-browser-navigate': Error: ERR_ABORTED (-3) loading 'http://127.0.0.1:18442/slow'",
+        ),
+      ),
+    ).toBe('Loading stopped.');
+  });
+
+  it('formats failed native page loads without leaking Chromium network details', () => {
+    expect(
+      formatWorkbenchBrowserError(
+        new Error(
+          "Error invoking remote method 'neon-pilot-desktop:workbench-browser-navigate': Error: ERR_CONNECTION_REFUSED (-102) loading 'http://127.0.0.1:18443/'",
+        ),
+      ),
+    ).toBe('Page failed to load. Check the address or connection and try again.');
+  });
+
   it('closes the active browser tab from the browser toolbar', async () => {
     const browserTabsState: BrowserTabsState = readBrowserTabsState();
     const activeBrowserTab: BrowserTabItem =

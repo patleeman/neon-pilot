@@ -14,6 +14,7 @@
 - **Strong opinions**: One right way to do things, not infinite flexibility
 - **Performance-first**: No unnecessary animations, blur, or visual effects
 - **Cross-platform**: Works on macOS, Windows, Linux without feeling alien
+- **Visual refresh, not shell redesign**: Keep Neon Pilot's current macro layout and navigation model. DS 2.0 changes the visual grammar inside the existing product.
 
 ---
 
@@ -24,31 +25,47 @@
 - Utilitarian, clear hierarchy, no-nonsense
 - Professional tool aesthetic, not consumer web app
 
-### 2. Platform Strategy: Cross-platform Ready
+### 2. Product Layout Scope
+
+- Do not redesign the global app layout as part of DS 2.0.
+- Do not add a status bar.
+- Keep the existing top bar, left sidebar, conversation/workbench split, right rail, extension routes, and resize behavior.
+- Improve the visual system through squarer geometry, denser surfaces, cleaner typography, solid backgrounds, stronger borders, quieter status, more tooltips, and stricter page composition.
+
+### 3. Platform Strategy: Cross-platform Ready
 
 - Avoid platform-specific patterns
 - Focus on universal desktop conventions
 - Works equally well on macOS, Windows, Linux
 
-### 3. Priorities
+### 4. Priorities
 
 1. **Polish** - Visual refinement, professional appearance
 2. **Velocity** - Fast for developers (especially agents) to build consistent UI
 3. **Performance** - Lightweight, no unnecessary visual effects
 
-### 4. Extension Philosophy: Guardrails
+### 5. Extension Philosophy: Guardrails
 
 - Very opinionated, hard to get wrong
 - Limited choices by design
 - Remove `className` prop from design system components
 - Enforce consistency through type system and ESLint
 
-### 5. Pain Points Being Addressed
+### 6. Pain Points Being Addressed
 
 - ❌ Too many rounded corners (feels web-like)
 - ❌ Soft, pastel colors (lacks definition)
 - ❌ Inconsistent spacing (no rhythm)
 - ❌ Too generic (lacks opinion and character)
+
+### 7. Agreed Visual Direction
+
+- ✅ Squarer and denser.
+- ✅ Cleaner typography.
+- ✅ Solid backgrounds and defined borders.
+- ✅ Quieter status treatments, paired with more tooltips for compact icon/status controls.
+- ✅ Tables over lists and cards for operational records.
+- ✅ Existing layout stays intact; no status bar.
 
 ---
 
@@ -233,6 +250,60 @@
 
 ---
 
+## Page Layouts 2.0
+
+Page layouts should become more consistent and more professional without changing the app shell. DS 2.0 does not introduce a new global layout, status bar, or navigation model. It defines how route content should compose inside the existing Neon Pilot workspace.
+
+### Page Anatomy
+
+Most app and extension routes should use this order:
+
+1. **Compact page header**: title, primary actions, and compact operational metadata when useful.
+2. **Tool row**: filters, search, tabs, view controls, refresh, add, export, or other object-level actions.
+3. **Primary data surface**: table, tree, editor, transcript, or split work surface.
+4. **Detail/inspector area when needed**: selected-row details, preview, logs, validation, or metadata.
+
+Avoid hero-like page introductions, large centered empty states, card stacks, and standalone form pages unless the workflow is genuinely tiny.
+
+### Header Treatment
+
+- Page titles are compact, left-aligned, and single-line when possible.
+- Secondary copy is rare. Use it only for state, scope, constraint, or recovery.
+- Primary actions live in the header or toolbar, not floating in page whitespace.
+- Icon-only common actions need tooltips. Tooltips are part of DS 2.0, not optional polish.
+- Avoid title/subtitle/description stacks that make every page feel custom.
+
+### Data Surface Defaults
+
+- Tables are the default for operational records, histories, tasks, settings inventories, runs, diagnostics, and extension-managed objects.
+- Trees are for hierarchy: files, nested resources, grouped navigation.
+- Lists are for navigation, short menus, or single-column pickers.
+- Cards are exceptions for visual previews or side-by-side comparison, not default CRUD.
+- Object editing should happen inline, in a selected detail/inspector region, or in a compact drawer/dialog only when the interaction is transient.
+
+### Density And Spacing
+
+- First viewport should show useful work immediately: rows plus details, editor plus status, settings plus current values, or workflow plus logs.
+- Page padding, toolbar height, row height, table cell padding, and section gaps should come from DS tokens.
+- Avoid local max-widths, centered marketing layouts, and excessive vertical spacing on app routes.
+- Empty states preserve the working layout: empty table rows, placeholder inspector content, or inline guidance near the relevant control.
+
+### Status And Metadata
+
+- Status should be quiet: dots, compact text, table columns, or subdued inline metadata.
+- Use tooltips to explain compact statuses and icon-only controls.
+- Avoid large pills, decorative badges, glowing state, and status cards that compete with the primary work surface.
+
+### Page Types
+
+- **Object management**: table first, selected detail/inspector second.
+- **Settings**: compact grouped rows with value/control on the right.
+- **Diagnostics/telemetry**: tables and dense charts with compact legends; no dashboard card wall.
+- **Editor/workbench pages**: toolbar plus editor plus optional inspector/logs.
+- **Extension pages**: same page grammar as core pages; no in-page mini-app chrome.
+
+---
+
 ## Component Architecture 2.0
 
 ### Principle: Guardrails by Design
@@ -335,30 +406,11 @@ export const Button = {
 
 ---
 
-## Layout System 2.0
+## Shell Surface System 2.0
 
-### VS Code-Inspired Layout Grid
+### Existing Shell, Sharper Surface Grammar
 
-```
-┌─────────────────────────────────────────────┐
-│ TopBar (Chrome)          [h: 35px, 0 radius]│ ← Solid, sharp
-├────┬────────────────────────────────────┬───┤
-│    │                                    │   │
-│ S  │  Editor (Main Content)             │ P │
-│ i  │                                    │ a │
-│ d  │  [bg: --color-editor]              │ n │
-│ e  │                                    │ e │
-│ b  │                                    │ l │
-│ a  │                                    │   │
-│ r  │                                    │ R │
-│    │                                    │ a │
-│    │                                    │ i │
-│    │                                    │ l │
-│    │                                    │   │
-├────┴────────────────────────────────────┴───┤
-│ StatusBar                   [h: 22px, sharp]│
-└─────────────────────────────────────────────┘
-```
+DS 2.0 keeps Neon Pilot's current shell: top bar, left sidebar, conversation/workbench region, right rail, extension routes, and existing resize behavior. The change is visual treatment, density, and consistency.
 
 **Background Hierarchy**:
 
@@ -367,7 +419,7 @@ const Layout = {
   Chrome: { bg: '--color-chrome' }, // Darkest/lightest
   Sidebar: { bg: '--color-sidebar' }, // Middle
   Editor: { bg: '--color-editor' }, // Brightest/main
-  Panel: { bg: '--color-panel' }, // Elevated cards
+  Panel: { bg: '--color-panel' }, // Elevated surfaces
 };
 ```
 
@@ -377,6 +429,8 @@ const Layout = {
 - Borders: `1px solid var(--color-border)`
 - NO blur, NO shadows (except modals)
 - Clear 3-level hierarchy (chrome → sidebar → content)
+- No new status bar.
+- No global shell-layout redesign.
 
 ---
 

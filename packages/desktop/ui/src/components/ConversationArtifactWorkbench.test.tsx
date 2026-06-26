@@ -13,6 +13,7 @@ import { ConversationArtifactWorkbenchPane } from './ConversationArtifactWorkben
 vi.mock('../client/api', () => ({
   api: {
     conversationArtifact: vi.fn(),
+    deleteConversationArtifact: vi.fn(),
   },
 }));
 
@@ -48,6 +49,7 @@ function renderPane(artifactId: string) {
 describe('ConversationArtifactWorkbenchPane', () => {
   beforeEach(() => {
     vi.mocked(api.conversationArtifact).mockReset();
+    vi.mocked(api.deleteConversationArtifact).mockReset();
     vi.mocked(writeClipboardText).mockReset().mockResolvedValue(undefined);
   });
 
@@ -101,5 +103,52 @@ describe('ConversationArtifactWorkbenchPane', () => {
     view.unmount();
 
     expect(clearTimeoutSpy).toHaveBeenCalledTimes(callsBeforeUnmount + 1);
+  });
+
+  it('copies artifact source from the pointer-activated workbench action', async () => {
+    vi.mocked(api.conversationArtifact).mockResolvedValue({ artifact: artifact('artifact-a', 'Artifact A', 'graph TD; A-->B;') });
+
+    renderPane('artifact-a');
+    const copyButton = await screen.findByRole('button', { name: /copy source/i });
+
+    fireEvent.pointerUp(copyButton);
+
+    await waitFor(() => expect(writeClipboardText).toHaveBeenCalledWith('graph TD; A-->B;'));
+    expect(await screen.findByRole('button', { name: /copied/i })).toBeTruthy();
+  });
+
+  it('deletes the selected artifact after confirmation', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(api.conversationArtifact).mockResolvedValue({ artifact: artifact('artifact-a', 'Artifact A', 'graph TD; A-->B;') });
+    vi.mocked(api.deleteConversationArtifact).mockResolvedValue({
+      conversationId: 'conv-123',
+      artifactId: 'artifact-a',
+      deleted: true,
+      artifacts: [],
+    });
+
+    renderPane('artifact-a');
+    fireEvent.click(await screen.findByRole('button', { name: /^delete$/i }));
+
+    await waitFor(() => expect(api.deleteConversationArtifact).toHaveBeenCalledWith('conv-123', 'artifact-a'));
+    expect(confirmSpy).toHaveBeenCalledWith('Delete artifact "Artifact A"? This cannot be undone.');
+    expect(await screen.findByText('This artifact was deleted.')).toBeTruthy();
+    expect(screen.queryByText('Artifact A')).toBeNull();
+  });
+
+  it('does not expose raw delete errors in the workbench pane', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(api.conversationArtifact).mockResolvedValue({ artifact: artifact('artifact-a', 'Artifact A', 'graph TD; A-->B;') });
+    vi.mocked(api.deleteConversationArtifact).mockRejectedValue(
+      new Error('DELETE /api/conversations/conv-123/artifacts/artifact-a failed at /Users/patrick/app.ts:12'),
+    );
+
+    renderPane('artifact-a');
+    fireEvent.click(await screen.findByRole('button', { name: /^delete$/i }));
+
+    await waitFor(() => expect(api.deleteConversationArtifact).toHaveBeenCalledWith('conv-123', 'artifact-a'));
+    expect(screen.queryByText(new RegExp('DELETE /api', 'i'))).toBeNull();
+    expect(screen.queryByText(new RegExp('Users/patrick', 'i'))).toBeNull();
+    expect(screen.getByText('Artifact A')).toBeTruthy();
   });
 });

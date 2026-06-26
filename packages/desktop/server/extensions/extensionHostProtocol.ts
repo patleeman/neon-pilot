@@ -267,6 +267,11 @@ export interface ExtensionHostHealthRequest {
   type: 'health';
 }
 
+export interface ExtensionHostAbortConversationResourcesRequest {
+  type: 'abortConversationResources';
+  conversationId: string;
+}
+
 export interface ExtensionHostInvokeActionRequest {
   type: 'invokeAction';
   extensionId: string;
@@ -460,6 +465,7 @@ export interface ExtensionHostStartupGuardResult {
 
 export type ExtensionHostRequest =
   | ExtensionHostHealthRequest
+  | ExtensionHostAbortConversationResourcesRequest
   | ExtensionHostInvokeActionRequest
   | ExtensionHostPublishEventRequest
   | ExtensionHostInstallSubscriptionsRequest
@@ -500,6 +506,10 @@ export interface ExtensionHostHealthResponse {
 
 export type ExtensionHostResponse =
   | ExtensionHostHealthResponse
+  | {
+      ok: true;
+      abortedResources: { ok: true; killed: number };
+    }
   | {
       ok: true;
       result: ExtensionHostActionInvokeResult;
@@ -610,6 +620,7 @@ export type ExtensionHostResponse =
     };
 
 export function extensionHostRequestName(request: ExtensionHostRequest): string {
+  if (request.type === 'abortConversationResources') return `abortConversationResources:${request.conversationId}`;
   if (request.type === 'invokeAction') return `invokeAction:${request.extensionId}/${request.actionId}`;
   if (request.type === 'invokeProtocolEntrypoint') return `invokeProtocolEntrypoint:${request.protocolId}`;
   if (request.type === 'publishEvent') return `publishEvent:${request.source}`;

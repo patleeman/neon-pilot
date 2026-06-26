@@ -3,7 +3,6 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ComposerAttachmentShelf } from './ComposerAttachmentShelf';
 import {
   COMPOSER_EDIT_FIRST_DRAWING_COMMAND_EVENT,
   COMPOSER_PREVIEW_FIRST_ATTACHMENT_COMMAND_EVENT,
@@ -11,6 +10,7 @@ import {
   COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT,
   COMPOSER_REMOVE_FIRST_DRAWING_COMMAND_EVENT,
 } from './composerAttachmentCommands';
+import { ComposerAttachmentShelf } from './ComposerAttachmentShelf';
 import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './imagePreviewCommands';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -143,8 +143,8 @@ describe('ComposerAttachmentShelf', () => {
       ],
     });
 
-    click(container.querySelector('button[title="Remove Screenshot 2026-04-22.png"]'));
-    click(container.querySelector('button[title="Remove Wireframe"]'));
+    click(container.querySelector('button[aria-label="Remove Screenshot 2026-04-22.png"]'));
+    click(container.querySelector('button[aria-label="Remove Wireframe"]'));
 
     expect(onRemoveAttachment).toHaveBeenCalledWith(0);
     expect(onRemoveDrawingAttachment).toHaveBeenCalledWith('drawing-1');

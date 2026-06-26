@@ -12,6 +12,7 @@ import {
   isHostCommandDisabledInPalette,
   searchCommandPaletteItems,
   selectCommandPaletteScopedItems,
+  selectPreferredCommandPaletteCursor,
   shouldBootstrapCommandPaletteThreads,
   THREAD_COMMAND_PALETTE_SECTIONS,
   THREADS_COMMAND_PALETTE_SCOPE,
@@ -50,6 +51,10 @@ const FILE_SEARCH_LIMIT = 50;
 const FILE_CONTENT_SEARCH_DEBOUNCE_MS = 160;
 const CONVERSATION_CONTENT_SEARCH_DEBOUNCE_MS = 160;
 const COMMANDS_COMMAND_PALETTE_SCOPE = 'commands';
+
+function commandSecondaryText(input: { category?: string; description?: string }, fallback?: string): string | undefined {
+  return input.description?.trim() || input.category?.trim() || fallback;
+}
 
 function isMacPlatform(): boolean {
   if (typeof navigator === 'undefined') {
@@ -126,7 +131,7 @@ export function CommandPalette() {
         id: `host-command:${command.id}`,
         section: 'commands',
         title: command.title,
-        subtitle: command.id,
+        subtitle: undefined,
         meta: command.category,
         keywords: [command.id, command.category].filter((keyword): keyword is string => typeof keyword === 'string'),
         order: index,
@@ -138,8 +143,8 @@ export function CommandPalette() {
       id: `extension-command:${command.extensionId}:${command.surfaceId}`,
       section: 'commands',
       title: command.title,
-      subtitle: `${command.extensionId}.${command.surfaceId}`,
-      meta: command.category ?? command.extensionId,
+      subtitle: commandSecondaryText(command),
+      meta: command.category ? undefined : 'Extension command',
       keywords: [command.surfaceId, command.extensionId, command.category, command.description].filter(
         (keyword): keyword is string => typeof keyword === 'string',
       ),
@@ -223,6 +228,7 @@ export function CommandPalette() {
     [allItems, emptyQueryLimits, query, quickOpenSectionLabels, scope],
   );
   const visibleItems = useMemo(() => groups.flatMap((group) => group.items), [groups]);
+  const preferredCursor = useMemo(() => selectPreferredCommandPaletteCursor(visibleItems, query), [query, visibleItems]);
 
   const closePalette = useCallback(() => {
     setOpen(false);
@@ -569,9 +575,13 @@ export function CommandPalette() {
         return 0;
       }
 
+      if (query.trim().length > 0) {
+        return Math.max(0, Math.min(preferredCursor, visibleItems.length - 1));
+      }
+
       return Math.max(0, Math.min(current, visibleItems.length - 1));
     });
-  }, [open, visibleItems.length]);
+  }, [open, preferredCursor, query, visibleItems.length]);
 
   useEffect(() => {
     if (!open) {
@@ -876,7 +886,7 @@ export function CommandPalette() {
                       isSelected && 'text-accent',
                       item.disabled && 'opacity-55',
                     )}
-                    title={item.subtitle ?? item.title}
+                    title={item.subtitle ?? item.meta ?? item.title}
                   >
                     <span
                       className={cx('ui-command-palette-result-accent mt-[3px]', isSelected && 'ui-command-palette-result-accent-selected')}

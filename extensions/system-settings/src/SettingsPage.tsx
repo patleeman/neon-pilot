@@ -119,6 +119,9 @@ interface CliInstallStatus {
   binDir: string;
   linkPath: string;
   globallyInstalled: boolean;
+  linkExists: boolean;
+  linkConflict: boolean;
+  linkTarget?: string;
   removed?: boolean;
 }
 
@@ -207,8 +210,20 @@ export function readSettingsSectionIdFromHash(hash: string): string {
 
 export function readSettingsSectionIdFromPathname(pathname: string): SettingsQuickLinkId | '' {
   switch (pathname.replace(/\/+$/, '')) {
+    case '/settings/appearance':
+      return 'settings-appearance';
+    case '/settings/conversation':
+      return 'settings-conversation';
     case '/settings/providers':
       return 'settings-providers';
+    case '/settings/workspace':
+      return 'settings-workspace';
+    case '/settings/commands':
+      return 'settings-commands';
+    case '/settings/security':
+      return 'settings-security';
+    case '/settings/extensions':
+      return 'settings-extensions';
     case '/settings/desktop':
       return 'settings-desktop';
     default:
@@ -216,20 +231,79 @@ export function readSettingsSectionIdFromPathname(pathname: string): SettingsQui
   }
 }
 
-function readSettingsSectionIdFromContext(context: ExtensionSurfaceProps['context']): string {
-  return readSettingsSectionIdFromHash(context.hash) || readSettingsSectionIdFromPathname(context.pathname);
+function readSettingsSectionIdFromContext(
+  context: ExtensionSurfaceProps['context'] | undefined,
+  fallback: { pathname?: string; hash?: string } = {},
+): SettingsQuickLinkId | '' {
+  const fromContext = readSettingsSectionIdFromHash(context?.hash ?? '') || readSettingsSectionIdFromPathname(context?.pathname ?? '');
+  if (fromContext) {
+    return fromContext;
+  }
+  const fromFallback = readSettingsSectionIdFromHash(fallback.hash ?? '') || readSettingsSectionIdFromPathname(fallback.pathname ?? '');
+  if (fromFallback) {
+    return fromFallback;
+  }
+  if (typeof window === 'undefined') {
+    return '';
+  }
+  return readSettingsSectionIdFromHash(window.location.hash) || readSettingsSectionIdFromPathname(window.location.pathname);
+}
+
+export function formatDefaultCwdSaveError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/Directory does not exist:/i.test(message)) {
+    return 'That folder does not exist. Choose an existing folder.';
+  }
+  if (/^5\d\d\s+.+?\s+from\s+\/api\/default-cwd:/i.test(message)) {
+    return 'The default project folder could not be saved.';
+  }
+  return message;
 }
 
 export function scrollSettingsSectionIntoView(container: HTMLElement | null, sectionId: SettingsQuickLinkId) {
   const section = typeof document === 'undefined' ? null : document.getElementById(sectionId);
   if (section && container?.contains(section)) {
     section.scrollIntoView({ block: 'start' });
+    const sectionRect = section.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const sectionTop = sectionRect.top - containerRect.top;
+    if (Math.abs(sectionTop) > 24 && typeof container.scrollTo === 'function') {
+      container.scrollTo({ top: Math.max(0, container.scrollTop + sectionTop - 16) });
+    }
     return;
   }
 
   if (container && typeof container.scrollTo === 'function') {
     container.scrollTo({ top: 0 });
   }
+}
+
+function scheduleSettingsSectionScroll(container: HTMLElement | null, sectionId: SettingsQuickLinkId): () => void {
+  if (typeof window === 'undefined') return () => undefined;
+  const timers: Array<ReturnType<typeof window.setTimeout>> = [];
+  let frame: number | null = null;
+  let attempts = 0;
+  const isSectionVisible = () => {
+    const section = document.getElementById(sectionId);
+    if (!section || !container?.contains(section)) return false;
+    const sectionRect = section.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    return sectionRect.top >= containerRect.top - 24 && sectionRect.top <= containerRect.top + 120;
+  };
+  const scroll = () => {
+    attempts += 1;
+    scrollSettingsSectionIntoView(container, sectionId);
+    if (attempts < 16 && !isSectionVisible()) {
+      timers.push(window.setTimeout(scroll, attempts < 6 ? 100 : 300));
+    }
+  };
+  frame = window.requestAnimationFrame(scroll);
+  return () => {
+    if (frame !== null) {
+      window.cancelAnimationFrame(frame);
+    }
+    timers.forEach((timer) => window.clearTimeout(timer));
+  };
 }
 
 type ShortcutListItem = {
@@ -244,6 +318,12 @@ type ShortcutListItem = {
   keybindingId?: string;
   enabled?: boolean;
   defaultShortcuts?: string[];
+};
+
+type ShortcutListConflict = {
+  shortcut: string;
+  first: ShortcutListItem;
+  second: ShortcutListItem;
 };
 
 export interface CommandSettingsEntry {
@@ -267,7 +347,8 @@ interface CommandWithKeybindings extends CommandSettingsEntry {
   keybindings: CommandKeybindingSettingsEntry[];
 }
 
-function normalizeShortcutForConflict(shortcut: string): string {
+function normalizeShortcutForConflict(shortcut: unknown): string {
+  if (typeof shortcut !== 'string') return '';
   const modifierOrder = ['mod', 'ctrl', 'meta', 'alt', 'shift'];
   const modifierAliases: Record<string, string> = {
     commandorcontrol: 'mod',
@@ -302,6 +383,72 @@ function normalizeShortcutForConflict(shortcut: string): string {
     else key = keyAliases[part] ?? part;
   }
   return [...modifierOrder.filter((modifier) => modifiers.has(modifier)), key].filter(Boolean).join('+');
+}
+
+function buildDesktopShortcutItems(
+  draft: DesktopAppPreferencesState['keyboardShortcuts'],
+  extensionKeybindings: ExtensionKeybindingRegistration[],
+): ShortcutListItem[] {
+  const coreItems = DESKTOP_KEYBOARD_SHORTCUT_IDS.map((id) => ({
+    id,
+    owner: 'Core',
+    label: DESKTOP_KEYBOARD_SHORTCUT_LABELS[id].label,
+    description: DESKTOP_KEYBOARD_SHORTCUT_LABELS[id].description,
+    shortcuts: [draft[id]],
+    editable: true,
+    conflictScope: 'global' as const,
+  }));
+  const extensionItems = extensionKeybindings.map((keybinding) => ({
+    id: `${keybinding.extensionId}:${keybinding.surfaceId}`,
+    owner: keybinding.packageType === 'system' ? 'Built-in extension' : 'Extension',
+    label: keybinding.title,
+    description: keybinding.scope === 'surface' ? 'Surface shortcut' : 'Global shortcut',
+    shortcuts: keybinding.enabled ? keybinding.keys : [],
+    editable: true,
+    conflictScope: keybinding.scope === 'surface' ? (`surface:${keybinding.extensionId}` as const) : ('global' as const),
+    extensionId: keybinding.extensionId,
+    keybindingId: keybinding.surfaceId,
+    enabled: keybinding.enabled,
+    defaultShortcuts: keybinding.defaultKeys,
+  }));
+  return [...coreItems, ...extensionItems];
+}
+
+function findDuplicateShortcut(items: ShortcutListItem[]): ShortcutListConflict | null {
+  const seen = new Map<string, ShortcutListItem>();
+  for (const item of items) {
+    for (const shortcut of item.shortcuts) {
+      const normalizedShortcut = normalizeShortcutForConflict(shortcut);
+      if (!normalizedShortcut) continue;
+      const normalized = `${item.conflictScope}:${normalizedShortcut}`;
+      const previous = seen.get(normalized);
+      if (previous) return { shortcut, first: previous, second: item };
+      seen.set(normalized, item);
+    }
+  }
+  return null;
+}
+
+function findShortcutConflictForItem(
+  items: ShortcutListItem[],
+  targetId: string,
+  shortcuts: string[],
+): { shortcut: string; title: string } | null {
+  const target = items.find((item) => item.id === targetId);
+  if (!target) return null;
+  const requestedShortcuts = new Map(shortcuts.map((shortcut) => [normalizeShortcutForConflict(shortcut), shortcut]));
+  for (const item of items) {
+    if (item.id === targetId || item.conflictScope !== target.conflictScope) continue;
+    for (const existingShortcut of item.shortcuts) {
+      const requestedShortcut = requestedShortcuts.get(normalizeShortcutForConflict(existingShortcut));
+      if (requestedShortcut) return { shortcut: requestedShortcut, title: item.label };
+    }
+  }
+  return null;
+}
+
+function formatDuplicateShortcutError(shortcut: string, title?: string): string {
+  return `Duplicate shortcut: ${shortcut} is already assigned.${title ? ` ${title} already uses it.` : ''}`;
 }
 
 const MODEL_PROVIDER_API_OPTIONS: Array<{ value: ModelProviderApi; label: string }> = [
@@ -773,42 +920,11 @@ export function DesktopKeyboardShortcutsSettingsSection() {
   }, [draft, preferencesState]);
 
   const shortcutItems = useMemo<ShortcutListItem[]>(() => {
-    const coreItems = DESKTOP_KEYBOARD_SHORTCUT_IDS.map((id) => ({
-      id,
-      owner: 'Core',
-      label: DESKTOP_KEYBOARD_SHORTCUT_LABELS[id].label,
-      description: DESKTOP_KEYBOARD_SHORTCUT_LABELS[id].description,
-      shortcuts: [draft[id]],
-      editable: true,
-      conflictScope: 'global' as const,
-    }));
-    const extensionItems = extensionKeybindings.map((keybinding) => ({
-      id: `${keybinding.extensionId}:${keybinding.surfaceId}`,
-      owner: keybinding.extensionId.replace(/^system-/, ''),
-      label: keybinding.title,
-      description: keybinding.scope === 'surface' ? 'Surface shortcut' : 'Extension shortcut',
-      shortcuts: keybinding.enabled ? keybinding.keys : [],
-      editable: true,
-      conflictScope: keybinding.scope === 'surface' ? (`surface:${keybinding.extensionId}` as const) : ('global' as const),
-      extensionId: keybinding.extensionId,
-      keybindingId: keybinding.surfaceId,
-      enabled: keybinding.enabled,
-      defaultShortcuts: keybinding.defaultKeys,
-    }));
-    return [...coreItems, ...extensionItems];
+    return buildDesktopShortcutItems(draft, extensionKeybindings);
   }, [draft, extensionKeybindings]);
 
   const duplicateShortcut = useMemo(() => {
-    const seen = new Map<string, ShortcutListItem>();
-    for (const item of shortcutItems) {
-      for (const shortcut of item.shortcuts) {
-        const normalized = `${item.conflictScope}:${normalizeShortcutForConflict(shortcut)}`;
-        const previous = seen.get(normalized);
-        if (previous) return { shortcut, first: previous, second: item };
-        seen.set(normalized, item);
-      }
-    }
-    return null;
+    return findDuplicateShortcut(shortcutItems);
   }, [shortcutItems]);
 
   const loadPreferences = useCallback(async () => {
@@ -843,6 +959,13 @@ export function DesktopKeyboardShortcutsSettingsSection() {
 
   async function saveExtensionKeybinding(item: ShortcutListItem, input: { keys?: string[]; enabled?: boolean; reset?: boolean }) {
     if (!item.extensionId || !item.keybindingId) return;
+    if (input.keys && input.enabled !== false) {
+      const conflict = findShortcutConflictForItem(shortcutItems, item.id, input.keys);
+      if (conflict) {
+        setError(formatDuplicateShortcutError(conflict.shortcut, conflict.title));
+        return;
+      }
+    }
     setSaving(true);
     setError(null);
     setNotice(null);
@@ -857,7 +980,7 @@ export function DesktopKeyboardShortcutsSettingsSection() {
     }
   }
 
-  async function saveKeyboardShortcuts(nextShortcuts = draft) {
+  async function saveKeyboardShortcuts(nextShortcuts = draft, changedId?: DesktopKeyboardShortcutId) {
     const bridge = getDesktopBridge();
     if (!bridge) {
       setError('Desktop bridge unavailable. Restart the desktop app and try again.');
@@ -866,15 +989,24 @@ export function DesktopKeyboardShortcutsSettingsSection() {
 
     // Pre-save duplicate check: reject before calling the API so a conflict
     // isn't persisted before the next render can surface the warning.
-    const shortcutValues = Object.values(nextShortcuts).filter((s): s is string => typeof s === 'string' && s.length > 0);
-    const seenShortcuts = new Set<string>();
-    for (const value of shortcutValues) {
-      const normalizedValue = normalizeShortcutForConflict(value);
-      if (seenShortcuts.has(normalizedValue)) {
-        setError(`Duplicate shortcut: ${value} is already assigned.`);
-        return;
-      }
-      seenShortcuts.add(normalizedValue);
+    let keybindingsForValidation = extensionKeybindings;
+    try {
+      keybindingsForValidation = await api.extensionKeybindings();
+      setExtensionKeybindings(keybindingsForValidation);
+    } catch {
+      /* Use the loaded keybindings if the refresh fails. */
+    }
+    const nextShortcutItems = buildDesktopShortcutItems(nextShortcuts, keybindingsForValidation);
+    const conflict = changedId
+      ? findShortcutConflictForItem(nextShortcutItems, changedId, [nextShortcuts[changedId]])
+      : findDuplicateShortcut(nextShortcutItems);
+    if (conflict) {
+      setError(
+        'title' in conflict
+          ? formatDuplicateShortcutError(conflict.shortcut, conflict.title)
+          : formatDuplicateShortcutError(conflict.shortcut, conflict.first.label),
+      );
+      return;
     }
 
     setSaving(true);
@@ -930,7 +1062,7 @@ export function DesktopKeyboardShortcutsSettingsSection() {
                             setDraft(nextDraft);
                             setError(null);
                             setNotice(null);
-                            void saveKeyboardShortcuts(nextDraft);
+                            void saveKeyboardShortcuts(nextDraft, editableId);
                             return;
                           }
                           void saveExtensionKeybinding(item, { keys: [shortcut], enabled: true });
@@ -1091,12 +1223,7 @@ export function CommandsSettingsSection() {
     setNotice(null);
     try {
       await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, {
-        title: keybinding.title,
-        command: keybinding.command,
-        args: keybinding.args,
-        when: keybinding.when,
-        scope: keybinding.scope,
-        packageType: keybinding.packageType,
+        ...commandKeybindingMetadataPatch(keybinding),
         keys,
         enabled: true,
       });
@@ -1104,7 +1231,8 @@ export function CommandsSettingsSection() {
       setDrafts((current) => ({ ...current, [id]: keys.join(', ') }));
       setNotice('Saved shortcut.');
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setDrafts((current) => ({ ...current, [id]: keybinding.keys.join(', ') }));
+      setError(formatCommandShortcutError(nextError));
     } finally {
       setBusyId(null);
     }
@@ -1117,18 +1245,13 @@ export function CommandsSettingsSection() {
     setNotice(null);
     try {
       await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, {
-        title: keybinding.title,
-        command: keybinding.command,
-        args: keybinding.args,
-        when: keybinding.when,
-        scope: keybinding.scope,
-        packageType: keybinding.packageType,
+        ...commandKeybindingMetadataPatch(keybinding),
         enabled: !keybinding.enabled,
       });
       await load();
       setNotice(keybinding.enabled ? 'Disabled shortcut.' : 'Enabled shortcut.');
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setError(formatCommandShortcutError(nextError));
     } finally {
       setBusyId(null);
     }
@@ -1143,13 +1266,7 @@ export function CommandsSettingsSection() {
           <SettingsControlRow
             key={commandDisplayId(command)}
             title={command.title ?? commandDisplayId(command)}
-            description={
-              <>
-                <span className="font-mono">{commandDisplayId(command)}</span>
-                <span className="mx-1">·</span>
-                {command.category ?? 'Command'} · {command.extensionId ?? 'host'}
-              </>
-            }
+            description={commandShortcutDescription(command)}
             actionsClassName="settings-page-command-actions"
           >
             <div className="space-y-2">
@@ -1217,8 +1334,49 @@ function keybindingSettingId(keybinding: Pick<CommandKeybindingSettingsEntry, 'e
   return `${keybinding.extensionId}:${keybinding.surfaceId}`;
 }
 
+function commandShortcutDescription(command: CommandWithKeybindings): string {
+  const category = command.category?.trim() || 'Command';
+  if (command.extensionId === 'host') {
+    return `${category} · Built-in`;
+  }
+  return `${category} · ${command.packageType === 'system' ? 'Built-in extension' : 'Extension'}`;
+}
+
 function commandKeybindingConflictScope(keybinding: Pick<CommandKeybindingSettingsEntry, 'extensionId' | 'scope'>): string {
   return keybinding.scope === 'surface' ? `surface:${keybinding.extensionId}` : 'global';
+}
+
+function formatCommandShortcutError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/unknown command/i.test(message)) {
+    return 'Could not save shortcut because its command is no longer available. Reload extensions and try again.';
+  }
+  if (
+    !message.trim() ||
+    /Local API route did not complete/i.test(message) ||
+    /\/api\//i.test(message) ||
+    /file:\/\//i.test(message) ||
+    /localApi\.js/i.test(message) ||
+    /\bModule\./i.test(message) ||
+    /\s+at\s+\S+/i.test(message)
+  ) {
+    return 'Could not save shortcut. Reload extensions and try again.';
+  }
+  return message;
+}
+
+function commandKeybindingMetadataPatch(
+  keybinding: CommandKeybindingSettingsEntry,
+): Partial<Pick<CommandKeybindingSettingsEntry, 'title' | 'command' | 'args' | 'when' | 'scope' | 'packageType'>> {
+  if (!keybinding.surfaceId.startsWith('command:')) return {};
+  return {
+    title: keybinding.title,
+    command: keybinding.command,
+    args: keybinding.args,
+    when: keybinding.when,
+    scope: keybinding.scope,
+    packageType: keybinding.packageType,
+  };
 }
 
 function findCommandShortcutConflict(
@@ -1634,7 +1792,7 @@ function NeonPilotCliSettingsPanel() {
             >
               <SettingsIcon name="trash" />
             </IconButton>
-          ) : (
+          ) : status && !status.linkConflict ? (
             <IconButton
               compact
               type="button"
@@ -1646,17 +1804,32 @@ function NeonPilotCliSettingsPanel() {
             >
               <SettingsIcon name="plus" />
             </IconButton>
-          )}
+          ) : null}
         </>
       }
     >
       {status ? (
-        <SettingsControlRow
-          title={status.globallyInstalled ? 'Installed' : 'Not installed'}
-          description={<code className="break-all">{status.target}</code>}
-        >
-          <code className="break-all text-[12px] text-secondary">{status.linkPath}</code>
-        </SettingsControlRow>
+        <>
+          <SettingsControlRow
+            title={status.globallyInstalled ? 'Installed' : status.linkConflict ? 'Used by another install' : 'Not installed'}
+            description={<code className="break-all">{status.target}</code>}
+          >
+            <code className="break-all text-[12px] text-secondary">{status.linkPath}</code>
+          </SettingsControlRow>
+          {status.linkConflict ? (
+            <div className="space-y-1 text-[12px] text-secondary">
+              <p>
+                The shell command is already linked to another Neon Pilot install. Remove that link or uninstall the other profile before
+                installing this one.
+              </p>
+              {status.linkTarget ? (
+                <p>
+                  Current target: <code className="break-all">{status.linkTarget}</code>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </>
       ) : (
         <p className="ui-card-meta">Loading CLI status...</p>
       )}
@@ -1819,6 +1992,7 @@ function ExtensionSettingsSection({
   const { data: schema, loading: schemaLoading, error: schemaError } = useApi<UnifiedSettingsEntry[]>(api.settingsSchema as never);
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [saveError, setSaveError] = useState<string | null>(null);
+  const valuesRef = useRef<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (saveError)
@@ -1838,6 +2012,7 @@ function ExtensionSettingsSection({
 
   useEffect(() => {
     if (values) {
+      valuesRef.current = values;
       setDraft((prev) => {
         // Start from the fresh backend snapshot, then overlay only the keys
         // the user explicitly edited since the last save.
@@ -1864,9 +2039,11 @@ function ExtensionSettingsSection({
         }
         editedKeys.current.delete(key);
         window.dispatchEvent(new CustomEvent(EXTENSION_REGISTRY_CHANGED_EVENT));
-      } catch (err) {
+      } catch {
         if (saveSequenceByKey.current.get(key) === sequence) {
-          setSaveError(err instanceof Error ? err.message : String(err));
+          editedKeys.current.delete(key);
+          setDraft((prev) => ({ ...prev, [key]: valuesRef.current?.[key] }));
+          setSaveError('Could not save this setting. Your change was not saved.');
         }
       }
     },
@@ -2225,7 +2402,10 @@ function ExtensionSecretsSection() {
   );
 }
 
-export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[] } = {}) {
+export function SettingsPage({
+  sectionIds,
+  context,
+}: { sectionIds?: SettingsQuickLinkId[]; context?: ExtensionSurfaceProps['context'] } = {}) {
   const location = useLocation();
   const extensionRegistry = useExtensionRegistry();
   const {
@@ -2328,12 +2508,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   );
 
   useEffect(() => {
-    const rawSectionId = readSettingsSectionIdFromHash(location.hash);
+    const rawSectionId = readSettingsSectionIdFromContext(context, { pathname: location.pathname, hash: location.hash });
     const sectionId = visibleTocLinks.some((item) => item.id === rawSectionId) ? rawSectionId : '';
     if (!sectionId) return;
-    const frame = window.requestAnimationFrame(() => navigateToSection(sectionId));
-    return () => window.cancelAnimationFrame(frame);
-  }, [location.hash, visibleTocLinks]);
+    setActiveQuickLinkId(sectionId);
+    return scheduleSettingsSectionScroll(settingsScrollRef.current, sectionId);
+  }, [context, location.hash, location.pathname, visibleTocLinks]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2849,7 +3029,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       setDefaultCwdDraft(saved.currentCwd);
       await refetchDefaultCwd({ resetLoading: false });
     } catch (error) {
-      setDefaultCwdSaveError(error instanceof Error ? error.message : String(error));
+      setDefaultCwdSaveError(formatDefaultCwdSaveError(error));
     } finally {
       setSavingDefaultCwd(false);
     }
@@ -2875,7 +3055,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       setDefaultCwdDraft(result.path);
       await handleDefaultCwdSave(result.path);
     } catch (error) {
-      setDefaultCwdSaveError(error instanceof Error ? error.message : String(error));
+      setDefaultCwdSaveError(formatDefaultCwdSaveError(error));
     } finally {
       setPathPickerTarget((current) => (current === 'default-cwd' ? null : current));
     }
@@ -3194,6 +3374,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     try {
       const state = await api.deleteModelProviderModel(selectedModelProvider.id, modelId);
       syncModelProviderSelection(state, selectedModelProvider.id);
+      setShowProviderModelManagement(true);
       setModelDraftMessage(`Removed ${modelId}.`);
       await Promise.all([refetchModels({ resetLoading: false }), refetchProviderAuth({ resetLoading: false })]);
     } catch (error) {
@@ -3204,7 +3385,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   }
 
   async function handleSaveProviderApiKey() {
-    if (!selectedProvider || providerCredentialAction !== null || !canProviderUseApiKey(selectedProvider)) {
+    if (!modalProviderAuth || providerCredentialAction !== null || !canProviderUseApiKey(modalProviderAuth)) {
       return;
     }
 
@@ -3220,10 +3401,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setProviderCredentialAction('saveKey');
 
     try {
-      await api.setProviderApiKey(selectedProvider.id, apiKey);
+      await api.setProviderApiKey(modalProviderAuth.id, apiKey);
       setProviderApiKey('');
       setOauthLoginState(null);
-      setProviderCredentialNotice(`Saved API key for ${selectedProvider.id}.`);
+      setProviderCredentialNotice(`Saved API key for ${modalProviderAuth.id}.`);
       await Promise.all([refetchProviderAuth({ resetLoading: false }), refetchModels({ resetLoading: false })]);
     } catch (error) {
       setProviderCredentialError(error instanceof Error ? error.message : String(error));
@@ -3233,11 +3414,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   }
 
   async function handleRemoveProviderCredential() {
-    if (!selectedProvider || providerCredentialAction !== null) {
+    if (!modalProviderAuth || providerCredentialAction !== null) {
       return;
     }
 
-    const confirmed = window.confirm(`Remove the stored credential for ${selectedProvider.id} from auth.json?`);
+    const confirmed = window.confirm(`Remove the stored credential for ${modalProviderAuth.id} from auth.json?`);
     if (!confirmed) {
       return;
     }
@@ -3248,9 +3429,9 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setProviderCredentialAction('remove');
 
     try {
-      await api.removeProviderCredential(selectedProvider.id);
+      await api.removeProviderCredential(modalProviderAuth.id);
       setOauthLoginState(null);
-      setProviderCredentialNotice(`Removed stored credential for ${selectedProvider.id}.`);
+      setProviderCredentialNotice(`Removed stored credential for ${modalProviderAuth.id}.`);
       await Promise.all([refetchProviderAuth({ resetLoading: false }), refetchModels({ resetLoading: false })]);
     } catch (error) {
       setProviderCredentialError(error instanceof Error ? error.message : String(error));
@@ -3370,14 +3551,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       setProviderCredentialNotice('Copied OAuth login details.');
     } catch (error) {
       setOauthError(error instanceof Error ? error.message : String(error));
-    }
-  }
-
-  function navigateToSection(sectionId: SettingsQuickLinkId) {
-    setActiveQuickLinkId(sectionId);
-    window.requestAnimationFrame(() => scrollSettingsSectionIntoView(settingsScrollRef.current, sectionId));
-    if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', `#${sectionId}`);
     }
   }
 
@@ -4619,6 +4792,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
               <SettingsSection id="settings-desktop" label="Desktop" description="Desktop app behavior and diagnostics.">
                 <DesktopConnectionsSettingsPanel />
+                <DesktopKeyboardShortcutsSettingsSection />
                 <TelemetryLogsSettingsPanel />
               </SettingsSection>
             </div>

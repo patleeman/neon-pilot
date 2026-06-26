@@ -44,6 +44,8 @@ export interface LiveEntry extends LiveSessionPresenceHost, LiveSessionStaleTurn
   running: boolean;
   tracePersistedTokens?: PersistedTokensSnapshot;
   pendingAutoModeContinuation?: boolean;
+  directBashRunning?: boolean;
+  directBashAbortControllers?: Set<AbortController>;
   traceRunId?: string | null;
   traceRunStartedAtMs?: number | null;
   traceRunTurnCount?: number;

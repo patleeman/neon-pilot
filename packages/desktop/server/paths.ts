@@ -1,6 +1,7 @@
 import { resolveStatePaths } from '@neon-pilot/core';
+import { createHash } from 'crypto';
 import { mkdirSync } from 'fs';
-import { homedir } from 'os';
+import { homedir, tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 
 import type { DaemonPaths } from './daemon/types.js';
@@ -39,13 +40,21 @@ function expandHome(path: string): string {
 // in EADDRINUSE when the truncated path collides with an existing directory entry.
 const UNIX_SOCKET_PATH_MAX = 103;
 
+function createShortSocketPath(stateRoot: string, daemonDirName: string): string {
+  const digest = createHash('sha256').update(`${stateRoot}\0${daemonDirName}`).digest('hex').slice(0, 16);
+  return join(tmpdir(), `neon-pilotd-${digest}.sock`);
+}
+
 export function resolveDaemonPaths(explicitSocketPath?: string, namespace = process.env.NEON_PILOT_DAEMON_NAMESPACE): DaemonPaths {
   const statePaths = resolveStatePaths();
   const normalizedNamespace = explicitSocketPath ? undefined : normalizeDaemonNamespace(namespace);
   const daemonDirName = normalizedNamespace ? `daemon-${normalizedNamespace}` : 'daemon';
+  const defaultSocketPath = join(statePaths.root, daemonDirName, DAEMON_SOCKET_FILE_NAME);
   const socketPath = explicitSocketPath
     ? resolve(expandHome(explicitSocketPath))
-    : join(statePaths.root, daemonDirName, DAEMON_SOCKET_FILE_NAME);
+    : defaultSocketPath.length > UNIX_SOCKET_PATH_MAX
+      ? createShortSocketPath(statePaths.root, daemonDirName)
+      : defaultSocketPath;
   const root = explicitSocketPath ? dirname(socketPath) : join(statePaths.root, daemonDirName);
 
   if (socketPath.length > UNIX_SOCKET_PATH_MAX) {
@@ -68,5 +77,6 @@ export function resolveDaemonPaths(explicitSocketPath?: string, namespace = proc
 
 export function ensureDaemonDirectories(paths: DaemonPaths): void {
   mkdirSync(paths.root, { recursive: true, mode: 0o700 });
+  mkdirSync(dirname(paths.socketPath), { recursive: true, mode: 0o700 });
   mkdirSync(paths.logDir, { recursive: true, mode: 0o700 });
 }

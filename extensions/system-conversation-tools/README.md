@@ -130,10 +130,11 @@ The `neon-pilot conversations cwd` CLI command switches the conversation's worki
 
 ## Parameters
 
-| Parameter        | Type   | Required | Description                                                   |
-| ---------------- | ------ | -------- | ------------------------------------------------------------- |
-| `cwd`            | string | yes      | Target directory. Relative paths resolve from the current cwd |
-| `continuePrompt` | string | no       | Prompt to execute automatically after the directory switch    |
+| Parameter        | Type   | Required | Description                                                                                                                                                                    |
+| ---------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cwd`            | string | yes      | Target directory. Relative paths resolve from the current conversation cwd, or from the target conversation cwd when a `conversationId` is supplied through the admin/CLI form |
+| `conversationId` | string | no       | Target conversation id for the `conversation_admin` / `neon-pilot conversations cwd` form; defaults to the calling conversation                                                |
+| `continuePrompt` | string | no       | Prompt to execute automatically after the directory switch                                                                                                                     |
 
 ## Behavior
 
@@ -153,7 +154,8 @@ The `neon-pilot conversations cwd` CLI command switches the conversation's worki
 
 ## Scope
 
-- The change affects only the calling conversation
+- The split `change_working_directory` tool affects only the calling conversation
+- The admin/CLI form can target another conversation by id
 - Other conversations retain their own working directories
 - The change persists for the lifetime of the conversation
 - If `continuePrompt` is provided, it runs in the new directory automatically

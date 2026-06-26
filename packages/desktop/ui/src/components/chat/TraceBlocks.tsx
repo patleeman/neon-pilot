@@ -41,9 +41,11 @@ import type { TraceClusterSummary, TraceClusterSummaryCategory, TraceConversatio
 export const ThinkingBlock = memo(function ThinkingBlock({
   block,
   autoOpen,
+  live,
 }: {
   block: Extract<MessageBlock, { type: 'thinking' }>;
   autoOpen: boolean;
+  live?: boolean;
 }) {
   const [preference, setPreference] = useState<DisclosurePreference>('auto');
   const open = resolveDisclosureOpen(autoOpen, preference);
@@ -70,7 +72,7 @@ export const ThinkingBlock = memo(function ThinkingBlock({
       <RowButton onClick={toggleThinkingBlock} className="px-2.5 py-2">
         <Pill tone="muted">Thinking</Pill>
         {!open && preview ? <span className="min-w-0 flex-1 truncate text-secondary italic">{preview}</span> : <span className="flex-1" />}
-        {autoOpen && <MetaLabel tone="muted">live</MetaLabel>}
+        {live && <MetaLabel tone="muted">live</MetaLabel>}
         <span className="text-dim text-[10px]">{open ? 'hide' : 'show'}</span>
       </RowButton>
       {open && (
@@ -533,10 +535,11 @@ export function TraceClusterBlock({
           {visibleBlocks.map((block, index) => {
             const blockIndex = open ? visibleStartIndex + index : runningBlockIndex;
             const autoOpen = resolveConversationBlockAutoOpen(block, blockIndex, blocks.length, stableActive, transcriptDisclosureMode);
+            const blockLive = stableActive && blockIndex === blocks.length - 1;
 
             switch (block.type) {
               case 'thinking':
-                return <ThinkingBlock key={`thinking-${blockIndex}`} block={block} autoOpen={autoOpen} />;
+                return <ThinkingBlock key={`thinking-${blockIndex}`} block={block} autoOpen={autoOpen} live={blockLive} />;
               case 'tool_use':
                 return (
                   <ToolBlock
@@ -633,6 +636,15 @@ function presentTraceErrorMessage(message: string): string {
 
   if (normalized.toLowerCase() === 'terminated') {
     return 'Stopped before finishing. The agent run was interrupted or cancelled.';
+  }
+
+  const extensionModuleLoadFailure = /^Extension "([^"]+)" action "([^"]+)" failed: Cannot find module\b/.exec(normalized);
+  if (extensionModuleLoadFailure) {
+    return `Extension "${extensionModuleLoadFailure[1]}" action "${extensionModuleLoadFailure[2]}" could not start because a required app module was unavailable. Rebuild or restart Neon Pilot and try again.`;
+  }
+
+  if (/^Cannot find module\b/.test(normalized)) {
+    return 'A required app module was unavailable. Rebuild or restart Neon Pilot and try again.';
   }
 
   return message;

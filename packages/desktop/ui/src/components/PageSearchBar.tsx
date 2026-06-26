@@ -576,8 +576,11 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
   const topClassName = desktopShell ? 'top-12' : 'top-4';
 
   return (
-    <div className={cx('pointer-events-none fixed right-4 z-40', topClassName)} data-page-search-ignore="true">
-      <MenuShell role="group" className="pointer-events-auto flex min-w-[19rem] items-center gap-2 px-2.5 py-2">
+    <div
+      className={cx('pointer-events-none fixed right-4 z-40 w-[min(32rem,calc(100vw-2rem))]', topClassName)}
+      data-page-search-ignore="true"
+    >
+      <MenuShell role="group" className="pointer-events-auto !static !inset-auto !mb-0 flex w-full items-center gap-2 px-2.5 py-2">
         <label
           className="ui-input-shell flex min-w-0 flex-1 items-center gap-2 px-2.5 py-1.5 focus-within:bg-base/90"
           aria-label="Page search"

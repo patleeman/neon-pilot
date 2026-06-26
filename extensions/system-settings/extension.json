@@ -282,6 +282,46 @@
         "activation": "on-route"
       },
       {
+        "id": "workspace",
+        "title": "Workspace settings",
+        "location": "main",
+        "route": "/settings/workspace",
+        "component": "WorkspaceSettingsPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      },
+      {
+        "id": "commands",
+        "title": "Command settings",
+        "location": "main",
+        "route": "/settings/commands",
+        "component": "CommandsSettingsPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      },
+      {
+        "id": "security",
+        "title": "Security settings",
+        "location": "main",
+        "route": "/settings/security",
+        "component": "SecuritySettingsPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      },
+      {
+        "id": "extensions",
+        "title": "Extension settings",
+        "location": "main",
+        "route": "/settings/extensions",
+        "component": "ExtensionsSettingsPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      },
+      {
         "id": "desktop",
         "title": "Desktop settings",
         "location": "main",

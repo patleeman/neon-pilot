@@ -40,6 +40,7 @@ describe('registerFilePickerRoutes', () => {
   function createResponse() {
     return {
       json: vi.fn(),
+      status: vi.fn().mockReturnThis(),
     };
   }
 
@@ -74,5 +75,18 @@ describe('registerFilePickerRoutes', () => {
       prompt: 'Choose instruction files',
     });
     expect(res.json).toHaveBeenCalledWith({ paths: [], cancelled: true });
+  });
+
+  it('returns a friendly error when the picker cannot open', () => {
+    const { postHandler } = createHarness();
+    const res = createResponse();
+    pickFilesMock.mockImplementation(() => {
+      throw new Error('spawn osascript ENOENT at /private/tmp/internal.js:12');
+    });
+
+    postHandler({ body: {} }, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Could not open the file picker. Try again or enter the path manually.' });
   });
 });

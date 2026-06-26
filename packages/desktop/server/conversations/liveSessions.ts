@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { AgentSession } from '@earendil-works/pi-coding-agent';
 import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { publishAppEvent, publishConversationRuntimeState } from '../shared/appEvents.js';
 import { persistTraceStats } from '../traces/tracePersistence.js';
 import {
@@ -25,6 +26,7 @@ import {
 import { type InjectedTurnEnvelopeOptions, wrapInjectedTurnMessage } from './injectedTurnEnvelope.js';
 import { executeLiveSessionBash } from './liveSessionBash.js';
 import { finalizeLiveSessionBashExecution } from './liveSessionBashFinalization.js';
+import { abortConversationBashProcesses } from './liveSessionBashProcesses.js';
 import { branchLiveSession, forkLiveSession } from './liveSessionBranching.js';
 import {
   applySessionTitle,
@@ -51,6 +53,7 @@ import {
   requestLiveSessionWorkingDirectoryChange,
 } from './liveSessionCwdChange.js';
 import { destroyLiveSession } from './liveSessionDestroy.js';
+import { abortConversationDurableRuns } from './liveSessionDurableRun.js';
 import { handleLiveSessionEvent } from './liveSessionEventHandling.js';
 import { type LiveContextUsage, type SseEvent } from './liveSessionEvents.js';
 import { makeAuth as makeFactoryAuth, makeRegistry, warmLiveSessionToolSelection } from './liveSessionFactory.js';
@@ -66,6 +69,7 @@ import {
   updateLiveSessionModelPreferences as updateLiveSessionModelPreferencesWithCallbacks,
 } from './liveSessionMaintenanceOps.js';
 import {
+  appendDetachedLiveSessionBashExecution,
   appendDetachedLiveSessionUserMessage,
   appendParallelImportedLiveSessionMessage,
   appendVisibleLiveSessionCustomMessage,
@@ -680,6 +684,7 @@ export async function appendDetachedUserMessage(sessionId: string, text: string)
   await appendDetachedLiveSessionUserMessage(entry, text, {
     broadcastTitle: (entry) => broadcastTitle(entry, { resolveEntryTitle, publishSessionMetaChanged }),
     publishSessionMetaChanged,
+    publishSessionFileChanged: (sessionId) => publishAppEvent({ type: 'session_file_changed', sessionId }),
   });
 }
 
@@ -938,11 +943,34 @@ export async function executeSessionBash(
     throw new Error(`Session ${sessionId} is not live`);
   }
 
-  const { result, normalizedCommand } = await executeLiveSessionBash(entry, command, {
-    excludeFromContext: options.excludeFromContext,
-    broadcast: (event) => broadcast(entry, event),
-  });
+  const abortController = new AbortController();
+  entry.directBashAbortControllers ??= new Set();
+  entry.directBashAbortControllers.add(abortController);
+  entry.directBashRunning = true;
+  publishRunningChange(entry);
 
+  let result: unknown;
+  let normalizedCommand: string;
+  try {
+    const executed = await executeLiveSessionBash(entry, command, {
+      excludeFromContext: options.excludeFromContext,
+      signal: abortController.signal,
+      broadcast: (event) => broadcast(entry, event),
+    });
+    result = executed.result;
+    normalizedCommand = executed.normalizedCommand;
+  } finally {
+    entry.directBashAbortControllers.delete(abortController);
+    if (entry.directBashAbortControllers.size === 0) {
+      entry.directBashAbortControllers = undefined;
+      entry.directBashRunning = false;
+    }
+    publishRunningChange(entry);
+  }
+
+  appendDetachedLiveSessionBashExecution(entry, normalizedCommand, result as Record<string, unknown>, {
+    excludeFromContext: options.excludeFromContext,
+  });
   finalizeLiveSessionBashExecution(entry, normalizedCommand, {
     broadcastTitle: (entry) => broadcastTitle(entry, { resolveEntryTitle, publishSessionMetaChanged }),
     broadcast,
@@ -1059,7 +1087,22 @@ export async function updateLiveSessionModelPreferences(
 export async function abortSession(sessionId: string): Promise<void> {
   const entry = registry.get(sessionId);
   if (!entry) return;
+  for (const controller of entry.directBashAbortControllers ?? []) {
+    controller.abort();
+  }
+  abortConversationBashProcesses(sessionId);
+  await abortConversationDurableRuns(entry);
   await entry.session.abort();
+  for (const controller of entry.directBashAbortControllers ?? []) {
+    controller.abort();
+  }
+  abortConversationBashProcesses(sessionId);
+  await abortConversationDurableRuns(entry);
+  try {
+    await getExtensionHostClient().abortConversationResources(sessionId);
+  } catch {
+    // Some test and CLI contexts do not run a split extension host.
+  }
   await syncDurableConversationRun(entry, 'interrupted', { force: true, lastError: 'Stopped by user' });
   publishRunningChange(entry);
 }
@@ -1077,6 +1120,7 @@ export async function branchSession(
   const result = await branchLiveSession(entry, entryId, options, { resumeSession });
   // Notify the source conversation so its transcript refreshes and shows the new child tombstone.
   publishSessionMetaChanged(sessionId);
+  publishAppEvent({ type: 'session_file_changed', sessionId });
   return result;
 }
 
@@ -1104,6 +1148,7 @@ export async function forkSession(
   // Notify the source conversation so its transcript refreshes and shows the new child tombstone.
   if (options.preserveSource) {
     publishSessionMetaChanged(sessionId);
+    publishAppEvent({ type: 'session_file_changed', sessionId });
   }
   return result;
 }

@@ -1,9 +1,4 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
-import {
-  buildLiveSessionExtensionFactoriesForRuntime,
-  buildLiveSessionResourceOptionsForRuntime,
-  requestConversationWorkingDirectoryChange,
-} from '@neon-pilot/extensions/backend/conversations';
 
 import { deferredResume } from '../../system-automations/src/conversationQueueBackend.js';
 import { executeAskUserQuestion } from './askUserQuestionAgentExtension.js';
@@ -624,6 +619,7 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
       getCwd: () => toolCtx?.cwd,
     },
     cwd: toolCtx?.cwd,
+    readConversationSessions: () => ctx.conversations.list(),
   };
 
   const action = readAction(input);
@@ -672,8 +668,16 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
       return executeConversationInspectTool(conversationInspectPayload(params), { ...sessionManagerCtx, conversations: ctx.conversations });
 
     case 'set_title':
-      return executeSetConversationTitle(payload, sessionManagerCtx, (title) =>
-        ctx.conversations.setTitle(optionalString(payload.conversationId) ?? conversationId, title),
+      return executeSetConversationTitle(
+        payload,
+        {
+          ...sessionManagerCtx,
+          sessionManager: {
+            ...sessionManagerCtx.sessionManager,
+            getSessionId: () => optionalString(payload.conversationId) ?? conversationId,
+          },
+        },
+        (title) => ctx.conversations.setTitle(optionalString(payload.conversationId) ?? conversationId, title),
       );
 
     case 'change_working_directory':
@@ -681,9 +685,8 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
         payload,
         sessionManagerCtx,
         (changeInput) =>
-          requestConversationWorkingDirectoryChange(changeInput, {
-            ...buildLiveSessionResourceOptionsForRuntime(),
-            extensionFactories: buildLiveSessionExtensionFactoriesForRuntime(),
+          ctx.conversations.requestWorkingDirectoryChange(changeInput.conversationId, changeInput.cwd, {
+            ...(changeInput.continuePrompt ? { continuePrompt: changeInput.continuePrompt } : {}),
           }) as Promise<RequestConversationWorkingDirectoryChangeResult>,
       );
 
@@ -828,6 +831,7 @@ function toolSessionManagerCtx(ctx: ExtensionBackendContext) {
         getCwd: () => toolCtx?.cwd,
       },
       cwd: toolCtx?.cwd,
+      readConversationSessions: () => ctx.conversations.list(),
     },
   };
 }
@@ -855,9 +859,8 @@ export async function conversationCwd(input: unknown, ctx: ExtensionBackendConte
     input as { cwd?: string; continuePrompt?: string },
     sessionManagerCtx,
     (changeInput) =>
-      requestConversationWorkingDirectoryChange(changeInput, {
-        ...buildLiveSessionResourceOptionsForRuntime(),
-        extensionFactories: buildLiveSessionExtensionFactoriesForRuntime(),
+      ctx.conversations.requestWorkingDirectoryChange(changeInput.conversationId, changeInput.cwd, {
+        ...(changeInput.continuePrompt ? { continuePrompt: changeInput.continuePrompt } : {}),
       }) as Promise<RequestConversationWorkingDirectoryChangeResult>,
   );
 }

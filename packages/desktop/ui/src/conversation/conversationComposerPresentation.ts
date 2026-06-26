@@ -13,6 +13,7 @@ interface ComposerMentionProviderSummary {
 export function resolveConversationAutocompleteCatalogDemand(input: string): {
   needsMemoryData: boolean;
   needsKnowledgeFiles: boolean;
+  needsTaskData: boolean;
 } {
   const slashInput = parseSlashInput(input);
   const showModelPicker = slashInput?.command === '/model' && input.startsWith('/model ');
@@ -21,6 +22,7 @@ export function resolveConversationAutocompleteCatalogDemand(input: string): {
   return {
     needsMemoryData: hasMentionQuery || Boolean(slashInput && !showModelPicker),
     needsKnowledgeFiles: hasMentionQuery,
+    needsTaskData: hasMentionQuery,
   };
 }
 

@@ -12,6 +12,8 @@ export type ConversationSlashCommand =
 
 type ConversationSlashParseResult = { kind: 'command'; command: ConversationSlashCommand } | { kind: 'invalid'; message: string };
 
+export type ConversationSlashCommandExecution = { kind: 'local' } | { kind: 'send'; text: string };
+
 export function parseConversationSlashCommand(input: string): ConversationSlashParseResult | null {
   const parsed = parseSlashInput(input.trim());
   if (!parsed) {
@@ -43,5 +45,26 @@ export function parseConversationSlashCommand(input: string): ConversationSlashP
       return argument ? { kind: 'invalid', message: 'Usage: /copy' } : { kind: 'command', command: { action: 'copy' } };
     default:
       return null;
+  }
+}
+
+export function resolveConversationSlashCommandExecution(command: ConversationSlashCommand): ConversationSlashCommandExecution {
+  switch (command.action) {
+    case 'compact':
+    case 'export':
+    case 'name':
+    case 'copy':
+      return { kind: 'local' };
+    case 'run':
+      return { kind: 'send', text: `Run this shell command: ${command.command}` };
+    case 'search':
+      return { kind: 'send', text: `Search the web for: ${command.query}` };
+    case 'summarize':
+      return { kind: 'send', text: 'Summarize our conversation so far' };
+    case 'think':
+      return {
+        kind: 'send',
+        text: command.topic ? `Think step-by-step about: ${command.topic}` : 'Think step-by-step about the next step',
+      };
   }
 }

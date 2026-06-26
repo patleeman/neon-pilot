@@ -83,6 +83,7 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
 
   const clearCopyResetTimeout = useCallback(() => {
@@ -101,6 +102,7 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
     setArtifact(null);
     setError(null);
     setCopied(false);
+    setDeleting(false);
 
     api
       .conversationArtifact(conversationId, artifactId)
@@ -155,6 +157,38 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
     }, 1200);
   }, [artifact, clearCopyResetTimeout]);
 
+  const deleteArtifact = useCallback(async () => {
+    if (!artifact || deleting) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete artifact "${artifact.title}"? This cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const result = await api.deleteConversationArtifact(conversationId, artifact.id);
+      if (!result.deleted) {
+        setError('Artifact not found.');
+      } else {
+        setError('This artifact was deleted.');
+      }
+      setArtifact(null);
+      addNotification({ type: 'success', message: 'Artifact deleted.' });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Delete failed',
+        message: 'Could not delete artifact.',
+        details: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setDeleting(false);
+    }
+  }, [artifact, conversationId, deleting]);
+
   const artifactTitle = artifact
     ? `${artifact.title} · ${artifact.id} · rev ${artifact.revision} · updated ${formatDate(artifact.updatedAt)}`
     : artifactId;
@@ -175,14 +209,24 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
           titleClassName="text-[14px]"
           actions={
             artifact ? (
-              <ToolbarButton
-                onClick={() => {
-                  void copySource();
-                }}
-                className="shrink-0 px-2 py-1 text-[10px]"
-              >
-                {copied ? 'copied' : artifact.kind === 'latex' ? 'copy latex' : 'copy source'}
-              </ToolbarButton>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <ToolbarButton
+                  onClick={(event) => {
+                    if (event.detail === 0) {
+                      void copySource();
+                    }
+                  }}
+                  onPointerUp={() => {
+                    void copySource();
+                  }}
+                  className="shrink-0 px-2 py-1 text-[10px]"
+                >
+                  {copied ? 'copied' : artifact.kind === 'latex' ? 'copy latex' : 'copy source'}
+                </ToolbarButton>
+                <ToolbarButton onClick={() => void deleteArtifact()} disabled={deleting} className="shrink-0 px-2 py-1 text-[10px]">
+                  {deleting ? 'deleting' : 'delete'}
+                </ToolbarButton>
+              </div>
             ) : null
           }
         />

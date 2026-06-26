@@ -29,6 +29,21 @@ export function excerpt(value: string | undefined, maxLength = 110): string | un
   return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}…` : normalized;
 }
 
+export function workspaceDisplayLabel(cwd: string | undefined, cwdSlug?: string | null): string | undefined {
+  const normalized = cwd?.trim();
+  if (normalized) {
+    return (
+      normalized
+        .split(/[\\/]+/)
+        .filter(Boolean)
+        .at(-1) ?? normalized
+    );
+  }
+
+  const slug = cwdSlug?.trim();
+  return slug || undefined;
+}
+
 export function buildConversationItems(
   section: 'open' | 'archived',
   sessions: ScopedSessionMeta[],
@@ -66,7 +81,7 @@ export function buildConversationItems(
       id: `${section}:${session.id}`,
       section,
       title: session.title,
-      subtitle: session.cwd,
+      subtitle: workspaceDisplayLabel(session.cwd, session.cwdSlug),
       meta: metaParts.join(' · '),
       keywords: [session.id, session.file, session.cwd, session.model, session.cwdSlug],
       order: index,
@@ -124,7 +139,7 @@ export function buildConversationContentSearchItems(
     id: `conversation-search:${result.conversationId}:${result.blockId}`,
     section: result.isLive ? ('open' as const) : ('archived' as const),
     title: result.title,
-    subtitle: result.cwd,
+    subtitle: workspaceDisplayLabel(result.cwd),
     meta: excerpt(result.snippet, 160),
     keywords: [query, result.conversationId, result.cwd, result.snippet, result.blockId],
     order: index,

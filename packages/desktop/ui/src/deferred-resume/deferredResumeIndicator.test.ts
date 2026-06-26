@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import type { DeferredResumeSummary } from '../shared/types';
 import {
   buildDeferredResumeIndicatorText,
+  buildDeferredResumeScheduleTimerKey,
+  buildOverdueScheduledDeferredResumeRefreshKey,
   compareDeferredResumes,
   describeDeferredResumeStatus,
   formatDeferredResumeWhen,
@@ -101,6 +103,44 @@ describe('deferredResumeIndicator', () => {
     expect(state.hasReadyResumes).toBe(true);
     expect(state.autoResumeKey).toBe('/tmp/session.jsonl::ready');
     expect(state.indicatorText).toBe('1 ready now · 1 scheduled');
+  });
+
+  it('builds a refresh key only for overdue scheduled resumes', () => {
+    const nowMs = Date.parse('2026-03-12T13:05:00.000Z');
+
+    expect(
+      buildOverdueScheduledDeferredResumeRefreshKey(
+        [
+          scheduled('future', '2026-03-12T13:08:00.000Z'),
+          scheduled('overdue-b', '2026-03-12T13:04:59.000Z'),
+          ready('ready', '2026-03-12T13:01:00.000Z'),
+          scheduled('overdue-a', '2026-03-12T13:05:00.000Z'),
+          scheduled('bad', 'not-a-date'),
+        ],
+        nowMs,
+      ),
+    ).toBe('overdue-a,overdue-b');
+
+    expect(buildOverdueScheduledDeferredResumeRefreshKey([scheduled('future', '2026-03-12T13:08:00.000Z')], nowMs)).toBeNull();
+    expect(buildOverdueScheduledDeferredResumeRefreshKey([ready('ready', '2026-03-12T13:01:00.000Z')], nowMs)).toBeNull();
+  });
+
+  it('builds a stable timer key for visible deferred resume schedule changes', () => {
+    expect(buildDeferredResumeScheduleTimerKey([])).toBeNull();
+
+    expect(
+      buildDeferredResumeScheduleTimerKey([
+        scheduled('future-b', '2026-03-12T13:08:00.000Z'),
+        ready('ready-a', '2026-03-12T13:01:00.000Z'),
+      ]),
+    ).toBe('future-b:scheduled:2026-03-12T13:08:00.000Z:|ready-a:ready:2026-03-12T13:00:00.000Z:2026-03-12T13:01:00.000Z');
+
+    expect(
+      buildDeferredResumeScheduleTimerKey([
+        ready('ready-a', '2026-03-12T13:01:00.000Z'),
+        scheduled('future-b', '2026-03-12T13:08:00.000Z'),
+      ]),
+    ).toBe('future-b:scheduled:2026-03-12T13:08:00.000Z:|ready-a:ready:2026-03-12T13:00:00.000Z:2026-03-12T13:01:00.000Z');
   });
 
   it('formats the visible due/ready timestamp for deferred resumes', () => {

@@ -105,6 +105,8 @@ async function resolveExtensionActionPathByRouteCapability(
         candidate.surfaces?.some((surface) => surface.routeCapabilities?.includes(capability))) &&
       (candidate.backendActions ?? candidate.manifest?.backend?.actions ?? []).some((action) => action.id === actionId),
   );
-  if (!extension) throw new Error(`No enabled extension provides ${capability}.${actionId}.`);
+  if (!extension) {
+    throw new Error('URL clipping is not available. Enable a Knowledge extension and try again.');
+  }
   return `/api/extensions/${encodeURIComponent(extension.id)}/actions/${encodeURIComponent(actionId)}`;
 }

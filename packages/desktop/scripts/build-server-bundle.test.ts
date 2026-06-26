@@ -52,6 +52,17 @@ describe('desktop server bundle lazy module entries', () => {
     expect(buildScript).toContain("'@silvia-odwyer/photon-node'");
   });
 
+  it('packages pi-coding-agent export HTML assets beside app chunks', () => {
+    const buildScript = readRepoFile('packages/desktop/scripts/build-server-bundle.mjs');
+
+    expect(buildScript).toContain("resolve(piCodingAgentRoot, 'dist/core/export-html')");
+    expect(buildScript).toContain("resolve(piCodingAgentRoot, 'dist/modes/interactive/theme')");
+    expect(buildScript).toContain("resolve(outdir, 'app', 'chunks', 'dist', 'core', 'export-html')");
+    expect(buildScript).toContain("resolve(outdir, 'app', 'chunks', 'dist', 'modes', 'interactive', 'theme')");
+    expect(buildScript).toContain('cpSync(piCodingAgentExportHtml, bundledAppChunkExportHtml, { recursive: true })');
+    expect(buildScript).toContain('cpSync(piCodingAgentInteractiveTheme, bundledAppChunkInteractiveTheme, { recursive: true })');
+  });
+
   it('packages every relative backend API lazy module used by extension wrappers', () => {
     const backendApiFiles = ['automations.ts', 'events.ts', 'gateways.ts', 'images.ts', 'knowledge.ts', 'modelGateway.ts'].map(
       (file) => `packages/desktop/server/extensions/backendApi/${file}`,

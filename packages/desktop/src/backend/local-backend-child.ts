@@ -267,7 +267,16 @@ async function shutdown(server: ReturnType<typeof createServer>): Promise<void> 
     return;
   }
   shuttingDown = true;
-  await new Promise<void>((resolve) => server.close(() => resolve()));
+  const closeStalledConnections = setTimeout(() => {
+    server.closeAllConnections?.();
+  }, 500);
+  closeStalledConnections.unref?.();
+  await new Promise<void>((resolve) =>
+    server.close(() => {
+      clearTimeout(closeStalledConnections);
+      resolve();
+    }),
+  );
   await localhostWebappProxy?.close().catch(() => undefined);
   localhostWebappProxy = undefined;
   await stopDaemon();
@@ -365,7 +374,25 @@ async function main(): Promise<void> {
       }
     })();
   });
-  const handleRealtimeUpgrade = createDesktopRealtimeUpgradeHandler({ getRuntimeScope: () => SHARED_CHILD_RUNTIME_SCOPE });
+  const handleRealtimeUpgrade = createDesktopRealtimeUpgradeHandler({
+    getRuntimeScope: () => SHARED_CHILD_RUNTIME_SCOPE,
+    subscribeLocalApiStreamByUrl: async (url, onEvent) => {
+      if (!localApi) {
+        throw new Error('Local API is unavailable.');
+      }
+      return localApi.subscribeDesktopLocalApiStream(`${url.pathname}${url.search}`, (event) => {
+        if (event.type === 'message') {
+          onEvent({ type: 'message', data: event.data ?? '' });
+        } else if (event.type === 'error') {
+          onEvent({ type: 'error', message: event.message ?? 'Stream failed.' });
+        } else if (event.type === 'open') {
+          onEvent({ type: 'open' });
+        } else if (event.type === 'close') {
+          onEvent({ type: 'close' });
+        }
+      });
+    },
+  });
   server.on('upgrade', (request, socket, head) => {
     if (!isAuthorizedRealtimeUpgrade(request, token)) {
       rejectUpgrade(socket, 401, 'Unauthorized');

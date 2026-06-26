@@ -233,39 +233,139 @@ async function resumeSource(cdp) {
 }
 
 async function clickMessageAction(cdp, child, text, action) {
+  const sourceSessions = await readSessionSummaries(cdp);
+  const existingSessionIds = sourceSessions.map((session) => session.id).filter((id) => typeof id === 'string');
   const clicked = await evalJs(
     cdp,
     `(() => {
+      if (!window.__forkRewindFetchPatched) {
+        const originalFetch = window.fetch.bind(window);
+        window.__forkRewindFetches = [];
+        window.fetch = async (...args) => {
+          const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+          const method = args[1]?.method || args[0]?.method || 'GET';
+          const shouldCapture = String(url).includes('/api/live-sessions') || String(url).includes('/api/sessions');
+          const startedAt = Date.now();
+          try {
+            const response = await originalFetch(...args);
+            if (shouldCapture) {
+              const clone = response.clone();
+              const body = await clone.text().catch((error) => String(error));
+              window.__forkRewindFetches.push({
+                url: String(url),
+                method: String(method),
+                status: response.status,
+                ok: response.ok,
+                body: body.slice(0, 800),
+                durationMs: Date.now() - startedAt,
+              });
+            }
+            return response;
+          } catch (error) {
+            if (shouldCapture) {
+              window.__forkRewindFetches.push({
+                url: String(url),
+                method: String(method),
+                error: error instanceof Error ? error.message : String(error),
+                durationMs: Date.now() - startedAt,
+              });
+            }
+            throw error;
+          }
+        };
+        window.__forkRewindFetchPatched = true;
+      }
+      window.__forkRewindFetches.length = 0;
       const needle = ${JSON.stringify(text)};
       const actionText = ${JSON.stringify(action)};
-      const blocks = Array.from(document.querySelectorAll('[data-transcript-block-id]'));
+      const expectedButtonText = actionText === 'fork' ? '⑂ fork' : '↩ rewind';
+      const actionRoot = document.querySelector('main') || document;
+      const blocks = Array.from(actionRoot.querySelectorAll('[data-transcript-block-id]')).filter(
+        (candidate) => !candidate.closest('[data-chat-rail="1"]')
+      );
       const block = blocks.find((candidate) => (candidate.textContent || '').includes(needle));
       if (!block) return { ok: false, reason: 'block not found', blocks: blocks.map((b) => (b.textContent || '').slice(0, 140)) };
       block.scrollIntoView({ block: 'center', inline: 'nearest' });
-      const button = Array.from(block.querySelectorAll('button')).find((candidate) => (candidate.textContent || '').toLowerCase().includes(actionText));
-      if (!button) return { ok: false, reason: 'button not found', blockText: block.textContent || '' };
+      const button = Array.from(block.querySelectorAll('button')).find((candidate) => (candidate.textContent || '').trim().toLowerCase() === expectedButtonText);
+      if (!button) {
+        return {
+          ok: false,
+          reason: 'button not found',
+          expectedButtonText,
+          buttons: Array.from(block.querySelectorAll('button')).map((candidate) => (candidate.textContent || '').trim()),
+          blockText: block.textContent || ''
+        };
+      }
       button.click();
-      return { ok: true };
+      return {
+        ok: true,
+        blockId: block.getAttribute('data-transcript-block-id'),
+        buttonText: (button.textContent || '').trim(),
+        buttonDisabled: button.disabled,
+        inChatRail: Boolean(block.closest('[data-chat-rail="1"]')),
+      };
     })()`,
   );
   if (!clicked.ok) throw new Error(`could not click ${action}: ${JSON.stringify(clicked)}`);
-  await waitForExpression(
-    cdp,
-    child,
-    `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith(${JSON.stringify(sourceSessionId)})`,
-    30_000,
+  const expectedKind = action === 'rewind' ? 'rewind' : 'fork';
+  try {
+    await waitForExpression(
+      cdp,
+      child,
+      `(async () => {
+      const existing = new Set(${JSON.stringify(existingSessionIds)});
+      const response = await fetch('/api/sessions?limit=100');
+      if (!response.ok) return false;
+      const sessions = await response.json().catch(() => []);
+      return Array.isArray(sessions) && sessions.some((session) =>
+        session &&
+        typeof session.id === 'string' &&
+        !existing.has(session.id) &&
+        session.parentSessionId === ${JSON.stringify(sourceSessionId)} &&
+        session.offshootKind === ${JSON.stringify(expectedKind)}
+      );
+    })()`,
+      30_000,
+    );
+  } catch (error) {
+    const actionDiagnostics = await evalJs(
+      cdp,
+      `(() => ({
+        clicked: ${JSON.stringify(clicked)},
+        fetches: window.__forkRewindFetches || [],
+        notices: Array.from(document.querySelectorAll('[role="alert"], [data-notice], .ui-notice')).map((node) => node.textContent || ''),
+      }))()`,
+    ).catch((diagnosticError) => ({
+      error: diagnosticError instanceof Error ? diagnosticError.message : String(diagnosticError),
+    }));
+    throw new Error(
+      `${error instanceof Error ? error.message : String(error)}\nAction diagnostics: ${JSON.stringify(actionDiagnostics, null, 2)}`,
+    );
+  }
+  const nextSessions = await readSessionSummaries(cdp);
+  const childSession = nextSessions.find(
+    (session) =>
+      session &&
+      typeof session.id === 'string' &&
+      !existingSessionIds.includes(session.id) &&
+      session.parentSessionId === sourceSessionId &&
+      session.offshootKind === expectedKind,
   );
-  return evalJs(cdp, `location.pathname.split('/').filter(Boolean).at(-1)`);
+  return childSession?.id ?? null;
 }
 
-async function readUiState(cdp) {
+async function readUiState(cdp, scopeSelector = null) {
   return evalJs(
     cdp,
-    `(() => ({
+    `(() => {
+      const scopedRoot = ${JSON.stringify(scopeSelector)} ? document.querySelector(${JSON.stringify(scopeSelector)}) : document;
+      const root = scopedRoot || document;
+      const textRoot = root === document ? document.body : root;
+      return ({
       pathname: location.pathname,
       conversationId: location.pathname.split('/').filter(Boolean).at(-1) || null,
-      bodyText: document.body.innerText || '',
-      composerValue: document.querySelector('textarea[placeholder*="Message"]')?.value ?? '',
+      bodyText: textRoot?.innerText || '',
+      composerValue: root.querySelector('textarea[placeholder*="Message"]')?.value ?? '',
       sidebarRows: (() => {
         let currentGroupKey = null;
         const rows = [];
@@ -286,12 +386,13 @@ async function readUiState(cdp) {
         }
         return rows;
       })(),
-      topologyLabels: Array.from(document.querySelectorAll('[data-topology-kind]')).map((row) => row.textContent || ''),
-      transcriptBlocks: Array.from(document.querySelectorAll('[data-transcript-block-id]')).map((row) => ({
+      topologyLabels: Array.from(root.querySelectorAll('[data-topology-kind]')).map((row) => row.textContent || ''),
+      transcriptBlocks: Array.from(root.querySelectorAll('[data-transcript-block-id]')).map((row) => ({
         id: row.getAttribute('data-transcript-block-id'),
         text: row.textContent || '',
       })),
-    }))()`,
+    });
+    })()`,
   );
 }
 
@@ -306,6 +407,21 @@ async function readSessionMeta(cdp, sessionId) {
   );
   if (!result.ok) {
     throw new Error(`session meta failed for ${sessionId}: ${JSON.stringify(result)}`);
+  }
+  return result.body;
+}
+
+async function readSessionSummaries(cdp) {
+  const result = await evalJs(
+    cdp,
+    `(async () => {
+      const response = await fetch('/api/sessions?limit=100');
+      const body = await response.json().catch(() => []);
+      return { ok: response.ok, status: response.status, body };
+    })()`,
+  );
+  if (!result.ok || !Array.isArray(result.body)) {
+    throw new Error(`sessions read failed: ${JSON.stringify(result)}`);
   }
   return result.body;
 }
@@ -366,13 +482,23 @@ function assertState(condition, message, details) {
 }
 
 async function expectChild(cdp, child, { id, sourceId, kind, composer, includes = [], excludes = [], sourceMessageText }) {
+  const expectedFrom = kind === 'rewind' ? 'Rewound from' : 'Forked from';
   await waitForExpression(
     cdp,
     child,
-    `location.pathname.endsWith('/${id}') && Boolean(document.querySelector('textarea[placeholder*="Message"]'))`,
+    `(() => {
+      const root = document.querySelector('[data-chat-rail="1"]');
+      const bodyText = root?.innerText || '';
+      return Boolean(root) &&
+        (root.querySelector('textarea[placeholder*="Message"]')?.value ?? null) === ${JSON.stringify(composer)} &&
+        !bodyText.includes('Loading messages') &&
+        Array.from(root.querySelectorAll('[data-topology-kind="parent_conversation_backlink"]')).some((row) =>
+          (row.textContent || '').includes(${JSON.stringify(expectedFrom)})
+        );
+    })()`,
     45_000,
   );
-  const state = await readUiState(cdp);
+  const state = await readUiState(cdp, '[data-chat-rail="1"]');
   assertState(state.composerValue === composer, `${kind} child composer mismatch`, state);
   for (const text of includes) {
     assertState(state.bodyText.includes(text), `${kind} child missing expected text: ${text}`, state);
@@ -384,7 +510,6 @@ async function expectChild(cdp, child, { id, sourceId, kind, composer, includes 
       state,
     );
   }
-  const expectedFrom = kind === 'rewind' ? 'Rewound from' : 'Forked from';
   assertState(
     state.topologyLabels.some((label) => label.includes(expectedFrom) && label.includes(sourceTitle)),
     `${kind} child missing ${expectedFrom} marker`,
@@ -397,12 +522,16 @@ async function expectChild(cdp, child, { id, sourceId, kind, composer, includes 
 }
 
 async function expectParentMarker(cdp, child, sourceId, kind, childId) {
+  await navigateSpa(cdp, `/conversations/${childId}`);
   await openConversation(cdp, child, sourceId, sourceTitle);
   const expectedTo = kind === 'rewind' ? 'Rewound to' : 'Forked to';
   await waitForExpression(
     cdp,
     child,
-    `Array.from(document.querySelectorAll('[data-topology-kind]')).some((row) => (row.textContent || '').includes(${JSON.stringify(expectedTo)}))`,
+    `Array.from(document.querySelectorAll('[data-topology-kind]')).some((row) => {
+      const text = row.textContent || '';
+      return text.includes(${JSON.stringify(expectedTo)}) && text.includes(${JSON.stringify(childId)});
+    })`,
     30_000,
   );
   const state = await readUiState(cdp);
@@ -416,6 +545,9 @@ async function expectParentMarker(cdp, child, sourceId, kind, childId) {
 async function runCase(cdp, child, sourceId, { label, messageText, action, kind, composer, includes, excludes, sourceMessageText }) {
   await openConversation(cdp, child, sourceId, messageText);
   const childId = await clickMessageAction(cdp, child, messageText, action);
+  if (!childId) {
+    throw new Error(`could not resolve child id for ${label}`);
+  }
   await expectChild(cdp, child, {
     id: childId,
     sourceId,

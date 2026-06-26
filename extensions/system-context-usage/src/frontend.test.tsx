@@ -22,6 +22,13 @@ describe('ContextUsageIndicator', () => {
     ).toContain('ui-ring-status-dot-danger');
   });
 
+  it('renders unknown context windows with muted tone', () => {
+    const html = renderToString(<ContextUsageIndicator pa={pa} statusBarContext={{ contextUsage: { total: 10_000, contextWindow: 0 } }} />);
+
+    expect(html).toContain('Context usage: ? of unknown ctx');
+    expect(html).toContain('ui-ring-status-dot-muted');
+  });
+
   it('does not render without context usage', () => {
     expect(renderToString(<ContextUsageIndicator pa={pa} statusBarContext={{}} />)).toBe('');
   });

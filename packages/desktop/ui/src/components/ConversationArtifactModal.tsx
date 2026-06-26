@@ -31,6 +31,7 @@ const ICON_PATHS = {
     'M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 4.2A10.8 10.8 0 0 1 12 4c6.5 0 10 8 10 8a17.9 17.9 0 0 1-3.1 4.4M6.6 6.6C3.7 8.5 2 12 2 12s3.5 8 10 8c1.4 0 2.7-.4 3.8-1',
   maximize: 'M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5',
   minimize: 'M8 3v5H3M16 3v5h5M21 16h-5v5M3 16h5v5',
+  trash: 'M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15M10 10v7M14 10v7',
   x: 'M6 6l12 12M18 6 6 18',
 };
 
@@ -57,6 +58,7 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
   const { versions } = useAppEvents();
   const [showSource, setShowSource] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
 
@@ -72,6 +74,7 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
   useEffect(() => {
     clearCopyResetTimeout();
     setCopied(false);
+    setDeleting(false);
   }, [artifactId, clearCopyResetTimeout]);
 
   const artifactFetcher = useCallback(() => api.conversationArtifact(conversationId, artifactId), [artifactId, conversationId]);
@@ -160,6 +163,33 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
       setCopied(false);
     }, 1200);
   }, [artifact, clearCopyResetTimeout]);
+
+  const deleteArtifact = useCallback(async () => {
+    if (!artifact || deleting) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete artifact "${artifact.title}"? This cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await api.deleteConversationArtifact(conversationId, artifact.id);
+      addNotification({ type: 'success', message: 'Artifact deleted.' });
+      closeArtifact();
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Delete failed',
+        message: 'Could not delete artifact.',
+        details: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setDeleting(false);
+    }
+  }, [artifact, closeArtifact, conversationId, deleting]);
 
   useEffect(() => {
     setExtensionCommandContext('artifact.active', Boolean(artifact));
@@ -260,6 +290,17 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
                       <ToolbarIcon name={showSource ? 'eyeOff' : 'code'} />
                     </IconButton>
                   ) : null}
+                  <IconButton
+                    compact
+                    disabled={deleting}
+                    onClick={() => {
+                      void deleteArtifact();
+                    }}
+                    aria-label={deleting ? 'Deleting artifact' : 'Delete artifact'}
+                    title={deleting ? 'Deleting artifact' : 'Delete artifact'}
+                  >
+                    <ToolbarIcon name="trash" />
+                  </IconButton>
                 </>
               ) : null}
               <IconButton

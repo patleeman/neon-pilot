@@ -45,12 +45,14 @@ describe('system-ast-grep backend', () => {
     expect(exec).toHaveBeenLastCalledWith(expect.objectContaining({ command: '/usr/local/bin/sg' }));
   });
 
-  it('rejects search paths outside the active workspace', async () => {
+  it('returns user-facing diagnostics for search paths outside the active workspace', async () => {
     const exec = vi.fn();
 
-    await expect(astGrep({ pattern: 'console.log($$$)', paths: ['../outside'] }, createCtx(exec))).rejects.toThrow(
-      'Invalid search path outside workspace',
-    );
+    await expect(astGrep({ pattern: 'console.log($$$)', paths: ['../outside'] }, createCtx(exec))).resolves.toMatchObject({
+      isError: true,
+      content: [{ type: 'text', text: expect.stringContaining('Invalid search path outside workspace') }],
+      details: { invalidPath: true },
+    });
     expect(exec).not.toHaveBeenCalled();
   });
 

@@ -13,50 +13,40 @@ const mocks = vi.hoisted(() => ({
   setSkillEnabled: vi.fn(),
 }));
 
-vi.mock(
-  '@neon-pilot/extensions/backend/extensions',
-  () => ({
-    listExtensionInstallSummaries: mocks.listExtensionInstallSummaries,
-  }),
-);
+vi.mock('@neon-pilot/extensions/backend/extensions', () => ({
+  listExtensionInstallSummaries: mocks.listExtensionInstallSummaries,
+}));
 
-vi.mock(
-  '@neon-pilot/extensions/backend/mcp',
-  () => ({
-    buildMergedMcpConfigDocument: mocks.buildMergedMcpConfigDocument,
-    readBundledSkillMcpManifests: mocks.readBundledSkillMcpManifests,
-    readMcpConfigDocument: mocks.readMcpConfigDocument,
-  }),
-);
+vi.mock('@neon-pilot/extensions/backend/mcp', () => ({
+  buildMergedMcpConfigDocument: mocks.buildMergedMcpConfigDocument,
+  readBundledSkillMcpManifests: mocks.readBundledSkillMcpManifests,
+  readMcpConfigDocument: mocks.readMcpConfigDocument,
+}));
 
-vi.mock(
-  '@neon-pilot/extensions/backend/promptAssembly',
-  () => ({
-    buildInstructionPlan: mocks.buildInstructionPlan,
-    buildPromptAssemblyPlanAsync: mocks.buildPromptAssemblyPlanAsync,
-    buildPromptTemplatePlanAsync: mocks.buildPromptTemplatePlanAsync,
-    buildToolInjectionPlanAsync: mocks.buildToolInjectionPlanAsync,
-  }),
-);
+vi.mock('@neon-pilot/extensions/backend/promptAssembly', () => ({
+  buildInstructionPlan: mocks.buildInstructionPlan,
+  buildPromptAssemblyPlanAsync: mocks.buildPromptAssemblyPlanAsync,
+  buildPromptTemplatePlanAsync: mocks.buildPromptTemplatePlanAsync,
+  buildToolInjectionPlanAsync: mocks.buildToolInjectionPlanAsync,
+}));
 
-vi.mock(
-  '@neon-pilot/extensions/backend/skills',
-  () => ({
-    buildSkillInventoryAsync: mocks.buildSkillInventoryAsync,
-    setSkillEnabled: mocks.setSkillEnabled,
-  }),
-);
+vi.mock('@neon-pilot/extensions/backend/skills', () => ({
+  buildSkillInventoryAsync: mocks.buildSkillInventoryAsync,
+  setSkillEnabled: mocks.setSkillEnabled,
+}));
 
-const { inspectAgentRuntime, updateRuntimeCapability } = await import('./backend.js');
+const { inspectAgentRuntime, updateRuntimeCapability, updateSkillEnabled } = await import('./backend.js');
 
 describe('system-prompt-assembly backend', () => {
   const setEnabled = vi.fn();
   const invalidate = vi.fn();
+  const refreshSkillMcpConfig = vi.fn();
   const ctx = {
     runtimeScope: 'runtime-scope',
     runtime: {
       getRepoRoot: () => '/repo',
       getLiveSessionResourceOptions: () => ({ cwd: '/repo/workspace', additionalSkillPaths: ['/skills'] }),
+      refreshSkillMcpConfig,
     },
     extensions: { setEnabled },
     ui: { invalidate },
@@ -168,6 +158,29 @@ describe('system-prompt-assembly backend', () => {
         { name: 'bundled', transport: 'http', url: 'http://localhost:3000', oauthClientInfo: {} },
       ],
     });
+  });
+
+  it('refreshes skill MCP config after direct skill toggles', async () => {
+    await expect(updateSkillEnabled({ id: ' skill-a ', enabled: false }, ctx)).resolves.toEqual({
+      ok: true,
+      id: 'skill-a',
+      enabled: false,
+    });
+
+    expect(mocks.setSkillEnabled).toHaveBeenCalledWith('skill-a', false);
+    expect(refreshSkillMcpConfig).toHaveBeenCalledOnce();
+  });
+
+  it('refreshes skill MCP config after runtime skill capability toggles', async () => {
+    await expect(updateRuntimeCapability({ id: 'skill-a', kind: 'skill', enabled: false }, ctx)).resolves.toEqual({
+      ok: true,
+      id: 'skill-a',
+      kind: 'skill',
+      enabled: false,
+    });
+
+    expect(mocks.setSkillEnabled).toHaveBeenCalledWith('skill-a', false);
+    expect(refreshSkillMcpConfig).toHaveBeenCalledOnce();
   });
 
   it('aggregates runtime capabilities from public backend seams', async () => {

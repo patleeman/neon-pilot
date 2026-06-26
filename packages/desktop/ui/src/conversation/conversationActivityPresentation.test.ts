@@ -5,6 +5,7 @@ import {
   activityExecutions,
   activityQueuedPrompts,
   activityScheduledTasks,
+  mergeCanonicalDeferredResumesWithActivity,
 } from './conversationActivityPresentation';
 
 describe('conversation activity presentation adapters', () => {
@@ -32,7 +33,15 @@ describe('conversation activity presentation adapters', () => {
         conversationId: 'conv-1',
         source: { type: 'deferred-resume', id: 'resume-1' },
         actions: [],
-        payload: { id: 'resume-1', sessionFile: '/session.jsonl', prompt: 'Continue', dueAt: '2026-06-11T00:00:00.000Z', createdAt: '2026-06-10T00:00:00.000Z', attempts: 0, status: 'scheduled' },
+        payload: {
+          id: 'resume-1',
+          sessionFile: '/session.jsonl',
+          prompt: 'Continue',
+          dueAt: '2026-06-11T00:00:00.000Z',
+          createdAt: '2026-06-10T00:00:00.000Z',
+          attempts: 0,
+          status: 'scheduled',
+        },
       },
       {
         id: 'scheduled-task:task-1',
@@ -44,7 +53,15 @@ describe('conversation activity presentation adapters', () => {
         conversationId: 'conv-1',
         source: { type: 'scheduled-task', id: 'task-1' },
         actions: [],
-        payload: { id: 'task-1', title: 'Task', scheduleType: 'cron', running: false, enabled: true, prompt: 'Run', threadMode: 'existing' },
+        payload: {
+          id: 'task-1',
+          title: 'Task',
+          scheduleType: 'cron',
+          running: false,
+          enabled: true,
+          prompt: 'Run',
+          threadMode: 'existing',
+        },
       },
       {
         id: 'queued-prompt:followUp:queue-1',
@@ -66,5 +83,65 @@ describe('conversation activity presentation adapters', () => {
     expect(activityQueuedPrompts(items)).toEqual([
       { id: 'queue-1', text: 'Next', imageCount: 1, restorable: false, type: 'followUp', queueIndex: 2 },
     ]);
+  });
+
+  it('does not resurrect stale deferred resumes from mirrored activity payloads', () => {
+    const canonical = [
+      {
+        id: 'resume-current',
+        sessionFile: '/session.jsonl',
+        prompt: 'Current prompt',
+        dueAt: '2026-06-11T00:00:00.000Z',
+        createdAt: '2026-06-10T00:00:00.000Z',
+        attempts: 0,
+        status: 'scheduled',
+      },
+    ] as const;
+
+    const merged = mergeCanonicalDeferredResumesWithActivity({
+      canonical,
+      activity: [
+        {
+          id: 'resume-current',
+          sessionFile: '/session.jsonl',
+          prompt: 'Updated prompt',
+          dueAt: '2026-06-11T00:01:00.000Z',
+          createdAt: '2026-06-10T00:00:00.000Z',
+          attempts: 0,
+          status: 'ready',
+          readyAt: '2026-06-11T00:01:00.000Z',
+        },
+        {
+          id: 'resume-stale',
+          sessionFile: '/session.jsonl',
+          prompt: 'Already cancelled',
+          dueAt: '2026-06-11T00:02:00.000Z',
+          createdAt: '2026-06-10T00:00:00.000Z',
+          attempts: 0,
+          status: 'scheduled',
+        },
+      ],
+    });
+
+    expect(merged.map((resume) => resume.id)).toEqual(['resume-current']);
+    expect(merged[0]?.prompt).toBe('Updated prompt');
+    expect(merged[0]?.status).toBe('ready');
+
+    expect(
+      mergeCanonicalDeferredResumesWithActivity({
+        canonical: [],
+        activity: [
+          {
+            id: 'resume-stale',
+            sessionFile: '/session.jsonl',
+            prompt: 'Already cancelled',
+            dueAt: '2026-06-11T00:02:00.000Z',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            attempts: 0,
+            status: 'scheduled',
+          },
+        ],
+      }),
+    ).toEqual([]);
   });
 });

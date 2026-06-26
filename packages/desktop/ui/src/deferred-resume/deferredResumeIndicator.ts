@@ -97,6 +97,33 @@ export function resolveDeferredResumePresentationState(input: {
   };
 }
 
+export function buildOverdueScheduledDeferredResumeRefreshKey(
+  resumes: readonly DeferredResumeSummary[],
+  nowMs = Date.now(),
+): string | null {
+  if (!Number.isSafeInteger(nowMs)) {
+    return null;
+  }
+
+  const overdueIds = resumes
+    .filter((resume) => resume.status === 'scheduled' && parseIsoTimestamp(resume.dueAt) <= nowMs)
+    .map((resume) => resume.id)
+    .sort();
+
+  return overdueIds.length > 0 ? overdueIds.join(',') : null;
+}
+
+export function buildDeferredResumeScheduleTimerKey(resumes: readonly DeferredResumeSummary[]): string | null {
+  if (resumes.length === 0) {
+    return null;
+  }
+
+  return resumes
+    .map((resume) => [resume.id, resume.status, resume.dueAt, resume.readyAt ?? ''].join(':'))
+    .sort()
+    .join('|');
+}
+
 export function formatDeferredResumeWhen(resume: DeferredResumeSummary): string {
   const target = resume.status === 'ready' ? (resume.readyAt ?? resume.dueAt) : resume.dueAt;
   const date = new Date(target);

@@ -68,7 +68,7 @@ describe('system-computer-use backend', () => {
     await expect(computerUseDoctor({}, createCtx())).resolves.toEqual(
       expect.objectContaining({
         ok: false,
-        message: 'Cua Driver doctor could not run.',
+        message: 'Cua Driver is not installed or is not on PATH.',
         error: 'spawn cua-driver ENOENT',
         installHint: expect.stringContaining('Install Cua Driver'),
       }),
@@ -83,6 +83,25 @@ describe('system-computer-use backend', () => {
       'health_report',
       {},
       expect.objectContaining({ timeoutMs: 20_000 }),
+    );
+  });
+
+  it('returns a recovery hint for capture when Cua Driver is missing', async () => {
+    callMcpToolDirectMock.mockRejectedValue(new Error('spawn cua-driver ENOENT'));
+
+    await expect(computerUse({ action: 'capture' }, createCtx())).resolves.toEqual(
+      expect.objectContaining({
+        ok: false,
+        message: 'Cua Driver is not installed or is not on PATH.',
+        error: 'spawn cua-driver ENOENT',
+        installHint: expect.stringContaining('Install Cua Driver'),
+      }),
+    );
+    expect(callMcpToolDirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ command: 'cua-driver' }),
+      'screenshot',
+      {},
+      expect.objectContaining({ timeoutMs: 30_000 }),
     );
   });
 

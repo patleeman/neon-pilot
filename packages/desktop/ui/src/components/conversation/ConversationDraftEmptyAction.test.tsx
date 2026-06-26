@@ -85,7 +85,8 @@ describe('ConversationDraftEmptyAction', () => {
 
     expect(html).toContain('Workspace');
     expect(html).toContain('neon-pilot');
-    expect(html).toContain('/Users/patrick/workingdir');
+    expect(html).toContain('In workingdir');
+    expect(html).not.toContain('/Users/patrick/workingdir');
   });
 
   it('renders cwd errors without remote controls', () => {

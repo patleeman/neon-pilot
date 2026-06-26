@@ -39,6 +39,7 @@ import { buildScheduledTaskThreadDetail } from '../automation/scheduledTaskThrea
 import { readConversationAggregateState } from '../conversations/conversationAggregate.js';
 import {
   createConversationAttachmentCapability,
+  deleteConversationArtifactCapability,
   deleteConversationAttachmentCapability,
   readConversationArtifactCapability,
   readConversationArtifactsCapability,
@@ -69,6 +70,7 @@ import { searchIndexedConversationContent } from '../conversations/conversationS
 import {
   appendConversationOffshootDetachedMetadata,
   appendConversationWorkspaceMetadata,
+  deleteStoredConversations,
   publishConversationSessionMetaChanged,
   readConversationModelPreferenceStateById,
   readConversationSessionMeta,
@@ -124,6 +126,7 @@ import {
   updateLiveSessionModelPreferences,
 } from '../conversations/liveSessions.js';
 import { getExecution, getExecutionLog, listConversationExecutions, listExecutions } from '../executions/executionService.js';
+import { createExtensionConversationsCapability } from '../extensions/extensionConversations.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import { notifyExtensionStartupStatus } from '../extensions/extensionNotifications.js';
@@ -219,7 +222,7 @@ import {
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
 import { assertConversationFound, assertSessionFound } from './localApiConversationNotFound.js';
 import { buildDesktopConversationSource, normalizeResolvedSessionFile } from './localApiConversationSource.js';
-import { buildCreateLiveSessionPerf, shouldDispatchInitialLiveSessionPrompt } from './localApiCreateLiveSessionResponse.js';
+import { buildCreateLiveSessionPerf } from './localApiCreateLiveSessionResponse.js';
 import {
   buildExportLiveSessionResponse,
   normalizeExportLiveSessionConversationId,
@@ -313,20 +316,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
-function readDesktopLocalApiBooleanParam(value: string | null): boolean | undefined {
-  if (value === null) return undefined;
-  const normalized = value.trim().toLowerCase();
-  if (normalized === 'true' || normalized === '1') return true;
-  if (normalized === 'false' || normalized === '0') return false;
-  return undefined;
+function optionalStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items = value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean);
+  return items.length > 0 ? items : undefined;
 }
 
-function readDesktopExecutionVisibilityParam(value: string | null): 'primary' | 'system' | 'hidden' | 'visible' | 'all' | undefined {
-  if (value === null) return undefined;
-  const normalized = value.trim();
-  return normalized === 'primary' || normalized === 'system' || normalized === 'hidden' || normalized === 'visible' || normalized === 'all'
-    ? normalized
-    : undefined;
+async function syncSystemConversationToolMutation(input: {
+  extensionId: string;
+  actionId: string;
+  body: unknown;
+  result: unknown;
+}): Promise<void> {
+  if (input.extensionId !== 'system-conversation-tools' || input.actionId !== 'conversationTool') return;
+  if (!isRecord(input.body)) return;
+  const action = typeof input.body.action === 'string' ? input.body.action : '';
+  const actionResult = isRecord(input.result) ? input.result : {};
+  if (actionResult.ok !== true) return;
+
+  const conversations = createExtensionConversationsCapability(await getLocalServerRouteContext(), input.extensionId);
+  if (action === 'delete') {
+    await conversations.delete({ conversationIds: optionalStringArray(input.body.conversationIds) ?? [] });
+    return;
+  }
+  if (action === 'retention_prune' && input.body.dryRun !== true) {
+    await conversations.prune({
+      olderThanMs: Number(input.body.olderThanMs),
+      archivedOnly: input.body.archivedOnly === true,
+      dryRun: false,
+    });
+  }
 }
 
 export function setDesktopWorkbenchBrowserToolHost(host: WorkbenchBrowserToolHost | null): void {
@@ -1018,6 +1037,10 @@ function getDesktopLocalApiErrorStatus(error: unknown): number {
     return 400;
   }
 
+  if (error.name === 'DesktopConversationTitleValidationError') {
+    return 400;
+  }
+
   return /\bnot found\b/i.test(error.message) || error.message === '404 Not Found' ? 404 : 500;
 }
 
@@ -1233,15 +1256,17 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   }
   const extensionActionMatch = /^\/api\/extensions\/([^/]+)\/actions\/([^/]+)$/.exec(path);
   if (method === 'POST' && extensionActionMatch) {
-    return createDesktopLocalApiJsonResponse(
-      await getExtensionHostClient().invokeAction({
-        extensionId: decodeURIComponent(extensionActionMatch[1] ?? ''),
-        actionId: decodeURIComponent(extensionActionMatch[2] ?? ''),
-        input: input.body,
-        serverContextSnapshot: createExtensionHostServerContextSnapshot(await getLocalServerRouteContext()),
-        signal: input.signal,
-      }),
-    );
+    const extensionId = decodeURIComponent(extensionActionMatch[1] ?? '');
+    const actionId = decodeURIComponent(extensionActionMatch[2] ?? '');
+    const result = await getExtensionHostClient().invokeAction({
+      extensionId,
+      actionId,
+      input: input.body,
+      serverContextSnapshot: createExtensionHostServerContextSnapshot(await getLocalServerRouteContext()),
+      signal: input.signal,
+    });
+    await syncSystemConversationToolMutation({ extensionId, actionId, body: input.body, result });
+    return createDesktopLocalApiJsonResponse(result);
   }
   if (method === 'PATCH' && path === '/api/model-preferences')
     return createDesktopLocalApiJsonResponse(
@@ -1362,15 +1387,6 @@ async function dispatchDesktopLocalProductApiRequest(input: {
 
   if (method === 'GET' && path === '/api/runs') return createDesktopLocalApiJsonResponse(await readDesktopDurableRuns());
   if (method === 'GET' && path === '/api/executions') return createDesktopLocalApiJsonResponse(await listExecutions());
-  const conversationExecutionsMatch = /^\/api\/conversations\/([^/]+)\/executions$/.exec(path);
-  if (method === 'GET' && conversationExecutionsMatch) {
-    return createDesktopLocalApiJsonResponse(
-      await listConversationExecutions(decodeURIComponent(conversationExecutionsMatch[1] ?? ''), {
-        active: readDesktopLocalApiBooleanParam(input.url.searchParams.get('active')),
-        visibility: readDesktopExecutionVisibilityParam(input.url.searchParams.get('visibility')),
-      }),
-    );
-  }
   const runLogMatch = /^\/api\/runs\/([^/]+)\/log$/.exec(path);
   if (method === 'GET' && runLogMatch) {
     return createDesktopLocalApiJsonResponse(
@@ -1640,6 +1656,14 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   if (method === 'GET' && conversationArtifactMatch) {
     return createDesktopLocalApiJsonResponse(
       await readDesktopConversationArtifact({
+        conversationId: decodeURIComponent(conversationArtifactMatch[1] ?? ''),
+        artifactId: decodeURIComponent(conversationArtifactMatch[2] ?? ''),
+      }),
+    );
+  }
+  if (method === 'DELETE' && conversationArtifactMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await deleteDesktopConversationArtifact({
         conversationId: decodeURIComponent(conversationArtifactMatch[1] ?? ''),
         artifactId: decodeURIComponent(conversationArtifactMatch[2] ?? ''),
       }),
@@ -1982,6 +2006,44 @@ export async function readDesktopDaemonState() {
 export async function readDesktopSessions(input: { limit?: number } = {}) {
   await getLocalServerRouteContext();
   return readConversationSessionsCapability(input);
+}
+
+export async function syncDesktopDeletedConversations(input: { conversationIds?: unknown }): Promise<{
+  ok: true;
+  deleted: Array<{ id: string; file: string }>;
+  missing: string[];
+}> {
+  const conversationIds = optionalStringArray(input.conversationIds) ?? [];
+  if (conversationIds.length === 0) return { ok: true, deleted: [], missing: [] };
+  for (const conversationId of conversationIds) {
+    if (isLiveSession(conversationId)) {
+      destroySession(conversationId);
+    }
+  }
+  const result = deleteStoredConversations(conversationIds);
+
+  const context = await getLocalServerRouteContext();
+  const deletedIds = new Set(conversationIds);
+  persistSettingsWrite(
+    (settingsFile) => {
+      const before = readSavedUiPreferences(settingsFile);
+      return writeSavedUiPreferences(
+        {
+          openConversationIds: before.openConversationIds.filter((id) => !deletedIds.has(id)),
+          pinnedConversationIds: before.pinnedConversationIds.filter((id) => !deletedIds.has(id)),
+          archivedConversationIds: before.archivedConversationIds.filter((id) => !deletedIds.has(id)),
+          lockedConversationIds: before.lockedConversationIds.filter((id) => !deletedIds.has(id)),
+          activeConversationId:
+            before.activeConversationId && deletedIds.has(before.activeConversationId) ? null : before.activeConversationId,
+          remoteControlledConversationIds: before.remoteControlledConversationIds.filter((id) => !deletedIds.has(id)),
+        },
+        settingsFile,
+      );
+    },
+    { runtimeSettingsFile: context.getSettingsFile() },
+  );
+  invalidateAppTopics('sessions');
+  return { ok: true, ...result };
 }
 
 export async function readDesktopSessionMeta(sessionId: string) {
@@ -2662,6 +2724,11 @@ export async function readDesktopConversationArtifact(input: { conversationId: s
   return readConversationArtifactCapability(context.getRuntimeScope(), input);
 }
 
+export async function deleteDesktopConversationArtifact(input: { conversationId: string; artifactId: string }) {
+  const context = await getLocalServerRouteContext();
+  return deleteConversationArtifactCapability(context.getRuntimeScope(), input);
+}
+
 export async function readDesktopConversationCheckpoints(conversationId: string) {
   const context = await getLocalServerRouteContext();
   return readConversationCommitCheckpointsCapability(context.getRuntimeScope(), conversationId);
@@ -2991,30 +3058,6 @@ export async function createDesktopLiveSession(input: {
       contextSetupPerf: contextSetupPerf,
     };
     process.stderr.write(`[perf] ${JSON.stringify(perfLog)}\n`);
-  }
-  const prompt = typeof input.prompt === 'string' ? input.prompt : '';
-  if (shouldDispatchInitialLiveSessionPrompt({ prompt, imageCount: input.images?.length })) {
-    const dispatchTimer = setTimeout(() => {
-      void submitLiveSessionPromptCapability(
-        {
-          conversationId: created.id,
-          text: prompt,
-          behavior: input.behavior,
-          images: input.images,
-          attachmentRefs: input.attachmentRefs,
-          contextMessages: input.contextMessages,
-          relatedConversationIds: input.relatedConversationIds,
-        },
-        context,
-      ).catch((error) => {
-        logError('initial live-session prompt dispatch failed', {
-          conversationId: created.id,
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        });
-      });
-    }, 1_000);
-    dispatchTimer.unref?.();
   }
   return {
     ...created,

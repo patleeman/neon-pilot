@@ -1,6 +1,11 @@
+import { clearSessionCaches } from '../../server/conversations/sessions.js';
 import type { AppEvent, AppEventTopic } from '../../server/shared/appEvents.js';
 import { invalidateAppTopics, publishAppEvent } from '../../server/shared/appEvents.js';
 import type { LocalApiModule } from '../local-api-module.js';
+
+function clearSessionDataCaches(): void {
+  clearSessionCaches();
+}
 
 export interface DesktopAppEventBridgeMessage {
   type: 'desktop-app-event';
@@ -39,10 +44,16 @@ export function isDesktopAppEventBridgeMessage(value: unknown): value is Desktop
 export function publishBundledDesktopAppEvent(event: AppEvent): void {
   if (event.type === 'invalidate') {
     const topics = event.topics.filter(isAppEventTopic);
+    if (topics.includes('sessions') || topics.includes('sessionFiles')) {
+      clearSessionDataCaches();
+    }
     if (topics.length > 0) {
       invalidateAppTopics(...topics);
     }
     return;
+  }
+  if (event.type === 'session_file_changed') {
+    clearSessionDataCaches();
   }
   publishAppEvent(event);
 }

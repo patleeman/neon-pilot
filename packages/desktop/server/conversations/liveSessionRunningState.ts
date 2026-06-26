@@ -6,6 +6,7 @@ export interface LiveSessionRunningStateHost {
   session: Pick<AgentSession, 'isStreaming' | 'sessionManager'>;
   lastDurableRunState?: string;
   isCompacting?: boolean;
+  directBashRunning?: boolean;
 }
 
 function isTerminalDurableRunState(state: string | undefined): boolean {
@@ -38,6 +39,9 @@ function hasDanglingToolCallTail(sessionManager: Pick<AgentSession['sessionManag
 
 export function computeCanonicalLiveSessionRunning(entry: LiveSessionRunningStateHost): boolean {
   if (entry.isCompacting) {
+    return true;
+  }
+  if (entry.directBashRunning) {
     return true;
   }
   if (isTerminalDurableRunState(entry.lastDurableRunState)) {

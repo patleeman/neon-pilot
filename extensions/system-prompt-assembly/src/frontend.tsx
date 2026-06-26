@@ -12,3 +12,31 @@ export function PromptAssemblyPage(props: ExtensionSurfaceProps) {
     </Suspense>
   );
 }
+
+export function PromptAssemblySettingsPanel({
+  pa,
+  settingsContext,
+}: {
+  pa: ExtensionSurfaceProps['pa'];
+  settingsContext?: { sectionId?: string };
+}) {
+  return (
+    <PromptAssemblyPage
+      pa={pa}
+      context={{
+        cwd: undefined,
+        pathname: '/settings',
+        search: '',
+        hash: settingsContext?.sectionId ? `#${settingsContext.sectionId}` : '#settings-prompt-assembly',
+      }}
+      surface={{
+        id: 'prompt-assembly-settings',
+        extensionId: 'system-prompt-assembly',
+        title: 'Prompt Assembly',
+        location: 'main',
+        component: 'PromptAssemblySettingsPanel',
+      }}
+      params={{}}
+    />
+  );
+}

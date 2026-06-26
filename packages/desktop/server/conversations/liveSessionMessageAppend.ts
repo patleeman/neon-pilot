@@ -1,6 +1,7 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
 import { buildFallbackTitleFromContent, isPlaceholderConversationTitle } from './liveSessionTitle.js';
+import { OVERSIZED_TOOL_OUTPUT_MAX_CHARS, truncateOversizedToolOutput } from './toolResultPresentation.js';
 
 export interface LiveSessionMessageAppendHost {
   sessionId: string;
@@ -85,6 +86,58 @@ export async function appendDetachedLiveSessionUserMessage<TEntry extends LiveSe
   }
 
   callbacks.publishSessionMetaChanged(entry.sessionId);
+}
+
+export function appendDetachedLiveSessionBashExecution<TEntry extends LiveSessionMessageAppendHost>(
+  entry: TEntry,
+  command: string,
+  result: {
+    output?: unknown;
+    exitCode?: unknown;
+    cancelled?: unknown;
+    truncated?: unknown;
+    fullOutputPath?: unknown;
+  },
+  options: { excludeFromContext?: boolean } = {},
+): void {
+  if (entry.session.isStreaming) {
+    throw new Error(`Session ${entry.sessionId} is currently streaming`);
+  }
+
+  const normalizedCommand = command.trim();
+  if (!normalizedCommand) {
+    return;
+  }
+
+  const rawOutput = typeof result.output === 'string' ? result.output : '';
+  const output = truncateOversizedToolOutput(rawOutput);
+  const details = output.truncated
+    ? {
+        contextHardening: {
+          truncated: true,
+          originalChars: output.originalChars,
+          maxChars: OVERSIZED_TOOL_OUTPUT_MAX_CHARS,
+        },
+      }
+    : undefined;
+
+  const message = {
+    role: 'bashExecution' as const,
+    command: normalizedCommand,
+    output: output.output,
+    timestamp: Date.now(),
+    ...(typeof result.exitCode === 'number' ? { exitCode: result.exitCode } : {}),
+    ...(result.cancelled === true ? { cancelled: true } : {}),
+    ...(result.truncated === true || output.truncated ? { truncated: true } : {}),
+    ...(details ? { details } : {}),
+    ...(typeof result.fullOutputPath === 'string' && result.fullOutputPath.trim().length > 0
+      ? { fullOutputPath: result.fullOutputPath }
+      : {}),
+    ...(options.excludeFromContext === true ? { excludeFromContext: true } : {}),
+  };
+
+  entry.session.state.messages = [...entry.session.state.messages, message];
+  entry.session.sessionManager.appendMessage(message);
 }
 
 export async function appendVisibleLiveSessionCustomMessage<TEntry extends LiveSessionMessageAppendHost>(

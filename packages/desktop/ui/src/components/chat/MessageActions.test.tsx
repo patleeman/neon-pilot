@@ -5,8 +5,8 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { writeClipboardText } from '../../desktop/clipboard';
-import { MessageActions } from './MessageActions';
 import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail } from './messageActionCommands';
+import { MessageActions } from './MessageActions';
 
 vi.mock('../../desktop/clipboard', () => ({
   writeClipboardText: vi.fn(),
@@ -37,22 +37,24 @@ describe('MessageActions commands', () => {
     document.body.innerHTML = '';
   });
 
+  it('labels prompt and assistant copy actions from the matching user perspective', () => {
+    const { rerender } = render(<MessageActions isUser blockText="Prompt" copyText="Prompt to copy" />);
+
+    expect(document.querySelector('button[title="Copy this prompt to the clipboard"]')).not.toBeNull();
+    expect(document.body.textContent).toContain('⎘ copy');
+
+    rerender(<MessageActions blockText="Reply" copyText="Reply to copy" />);
+
+    expect(document.querySelector('button[title="Copy this assistant message to the clipboard"]')).not.toBeNull();
+  });
+
   it('handles shared first message action commands', async () => {
     vi.mocked(writeClipboardText).mockResolvedValue(undefined);
     const onEdit = vi.fn();
     const onRewind = vi.fn();
     const onFork = vi.fn();
 
-    render(
-      <MessageActions
-        isUser
-        blockText="Prompt"
-        copyText="Prompt to copy"
-        onEdit={onEdit}
-        onRewind={onRewind}
-        onFork={onFork}
-      />,
-    );
+    render(<MessageActions isUser blockText="Prompt" copyText="Prompt to copy" onEdit={onEdit} onRewind={onRewind} onFork={onFork} />);
 
     await dispatchMessageAction('copyFirst');
     await waitFor(() => expect(writeClipboardText).toHaveBeenCalledWith('Prompt to copy'));

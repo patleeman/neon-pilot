@@ -8,6 +8,7 @@ import {
   listCommandPaletteGatedHostCommandIds,
   searchCommandPaletteItems,
   selectCommandPaletteScopedItems,
+  selectPreferredCommandPaletteCursor,
   shouldBootstrapCommandPaletteThreads,
 } from './commandPalette';
 
@@ -1255,6 +1256,47 @@ describe('command palette search', () => {
     const results = searchCommandPaletteItems(ITEMS, { query: '', scope: 'threads' });
 
     expect(results.map((group) => group.section)).toEqual(['open', 'archived']);
+  });
+
+  it('selects the highest scoring non-empty thread result even when it is in a later section', () => {
+    const results = searchCommandPaletteItems(
+      [
+        {
+          id: 'open:partial',
+          section: 'open',
+          title: 'ROW81 marker different thread',
+          subtitle: '/tmp/row81',
+          keywords: ['ROW81 marker exact archived'],
+          order: 0,
+          action: { kind: 'open' },
+        },
+        {
+          id: 'archived:exact',
+          section: 'archived',
+          title: 'ROW81 marker exact archived',
+          subtitle: '/tmp/row81',
+          keywords: ['ROW81 marker exact archived'],
+          order: 0,
+          action: { kind: 'restore' },
+        },
+      ],
+      { query: 'ROW81 marker exact archived', scope: 'threads' },
+    );
+    const visibleItems = results.flatMap((group) => group.items);
+
+    expect(visibleItems.map((item) => item.id)).toEqual(['open:partial', 'archived:exact']);
+    expect(selectPreferredCommandPaletteCursor(visibleItems, 'ROW81 marker exact archived')).toBe(1);
+  });
+
+  it('keeps empty thread search selection on the first visible result', () => {
+    const results = searchCommandPaletteItems(ITEMS, { query: '', scope: 'threads' });
+
+    expect(
+      selectPreferredCommandPaletteCursor(
+        results.flatMap((group) => group.items),
+        '',
+      ),
+    ).toBe(0);
   });
 
   it('keeps local file title matches while adding file content-search results', () => {

@@ -174,13 +174,35 @@ describe('startNewConversation', () => {
     expect(window.dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'neon-pilot:composer-focus' }));
   });
 
-  it('reuses an existing empty new conversation for the same cwd', async () => {
+  it('creates a fresh conversation by default when an empty new conversation already exists for the same cwd', async () => {
+    const navigate = vi.fn();
+
+    await startNewConversation({
+      navigate,
+      cwd: '/repo',
+      focusComposer: true,
+      existingSessions: [createSession({ id: 'existing-new', cwd: '/repo' })],
+    });
+
+    expect(apiMocks.createLiveSession).toHaveBeenCalledWith('/repo', undefined, expect.any(Object));
+    expect(navigate).toHaveBeenCalledWith('/conversations/new-conversation', {
+      replace: undefined,
+      state: {
+        focusComposer: true,
+      },
+    });
+    expect(readConversationLayout().sessionIds).toEqual(['new-conversation']);
+    expect(readConversationLayout().activeSessionId).toBe('new-conversation');
+  });
+
+  it('reuses an existing empty new conversation for the same cwd when explicitly requested', async () => {
     const navigate = vi.fn();
 
     await startNewConversation({
       navigate,
       cwd: '/repo/',
       focusComposer: true,
+      reuseEmptyConversation: true,
       existingSessions: [createSession({ id: 'existing-new', cwd: '/repo' })],
     });
 

@@ -14,7 +14,8 @@ describe('liveSessionQueue', () => {
     expect(normalizeQueuedPromptBehavior(undefined, { isStreaming: false, hasQueuedStaleTurn: false })).toBeUndefined();
     expect(normalizeQueuedPromptBehavior(undefined, { isStreaming: true, hasQueuedStaleTurn: false })).toBe('followUp');
     expect(normalizeQueuedPromptBehavior('steer', { isStreaming: true, hasQueuedStaleTurn: false })).toBe('steer');
-    expect(normalizeQueuedPromptBehavior(undefined, { isStreaming: false, hasQueuedStaleTurn: true })).toBeUndefined();
+    expect(normalizeQueuedPromptBehavior(undefined, { isStreaming: false, hasQueuedStaleTurn: true })).toBe('followUp');
+    expect(normalizeQueuedPromptBehavior('steer', { isStreaming: false, hasQueuedStaleTurn: true })).toBe('steer');
   });
 
   it('builds previews from internal queued user messages and keeps image-only prompts restorable', () => {

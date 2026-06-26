@@ -743,6 +743,31 @@ function statusForFailure(behavior: RoutineFailureBehavior): RoutineRunStep['sta
   return 'passed';
 }
 
+function formatRoutineError(error: unknown): string {
+  const rawMessage = error instanceof Error ? error.message : String(error);
+  const trimmed = rawMessage.trim();
+  const jsonStart = trimmed.indexOf('{');
+  if (jsonStart >= 0) {
+    try {
+      const parsed = JSON.parse(trimmed.slice(jsonStart)) as unknown;
+      if (parsed && typeof parsed === 'object') {
+        const record = parsed as Record<string, unknown>;
+        const nestedError = record.error && typeof record.error === 'object' ? (record.error as Record<string, unknown>) : undefined;
+        const message = typeof nestedError?.message === 'string' ? nestedError.message : undefined;
+        const statusCode = typeof record.status_code === 'number' ? record.status_code : undefined;
+        if (message && statusCode) return `Routine model call failed (${statusCode}): ${message}`;
+        if (message) return `Routine model call failed: ${message}`;
+      }
+    } catch {
+      // Fall through to generic cleanup below.
+    }
+  }
+  if (/status_code|headers|x-codex-|usage_limit_reached/i.test(trimmed)) {
+    return 'Routine model call failed. Check provider limits or credentials, then try again.';
+  }
+  return trimmed || 'Routine failed.';
+}
+
 async function runRoutineAgentTask(routine: Routine, ctx: ExtensionBackendContext, context: Record<string, unknown>) {
   const baseInput = {
     prompt: buildPrompt(routine, context),
@@ -840,7 +865,7 @@ async function runRoutine(
         routineId: routine.id,
         routineName: routine.name,
         status: statusForFailure(routine.failureBehavior),
-        message: error instanceof Error ? error.message : String(error),
+        message: formatRoutineError(error),
         skillRefs,
       },
     ];

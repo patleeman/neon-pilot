@@ -25,6 +25,7 @@ export interface DisplayMessageEntryLike {
     truncated?: boolean;
     fullOutputPath?: string;
     excludeFromContext?: boolean;
+    isError?: boolean;
   };
 }
 

@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppEventsContext, INITIAL_APP_EVENT_VERSIONS } from '../app/contexts.js';
+import { api } from '../client/api.js';
 import { INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS } from '../conversation/conversationEventVersions.js';
 import { writeClipboardText } from '../desktop/clipboard';
 import { useApi } from '../hooks/useApi';
@@ -18,6 +19,12 @@ vi.mock('../hooks/useApi', () => ({
 
 vi.mock('../desktop/clipboard', () => ({
   writeClipboardText: vi.fn(),
+}));
+
+vi.mock('../client/api.js', () => ({
+  api: {
+    deleteConversationArtifact: vi.fn(),
+  },
 }));
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
@@ -144,6 +151,7 @@ describe('ConversationArtifactModal', () => {
     expect(html).toContain('Architecture diagram');
     expect(html).toContain('aria-label="Copy source"');
     expect(html).toContain('aria-label="Show source"');
+    expect(html).toContain('aria-label="Delete artifact"');
     expect(html).toContain('iframe');
   });
 
@@ -222,5 +230,37 @@ describe('ConversationArtifactModal', () => {
 
     expect(html).toContain('Artifact not found.');
     expect(html).toContain('aria-label="Close"');
+  });
+
+  it('deletes the open artifact from the modal toolbar after confirmation', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(api.deleteConversationArtifact).mockResolvedValue({
+      conversationId: 'conv-123',
+      artifactId: 'artifact-html',
+      deleted: true,
+      artifacts: [],
+    });
+    mockLoadedArtifact();
+
+    renderModalClient();
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete artifact' }));
+
+    await waitFor(() => expect(api.deleteConversationArtifact).toHaveBeenCalledWith('conv-123', 'artifact-html'));
+    expect(confirmSpy).toHaveBeenCalledWith('Delete artifact "Product draft"? This cannot be undone.');
+  });
+
+  it('does not expose raw delete failures in the modal', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(api.deleteConversationArtifact).mockRejectedValue(
+      new Error('DELETE /api/conversations/conv-123/artifacts/artifact-html failed at /Users/patrick/app.ts:12'),
+    );
+    mockLoadedArtifact();
+
+    renderModalClient();
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete artifact' }));
+
+    await waitFor(() => expect(api.deleteConversationArtifact).toHaveBeenCalledWith('conv-123', 'artifact-html'));
+    expect(screen.queryByText(new RegExp('DELETE /api', 'i'))).toBeNull();
+    expect(screen.queryByText(new RegExp('Users/patrick', 'i'))).toBeNull();
   });
 });

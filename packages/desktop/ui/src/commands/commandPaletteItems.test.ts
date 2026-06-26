@@ -7,6 +7,7 @@ import {
   normalizeExtensionSearchItem,
   normalizeQuickOpenItem,
   type ScopedSessionMeta,
+  workspaceDisplayLabel,
 } from './commandPaletteItems';
 
 function session(overrides: Partial<ScopedSessionMeta>): ScopedSessionMeta {
@@ -29,19 +30,35 @@ describe('command palette item builders', () => {
 
   it('builds open conversation items with status metadata', () => {
     const [item] = buildConversationItems('open', [
-      session({ id: 'conv-open', title: 'Open thread', pinned: true, isRunning: true, needsAttention: true, model: 'openai/gpt-5' }),
+      session({
+        id: 'conv-open',
+        title: 'Open thread',
+        pinned: true,
+        isRunning: true,
+        needsAttention: true,
+        model: 'openai/gpt-5',
+        cwd: '/Users/patrick/workingdir/neon-pilot/packages/desktop',
+        cwdSlug: 'desktop',
+      }),
     ]);
 
     expect(item).toMatchObject({
       id: 'open:conv-open',
       section: 'open',
       title: 'Open thread',
+      subtitle: 'desktop',
       meta: expect.stringContaining('pinned'),
       action: { kind: 'navigate', to: '/conversations/conv-open' },
     });
     expect(item?.meta).toContain('running');
     expect(item?.meta).toContain('attention');
     expect(item?.meta).toContain('gpt-5');
+  });
+
+  it('uses workspace display labels instead of raw paths', () => {
+    expect(workspaceDisplayLabel('/Users/patrick/workingdir/neon-pilot', 'neon-pilot')).toBe('neon-pilot');
+    expect(workspaceDisplayLabel('/tmp/neon-pilot-worktrees/baseline-wtf-gateway-timeouts', null)).toBe('baseline-wtf-gateway-timeouts');
+    expect(workspaceDisplayLabel(undefined, null)).toBeUndefined();
   });
 
   it('sorts archived conversations by latest activity', () => {
@@ -95,14 +112,21 @@ describe('command palette item builders', () => {
     expect(
       buildConversationContentSearchItems(
         [
-          { conversationId: 'live one', blockId: 'b1', title: 'Live', cwd: '/repo', snippet: 'match', isLive: true },
+          {
+            conversationId: 'live one',
+            blockId: 'b1',
+            title: 'Live',
+            cwd: '/Users/patrick/workingdir/neon-pilot',
+            snippet: 'match',
+            isLive: true,
+          },
           { conversationId: 'archived one', blockId: 'b2', title: 'Archived', cwd: '/repo', snippet: 'match', isLive: false },
         ],
         'match',
-      ).map((item) => item.action),
+      ).map((item) => ({ action: item.action, subtitle: item.subtitle })),
     ).toEqual([
-      { kind: 'navigate', to: '/conversations/live%20one' },
-      { kind: 'restoreArchivedConversation', conversationId: 'archived one' },
+      { action: { kind: 'navigate', to: '/conversations/live%20one' }, subtitle: 'neon-pilot' },
+      { action: { kind: 'restoreArchivedConversation', conversationId: 'archived one' }, subtitle: 'repo' },
     ]);
   });
 });

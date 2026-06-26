@@ -67,6 +67,31 @@ describe('toSse tool execution events', () => {
     expect(end && 'details' in end ? end.details : undefined).toBeUndefined();
   });
 
+  it('presents extension-host abort tool failures without leaking local RPC URLs', () => {
+    const end = toSse({
+      type: 'tool_execution_end',
+      toolCallId: 'bash-abort',
+      toolName: 'bash',
+      isError: false,
+      result: {
+        content: [
+          {
+            type: 'text',
+            text: 'Extension host RPC request action:system-runs/bash failed at http://127.0.0.1:55183/action: This operation was aborted',
+          },
+        ],
+      },
+    } as never);
+
+    expect(end).toMatchObject({
+      type: 'tool_end',
+      toolCallId: 'bash-abort',
+      toolName: 'bash',
+      isError: true,
+      output: 'Stopped before finishing. The tool call was interrupted or cancelled.',
+    });
+  });
+
   it('broadcasts structured streamed tool partials with text content', () => {
     const partialResult = { content: [{ type: 'text', text: 'streamed output' }] };
 

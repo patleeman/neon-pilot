@@ -40,7 +40,7 @@ export function normalizeQueuedPromptBehavior(
   behavior: 'steer' | 'followUp' | undefined,
   options: { isStreaming: boolean; hasQueuedStaleTurn: boolean },
 ): 'steer' | 'followUp' | undefined {
-  if (options.isStreaming) {
+  if (options.isStreaming || options.hasQueuedStaleTurn) {
     return behavior ?? 'followUp';
   }
 

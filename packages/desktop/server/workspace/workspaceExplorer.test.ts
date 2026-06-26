@@ -144,6 +144,18 @@ describe('workspace explorer', () => {
     expect(result?.files.map((file) => file.path).sort()).toEqual(['src/app.ts', 'tracked.txt']);
   });
 
+  it('keeps detached HEAD visible in uncommitted diff summaries', async () => {
+    const repo = createRepo();
+    git(['checkout', '--detach', 'HEAD'], repo);
+    writeFileSync(join(repo, 'tracked.txt'), 'one\ntwo\nthree\nfour\n');
+
+    const result = await readUncommittedDiffAsync(repo);
+
+    expect(result?.branch).toBe('detached HEAD');
+    expect(result?.changeCount).toBe(1);
+    expect(result?.linesAdded).toBe(1);
+  });
+
   it('writes, creates, renames, moves, and deletes workspace paths safely', async () => {
     const repo = createRepo();
 

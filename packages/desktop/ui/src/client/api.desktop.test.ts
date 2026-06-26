@@ -638,7 +638,7 @@ describe('api desktop transport', () => {
     const exported = await api.exportSession('live-1', '/tmp/live-1.html');
     const reloaded = await api.reloadSession('live-1', 'surface-1');
     const branched = await api.branchSession('live-1', 'entry-1', 'surface-1');
-    const forked = await api.forkSession('live-1', 'entry-1', { preserveSource: true, beforeEntry: true }, 'surface-1');
+    const forked = await api.forkSession('live-1', 'entry-1', { preserveSource: true, beforeEntry: true, branchKind: 'fork' }, 'surface-1');
     const aborted = await api.abortSession('live-1', 'surface-1');
     const destroyed = await api.destroySession('conversation-1', 'surface-1');
 
@@ -731,6 +731,7 @@ describe('api desktop transport', () => {
       entryId: 'entry-1',
       preserveSource: true,
       beforeEntry: true,
+      branchKind: 'fork',
       surfaceId: 'surface-1',
     });
     expect(abortLiveSession).toHaveBeenCalledWith('live-1');

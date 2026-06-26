@@ -390,6 +390,46 @@ describe('conversation inspect agent extension', () => {
     });
   });
 
+  it('prefers host conversation lists so renamed stored conversations inspect with current titles', async () => {
+    executeConversationInspectMock.mockResolvedValue({
+      action: 'list',
+      result: { scope: 'all', totalMatching: 1, returnedCount: 1, sessions: [{ id: 'conv-renamed' }] },
+      text: 'list text',
+    });
+
+    const tool = registerConversationInspectTool();
+    await tool.execute('tool-1', { action: 'list' }, undefined, undefined, {
+      ...createToolContext('conv-self'),
+      conversations: {
+        list: async () => [
+          {
+            id: 'conv-renamed',
+            title: 'Renamed from host list',
+            cwd: '/repo/renamed',
+            file: '/sessions/conv-renamed.jsonl',
+            timestamp: '2026-05-12T11:00:00.000Z',
+            lastActivityAt: '2026-05-12T11:05:00.000Z',
+            isLive: false,
+            isRunning: false,
+            messageCount: 2,
+          },
+        ],
+      },
+    });
+
+    expect(readConversationSessionsCapabilityMock).not.toHaveBeenCalled();
+    expect(executeConversationInspectMock).toHaveBeenCalledWith('list', {
+      currentConversationId: 'conv-self',
+      sessionSnapshot: [
+        expect.objectContaining({
+          id: 'conv-renamed',
+          title: 'Renamed from host list',
+          cwd: '/repo/renamed',
+        }),
+      ],
+    });
+  });
+
   it('falls back to worker-local inspection when the main-thread snapshot is unavailable', async () => {
     readConversationSessionsCapabilityMock.mockImplementation(() => {
       throw new Error('conversation service unavailable');

@@ -1,3 +1,7 @@
+import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import type { ExtensionRouteRequest } from '@neon-pilot/extensions';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -55,9 +59,10 @@ describe('terminal sessions', () => {
 
   it('creates an interactive shell process', async () => {
     const handlePty = createMockSpawnHandle({ pid: 777 });
+    const cwd = tmpdir();
     shellSpawn.mockResolvedValue(handlePty);
 
-    const result = await mod.createTerminalSession({ cwd: '/workspace' });
+    const result = await mod.createTerminalSession({ cwd });
 
     expect(result.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(result.pid).toBe(777);
@@ -66,9 +71,31 @@ describe('terminal sessions', () => {
       expect.objectContaining({
         command: expect.any(String),
         pty: { cols: 80, rows: 24 },
-        cwd: '/workspace',
+        cwd,
       }),
     );
+  });
+
+  it('rejects a missing cwd before creating a terminal process', async () => {
+    const missingCwd = join(tmpdir(), `neon-pilot-terminal-missing-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+    await expect(mod.createTerminalSession({ cwd: missingCwd })).rejects.toThrow('Terminal workspace folder is unavailable.');
+
+    expect(shellSpawn).not.toHaveBeenCalled();
+  });
+
+  it('rejects an inaccessible cwd before creating a terminal process', async () => {
+    const inaccessibleCwd = mkdtempSync(join(tmpdir(), 'neon-pilot-terminal-inaccessible-'));
+    try {
+      chmodSync(inaccessibleCwd, 0o000);
+
+      await expect(mod.createTerminalSession({ cwd: inaccessibleCwd })).rejects.toThrow('Terminal workspace folder is unavailable.');
+
+      expect(shellSpawn).not.toHaveBeenCalled();
+    } finally {
+      chmodSync(inaccessibleCwd, 0o700);
+      rmSync(inaccessibleCwd, { recursive: true, force: true });
+    }
   });
 
   it('includes the realtime WebSocket URL when the local backend base URL is known', async () => {

@@ -85,6 +85,34 @@ describe('useTracesData', () => {
     expect(result.current.summary).toEqual({ totalTraces: 7 });
   });
 
+  it('sanitizes internal extension action failures before rendering or notifying', async () => {
+    const notify = vi.fn();
+    window.addEventListener('neon-pilot-notification', notify);
+    const invoke = vi
+      .fn()
+      .mockRejectedValue(
+        new Error(
+          [
+            'Local API route did not complete for POST /api/extensions/system-telemetry/actions/getTelemetryData at Module.ep',
+            '(file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/app/localApi.js:132:20)',
+          ].join('\n'),
+        ),
+      );
+    const pa = createPa(invoke);
+    const { result } = renderHook(() => useTracesData('1h', pa));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.error).toBe('Could not load diagnostics. Refresh diagnostics or reopen this page.');
+    const notification = notify.mock.calls[0]?.[0] as CustomEvent<{ message: string }> | undefined;
+    expect(notification?.detail.message).toBe('Could not load diagnostics. Refresh diagnostics or reopen this page.');
+    expect(result.current.error).not.toContain('/api/extensions');
+    expect(result.current.error).not.toContain('localApi.js');
+    expect(result.current.error).not.toContain('file://');
+    expect(result.current.error).not.toContain('Module.ep');
+    window.removeEventListener('neon-pilot-notification', notify);
+  });
+
   it('refetches with the new range when the range changes', async () => {
     const invoke = vi.fn(async () => payload);
     const pa = createPa(invoke);

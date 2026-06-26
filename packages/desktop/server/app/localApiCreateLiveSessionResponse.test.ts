@@ -1,15 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCreateLiveSessionPerf, shouldDispatchInitialLiveSessionPrompt } from './localApiCreateLiveSessionResponse';
+import { buildCreateLiveSessionPerf } from './localApiCreateLiveSessionResponse';
 
 describe('localApiCreateLiveSessionResponse', () => {
-  it('dispatches initial prompt when prompt text or images are present', () => {
-    expect(shouldDispatchInitialLiveSessionPrompt({ prompt: ' hello ' })).toBe(true);
-    expect(shouldDispatchInitialLiveSessionPrompt({ prompt: '  ', imageCount: 1 })).toBe(true);
-    expect(shouldDispatchInitialLiveSessionPrompt({ prompt: '  ', imageCount: 0 })).toBe(false);
-    expect(shouldDispatchInitialLiveSessionPrompt({})).toBe(false);
-  });
-
   it('builds rounded live session perf with capability-prefixed metrics', () => {
     expect(
       buildCreateLiveSessionPerf({

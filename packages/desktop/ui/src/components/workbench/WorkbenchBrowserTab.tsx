@@ -32,6 +32,12 @@ export function formatWorkbenchBrowserError(error: unknown): string {
   const remoteMatch = firstLine.match(/^Error invoking remote method '[^']+':\s*(?:Error:\s*)?(.*)$/i);
   const message = (remoteMatch?.[1] ?? firstLine).replace(/^Error:\s*/i, '').trim();
 
+  if (/ERR_ABORTED/i.test(message) || /\(-3\)\s+loading/i.test(message)) {
+    return 'Loading stopped.';
+  }
+  if (/ERR_[A-Z_]+/i.test(message) || /\(-\d+\)\s+loading/i.test(message)) {
+    return 'Page failed to load. Check the address or connection and try again.';
+  }
   if (!message || raw.includes('\n') || /file:\/\//i.test(raw) || /\s+at\s+\S+/i.test(raw)) {
     return 'Browser action failed. Check the address and try again.';
   }

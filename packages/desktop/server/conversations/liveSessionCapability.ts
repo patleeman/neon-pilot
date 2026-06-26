@@ -1053,8 +1053,7 @@ export async function submitLiveSessionPromptCapability(
 
       logError('live prompt error', {
         sessionId: liveConversationId,
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+        message: sanitizeLivePromptErrorMessage(error),
       });
     });
 
@@ -1078,6 +1077,14 @@ export async function submitLiveSessionPromptCapability(
       totalBeforeReturnMs: Math.round(submittedAtMs - startedAtMs),
     },
   };
+}
+
+function sanitizeLivePromptErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes('No API key found for the selected model')) {
+    return 'No API key found for the selected model. Configure a provider in Neon Pilot, then try again.';
+  }
+  return message.replace(/\s+at\s+.+$/ms, '').trim();
 }
 
 export async function submitLiveSessionParallelPromptCapability(

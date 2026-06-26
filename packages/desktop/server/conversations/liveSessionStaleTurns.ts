@@ -23,7 +23,7 @@ export function ensureStaleTurnState(entry: Partial<LiveSessionStaleTurnState>):
 
 export function hasQueuedOrActiveStaleTurn(entry: Partial<LiveSessionStaleTurnState>): boolean {
   ensureStaleTurnState(entry);
-  return false;
+  return entry.queuedStaleTurnCustomTypes.length > 0 || entry.activeStaleTurnCustomType !== null;
 }
 
 export function clearQueuedStaleTurn(entry: Partial<LiveSessionStaleTurnState>, _event: Pick<AgentSessionEvent, 'type'>): string | null {

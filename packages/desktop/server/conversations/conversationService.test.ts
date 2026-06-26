@@ -18,6 +18,7 @@ const {
   listSessionsMock,
   readConversationCatalogSessionMock,
   liveSessionRegistry,
+  upsertConversationCatalogSessionMock,
   upsertConversationCatalogSessionsMock,
   loadDaemonConfigMock,
   loadDeferredResumeStateMock,
@@ -31,6 +32,7 @@ const {
   readSessionBlocksByFileWithTelemetryMock,
   readSessionBlocksWithTelemetryMock,
   readSessionMetaMock,
+  renameStoredSessionMock,
   resolveConversationModelPreferenceStateMock,
   resolveDaemonPathsMock,
   scheduleConversationSearchIndexingMock,
@@ -54,6 +56,7 @@ const {
   listSessionsMock: vi.fn(),
   readConversationCatalogSessionMock: vi.fn(() => null),
   liveSessionRegistry: new Map<string, unknown>(),
+  upsertConversationCatalogSessionMock: vi.fn(),
   upsertConversationCatalogSessionsMock: vi.fn(),
   loadDaemonConfigMock: vi.fn(),
   loadDeferredResumeStateMock: vi.fn(),
@@ -67,6 +70,7 @@ const {
   readSessionBlocksByFileWithTelemetryMock: vi.fn(),
   readSessionBlocksWithTelemetryMock: vi.fn(),
   readSessionMetaMock: vi.fn(),
+  renameStoredSessionMock: vi.fn(),
   resolveConversationModelPreferenceStateMock: vi.fn(),
   resolveDaemonPathsMock: vi.fn(),
   scheduleConversationSearchIndexingMock: vi.fn(),
@@ -128,6 +132,7 @@ vi.mock('./sessions.js', () => ({
   readSessionBlocksByFileWithTelemetry: readSessionBlocksByFileWithTelemetryMock,
   readSessionBlocksWithTelemetry: readSessionBlocksWithTelemetryMock,
   readSessionMeta: readSessionMetaMock,
+  renameStoredSession: renameStoredSessionMock,
 }));
 
 vi.mock('./conversationCatalog.js', () => ({
@@ -136,6 +141,7 @@ vi.mock('./conversationCatalog.js', () => ({
   listConversationCatalogSessions: listConversationCatalogSessionsMock,
   markConversationCatalogComplete: markConversationCatalogCompleteMock,
   readConversationCatalogSession: readConversationCatalogSessionMock,
+  upsertConversationCatalogSession: upsertConversationCatalogSessionMock,
   upsertConversationCatalogSessions: upsertConversationCatalogSessionsMock,
 }));
 
@@ -162,6 +168,7 @@ import {
   readConversationSessionMeta,
   readConversationSessionSignature,
   readSessionDetailForRoute,
+  renameStoredConversation,
   resetConversationReadModelBackfillForTests,
   resolveConversationSessionFile,
   setConversationServiceContext,
@@ -195,6 +202,7 @@ describe('conversationService', () => {
     markConversationCatalogCompleteMock.mockReset();
     listSessionsMock.mockReset();
     readConversationCatalogSessionMock.mockReset();
+    upsertConversationCatalogSessionMock.mockReset();
     upsertConversationCatalogSessionsMock.mockReset();
     liveSessionRegistry.clear();
     loadDaemonConfigMock.mockReset();
@@ -209,6 +217,7 @@ describe('conversationService', () => {
     readSavedModelPreferencesMock.mockReset();
     readSessionBlocksWithTelemetryMock.mockReset();
     readSessionMetaMock.mockReset();
+    renameStoredSessionMock.mockReset();
     resolveConversationModelPreferenceStateMock.mockReset();
     resolveDaemonPathsMock.mockReset();
     resetConversationReadModelBackfillForTests();
@@ -488,6 +497,25 @@ describe('conversationService', () => {
     expect(listSessionsMock).not.toHaveBeenCalled();
     expect(upsertConversationCatalogSessionsMock).not.toHaveBeenCalled();
     expect(markConversationCatalogCompleteMock).not.toHaveBeenCalled();
+  });
+
+  it('refreshes the conversation catalog when a stored conversation is renamed', () => {
+    const renamed = {
+      id: 'conversation-1',
+      file: '/sessions/conversation-1.jsonl',
+      timestamp: '2026-04-09T12:00:00.000Z',
+      cwd: '/repo/one',
+      cwdSlug: '-repo-one',
+      model: 'gpt-5',
+      title: 'Renamed conversation',
+      messageCount: 3,
+    };
+    renameStoredSessionMock.mockReturnValue(renamed);
+
+    expect(renameStoredConversation('conversation-1', 'Renamed conversation')).toBe(renamed);
+
+    expect(renameStoredSessionMock).toHaveBeenCalledWith('conversation-1', 'Renamed conversation');
+    expect(upsertConversationCatalogSessionMock).toHaveBeenCalledWith(renamed);
   });
 
   it('passes positive snapshot limits into catalog reads', () => {

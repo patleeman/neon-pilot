@@ -40,6 +40,7 @@ import {
   closeAutomationDbs,
   createStoredAutomation,
   DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS,
+  deleteStoredAutomation,
   listAutomationActivityEntries,
   listStoredAutomations,
   loadAutomationRuntimeStateMap,
@@ -216,6 +217,23 @@ describe('tasks module scheduling', () => {
     await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
   });
 
+  it('opens a fresh runtime sqlite database without creating migration backups', () => {
+    const stateRoot = createTempDir('tasks-module-state-');
+    const dbPath = resolveRuntimeDbPath(stateRoot);
+
+    expect(listStoredAutomations({ dbPath })).toEqual([]);
+
+    const db = openSqliteDatabase(dbPath);
+    try {
+      expect(db.prepare('PRAGMA integrity_check').all()).toEqual([{ integrity_check: 'ok' }]);
+      expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+      expect(db.prepare('PRAGMA user_version').get()).toEqual({ user_version: 5 });
+    } finally {
+      db.close();
+    }
+    expect(existsSync(join(stateRoot, '.backups'))).toBe(false);
+  });
+
   it('migrates legacy automation profile columns to shared runtime scope', () => {
     const stateRoot = createTempDir('tasks-module-state-');
     const dbPath = resolveRuntimeDbPath(stateRoot);
@@ -318,14 +336,318 @@ describe('tasks module scheduling', () => {
     const columns = migratedDb.prepare('PRAGMA table_info(automations)').all() as Array<{ name: string }>;
     expect(columns.map((column) => column.name)).toContain('runtime_scope');
     expect(columns.map((column) => column.name)).not.toContain('profile');
+    expect(columns.map((column) => column.name)).not.toContain('legacy_file_path');
     const childTableSql = migratedDb
       .prepare(
         "SELECT group_concat(sql, '\n') AS sql FROM sqlite_master WHERE type = 'table' AND name IN ('automation_state', 'automation_activity')",
       )
       .get() as { sql: string };
     expect(childTableSql.sql).not.toContain('automations_legacy_profile');
+    expect(childTableSql.sql).not.toContain('automations_migrate_');
+    expect(childTableSql.sql).toContain('REFERENCES automations(id)');
     expect(migratedDb.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
     migratedDb.close();
+  });
+
+  it('repairs stale automation child foreign keys left by an interrupted migration', () => {
+    const stateRoot = createTempDir('tasks-module-state-');
+    const dbPath = resolveRuntimeDbPath(stateRoot);
+    const staleDb = openSqliteDatabase(dbPath);
+    staleDb.exec(`
+      PRAGMA foreign_keys = OFF;
+      PRAGMA user_version = 5;
+      CREATE TABLE automations (
+        id TEXT PRIMARY KEY,
+        runtime_scope TEXT NOT NULL DEFAULT 'shared',
+        title TEXT NOT NULL,
+        enabled INTEGER NOT NULL,
+        schedule_type TEXT NOT NULL,
+        cron TEXT,
+        at TEXT,
+        prompt TEXT NOT NULL,
+        cwd TEXT,
+        model_ref TEXT,
+        thinking_level TEXT,
+        allowed_tools_json TEXT,
+        timeout_seconds INTEGER NOT NULL,
+        catch_up_window_seconds INTEGER,
+        policies_json TEXT,
+        target_type TEXT NOT NULL DEFAULT 'background-agent',
+        conversation_behavior TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        thread_mode TEXT NOT NULL DEFAULT 'dedicated',
+        thread_session_file TEXT,
+        thread_conversation_id TEXT
+      );
+      INSERT INTO automations (id, runtime_scope, title, enabled, schedule_type, cron, prompt, timeout_seconds, created_at, updated_at)
+      VALUES ('stale-fk-task', 'shared', 'Stale FK task', 1, 'cron', '0 * * * *', 'Run stale FK task.', 1800, '2026-03-02T10:00:00.000Z', '2026-03-02T10:00:00.000Z');
+      CREATE TABLE automation_state (
+        automation_id TEXT PRIMARY KEY,
+        running INTEGER NOT NULL DEFAULT 0,
+        running_started_at TEXT,
+        active_run_id TEXT,
+        last_run_id TEXT,
+        last_status TEXT,
+        last_run_at TEXT,
+        last_success_at TEXT,
+        last_failure_at TEXT,
+        last_error TEXT,
+        last_log_path TEXT,
+        last_scheduled_minute TEXT,
+        last_attempt_count INTEGER,
+        one_time_resolved_at TEXT,
+        one_time_resolved_status TEXT,
+        one_time_completed_at TEXT,
+        FOREIGN KEY (automation_id) REFERENCES "automations_migrate_12345"(id) ON DELETE CASCADE
+      );
+      INSERT INTO automation_state (automation_id, running, last_status, last_run_at)
+      VALUES ('stale-fk-task', 0, 'success', '2026-03-02T11:00:00.000Z');
+      CREATE TABLE automation_activity (
+        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+        automation_id TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        payload_json TEXT,
+        FOREIGN KEY (automation_id) REFERENCES "automations_migrate_12345"(id) ON DELETE CASCADE
+      );
+      INSERT INTO automation_activity (automation_id, kind, created_at, payload_json)
+      VALUES ('stale-fk-task', 'run-failed', '2026-03-02T12:00:00.000Z', '{"message":"stale"}');
+      PRAGMA foreign_keys = ON;
+    `);
+    staleDb.close();
+
+    expect(listStoredAutomations({ dbPath })[0]).toEqual(expect.objectContaining({ id: 'stale-fk-task' }));
+    expect(loadAutomationRuntimeStateMap({ dbPath })['stale-fk-task']).toEqual(expect.objectContaining({ lastStatus: 'success' }));
+    expect(listAutomationActivityEntries('stale-fk-task', { dbPath })).toEqual([
+      expect.objectContaining({ automationId: 'stale-fk-task', kind: 'run-failed' }),
+    ]);
+
+    const repairedDb = openSqliteDatabase(dbPath);
+    const childTableSql = repairedDb
+      .prepare(
+        "SELECT group_concat(sql, '\n') AS sql FROM sqlite_master WHERE type = 'table' AND name IN ('automation_state', 'automation_activity')",
+      )
+      .get() as { sql: string };
+    expect(childTableSql.sql).not.toContain('automations_migrate_');
+    expect(childTableSql.sql).toContain('REFERENCES automations(id)');
+    expect(repairedDb.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    repairedDb.close();
+  });
+
+  it('deletes automation child rows when removing an automation', () => {
+    const stateRoot = createTempDir('tasks-module-state-');
+    const dbPath = resolveRuntimeDbPath(stateRoot);
+    seedAutomation(stateRoot, { id: 'cleanup-children', title: 'Cleanup children', cron: '0 * * * *', prompt: 'Clean child rows' });
+
+    saveAutomationRuntimeStateMap(
+      {
+        'cleanup-children': {
+          id: 'cleanup-children',
+          key: 'cleanup-children',
+          filePath: '/__automations__/cleanup-children.automation.md',
+          scheduleType: 'cron',
+          running: false,
+          lastStatus: 'failed',
+          lastRunAt: '2026-03-02T12:00:00.000Z',
+        },
+      },
+      { dbPath },
+    );
+    appendAutomationActivityEntry(
+      'cleanup-children',
+      {
+        kind: 'run-failed',
+        createdAt: '2026-03-02T12:00:00.000Z',
+        message: 'failed before cleanup',
+      },
+      { dbPath },
+    );
+
+    expect(deleteStoredAutomation('cleanup-children', { dbPath })).toBe(true);
+    expect(listStoredAutomations({ dbPath }).map((task) => task.id)).not.toContain('cleanup-children');
+    expect(loadAutomationRuntimeStateMap({ dbPath })['cleanup-children']).toBeUndefined();
+    expect(listAutomationActivityEntries('cleanup-children', { dbPath })).toEqual([]);
+
+    const db = openSqliteDatabase(dbPath);
+    try {
+      expect(db.prepare('SELECT COUNT(*) AS count FROM automation_state WHERE automation_id = ?').get('cleanup-children')).toEqual({
+        count: 0,
+      });
+      expect(db.prepare('SELECT COUNT(*) AS count FROM automation_activity WHERE automation_id = ?').get('cleanup-children')).toEqual({
+        count: 0,
+      });
+      expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it('prunes orphan automation child rows left by earlier startup cleanup', () => {
+    const stateRoot = createTempDir('tasks-module-state-');
+    const dbPath = resolveRuntimeDbPath(stateRoot);
+    const orphanDb = openSqliteDatabase(dbPath);
+    orphanDb.exec(`
+      PRAGMA foreign_keys = OFF;
+      PRAGMA user_version = 5;
+      CREATE TABLE automations (
+        id TEXT PRIMARY KEY,
+        runtime_scope TEXT NOT NULL DEFAULT 'shared',
+        title TEXT NOT NULL,
+        enabled INTEGER NOT NULL,
+        schedule_type TEXT NOT NULL,
+        cron TEXT,
+        at TEXT,
+        prompt TEXT NOT NULL,
+        cwd TEXT,
+        model_ref TEXT,
+        thinking_level TEXT,
+        timeout_seconds INTEGER NOT NULL,
+        catch_up_window_seconds INTEGER,
+        policies_json TEXT,
+        target_type TEXT NOT NULL DEFAULT 'background-agent',
+        conversation_behavior TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        thread_mode TEXT NOT NULL DEFAULT 'dedicated',
+        thread_session_file TEXT,
+        thread_conversation_id TEXT,
+        allowed_tools_json TEXT
+      );
+      CREATE TABLE automation_state (
+        automation_id TEXT PRIMARY KEY,
+        running INTEGER NOT NULL DEFAULT 0,
+        running_started_at TEXT,
+        active_run_id TEXT,
+        last_run_id TEXT,
+        last_status TEXT,
+        last_run_at TEXT,
+        last_success_at TEXT,
+        last_failure_at TEXT,
+        last_error TEXT,
+        last_log_path TEXT,
+        last_scheduled_minute TEXT,
+        last_attempt_count INTEGER,
+        one_time_resolved_at TEXT,
+        one_time_resolved_status TEXT,
+        one_time_completed_at TEXT,
+        FOREIGN KEY (automation_id) REFERENCES automations(id) ON DELETE CASCADE
+      );
+      CREATE TABLE automation_activity (
+        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+        automation_id TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        payload_json TEXT,
+        FOREIGN KEY (automation_id) REFERENCES automations(id) ON DELETE CASCADE
+      );
+      INSERT INTO automation_state (automation_id, running, last_status, last_run_at)
+      VALUES ('orphaned-task', 0, 'failed', '2026-03-02T11:00:00.000Z');
+      INSERT INTO automation_activity (automation_id, kind, created_at, payload_json)
+      VALUES ('orphaned-task', 'run-failed', '2026-03-02T12:00:00.000Z', '{"message":"orphaned"}');
+      PRAGMA foreign_keys = ON;
+    `);
+    orphanDb.close();
+
+    expect(listStoredAutomations({ dbPath })).toEqual([]);
+    expect(loadAutomationRuntimeStateMap({ dbPath })['orphaned-task']).toBeUndefined();
+    expect(listAutomationActivityEntries('orphaned-task', { dbPath })).toEqual([]);
+
+    const repairedDb = openSqliteDatabase(dbPath);
+    try {
+      expect(repairedDb.prepare('SELECT COUNT(*) AS count FROM automation_state').get()).toEqual({ count: 0 });
+      expect(repairedDb.prepare('SELECT COUNT(*) AS count FROM automation_activity').get()).toEqual({ count: 0 });
+      expect(repairedDb.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    } finally {
+      repairedDb.close();
+    }
+  });
+
+  it('prunes orphan legacy automation children before profile migrations validate foreign keys', () => {
+    const stateRoot = createTempDir('tasks-module-state-');
+    const dbPath = resolveRuntimeDbPath(stateRoot);
+    const legacyDb = openSqliteDatabase(dbPath);
+    legacyDb.exec(`
+      PRAGMA foreign_keys = OFF;
+      PRAGMA user_version = 0;
+      CREATE TABLE automations (
+        id TEXT PRIMARY KEY,
+        profile TEXT NOT NULL,
+        title TEXT NOT NULL,
+        enabled INTEGER NOT NULL,
+        schedule_type TEXT NOT NULL,
+        cron TEXT,
+        at TEXT,
+        prompt TEXT NOT NULL,
+        cwd TEXT,
+        model_ref TEXT,
+        timeout_seconds INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE automation_state (
+        automation_id TEXT PRIMARY KEY,
+        running INTEGER NOT NULL DEFAULT 0,
+        running_started_at TEXT,
+        active_run_id TEXT,
+        last_run_id TEXT,
+        last_status TEXT,
+        last_run_at TEXT,
+        last_success_at TEXT,
+        last_failure_at TEXT,
+        last_error TEXT,
+        last_log_path TEXT,
+        last_scheduled_minute TEXT,
+        last_attempt_count INTEGER,
+        one_time_resolved_at TEXT,
+        one_time_resolved_status TEXT,
+        one_time_completed_at TEXT,
+        FOREIGN KEY (automation_id) REFERENCES automations(id) ON DELETE CASCADE
+      );
+      CREATE TABLE automation_activity (
+        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+        automation_id TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        payload_json TEXT,
+        FOREIGN KEY (automation_id) REFERENCES automations(id) ON DELETE CASCADE
+      );
+      INSERT INTO automations (id, profile, title, enabled, schedule_type, cron, prompt, timeout_seconds, created_at, updated_at)
+      VALUES ('legacy-task', 'shared', 'Legacy task', 1, 'cron', '*/15 * * * *', 'Run legacy task.', 1200, '2026-03-02T10:00:00.000Z', '2026-03-02T10:00:00.000Z');
+      INSERT INTO automation_state (automation_id, running, last_status, last_run_at)
+      VALUES ('legacy-task', 0, 'success', '2026-03-02T11:00:00.000Z');
+      INSERT INTO automation_activity (automation_id, kind, created_at, payload_json)
+      VALUES ('legacy-task', 'run-failed', '2026-03-02T12:00:00.000Z', '{"message":"kept"}');
+      INSERT INTO automation_activity (automation_id, kind, created_at, payload_json)
+      VALUES ('missing-legacy-task', 'run-failed', '2026-03-02T12:30:00.000Z', '{"message":"orphaned"}');
+      PRAGMA foreign_keys = ON;
+    `);
+    legacyDb.close();
+
+    expect(listStoredAutomations({ dbPath })).toEqual([
+      expect.objectContaining({
+        id: 'legacy-task',
+        profile: 'shared',
+        runtimeScope: 'shared',
+      }),
+    ]);
+    expect(loadAutomationRuntimeStateMap({ dbPath })['legacy-task']).toEqual(expect.objectContaining({ id: 'legacy-task' }));
+    expect(listAutomationActivityEntries('legacy-task', { dbPath })).toEqual([
+      expect.objectContaining({
+        automationId: 'legacy-task',
+        kind: 'run-failed',
+      }),
+    ]);
+    expect(listAutomationActivityEntries('missing-legacy-task', { dbPath })).toEqual([]);
+
+    const migratedDb = openSqliteDatabase(dbPath);
+    try {
+      expect(migratedDb.prepare('PRAGMA integrity_check').all()).toEqual([{ integrity_check: 'ok' }]);
+      expect(migratedDb.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+      expect(migratedDb.prepare('PRAGMA user_version').get()).toEqual({ user_version: 5 });
+    } finally {
+      migratedDb.close();
+    }
   });
 
   it('rejects fractional automation timeouts when storing tasks', () => {
@@ -1951,7 +2273,15 @@ describe('tasks module scheduling', () => {
     });
 
     let currentTime = new Date('2026-03-02T10:00:00.000Z');
-    const runTask = vi.fn(async (request: TaskRunRequest) => createRunResult(request, true, currentTime.toISOString()));
+    const runTask = vi.fn(async (request: TaskRunRequest) =>
+      createRunResult(
+        request,
+        true,
+        currentTime.toISOString(),
+        undefined,
+        '[background-agent] starting cwd=/Users/patrick/workingdir/neon-pilot model=(default) allowedTools=(default)\nConversation check passed.',
+      ),
+    );
 
     const module = createTasksModule(
       {
@@ -2011,6 +2341,20 @@ describe('tasks module scheduling', () => {
     expect(rawSessionLines).toEqual(
       expect.arrayContaining([expect.objectContaining({ type: 'custom_message', customType: 'automation_run', display: false })]),
     );
+
+    const completedAuditEntry = rawSessionLines.find(
+      (line) =>
+        line.type === 'custom_message' &&
+        line.customType === 'automation_run' &&
+        typeof line.content === 'string' &&
+        line.content.includes('Automation completed: Conversation check'),
+    );
+    expect(completedAuditEntry?.content).toContain('Output:\nConversation check passed.');
+    expect(completedAuditEntry?.content).toContain('Run log: available from the automation run details.');
+    expect(completedAuditEntry?.content).not.toContain('[background-agent] starting cwd=');
+    expect(completedAuditEntry?.content).not.toContain('/tmp/');
+    expect(completedAuditEntry?.content).not.toContain('/Users/');
+    expect(completedAuditEntry?.details).toEqual(expect.objectContaining({ logPath: expect.stringContaining('/attempts/') }));
 
     const runId = runtimeState['conversation-check']?.lastRunId;
     expect(runId).toBeTruthy();
@@ -2078,6 +2422,69 @@ describe('tasks module scheduling', () => {
     } finally {
       unsubscribe();
     }
+  });
+
+  it('redacts local paths from failed owner-thread automation audit entries', async () => {
+    const taskDir = createTempDir('tasks-module-definitions-');
+    const stateRoot = createTempDir('tasks-module-state-');
+    const dbPath = resolveRuntimeDbPath(stateRoot);
+
+    createStoredAutomation({
+      dbPath,
+      id: 'failed-conversation-check',
+      title: 'Failed conversation check',
+      enabled: true,
+      at: '2026-03-02T10:00:05.000Z',
+      cwd: '/tmp/workspace',
+      prompt: 'Fail the conversation check.',
+      targetType: 'conversation',
+      timeoutSeconds: 1800,
+    });
+
+    let currentTime = new Date('2026-03-02T10:00:00.000Z');
+    const rawError =
+      'spawn /Users/patrick/workingdir/neon-pilot/dist/dev-desktop/Neon Pilot Testing.app/Contents/MacOS/Neon Pilot Testing ENOENT';
+    const runTask = vi.fn(async (request: TaskRunRequest) => createRunResult(request, false, currentTime.toISOString(), rawError));
+    const module = createTasksModule(
+      {
+        enabled: true,
+        taskDir,
+        tickIntervalSeconds: 30,
+        maxRetries: 1,
+        reapAfterDays: 7,
+        defaultTimeoutSeconds: 1800,
+      },
+      { now: () => currentTime, runTask },
+    );
+    const { context } = createContext(taskDir, stateRoot);
+
+    await module.start(context);
+    currentTime = new Date('2026-03-02T10:00:10.000Z');
+    await module.handleEvent(createTimerEvent(), context);
+    await waitForCondition(() => loadAutomationRuntimeStateMap({ dbPath })['failed-conversation-check']?.lastStatus === 'failed');
+
+    const runtimeState = loadAutomationRuntimeStateMap({ dbPath });
+    expect(runtimeState['failed-conversation-check']?.lastError).toBe(rawError);
+
+    const boundTask = runTask.mock.calls[0]?.[0].task;
+    expect(boundTask?.threadSessionFile).toBeTruthy();
+    const rawSessionLines = readFileSync(boundTask!.threadSessionFile!, 'utf-8')
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    const failedAuditEntry = rawSessionLines.find(
+      (line) =>
+        line.type === 'custom_message' &&
+        line.customType === 'automation_run' &&
+        typeof line.content === 'string' &&
+        line.content.includes('Automation failed: Failed conversation check'),
+    );
+
+    expect(failedAuditEntry?.content).toContain('Error: spawn automation runner ENOENT');
+    expect(failedAuditEntry?.content).not.toContain('/Users/');
+    expect(failedAuditEntry?.content).not.toContain('Neon Pilot Testing.app');
+
+    await module.stop?.(context);
   });
 
   it('reruns recurring conversation automations after the prior run completes', async () => {

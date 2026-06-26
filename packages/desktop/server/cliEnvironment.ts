@@ -55,7 +55,19 @@ export function getDefaultUserCliInstallPath(command = NEON_PILOT_CLI_COMMAND): 
 export function installUserCliSymlink(input: { target: string; linkPath?: string; command?: string }): string {
   const linkPath = input.linkPath ?? getDefaultUserCliInstallPath(input.command);
   mkdirSync(dirname(linkPath), { recursive: true });
-  if (existsSync(linkPath)) unlinkSync(linkPath);
+  try {
+    const linkStat = lstatSync(linkPath);
+    if (!linkStat.isSymbolicLink()) {
+      throw new Error(`Cannot install Neon Pilot CLI because ${linkPath} already exists and is not a symlink.`);
+    }
+    const currentTarget = readlinkSync(linkPath);
+    if (currentTarget !== input.target) {
+      throw new Error(`Cannot install Neon Pilot CLI because ${linkPath} already points to ${currentTarget}.`);
+    }
+    return linkPath;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
   symlinkSync(input.target, linkPath);
   return linkPath;
 }
@@ -65,6 +77,9 @@ export interface NeonPilotCliInstallStatus {
   binDir: string;
   linkPath: string;
   globallyInstalled: boolean;
+  linkExists: boolean;
+  linkConflict: boolean;
+  linkTarget?: string;
 }
 
 export function readNeonPilotCliInstallStatus(input: { repoRoot: string; stateRoot?: string } | string): NeonPilotCliInstallStatus {
@@ -72,8 +87,19 @@ export function readNeonPilotCliInstallStatus(input: { repoRoot: string; stateRo
   const target = ensureNeonPilotCliLauncher(options);
   const linkPath = getDefaultUserCliInstallPath();
   let globallyInstalled = false;
+  let linkExists = false;
+  let linkConflict = false;
+  let linkTarget: string | undefined;
   try {
-    globallyInstalled = existsSync(linkPath) && lstatSync(linkPath).isSymbolicLink() && readlinkSync(linkPath) === target;
+    const linkStat = lstatSync(linkPath);
+    linkExists = true;
+    if (linkStat.isSymbolicLink()) {
+      linkTarget = readlinkSync(linkPath);
+      globallyInstalled = linkTarget === target;
+      linkConflict = !globallyInstalled;
+    } else {
+      linkConflict = true;
+    }
   } catch {
     globallyInstalled = false;
   }
@@ -82,13 +108,23 @@ export function readNeonPilotCliInstallStatus(input: { repoRoot: string; stateRo
     binDir: getNeonPilotCliBinDir(options.stateRoot),
     linkPath,
     globallyInstalled,
+    linkExists,
+    linkConflict,
+    ...(linkTarget ? { linkTarget } : {}),
   };
 }
 
 export function installNeonPilotUserCli(input: { repoRoot: string; stateRoot?: string } | string): NeonPilotCliInstallStatus {
   const status = readNeonPilotCliInstallStatus(input);
+  if (status.linkConflict) {
+    throw new Error(
+      status.linkTarget
+        ? `Cannot install Neon Pilot CLI because ${status.linkPath} already points to ${status.linkTarget}.`
+        : `Cannot install Neon Pilot CLI because ${status.linkPath} already exists and is not a Neon Pilot CLI symlink.`,
+    );
+  }
   installUserCliSymlink({ target: status.target, linkPath: status.linkPath });
-  return { ...status, globallyInstalled: true };
+  return { ...status, globallyInstalled: true, linkExists: true, linkConflict: false, linkTarget: status.target };
 }
 
 export function uninstallNeonPilotUserCli(
@@ -96,5 +132,12 @@ export function uninstallNeonPilotUserCli(
 ): NeonPilotCliInstallStatus & { removed: boolean } {
   const status = readNeonPilotCliInstallStatus(input);
   if (status.globallyInstalled) unlinkSync(status.linkPath);
-  return { ...status, globallyInstalled: false, removed: status.globallyInstalled };
+  return {
+    ...status,
+    globallyInstalled: false,
+    linkExists: status.globallyInstalled ? false : status.linkExists,
+    linkConflict: status.globallyInstalled ? false : status.linkConflict,
+    linkTarget: status.globallyInstalled ? undefined : status.linkTarget,
+    removed: status.globallyInstalled,
+  };
 }

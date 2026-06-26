@@ -793,7 +793,9 @@
     "executions:start",
     "settings:read",
     "settings:write",
+    "storage:readwrite",
     "shell:execute",
+    "ui:invalidate",
     "models:read",
     "models:write"
   ]

@@ -277,6 +277,7 @@ export interface DesktopLiveSessionCompactRequest {
 export interface DesktopLiveSessionBranchRequest {
   conversationId: string;
   entryId: string;
+  surfaceId?: string;
 }
 
 export interface DesktopLiveSessionForkRequest {
@@ -284,6 +285,7 @@ export interface DesktopLiveSessionForkRequest {
   entryId: string;
   preserveSource?: boolean;
   beforeEntry?: boolean;
+  branchKind?: 'fork' | 'rewind';
 }
 
 /**

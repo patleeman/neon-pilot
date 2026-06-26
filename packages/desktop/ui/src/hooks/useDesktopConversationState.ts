@@ -7,6 +7,7 @@ import type {
   ConversationAggregateDelta,
   ConversationAggregateState,
   ConversationBootstrapState,
+  DesktopAppEvent,
   DesktopConversationState,
   DisplayBlock,
   PromptAttachmentRefInput,
@@ -20,23 +21,27 @@ import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
 const MAX_CACHED_DESKTOP_CONVERSATION_STATES = 8;
 const STREAM_CONTROL_FLUSH_INTERVAL_MS = 16;
+const POST_SEND_REFRESH_DELAYS_MS = [500, 1500, 4000] as const;
+const RUNNING_SESSION_RECOVERY_REFRESH_DELAYS_MS = [3000, 8000, 16000, 30000, 60000, 120000, 240000] as const;
+const DESKTOP_CONVERSATION_STATE_REFRESH_EVENT = 'neon-pilot:desktop-conversation-state-refresh';
 const desktopConversationStateCache = new Map<string, DesktopConversationState>();
 const desktopConversationStateInflight = new Map<string, Promise<DesktopConversationState>>();
 
 function desktopConversationStateFromAggregate(aggregate: ConversationAggregateState): DesktopConversationState {
-  if (!('conversation' in aggregate)) {
-    return aggregate as unknown as DesktopConversationState;
-  }
-  return {
-    ...aggregate.conversation,
-    activity: aggregate.activity,
-    revision: aggregate.revision,
-  };
+  const state = !('conversation' in aggregate)
+    ? (aggregate as unknown as DesktopConversationState)
+    : {
+        ...aggregate.conversation,
+        activity: aggregate.activity,
+        revision: aggregate.revision,
+      };
+  return presentDesktopConversationState(state);
 }
 
 interface DesktopConversationStateOptions {
   tailBlocks?: number;
   includeToolBlocks?: boolean;
+  version?: number | string;
 }
 
 interface UseDesktopConversationStateOptions extends DesktopConversationStateOptions {
@@ -90,6 +95,92 @@ function findLastToolUseIndex(blocks: DisplayBlock[], toolCallId: string): numbe
     }
   }
   return -1;
+}
+
+const EXTENSION_HOST_RPC_FAILURE_PATTERN = /^Extension host RPC request\s+(.+?)\s+failed at\s+https?:\/\/[^/]+\/action:\s+(.+)$/;
+
+function presentToolBlockOutput(input: { output: string; status?: 'running' | 'ok' | 'error' }): {
+  output: string;
+  status?: 'running' | 'ok' | 'error';
+} {
+  const extensionHostRpcFailure = EXTENSION_HOST_RPC_FAILURE_PATTERN.exec(input.output.trim());
+  const isError = input.status === 'error' || Boolean(extensionHostRpcFailure);
+  if (!extensionHostRpcFailure) {
+    return { output: input.output, ...(input.status ? { status: input.status } : {}) };
+  }
+
+  const message = extensionHostRpcFailure[2]?.trim();
+  const output = /^This operation was aborted\.?$/i.test(message ?? '')
+    ? 'Stopped before finishing. The tool call was interrupted or cancelled.'
+    : message
+      ? `Extension action failed: ${message}`
+      : 'Extension action failed.';
+  return { output, ...(isError ? { status: 'error' as const } : {}) };
+}
+
+function presentStreamBlock(block: DisplayBlock): DisplayBlock {
+  if (block.type !== 'tool_use') {
+    return block;
+  }
+
+  const presented = presentToolBlockOutput({ output: block.output ?? '', status: block.status });
+  if (presented.output === block.output && presented.status === block.status) {
+    return block;
+  }
+
+  return {
+    ...block,
+    ...presented,
+  };
+}
+
+function presentStreamBlocks(blocks: DisplayBlock[]): DisplayBlock[] {
+  return blocks.map(presentStreamBlock);
+}
+
+function presentDesktopConversationState(state: DesktopConversationState): DesktopConversationState {
+  return {
+    ...state,
+    sessionDetail: state.sessionDetail
+      ? {
+          ...state.sessionDetail,
+          blocks: presentStreamBlocks(state.sessionDetail.blocks),
+        }
+      : state.sessionDetail,
+    stream: {
+      ...state.stream,
+      blocks: presentStreamBlocks(state.stream.blocks),
+    },
+  };
+}
+
+function clearDesktopConversationStreamingState(state: DesktopConversationState): DesktopConversationState {
+  return {
+    ...state,
+    liveSession:
+      state.liveSession.live === true
+        ? {
+            ...state.liveSession,
+            isStreaming: false,
+            hasStaleTurnState: false,
+          }
+        : state.liveSession,
+    stream: {
+      ...state.stream,
+      isStreaming: false,
+      isCompacting: false,
+      blocks: state.stream.blocks.map((block) =>
+        block.type === 'tool_use' && (block.running === true || block.status === 'running')
+          ? {
+              ...block,
+              running: false,
+              status: 'error',
+              output: block.output || 'Stopped before finishing. The tool call was interrupted or cancelled.',
+            }
+          : block,
+      ),
+    },
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -189,12 +280,12 @@ export function applyDesktopConversationStreamEvent(
     case 'snapshot':
       return {
         ...stream,
-        blocks: event.blocks,
+        blocks: presentStreamBlocks(event.blocks),
         blockOffset: event.blockOffset,
         totalBlocks: event.totalBlocks,
         hasSnapshot: true,
         isStreaming: event.isStreaming,
-        isCompacting: false,
+        isCompacting: event.isCompacting === true,
         error: null,
         goalState: 'goalState' in event ? (event.goalState ?? null) : stream.goalState,
         systemPrompt: 'systemPrompt' in event ? (event.systemPrompt ?? null) : stream.systemPrompt,
@@ -288,7 +379,10 @@ export function applyDesktopConversationStreamEvent(
       if (index >= 0 && stream.blocks[index]?.type === 'tool_use') {
         const blocks = [...stream.blocks];
         const block = blocks[index];
-        blocks[index] = { ...block, output: `${block.output ?? ''}${partialText}` };
+        blocks[index] = {
+          ...block,
+          ...presentToolBlockOutput({ output: `${block.output ?? ''}${partialText}`, status: block.status }),
+        };
         return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
       }
       return stream;
@@ -299,10 +393,11 @@ export function applyDesktopConversationStreamEvent(
       if (index >= 0 && stream.blocks[index]?.type === 'tool_use') {
         blocks = [...stream.blocks];
         const block = blocks[index];
+        const presented = presentToolBlockOutput({ output: event.output, status: event.isError ? 'error' : 'ok' });
         blocks[index] = {
           ...block,
-          output: event.output,
-          status: event.isError ? 'error' : 'ok',
+          output: presented.output,
+          status: presented.status,
           running: false,
           durationMs: event.durationMs,
           details: event.details ?? block.details,
@@ -419,8 +514,9 @@ function buildDesktopConversationStateCacheKey(
   conversationId: string,
   tailBlocks: number | undefined,
   includeToolBlocks: boolean | undefined,
+  version: number | string | undefined,
 ): string {
-  return `${conversationId}:${tailBlocks ?? 'default'}:${includeToolBlocks === false ? 'conversation' : 'full'}`;
+  return `${conversationId}:${tailBlocks ?? 'default'}:${includeToolBlocks === false ? 'conversation' : 'full'}:${version ?? 'current'}`;
 }
 
 function rememberDesktopConversationState(
@@ -428,8 +524,9 @@ function rememberDesktopConversationState(
   key: string,
   nextState: DesktopConversationState,
 ): void {
+  const presentedState = presentDesktopConversationState(nextState);
   cache.delete(key);
-  cache.set(key, nextState);
+  cache.set(key, presentedState);
   while (cache.size > MAX_CACHED_DESKTOP_CONVERSATION_STATES) {
     const oldestKey = cache.keys().next().value;
     if (typeof oldestKey !== 'string') {
@@ -450,7 +547,12 @@ export function primeDesktopConversationStateCache(
   }
 
   const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
-  const cacheKey = buildDesktopConversationStateCacheKey(normalizedConversationId, tailBlocks, options?.includeToolBlocks);
+  const cacheKey = buildDesktopConversationStateCacheKey(
+    normalizedConversationId,
+    tailBlocks,
+    options?.includeToolBlocks,
+    options?.version,
+  );
   rememberDesktopConversationState(
     desktopConversationStateCache,
     cacheKey,
@@ -469,7 +571,12 @@ export function primeReservedDesktopConversationStateCache(
   }
 
   const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
-  const cacheKey = buildDesktopConversationStateCacheKey(normalizedConversationId, tailBlocks, options?.includeToolBlocks);
+  const cacheKey = buildDesktopConversationStateCacheKey(
+    normalizedConversationId,
+    tailBlocks,
+    options?.includeToolBlocks,
+    options?.version,
+  );
   rememberDesktopConversationState(desktopConversationStateCache, cacheKey, {
     conversationId: normalizedConversationId,
     sessionDetail: null,
@@ -492,7 +599,7 @@ function createDesktopConversationStateFromBootstrap(
   const sessionDetail = bootstrap.sessionDetail;
   const liveSession = bootstrap.liveSession ?? { live: false as const };
   const seededStream = liveSession.live ? { ...stream, isStreaming: liveSession.isStreaming } : stream;
-  return {
+  return presentDesktopConversationState({
     conversationId,
     sessionDetail,
     liveSession,
@@ -505,7 +612,7 @@ function createDesktopConversationStateFromBootstrap(
           contextUsage: sessionDetail.contextUsage,
         }
       : seededStream,
-  };
+  });
 }
 
 function fetchDesktopConversationStateCached(
@@ -513,7 +620,7 @@ function fetchDesktopConversationStateCached(
   options?: DesktopConversationStateOptions,
 ): Promise<DesktopConversationState> {
   const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
-  const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, options?.includeToolBlocks);
+  const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, options?.includeToolBlocks, options?.version);
   const inflight = desktopConversationStateInflight.get(cacheKey);
   if (inflight) {
     return inflight;
@@ -551,6 +658,19 @@ export function prefetchDesktopConversationState(
   return fetchDesktopConversationStateCached(normalizedConversationId, options);
 }
 
+export function notifyDesktopConversationStateRefresh(conversationId: string): void {
+  const normalizedConversationId = conversationId.trim();
+  if (!normalizedConversationId || typeof window === 'undefined') {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent(DESKTOP_CONVERSATION_STATE_REFRESH_EVENT, {
+      detail: { conversationId: normalizedConversationId },
+    }),
+  );
+}
+
 export function useDesktopConversationState(conversationId: string | null, options?: UseDesktopConversationStateOptions) {
   const enabled = options?.enabled !== false && Boolean(conversationId);
   const bridge = getDesktopBridge();
@@ -566,9 +686,28 @@ export function useDesktopConversationState(conversationId: string | null, optio
   const pendingStreamFlushTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const pendingStreamFlushDelayRef = useRef<number | null>(null);
   const reconnectRetryRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const postSendRefreshTimersRef = useRef<Array<ReturnType<typeof window.setTimeout>>>([]);
+  const runningSessionRecoveryRefreshTimersRef = useRef<Array<ReturnType<typeof window.setTimeout>>>([]);
   const matchedState = state?.conversationId === conversationId ? state : null;
   const activeConversationIdRef = useRef(conversationId);
   activeConversationIdRef.current = conversationId;
+
+  const clearPostSendRefreshTimers = useCallback(() => {
+    for (const timer of postSendRefreshTimersRef.current) {
+      window.clearTimeout(timer);
+    }
+    postSendRefreshTimersRef.current = [];
+  }, []);
+
+  const clearRunningSessionRecoveryRefreshTimers = useCallback(() => {
+    for (const timer of runningSessionRecoveryRefreshTimersRef.current) {
+      window.clearTimeout(timer);
+    }
+    runningSessionRecoveryRefreshTimersRef.current = [];
+  }, []);
+
+  useEffect(() => clearPostSendRefreshTimers, [clearPostSendRefreshTimers, conversationId]);
+  useEffect(() => clearRunningSessionRecoveryRefreshTimers, [clearRunningSessionRecoveryRefreshTimers, conversationId]);
 
   useEffect(() => {
     if (!enabled) {
@@ -591,8 +730,14 @@ export function useDesktopConversationState(conversationId: string | null, optio
     const requestOptions = {
       ...(tailBlocks !== undefined ? { tailBlocks } : {}),
       ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+      ...(options?.version !== undefined ? { version: options.version } : {}),
     } satisfies DesktopConversationStateOptions;
-    const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
+    const cacheKey = buildDesktopConversationStateCacheKey(
+      conversationId,
+      tailBlocks,
+      requestOptions.includeToolBlocks,
+      requestOptions.version,
+    );
     const cachedState = desktopConversationStateCache.get(cacheKey) ?? null;
     setState((current) => (current?.conversationId === conversationId ? current : cachedState));
     setError(null);
@@ -617,7 +762,17 @@ export function useDesktopConversationState(conversationId: string | null, optio
     return () => {
       closed = true;
     };
-  }, [bridge, conversationId, mode, options?.includeToolBlocks, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
+  }, [
+    bridge,
+    conversationId,
+    mode,
+    options?.includeToolBlocks,
+    options?.tailBlocks,
+    options?.version,
+    subscriptionVersion,
+    surfaceId,
+    surfaceType,
+  ]);
 
   useEffect(() => {
     if (mode !== 'local' || !conversationId) {
@@ -628,8 +783,14 @@ export function useDesktopConversationState(conversationId: string | null, optio
     const requestOptions = {
       ...(tailBlocks !== undefined ? { tailBlocks } : {}),
       ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+      ...(options?.version !== undefined ? { version: options.version } : {}),
     } satisfies DesktopConversationStateOptions;
-    const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
+    const cacheKey = buildDesktopConversationStateCacheKey(
+      conversationId,
+      tailBlocks,
+      requestOptions.includeToolBlocks,
+      requestOptions.version,
+    );
     let closed = false;
     let socket: WebSocket | null = null;
     let subscriptionId: string | null = null;
@@ -810,6 +971,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         const message = JSON.parse(String(event.data)) as
           | { type: 'conversation_snapshot'; id?: string; subscriptionId: string; state: ConversationAggregateState }
           | { type: 'conversation_delta'; subscriptionId: string; delta: ConversationAggregateDelta }
+          | { type: 'app_event'; event: DesktopAppEvent }
           | { type: 'error'; id?: string; message: string }
           | { type: string };
         if (message.type === 'conversation_snapshot') {
@@ -820,6 +982,11 @@ export function useDesktopConversationState(conversationId: string | null, optio
         if (message.type === 'conversation_delta' && (!subscriptionId || message.subscriptionId === subscriptionId)) {
           subscriptionId = message.subscriptionId;
           handleAggregateDelta(message.delta);
+          return;
+        }
+        if (message.type === 'app_event' && message.event.type === 'session_file_changed' && message.event.sessionId === conversationId) {
+          flushPendingStreamEvents();
+          refreshAuthoritativeState();
           return;
         }
         if (message.type === 'error') {
@@ -847,8 +1014,12 @@ export function useDesktopConversationState(conversationId: string | null, optio
     };
 
     const refreshAuthoritativeState = () => {
+      const aggregateOptions = {
+        ...(tailBlocks !== undefined ? { tailBlocks } : {}),
+        ...(requestOptions.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+      };
       void api
-        .conversationAggregate(conversationId, requestOptions)
+        .conversationAggregate(conversationId, aggregateOptions)
         .then((nextAggregate) => {
           if (closed) return;
           const nextState = desktopConversationStateFromAggregate(nextAggregate);
@@ -874,6 +1045,17 @@ export function useDesktopConversationState(conversationId: string | null, optio
       refreshAuthoritativeState();
       scheduleReconnectRetry();
     };
+
+    const handleLocalRefresh = (event: Event) => {
+      const detail = (event as CustomEvent<{ conversationId?: unknown }>).detail;
+      if (typeof detail?.conversationId !== 'string' || detail.conversationId !== conversationId) {
+        return;
+      }
+      flushPendingStreamEvents();
+      refreshAuthoritativeState();
+    };
+
+    window.addEventListener(DESKTOP_CONVERSATION_STATE_REFRESH_EVENT, handleLocalRefresh);
 
     void openDesktopRealtimeSocket()
       .then((nextSocket) => {
@@ -914,6 +1096,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
 
     return () => {
       closed = true;
+      window.removeEventListener(DESKTOP_CONVERSATION_STATE_REFRESH_EVENT, handleLocalRefresh);
       if (reconnectRetryRef.current !== null) {
         window.clearTimeout(reconnectRetryRef.current);
         reconnectRetryRef.current = null;
@@ -925,7 +1108,17 @@ export function useDesktopConversationState(conversationId: string | null, optio
       clearPendingStreamFlush();
       pendingStreamEventsRef.current = [];
     };
-  }, [bridge, conversationId, mode, options?.includeToolBlocks, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
+  }, [
+    bridge,
+    conversationId,
+    mode,
+    options?.includeToolBlocks,
+    options?.tailBlocks,
+    options?.version,
+    subscriptionVersion,
+    surfaceId,
+    surfaceType,
+  ]);
 
   const reconnect = useCallback(() => {
     if (mode === 'local') {
@@ -945,6 +1138,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
     const requestOptions = {
       ...(tailBlocks !== undefined ? { tailBlocks } : {}),
       ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+      ...(options?.version !== undefined ? { version: options.version } : {}),
     } satisfies DesktopConversationStateOptions;
     const nextState = await fetchDesktopConversationStateCached(conversationId, requestOptions);
     let refreshedState: DesktopConversationState | null = null;
@@ -954,14 +1148,66 @@ export function useDesktopConversationState(conversationId: string | null, optio
         return previous;
       }
       const mergedState = mergeDesktopConversationState(previous, nextState);
-      const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
+      const cacheKey = buildDesktopConversationStateCacheKey(
+        conversationId,
+        tailBlocks,
+        requestOptions.includeToolBlocks,
+        requestOptions.version,
+      );
       rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
       refreshedState = mergedState;
       return mergedState;
     });
     setError(null);
     return refreshedState ?? nextState;
-  }, [conversationId, mode, options?.includeToolBlocks, options?.tailBlocks]);
+  }, [conversationId, mode, options?.includeToolBlocks, options?.tailBlocks, options?.version]);
+
+  const schedulePostSendRefreshes = useCallback(() => {
+    clearPostSendRefreshTimers();
+    postSendRefreshTimersRef.current = POST_SEND_REFRESH_DELAYS_MS.map((delayMs) => {
+      const timer = window.setTimeout(() => {
+        postSendRefreshTimersRef.current = postSendRefreshTimersRef.current.filter((currentTimer) => currentTimer !== timer);
+        void refresh().catch((nextError) => {
+          setError(nextError instanceof Error ? nextError.message : String(nextError));
+        });
+      }, delayMs);
+      return timer;
+    });
+  }, [clearPostSendRefreshTimers, refresh]);
+
+  useEffect(() => {
+    clearRunningSessionRecoveryRefreshTimers();
+    if (
+      mode !== 'local' ||
+      !conversationId ||
+      matchedState?.liveSession.live !== true ||
+      (matchedState.stream.isStreaming !== true && matchedState.liveSession.isStreaming !== true)
+    ) {
+      return;
+    }
+
+    runningSessionRecoveryRefreshTimersRef.current = RUNNING_SESSION_RECOVERY_REFRESH_DELAYS_MS.map((delayMs) => {
+      const timer = window.setTimeout(() => {
+        runningSessionRecoveryRefreshTimersRef.current = runningSessionRecoveryRefreshTimersRef.current.filter(
+          (currentTimer) => currentTimer !== timer,
+        );
+        void refresh().catch((nextError) => {
+          setError(nextError instanceof Error ? nextError.message : String(nextError));
+        });
+      }, delayMs);
+      return timer;
+    });
+
+    return clearRunningSessionRecoveryRefreshTimers;
+  }, [
+    clearRunningSessionRecoveryRefreshTimers,
+    conversationId,
+    matchedState?.liveSession.isStreaming,
+    matchedState?.liveSession.live,
+    matchedState?.stream.isStreaming,
+    mode,
+    refresh,
+  ]);
 
   const send = useCallback(
     async (
@@ -980,10 +1226,16 @@ export function useDesktopConversationState(conversationId: string | null, optio
       const requestOptions = {
         ...(tailBlocks !== undefined ? { tailBlocks } : {}),
         ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+        ...(options?.version !== undefined ? { version: options.version } : {}),
       } satisfies DesktopConversationStateOptions;
       let stateForSend = matchedState;
       if (!stateForSend) {
-        stateForSend = desktopConversationStateFromAggregate(await api.conversationAggregate(conversationId, requestOptions));
+        stateForSend = desktopConversationStateFromAggregate(
+          await api.conversationAggregate(conversationId, {
+            ...(tailBlocks !== undefined ? { tailBlocks } : {}),
+            ...(requestOptions.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+          }),
+        );
         setState((previous) => {
           if (
             activeConversationIdRef.current !== conversationId ||
@@ -1008,6 +1260,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       void refresh().catch((nextError) => {
         setError(nextError instanceof Error ? nextError.message : String(nextError));
       });
+      schedulePostSendRefreshes();
       setSubscriptionVersion((current) => current + 1);
       return result;
     },
@@ -1018,7 +1271,9 @@ export function useDesktopConversationState(conversationId: string | null, optio
       matchedState?.sessionDetail?.meta?.file,
       options?.includeToolBlocks,
       options?.tailBlocks,
+      options?.version,
       refresh,
+      schedulePostSendRefreshes,
       surfaceId,
     ],
   );
@@ -1029,6 +1284,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
     }
 
     await api.abortSession(conversationId, surfaceId);
+    setState((previous) => (previous?.conversationId === conversationId ? clearDesktopConversationStreamingState(previous) : previous));
     void refresh().catch((nextError) => {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
     });

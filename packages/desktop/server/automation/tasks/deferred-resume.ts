@@ -3,7 +3,7 @@ import {
   loadDeferredResumeState,
   readSessionConversationId,
   resolveDeferredResumeStateFile,
-  saveDeferredResumeState,
+  withDeferredResumeLock,
 } from '@neon-pilot/core';
 import { join, resolve, sep } from 'path';
 
@@ -135,12 +135,12 @@ export function createDeferredResumeModule(dependencies: DeferredResumeModuleDep
 
       try {
         const deferredResumeStateFile = resolveDeferredResumeStateFile(context.paths.stateRoot);
-        const deferredState = loadDeferredResumeState(deferredResumeStateFile);
-        const activated = activateDueDeferredResumes(deferredState, { at: now() });
+        const activated = withDeferredResumeLock(
+          (deferredState) => activateDueDeferredResumes(deferredState, { at: now() }),
+          deferredResumeStateFile,
+        );
 
         if (activated.length > 0) {
-          saveDeferredResumeState(deferredState, deferredResumeStateFile);
-
           const profileContext = resolveProfileContext(context.config.modules.tasks.taskDir);
           for (const entry of activated) {
             const conversationId = readSessionConversationId(entry.sessionFile);

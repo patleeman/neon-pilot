@@ -11,7 +11,12 @@ import {
   PINNED_SESSION_IDS_STORAGE_KEY,
   SAVED_WORKSPACE_PATHS_STORAGE_KEY,
 } from '../local/localSettings.js';
-import { readConversationLayout, resetLocalWriteGrace, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
+import {
+  applyRemoteConversationLayout,
+  readConversationLayout,
+  resetLocalWriteGrace,
+  resetRemoteConversationLayoutCache,
+} from '../session/sessionTabs.js';
 import type { SessionMeta } from '../shared/types.js';
 import { sessionStore } from '../store';
 import { Sidebar } from './Sidebar.js';
@@ -127,9 +132,25 @@ function row(container: HTMLElement, id: string): HTMLElement {
   return element;
 }
 
-function dispatchDesktopShortcutCommand(command: string): void {
+function groupRow(container: HTMLElement, groupKey: string): HTMLElement {
+  const element = container.querySelector<HTMLElement>(`[data-sidebar-group-key="${groupKey}"]`);
+  if (!element) throw new Error(`Missing group ${groupKey}`);
+  return element;
+}
+
+function clickMenuItem(label: string): void {
+  const item = Array.from(document.querySelectorAll<HTMLElement>('button, [role="menuitem"]')).find(
+    (element) => element.textContent?.trim() === label,
+  );
+  if (!item) throw new Error(`Missing menu item ${label}`);
   act(() => {
-    window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command } }));
+    item.click();
+  });
+}
+
+function dispatchDesktopShortcutCommand(command: string, source?: string): void {
+  act(() => {
+    window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command, ...(source ? { source } : {}) } }));
   });
 }
 
@@ -371,5 +392,75 @@ describe('Sidebar branch conversation interactions', () => {
     expect(apiMocks.updateConversationWorkspace).toHaveBeenCalledWith({ operation: 'unlock', sessionId: 'locked' });
     expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual([]);
     expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['locked']);
+  });
+
+  it('archives only unlocked threads from a mixed locked workspace group', async () => {
+    const sessions = [
+      session({ id: 'open-a', title: 'Open A', cwd: '/repo/group', cwdSlug: 'group' }),
+      session({ id: 'open-b', title: 'Open B', cwd: '/repo/group', cwdSlug: 'group' }),
+      session({ id: 'locked-c', title: 'Locked C', cwd: '/repo/group', cwdSlug: 'group' }),
+    ];
+    applyRemoteConversationLayout({
+      sessionIds: ['open-a', 'open-b', 'locked-c'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      lockedConversationIds: ['locked-c'],
+      activeConversationId: 'open-a',
+      workspacePaths: ['/repo/group'],
+    });
+    apiMocks.readConversationWorkspace.mockResolvedValue({
+      sessionIds: ['open-a', 'open-b', 'locked-c'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      lockedConversationIds: ['locked-c'],
+      workspacePaths: ['/repo/group'],
+      activeConversationId: 'open-a',
+    });
+    const container = renderSidebar('/conversations/open-a', sessions, {
+      sessionIds: ['open-a', 'open-b', 'locked-c'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      lockedConversationIds: ['locked-c'],
+      activeConversationId: 'open-a',
+      workspacePaths: ['/repo/group'],
+    });
+    await flush();
+
+    expect(readConversationLayout().sessionIds).toEqual(['open-a', 'open-b', 'locked-c']);
+    expect(readConversationLayout().lockedConversationIds).toEqual(['locked-c']);
+
+    const group = groupRow(container, '/repo/group');
+    act(() => {
+      group.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 20, clientY: 20 }));
+    });
+    await flush();
+
+    clickMenuItem('Archive Threads');
+    await flush();
+
+    expect(readConversationLayout().sessionIds).toEqual(['locked-c']);
+    expect(readConversationLayout().archivedSessionIds).toEqual(['open-a', 'open-b']);
+    expect(readConversationLayout().lockedConversationIds).toEqual(['locked-c']);
+  });
+
+  it('allows command palette conversation commands through the overlay shortcut guard', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['locked']));
+    renderSidebar('/conversations/locked', [session({ id: 'locked', title: 'Important thread' })]);
+    await flush();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'ui-overlay-backdrop';
+    document.body.appendChild(overlay);
+
+    dispatchDesktopShortcutCommand('conversation.toggleLocked');
+    await flush();
+
+    expect(readConversationLayout().lockedConversationIds).toEqual([]);
+
+    dispatchDesktopShortcutCommand('conversation.toggleLocked', 'command-palette');
+    await flush();
+
+    expect(readConversationLayout().lockedConversationIds).toEqual(['locked']);
+    expect(apiMocks.updateConversationWorkspace).toHaveBeenCalledWith({ operation: 'lock', sessionId: 'locked' });
   });
 });

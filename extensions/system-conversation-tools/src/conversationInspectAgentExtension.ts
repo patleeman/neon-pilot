@@ -91,6 +91,7 @@ interface ConversationInspectToolContext {
   sessionManager: { getSessionId(): string };
   conversations?: {
     getWorkspace?: () => Promise<unknown>;
+    list?: () => Promise<unknown>;
   };
 }
 
@@ -98,7 +99,9 @@ function readWorkspaceConversationIds(workspace: unknown): { openIds: Set<string
   const readIds = (key: string) =>
     new Set(
       workspace && typeof workspace === 'object' && Array.isArray((workspace as Record<string, unknown>)[key])
-        ? ((workspace as Record<string, unknown>)[key] as unknown[]).filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+        ? ((workspace as Record<string, unknown>)[key] as unknown[]).filter(
+            (id): id is string => typeof id === 'string' && id.trim().length > 0,
+          )
         : [],
     );
   return {
@@ -124,8 +127,13 @@ async function buildWorkerConversationInspectSessionSnapshot(
   ctx?: ConversationInspectToolContext,
 ): Promise<WorkerConversationInspectSessionSnapshotEntry[] | undefined> {
   try {
-    const [sessions, workspace] = await Promise.all([readConversationSessionsCapability(), readWorkspaceConversationState(ctx)]);
-    return sessions
+    const [sessions, workspace] = await Promise.all([
+      typeof ctx?.conversations?.list === 'function' ? ctx.conversations.list() : readConversationSessionsCapability(),
+      readWorkspaceConversationState(ctx),
+    ]);
+    const sessionList = Array.isArray(sessions) ? sessions : [];
+    return sessionList
+      .filter((session): session is WorkerConversationInspectSessionSnapshotEntry => Boolean(session && typeof session === 'object'))
       .filter((session) => !conversationId || session.id === conversationId)
       .map((session) => {
         const visibleInWorkspace = Boolean(

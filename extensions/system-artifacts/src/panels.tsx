@@ -4,6 +4,7 @@ import {
   CenteredLoadingState,
   CenteredMessage,
   CodeBlock,
+  getDesktopBridge,
   MetaLabel,
   PanelMessage,
   ResourceListItem,
@@ -384,6 +385,8 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
   const [error, setError] = useState<string | null>(null);
   const [copyError, setCopyError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const copyResetTimeoutRef = useRef<number | null>(null);
 
@@ -413,7 +416,9 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
     setLoading(true);
     setError(null);
     setCopyError(null);
+    setDeleteError(null);
     setCopied(false);
+    setDeleting(false);
     pa.extension
       .invoke('artifact', { action: 'get', conversationId: context.conversationId, artifactId })
       .then((result) => {
@@ -440,7 +445,18 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
     if (!artifact) return;
     setCopyError(null);
     try {
-      await navigator.clipboard.writeText(artifact.content);
+      const desktopBridge = getDesktopBridge();
+      if (desktopBridge) {
+        const result = await desktopBridge.writeClipboardText(artifact.content);
+        if (!result.ok) {
+          throw new Error(result.error || 'Copy to clipboard failed.');
+        }
+      } else {
+        if (typeof navigator === 'undefined' || typeof navigator.clipboard?.writeText !== 'function') {
+          throw new Error('Clipboard access is unavailable.');
+        }
+        await navigator.clipboard.writeText(artifact.content);
+      }
       setCopied(true);
       if (copyResetTimeoutRef.current !== null) {
         window.clearTimeout(copyResetTimeoutRef.current);
@@ -452,6 +468,34 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
     } catch (error) {
       setCopied(false);
       setCopyError('Could not copy artifact source. Use the visible source text instead.');
+    }
+  }
+
+  async function deleteArtifact() {
+    if (!artifact || !context.conversationId || deleting) return;
+    const confirmed = window.confirm(`Delete artifact "${artifact.title}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setDeleteError(null);
+    setDeleting(true);
+    try {
+      const result = await pa.extension.invoke('artifact', {
+        action: 'delete',
+        conversationId: context.conversationId,
+        artifactId: artifact.id,
+      });
+      const deleted = isRecord(result) && result.deleted === true;
+      setArtifact(null);
+      setError(deleted ? 'This artifact was deleted.' : 'This artifact was already deleted.');
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.delete(ARTIFACT_PARAM);
+        return next;
+      });
+    } catch (error) {
+      setDeleteError('Could not delete artifact.');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -479,9 +523,14 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
           </div>
           {artifact ? (
             <div className="flex shrink-0 items-center gap-2">
-              {copyError ? <span className="max-w-[240px] truncate text-[11px] text-danger">{copyError}</span> : null}
+              {copyError || deleteError ? (
+                <span className="max-w-[240px] truncate text-[11px] text-danger">{copyError ?? deleteError}</span>
+              ) : null}
               <ToolbarButton onClick={() => void copySource()} className="shrink-0 px-2 py-1 text-[10px]">
                 {copied ? 'copied' : artifact.kind === 'latex' ? 'copy latex' : 'copy source'}
+              </ToolbarButton>
+              <ToolbarButton onClick={() => void deleteArtifact()} disabled={deleting} className="shrink-0 px-2 py-1 text-[10px]">
+                {deleting ? 'deleting' : 'delete'}
               </ToolbarButton>
             </div>
           ) : null}

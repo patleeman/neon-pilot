@@ -55,6 +55,22 @@ describe('useExtensionStyles', () => {
     expect(document.head.querySelectorAll('link[data-extension-style]').length).toBe(1);
   });
 
+  it('updates stylesheet URLs when the extension revision changes', () => {
+    const extensionId = 'revisioned-extension';
+
+    const { rerender } = renderHook(({ revision }) => useExtensionStyles(extensionId, ['theme.css'], revision), {
+      initialProps: { revision: 'one' },
+    });
+
+    const firstHref = document.head.querySelector('link[data-extension-style]')?.getAttribute('href');
+    expect(firstHref).toContain('v=one');
+
+    rerender({ revision: 'two' });
+
+    const secondHref = document.head.querySelector('link[data-extension-style]')?.getAttribute('href');
+    expect(secondHref).toContain('v=two');
+  });
+
   it('does nothing when no styles are provided', () => {
     renderHook(() => useExtensionStyles('some-extension', undefined));
     expect(document.head.querySelectorAll('link[data-extension-style]').length).toBe(0);

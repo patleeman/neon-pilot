@@ -59,11 +59,16 @@ export function ExcalidrawInputTool({
 
   const openDrawingModal = async () => {
     if (toolContext.composerDisabled) return;
-    const result = await pa.ui.openModal({
-      component: 'ExcalidrawEditorModal',
-      props: { conversationId: toolContext.conversationId, saveLabel: 'Attach to chat' },
-      size: 'fullscreen',
-    });
+    const result = await pa.ui
+      .openModal({
+        component: 'ExcalidrawEditorModal',
+        props: { conversationId: toolContext.conversationId, saveLabel: 'Attach to chat' },
+        size: 'fullscreen',
+      })
+      .catch(() => {
+        pa.ui.toast('Drawing editor could not be opened. Try again after reloading Neon Pilot.');
+        return null;
+      });
     if (result && typeof result === 'object') {
       toolContext.upsertDrawingAttachment(result as ExcalidrawEditorSavePayload);
       pa.ui.toast('Drawing attached to composer.');

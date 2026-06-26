@@ -20,7 +20,7 @@ export async function executeSetConversationTitle(
   }
 
   const conversationId = ctx.sessionManager.getSessionId();
-  setSessionName(title);
+  await setSessionName(title);
 
   return {
     content: [{ type: 'text' as const, text: `Conversation title set to "${title}".` }],

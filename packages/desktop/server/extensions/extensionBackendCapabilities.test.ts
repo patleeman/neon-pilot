@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createExtensionBackendCapabilityDispatcher } from './extensionBackendCapabilities.js';
+import {
+  abortExtensionShellSpawnHandlesForConversation,
+  createExtensionBackendCapabilityDispatcher,
+} from './extensionBackendCapabilities.js';
 
 const findExtensionEntry = vi.hoisted(() =>
   vi.fn(() => ({
@@ -1851,6 +1854,172 @@ describe('extension backend capability dispatcher', () => {
     expect(handle.write).toHaveBeenCalledWith('hello');
     expect(handle.resize).toHaveBeenCalledWith(80, 24);
     expect(handle.kill).toHaveBeenCalledOnce();
+  });
+
+  it('kills host-owned shell spawn handles for an aborted worker request', async () => {
+    const matchingHandle = {
+      pid: 123,
+      usingPty: false,
+      executionWrappers: [],
+      kill: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+    };
+    const otherRequestHandle = {
+      pid: 456,
+      usingPty: false,
+      executionWrappers: [],
+      kill: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+    };
+    const otherExtensionHandle = {
+      pid: 789,
+      usingPty: false,
+      executionWrappers: [],
+      kill: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+    };
+    const shell = {
+      exec: vi.fn(),
+      spawn: vi.fn(async () => matchingHandle),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ shell });
+
+    await dispatch({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'ext',
+      capability: 'shell',
+      operation: 'spawn',
+      input: { handleId: 'matching', command: 'sleep', args: ['120'] },
+      context: { workerRequestId: 77 },
+    });
+    shell.spawn.mockResolvedValueOnce(otherRequestHandle);
+    await dispatch({
+      id: 2,
+      kind: 'capabilityRequest',
+      extensionId: 'ext',
+      capability: 'shell',
+      operation: 'spawn',
+      input: { handleId: 'other-request', command: 'sleep', args: ['120'] },
+      context: { workerRequestId: 88 },
+    });
+    shell.spawn.mockResolvedValueOnce(otherExtensionHandle);
+    await dispatch({
+      id: 3,
+      kind: 'capabilityRequest',
+      extensionId: 'other-ext',
+      capability: 'shell',
+      operation: 'spawn',
+      input: { handleId: 'other-extension', command: 'sleep', args: ['120'] },
+      context: { workerRequestId: 77 },
+    });
+
+    await expect(
+      dispatch({
+        id: 4,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'shell',
+        operation: 'abortOwner',
+        input: { workerRequestId: 77 },
+      }),
+    ).resolves.toEqual({ ok: true, killed: 1 });
+
+    expect(matchingHandle.kill).toHaveBeenCalledOnce();
+    expect(otherRequestHandle.kill).not.toHaveBeenCalled();
+    expect(otherExtensionHandle.kill).not.toHaveBeenCalled();
+    await expect(
+      dispatch({
+        id: 5,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'shell',
+        operation: 'write',
+        input: { handleId: 'other-request', data: 'still alive' },
+      }),
+    ).resolves.toEqual({ ok: true });
+    expect(otherRequestHandle.write).toHaveBeenCalledWith('still alive');
+  });
+
+  it('kills host-owned shell spawn handles for an aborted conversation', async () => {
+    const matchingHandle = {
+      pid: 123,
+      usingPty: false,
+      executionWrappers: [],
+      kill: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+    };
+    const otherHandle = {
+      pid: 456,
+      usingPty: false,
+      executionWrappers: [],
+      kill: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+    };
+    const shell = {
+      exec: vi.fn(),
+      spawn: vi.fn(async () => matchingHandle),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ shell });
+
+    await dispatch({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'ext',
+      capability: 'shell',
+      operation: 'spawn',
+      input: { handleId: 'matching', command: 'sleep', args: ['120'] },
+      context: { agentToolContext: { conversationId: 'conv-1', sessionId: 'conv-1' } },
+    });
+    shell.spawn.mockResolvedValueOnce(otherHandle);
+    await dispatch({
+      id: 2,
+      kind: 'capabilityRequest',
+      extensionId: 'ext',
+      capability: 'shell',
+      operation: 'spawn',
+      input: { handleId: 'other', command: 'sleep', args: ['120'] },
+      context: { agentToolContext: { conversationId: 'conv-2', sessionId: 'conv-2' } },
+    });
+
+    await expect(abortExtensionShellSpawnHandlesForConversation('conv-1')).resolves.toEqual({ ok: true, killed: 1 });
+    expect(matchingHandle.kill).toHaveBeenCalledOnce();
+    expect(otherHandle.kill).not.toHaveBeenCalled();
+  });
+
+  it('cleans up ownerless shell spawn handles when conversation ownership is missing', async () => {
+    const ownerlessHandle = {
+      pid: 123,
+      usingPty: false,
+      executionWrappers: [],
+      kill: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+    };
+    const shell = {
+      exec: vi.fn(),
+      spawn: vi.fn(async () => ownerlessHandle),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ shell });
+
+    await dispatch({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'ext',
+      capability: 'shell',
+      operation: 'spawn',
+      input: { handleId: 'ownerless', command: 'sleep', args: ['120'] },
+    });
+
+    const result = await abortExtensionShellSpawnHandlesForConversation('conv-with-missing-owner');
+    expect(result.ok).toBe(true);
+    expect(result.killed).toBeGreaterThanOrEqual(1);
+    expect(ownerlessHandle.kill).toHaveBeenCalledOnce();
   });
 
   it('rejects malformed shell capability inputs', async () => {

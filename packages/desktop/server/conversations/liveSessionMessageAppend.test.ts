@@ -7,6 +7,7 @@ const title = vi.hoisted(() => ({
 vi.mock('./liveSessionTitle.js', () => title);
 
 import {
+  appendDetachedLiveSessionBashExecution,
   appendDetachedLiveSessionUserMessage,
   appendParallelImportedLiveSessionMessage,
   appendVisibleLiveSessionCustomMessage,
@@ -75,11 +76,69 @@ describe('live session message append operations', () => {
     expect(e.session.sessionManager.appendMessage).toHaveBeenCalledTimes(1);
   });
 
+  it('appends detached bash executions for abortable direct shell runs', () => {
+    const e = entry();
+
+    appendDetachedLiveSessionBashExecution(
+      e as never,
+      ' git status --short ',
+      {
+        output: ' M packages/desktop/server/conversations/liveSessions.ts\n',
+        exitCode: 0,
+        truncated: true,
+        fullOutputPath: '/tmp/neon-pilot-bash-output.log',
+      },
+      { excludeFromContext: true },
+    );
+
+    expect(e.session.state.messages).toEqual([
+      {
+        role: 'bashExecution',
+        command: 'git status --short',
+        output: ' M packages/desktop/server/conversations/liveSessions.ts\n',
+        timestamp: Date.now(),
+        exitCode: 0,
+        truncated: true,
+        fullOutputPath: '/tmp/neon-pilot-bash-output.log',
+        excludeFromContext: true,
+      },
+    ]);
+    expect(e.session.sessionManager.appendMessage).toHaveBeenCalledWith(e.session.state.messages[0]);
+  });
+
+  it('bounds oversized detached bash execution output before persistence', () => {
+    const e = entry();
+    const output = `head\n${'x'.repeat(90_000)}\ntail`;
+
+    appendDetachedLiveSessionBashExecution(e as never, 'cat huge.log', { output, exitCode: 0 });
+
+    expect(e.session.state.messages).toHaveLength(1);
+    const message = e.session.state.messages[0] as {
+      output: string;
+      truncated?: boolean;
+      details?: { contextHardening?: { truncated?: boolean; originalChars?: number; maxChars?: number } };
+    };
+    expect(message.output.length).toBeLessThanOrEqual(64 * 1024);
+    expect(message.output).toContain('head');
+    expect(message.output).toContain('tail');
+    expect(message.output).toContain('Neon Pilot truncated oversized tool output');
+    expect(message.truncated).toBe(true);
+    expect(message.details?.contextHardening).toMatchObject({
+      truncated: true,
+      originalChars: output.length,
+      maxChars: 64 * 1024,
+    });
+    expect(e.session.sessionManager.appendMessage).toHaveBeenCalledWith(message);
+  });
+
   it('blocks detached and visible appends while streaming', async () => {
     const e = entry({ session: { ...entry().session, isStreaming: true } });
     await expect(
       appendDetachedLiveSessionUserMessage(e as never, 'hello', { broadcastTitle: vi.fn(), publishSessionMetaChanged: vi.fn() }),
     ).rejects.toThrow('Session s1 is currently streaming');
+    expect(() => appendDetachedLiveSessionBashExecution(e as never, 'echo hello', { output: 'hello\n', exitCode: 0 })).toThrow(
+      'Session s1 is currently streaming',
+    );
     await expect(
       appendVisibleLiveSessionCustomMessage(
         e as never,

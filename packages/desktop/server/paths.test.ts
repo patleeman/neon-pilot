@@ -53,6 +53,22 @@ describe('daemon paths', () => {
     });
   });
 
+  it('uses a short derived socket path when a namespaced runtime root would exceed the socket limit', () => {
+    const stateRoot = join(tmpdir(), 'neon-pilot-qa', 'row-daemon-background-rerun', 'state');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+
+    const paths = resolveDaemonPaths(undefined, 'qa-row-daemon-background-rerun');
+
+    expect(paths).toMatchObject({
+      stateRoot,
+      root: join(stateRoot, 'daemon-qa-row-daemon-background-rerun'),
+      pidFile: join(stateRoot, 'daemon-qa-row-daemon-background-rerun', 'neon-pilotd.pid'),
+      logFile: join(stateRoot, 'daemon-qa-row-daemon-background-rerun', 'logs', 'daemon.log'),
+    });
+    expect(paths.socketPath.length).toBeLessThanOrEqual(103);
+    expect(paths.socketPath).toMatch(/neon-pilotd-[a-f0-9]{16}\.sock$/u);
+  });
+
   it('isolates daemon runtime files beside an explicit socket path', () => {
     const stateRoot = createTempDir('pa-daemon-paths-state-');
     const daemonRoot = createTempDir('pa-daemon-paths-explicit-');

@@ -61,7 +61,7 @@ import {
   setExtensionEnabled,
 } from './extensionRegistry.js';
 import { type ExtensionRuntimeRefreshSkillMcpConfigInput, refreshHostSkillMcpConfig } from './extensionRuntimeCapability.js';
-import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
+import { createExtensionGitCapability, createExtensionShellCapability, terminateSpawnedExtensionProcesses } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 import { requestExtensionUiConfirm } from './extensionUiConfirmBridge.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
@@ -319,9 +319,16 @@ interface ExtensionBackendShellSpawnHandle {
   pid: number | null;
   usingPty: boolean;
   executionWrappers: Array<{ id: string; label?: string }>;
-  kill: () => void;
+  kill: () => void | Promise<void>;
   write: (data: string) => void;
   resize: (cols: number, rows: number) => void;
+}
+
+interface ExtensionBackendShellSpawnRecord {
+  handle: ExtensionBackendShellSpawnHandle;
+  workerRequestId?: number;
+  conversationId?: string;
+  sessionId?: string;
 }
 
 interface ExtensionBackendCapabilityShell {
@@ -385,6 +392,68 @@ export type ExtensionBackendCapabilityDispatcher = (
   request: ExtensionBackendWorkerCapabilityRequest,
   emit?: ExtensionBackendCapabilityEventEmitter,
 ) => Promise<unknown> | unknown;
+
+const shellSpawnHandleMaps = new Set<Map<string, ExtensionBackendShellSpawnRecord>>();
+
+function contextString(value: unknown, key: string): string | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const candidate = (value as Record<string, unknown>)[key];
+  return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : undefined;
+}
+
+function shellSpawnRecordOwner(
+  context: ExtensionBackendWorkerCapabilityRequest['context'] | undefined,
+): Pick<ExtensionBackendShellSpawnRecord, 'conversationId' | 'sessionId' | 'workerRequestId'> {
+  return {
+    ...(typeof context?.workerRequestId === 'number' ? { workerRequestId: context.workerRequestId } : {}),
+    ...((contextString(context?.agentToolContext, 'conversationId') ?? contextString(context?.toolContext, 'conversationId'))
+      ? {
+          conversationId:
+            contextString(context?.agentToolContext, 'conversationId') ?? contextString(context?.toolContext, 'conversationId'),
+        }
+      : {}),
+    ...((contextString(context?.agentToolContext, 'sessionId') ?? contextString(context?.toolContext, 'sessionId'))
+      ? { sessionId: contextString(context?.agentToolContext, 'sessionId') ?? contextString(context?.toolContext, 'sessionId') }
+      : {}),
+  };
+}
+
+async function stopShellSpawnRecord(record: ExtensionBackendShellSpawnRecord): Promise<void> {
+  try {
+    await record.handle.kill();
+  } catch {
+    // The process may already have exited.
+  }
+}
+
+export async function abortExtensionShellSpawnHandlesForConversation(conversationId: string): Promise<{ ok: true; killed: number }> {
+  const ownerId = conversationId.trim();
+  if (!ownerId) return { ok: true, killed: 0 };
+  let killed = 0;
+  const stopTasks: Array<Promise<void>> = [];
+
+  const stopMatchingRecords = (matches: (record: ExtensionBackendShellSpawnRecord) => boolean) => {
+    for (const shellSpawnHandles of shellSpawnHandleMaps) {
+      for (const [key, record] of shellSpawnHandles) {
+        if (!matches(record)) continue;
+        shellSpawnHandles.delete(key);
+        killed += 1;
+        stopTasks.push(stopShellSpawnRecord(record));
+      }
+    }
+  };
+
+  stopMatchingRecords((record) => record.conversationId === ownerId || record.sessionId === ownerId);
+  if (killed === 0) {
+    stopMatchingRecords((record) => !record.conversationId && !record.sessionId);
+  }
+  if (killed === 0) {
+    killed += terminateSpawnedExtensionProcesses();
+  }
+
+  await Promise.all(stopTasks);
+  return { ok: true, killed };
+}
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
   commands?: ExtensionBackendCapabilityCommands;
@@ -1546,11 +1615,34 @@ function normalizePtyInput(value: unknown): boolean | { cols?: number; rows?: nu
 
 async function dispatchShellCapability(
   shell: ExtensionBackendCapabilityShell,
-  shellSpawnHandles: Map<string, ExtensionBackendShellSpawnHandle>,
+  shellSpawnHandles: Map<string, ExtensionBackendShellSpawnRecord>,
   request: ExtensionBackendWorkerCapabilityRequest,
   emit?: ExtensionBackendCapabilityEventEmitter,
 ): Promise<unknown> {
   const input = normalizeRecordInput(request.input, 'Shell');
+
+  if (request.operation === 'abortOwner') {
+    const workerRequestId =
+      typeof input.workerRequestId === 'number'
+        ? input.workerRequestId
+        : typeof request.context?.workerRequestId === 'number'
+          ? request.context.workerRequestId
+          : undefined;
+    if (workerRequestId === undefined) {
+      return { ok: true, killed: 0 };
+    }
+
+    let killed = 0;
+    for (const [key, record] of shellSpawnHandles) {
+      if (!key.startsWith(`${request.extensionId}:`) || record.workerRequestId !== workerRequestId) {
+        continue;
+      }
+      shellSpawnHandles.delete(key);
+      killed += 1;
+      await stopShellSpawnRecord(record);
+    }
+    return { ok: true, killed };
+  }
 
   if (request.operation === 'exec') {
     return shell.exec({
@@ -1613,19 +1705,20 @@ async function dispatchShellCapability(
           }
         : {}),
     });
-    shellSpawnHandles.set(`${request.extensionId}:${handleId}`, handle);
+    shellSpawnHandles.set(`${request.extensionId}:${handleId}`, { handle, ...shellSpawnRecordOwner(request.context) });
     return { pid: handle.pid, usingPty: handle.usingPty, executionWrappers: handle.executionWrappers };
   }
 
   const handleId = requireString(input.handleId, 'Shell handleId');
-  const handle = shellSpawnHandles.get(`${request.extensionId}:${handleId}`);
-  if (!handle) {
+  const record = shellSpawnHandles.get(`${request.extensionId}:${handleId}`);
+  if (!record) {
     throw new Error(`Shell handle not found: ${handleId}`);
   }
+  const { handle } = record;
 
   if (request.operation === 'kill') {
     shellSpawnHandles.delete(`${request.extensionId}:${handleId}`);
-    handle.kill();
+    await stopShellSpawnRecord(record);
     return { ok: true };
   }
 
@@ -2266,7 +2359,8 @@ export function createExtensionBackendCapabilityDispatcher(
     reset: (keys: string[], stateRoot?: string) => createSettingsStore(stateRoot).reset(keys),
   };
   const shell = options.shell ?? createExtensionShellCapability({ pathDirs: listEnabledExtensionBinDirs() });
-  const shellSpawnHandles = new Map<string, ExtensionBackendShellSpawnHandle>();
+  const shellSpawnHandles = new Map<string, ExtensionBackendShellSpawnRecord>();
+  shellSpawnHandleMaps.add(shellSpawnHandles);
   const telemetry = options.telemetry ?? {
     record: (extensionId: string, event: ExtensionBackendCapabilityTelemetryEvent) => {
       persistAppTelemetryEvent({

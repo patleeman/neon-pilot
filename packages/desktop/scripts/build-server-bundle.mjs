@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -217,6 +217,10 @@ const jsdomXhrSyncWorker = resolve(packageRoot, 'node_modules/jsdom/lib/jsdom/li
 const piCodingAgentRoot = resolve(packageRoot, 'node_modules/@earendil-works/pi-coding-agent');
 const piCodingAgentPackageJson = resolve(piCodingAgentRoot, 'package.json');
 const piCodingAgentReadme = resolve(piCodingAgentRoot, 'README.md');
+const piCodingAgentExportHtml = resolve(piCodingAgentRoot, 'dist/core/export-html');
+const piCodingAgentInteractiveTheme = resolve(piCodingAgentRoot, 'dist/modes/interactive/theme');
+const bundledAppChunkExportHtml = resolve(outdir, 'app', 'chunks', 'dist', 'core', 'export-html');
+const bundledAppChunkInteractiveTheme = resolve(outdir, 'app', 'chunks', 'dist', 'modes', 'interactive', 'theme');
 const piCodingAgentPackageMetadata = existsSync(piCodingAgentPackageJson)
   ? JSON.parse(readFileSync(piCodingAgentPackageJson, 'utf-8'))
   : { name: '@earendil-works/pi-coding-agent', version: '0.0.0', piConfig: { configDir: '.pi' } };
@@ -279,4 +283,12 @@ for (const bundleOutput of bundleOutputs) {
 
 if (existsSync(piCodingAgentReadme)) {
   copyFileSync(piCodingAgentReadme, resolve(outdir, 'app', 'README.md'));
+}
+
+if (existsSync(piCodingAgentExportHtml)) {
+  cpSync(piCodingAgentExportHtml, bundledAppChunkExportHtml, { recursive: true });
+}
+
+if (existsSync(piCodingAgentInteractiveTheme)) {
+  cpSync(piCodingAgentInteractiveTheme, bundledAppChunkInteractiveTheme, { recursive: true });
 }

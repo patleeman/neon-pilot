@@ -8,9 +8,10 @@ import {
   clearWorkbenchOnlySearchParamsForCompact,
   focusComposerTextarea,
   focusFirstSidebarControl,
-  removeTerminalWorkbenchTabs,
   readStoredPanelWidth,
   readStoredWorkbenchExplorerOpen,
+  readStoredWorkbenchTabs,
+  removeTerminalWorkbenchTabs,
   resolveActiveWorkspaceCwd,
   shouldAllowWorkbenchRailSurface,
   shouldResetEmptyArtifactsRail,
@@ -36,6 +37,21 @@ describe('Layout workspace selection', () => {
   it('uses the active conversation cwd for the workbench workspace', () => {
     expect(resolveActiveWorkspaceCwd([createSession({ id: 'local', cwd: '/tmp/local' })], 'local')).toBe('/tmp/local');
     expect(resolveActiveWorkspaceCwd([createSession({ id: 'other', cwd: '/tmp/other' })], 'missing')).toBeNull();
+  });
+
+  it('uses the draft cwd while the new conversation route is active', () => {
+    expect(
+      resolveActiveWorkspaceCwd([createSession({ id: 'local', cwd: '/tmp/local' })], null, {
+        pathname: '/conversations/new',
+        draftCwd: ' /tmp/draft-workspace ',
+      }),
+    ).toBe('/tmp/draft-workspace');
+    expect(
+      resolveActiveWorkspaceCwd([createSession({ id: 'local', cwd: '/tmp/local' })], 'local', {
+        pathname: '/conversations/new',
+        draftCwd: '',
+      }),
+    ).toBeNull();
   });
 });
 
@@ -214,6 +230,33 @@ describe('Layout workbench rail state', () => {
       'conversation-2': 'chat',
     } as const;
     expect(clearSelectedWorkbenchTool(preserved, 'terminal')).toBe(preserved);
+  });
+
+  it('restores persisted workbench tabs with the saved active tab', () => {
+    const storage = new Map<string, string>();
+    const localStorage = {
+      getItem: (key: string) => storage.get(key) ?? null,
+    } as Storage;
+    storage.set(
+      'pa:workbench-tabs',
+      JSON.stringify({
+        tabs: [
+          { id: 'files', mode: 'files' },
+          { id: 'terminal-1', mode: 'terminal' },
+          { id: 'scratchpad', mode: 'scratchpad' },
+        ],
+        activeTabId: 'terminal-1',
+      }),
+    );
+
+    expect(readStoredWorkbenchTabs(localStorage)).toEqual({
+      tabs: [
+        { id: 'files', mode: 'files' },
+        { id: 'terminal-1', mode: 'terminal' },
+        { id: 'scratchpad', mode: 'scratchpad' },
+      ],
+      activeTabId: 'terminal-1',
+    });
   });
 });
 

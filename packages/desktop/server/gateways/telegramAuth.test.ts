@@ -36,6 +36,15 @@ describe('telegramAuth', () => {
     expect(authStorage.instance.get).toHaveBeenCalledWith('telegram');
   });
 
+  it('treats a missing optional gateway secret declaration as unconfigured', () => {
+    secrets.resolveSecret.mockImplementation(() => {
+      throw new Error('Secret "system-gateways/telegramBotToken" is not registered by an enabled extension.');
+    });
+
+    expect(readTelegramBotToken('/auth.json', '/state')).toBeNull();
+    expect(authStorage.create).toHaveBeenCalledWith('/auth.json');
+  });
+
   it('ignores empty or non-api-key legacy credentials', () => {
     authStorage.instance.get.mockReturnValue({ type: 'oauth', key: 'token' });
     expect(readTelegramBotToken('/auth.json', '/state')).toBeNull();

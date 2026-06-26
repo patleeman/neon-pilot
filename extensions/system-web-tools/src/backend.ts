@@ -11,6 +11,52 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function getErrorCauseCode(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  const cause = 'cause' in error ? (error as { cause?: unknown }).cause : undefined;
+  const source = cause && typeof cause === 'object' ? cause : error;
+  const code = 'code' in source ? (source as { code?: unknown }).code : undefined;
+  return typeof code === 'string' ? code : undefined;
+}
+
+function friendlyFetchError(error: unknown): string {
+  const message = getErrorMessage(error);
+  const code = getErrorCauseCode(error);
+  if (error instanceof DOMException && error.name === 'TimeoutError') {
+    return 'The request timed out after 15 seconds.';
+  }
+  if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
+    return 'The host could not be resolved.';
+  }
+  if (code === 'ECONNREFUSED') {
+    return 'The host refused the connection.';
+  }
+  if (code === 'ECONNRESET' || code === 'UND_ERR_SOCKET') {
+    return 'The connection closed before the page could be fetched.';
+  }
+  if (
+    code === 'CERT_HAS_EXPIRED' ||
+    code === 'DEPTH_ZERO_SELF_SIGNED_CERT' ||
+    code === 'ERR_TLS_CERT_ALTNAME_INVALID' ||
+    code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE'
+  ) {
+    return 'The site TLS certificate could not be verified.';
+  }
+  if (message === 'fetch failed') {
+    return 'The page could not be fetched.';
+  }
+  return message;
+}
+
+function toolError(url: string, error: unknown) {
+  const message = `Error fetching ${url || 'URL'}: ${friendlyFetchError(error)}`;
+  return {
+    content: [{ type: 'text' as const, text: message }],
+    details: { url, error: message },
+    isError: true,
+  };
+}
+
 function createRequestSignal(timeoutMs: number): AbortSignal {
   return AbortSignal.timeout(timeoutMs);
 }
@@ -33,7 +79,13 @@ function isPrivateIpv4(host: string): boolean {
 
 function isPrivateIpv6(host: string): boolean {
   const normalized = host.toLowerCase();
-  return normalized === '::1' || normalized === '::' || normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80:');
+  return (
+    normalized === '::1' ||
+    normalized === '::' ||
+    normalized.startsWith('fc') ||
+    normalized.startsWith('fd') ||
+    normalized.startsWith('fe80:')
+  );
 }
 
 function normalizeIpHost(host: string): string {
@@ -109,9 +161,10 @@ function formatTruncatedContent(content: string): { text: string; truncated: boo
 export async function webFetch(input: { url: string; raw?: boolean }, _ctx?: ExtensionBackendContext) {
   const { url, raw } = input;
   try {
+    if (typeof url !== 'string' || !url.trim()) throw new Error('URL is required');
     const parsedUrl = await validateFetchUrl(url);
     const response = await fetch(parsedUrl, {
-      redirect: 'error',
+      redirect: 'manual',
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -120,6 +173,10 @@ export async function webFetch(input: { url: string; raw?: boolean }, _ctx?: Ext
       signal: createRequestSignal(15000),
     });
 
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location');
+      throw new Error(location ? `Redirects are not followed: ${location}` : `Redirects are not followed: HTTP ${response.status}`);
+    }
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 
     const contentType = response.headers.get('content-type') || '';
@@ -134,6 +191,6 @@ export async function webFetch(input: { url: string; raw?: boolean }, _ctx?: Ext
     const formatted = formatTruncatedContent(readable.markdown);
     return { text: formatted.text, url, title: readable.title, truncated: formatted.truncated };
   } catch (error) {
-    throw new Error(`Error fetching ${url}: ${getErrorMessage(error)}`);
+    return toolError(url, error);
   }
 }

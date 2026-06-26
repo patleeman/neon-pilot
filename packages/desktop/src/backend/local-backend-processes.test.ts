@@ -162,6 +162,7 @@ describe('LocalBackendProcesses', () => {
   const originalStderrWrite = process.stderr.write;
 
   afterEach(() => {
+    vi.useRealTimers();
     process.stderr.write = originalStderrWrite;
     childProcessMocks.spawn.mockReset();
     criticalRegistryMocks.moduleLoaded.mockClear();
@@ -195,6 +196,35 @@ describe('LocalBackendProcesses', () => {
       method: 'GET',
       headers: { Authorization: 'Bearer backend-secret' },
     });
+  });
+
+  it('waits for a backend child to exit after SIGTERM before resolving shutdown', async () => {
+    vi.useFakeTimers();
+    const backend = new LocalBackendProcesses() as LocalBackendProcesses & {
+      stopChild(child: FakeChildProcess): Promise<void>;
+    };
+    const child = new FakeChildProcess();
+    child.send = vi.fn(() => true);
+    child.kill = vi.fn((_signal?: NodeJS.Signals | number) => {
+      child.killed = true;
+      child.connected = false;
+      return true;
+    });
+
+    let resolved = false;
+    const stopPromise = backend.stopChild(child).then(() => {
+      resolved = true;
+    });
+    await Promise.resolve();
+
+    expect(child.send).toHaveBeenCalledWith({ type: 'shutdown' });
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+    expect(resolved).toBe(false);
+
+    child.emit('exit', null, 'SIGTERM');
+    await stopPromise;
+    expect(resolved).toBe(true);
   });
 
   it('rolls back extension host state when backend child startup fails and can retry', async () => {
@@ -599,10 +629,27 @@ describe('LocalBackendProcesses', () => {
       method: 'readDesktopLiveSessionForkEntries',
       args: ['conversation 1'],
     });
+    const branchResponse = await backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/live-sessions/conversation%201/branch',
+      body: { entryId: 'entry-1', surfaceId: 'surface-1' },
+    });
+
+    expect(branchResponse.statusCode).toBe(200);
+    expect(JSON.parse(branchResponse.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'backend-rpc',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(branchResponse.body))).toEqual({
+      ok: true,
+      method: 'branchDesktopLiveSession',
+      args: [{ conversationId: 'conversation 1', entryId: 'entry-1', surfaceId: 'surface-1' }],
+    });
     const forkResponse = await backend.dispatchApiRequest({
       method: 'POST',
       path: '/api/live-sessions/conversation%201/fork',
-      body: { entryId: 'entry-1', beforeEntry: true },
+      body: { entryId: 'entry-1', beforeEntry: true, branchKind: 'fork', surfaceId: 'surface-1' },
     });
 
     expect(forkResponse.statusCode).toBe(200);
@@ -614,7 +661,7 @@ describe('LocalBackendProcesses', () => {
     expect(JSON.parse(new TextDecoder().decode(forkResponse.body))).toEqual({
       ok: true,
       method: 'forkDesktopLiveSession',
-      args: [{ conversationId: 'conversation 1', entryId: 'entry-1', beforeEntry: true }],
+      args: [{ conversationId: 'conversation 1', entryId: 'entry-1', beforeEntry: true, branchKind: 'fork', surfaceId: 'surface-1' }],
     });
     expect(backend.calls).toEqual([
       { method: 'createDesktopLiveSession', args: [{ cwd: '/repo' }] },
@@ -625,8 +672,21 @@ describe('LocalBackendProcesses', () => {
       { method: 'readDesktopLiveSession', args: ['conversation 1'] },
       { method: 'readDesktopLiveSessionForkEntries', args: ['conversation 1'] },
       {
+        method: 'branchDesktopLiveSession',
+        args: [{ conversationId: 'conversation 1', entryId: 'entry-1', surfaceId: 'surface-1' }],
+      },
+      {
         method: 'forkDesktopLiveSession',
-        args: [{ conversationId: 'conversation 1', entryId: 'entry-1', beforeEntry: true, preserveSource: undefined }],
+        args: [
+          {
+            conversationId: 'conversation 1',
+            entryId: 'entry-1',
+            beforeEntry: true,
+            preserveSource: undefined,
+            branchKind: 'fork',
+            surfaceId: 'surface-1',
+          },
+        ],
       },
     ]);
   });

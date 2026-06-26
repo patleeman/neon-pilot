@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { SettingsPage } from '../../../../../extensions/system-settings/src/SettingsPage';
+import { formatDefaultCwdSaveError, SettingsPage } from '../../../../../extensions/system-settings/src/SettingsPage';
 import { useAppEvents, useSseConnection } from '../app/contexts';
 import { api } from '../client/api';
 import { useApi } from '../hooks/useApi';
@@ -39,7 +39,7 @@ function renderPage(pathname: string, sectionIds?: React.ComponentProps<typeof S
   return renderToString(
     <MemoryRouter initialEntries={[pathname]}>
       <Routes>
-        <Route path="/settings" element={<SettingsPage sectionIds={sectionIds} />} />
+        <Route path="/settings/*" element={<SettingsPage sectionIds={sectionIds} />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -376,6 +376,18 @@ describe('SettingsPage', () => {
     expect(html).toContain('Default project folder');
     expect(html).toContain('class="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end"');
     expect(html).toContain('aria-label="Choose default working directory"');
+  });
+
+  it('formats default project folder save errors without raw local API details', () => {
+    expect(
+      formatDefaultCwdSaveError(
+        new Error('500 Internal Server Error from /api/default-cwd: Directory does not exist: /tmp/does-not-exist-neon-pilot'),
+      ),
+    ).toBe('That folder does not exist. Choose an existing folder.');
+
+    expect(formatDefaultCwdSaveError(new Error('500 Internal Server Error from /api/default-cwd: boom'))).toBe(
+      'The default project folder could not be saved.',
+    );
   });
 
   it('shows a desktop bridge warning instead of hiding desktop connections when preload is unavailable', () => {

@@ -137,7 +137,21 @@ export async function astGrep(input: AstGrepInput, ctx: BackendContext) {
   const pattern = input.pattern?.trim();
   if (!pattern) throw new Error('pattern is required.');
   const limit = clampLimit(input.limit);
-  const paths = normalizeSearchPaths(cwd, input.paths);
+  let paths: string[];
+  try {
+    paths = normalizeSearchPaths(cwd, input.paths);
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `ast-grep could not complete the search.\n\nDiagnostics:\n${String(error instanceof Error ? error.message : error)}`,
+        },
+      ],
+      isError: true,
+      details: { invalidPath: true },
+    };
+  }
 
   const binary = await findAstGrepBinary(ctx, cwd);
   if (!binary) {

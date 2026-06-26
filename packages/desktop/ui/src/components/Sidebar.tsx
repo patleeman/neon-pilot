@@ -24,7 +24,7 @@ import {
   groupConversationItemsByCwd,
   normalizeConversationGroupCwd,
 } from '../conversation/conversationCwdGroups';
-import { isNeutralChatCwdPath } from '../conversation/conversationCwdPresentation';
+import { formatWorkspacePathName, isNeutralChatCwdPath } from '../conversation/conversationCwdPresentation';
 import {
   type ConversationBackgroundWorkKind,
   selectConversationActiveExecutions,
@@ -798,9 +798,10 @@ function ConversationCwdGroupHeader({
   const menuRootRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
-  const hoverTitle = cwd ?? label;
-  const newConversationTitle = cwd ? `New conversation in ${cwd}` : 'New conversation';
-  const workspaceActionsTitle = cwd ? `Workspace actions for ${cwd}` : `Chat actions for ${label}`;
+  const workspaceTitleLabel = cwd ? label || formatWorkspacePathName(cwd) || 'workspace' : label;
+  const hoverTitle = workspaceTitleLabel;
+  const newConversationTitle = cwd ? `New conversation in ${workspaceTitleLabel}` : 'New conversation';
+  const workspaceActionsTitle = cwd ? `Workspace actions for ${workspaceTitleLabel}` : `Chat actions for ${label}`;
   const toggleTitle = `${collapsed ? 'Expand' : 'Collapse'} ${label}`;
   const iconPath = hovered ? (collapsed ? PATH.chevronRight : PATH.chevronDown) : cwd ? PATH.workspace : PATH.chatBubble;
   const hasMenuActions = Boolean(onOpenInFinder || onEditName || onArchiveThreads || onRemove);
@@ -1812,6 +1813,7 @@ export function Sidebar() {
         sessionIds,
         pinnedSessionIds,
         archivedSessionIds,
+        lockedConversationIds,
         activeConversationId,
         workspacePaths,
         remoteControlledConversationIds,
@@ -1827,6 +1829,7 @@ export function Sidebar() {
           sessionIds,
           pinnedSessionIds,
           archivedSessionIds,
+          lockedConversationIds,
           activeSessionId: activeConversationId,
           workspacePaths,
           remoteControlledConversationIds,
@@ -2194,7 +2197,6 @@ export function Sidebar() {
             id: buildActivityTreeGroupId(group.key),
             kind: 'group',
             title: group.label,
-            subtitle: group.cwd ?? undefined,
             status: 'idle',
             metadata: { cwd: group.cwd, groupKey: group.key, defaultLabel: group.defaultLabel },
           }) satisfies ActivityTreeItem,
@@ -3588,11 +3590,10 @@ export function Sidebar() {
     }
 
     function handleDesktopShortcut(event: Event) {
-      if (hasOverlayOpen()) {
+      const detail = (event as CustomEvent<{ action?: unknown; command?: unknown; source?: unknown }>).detail;
+      if (hasOverlayOpen() && detail?.source !== 'command-palette') {
         return;
       }
-
-      const detail = (event as CustomEvent<{ action?: unknown; command?: unknown }>).detail;
       const action = isSidebarConversationShortcutAction(detail?.action)
         ? detail.action
         : sidebarConversationShortcutCommandAction(detail?.command);

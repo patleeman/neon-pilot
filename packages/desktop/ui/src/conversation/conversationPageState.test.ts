@@ -263,11 +263,40 @@ describe('conversation page state helpers', () => {
         sessionsLoaded: true,
         confirmedLive: false,
         sessionLoading: false,
+        hasAuthoritativeSessionSnapshot: false,
         hasVisibleSessionDetail: false,
         hasSavedConversationSessionFile: false,
         hasPendingInitialPrompt: false,
       }),
     ).toBe(true);
+
+    expect(
+      shouldShowMissingConversationState({
+        draft: false,
+        conversationId: 'conv-1',
+        sessionsLoaded: true,
+        confirmedLive: false,
+        sessionLoading: false,
+        hasAuthoritativeSessionSnapshot: false,
+        hasVisibleSessionDetail: true,
+        hasSavedConversationSessionFile: true,
+        hasPendingInitialPrompt: false,
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldShowMissingConversationState({
+        draft: false,
+        conversationId: 'conv-1',
+        sessionsLoaded: true,
+        confirmedLive: false,
+        sessionLoading: false,
+        hasAuthoritativeSessionSnapshot: true,
+        hasVisibleSessionDetail: true,
+        hasSavedConversationSessionFile: true,
+        hasPendingInitialPrompt: false,
+      }),
+    ).toBe(false);
 
     expect(resolveConversationPerformanceMode({ messageCount: 96 })).toBe('aggressive');
   });

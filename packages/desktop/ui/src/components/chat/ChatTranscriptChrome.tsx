@@ -19,6 +19,19 @@ export function StreamingIndicator({ label }: { label: string }) {
   );
 }
 
+export function estimateSelectionContextMenuHeight({
+  hasReplySelection,
+  selectionActionCount,
+}: {
+  hasReplySelection: boolean;
+  selectionActionCount: number;
+}) {
+  const hasReplyStarters = hasReplySelection && selectionActionCount > 0;
+  const itemCount = 1 + Number(hasReplySelection) + Number(hasReplyStarters);
+  const separatorCount = Math.max(0, itemCount - 1);
+  return estimateContextMenuHeight({ itemCount, separatorCount });
+}
+
 export function SelectionContextMenu({
   menuState,
   menuRef,
@@ -30,8 +43,10 @@ export function SelectionContextMenu({
   selectionActions?: TranscriptSelectionAction[];
   onAction: (action: 'reply' | 'copy' | TranscriptSelectionAction) => Promise<void> | void;
 }) {
-  const menuItemCount = 1 + Number(Boolean(menuState.replySelection));
-  const estimatedMenuHeight = estimateContextMenuHeight({ itemCount: menuItemCount, separatorCount: menuItemCount > 1 ? 1 : 0 });
+  const estimatedMenuHeight = estimateSelectionContextMenuHeight({
+    hasReplySelection: Boolean(menuState.replySelection),
+    selectionActionCount: selectionActions.length,
+  });
 
   return (
     <ContextMenu

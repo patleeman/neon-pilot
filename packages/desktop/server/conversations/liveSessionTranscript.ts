@@ -2,6 +2,27 @@ import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
 import { buildConversationDisplayBlocksFromEntries } from './conversationDisplayBlocks.js';
 import type { DisplayBlock } from './conversationTypes.js';
+import { presentToolUseOutput } from './toolResultPresentation.js';
+
+function presentDisplayToolBlock(block: DisplayBlock): DisplayBlock {
+  if (block.type !== 'tool_use') {
+    return block;
+  }
+
+  const presented = presentToolUseOutput({ output: block.output, status: block.status });
+  if (presented.output === block.output && presented.status === block.status) {
+    return block;
+  }
+
+  return {
+    ...block,
+    ...presented,
+  };
+}
+
+function presentDisplayBlocks(blocks: DisplayBlock[]): DisplayBlock[] {
+  return blocks.map(presentDisplayToolBlock);
+}
 
 export function buildLiveStateBlocks(session: AgentSession, options: { omitStreamMessage?: boolean } = {}): DisplayBlock[] {
   const state = session.state;
@@ -12,32 +33,35 @@ export function buildLiveStateBlocks(session: AgentSession, options: { omitStrea
     messages.push(streamMessage);
   }
 
-  return buildConversationDisplayBlocksFromEntries(
-    messages.map((message, index) => ({
-      id: `live-${index}`,
-      timestamp: (message as { timestamp?: string | number }).timestamp ?? index,
-      message: {
-        role: (message as { role?: string }).role ?? 'unknown',
-        content: (message as { content?: unknown }).content,
-        toolCallId: (message as { toolCallId?: string }).toolCallId,
-        toolName: (message as { toolName?: string }).toolName,
-        details: (message as { details?: unknown }).details,
-        stopReason: (message as { stopReason?: string }).stopReason,
-        errorMessage: (message as { errorMessage?: string }).errorMessage,
-        summary: (message as { summary?: string }).summary,
-        tokensBefore: (message as { tokensBefore?: number }).tokensBefore,
-        fromId: (message as { fromId?: string }).fromId,
-        customType: (message as { customType?: string }).customType,
-        display: (message as { display?: boolean }).display,
-        command: (message as { command?: string }).command,
-        output: (message as { output?: string }).output,
-        exitCode: (message as { exitCode?: number }).exitCode,
-        cancelled: (message as { cancelled?: boolean }).cancelled,
-        truncated: (message as { truncated?: boolean }).truncated,
-        fullOutputPath: (message as { fullOutputPath?: string }).fullOutputPath,
-        excludeFromContext: (message as { excludeFromContext?: boolean }).excludeFromContext,
-      },
-    })),
+  return presentDisplayBlocks(
+    buildConversationDisplayBlocksFromEntries(
+      messages.map((message, index) => ({
+        id: `live-${index}`,
+        timestamp: (message as { timestamp?: string | number }).timestamp ?? index,
+        message: {
+          role: (message as { role?: string }).role ?? 'unknown',
+          content: (message as { content?: unknown }).content,
+          toolCallId: (message as { toolCallId?: string }).toolCallId,
+          toolName: (message as { toolName?: string }).toolName,
+          details: (message as { details?: unknown }).details,
+          stopReason: (message as { stopReason?: string }).stopReason,
+          errorMessage: (message as { errorMessage?: string }).errorMessage,
+          summary: (message as { summary?: string }).summary,
+          tokensBefore: (message as { tokensBefore?: number }).tokensBefore,
+          fromId: (message as { fromId?: string }).fromId,
+          customType: (message as { customType?: string }).customType,
+          display: (message as { display?: boolean }).display,
+          command: (message as { command?: string }).command,
+          output: (message as { output?: string }).output,
+          exitCode: (message as { exitCode?: number }).exitCode,
+          cancelled: (message as { cancelled?: boolean }).cancelled,
+          truncated: (message as { truncated?: boolean }).truncated,
+          fullOutputPath: (message as { fullOutputPath?: string }).fullOutputPath,
+          excludeFromContext: (message as { excludeFromContext?: boolean }).excludeFromContext,
+          isError: (message as { isError?: boolean }).isError,
+        },
+      })),
+    ),
   );
 }
 
@@ -198,16 +222,18 @@ function mergePersistedIdentityBlock(existing: DisplayBlock, liveBlock: DisplayB
 // Merge it with the persisted snapshot so reconnects/navigation preserve any durable-only blocks while
 // still converging on the compacted view once summaries are present.
 export function mergeConversationHistoryBlocks(persistedBlocks: DisplayBlock[], liveBlocks: DisplayBlock[]): DisplayBlock[] {
-  if (persistedBlocks.length === 0) {
-    return liveBlocks;
+  const persisted = presentDisplayBlocks(persistedBlocks);
+  const live = presentDisplayBlocks(liveBlocks);
+  if (persisted.length === 0) {
+    return live;
   }
 
-  if (liveBlocks.length === 0) {
-    return persistedBlocks;
+  if (live.length === 0) {
+    return persisted;
   }
 
-  const persistedFingerprints = persistedBlocks.map(fingerprintDisplayBlock);
-  const liveFingerprints = liveBlocks.map(fingerprintDisplayBlock);
+  const persistedFingerprints = persisted.map(fingerprintDisplayBlock);
+  const liveFingerprints = live.map(fingerprintDisplayBlock);
   const maxOverlap = Math.min(persistedFingerprints.length, liveFingerprints.length);
 
   for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
@@ -221,14 +247,14 @@ export function mergeConversationHistoryBlocks(persistedBlocks: DisplayBlock[], 
     }
 
     if (matches) {
-      return [...persistedBlocks, ...liveBlocks.slice(overlap)];
+      return [...persisted, ...live.slice(overlap)];
     }
   }
 
-  const merged = [...persistedBlocks];
+  const merged = [...persisted];
   const seenFingerprints = new Set(persistedFingerprints);
   const mergedIndexByIdentity = new Map<string, number>();
-  const latestPersistedTimestampMs = parseDisplayBlockTimestampMs(persistedBlocks[persistedBlocks.length - 1]);
+  const latestPersistedTimestampMs = parseDisplayBlockTimestampMs(persisted[persisted.length - 1]);
   let lastMatchedLiveIndex = -1;
 
   for (const [index, block] of merged.entries()) {
@@ -238,7 +264,7 @@ export function mergeConversationHistoryBlocks(persistedBlocks: DisplayBlock[], 
     }
   }
 
-  for (const [liveIndex, liveBlock] of liveBlocks.entries()) {
+  for (const [liveIndex, liveBlock] of live.entries()) {
     const identityKey = mergeIdentityKey(liveBlock);
     if (identityKey) {
       const existingIndex = mergedIndexByIdentity.get(identityKey);
@@ -259,8 +285,8 @@ export function mergeConversationHistoryBlocks(persistedBlocks: DisplayBlock[], 
 
   const appendStartIndex = lastMatchedLiveIndex >= 0 ? lastMatchedLiveIndex + 1 : 0;
 
-  for (let liveIndex = appendStartIndex; liveIndex < liveBlocks.length; liveIndex += 1) {
-    const liveBlock = liveBlocks[liveIndex];
+  for (let liveIndex = appendStartIndex; liveIndex < live.length; liveIndex += 1) {
+    const liveBlock = live[liveIndex];
     const identityKey = mergeIdentityKey(liveBlock);
     if (identityKey) {
       const existingIndex = mergedIndexByIdentity.get(identityKey);

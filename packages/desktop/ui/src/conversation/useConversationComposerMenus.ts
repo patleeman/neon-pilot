@@ -124,13 +124,13 @@ export function useConversationComposerMenus({
           return true;
         }
         if (event.key === 'Tab' || (event.key === 'Enter' && !event.shiftKey)) {
+          event.preventDefault();
           const shouldCommitSlashCommand =
             showSlash && event.key === 'Enter' && onSlashCommandCommit ? await onSlashCommandCommit(input.trim()) : false;
           if (shouldCommitSlashCommand) {
             return true;
           }
 
-          event.preventDefault();
           if (showSlash) {
             const nextIndex = slashIdx % (slashItems.length || 1);
             const selection = slashItems[nextIndex];

@@ -159,6 +159,47 @@ describe('CommandPalette', () => {
     expect(screen.queryByText('Loading commands…')).toBeNull();
   });
 
+  it('keeps command identifiers searchable without rendering internal IDs', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([
+      {
+        extensionId: 'system-extension-manager',
+        surfaceId: 'open',
+        title: 'Open Extensions',
+        action: 'open',
+        description: 'Manage installed extensions.',
+      },
+    ]);
+    vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionQuickOpen').mockResolvedValue([]);
+    Element.prototype.scrollIntoView = vi.fn();
+
+    render(
+      <MemoryRouter initialEntries={['/conversations/conv-1']}>
+        <CommandPalette />
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'commands', query: 'layout.toggleSidebar' } }));
+    });
+
+    expect(await screen.findByText('Toggle Left Sidebar')).toBeTruthy();
+    let dialog = screen.getByRole('dialog', { name: 'Command palette' });
+    expect(dialog.textContent).not.toContain('layout.toggleSidebar');
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'commands', query: 'system-extension-manager' } }),
+      );
+    });
+
+    expect(await screen.findByText('Open Extensions')).toBeTruthy();
+    dialog = screen.getByRole('dialog', { name: 'Command palette' });
+    expect(dialog.textContent).toContain('Manage installed extensions.');
+    expect(dialog.textContent).not.toContain('system-extension-manager');
+    expect(dialog.textContent).not.toContain('system-extension-manager.open');
+  });
+
   it('executes a rendered command workflow and closes the palette when handled', async () => {
     vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
     vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
@@ -236,6 +277,67 @@ describe('CommandPalette', () => {
     await waitFor(() => {
       expect(screen.getByTestId('location').textContent).toBe('/conversations/conv-route');
     });
+    expect(screen.queryByRole('dialog', { name: 'Command palette' })).toBeNull();
+  });
+
+  it('activates the highest scoring thread result on Enter even when it is archived', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionQuickOpen').mockResolvedValue([]);
+    vi.spyOn(api, 'conversationContentSearch').mockResolvedValue({ matches: [] } as Awaited<
+      ReturnType<typeof api.conversationContentSearch>
+    >);
+    Element.prototype.scrollIntoView = vi.fn();
+    conversationMocks.state.openSession = vi.fn();
+    conversationMocks.state.tabs = [
+      {
+        id: 'open-partial',
+        title: 'ROW81 marker other open',
+        file: '/tmp/open-partial.jsonl',
+        timestamp: '2026-06-15T12:00:00.000Z',
+        cwd: '/tmp/ROW81 marker exact archived',
+        cwdSlug: 'open',
+        model: 'openai/gpt-5',
+        messageCount: 4,
+        isRunning: false,
+      },
+    ];
+    conversationMocks.state.archivedSessions = [
+      {
+        id: 'archived-exact',
+        title: 'ROW81 marker exact archived',
+        file: '/tmp/archived-exact.jsonl',
+        timestamp: '2026-06-15T12:00:00.000Z',
+        cwd: '/tmp/archived',
+        cwdSlug: 'archived',
+        model: 'openai/gpt-5',
+        messageCount: 4,
+        isRunning: false,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/conversations/open-partial']}>
+        <LocationProbe />
+        <CommandPalette />
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'threads', query: 'ROW81 marker exact archived' } }),
+      );
+    });
+
+    expect(await screen.findByText('ROW81 marker other open')).toBeTruthy();
+    expect(await screen.findByText('ROW81 marker exact archived')).toBeTruthy();
+
+    fireEvent.keyDown(window, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location').textContent).toBe('/conversations/archived-exact');
+    });
+    expect(conversationMocks.state.openSession).toHaveBeenCalledWith('archived-exact');
     expect(screen.queryByRole('dialog', { name: 'Command palette' })).toBeNull();
   });
 

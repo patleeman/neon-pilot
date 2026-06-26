@@ -210,9 +210,23 @@ async function findSidebarConversationRowControl(id: string): Promise<HTMLElemen
   if (row instanceof HTMLAnchorElement || row instanceof HTMLButtonElement) {
     return row;
   }
-  const link = row.querySelector<HTMLAnchorElement>(`a[href="/conversations/${id}"]`);
+  if (row.getAttribute('role') === 'treeitem') {
+    return row;
+  }
+  const expectedPathname = `/conversations/${id}`;
+  const link = Array.from(row.querySelectorAll<HTMLAnchorElement>('a[href]')).find((candidate) => {
+    const rawHref = candidate.getAttribute('href') ?? '';
+    if (rawHref === expectedPathname) {
+      return true;
+    }
+    try {
+      return new URL(candidate.href, window.location.origin).pathname === expectedPathname;
+    } catch {
+      return false;
+    }
+  });
   if (link) return link;
-  const button = row.querySelector<HTMLButtonElement>('button[role="treeitem"], button');
+  const button = row.querySelector<HTMLButtonElement>('button[role="treeitem"]');
   if (button) return button;
   throw new Error(`Missing sidebar row control ${id}: ${row.outerHTML}`);
 }
@@ -389,6 +403,24 @@ describe('App sidebar conversation navigation workflow', () => {
     expect(screen.getByText('Second persisted thread')).toBeTruthy();
     expect(apiMock.sessionMeta).toHaveBeenCalledWith('conv-first');
     expect(apiMock.sessionMeta).toHaveBeenCalledWith('conv-second');
+  });
+
+  it('waits for workspace bootstrap before redirecting /conversations to a pinned-only conversation', async () => {
+    workspaceLayout = {
+      sessionIds: [],
+      pinnedSessionIds: ['conv-second'],
+      archivedSessionIds: [],
+      activeConversationId: 'conv-second',
+      workspacePaths: [],
+    };
+    fetchSessionsSnapshotMock.mockImplementation(() => new Promise<SessionMeta[]>(() => {}));
+
+    ({ root } = await renderAppAt('/conversations'));
+
+    await screen.findByText('Conversation route conv-second');
+    expect(window.location.pathname).toBe('/conversations/conv-second');
+    await findSidebarRow('conv-second');
+    expect(screen.queryByText('Draft conversation route')).toBeNull();
   });
 
   it('uses the backend sidebar projection even while the broader sessions snapshot retries', async () => {

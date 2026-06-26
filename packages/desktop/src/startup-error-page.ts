@@ -1,11 +1,4 @@
-function escapeHtml(value: string): string {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
-}
-
 export function buildDesktopStartupErrorPageHtml(input: { message: string; logsDir: string }): string {
-  const message = escapeHtml(input.message.trim() || 'Desktop startup failed.');
-  const logsDir = escapeHtml(input.logsDir.trim());
-
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -70,14 +63,12 @@ export function buildDesktopStartupErrorPageHtml(input: { message: string; logsD
         color: var(--muted);
       }
 
-      .error {
+      .status {
         margin: 22px 0 0;
         padding: 16px 18px;
         border-radius: 16px;
         background: rgba(0, 0, 0, 0.18);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        white-space: pre-wrap;
-        word-break: break-word;
       }
 
       .logs {
@@ -141,9 +132,9 @@ export function buildDesktopStartupErrorPageHtml(input: { message: string; logsD
     <main class="panel">
       <p class="eyebrow">Desktop Startup Error</p>
       <h1>Neon Pilot couldn’t finish starting.</h1>
-      <p>The desktop shell hit an error before it could open the normal app surface.</p>
-      <div class="error">${message}</div>
-      <p class="logs">Logs: <code>${logsDir}</code></p>
+      <p>The desktop shell could not open the normal app surface.</p>
+      <div class="status">The runtime did not become ready. Try again, or open the diagnostic logs if the problem keeps happening.</div>
+      <p class="logs">Diagnostic logs are available from the button below.</p>
       <div class="actions">
         <button class="primary" id="open-logs" type="button">Open logs</button>
         <button class="secondary" id="try-again" type="button">Try again</button>

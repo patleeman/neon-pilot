@@ -4,6 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { CommandsSettingsPage, ExtensionsSettingsPage, SecuritySettingsPage } from '../../../../../extensions/system-settings/src/frontend';
 import { SettingsPage } from '../../../../../extensions/system-settings/src/SettingsPage';
 import { useAppEvents, useSseConnection } from '../app/contexts';
 import { api } from '../client/api';
@@ -41,6 +42,22 @@ function renderPage(pathname: string, sectionIds?: React.ComponentProps<typeof S
     <MemoryRouter initialEntries={[pathname]}>
       <Routes>
         <Route path="/settings" element={<SettingsPage sectionIds={sectionIds} />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+function renderDirectSettingsRoute(pathname: string): string {
+  const Component =
+    pathname === '/settings/commands'
+      ? CommandsSettingsPage
+      : pathname === '/settings/security'
+        ? SecuritySettingsPage
+        : ExtensionsSettingsPage;
+  return renderToString(
+    <MemoryRouter initialEntries={[pathname]}>
+      <Routes>
+        <Route path="/settings/*" element={<Component />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -139,5 +156,15 @@ describe('SettingsPage — untested panel rendering', () => {
     expect(html).toContain('App behavior');
     expect(html).toContain('Command line');
     expect(html).toContain('Loading CLI status...');
+  });
+
+  it.each([
+    ['/settings/commands', 'Commands'],
+    ['/settings/security', 'Security'],
+    ['/settings/extensions', 'Extensions'],
+  ])('renders %s without tripping the extension error boundary', (pathname, expectedHeading) => {
+    const html = renderDirectSettingsRoute(pathname);
+    expect(html).toContain(expectedHeading);
+    expect(html).not.toContain('This extension surface could not be loaded');
   });
 });

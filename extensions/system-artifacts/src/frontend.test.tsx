@@ -39,6 +39,7 @@ function renderDetailPanel(invoke = vi.fn()) {
 describe('ArtifactDetailPanel', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    delete (window as typeof window & { neonPilotDesktop?: unknown }).neonPilotDesktop;
   });
 
   it('keeps latex source visible when clipboard copy is denied', async () => {
@@ -91,6 +92,35 @@ describe('ArtifactDetailPanel', () => {
     expect(screen.getByText('Slide deck · html · rev 1')).toBeTruthy();
   });
 
+  it('uses the desktop clipboard bridge when copying artifact source', async () => {
+    const writeClipboardText = vi.fn().mockResolvedValue({ ok: true });
+    (window as typeof window & { neonPilotDesktop?: { writeClipboardText: typeof writeClipboardText } }).neonPilotDesktop = {
+      writeClipboardText,
+    };
+    const invoke = vi.fn().mockResolvedValue({
+      id: 'latex-1',
+      kind: 'html',
+      title: 'Bridge copy',
+      revision: 1,
+      updatedAt: '2026-06-24T00:00:00.000Z',
+      content: '<main>bridge clipboard sentinel</main>',
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: vi.fn(),
+      },
+    });
+
+    renderDetailPanel(invoke);
+
+    fireEvent.click(await screen.findByRole('button', { name: /copy source/i }));
+
+    await waitFor(() => expect(writeClipboardText).toHaveBeenCalledWith('<main>bridge clipboard sentinel</main>'));
+    expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
+    expect(await screen.findByRole('button', { name: /copied/i })).toBeTruthy();
+  });
+
   it('refreshes an open artifact when artifacts are invalidated', async () => {
     const invoke = vi
       .fn()
@@ -137,5 +167,59 @@ describe('ArtifactDetailPanel', () => {
     expect(await screen.findByText('This artifact was deleted or is no longer available.')).toBeTruthy();
     expect(screen.queryByText(/Extension "system-artifacts"/i)).toBeNull();
     expect(screen.queryByText(/action "artifact" failed/i)).toBeNull();
+  });
+
+  it('deletes the open artifact through the detail action after confirmation', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const invoke = vi
+      .fn()
+      .mockResolvedValueOnce({
+        id: 'latex-1',
+        kind: 'latex',
+        title: 'Proof notes',
+        revision: 1,
+        updatedAt: '2026-06-24T00:00:00.000Z',
+        content: '\\\\documentclass{article}',
+      })
+      .mockResolvedValueOnce({ deleted: true, artifactId: 'latex-1' });
+
+    renderDetailPanel(invoke);
+
+    fireEvent.click(await screen.findByRole('button', { name: /^delete$/i }));
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenLastCalledWith('artifact', {
+        action: 'delete',
+        conversationId: 'conv-1',
+        artifactId: 'latex-1',
+      });
+    });
+    expect(confirmSpy).toHaveBeenCalledWith('Delete artifact "Proof notes"? This cannot be undone.');
+    expect(await screen.findByText('This artifact was deleted.')).toBeTruthy();
+    expect(screen.queryByText('Proof notes')).toBeNull();
+  });
+
+  it('keeps raw delete failures out of the artifact detail panel', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const invoke = vi
+      .fn()
+      .mockResolvedValueOnce({
+        id: 'latex-1',
+        kind: 'latex',
+        title: 'Proof notes',
+        revision: 1,
+        updatedAt: '2026-06-24T00:00:00.000Z',
+        content: '\\\\documentclass{article}',
+      })
+      .mockRejectedValueOnce(new Error('DELETE /api/conversations/conv-1/artifacts/latex-1 failed at /Users/patrick/app.ts:12'));
+
+    renderDetailPanel(invoke);
+
+    fireEvent.click(await screen.findByRole('button', { name: /^delete$/i }));
+
+    expect(await screen.findByText('Could not delete artifact.')).toBeTruthy();
+    expect(screen.queryByText(new RegExp('DELETE /api', 'i'))).toBeNull();
+    expect(screen.queryByText(new RegExp('Users/patrick', 'i'))).toBeNull();
+    expect(screen.getByText('Proof notes')).toBeTruthy();
   });
 });

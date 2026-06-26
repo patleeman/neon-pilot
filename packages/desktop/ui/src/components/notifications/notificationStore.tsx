@@ -48,17 +48,57 @@ function generateId(): string {
   return `notif-${nextId++}-${Date.now()}`;
 }
 
+function isNotificationType(value: unknown): value is NotificationType {
+  return value === 'info' || value === 'warning' || value === 'error';
+}
+
+function hasInternalDiagnosticContent(value: string): boolean {
+  return (
+    /Local API route did not complete/i.test(value) ||
+    /\/api\//i.test(value) ||
+    /file:\/\//i.test(value) ||
+    /\s+at\s+\S+/i.test(value) ||
+    /\bModule\.[A-Za-z_$][\w$]*/.test(value) ||
+    /packages\/desktop\/server\/dist\/app\/localApi\.js/i.test(value)
+  );
+}
+
+function fallbackNotificationMessage(type: NotificationType): string {
+  if (type === 'error') return 'Something went wrong.';
+  if (type === 'warning') return 'Something needs attention.';
+  return 'Notification received.';
+}
+
+function sanitizeNotificationPayload(payload: AddNotificationPayload): AddNotificationPayload | null {
+  const type = isNotificationType(payload.type) ? payload.type : 'info';
+  const message = typeof payload.message === 'string' ? payload.message.trim() : '';
+  if (!message) return null;
+
+  const details = typeof payload.details === 'string' ? payload.details.trim() : '';
+  const source = typeof payload.source === 'string' ? payload.source.trim() : '';
+
+  return {
+    type,
+    message: hasInternalDiagnosticContent(message) ? fallbackNotificationMessage(type) : message,
+    ...(details && !hasInternalDiagnosticContent(details) ? { details } : {}),
+    ...(source ? { source } : {}),
+  };
+}
+
 function reducer(state: NotificationItem[], action: Action): NotificationItem[] {
   switch (action.kind) {
     case 'ADD': {
+      const payload = sanitizeNotificationPayload(action.payload);
+      if (!payload) return state;
+
       const now = Date.now();
       // Dedup: same message + source + type within the window increments counter
       const existing = state.find(
         (n) =>
           !n.dismissed &&
-          n.message === action.payload.message &&
-          n.source === action.payload.source &&
-          n.type === action.payload.type &&
+          n.message === payload.message &&
+          n.source === payload.source &&
+          n.type === payload.type &&
           now - new Date(n.timestamp).getTime() < DEDUP_WINDOW_MS,
       );
 
@@ -72,10 +112,10 @@ function reducer(state: NotificationItem[], action: Action): NotificationItem[] 
         ...state,
         {
           id: generateId(),
-          type: action.payload.type,
-          message: action.payload.message,
-          details: action.payload.details,
-          source: action.payload.source,
+          type: payload.type,
+          message: payload.message,
+          details: payload.details,
+          source: payload.source,
           timestamp: new Date().toISOString(),
           count: 1,
           read: false,

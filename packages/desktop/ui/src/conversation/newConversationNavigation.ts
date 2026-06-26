@@ -84,7 +84,7 @@ export async function startNewConversation(input: StartDraftConversationInput): 
   const initialPromptText = input.initialPromptText?.trim() ?? input.initialComposerText?.trim() ?? '';
   const shouldFocusComposer = input.focusComposer === true && !initialPromptText;
   const reusableSession =
-    input.reuseEmptyConversation !== false && initialPromptText.length === 0
+    input.reuseEmptyConversation === true && initialPromptText.length === 0
       ? findReusableNewConversationForCwd(input.existingSessions, cwd)
       : null;
 

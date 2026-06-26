@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import type { AgentSession, AgentSessionEvent } from '@earendil-works/pi-coding-agent';
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
@@ -5,6 +7,7 @@ import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { persistTraceCompaction, persistTraceToolCall } from '../traces/tracePersistence.js';
 import type { WebLiveConversationRunState } from './conversationRuns.js';
 import { type SseEvent, toSse } from './liveSessionEvents.js';
+import { resolveLiveSessionFile } from './liveSessionPersistence.js';
 import {
   clearQueuedStaleTurn,
   clearStaleTurnStateAfterTerminalEvent,
@@ -94,6 +97,149 @@ function publishConversationLifecycleEvent(sessionId: string, type: string, payl
     // The product process wires the extension host client during startup; unit
     // tests can exercise live-session event handling without that host.
   }
+}
+
+function readNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function readCostTotal(value: unknown): number {
+  return isRecord(value) ? readNumber(value.total) : 0;
+}
+
+function readAssistantUsageStats(session: AgentSession): {
+  tokens: { input: number; output: number; total: number; cacheRead: number; cacheWrite: number };
+  cost: number;
+} | null {
+  const messages = (session as { messages?: unknown }).messages;
+  if (!Array.isArray(messages)) return null;
+
+  let input = 0;
+  let output = 0;
+  let cacheRead = 0;
+  let cacheWrite = 0;
+  let cost = 0;
+  for (const message of messages) {
+    if (!isRecord(message) || message.role !== 'assistant' || !isRecord(message.usage)) continue;
+    input += readNumber(message.usage.input);
+    output += readNumber(message.usage.output);
+    cacheRead += readNumber(message.usage.cacheRead);
+    cacheWrite += readNumber(message.usage.cacheWrite);
+    cost += readCostTotal(message.usage.cost);
+  }
+
+  const total = input + output + cacheRead + cacheWrite;
+  return total > 0 || cost > 0 ? { tokens: { input, output, total, cacheRead, cacheWrite }, cost } : null;
+}
+
+function readAssistantUsageStatsFromSessionFile(session: AgentSession): {
+  tokens: { input: number; output: number; total: number; cacheRead: number; cacheWrite: number };
+  cost: number;
+} | null {
+  const sessionFile = resolveLiveSessionFile(session, { ensurePersisted: true });
+  if (!sessionFile) return null;
+
+  let input = 0;
+  let output = 0;
+  let cacheRead = 0;
+  let cacheWrite = 0;
+  let cost = 0;
+  try {
+    for (const line of readFileSync(sessionFile, 'utf-8').split('\n')) {
+      if (!line.trim()) continue;
+      const entry = JSON.parse(line) as unknown;
+      if (!isRecord(entry) || entry.type !== 'message' || !isRecord(entry.message) || entry.message.role !== 'assistant') continue;
+      const stats = readAssistantMessageUsageStats(entry.message);
+      if (!stats) continue;
+      input += stats.tokens.input;
+      output += stats.tokens.output;
+      cacheRead += stats.tokens.cacheRead;
+      cacheWrite += stats.tokens.cacheWrite;
+      cost += stats.cost;
+    }
+  } catch {
+    return null;
+  }
+
+  const total = input + output + cacheRead + cacheWrite;
+  return total > 0 || cost > 0 ? { tokens: { input, output, total, cacheRead, cacheWrite }, cost } : null;
+}
+
+function readAssistantMessageUsageStats(message: unknown): {
+  tokens: { input: number; output: number; total: number; cacheRead: number; cacheWrite: number };
+  cost: number;
+} | null {
+  if (!isRecord(message) || !isRecord(message.usage)) return null;
+  const input = readNumber(message.usage.input);
+  const output = readNumber(message.usage.output);
+  const cacheRead = readNumber(message.usage.cacheRead);
+  const cacheWrite = readNumber(message.usage.cacheWrite);
+  const total = input + output + cacheRead + cacheWrite;
+  const cost = readCostTotal(message.usage.cost);
+  return total > 0 || cost > 0 ? { tokens: { input, output, total, cacheRead, cacheWrite }, cost } : null;
+}
+
+function readTraceStats(session: AgentSession): {
+  tokens: { input: number; output: number; total: number; cacheRead: number; cacheWrite: number };
+  cost: number;
+} | null {
+  try {
+    const stats = session.getSessionStats();
+    const tokens = {
+      input: readNumber(stats.tokens.input),
+      output: readNumber(stats.tokens.output),
+      cacheRead: readNumber(stats.tokens.cacheRead),
+      cacheWrite: readNumber(stats.tokens.cacheWrite),
+      total:
+        readNumber(stats.tokens.total) ||
+        readNumber(stats.tokens.input) +
+          readNumber(stats.tokens.output) +
+          readNumber(stats.tokens.cacheRead) +
+          readNumber(stats.tokens.cacheWrite),
+    };
+    if (tokens.total > 0 || readNumber(stats.cost) > 0) {
+      return { tokens, cost: readNumber(stats.cost) };
+    }
+  } catch {
+    // Fall back to transcript usage below.
+  }
+  return readAssistantUsageStats(session) ?? readAssistantUsageStatsFromSessionFile(session);
+}
+
+function persistStatsDelta<TEntry extends LiveSessionEventHost>(
+  entry: TEntry,
+  stats: { tokens: { input: number; output: number; total: number; cacheRead: number; cacheWrite: number }; cost: number },
+  callbacks: LiveSessionEventCallbacks<TEntry>,
+): void {
+  const prev = entry.tracePersistedTokens ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
+  const deltaTokens = {
+    input: stats.tokens.input - prev.input,
+    output: stats.tokens.output - prev.output,
+    cacheRead: stats.tokens.cacheRead - prev.cacheRead,
+    cacheWrite: stats.tokens.cacheWrite - prev.cacheWrite,
+    total:
+      stats.tokens.input -
+      prev.input +
+      (stats.tokens.output - prev.output) +
+      (stats.tokens.cacheRead - prev.cacheRead) +
+      (stats.tokens.cacheWrite - prev.cacheWrite),
+  };
+  const deltaCost = stats.cost - prev.cost;
+  if (deltaTokens.total <= 0 && deltaCost <= 0) return;
+
+  entry.tracePersistedTokens = {
+    input: stats.tokens.input,
+    output: stats.tokens.output,
+    cacheRead: stats.tokens.cacheRead,
+    cacheWrite: stats.tokens.cacheWrite,
+    cost: stats.cost,
+  };
+  callbacks.broadcastStats(entry, deltaTokens, deltaCost, {
+    runId: entry.traceRunId ?? undefined,
+    turnCount: entry.traceRunTurnCount ?? 0,
+    stepCount: entry.traceRunStepCount ?? 0,
+    durationMs: entry.traceRunStartedAtMs ? Date.now() - entry.traceRunStartedAtMs : 0,
+  });
 }
 
 function readToolInputMetadata(toolName: string, toolInput: unknown): Record<string, unknown> | undefined {
@@ -380,6 +526,10 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
   }
 
   if (event.type === 'message_end' && event.message.role === 'assistant') {
+    const messageStats = readAssistantMessageUsageStats(event.message);
+    if (messageStats) {
+      persistStatsDelta(entry, messageStats, callbacks);
+    }
     const errorMessage = getAssistantErrorDisplayMessage(event.message);
     if (errorMessage) {
       entry.currentTurnError = errorMessage;
@@ -438,38 +588,9 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
   }
 
   if (event.type === 'agent_end') {
-    try {
-      const stats = entry.session.getSessionStats();
-      // getSessionStats() returns cumulative session totals — compute per-run deltas
-      const prev = entry.tracePersistedTokens ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
-      const deltaTokens = {
-        input: stats.tokens.input - prev.input,
-        output: stats.tokens.output - prev.output,
-        cacheRead: stats.tokens.cacheRead - prev.cacheRead,
-        cacheWrite: stats.tokens.cacheWrite - prev.cacheWrite,
-        total:
-          stats.tokens.input -
-          prev.input +
-          (stats.tokens.output - prev.output) +
-          (stats.tokens.cacheRead - prev.cacheRead) +
-          (stats.tokens.cacheWrite - prev.cacheWrite),
-      };
-      const deltaCost = stats.cost - prev.cost;
-      entry.tracePersistedTokens = {
-        input: stats.tokens.input,
-        output: stats.tokens.output,
-        cacheRead: stats.tokens.cacheRead,
-        cacheWrite: stats.tokens.cacheWrite,
-        cost: stats.cost,
-      };
-      callbacks.broadcastStats(entry, deltaTokens, deltaCost, {
-        runId: entry.traceRunId ?? undefined,
-        turnCount: entry.traceRunTurnCount ?? 0,
-        stepCount: entry.traceRunStepCount ?? 0,
-        durationMs: entry.traceRunStartedAtMs ? Date.now() - entry.traceRunStartedAtMs : 0,
-      });
-    } catch {
-      /* ignore */
+    const stats = readTraceStats(entry.session);
+    if (stats) {
+      persistStatsDelta(entry, stats, callbacks);
     }
     entry.traceRunId = null;
     entry.traceRunStartedAtMs = null;

@@ -40,7 +40,9 @@ export function executePaletteCommand(command: string, args: unknown): Promise<b
   }
 
   return new Promise<boolean>((resolve) => {
-    window.dispatchEvent(new CustomEvent('neon-pilot-extension-command-execute', { detail: { command, args, resolve } }));
+    window.dispatchEvent(
+      new CustomEvent('neon-pilot-extension-command-execute', { detail: { command, args, resolve, source: 'command-palette' } }),
+    );
   });
 }
 

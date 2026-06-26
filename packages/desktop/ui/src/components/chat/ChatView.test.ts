@@ -781,6 +781,26 @@ describe('chat view streaming disclosure', () => {
     expect(html).not.toContain('>terminated<');
   });
 
+  it('hides raw module paths from extension action load failures', () => {
+    const html = renderToStaticMarkup(
+      createElement(ErrorBlock, {
+        block: {
+          type: 'error',
+          ts: '2026-03-11T18:00:00.000Z',
+          message:
+            'Extension "system-ds4" action "ds4StartServer" failed: Cannot find module \'/Users/patrick/workingdir/neon-pilot/packages/desktop/server/dist/app/localApi.js\'',
+        },
+      }),
+    );
+
+    expect(html).toContain(
+      'Extension &quot;system-ds4&quot; action &quot;ds4StartServer&quot; could not start because a required app module was unavailable.',
+    );
+    expect(html).toContain('Rebuild or restart Neon Pilot and try again.');
+    expect(html).not.toContain('/Users/patrick');
+    expect(html).not.toContain('server/dist/app/localApi.js');
+  });
+
   it('shows only the latest 5 internal-work steps by default and summarizes older ones above', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {

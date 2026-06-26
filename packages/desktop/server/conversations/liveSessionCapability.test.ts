@@ -107,6 +107,9 @@ vi.mock('./liveSessions.js', () => ({
   updateLiveSessionModelPreferences: vi.fn(),
 }));
 
+import { logError } from '../middleware/index.js';
+import { buildPromptContextPlan } from '../prompt-assembly/promptContextInventory.js';
+import { buildAttachedConversationContextDocsContext, readConversationContextDocs } from './conversationContextDocs.js';
 import { appendConversationWorkspaceMetadata } from './conversationService.js';
 import {
   createLiveSessionCapability,
@@ -138,6 +141,12 @@ beforeEach(() => {
   extensionHostClient.resolvePromptReferences.mockReset();
   extensionHostClient.resolvePromptReferences.mockResolvedValue({ contextBlocks: [], references: [] });
   syncWebLiveConversationRunMock.mockResolvedValue({ runId: 'run-1' });
+  vi.mocked(buildPromptContextPlan).mockReset();
+  vi.mocked(buildPromptContextPlan).mockResolvedValue({ contextMessages: [], diagnostics: [] });
+  vi.mocked(buildAttachedConversationContextDocsContext).mockReset();
+  vi.mocked(buildAttachedConversationContextDocsContext).mockReturnValue('');
+  vi.mocked(readConversationContextDocs).mockReset();
+  vi.mocked(readConversationContextDocs).mockReturnValue([]);
   submitLocalPromptSessionMock.mockResolvedValue({ acceptedAs: 'started', completion: Promise.resolve() });
 });
 
@@ -345,5 +354,82 @@ describe('liveSessionCapability input validation', () => {
         pendingOperation: expect.objectContaining({ type: 'prompt', text: 'hello' }),
       }),
     );
+  });
+
+  it('queues attached conversation context docs as referenced context when submitting a prompt', async () => {
+    isLocalLiveMock.mockReturnValue(true);
+    liveRegistry.set('session-context-docs', {
+      cwd: '/repo',
+      title: 'Session with context docs',
+      session: {
+        isStreaming: false,
+        sessionFile: '/sessions/session-context-docs.jsonl',
+      },
+    });
+    vi.mocked(readConversationContextDocs).mockReturnValueOnce([
+      {
+        path: 'README.md',
+        title: 'README.md',
+        kind: 'file',
+        mentionId: '@README.md',
+        summary: 'README.md',
+      },
+    ]);
+    vi.mocked(buildAttachedConversationContextDocsContext).mockReturnValueOnce('Attached conversation context docs:\n- README.md');
+    vi.mocked(buildPromptContextPlan).mockImplementationOnce(async (input) => ({
+      contextMessages: input.contextMessages,
+      diagnostics: [],
+    }));
+
+    await submitLiveSessionPromptCapability({ conversationId: 'session-context-docs', text: 'Use the attached context.' }, createContext());
+
+    expect(readConversationContextDocs).toHaveBeenCalledWith('session-context-docs');
+    expect(buildAttachedConversationContextDocsContext).toHaveBeenCalledWith([
+      {
+        path: 'README.md',
+        title: 'README.md',
+        kind: 'file',
+        mentionId: '@README.md',
+        summary: 'README.md',
+      },
+    ]);
+    expect(queuePromptContextMock).toHaveBeenCalledWith(
+      'session-context-docs',
+      'referenced_context',
+      'Attached conversation context docs:\n- README.md',
+    );
+  });
+
+  it('logs live prompt failures without stack traces or local provider doc paths', async () => {
+    isLocalLiveMock.mockReturnValue(true);
+    liveRegistry.set('session-no-key', {
+      cwd: '/repo',
+      title: 'Session without key',
+      session: {
+        isStreaming: true,
+        sessionFile: '/sessions/session-no-key.jsonl',
+      },
+    });
+    submitLocalPromptSessionMock.mockResolvedValueOnce({
+      acceptedAs: 'started',
+      completion: Promise.reject(
+        new Error(
+          [
+            'No API key found for the selected model.',
+            '',
+            'Use /login to log into a provider via OAuth or API key. See:',
+            '  /Users/patrick/workingdir/neon-pilot/node_modules/provider/docs/providers.md',
+          ].join('\n'),
+        ),
+      ),
+    });
+
+    await submitLiveSessionPromptCapability({ conversationId: 'session-no-key', text: 'hello' }, createContext());
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(logError).toHaveBeenCalledWith('live prompt error', {
+      sessionId: 'session-no-key',
+      message: 'No API key found for the selected model. Configure a provider in Neon Pilot, then try again.',
+    });
   });
 });

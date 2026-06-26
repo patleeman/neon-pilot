@@ -1201,13 +1201,61 @@ function parseFrontmatter(content: string): Record<string, unknown> {
   if (!match || match.index === undefined) return {};
   const yaml = content.slice(3, 3 + match.index);
   const result: Record<string, unknown> = {};
-  for (const line of yaml.split(/\r?\n/)) {
+  const lines = yaml.split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? '';
     const simple = line.match(/^([A-Za-z0-9_.-]+):\s*(.*)$/);
     if (!simple) continue;
     const value = simple[2].trim();
+    if (/^[>|][+-]?$/.test(value)) {
+      const blockIndent = findYamlBlockIndent(lines, index + 1);
+      if (blockIndent === null) {
+        result[simple[1]] = '';
+        continue;
+      }
+      const blockLines: string[] = [];
+      for (index += 1; index < lines.length; index += 1) {
+        const blockLine = lines[index] ?? '';
+        if (!blockLine.trim()) {
+          blockLines.push('');
+          continue;
+        }
+        const indent = blockLine.match(/^ */)?.[0].length ?? 0;
+        if (indent < blockIndent) {
+          index -= 1;
+          break;
+        }
+        blockLines.push(blockLine.slice(blockIndent));
+      }
+      result[simple[1]] = normalizeYamlBlockScalar(value, blockLines);
+      continue;
+    }
     result[simple[1]] = value.replace(/^["']|["']$/g, '');
   }
   return result;
+}
+
+function findYamlBlockIndent(lines: string[], startIndex: number): number | null {
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = lines[index] ?? '';
+    if (!line.trim()) continue;
+    return line.match(/^ */)?.[0].length ?? 0;
+  }
+  return null;
+}
+
+function normalizeYamlBlockScalar(marker: string, lines: string[]): string {
+  const keepLines = marker.startsWith('|');
+  const chomp = marker.endsWith('-') ? 'strip' : marker.endsWith('+') ? 'keep' : 'clip';
+  let text = keepLines
+    ? lines.join('\n')
+    : lines
+        .map((line) => line.trim())
+        .join(' ')
+        .replace(/\s+/g, ' ');
+  if (chomp === 'strip') return text.trimEnd();
+  if (chomp === 'clip') text = text.trimEnd();
+  return text;
 }
 
 function firstBodySentence(content: string): string {

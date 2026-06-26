@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
   AgentSession,
   AuthStorage,
+  type BashOperations,
   createAgentSession,
   createBashTool,
   type ExtensionFactory,
@@ -19,6 +20,7 @@ import { createRuntimeModelRegistry } from '../models/modelRegistry.js';
 import { formatProcessLaunchShellCommand, resolveProcessLaunch } from '../shared/processLauncher.js';
 import { buildToolInjectionPlanAsync } from '../tools/toolInventory.js';
 import { applyConversationModelPreferencesToLiveSession } from './conversationModelPreferences.js';
+import { createConversationBashOperations } from './liveSessionBashProcesses.js';
 import { type LiveSessionLoaderOptions, makeLoader } from './liveSessionLoader.js';
 import {
   applyLiveSessionServiceTier,
@@ -173,6 +175,7 @@ function patchConversationBashTool(
     'bash',
     createBashTool(cwd, {
       commandPrefix: session.settingsManager.getShellCommandPrefix(),
+      operations: createConversationBashOperations() as BashOperations,
       spawnHook: (context) => {
         const env = resolveChildProcessEnv(
           {

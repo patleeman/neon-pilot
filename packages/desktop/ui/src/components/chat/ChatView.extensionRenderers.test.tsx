@@ -147,6 +147,30 @@ describe('chat view extension transcript renderers', () => {
     expect(html).not.toContain('data-extension-tool-host');
   });
 
+  it('renders artifact list calls as ordinary tool rows instead of extension fallback cards', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        transcriptDisclosureMode: 'expanded',
+        messages: [
+          {
+            type: 'tool_use',
+            ts: '2026-05-12T18:00:00.000Z',
+            tool: 'artifact',
+            input: { action: 'list' },
+            output: 'No artifacts saved for conversation 019ea528-9bd7-75c7-81d9-f66eb593e705.',
+            status: 'ok',
+          },
+        ],
+      }),
+    );
+
+    expect(html).toContain('artifact');
+    expect(html).toContain('list');
+    expect(html).not.toContain('Extension renderer unavailable');
+    expect(html).not.toContain('019ea528');
+    expect(html).not.toContain('data-extension-tool-host');
+  });
+
   it('collapses repeated checkpoint save attempts with the same message in pinned tool rows', () => {
     const checkpointInput = { action: 'save', message: 'fix: dedupe checkpoint retries', paths: ['src/file.ts'] };
     const html = renderToStaticMarkup(
@@ -175,6 +199,11 @@ describe('chat view extension transcript renderers', () => {
             input: checkpointInput,
             output: 'error: failed to push some refs to github.com:repo.git',
             status: 'ok',
+          },
+          {
+            type: 'text',
+            ts: '2026-05-12T18:00:03.000Z',
+            text: 'Checkpoint attempt finished.',
           },
         ],
       }),

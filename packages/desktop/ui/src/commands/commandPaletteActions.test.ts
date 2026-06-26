@@ -62,7 +62,7 @@ describe('activateCommandPaletteItem', () => {
 
     expect(listener).toHaveBeenCalledOnce();
     const detail = (listener.mock.calls[0]?.[0] as CustomEvent).detail;
-    expect(detail).toMatchObject({ command: 'layout.toggleSidebar', args: { source: 'palette' } });
+    expect(detail).toMatchObject({ command: 'layout.toggleSidebar', args: { source: 'palette' }, source: 'command-palette' });
     window.removeEventListener('neon-pilot-extension-command-execute', listener);
   });
 

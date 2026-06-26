@@ -236,6 +236,37 @@ describe('RoutinesPage', () => {
     expect(screen.getByText(/Blocked by QA/)).toBeTruthy();
   });
 
+  it('sanitizes persisted structured provider errors in run history', async () => {
+    const { pa, state } = createPa();
+    state.runs.unshift({
+      id: 'run-raw-error',
+      hookId: 'checkpoint',
+      position: 'before',
+      status: 'warned',
+      startedAt: '2026-01-01T00:01:00.000Z',
+      completedAt: '2026-01-01T00:01:00.000Z',
+      context: {},
+      steps: [
+        {
+          routineId: 'r1',
+          routineName: 'Review code changes',
+          status: 'warned',
+          message:
+            'Codex error: {"type":"error","error":{"type":"usage_limit_reached","message":"The usage limit has been reached"},"status_code":429,"headers":{"X-Codex-Active-Limit":"codex_bengalfox"}}',
+          skillRefs: [],
+        },
+      ],
+    } satisfies RoutineRunRecord);
+
+    render(<RoutinesPage {...props(pa)} />);
+    await screen.findByText('Checkpoint timeline');
+    fireEvent.click(screen.getByText('Runs'));
+
+    expect(await screen.findByText(/Routine model call failed \(429\): The usage limit has been reached/)).toBeTruthy();
+    expect(screen.queryByText(/X-Codex/)).toBeNull();
+    expect(screen.queryByText(/headers/)).toBeNull();
+  });
+
   it('polls run history while the Runs view is open', async () => {
     const { pa, state } = createPa();
     render(<RoutinesPage {...props(pa)} />);

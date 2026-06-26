@@ -16,6 +16,19 @@ describe('context hardening', () => {
     expect(message.details?.contextHardening).toMatchObject({ truncated: true, maxChars: TOOL_RESULT_TEXT_MAX_CHARS });
   });
 
+  it('truncates oversized bash execution output blocks', () => {
+    const message = {
+      role: 'bashExecution' as const,
+      output: 'b'.repeat(TOOL_RESULT_TEXT_MAX_CHARS + 1000),
+    };
+
+    expect(truncateToolResultMessage(message)).toBe(true);
+    expect(message.output.length).toBeLessThanOrEqual(TOOL_RESULT_TEXT_MAX_CHARS);
+    expect(message.output).toContain('Neon Pilot truncated oversized tool output');
+    expect(message.truncated).toBe(true);
+    expect(message.details?.contextHardening).toMatchObject({ truncated: true, maxChars: TOOL_RESULT_TEXT_MAX_CHARS });
+  });
+
   it('mutates tool-result message_end events before persistence', async () => {
     const handlers = new Map<string, Array<(event: Record<string, unknown>) => unknown>>();
     const pi = {
@@ -35,6 +48,25 @@ describe('context hardening', () => {
     expect((event.message.content[0] as { text: string }).text).toContain('Neon Pilot truncated oversized tool output');
   });
 
+  it('mutates bash execution message_end events before persistence', async () => {
+    const handlers = new Map<string, Array<(event: Record<string, unknown>) => unknown>>();
+    const pi = {
+      on: vi.fn((name: string, handler: (event: Record<string, unknown>) => unknown) => {
+        handlers.set(name, [...(handlers.get(name) ?? []), handler]);
+      }),
+    };
+
+    createContextHardeningAgentExtension()(pi as never);
+    const event = {
+      type: 'message_end',
+      message: { role: 'bashExecution', output: 'z'.repeat(TOOL_RESULT_TEXT_MAX_CHARS + 1) },
+    };
+
+    await handlers.get('message_end')?.[0]?.(event);
+
+    expect(event.message.output).toContain('Neon Pilot truncated oversized tool output');
+  });
+
   it('caps OpenAI Responses function call output payloads as a provider-request backstop', () => {
     const handlers = new Map<string, Array<(event: Record<string, unknown>) => unknown>>();
     const pi = {
@@ -50,5 +82,53 @@ describe('context hardening', () => {
 
     expect(rewritten).toBe(payload);
     expect((payload.input[0] as { output: string }).output).toContain('Neon Pilot truncated oversized tool output');
+  });
+
+  it('caps OpenAI Chat tool message content as a provider-request backstop', () => {
+    const handlers = new Map<string, Array<(event: Record<string, unknown>) => unknown>>();
+    const pi = {
+      on: vi.fn((name: string, handler: (event: Record<string, unknown>) => unknown) => {
+        handlers.set(name, [...(handlers.get(name) ?? []), handler]);
+      }),
+    };
+
+    createContextHardeningAgentExtension()(pi as never);
+    const payload = { messages: [{ role: 'tool', tool_call_id: 'call_1', content: 'c'.repeat(TOOL_RESULT_TEXT_MAX_CHARS + 1) }] };
+
+    const rewritten = handlers.get('before_provider_request')?.[0]?.({ type: 'before_provider_request', payload });
+
+    expect(rewritten).toBe(payload);
+    expect(payload.messages[0].content).toContain('Neon Pilot truncated oversized tool output');
+  });
+
+  it('caps Anthropic tool_result content blocks as a provider-request backstop', () => {
+    const handlers = new Map<string, Array<(event: Record<string, unknown>) => unknown>>();
+    const pi = {
+      on: vi.fn((name: string, handler: (event: Record<string, unknown>) => unknown) => {
+        handlers.set(name, [...(handlers.get(name) ?? []), handler]);
+      }),
+    };
+
+    createContextHardeningAgentExtension()(pi as never);
+    const payload = {
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'toolu_1',
+              content: [{ type: 'text', text: 'd'.repeat(TOOL_RESULT_TEXT_MAX_CHARS + 1) }],
+            },
+          ],
+        },
+      ],
+    };
+
+    const rewritten = handlers.get('before_provider_request')?.[0]?.({ type: 'before_provider_request', payload });
+
+    expect(rewritten).toBe(payload);
+    const toolResult = payload.messages[0].content[0];
+    expect(toolResult.content[0].text).toContain('Neon Pilot truncated oversized tool output');
   });
 });

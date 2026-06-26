@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { readRequiredConversationId, readRequiredConversationName } from './localApiConversationBasics';
+import {
+  DesktopConversationTitleValidationError,
+  readRequiredConversationId,
+  readRequiredConversationName,
+} from './localApiConversationBasics';
 
 describe('localApiConversationBasics', () => {
   it('trims required conversation ids and names', () => {
@@ -10,6 +14,7 @@ describe('localApiConversationBasics', () => {
 
   it('rejects missing conversation ids and names', () => {
     expect(() => readRequiredConversationId('   ')).toThrow('conversationId required');
-    expect(() => readRequiredConversationName('   ')).toThrow('name required');
+    expect(() => readRequiredConversationName('   ')).toThrow(DesktopConversationTitleValidationError);
+    expect(() => readRequiredConversationName('   ')).toThrow('Conversation title is required.');
   });
 });

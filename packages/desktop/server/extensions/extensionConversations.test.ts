@@ -8,6 +8,7 @@ const liveSessionCapability = vi.hoisted(() => ({
 }));
 const conversationService = vi.hoisted(() => ({
   appendStoredVisibleCustomMessage: vi.fn(),
+  publishConversationSessionMetaChanged: vi.fn(),
   renameStoredConversation: vi.fn(),
   resolveConversationSessionFile: vi.fn(),
 }));
@@ -17,9 +18,17 @@ const live = vi.hoisted(() => ({
   appendVisibleCustomMessage: vi.fn(),
   createSession: vi.fn(),
   createSessionFromExisting: vi.fn(),
+  destroySession: vi.fn((conversationId: string) => {
+    live.registry.delete(conversationId);
+  }),
+  requestConversationWorkingDirectoryChange: vi.fn(),
   resumeSession: vi.fn(),
   subscribe: vi.fn(),
   updateVisibleCustomMessage: vi.fn(),
+}));
+const sessions = vi.hoisted(() => ({
+  deleteSessions: vi.fn(),
+  pruneSessionsByRetention: vi.fn(),
 }));
 const titles = vi.hoisted(() => ({
   resolveStableSessionTitle: vi.fn((session: { name?: string }) => session.name ?? 'Stable Title'),
@@ -31,6 +40,10 @@ const metadata = vi.hoisted(() => ({
   writeConversationMetadata: vi.fn(),
 }));
 const subscriptions = vi.hoisted(() => ({ publishExtensionHostEvent: vi.fn() }));
+const runtimeHooks = vi.hoisted(() => ({
+  buildLiveSessionExtensionFactoriesForRuntime: vi.fn(() => ['factory']),
+  buildLiveSessionResourceOptionsForRuntime: vi.fn(() => ({ resources: true })),
+}));
 const uiPreferences = vi.hoisted(() => ({
   saved: {
     openConversationIds: ['existing-open'],
@@ -56,10 +69,12 @@ vi.mock('../conversations/conversationReservation.js', () => reservation);
 vi.mock('../conversations/liveSessionCapability.js', () => liveSessionCapability);
 vi.mock('../conversations/conversationService.js', () => conversationService);
 vi.mock('../conversations/liveSessions.js', () => live);
+vi.mock('../conversations/sessions.js', () => sessions);
 vi.mock('../conversations/liveSessionTitle.js', () => titles);
 vi.mock('../shared/appEvents.js', () => appEvents);
 vi.mock('./extensionConversationMetadata.js', () => metadata);
 vi.mock('./extensionSubscriptions.js', () => subscriptions);
+vi.mock('./runtimeAgentHooks.js', () => runtimeHooks);
 vi.mock('../ui/uiPreferences.js', () => uiPreferences);
 vi.mock('../ui/settingsPersistence.js', () => settingsPersistence);
 
@@ -95,6 +110,18 @@ describe('extensionConversations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     live.registry.clear();
+    live.destroySession.mockImplementation((conversationId: string) => {
+      live.registry.delete(conversationId);
+    });
+    sessions.deleteSessions.mockReturnValue({ deleted: [], missing: [] });
+    sessions.pruneSessionsByRetention.mockReturnValue({
+      ok: true,
+      dryRun: true,
+      cutoff: '2026-06-01T00:00:00.000Z',
+      candidates: [],
+      deleted: [],
+      skipped: 0,
+    });
     liveSessionCapability.submitLiveSessionPromptCapability.mockResolvedValue({
       ok: true,
       accepted: true,
@@ -107,10 +134,12 @@ describe('extensionConversations', () => {
     reservation.reserveConversationSession.mockReturnValue({ id: 'reserved-1', sessionFile: '/sessions/reserved-1.jsonl', cwd: '/repo' });
     conversationService.resolveConversationSessionFile.mockReturnValue('/sessions/persisted.jsonl');
     conversationService.appendStoredVisibleCustomMessage.mockReturnValue('block-1');
+    conversationService.renameStoredConversation.mockReturnValue({ id: 'stored-1', title: 'Stored Title' });
     uiPreferences.saved = {
       openConversationIds: ['existing-open'],
       pinnedConversationIds: ['existing-pinned'],
       archivedConversationIds: ['existing-archived'],
+      lockedConversationIds: [],
       activeConversationId: 'existing-open',
       workspacePaths: [],
       remoteControlledConversationIds: [],
@@ -197,6 +226,115 @@ describe('extensionConversations', () => {
     expect(uiPreferences.writeSavedUiPreferences).not.toHaveBeenCalled();
   });
 
+  it('destroys live conversations before deleting session files and removes workspace references', async () => {
+    uiPreferences.saved = {
+      openConversationIds: ['live-delete', 'keep-open'],
+      pinnedConversationIds: ['live-delete', 'keep-pinned'],
+      archivedConversationIds: ['live-delete', 'keep-archived'],
+      lockedConversationIds: ['live-delete', 'keep-locked'],
+      activeConversationId: 'live-delete',
+      workspacePaths: ['/repo'],
+      remoteControlledConversationIds: ['live-delete', 'keep-remote'],
+    };
+    live.registry.set('live-delete', liveEntry());
+    sessions.deleteSessions.mockReturnValue({
+      deleted: [{ id: 'live-delete', file: '/sessions/live-delete.jsonl' }],
+      missing: [],
+    });
+
+    await expect(
+      createExtensionConversationsCapability({ getRuntimeScope: () => 'shared', getSettingsFile: () => '/settings.json' }).delete({
+        conversationIds: ['live-delete'],
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      deleted: [{ id: 'live-delete', file: '/sessions/live-delete.jsonl' }],
+      missing: [],
+    });
+
+    expect(live.destroySession).toHaveBeenCalledWith('live-delete');
+    expect(live.destroySession.mock.invocationCallOrder[0]).toBeLessThan(sessions.deleteSessions.mock.invocationCallOrder[0] ?? 0);
+    expect(uiPreferences.writeSavedUiPreferences).toHaveBeenCalledWith(
+      {
+        openConversationIds: ['keep-open'],
+        pinnedConversationIds: ['keep-pinned'],
+        archivedConversationIds: ['keep-archived'],
+        lockedConversationIds: ['keep-locked'],
+        activeConversationId: null,
+        remoteControlledConversationIds: ['keep-remote'],
+      },
+      '/settings.json',
+    );
+    expect(appEvents.publishAppEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'conversation_workspace_changed',
+        sessionIds: ['keep-open'],
+        pinnedSessionIds: ['keep-pinned'],
+        archivedSessionIds: ['keep-archived'],
+        activeConversationId: null,
+      }),
+    );
+    expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
+      type: 'session.deleted',
+      conversationIds: ['live-delete'],
+    });
+  });
+
+  it('destroys live prune candidates before deleting them', async () => {
+    uiPreferences.saved = {
+      openConversationIds: [],
+      pinnedConversationIds: [],
+      archivedConversationIds: ['live-old', 'keep-archived'],
+      lockedConversationIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+    };
+    live.registry.set('live-old', liveEntry());
+    sessions.pruneSessionsByRetention.mockReturnValue({
+      ok: true,
+      dryRun: true,
+      cutoff: '2026-06-01T00:00:00.000Z',
+      candidates: [{ id: 'live-old', file: '/sessions/live-old.jsonl', timestamp: '2026-05-01T00:00:00.000Z' }],
+      deleted: [],
+      skipped: 1,
+    });
+    sessions.deleteSessions.mockReturnValue({
+      deleted: [{ id: 'live-old', file: '/sessions/live-old.jsonl' }],
+      missing: [],
+    });
+
+    await expect(
+      createExtensionConversationsCapability({ getRuntimeScope: () => 'shared', getSettingsFile: () => '/settings.json' }).prune({
+        olderThanMs: 30 * 24 * 60 * 60 * 1000,
+        archivedOnly: true,
+        dryRun: false,
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      dryRun: false,
+      cutoff: '2026-06-01T00:00:00.000Z',
+      candidates: [{ id: 'live-old', file: '/sessions/live-old.jsonl', timestamp: '2026-05-01T00:00:00.000Z' }],
+      deleted: [{ id: 'live-old', file: '/sessions/live-old.jsonl' }],
+      skipped: 1,
+    });
+
+    expect(sessions.pruneSessionsByRetention).toHaveBeenCalledWith({
+      olderThanMs: 30 * 24 * 60 * 60 * 1000,
+      archivedOnly: true,
+      dryRun: true,
+      archivedConversationIds: ['live-old', 'keep-archived'],
+    });
+    expect(live.destroySession).toHaveBeenCalledWith('live-old');
+    expect(live.destroySession.mock.invocationCallOrder[0]).toBeLessThan(sessions.deleteSessions.mock.invocationCallOrder[0] ?? 0);
+    expect(uiPreferences.writeSavedUiPreferences).toHaveBeenCalledWith(
+      expect.objectContaining({
+        archivedConversationIds: ['keep-archived'],
+      }),
+      '/settings.json',
+    );
+  });
+
   it('creates non-live conversations without starting an agent session and can append persisted transcript blocks', async () => {
     const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' });
 
@@ -270,6 +408,26 @@ describe('extensionConversations', () => {
     expect(entry.session.steer).not.toHaveBeenCalled();
   });
 
+  it('queues working directory changes through the host live session registry', async () => {
+    live.requestConversationWorkingDirectoryChange.mockResolvedValueOnce({
+      conversationId: 'conv-1',
+      cwd: '/next',
+      queued: true,
+    });
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' });
+
+    await expect(capability.requestWorkingDirectoryChange('conv-1', '/next', { continuePrompt: 'Continue there.' })).resolves.toEqual({
+      conversationId: 'conv-1',
+      cwd: '/next',
+      queued: true,
+    });
+
+    expect(live.requestConversationWorkingDirectoryChange).toHaveBeenCalledWith(
+      { conversationId: 'conv-1', cwd: '/next', continuePrompt: 'Continue there.' },
+      { resources: true, extensionFactories: ['factory'] },
+    );
+  });
+
   it('waits for agent_end instead of resolving on the first turn_end', async () => {
     let liveHandler: ((event: unknown) => void) | null = null;
     live.subscribe.mockImplementationOnce((_conversationId: string, handler: (event: unknown) => void) => {
@@ -312,6 +470,25 @@ describe('extensionConversations', () => {
       type: 'session.renamed',
       conversationId: 'conv-1',
       title: 'Renamed',
+    });
+  });
+
+  it('sets stored conversation titles through persisted metadata and publishes updates', async () => {
+    conversationService.renameStoredConversation.mockReturnValueOnce({ id: 'stored-1', title: 'Stored Renamed' });
+
+    await expect(
+      createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' }).setTitle('stored-1', '  Stored Renamed  '),
+    ).resolves.toEqual({
+      ok: true,
+    });
+
+    expect(conversationService.renameStoredConversation).toHaveBeenCalledWith('stored-1', '  Stored Renamed  ');
+    expect(conversationService.publishConversationSessionMetaChanged).toHaveBeenCalledWith('stored-1');
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('sessions');
+    expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
+      type: 'session.renamed',
+      conversationId: 'stored-1',
+      title: 'Stored Renamed',
     });
   });
 

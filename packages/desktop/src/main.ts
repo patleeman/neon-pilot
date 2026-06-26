@@ -16,7 +16,7 @@ import { resolveDesktopLaunchPresentation } from './launch-mode.js';
 import { installDesktopApplicationMenu, setDesktopApplicationMenuKeyboardShortcutsReader } from './menu.js';
 import { confirmDesktopQuit } from './quit.js';
 import { applyDesktopRuntimeEnvironmentOverrides } from './runtime-env.js';
-import { claimDesktopSingleInstance } from './single-instance.js';
+import { claimDesktopSingleInstance, readDesktopInitialRoute, readDesktopProtocolRoute } from './single-instance.js';
 import { startDesktopBackendWarmup } from './startup-backend-warmup.js';
 import { loadDesktopConfig, readDesktopAppPreferences, updateDesktopAppPreferences } from './state/desktop-config.js';
 import { DesktopTrayController } from './tray.js';
@@ -29,6 +29,7 @@ let windowController: DesktopWindowController | undefined;
 let trayController: DesktopTrayController | undefined;
 let updateManager: DesktopUpdateManager | undefined;
 let backendStartupPromise: Promise<boolean> | undefined;
+let pendingDesktopProtocolRoute: string | null = null;
 
 let quitRequestPromise: Promise<void> | null = null;
 let quitting = false;
@@ -152,17 +153,26 @@ if (desktopUserDataDir) {
   app.setPath('userData', resolve(desktopUserDataDir));
 }
 
-const hasDesktopSingleInstanceLock = claimDesktopSingleInstance(app, () => {
-  void openMainRoute(readInitialDesktopRoute());
+const hasDesktopSingleInstanceLock = claimDesktopSingleInstance(app, (_event, argv) => {
+  void openMainRoute(readDesktopInitialRoute(process.env, argv));
 });
 
 function readInitialDesktopRoute(): string {
-  const route = process.env.NEON_PILOT_DESKTOP_INITIAL_ROUTE?.trim();
-  if (!route || !route.startsWith('/') || route.startsWith('//')) {
-    return '/';
+  return readDesktopInitialRoute(process.env);
+}
+
+function openDesktopProtocolUrl(url: string): void {
+  const route = readDesktopProtocolRoute(url);
+  if (!route) {
+    return;
   }
 
-  return route;
+  if (!windowController) {
+    pendingDesktopProtocolRoute = route;
+    return;
+  }
+
+  void openMainRoute(route);
 }
 
 function renderDesktopErrorMessage(error: unknown): string {
@@ -603,6 +613,13 @@ async function bootstrapDesktopApp(): Promise<void> {
     await openMainRoute(readInitialDesktopRoute());
     logStartupMilestone('main-window-open-requested');
   }
+
+  if (pendingDesktopProtocolRoute) {
+    const route = pendingDesktopProtocolRoute;
+    pendingDesktopProtocolRoute = null;
+    await openMainRoute(route);
+    logStartupMilestone('pending-protocol-route-open-requested');
+  }
 }
 
 async function prepareForQuit(): Promise<void> {
@@ -673,6 +690,11 @@ if (hasDesktopSingleInstanceLock) {
 
   app.on('activate', () => {
     void openMainRoute('/');
+  });
+
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    openDesktopProtocolUrl(url);
   });
 
   app

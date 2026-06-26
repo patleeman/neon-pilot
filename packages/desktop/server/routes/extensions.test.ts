@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setDefaultExtensionBackendWorkerUrl } from '../extensions/extensionBackendWorkerClient.js';
 import { clearExtensionHostAuditEvents } from '../extensions/extensionHostAudit.js';
 import { createInProcessExtensionHostClient, setExtensionHostClient } from '../extensions/extensionHostClient.js';
-import { createExtensionRequestAbortSignal, registerExtensionRoutes } from './extensions.js';
+import { createExtensionRequestAbortSignal, readSystemConversationSetTitleMutation, registerExtensionRoutes } from './extensions.js';
 
 const originalResourcesPathDescriptor = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
 
@@ -358,9 +358,7 @@ describe('registerExtensionRoutes', () => {
     setExtensionHostClient({
       ...baseClient,
       resolveFilePath: vi.fn(async (input) =>
-        input.relativePath === 'dist/webapp/app.js'
-          ? join(extensionRoot, 'dist', 'private.txt')
-          : baseClient.resolveFilePath(input),
+        input.relativePath === 'dist/webapp/app.js' ? join(extensionRoot, 'dist', 'private.txt') : baseClient.resolveFilePath(input),
       ),
     });
     const compromisedHostRes = createResponse();
@@ -457,7 +455,11 @@ describe('registerExtensionRoutes', () => {
         path: '/.neon/api/extensions/agent-board/actions/saveTask',
         body: { title: 'Blocked' },
         get: (name: string) =>
-          name.toLowerCase() === 'host' ? 'board-agent-board.localhost' : name.toLowerCase() === 'origin' ? 'https://evil.example' : undefined,
+          name.toLowerCase() === 'host'
+            ? 'board-agent-board.localhost'
+            : name.toLowerCase() === 'origin'
+              ? 'https://evil.example'
+              : undefined,
       } as never,
       crossOriginRes,
     );
@@ -476,9 +478,9 @@ describe('registerExtensionRoutes', () => {
             ? 'board-agent-board.localhost'
             : name.toLowerCase() === 'origin'
               ? 'http://board-agent-board.localhost'
-            : name.toLowerCase() === 'content-type'
-              ? 'application/json'
-              : undefined,
+              : name.toLowerCase() === 'content-type'
+                ? 'application/json'
+                : undefined,
       } as never,
       forwardedBodyRes,
     );
@@ -538,7 +540,8 @@ describe('registerExtensionRoutes', () => {
       expect.objectContaining({ method: 'POST', body: undefined }),
     );
     const [, emptyPostInit] = fetchMock.mock.calls.at(-1) ?? [];
-    const emptyPostHeaders = emptyPostInit instanceof Object && 'headers' in emptyPostInit ? (emptyPostInit.headers as Headers) : new Headers();
+    const emptyPostHeaders =
+      emptyPostInit instanceof Object && 'headers' in emptyPostInit ? (emptyPostInit.headers as Headers) : new Headers();
     expect(emptyPostHeaders.get('content-type')).toBe('application/json');
     expect(emptyPostHeaders.get('authorization')).toBeNull();
     expect(emptyPostHeaders.get('cookie')).toBeNull();
@@ -1117,6 +1120,22 @@ describe('registerExtensionRoutes', () => {
     });
   }, 30000);
 
+  it('reads targeted system conversation title mutations from wrapped action results', () => {
+    expect(
+      readSystemConversationSetTitleMutation(
+        { action: 'set_title', conversationId: 'conv-body', title: 'Body Title' },
+        { ok: true, result: { details: { conversationId: 'conv-result', title: 'Result Title' } } },
+      ),
+    ).toEqual({ conversationId: 'conv-body', title: 'Body Title' });
+
+    expect(
+      readSystemConversationSetTitleMutation(
+        { action: 'set_title' },
+        { ok: true, result: { details: { conversationId: 'conv-result', title: 'Result Title' } } },
+      ),
+    ).toEqual({ conversationId: 'conv-result', title: 'Result Title' });
+  });
+
   it('searches extension providers through the extension host registry presentation', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
@@ -1285,4 +1304,14 @@ describe('registerExtensionRoutes', () => {
       message: 'Extension backend reloaded.',
     });
   }, 30000);
+
+  it('returns not found when reloading an unknown extension', async () => {
+    const harness = createHarness();
+    const res = createResponse();
+
+    await harness.postHandler('/api/extensions/:id/reload')({ params: { id: 'missing-extension' } }, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Extension not found.' });
+  });
 });

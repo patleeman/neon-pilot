@@ -7,6 +7,7 @@ import {
   resolveActiveExtensionWorkbenchSurface,
   resolveWorkbenchRailMode,
   shouldKeepActiveToolWhenConversationHasNoSavedSelection,
+  shouldOpenRailForWorkbenchTool,
   singletonWorkbenchToolTabId,
 } from './workbenchRailModel';
 
@@ -91,6 +92,12 @@ describe('workbench rail model', () => {
     expect(isSinglePaneWorkbenchMode('files')).toBe(false);
     expect(isSinglePaneWorkbenchMode('files', surface({ toolSlot: 'terminal' }))).toBe(true);
     expect(isSinglePaneWorkbenchMode('files', surface({ toolSlot: 'scratchpad' }))).toBe(true);
+  });
+
+  it('opens the paired rail for two-pane extension workbench tools', () => {
+    expect(shouldOpenRailForWorkbenchTool('files', surface({ toolSlot: 'files', detailView: 'files-detail' }))).toBe(true);
+    expect(shouldOpenRailForWorkbenchTool('terminal', surface({ toolSlot: 'terminal', detailView: 'terminal-detail' }))).toBe(false);
+    expect(shouldOpenRailForWorkbenchTool('files', surface({ toolSlot: 'files' }))).toBe(false);
   });
 
   it('assigns scratchpad one singleton tab that follows the active conversation', () => {

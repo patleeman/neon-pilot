@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
+import { formatWorkspacePathName, formatWorkspacePathParentName } from '../../conversation/conversationCwdPresentation';
 import { setExtensionCommandContext } from '../../extensions/commands';
 import { cx, MenuShell, RowButton, SectionLabel } from '../ui';
 import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
@@ -30,11 +31,10 @@ function formatWorkspaceOption(workspacePath: string): WorkspacePickerOption {
     };
   }
 
-  const normalizedPath = workspacePath.replace(/\/+$/, '') || workspacePath;
-  const segments = normalizedPath.split('/').filter(Boolean);
-  const label = segments.at(-1) ?? normalizedPath;
-  const detail = segments.length > 1 ? normalizedPath.slice(0, Math.max(1, normalizedPath.length - label.length - 1)) : normalizedPath;
-  return { value: workspacePath, label, detail, title: workspacePath };
+  const label = formatWorkspacePathName(workspacePath) || 'Workspace';
+  const parentName = formatWorkspacePathParentName(workspacePath);
+  const detail = parentName ? `In ${parentName}` : 'Workspace folder';
+  return { value: workspacePath, label, detail, title: `${label} workspace` };
 }
 
 export function ConversationDraftEmptyAction({

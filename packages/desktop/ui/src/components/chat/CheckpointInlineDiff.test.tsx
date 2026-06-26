@@ -84,4 +84,29 @@ describe('CheckpointInlineDiff', () => {
     expect(html).toContain('packages/desktop/ui/src/components/chat/ChatView.tsx');
     expect(html).toContain('Modified');
   });
+
+  it('hides raw checkpoint API failures behind recovery copy', () => {
+    vi.mocked(useApi).mockReturnValue(
+      createUseApiResult({
+        error:
+          '404 Not Found from /api/conversations/conv-123/checkpoints/missing: Commit checkpoint missing was not found in file://localApi.js',
+      }),
+    );
+
+    const html = renderToString(
+      <ThemeProvider>
+        <AppEventsContext.Provider
+          value={{ versions: INITIAL_APP_EVENT_VERSIONS, conversationVersions: INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS }}
+        >
+          <CheckpointInlineDiff conversationId="conv-123" checkpointId="missing" />
+        </AppEventsContext.Provider>
+      </ThemeProvider>,
+    );
+
+    expect(html).toContain('Couldn’t load this checkpoint diff. It may have been removed or is unavailable.');
+    expect(html).not.toContain('/api/conversations');
+    expect(html).not.toContain('file://');
+    expect(html).not.toContain('localApi.js');
+    expect(html).not.toContain('Commit checkpoint missing was not found');
+  });
 });

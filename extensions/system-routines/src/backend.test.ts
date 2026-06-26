@@ -117,6 +117,38 @@ describe('system-routines backend', () => {
     expect(result.run.steps.find((step) => step.routineName === 'Model routine')).toMatchObject({ fallbackUsed: true, provider: 'backup' });
   });
 
+  it('stores sanitized routine model errors in run history', async () => {
+    const ctx = createCtx();
+    await saveRoutine(
+      {
+        id: 'quota-error-routine',
+        hookId: 'background.command',
+        position: 'before',
+        type: 'instruction',
+        name: 'Quota check',
+        instruction: 'Check command.',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'continue',
+        outcomes: [],
+      },
+      ctx,
+    );
+    runAgentTaskMock.mockRejectedValue(
+      new Error(
+        'Codex error: {"type":"error","error":{"type":"usage_limit_reached","message":"The usage limit has been reached"},"status_code":429,"headers":{"X-Codex-Active-Limit":"codex_bengalfox"}}',
+      ),
+    );
+
+    const result = (await runHook({ hookId: 'background.command', position: 'before', context: { cwd: '/repo' } }, ctx)) as {
+      run: { steps: Array<{ message?: string }> };
+    };
+
+    expect(result.run.steps[0]?.message).toBe('Routine model call failed (429): The usage limit has been reached');
+    expect(result.run.steps[0]?.message).not.toContain('headers');
+    expect(result.run.steps[0]?.message).not.toContain('X-Codex');
+  });
+
   it('runs only routines nested under the judge output route', async () => {
     const ctx = createCtx();
     await saveRoutine(

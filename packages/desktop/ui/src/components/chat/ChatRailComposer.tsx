@@ -188,12 +188,6 @@ export function ChatRailComposer({
 
   const handleRailSlashMenuSelect = useCallback(
     async (item: SlashMenuItem) => {
-      const parsed = parseConversationSlashCommand(item.displayCmd.trim());
-      if (parsed?.kind === 'command') {
-        addNotification({ type: 'warning', message: 'Slash commands are available in main conversation only.' });
-        return;
-      }
-
       composerController.setText(item.insertText);
     },
     [composerController],

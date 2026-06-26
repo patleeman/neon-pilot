@@ -311,6 +311,7 @@ export function ComposerAttachmentShelf({
                       onClick={() => onRemoveAttachment(index)}
                       className="mr-1 shrink-0 leading-none"
                       title={`Remove ${fileName}`}
+                      aria-label={`Remove ${fileName}`}
                     >
                       ×
                     </IconButton>
@@ -355,6 +356,7 @@ export function ComposerAttachmentShelf({
                       onClick={() => onRemoveDrawingAttachment(attachment.localId)}
                       className="ml-0.5 shrink-0 leading-none"
                       title={`Remove ${attachment.title}`}
+                      aria-label={`Remove ${attachment.title}`}
                     >
                       ×
                     </IconButton>

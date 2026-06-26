@@ -5,6 +5,7 @@ import { basename, dirname, join } from 'node:path';
 import { SessionManager } from '@earendil-works/pi-coding-agent';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { closeConversationCatalogDb, listConversationCatalogSessions, upsertConversationCatalogSession } from './conversationCatalog.js';
 import {
   appendChildConversationTopologyEntry,
   appendConversationCompactionSummary,
@@ -15,8 +16,10 @@ import {
   buildAppendOnlySessionDetailResponse,
   buildDisplayBlocksFromEntries,
   clearSessionCaches,
+  deleteSessions,
   flushSessionIndexWrite,
   listSessions,
+  pruneSessionsByRetention,
   readSessionBlock,
   readSessionBlocks,
   readSessionBlocksWithTelemetry,
@@ -125,6 +128,7 @@ beforeEach(() => {
 
 afterEach(() => {
   clearSessionCaches();
+  closeConversationCatalogDb();
   process.env = originalEnv;
   for (const dir of tempDirs.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
@@ -132,6 +136,136 @@ afterEach(() => {
 });
 
 describe('sessions', () => {
+  it('deletes persisted sessions by id, dedupes input, and reports missing ids', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const deletedFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'session-delete',
+      title: 'Delete me',
+    });
+    const keptFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'session-keep',
+      title: 'Keep me',
+      fileName: '2026-03-11T13-00-00-000Z_session-keep.jsonl',
+    });
+
+    expect(
+      listSessions()
+        .map((session) => session.id)
+        .sort(),
+    ).toEqual(['session-delete', 'session-keep']);
+
+    const result = deleteSessions(['session-delete', 'session-delete', 'missing-session', '  ']);
+
+    expect(result).toEqual({
+      deleted: [{ id: 'session-delete', file: deletedFile }],
+      missing: ['missing-session'],
+    });
+    expect(existsSync(deletedFile)).toBe(false);
+    expect(existsSync(keptFile)).toBe(true);
+    expect(readSessionBlocks('session-delete')).toBeNull();
+    expect(listSessions().map((session) => session.id)).toEqual(['session-keep']);
+  });
+
+  it('removes deleted and stale-missing sessions from the conversation catalog', () => {
+    const stateRoot = createTempSessionsDir();
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const deletedFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'catalog-delete',
+      title: 'Catalog delete',
+    });
+    const staleFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'catalog-stale',
+      title: 'Catalog stale',
+      fileName: '2026-03-11T13-00-00-000Z_catalog-stale.jsonl',
+    });
+
+    const metasById = new Map(listSessions().map((session) => [session.id, session]));
+    upsertConversationCatalogSession(metasById.get('catalog-delete')!);
+    upsertConversationCatalogSession(metasById.get('catalog-stale')!);
+    expect(
+      listConversationCatalogSessions()
+        .map((session) => session.id)
+        .sort(),
+    ).toEqual(['catalog-delete', 'catalog-stale']);
+
+    unlinkSync(staleFile);
+    const result = deleteSessions(['catalog-delete', 'catalog-stale']);
+
+    expect(result).toEqual({
+      deleted: [{ id: 'catalog-delete', file: deletedFile }],
+      missing: ['catalog-stale'],
+    });
+    expect(listConversationCatalogSessions()).toEqual([]);
+  });
+
+  it('prunes old sessions by retention with dry-run and archived-only guards', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const oldArchivedFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'old-archived',
+      title: 'Old archived',
+      timestamp: '2026-03-01T12:00:00.000Z',
+    });
+    const oldOpenFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'old-open',
+      title: 'Old open',
+      timestamp: '2026-03-01T12:00:00.000Z',
+      fileName: '2026-03-01T13-00-00-000Z_old-open.jsonl',
+    });
+    const newArchivedFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'new-archived',
+      title: 'New archived',
+      timestamp: '2026-04-10T12:00:00.000Z',
+      fileName: '2026-04-10T12-00-00-000Z_new-archived.jsonl',
+    });
+
+    const dryRun = pruneSessionsByRetention({
+      now: new Date('2026-04-15T12:00:00.000Z'),
+      olderThanMs: 30 * 24 * 60 * 60 * 1000,
+      archivedOnly: true,
+      dryRun: true,
+      archivedConversationIds: ['old-archived', 'new-archived'],
+    });
+
+    expect(dryRun).toMatchObject({
+      ok: true,
+      dryRun: true,
+      cutoff: '2026-03-16T12:00:00.000Z',
+      deleted: [],
+    });
+    expect(dryRun.candidates.map((candidate) => candidate.id)).toEqual(['old-archived']);
+    expect(existsSync(oldArchivedFile)).toBe(true);
+    expect(existsSync(oldOpenFile)).toBe(true);
+    expect(existsSync(newArchivedFile)).toBe(true);
+
+    const pruned = pruneSessionsByRetention({
+      now: new Date('2026-04-15T12:00:00.000Z'),
+      olderThanMs: 30 * 24 * 60 * 60 * 1000,
+      archivedOnly: true,
+      dryRun: false,
+      archivedConversationIds: ['old-archived', 'new-archived'],
+    });
+
+    expect(pruned.deleted).toEqual([{ id: 'old-archived', file: oldArchivedFile }]);
+    expect(existsSync(oldArchivedFile)).toBe(false);
+    expect(existsSync(oldOpenFile)).toBe(true);
+    expect(existsSync(newArchivedFile)).toBe(true);
+    expect(listSessions().map((session) => session.id)).toEqual(['new-archived', 'old-open']);
+  });
+
   it('reads a session directly even before the session list was built', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);
@@ -780,6 +914,73 @@ describe('sessions', () => {
       expect.objectContaining({ type: 'user', text: 'Second prompt' }),
       expect.objectContaining({ type: 'text', text: 'Second answer' }),
     ]);
+  });
+
+  it('marks persisted tool result errors and hides extension-host abort internals', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const dir = join(sessionsDir, '--tmp-project--');
+    mkdirSync(dir, { recursive: true });
+    const filePath = join(dir, '2026-03-11T12-00-00-000Z_session-tool-result-error.jsonl');
+    writeFileSync(
+      filePath,
+      [
+        JSON.stringify({
+          type: 'session',
+          version: 3,
+          id: 'session-tool-result-error',
+          timestamp: '2026-03-11T12:00:00.000Z',
+          cwd: '/tmp/project',
+        }),
+        JSON.stringify({
+          type: 'message',
+          id: 'tool-user',
+          parentId: 'session-tool-result-error',
+          timestamp: '2026-03-11T12:00:01.000Z',
+          message: { role: 'user', content: [{ type: 'text', text: 'Run bash' }] },
+        }),
+        JSON.stringify({
+          type: 'message',
+          id: 'tool-assistant',
+          parentId: 'tool-user',
+          timestamp: '2026-03-11T12:00:02.000Z',
+          message: {
+            role: 'assistant',
+            content: [{ type: 'toolCall', id: 'call-aborted', name: 'bash', arguments: { command: 'sleep 30' } }],
+            stopReason: 'toolUse',
+          },
+        }),
+        JSON.stringify({
+          type: 'message',
+          id: 'tool-result',
+          parentId: 'tool-assistant',
+          timestamp: '2026-03-11T12:00:03.000Z',
+          message: {
+            role: 'toolResult',
+            toolCallId: 'call-aborted',
+            toolName: 'bash',
+            content: [
+              {
+                type: 'text',
+                text: 'Extension host RPC request action:system-runs/bash failed at http://127.0.0.1:55183/action: This operation was aborted',
+              },
+            ],
+            details: {},
+          },
+        }),
+      ].join('\n') + '\n',
+    );
+
+    const detail = readSessionBlocks('session-tool-result-error', { tailBlocks: 20 });
+    expect(detail?.blocks.at(-1)).toEqual(
+      expect.objectContaining({
+        type: 'tool_use',
+        tool: 'bash',
+        status: 'error',
+        output: 'Stopped before finishing. The tool call was interrupted or cancelled.',
+      }),
+    );
   });
 
   it('keeps walking backward through non-display parent links when reading archived tails', () => {
@@ -3327,6 +3528,36 @@ describe('sessions', () => {
           displayMode: 'terminal',
           exitCode: 0,
           excludeFromContext: true,
+        }),
+      }),
+    ]);
+  });
+
+  it('marks bash execution display output as truncated when it is capped', () => {
+    const output = `${'line\n'.repeat(2000)}tail`;
+    const blocks = buildDisplayBlocksFromEntries([
+      {
+        id: 'bash-1',
+        timestamp: '2026-03-12T16:02:00.000Z',
+        message: {
+          role: 'bashExecution',
+          command: 'cat huge.log',
+          output,
+          exitCode: 0,
+        },
+      },
+    ]);
+
+    expect(blocks).toEqual([
+      expect.objectContaining({
+        type: 'tool_use',
+        tool: 'bash',
+        input: { command: 'cat huge.log' },
+        output: output.slice(0, 8000),
+        details: expect.objectContaining({
+          displayMode: 'terminal',
+          exitCode: 0,
+          truncated: true,
         }),
       }),
     ]);

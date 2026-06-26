@@ -38,6 +38,17 @@ export function resolveComposerClearShortcut(input: {
   };
 }
 
+export function shouldRestoreFirstQueuedPromptFromComposerShortcut(input: {
+  key: string;
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  shiftKey: boolean;
+  isComposing: boolean;
+}): boolean {
+  return input.key === 'ArrowUp' && input.altKey && !input.ctrlKey && !input.metaKey && !input.shiftKey && !input.isComposing;
+}
+
 export function canNavigateComposerHistoryValue(input: {
   value: string;
   selectionStart: number;

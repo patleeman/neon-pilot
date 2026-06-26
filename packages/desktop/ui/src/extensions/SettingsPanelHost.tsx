@@ -27,6 +27,12 @@ type ExtensionSettingsPanelComponent = ComponentType<{
   settingsContext: ExtensionSettingsPanelContext;
 }>;
 
+function renderSettingsPanelError(body: string) {
+  return {
+    default: () => <ErrorState title="Extension settings failed to render." body={body} className="p-4" />,
+  };
+}
+
 function loadPanelModule(registration: ExtensionSettingsPanelRegistration, revision: number): Promise<Record<string, unknown>> {
   ensureExtensionFrontendReactGlobals();
   const systemLoader = systemExtensionModules.get(registration.extensionId);
@@ -42,21 +48,28 @@ function loadPanelModule(registration: ExtensionSettingsPanelRegistration, revis
 export function SettingsPanelHost({ registration }: { registration: ExtensionSettingsPanelRegistration }) {
   const moduleKey = `${registration.extensionId}:${registration.frontendEntry ?? ''}:${getExtensionRegistryRevision()}`;
   const pa = useMemo(() => createNativeExtensionClient(registration.extensionId), [registration.extensionId]);
+  const friendlyErrorBody = `The settings panel for ${registration.label} could not load. Reload the extension or try again after updating it.`;
   const Component = useMemo(
     () =>
       lazy(async () => {
-        const module = await loadPanelModule(registration, getExtensionRegistryRevision());
+        let module: Record<string, unknown>;
+        try {
+          module = await loadPanelModule(registration, getExtensionRegistryRevision());
+        } catch (error) {
+          console.error(`Extension settings failed to load: ${registration.extensionId}:${registration.id}`, error);
+          return renderSettingsPanelError(friendlyErrorBody);
+        }
         const component = module[registration.component] as ExtensionSettingsPanelComponent | undefined;
         if (typeof component !== 'function') {
-          return { default: () => null as unknown as React.ReactElement };
+          return renderSettingsPanelError(friendlyErrorBody);
         }
         return { default: component };
       }),
-    [moduleKey],
+    [friendlyErrorBody, moduleKey, registration],
   );
 
   return (
-    <SettingsPanelErrorBoundary extensionId={registration.extensionId} componentId={registration.id}>
+    <SettingsPanelErrorBoundary extensionId={registration.extensionId} componentId={registration.id} errorBody={friendlyErrorBody}>
       <Suspense fallback={<LoadingState label="Loading extension settings…" />}>
         <Component pa={pa} settingsContext={{ sectionId: registration.sectionId, extensionId: registration.extensionId }} />
       </Suspense>
@@ -65,23 +78,21 @@ export function SettingsPanelHost({ registration }: { registration: ExtensionSet
 }
 
 class SettingsPanelErrorBoundary extends React.Component<
-  { children: React.ReactNode; extensionId: string; componentId: string },
-  { message: string | null }
+  { children: React.ReactNode; extensionId: string; componentId: string; errorBody: string },
+  { failed: boolean }
 > {
-  state = { message: null };
+  state = { failed: false };
 
-  static getDerivedStateFromError(error: unknown) {
-    return { message: error instanceof Error ? error.message : String(error) };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error(`Extension settings failed to render: ${this.props.extensionId}:${this.props.componentId}`, error);
   }
 
   render() {
-    if (!this.state.message) return this.props.children;
-    return (
-      <ErrorState
-        title="Extension settings failed to render."
-        body={`${this.props.extensionId}:${this.props.componentId} - ${this.state.message}`}
-        className="p-4 font-mono"
-      />
-    );
+    if (!this.state.failed) return this.props.children;
+    return <ErrorState title="Extension settings failed to render." body={this.props.errorBody} className="p-4" />;
   }
 }

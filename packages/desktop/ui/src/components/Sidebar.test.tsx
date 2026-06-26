@@ -493,8 +493,10 @@ describe('Sidebar', () => {
     expect((html.match(/alpha-worktree/g) ?? []).length).toBeGreaterThanOrEqual(1);
     expect((html.match(/beta-worktree/g) ?? []).length).toBeGreaterThanOrEqual(1);
     expect(html).toContain('data-sidebar-group-key="/tmp/alpha-worktree"');
-    expect(html).toContain('title="Workspace actions for /tmp/alpha-worktree"');
-    expect(html).toContain('title="New conversation in /tmp/alpha-worktree"');
+    expect(html).toContain('title="Workspace actions for alpha-worktree"');
+    expect(html).toContain('title="New conversation in alpha-worktree"');
+    expect(html).not.toContain('title="Workspace actions for /tmp/alpha-worktree"');
+    expect(html).not.toContain('title="New conversation in /tmp/alpha-worktree"');
     expect(html).toContain('aria-label="Collapse alpha-worktree"');
     expect(html).toContain('aria-expanded="true"');
     expect(html).not.toContain('>2</span>');
@@ -565,7 +567,10 @@ describe('Sidebar', () => {
     const html = renderSidebar('/conversations/new', { sessions: [] });
 
     expect(html).toContain('alpha-worktree');
-    expect(html).toContain('title="New conversation in /tmp/alpha-worktree"');
+    expect(html).toContain('title="New conversation in alpha-worktree"');
+    expect(html).toContain('aria-label="Workspace actions for alpha-worktree"');
+    expect(html).not.toContain('title="New conversation in /tmp/alpha-worktree"');
+    expect(html).not.toContain('aria-label="Workspace actions for /tmp/alpha-worktree"');
     expect(html).toContain('data-sidebar-group-key="/tmp/alpha-worktree"');
     expect(html).not.toContain('No open conversations yet.');
   });

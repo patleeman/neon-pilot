@@ -28,6 +28,26 @@ function notifyError(message: string) {
   window.dispatchEvent(new CustomEvent('neon-pilot-notification', { detail: { type: 'error', message, source: 'system-telemetry' } }));
 }
 
+const DIAGNOSTICS_LOAD_ERROR = 'Could not load diagnostics. Refresh diagnostics or reopen this page.';
+
+function formatDiagnosticsLoadError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error ?? '');
+  const firstLine = raw.split('\n')[0]?.trim() ?? '';
+  if (
+    !firstLine ||
+    raw.includes('\n') ||
+    /Local API route did not complete/i.test(raw) ||
+    /\/api\//i.test(raw) ||
+    /file:\/\//i.test(raw) ||
+    /localApi\.js/i.test(raw) ||
+    /\bModule\./i.test(raw) ||
+    /\s+at\s+\S+/i.test(raw)
+  ) {
+    return DIAGNOSTICS_LOAD_ERROR;
+  }
+  return firstLine;
+}
+
 export type TraceRange = '1h' | '6h' | '24h' | '7d' | '30d';
 
 export interface TracesData {
@@ -126,12 +146,13 @@ export function useTracesData(range: TraceRange, pa: NativeExtensionClient): Tra
       if (fetchSequenceRef.current !== sequence) {
         return;
       }
+      const message = formatDiagnosticsLoadError(err);
       setData((prev) => ({
         ...prev,
         loading: false,
-        error: err instanceof Error ? err.message : 'Failed to load trace data',
+        error: message,
       }));
-      notifyError(err instanceof Error ? err.message : 'Failed to load trace data');
+      notifyError(message);
     }
   }, [pa, range]);
 

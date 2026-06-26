@@ -9,12 +9,12 @@ import {
 } from './liveSessionStaleTurns.js';
 
 describe('live session stale turn state', () => {
-  it('does not support stale turn state or suppress events', () => {
+  it('reports stale turn state without suppressing events', () => {
     const state = createLiveSessionStaleTurnState();
     state.queuedStaleTurnCustomTypes = ['legacy-hidden'];
     state.activeStaleTurnCustomType = 'legacy-active';
 
-    expect(hasQueuedOrActiveStaleTurn(state)).toBe(false);
+    expect(hasQueuedOrActiveStaleTurn(state)).toBe(true);
     expect(clearQueuedStaleTurn(state, { type: 'agent_start' } as unknown)).toBeNull();
     expect(state.queuedStaleTurnCustomTypes).toEqual([]);
     expect(state.activeStaleTurnCustomType).toBeNull();

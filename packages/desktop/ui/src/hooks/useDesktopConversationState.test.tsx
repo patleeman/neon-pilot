@@ -102,6 +102,7 @@ import {
   applyDesktopConversationStreamEvents,
   clearDesktopConversationStateCacheForTests,
   normalizeDesktopConversationStateTailBlocks,
+  notifyDesktopConversationStateRefresh,
   prefetchDesktopConversationState,
   primeDesktopConversationStateCache,
   primeReservedDesktopConversationStateCache,
@@ -118,18 +119,51 @@ function HookProbe({
   conversationId = 'conv-1',
   tailBlocks = 20,
   includeToolBlocks,
+  version,
 }: {
   conversationId?: string;
   tailBlocks?: number;
   includeToolBlocks?: boolean;
+  version?: number | string;
 }) {
-  latestState = useDesktopConversationState(conversationId, { tailBlocks, includeToolBlocks });
+  latestState = useDesktopConversationState(conversationId, { tailBlocks, includeToolBlocks, version });
   latestReconnect = latestState.reconnect;
   return null;
 }
 
 function flushPromises() {
   return new Promise((resolve) => queueMicrotask(resolve));
+}
+
+function aggregateState(
+  conversationId: string,
+  blocks: Awaited<ReturnType<typeof api.conversationAggregate>>['stream']['blocks'] = [],
+): Awaited<ReturnType<typeof api.conversationAggregate>> {
+  return {
+    conversationId,
+    sessionDetail: null,
+    bootstrap: null,
+    liveSession: { live: false, title: null, isStreaming: false, hasStaleTurnState: false },
+    stream: {
+      blocks,
+      blockOffset: 0,
+      totalBlocks: blocks.length,
+      hasSnapshot: true,
+      isStreaming: false,
+      isCompacting: false,
+      error: null,
+      goalState: null,
+      systemPrompt: null,
+      toolDefinitions: [],
+      pendingQueue: { steering: [], followUp: [] },
+      presence: null,
+      contextUsage: null,
+      tokens: null,
+      cost: null,
+      cwdChange: null,
+      title: null,
+    },
+  };
 }
 
 describe('normalizeDesktopConversationStateTailBlocks', () => {
@@ -259,6 +293,74 @@ describe('applyDesktopConversationStreamEvent', () => {
     });
 
     expect(next.goalState).toBeNull();
+  });
+
+  it('hides extension-host abort internals from snapshot and tool-end output', () => {
+    const rawOutput =
+      'Extension host RPC request action:system-runs/bash failed at http://127.0.0.1:55183/action: This operation was aborted';
+    const stream = {
+      blocks: [],
+      blockOffset: 0,
+      totalBlocks: 0,
+      hasSnapshot: false,
+      isStreaming: false,
+      isCompacting: false,
+      error: null,
+      goalState: null,
+      systemPrompt: null,
+      toolDefinitions: [],
+      pendingQueue: { steering: [], followUp: [] },
+      presence: null,
+      contextUsage: null,
+      tokens: null,
+      cost: null,
+      cwdChange: null,
+      title: null,
+    };
+
+    const snapshot = applyDesktopConversationStreamEvent(stream, {
+      type: 'snapshot',
+      blocks: [
+        {
+          type: 'tool_use',
+          id: 'tool-1',
+          toolCallId: 'tool-1',
+          tool: 'bash',
+          input: {},
+          output: rawOutput,
+          ts: '2026-05-24T00:00:00.000Z',
+        },
+      ],
+      blockOffset: 0,
+      totalBlocks: 1,
+      isStreaming: true,
+      goalState: null,
+    });
+
+    expect(snapshot.blocks[0]).toEqual(
+      expect.objectContaining({
+        type: 'tool_use',
+        status: 'error',
+        output: 'Stopped before finishing. The tool call was interrupted or cancelled.',
+      }),
+    );
+
+    const ended = applyDesktopConversationStreamEvent(snapshot, {
+      type: 'tool_end',
+      toolCallId: 'tool-1',
+      toolName: 'bash',
+      isError: false,
+      durationMs: 12,
+      output: rawOutput,
+    });
+
+    expect(ended.blocks[0]).toEqual(
+      expect.objectContaining({
+        type: 'tool_use',
+        status: 'error',
+        output: 'Stopped before finishing. The tool call was interrupted or cancelled.',
+      }),
+    );
   });
 
   it('preserves transcript block identity for control-only events', () => {
@@ -421,6 +523,40 @@ describe('applyDesktopConversationStreamEvent', () => {
     ).toBe(stream);
   });
 
+  it('preserves compacting state from snapshot events', () => {
+    const stream = {
+      blocks: [],
+      blockOffset: 0,
+      totalBlocks: 0,
+      hasSnapshot: true,
+      isStreaming: false,
+      isCompacting: true,
+      error: null,
+      goalState: null,
+      systemPrompt: null,
+      toolDefinitions: [],
+      pendingQueue: { steering: [], followUp: [] },
+      presence: null,
+      contextUsage: null,
+      tokens: null,
+      cost: null,
+      cwdChange: null,
+      title: null,
+    };
+
+    const next = applyDesktopConversationStreamEvent(stream, {
+      type: 'snapshot',
+      blocks: [{ type: 'text', id: 'text-1', text: 'Compaction snapshot', ts: '2026-05-24T00:00:00.000Z' }],
+      blockOffset: 0,
+      totalBlocks: 1,
+      isStreaming: false,
+      isCompacting: true,
+      goalState: null,
+    });
+
+    expect(next.isCompacting).toBe(true);
+  });
+
   it('appends an error block for failed compaction events', () => {
     const stream = {
       blocks: [{ type: 'text' as const, id: 'text-1', text: 'Existing text', ts: '2026-05-24T00:00:00.000Z' }],
@@ -507,6 +643,7 @@ describe('useDesktopConversationState', () => {
     clearDesktopConversationStateCacheForTests();
     sessionStore.reset?.();
     vi.restoreAllMocks();
+    vi.useRealTimers();
     Reflect.deleteProperty(window, 'neonPilotDesktop');
   });
 
@@ -622,6 +759,49 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.state?.conversationId).toBe('conv-prefetch');
   });
 
+  it('hides extension-host abort internals from aggregate snapshot state', async () => {
+    const rawOutput =
+      'Extension host RPC request action:system-runs/bash failed at http://127.0.0.1:55183/action: This operation was aborted';
+    vi.spyOn(api, 'conversationAggregate').mockResolvedValue(
+      aggregateState('conv-raw-snapshot', [
+        {
+          type: 'tool_use',
+          id: 'tool-1',
+          toolCallId: 'tool-1',
+          tool: 'bash',
+          input: {},
+          output: rawOutput,
+          ts: '2026-05-26T00:00:00.000Z',
+        },
+      ]),
+    );
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-raw-snapshot" />);
+      await flushPromises();
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks[0]).toEqual(
+      expect.objectContaining({
+        type: 'tool_use',
+        status: 'error',
+        output: 'Stopped before finishing. The tool call was interrupted or cancelled.',
+      }),
+    );
+  });
+
   it('uses a primed create bootstrap as the initial desktop conversation state', async () => {
     const conversationAggregate = vi.spyOn(api, 'conversationAggregate').mockReturnValue(new Promise(() => undefined));
 
@@ -668,6 +848,49 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.loading).toBe(false);
     expect(latestState?.state?.sessionDetail?.meta.id).toBe('conv-created');
     expect(conversationAggregate).toHaveBeenCalledWith('conv-created', { tailBlocks: 20 });
+  });
+
+  it('does not expose primed desktop conversation state from an older file version', async () => {
+    primeDesktopConversationStateCache(
+      'conv-versioned',
+      {
+        conversationId: 'conv-versioned',
+        sessionDetail: null,
+        liveSession: { live: false },
+      },
+      { tailBlocks: 20, includeToolBlocks: false, version: 1 },
+    );
+    let resolveFreshState: (state: Awaited<ReturnType<typeof api.conversationAggregate>>) => void = () => {};
+    const freshStateRequest = new Promise<Awaited<ReturnType<typeof api.conversationAggregate>>>((resolve) => {
+      resolveFreshState = resolve;
+    });
+    const conversationAggregate = vi.spyOn(api, 'conversationAggregate').mockReturnValue(freshStateRequest);
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-versioned" includeToolBlocks={false} version={2} />);
+      await flushPromises();
+    });
+
+    expect(latestState?.state).toBeNull();
+
+    await act(async () => {
+      resolveFreshState(aggregateState('conv-versioned', [{ type: 'text', id: 'fresh', text: 'Fresh', ts: '2026-05-24T00:00:00.000Z' }]));
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(conversationAggregate).toHaveBeenCalledWith('conv-versioned', { tailBlocks: 20, includeToolBlocks: false });
+    expect(latestState?.state?.stream.blocks.map((block) => block.id)).toEqual(['fresh']);
   });
 
   it('seeds stream running state from live bootstrap metadata before the stream snapshot arrives', async () => {
@@ -953,6 +1176,312 @@ describe('useDesktopConversationState', () => {
       expect.objectContaining({ live: true, id: 'conv-saved', sessionFile: '/repo/saved.jsonl' }),
     );
     expect(eventSources.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('refreshes again after accepted sends so delayed transcript writes render', async () => {
+    vi.useFakeTimers();
+    const initialState = aggregateState('conv-delayed', []);
+    const refreshedState = aggregateState('conv-delayed', [
+      { type: 'user', id: 'user-1', text: 'Run this shell command: echo row94', ts: '2026-05-30T00:00:01.000Z' },
+    ]);
+    const conversationAggregate = vi
+      .spyOn(api, 'conversationAggregate')
+      .mockResolvedValueOnce(initialState)
+      .mockResolvedValueOnce(initialState)
+      .mockResolvedValueOnce(initialState)
+      .mockResolvedValue(refreshedState);
+    vi.spyOn(api, 'sendConversationMessage').mockResolvedValue({
+      ok: true,
+      accepted: true,
+      delivery: 'started',
+      referencedTaskIds: [],
+      referencedMemoryDocIds: [],
+      referencedKnowledgeFileIds: [],
+      referencedAttachmentIds: [],
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-delayed" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks).toEqual([]);
+
+    await act(async () => {
+      await latestState?.send('Run this shell command: echo row94');
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks).toEqual([]);
+
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(conversationAggregate).toHaveBeenCalledTimes(4);
+    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ text: 'Run this shell command: echo row94' })]);
+  });
+
+  it('refreshes a mounted running session when terminal stream events are missed', async () => {
+    vi.useFakeTimers();
+    const runningState = {
+      ...aggregateState('conv-running-recovery', [{ type: 'user', id: 'user-1', text: 'Run sleep', ts: '2026-05-30T00:00:01.000Z' }]),
+      liveSession: {
+        live: true,
+        id: 'conv-running-recovery',
+        cwd: '/repo',
+        sessionFile: '/repo/session.jsonl',
+        isStreaming: true,
+      },
+      stream: {
+        ...aggregateState('conv-running-recovery', [{ type: 'user', id: 'user-1', text: 'Run sleep', ts: '2026-05-30T00:00:01.000Z' }])
+          .stream,
+        isStreaming: true,
+      },
+    } as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    const completedState = {
+      ...aggregateState('conv-running-recovery', [
+        { type: 'user', id: 'user-1', text: 'Run sleep', ts: '2026-05-30T00:00:01.000Z' },
+        { type: 'text', id: 'text-1', text: 'Done', ts: '2026-05-30T00:00:15.000Z' },
+      ]),
+      liveSession: {
+        live: true,
+        id: 'conv-running-recovery',
+        cwd: '/repo',
+        sessionFile: '/repo/session.jsonl',
+        isStreaming: false,
+      },
+    } as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    const conversationAggregate = vi
+      .spyOn(api, 'conversationAggregate')
+      .mockResolvedValueOnce(runningState)
+      .mockResolvedValueOnce(runningState)
+      .mockResolvedValueOnce(runningState)
+      .mockResolvedValue(completedState);
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-running-recovery" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.isStreaming).toBe(true);
+
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await flushPromises();
+      await flushPromises();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+      await flushPromises();
+      await flushPromises();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(8000);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(conversationAggregate).toHaveBeenCalledTimes(4);
+    expect(latestState?.state?.stream.isStreaming).toBe(false);
+    expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ isStreaming: false }));
+    expect(latestState?.state?.stream.blocks.map((block) => block.id)).toEqual(['user-1', 'text-1']);
+  });
+
+  it('keeps checking long-running sessions after early recovery refreshes pass', async () => {
+    vi.useFakeTimers();
+    const runningState = {
+      ...aggregateState('conv-long-running-recovery', [
+        { type: 'user', id: 'user-1', text: 'Run long sleep', ts: '2026-05-30T00:00:01.000Z' },
+      ]),
+      liveSession: {
+        live: true,
+        id: 'conv-long-running-recovery',
+        cwd: '/repo',
+        sessionFile: '/repo/session.jsonl',
+        isStreaming: true,
+      },
+      stream: {
+        ...aggregateState('conv-long-running-recovery', [
+          { type: 'user', id: 'user-1', text: 'Run long sleep', ts: '2026-05-30T00:00:01.000Z' },
+        ]).stream,
+        isStreaming: true,
+      },
+    } as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    const completedState = {
+      ...aggregateState('conv-long-running-recovery', [
+        { type: 'user', id: 'user-1', text: 'Run long sleep', ts: '2026-05-30T00:00:01.000Z' },
+        { type: 'text', id: 'text-1', text: 'Late done', ts: '2026-05-30T00:01:00.000Z' },
+      ]),
+      liveSession: {
+        live: true,
+        id: 'conv-long-running-recovery',
+        cwd: '/repo',
+        sessionFile: '/repo/session.jsonl',
+        isStreaming: false,
+      },
+    } as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    const conversationAggregate = vi
+      .spyOn(api, 'conversationAggregate')
+      .mockResolvedValueOnce(runningState)
+      .mockResolvedValueOnce(runningState)
+      .mockResolvedValueOnce(runningState)
+      .mockResolvedValueOnce(runningState)
+      .mockResolvedValueOnce(runningState)
+      .mockResolvedValue(completedState);
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-long-running-recovery" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.isStreaming).toBe(true);
+
+    for (const delayMs of [3000, 5000, 8000, 14000]) {
+      await act(async () => {
+        vi.advanceTimersByTime(delayMs);
+        await flushPromises();
+        await flushPromises();
+      });
+    }
+
+    expect(conversationAggregate).toHaveBeenCalledTimes(5);
+    expect(latestState?.state?.stream.isStreaming).toBe(true);
+
+    await act(async () => {
+      vi.advanceTimersByTime(30000);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(conversationAggregate).toHaveBeenCalledTimes(6);
+    expect(latestState?.state?.stream.isStreaming).toBe(false);
+    expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ isStreaming: false }));
+    expect(latestState?.state?.stream.blocks.map((block) => block.id)).toEqual(['user-1', 'text-1']);
+  });
+
+  it('clears streaming state after abort even when the follow-up refresh is delayed', async () => {
+    const runningConversationState = {
+      conversationId: 'conv-abort-delayed-refresh',
+      sessionDetail: null,
+      bootstrap: null,
+      liveSession: {
+        live: true,
+        id: 'conv-abort-delayed-refresh',
+        cwd: '/repo',
+        sessionFile: '/repo/abort-delayed-refresh.jsonl',
+        isStreaming: true,
+        hasStaleTurnState: false,
+      },
+      stream: {
+        blocks: [
+          {
+            type: 'tool_use',
+            id: 'tool-1',
+            toolCallId: 'tool-1',
+            tool: 'bash',
+            input: { command: 'sleep 60' },
+            output: '',
+            status: 'running',
+            running: true,
+            ts: '2026-06-24T00:00:00.000Z',
+          },
+        ],
+        blockOffset: 0,
+        totalBlocks: 1,
+        hasSnapshot: true,
+        isStreaming: true,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    } as unknown as Awaited<ReturnType<typeof api.conversationAggregate>>;
+    const delayedRefresh = new Promise<Awaited<ReturnType<typeof api.conversationAggregate>>>(() => {});
+    const conversationAggregate = vi
+      .spyOn(api, 'conversationAggregate')
+      .mockResolvedValueOnce(runningConversationState)
+      .mockReturnValueOnce(delayedRefresh);
+    const abortSession = vi.spyOn(api, 'abortSession').mockResolvedValue({ ok: true });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-abort-delayed-refresh" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.isStreaming).toBe(true);
+
+    await act(async () => {
+      await latestState?.abort();
+      await flushPromises();
+    });
+
+    expect(abortSession).toHaveBeenCalledWith('conv-abort-delayed-refresh', expect.any(String));
+    expect(conversationAggregate).toHaveBeenCalledTimes(2);
+    expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ isStreaming: false }));
+    expect(latestState?.state?.stream.isStreaming).toBe(false);
+    expect(latestState?.state?.stream.blocks[0]).toEqual(
+      expect.objectContaining({
+        running: false,
+        status: 'error',
+        output: 'Stopped before finishing. The tool call was interrupted or cancelled.',
+      }),
+    );
   });
 
   it('refreshes desktop conversation state after aborting a live session', async () => {
@@ -1626,6 +2155,74 @@ describe('useDesktopConversationState', () => {
     });
 
     expect(conversationAggregate).toHaveBeenCalledTimes(initialFetchCount + 1);
+  });
+
+  it('refreshes conversation state when the realtime app stream reports a session file change', async () => {
+    const conversationAggregate = vi
+      .spyOn(api, 'conversationAggregate')
+      .mockResolvedValueOnce(aggregateState('conv-1', [{ type: 'text', id: 'before', text: 'Before', ts: '2026-05-24T00:00:00.000Z' }]))
+      .mockResolvedValueOnce(aggregateState('conv-1', [{ type: 'text', id: 'after', text: 'After', ts: '2026-05-24T00:00:01.000Z' }]));
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks.map((block) => block.id)).toEqual(['before']);
+
+    await act(async () => {
+      eventSources[0]?.receive({ type: 'app_event', event: { type: 'session_file_changed', sessionId: 'conv-1' } });
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(conversationAggregate).toHaveBeenCalledTimes(2);
+    expect(latestState?.state?.stream.blocks.map((block) => block.id)).toEqual(['after']);
+  });
+
+  it('refreshes conversation state when the renderer requests a local conversation refresh', async () => {
+    const conversationAggregate = vi
+      .spyOn(api, 'conversationAggregate')
+      .mockResolvedValueOnce(aggregateState('conv-1', [{ type: 'text', id: 'before', text: 'Before', ts: '2026-05-24T00:00:00.000Z' }]))
+      .mockResolvedValueOnce(aggregateState('conv-1', [{ type: 'text', id: 'after', text: 'After', ts: '2026-05-24T00:00:01.000Z' }]));
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks.map((block) => block.id)).toEqual(['before']);
+
+    await act(async () => {
+      notifyDesktopConversationStateRefresh('conv-1');
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(conversationAggregate).toHaveBeenCalledTimes(2);
+    expect(latestState?.state?.stream.blocks.map((block) => block.id)).toEqual(['after']);
   });
 
   it('preserves active streaming state and schedules reconnection when the SSE connection errors', async () => {

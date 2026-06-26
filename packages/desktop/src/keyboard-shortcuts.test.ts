@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+
+import { describe, expect, it } from 'vitest';
 
 import { CORE_KEYBOARD_SHORTCUT_REGISTRATIONS, DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS } from './keyboard-shortcuts.js';
 
@@ -44,9 +45,18 @@ describe('DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS', () => {
 
   it('keeps the desktop app docs shortcut table aligned with the core registry', () => {
     const docs = readFileSync(new URL('../../../docs/desktop-app.md', import.meta.url), 'utf8');
+    const shortcutRows = new Map(
+      docs
+        .split('\n')
+        .filter((line) => line.startsWith('|') && line.includes('`'))
+        .map((line) => {
+          const [, title, shortcut] = line.split('|').map((cell) => cell.trim());
+          return [title, shortcut] as const;
+        }),
+    );
 
     for (const registration of CORE_KEYBOARD_SHORTCUT_REGISTRATIONS) {
-      expect(docs).toContain(`| ${registration.title} | \`${formatShortcutForDocs(registration.defaultKeys[0] ?? '')}\` |`);
+      expect(shortcutRows.get(registration.title)).toBe(`\`${formatShortcutForDocs(registration.defaultKeys[0] ?? '')}\``);
     }
   });
 });

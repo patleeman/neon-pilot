@@ -2,7 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { SelectionContextMenu, StreamingIndicator } from './ChatTranscriptChrome.js';
+import { estimateSelectionContextMenuHeight, SelectionContextMenu, StreamingIndicator } from './ChatTranscriptChrome.js';
 
 describe('ChatTranscriptChrome', () => {
   it('renders streaming status accessibly', () => {
@@ -50,5 +50,14 @@ describe('ChatTranscriptChrome', () => {
     expect(html).toContain('Selection reply starters');
     expect(html).toContain('aria-label="Agree / proceed"');
     expect(html).toContain('👍');
+  });
+
+  it('includes the emoji starter row in selected-text menu positioning estimates', () => {
+    const copyOnlyHeight = estimateSelectionContextMenuHeight({ hasReplySelection: false, selectionActionCount: 0 });
+    const replyHeight = estimateSelectionContextMenuHeight({ hasReplySelection: true, selectionActionCount: 0 });
+    const replyWithEmojiHeight = estimateSelectionContextMenuHeight({ hasReplySelection: true, selectionActionCount: 2 });
+
+    expect(replyHeight).toBeGreaterThan(copyOnlyHeight);
+    expect(replyWithEmojiHeight).toBeGreaterThan(replyHeight);
   });
 });

@@ -154,6 +154,18 @@ describe('desktop local API conversation actions', () => {
     expect(Array.isArray(body.entries)).toBe(true);
     expect(Buffer.from(response.body).toString('utf-8')).not.toContain('Local API route did not complete');
   });
+
+  it('returns a friendly 404 for unregistered extension webapp localhost hosts', async () => {
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/',
+      headers: { host: 'missing-extension-webapp.localhost' },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(readJsonBody(response)).toEqual({ error: 'No Neon Pilot webapp is registered for this host.' });
+    expect(Buffer.from(response.body).toString('utf-8')).not.toContain('Local API route did not complete');
+  });
 });
 
 describe('desktop local API conversation rename route', () => {
@@ -183,8 +195,8 @@ describe('desktop local API conversation rename route', () => {
       },
     });
 
-    expect(response.statusCode).toBe(500);
-    expect(Buffer.from(response.body).toString('utf-8')).toBe('name required');
+    expect(response.statusCode).toBe(400);
+    expect(Buffer.from(response.body).toString('utf-8')).toBe('Conversation title is required.');
   });
 
   it('rejects browser-mode unsafe webapp dispatches with missing origin', async () => {
@@ -214,8 +226,8 @@ describe('desktop local API conversation rename route', () => {
       trustMode: 'browser',
     });
 
-    expect(response.statusCode).toBe(500);
-    expect(Buffer.from(response.body).toString('utf-8')).toBe('name required');
+    expect(response.statusCode).toBe(400);
+    expect(Buffer.from(response.body).toString('utf-8')).toBe('Conversation title is required.');
   });
 
   it('rejects rename with missing name instead of throwing No local API route', async () => {
@@ -224,8 +236,8 @@ describe('desktop local API conversation rename route', () => {
       path: '/api/conversations/test-id/title',
     });
 
-    expect(response.statusCode).toBe(500);
-    expect(Buffer.from(response.body).toString('utf-8')).toBe('name required');
+    expect(response.statusCode).toBe(400);
+    expect(Buffer.from(response.body).toString('utf-8')).toBe('Conversation title is required.');
   });
 
   it('rejects rename with empty name instead of throwing No local API route', async () => {
@@ -235,8 +247,8 @@ describe('desktop local API conversation rename route', () => {
       body: { name: '' },
     });
 
-    expect(response.statusCode).toBe(500);
-    expect(Buffer.from(response.body).toString('utf-8')).toBe('name required');
+    expect(response.statusCode).toBe(400);
+    expect(Buffer.from(response.body).toString('utf-8')).toBe('Conversation title is required.');
   });
 });
 
@@ -281,6 +293,26 @@ describe('desktop local API conversation asset routes', () => {
     expect(readJsonBody(detailResponse)).toEqual({
       conversationId: 'conversation-1',
       artifact: expect.objectContaining({ id: 'artifact-1', content: '<h1>Hello</h1>' }),
+    });
+
+    const deleteResponse = await dispatchDesktopLocalApiRequest({
+      method: 'DELETE',
+      path: '/api/conversations/conversation-1/artifacts/artifact-1',
+    });
+    expect(readJsonBody(deleteResponse)).toEqual({
+      conversationId: 'conversation-1',
+      artifactId: 'artifact-1',
+      deleted: true,
+      artifacts: [],
+    });
+
+    const listAfterDeleteResponse = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/conversations/conversation-1/artifacts',
+    });
+    expect(readJsonBody(listAfterDeleteResponse)).toEqual({
+      conversationId: 'conversation-1',
+      artifacts: [],
     });
   });
 });

@@ -30,18 +30,25 @@ const cliEnvironment = vi.hoisted(() => ({
     binDir: '/tmp/state/bin',
     linkPath: '/Users/patrick/.local/bin/neon-pilot',
     globallyInstalled: true,
+    linkExists: true,
+    linkConflict: false,
+    linkTarget: '/tmp/state/bin/neon-pilot',
   })),
   readNeonPilotCliInstallStatus: vi.fn(() => ({
     target: '/tmp/state/bin/neon-pilot',
     binDir: '/tmp/state/bin',
     linkPath: '/Users/patrick/.local/bin/neon-pilot',
     globallyInstalled: false,
+    linkExists: false,
+    linkConflict: false,
   })),
   uninstallNeonPilotUserCli: vi.fn(() => ({
     target: '/tmp/state/bin/neon-pilot',
     binDir: '/tmp/state/bin',
     linkPath: '/Users/patrick/.local/bin/neon-pilot',
     globallyInstalled: false,
+    linkExists: false,
+    linkConflict: false,
     removed: true,
   })),
 }));
@@ -205,6 +212,23 @@ describe('protocol CLI', () => {
     }
   });
 
+  it('shows occupied user shell links in CLI status output', async () => {
+    cliEnvironment.readNeonPilotCliInstallStatus.mockReturnValueOnce({
+      target: '/tmp/state-testing/bin/neon-pilot',
+      binDir: '/tmp/state-testing/bin',
+      linkPath: '/Users/patrick/.local/bin/neon-pilot',
+      globallyInstalled: false,
+      linkExists: true,
+      linkConflict: true,
+      linkTarget: '/tmp/state/bin/neon-pilot',
+    });
+
+    await expect(runProtocolCli(['cli', 'status'])).resolves.toBe(0);
+
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('User shell link: used by another install:'));
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('/Users/patrick/.local/bin/neon-pilot -> /tmp/state/bin/neon-pilot'));
+  });
+
   it('supports built-in aliases and runtime introspection commands', async () => {
     await expect(runProtocolCli(['ls', '--json'])).resolves.toBe(0);
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('"command": "commands"'));
@@ -321,6 +345,32 @@ describe('protocol CLI', () => {
 
     expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
     expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('"code": "usage_error"'));
+  });
+
+  it('requires ask prompt text before dispatching to extension actions', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-conversation-tools',
+          surfaceId: 'ask',
+          command: 'ask',
+          action: 'conversationTool',
+          inputAction: 'create_and_run',
+          argsSchema: { type: 'array', items: { type: 'string' } },
+          flagsSchema: {
+            type: 'object',
+            properties: { json: { type: 'boolean' }, text: { type: 'string' }, prompt: { type: 'string' } },
+            additionalProperties: true,
+          },
+        },
+      ],
+    });
+
+    await expect(runProtocolCli(['ask', '--json'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
+
+    expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Prompt text is required'));
+    expect(stderrWrite).not.toHaveBeenCalledWith(expect.stringContaining('Extension "system-conversation-tools"'));
   });
 
   it('validates required task save flags before dispatch', async () => {
@@ -590,6 +640,43 @@ describe('protocol CLI', () => {
     expect(stdoutWrite).toHaveBeenLastCalledWith(expect.stringContaining('"event":"result"'));
   });
 
+  it('omits raw snapshot internals from JSONL stream updates', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-conversation-tools',
+          surfaceId: 'ask',
+          command: 'ask',
+          action: 'conversationTool',
+          inputAction: 'create_and_run',
+          mode: 'streaming',
+          outputModes: ['text', 'json', 'jsonl'],
+          argsSchema: { type: 'array', items: { type: 'string' } },
+          flagsSchema: { type: 'object', properties: { format: { enum: ['text', 'json', 'jsonl'] } }, additionalProperties: true },
+        },
+      ],
+    });
+    extensionHostClient.invokeAction.mockImplementationOnce(async (input) => {
+      input.toolContext?.onUpdate?.({
+        content: [],
+        details: {
+          event: {
+            type: 'snapshot',
+            systemPrompt: 'secret prompt with /Users/patrick/workingdir/neon-pilot',
+            toolDefinitions: [{ name: 'bash' }],
+          },
+        },
+      });
+      return { ok: true, result: { accepted: true } };
+    });
+
+    await expect(runProtocolCli(['ask', 'hello', '--format', 'jsonl'])).resolves.toBe(0);
+
+    expect(stdoutWrite).toHaveBeenNthCalledWith(1, expect.stringContaining('"type":"snapshot"'));
+    expect(stdoutWrite).not.toHaveBeenNthCalledWith(1, expect.stringContaining('systemPrompt'));
+    expect(stdoutWrite).not.toHaveBeenNthCalledWith(1, expect.stringContaining('/Users/patrick'));
+  });
+
   it('dispatches extension-contributed CLI commands through extension actions', async () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
       cliCommandRegistrations: [
@@ -623,6 +710,54 @@ describe('protocol CLI', () => {
       }),
     );
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Validated system-knowledge'));
+  });
+
+  it('redacts extension CLI flag values from JSON command errors', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-scratchpad',
+          surfaceId: 'conversations-scratchpad-set',
+          command: 'conversations scratchpad set',
+          action: 'scratchpadTool',
+          inputAction: 'set',
+          jsonDefault: true,
+        },
+      ],
+    });
+    extensionHostClient.invokeAction.mockRejectedValueOnce(new Error('Scratchpad content exceeds 200000 characters.'));
+
+    await expect(
+      runProtocolCli(['conversations', 'scratchpad', 'set', 'qa-thread', '--content', 'secret note text', '--json']),
+    ).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.runtimeFailure);
+
+    expect(stderrWrite).toHaveBeenCalledWith(
+      expect.stringContaining('"command": "conversations scratchpad set qa-thread --content <redacted> --json"'),
+    );
+    expect(stderrWrite).not.toHaveBeenCalledWith(expect.stringContaining('secret note text'));
+  });
+
+  it('returns a nonzero CLI failure when an app-required command is not executed by the app', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-neon-pilot-admin-cli',
+          surfaceId: 'app-commands-run',
+          command: 'app-commands run',
+          action: 'manageAppCommands',
+          inputAction: 'run',
+          requiresApp: true,
+          argsSchema: { type: 'array', minItems: 1, items: { type: 'string' } },
+          flagsSchema: { type: 'object', properties: { json: { type: 'boolean' } }, additionalProperties: true },
+          outputModes: ['text', 'json'],
+        },
+      ],
+    });
+    extensionHostClient.invokeAction.mockResolvedValueOnce({ ok: true, result: { ok: false, commandId: 'fake.command', executed: false } });
+
+    await expect(runProtocolCli(['app-commands', 'run', 'fake.command', '--json'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.runtimeFailure);
+
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('requires the running app'));
   });
 
   it('passes the final command token as a generic action hint for extension CLI handlers', async () => {

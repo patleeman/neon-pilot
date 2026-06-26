@@ -19,6 +19,7 @@ export function finalizeLiveSessionBashExecution<TEntry extends LiveSessionBashF
     broadcastContextUsage: (entry: TEntry, force?: boolean) => void;
     broadcastSnapshot: (entry: TEntry) => void;
     publishSessionMetaChanged: (sessionId: string) => void;
+    publishSessionFileChanged: (sessionId: string) => void;
   },
 ): void {
   if (entry.session.isStreaming) {
@@ -44,4 +45,5 @@ export function finalizeLiveSessionBashExecution<TEntry extends LiveSessionBashF
   callbacks.broadcastContextUsage(entry, true);
   callbacks.broadcastSnapshot(entry);
   callbacks.publishSessionMetaChanged(entry.sessionId);
+  callbacks.publishSessionFileChanged(entry.sessionId);
 }

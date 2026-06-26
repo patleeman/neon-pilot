@@ -359,6 +359,12 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('status' in response)) throw new Error('Extension host returned an invalid health response.');
       return { status: response.status };
     },
+    async abortConversationResources(conversationId) {
+      const response = await send({ type: 'abortConversationResources', conversationId });
+      if (!response.ok) throw new Error(response.error);
+      if (!('abortedResources' in response)) throw new Error('Extension host returned an invalid abort resources response.');
+      return response.abortedResources;
+    },
     async checkBackendHealth() {
       const response = await send({ type: 'checkBackendHealth' });
       if (!response.ok) throw new Error(response.error);

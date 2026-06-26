@@ -109,7 +109,7 @@ describe('conversationMessageWindow', () => {
     ).toBe(2);
   });
 
-  it('gates the earlier transcript boundary by visible agent turns', () => {
+  it('shows the earlier transcript boundary whenever older blocks are hidden', () => {
     expect(
       shouldShowEarlierTranscriptBoundary({
         hasOlderBlocks: true,
@@ -120,7 +120,7 @@ describe('conversationMessageWindow', () => {
           { type: 'text', ts: '2026-05-29T00:00:03.000Z', text: 'Only one agent reply' },
         ],
       }),
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       shouldShowEarlierTranscriptBoundary({
@@ -132,6 +132,17 @@ describe('conversationMessageWindow', () => {
         ],
       }),
     ).toBe(true);
+
+    expect(
+      shouldShowEarlierTranscriptBoundary({
+        hasOlderBlocks: false,
+        visibleMessages: [
+          { type: 'text', ts: '2026-05-29T00:00:00.000Z', text: 'Reply 1' },
+          { type: 'text', ts: '2026-05-29T00:00:01.000Z', text: 'Reply 2' },
+          { type: 'text', ts: '2026-05-29T00:00:02.000Z', text: 'Reply 3' },
+        ],
+      }),
+    ).toBe(false);
   });
 
   it('reports tail-anchored transcript windows as ending at the latest content', () => {

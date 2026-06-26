@@ -34,6 +34,30 @@ describe('buildDesktopTrayMenuTemplate', () => {
     ).toBe(true);
   });
 
+  it('shows the full ready-state tray action set', () => {
+    const items = buildDesktopTrayMenuTemplate({
+      appName: 'Neon Pilot Testing',
+      startupState: { kind: 'ready' },
+      actions: {} as ReturnType<typeof buildDesktopTrayMenuTemplate> extends never
+        ? never
+        : Parameters<typeof buildDesktopTrayMenuTemplate>[0]['actions'],
+    });
+
+    const enabledLabels = items
+      .filter((item): item is Electron.MenuItemConstructorOptions & { label: string } => typeof item.label === 'string')
+      .map((item) => ({ label: item.label, enabled: item.enabled !== false }));
+
+    expect(enabledLabels).toEqual([
+      { label: 'Show Neon Pilot Testing', enabled: true },
+      { label: 'New Conversation', enabled: true },
+      { label: 'Clip URL from Clipboard', enabled: true },
+      { label: 'Settings…', enabled: true },
+      { label: 'Check for Updates…', enabled: true },
+      { label: 'Restart Runtime', enabled: true },
+      { label: 'Quit Neon Pilot Testing', enabled: true },
+    ]);
+  });
+
   it('shows error state with truncated message', () => {
     const items = buildDesktopTrayMenuTemplate({
       startupState: { kind: 'error', message: 'Something went wrong with the backend.' },

@@ -39,6 +39,7 @@ export interface LocalApiModule {
   readDesktopSessionState(): Promise<unknown>;
   readDesktopDaemonState(): Promise<unknown>;
   readDesktopSessions(): Promise<unknown>;
+  syncDesktopDeletedConversations(input: { conversationIds?: unknown }): Promise<unknown>;
   readDesktopSessionMeta(sessionId: string): Promise<unknown>;
   readDesktopSessionSearchIndex(sessionIds: string[]): Promise<unknown>;
   readDesktopModels(): Promise<unknown>;
@@ -235,13 +236,20 @@ export interface LocalApiModule {
   exportDesktopLiveSession(input: { conversationId: string; outputPath?: string }): Promise<{ ok: true; path: string }>;
   reloadDesktopLiveSession(input: { conversationId: string }): Promise<{ ok: true }>;
   destroyDesktopLiveSession(conversationId: string): Promise<{ ok: true }>;
-  branchDesktopLiveSession(input: { conversationId: string; entryId: string }): Promise<{
+  branchDesktopLiveSession(input: { conversationId: string; entryId: string; surfaceId?: string }): Promise<{
     newSessionId: string;
     sessionFile: string;
     bootstrap?: unknown;
     perf?: Record<string, number>;
   }>;
-  forkDesktopLiveSession(input: { conversationId: string; entryId: string; beforeEntry?: boolean; preserveSource?: boolean }): Promise<{
+  forkDesktopLiveSession(input: {
+    conversationId: string;
+    entryId: string;
+    beforeEntry?: boolean;
+    preserveSource?: boolean;
+    branchKind?: 'fork' | 'rewind';
+    surfaceId?: string;
+  }): Promise<{
     newSessionId: string;
     sessionFile: string;
     bootstrap?: unknown;

@@ -144,6 +144,32 @@ function formatTaskSchedule(task: ParsedTaskDefinition): string {
   return `at ${task.schedule.at}`;
 }
 
+function formatAutomationTranscriptOutput(outputText: string | undefined): string | undefined {
+  const lines = outputText
+    ?.trim()
+    .split(/\r?\n/)
+    .filter((line) => !/^\[background-agent\]\s+starting\b/.test(line.trim()));
+  const output = lines?.join('\n').trim();
+  return output && output.length > 0 ? output : undefined;
+}
+
+function sanitizeAutomationUserMessage(message: string | undefined): string | undefined {
+  const normalized = message?.trim();
+  if (!normalized) {
+    return undefined;
+  }
+
+  return normalized
+    .replace(
+      /(?:spawn|execFile|open)\s+(?:"[^"]+"|'[^']+'|\/[^\s]+(?:\s[^:\n]+?)*?)(?=\s+(?:ENOENT|EACCES|EPERM|ENOTDIR|EISDIR)\b)/g,
+      (match) => {
+        const verb = match.split(/\s+/, 1)[0] ?? 'run';
+        return `${verb} automation runner`;
+      },
+    )
+    .replace(/(?:\/Users|\/tmp|\/private\/tmp|\/var\/folders)\/[^\s\n]+/g, '[local path]');
+}
+
 function appendThreadAutomationEvent(
   task: Pick<StoredAutomation, 'id' | 'title' | 'threadSessionFile' | 'threadConversationId'>,
   input: {
@@ -173,9 +199,11 @@ function appendThreadAutomationEvent(
             : 'failed';
   const lines = [`Automation ${statusText}: ${title}`, '', `Task: @${task.id}`, `Time: ${input.timestamp}`];
   if (input.runId) lines.push(`Run: ${input.runId}`);
-  if (input.error) lines.push('', `Error: ${input.error}`);
-  if (input.outputText?.trim()) lines.push('', 'Output:', input.outputText.trim());
-  if (input.logPath) lines.push('', `Log: ${input.logPath}`);
+  const error = sanitizeAutomationUserMessage(input.error);
+  if (error) lines.push('', `Error: ${error}`);
+  const outputText = formatAutomationTranscriptOutput(input.outputText);
+  if (outputText) lines.push('', 'Output:', outputText);
+  if (input.logPath) lines.push('', 'Run log: available from the automation run details.');
 
   try {
     appendStoredVisibleCustomMessage({
@@ -388,7 +416,7 @@ function upsertTaskRunFailureAlert(input: {
       title: `Automation failed to start: ${input.task.title ?? input.task.id}`,
       body: [
         'Reason:',
-        input.message,
+        sanitizeAutomationUserMessage(input.message) ?? 'The automation could not start.',
         '',
         `Task: ${input.task.title ?? input.task.id}`,
         `Schedule: ${formatTaskSchedule(input.task)}`,

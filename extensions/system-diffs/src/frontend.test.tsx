@@ -103,6 +103,7 @@ describe('CheckpointTranscriptRenderer', () => {
     );
 
     expect(html).toContain('Checkpoint failed');
-    expect(html).toContain('border-danger');
+    expect(html).toContain('ui-surface-danger-soft');
+    expect(html).toContain('text-danger/85');
   });
 });

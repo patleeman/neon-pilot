@@ -1,6 +1,7 @@
 import type { ExtensionBackendLoadTarget } from './extensionBackendRunner.js';
 
 export interface ExtensionBackendWorkerBackendContextOptions {
+  workerRequestId?: number;
   runtimeScope?: string;
   repoRoot?: string;
   runtimeDir?: string;
@@ -98,6 +99,11 @@ export interface ExtensionBackendWorkerRouteStreamCancel {
   handleId: string;
 }
 
+export interface ExtensionBackendWorkerAbortRequest {
+  kind: 'abortRequest';
+  requestId: number;
+}
+
 export type ExtensionBackendWorkerRouteStreamEvent =
   | {
       kind: 'routeStreamEvent';
@@ -124,4 +130,5 @@ export type ExtensionBackendWorkerParentMessage =
   | ExtensionBackendWorkerRequest
   | ExtensionBackendWorkerCapabilityResponse
   | ExtensionBackendWorkerCapabilityEvent
-  | ExtensionBackendWorkerRouteStreamCancel;
+  | ExtensionBackendWorkerRouteStreamCancel
+  | ExtensionBackendWorkerAbortRequest;

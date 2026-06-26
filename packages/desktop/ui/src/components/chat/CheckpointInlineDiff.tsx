@@ -6,6 +6,7 @@ import { useApi } from '../../hooks/useApi';
 import { CheckpointDiffSection } from '../checkpoints/CheckpointDiffView';
 import { cx, ErrorState, LoadingState } from '../ui';
 const INLINE_DIFF_HEIGHT = 'clamp(20rem, 56vh, 44rem)';
+const INLINE_DIFF_ERROR_MESSAGE = 'Couldn’t load this checkpoint diff. It may have been removed or is unavailable.';
 
 export function CheckpointInlineDiff({ conversationId, checkpointId }: { conversationId?: string | null; checkpointId: string }) {
   const { versions } = useAppEvents();
@@ -24,6 +25,7 @@ export function CheckpointInlineDiff({ conversationId, checkpointId }: { convers
   const { data, loading, error, refetch } = useApi(
     fetchPreview,
     previewEnabled ? `${conversationId}:checkpoint-inline:${checkpointId}` : `checkpoint-inline:${checkpointId}:disabled`,
+    { notifyOnError: false },
   );
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export function CheckpointInlineDiff({ conversationId, checkpointId }: { convers
         {loading && !checkpoint ? (
           <LoadingState label="Loading diff…" className="h-full justify-center" />
         ) : error || !checkpoint ? (
-          <ErrorState message={error || 'Couldn’t load the inline diff preview.'} className="m-3" />
+          <ErrorState message={INLINE_DIFF_ERROR_MESSAGE} className="m-3" />
         ) : checkpoint.files.length === 0 ? (
           <div className="flex h-full items-center justify-center px-6 text-[13px] text-secondary">
             No changed files were captured for this checkpoint.

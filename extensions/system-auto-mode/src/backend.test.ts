@@ -620,13 +620,19 @@ describe('system-goal-mode extension', () => {
   it('slash command action returns prompts that route through the goal tool', async () => {
     await expect(
       handleSlashGoal({ commandName: 'goal', argument: 'clear', text: '/goal clear', conversationId: 'c1', cwd: '/tmp', draft: false }),
-    ).resolves.toEqual({ prompt: 'Clear the current goal.' });
+    ).resolves.toEqual({
+      prompt: 'Call the goal tool with status "complete" to clear the current goal. Do not set or replace the goal objective.',
+    });
     await expect(
       handleSlashGoal({ commandName: 'goal', argument: 'pause', text: '/goal pause', conversationId: 'c1', cwd: '/tmp', draft: false }),
-    ).resolves.toEqual({ prompt: 'Pause the current goal.' });
+    ).resolves.toEqual({
+      prompt: 'Call the goal tool with status "pause" to pause the current goal. Do not set or replace the goal objective.',
+    });
     await expect(
       handleSlashGoal({ commandName: 'goal', argument: 'resume', text: '/goal resume', conversationId: 'c1', cwd: '/tmp', draft: false }),
-    ).resolves.toEqual({ prompt: 'Resume the current goal.' });
+    ).resolves.toEqual({
+      prompt: 'Call the goal tool with status "resume" to resume the paused goal. Do not set or replace the goal objective.',
+    });
     await expect(
       handleSlashGoal({
         commandName: 'goal',

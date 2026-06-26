@@ -321,6 +321,28 @@ describe('Layout workbench toggle', () => {
     expect(screen.getAllByLabelText('Close File Explorer')).toHaveLength(1);
   });
 
+  it('restores open workbench tabs after a reload-style remount', async () => {
+    setWorkbenchModeForCurrentSession();
+    window.localStorage.setItem(
+      'pa:workbench-tabs',
+      JSON.stringify({
+        tabs: [
+          { id: 'files', mode: 'files' },
+          { id: 'terminal-1', mode: 'terminal' },
+        ],
+        activeTabId: 'terminal-1',
+      }),
+    );
+
+    renderLayout('/conversations/conv-1');
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'File Explorer' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Terminal' })).toBeTruthy();
+    });
+    expect(screen.getByTitle('Terminal').className).toContain('ui-workbench-tab-active');
+  });
+
   it('publishes browser command context when the browser workbench tab is active', async () => {
     setWorkbenchModeForCurrentSession();
     renderLayout('/conversations/conv-1');

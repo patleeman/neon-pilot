@@ -29,6 +29,18 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 type CapabilityKind = 'extension' | 'instruction' | 'skill' | 'tool' | 'mcp-server' | 'prompt-template' | 'context';
 type RuntimeSectionId = 'system-prompt' | 'instructions' | 'skills' | 'tools' | 'mcp' | 'issues';
 
+const INTERNAL_ERROR_PATTERNS = [
+  /Local API route did not complete/i,
+  /\/api\//i,
+  /file:\/\//i,
+  /\bModule\./,
+  /localApi\.js/i,
+  /readonly-local-api-worker\.js/i,
+  /\bENOENT\b/,
+  /Cannot find module/i,
+  /Cannot read/i,
+];
+
 const RUNTIME_SECTIONS = [
   { id: 'system-prompt', label: 'System Prompt', summary: 'Generated template' },
   { id: 'instructions', label: 'Instructions', summary: 'Instruction files and layers' },
@@ -68,6 +80,13 @@ interface SystemPromptTemplateState {
   template: string;
 }
 
+async function invokePromptAssemblyAction(pa: ExtensionSurfaceProps['pa'], actionId: string, input?: unknown) {
+  if (typeof pa.extensions?.callAction === 'function') {
+    return pa.extensions.callAction('system-prompt-assembly', actionId, input);
+  }
+  return pa.extension.invoke(actionId, input);
+}
+
 export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   const [data, setData] = useState<AgentRuntimeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +105,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     error: string | null;
   };
   const [systemPromptTemplateDraft, setSystemPromptTemplateDraft] = useState('');
+  const [systemPromptTemplateSaved, setSystemPromptTemplateSaved] = useState<SystemPromptTemplateState | null>(null);
   const [savingSystemPromptTemplate, setSavingSystemPromptTemplate] = useState(false);
   const [systemPromptTemplateSaveError, setSystemPromptTemplateSaveError] = useState<string | null>(null);
 
@@ -93,12 +113,12 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     const requestId = (loadRequestIdRef.current += 1);
     setError(null);
     try {
-      const result = await pa.extension.invoke('inspectAgentRuntime', { cwd: context.cwd ?? undefined });
+      const result = await invokePromptAssemblyAction(pa, 'inspectAgentRuntime', { cwd: context.cwd ?? undefined });
       if (loadRequestIdRef.current !== requestId) return;
       setData(result as AgentRuntimeResult);
     } catch (err) {
       if (loadRequestIdRef.current !== requestId) return;
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatPromptAssemblyError(err, 'Could not load Prompt Assembly. Refresh this page or reopen Settings.'));
     }
   }, [context.cwd, pa]);
 
@@ -106,10 +126,12 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     void load();
   }, [load]);
 
-  const systemPromptTemplateDirty = systemPromptTemplateState ? systemPromptTemplateDraft !== systemPromptTemplateState.template : false;
+  const systemPromptTemplateSavedTemplate = systemPromptTemplateSaved?.template ?? systemPromptTemplateState?.template ?? '';
+  const systemPromptTemplateDirty = systemPromptTemplateState ? systemPromptTemplateDraft !== systemPromptTemplateSavedTemplate : false;
 
   useEffect(() => {
     if (systemPromptTemplateState) {
+      setSystemPromptTemplateSaved(systemPromptTemplateState);
       setSystemPromptTemplateDraft(systemPromptTemplateState.template);
     }
   }, [systemPromptTemplateState?.configFile, systemPromptTemplateState?.template]);
@@ -124,9 +146,12 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
 
     try {
       const saved = (await api.updateSystemPromptTemplate(systemPromptTemplateDraft)) as SystemPromptTemplateState;
+      setSystemPromptTemplateSaved(saved);
       setSystemPromptTemplateDraft(saved.template);
     } catch (err) {
-      setSystemPromptTemplateSaveError(err instanceof Error ? err.message : String(err));
+      setSystemPromptTemplateSaveError(
+        formatPromptAssemblyError(err, 'Could not save the instruction template. Revert edits or try again.'),
+      );
     } finally {
       setSavingSystemPromptTemplate(false);
     }
@@ -150,10 +175,10 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     setBusyId(row.id);
     setError(null);
     try {
-      await pa.extension.invoke('updateRuntimeCapability', { id: row.id, kind: row.kind, enabled });
+      await invokePromptAssemblyAction(pa, 'updateRuntimeCapability', { id: row.id, kind: row.kind, enabled });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatPromptAssemblyError(err, 'Could not update this capability. Refresh Prompt Assembly and try again.'));
     } finally {
       setBusyId(null);
     }
@@ -312,12 +337,17 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
             <Notice>Loading system prompt template...</Notice>
           ) : systemPromptTemplateError && !systemPromptTemplateState ? (
             <Notice tone="danger" title="Failed to load system prompt template">
-              {systemPromptTemplateError}
+              {formatPromptAssemblyError(
+                systemPromptTemplateError,
+                'Could not load the instruction template. Refresh Prompt Assembly or reopen Settings.',
+              )}
             </Notice>
           ) : systemPromptTemplateState ? (
             <div className="space-y-3">
-              <p className="break-all text-[12px] text-dim">
-                Configured in <span className="font-mono text-[11px]">{systemPromptTemplateState.configFile}</span>.
+              <p className="text-[12px] text-dim">
+                Configured in{' '}
+                <span className="font-mono text-[11px]">{formatPromptAssemblyDisplayPath(systemPromptTemplateState.configFile, data)}</span>
+                .
               </p>
               <Textarea
                 id="agent-runtime-system-prompt-template"
@@ -338,7 +368,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
                 </span>
                 <ToolbarButton
                   onClick={() => {
-                    setSystemPromptTemplateDraft(systemPromptTemplateState.template);
+                    setSystemPromptTemplateDraft(systemPromptTemplateSavedTemplate);
                     setSystemPromptTemplateSaveError(null);
                   }}
                   disabled={savingSystemPromptTemplate || !systemPromptTemplateDirty}
@@ -357,26 +387,28 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
           description={
             <>
               {formatCount(visibleAgentCapabilities.length, 'capability')} shown: instructions, skills, tools, MCP, templates, and context.
-              <span className="block text-[12px] text-dim">Working directory: {data.cwd ?? data.repoRoot}</span>
+              <span className="block text-[12px] text-dim">
+                Working directory: {formatPromptAssemblyDisplayPath(data.cwd ?? data.repoRoot, data)}
+              </span>
             </>
-          }
-          actions={
-            <SearchInput
-              className="w-72"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search agent context…"
-            />
           }
           className="border-t border-border-subtle pt-10"
           titleClassName="text-[22px]"
-        />
+        >
+          <SearchInput
+            className="w-full max-w-md"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search agent context…"
+          />
+        </AppPageSection>
 
         <CapabilitySection
           id="instructions"
           title="Instructions"
           description="Instruction files, prompt templates, and context blocks assembled before the agent starts."
           rows={instructionCapabilities}
+          runtime={data}
           busyId={busyId}
           onToggle={toggleCapability}
           emptyTitle="No instructions found"
@@ -386,6 +418,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
           title="Skills"
           description="Agent-selectable procedures that add local workflow instructions and supporting assets."
           rows={skillCapabilities}
+          runtime={data}
           busyId={busyId}
           onToggle={toggleCapability}
           emptyTitle="No skills found"
@@ -395,6 +428,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
           title="Tools"
           description="Tools the agent can call in the current workspace."
           rows={toolCapabilities}
+          runtime={data}
           busyId={busyId}
           onToggle={toggleCapability}
           emptyTitle="No tools found"
@@ -404,6 +438,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
           title="MCP"
           description="Model Context Protocol servers available to the agent."
           rows={mcpCapabilities}
+          runtime={data}
           busyId={busyId}
           onToggle={toggleCapability}
           emptyTitle="No MCP servers found"
@@ -413,6 +448,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
           title="Issues"
           description="Problems, invalid registrations, and unavailable entries that need attention."
           rows={issueCapabilities}
+          runtime={data}
           busyId={busyId}
           onToggle={toggleCapability}
           emptyTitle="No issues found"
@@ -427,6 +463,7 @@ function CapabilitySection({
   title,
   description,
   rows,
+  runtime,
   busyId,
   onToggle,
   emptyTitle,
@@ -435,6 +472,7 @@ function CapabilitySection({
   title: string;
   description: string;
   rows: RuntimeCapability[];
+  runtime: AgentRuntimeResult;
   busyId: string | null;
   onToggle: (row: RuntimeCapability, enabled: boolean) => Promise<void>;
   emptyTitle: string;
@@ -448,7 +486,7 @@ function CapabilitySection({
       className="border-t border-border-subtle pt-10"
     >
       {rows.length ? (
-        <CapabilityTable rows={rows} busyId={busyId} onToggle={onToggle} />
+        <CapabilityTable rows={rows} runtime={runtime} busyId={busyId} onToggle={onToggle} />
       ) : (
         <EmptyState title={emptyTitle} body="Try a broader search query." />
       )}
@@ -458,56 +496,64 @@ function CapabilitySection({
 
 function CapabilityTable({
   rows,
+  runtime,
   busyId,
   onToggle,
 }: {
   rows: RuntimeCapability[];
+  runtime: AgentRuntimeResult;
   busyId: string | null;
   onToggle: (row: RuntimeCapability, enabled: boolean) => Promise<void>;
 }) {
   return (
-    <DataTable>
+    <DataTable
+      tableClassName="table-fixed"
+      columns={
+        <colgroup>
+          <col className="w-[48%]" />
+          <col className="w-[24%]" />
+          <col className="w-[28%]" />
+        </colgroup>
+      }
+    >
       <DataTableHead>
         <DataTableRow>
           <DataTableHeaderCell className="pr-4">Name</DataTableHeaderCell>
           <DataTableHeaderCell>Contributes</DataTableHeaderCell>
           <DataTableHeaderCell>Source</DataTableHeaderCell>
-          <DataTableHeaderCell className="text-right">Enabled</DataTableHeaderCell>
         </DataTableRow>
       </DataTableHead>
       <DataTableBody>
         {rows.map((row) => (
           <DataTableRow key={`${row.kind}:${row.id}`} className="group">
             <DataTableCell className="min-w-0 pr-4">
-              <div className="min-w-0">
-                <div className="flex min-w-0 items-center gap-2">
-                  <div className="truncate text-[14px] font-semibold text-primary">{row.title}</div>
-                  <MetaLabel tone="muted">{labelForKind(row.kind)}</MetaLabel>
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="truncate text-[14px] font-semibold text-primary">{row.title}</div>
+                    <MetaLabel tone="muted">{labelForKind(row.kind)}</MetaLabel>
+                  </div>
+                  <CardBody as="div" className="mt-0.5 max-w-[44rem] whitespace-normal break-words">
+                    {row.description || fallbackDescription(row)}
+                  </CardBody>
+                  {row.diagnostics?.length ? <DiagnosticsSummary diagnostics={row.diagnostics} /> : null}
                 </div>
-                <CardBody as="div" className="mt-0.5 max-w-[44rem] whitespace-normal break-words">
-                  {row.description || fallbackDescription(row)}
-                </CardBody>
-                {row.diagnostics?.length ? <DiagnosticsSummary diagnostics={row.diagnostics} /> : null}
+                <div className="flex shrink-0 items-center gap-2 pt-0.5">
+                  {busyId === row.id ? <span className="text-[11px] text-dim">Working…</span> : null}
+                  {canToggle(row) ? (
+                    <StatusToggle row={row} busy={busyId === row.id} onToggle={() => void onToggle(row, !row.enabled)} />
+                  ) : (
+                    <span className={statusClass(row)}>{row.status}</span>
+                  )}
+                </div>
               </div>
             </DataTableCell>
             <DataTableCell>
               <ContributionSummary row={row} />
             </DataTableCell>
-            <DataTableCell className="max-w-[18rem] text-[12px] leading-5 text-secondary">
+            <DataTableCell className="min-w-0 text-[12px] leading-5 text-secondary">
               <div className="truncate">{formatParts(row.ownerExtensionId, row.scope, row.source?.kind)}</div>
-              <div className="truncate text-dim" title={row.source?.label}>
-                {row.source?.label ?? row.id}
-              </div>
-            </DataTableCell>
-            <DataTableCell className="pl-3 text-right">
-              <div className="flex items-center justify-end gap-3">
-                {busyId === row.id ? <span className="text-[11px] text-dim">Working…</span> : null}
-                {canToggle(row) ? (
-                  <StatusToggle row={row} busy={busyId === row.id} onToggle={() => void onToggle(row, !row.enabled)} />
-                ) : (
-                  <span className={statusClass(row)}>{row.status}</span>
-                )}
-              </div>
+              <div className="truncate text-dim">{formatPromptAssemblyDisplayPath(row.source?.label ?? row.id, runtime)}</div>
             </DataTableCell>
           </DataTableRow>
         ))}
@@ -532,9 +578,9 @@ function DiagnosticsSummary({ diagnostics }: { diagnostics: unknown[] }) {
 }
 
 function formatDiagnostic(diagnostic: unknown): string {
-  if (typeof diagnostic === 'string') return diagnostic;
+  if (typeof diagnostic === 'string') return sanitizePromptAssemblyDisplayText(diagnostic);
   const record = asRecord(diagnostic);
-  if (typeof record.message === 'string') return record.message;
+  if (typeof record.message === 'string') return sanitizePromptAssemblyDisplayText(record.message);
   if (typeof record.code === 'string') return record.code;
   return '';
 }
@@ -621,7 +667,10 @@ function statusClass(row: RuntimeCapability): string {
 
 function fallbackDescription(row: RuntimeCapability): string {
   if (row.kind === 'instruction') return formatParts(row.scope, row.metadata?.risk) || 'Instruction layer';
-  if (row.kind === 'mcp-server') return formatParts(row.metadata?.transport, row.metadata?.url ?? row.metadata?.command) || 'MCP server';
+  if (row.kind === 'mcp-server')
+    return (
+      sanitizePromptAssemblyDisplayText(formatParts(row.metadata?.transport, row.metadata?.url ?? row.metadata?.command)) || 'MCP server'
+    );
   if (row.kind === 'tool') return String(row.metadata?.name ?? 'Agent tool');
   return row.id;
 }
@@ -639,6 +688,38 @@ function formatParts(...parts: Array<unknown>): string {
   return parts.filter(Boolean).join(' · ');
 }
 
+function formatPromptAssemblyDisplayPath(value: unknown, runtime?: Pick<AgentRuntimeResult, 'cwd' | 'repoRoot'>): string {
+  const text = String(value ?? '').trim();
+  if (!text) return '';
+
+  const roots = [runtime?.cwd, runtime?.repoRoot]
+    .map((root) => (typeof root === 'string' ? root.trim().replace(/\/+$/, '') : ''))
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+
+  for (const root of roots) {
+    if (text === root) return '.';
+    if (text.startsWith(`${root}/`)) return `./${text.slice(root.length + 1)}`;
+  }
+
+  return sanitizePromptAssemblyDisplayText(text);
+}
+
+function sanitizePromptAssemblyDisplayText(value: string): string {
+  return value
+    .replace(/\/Users\/[^/\s]+\/\.config\/mcp\/mcp_servers\.json/g, 'MCP config')
+    .replace(/\/Users\/[^/\s]+\/\.codex\/skills\/([^/\s]+)/g, 'skills/$1')
+    .replace(/\/tmp\/[^\s]*\/config\/config\.json/g, 'config.json')
+    .replace(/\/Users\/[^/\s]+\/workingdir\/([^/\s]+)\/([^\s,.)]+)/g, './$2');
+}
+
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function formatPromptAssemblyError(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  if (!message) return fallback;
+  if (INTERNAL_ERROR_PATTERNS.some((pattern) => pattern.test(message))) return fallback;
+  return message;
 }

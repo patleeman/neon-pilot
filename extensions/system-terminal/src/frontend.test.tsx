@@ -96,8 +96,15 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
 }));
 
 class FakeResizeObserver {
+  static instances: FakeResizeObserver[] = [];
+  constructor(private readonly callback: ResizeObserverCallback) {
+    FakeResizeObserver.instances.push(this);
+  }
   observe = vi.fn();
   disconnect = vi.fn();
+  trigger(): void {
+    this.callback([], this as unknown as ResizeObserver);
+  }
 }
 
 class FakeWebSocket extends EventTarget {
@@ -146,6 +153,7 @@ describe('TerminalPanel', () => {
     vi.clearAllMocks();
     terminalHarness.FakeTerminal.instances.length = 0;
     FakeWebSocket.instances.length = 0;
+    FakeResizeObserver.instances.length = 0;
     vi.stubGlobal('WebSocket', FakeWebSocket);
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
       cb(0);
@@ -181,10 +189,12 @@ describe('TerminalPanel', () => {
     await act(async () => {
       root?.render(
         <TerminalPanel
-          pa={{
-            extension: { invoke },
-            workbench: { closeTab },
-          } as never}
+          pa={
+            {
+              extension: { invoke },
+              workbench: { closeTab },
+            } as never
+          }
           context={{ cwd: '/repo', instanceId: 'tab-1' } as never}
         />,
       );
@@ -240,6 +250,89 @@ describe('TerminalPanel', () => {
     expect(closeTab).not.toHaveBeenCalled();
   });
 
+  it('does not render internal startup errors when the workspace is unavailable', async () => {
+    const invoke = vi.fn(async (action: string) => {
+      if (action === 'terminalCreate') {
+        throw new Error(
+          [
+            'Error: Local API route did not complete for GET /api/extensions/action at Module.ep',
+            '(file:///Users/patrick/workingdir/neon-pilot/packages/desktop/server/dist/app/localApi.js:132:20)',
+          ].join('\n'),
+        );
+      }
+      return { ok: true };
+    });
+
+    const { TerminalPanel } = await import('./frontend.js');
+
+    await act(async () => {
+      root?.render(
+        <TerminalPanel
+          pa={
+            {
+              extension: { invoke },
+              workbench: { closeTab: vi.fn() },
+            } as never
+          }
+          context={{ cwd: '/missing-workspace', instanceId: 'tab-1' } as never}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    const terminal = terminalHarness.FakeTerminal.instances[0];
+    await vi.waitFor(() => {
+      expect(terminal?.writeln).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Terminal failed to start: Terminal could not start in this workspace. Choose an existing folder or reopen the conversation.',
+        ),
+      );
+    });
+
+    const rendered = terminal?.writeln.mock.calls.map(([value]) => value).join('\n') ?? '';
+    expect(rendered).not.toContain('/api/extensions/action');
+    expect(rendered).not.toContain('localApi.js');
+    expect(rendered).not.toContain('file://');
+    expect(rendered).not.toContain('Module.ep');
+  });
+
+  it('strips extension action wrappers from startup errors', async () => {
+    const invoke = vi.fn(async (action: string) => {
+      if (action === 'terminalCreate') {
+        throw new Error('Extension "system-terminal" action "terminalCreate" failed: Terminal workspace folder is unavailable.');
+      }
+      return { ok: true };
+    });
+
+    const { TerminalPanel } = await import('./frontend.js');
+
+    await act(async () => {
+      root?.render(
+        <TerminalPanel
+          pa={
+            {
+              extension: { invoke },
+              workbench: { closeTab: vi.fn() },
+            } as never
+          }
+          context={{ cwd: '/missing-workspace', instanceId: 'tab-1' } as never}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    const terminal = terminalHarness.FakeTerminal.instances[0];
+    await vi.waitFor(() => {
+      expect(terminal?.writeln).toHaveBeenCalledWith(
+        expect.stringContaining('Terminal failed to start: Terminal workspace folder is unavailable.'),
+      );
+    });
+
+    const rendered = terminal?.writeln.mock.calls.map(([value]) => value).join('\n') ?? '';
+    expect(rendered).not.toContain('system-terminal');
+    expect(rendered).not.toContain('terminalCreate');
+  });
+
   it('skips split fallback replay chunks that were already rendered over realtime', async () => {
     const invoke = vi.fn(async (action: string) => {
       if (action === 'terminalCreate') {
@@ -253,10 +346,12 @@ describe('TerminalPanel', () => {
     await act(async () => {
       root?.render(
         <TerminalPanel
-          pa={{
-            extension: { invoke },
-            workbench: { closeTab: vi.fn() },
-          } as never}
+          pa={
+            {
+              extension: { invoke },
+              workbench: { closeTab: vi.fn() },
+            } as never
+          }
           context={{ cwd: '/repo', instanceId: 'tab-1' } as never}
         />,
       );
@@ -310,10 +405,12 @@ describe('TerminalPanel', () => {
     await act(async () => {
       root?.render(
         <TerminalPanel
-          pa={{
-            extension: { invoke },
-            workbench: { closeTab: vi.fn() },
-          } as never}
+          pa={
+            {
+              extension: { invoke },
+              workbench: { closeTab: vi.fn() },
+            } as never
+          }
           context={{ cwd: '/repo', instanceId: 'tab-1' } as never}
         />,
       );
@@ -369,10 +466,12 @@ describe('TerminalPanel', () => {
     await act(async () => {
       root?.render(
         <TerminalPanel
-          pa={{
-            extension: { invoke },
-            workbench: { closeTab: vi.fn() },
-          } as never}
+          pa={
+            {
+              extension: { invoke },
+              workbench: { closeTab: vi.fn() },
+            } as never
+          }
           context={{ cwd: '/repo', instanceId: 'tab-1' } as never}
         />,
       );
@@ -408,10 +507,12 @@ describe('TerminalPanel', () => {
     await act(async () => {
       root?.render(
         <TerminalPanel
-          pa={{
-            extension: { invoke },
-            workbench: { closeTab: vi.fn() },
-          } as never}
+          pa={
+            {
+              extension: { invoke },
+              workbench: { closeTab: vi.fn() },
+            } as never
+          }
           context={{ cwd: '/repo', instanceId: 'tab-1' } as never}
         />,
       );
@@ -432,5 +533,65 @@ describe('TerminalPanel', () => {
     });
 
     expect(terminal?.write).toHaveBeenCalledWith('l');
+  });
+
+  it('sends a startup resize once when realtime attaches after the panel has measured', async () => {
+    const invoke = vi.fn(async (action: string) => {
+      if (action === 'terminalCreate') {
+        return { id: 'term-1', pid: 123, usingPty: true, realtimeUrl: 'ws://127.0.0.1:4321/api/realtime' };
+      }
+      return { ok: true };
+    });
+
+    const { TerminalPanel } = await import('./frontend.js');
+
+    await act(async () => {
+      root?.render(
+        <TerminalPanel
+          pa={
+            {
+              extension: { invoke },
+              workbench: { closeTab: vi.fn() },
+            } as never
+          }
+          context={{ cwd: '/repo', instanceId: 'tab-1' } as never}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    const socket = FakeWebSocket.instances[0];
+    expect(socket).toBeTruthy();
+
+    await act(async () => {
+      FakeResizeObserver.instances[0]?.trigger();
+      await Promise.resolve();
+    });
+
+    expect(invoke).not.toHaveBeenCalledWith('terminalResize', expect.anything());
+
+    await act(async () => {
+      socket?.open();
+      await Promise.resolve();
+    });
+
+    const attachRequest = JSON.parse(socket?.sent[0] ?? '{}') as { id?: string };
+
+    await act(async () => {
+      socket?.receive({
+        type: 'terminal_attached',
+        id: attachRequest.id,
+        terminalId: 'term-1',
+        replay: '',
+        exited: false,
+        exitCode: null,
+      });
+      await Promise.resolve();
+    });
+
+    const resizeMessages = socket?.sent
+      .map((payload) => JSON.parse(payload) as { type?: string; cols?: number; rows?: number })
+      .filter((message) => message.type === 'terminal_resize');
+    expect(resizeMessages).toEqual([{ type: 'terminal_resize', terminalId: 'term-1', cols: 80, rows: 24 }]);
   });
 });

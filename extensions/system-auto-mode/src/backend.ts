@@ -492,13 +492,13 @@ export async function handleSlashGoal(input: SlashGoalInput): Promise<SlashGoalR
 
   const lower = arg.toLowerCase();
   if (lower === 'pause' || lower === 'p') {
-    return { prompt: 'Pause the current goal.' };
+    return { prompt: 'Call the goal tool with status "pause" to pause the current goal. Do not set or replace the goal objective.' };
   }
   if (lower === 'resume' || lower === 'r') {
-    return { prompt: 'Resume the current goal.' };
+    return { prompt: 'Call the goal tool with status "resume" to resume the paused goal. Do not set or replace the goal objective.' };
   }
   if (lower === 'clear' || lower === 'c') {
-    return { prompt: 'Clear the current goal.' };
+    return { prompt: 'Call the goal tool with status "complete" to clear the current goal. Do not set or replace the goal objective.' };
   }
 
   // Set a new goal

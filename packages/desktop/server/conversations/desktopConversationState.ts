@@ -1,5 +1,5 @@
 import { listConversationMetadataNamespaces } from '../extensions/extensionConversationMetadata.js';
-import { readSessionDetailForRoute } from './conversationService.js';
+import { readConversationGoalStateByFile, readSessionDetailForRoute, type ThreadGoal } from './conversationService.js';
 import { inlineConversationSessionDetailAssetsCapability } from './conversationSessionAssetCapability.js';
 import { readConversationSessionMetaCapability } from './conversationSessionCapability.js';
 import type {
@@ -11,6 +11,7 @@ import type {
   SseEvent,
 } from './liveSessions.js';
 import { readLiveSessionStateSnapshot } from './liveSessions.js';
+import { presentToolUseOutput } from './toolResultPresentation.js';
 
 export interface DesktopConversationMessageBlock {
   type: 'user' | 'text' | 'context' | 'summary' | 'thinking' | 'tool_use' | 'image' | 'error';
@@ -64,7 +65,7 @@ export interface DesktopConversationStreamState {
   pendingQueue: { steering: QueuedPromptPreview[]; followUp: QueuedPromptPreview[] };
   parallelJobs: ParallelPromptPreview[];
   presence: LiveSessionPresenceState;
-  goalState: import('./sessions.js').ThreadGoal | null;
+  goalState: ThreadGoal | null;
   systemPrompt: string | null;
   toolDefinitions: Array<{ name: string; description: string; parameters: Record<string, unknown> }>;
   cwdChange: { newConversationId: string; cwd: string; autoContinued: boolean } | null;
@@ -132,17 +133,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function normalizeGoalStatus(value: unknown): import('./sessions.js').ThreadGoal['status'] {
+function normalizeGoalStatus(value: unknown): ThreadGoal['status'] {
   if (typeof value === 'string' && ['active', 'paused', 'complete'].includes(value)) {
-    return value as import('./sessions.js').ThreadGoal['status'];
+    return value as ThreadGoal['status'];
   }
   return 'complete';
 }
 
-function readGoalStateFromToolDetails(
-  toolName: string | undefined,
-  details: unknown,
-): import('./sessions.js').ThreadGoal | null | undefined {
+function readGoalStateFromToolDetails(toolName: string | undefined, details: unknown): ThreadGoal | null | undefined {
   if (!toolName || !GOAL_TOOL_NAMES.has(toolName) || !isRecord(details) || !isRecord(details.state)) {
     return undefined;
   }
@@ -240,6 +238,7 @@ function displayBlockToMessageBlock(block: {
   input?: Record<string, unknown>;
   output?: string;
   durationMs?: number;
+  status?: 'running' | 'ok' | 'error';
   toolCallId?: string;
   details?: unknown;
   outputDeferred?: boolean;
@@ -277,19 +276,22 @@ function displayBlockToMessageBlock(block: {
         detail: block.detail,
         ts: block.ts,
       };
-    case 'tool_use':
+    case 'tool_use': {
+      const presented = presentToolUseOutput({ output: block.output ?? '', status: block.status });
       return {
         type: 'tool_use',
         id: block.id,
         tool: block.tool ?? 'unknown',
         input: block.input,
-        output: block.output,
+        output: presented.output,
         durationMs: block.durationMs,
+        status: presented.status,
         details: block.details,
         outputDeferred: block.outputDeferred,
         ts: block.ts,
         _toolCallId: block.toolCallId,
       };
+    }
     case 'image':
       return {
         type: 'image',
@@ -352,7 +354,7 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
         isStreaming: 'isStreaming' in event ? event.isStreaming === true : prev.isStreaming,
         isCompacting: false,
         error: null,
-        goalState: 'goalState' in event ? (event.goalState as import('./sessions.js').ThreadGoal | null) : prev.goalState,
+        goalState: 'goalState' in event ? (event.goalState as ThreadGoal | null) : prev.goalState,
         systemPrompt: 'systemPrompt' in event ? (event.systemPrompt ?? null) : prev.systemPrompt,
         toolDefinitions: 'toolDefinitions' in event ? (event.toolDefinitions ?? []) : prev.toolDefinitions,
       };
@@ -693,6 +695,7 @@ export async function readDesktopConversationState(input: {
   const detail = inlineConversationSessionDetailAssetsCapability(conversationId, sessionRead.detail);
   const assetInlineAtMs = performance.now();
   const storedStream = createEmptyDesktopConversationStreamState();
+  const storedGoalState = readConversationGoalStateByFile(sessionMeta?.file);
   return {
     conversationId,
     sessionDetail: detail,
@@ -706,6 +709,7 @@ export async function readDesktopConversationState(input: {
       hasSnapshot: true,
       title: typeof detail.meta === 'object' && detail.meta && 'title' in detail.meta ? String(detail.meta.title ?? '') || null : null,
       contextUsage: detail.contextUsage,
+      goalState: storedGoalState,
     },
     perf: {
       sessionMetaMs: Math.round(sessionMetaAtMs - startedAtMs),

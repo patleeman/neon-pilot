@@ -111,13 +111,20 @@ export function filterMentionItems(items: MentionItem[], query: string, options:
   const normalizedQuery = query.replace(/^@/, '').trim().toLowerCase();
   const filtered = !normalizedQuery
     ? items
-    : items.filter((item) => {
-        const haystacks = [item.id, item.label, item.title, item.summary]
-          .filter((value): value is string => Boolean(value))
-          .map((value) => value.toLowerCase());
+    : items
+        .filter((item) => {
+          const haystacks = [item.id, item.label, item.title, item.summary]
+            .filter((value): value is string => Boolean(value))
+            .map((value) => value.toLowerCase());
 
-        return haystacks.some((value) => value.includes(normalizedQuery));
-      });
+          return haystacks.some((value) => value.includes(normalizedQuery));
+        })
+        .sort((left, right) => {
+          const leftScore = scoreMentionMatch(left, normalizedQuery);
+          const rightScore = scoreMentionMatch(right, normalizedQuery);
+
+          return leftScore - rightScore || compareMentionItems(left, right);
+        });
 
   const limit = options.limit;
   if (typeof limit === 'number' && Number.isSafeInteger(limit) && limit >= 0) {
@@ -125,6 +132,35 @@ export function filterMentionItems(items: MentionItem[], query: string, options:
   }
 
   return filtered;
+}
+
+function scoreMentionMatch(item: MentionItem, normalizedQuery: string): number {
+  const haystacks = [item.id.replace(/^@/, ''), item.label, item.title, item.summary]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => value.toLowerCase());
+  const identityLength = Math.min(item.id.replace(/^@/, '').length, item.label.length);
+
+  const shortestMatchingLength = (predicate: (value: string) => boolean): number | null => {
+    const lengths = haystacks.filter(predicate).map((value) => value.length);
+    return lengths.length > 0 ? Math.min(...lengths) : null;
+  };
+
+  const exactLength = shortestMatchingLength((value) => value === normalizedQuery);
+  if (exactLength !== null) {
+    return exactLength * 100 + identityLength;
+  }
+
+  const prefixLength = shortestMatchingLength((value) => value.startsWith(normalizedQuery));
+  if (prefixLength !== null) {
+    return 10_000 + prefixLength * 100 + identityLength;
+  }
+
+  const containsLength = shortestMatchingLength((value) => value.includes(normalizedQuery));
+  if (containsLength !== null) {
+    return 20_000 + containsLength * 100 + identityLength;
+  }
+
+  return 30_000;
 }
 
 export function resolveMentionItems(text: string, items: MentionItem[]): MentionItem[] {

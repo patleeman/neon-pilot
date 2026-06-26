@@ -1,6 +1,7 @@
 import { type ComponentProps, useRef, useState } from 'react';
 
 import type { ConversationContextUsageTokensPresentation } from '../../conversation/conversationComposerPresentation';
+import { formatWorkspacePathName } from '../../conversation/conversationCwdPresentation';
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import { StatusBarItemHost } from '../../extensions/StatusBarItemHost';
 import { type ExtensionStatusBarItemRegistration, useExtensionRegistry } from '../../extensions/useExtensionRegistry';
@@ -99,7 +100,7 @@ export function ConversationComposerMeta({
                 <option value="">Chat</option>
                 {availableDraftWorkspacePaths.map((workspacePath) => (
                   <option key={workspacePath} value={workspacePath}>
-                    {workspacePath}
+                    {formatWorkspacePathName(workspacePath) || workspacePath}
                   </option>
                 ))}
               </Select>
@@ -153,10 +154,11 @@ export function ConversationComposerMeta({
                 className="h-7 w-full min-w-0 truncate py-0 pl-2 pr-6 text-[11px] font-mono text-primary"
                 disabled={conversationCwdBusy || conversationCwdPickBusy || availableConversationWorkspacePaths.length === 0}
               >
+                {neutralChatCwd ? <option value="">Chat</option> : null}
                 {availableConversationWorkspacePaths.length === 0 ? <option value="">Choose a working directory</option> : null}
                 {availableConversationWorkspacePaths.map((workspacePath) => (
                   <option key={workspacePath} value={workspacePath}>
-                    {workspacePath}
+                    {formatWorkspacePathName(workspacePath) || workspacePath}
                   </option>
                 ))}
               </Select>
@@ -198,7 +200,7 @@ export function ConversationComposerMeta({
             onClick={onBeginConversationCwdEdit}
             compact
             className="max-w-full flex-1 gap-1.5 px-1.5 py-1 text-secondary xl:w-[26rem] xl:flex-none"
-            title={neutralChatCwd ? 'Chat - no workspace' : currentCwd ? `Working directory: ${currentCwd}` : 'Set working directory'}
+            title={neutralChatCwd ? 'Chat - no workspace' : currentCwd ? `Working directory: ${currentCwdLabel}` : 'Set working directory'}
           >
             {neutralChatCwd ? <ChatBubbleIcon className="shrink-0 text-dim/70" /> : <FolderIcon className="shrink-0 text-dim/70" />}
             <span className="ui-truncate-start min-w-0 flex-1 font-mono text-xs">{currentCwdLabel || 'Set working directory'}</span>

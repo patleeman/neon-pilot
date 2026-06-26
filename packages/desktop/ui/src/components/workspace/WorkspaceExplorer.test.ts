@@ -80,7 +80,14 @@ vi.mock('../shared/useFileTreeModel', () => ({
   }),
 }));
 
-import { buildWorkspaceTreePaths, formatWorkspaceEntrySize, WorkspaceExplorer, WorkspaceFileDocument } from './WorkspaceExplorer.js';
+import {
+  buildWorkspaceTreePaths,
+  clearWorkspacePathAfterEntryDelete,
+  formatWorkspaceEntrySize,
+  remapWorkspacePathAfterEntryMove,
+  WorkspaceExplorer,
+  WorkspaceFileDocument,
+} from './WorkspaceExplorer.js';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -157,6 +164,20 @@ describe('formatWorkspaceEntrySize', () => {
     expect(formatWorkspaceEntrySize(1.5)).toBe('');
   });
 
+  it('remaps active file paths after file tree rename and move operations', () => {
+    expect(remapWorkspacePathAfterEntryMove('src/a.ts', 'src/a.ts', 'src/b.ts')).toBe('src/b.ts');
+    expect(remapWorkspacePathAfterEntryMove('src/folder/a.ts', 'src/folder', 'moved/folder')).toBe('moved/folder/a.ts');
+    expect(remapWorkspacePathAfterEntryMove('src/folderish/a.ts', 'src/folder', 'moved/folder')).toBe('src/folderish/a.ts');
+    expect(remapWorkspacePathAfterEntryMove(null, 'src/a.ts', 'src/b.ts')).toBeNull();
+  });
+
+  it('clears active file paths after deleting the open file or its parent folder', () => {
+    expect(clearWorkspacePathAfterEntryDelete('src/a.ts', 'src/a.ts', 'file')).toBeNull();
+    expect(clearWorkspacePathAfterEntryDelete('src/folder/a.ts', 'src/folder', 'directory')).toBeNull();
+    expect(clearWorkspacePathAfterEntryDelete('src/folderish/a.ts', 'src/folder', 'directory')).toBe('src/folderish/a.ts');
+    expect(clearWorkspacePathAfterEntryDelete('src/folder/a.ts', 'src/folder', 'file')).toBe('src/folder/a.ts');
+  });
+
   it('adds a friendly synthetic child row for rail folder load failures', () => {
     const paths = buildWorkspaceTreePaths(
       [
@@ -226,6 +247,58 @@ describe('formatWorkspaceEntrySize', () => {
     expect(container.textContent).toContain('Workspace unavailable');
     expect(container.textContent).not.toContain('/api/workspace/tree');
     expect(container.textContent).not.toContain('localApi.js');
+  });
+
+  it('does not expose the absolute workspace root in the rail header title', async () => {
+    apiMocks.workspaceTree.mockResolvedValue({
+      root: '/private/tmp/neon-pilot-qa/workspaces/files',
+      rootName: 'files',
+      rootKind: 'directory',
+      branch: null,
+      entries: [],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(
+        React.createElement(WorkspaceExplorer, { cwd: '/private/tmp/neon-pilot-qa/workspaces/files', onDraftPrompt: () => undefined }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('Working directory');
+    });
+
+    expect(container.querySelector('[title="/private/tmp/neon-pilot-qa/workspaces/files"]')).toBeNull();
+    expect(container.querySelector('[title="Working directory"]')).not.toBeNull();
+  });
+
+  it('does not render internal filesystem process failures in the file explorer', async () => {
+    apiMocks.workspaceTree.mockRejectedValue(new Error('spawnSync pwd ENOENT'));
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(React.createElement(WorkspaceExplorer, { cwd: '/missing-repo', onDraftPrompt: () => undefined }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('Could not load the workspace file tree. Refresh the workspace or reopen the conversation.');
+    });
+    expect(container.textContent).toContain('Workspace unavailable');
+    expect(container.textContent).not.toContain('spawnSync');
+    expect(container.textContent).not.toContain('ENOENT');
   });
 
   it('ignores stale file loads after switching paths', async () => {
@@ -438,6 +511,55 @@ describe('formatWorkspaceEntrySize', () => {
       expect(current?.value).toBe('current b');
     });
     vi.useRealTimers();
+  });
+
+  it('does not render internal workspace file save failures in the workbench document', async () => {
+    vi.useFakeTimers();
+    try {
+      apiMocks.workspaceFile.mockResolvedValue(file('a.ts', 'original a'));
+      apiMocks.writeWorkspaceFile.mockRejectedValue(
+        new Error(
+          [
+            'Error: Local API route did not complete for PUT /api/workspace/file at Module.ep',
+            '(file:///Users/patrick/workingdir/neon-pilot/packages/desktop/server/dist/app/localApi.js:132:20)',
+          ].join('\n'),
+        ),
+      );
+
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = createRoot(container);
+      mountedRoots.push(root);
+
+      await act(async () => {
+        root.render(React.createElement(WorkspaceFileDocument, { cwd: '/repo', path: 'a.ts' }));
+        await Promise.resolve();
+      });
+
+      const textarea = await vi.waitFor(() => {
+        const field = container.querySelector('textarea') as HTMLTextAreaElement | null;
+        expect(field?.value).toBe('original a');
+        return field as HTMLTextAreaElement;
+      });
+
+      act(() => {
+        setTextAreaValue(textarea, 'edited a');
+      });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(800);
+      });
+
+      await vi.waitFor(() => {
+        expect(container.textContent).toContain('Could not save this file. Check the file and try again.');
+      });
+      expect(container.textContent).not.toContain('/api/workspace/file');
+      expect(container.textContent).not.toContain('localApi.js');
+      expect(container.textContent).not.toContain('file://');
+      expect(container.textContent).not.toContain('Module.ep');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('ignores stale workspace explorer file loads after selecting a different file', async () => {

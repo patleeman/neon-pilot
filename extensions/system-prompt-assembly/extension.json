@@ -43,6 +43,28 @@
       }
     ]
   },
-  "contributes": {},
-  "permissions": ["extensions:read", "extensions:write", "ui:invalidate"]
+  "contributes": {
+    "settingsComponent": {
+      "id": "prompt-assembly",
+      "component": "PromptAssemblySettingsPanel",
+      "sectionId": "settings-prompt-assembly",
+      "label": "Prompt Assembly",
+      "description": "Inspect instruction layers, skills, tools, MCP servers, templates, and runtime prompt diagnostics.",
+      "order": 45
+    },
+    "commands": [
+      {
+        "id": "open-prompt-assembly",
+        "title": "Open Prompt Assembly",
+        "category": "Settings",
+        "description": "Open prompt assembly diagnostics in Settings.",
+        "action": "app.navigate",
+        "args": {
+          "to": "/settings#settings-prompt-assembly"
+        },
+        "icon": "sparkle"
+      }
+    ]
+  },
+  "permissions": ["extensions:read", "extensions:write", "settings:read", "settings:write", "ui:invalidate", "mcp:write"]
 }

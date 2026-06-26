@@ -6,10 +6,17 @@ export function readRequiredConversationId(value: string): string {
   return conversationId;
 }
 
+export class DesktopConversationTitleValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DesktopConversationTitleValidationError';
+  }
+}
+
 export function readRequiredConversationName(value: string): string {
   const name = value.trim();
   if (!name) {
-    throw new Error('name required');
+    throw new DesktopConversationTitleValidationError('Conversation title is required.');
   }
   return name;
 }

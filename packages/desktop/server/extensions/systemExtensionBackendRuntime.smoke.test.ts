@@ -698,6 +698,13 @@ const smokes = {
     const result = await module.listSkills({}, ctx);
     assert(result.ok === true && Array.isArray(result.skills), 'skills list failed');
   },
+  async 'system-skill-search'() {
+    const state = await module.listState({}, ctx);
+    assert(state.ok === true && Array.isArray(state.sources), 'skill search listState failed');
+    assert(state.sources.some((source) => source.id === 'hermes-index'), 'skill search sources missing Hermes index');
+    const contributions = await module.listInstalledSkillContributions({}, ctx);
+    assert(Array.isArray(contributions.skills), 'skill search installed skill contributions failed');
+  },
   async 'system-scratchpad'() {
     const empty = await module.scratchpadTool({ action: 'get', conversationId: 'smoke-conversation' }, ctx);
     assert(

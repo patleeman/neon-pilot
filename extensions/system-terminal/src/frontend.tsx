@@ -1,6 +1,6 @@
 import '@xterm/xterm/css/xterm.css';
 
-import { buildDesktopWebSocketUrl, streamExtensionRouteSse, type ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
+import { buildDesktopWebSocketUrl, type ExtensionSurfaceProps, streamExtensionRouteSse } from '@neon-pilot/extensions/ui';
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import { useEffect, useRef } from 'react';
@@ -21,15 +21,34 @@ function readRgbVar(element: HTMLElement, name: string): string {
   return value ? `rgb(${value})` : '';
 }
 
-type TerminalRealtimeMessage =
-  | { type: 'output'; data: string }
-  | { type: 'exit'; code: number | null };
+type TerminalRealtimeMessage = { type: 'output'; data: string } | { type: 'exit'; code: number | null };
 
 type TerminalSocketMessage =
   | { type: 'connected' }
   | { type: 'terminal_attached'; id?: string; terminalId: string; replay: string; exited: boolean; exitCode: number | null }
   | { type: 'terminal'; terminalId: string; event: TerminalRealtimeMessage }
   | { type: 'error'; id?: string; message: string };
+
+function formatTerminalStartupError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error ?? '');
+  const extensionActionMatch = /^Extension "[^"]+" action "[^"]+" failed:\s*(.+)$/i.exec(raw.trim());
+  if (extensionActionMatch?.[1]) {
+    return formatTerminalStartupError(new Error(extensionActionMatch[1]));
+  }
+  const firstLine = raw.split('\n')[0]?.trim() ?? '';
+  if (
+    !firstLine ||
+    raw.includes('\n') ||
+    /ENOENT|ENOTDIR|EACCES|permission denied|no such file or directory|chdir|cwd/i.test(raw) ||
+    /Local API route did not complete/i.test(raw) ||
+    /\/api\//i.test(raw) ||
+    /file:\/\//i.test(raw) ||
+    /\s+at\s+\S+/i.test(raw)
+  ) {
+    return 'Terminal could not start in this workspace. Choose an existing folder or reopen the conversation.';
+  }
+  return firstLine;
+}
 
 export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -367,7 +386,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       })
       .catch((error) => {
         if (closed) return;
-        const message = error instanceof Error ? error.message : String(error);
+        const message = formatTerminalStartupError(error);
         xterm.writeln(`\r\n\x1b[91mTerminal failed to start: ${message}\x1b[0m`);
       });
 
@@ -389,6 +408,8 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
             pendingResize = { cols: dims.cols, rows: dims.rows };
             if (sendTerminalSocketMessage({ type: 'terminal_resize', terminalId, cols: dims.cols, rows: dims.rows })) {
               pendingResize = null;
+            } else if (terminalSocket && !fallbackActive) {
+              // Realtime is connecting; send the latest size once attach completes.
             } else {
               pa.extension.invoke('terminalResize', { id: terminalId, cols: dims.cols, rows: dims.rows }).catch(() => {});
             }

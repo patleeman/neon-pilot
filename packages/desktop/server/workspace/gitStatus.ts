@@ -192,7 +192,7 @@ function normalizeGitStatusChange(code: string): GitStatusChangeKind | null {
     return 'untracked';
   }
 
-  if (code.includes('U')) {
+  if (code.includes('U') || code === 'AA' || code === 'DD') {
     return 'conflicted';
   }
 
@@ -239,8 +239,12 @@ export function parseGitStatusBranch(output: string): string | null {
   }
 
   const raw = branchLine.slice(3).trim();
-  if (!raw || raw === 'HEAD (no branch)') {
+  if (!raw) {
     return null;
+  }
+
+  if (raw === 'HEAD (no branch)') {
+    return 'detached HEAD';
   }
 
   if (raw.startsWith('No commits yet on ')) {

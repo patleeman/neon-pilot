@@ -37,6 +37,7 @@ export interface CreateRuntimeStateOptions {
 export interface RuntimeState {
   getRuntimeScope: () => string;
   materializeRuntimeResources: () => void;
+  refreshSkillRuntimeResources: () => void;
   buildLiveSessionExtensionFactories: () => ExtensionFactory[];
   buildLiveSessionResourceOptions: () => LiveSessionResourceOptions;
   buildLiveSessionResourceOptionsAsync: () => Promise<LiveSessionResourceOptions>;
@@ -45,6 +46,16 @@ export interface RuntimeState {
 
 const DEFAULT_RUNTIME_SCOPE = 'shared';
 const LIVE_SESSION_HOT_CACHE_TTL_MS = 15_000;
+const skillRuntimeResourceRefreshers = new Map<string, () => void>();
+
+function skillRuntimeResourceKey(input: { runtimeScope: string; agentDir: string }): string {
+  return `${input.runtimeScope}\n${input.agentDir}`;
+}
+
+export function refreshRegisteredSkillRuntimeResources(input: { runtimeScope?: string; runtimeDir: string }): void {
+  const key = skillRuntimeResourceKey({ runtimeScope: input.runtimeScope ?? DEFAULT_RUNTIME_SCOPE, agentDir: input.runtimeDir });
+  skillRuntimeResourceRefreshers.get(key)?.();
+}
 
 export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeState {
   const { repoRoot, agentDir, settingsFile, stateRoot, logger } = options;
@@ -171,6 +182,19 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     writeRuntimeMcpConfig(skills.skillPaths);
     watchRuntimeMcpConfig(skills.skillPaths);
   }
+
+  function refreshSkillRuntimeResources(): void {
+    liveSessionResourceOptionsCache = null;
+    liveSessionResourceOptionsPromiseCache = null;
+    const skills = buildSkillInjectionPlan({
+      runtimeScope,
+      repoRoot,
+    });
+    writeRuntimeMcpConfig(skills.skillPaths);
+    watchRuntimeMcpConfig(skills.skillPaths);
+  }
+
+  skillRuntimeResourceRefreshers.set(skillRuntimeResourceKey({ runtimeScope, agentDir }), refreshSkillRuntimeResources);
 
   setRuntimeAgentHookBuilders({
     buildLiveSessionResourceOptions,
@@ -504,6 +528,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   return {
     getRuntimeScope,
     materializeRuntimeResources,
+    refreshSkillRuntimeResources,
     buildLiveSessionExtensionFactories,
     buildLiveSessionResourceOptions,
     buildLiveSessionResourceOptionsAsync,

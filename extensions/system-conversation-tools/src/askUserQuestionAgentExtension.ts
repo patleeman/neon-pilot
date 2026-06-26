@@ -40,9 +40,22 @@ const AskUserQuestionPromptParams = {
 export const AskUserQuestionToolParams = {
   type: 'object',
   properties: {
+    question: {
+      type: 'string',
+      description: 'Single user-facing question label. Prefer questions[] for multi-question forms.',
+    },
     details: {
       type: 'string',
       description: 'Optional overall context for the prompt.',
+    },
+    options: {
+      type: 'array',
+      items: {
+        anyOf: [{ type: 'string', minLength: 1 }, AskUserQuestionOptionParams],
+      },
+      minItems: 1,
+      maxItems: ASK_USER_MAX_OPTIONS_PER_QUESTION,
+      description: 'Available answers for the single question form.',
     },
     questions: {
       type: 'array',
@@ -145,6 +158,12 @@ function normalizeOptions(value: unknown): AskUserQuestionOption[] {
   return options;
 }
 
+function assertQuestionOptionLimit(options: AskUserQuestionOption[], index: number): void {
+  if (options.length > ASK_USER_MAX_OPTIONS_PER_QUESTION) {
+    throw new Error(`questions[${index}] supports at most ${ASK_USER_MAX_OPTIONS_PER_QUESTION} options.`);
+  }
+}
+
 function dedupeQuestionIds(questions: AskUserQuestionPrompt[]): AskUserQuestionPrompt[] {
   const counts = new Map<string, number>();
 
@@ -179,6 +198,7 @@ function normalizeStructuredPrompt(value: unknown, index: number): AskUserQuesti
   if (options.length === 0) {
     throw new Error(`questions[${index}] requires at least one option.`);
   }
+  assertQuestionOptionLimit(options, index);
 
   const id = sanitizeQuestionId(readOptionalString(candidate.id) ?? `question-${index + 1}`);
   const details = readOptionalString(candidate.details);
@@ -193,7 +213,9 @@ function normalizeStructuredPrompt(value: unknown, index: number): AskUserQuesti
 }
 
 function normalizePayload(params: {
+  question?: unknown;
   details?: unknown;
+  options?: unknown;
   questions?: unknown;
 }): AskUserQuestionPayload {
   if (Array.isArray(params.questions) && params.questions.length > 0) {
@@ -205,6 +227,28 @@ function normalizePayload(params: {
     return {
       ...(details ? { details } : {}),
       questions,
+    };
+  }
+
+  const singleQuestionLabel = readOptionalString(params.question);
+  if (singleQuestionLabel) {
+    const options = normalizeOptions(params.options);
+    if (options.length === 0) {
+      throw new Error('options is required for question.');
+    }
+    assertQuestionOptionLimit(options, 0);
+    const details = readOptionalString(params.details);
+    return {
+      ...(details ? { details } : {}),
+      questions: [
+        {
+          id: 'question-1',
+          label: singleQuestionLabel,
+          ...(details ? { details } : {}),
+          style: 'radio',
+          options,
+        },
+      ],
     };
   }
 

@@ -6,7 +6,7 @@ describe('conversationCwdPresentation', () => {
   it('formats current cwd labels', () => {
     expect(formatConversationCwdLabel(null)).toBe('');
     expect(formatConversationCwdLabel(undefined)).toBe('');
-    expect(formatConversationCwdLabel('/Users/patrick/workingdir/personal-agent')).toContain('personal-agent');
+    expect(formatConversationCwdLabel('/Users/patrick/workingdir/personal-agent')).toBe('personal-agent');
     expect(formatConversationCwdLabel('/Users/patrick/.local/state/neon-pilot/neon-pilot-runtime/chat-workspaces/shared')).toBe('Chat');
   });
 

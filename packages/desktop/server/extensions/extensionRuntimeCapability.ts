@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { refreshRegisteredSkillRuntimeResources } from '../app/runtimeState.js';
 import { buildSkillInjectionPlanAsync } from '../skills/skillInventory.js';
 import { callServerModuleExport } from './backendApi/serverModuleResolver.js';
 
@@ -25,6 +26,7 @@ export async function refreshHostSkillMcpConfig(
     env,
     skillDirs: plan.skillPaths,
   });
+  refreshRegisteredSkillRuntimeResources({ runtimeScope, runtimeDir: input.runtimeDir });
   if (merged.bundledServerCount > 0) {
     process.env.MCP_CONFIG_PATH = outputPath;
     return { mcpConfigPath: outputPath };

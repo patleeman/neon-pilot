@@ -1,5 +1,5 @@
-import { type ExtensionSurfaceProps, WorkspaceExplorer, WorkspaceFileDocument } from '@neon-pilot/extensions/workbench-files';
 import { CenteredLoadingState, CenteredMessage } from '@neon-pilot/extensions/ui';
+import { type ExtensionSurfaceProps, WorkspaceExplorer, WorkspaceFileDocument } from '@neon-pilot/extensions/workbench-files';
 import { Suspense, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -34,6 +34,20 @@ export function WorkspaceFilesPanel({ context }: ExtensionSurfaceProps) {
     },
     [setSearchParams],
   );
+  const handleActiveFilePathChange = useCallback(
+    (path: string | null) => {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        if (path) {
+          next.set(WORKSPACE_FILE_PARAM, path);
+        } else {
+          next.delete(WORKSPACE_FILE_PARAM);
+        }
+        return next;
+      });
+    },
+    [setSearchParams],
+  );
   if (!context.cwd) {
     return (
       <CenteredMessage
@@ -61,6 +75,7 @@ export function WorkspaceFilesPanel({ context }: ExtensionSurfaceProps) {
         activeFilePath={activeFilePath}
         openFilesScope={context.conversationId}
         onOpenFile={handleOpenFile}
+        onActiveFilePathChange={handleActiveFilePathChange}
         onDraftPrompt={(prompt) => {
           window.dispatchEvent(new CustomEvent(WORKSPACE_DRAFT_PROMPT_EVENT, { detail: { prompt } }));
         }}

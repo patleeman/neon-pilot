@@ -140,6 +140,34 @@ describe('ExtensionModalHost modal bridge', () => {
     await waitFor(() => expect(screen.queryByText('Extension modal body')).toBeNull());
     expect(setExtensionCommandContext).toHaveBeenCalledWith('extensionModal.open', null);
   });
+
+  it('shows safe copy when an extension modal component cannot be loaded', async () => {
+    systemExtensionModules.set('test-extension', async () => ({
+      OtherModal: () => <div>Other modal body</div>,
+    }));
+    render(<ExtensionModalHost />);
+
+    const result = new Promise<unknown>((resolve, reject) => {
+      act(() => {
+        window.dispatchEvent(
+          new CustomEvent('neon-pilot-extension-modal', {
+            detail: {
+              extensionId: 'test-extension',
+              title: 'Test modal',
+              component: 'TestModal',
+              props: {},
+              resolve,
+              reject,
+            },
+          }),
+        );
+      });
+    });
+
+    expect(await screen.findByText('This extension dialog could not be loaded.')).not.toBeNull();
+    expect(document.body.textContent).not.toContain('TestModal');
+    await expect(result).resolves.toBeNull();
+  });
 });
 
 describe('resolveExtensionModalSizeClasses', () => {

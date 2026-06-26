@@ -1,7 +1,8 @@
+import './frontend.css';
+
 import { useEffect } from 'react';
 
 import { SettingsPage, SettingsSidebar } from './SettingsPage';
-import './frontend.css';
 
 type SettingsSectionId =
   | 'settings-appearance'
@@ -9,6 +10,7 @@ type SettingsSectionId =
   | 'settings-workspace'
   | 'settings-commands'
   | 'settings-security'
+  | 'settings-extensions'
   | 'settings-providers'
   | 'settings-desktop';
 
@@ -24,6 +26,22 @@ export { SettingsPage, SettingsSidebar };
 
 export function ProviderSettingsPage() {
   return <SettingsSectionPage sectionIds={['settings-providers']} />;
+}
+
+export function WorkspaceSettingsPage() {
+  return <SettingsSectionPage sectionIds={['settings-workspace']} />;
+}
+
+export function CommandsSettingsPage() {
+  return <SettingsSectionPage sectionIds={['settings-commands']} />;
+}
+
+export function SecuritySettingsPage() {
+  return <SettingsSectionPage sectionIds={['settings-security']} />;
+}
+
+export function ExtensionsSettingsPage() {
+  return <SettingsSectionPage sectionIds={['settings-extensions']} />;
 }
 
 export function DesktopSettingsPage() {

@@ -106,6 +106,15 @@ export function detectConversationSurfaceType(): LiveSessionSurfaceType {
   return 'desktop_web';
 }
 
+export function resolveControllableConversationSurfaceId(surfaceId: string, presence: LiveSessionPresenceState | null | undefined): string {
+  const trimmedSurfaceId = surfaceId.trim();
+  if (!trimmedSurfaceId || !presence?.surfaces.some((surface) => surface.surfaceId === trimmedSurfaceId)) {
+    return '';
+  }
+
+  return trimmedSurfaceId;
+}
+
 function isLiveSessionControlError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   const normalized = message.trim().toLowerCase();

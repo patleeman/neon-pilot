@@ -120,18 +120,20 @@ export function shouldShowMissingConversationState(input: {
   sessionsLoaded: boolean;
   confirmedLive: boolean | null;
   sessionLoading: boolean;
+  hasAuthoritativeSessionSnapshot: boolean;
   hasVisibleSessionDetail: boolean;
   hasSavedConversationSessionFile: boolean;
   hasPendingInitialPrompt: boolean;
 }): boolean {
+  const canTrustCachedSessionData = !input.sessionsLoaded || input.hasAuthoritativeSessionSnapshot;
   return (
     !input.draft &&
     Boolean(input.conversationId) &&
     input.sessionsLoaded &&
     input.confirmedLive === false &&
     !input.sessionLoading &&
-    !input.hasVisibleSessionDetail &&
-    !input.hasSavedConversationSessionFile &&
+    !(input.hasVisibleSessionDetail && canTrustCachedSessionData) &&
+    !(input.hasSavedConversationSessionFile && canTrustCachedSessionData) &&
     !input.hasPendingInitialPrompt
   );
 }

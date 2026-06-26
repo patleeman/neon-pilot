@@ -201,6 +201,22 @@ export function readConversationCatalogSession(id: string): SessionMeta | null {
   return row ? rowToSessionMeta(row) : null;
 }
 
+export function deleteConversationCatalogSessions(ids: string[]): void {
+  const normalizedIds = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  if (normalizedIds.length === 0) return;
+  const remove = getDb().transaction((conversationIds: string[]) => {
+    const deleteConversation = getDb().prepare('DELETE FROM conversations WHERE id = ?');
+    const deleteDetails = getDb().prepare('DELETE FROM conversation_details WHERE conversation_id = ?');
+    const deleteAssets = getDb().prepare('DELETE FROM conversation_assets WHERE conversation_id = ?');
+    for (const conversationId of conversationIds) {
+      deleteConversation.run(conversationId);
+      deleteDetails.run(conversationId);
+      deleteAssets.run(conversationId);
+    }
+  });
+  remove(normalizedIds);
+}
+
 export function hasConversationCatalogRows(): boolean {
   const row = getDb().prepare('SELECT 1 AS found FROM conversations LIMIT 1').get() as { found?: number } | undefined;
   return row?.found === 1;

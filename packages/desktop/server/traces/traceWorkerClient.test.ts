@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const fs = vi.hoisted(() => ({
+  existingPaths: new Set<string>(),
+  existsSync: vi.fn((path: string) => fs.existingPaths.has(path)),
+}));
 const workerThreads = vi.hoisted(() => ({
   instances: [] as Array<{
     postMessage: ReturnType<typeof vi.fn>;
@@ -28,6 +32,7 @@ const core = vi.hoisted(() => ({
   writeTraceToolCall: vi.fn(),
 }));
 
+vi.mock('node:fs', () => ({ existsSync: fs.existsSync }));
 vi.mock('node:worker_threads', () => ({ Worker: workerThreads.Worker }));
 vi.mock('@neon-pilot/core', () => core);
 
@@ -39,6 +44,8 @@ async function loadClient() {
 describe('traceWorkerClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    fs.existingPaths.clear();
+    fs.existsSync.mockImplementation((path: string) => fs.existingPaths.has(path));
     workerThreads.instances.length = 0;
   });
 
@@ -49,8 +56,19 @@ describe('traceWorkerClient', () => {
     client.traceWorkerToolCall({ sessionId: 's1', toolName: 'bash' } as never);
 
     expect(workerThreads.Worker).toHaveBeenCalledTimes(1);
+    expect(workerThreads.Worker.mock.calls[0][0]).toBeInstanceOf(URL);
+    expect(workerThreads.Worker.mock.calls[0][1]).toMatchObject({ execArgv: expect.any(Array) });
     expect(workerThreads.instances[0].postMessage).toHaveBeenNthCalledWith(1, { type: 'stats', sessionId: 's1' });
     expect(workerThreads.instances[0].postMessage).toHaveBeenNthCalledWith(2, { type: 'tool_call', sessionId: 's1', toolName: 'bash' });
+  });
+
+  it('uses the bundled backend worker path when the sibling worker is absent', async () => {
+    fs.existsSync.mockImplementation((path: string) => path.endsWith('/server/traces/traceWorker.js'));
+    const client = await loadClient();
+
+    client.traceWorkerStats({ sessionId: 's1' } as never);
+
+    expect(String(workerThreads.Worker.mock.calls[0][0])).toMatch(/\/server\/traces\/traceWorker\.js$/);
   });
 
   it('terminates and recreates the worker on close', async () => {

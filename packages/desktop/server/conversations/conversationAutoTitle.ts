@@ -97,10 +97,7 @@ export function readConversationAutoTitleSettings(settingsFile: string): Convers
   };
 }
 
-export function normalizeGeneratedConversationTitle(
-  title: string | null | undefined,
-  _maxLength = DEFAULT_MAX_TITLE_LENGTH,
-): string | null {
+export function normalizeGeneratedConversationTitle(title: string | null | undefined, maxLength = DEFAULT_MAX_TITLE_LENGTH): string | null {
   if (typeof title !== 'string') {
     return null;
   }
@@ -125,9 +122,26 @@ export function normalizeGeneratedConversationTitle(
     return null;
   }
 
-  return normalized;
+  return truncateGeneratedConversationTitle(normalized, maxLength);
 }
 
 function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
+}
+
+function truncateGeneratedConversationTitle(title: string, maxLength: number): string {
+  const limit = Number.isSafeInteger(maxLength) && maxLength > 0 ? Math.min(maxLength, MAX_TITLE_LENGTH) : DEFAULT_MAX_TITLE_LENGTH;
+  if (title.length <= limit) {
+    return title;
+  }
+  if (limit <= 3) {
+    return title.slice(0, limit).trim();
+  }
+
+  const suffix = '...';
+  const sliceLimit = limit - suffix.length;
+  const sliced = title.slice(0, sliceLimit).trimEnd();
+  const lastSpace = sliced.lastIndexOf(' ');
+  const prefix = lastSpace >= Math.max(8, Math.floor(sliceLimit * 0.45)) ? sliced.slice(0, lastSpace).trimEnd() : sliced;
+  return `${prefix}${suffix}`;
 }

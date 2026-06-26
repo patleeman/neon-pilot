@@ -1509,6 +1509,7 @@ export async function doThing(_input, ctx) {
         cwd: '/repo',
         env: { PATH: `${extensionBin}${delimiter}${process.env.NEON_PILOT_STATE_ROOT}/bin${delimiter}/usr/bin` },
       },
+      context: expect.objectContaining({ workerRequestId: 400 }),
     });
   });
 
@@ -1562,6 +1563,7 @@ export async function doThing(_input, ctx) {
         onStderr: true,
         onExit: true,
       },
+      context: expect.objectContaining({ workerRequestId: 41 }),
     });
     workerThreads.messageHandler?.({
       id: 1,
@@ -1591,6 +1593,7 @@ export async function doThing(_input, ctx) {
       capability: 'shell',
       operation: 'write',
       input: { handleId: 'worker-shell-1', data: 'ping' },
+      context: expect.objectContaining({ workerRequestId: 41 }),
     });
     workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { ok: true } });
 
@@ -1601,6 +1604,7 @@ export async function doThing(_input, ctx) {
       capability: 'shell',
       operation: 'resize',
       input: { handleId: 'worker-shell-1', cols: 80, rows: 24 },
+      context: expect.objectContaining({ workerRequestId: 41 }),
     });
     workerThreads.messageHandler?.({ id: 3, kind: 'capabilityResponse', ok: true, result: { ok: true } });
 
@@ -1611,6 +1615,7 @@ export async function doThing(_input, ctx) {
       capability: 'shell',
       operation: 'kill',
       input: { handleId: 'worker-shell-1' },
+      context: expect.objectContaining({ workerRequestId: 41 }),
     });
     workerThreads.messageHandler?.({ id: 4, kind: 'capabilityResponse', ok: true, result: { ok: true } });
 

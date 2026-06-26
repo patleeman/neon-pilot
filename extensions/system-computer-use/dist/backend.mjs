@@ -148,6 +148,18 @@ function isRecord(value) {
 function messageFrom(error) {
   return error instanceof Error ? error.message : String(error);
 }
+function isCuaDriverUnavailable(error) {
+  const message = messageFrom(error);
+  return /\bENOENT\b/.test(message) || /not found/i.test(message) || /command not found/i.test(message);
+}
+function cuaDriverUnavailableResult(error) {
+  return {
+    ok: false,
+    message: "Cua Driver is not installed or is not on PATH.",
+    error: messageFrom(error),
+    installHint: "Run the \u201CInstall Cua Driver\u201D command, then grant Accessibility and Screen Recording permissions when prompted by your OS."
+  };
+}
 function mergeArgs(input) {
   const args = isRecord(input.arguments) ? { ...input.arguments } : {};
   for (const key of ["pid", "window_id", "element", "x", "y", "text", "keys", "button", "capture_after"]) {
@@ -216,7 +228,12 @@ async function computerUse(input, ctx) {
   if (MUTATING_ACTIONS.has(input.action)) {
     assertSafeInput(input);
   }
-  return callCuaTool(input, ctx);
+  try {
+    return await callCuaTool(input, ctx);
+  } catch (error) {
+    if (isCuaDriverUnavailable(error)) return cuaDriverUnavailableResult(error);
+    throw error;
+  }
 }
 async function computerUseStatus(_input, ctx) {
   try {
@@ -230,20 +247,14 @@ async function computerUseStatus(_input, ctx) {
       health
     };
   } catch (error) {
-    return {
-      ok: false,
-      installed: false,
-      message: "Cua Driver is not installed or is not on PATH.",
-      error: messageFrom(error),
-      installHint: "Run the \u201CInstall Cua Driver\u201D command, then grant Accessibility and Screen Recording permissions when prompted by your OS."
-    };
+    return { installed: false, ...cuaDriverUnavailableResult(error) };
   }
 }
 async function computerUseDoctor(input, ctx) {
   try {
     return await callCuaTool({ ...input, action: "doctor" }, ctx);
   } catch (error) {
-    return {
+    return isCuaDriverUnavailable(error) ? cuaDriverUnavailableResult(error) : {
       ok: false,
       message: "Cua Driver doctor could not run.",
       error: messageFrom(error),

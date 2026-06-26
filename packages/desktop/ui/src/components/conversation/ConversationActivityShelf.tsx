@@ -6,12 +6,12 @@ import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } fro
 import { timeAgo } from '../../shared/utils';
 import { cx, MetaLabel, RowButton, ShelfHeader, ShelfSection, Spinner, TextButton } from '../ui';
 import {
-  CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
-  CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
   CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
+  CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
   CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
-  CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
   CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
+  CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
   CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
   CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT,
   CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
@@ -61,7 +61,6 @@ export function ConversationActivityShelf({
   deferredResumeIndicatorText,
   deferredResumeNowMs,
   hasReadyDeferredResumes,
-  isLiveSession,
   deferredResumesBusy,
   showDeferredResumeDetails,
   onContinueDeferredResumesNow,
@@ -100,13 +99,15 @@ export function ConversationActivityShelf({
   onRunScheduledTaskNow?: (taskId: string) => void;
   onOpenScheduledTask?: (taskId: string) => void;
 }) {
-  const canContinueDeferredResumes = hasReadyDeferredResumes && !isLiveSession && !deferredResumesBusy;
+  const canContinueDeferredResumes = hasReadyDeferredResumes && !deferredResumesBusy;
   const canToggleBackgroundRunDetails = backgroundExecutions.length > 0;
   const canToggleDeferredResumeDetails = deferredResumes.length > 0;
   const canToggleScheduledTaskDetails = scheduledTasks.length > 0 && Boolean(onToggleScheduledTaskDetails);
   const latestBackgroundRun = backgroundExecutions[0] ?? null;
   const latestCancellableBackgroundRun =
-    backgroundExecutions.find((execution) => execution.capabilities.canCancel && !(cancellingBackgroundRunIds?.has(execution.id) ?? false)) ?? null;
+    backgroundExecutions.find(
+      (execution) => execution.capabilities.canCancel && !(cancellingBackgroundRunIds?.has(execution.id) ?? false),
+    ) ?? null;
   const firstRunnableScheduledTask = scheduledTasks.find((task) => task.enabled && !task.running) ?? null;
   const firstOpenableScheduledTask = scheduledTasks[0] ?? null;
   const firstFireableDeferredResume = deferredResumes.find((resume) => resume.status === 'scheduled') ?? null;
@@ -196,7 +197,8 @@ export function ConversationActivityShelf({
       onCancelBackgroundRun?.(latestCancellableBackgroundRun.id);
     }
     window.addEventListener(CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT, handleCancelLatestBackgroundRunCommand);
-    return () => window.removeEventListener(CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT, handleCancelLatestBackgroundRunCommand);
+    return () =>
+      window.removeEventListener(CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT, handleCancelLatestBackgroundRunCommand);
   }, [latestCancellableBackgroundRun, onCancelBackgroundRun]);
 
   useEffect(() => {
@@ -232,7 +234,8 @@ export function ConversationActivityShelf({
       onCancelDeferredResume(firstCancellableDeferredResume.id);
     }
     window.addEventListener(CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT, handleCancelFirstDeferredResumeCommand);
-    return () => window.removeEventListener(CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT, handleCancelFirstDeferredResumeCommand);
+    return () =>
+      window.removeEventListener(CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT, handleCancelFirstDeferredResumeCommand);
   }, [deferredResumesBusy, firstCancellableDeferredResume, onCancelDeferredResume]);
 
   return (
@@ -392,7 +395,7 @@ export function ConversationActivityShelf({
               detail={deferredResumeIndicatorText}
               actions={
                 <>
-                  {hasReadyDeferredResumes && !isLiveSession && (
+                  {canContinueDeferredResumes && (
                     <TextButton type="button" onClick={onContinueDeferredResumesNow} tone="accent">
                       continue now
                     </TextButton>

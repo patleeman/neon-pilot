@@ -101,4 +101,28 @@ describe('importClipboardUrlToKnowledge', () => {
       },
     ]);
   });
+
+  it('uses a user-facing error when no knowledge import provider is installed', async () => {
+    const host: DesktopUrlClipperHost = {
+      async ensureActiveHostRunning() {},
+      getActiveHostController() {
+        return {
+          async dispatchApiRequest(input) {
+            if (input.path === '/api/extensions/installed') {
+              return {
+                statusCode: 200,
+                headers: { 'content-type': 'application/json' },
+                body: Buffer.from(JSON.stringify([])),
+              };
+            }
+            throw new Error(`Unexpected request to ${input.path}`);
+          },
+        };
+      },
+    };
+
+    await expect(importClipboardUrlToKnowledge({ host, clipboardText: 'https://example.com/page' })).rejects.toThrow(
+      'URL clipping is not available. Enable a Knowledge extension and try again.',
+    );
+  });
 });

@@ -2,6 +2,26 @@ import { parseSlashInput } from '../commands/slashMenu';
 
 const DEFERRED_RESUME_SLASH_USAGE = 'Usage: /resume <delay> [--follow-up] [prompt]';
 const DEFERRED_RESUME_SLASH_COMMANDS = new Set(['/resume', '/defer']);
+const DEFERRED_RESUME_DELAY_UNITS = new Set([
+  's',
+  'sec',
+  'secs',
+  'second',
+  'seconds',
+  'm',
+  'min',
+  'mins',
+  'minute',
+  'minutes',
+  'h',
+  'hr',
+  'hrs',
+  'hour',
+  'hours',
+  'd',
+  'day',
+  'days',
+]);
 
 interface DeferredResumeSlashCommand {
   action: 'schedule';
@@ -23,8 +43,12 @@ export function parseDeferredResumeSlashCommand(input: string): DeferredResumeSl
     return { kind: 'invalid', message: DEFERRED_RESUME_SLASH_USAGE };
   }
 
-  const [delayToken, ...restTokens] = argument.split(/\s+/);
-  const delay = delayToken?.trim() ?? '';
+  const tokens = argument.split(/\s+/);
+  const delayToken = tokens[0]?.trim() ?? '';
+  const secondToken = tokens[1]?.trim().toLowerCase() ?? '';
+  const hasSeparatedUnit = /^\d+$/.test(delayToken) && DEFERRED_RESUME_DELAY_UNITS.has(secondToken);
+  const delay = hasSeparatedUnit ? `${delayToken} ${secondToken}` : delayToken;
+  const restTokens = hasSeparatedUnit ? tokens.slice(2) : tokens.slice(1);
   if (!delay) {
     return { kind: 'invalid', message: DEFERRED_RESUME_SLASH_USAGE };
   }

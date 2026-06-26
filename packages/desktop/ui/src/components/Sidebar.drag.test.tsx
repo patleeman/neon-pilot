@@ -192,6 +192,7 @@ describe('Sidebar group drag reordering', () => {
     apiMocks.gateways.mockReset();
     apiMocks.sessions.mockReset();
     apiMocks.sidebarConversations.mockReset();
+    apiMocks.sessionMeta.mockReset();
     apiMocks.saveConversationWorkspaceLayout.mockImplementation(
       async (
         sessionIds: string[] = [],
@@ -215,6 +216,7 @@ describe('Sidebar group drag reordering', () => {
     apiMocks.markConversationAttentionRead.mockResolvedValue({ ok: true });
     apiMocks.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });
     apiMocks.sessions.mockResolvedValue([]);
+    apiMocks.sessionMeta.mockImplementation(async (id: string) => sessionStore.get(id) ?? createSession({ id }));
     apiMocks.sidebarConversations.mockImplementation(async () => ({
       sessionIds: JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]') as string[],
       pinnedSessionIds: JSON.parse(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY) ?? '[]') as string[],

@@ -460,5 +460,5 @@
       }
     ]
   },
-  "permissions": ["executions:read", "executions:start", "executions:cancel", "shell:execute", "telemetry:write"]
+  "permissions": ["executions:read", "executions:start", "executions:cancel", "shell:execute", "telemetry:write", "extensions:read"]
 }

@@ -45,6 +45,25 @@ describe('executeLiveSessionBash', () => {
   });
 
   describe('successful execution', () => {
+    it('rejects overlapping commands even before the host running flag updates', async () => {
+      let resolveFirst: ((value: { output: string; exitCode: number }) => void) | null = null;
+      const firstResult = new Promise<{ output: string; exitCode: number }>((resolve) => {
+        resolveFirst = resolve;
+      });
+      const executeBash = vi.fn().mockReturnValueOnce(firstResult).mockResolvedValueOnce({ output: 'second', exitCode: 0 });
+      const host = createMockHost({ session: { isBashRunning: false, executeBash } });
+      const broadcast = createBroadcastMock();
+
+      const first = executeLiveSessionBash(host, 'sleep 10', { broadcast });
+      await Promise.resolve();
+
+      await expect(executeLiveSessionBash(host, 'echo second', { broadcast })).rejects.toThrow('A bash command is already running.');
+
+      resolveFirst?.({ output: 'done', exitCode: 0 });
+      await expect(first).resolves.toMatchObject({ normalizedCommand: 'sleep 10', result: { output: 'done', exitCode: 0 } });
+      expect(executeBash).toHaveBeenCalledTimes(1);
+    });
+
     it('broadcasts tool_start, runs bash, and broadcasts tool_end with output', async () => {
       const executeBash = vi.fn().mockResolvedValue({ output: 'file1.txt\nfile2.txt', exitCode: 0 });
       const host = createMockHost({ session: { isBashRunning: false, executeBash } });
@@ -80,6 +99,25 @@ describe('executeLiveSessionBash', () => {
       });
       expect(toolEndCalls[0][0].durationMs).toEqual(expect.any(Number));
       expect(toolEndCalls[0][0].details).toMatchObject({ displayMode: 'terminal', exitCode: 0 });
+    });
+
+    it('uses the abortable conversation bash operation for live entries with a cwd', async () => {
+      const executeBash = vi.fn().mockResolvedValue({ output: 'sdk output', exitCode: 0 });
+      const host = createMockHost({ cwd: process.cwd(), session: { isBashRunning: false, executeBash } });
+      const broadcast = createBroadcastMock();
+
+      const result = await executeLiveSessionBash(host, 'printf direct-ops', { broadcast });
+
+      expect(executeBash).not.toHaveBeenCalled();
+      expect(result.result).toEqual({ output: 'direct-ops', exitCode: 0 });
+      const toolEndCalls = broadcast.mock.calls.filter((c: unknown[]) => (c[0] as { type: string }).type === 'tool_end');
+      expect(toolEndCalls[0][0]).toMatchObject({
+        type: 'tool_end',
+        toolName: 'bash',
+        isError: false,
+        output: 'direct-ops',
+        details: expect.objectContaining({ exitCode: 0 }),
+      });
     });
 
     it('trims whitespace from the command', async () => {

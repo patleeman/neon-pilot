@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { accessSync, constants } from 'node:fs';
+import { accessSync, constants, statSync } from 'node:fs';
 import { basename } from 'node:path';
 
 import type { ExtensionRouteRequest, ExtensionRouteResponse, ExtensionRouteSseEvent } from '@neon-pilot/extensions';
@@ -69,6 +69,24 @@ function resolveShellArgs(shellPath: string, options: { interactive?: boolean } 
   return undefined;
 }
 
+function assertTerminalCwdAvailable(cwd: string | undefined): void {
+  if (!cwd) return;
+  let stats: ReturnType<typeof statSync>;
+  try {
+    stats = statSync(cwd);
+  } catch {
+    throw new Error('Terminal workspace folder is unavailable.');
+  }
+  if (!stats.isDirectory()) {
+    throw new Error('Terminal workspace must be a folder.');
+  }
+  try {
+    accessSync(cwd, constants.R_OK | constants.X_OK);
+  } catch {
+    throw new Error('Terminal workspace folder is unavailable.');
+  }
+}
+
 async function waitForStartupOutput(session: TerminalSession): Promise<void> {
   const startedAt = Date.now();
   while (!session.closed && session.outputBuffer.length === 0 && Date.now() - startedAt < STARTUP_OUTPUT_SETTLE_MS) {
@@ -120,9 +138,7 @@ function scheduleExitedSessionCleanup(session: TerminalSession): void {
   session.cleanupTimer.unref?.();
 }
 
-export type TerminalSessionEvent =
-  | { type: 'output'; data: string }
-  | { type: 'exit'; code: number | null };
+export type TerminalSessionEvent = { type: 'output'; data: string } | { type: 'exit'; code: number | null };
 
 export function subscribeTerminalSession(
   input: { id: string },
@@ -191,6 +207,7 @@ function removeSession(id: string): void {
 export async function createTerminalSession(input: {
   cwd?: string;
 }): Promise<{ id: string; pid: number | null; usingPty: boolean; initialOutput: string; realtimeUrl?: string }> {
+  assertTerminalCwdAvailable(input.cwd);
   const shellPath = resolveLoginShell();
   const id = generateId();
   const earlyOutputReplay: string[] = [];

@@ -26,6 +26,7 @@ import {
   markConversationCatalogComplete,
   readConversationCatalogSession,
   startConversationCatalogBackfill,
+  upsertConversationCatalogSession,
   upsertConversationCatalogSessions,
 } from './conversationCatalog.js';
 import { readConversationContextDocs } from './conversationContextDocs.js';
@@ -43,7 +44,11 @@ import {
   appendConversationWorkspaceMetadata as appendSessionConversationWorkspaceMetadata,
   appendStoredVisibleCustomMessage as appendSessionStoredVisibleCustomMessage,
   buildAppendOnlySessionDetailResponse as buildSessionAppendOnlySessionDetailResponse,
+  clearSessionCaches as clearConversationSessionCaches,
+  deleteSessions as deleteStoredConversationSessions,
+  type DeleteSessionsResult,
   listSessions,
+  readGoalFromEntries,
   readKnownSessionIdByFilePath,
   readSessionBlocksByFileWithTelemetry,
   readSessionBlocksWithTelemetry,
@@ -53,7 +58,10 @@ import {
   readSessionMetaByFile,
   renameStoredSession as renameStoredConversationSession,
   type SessionImageAsset,
+  type ThreadGoal,
 } from './sessions.js';
+
+export type { ThreadGoal } from './sessions.js';
 
 let getRuntimeScopeFn: () => string = () => {
   throw new Error('getRuntimeScope not initialized for conversation service');
@@ -597,6 +605,18 @@ export function readConversationSessionMetaByFile(filePath: string) {
   return readSessionMetaByFile(filePath);
 }
 
+export function readConversationGoalStateByFile(filePath: string | undefined): ThreadGoal | null {
+  if (!filePath) {
+    return null;
+  }
+
+  try {
+    return readGoalFromEntries(SessionManager.open(filePath).getEntries());
+  } catch {
+    return null;
+  }
+}
+
 export function appendConversationOffshootMetadata(input: Parameters<typeof appendSessionConversationOffshootMetadata>[0]): void {
   appendSessionConversationOffshootMetadata(input);
 }
@@ -616,7 +636,15 @@ export function appendStoredVisibleCustomMessage(input: Parameters<typeof append
 }
 
 export function renameStoredConversation(conversationId: string, nextName: string): ReturnType<typeof renameStoredConversationSession> {
-  return renameStoredConversationSession(conversationId, nextName);
+  const renamed = renameStoredConversationSession(conversationId, nextName);
+  upsertConversationCatalogSession(renamed);
+  return renamed;
+}
+
+export function deleteStoredConversations(conversationIds: string[]): DeleteSessionsResult {
+  const result = deleteStoredConversationSessions(conversationIds);
+  clearConversationSessionCaches();
+  return result;
 }
 
 export function buildAppendOnlyConversationDetailResponse(

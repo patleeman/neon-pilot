@@ -434,6 +434,7 @@ function sleepSync(ms: number): void {
  */
 function acquireDeferredResumeLock(lockPath: string): { release: () => void } {
   const deadline = Date.now() + LOCK_TIMEOUT_MS;
+  mkdirSync(dirname(lockPath), { recursive: true, mode: 0o700 });
 
   for (;;) {
     try {

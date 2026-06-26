@@ -19,9 +19,9 @@ import {
   retryAttentionEvents,
   retryDeferredResume,
   saveAttentionEventsState,
-  saveDeferredResumeState,
   scheduleAttentionEvent,
   scheduleDeferredResume,
+  withDeferredResumeLock,
 } from '@neon-pilot/core';
 import {
   cancelDeferredResumeConversationRun,
@@ -223,28 +223,28 @@ export function listDeferredResumesForSessionFile(sessionFile: string): Deferred
 }
 
 export function activateDueDeferredResumesForSessionFile(input: { sessionFile: string; at?: Date }): DeferredResumeSummary[] {
-  const state = loadDeferredResumeState();
-  const activated = activateDueDeferredResumes(state, {
-    at: input.at,
-    sessionFile: input.sessionFile,
+  const activated = withDeferredResumeLock((state) => {
+    return activateDueDeferredResumes(state, {
+      at: input.at,
+      sessionFile: input.sessionFile,
+    });
   });
-
-  if (activated.length > 0) {
-    saveDeferredResumeState(state);
-  }
 
   return activated.map(toDeferredResumeSummary);
 }
 
 export function completeDeferredResumeForSessionFile(input: { sessionFile: string; id: string }): DeferredResumeSummary | undefined {
-  const state = loadDeferredResumeState();
-  const record = state.resumes[input.id];
-  if (!record || record.sessionFile !== input.sessionFile) {
-    return undefined;
-  }
+  const record = withDeferredResumeLock((state) => {
+    const current = state.resumes[input.id];
+    if (!current || current.sessionFile !== input.sessionFile) {
+      return undefined;
+    }
 
-  removeDeferredResume(state, input.id);
-  saveDeferredResumeState(state);
+    removeDeferredResume(state, input.id);
+    return { ...current };
+  });
+  if (!record) return undefined;
+
   completeMirroredAttentionEvent(record.id);
   return toDeferredResumeSummary(record);
 }
@@ -254,21 +254,21 @@ export function retryDeferredResumeForSessionFile(input: {
   id: string;
   dueAt: string;
 }): DeferredResumeSummary | undefined {
-  const state = loadDeferredResumeState();
-  const record = state.resumes[input.id];
-  if (!record || record.sessionFile !== input.sessionFile) {
-    return undefined;
-  }
+  const retried = withDeferredResumeLock((state) => {
+    const record = state.resumes[input.id];
+    if (!record || record.sessionFile !== input.sessionFile) {
+      return undefined;
+    }
 
-  const retried = retryDeferredResume(state, {
-    id: input.id,
-    dueAt: input.dueAt,
+    return retryDeferredResume(state, {
+      id: input.id,
+      dueAt: input.dueAt,
+    });
   });
   if (!retried) {
     return undefined;
   }
 
-  saveDeferredResumeState(state);
   retryMirroredAttentionEvent(retried.id, retried.dueAt);
   return toDeferredResumeSummary(retried);
 }
@@ -278,22 +278,24 @@ export async function fireDeferredResumeNowForSessionFile(input: {
   id: string;
   at?: Date;
 }): Promise<DeferredResumeSummary> {
-  const state = loadDeferredResumeState();
-  const record = state.resumes[input.id];
-  if (!record || record.sessionFile !== input.sessionFile) {
-    throw new Error(`No deferred resume found for this conversation: ${input.id}`);
-  }
+  const { activated, wasReady } = withDeferredResumeLock((state) => {
+    const record = state.resumes[input.id];
+    if (!record || record.sessionFile !== input.sessionFile) {
+      throw new Error(`No deferred resume found for this conversation: ${input.id}`);
+    }
 
-  const wasReady = record.status === 'ready';
-  const activated = activateDeferredResume(state, {
-    id: input.id,
-    at: input.at,
+    const wasReady = record.status === 'ready';
+    const activated = activateDeferredResume(state, {
+      id: input.id,
+      at: input.at,
+    });
+    if (!activated) {
+      throw new Error(`No deferred resume found for this conversation: ${input.id}`);
+    }
+
+    return { activated, wasReady };
   });
-  if (!activated) {
-    throw new Error(`No deferred resume found for this conversation: ${input.id}`);
-  }
 
-  saveDeferredResumeState(state);
   mirrorDeferredResumeToAttentionEvent(activated, readSessionConversationId(activated.sessionFile));
   if (!wasReady) {
     await markDeferredResumeConversationRunReady({
@@ -329,28 +331,28 @@ export async function scheduleDeferredResumeForSessionFile(input: {
 }): Promise<DeferredResumeSummary> {
   const now = resolveValidNow(input.now);
   const dueAt = resolveDueAt({ delay: input.delay, at: input.at, now });
-  const state = loadDeferredResumeState();
   const kind = input.kind ?? 'continue';
-  const record = scheduleDeferredResume(state, {
-    id: createDeferredResumeId(now),
-    sessionFile: input.sessionFile,
-    prompt: input.prompt?.trim() || DEFAULT_DEFERRED_RESUME_PROMPT,
-    dueAt,
-    createdAt: now.toISOString(),
-    attempts: 0,
-    kind,
-    ...(input.title?.trim() ? { title: input.title.trim() } : {}),
-    ...(input.behavior ? { behavior: input.behavior } : {}),
-    ...(input.source ? { source: input.source } : {}),
-    delivery: {
-      alertLevel: input.notify,
-      autoResumeIfOpen: input.autoResumeIfOpen,
-      requireAck: input.requireAck,
-      mode: input.deliveryMode,
-    },
+  const record = withDeferredResumeLock((state) => {
+    return scheduleDeferredResume(state, {
+      id: createDeferredResumeId(now),
+      sessionFile: input.sessionFile,
+      prompt: input.prompt?.trim() || DEFAULT_DEFERRED_RESUME_PROMPT,
+      dueAt,
+      createdAt: now.toISOString(),
+      attempts: 0,
+      kind,
+      ...(input.title?.trim() ? { title: input.title.trim() } : {}),
+      ...(input.behavior ? { behavior: input.behavior } : {}),
+      ...(input.source ? { source: input.source } : {}),
+      delivery: {
+        alertLevel: input.notify,
+        autoResumeIfOpen: input.autoResumeIfOpen,
+        requireAck: input.requireAck,
+        mode: input.deliveryMode,
+      },
+    });
   });
 
-  saveDeferredResumeState(state);
   mirrorDeferredResumeToAttentionEvent(record, input.conversationId?.trim() || readSessionConversationId(record.sessionFile));
   try {
     await scheduleDeferredResumeConversationRun({
@@ -364,8 +366,9 @@ export async function scheduleDeferredResumeForSessionFile(input: {
     });
   } catch (error) {
     // Daemon scheduling failed — roll back the persisted state
-    removeDeferredResume(state, record.id);
-    saveDeferredResumeState(state);
+    withDeferredResumeLock((state) => {
+      removeDeferredResume(state, record.id);
+    });
     cancelMirroredAttentionEvent(record.id);
     throw error;
   }
@@ -391,40 +394,42 @@ export function createReadyDeferredResumeForSessionFile(input: {
   const dueAt = normalizeOptionalTimestamp(input.dueAt, nowIso);
   const createdAt = normalizeOptionalTimestamp(input.createdAt, dueAt);
   const readyAt = normalizeOptionalTimestamp(input.readyAt, nowIso);
-  const state = loadDeferredResumeState();
   const prompt = input.prompt.trim() || DEFAULT_DEFERRED_RESUME_PROMPT;
-  const record = createReadyDeferredResume(state, {
-    id: createDeferredResumeId(now),
-    sessionFile: input.sessionFile,
-    prompt,
-    dueAt,
-    createdAt,
-    readyAt,
-    attempts: 0,
-    kind: input.kind,
-    ...(input.title?.trim() ? { title: input.title.trim() } : {}),
-    ...(input.source ? { source: input.source } : {}),
-    delivery: {
-      alertLevel: input.notify,
-      autoResumeIfOpen: input.autoResumeIfOpen,
-      requireAck: input.requireAck,
-      mode: input.deliveryMode,
-    },
+  const record = withDeferredResumeLock((state) => {
+    return createReadyDeferredResume(state, {
+      id: createDeferredResumeId(now),
+      sessionFile: input.sessionFile,
+      prompt,
+      dueAt,
+      createdAt,
+      readyAt,
+      attempts: 0,
+      kind: input.kind,
+      ...(input.title?.trim() ? { title: input.title.trim() } : {}),
+      ...(input.source ? { source: input.source } : {}),
+      delivery: {
+        alertLevel: input.notify,
+        autoResumeIfOpen: input.autoResumeIfOpen,
+        requireAck: input.requireAck,
+        mode: input.deliveryMode,
+      },
+    });
   });
-  saveDeferredResumeState(state);
   mirrorDeferredResumeToAttentionEvent(record, readSessionConversationId(record.sessionFile));
   return toDeferredResumeSummary(record);
 }
 
 export async function cancelDeferredResumeForSessionFile(input: { sessionFile: string; id: string }): Promise<DeferredResumeSummary> {
-  const state = loadDeferredResumeState();
-  const record = state.resumes[input.id];
-  if (!record || record.sessionFile !== input.sessionFile) {
-    throw new Error(`No deferred resume found for this conversation: ${input.id}`);
-  }
+  const record = withDeferredResumeLock((state) => {
+    const current = state.resumes[input.id];
+    if (!current || current.sessionFile !== input.sessionFile) {
+      throw new Error(`No deferred resume found for this conversation: ${input.id}`);
+    }
 
-  removeDeferredResume(state, input.id);
-  saveDeferredResumeState(state);
+    removeDeferredResume(state, input.id);
+    return { ...current };
+  });
+
   cancelMirroredAttentionEvent(record.id);
   await cancelDeferredResumeConversationRun({
     daemonRoot: resolveDaemonRoot(),

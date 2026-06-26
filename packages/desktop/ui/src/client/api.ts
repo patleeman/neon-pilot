@@ -876,6 +876,11 @@ export const api = {
       `/conversations/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(artifactId)}`,
     );
   },
+  deleteConversationArtifact: async (id: string, artifactId: string) => {
+    return del<{ conversationId: string; artifactId: string; deleted: boolean; artifacts: ConversationArtifactSummary[] }>(
+      `/conversations/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(artifactId)}`,
+    );
+  },
   conversationCheckpoints: async (id: string) =>
     get<{ conversationId: string; checkpoints: ConversationCommitCheckpointSummary[] }>(
       `/conversations/${encodeURIComponent(id)}/checkpoints`,

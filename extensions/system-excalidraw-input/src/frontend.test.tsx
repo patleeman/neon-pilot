@@ -24,10 +24,13 @@ function pointerDown(button: HTMLElement) {
   fireEvent(button, event);
 }
 
-function renderTool(overrides?: { composerDisabled?: boolean; modalResult?: unknown }) {
+function renderTool(overrides?: { composerDisabled?: boolean; modalResult?: unknown; modalError?: Error }) {
   const listeners = new Map<string, (event: { payload?: unknown }) => void>();
   const upsertDrawingAttachment = vi.fn();
-  const openModal = vi.fn(async () => overrides?.modalResult ?? payload);
+  const openModal = vi.fn(async () => {
+    if (overrides?.modalError) throw overrides.modalError;
+    return overrides?.modalResult ?? payload;
+  });
   const toast = vi.fn();
   const pa = {
     events: {
@@ -81,5 +84,19 @@ describe('ExcalidrawInputTool', () => {
 
     expect((button as HTMLButtonElement).disabled).toBe(true);
     expect(openModal).not.toHaveBeenCalled();
+  });
+
+  it('handles drawing modal load failures with safe copy', async () => {
+    const { button, openModal, toast, upsertDrawingAttachment } = renderTool({
+      modalError: new Error('Failed to fetch dynamically imported module: neon-pilot://app/assets/frontend-secret.js'),
+    });
+
+    pointerDown(button);
+
+    await waitFor(() => expect(openModal).toHaveBeenCalled());
+    expect(upsertDrawingAttachment).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith('Drawing editor could not be opened. Try again after reloading Neon Pilot.');
+    expect(toast).not.toHaveBeenCalledWith(expect.stringContaining('frontend-secret.js'));
+    expect(toast).not.toHaveBeenCalledWith(expect.stringContaining('neon-pilot://app'));
   });
 });

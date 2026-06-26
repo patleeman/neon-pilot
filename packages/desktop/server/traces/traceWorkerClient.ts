@@ -6,6 +6,8 @@
  * on trace writes.
  */
 
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
 import {
@@ -23,16 +25,36 @@ import type { TraceWorkerMessage } from './traceWorker.js';
 let workerInstance: Worker | null = null;
 let useDirectWrites = false;
 
+function resolveTraceWorkerUrl(): URL {
+  const candidates = [
+    new URL('./traceWorker.js', import.meta.url),
+    // Bundled backend children live under dist/backend or dist/chunks while the
+    // worker is emitted under dist/server/traces.
+    new URL('../server/traces/traceWorker.js', import.meta.url),
+    new URL('../traces/traceWorker.js', import.meta.url),
+  ];
+  for (const candidate of candidates) {
+    try {
+      if (candidate.protocol === 'file:' && existsSync(fileURLToPath(candidate))) {
+        return candidate;
+      }
+    } catch {
+      // Try the next layout.
+    }
+  }
+  return candidates[0];
+}
+
+function resolveTraceWorkerExecArgv(): string[] {
+  return process.execArgv.filter((arg) => arg !== '--input-type=module' && arg !== '--input-type=commonjs');
+}
+
 function getOrCreateWorker(): Worker {
   if (workerInstance) {
     return workerInstance;
   }
 
-  // The main bundle is at server/dist/app/localApi.js and the worker is at
-  // server/dist/traces/traceWorker.js.
-  const workerUrl = new URL('../traces/traceWorker.js', import.meta.url);
-
-  const worker = new Worker(workerUrl);
+  const worker = new Worker(resolveTraceWorkerUrl(), { execArgv: resolveTraceWorkerExecArgv() });
 
   worker.on('error', (error) => {
     console.error('[telemetry] trace worker failed; falling back to direct trace writes', error);

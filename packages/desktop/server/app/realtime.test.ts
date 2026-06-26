@@ -208,6 +208,42 @@ describe('createDesktopRealtimeUpgradeHandler', () => {
     handleUpgrade.mockRestore();
   });
 
+  it('can route realtime local API streams through a host-provided stream resolver', async () => {
+    const streamUnsubscribe = vi.fn();
+    const subscribeLocalApiStreamByUrl = vi.fn(
+      async (_url: URL, onEvent: (event: { type: 'open' } | { type: 'message'; data: string }) => void) => {
+        onEvent({ type: 'open' });
+        onEvent({ type: 'message', data: '{"type":"tasks_snapshot","tasks":[]}' });
+        return streamUnsubscribe;
+      },
+    );
+
+    const fakeSocket = new FakeWebSocket();
+    const { createDesktopRealtimeUpgradeHandler } = await import('./realtime.js');
+    const handler = createDesktopRealtimeUpgradeHandler({ subscribeLocalApiStreamByUrl });
+    const server = (await import('ws')).WebSocketServer;
+    const handleUpgrade = vi.spyOn(server.prototype, 'handleUpgrade').mockImplementation((_request, _socket, _head, cb) => {
+      cb(fakeSocket as never);
+    });
+
+    handler({ url: '/api/realtime' } as never, { destroy: vi.fn() } as never, Buffer.alloc(0));
+    fakeSocket.receive({ type: 'subscribe', id: 'req-1', path: '/api/app-events/events?initialSnapshotTopics=tasks' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(subscribeLocalApiStreamByUrl).toHaveBeenCalledOnce();
+    expect(subscribeLocalApiStreamByUrl.mock.calls[0]?.[0].pathname).toBe('/api/app-events/events');
+    expect(subscribeLocalApiStreamByUrl.mock.calls[0]?.[0].search).toBe('?initialSnapshotTopics=tasks');
+    expect(subscribeDesktopLocalApiStreamByUrlMock).not.toHaveBeenCalled();
+
+    const streamMessages = fakeSocket.sent.map((entry) => JSON.parse(entry)).filter((entry) => entry.type === 'stream');
+    expect(streamMessages).toEqual([
+      expect.objectContaining({ event: { type: 'open' } }),
+      expect.objectContaining({ event: { type: 'message', data: '{"type":"tasks_snapshot","tasks":[]}' } }),
+    ]);
+
+    handleUpgrade.mockRestore();
+  });
+
   it('subscribes conversation aggregates over the WebSocket protocol', async () => {
     const unsubscribe = vi.fn();
     let emitDelta: ((delta: { type: 'activity'; conversationId: string; revision: number; activity: unknown }) => void) | undefined;

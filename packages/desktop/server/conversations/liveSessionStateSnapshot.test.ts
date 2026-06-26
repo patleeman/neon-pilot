@@ -92,6 +92,22 @@ describe('liveSessionStateSnapshot', () => {
     expect(readSessionBlocksByFileMock).not.toHaveBeenCalled();
   });
 
+  it('includes compacting state in lightweight live snapshots', async () => {
+    const { buildLiveSessionSnapshot } = await import('./liveSessionStateSnapshot.js');
+
+    const snapshot = buildLiveSessionSnapshot({
+      isCompacting: true,
+      session: {
+        sessionFile: '/tmp/session.jsonl',
+        isStreaming: false,
+        state: { messages: [] },
+        sessionManager: { getEntries: () => [] },
+      },
+    } as never);
+
+    expect(snapshot).toMatchObject({ isCompacting: true });
+  });
+
   it('skips transcript reads for empty new live session files', async () => {
     const { buildLiveSessionSnapshot } = await import('./liveSessionStateSnapshot.js');
 

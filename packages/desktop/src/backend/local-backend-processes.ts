@@ -115,6 +115,12 @@ interface LocalApiRpcResponseMessage {
   error?: string;
 }
 
+function optionalStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items = value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean);
+  return items.length > 0 ? items : undefined;
+}
+
 function isBackendChildMessage(value: unknown): value is BackendChildMessage {
   return (
     Boolean(value && typeof value === 'object') &&
@@ -364,6 +370,7 @@ export class LocalBackendProcesses {
       signal: input.signal,
     });
     const body = new Uint8Array(await response.arrayBuffer());
+    await this.syncSystemConversationToolMutation(input, response.status, body);
     return {
       statusCode: response.status,
       headers: Object.fromEntries(response.headers.entries()),
@@ -406,6 +413,36 @@ export class LocalBackendProcesses {
       throw new Error(body.error || `Local backend RPC failed: ${String(response.status)}`);
     }
     return this.withRpcPerf(body.result, ensureStartedMs, 'http');
+  }
+
+  private async syncSystemConversationToolMutation(
+    input: {
+      method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+      path: string;
+      body?: unknown;
+    },
+    statusCode: number,
+    responseBody: Uint8Array,
+  ): Promise<void> {
+    if (input.method !== 'POST' || statusCode < 200 || statusCode >= 300) return;
+    const url = new URL(input.path, 'http://neon-pilot.local');
+    const match = /^\/api\/extensions\/([^/]+)\/actions\/([^/]+)$/.exec(url.pathname);
+    if (!match) return;
+    if (decodeURIComponent(match[1] ?? '') !== 'system-conversation-tools') return;
+    if (decodeURIComponent(match[2] ?? '') !== 'conversationTool') return;
+    const requestBody =
+      input.body && typeof input.body === 'object' && !Array.isArray(input.body) ? (input.body as Record<string, unknown>) : {};
+    if (requestBody.action !== 'delete') return;
+    const conversationIds = optionalStringArray(requestBody.conversationIds);
+    if (!conversationIds) return;
+    try {
+      const parsed = JSON.parse(new TextDecoder().decode(responseBody)) as unknown;
+      if (!parsed || typeof parsed !== 'object' || (parsed as { ok?: unknown }).ok !== true) return;
+      await this.callLocalApiMethod('syncDesktopDeletedConversations', [{ conversationIds }]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`[local-backend] failed to sync deleted conversations: ${message}\n`);
+    }
   }
 
   async subscribeApiStream(path: string, onEvent: (event: DesktopApiStreamEvent) => void): Promise<() => void> {
@@ -566,6 +603,20 @@ export class LocalBackendProcesses {
         'backend-rpc',
       );
     }
+    const branchMatch = path.match(/^\/api\/live-sessions\/([^/]+)\/branch$/);
+    if (input.method === 'POST' && branchMatch) {
+      const result = await this.callLocalApiMethod('branchDesktopLiveSession', [
+        {
+          conversationId: decodeURIComponent(branchMatch[1] ?? ''),
+          entryId: jsonBody.entryId,
+          surfaceId: jsonBody.surfaceId,
+        },
+      ]);
+      if (result && typeof result === 'object' && typeof (result as { newSessionId?: unknown }).newSessionId === 'string') {
+        this.backendLiveConversationIds.add(String((result as { newSessionId: string }).newSessionId));
+      }
+      return this.makeJsonResponse(result, 'backend-rpc');
+    }
     const forkMatch = path.match(/^\/api\/live-sessions\/([^/]+)\/fork$/);
     if (input.method === 'POST' && forkMatch) {
       const result = await this.callLocalApiMethod('forkDesktopLiveSession', [
@@ -574,6 +625,8 @@ export class LocalBackendProcesses {
           entryId: jsonBody.entryId,
           beforeEntry: jsonBody.beforeEntry,
           preserveSource: jsonBody.preserveSource,
+          branchKind: jsonBody.branchKind,
+          surfaceId: jsonBody.surfaceId,
         },
       ]);
       if (result && typeof result === 'object' && typeof (result as { newSessionId?: unknown }).newSessionId === 'string') {
@@ -888,15 +941,26 @@ export class LocalBackendProcesses {
   private async stopChild(child: ChildProcess | undefined): Promise<void> {
     if (!child || child.killed) return;
     await new Promise<void>((resolveStop) => {
-      const timeout = setTimeout(() => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (terminateTimer) clearTimeout(terminateTimer);
+        if (killTimer) clearTimeout(killTimer);
+        if (abandonTimer) clearTimeout(abandonTimer);
+        resolveStop();
+      };
+      const terminateTimer = setTimeout(() => {
         child.kill('SIGTERM');
-        resolveStop();
       }, 3_000);
-      timeout.unref?.();
-      child.once('exit', () => {
-        clearTimeout(timeout);
-        resolveStop();
-      });
+      terminateTimer.unref?.();
+      const killTimer = setTimeout(() => {
+        child.kill('SIGKILL');
+      }, 8_000);
+      killTimer.unref?.();
+      const abandonTimer = setTimeout(finish, 12_000);
+      abandonTimer.unref?.();
+      child.once('exit', finish);
       if (typeof child.send === 'function' && child.connected) {
         child.send({ type: 'shutdown' });
       } else {

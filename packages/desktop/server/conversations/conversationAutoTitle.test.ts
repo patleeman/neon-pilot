@@ -132,9 +132,15 @@ describe('normalizeGeneratedConversationTitle', () => {
     );
   });
 
-  it('keeps the full generated title instead of hard truncating display text', () => {
+  it('caps generated titles at the requested display length', () => {
     const title = 'It should be impossible for an extension to: 1. Kill the whole application 2. Exfiltrate local files';
 
-    expect(normalizeGeneratedConversationTitle(title, 32)).toBe(title);
+    expect(normalizeGeneratedConversationTitle(title, 32)).toBe('It should be impossible for...');
+  });
+
+  it('caps generated titles at the hard maximum', () => {
+    const title = 'Long title '.repeat(30).trim();
+
+    expect(normalizeGeneratedConversationTitle(title, 1_000)?.length).toBeLessThanOrEqual(160);
   });
 });

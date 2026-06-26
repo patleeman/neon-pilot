@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseConversationSlashCommand } from './conversationSlashCommand';
+import { parseConversationSlashCommand, resolveConversationSlashCommandExecution } from './conversationSlashCommand';
 
 describe('parseConversationSlashCommand', () => {
   it('parses compact with optional custom instructions', () => {
@@ -71,5 +71,32 @@ describe('parseConversationSlashCommand', () => {
     expect(parseConversationSlashCommand('/project')).toBeNull();
     expect(parseConversationSlashCommand('/resume 10m')).toBeNull();
     expect(parseConversationSlashCommand('/model')).toBeNull();
+  });
+
+  it('classifies every built-in command as local or prompt-sending work', () => {
+    expect(resolveConversationSlashCommandExecution({ action: 'compact' })).toEqual({ kind: 'local' });
+    expect(resolveConversationSlashCommandExecution({ action: 'export', outputPath: '/tmp/session.html' })).toEqual({ kind: 'local' });
+    expect(resolveConversationSlashCommandExecution({ action: 'name', name: 'Better title' })).toEqual({ kind: 'local' });
+    expect(resolveConversationSlashCommandExecution({ action: 'copy' })).toEqual({ kind: 'local' });
+    expect(resolveConversationSlashCommandExecution({ action: 'run', command: 'git status' })).toEqual({
+      kind: 'send',
+      text: 'Run this shell command: git status',
+    });
+    expect(resolveConversationSlashCommandExecution({ action: 'search', query: 'compaction bug' })).toEqual({
+      kind: 'send',
+      text: 'Search the web for: compaction bug',
+    });
+    expect(resolveConversationSlashCommandExecution({ action: 'summarize' })).toEqual({
+      kind: 'send',
+      text: 'Summarize our conversation so far',
+    });
+    expect(resolveConversationSlashCommandExecution({ action: 'think', topic: 'next step' })).toEqual({
+      kind: 'send',
+      text: 'Think step-by-step about: next step',
+    });
+    expect(resolveConversationSlashCommandExecution({ action: 'think' })).toEqual({
+      kind: 'send',
+      text: 'Think step-by-step about the next step',
+    });
   });
 });

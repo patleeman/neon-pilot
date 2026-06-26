@@ -47,7 +47,18 @@ vi.mock('./systemExtensionModules', () => ({
     [
       'system-automations',
       async () => ({
-        AutomationsPage: (await import('../../../../../extensions/system-automations/src/frontend')).AutomationsPage,
+        AutomationsPage: ({ pa }: { pa: { automations: { list: () => Promise<unknown> } } }) => {
+          React.useEffect(() => {
+            void pa.automations.list();
+          }, [pa]);
+          return <div>Automations loaded</div>;
+        },
+      }),
+    ],
+    [
+      'system-broken-extension',
+      async () => ({
+        OtherExport: () => <div>Wrong component</div>,
       }),
     ],
   ]),
@@ -109,8 +120,32 @@ describe('NativeExtensionSurfaceHost', () => {
     });
 
     await vi.waitFor(() => expect(container.textContent).toContain('Automations'));
-    expect(container.textContent).toContain('No events match this view');
-    expect(container.textContent).toContain('No event selected');
+    expect(container.textContent).toContain('Automations loaded');
     expect(apiMocks.automations.list).toHaveBeenCalled();
+  });
+
+  it('shows a safe message when an extension surface fails to load', async () => {
+    const surface: NativeExtensionViewSummary = {
+      extensionId: 'system-broken-extension',
+      id: 'page',
+      title: 'Broken',
+      location: 'main',
+      route: '/broken',
+      component: 'MissingExport',
+      frontend: { entry: '/Users/patrick/private-extension/dist/frontend.js' },
+    };
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/broken" search="" hash="" />);
+    });
+
+    await vi.waitFor(() => expect(container.textContent).toContain('This extension surface could not be loaded.'));
+    expect(container.textContent).not.toContain('MissingExport');
+    expect(container.textContent).not.toContain('/Users/patrick');
+    expect(container.textContent).not.toContain('dist/frontend.js');
   });
 });

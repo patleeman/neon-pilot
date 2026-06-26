@@ -452,7 +452,7 @@ function createWorkerBackendContext(
           const env = shellEnv(record.env);
           if (env) record.env = env;
         }
-        return callHostCapability(extensionId, 'shell', 'exec', serializableInput);
+        return callHostCapability(extensionId, 'shell', 'exec', serializableInput, options);
       },
       spawn: async (input: {
         command?: unknown;
@@ -481,7 +481,7 @@ function createWorkerBackendContext(
         }
         const env = shellEnv(serializableInput.env);
         if (env) serializableInput.env = env;
-        const result = (await callHostCapability(extensionId, 'shell', 'spawn', { handleId, ...serializableInput })) as {
+        const result = (await callHostCapability(extensionId, 'shell', 'spawn', { handleId, ...serializableInput }, options)) as {
           pid?: number | null;
           usingPty?: boolean;
           executionWrappers?: Array<{ id: string; label?: string }>;
@@ -492,10 +492,10 @@ function createWorkerBackendContext(
           executionWrappers: result.executionWrappers ?? [],
           kill: () => {
             shellHandleCallbacks.delete(handleId);
-            return callHostCapability(extensionId, 'shell', 'kill', { handleId });
+            return callHostCapability(extensionId, 'shell', 'kill', { handleId }, options);
           },
-          write: (data: string) => callHostCapability(extensionId, 'shell', 'write', { handleId, data }),
-          resize: (cols: number, rows: number) => callHostCapability(extensionId, 'shell', 'resize', { handleId, cols, rows }),
+          write: (data: string) => callHostCapability(extensionId, 'shell', 'write', { handleId, data }, options),
+          resize: (cols: number, rows: number) => callHostCapability(extensionId, 'shell', 'resize', { handleId, cols, rows }, options),
         };
       },
     },
@@ -531,16 +531,16 @@ function createWorkerBackendContext(
 function attachWorkerAbortSignal(
   contextOptions: ExtensionBackendWorkerBackendContextOptions | undefined,
   signal: AbortSignal,
-): ExtensionBackendWorkerBackendContextOptions | undefined {
-  if (!contextOptions) return undefined;
+  workerRequestId: number,
+): ExtensionBackendWorkerBackendContextOptions {
+  const base = contextOptions ?? {};
   const agentToolContext =
-    contextOptions.agentToolContext &&
-    typeof contextOptions.agentToolContext === 'object' &&
-    !Array.isArray(contextOptions.agentToolContext)
-      ? { ...(contextOptions.agentToolContext as Record<string, unknown>), signal }
-      : contextOptions.agentToolContext;
+    base.agentToolContext && typeof base.agentToolContext === 'object' && !Array.isArray(base.agentToolContext)
+      ? { ...(base.agentToolContext as Record<string, unknown>), signal }
+      : base.agentToolContext;
   return {
-    ...contextOptions,
+    ...base,
+    workerRequestId,
     ...(agentToolContext ? { agentToolContext } : {}),
   };
 }
@@ -652,8 +652,11 @@ async function handleRequest(request: ExtensionBackendWorkerRequest): Promise<Ex
       const abortController = new AbortController();
       requestAbortControllers.set(request.id, abortController);
       try {
-        const contextOptions =
-          typeof request.context === 'object' ? attachWorkerAbortSignal(request.context, abortController.signal) : undefined;
+        const contextOptions = attachWorkerAbortSignal(
+          typeof request.context === 'object' ? request.context : undefined,
+          abortController.signal,
+          request.id,
+        );
         const args = request.context ? [...request.args, createWorkerBackendContext(request.extensionId, contextOptions)] : request.args;
         const result = await extensionCapabilityScope.run({ extensionId: request.extensionId, contextOptions }, () =>
           (handler as (...args: unknown[]) => unknown)(...args),

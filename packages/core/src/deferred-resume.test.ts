@@ -18,6 +18,7 @@ import {
   retryDeferredResume,
   saveDeferredResumeState,
   scheduleDeferredResume,
+  withDeferredResumeLock,
 } from './deferred-resume.js';
 
 const tempDirs: string[] = [];
@@ -42,6 +43,27 @@ describe('deferred resume state', () => {
     expect(parseDeferredResumeDelayMs('2 hours')).toBe(7_200_000);
     expect(parseDeferredResumeDelayMs('1 day')).toBe(86_400_000);
     expect(parseDeferredResumeDelayMs('later')).toBeUndefined();
+  });
+
+  it('creates the state directory before acquiring the first write lock', () => {
+    const dir = createTempDir('deferred-resume-lock-');
+    const stateFile = join(dir, 'nested', 'deferred-resumes-state.json');
+
+    withDeferredResumeLock((state) => {
+      scheduleDeferredResume(state, {
+        id: 'resume-locked',
+        sessionFile: '/tmp/sessions/current.jsonl',
+        prompt: 'continue',
+        dueAt: '2026-03-08T12:00:00.000Z',
+        createdAt: '2026-03-08T11:50:00.000Z',
+        attempts: 0,
+      });
+    }, stateFile);
+
+    expect(loadDeferredResumeState(stateFile).resumes['resume-locked']).toMatchObject({
+      id: 'resume-locked',
+      status: 'scheduled',
+    });
   });
 
   it('loads entries without explicit status as scheduled', () => {

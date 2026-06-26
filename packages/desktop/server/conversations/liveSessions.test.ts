@@ -654,7 +654,7 @@ describe('parallel prompt job management', () => {
     expect(existsSync(jobsFile)).toBe(false);
   });
 
-  it('ignores stale auto-mode markers when reporting streaming sessions', () => {
+  it('reports stale auto-mode markers separately from running state', () => {
     setLiveEntry('session-hidden-auto-running', {
       sessionId: 'session-hidden-auto-running',
       cwd: '/tmp/workspace',
@@ -675,7 +675,7 @@ describe('parallel prompt job management', () => {
       expect.objectContaining({
         id: 'session-hidden-auto-running',
         isStreaming: true,
-        hasStaleTurnState: false,
+        hasStaleTurnState: true,
       }),
     );
   });
@@ -769,7 +769,7 @@ describe('live session registry helpers', () => {
       title: 'Persisted title',
       running: false,
       isStreaming: false,
-      hasStaleTurnState: false,
+      hasStaleTurnState: true,
     });
     expect(getLiveSessionForkEntries('session-helper')).toBe(forkEntries);
     expect(getLiveSessionForkEntries('missing-session')).toBeNull();
@@ -4150,7 +4150,7 @@ describe('promptSession', () => {
     expect(followUp).toHaveBeenCalledWith('keep going');
   });
 
-  it('prompts immediately when only stale turn state remains', async () => {
+  it('defaults to a queued follow-up when only stale turn state remains', async () => {
     const prompt = vi.fn(async () => undefined);
     const steer = vi.fn(async () => undefined);
     const followUp = vi.fn(async () => undefined);
@@ -4176,9 +4176,9 @@ describe('promptSession', () => {
 
     await promptSession('session-hidden-pending-followup', 'my missing message');
 
-    expect(prompt).toHaveBeenCalledWith('my missing message');
+    expect(prompt).not.toHaveBeenCalled();
     expect(steer).not.toHaveBeenCalled();
-    expect(followUp).not.toHaveBeenCalled();
+    expect(followUp).toHaveBeenCalledWith('my missing message');
   });
 
   it('retries queued steering prompts without images when the model rejects image input', async () => {

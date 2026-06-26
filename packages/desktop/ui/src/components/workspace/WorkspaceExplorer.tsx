@@ -59,6 +59,7 @@ interface WorkspaceExplorerProps {
   cwd: string | null;
   onDraftPrompt: (prompt: string) => void;
   onOpenFile?: (file: { cwd: string; path: string }) => void;
+  onActiveFilePathChange?: (path: string | null) => void;
   activeFilePath?: string | null;
   openFilesScope?: string | null;
   railOnly?: boolean;
@@ -224,6 +225,7 @@ function formatWorkspaceLoadError(error: unknown, fallback: string): string {
   if (
     !firstLine ||
     raw.includes('\n') ||
+    /ENOENT|ENOTDIR|EACCES|permission denied|no such file or directory|spawnSync|scandir|chdir|cwd/i.test(raw) ||
     /Local API route did not complete/i.test(raw) ||
     /\/api\/workspace\//i.test(raw) ||
     /file:\/\//i.test(raw) ||
@@ -366,6 +368,24 @@ function parentDirectory(path: string): string {
   return parts.join('/');
 }
 
+export function remapWorkspacePathAfterEntryMove(currentPath: string | null, sourcePath: string, targetPath: string): string | null {
+  if (!currentPath) return currentPath;
+  if (currentPath === sourcePath) return targetPath;
+  if (currentPath.startsWith(`${sourcePath}/`)) return `${targetPath}/${currentPath.slice(sourcePath.length + 1)}`;
+  return currentPath;
+}
+
+export function clearWorkspacePathAfterEntryDelete(
+  currentPath: string | null,
+  deletedPath: string,
+  deletedKind: WorkspaceEntryKind,
+): string | null {
+  if (!currentPath) return currentPath;
+  if (currentPath === deletedPath) return null;
+  if (deletedKind === 'directory' && currentPath.startsWith(`${deletedPath}/`)) return null;
+  return currentPath;
+}
+
 function WorkspaceTreeContextMenu({
   onCreateFile,
   onCreateFolder,
@@ -470,6 +490,9 @@ function WorkspaceTreeRow({
   onToggle,
   onSelect,
   onDraftPrompt,
+  onCreateFile,
+  onCreateFolder,
+  onMove,
   root,
 }: {
   entry: WorkspaceEntry;
@@ -480,6 +503,9 @@ function WorkspaceTreeRow({
   onToggle: (entry: WorkspaceEntry) => void;
   onSelect: (entry: WorkspaceEntry) => void;
   onDraftPrompt: (prompt: string) => void;
+  onCreateFile?: (entry: WorkspaceEntry) => void;
+  onCreateFolder?: (entry: WorkspaceEntry) => void;
+  onMove?: (entry: WorkspaceEntry) => void;
   root: string | null;
 }) {
   const selected = selectedPath === entry.path;
@@ -514,6 +540,39 @@ function WorkspaceTreeRow({
         >
           ask
         </TextButton>
+        {isDirectory && onCreateFile ? (
+          <TextButton
+            className="hidden shrink-0 px-1 py-0.5 text-[10px] text-dim group-hover:inline-flex group-focus-within:inline-flex"
+            onClick={(event) => {
+              event.stopPropagation();
+              onCreateFile(entry);
+            }}
+          >
+            New File
+          </TextButton>
+        ) : null}
+        {isDirectory && onCreateFolder ? (
+          <TextButton
+            className="hidden shrink-0 px-1 py-0.5 text-[10px] text-dim group-hover:inline-flex group-focus-within:inline-flex"
+            onClick={(event) => {
+              event.stopPropagation();
+              onCreateFolder(entry);
+            }}
+          >
+            New Folder
+          </TextButton>
+        ) : null}
+        {onMove ? (
+          <TextButton
+            className="mr-1 hidden shrink-0 px-1 py-0.5 text-[10px] text-dim group-hover:inline-flex group-focus-within:inline-flex"
+            onClick={(event) => {
+              event.stopPropagation();
+              onMove(entry);
+            }}
+          >
+            Move to…
+          </TextButton>
+        ) : null}
       </div>
       {isDirectory && node?.expanded && (
         <div>
@@ -538,6 +597,9 @@ function WorkspaceTreeRow({
               onToggle={onToggle}
               onSelect={onSelect}
               onDraftPrompt={onDraftPrompt}
+              onCreateFile={onCreateFile}
+              onCreateFolder={onCreateFolder}
+              onMove={onMove}
               root={root}
             />
           ))}
@@ -555,6 +617,7 @@ export function WorkspaceExplorer({
   cwd,
   onDraftPrompt,
   onOpenFile,
+  onActiveFilePathChange,
   activeFilePath = null,
   openFilesScope = null,
   railOnly = false,
@@ -600,14 +663,12 @@ export function WorkspaceExplorer({
         .renameWorkspacePath(cwd, entry.path, nextName)
         .then((renamed) => {
           const current = readWorkspaceOpenFiles(cwd, openFilesScope);
-          const next = current.map((path) =>
-            path === entry.path
-              ? renamed.path
-              : path.startsWith(`${entry.path}/`)
-                ? `${renamed.path}/${path.slice(entry.path.length + 1)}`
-                : path,
-          );
+          const next = current.map((path) => remapWorkspacePathAfterEntryMove(path, entry.path, renamed.path) ?? path);
           writeWorkspaceOpenFiles(cwd, next, openFilesScope);
+          const remappedActiveFilePath = remapWorkspacePathAfterEntryMove(activeFilePath, entry.path, renamed.path);
+          if (remappedActiveFilePath !== activeFilePath) {
+            onActiveFilePathChange?.(remappedActiveFilePath);
+          }
           void loadRoot();
           const parent = parentDirectory(entry.path);
           if (parent) void loadDirectory(parent);
@@ -848,11 +909,15 @@ export function WorkspaceExplorer({
           ? current.filter((path) => !path.startsWith(`${entry.path}/`))
           : removeWorkspaceOpenFile(current, entry.path);
       writeWorkspaceOpenFiles(cwd, next, openFilesScope);
+      const nextActiveFilePath = clearWorkspacePathAfterEntryDelete(activeFilePath, entry.path, entry.kind);
+      if (nextActiveFilePath !== activeFilePath) {
+        onActiveFilePathChange?.(nextActiveFilePath);
+      }
       await loadRoot();
       const parent = parentDirectory(entry.path);
       if (parent) await loadDirectory(parent);
     },
-    [cwd, loadDirectory, loadRoot, openFilesScope],
+    [activeFilePath, cwd, loadDirectory, loadRoot, onActiveFilePathChange, openFilesScope],
   );
 
   const movePath = useCallback((entry: WorkspaceEntry) => {
@@ -870,14 +935,12 @@ export function WorkspaceExplorer({
       try {
         const moved = await api.moveWorkspacePath(cwd, entry.path, normalizedTargetDir);
         const current = readWorkspaceOpenFiles(cwd, openFilesScope);
-        const next = current.map((path) =>
-          path === entry.path
-            ? moved.path
-            : path.startsWith(`${entry.path}/`)
-              ? `${moved.path}/${path.slice(entry.path.length + 1)}`
-              : path,
-        );
+        const next = current.map((path) => remapWorkspacePathAfterEntryMove(path, entry.path, moved.path) ?? path);
         writeWorkspaceOpenFiles(cwd, next, openFilesScope);
+        const remappedActiveFilePath = remapWorkspacePathAfterEntryMove(activeFilePath, entry.path, moved.path);
+        if (remappedActiveFilePath !== activeFilePath) {
+          onActiveFilePathChange?.(remappedActiveFilePath);
+        }
         await loadRoot();
         await loadDirectory(parentDirectory(entry.path));
         if (normalizedTargetDir) await loadDirectory(normalizedTargetDir);
@@ -888,7 +951,7 @@ export function WorkspaceExplorer({
         setPathPromptSubmitting(false);
       }
     },
-    [cwd, loadDirectory, loadRoot, openFilesScope],
+    [activeFilePath, cwd, loadDirectory, loadRoot, onActiveFilePathChange, openFilesScope],
   );
 
   const root = rootListing.data?.root ?? null;
@@ -1032,6 +1095,32 @@ export function WorkspaceExplorer({
               <PanelMessage className="animate-pulse px-3 py-2">Loading workspace…</PanelMessage>
             ) : rootListing.error ? (
               <EmptyState title="Workspace unavailable" body={rootListing.error} className="px-3 py-8" />
+            ) : rootListing.data ? (
+              <div className="h-full overflow-auto">
+                {rootListing.data.entries.length === 0 ? (
+                  <EmptyState title="No files" body="This workspace folder is empty." className="px-3 py-8" />
+                ) : (
+                  <div className="py-1">
+                    {rootListing.data.entries.map((entry) => (
+                      <WorkspaceTreeRow
+                        key={entry.path}
+                        entry={entry}
+                        depth={0}
+                        selectedPath={selectedPath}
+                        node={nodes[entry.path]}
+                        nodes={nodes}
+                        onToggle={toggleDirectory}
+                        onSelect={selectFile}
+                        onDraftPrompt={onDraftPrompt}
+                        onCreateFile={(entry) => createPath('file', entry.path)}
+                        onCreateFolder={(entry) => createPath('folder', entry.path)}
+                        onMove={(entry) => movePath(entry)}
+                        root={root}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : (
               <TreesFileTree
                 className="h-full rounded-none"
@@ -1101,7 +1190,10 @@ export function WorkspaceExplorer({
         <div className="flex items-center gap-2 border-b border-border-subtle px-3 py-2">
           <div className="min-w-0 flex-1">
             <div className="truncate text-[12px] font-semibold text-primary">{rootListing.data?.rootName ?? 'Workspace'}</div>
-            <div className="truncate font-mono text-[10px] text-dim" title={rootListing.data?.root ?? cwd}>
+            <div
+              className="truncate font-mono text-[10px] text-dim"
+              title={rootListing.data?.rootKind === 'git' ? 'Project root' : 'Working directory'}
+            >
               {rootListing.data?.rootKind === 'git' ? 'Project root' : 'Working directory'} · {rootListing.data?.branch ?? 'No branch'}
             </div>
           </div>
@@ -1200,9 +1292,19 @@ export function WorkspaceExplorer({
                             selectFileRequestIdRef.current = requestId;
                             const isCurrentRequest = () => selectFileRequestIdRef.current === requestId;
                             setFileState({ status: 'loading', data: selectedFile, error: null });
-                            const file = await api.workspaceFile(cwd, selectedFile.path, { force: true });
-                            if (isCurrentRequest()) {
-                              setFileState({ status: 'idle', data: file, error: null });
+                            try {
+                              const file = await api.workspaceFile(cwd, selectedFile.path, { force: true });
+                              if (isCurrentRequest()) {
+                                setFileState({ status: 'idle', data: file, error: null });
+                              }
+                            } catch (error) {
+                              if (isCurrentRequest()) {
+                                setFileState({
+                                  status: 'idle',
+                                  data: null,
+                                  error: formatWorkspaceLoadError(error, 'Could not open this file. Refresh the workspace or try again.'),
+                                });
+                              }
                             }
                           }}
                         >
@@ -1422,7 +1524,7 @@ export function WorkspaceFileDocument({
           if (!isCurrentSaveRequest()) {
             return;
           }
-          setSaveState({ error: error instanceof Error ? error.message : String(error) });
+          setSaveState({ error: formatWorkspaceLoadError(error, 'Could not save this file. Check the file and try again.') });
         });
     }, 800);
 

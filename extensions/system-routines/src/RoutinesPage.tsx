@@ -78,6 +78,30 @@ function hookIdFromHash(hash?: string): string | null {
   }
 }
 
+function sanitizeRunStepMessage(message: string): string {
+  const trimmed = message.trim();
+  const jsonStart = trimmed.indexOf('{');
+  if (jsonStart >= 0) {
+    try {
+      const parsed = JSON.parse(trimmed.slice(jsonStart)) as unknown;
+      if (parsed && typeof parsed === 'object') {
+        const record = parsed as Record<string, unknown>;
+        const nestedError = record.error && typeof record.error === 'object' ? (record.error as Record<string, unknown>) : undefined;
+        const providerMessage = typeof nestedError?.message === 'string' ? nestedError.message : undefined;
+        const statusCode = typeof record.status_code === 'number' ? record.status_code : undefined;
+        if (providerMessage && statusCode) return `Routine model call failed (${statusCode}): ${providerMessage}`;
+        if (providerMessage) return `Routine model call failed: ${providerMessage}`;
+      }
+    } catch {
+      // Keep the generic cleanup below for malformed structured errors.
+    }
+  }
+  if (/status_code|headers|x-codex-|usage_limit_reached/i.test(trimmed)) {
+    return 'Routine model call failed. Check provider limits or credentials, then try again.';
+  }
+  return trimmed;
+}
+
 async function navigateRoutines(pa: ExtensionSurfaceProps['pa'], hookId: string) {
   const to = `/routines#${encodeURIComponent(hookId)}`;
   const handled = await pa.commands?.execute?.('app.navigate', { to });
@@ -1399,7 +1423,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     <div className="mt-2 grid gap-1 text-[12px] text-secondary">
                       {run.steps.map((step, index) => (
                         <div key={`${step.routineId}-${index}`}>
-                          {step.routineName}: {step.outcome ?? step.status} {step.message ? `— ${step.message}` : ''}
+                          {step.routineName}: {step.outcome ?? step.status}{' '}
+                          {step.message ? `— ${sanitizeRunStepMessage(step.message)}` : ''}
                         </div>
                       ))}
                     </div>

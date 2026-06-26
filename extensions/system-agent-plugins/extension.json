@@ -88,7 +88,7 @@
         "description": "Open plugin settings.",
         "action": "app.navigate",
         "args": {
-          "to": "/settings#agent-plugins"
+          "to": "/settings#settings-agent-plugins"
         },
         "icon": "sparkle"
       },

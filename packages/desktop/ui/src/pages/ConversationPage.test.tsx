@@ -8,10 +8,14 @@ import { AppDataContext } from '../app/contexts.js';
 import { constrainPromptImageDimensions } from '../conversation/promptAttachments.js';
 import {
   buildMissionAutoModeInputFromDraft,
+  cancelConversationGoalViaApi,
   ConversationPage,
   createDraftMissionTask,
+  formatDeferredResumeOperationFailure,
   hasConversationTranscriptAcceptedPendingInitialPrompt,
+  loadDeferredResumesAfterConversationRefresh,
   replaceConversationMetaInSessionList,
+  resolveComposerQuestionHotkeyAction,
   resolveConversationComposerRunState,
   resolveConversationCwdChangeAction,
   resolveConversationPerformanceMode,
@@ -23,6 +27,8 @@ import {
   shouldFetchConversationLiveSessionGitContext,
   shouldLoadConversationModels,
   shouldMountComposerShelvesImmediately,
+  shouldPrepareConversationComposerChrome,
+  shouldReleaseWholeLineBashLock,
   shouldShowMissingConversationState,
   shouldShowNewConversationSetup,
   shouldUseHealthyDesktopConversationState,
@@ -109,6 +115,71 @@ describe('desktop conversation state fallback', () => {
     ).toBe(false);
   });
 
+  it('prepares composer chrome for editable empty saved conversations', () => {
+    expect(
+      shouldPrepareConversationComposerChrome({
+        draft: false,
+        conversationId: 'conv-empty',
+        composerChromeReady: false,
+        showConversationLoadingState: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldPrepareConversationComposerChrome({
+        draft: false,
+        conversationId: null,
+        composerChromeReady: false,
+        showConversationLoadingState: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldPrepareConversationComposerChrome({
+        draft: false,
+        conversationId: 'conv-empty',
+        composerChromeReady: true,
+        showConversationLoadingState: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldPrepareConversationComposerChrome({
+        draft: false,
+        conversationId: 'conv-empty',
+        composerChromeReady: false,
+        showConversationLoadingState: true,
+      }),
+    ).toBe(false);
+  });
+
+  it('resolves composer question hotkeys without swallowing shifted text-navigation arrows', () => {
+    const baseInput = {
+      key: 'Tab',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      isComposing: false,
+      hasPendingQuestion: true,
+      questionSubmitting: false,
+      composerInputLength: 0,
+      attachmentCount: 0,
+      drawingAttachmentCount: 0,
+      activeOptionCount: 2,
+    };
+
+    expect(resolveComposerQuestionHotkeyAction(baseInput)).toEqual({ kind: 'moveQuestion', direction: 1 });
+    expect(resolveComposerQuestionHotkeyAction({ ...baseInput, shiftKey: true })).toEqual({ kind: 'moveQuestion', direction: -1 });
+    expect(resolveComposerQuestionHotkeyAction({ ...baseInput, key: 'ArrowRight' })).toEqual({
+      kind: 'moveQuestion',
+      direction: 1,
+    });
+    expect(resolveComposerQuestionHotkeyAction({ ...baseInput, key: 'ArrowRight', shiftKey: true })).toEqual({ kind: 'none' });
+    expect(resolveComposerQuestionHotkeyAction({ ...baseInput, key: 'ArrowDown' })).toEqual({ kind: 'moveOption', direction: 1 });
+    expect(resolveComposerQuestionHotkeyAction({ ...baseInput, key: 'ArrowDown', shiftKey: true })).toEqual({ kind: 'none' });
+    expect(resolveComposerQuestionHotkeyAction({ ...baseInput, key: '2' })).toEqual({ kind: 'selectOption', optionIndex: 1 });
+    expect(resolveComposerQuestionHotkeyAction({ ...baseInput, key: 'Enter' })).toEqual({ kind: 'submitOrSelect' });
+    expect(resolveComposerQuestionHotkeyAction({ ...baseInput, key: 'Tab', composerInputLength: 1 })).toEqual({ kind: 'none' });
+  });
+
   it('reconnects the current transcript when a cwd change keeps the same conversation id', () => {
     expect(
       resolveConversationCwdChangeAction({
@@ -137,6 +208,21 @@ describe('desktop conversation state fallback', () => {
         handledKey: 'conv-1\n/tmp/next\n1',
       }),
     ).toEqual({ action: 'none', key: null });
+  });
+
+  it('lets the canonical deferred-resume endpoint win after broader conversation refresh', async () => {
+    const calls: string[] = [];
+    const refreshConversation = vi.fn(async () => {
+      calls.push('refresh');
+    });
+    const loadDeferredResumes = vi.fn(async () => {
+      calls.push('load');
+      return { resumes: [] };
+    });
+
+    await expect(loadDeferredResumesAfterConversationRefresh({ refreshConversation, loadDeferredResumes })).resolves.toEqual([]);
+
+    expect(calls).toEqual(['refresh', 'load']);
   });
 
   it('creates pending user mission tasks with stable user-owned ids', () => {
@@ -228,6 +314,133 @@ describe('desktop conversation state fallback', () => {
         hasStaleTurnState: false,
       }),
     ).toEqual({ allowQueuedPrompts: false, defaultComposerBehavior: undefined, streamControlsActive: false });
+  });
+
+  it('keeps whole-line bash locked until the matching terminal block completes', () => {
+    expect(
+      shouldReleaseWholeLineBashLock({
+        command: 'sleep 10',
+        messages: [
+          { type: 'tool_use', ts: '2026-05-24T00:00:00.000Z', tool: 'bash', input: { command: 'sleep 10' }, output: '', status: 'running' },
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      shouldReleaseWholeLineBashLock({
+        command: 'sleep 10',
+        messages: [
+          {
+            type: 'tool_use',
+            ts: '2026-05-24T00:00:01.000Z',
+            tool: 'bash',
+            input: { command: 'echo other' },
+            output: 'ok\n',
+            details: { displayMode: 'terminal', exitCode: 0 },
+          },
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      shouldReleaseWholeLineBashLock({
+        command: 'sleep 10',
+        messages: [
+          {
+            type: 'tool_use',
+            ts: '2026-05-24T00:00:02.000Z',
+            tool: 'bash',
+            input: { command: 'sleep 10' },
+            output: '',
+            details: { displayMode: 'terminal', exitCode: 0 },
+          },
+        ],
+      }),
+    ).toBe(true);
+  });
+
+  it('cancels an active goal through the goal state API instead of sending a slash prompt', async () => {
+    const updateGoal = vi.fn().mockResolvedValue({});
+    const refreshConversation = vi.fn().mockResolvedValue({});
+    const showNotice = vi.fn();
+
+    await cancelConversationGoalViaApi({
+      conversationId: 'conv-goal',
+      updateGoal,
+      refreshConversation,
+      showNotice,
+    });
+
+    expect(updateGoal).toHaveBeenCalledWith('conv-goal', {});
+    expect(refreshConversation).toHaveBeenCalledTimes(1);
+    expect(showNotice).toHaveBeenCalledWith('accent', 'Goal cancelled.');
+  });
+
+  it('reports goal cancellation failures without calling refresh', async () => {
+    const updateGoal = vi.fn().mockRejectedValue(new Error('nope'));
+    const refreshConversation = vi.fn().mockResolvedValue({});
+    const showNotice = vi.fn();
+
+    await cancelConversationGoalViaApi({
+      conversationId: 'conv-goal',
+      updateGoal,
+      refreshConversation,
+      showNotice,
+    });
+
+    expect(updateGoal).toHaveBeenCalledWith('conv-goal', {});
+    expect(refreshConversation).not.toHaveBeenCalled();
+    expect(showNotice).toHaveBeenCalledWith('danger', 'nope', 4000);
+  });
+
+  it('does not cancel a goal without a conversation id', async () => {
+    const updateGoal = vi.fn().mockResolvedValue({});
+    const refreshConversation = vi.fn().mockResolvedValue({});
+    const showNotice = vi.fn();
+
+    await cancelConversationGoalViaApi({
+      conversationId: null,
+      updateGoal,
+      refreshConversation,
+      showNotice,
+    });
+
+    expect(updateGoal).not.toHaveBeenCalled();
+    expect(refreshConversation).not.toHaveBeenCalled();
+    expect(showNotice).toHaveBeenCalledWith('danger', 'Open a conversation before cancelling a goal.', 4000);
+  });
+
+  it('keeps helpful deferred resume validation messages visible', () => {
+    expect(
+      formatDeferredResumeOperationFailure('schedule', new Error('Invalid delay. Use forms like 30s, 10m, 10 minutes, 2h, or 1d.')),
+    ).toBe('Invalid delay. Use forms like 30s, 10m, 10 minutes, 2h, or 1d.');
+  });
+
+  it('hides raw deferred resume route and stack details from visible notices', () => {
+    const message = formatDeferredResumeOperationFailure(
+      'schedule',
+      new Error(
+        [
+          'Error: Local API route did not complete for POST /api/conversations/conv/deferred-resumes at Module.ep',
+          '(file:///Users/patrick/workingdir/neon-pilot/packages/desktop/server/dist/app/localApi.js:132:20)',
+        ].join('\n'),
+      ),
+    );
+
+    expect(message).toBe('Could not schedule the wakeup. Check the delay and try again.');
+    expect(message).not.toContain('/api/');
+    expect(message).not.toContain('file://');
+    expect(message).not.toContain('Module.ep');
+  });
+
+  it('hides raw filesystem errors from deferred resume action notices', () => {
+    expect(formatDeferredResumeOperationFailure('cancel', new Error('ENOENT: no such file or directory, open /tmp/state.json'))).toBe(
+      'Could not cancel this wakeup. Refresh the conversation and try again.',
+    );
+    expect(formatDeferredResumeOperationFailure('fire', new Error('ENOENT: no such file or directory, open /tmp/state.json'))).toBe(
+      'Could not start this wakeup. Refresh the conversation and try again.',
+    );
+    expect(formatDeferredResumeOperationFailure('continue', new Error('ENOENT: no such file or directory, open /tmp/state.json'))).toBe(
+      'Could not resume deferred work. Refresh the conversation and try again.',
+    );
   });
 
   it('syncs active conversation meta back into the session list', () => {
@@ -563,6 +776,7 @@ describe('conversation live state helpers', () => {
         sessionsLoaded: false,
         confirmedLive: false,
         sessionLoading: false,
+        hasAuthoritativeSessionSnapshot: false,
         hasVisibleSessionDetail: false,
         hasSavedConversationSessionFile: false,
         hasPendingInitialPrompt: false,
@@ -576,6 +790,7 @@ describe('conversation live state helpers', () => {
         sessionsLoaded: true,
         confirmedLive: false,
         sessionLoading: false,
+        hasAuthoritativeSessionSnapshot: false,
         hasVisibleSessionDetail: false,
         hasSavedConversationSessionFile: false,
         hasPendingInitialPrompt: false,

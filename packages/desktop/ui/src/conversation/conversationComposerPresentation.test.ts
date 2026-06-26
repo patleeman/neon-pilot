@@ -23,18 +23,22 @@ describe('conversation composer presentation helpers', () => {
     expect(resolveConversationAutocompleteCatalogDemand('hello')).toEqual({
       needsMemoryData: false,
       needsKnowledgeFiles: false,
+      needsTaskData: false,
     });
     expect(resolveConversationAutocompleteCatalogDemand('ask @proj')).toEqual({
       needsMemoryData: true,
       needsKnowledgeFiles: true,
+      needsTaskData: true,
     });
     expect(resolveConversationAutocompleteCatalogDemand('/model gpt')).toEqual({
       needsMemoryData: false,
       needsKnowledgeFiles: false,
+      needsTaskData: false,
     });
     expect(resolveConversationAutocompleteCatalogDemand('/skill build')).toEqual({
       needsMemoryData: true,
       needsKnowledgeFiles: false,
+      needsTaskData: false,
     });
   });
 

@@ -303,6 +303,42 @@ describe('system-skill-search backend', () => {
     );
   });
 
+  it('normalizes block scalar frontmatter descriptions in search results', async () => {
+    const archive = createTarGz({
+      'skills-main/skills/research/SKILL.md':
+        '---\nname: research\ndescription: |\n  Research papers and summarize findings.\n  Use this for literature review.\n---\nUse this for research workflows.',
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const textUrl = String(url);
+        if (textUrl.includes('skills-index.json')) return jsonResponse({ skills: [] });
+        if (textUrl.includes('api.github.com/repos/NVIDIA/skills')) {
+          return jsonResponse({ message: 'API rate limit exceeded' }, 403);
+        }
+        if (textUrl.includes('codeload.github.com/NVIDIA/skills/tar.gz/refs/heads/main')) {
+          return bufferResponse(archive);
+        }
+        if (textUrl.includes('/repos/')) return jsonResponse({ tree: [] });
+        return jsonResponse({});
+      }),
+    );
+    const { ctx } = createCtx();
+
+    const result = (await searchSkills({ intent: 'research papers', limit: 10 }, ctx as never)) as {
+      candidates: Array<{ title: string; description: string; previewSummary: string }>;
+    };
+
+    expect(result.candidates).toContainEqual(
+      expect.objectContaining({
+        title: 'Research',
+        description: 'Research papers and summarize findings.\nUse this for literature review.',
+        previewSummary: 'Research papers and summarize findings.\nUse this for literature review.',
+      }),
+    );
+    expect(result.candidates.map((candidate) => candidate.description)).not.toContain('|');
+  });
+
   it('installs trusted vetted candidates without prompting for approval', async () => {
     installFetchMock({
       'SKILL.md': '---\nname: reviewer\ndescription: Review pull requests.\n---\nUse this when reviewing code.',

@@ -166,7 +166,43 @@ describe('ask user question agent extension', () => {
     });
   });
 
-  it('rejects payloads without structured questions', async () => {
+  it('supports the documented single-question shorthand', async () => {
+    const tool = registerAskUserQuestionTool();
+    const ctx = createToolContext();
+
+    const result = await tool.execute(
+      'tool-3',
+      {
+        question: ' Which environment should I deploy to? ',
+        details: ' Pick one target so I can continue. ',
+        options: [' staging ', { value: 'prod', label: 'Production' }],
+      },
+      undefined,
+      undefined,
+      ctx,
+    );
+
+    expect(result.content[0]?.text).toContain('Asked the user a question.');
+    expect(result.details).toMatchObject({
+      action: 'ask_user',
+      conversationId: 'conv-123',
+      details: 'Pick one target so I can continue.',
+      questions: [
+        {
+          id: 'question-1',
+          label: 'Which environment should I deploy to?',
+          details: 'Pick one target so I can continue.',
+          style: 'radio',
+          options: [
+            { value: 'staging', label: 'staging' },
+            { value: 'prod', label: 'Production' },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('rejects shorthand questions without options', async () => {
     const tool = registerAskUserQuestionTool();
     const ctx = createToolContext();
 
@@ -175,13 +211,12 @@ describe('ask user question agent extension', () => {
         'tool-3',
         {
           question: 'Which environment should I deploy to?',
-          options: ['staging', 'prod'],
         },
         undefined,
         undefined,
         ctx,
       ),
-    ).rejects.toThrow('questions is required.');
+    ).rejects.toThrow('options is required for question.');
   });
 
   it('rejects structured questions without labels', async () => {
@@ -248,5 +283,23 @@ describe('ask user question agent extension', () => {
         ctx,
       ),
     ).rejects.toThrow('ask_user supports at most 8 questions.');
+  });
+
+  it('rejects payloads over the option limit after normalization', async () => {
+    const tool = registerAskUserQuestionTool();
+    const ctx = createToolContext();
+
+    await expect(
+      tool.execute(
+        'tool-5',
+        {
+          question: 'Pick one',
+          options: Array.from({ length: 13 }, (_, index) => `option-${index + 1}`),
+        },
+        undefined,
+        undefined,
+        ctx,
+      ),
+    ).rejects.toThrow('questions[0] supports at most 12 options.');
   });
 });

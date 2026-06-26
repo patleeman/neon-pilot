@@ -83,6 +83,28 @@ function optionalStringArray(value: unknown): string[] | undefined {
   return ids.length > 0 ? ids : undefined;
 }
 
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function extensionActionResultDetails(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const result = (value as { result?: unknown }).result;
+  if (!result || typeof result !== 'object' || Array.isArray(result)) return {};
+  const details = (result as { details?: unknown }).details;
+  return details && typeof details === 'object' && !Array.isArray(details) ? (details as Record<string, unknown>) : {};
+}
+
+export function readSystemConversationSetTitleMutation(
+  body: Record<string, unknown>,
+  result: unknown,
+): { conversationId: string; title: string } | null {
+  const details = extensionActionResultDetails(result);
+  const conversationId = optionalString(body.conversationId) ?? optionalString(details.conversationId);
+  const title = optionalString(body.title) ?? optionalString(details.title);
+  return conversationId && title ? { conversationId, title } : null;
+}
+
 async function syncSystemConversationToolMutation(input: {
   extensionId: string;
   actionId: string;
@@ -96,9 +118,16 @@ async function syncSystemConversationToolMutation(input: {
   const action = typeof body.action === 'string' ? body.action : '';
   const actionResult = input.result && typeof input.result === 'object' ? (input.result as { ok?: unknown }) : {};
   if (actionResult.ok !== true) return;
-  if (!input.context || !('resolveRequestedCwd' in input.context)) return;
+  if (!input.context) return;
 
   const conversations = createExtensionConversationsCapability(input.context as ServerRouteContext, input.extensionId);
+  if (action === 'set_title') {
+    const mutation = readSystemConversationSetTitleMutation(body, input.result);
+    if (mutation) {
+      await conversations.setTitle(mutation.conversationId, mutation.title);
+    }
+    return;
+  }
   if (action === 'delete') {
     await conversations.delete({ conversationIds: optionalStringArray(body.conversationIds) ?? [] });
     return;
@@ -126,6 +155,11 @@ function normalizeHostHeader(value: string | undefined): string {
 function normalizeRequestPath(path: string | undefined): string {
   const value = path && path.trim() ? path : '/';
   return value.startsWith('/') ? value : `/${value}`;
+}
+
+function isExtensionWebappLocalhostHost(hostname: string): boolean {
+  const name = hostname.endsWith('.localhost') ? hostname.slice(0, -'.localhost'.length) : '';
+  return name.length > 0;
 }
 
 function webappLocalhostUrl(webapp: Pick<ExtensionWebappSummary, 'localhostName'>): string {
@@ -1399,6 +1433,10 @@ export function registerExtensionRoutes(
       await getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches' });
       await getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: req.params.id });
       const summary = await readExtensionInstallSummaryFromHost(req.params.id);
+      if (!summary) {
+        res.status(404).json({ error: 'Extension not found.' });
+        return;
+      }
       if (summary?.status === 'invalid') {
         const errors = Array.isArray(summary.errors) ? summary.errors.filter((error): error is string => typeof error === 'string') : [];
         res.status(400).json({ error: errors[0] ?? 'Extension manifest is invalid.' });
@@ -1501,6 +1539,10 @@ export function registerExtensionRoutes(
       const host = normalizeHostHeader(req.get('host'));
       const webapp = await findWebappByHost(host);
       if (!webapp) {
+        if (isExtensionWebappLocalhostHost(host)) {
+          res.status(404).json({ error: 'No Neon Pilot webapp is registered for this host.' });
+          return;
+        }
         next?.();
         return;
       }

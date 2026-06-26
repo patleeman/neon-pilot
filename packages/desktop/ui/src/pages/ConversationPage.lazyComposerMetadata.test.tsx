@@ -33,6 +33,8 @@ const apiMock = vi.hoisted(() => ({
   createLiveSession: vi.fn(),
   reserveConversation: vi.fn(),
   destroySession: vi.fn(),
+  executeLiveSessionBash: vi.fn(),
+  clearQueuedMessages: vi.fn(),
   workspaceUncommittedDiff: vi.fn(),
 }));
 
@@ -40,6 +42,7 @@ const sessionTabsMock = vi.hoisted(() => ({
   closeConversationTab: vi.fn(),
   ensureConversationTabOpen: vi.fn(),
   fetchRemoteConversationLayout: vi.fn(),
+  forgetConversationTab: vi.fn(),
   isWithinLocalWriteGrace: vi.fn(),
   setActiveConversationTab: vi.fn(),
 }));
@@ -90,6 +93,7 @@ const desktopConversationState = {
   error: null,
   surfaceId: '',
   reconnect: vi.fn(),
+  refresh: vi.fn(),
   send: vi.fn(),
   abort: vi.fn(),
   takeover: vi.fn(),
@@ -158,7 +162,20 @@ function createDesktopStateFromRegressionBootstrap() {
       contextUsage: null,
       pendingQueue: { steering: [], followUp: [] },
       parallelJobs: [],
-      presence: { surfaces: [] },
+      presence: desktopConversationState.surfaceId
+        ? {
+            surfaces: [
+              {
+                surfaceId: desktopConversationState.surfaceId,
+                surfaceType: 'desktop_web' as const,
+                connectedAt: '2026-05-27T12:00:00.000Z',
+              },
+            ],
+            controllerSurfaceId: desktopConversationState.surfaceId,
+            controllerSurfaceType: 'desktop_web' as const,
+            controllerAcquiredAt: '2026-05-27T12:00:00.000Z',
+          }
+        : { surfaces: [] },
       goalState: null,
       systemPrompt: null,
       toolDefinitions: [],
@@ -298,6 +315,7 @@ vi.mock('../session/sessionTabs', () => ({
   closeConversationTab: sessionTabsMock.closeConversationTab,
   ensureConversationTabOpen: sessionTabsMock.ensureConversationTabOpen,
   fetchRemoteConversationLayout: sessionTabsMock.fetchRemoteConversationLayout,
+  forgetConversationTab: sessionTabsMock.forgetConversationTab,
   isWithinLocalWriteGrace: sessionTabsMock.isWithinLocalWriteGrace,
   setActiveConversationTab: sessionTabsMock.setActiveConversationTab,
 }));
@@ -551,6 +569,7 @@ beforeEach(() => {
   desktopConversationState.error = null;
   desktopConversationState.surfaceId = '';
   desktopConversationState.reconnect.mockReset();
+  desktopConversationState.refresh.mockReset();
   desktopConversationState.send.mockReset();
   desktopConversationState.abort.mockReset();
   desktopConversationState.takeover.mockReset();
@@ -626,6 +645,8 @@ beforeEach(() => {
     bootstrap: undefined,
   });
   apiMock.destroySession.mockResolvedValue({ ok: true });
+  apiMock.executeLiveSessionBash.mockResolvedValue({ ok: true, result: { output: 'ok\n', exitCode: 0 } });
+  apiMock.clearQueuedMessages.mockResolvedValue({ ok: true, items: [] });
   apiMock.workspaceUncommittedDiff.mockResolvedValue({
     branch: 'main',
     changeCount: 0,
@@ -640,6 +661,7 @@ beforeEach(() => {
   sessionTabsMock.isWithinLocalWriteGrace.mockReturnValue(true);
   sessionTabsMock.closeConversationTab.mockReset();
   sessionTabsMock.ensureConversationTabOpen.mockReset();
+  sessionTabsMock.forgetConversationTab.mockReset();
   sessionTabsMock.setActiveConversationTab.mockReset();
 });
 
@@ -658,8 +680,9 @@ describe('ConversationPage lazy composer metadata', () => {
     });
 
     await waitFor(() => {
-      expect(sessionTabsMock.closeConversationTab).toHaveBeenCalledWith('missing-conv');
+      expect(sessionTabsMock.forgetConversationTab).toHaveBeenCalledWith('missing-conv');
     });
+    expect(sessionTabsMock.closeConversationTab).not.toHaveBeenCalledWith('missing-conv');
     expect(sessionTabsMock.ensureConversationTabOpen).not.toHaveBeenCalledWith('missing-conv');
     expect(sessionTabsMock.setActiveConversationTab).not.toHaveBeenCalledWith('missing-conv');
   });
@@ -884,6 +907,156 @@ describe('ConversationPage lazy composer metadata', () => {
     });
   });
 
+  it('clears queued prompts before aborting on Escape so they restore instead of draining', async () => {
+    vi.useRealTimers();
+    const callOrder: string[] = [];
+    const queuedText = 'Queued follow-up should return to the composer';
+    apiMock.clearQueuedMessages.mockImplementation(async () => {
+      callOrder.push('clear');
+      return {
+        ok: true,
+        items: [{ behavior: 'followUp' as const, text: queuedText, images: [], author: 'user' as const }],
+      };
+    });
+    desktopConversationState.abort.mockImplementation(async () => {
+      callOrder.push('abort');
+    });
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = {
+      conversationId: 'conv-regression',
+      sessionDetail: regressionBootstrapData.sessionDetail,
+      liveSession: {
+        live: true,
+        id: 'conv-regression',
+        cwd: '/tmp/project',
+        sessionFile: '/tmp/conv-regression.jsonl',
+        isStreaming: true,
+        hasStaleTurnState: false,
+      },
+      stream: {
+        blocks: regressionBootstrapData.sessionDetail.blocks,
+        blockOffset: 0,
+        totalBlocks: 2,
+        hasSnapshot: true,
+        isStreaming: true,
+        isCompacting: false,
+        error: null,
+        title: null,
+        tokens: null,
+        cost: null,
+        contextUsage: null,
+        pendingQueue: {
+          steering: [],
+          followUp: [{ id: 'queued-follow-up-1', text: queuedText, imageCount: 0, restorable: true }],
+        },
+        presence: {
+          surfaces: [
+            {
+              surfaceId: 'surface-test',
+              surfaceType: 'desktop_web',
+              connectedAt: '2026-05-27T12:00:00.000Z',
+            },
+          ],
+          controllerSurfaceId: 'surface-test',
+          controllerSurfaceType: 'desktop_web',
+          controllerAcquiredAt: '2026-05-27T12:00:00.000Z',
+        },
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        cwdChange: null,
+      },
+    };
+
+    renderConversationPage();
+
+    expect(await screen.findByText(queuedText)).toBeTruthy();
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(desktopConversationState.abort).toHaveBeenCalledTimes(1));
+    expect(apiMock.clearQueuedMessages).toHaveBeenCalledWith('conv-regression', 'surface-test');
+    expect(callOrder).toEqual(['clear', 'abort']);
+    expect((screen.getByPlaceholderText(/Message Neon Pilot/i) as HTMLTextAreaElement).value).toBe(queuedText);
+  });
+
+  it('refreshes desktop conversation state after an inline bash command completes', async () => {
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = {
+      conversationId: 'conv-regression',
+      sessionDetail: regressionBootstrapData.sessionDetail,
+      liveSession: {
+        live: true,
+        id: 'conv-regression',
+        cwd: '/tmp/project',
+        sessionFile: '/tmp/conv-regression.jsonl',
+        isStreaming: false,
+        hasStaleTurnState: false,
+      },
+      stream: {
+        blocks: [],
+        blockOffset: 0,
+        totalBlocks: 0,
+        hasSnapshot: true,
+        isStreaming: false,
+        isCompacting: false,
+        error: null,
+        title: null,
+        tokens: null,
+        cost: null,
+        contextUsage: null,
+        pendingQueue: { steering: [], followUp: [] },
+        presence: {
+          surfaces: [],
+          controllerSurfaceId: null,
+          controllerSurfaceType: null,
+          controllerAcquiredAt: null,
+        },
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        cwdChange: null,
+      },
+    };
+    desktopConversationState.refresh.mockResolvedValue(desktopConversationState.state);
+
+    renderConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+    });
+
+    const textarea = screen.getByPlaceholderText(/Message Neon Pilot/i);
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: '!echo inline-bash' } });
+      await Promise.resolve();
+    });
+
+    const refreshCountBeforeSubmit = desktopConversationState.refresh.mock.calls.length;
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiMock.executeLiveSessionBash).toHaveBeenCalledWith('conv-regression', 'echo inline-bash', { excludeFromContext: false });
+    expect(desktopConversationState.refresh).toHaveBeenCalledTimes(refreshCountBeforeSubmit + 1);
+    await act(async () => {
+      vi.advanceTimersByTime(1_300);
+      await Promise.resolve();
+    });
+    expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeTruthy();
+  });
+
   it('keeps a locally picked draft workspace after the initial saved-workspace refresh resolves late', async () => {
     let resolveSavedWorkspacePaths: (workspacePaths: string[]) => void = () => {};
     apiMock.savedWorkspacePaths.mockReturnValue(
@@ -1023,6 +1196,90 @@ describe('ConversationPage lazy composer metadata', () => {
       resolveCreateLiveSession({ id: 'reserved-conv', sessionFile: '/tmp/reserved-conv.jsonl', bootstrap: undefined });
       await Promise.resolve();
     });
+  });
+
+  it('routes a draft inline bash command to the created conversation before the command completes', async () => {
+    vi.useRealTimers();
+    let resolveExecuteBash: (value: { ok: true; result: { output: string; exitCode: number } }) => void = () => {};
+    apiMock.executeLiveSessionBash.mockReturnValue(
+      new Promise((resolve) => {
+        resolveExecuteBash = resolve;
+      }),
+    );
+
+    renderRoutedDraftConversationPage();
+
+    const textarea = screen.getByPlaceholderText(/Message Neon Pilot/i);
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: '!sleep 120; echo done' } });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location').textContent).toBe('/conversations/reserved-conv');
+    });
+    expect(apiMock.createLiveSession).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      expect.objectContaining({ model: 'openai/gpt-5.4', thinkingLevel: 'medium' }),
+    );
+    expect(apiMock.executeLiveSessionBash).toHaveBeenCalledWith('reserved-conv', 'sleep 120; echo done', {
+      excludeFromContext: false,
+    });
+    expect(sessionTabsMock.ensureConversationTabOpen).toHaveBeenCalledWith('reserved-conv');
+
+    await act(async () => {
+      resolveExecuteBash({ ok: true, result: { output: 'done\n', exitCode: 0 } });
+      await Promise.resolve();
+    });
+  });
+
+  it('creates a reserved draft prompt in the reserved workspace cwd when draft state is stale', async () => {
+    vi.useRealTimers();
+    apiMock.reserveConversation.mockResolvedValue({
+      id: 'reserved-workspace-conv',
+      sessionFile: '/tmp/reserved-workspace-conv.jsonl',
+      cwd: '/repo',
+      perf: {},
+    });
+    apiMock.createLiveSession.mockResolvedValue({
+      id: 'reserved-workspace-conv',
+      sessionFile: '/tmp/reserved-workspace-conv.jsonl',
+      bootstrap: undefined,
+    });
+
+    renderRoutedDraftConversationPage();
+
+    const textarea = screen.getByPlaceholderText(/Message Neon Pilot/i);
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: 'Run in the reserved workspace' } });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location').textContent).toBe('/conversations/reserved-workspace-conv');
+    });
+    expect(apiMock.reserveConversation).toHaveBeenCalledWith(undefined);
+    expect(apiMock.createLiveSession).toHaveBeenCalledWith(
+      '/repo',
+      'Run in the reserved workspace',
+      expect.objectContaining({
+        reservedSessionFile: '/tmp/reserved-workspace-conv.jsonl',
+        workspaceCwd: '/repo',
+      }),
+    );
   });
 
   it('ignores an older live session context refresh after a same-thread workspace dropdown switch triggers a newer one', async () => {

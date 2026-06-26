@@ -49,6 +49,7 @@ function ctx(overrides: Record<string, unknown> = {}) {
     setTitle: vi.fn().mockResolvedValue({ ok: true }),
     create: vi.fn().mockResolvedValue({ conversationId: 'created-1' }),
     ensureLive: vi.fn().mockResolvedValue({ conversationId: 'conv-2' }),
+    requestWorkingDirectoryChange: vi.fn().mockResolvedValue({ conversationId: 'conv-1', cwd: '/next', queued: true }),
     sendMessage: vi.fn().mockResolvedValue({ accepted: true }),
     runTurn: vi.fn().mockResolvedValue({ accepted: true, text: 'done' }),
     abort: vi.fn().mockResolvedValue({ ok: true }),
@@ -343,6 +344,7 @@ describe('system-conversation-tools backend routing', () => {
     const context = ctx();
 
     await conversationTool({ action: 'set_title', conversationId: 'conv-2', title: 'Target Title' }, context);
+    expect(title.executeSetConversationTitle.mock.calls[0][1].sessionManager.getSessionId()).toBe('conv-2');
     const setTitleCallback = title.executeSetConversationTitle.mock.calls[0][2] as (nextTitle: string) => Promise<unknown>;
     await setTitleCallback('Target Title');
 
@@ -353,14 +355,28 @@ describe('system-conversation-tools backend routing', () => {
   });
 
   it('routes working directory changes with live session runtime resources', async () => {
-    await conversationTool({ action: 'change_working_directory', cwd: '/next' }, ctx());
+    const context = ctx();
+
+    await conversationTool({ action: 'change_working_directory', cwd: '/next' }, context);
 
     const changeCallback = cwd.executeChangeWorkingDirectory.mock.calls[0][2] as (input: unknown) => Promise<unknown>;
     await changeCallback({ conversationId: 'conv-1', cwd: '/next' });
 
-    expect(conversationsBackend.requestConversationWorkingDirectoryChange).toHaveBeenCalledWith(
-      { conversationId: 'conv-1', cwd: '/next' },
-      { resources: true, extensionFactories: ['factory'] },
+    expect(
+      (context as { conversations: { requestWorkingDirectoryChange: ReturnType<typeof vi.fn> } }).conversations
+        .requestWorkingDirectoryChange,
+    ).toHaveBeenCalledWith('conv-1', '/next', {});
+  });
+
+  it('keeps an explicit target conversation id for working directory CLI changes', async () => {
+    const context = ctx();
+
+    await conversationTool({ cli: { command: 'conversations cwd', args: ['conv-2', '/next'] } }, context);
+
+    expect(cwd.executeChangeWorkingDirectory).toHaveBeenCalledWith(
+      { conversationId: 'conv-2', cwd: '/next', continuePrompt: undefined },
+      expect.objectContaining({ cwd: '/repo' }),
+      expect.any(Function),
     );
   });
 
@@ -388,10 +404,10 @@ describe('system-conversation-tools backend routing', () => {
     await conversationCwd({ cwd: '/next' }, context);
     const changeCallback = cwd.executeChangeWorkingDirectory.mock.calls.at(-1)?.[2] as (input: unknown) => Promise<unknown>;
     await changeCallback({ conversationId: 'conv-1', cwd: '/next' });
-    expect(conversationsBackend.requestConversationWorkingDirectoryChange).toHaveBeenLastCalledWith(
-      { conversationId: 'conv-1', cwd: '/next' },
-      { resources: true, extensionFactories: ['factory'] },
-    );
+    expect(
+      (context as { conversations: { requestWorkingDirectoryChange: ReturnType<typeof vi.fn> } }).conversations
+        .requestWorkingDirectoryChange,
+    ).toHaveBeenLastCalledWith('conv-1', '/next', {});
 
     await expect(deferredResumeTool({ action: 'add', prompt: 'Continue' }, context)).resolves.toEqual({
       content: [{ type: 'text', text: 'scheduled' }],

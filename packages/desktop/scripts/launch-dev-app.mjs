@@ -5,6 +5,7 @@ import { cpSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, rmSy
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { ensureElectronNativeModules, readElectronNativeModulesDir } from './ensure-electron-native-modules.mjs';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
@@ -33,6 +34,7 @@ const ELECTRON_SWITCH_PREFIXES = [
   '--enable-logging',
   '--trace-startup',
 ];
+const DESKTOP_INITIAL_ROUTE_ARG = '--neon-pilot-initial-route=';
 
 function isElectronSwitch(arg) {
   return ELECTRON_SWITCH_PREFIXES.some((prefix) => arg === prefix || arg.startsWith(`${prefix}=`));
@@ -53,18 +55,39 @@ function splitDesktopLaunchArgs(args = []) {
   return { electronSwitches, appArgs };
 }
 
+function normalizeDesktopInitialRoute(route) {
+  const normalized = route?.trim();
+  if (!normalized || !normalized.startsWith('/') || normalized.startsWith('//')) {
+    return null;
+  }
+  return normalized;
+}
+
+function withInitialRouteArg(appArgs) {
+  const route = normalizeDesktopInitialRoute(process.env.NEON_PILOT_DESKTOP_INITIAL_ROUTE);
+  if (!route || appArgs.some((arg) => arg.startsWith(DESKTOP_INITIAL_ROUTE_ARG))) {
+    return appArgs;
+  }
+  return [...appArgs, `${DESKTOP_INITIAL_ROUTE_ARG}${route}`];
+}
+
 function buildDesktopLaunchEnv(baseEnv = process.env) {
-  const {
-    NEON_PILOT_STATE_ROOT: _stateRoot,
-    NEON_PILOT_CONFIG_ROOT: _configRoot,
-    NEON_PILOT_KNOWLEDGE_ROOT: _knowledgeRoot,
-    NEON_PILOT_RUNTIME_CHANNEL: _runtimeChannel,
-    NEON_PILOT_DESKTOP_VARIANT: _desktopVariant,
-    ...cleanBaseEnv
-  } = baseEnv;
+  const cleanBaseEnv = { ...baseEnv };
+  delete cleanBaseEnv.NEON_PILOT_RUNTIME_CHANNEL;
+  delete cleanBaseEnv.NEON_PILOT_DESKTOP_VARIANT;
+  const stateRoot = baseEnv.NEON_PILOT_STATE_ROOT?.trim();
+  const desktopUserDataDir = baseEnv.NEON_PILOT_DESKTOP_USER_DATA_DIR?.trim();
 
   return {
     ...cleanBaseEnv,
+    ...(stateRoot ? { NEON_PILOT_STATE_ROOT: stateRoot } : {}),
+    ...(baseEnv.NEON_PILOT_CONFIG_ROOT?.trim() ? { NEON_PILOT_CONFIG_ROOT: baseEnv.NEON_PILOT_CONFIG_ROOT.trim() } : {}),
+    ...(baseEnv.NEON_PILOT_KNOWLEDGE_ROOT?.trim() ? { NEON_PILOT_KNOWLEDGE_ROOT: baseEnv.NEON_PILOT_KNOWLEDGE_ROOT.trim() } : {}),
+    ...(desktopUserDataDir
+      ? { NEON_PILOT_DESKTOP_USER_DATA_DIR: desktopUserDataDir }
+      : stateRoot
+        ? { NEON_PILOT_DESKTOP_USER_DATA_DIR: resolve(stateRoot, 'desktop-user-data') }
+        : {}),
     NEON_PILOT_DESKTOP_VARIANT: desktopVariant,
     NEON_PILOT_RUNTIME_CHANNEL: 'test',
     NEON_PILOT_DAEMON_NAMESPACE: baseEnv.NEON_PILOT_DAEMON_NAMESPACE || 'test',
@@ -232,7 +255,7 @@ async function launchMacDevApp() {
     return;
   }
   const { electronSwitches, appArgs } = splitDesktopLaunchArgs(desktopLaunchArgs);
-  const child = spawn(executablePath, [...electronSwitches, desktopMainFile, ...appArgs], {
+  const child = spawn(executablePath, [...electronSwitches, desktopMainFile, ...withInitialRouteArg(appArgs)], {
     stdio: 'ignore',
     cwd: packageDir,
     env: {
@@ -252,7 +275,7 @@ if (process.platform === 'darwin') {
 }
 
 const { electronSwitches, appArgs } = splitDesktopLaunchArgs(desktopLaunchArgs);
-const child = spawn(process.execPath, [electronCliPath, ...electronSwitches, desktopMainFile, ...appArgs], {
+const child = spawn(process.execPath, [electronCliPath, ...electronSwitches, desktopMainFile, ...withInitialRouteArg(appArgs)], {
   stdio: 'inherit',
   cwd: packageDir,
   env: buildDesktopLaunchEnv(process.env, desktopLaunchArgs),

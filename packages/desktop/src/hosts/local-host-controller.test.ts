@@ -968,12 +968,20 @@ describe('LocalHostController', () => {
     });
     await expect(controller.reloadLiveSession?.('live-1')).resolves.toEqual({ ok: true });
     await expect(controller.destroyLiveSession?.('live-1')).resolves.toEqual({ ok: true });
-    await expect(controller.branchLiveSession?.({ conversationId: 'live-1', entryId: 'entry-1' })).resolves.toEqual({
-      newSessionId: 'branch-1',
-      sessionFile: '/tmp/branch-1.jsonl',
-    });
+    await expect(controller.branchLiveSession?.({ conversationId: 'live-1', entryId: 'entry-1', surfaceId: 'surface-1' })).resolves.toEqual(
+      {
+        newSessionId: 'branch-1',
+        sessionFile: '/tmp/branch-1.jsonl',
+      },
+    );
     await expect(
-      controller.forkLiveSession?.({ conversationId: 'live-1', entryId: 'entry-1', preserveSource: true, beforeEntry: true }),
+      controller.forkLiveSession?.({
+        conversationId: 'live-1',
+        entryId: 'entry-1',
+        preserveSource: true,
+        beforeEntry: true,
+        branchKind: 'fork',
+      }),
     ).resolves.toEqual({ newSessionId: 'fork-1', sessionFile: '/tmp/fork-1.jsonl' });
     await expect(controller.abortLiveSession?.('live-1')).resolves.toEqual({ ok: true });
 
@@ -1022,12 +1030,13 @@ describe('LocalHostController', () => {
     expect(exportDesktopLiveSession).toHaveBeenCalledWith({ conversationId: 'live-1', outputPath: '/tmp/live-1.html' });
     expect(reloadDesktopLiveSession).toHaveBeenCalledWith({ conversationId: 'live-1' });
     expect(destroyDesktopLiveSession).toHaveBeenCalledWith('live-1');
-    expect(branchDesktopLiveSession).toHaveBeenCalledWith({ conversationId: 'live-1', entryId: 'entry-1' });
+    expect(branchDesktopLiveSession).toHaveBeenCalledWith({ conversationId: 'live-1', entryId: 'entry-1', surfaceId: 'surface-1' });
     expect(forkDesktopLiveSession).toHaveBeenCalledWith({
       conversationId: 'live-1',
       entryId: 'entry-1',
       preserveSource: true,
       beforeEntry: true,
+      branchKind: 'fork',
     });
     expect(abortDesktopLiveSession).toHaveBeenCalledWith('live-1');
     expect(backend.ensureStarted).not.toHaveBeenCalled();

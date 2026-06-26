@@ -160,6 +160,7 @@ export function constrainPromptImageDimensions(
 
 async function preparePromptImage(file: File): Promise<ComposerImageAttachment> {
   const mimeType = file.type || 'image/png';
+  const outputMimeType = normalizePromptImageMimeType(mimeType);
   const localId = createComposerImageLocalId();
 
   try {
@@ -190,7 +191,7 @@ async function preparePromptImage(file: File): Promise<ComposerImageAttachment> 
     context.imageSmoothingQuality = 'high';
     context.drawImage(image, 0, 0, targetSize.width, targetSize.height);
 
-    const outputBlob = await encodePromptImageCanvas(canvas, mimeType);
+    const outputBlob = await encodePromptImageCanvas(canvas, outputMimeType);
     const resizedPreviewUrl = await readBlobAsDataUrl(outputBlob, file.name);
 
     return {

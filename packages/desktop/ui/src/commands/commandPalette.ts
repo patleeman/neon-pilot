@@ -399,3 +399,25 @@ export function searchCommandPaletteItems<TAction>(
     ];
   });
 }
+
+export function selectPreferredCommandPaletteCursor<TAction>(
+  items: Array<CommandPaletteItem<TAction> & { score?: number }>,
+  query: string,
+): number {
+  if (items.length === 0 || query.trim().length === 0) {
+    return 0;
+  }
+
+  let bestIndex = 0;
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  items.forEach((item, index) => {
+    const score = typeof item.score === 'number' && Number.isFinite(item.score) ? item.score : 0;
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  });
+
+  return bestIndex;
+}

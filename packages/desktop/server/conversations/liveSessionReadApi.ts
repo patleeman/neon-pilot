@@ -13,6 +13,7 @@ export interface LiveSessionReadHost extends LiveSessionStaleTurnState {
   title: string;
   lastDurableRunState?: string;
   isCompacting?: boolean;
+  directBashRunning?: boolean;
 }
 
 /** Single canonical function that determines whether a live session is running.

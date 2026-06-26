@@ -71,6 +71,10 @@ export function isSinglePaneWorkbenchMode(mode: WorkbenchRailMode, surface?: { e
   );
 }
 
+export function shouldOpenRailForWorkbenchTool(mode: WorkbenchRailMode, surface?: WorkbenchToolPanelSurface | null): boolean {
+  return Boolean(surface && 'detailView' in surface && typeof surface.detailView === 'string' && !isSinglePaneWorkbenchMode(mode, surface));
+}
+
 export function resolveActiveExtensionWorkbenchSurface({
   activeWorkbenchTool,
   extensionRightToolPanels,

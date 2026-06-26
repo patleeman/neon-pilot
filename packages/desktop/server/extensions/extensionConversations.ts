@@ -3,6 +3,7 @@ import type { SessionEntry } from '@earendil-works/pi-coding-agent';
 import { reserveConversationSession } from '../conversations/conversationReservation.js';
 import {
   appendStoredVisibleCustomMessage,
+  publishConversationSessionMetaChanged,
   renameStoredConversation,
   resolveConversationSessionFile,
 } from '../conversations/conversationService.js';
@@ -14,7 +15,9 @@ import {
   appendVisibleCustomMessage as appendVisibleLiveSessionCustomMessage,
   createSession,
   createSessionFromExisting,
+  destroySession,
   registry as liveSessionRegistry,
+  requestConversationWorkingDirectoryChange,
   resumeSession,
   subscribe as subscribeLiveSession,
   updateVisibleCustomMessage as updateVisibleLiveSessionCustomMessage,
@@ -91,7 +94,8 @@ interface ExtensionConversationsCapabilityOptions {
 /**
  * Conversation capability factory.
  *
- * Write operations require the session to be live (in the in-memory registry).
+ * Most write operations require the session to be live (in the in-memory registry).
+ * Stored title and metadata writes use persisted session data.
  * Read-only meta operations work against persisted session data.
  */
 export function createExtensionConversationsCapability(
@@ -159,7 +163,7 @@ export function createExtensionConversationsCapability(
     const { readSavedUiPreferences, writeSavedUiPreferences } = await import('../ui/uiPreferences.js');
     const { persistSettingsWrite } = await import('../ui/settingsPersistence.js');
     const before = readSavedUiPreferences(serverContext.getSettingsFile());
-    persistSettingsWrite(
+    const saved = persistSettingsWrite(
       (settingsFile) =>
         writeSavedUiPreferences(
           {
@@ -175,6 +179,19 @@ export function createExtensionConversationsCapability(
         ),
       { runtimeSettingsFile: serverContext.getSettingsFile() },
     );
+    publishConversationWorkspaceChanged(saved);
+  };
+
+  const destroyLiveConversationsBeforeDeleting = async (conversationIds: string[]) => {
+    let destroyed = false;
+    for (const conversationId of conversationIds) {
+      if (!liveSessionRegistry.has(conversationId)) continue;
+      destroySession(conversationId);
+      destroyed = true;
+    }
+    if (destroyed) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
   };
 
   const addCreatedConversationToWorkspace = async (conversationId: string) => {
@@ -419,13 +436,14 @@ export function createExtensionConversationsCapability(
       assertConversationPermission('write', 'conversations.delete');
       const conversationIds = [...new Set((input.conversationIds ?? []).map((id) => id.trim()).filter(Boolean))];
       if (conversationIds.length === 0) throw new Error('At least one conversation id is required.');
+      await destroyLiveConversationsBeforeDeleting(conversationIds);
       const { deleteSessions } = await import('../conversations/sessions.js');
       const result = deleteSessions(conversationIds);
-      await removeDeletedConversationWorkspaceReferences(result.deleted.map((entry) => entry.id));
+      await removeDeletedConversationWorkspaceReferences(conversationIds);
       invalidateAppTopics('sessions');
       await publishExtensionHostEvent('conversationSessions', {
         type: 'session.deleted',
-        conversationIds: result.deleted.map((entry) => entry.id),
+        conversationIds,
       });
       return { ok: true, ...result };
     },
@@ -440,18 +458,26 @@ export function createExtensionConversationsCapability(
         const { readSavedUiPreferences } = await import('../ui/uiPreferences.js');
         archivedConversationIds = readSavedUiPreferences(serverContext.getSettingsFile()).archivedConversationIds;
       }
-      const result = pruneSessionsByRetention({
+      const candidates = pruneSessionsByRetention({
         olderThanMs,
         archivedOnly: Boolean(input.archivedOnly),
-        dryRun: Boolean(input.dryRun),
+        dryRun: true,
         archivedConversationIds,
       });
+      if (input.dryRun) {
+        return candidates;
+      }
+      await destroyLiveConversationsBeforeDeleting(candidates.candidates.map((entry) => entry.id));
+      const { deleteSessions } = await import('../conversations/sessions.js');
+      const deletedResult = deleteSessions(candidates.candidates.map((entry) => entry.id));
+      const result = { ...candidates, dryRun: false, deleted: deletedResult.deleted };
       if (!result.dryRun) {
-        await removeDeletedConversationWorkspaceReferences(result.deleted.map((entry) => entry.id));
+        const candidateIds = candidates.candidates.map((entry) => entry.id);
+        await removeDeletedConversationWorkspaceReferences(candidateIds);
         invalidateAppTopics('sessions');
         await publishExtensionHostEvent('conversationSessions', {
           type: 'session.deleted',
-          conversationIds: result.deleted.map((entry) => entry.id),
+          conversationIds: candidateIds,
         });
       }
       return result;
@@ -624,6 +650,28 @@ export function createExtensionConversationsCapability(
     },
 
     /**
+     * Queue a working-directory switch on the host-owned live conversation.
+     */
+    async requestWorkingDirectoryChange(
+      conversationId: string,
+      cwd: string,
+      options?: { continuePrompt?: string },
+    ): Promise<{ conversationId: string; cwd: string; queued: boolean; unchanged?: boolean }> {
+      assertConversationPermission('write', 'conversations.requestWorkingDirectoryChange');
+      return requestConversationWorkingDirectoryChange(
+        {
+          conversationId,
+          cwd,
+          ...(options?.continuePrompt ? { continuePrompt: options.continuePrompt } : {}),
+        },
+        {
+          ...buildLiveSessionResourceOptionsForRuntime(),
+          extensionFactories: buildLiveSessionExtensionFactoriesForRuntime(),
+        },
+      );
+    },
+
+    /**
      * Send a message into a live conversation.
      */
     async sendMessage(
@@ -739,13 +787,22 @@ export function createExtensionConversationsCapability(
     },
 
     /**
-     * Update the title of a live conversation.
+     * Update the title of a live or stored conversation.
      */
     async setTitle(conversationId: string, title: string): Promise<{ ok: true }> {
       assertConversationPermission('write', 'conversations.setTitle');
-      const entry = findLiveEntry(conversationId);
+      const entry = liveSessionRegistry.get(conversationId);
+      if (!entry) {
+        const renamed = renameStoredConversation(conversationId, title);
+        const nextTitle = renamed.title ?? title.trim();
+        publishConversationSessionMetaChanged(conversationId);
+        invalidateAppTopics('sessions');
+        await publishExtensionHostEvent('conversationSessions', { type: 'session.renamed', conversationId, title: nextTitle });
+        return { ok: true };
+      }
+
       try {
-        entry.session.setSessionName(title);
+        await entry.session.setSessionName(title);
       } catch {
         entry.title = title;
       }

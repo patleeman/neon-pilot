@@ -5,11 +5,7 @@ import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import type { ExtensionMessageActionRegistration } from '../../extensions/useExtensionRegistry';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import { MessageActionButton } from '../ui';
-import {
-  MESSAGE_ACTION_COMMAND_EVENT,
-  registerMessageActionCapability,
-  type MessageActionCommandDetail,
-} from './messageActionCommands';
+import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail, registerMessageActionCapability } from './messageActionCommands';
 
 /**
  * Simple `when` expression evaluator for message actions.
@@ -69,6 +65,7 @@ export function MessageActions({
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const copyResetTimeoutRef = useRef<number | null>(null);
   const canCopy = typeof copyText === 'string' && copyText.length > 0;
+  const copyTitle = isUser ? 'Copy this prompt to the clipboard' : 'Copy this assistant message to the clipboard';
   const { messageActions } = useExtensionRegistry();
 
   const extensionActionInvocations = useRef<Map<string, ReturnType<typeof createNativeExtensionClient>>>(new Map());
@@ -198,7 +195,7 @@ export function MessageActions({
             void handleCopy();
           }}
           tone={copyState === 'copied' ? 'accent' : copyState === 'failed' ? 'danger' : 'default'}
-          title={copyState === 'failed' ? 'Copy to clipboard failed' : 'Copy this assistant message to the clipboard'}
+          title={copyState === 'failed' ? 'Copy to clipboard failed' : copyTitle}
         >
           {copyState === 'copied' ? '⎘ copied' : copyState === 'failed' ? '⎘ copy failed' : '⎘ copy'}
         </MessageActionButton>

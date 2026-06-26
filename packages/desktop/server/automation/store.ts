@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
+import { closeSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 import {
   migrateWithBackup,
   type Migration,
   readTableColumnNames,
+  readTableCreateSql,
   safeRebuildTable,
   setSchemaVersion,
   type SqliteDatabase,
@@ -433,6 +434,172 @@ type AutomationStateRow = {
 };
 
 const dbCache = new Map<string, SqliteDatabase>();
+const AUTOMATION_DB_LOCK_TIMEOUT_MS = 10_000;
+const AUTOMATION_DB_STALE_LOCK_MS = 30_000;
+
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function isPidRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function acquireAutomationDbSchemaLock(dbPath: string): () => void {
+  const lockPath = `${dbPath}.schema.lock`;
+  const startedAt = Date.now();
+
+  for (;;) {
+    try {
+      const fd = openSync(lockPath, 'wx', 0o600);
+      writeFileSync(fd, `${process.pid}\n${new Date().toISOString()}\n`, 'utf-8');
+      return () => {
+        try {
+          closeSync(fd);
+        } catch {
+          // Best-effort close.
+        }
+        try {
+          unlinkSync(lockPath);
+        } catch {
+          // Best-effort release.
+        }
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+        throw error;
+      }
+
+      try {
+        const [pidLine, timestampLine] = readFileSync(lockPath, 'utf-8').split(/\r?\n/);
+        const pid = Number(pidLine);
+        const ageMs = Date.now() - Date.parse(timestampLine ?? '');
+        if (!Number.isFinite(pid) || !isPidRunning(pid) || (Number.isFinite(ageMs) && ageMs > AUTOMATION_DB_STALE_LOCK_MS)) {
+          unlinkSync(lockPath);
+          continue;
+        }
+      } catch {
+        try {
+          unlinkSync(lockPath);
+          continue;
+        } catch {
+          // Another process may have won the race.
+        }
+      }
+
+      if (Date.now() - startedAt > AUTOMATION_DB_LOCK_TIMEOUT_MS) {
+        throw new Error(`Timed out waiting for automation database schema lock: ${lockPath}`);
+      }
+      sleepSync(50);
+    }
+  }
+}
+
+const AUTOMATION_STATE_CREATE_SQL = `CREATE TABLE automation_state (
+  automation_id TEXT PRIMARY KEY,
+  running INTEGER NOT NULL DEFAULT 0,
+  running_started_at TEXT,
+  active_run_id TEXT,
+  last_run_id TEXT,
+  last_status TEXT,
+  last_run_at TEXT,
+  last_success_at TEXT,
+  last_failure_at TEXT,
+  last_error TEXT,
+  last_log_path TEXT,
+  last_scheduled_minute TEXT,
+  last_attempt_count INTEGER,
+  one_time_resolved_at TEXT,
+  one_time_resolved_status TEXT,
+  one_time_completed_at TEXT,
+  FOREIGN KEY (automation_id) REFERENCES automations(id) ON DELETE CASCADE
+)`;
+
+const AUTOMATION_STATE_COLUMNS = [
+  'automation_id',
+  'running',
+  'running_started_at',
+  'active_run_id',
+  'last_run_id',
+  'last_status',
+  'last_run_at',
+  'last_success_at',
+  'last_failure_at',
+  'last_error',
+  'last_log_path',
+  'last_scheduled_minute',
+  'last_attempt_count',
+  'one_time_resolved_at',
+  'one_time_resolved_status',
+  'one_time_completed_at',
+];
+
+const AUTOMATION_ACTIVITY_CREATE_SQL = `CREATE TABLE automation_activity (
+  seq INTEGER PRIMARY KEY AUTOINCREMENT,
+  automation_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  payload_json TEXT,
+  FOREIGN KEY (automation_id) REFERENCES automations(id) ON DELETE CASCADE
+)`;
+
+const AUTOMATION_ACTIVITY_COLUMNS = ['seq', 'automation_id', 'kind', 'created_at', 'payload_json'];
+
+const AUTOMATION_CHILD_TABLE_DEFS = [
+  {
+    tableName: 'automation_state',
+    createSql: AUTOMATION_STATE_CREATE_SQL,
+    columns: AUTOMATION_STATE_COLUMNS,
+  },
+  {
+    tableName: 'automation_activity',
+    createSql: AUTOMATION_ACTIVITY_CREATE_SQL,
+    columns: AUTOMATION_ACTIVITY_COLUMNS,
+  },
+];
+
+function repairStaleAutomationChildForeignKeys(db: SqliteDatabase): void {
+  for (const def of AUTOMATION_CHILD_TABLE_DEFS) {
+    const createSql = readTableCreateSql(db, def.tableName);
+    if (!createSql || !/REFERENCES\s+["'`]?automations_migrate_\d+/i.test(createSql)) {
+      continue;
+    }
+
+    safeRebuildTable({
+      db,
+      tableName: def.tableName,
+      createSql: def.createSql,
+      columns: def.columns,
+      validate: false,
+      strict: false,
+    });
+  }
+}
+
+function pruneOrphanAutomationChildRows(db: SqliteDatabase): void {
+  db.exec('PRAGMA foreign_keys = OFF');
+  try {
+    db.prepare(
+      `
+      DELETE FROM automation_activity
+      WHERE automation_id NOT IN (SELECT id FROM automations)
+    `,
+    ).run();
+    db.prepare(
+      `
+      DELETE FROM automation_state
+      WHERE automation_id NOT IN (SELECT id FROM automations)
+    `,
+    ).run();
+  } finally {
+    db.exec('PRAGMA foreign_keys = ON');
+  }
+}
 
 /** Run a PASSIVE WAL checkpoint on all cached automation databases (non-blocking). */
 export function checkpointAutomationDbsPassive(): void {
@@ -629,8 +796,16 @@ function openAutomationDb(dbPath: string = getAutomationDbPath()): SqliteDatabas
   }
 
   mkdirSync(dirname(resolved), { recursive: true });
-  const db = openRecoveringRuntimeSqliteDb(resolved);
-  db.exec(`
+  const releaseSchemaLock = acquireAutomationDbSchemaLock(resolved);
+  try {
+    const lockedCached = dbCache.get(resolved);
+    if (lockedCached) {
+      return lockedCached;
+    }
+
+    const db = openRecoveringRuntimeSqliteDb(resolved);
+    const tableExisted = tableExists(db, 'automations');
+    db.exec(`
     CREATE TABLE IF NOT EXISTS automations (
       id TEXT PRIMARY KEY,
       runtime_scope TEXT NOT NULL DEFAULT 'shared',
@@ -694,31 +869,36 @@ function openAutomationDb(dbPath: string = getAutomationDbPath()): SqliteDatabas
       ON automation_activity(automation_id, created_at DESC, seq DESC);
   `);
 
-  // Apply versioned schema migrations with pre-migration backup
-  //
-  // Fresh DBs: tables don't exist yet, CREATE TABLE IF NOT EXISTS above handles
-  //   the full schema. We mark them at the latest version — no migrations needed.
-  // Already-versioned DBs: user_version > 0, migrateWithBackup runs pending steps
-  //   and creates a timestamped backup before making any changes.
-  // Pre-migration DBs: user_version is 0. migrateWithBackup detects this and runs
-  //   all migrations from scratch, with a pre-migration backup.
-  {
-    const tableExisted = tableExists(db, 'automations');
-    if (!tableExisted) {
-      setSchemaVersion(db, AUTOMATION_SCHEMA_VERSION);
-    } else {
-      const result = migrateWithBackup(db, resolved, 'automation', AUTOMATION_MIGRATIONS);
-      if (result.applied > 0 && result.backupPath) {
-        // Backup taken and migrations applied successfully.
-        // The backup remains on disk in the .backups/ directory.
+    // Apply versioned schema migrations with pre-migration backup
+    //
+    // Fresh DBs: tables don't exist yet, CREATE TABLE IF NOT EXISTS above handles
+    //   the full schema. We mark them at the latest version — no migrations needed.
+    // Already-versioned DBs: user_version > 0, migrateWithBackup runs pending steps
+    //   and creates a timestamped backup before making any changes.
+    // Pre-migration DBs: user_version is 0. migrateWithBackup detects this and runs
+    //   all migrations from scratch, with a pre-migration backup.
+    {
+      if (!tableExisted) {
+        setSchemaVersion(db, AUTOMATION_SCHEMA_VERSION);
+      } else {
+        pruneOrphanAutomationChildRows(db);
+        const result = migrateWithBackup(db, resolved, 'automation', AUTOMATION_MIGRATIONS);
+        if (result.applied > 0 && result.backupPath) {
+          // Backup taken and migrations applied successfully.
+          // The backup remains on disk in the .backups/ directory.
+        }
       }
     }
+
+    repairStaleAutomationChildForeignKeys(db);
+    pruneOrphanAutomationChildRows(db);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_automations_runtime_scope_title ON automations(runtime_scope, title)');
+
+    dbCache.set(resolved, db);
+    return db;
+  } finally {
+    releaseSchemaLock();
   }
-
-  db.exec('CREATE INDEX IF NOT EXISTS idx_automations_runtime_scope_title ON automations(runtime_scope, title)');
-
-  dbCache.set(resolved, db);
-  return db;
 }
 
 function toParsedSchedule(row: StoredAutomationRow): ParsedTaskSchedule {
@@ -1133,9 +1313,14 @@ export function deleteStoredAutomation(id: string, options: { runtimeScope?: str
   }
 
   const db = openAutomationDb(options.dbPath);
-  const result = db.prepare('DELETE FROM automations WHERE id = ?').run(id);
+  let changes = 0;
+  db.transaction(() => {
+    db.prepare('DELETE FROM automation_activity WHERE automation_id = ?').run(id);
+    db.prepare('DELETE FROM automation_state WHERE automation_id = ?').run(id);
+    changes = db.prepare('DELETE FROM automations WHERE id = ?').run(id).changes;
+  })();
 
-  return result.changes > 0;
+  return changes > 0;
 }
 
 export function loadAutomationRuntimeStateMap(options: { dbPath?: string } = {}): Record<string, TaskRuntimeState> {

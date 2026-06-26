@@ -6,6 +6,7 @@ import type { ParallelPromptPreview } from './liveSessionParallelJobs.js';
 import type { LiveSessionPresenceState } from './liveSessionPresence.js';
 import type { QueuedPromptPreview } from './liveSessionQueue.js';
 import { getAssistantErrorDisplayMessage } from './sessionAssistantErrors.js';
+import { isToolResultOutputError, presentToolResultOutput } from './toolResultPresentation.js';
 
 export interface LiveContextUsageSegment {
   key: 'system' | 'user' | 'assistant' | 'tool' | 'summary' | 'other';
@@ -34,6 +35,7 @@ export type SseEvent =
       blockOffset: number;
       totalBlocks: number;
       isStreaming: boolean;
+      isCompacting?: boolean;
       goalState?: ThreadGoal | null;
       systemPrompt?: string | null;
       toolDefinitions?: LiveSessionToolDefinition[];
@@ -162,17 +164,19 @@ export function toSse(event: AgentSessionEvent): SseEvent | null {
       const start = toolTimings.get(event.toolCallId) ?? Date.now();
       toolTimings.delete(event.toolCallId);
       const result = event.result as { content?: Array<{ type: string; text?: string }>; details?: unknown } | undefined;
-      const outputText =
+      const rawOutputText =
         result?.content
           ?.filter((content) => content.type === 'text')
           .map((content) => content.text ?? '')
           .join('\n')
           .slice(0, 8000) ?? '';
+      const isError = event.isError === true || isToolResultOutputError(rawOutputText);
+      const outputText = presentToolResultOutput({ text: rawOutputText, isError });
       return {
         type: 'tool_end',
         toolCallId: event.toolCallId,
         toolName: event.toolName,
-        isError: event.isError,
+        isError,
         durationMs: Math.max(0, Date.now() - start),
         output: outputText,
         ...(result?.details !== undefined ? { details: result.details } : {}),

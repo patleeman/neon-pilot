@@ -16,7 +16,20 @@ function readLegacyTelegramBotToken(authFile: string): string | null {
 }
 
 export function readTelegramBotToken(authFile: string, stateRoot: string): string | null {
-  return resolveSecret(TELEGRAM_SECRET_EXTENSION, TELEGRAM_SECRET_ID, stateRoot)?.trim() || readLegacyTelegramBotToken(authFile);
+  let token: string | undefined;
+  try {
+    token = resolveSecret(TELEGRAM_SECRET_EXTENSION, TELEGRAM_SECRET_ID, stateRoot);
+  } catch (error) {
+    if (!isMissingTelegramSecretRegistrationError(error)) throw error;
+  }
+  return token?.trim() || readLegacyTelegramBotToken(authFile);
+}
+
+function isMissingTelegramSecretRegistrationError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.includes(`Secret "${TELEGRAM_SECRET_EXTENSION}/${TELEGRAM_SECRET_ID}" is not registered by an enabled extension.`)
+  );
 }
 
 export function writeTelegramBotToken(authFile: string, stateRoot: string, token: string): void {

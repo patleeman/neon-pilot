@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { AuthStorage, SessionManager } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir, getRuntimeConfigRoot, getStateRoot } from '@neon-pilot/core';
 
+import { readNeonPilotCliControlPlaneRecord } from '../cliControlPlane.js';
 import { appendConversationOffshootMetadata } from '../conversations/conversationService.js';
 import { createPreparedLiveAgentSession } from '../conversations/liveSessionFactory.js';
 import { resolveLiveSessionFile } from '../conversations/liveSessionPersistence.js';
@@ -161,8 +162,20 @@ export function configureExtensionHostClientFromEnv(env: NodeJS.ProcessEnv = pro
   return true;
 }
 
+export function configureExtensionHostClientForBackgroundAgent(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (configureExtensionHostClientFromEnv(env)) {
+    return true;
+  }
+  const controlPlane = readNeonPilotCliControlPlaneRecord();
+  if (!controlPlane) {
+    return false;
+  }
+  setExtensionHostClient(createExtensionHostRpcClient(controlPlane.extensionHost));
+  return true;
+}
+
 export async function main(): Promise<void> {
-  configureExtensionHostClientFromEnv();
+  configureExtensionHostClientForBackgroundAgent();
   const args = parseArgs(process.argv.slice(2));
   const stateRoot = getStateRoot();
   const agentDir = getPiAgentRuntimeDir(stateRoot);

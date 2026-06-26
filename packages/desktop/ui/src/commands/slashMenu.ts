@@ -28,6 +28,41 @@ const BASE_SLASH_COMMANDS = [
     icon: '◌',
     desc: 'Manually compact the current conversation. Add text to guide the summary.',
   },
+  {
+    cmd: '/copy',
+    icon: '⎘',
+    desc: 'Copy the last assistant response.',
+  },
+  {
+    cmd: '/export',
+    icon: '⇩',
+    desc: 'Export the current conversation. Add a path to choose where it saves.',
+  },
+  {
+    cmd: '/name',
+    icon: '✎',
+    desc: 'Rename this conversation. Add the new title after the command.',
+  },
+  {
+    cmd: '/run',
+    icon: '$',
+    desc: 'Ask Neon Pilot to run a shell command.',
+  },
+  {
+    cmd: '/search',
+    icon: '⌕',
+    desc: 'Ask Neon Pilot to search the web.',
+  },
+  {
+    cmd: '/summarize',
+    icon: '≡',
+    desc: 'Ask Neon Pilot to summarize the conversation so far.',
+  },
+  {
+    cmd: '/think',
+    icon: '◇',
+    desc: 'Ask Neon Pilot to think through a topic or next step.',
+  },
 ] as const;
 
 interface ParsedSlashInput {
@@ -57,6 +92,21 @@ function normalizeSlashQuery(query: string): string {
 
 function normalizeFuzzyText(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function formatExtensionSourceLabel(extensionId: string): string {
+  const withoutSystemPrefix = extensionId.startsWith('system-') ? extensionId.slice('system-'.length) : extensionId;
+  const words = withoutSystemPrefix
+    .split(/[-_.\s]+/)
+    .map((word) => word.trim())
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return 'Extension';
+  }
+
+  const title = words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  return `${title} extension`;
 }
 
 export function fuzzyScore(query: string, candidate: string): number | null {
@@ -219,7 +269,7 @@ export function buildSlashMenuItems(
       icon: '◇',
       desc: command.description,
       section: 'Extensions',
-      source: command.extensionId,
+      source: formatExtensionSourceLabel(command.extensionId),
       kind: 'extensionSlashCommand',
       extensionId: command.extensionId,
       action: command.action,

@@ -205,6 +205,74 @@ describe('promptAttachments', () => {
     expect(drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 2000, 1000);
   });
 
+  it('keeps the normalized mime type when a resized canvas blob is untyped', async () => {
+    const originalImage = globalThis.Image;
+    vi.stubGlobal(
+      'Image',
+      class {
+        naturalWidth = 4000;
+        naturalHeight = 2000;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+
+        set src(_value: string) {
+          queueMicrotask(() => this.onload?.());
+        }
+      },
+    );
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(() => 'blob:large'),
+      revokeObjectURL: vi.fn(),
+    });
+    vi.stubGlobal(
+      'FileReader',
+      class {
+        result: string | ArrayBuffer | null = null;
+        error: DOMException | null = null;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+
+        readAsDataURL(blob: Blob) {
+          void blob.arrayBuffer().then((buffer) => {
+            this.result = `data:${blob.type || 'application/octet-stream'};base64,${Buffer.from(buffer).toString('base64')}`;
+            this.onload?.();
+          });
+        }
+      },
+    );
+    vi.stubGlobal('document', {
+      createElement: vi.fn((tagName: string) => {
+        if (tagName !== 'canvas') {
+          throw new Error(`Unexpected element: ${tagName}`);
+        }
+
+        return {
+          width: 0,
+          height: 0,
+          getContext: vi.fn(() => ({
+            imageSmoothingEnabled: false,
+            imageSmoothingQuality: 'low',
+            drawImage: vi.fn(),
+          })),
+          toBlob: vi.fn((callback: BlobCallback) => {
+            callback(new Blob(['resized-image']));
+          }),
+        } as unknown as HTMLCanvasElement;
+      }),
+    });
+
+    const result = await prepareComposerFiles([new File([new Uint8Array(9 * 1024 * 1024)], 'huge.jpg', { type: 'image/jpeg' })]);
+
+    expect(result.imageReadFailures).toEqual([]);
+    expect(result.imageAttachments[0]).toMatchObject({
+      name: 'huge.jpg',
+      mimeType: 'image/jpeg',
+      data: globalThis.btoa('resized-image'),
+    });
+
+    vi.stubGlobal('Image', originalImage);
+  });
+
   it('reads files from paste/drop transfer file lists', () => {
     const first = new File(['one'], 'one.png', { type: 'image/png' });
     const second = new File(['two'], 'two.png', { type: 'image/png' });

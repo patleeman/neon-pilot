@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -38,16 +39,38 @@ function buildUseApiResult<T>(data: T) {
   };
 }
 
-function renderPage(sectionId?: string) {
+function renderPage(
+  sectionId?: string,
+  pathname = '/settings',
+  context: Partial<Pick<ExtensionSurfaceProps['context'], 'route' | 'pathname' | 'search' | 'hash'>> & {
+    conversationId?: string | null;
+    cwd?: string | null;
+  } = {},
+) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
 
   act(() => {
     root.render(
-      <MemoryRouter initialEntries={['/settings']}>
+      <MemoryRouter initialEntries={[pathname]}>
         <Routes>
-          <Route path="/settings" element={<SettingsPage sectionIds={sectionId ? [sectionId] : undefined} />} />
+          <Route
+            path="/settings/*"
+            element={
+              <SettingsPage
+                sectionIds={sectionId ? [sectionId] : undefined}
+                context={{
+                  route: context.route ?? '/settings',
+                  pathname: context.pathname ?? pathname,
+                  search: context.search ?? '',
+                  hash: context.hash ?? '',
+                  conversationId: context.conversationId ?? null,
+                  cwd: context.cwd ?? null,
+                }}
+              />
+            }
+          />
         </Routes>
       </MemoryRouter>,
     );
@@ -169,23 +192,28 @@ function updateSelectValue(select: HTMLSelectElement, value: string) {
 
 describe('SettingsPage provider model editor', () => {
   let saveModelProviderModelMock: ReturnType<typeof vi.spyOn>;
+  let deleteModelProviderModelMock: ReturnType<typeof vi.spyOn>;
   let updateModelPreferencesMock: ReturnType<typeof vi.spyOn>;
   let refreshModelsMock: ReturnType<typeof vi.spyOn>;
   let testModelProviderMock: ReturnType<typeof vi.spyOn>;
   let startProviderOAuthLoginMock: ReturnType<typeof vi.spyOn>;
+  let setProviderApiKeyMock: ReturnType<typeof vi.spyOn>;
   let removeProviderCredentialMock: ReturnType<typeof vi.spyOn>;
   let maintainTelemetryDbMock: ReturnType<typeof vi.spyOn>;
   let updateSettingsMock: ReturnType<typeof vi.spyOn>;
   let modelsRefetchMock: ReturnType<typeof vi.fn>;
   let settingsResult: ReturnType<typeof buildUseApiResult<Record<string, unknown>>>;
   let settingsSchemaResult: ReturnType<typeof buildUseApiResult<unknown[]>>;
+  let providerAuthResult: ReturnType<typeof buildUseApiResult<{ authFile: string; providers: Array<Record<string, unknown>> }>>;
 
   beforeEach(() => {
     saveModelProviderModelMock = vi.spyOn(api, 'saveModelProviderModel');
+    deleteModelProviderModelMock = vi.spyOn(api, 'deleteModelProviderModel');
     updateModelPreferencesMock = vi.spyOn(api, 'updateModelPreferences');
     refreshModelsMock = vi.spyOn(api, 'refreshModels');
     testModelProviderMock = vi.spyOn(api, 'testModelProvider');
     startProviderOAuthLoginMock = vi.spyOn(api, 'startProviderOAuthLogin');
+    setProviderApiKeyMock = vi.spyOn(api, 'setProviderApiKey');
     removeProviderCredentialMock = vi.spyOn(api, 'removeProviderCredential');
     maintainTelemetryDbMock = vi.spyOn(api, 'maintainTelemetryDb');
     updateSettingsMock = vi.spyOn(api, 'updateSettings').mockResolvedValue({});
@@ -317,7 +345,7 @@ describe('SettingsPage provider model editor', () => {
       projectCount: 5,
       appRevision: 'abc123',
     });
-    const providerAuthResult = buildUseApiResult({
+    providerAuthResult = buildUseApiResult({
       authFile: '/tmp/auth.json',
       providers: [
         {
@@ -468,6 +496,23 @@ describe('SettingsPage provider model editor', () => {
         },
       ],
     });
+    deleteModelProviderModelMock.mockResolvedValue({
+      profile: 'assistant',
+      filePath: '/tmp/assistant-models.json',
+      providers: [
+        {
+          id: 'desktop',
+          baseUrl: 'http://desktop:8000/v1',
+          api: 'openai-completions',
+          apiKey: 'local-dev',
+          authHeader: false,
+          headers: undefined,
+          compat: undefined,
+          modelOverrides: undefined,
+          models: [],
+        },
+      ],
+    });
     refreshModelsMock.mockResolvedValue({
       currentModel: 'gpt-5.4',
       currentVisionModel: '',
@@ -490,10 +535,12 @@ describe('SettingsPage provider model editor', () => {
 
   afterEach(() => {
     saveModelProviderModelMock.mockRestore();
+    deleteModelProviderModelMock.mockRestore();
     updateModelPreferencesMock.mockRestore();
     refreshModelsMock.mockRestore();
     testModelProviderMock.mockRestore();
     startProviderOAuthLoginMock.mockRestore();
+    setProviderApiKeyMock.mockRestore();
     removeProviderCredentialMock.mockRestore();
     maintainTelemetryDbMock.mockRestore();
     updateSettingsMock.mockRestore();
@@ -531,6 +578,37 @@ describe('SettingsPage provider model editor', () => {
     expect(querySettingsTocLink(container, 'settings-appearance').getAttribute('aria-current')).toBeNull();
   });
 
+  it('highlights appearance and conversation for their direct settings routes', async () => {
+    const { container } = renderSettingsSidebar('', '/settings/appearance');
+    await flushAsyncWork();
+    expect(querySettingsTocLink(container, 'settings-appearance').getAttribute('aria-current')).toBe('location');
+    expect(querySettingsTocLink(container, 'settings-providers').getAttribute('aria-current')).toBeNull();
+
+    const conversationContainer = renderSettingsSidebar('', '/settings/conversation');
+    await flushAsyncWork();
+    expect(querySettingsTocLink(conversationContainer.container, 'settings-conversation').getAttribute('aria-current')).toBe('location');
+    expect(querySettingsTocLink(conversationContainer.container, 'settings-appearance').getAttribute('aria-current')).toBeNull();
+  });
+
+  it('renders the conversation section for direct settings routes', async () => {
+    const { container } = renderPage(undefined, '/settings/conversation');
+    await flushAsyncWork();
+
+    const section = container.querySelector('#settings-conversation');
+    const heading = container.querySelector('h1');
+
+    expect(section).toBeInstanceOf(HTMLElement);
+    expect(heading?.textContent?.trim()).toBe('Conversation');
+  });
+
+  it('falls back to browser pathname when context pathname is not a concrete settings route', async () => {
+    const { container } = renderPage(undefined, '/settings/conversation', { pathname: '/settings' });
+    await flushAsyncWork();
+
+    const heading = container.querySelector('h1');
+    expect(heading?.textContent?.trim()).toBe('Conversation');
+  });
+
   it('auto-saves extension settings without save or reset controls', async () => {
     settingsResult = buildUseApiResult({ 'sample.label': 'Old label' });
     settingsSchemaResult = buildUseApiResult([
@@ -556,6 +634,38 @@ describe('SettingsPage provider model editor', () => {
     await flushAsyncWork();
 
     expect(updateSettingsMock).toHaveBeenCalledWith({ 'sample.label': 'New label' });
+  });
+
+  it('restores the previous extension setting value when autosave fails', async () => {
+    updateSettingsMock.mockRejectedValueOnce(
+      new Error('Local API route did not complete for PATCH /api/settings at file:///Users/patrick/app/localApi.js'),
+    );
+    settingsResult = buildUseApiResult({ 'sample.label': 'Old label' });
+    settingsSchemaResult = buildUseApiResult([
+      {
+        extensionId: 'sample-extension',
+        key: 'sample.label',
+        type: 'string',
+        default: 'Old label',
+        description: 'Sample extension setting',
+        group: 'Sample',
+        order: 1,
+      },
+    ]);
+
+    const { container } = renderPage('settings-extensions');
+    await flushAsyncWork();
+
+    const input = queryInput(container, 'input[value="Old label"]');
+    updateInputValue(input, 'Unsaved label');
+    await flushAsyncWork();
+
+    expect(updateSettingsMock).toHaveBeenCalledWith({ 'sample.label': 'Unsaved label' });
+    expect(queryInput(container, 'input[value="Old label"]')).toBeInstanceOf(HTMLInputElement);
+    expect(container.textContent).toContain('Could not save this setting. Your change was not saved.');
+    expect(container.textContent).not.toContain('/api/settings');
+    expect(container.textContent).not.toContain('localApi.js');
+    expect(container.textContent).not.toContain('file:///');
   });
 
   it('renders File Explorer path link target options as human labels', async () => {
@@ -618,6 +728,48 @@ describe('SettingsPage provider model editor', () => {
     );
   });
 
+  it('keeps the model management section open after removing a model', async () => {
+    const confirmMock = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { container } = renderPage('settings-providers');
+    await flushAsyncWork();
+
+    const desktopRow = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('desktop'));
+    if (!(desktopRow instanceof HTMLButtonElement)) {
+      throw new Error('Expected configured desktop provider row');
+    }
+    click(desktopRow);
+    await flushAsyncWork();
+
+    const modelsSummary = Array.from(container.querySelectorAll('summary')).find((summary) => summary.textContent?.trim() === 'Models');
+    if (!(modelsSummary instanceof HTMLElement)) {
+      throw new Error('Expected Models disclosure summary');
+    }
+    const modelsDetails = modelsSummary.closest('details');
+    if (!(modelsDetails instanceof HTMLDetailsElement)) {
+      throw new Error('Expected Models details element');
+    }
+    act(() => {
+      modelsDetails.open = true;
+    });
+
+    const qwenRow = Array.from(container.querySelectorAll('.ui-list-row')).find((row) => row.textContent?.includes('qwen-reap'));
+    if (!(qwenRow instanceof HTMLElement)) {
+      throw new Error('Expected qwen-reap model row');
+    }
+    const removeButton = Array.from(qwenRow.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Reset');
+    if (!(removeButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected model Reset button');
+    }
+    click(removeButton);
+    await flushAsyncWork();
+
+    expect(deleteModelProviderModelMock).toHaveBeenCalledWith('desktop', 'qwen-reap');
+    expect(modelsDetails.open).toBe(true);
+    expect(container.textContent).toContain('Removed qwen-reap.');
+
+    confirmMock.mockRestore();
+  });
+
   it('refreshes models from advanced config', async () => {
     const { container } = renderPage('settings-providers');
     await flushAsyncWork();
@@ -650,6 +802,62 @@ describe('SettingsPage provider model editor', () => {
     expect(testModelProviderMock).toHaveBeenCalledWith('desktop');
     expect(container.textContent).toContain('Connected. Provider returned 1 models.');
     expect(container.textContent).toContain('Sample: qwen-reap.');
+  });
+
+  it('saves an API key for the provider shown in the credentials section', async () => {
+    setProviderApiKeyMock.mockResolvedValue({
+      authFile: '/tmp/auth.json',
+      providers: [
+        {
+          id: 'desktop',
+          modelCount: 1,
+          authType: 'api_key',
+          hasStoredCredential: true,
+          apiKeySupported: true,
+          oauthSupported: false,
+          oauthProviderName: '',
+          oauthUsesCallbackServer: false,
+        },
+      ],
+    });
+    providerAuthResult.data.providers = [
+      {
+        id: 'anthropic',
+        modelCount: 3,
+        authType: 'none',
+        hasStoredCredential: false,
+        apiKeySupported: true,
+        oauthSupported: false,
+        oauthProviderName: '',
+        oauthUsesCallbackServer: false,
+      },
+      {
+        id: 'desktop',
+        modelCount: 1,
+        authType: 'none',
+        hasStoredCredential: false,
+        apiKeySupported: true,
+        oauthSupported: false,
+        oauthProviderName: '',
+        oauthUsesCallbackServer: false,
+      },
+    ];
+
+    const { container } = renderPage('settings-providers');
+    await flushAsyncWork();
+
+    const desktopRow = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('desktop'));
+    if (!(desktopRow instanceof HTMLButtonElement)) {
+      throw new Error('Expected configured desktop provider row');
+    }
+    click(desktopRow);
+    await flushAsyncWork();
+
+    updateInputValue(queryInput(container, '#settings-provider-api-key-modal'), 'sk-test-visible-provider');
+    click(queryButtonByLabel(container, 'Save API key'));
+    await flushAsyncWork();
+
+    expect(setProviderApiKeyMock).toHaveBeenCalledWith('desktop', 'sk-test-visible-provider');
   });
 
   it('opens OAuth login URLs through the desktop shell bridge', async () => {

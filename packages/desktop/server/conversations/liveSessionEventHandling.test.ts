@@ -5,6 +5,10 @@
  * are called with correct arguments when SSE events fire.
  */
 
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the persist functions before importing the handler
@@ -77,6 +81,132 @@ describe('streaming lifecycle callbacks', () => {
     expect(cbs.syncDurableConversationRun).toHaveBeenCalledWith(entry, 'waiting');
     expect(cbs.clearContextUsageTimer).toHaveBeenCalled();
     expect(cbs.broadcastContextUsage).toHaveBeenCalled();
+  });
+
+  it('agent_end derives trace stats from assistant usage when live stats are empty', () => {
+    const entry = makeEntry({
+      session: {
+        getSessionStats: () => ({
+          tokens: { input: 0, output: 0, total: 0, cacheRead: 0, cacheWrite: 0 },
+          cost: 0,
+        }),
+        messages: [
+          { role: 'user', content: [{ type: 'text', text: 'hello' }] },
+          {
+            role: 'assistant',
+            usage: {
+              input: 12,
+              output: 3,
+              cacheRead: 4,
+              cacheWrite: 5,
+              totalTokens: 24,
+              cost: { input: 0.01, output: 0.02, cacheRead: 0, cacheWrite: 0, total: 0.03 },
+            },
+            content: [{ type: 'text', text: 'ok' }],
+          },
+        ],
+      },
+      traceRunId: 'run-usage',
+      traceRunStartedAtMs: Date.now(),
+      traceRunTurnCount: 1,
+      traceRunStepCount: 2,
+    });
+    const cbs = makeCallbacks();
+
+    handleLiveSessionEvent(entry, { type: 'agent_end', messages: [] } as unknown, cbs);
+
+    expect(cbs.broadcastStats).toHaveBeenCalledWith(
+      entry,
+      { input: 12, output: 3, cacheRead: 4, cacheWrite: 5, total: 24 },
+      0.03,
+      expect.objectContaining({ runId: 'run-usage', turnCount: 1, stepCount: 2 }),
+    );
+  });
+
+  it('agent_end derives trace stats from persisted transcript usage when runtime stats are empty', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'live-session-usage-'));
+    const sessionFile = join(dir, 'session.jsonl');
+    writeFileSync(
+      sessionFile,
+      `${JSON.stringify({ type: 'session', id: 's1' })}\n${JSON.stringify({
+        type: 'message',
+        message: {
+          role: 'assistant',
+          usage: {
+            input: 20,
+            output: 4,
+            cacheRead: 2,
+            cacheWrite: 1,
+            cost: { total: 0.05 },
+          },
+        },
+      })}\n`,
+    );
+    const entry = makeEntry({
+      session: {
+        sessionFile,
+        getSessionStats: () => ({
+          tokens: { input: 0, output: 0, total: 0, cacheRead: 0, cacheWrite: 0 },
+          cost: 0,
+        }),
+      },
+      traceRunId: 'run-file-usage',
+      traceRunStartedAtMs: Date.now(),
+    });
+    const cbs = makeCallbacks();
+
+    handleLiveSessionEvent(entry, { type: 'agent_end', messages: [] } as unknown, cbs);
+
+    expect(cbs.broadcastStats).toHaveBeenCalledWith(
+      entry,
+      { input: 20, output: 4, cacheRead: 2, cacheWrite: 1, total: 27 },
+      0.05,
+      expect.objectContaining({ runId: 'run-file-usage' }),
+    );
+  });
+
+  it('message_end broadcasts assistant usage stats before agent_end cleanup', () => {
+    const entry = makeEntry({
+      session: {
+        getSessionStats: () => ({
+          tokens: { input: 9, output: 2, total: 11, cacheRead: 0, cacheWrite: 0 },
+          cost: 0.02,
+        }),
+      },
+      traceRunId: 'run-message-usage',
+      traceRunStartedAtMs: Date.now(),
+      traceRunTurnCount: 1,
+      traceRunStepCount: 0,
+    });
+    const cbs = makeCallbacks();
+
+    handleLiveSessionEvent(
+      entry,
+      {
+        type: 'message_end',
+        message: {
+          role: 'assistant',
+          usage: {
+            input: 9,
+            output: 2,
+            cacheRead: 0,
+            cacheWrite: 0,
+            cost: { total: 0.02 },
+          },
+          content: [{ type: 'text', text: 'ok' }],
+        },
+      } as unknown,
+      cbs,
+    );
+    handleLiveSessionEvent(entry, { type: 'agent_end', messages: [] } as unknown, cbs);
+
+    expect(cbs.broadcastStats).toHaveBeenCalledTimes(1);
+    expect(cbs.broadcastStats).toHaveBeenCalledWith(
+      entry,
+      { input: 9, output: 2, cacheRead: 0, cacheWrite: 0, total: 11 },
+      0.02,
+      expect.objectContaining({ runId: 'run-message-usage' }),
+    );
   });
 
   it('turn_end keeps the durable run active and notifies lifecycle handlers', () => {

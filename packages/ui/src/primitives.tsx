@@ -3143,13 +3143,36 @@ export function KeyboardShortcutCaptureInput({
 }) {
   const [capturing, setCapturing] = useState(false);
   const [invalid, setInvalid] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!capturing) return;
+
+    const closeIfOutside = (target: EventTarget | null) => {
+      const button = buttonRef.current;
+      if (!button || !target || !(target instanceof Node) || button.contains(target)) return;
+      setCapturing(false);
+      setInvalid(false);
+    };
+
+    const handlePointerDown = (event: PointerEvent) => closeIfOutside(event.target);
+    const handleFocusIn = (event: FocusEvent) => closeIfOutside(event.target);
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    document.addEventListener('focusin', handleFocusIn, true);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+      document.removeEventListener('focusin', handleFocusIn, true);
+    };
+  }, [capturing]);
 
   return (
     <button
+      ref={buttonRef}
       id={id}
       type="button"
       disabled={disabled}
-      onClick={() => {
+      onClick={(event) => {
+        event.currentTarget.focus();
         setCapturing(true);
         setInvalid(false);
       }}

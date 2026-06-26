@@ -1,7 +1,3 @@
-export function shouldDispatchInitialLiveSessionPrompt(input: { prompt?: string; imageCount?: number }): boolean {
-  return (typeof input.prompt === 'string' && input.prompt.trim().length > 0) || (input.imageCount ?? 0) > 0;
-}
-
 export function buildCreateLiveSessionPerf(input: {
   startedAtMs: number;
   contextReadyAtMs: number;

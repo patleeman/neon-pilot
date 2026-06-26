@@ -95,12 +95,16 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBounda
 }
 
 function ConversationsRouteRedirect() {
-  const { openIds, pinnedIds } = useConversations();
+  const { openIds, pinnedIds, layoutHydrating } = useConversations();
   const hasDraft =
     readDraftConversationComposer().trim().length > 0 ||
     readDraftConversationCwd().trim().length > 0 ||
     hasDraftConversationAttachments() ||
     hasDraftConversationContextDocs();
+
+  if (layoutHydrating) {
+    return <CenteredLoadingState label="Loading..." />;
+  }
 
   const redirectPath = resolveConversationIndexRedirect({
     openIds,

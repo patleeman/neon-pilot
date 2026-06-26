@@ -42,6 +42,10 @@ describe('computeLiveSessionRunning', () => {
     expect(computeLiveSessionRunning(makeEntry({ isCompacting: true, lastDurableRunState: 'waiting' }))).toBe(true);
   });
 
+  it('returns true while a direct bash command is running even when the durable run is otherwise terminal', () => {
+    expect(computeLiveSessionRunning(makeEntry({ directBashRunning: true, lastDurableRunState: 'interrupted' }))).toBe(true);
+  });
+
   it('returns true when session.isStreaming is true and no stale turn masks it', () => {
     expect(
       computeLiveSessionRunning(

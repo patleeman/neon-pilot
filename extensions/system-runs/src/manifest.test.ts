@@ -9,11 +9,13 @@ const manifestPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'ext
 describe('system-runs manifest', () => {
   it('exposes scheduled subagent fields to agent tool schemas', () => {
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
+      permissions?: string[];
       contributes?: { tools?: Array<{ id?: string; inputSchema?: { properties?: Record<string, unknown> } }> };
     };
 
     const subagent = manifest.contributes?.tools?.find((tool) => tool.id === 'subagent');
 
+    expect(manifest.permissions).toContain('extensions:read');
     expect(subagent?.inputSchema?.properties).toMatchObject({
       defer: expect.objectContaining({ type: 'string' }),
       cron: expect.objectContaining({ type: 'string' }),

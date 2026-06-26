@@ -3,7 +3,9 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { api } from '../../client/api';
 import type { MessageBlock } from '../../shared/types';
+import { CONVERSATION_TRANSCRIPT_DISCLOSURE_SETTING_KEY } from './toolPresentation';
 
 const timeAgoSpy = vi.hoisted(() => vi.fn<(iso: string) => void>());
 
@@ -214,6 +216,26 @@ describe('ChatView rendering stability', () => {
 
     expect(container.textContent).toContain('Stable assistant reply');
     expect(container.textContent).not.toContain('npm test -- --runInBand');
+  });
+
+  it('does not mark completed thinking details live when transcript details are expanded', async () => {
+    vi.spyOn(api, 'settings').mockResolvedValue({ [CONVERSATION_TRANSCRIPT_DISCLOSURE_SETTING_KEY]: 'expanded' });
+    const thinkingBlock = {
+      id: 'thinking-1',
+      type: 'thinking',
+      ts: '2026-04-23T18:00:02.000Z',
+      text: 'The assistant is planning the answer.',
+    } satisfies Extract<MessageBlock, { type: 'thinking' }>;
+    const { container } = renderChatView([thinkingBlock, createAssistantBlock()], { isStreaming: false });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('The assistant is planning the answer.');
+    expect(container.textContent).toContain('Stable assistant reply');
+    expect(container.textContent).not.toContain('live');
   });
 
   it('auto-expands the running tool block in the live trace cluster', () => {

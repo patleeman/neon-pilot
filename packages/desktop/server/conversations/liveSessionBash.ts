@@ -1,12 +1,15 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
 import { listProcessWrappers } from '../shared/processLauncher.js';
+import { createConversationBashOperations } from './liveSessionBashProcesses.js';
 import type { SseEvent } from './liveSessionEvents.js';
 
 let syntheticBashExecutionCounter = 0;
+const activeBashSessionIds = new Set<string>();
 
 export interface LiveSessionBashHost {
   sessionId: string;
+  cwd?: string;
   session: Pick<AgentSession, 'isBashRunning' | 'executeBash'>;
 }
 
@@ -15,6 +18,7 @@ export async function executeLiveSessionBash(
   command: string,
   options: {
     excludeFromContext?: boolean;
+    signal?: AbortSignal;
     broadcast: (event: SseEvent) => void;
   },
 ): Promise<{ result: unknown; normalizedCommand: string }> {
@@ -22,10 +26,11 @@ export async function executeLiveSessionBash(
   if (!normalizedCommand) {
     throw new Error('command required');
   }
-  if (host.session.isBashRunning) {
+  if (activeBashSessionIds.has(host.sessionId) || host.session.isBashRunning) {
     throw new Error('A bash command is already running.');
   }
 
+  activeBashSessionIds.add(host.sessionId);
   const toolCallId = `user-bash-${host.sessionId}-${Date.now()}-${++syntheticBashExecutionCounter}`;
   const startedAtMs = Date.now();
   const eventArgs: Record<string, unknown> = {
@@ -34,24 +39,47 @@ export async function executeLiveSessionBash(
     ...(options.excludeFromContext ? { excludeFromContext: true } : {}),
   };
 
-  options.broadcast({ type: 'tool_start', toolCallId, toolName: 'bash', args: eventArgs });
-
   let streamedOutput = '';
   try {
-    const result = await host.session.executeBash(
-      normalizedCommand,
-      (chunk) => {
-        if (!chunk) {
-          return;
-        }
+    options.broadcast({ type: 'tool_start', toolCallId, toolName: 'bash', args: eventArgs });
 
-        streamedOutput += chunk;
-        options.broadcast({ type: 'tool_update', toolCallId, partialResult: chunk });
-      },
-      { excludeFromContext: options.excludeFromContext === true },
-    );
+    const appendChunk = (chunk: unknown) => {
+      if (!chunk) {
+        return;
+      }
 
-    const bashResult = result as {
+      const text = Buffer.isBuffer(chunk) ? chunk.toString('utf-8') : String(chunk);
+      streamedOutput += text;
+      options.broadcast({ type: 'tool_update', toolCallId, partialResult: text });
+    };
+
+    const result = host.cwd
+      ? await createConversationBashOperations({ conversationId: host.sessionId }).exec(normalizedCommand, host.cwd, {
+          onData: appendChunk,
+          signal: options.signal,
+          env: {
+            ...process.env,
+            NEON_PILOT_SOURCE_CONVERSATION_ID: host.sessionId,
+          },
+        })
+      : await host.session.executeBash(
+          normalizedCommand,
+          (chunk) => {
+            appendChunk(chunk);
+          },
+          { excludeFromContext: options.excludeFromContext === true },
+        );
+
+    const normalizedResult =
+      host.cwd && result && typeof result === 'object'
+        ? {
+            output: streamedOutput,
+            exitCode: (result as { exitCode?: unknown }).exitCode,
+            ...((result as { exitCode?: unknown }).exitCode === null ? { cancelled: true } : {}),
+          }
+        : result;
+
+    const bashResult = normalizedResult as {
       output?: unknown;
       exitCode?: unknown;
       cancelled?: unknown;
@@ -81,7 +109,7 @@ export async function executeLiveSessionBash(
       ...(Object.keys(details).length > 0 ? { details } : {}),
     });
 
-    return { result, normalizedCommand };
+    return { result: normalizedResult, normalizedCommand };
   } catch (error) {
     const details = {
       displayMode: 'terminal',
@@ -98,5 +126,7 @@ export async function executeLiveSessionBash(
       details,
     });
     throw error;
+  } finally {
+    activeBashSessionIds.delete(host.sessionId);
   }
 }

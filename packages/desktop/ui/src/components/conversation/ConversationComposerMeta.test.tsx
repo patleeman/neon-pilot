@@ -38,7 +38,8 @@ describe('ConversationComposerMeta', () => {
     const html = renderToString(<ConversationComposerMeta {...baseProps} />);
 
     expect(html).toContain('Workspace folder');
-    expect(html).toContain('/repo');
+    expect(html).toContain('repo');
+    expect(html).not.toContain('&gt;/repo&lt;');
     expect(html).toContain('Choose folder');
     expect(html).not.toContain('Conversation options');
   });
@@ -63,7 +64,7 @@ describe('ConversationComposerMeta', () => {
       />,
     );
 
-    expect(html).toContain('Working directory: /repo/project');
+    expect(html).toContain('Working directory: project');
     expect(html).toContain('project');
     expect(html).not.toContain('Conversation options');
   });
@@ -97,12 +98,33 @@ describe('ConversationComposerMeta', () => {
     );
 
     expect(html).toContain('Conversation working directory');
-    expect(html).toContain('/repo/project');
-    expect(html).toContain('/repo/other');
+    expect(html).toContain('project');
+    expect(html).toContain('other');
+    expect(html).not.toContain('&gt;/repo/project&lt;');
+    expect(html).not.toContain('&gt;/repo/other&lt;');
     expect(html).toContain('Choose folder');
     expect(html).toContain('Cancel working directory edit');
     expect(html).not.toContain('Switch');
     expect(html).not.toContain('>Cancel<');
     expect(html).not.toContain('type="text"');
+  });
+
+  it('keeps neutral chat selected when editing a no-workspace conversation cwd', () => {
+    const html = renderToString(
+      <ConversationComposerMeta
+        {...baseProps}
+        draft={false}
+        conversationCwdEditorOpen
+        currentCwd="/Users/patrick/.local/state/neon-pilot/neon-pilot-runtime/chat-workspaces/shared"
+        currentCwdLabel="Chat"
+        conversationCwdDraft=""
+        availableConversationWorkspacePaths={['/repo/other']}
+      />,
+    );
+
+    expect(html).toContain('Conversation working directory');
+    expect(html).toContain('<option value="" selected="">Chat</option>');
+    expect(html).toContain('other');
+    expect(html).not.toContain('chat-workspaces/shared');
   });
 });

@@ -143,6 +143,7 @@ describe('live session factory', () => {
     );
     expect(s._baseToolRegistry.get('bash')).toMatchObject({ name: 'bash', cwd: '/repo' });
     const spawnHook = s._baseToolRegistry.get('bash').options.spawnHook;
+    expect(s._baseToolRegistry.get('bash').options.operations).toMatchObject({ exec: expect.any(Function) });
     expect(spawnHook({ command: 'echo hi', cwd: '/repo', env: { EXISTING: '1' } })).toMatchObject({
       command: expect.stringContaining('wrapped command'),
       env: expect.objectContaining({

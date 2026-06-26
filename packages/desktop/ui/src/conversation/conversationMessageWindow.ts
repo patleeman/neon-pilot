@@ -1,8 +1,6 @@
 import type { PendingConversationPrompt } from '../pending/pendingConversationPrompt';
 import type { MessageBlock } from '../shared/types';
 
-const MIN_VISIBLE_AGENT_TURNS_FOR_EARLIER_TRANSCRIPT_BOUNDARY = 3;
-
 export function resolveComputedMessagesRaw(input: {
   draft: boolean;
   draftPendingPrompt: PendingConversationPrompt | null;
@@ -58,16 +56,7 @@ export function shouldShowEarlierTranscriptBoundary(input: {
   visibleMessages: MessageBlock[] | undefined;
   minVisibleAgentTurns?: number;
 }): boolean {
-  if (!input.hasOlderBlocks) {
-    return false;
-  }
-
-  const minVisibleAgentTurns =
-    typeof input.minVisibleAgentTurns === 'number' && Number.isSafeInteger(input.minVisibleAgentTurns) && input.minVisibleAgentTurns > 0
-      ? input.minVisibleAgentTurns
-      : MIN_VISIBLE_AGENT_TURNS_FOR_EARLIER_TRANSCRIPT_BOUNDARY;
-
-  return countVisibleAgentTurns(input.visibleMessages) >= minVisibleAgentTurns;
+  return input.hasOlderBlocks;
 }
 
 export function pruneComputedMessages(input: {

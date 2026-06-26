@@ -255,10 +255,15 @@ export function ToolBlock({
   const subagentTitle = block.tool === 'subagent' ? (readToolDetailString(block.details, 'branchTitle') ?? subagentTask) : undefined;
   const artifactId = block.tool === 'artifact' ? readArtifactId(block) : undefined;
   const artifactTitle = block.tool === 'artifact' ? readArtifactTitle(block) : undefined;
+  const artifactAction =
+    block.tool === 'artifact' ? (readToolInputString(block.input, 'action') ?? readToolDetailString(block.details, 'action')) : undefined;
   const pinnedSubagent = block.tool === 'subagent' && Boolean(subagentConversationRoute);
   const checkpointAction =
     block.tool === 'checkpoint' ? (readToolInputString(block.input, 'action') ?? readToolDetailString(block.details, 'action')) : undefined;
-  const useExtensionRenderer = extensionRenderer && !(block.tool === 'checkpoint' && checkpointAction === 'list');
+  const useExtensionRenderer =
+    extensionRenderer &&
+    !(block.tool === 'checkpoint' && checkpointAction === 'list') &&
+    !(block.tool === 'artifact' && (artifactAction === 'list' || artifactAction === 'delete'));
   const pinnedCheckpoint = block.tool === 'checkpoint' && checkpointAction === 'save' && !isRunning && !isError;
   const pinnedArtifact = isDurableArtifactTool(block);
   const pinnedVisual = isPinnedVisualTool(block);

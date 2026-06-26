@@ -123,6 +123,91 @@ describe('change working directory agent extension', () => {
     });
   });
 
+  it('uses an explicit target conversation id and resolves relative paths from that conversation cwd', async () => {
+    const currentRepo = createTempRepo();
+    const targetRepo = createTempRepo();
+    const targetDir = join(targetRepo, 'nested-repo');
+    mkdirSync(targetDir, { recursive: true });
+    const readConversationSessions = vi.fn(async () => [
+      { id: 'conv-current', cwd: currentRepo },
+      { id: 'conv-target', cwd: targetRepo },
+    ]);
+
+    const requestConversationWorkingDirectoryChange = vi.fn(async () => ({
+      conversationId: 'conv-target',
+      cwd: targetDir,
+      queued: true,
+    }));
+    const { tool } = registerChangeWorkingDirectoryTool(requestConversationWorkingDirectoryChange);
+    const ctx = {
+      ...createToolContext('conv-current', currentRepo),
+      readConversationSessions,
+    };
+
+    const result = await tool.execute(
+      'tool-1',
+      {
+        conversationId: 'conv-target',
+        cwd: './nested-repo',
+      },
+      undefined,
+      undefined,
+      ctx,
+    );
+
+    expect(requestConversationWorkingDirectoryChange).toHaveBeenCalledWith({
+      conversationId: 'conv-target',
+      cwd: targetDir,
+    });
+    expect(readConversationSessions).toHaveBeenCalledWith();
+    expect(result.details).toMatchObject({
+      action: 'queue',
+      conversationId: 'conv-target',
+      cwd: targetDir,
+      queued: true,
+    });
+  });
+
+  it('allows worker action calls with an explicit target conversation and no active session id', async () => {
+    const targetRepo = createTempRepo();
+    const targetDir = join(targetRepo, 'nested-repo');
+    mkdirSync(targetDir, { recursive: true });
+    const readConversationSessions = vi.fn(async () => [{ id: 'conv-target', cwd: targetRepo }]);
+
+    const requestConversationWorkingDirectoryChange = vi.fn(async () => ({
+      conversationId: 'conv-target',
+      cwd: targetDir,
+      queued: true,
+    }));
+    const { tool } = registerChangeWorkingDirectoryTool(requestConversationWorkingDirectoryChange);
+    const ctx = {
+      ...createToolContext('', ''),
+      readConversationSessions,
+    };
+
+    const result = await tool.execute(
+      'tool-1',
+      {
+        conversationId: 'conv-target',
+        cwd: './nested-repo',
+      },
+      undefined,
+      undefined,
+      ctx,
+    );
+
+    expect(requestConversationWorkingDirectoryChange).toHaveBeenCalledWith({
+      conversationId: 'conv-target',
+      cwd: targetDir,
+    });
+    expect(result.details).toMatchObject({
+      action: 'queue',
+      conversationId: 'conv-target',
+      cwd: targetDir,
+      queued: true,
+    });
+  });
+
   it('returns a noop result when the conversation is already in that directory', async () => {
     const repoRoot = createTempRepo();
     const requestConversationWorkingDirectoryChange = vi.fn(async () => ({

@@ -23,6 +23,7 @@ import type {
 import { decodeExtensionHostProtocolFrame, encodeExtensionHostProtocolFrame } from '../../server/extensions/extensionHostProtocolFrames.js';
 import { type AppEvent, subscribeAppEvents } from '../../server/shared/appEvents.js';
 import { installSharedConversationServiceContext, SHARED_CHILD_RUNTIME_SCOPE } from './conversation-service-context.js';
+import { withRpcAbortSignal } from './extension-host-rpc-request.js';
 
 interface ExtensionHostReadyMessage {
   type: 'ready';
@@ -309,11 +310,14 @@ async function main(): Promise<void> {
         }
 
         if (request.method === 'POST' && url.pathname === '/rpc') {
+          const abort = new AbortController();
+          request.on('aborted', () => abort.abort());
+          response.on('close', () => abort.abort());
           const body = await readRequestBody(request);
           if (!body.request) {
             throw new Error('Missing extension host request.');
           }
-          const result = await handleInProcessExtensionHostRequest(body.request);
+          const result = await handleInProcessExtensionHostRequest(withRpcAbortSignal(body.request, abort.signal));
           writeJson(response, result.ok ? 200 : 500, result);
           return;
         }

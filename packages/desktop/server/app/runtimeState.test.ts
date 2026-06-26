@@ -17,6 +17,7 @@ const {
   manifestAgentFactoryMock,
   authStorageMock,
   readSavedModelPreferencesMock,
+  buildSkillInjectionPlanMock,
   buildSkillInjectionPlanAsyncMock,
   buildPromptTemplatePlanAsyncMock,
   listExtensionSkillRegistrationsMock,
@@ -44,6 +45,7 @@ const {
     manifestAgentFactoryMock,
     authStorageMock,
     readSavedModelPreferencesMock: vi.fn(() => ({ currentVisionModel: 'openai/gpt-4o' })),
+    buildSkillInjectionPlanMock: vi.fn(() => ({ skillPaths: ['/skills/sync'], inlineSkills: [], diagnostics: [] })),
     buildSkillInjectionPlanAsyncMock: vi.fn(async () => ({ skillPaths: ['/skills/async'], inlineSkills: [], diagnostics: [] })),
     buildPromptTemplatePlanAsyncMock: vi.fn(async () => ({ templatePaths: ['/prompts/async.md'], templates: [], diagnostics: [] })),
     listExtensionSkillRegistrationsMock: vi.fn(() => []),
@@ -88,7 +90,7 @@ vi.mock('../models/modelPreferences.js', () => ({
 }));
 
 vi.mock('../skills/skillInventory.js', () => ({
-  buildSkillInjectionPlan: vi.fn(() => ({ skillPaths: ['/skills/sync'], inlineSkills: [], diagnostics: [] })),
+  buildSkillInjectionPlan: buildSkillInjectionPlanMock,
   buildSkillInjectionPlanAsync: buildSkillInjectionPlanAsyncMock,
 }));
 
@@ -153,6 +155,8 @@ describe('createRuntimeState', () => {
     listExtensionSkillRegistrationsMock.mockReturnValue([]);
     readSavedModelPreferencesMock.mockClear();
     readSavedModelPreferencesMock.mockReturnValue({ currentVisionModel: 'openai/gpt-4o' });
+    buildSkillInjectionPlanMock.mockClear();
+    buildSkillInjectionPlanMock.mockReturnValue({ skillPaths: ['/skills/sync'], inlineSkills: [], diagnostics: [] });
     buildSkillInjectionPlanAsyncMock.mockClear();
     buildSkillInjectionPlanAsyncMock.mockResolvedValue({ skillPaths: ['/skills/async'], inlineSkills: [], diagnostics: [] });
     buildPromptTemplatePlanAsyncMock.mockClear();
@@ -349,6 +353,25 @@ describe('createRuntimeState', () => {
     });
     expect(buildSkillInjectionPlanAsyncMock).not.toHaveBeenCalled();
     expect(buildPromptTemplatePlanAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it('clears live session resource caches after skill runtime resources refresh', async () => {
+    const state = createTestRuntimeState();
+
+    await expect(state.buildLiveSessionResourceOptionsAsync()).resolves.toMatchObject({
+      additionalSkillPaths: ['/skills/async'],
+    });
+    expect(buildSkillInjectionPlanAsyncMock).toHaveBeenCalledTimes(1);
+
+    buildSkillInjectionPlanAsyncMock.mockResolvedValueOnce({ skillPaths: ['/skills/after-refresh'], inlineSkills: [], diagnostics: [] });
+    state.refreshSkillRuntimeResources();
+
+    await expect(state.buildLiveSessionResourceOptionsAsync()).resolves.toMatchObject({
+      additionalSkillPaths: ['/skills/after-refresh'],
+    });
+    expect(buildSkillInjectionPlanMock).toHaveBeenCalledWith({ runtimeScope: 'shared', repoRoot: '/repo-root' });
+    expect(buildSkillInjectionPlanAsyncMock).toHaveBeenCalledTimes(2);
+    expect(writeMergedMcpConfigFileMock).toHaveBeenCalledWith(expect.objectContaining({ skillDirs: ['/skills/sync'] }));
   });
 
   it('surfaces explicit materialization failures', async () => {
