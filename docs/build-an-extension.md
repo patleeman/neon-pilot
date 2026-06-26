@@ -9,17 +9,25 @@ Extensions are how Neon Pilot grows new product features. You usually should not
 ```text
 Build a Neon Pilot extension that [does what].
 
-Before implementation, produce a short UX brief and ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass. The brief must name the primary user, the job-to-be-done, the primary surface, the default/empty/loading/error/success states, the main actions, and the shared UI primitives you will reuse from `@neon-pilot/extensions/ui`.
+Start by interviewing me before you write code. Ask focused questions until you understand the workflow I want, who it is for, what the first version should do, where it should live in Neon Pilot, and what empty, loading, error, and success states it needs.
 
-Use the extension manager/template if helpful. Pick the right surface:
-- main page for a full app/workflow
-- tab-local right rail for a compact conversation-specific tool panel inside the workbench
-- workbench detail for split-pane workflows
+Then write a short UX brief. If the extension has UI, make a quick visual prototype or artifact using Neon Pilot's UI patterns so I can react before implementation.
 
-Implement it with editable source files, build it, reload it, visually test the exact user path, fix any layout or interaction problems you see, and checkpoint the changes.
+After I approve the direction, build the extension, reload it, test the real app path, and keep iterating with me until it feels right.
 ```
 
 Add concrete product details after the first sentence: what data it should show, what actions it should support, and what “done” looks like.
+
+## Extension-building workflow
+
+Use this sequence when an agent helps a user create a new extension:
+
+1. **Interview first.** Ask enough questions to understand the job, the user, the data involved, the first useful version, the expected controls, and what the user should see when nothing is configured or something fails. Do not start coding while the product shape is still vague.
+2. **Write the brief.** Summarize the primary user, job-to-be-done, first-version scope, chosen extension surface, state model, main actions, and validation plan. State any assumptions so the user can correct them.
+3. **Prototype UI when UI matters.** For pages, panels, settings, or workflow surfaces, make a quick artifact or local prototype before implementation. Use Neon Pilot's density, shared primitives, and copy rules so the user reacts to the product shape, not a generic mockup.
+4. **Build the extension.** Create editable source in `src/`, declare contributions in `extension.json`, use the public extension SDK, and keep generated output in `dist/`.
+5. **Reload and test in the app.** Build, validate, reload extensions, open the actual contributed surface, and exercise default, empty, loading, error, success, disabled, and long-running states that apply.
+6. **Iterate with the user.** Adjust scope, copy, layout, actions, or state behavior from what the user sees. Checkpoint only when the extension is working through the real app path.
 
 ## Production agent loop
 
@@ -36,18 +44,19 @@ Use this as the no-ambiguity loop for an agent building an extension in a repo c
      For Settings components, use `@neon-pilot/extensions/settings` row-list primitives (`SettingsPanel`, `SettingsRow`, `Switch`, `Select`, `TextInput`, `ToolbarButton`) and autosave normal preferences.
    - **Visual acceptance**: what must be visible in the app screenshot or manual inspection before calling the UI correct.
 4. Ask focused questions for unresolved UX/product decisions before writing code. If the user gave enough detail, state the assumptions and proceed.
-5. Start from [`docs/extension-templates/`](extension-templates/README.md) when the feature matches a template; otherwise copy the closest first-party extension shape.
-6. Create editable source files in `src/`, declare every contribution in `extension.json`, and keep generated bundles in `dist/`.
-7. Build with `pnpm run extension:build -- <extension-dir>`.
-8. Run `neon-pilot-extension doctor <extension-dir>` when the CLI is available; in a packaged app, run `neon-pilot extensions validate --package-root <extension-dir>` before install or `neon-pilot extensions validate <extension-id>` after install. For repo extension or boundary work, also run `pnpm run check:extensions:static`.
-9. Reload extensions from Settings -> Extensions, or restart the desktop app when reload is unavailable.
-10. Run `neon-pilot extensions smoke <extension-id>` when the app is running, then validate through the same surface the user will use: open the route, rail, Settings section, command, composer control, or agent tool.
+5. For user-visible UI, make a quick artifact or local prototype before implementation unless the user explicitly wants to skip straight to code. The prototype should show the chosen surface, primary actions, and important states; use the shared Neon Pilot UI patterns instead of generic app chrome.
+6. Start from [`docs/extension-templates/`](extension-templates/README.md) when the feature matches a template; otherwise copy the closest first-party extension shape.
+7. Create editable source files in `src/`, declare every contribution in `extension.json`, and keep generated bundles in `dist/`.
+8. Build with `pnpm run extension:build -- <extension-dir>`.
+9. Run `neon-pilot-extension doctor <extension-dir>` when the CLI is available; in a packaged app, run `neon-pilot extensions validate --package-root <extension-dir>` before install or `neon-pilot extensions validate <extension-id>` after install. For repo extension or boundary work, also run `pnpm run check:extensions:static`.
+10. Reload extensions from Settings -> Extensions, or restart the desktop app when reload is unavailable.
+11. Run `neon-pilot extensions smoke <extension-id>` when the app is running, then validate through the same surface the user will use: open the route, rail, Settings section, command, composer control, or agent tool.
     For a Settings component, open `/settings#<sectionId>` and inspect it beside neighboring Settings sections for row spacing, padding, title hierarchy, and action alignment.
-11. Exercise empty, loading, error, success, disabled, and long-running states when the surface has UI; for backend tools/actions, run one representative invocation and inspect the transcript or visible result.
-12. Visually inspect the UI against the brief. Check layout density, text wrapping, keyboard/focus behavior, responsive constraints, empty/error copy, command availability, and whether shared primitives were used instead of one-off chrome.
-13. Update the extension `README.md` with install/build/use notes and any non-obvious behavior.
-14. If the extension is meant for other users, prepare `.neon-extension.zip` release artifacts and document the GitHub release tag users should install from.
-15. Checkpoint only the files touched for this extension and its docs.
+12. Exercise empty, loading, error, success, disabled, and long-running states when the surface has UI; for backend tools/actions, run one representative invocation and inspect the transcript or visible result.
+13. Visually inspect the UI against the brief. Check layout density, text wrapping, keyboard/focus behavior, responsive constraints, empty/error copy, command availability, and whether shared primitives were used instead of one-off chrome.
+14. Update the extension `README.md` with install/build/use notes and any non-obvious behavior.
+15. If the extension is meant for other users, prepare `.neon-extension.zip` release artifacts and document the GitHub release tag users should install from.
+16. Checkpoint only the files touched for this extension and its docs.
 
 Do not stop after a successful build. A built extension is only ready after its manifest diagnostics are clean and the user-visible path has been exercised.
 

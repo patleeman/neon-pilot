@@ -118,6 +118,15 @@ type ExtensionManagerNotice = { type: 'info' | 'success' | 'error'; message: str
 
 const ACTIONS_MENU_VIEWPORT_MARGIN = 8;
 const ACTIONS_MENU_BUTTON_GAP = 8;
+const BUILD_EXTENSION_PROMPT = `I want to build a Neon Pilot extension.
+
+Start by interviewing me before you write code. Ask focused questions until you understand the workflow I want, who it is for, what the first version should do, where it should live in Neon Pilot, and what empty, loading, error, and success states it needs.
+
+Then write a short UX brief. If the extension has UI, make a quick visual prototype or artifact using Neon Pilot's UI patterns so I can react before implementation.
+
+After I approve the direction, build the extension, reload it, test the real app path, and keep iterating with me until it feels right.`;
+const COMPOSER_DRAFT_RETRY_MS = 100;
+const COMPOSER_DRAFT_MAX_ATTEMPTS = 20;
 
 interface ActionsMenuPosition {
   top: number;
@@ -132,6 +141,26 @@ function ExtensionNoticeBox({ notice }: { notice: ExtensionManagerNotice }) {
       {notice.details}
     </Notice>
   );
+}
+
+function draftComposerTextWhenReady(text: string, attempt = 0): void {
+  const textarea = document.querySelector('textarea');
+  const currentValue = textarea instanceof HTMLTextAreaElement ? textarea.value : '';
+  if (currentValue.includes(text)) {
+    window.dispatchEvent(new CustomEvent('neon-pilot:composer-focus'));
+    return;
+  }
+
+  if (textarea) {
+    window.dispatchEvent(new CustomEvent('neon-pilot:composer-clear'));
+    window.dispatchEvent(new CustomEvent('neon-pilot:composer-append-text', { detail: { text } }));
+    window.dispatchEvent(new CustomEvent('neon-pilot:composer-focus'));
+    return;
+  }
+
+  if (attempt + 1 < COMPOSER_DRAFT_MAX_ATTEMPTS) {
+    window.setTimeout(() => draftComposerTextWhenReady(text, attempt + 1), COMPOSER_DRAFT_RETRY_MS);
+  }
 }
 
 function calculateActionsMenuPosition({
@@ -482,6 +511,16 @@ function RefreshIcon() {
       <path d="M3 2.8v2.5h2.5" />
       <path d="M3 9a5 5 0 0 0 8.5 3.2L13 10.7" />
       <path d="M13 13.2v-2.5h-2.5" />
+    </svg>
+  );
+}
+
+function SparkIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <path d="M8 1.8 9.3 5.9 13.2 8 9.3 10.1 8 14.2 6.7 10.1 2.8 8 6.7 5.9 8 1.8Z" />
+      <path d="M13 1.8v3" />
+      <path d="M11.5 3.3h3" />
     </svg>
   );
 }
@@ -1581,6 +1620,11 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     );
   };
 
+  const startExtensionBuildConversation = useCallback(() => {
+    navigate('/conversations/new', { state: { suppressOnboardingAutoStart: true } });
+    window.setTimeout(() => draftComposerTextWhenReady(BUILD_EXTENSION_PROMPT), 0);
+  }, [navigate]);
+
   if (loading) {
     return <LoadingState label="Loading extensions…" />;
   }
@@ -1630,6 +1674,18 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                         {busyId === 'update-all' ? 'Updating...' : `Update all (${updatableExtensions.length})`}
                       </Button>
                     ) : null}
+                    <Button
+                      type="button"
+                      data-onboarding-target="build-extension"
+                      className="min-h-9 px-3 py-2 text-[13px]"
+                      disabled={busyId === 'update-all'}
+                      onClick={startExtensionBuildConversation}
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <SparkIcon />
+                        Build with agent
+                      </span>
+                    </Button>
                     <Button
                       variant="action"
                       tone="accent"
@@ -1692,6 +1748,18 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                     {busyId === 'update-all' ? 'Updating...' : `Update all (${updatableExtensions.length})`}
                   </Button>
                 ) : null}
+                <Button
+                  type="button"
+                  data-onboarding-target="build-extension"
+                  className="min-h-9 px-3 py-2 text-[13px]"
+                  disabled={busyId === 'update-all'}
+                  onClick={startExtensionBuildConversation}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <SparkIcon />
+                    Build with agent
+                  </span>
+                </Button>
                 <Button
                   variant="action"
                   tone="accent"

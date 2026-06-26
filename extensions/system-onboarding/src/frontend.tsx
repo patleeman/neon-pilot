@@ -51,9 +51,10 @@ const TOUR_STEPS: TourStep[] = [
   {
     id: 'extension-authoring',
     route: '/extensions',
+    target: '[data-onboarding-target="build-extension"]',
     title: 'Ask for the app you want',
-    body: 'If Neon Pilot is missing something, ask the agent to build it as an extension. Start small, try it, then keep asking for changes until it fits how you work.',
-    detail: 'Examples: a release checklist, a PR summary button, a notes panel, or a tool for your internal API.',
+    body: 'If Neon Pilot is missing something, start here. The agent will ask what you want, sketch a first version, build it as an extension, and keep changing it with you.',
+    detail: 'Try a release checklist, a PR summary button, a notes panel, or a tool for your internal API.',
   },
   {
     id: 'conversation',
@@ -75,6 +76,14 @@ const TOUR_STEPS: TourStep[] = [
 
 function canAutoStartOnboarding(pathname: string): boolean {
   return pathname === '/' || pathname === '/conversations' || pathname === '/conversations/new';
+}
+
+function shouldSuppressOnboardingAutoStart(locationState: unknown): boolean {
+  return Boolean(
+    locationState &&
+    typeof locationState === 'object' &&
+    (locationState as { suppressOnboardingAutoStart?: unknown }).suppressOnboardingAutoStart === true,
+  );
 }
 
 function clampStepIndex(index: number): number {
@@ -284,6 +293,7 @@ export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
   const navigate = useNavigate();
   const location = useLocation();
   const startedPathnameRef = useRef(location.pathname);
+  const suppressAutoStartRef = useRef(shouldSuppressOnboardingAutoStart(location.state));
   const pathnameRef = useRef(location.pathname);
   const [state, setState] = useState<OnboardingTourState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -335,7 +345,8 @@ export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
   useEffect(() => {
     pathnameRef.current = location.pathname;
     startedPathnameRef.current = location.pathname;
-  }, [location.pathname]);
+    suppressAutoStartRef.current = shouldSuppressOnboardingAutoStart(location.state);
+  }, [location.pathname, location.state]);
 
   useEffect(() => {
     let cancelled = false;
@@ -358,6 +369,9 @@ export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
             return;
           }
           const currentPathname = pathnameRef.current;
+          if (suppressAutoStartRef.current) {
+            return;
+          }
           if (!canAutoStartOnboarding(startedPathname) || !canAutoStartOnboarding(currentPathname)) {
             return;
           }

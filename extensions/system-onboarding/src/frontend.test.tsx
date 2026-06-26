@@ -117,6 +117,29 @@ describe('OnboardingBootstrap', () => {
     expect(screen.getByTestId('location').textContent).toBe('/extensions');
   });
 
+  it('does not auto-start when a seeded chat suppresses onboarding', async () => {
+    const { pa, invoke } = createPa({
+      ensureResult: {
+        state: { status: 'unseen', stepIndex: 0, updatedAt: '2026-06-25T00:00:00.000Z' },
+        shouldStart: true,
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/conversations/new', state: { suppressOnboardingAutoStart: true } }]}>
+        <OnboardingBootstrap pa={pa} />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    await advanceEnsureTimer();
+
+    expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
+    expect(invoke).not.toHaveBeenCalledWith('update', expect.anything());
+    expect(screen.queryByTestId('onboarding-tour')).toBeNull();
+    expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
+  });
+
   it('moves through real app routes with next and back', async () => {
     const { pa, invoke } = createPa({
       ensureResult: {
@@ -143,6 +166,35 @@ describe('OnboardingBootstrap', () => {
 
     expect(screen.getByTestId('location').textContent).toBe('/settings/providers');
     expect(invoke).toHaveBeenCalledWith('update', { status: 'active', stepIndex: 0 });
+  });
+
+  it('points the extension-building step at the Extensions page action', async () => {
+    const { pa } = createPa({
+      ensureResult: {
+        state: { status: 'active', stepIndex: 2, updatedAt: '2026-06-25T00:00:00.000Z' },
+        shouldStart: false,
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/extensions']}>
+        <OnboardingBootstrap pa={pa} />
+        <LocationProbe />
+        <button type="button" data-onboarding-target="build-extension">
+          Build with agent
+        </button>
+      </MemoryRouter>,
+    );
+
+    await advanceEnsureTimer();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    expect(screen.getByTestId('location').textContent).toBe('/extensions');
+    expect(screen.getByText('Ask for the app you want')).toBeTruthy();
+    expect(screen.getByText(/The agent will ask what you want/)).toBeTruthy();
+    expect(document.querySelector('.np-onboarding-highlight')).toBeTruthy();
   });
 
   it('persists skipped tours and hides the overlay', async () => {

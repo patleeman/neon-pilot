@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -47,6 +47,15 @@ vi.mock('@neon-pilot/extensions/workbench-browser', () => ({
 import { ExtensionManagerPage, ExtensionRepositoriesSettingsPanel } from './frontend';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
+
+function LocationProbe() {
+  const location = useLocation();
+  return (
+    <div data-testid="location" data-state={JSON.stringify(location.state ?? null)}>
+      {location.pathname}
+    </div>
+  );
+}
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
@@ -266,6 +275,59 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('USER')).toBeNull();
     expect(screen.getAllByText('Installed').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
+  });
+
+  it('starts an extension-building chat with a guided prompt', async () => {
+    const appendedTexts: string[] = [];
+    let clearCount = 0;
+    let focusCount = 0;
+    const appendListener = (event: Event) => {
+      if (event instanceof CustomEvent && typeof event.detail?.text === 'string') {
+        appendedTexts.push(event.detail.text);
+      }
+    };
+    const clearListener = () => {
+      clearCount += 1;
+    };
+    const focusListener = () => {
+      focusCount += 1;
+    };
+    window.addEventListener('neon-pilot:composer-append-text', appendListener);
+    window.addEventListener('neon-pilot:composer-clear', clearListener);
+    window.addEventListener('neon-pilot:composer-focus', focusListener);
+
+    render(
+      <MemoryRouter initialEntries={['/extensions']}>
+        <ExtensionManagerPage
+          pa={{ ui: { toast: vi.fn(), notify: vi.fn() }, commands: { list: vi.fn().mockResolvedValue([]) } } as never}
+          context={{} as never}
+          surface={{} as never}
+          params={{}}
+        />
+        <LocationProbe />
+        <textarea aria-label="Composer" />
+      </MemoryRouter>,
+    );
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    const buildButton = screen.getByRole('button', { name: 'Build with agent' });
+
+    expect(buildButton.getAttribute('data-onboarding-target')).toBe('build-extension');
+    fireEvent.click(buildButton);
+
+    await waitFor(() => {
+      expect(appendedTexts.join('\n')).toContain('I want to build a Neon Pilot extension.');
+    });
+    expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
+    expect(screen.getByTestId('location').getAttribute('data-state')).toContain('suppressOnboardingAutoStart');
+    expect(appendedTexts.join('\n')).toContain('Start by interviewing me before you write code.');
+    expect(appendedTexts.join('\n')).toContain('make a quick visual prototype or artifact');
+    expect(clearCount).toBeGreaterThan(0);
+    expect(focusCount).toBeGreaterThan(0);
+
+    window.removeEventListener('neon-pilot:composer-append-text', appendListener);
+    window.removeEventListener('neon-pilot:composer-clear', clearListener);
+    window.removeEventListener('neon-pilot:composer-focus', focusListener);
   });
 
   it('keeps required platform surfaces out of the default list but visible in the Platform tab', async () => {
