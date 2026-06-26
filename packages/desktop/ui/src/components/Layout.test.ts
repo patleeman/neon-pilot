@@ -118,7 +118,8 @@ describe('Layout workbench rail state', () => {
 
   it('keeps picker rails available before a file is selected', () => {
     expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'knowledge', hasPairedDocument: false })).toBe(true);
-    expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'files', hasPairedDocument: false })).toBe(true);
+    expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'files', hasPairedDocument: false, hasWorkspaceCwd: true })).toBe(true);
+    expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'files', hasPairedDocument: false, hasWorkspaceCwd: false })).toBe(false);
     expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'files', hasPairedDocument: true })).toBe(true);
     expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'artifacts', hasPairedDocument: false })).toBe(false);
   });

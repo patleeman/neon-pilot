@@ -13,7 +13,15 @@ import {
 } from '../local/localSettings.js';
 import { applyRemoteConversationLayout, resetRemoteConversationLayoutCache } from '../session/sessionTabs.js';
 import type { DurableRunListResult, ExecutionListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
-import { conversationActivityStatusStore, conversationRuntimeStore, executionStore, runStore, sessionStore, taskStore } from '../store';
+import {
+  conversationActivityStatusStore,
+  conversationRuntimeStore,
+  executionStore,
+  runStore,
+  sessionStore,
+  taskStore,
+  titleStore,
+} from '../store';
 import { buildGatewayConversationAttachRoute, Sidebar } from './Sidebar.js';
 
 const apiMocks = vi.hoisted(() => ({
@@ -136,6 +144,7 @@ describe('Sidebar', () => {
     runStore.reset?.();
     executionStore.reset?.();
     conversationActivityStatusStore.reset();
+    titleStore.reset();
     apiMocks.sidebarConversations.mockReset();
     apiMocks.sidebarConversations.mockImplementation(async () => ({
       sessionIds: JSON.parse(storage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]') as string[],
@@ -299,16 +308,14 @@ describe('Sidebar', () => {
 
   it('keeps live title overrides scoped to the matching conversation id', () => {
     storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-123', 'conv-456']));
+    titleStore.set('conv-123', 'Fresh live title A');
+    titleStore.set('conv-456', 'Fresh live title B');
 
     const html = renderSidebar('/conversations/new', {
       sessions: [
         createSession({ id: 'conv-123', title: 'First conversation' }),
         createSession({ id: 'conv-456', title: 'Second conversation' }),
       ],
-      liveTitles: new Map([
-        ['conv-123', 'Fresh live title A'],
-        ['conv-456', 'Fresh live title B'],
-      ]),
     });
 
     expect(html).toContain('Fresh live title A');

@@ -14,10 +14,14 @@ function renderScope({
   liveTitles = new Map<string, string>(),
   locationPathname,
   sessionsReady = true,
+  sessions = [],
+  tabs = [],
 }: {
   liveTitles?: Map<string, string>;
   locationPathname: string;
   sessionsReady?: boolean;
+  sessions?: Array<{ id: string; title: string; cwd?: string; workspaceCwd?: string | null; isRunning?: boolean }>;
+  tabs?: Array<{ id: string; title: string; cwd?: string; workspaceCwd?: string | null; isRunning?: boolean }>;
 }): string {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -30,9 +34,29 @@ function renderScope({
       liveTitles,
       locationPathname,
       pinnedSessions: [],
-      sessions: [],
+      sessions: sessions.map((session) => ({
+        file: '',
+        timestamp: '2026-01-01T00:00:00.000Z',
+        cwd: session.cwd ?? '',
+        cwdSlug: '',
+        model: '',
+        messageCount: 0,
+        isLive: true,
+        ...session,
+        isRunning: session.isRunning ?? false,
+      })),
       sessionsReady,
-      tabs: [],
+      tabs: tabs.map((session) => ({
+        file: '',
+        timestamp: '2026-01-01T00:00:00.000Z',
+        cwd: session.cwd ?? '',
+        cwdSlug: '',
+        model: '',
+        messageCount: 0,
+        isLive: true,
+        ...session,
+        isRunning: session.isRunning ?? false,
+      })),
     });
     return (
       <span data-active-conversation-id={scope.activeConversationId ?? ''} data-visible-tab-count={scope.visibleConversationTabs.length}>
@@ -78,5 +102,16 @@ describe('useSidebarConversationScope', () => {
         sessionsReady: true,
       }),
     ).toBe('Live thread');
+  });
+
+  it('uses live title overrides for an active loaded conversation', () => {
+    expect(
+      renderScope({
+        liveTitles: new Map([['loaded-thread', 'Fresh title']]),
+        locationPathname: '/conversations/loaded-thread',
+        sessions: [{ id: 'loaded-thread', title: 'Stale title' }],
+        sessionsReady: true,
+      }),
+    ).toBe('Fresh title');
   });
 });

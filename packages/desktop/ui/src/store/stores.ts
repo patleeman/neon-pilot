@@ -198,6 +198,8 @@ export const conversationActivityStatusStore = {
 
 const titleEntities = new Map<string, string>();
 const titleListeners = new Map<string, Set<() => void>>();
+const titleAllListeners = new Set<() => void>();
+let titleVersion = 0;
 
 export const titleStore = {
   subscribe(sessionId: string, callback: () => void): () => void {
@@ -208,21 +210,36 @@ export const titleStore = {
     };
   },
 
+  subscribeAll(callback: () => void): () => void {
+    titleAllListeners.add(callback);
+    return () => {
+      titleAllListeners.delete(callback);
+    };
+  },
+
   get(sessionId: string): string | undefined {
     return titleEntities.get(sessionId);
+  },
+
+  getVersion(): number {
+    return titleVersion;
   },
 
   /** Called by the SSE handler in App.tsx and the live stream manager. */
   set(sessionId: string, title: string): void {
     if (titleEntities.get(sessionId) === title) return;
     titleEntities.set(sessionId, title);
+    titleVersion += 1;
     titleListeners.get(sessionId)?.forEach((cb) => cb());
+    titleAllListeners.forEach((cb) => cb());
   },
 
   /** Clear all titles (for test isolation). */
   reset(): void {
     titleEntities.clear();
     titleListeners.clear();
+    titleAllListeners.clear();
+    titleVersion = 0;
   },
 };
 

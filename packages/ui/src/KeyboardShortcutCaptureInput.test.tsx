@@ -54,4 +54,48 @@ describe('KeyboardShortcutCaptureInput', () => {
     expect(shortcutButton.textContent).toContain('⌘/Ctrl + Shift + P');
     expect(shortcutButton.textContent).not.toContain('Press shortcut...');
   });
+
+  it('captures chords before global shortcut handlers can treat them as unhandled', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+    const changes: string[] = [];
+    const globalHandlerCalls: boolean[] = [];
+    const globalHandler = (event: KeyboardEvent) => {
+      globalHandlerCalls.push(event.defaultPrevented);
+    };
+    window.addEventListener('keydown', globalHandler);
+
+    act(() => {
+      root.render(
+        createElement(KeyboardShortcutCaptureInput, { value: 'CommandOrControl+Shift+C', onChange: (value) => changes.push(value) }),
+      );
+    });
+
+    const shortcutButton = container.querySelector('.ui-shortcut-capture');
+    if (!(shortcutButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected shortcut button');
+    }
+
+    act(() => {
+      shortcutButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    act(() => {
+      shortcutButton.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'P',
+          code: 'KeyP',
+          metaKey: true,
+          shiftKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    window.removeEventListener('keydown', globalHandler);
+
+    expect(changes).toEqual(['CommandOrControl+Shift+P']);
+    expect(globalHandlerCalls).toEqual([]);
+  });
 });

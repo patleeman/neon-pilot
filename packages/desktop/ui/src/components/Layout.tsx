@@ -31,7 +31,7 @@ import { canExecuteExtensionCommand, executeExtensionCommand, setExtensionComman
 import { buildExtensionCommandNotification } from '../extensions/extensionCommandNotifications';
 import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from '../extensions/extensionModalCommands';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../extensions/extensionRegistryEvents';
-import { findMatchingExtensionKeybinding } from '../extensions/keybindings';
+import { findMatchingExtensionKeybinding, isShortcutCaptureEventTarget } from '../extensions/keybindings';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
 import {
   type ExtensionCommandRegistration,
@@ -791,8 +791,9 @@ export function shouldResetEmptyArtifactsRail(input: {
 export function shouldAllowWorkbenchRailSurface(input: {
   activeToolSlot: WorkbenchRailMode | string;
   hasPairedDocument: boolean;
+  hasWorkspaceCwd?: boolean;
 }): boolean {
-  if (input.activeToolSlot === 'files') return true;
+  if (input.activeToolSlot === 'files') return input.hasPairedDocument || input.hasWorkspaceCwd === true;
   if (input.activeToolSlot === 'knowledge') return true;
   return input.hasPairedDocument;
 }
@@ -1999,6 +2000,7 @@ export function Layout() {
   const activeWorkbenchAllowsRailSurface = shouldAllowWorkbenchRailSurface({
     activeToolSlot: activeWorkbenchToolSlot,
     hasPairedDocument: activeWorkbenchHasPairedDocument,
+    hasWorkspaceCwd: Boolean(activeWorkspaceCwd),
   });
   const activeWorkbenchRailSurface =
     showWorkbench &&
@@ -2973,6 +2975,7 @@ export function Layout() {
   useEffect(() => {
     function handleExtensionKeybinding(event: KeyboardEvent) {
       if (event.defaultPrevented) return;
+      if (isShortcutCaptureEventTarget(event.target)) return;
       const match = findMatchingExtensionKeybinding(
         event,
         extensionKeybindings.filter((keybinding) => keybinding.enabled && keybinding.scope === 'global'),

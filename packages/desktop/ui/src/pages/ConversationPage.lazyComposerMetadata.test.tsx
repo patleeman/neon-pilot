@@ -4,7 +4,7 @@ import React from 'react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AppDataContext } from '../app/contexts';
+import { AppDataContext, LiveTitlesContext } from '../app/contexts';
 import { DRAWING_PICKER_OPEN_COMMAND_EVENT } from '../components/conversation/drawingPickerCommands';
 import { SAVED_WORKSPACE_PATHS_STORAGE_KEY } from '../local/localSettings';
 import { sessionStore } from '../store';
@@ -36,6 +36,7 @@ const apiMock = vi.hoisted(() => ({
   executeLiveSessionBash: vi.fn(),
   clearQueuedMessages: vi.fn(),
   workspaceUncommittedDiff: vi.fn(),
+  renameConversation: vi.fn(),
 }));
 
 const sessionTabsMock = vi.hoisted(() => ({
@@ -307,6 +308,7 @@ vi.mock('../components/ConversationDrawingsPickerModal', () => ({
 }));
 
 vi.mock('../hooks/useDesktopConversationState', () => ({
+  notifyDesktopConversationStateRefresh: vi.fn(),
   primeReservedDesktopConversationStateCache: vi.fn(),
   useDesktopConversationState: () => desktopConversationState,
 }));
@@ -320,7 +322,7 @@ vi.mock('../session/sessionTabs', () => ({
   setActiveConversationTab: sessionTabsMock.setActiveConversationTab,
 }));
 
-function renderConversationPage() {
+function renderConversationPage(options?: { setTitle?: (id: string, title: string) => void }) {
   // Seed the store so ConversationPage hooks find the session data
   sessionStore.replaceAll([
     {
@@ -366,7 +368,14 @@ function renderConversationPage() {
     >
       <MemoryRouter initialEntries={['/conversations/conv-regression']}>
         <Routes>
-          <Route path="/conversations/:id" element={<ConversationPage />} />
+          <Route
+            path="/conversations/:id"
+            element={
+              <LiveTitlesContext.Provider value={{ titles: new Map(), setTitle: options?.setTitle ?? vi.fn() }}>
+                <ConversationPage />
+              </LiveTitlesContext.Provider>
+            }
+          />
         </Routes>
       </MemoryRouter>
     </AppDataContext.Provider>,
@@ -654,6 +663,7 @@ beforeEach(() => {
     linesDeleted: 0,
     files: [],
   });
+  apiMock.renameConversation.mockResolvedValue({ ok: true, title: 'Renamed regression conversation' });
   sessionTabsMock.fetchRemoteConversationLayout.mockResolvedValue({
     localConversationIds: [],
     remoteControlledConversationIds: [],
@@ -712,6 +722,26 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
     expect(apiMock.extensionMentions).toHaveBeenCalledTimes(2);
+  });
+
+  it('publishes header rename results so the sidebar title can refresh immediately', async () => {
+    vi.useRealTimers();
+    const setTitle = vi.fn();
+    apiMock.renameConversation.mockResolvedValue({ ok: true, title: 'Header renamed conversation' });
+    apiMock.sessionDetail.mockResolvedValue(regressionBootstrapData.sessionDetail);
+
+    renderConversationPage({ setTitle });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Rename conversation: Regression conversation' }));
+
+    const titleInput = screen.getByPlaceholderText('Name this conversation');
+    fireEvent.change(titleInput, { target: { value: 'Header renamed conversation' } });
+    fireEvent.keyDown(titleInput, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(apiMock.renameConversation).toHaveBeenCalledWith('conv-regression', 'Header renamed conversation', '');
+    });
+    expect(setTitle).toHaveBeenCalledWith('conv-regression', 'Header renamed conversation');
   });
 
   it('does not write local stream running state into the global session store', async () => {
@@ -1055,6 +1085,83 @@ describe('ConversationPage lazy composer metadata', () => {
     });
     expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Send' })).toBeTruthy();
+  });
+
+  it('does not restore a context-excluded inline bash draft when the post-command refresh fails', async () => {
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = {
+      conversationId: 'conv-regression',
+      sessionDetail: regressionBootstrapData.sessionDetail,
+      liveSession: {
+        live: true,
+        id: 'conv-regression',
+        cwd: '/tmp/project',
+        sessionFile: '/tmp/conv-regression.jsonl',
+        isStreaming: false,
+        hasStaleTurnState: false,
+      },
+      stream: {
+        blocks: [],
+        blockOffset: 0,
+        totalBlocks: 0,
+        hasSnapshot: true,
+        isStreaming: false,
+        isCompacting: false,
+        error: null,
+        title: null,
+        tokens: null,
+        cost: null,
+        contextUsage: null,
+        pendingQueue: { steering: [], followUp: [] },
+        presence: {
+          surfaces: [],
+          controllerSurfaceId: null,
+          controllerSurfaceType: null,
+          controllerAcquiredAt: null,
+        },
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        cwdChange: null,
+      },
+    };
+    desktopConversationState.refresh.mockResolvedValue(desktopConversationState.state);
+
+    renderConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+    });
+
+    desktopConversationState.refresh.mockReset();
+    desktopConversationState.refresh.mockRejectedValueOnce(new Error('refresh failed')).mockResolvedValue(desktopConversationState.state);
+
+    const textarea = screen.getByPlaceholderText(/Message Neon Pilot/i) as HTMLTextAreaElement;
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: '!!echo hidden-context' } });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiMock.executeLiveSessionBash).toHaveBeenCalledWith('conv-regression', 'echo hidden-context', {
+      excludeFromContext: true,
+    });
+    expect(screen.queryByText(/Bash command failed/i)).toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_300);
+      await Promise.resolve();
+    });
+
+    expect(textarea.value).toBe('');
+    expect(desktopConversationState.refresh).toHaveBeenCalledTimes(3);
   });
 
   it('keeps a locally picked draft workspace after the initial saved-workspace refresh resolves late', async () => {

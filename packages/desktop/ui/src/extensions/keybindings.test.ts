@@ -1,6 +1,7 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 
-import { findMatchingExtensionKeybinding } from './keybindings';
+import { findMatchingExtensionKeybinding, isShortcutCaptureEventTarget } from './keybindings';
 import type { ExtensionKeybindingRegistration } from './types';
 
 const keybindings: ExtensionKeybindingRegistration[] = [
@@ -96,5 +97,15 @@ describe('extension keybindings', () => {
         { ...keybindings[0]!, enabled: false },
       ]),
     ).toBeNull();
+  });
+
+  it('identifies active shortcut capture controls as reserved keybinding targets', () => {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = '<button class="ui-shortcut-capture ui-shortcut-capture-capturing"><span>Press shortcut...</span></button>';
+    const target = wrapper.querySelector('span');
+
+    expect(isShortcutCaptureEventTarget(target)).toBe(true);
+    expect(isShortcutCaptureEventTarget(document.createElement('button'))).toBe(false);
+    expect(isShortcutCaptureEventTarget(null)).toBe(false);
   });
 });

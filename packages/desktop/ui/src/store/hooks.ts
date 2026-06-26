@@ -16,6 +16,7 @@ import {
   runStore,
   sessionStore,
   taskStore,
+  titleStore,
 } from './stores';
 
 // ── Internal helper ──────────────────────────────────────────────────────────
@@ -45,6 +46,29 @@ function useDerivedValue<T>(subscribe: (onStoreChange: () => void) => () => void
 
 export function useSession(id: string | null | undefined): SessionMeta | undefined {
   return useEntityValue(sessionStore, id);
+}
+
+export function useTitle(id: string | null | undefined): string | undefined {
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      if (!id) return () => {};
+      return titleStore.subscribe(id, onStoreChange);
+    },
+    [id],
+  );
+
+  const getSnapshot = useCallback(() => {
+    if (!id) return undefined;
+    return titleStore.get(id);
+  }, [id]);
+
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+export function useTitleVersion(): number {
+  const subscribe = useCallback((onStoreChange: () => void) => titleStore.subscribeAll(onStoreChange), []);
+  const getSnapshot = useCallback(() => titleStore.getVersion(), []);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 export function useConversationActivityStatus(id: string | null | undefined): ConversationActivityStatus {

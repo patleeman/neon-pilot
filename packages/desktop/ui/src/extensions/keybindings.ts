@@ -1,5 +1,5 @@
-import type { ExtensionKeybindingRegistration } from './types';
 import { evaluateCommandEnablement, type ExtensionCommandContext } from './commands';
+import type { ExtensionKeybindingRegistration } from './types';
 
 export interface KeybindingEventLike {
   key: string;
@@ -9,6 +9,11 @@ export interface KeybindingEventLike {
   altKey: boolean;
   shiftKey: boolean;
   isComposing?: boolean;
+}
+
+export function isShortcutCaptureEventTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest('.ui-shortcut-capture-capturing'));
 }
 
 const MODIFIER_ALIASES: Record<string, 'mod' | 'ctrl' | 'meta' | 'alt' | 'shift'> = {

@@ -41,7 +41,11 @@ export function useSidebarConversationScope({
     if (!activeConversationId) return null;
     const session = (sessions ?? []).find((candidate) => candidate.id === activeConversationId);
     const isRunning = activeRuntime?.running ?? session?.isRunning ?? false;
-    if (session) return session.isRunning === isRunning ? session : { ...session, isRunning };
+    if (session) {
+      const liveTitle = liveTitles.get(activeConversationId);
+      const nextTitle = liveTitle ?? session.title;
+      return session.isRunning === isRunning && session.title === nextTitle ? session : { ...session, title: nextTitle, isRunning };
+    }
     if (sessionsReady && !isRunning && !liveTitles.has(activeConversationId)) {
       return null;
     }

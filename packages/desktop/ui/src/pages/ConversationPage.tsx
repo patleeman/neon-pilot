@@ -382,6 +382,7 @@ import {
   runStore,
   sessionStore,
   taskStore,
+  titleStore,
   useAllRuns,
   useAllSessions,
   useAllTasks,
@@ -5279,9 +5280,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
       const result = await api.renameConversation(id, nextTitle, currentSurfaceId);
       setTitleOverride(result.title);
-      if (isLiveSession) {
-        pushTitle(id, result.title);
-      }
+      pushTitle(id, result.title);
+      titleStore.set(id, result.title);
       sessionStore.patch(id, { title: result.title });
       setIsEditingTitle(false);
       showNotice('accent', 'Conversation renamed.');
@@ -5607,12 +5607,17 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
       if (conversationId === id || navigatedDraftConversation) {
         notifyDesktopConversationStateRefresh(conversationId);
+        const refreshAfterBash = () => {
+          void desktopConversationRefresh().catch(() => undefined);
+        };
         if (navigatedDraftConversation) {
           window.requestAnimationFrame(() => notifyDesktopConversationStateRefresh(conversationId));
           window.setTimeout(() => notifyDesktopConversationStateRefresh(conversationId), 250);
           window.setTimeout(() => notifyDesktopConversationStateRefresh(conversationId), 1_000);
         }
-        await desktopConversationRefresh();
+        await desktopConversationRefresh().catch(() => null);
+        window.setTimeout(refreshAfterBash, 250);
+        window.setTimeout(refreshAfterBash, 1_000);
       }
 
       if (draft && !navigatedDraftConversation) {

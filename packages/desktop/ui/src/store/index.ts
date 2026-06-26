@@ -19,6 +19,8 @@ export {
   useConversationRuntime,
   useSession,
   useSessionsReady,
+  useTitle,
+  useTitleVersion,
 } from './hooks';
 export type { ConversationActivityStatus } from './stores';
 export {

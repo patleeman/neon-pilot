@@ -99,6 +99,7 @@ import { timeAgoCompact } from '../shared/utils';
 import {
   conversationRuntimeStore,
   sessionStore,
+  titleStore,
   useAllExecutions,
   useAllSessions,
   useAllTasks,
@@ -107,6 +108,8 @@ import {
   useConversationRuntime,
   useSession,
   useSessionsReady,
+  useTitle,
+  useTitleVersion,
 } from '../store';
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
@@ -1606,12 +1609,14 @@ const SessionRow = memo(function SessionRow({
   // Use store as primary source; fall back to initialSession from parent (AppDataContext)
   // during initial render before SSE has seeded the store.
   const storeSession = useSession(sessionId);
+  const liveTitle = useTitle(sessionId);
   const activityStatus = useConversationActivityStatus(sessionId);
   const conversationRuntime = useConversationRuntime(sessionId);
-  const session = storeSession ?? initialSession;
+  const baseSession = storeSession ?? initialSession;
 
-  if (!session) return null;
+  if (!baseSession) return null;
 
+  const session = liveTitle && baseSession.title !== liveTitle ? { ...baseSession, title: liveTitle } : baseSession;
   const isRunning = conversationRuntime?.running ?? session.isRunning ?? false;
   const pending = (hasPendingRuns ?? false) || activityStatus === 'hasRuns' || activityStatus === 'automation';
 
@@ -1656,6 +1661,7 @@ export function Sidebar() {
   const tasks = useAllTasks();
   const executionRecords = useAllExecutions();
   const conversationActivityStatusVersion = useConversationActivityStatusVersion();
+  const titleVersion = useTitleVersion();
   const extensionRegistry = useExtensionRegistry();
   const {
     pinnedIds,
@@ -2127,7 +2133,7 @@ export function Sidebar() {
   );
   const activityTreeSessions = useMemo(() => {
     return renderedConversationItems.map(({ session }) => {
-      const liveTitle = liveTitles.get(session.id);
+      const liveTitle = titleStore.get(session.id) ?? liveTitles.get(session.id);
       const titledSession = liveTitle && liveTitle !== session.title ? { ...session, title: liveTitle } : session;
 
       // Sidebar nesting has proven too brittle: parent/child lineage is transcript
@@ -2142,7 +2148,7 @@ export function Sidebar() {
         offshootKind: titledSession.offshootKind ?? (titledSession.sourceRunId ? 'subagent' : undefined),
       };
     });
-  }, [liveTitles, renderedConversationItems]);
+  }, [liveTitles, renderedConversationItems, titleVersion]);
   const baseActivityTreeItems = useMemo(() => {
     const pinnedIdSet = new Set(pinnedIds);
     const flatItems = buildActivityTreeItems({
