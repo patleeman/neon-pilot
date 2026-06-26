@@ -64,9 +64,15 @@ describe('desktop server bundle lazy module entries', () => {
   });
 
   it('packages every relative backend API lazy module used by extension wrappers', () => {
-    const backendApiFiles = ['automations.ts', 'events.ts', 'gateways.ts', 'images.ts', 'knowledge.ts', 'modelGateway.ts'].map(
-      (file) => `packages/desktop/server/extensions/backendApi/${file}`,
-    );
+    const backendApiFiles = [
+      'automations.ts',
+      'events.ts',
+      'gateways.ts',
+      'images.ts',
+      'knowledge.ts',
+      'modelGateway.ts',
+      'transcription.ts',
+    ].map((file) => `packages/desktop/server/extensions/backendApi/${file}`);
     const lazyModuleSpecifiers = backendApiFiles.flatMap((path) => extractLazyServerModuleSpecifiers(readRepoFile(path)));
     const buildScript = readRepoFile('packages/desktop/scripts/build-server-bundle.mjs');
 

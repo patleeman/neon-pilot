@@ -16,7 +16,7 @@ const commands = vi.hoisted(() => ({
 vi.mock('./gatewayState.js', () => state);
 vi.mock('./telegramCommands.js', () => commands);
 
-import { renderTelegramHtml, splitTelegramMessage, TelegramGatewayRuntime } from './telegramGateway.js';
+import { buildTelegramPromptText, renderTelegramHtml, splitTelegramMessage, TelegramGatewayRuntime } from './telegramGateway.js';
 
 describe('TelegramGatewayRuntime', () => {
   beforeEach(() => {
@@ -95,6 +95,61 @@ describe('TelegramGatewayRuntime', () => {
       expect.objectContaining({
         body: expect.stringContaining('Unsupported Telegram message type'),
       }),
+    );
+  });
+
+  it('builds prompt text from Telegram voice transcripts and captions', () => {
+    expect(buildTelegramPromptText({ voiceTranscript: 'pick up milk' })).toBe(
+      '[The user sent a Telegram voice message. Transcript: "pick up milk"]',
+    );
+    expect(buildTelegramPromptText({ text: 'also compare this', hasPhoto: true, voiceTranscript: 'what do you think?' })).toBe(
+      '[The user sent a Telegram voice message. Transcript: "what do you think?"]\n\nalso compare this\n\n[The user also attached a Telegram photo.]',
+    );
+  });
+
+  it('transcribes Telegram voice messages before submitting them as prompts', async () => {
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const transcribeAudio = vi.fn(async () => ({ text: 'hello from voice' }));
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/getFile')) {
+        return { ok: true, json: async () => ({ ok: true, result: { file_path: 'voice/file_1.ogg' } }) };
+      }
+      if (url.includes('/file/bottoken/voice/file_1.ogg')) {
+        const bytes = Buffer.from('voice bytes');
+        return {
+          ok: true,
+          headers: { get: () => 'audio/ogg' },
+          arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+        };
+      }
+      return { ok: true, json: async () => ({ ok: true, result: { message_id: init?.body?.toString().includes('Working') ? 20 : 21 } }) };
+    });
+    const d = deps({ fetch: fetchMock, transcribeAudio });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      message: {
+        message_id: 10,
+        chat: { id: 123 },
+        from: { id: 777 },
+        voice: { file_id: 'voice-file', mime_type: 'audio/ogg', duration: 2 },
+      },
+    });
+
+    expect(transcribeAudio).toHaveBeenCalledWith({
+      dataBase64: Buffer.from('voice bytes').toString('base64'),
+      mimeType: 'audio/ogg',
+      fileName: 'file_1.ogg',
+    });
+    expect(d.submitPrompt).toHaveBeenCalledWith({
+      conversationId: 'conv-1',
+      text: '[The user sent a Telegram voice message. Transcript: "hello from voice"]',
+      images: undefined,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('hello from voice') }),
     );
   });
 

@@ -44,6 +44,7 @@ describe('desktop release config', () => {
   it('packages and unpacks native backend dependencies together', () => {
     expect(electronBuilderConfig.files).toEqual(
       expect.arrayContaining([
+        'node_modules/@ffmpeg-installer{,/**/*}',
         'node_modules/better-sqlite3{,/**/*}',
         'node_modules/@silvia-odwyer/photon-node{,/**/*}',
         'node_modules/bindings{,/**/*}',
@@ -53,6 +54,7 @@ describe('desktop release config', () => {
     );
     expect(electronBuilderConfig.asarUnpack).toEqual(
       expect.arrayContaining([
+        'node_modules/@ffmpeg-installer/**/*',
         'node_modules/better-sqlite3/**/*',
         'node_modules/@silvia-odwyer/photon-node/**/*',
         'node_modules/bindings/**/*',

@@ -85,6 +85,12 @@ A bundled extension shipped with the app or repo. System extensions can still ow
 
 A bundled system extension that exposes Neon Pilot model providers through an API surface external coding agents can use.
 
+### Transcription service
+
+The host-owned speech-to-text capability used by extensions for dictation, voice notes, and other audio-to-text workflows.
+
+Use **transcription service** for the shared host boundary and **dictation** only for the composer microphone workflow.
+
 ### Required system extension
 
 A bundled extension that owns a platform repair, configuration, routing, prompt assembly, terminal, or background-work surface that must stay available for the app to manage itself.

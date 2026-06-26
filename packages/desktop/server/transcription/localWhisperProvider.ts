@@ -5,12 +5,10 @@ import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type {
-  TranscriptionFileInput,
   TranscriptionInstallResult,
   TranscriptionModelStatus,
-  TranscriptionOptions,
   TranscriptionResult,
-} from './types.js';
+} from '@neon-pilot/extensions/backend/transcription';
 
 const DEFAULT_LOCAL_WHISPER_MODEL = 'base.en';
 const PCM_SAMPLE_RATE = 16_000;
@@ -49,19 +47,38 @@ interface WhisperCppNodeModule {
   ): Promise<{ segments: Array<[string, string, string]> }>;
 }
 
+export interface TranscriptionFileInput {
+  data: Buffer;
+  mimeType: string;
+  fileName?: string;
+}
+
+export interface TranscriptionOptions {
+  language?: string;
+  signal?: AbortSignal;
+}
+
 interface WhisperCppTranscriptionProviderOptions {
   model?: string;
   modelRootPath: string;
+  audioConverter?: AudioConverter;
 }
+
+interface PreparedAudio {
+  pcmf32: Float32Array;
+  sampleRate: number;
+}
+
+export type AudioConverter = (input: TranscriptionFileInput, options?: { signal?: AbortSignal }) => Promise<PreparedAudio>;
 
 const contextCache = new Map<string, { ctx: WhisperContext; module: WhisperCppNodeModule }>();
 
-function normalizeLocalWhisperModel(value: string | undefined): string {
+export function normalizeLocalWhisperModel(value: string | undefined): string {
   const model = value?.trim() || DEFAULT_LOCAL_WHISPER_MODEL;
   return MODEL_ALIASES[model] ?? model;
 }
 
-function resolveCustomHuggingFaceUrl(model: string): URL | null {
+export function resolveCustomHuggingFaceUrl(model: string): URL | null {
   let parsed: URL;
   try {
     parsed = new URL(model);
@@ -75,7 +92,7 @@ function resolveCustomHuggingFaceUrl(model: string): URL | null {
   return parsed;
 }
 
-function resolveModelFileName(model: string): string {
+export function resolveModelFileName(model: string): string {
   const trimmed = model.trim();
   const customUrl = resolveCustomHuggingFaceUrl(trimmed);
   if (customUrl) return basename(customUrl.pathname);
@@ -89,11 +106,11 @@ function resolveModelFileName(model: string): string {
   return MODEL_FILE_NAMES[normalizedModel] ?? `ggml-${normalizedModel}.bin`;
 }
 
-function resolveModelFilePath(modelRootPath: string, model: string): string {
+export function resolveModelFilePath(modelRootPath: string, model: string): string {
   return join(modelRootPath, resolveModelFileName(model));
 }
 
-function resolveModelDownloadUrl(model: string): string {
+export function resolveModelDownloadUrl(model: string): string {
   const customUrl = resolveCustomHuggingFaceUrl(model.trim());
   if (customUrl) return customUrl.toString();
   return `${MODEL_DOWNLOAD_BASE_URL}/${resolveModelFileName(model)}`;
@@ -103,7 +120,7 @@ function isPcm16Input(input: TranscriptionFileInput): boolean {
   return input.mimeType.toLowerCase().startsWith('audio/pcm') || input.fileName?.toLowerCase().endsWith('.pcm') === true;
 }
 
-function pcm16ToFloat32(data: Buffer): Float32Array {
+export function pcm16ToFloat32(data: Buffer): Float32Array {
   if (data.length === 0) {
     return new Float32Array();
   }
@@ -119,7 +136,7 @@ function pcm16ToFloat32(data: Buffer): Float32Array {
   return output;
 }
 
-function buildWhisperRequireCandidatePaths(moduleUrl: string, cwd: string): string[] {
+export function buildWhisperRequireCandidatePaths(moduleUrl: string, cwd: string): string[] {
   const moduleFile = fileURLToPath(moduleUrl);
   const candidates = [join(cwd, 'package.json'), moduleFile];
 
@@ -189,7 +206,7 @@ function readWhisperSegmentText(segment: WhisperSegment): string {
   return Array.isArray(segment) ? segment[2] : segment.text;
 }
 
-function formatWhisperSegments(segments: WhisperSegment[]): string {
+export function formatWhisperSegments(segments: WhisperSegment[]): string {
   return segments
     .map((segment) => readWhisperSegmentText(segment).trim())
     .filter(Boolean)
@@ -235,10 +252,12 @@ export class LocalWhisperTranscriptionProvider {
   readonly label = 'Local Whisper';
   private readonly model: string;
   private readonly modelRootPath: string;
+  private readonly audioConverter: AudioConverter;
 
   constructor(options: WhisperCppTranscriptionProviderOptions) {
     this.model = normalizeLocalWhisperModel(options.model);
     this.modelRootPath = options.modelRootPath;
+    this.audioConverter = options.audioConverter ?? defaultAudioConverter;
   }
 
   async isAvailable(): Promise<boolean> {
@@ -266,12 +285,11 @@ export class LocalWhisperTranscriptionProvider {
   }
 
   async transcribeFile(input: TranscriptionFileInput, options: TranscriptionOptions = {}): Promise<TranscriptionResult> {
-    if (!isPcm16Input(input)) {
-      throw new Error('Local Whisper requires browser-captured PCM audio.');
-    }
+    const audio = isPcm16Input(input)
+      ? { pcmf32: pcm16ToFloat32(input.data), sampleRate: PCM_SAMPLE_RATE }
+      : await this.audioConverter(input, { signal: options.signal });
 
-    const audio = pcm16ToFloat32(input.data);
-    if (audio.length === 0) {
+    if (audio.pcmf32.length === 0) {
       throw new Error('Local Whisper requires non-empty audio.');
     }
 
@@ -279,7 +297,7 @@ export class LocalWhisperTranscriptionProvider {
     const ctx = getOrCreateContext(this.modelRootPath, this.model, whisperModule);
 
     const result = await whisperModule.transcribeAsync(ctx, {
-      pcmf32: audio,
+      pcmf32: audio.pcmf32,
       language: options.language === 'auto' ? undefined : options.language,
       no_timestamps: true,
       no_prints: true,
@@ -295,18 +313,11 @@ export class LocalWhisperTranscriptionProvider {
       provider: this.provider,
       model: this.model,
       ...(options.language ? { language: options.language } : {}),
-      durationMs: Math.round((audio.length / PCM_SAMPLE_RATE) * 1000),
+      durationMs: Math.round((audio.pcmf32.length / audio.sampleRate) * 1000),
     };
   }
 }
 
-export const testExports = {
-  buildWhisperRequireCandidatePaths,
-  normalizeLocalWhisperModel,
-  resolveCustomHuggingFaceUrl,
-  resolveModelFileName,
-  resolveModelDownloadUrl,
-  pcm16ToFloat32,
-  resolveModelFilePath,
-  formatWhisperSegments,
-};
+async function defaultAudioConverter(): Promise<PreparedAudio> {
+  throw new Error('Audio conversion is unavailable.');
+}

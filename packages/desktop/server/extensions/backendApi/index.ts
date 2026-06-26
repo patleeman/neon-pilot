@@ -7,8 +7,8 @@ export * from './cli.js';
 export * from './conversations.js';
 export {
   cancelDelayedEvent,
-  deleteSubscription,
   delayEvent,
+  deleteSubscription,
   emitEvent,
   listEvents,
   listSubscriptions,
@@ -41,4 +41,5 @@ export * from './skills.js';
 export * from './telemetry.js';
 export * from './terminal.js';
 export * from './tools.js';
+export * from './transcription.js';
 export type { ExtensionBackendContext } from '@neon-pilot/extensions';

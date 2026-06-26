@@ -30,6 +30,7 @@ import { readTelegramBotToken, removeTelegramBotToken, writeTelegramBotToken } f
 import { TelegramGatewayRuntime } from '../gateways/telegramGateway.js';
 import { logError } from '../middleware/index.js';
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
+import { transcribeAudio } from '../transcription/transcriptionService.js';
 import type { ServerRouteContext } from './context.js';
 
 let getRuntimeScopeFn: () => string = () => {
@@ -214,6 +215,7 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
         liveSessionContext(context),
       );
     },
+    transcribeAudio,
     renameConversation: (conversationId, title) => renameSession(conversationId, title),
     compactConversation: async (conversationId) => {
       await compactLiveSessionCapability({ conversationId });

@@ -102,6 +102,7 @@ const electronBuilderConfig = {
     'node_modules/ajv{,/**/*}',
     'node_modules/ajv-formats{,/**/*}',
     // Native modules and their loader helpers (must remain on-disk, handled by asarUnpack).
+    'node_modules/@ffmpeg-installer{,/**/*}',
     'node_modules/@silvia-odwyer/photon-node{,/**/*}',
     'node_modules/better-sqlite3{,/**/*}',
     'node_modules/bindings{,/**/*}',
@@ -129,6 +130,7 @@ const electronBuilderConfig = {
     'server/dist/extensions/**/*.js',
     // Shared chunks may be imported by the unpacked conversationInspectWorker thread.
     'server/dist/chunks/**/*',
+    'node_modules/@ffmpeg-installer/**/*',
     'node_modules/@silvia-odwyer/photon-node/**/*',
     'node_modules/better-sqlite3/**/*',
     'node_modules/bindings/**/*',

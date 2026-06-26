@@ -155,6 +155,10 @@
       "types": "./dist/backend/terminal.d.ts",
       "default": "./dist/backend/terminal.js"
     },
+    "./backend/transcription": {
+      "types": "./dist/backend/transcription.d.ts",
+      "default": "./dist/backend/transcription.js"
+    },
     "./backend/webContent": {
       "types": "./dist/backend/webContent.d.ts",
       "default": "./dist/backend/webContent.js"

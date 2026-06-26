@@ -586,6 +586,16 @@ import {
 
 Use `ensureGatewayConnection({ provider })` when the runtime is created, `updateGatewayConnectionStatus(...)` when credentials or transport state changes, `attachGatewayConversation(...)` when an external chat is bound to a conversation, `detachGatewayConversation(...)` when a binding is removed, and `recordGatewayEvent(...)` for user-visible gateway activity. Extension code must not import `packages/desktop/server/gateways/*` directly.
 
+Gateway runtimes or other extensions that need speech-to-text should call the host transcription seam:
+
+```ts
+import { transcribeAudio } from '@neon-pilot/extensions/backend/transcription';
+
+const transcript = await transcribeAudio({ dataBase64, mimeType: 'audio/ogg', fileName: 'voice.ogg' });
+```
+
+The transcription API accepts normal audio payload metadata and currently routes through the host-owned local Whisper.cpp provider. The host owns model install/status, shared model caching, native module loading, and audio decoding; extension code should not import `whisper-cpp-node`, desktop server files, or the Local Dictation extension implementation.
+
 ### Composer Attachments
 
 Use `composerAttachmentProviders` for buttons above the composer attachment shelf. The provider action receives `{ conversationId, cwd, composerText }`; returning a string or `{ "text": "..." }` appends text to the composer. `composerAttachmentRenderers` and `composerAttachmentResolvers` reserve the manifest/API seam for extension-owned attachment refs.
@@ -1217,7 +1227,7 @@ The `pa` client provides:
 
 See `packages/extensions/src/index.ts` for the full API.
 
-Backend-only host APIs that should stay narrow can also be exposed through focused SDK subpaths such as `@neon-pilot/extensions/backend/artifacts`, `/automations`, `/browser`, `/compaction`, `/conversations`, `/images`, `/mcp`, `/runs`, `/runtime`, `/telemetry`, `/terminal`, and `/webContent`. Prefer a focused subpath over the broad backend barrel when bundling a system extension that only needs one backend service. Feature-specific data planes such as Knowledge should live inside their owning extension and use generic host capabilities (`ctx.storage`, `ctx.filesystem`, `ctx.shell`, `ctx.git`, events, and UI invalidation) rather than dedicated host subpaths. For daemon-backed shell work in a packaged system extension, keep the foreground path free of daemon imports and lazy-load background-run support only when the action actually starts or inspects background work.
+Backend-only host APIs that should stay narrow can also be exposed through focused SDK subpaths such as `@neon-pilot/extensions/backend/artifacts`, `/automations`, `/browser`, `/compaction`, `/conversations`, `/images`, `/mcp`, `/runs`, `/runtime`, `/telemetry`, `/terminal`, `/transcription`, and `/webContent`. Prefer a focused subpath over the broad backend barrel when bundling a system extension that only needs one backend service. Feature-specific data planes such as Knowledge should live inside their owning extension and use generic host capabilities (`ctx.storage`, `ctx.filesystem`, `ctx.shell`, `ctx.git`, events, and UI invalidation) rather than dedicated host subpaths. For daemon-backed shell work in a packaged system extension, keep the foreground path free of daemon imports and lazy-load background-run support only when the action actually starts or inspects background work.
 
 The backend API is deliberately two-layered: public stubs under `packages/extensions/src/backend/*.ts`, and host implementations under `packages/desktop/server/extensions/backendApi/*.ts`. Extension source imports only `@neon-pilot/extensions` and `@neon-pilot/extensions/backend/{name}`. It must not import desktop server files, `@neon-pilot/core`, `@neon-pilot/daemon`, or agent-runtime internals directly. System extension source should use the public `ExtensionAPI` type from `@neon-pilot/extensions` for agent lifecycle hooks, and any missing host capability should become a focused SDK/backend seam. Host backend API modules should be thin adapters; lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in half the app. If a backend API wraps process-local host state and may run in the backend worker, it must use the worker capability bridge instead of importing that state directly in the worker. `pnpm run check:extensions` enforces this with `scripts/check-extension-backend-api.mjs` and packaged source/bundle checks before packaged bundle checks run.
 

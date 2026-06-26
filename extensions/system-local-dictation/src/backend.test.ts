@@ -3,17 +3,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const buildDictationSettingsState = vi.fn();
 const readDictationSettings = vi.fn();
 const writeDictationSettings = vi.fn();
-const getModelStatus = vi.fn();
-const installModel = vi.fn();
-const transcribeFileProvider = vi.fn();
-const providerConstructor = vi.fn();
+const readTranscriptionModelStatus = vi.fn();
+const installTranscriptionModel = vi.fn();
+const transcribeAudio = vi.fn();
 
 vi.mock('./settings.js', () => ({ buildDictationSettingsState, readDictationSettings, writeDictationSettings }));
-vi.mock('./localWhisperProvider.js', () => ({
-  LocalWhisperTranscriptionProvider: vi.fn().mockImplementation(function LocalWhisperTranscriptionProvider(options) {
-    providerConstructor(options);
-    return { getModelStatus, installModel, transcribeFile: transcribeFileProvider };
-  }),
+vi.mock('@neon-pilot/extensions/backend/transcription', () => ({
+  installTranscriptionModel,
+  readTranscriptionModelStatus,
+  transcribeAudio,
 }));
 
 const { installModel: installModelAction, modelStatus, readSettings, transcribeFile, updateSettings } = await import('./backend.js');
@@ -25,10 +23,9 @@ describe('local dictation backend', () => {
     buildDictationSettingsState.mockReset().mockReturnValue({ settings: { model: 'base.en' } });
     readDictationSettings.mockReset().mockReturnValue({ model: 'base.en' });
     writeDictationSettings.mockReset();
-    getModelStatus.mockReset().mockResolvedValue({ installed: true });
-    installModel.mockReset().mockResolvedValue({ installed: true });
-    transcribeFileProvider.mockReset().mockResolvedValue({ text: 'hello' });
-    providerConstructor.mockReset();
+    readTranscriptionModelStatus.mockReset().mockResolvedValue({ installed: true });
+    installTranscriptionModel.mockReset().mockResolvedValue({ installed: true });
+    transcribeAudio.mockReset().mockResolvedValue({ text: 'hello' });
   });
 
   it('reads settings from the runtime settings file', async () => {
@@ -49,10 +46,10 @@ describe('local dictation backend', () => {
 
   it('uses requested or configured models for status and install operations', async () => {
     await expect(modelStatus({ model: ' tiny ' }, ctx)).resolves.toEqual({ installed: true });
-    expect(providerConstructor).toHaveBeenLastCalledWith({ model: 'tiny', modelRootPath: '/runtime/transcription-models' });
+    expect(readTranscriptionModelStatus).toHaveBeenLastCalledWith({ model: 'tiny' });
 
     await expect(installModelAction({}, ctx)).resolves.toEqual({ installed: true });
-    expect(providerConstructor).toHaveBeenLastCalledWith({ model: 'base.en', modelRootPath: '/runtime/transcription-models' });
+    expect(installTranscriptionModel).toHaveBeenLastCalledWith({ model: 'base.en' });
   });
 
   it('transcribes base64 audio', async () => {
@@ -63,19 +60,13 @@ describe('local dictation backend', () => {
       ),
     ).resolves.toEqual({ text: 'hello' });
 
-    expect(transcribeFileProvider).toHaveBeenCalledWith(
-      { data: Buffer.from('audio'), mimeType: 'audio/wav', fileName: 'clip.wav' },
-      { language: 'en' },
-    );
-  });
-
-  it('installs the configured model before transcribing when it is missing', async () => {
-    getModelStatus.mockResolvedValueOnce({ installed: false, model: 'base.en' });
-
-    await transcribeFile({ dataBase64: Buffer.from('audio').toString('base64') }, ctx);
-
-    expect(installModel).toHaveBeenCalledTimes(1);
-    expect(installModel.mock.invocationCallOrder[0]).toBeLessThan(transcribeFileProvider.mock.invocationCallOrder[0]);
+    expect(transcribeAudio).toHaveBeenCalledWith({
+      dataBase64: Buffer.from('audio').toString('base64'),
+      mimeType: 'audio/wav',
+      fileName: 'clip.wav',
+      language: 'en',
+      model: 'base.en',
+    });
   });
 
   it('rejects invalid base64 input', async () => {

@@ -25,6 +25,14 @@ interface TelegramPhotoSize {
   file_size?: number;
 }
 
+interface TelegramVoice {
+  file_id: string;
+  file_unique_id?: string;
+  duration?: number;
+  mime_type?: string;
+  file_size?: number;
+}
+
 interface TelegramUser {
   id: number | string;
   first_name?: string;
@@ -39,6 +47,7 @@ interface TelegramMessage {
   text?: string;
   caption?: string;
   photo?: TelegramPhotoSize[];
+  voice?: TelegramVoice;
 }
 
 interface TelegramCallbackQuery {
@@ -99,6 +108,7 @@ export interface TelegramGatewayRuntimeDependencies {
     text: string;
     images?: Array<{ data: string; mimeType: string; name?: string }>;
   }) => Promise<void>;
+  transcribeAudio?: (input: { dataBase64: string; mimeType?: string; fileName?: string; language?: string }) => Promise<{ text: string }>;
   renameConversation: (conversationId: string, title: string) => Promise<void> | void;
   compactConversation: (conversationId: string) => Promise<void>;
   archiveConversation: (conversationId: string) => Promise<void>;
@@ -195,8 +205,8 @@ export class TelegramGatewayRuntime {
       return;
     }
 
-    if (!text && !message.photo?.length) {
-      await this.sendMessage(externalChatId, 'Unsupported Telegram message type. Send text or a photo.');
+    if (!text && !message.photo?.length && !message.voice) {
+      await this.sendMessage(externalChatId, 'Unsupported Telegram message type. Send text, a photo, or a voice message.');
       return;
     }
 
@@ -207,9 +217,14 @@ export class TelegramGatewayRuntime {
       this.pendingStatusMessages.set(target.conversationId, { chatId: externalChatId, messageId: statusMessage.message_id });
     }
     try {
+      const voiceTranscript = message.voice ? await this.transcribeTelegramVoice(message.voice) : undefined;
+      if (voiceTranscript?.text) {
+        await this.sendMessage(externalChatId, `🎙️ "${voiceTranscript.text}"`);
+      }
+      const promptText = buildTelegramPromptText({ text, hasPhoto: Boolean(images?.length), voiceTranscript: voiceTranscript?.text });
       await this.dependencies.submitPrompt({
         conversationId: target.conversationId,
-        text: text || 'Please review this Telegram photo.',
+        text: promptText,
         images,
       });
     } catch (error) {
@@ -646,6 +661,25 @@ export class TelegramGatewayRuntime {
     return [{ data: bytesToBase64(bytes), mimeType: response.headers.get('content-type') || 'image/jpeg', name: 'telegram-photo.jpg' }];
   }
 
+  private async transcribeTelegramVoice(voice: TelegramVoice): Promise<{ text: string } | undefined> {
+    if (!this.dependencies.transcribeAudio) {
+      throw new Error('Telegram voice transcription is unavailable.');
+    }
+    const token = this.dependencies.readBotToken();
+    if (!token) return undefined;
+    const file = await this.telegramRequest<{ file_path?: string }>(token, 'getFile', { file_id: voice.file_id });
+    if (!file.file_path) return undefined;
+    const fetchImpl = this.dependencies.fetch ?? fetch;
+    const response = await fetchImpl(`https://api.telegram.org/file/bot${token}/${file.file_path}`);
+    if (!response.ok) return undefined;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return this.dependencies.transcribeAudio({
+      dataBase64: bytesToBase64(bytes),
+      mimeType: voice.mime_type || response.headers.get('content-type') || 'audio/ogg',
+      fileName: file.file_path.split('/').pop() || 'telegram-voice.ogg',
+    });
+  }
+
   private startTyping(chatId: string): void {
     if (this.typingIndicators.has(chatId)) return;
     const token = this.dependencies.readBotToken();
@@ -742,6 +776,24 @@ export function renderTelegramHtml(markdown: string): string {
   }
   segments.push(renderTelegramInlineMarkdown(markdown.slice(cursor)));
   return segments.join('').trim() || escapeTelegramHtml(markdown);
+}
+
+export function buildTelegramPromptText(input: { text?: string; hasPhoto?: boolean; voiceTranscript?: string }): string {
+  const parts: string[] = [];
+  const transcript = input.voiceTranscript?.trim();
+  if (transcript) {
+    parts.push(`[The user sent a Telegram voice message. Transcript: "${transcript}"]`);
+  }
+  const text = input.text?.trim();
+  if (text) {
+    parts.push(text);
+  }
+  if (input.hasPhoto && !text && !transcript) {
+    parts.push('Please review this Telegram photo.');
+  } else if (input.hasPhoto && transcript) {
+    parts.push('[The user also attached a Telegram photo.]');
+  }
+  return parts.join('\n\n').trim() || 'Please review this Telegram message.';
 }
 
 export function splitTelegramMessage(text: string): string[] {

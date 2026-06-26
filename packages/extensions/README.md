@@ -367,6 +367,16 @@ const result = await runAgentTask({ prompt: 'Summarize this image', images, tool
 
 The host owns model lookup, auth storage, session creation, timeout cleanup, and runtime policy. Extension code owns only the workflow request and result handling. When `allowedToolNames` is set, `runAgentTask` can continue through multiple allowlisted tool calls and stops early only if a tool result returns `terminate: true`. Extensions must declare `agent:run` before using this seam.
 
+Extensions that need speech-to-text should use the host transcription seam instead of importing Whisper.cpp or model files directly:
+
+```ts
+import { transcribeAudio } from '@neon-pilot/extensions/backend/transcription';
+
+const transcript = await transcribeAudio({ dataBase64, mimeType: 'audio/ogg', fileName: 'voice.ogg' });
+```
+
+The host owns the shared Whisper.cpp model cache, model install/status helpers, native module loading, and audio decoding for normal audio formats. Extension code should pass audio bytes plus MIME type/filename metadata and handle the returned transcript.
+
 For multi-turn agent work, use extension-owned conversations:
 
 ```ts

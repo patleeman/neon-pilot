@@ -1,16 +1,12 @@
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import { installTranscriptionModel, readTranscriptionModelStatus, transcribeAudio } from '@neon-pilot/extensions/backend/transcription';
 
-import { LocalWhisperTranscriptionProvider } from './localWhisperProvider.js';
 import { buildDictationSettingsState, readDictationSettings, writeDictationSettings } from './settings.js';
 
 function settingsFile(runtimeDir: string): string {
   return join(runtimeDir, 'settings.json');
-}
-
-function authFile(runtimeDir: string): string {
-  return join(runtimeDir, 'auth.json');
 }
 
 function readOptionalString(value: unknown): string | undefined {
@@ -25,17 +21,6 @@ function readRequiredBase64(value: unknown, label: string): Buffer {
   const decoded = Buffer.from(normalized, 'base64');
   if (decoded.length === 0) throw new Error(`${label} must decode to non-empty data.`);
   return decoded;
-}
-
-function createProvider(model: string, runtimeDir: string): LocalWhisperTranscriptionProvider {
-  return new LocalWhisperTranscriptionProvider({ model, modelRootPath: join(dirname(authFile(runtimeDir)), 'transcription-models') });
-}
-
-async function ensureProviderModelInstalled(provider: LocalWhisperTranscriptionProvider): Promise<void> {
-  const status = await provider.getModelStatus();
-  if (!status.installed) {
-    await provider.installModel();
-  }
 }
 
 export async function readSettings(_input: unknown, ctx: ExtensionBackendContext) {
@@ -61,13 +46,13 @@ export async function updateSettings(input: { model?: unknown }, ctx: ExtensionB
 export async function modelStatus(input: { model?: unknown }, ctx: ExtensionBackendContext) {
   const settings = readDictationSettings(settingsFile(ctx.runtimeDir));
   const model = readOptionalString(input.model) ?? settings.model;
-  return createProvider(model, ctx.runtimeDir).getModelStatus();
+  return readTranscriptionModelStatus({ model });
 }
 
 export async function installModel(input: { model?: unknown }, ctx: ExtensionBackendContext) {
   const settings = readDictationSettings(settingsFile(ctx.runtimeDir));
   const model = readOptionalString(input.model) ?? settings.model;
-  return createProvider(model, ctx.runtimeDir).installModel();
+  return installTranscriptionModel({ model });
 }
 
 export async function transcribeFile(
@@ -75,14 +60,12 @@ export async function transcribeFile(
   ctx: ExtensionBackendContext,
 ) {
   const settings = readDictationSettings(settingsFile(ctx.runtimeDir));
-  const provider = createProvider(settings.model, ctx.runtimeDir);
-  await ensureProviderModelInstalled(provider);
-  return provider.transcribeFile(
-    {
-      data: readRequiredBase64(input.dataBase64, 'dataBase64'),
-      mimeType: readOptionalString(input.mimeType) ?? 'audio/pcm',
-      fileName: readOptionalString(input.fileName),
-    },
-    { language: readOptionalString(input.language) },
-  );
+  const data = readRequiredBase64(input.dataBase64, 'dataBase64');
+  return transcribeAudio({
+    dataBase64: data.toString('base64'),
+    mimeType: readOptionalString(input.mimeType) ?? 'audio/pcm',
+    fileName: readOptionalString(input.fileName),
+    language: readOptionalString(input.language),
+    model: settings.model,
+  });
 }
