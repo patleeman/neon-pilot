@@ -475,41 +475,6 @@ export function applyDesktopConversationStreamEvents(
   return next;
 }
 
-function streamingBlockSnapshotWouldJump(previousBlock: DisplayBlock | undefined, nextBlock: DisplayBlock | undefined): boolean {
-  if (!previousBlock || !nextBlock || previousBlock.type !== nextBlock.type) {
-    return false;
-  }
-
-  if (previousBlock.type === 'text' || previousBlock.type === 'thinking') {
-    const previousText = previousBlock.text ?? '';
-    const nextText = nextBlock.text ?? '';
-    return Boolean(previousText) && nextText.length > previousText.length && nextText.startsWith(previousText);
-  }
-
-  if (previousBlock.type === 'tool_use') {
-    const previousOutput = previousBlock.output ?? '';
-    const nextOutput = nextBlock.output ?? '';
-    return (
-      Boolean(previousOutput) &&
-      (previousBlock.running === true || nextBlock.running === true) &&
-      nextOutput.length > previousOutput.length &&
-      nextOutput.startsWith(previousOutput)
-    );
-  }
-
-  return false;
-}
-
-function liveSnapshotWouldJumpStreamingTail(
-  previousStream: DesktopConversationState['stream'],
-  nextStream: DesktopConversationState['stream'],
-): boolean {
-  if (previousStream.blockOffset !== nextStream.blockOffset || previousStream.blocks.length !== nextStream.blocks.length) {
-    return false;
-  }
-  return streamingBlockSnapshotWouldJump(previousStream.blocks.at(-1), nextStream.blocks.at(-1));
-}
-
 function mergeDesktopConversationState(
   previous: DesktopConversationState | null,
   next: DesktopConversationState,
@@ -539,10 +504,7 @@ function mergeDesktopConversationState(
         }
       : next;
   const nextWithPreservedLiveTail =
-    previousHasLiveTail &&
-    nextHasLiveTail &&
-    previous &&
-    (previousStreamBlockEnd > nextStreamBlockEnd || liveSnapshotWouldJumpStreamingTail(previous.stream, next.stream))
+    previousHasLiveTail && nextHasLiveTail && previous && previousStreamBlockEnd > nextStreamBlockEnd
       ? {
           ...nextWithPreservedOptimisticLive,
           stream: {
@@ -575,6 +537,13 @@ function buildDesktopConversationStateCacheKey(
   version: number | string | undefined,
 ): string {
   return `${conversationId}:${tailBlocks ?? 'default'}:${includeToolBlocks === false ? 'conversation' : 'full'}:${version ?? 'current'}`;
+}
+
+function isConversationLiveStreaming(state: DesktopConversationState | null, conversationId: string): boolean {
+  if (state?.conversationId !== conversationId) {
+    return false;
+  }
+  return state.stream.isStreaming === true || (state.liveSession.live === true && state.liveSession.isStreaming === true);
 }
 
 function rememberDesktopConversationState(
@@ -747,7 +716,9 @@ export function useDesktopConversationState(conversationId: string | null, optio
   const postSendRefreshTimersRef = useRef<Array<ReturnType<typeof window.setTimeout>>>([]);
   const runningSessionRecoveryRefreshTimersRef = useRef<Array<ReturnType<typeof window.setTimeout>>>([]);
   const matchedState = state?.conversationId === conversationId ? state : null;
+  const stateRef = useRef<DesktopConversationState | null>(state);
   const activeConversationIdRef = useRef(conversationId);
+  stateRef.current = state;
   activeConversationIdRef.current = conversationId;
 
   const clearPostSendRefreshTimers = useCallback(() => {
@@ -1044,6 +1015,9 @@ export function useDesktopConversationState(conversationId: string | null, optio
         }
         if (message.type === 'app_event' && message.event.type === 'session_file_changed' && message.event.sessionId === conversationId) {
           flushPendingStreamEvents();
+          if (isConversationLiveStreaming(stateRef.current, conversationId)) {
+            return;
+          }
           refreshAuthoritativeState();
           return;
         }

@@ -1983,7 +1983,7 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hello' })]);
   });
 
-  it('preserves live stream blocks when an aggregate refresh returns a stale filtered snapshot', async () => {
+  it('ignores session file refreshes while the live stream channel is active', async () => {
     const frameCallbacks: FrameRequestCallback[] = [];
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
       frameCallbacks.push(callback);
@@ -2065,12 +2065,12 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(conversationAggregate).toHaveBeenCalledTimes(2);
+    expect(conversationAggregate).toHaveBeenCalledTimes(1);
     expect(latestState?.state?.stream.blocks.map((block) => block.type)).toEqual(['user', 'tool_use', 'text']);
     expect(latestState?.state?.stream.blocks[2]).toEqual(expect.objectContaining({ type: 'text', text: 'Running...' }));
   });
 
-  it('keeps live text deltas smooth when a file refresh has a longer copy of the same block', async () => {
+  it('keeps live text deltas smooth by not reading the session file during an active stream', async () => {
     const frameCallbacks: FrameRequestCallback[] = [];
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
       frameCallbacks.push(callback);
@@ -2147,7 +2147,7 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(conversationAggregate).toHaveBeenCalledTimes(2);
+    expect(conversationAggregate).toHaveBeenCalledTimes(1);
     expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hel' })]);
 
     act(() => {
