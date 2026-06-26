@@ -37,8 +37,8 @@ const TOUR_STEPS: TourStep[] = [
     id: 'provider',
     route: '/settings/providers',
     target: '#settings-providers',
-    title: 'Choose your AI model',
-    body: 'Neon Pilot needs a model before it can chat. Pick the provider you use, sign in or add a key, then choose the model to use for new chats.',
+    title: 'Choose your AI provider',
+    body: 'Neon Pilot needs an AI provider before it can chat. Pick the provider you use, sign in or add a key, then choose the model to use for new chats.',
     detail: 'You can change this later in Settings.',
   },
   {

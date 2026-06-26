@@ -88,7 +88,7 @@ describe('OnboardingBootstrap', () => {
     await advanceEnsureTimer();
 
     expect(screen.getByTestId('onboarding-tour')).toBeTruthy();
-    expect(screen.getByText('Choose your AI model')).toBeTruthy();
+    expect(screen.getByText('Choose your AI provider')).toBeTruthy();
     expect(screen.getByTestId('location').textContent).toBe('/settings/providers');
     expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
     expect(invoke).toHaveBeenCalledWith('update', { status: 'active', stepIndex: 0 });
