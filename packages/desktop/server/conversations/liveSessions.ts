@@ -686,7 +686,6 @@ export async function appendDetachedUserMessage(sessionId: string, text: string)
   await appendDetachedLiveSessionUserMessage(entry, text, {
     broadcastTitle: (entry) => broadcastTitle(entry, { resolveEntryTitle, publishSessionMetaChanged }),
     publishSessionMetaChanged,
-    publishSessionFileChanged: (sessionId) => publishAppEvent({ type: 'session_file_changed', sessionId }),
   });
 }
 

@@ -76,6 +76,7 @@ function unsupportedExtensionHostClientMethod(method: string): () => Promise<nev
 
 setExtensionHostClient({
   health: unsupportedExtensionHostClientMethod('health'),
+  abortConversationResources: unsupportedExtensionHostClientMethod('abortConversationResources'),
   checkBackendHealth: unsupportedExtensionHostClientMethod('checkBackendHealth'),
   invokeAction(input) {
     return callScopedHostCapability('extensions', 'invokeAction', input) as Promise<

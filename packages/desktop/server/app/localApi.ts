@@ -623,8 +623,8 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
       }),
     ensureLiveSessionForDeferredResume: async (sessionFile) => {
       const resourceOptions = runtimeState.buildLiveSessionResourceOptionsAsync
-        ? await runtimeState.buildLiveSessionResourceOptionsAsync(runtimeState.getRuntimeScope())
-        : runtimeState.buildLiveSessionResourceOptions(runtimeState.getRuntimeScope());
+        ? await runtimeState.buildLiveSessionResourceOptionsAsync()
+        : runtimeState.buildLiveSessionResourceOptions();
       await resumeSession(sessionFile, {
         ...resourceOptions,
         extensionFactories: runtimeState.buildLiveSessionExtensionFactories(),

@@ -7,6 +7,7 @@ const title = vi.hoisted(() => ({
 vi.mock('./liveSessionTitle.js', () => title);
 
 import {
+  appendDetachedLiveSessionAssistantError,
   appendDetachedLiveSessionBashExecution,
   appendDetachedLiveSessionUserMessage,
   appendParallelImportedLiveSessionMessage,
@@ -76,6 +77,42 @@ describe('live session message append operations', () => {
     expect(e.session.sessionManager.appendMessage).toHaveBeenCalledTimes(1);
   });
 
+  it('appends detached assistant errors with the complete assistant message contract', () => {
+    const e = entry({
+      session: {
+        ...entry().session,
+        model: { api: 'openai-responses', provider: 'openai', id: 'gpt-5' },
+      },
+    });
+    const callbacks = { broadcastTitle: vi.fn(), publishSessionMetaChanged: vi.fn() };
+
+    appendDetachedLiveSessionAssistantError(e as never, { promptText: ' failed prompt ', errorMessage: ' no key ' }, callbacks);
+
+    expect(e.session.state.messages).toEqual([
+      { role: 'user', content: [{ type: 'text', text: 'failed prompt' }], timestamp: Date.now() },
+      {
+        role: 'assistant',
+        content: [],
+        api: 'openai-responses',
+        provider: 'openai',
+        model: 'gpt-5',
+        usage: {
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+          totalTokens: 0,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+        },
+        stopReason: 'error',
+        errorMessage: 'no key',
+        timestamp: Date.now(),
+      },
+    ]);
+    expect(e.session.sessionManager.appendMessage).toHaveBeenCalledTimes(2);
+    expect(callbacks.publishSessionMetaChanged).toHaveBeenCalledWith('s1');
+  });
+
   it('appends detached bash executions for abortable direct shell runs', () => {
     const e = entry();
 
@@ -98,6 +135,7 @@ describe('live session message append operations', () => {
         output: ' M packages/desktop/server/conversations/liveSessions.ts\n',
         timestamp: Date.now(),
         exitCode: 0,
+        cancelled: false,
         truncated: true,
         fullOutputPath: '/tmp/neon-pilot-bash-output.log',
         excludeFromContext: true,

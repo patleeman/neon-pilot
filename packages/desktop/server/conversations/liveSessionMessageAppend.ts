@@ -24,6 +24,17 @@ function hasQueuedPromptContext(entry: LiveSessionMessageAppendHost, customType:
   return messages.some((message) => isRecord(message) && message.role === 'custom' && message.customType === customType);
 }
 
+function createZeroUsage() {
+  return {
+    input: 0,
+    output: 0,
+    cacheRead: 0,
+    cacheWrite: 0,
+    totalTokens: 0,
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+  };
+}
+
 export async function queueLiveSessionPromptContext(
   entry: LiveSessionMessageAppendHost,
   customType: string,
@@ -145,6 +156,10 @@ export function appendDetachedLiveSessionAssistantError<TEntry extends LiveSessi
   const assistantMessage = {
     role: 'assistant' as const,
     content: [] as Array<{ type: 'text'; text: string }>,
+    api: entry.session.model?.api ?? 'unknown',
+    provider: entry.session.model?.provider ?? 'unknown',
+    model: entry.session.model?.id ?? 'unknown',
+    usage: createZeroUsage(),
     stopReason: 'error' as const,
     errorMessage: normalizedError,
     timestamp: Date.now(),
@@ -191,10 +206,10 @@ export function appendDetachedLiveSessionBashExecution<TEntry extends LiveSessio
     role: 'bashExecution' as const,
     command: normalizedCommand,
     output: output.output,
+    exitCode: typeof result.exitCode === 'number' ? result.exitCode : undefined,
+    cancelled: result.cancelled === true,
+    truncated: result.truncated === true || output.truncated,
     timestamp: Date.now(),
-    ...(typeof result.exitCode === 'number' ? { exitCode: result.exitCode } : {}),
-    ...(result.cancelled === true ? { cancelled: true } : {}),
-    ...(result.truncated === true || output.truncated ? { truncated: true } : {}),
     ...(details ? { details } : {}),
     ...(typeof result.fullOutputPath === 'string' && result.fullOutputPath.trim().length > 0
       ? { fullOutputPath: result.fullOutputPath }
