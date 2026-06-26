@@ -12,6 +12,7 @@ export interface PendingConversationPrompt {
 }
 
 const inMemoryPendingPrompts = new Map<string, PendingConversationPrompt>();
+const inMemoryPendingPostBashPrompts = new Map<string, PendingConversationPrompt>();
 const inFlightPendingPromptDispatches = new Map<string, number>();
 const PENDING_CONVERSATION_PROMPT_DISPATCHING_STALE_MS = 90_000;
 const MAX_PENDING_ATTACHMENT_REVISION = 1_000_000;
@@ -209,19 +210,15 @@ function buildPendingConversationPromptStorageKey(sessionId: string): string {
   return `pa:reload:conversation:${sessionId}:pending-prompt`;
 }
 
+function buildPendingPostBashPromptStorageKey(sessionId: string): string {
+  return `pa:reload:conversation:${sessionId}:pending-post-bash-prompt`;
+}
+
 function buildPendingConversationPromptDispatchingStorageKey(sessionId: string): string {
   return `pa:reload:conversation:${sessionId}:pending-prompt-dispatching`;
 }
 
-export function persistPendingConversationPrompt(
-  sessionId: string,
-  prompt: PendingConversationPrompt,
-  storage: StorageLike | null = getSessionStorage(),
-): void {
-  if (!sessionId) {
-    return;
-  }
-
+function normalizePendingConversationPrompt(prompt: PendingConversationPrompt): PendingConversationPrompt | null {
   const contextMessages = normalizePendingPromptContextMessages(prompt.contextMessages);
   const relatedConversationIds = normalizePendingRelatedConversationIds(prompt.relatedConversationIds);
   const attachmentRefs = normalizePendingPromptAttachmentRefs(prompt.attachmentRefs);
@@ -241,7 +238,35 @@ export function persistPendingConversationPrompt(
     attachmentRefs.length > 0 ||
     contextMessages.length > 0 ||
     relatedConversationIds.length > 0;
-  if (!shouldPersist) {
+  return shouldPersist ? nextPrompt : null;
+}
+
+function deserializePendingConversationPrompt(raw: string): PendingConversationPrompt | null {
+  const parsed = JSON.parse(raw) as Partial<PendingConversationPrompt>;
+  if (!parsed || typeof parsed !== 'object' || typeof parsed.text !== 'string') {
+    return null;
+  }
+  return {
+    text: parsed.text,
+    ...(parsed.behavior === 'steer' || parsed.behavior === 'followUp' ? { behavior: parsed.behavior } : {}),
+    images: normalizePendingPromptImages(parsed.images),
+    attachmentRefs: normalizePendingPromptAttachmentRefs(parsed.attachmentRefs),
+    contextMessages: normalizePendingPromptContextMessages(parsed.contextMessages),
+    relatedConversationIds: normalizePendingRelatedConversationIds(parsed.relatedConversationIds),
+  };
+}
+
+export function persistPendingConversationPrompt(
+  sessionId: string,
+  prompt: PendingConversationPrompt,
+  storage: StorageLike | null = getSessionStorage(),
+): void {
+  if (!sessionId) {
+    return;
+  }
+
+  const nextPrompt = normalizePendingConversationPrompt(prompt);
+  if (!nextPrompt) {
     inMemoryPendingPrompts.delete(sessionId);
     clearStoredState(storage, buildPendingConversationPromptStorageKey(sessionId));
   } else {
@@ -253,7 +278,7 @@ export function persistPendingConversationPrompt(
     });
   }
 
-  emitPendingConversationPromptChanged(sessionId, shouldPersist ? nextPrompt : null, storage);
+  emitPendingConversationPromptChanged(sessionId, nextPrompt, storage);
 }
 
 export function readPendingConversationPrompt(
@@ -273,20 +298,7 @@ export function readPendingConversationPrompt(
     key: buildPendingConversationPromptStorageKey(sessionId),
     fallback: null,
     storage,
-    deserialize: (raw) => {
-      const parsed = JSON.parse(raw) as Partial<PendingConversationPrompt>;
-      if (!parsed || typeof parsed !== 'object' || typeof parsed.text !== 'string') {
-        return null;
-      }
-      return {
-        text: parsed.text,
-        ...(parsed.behavior === 'steer' || parsed.behavior === 'followUp' ? { behavior: parsed.behavior } : {}),
-        images: normalizePendingPromptImages(parsed.images),
-        attachmentRefs: normalizePendingPromptAttachmentRefs(parsed.attachmentRefs),
-        contextMessages: normalizePendingPromptContextMessages(parsed.contextMessages),
-        relatedConversationIds: normalizePendingRelatedConversationIds(parsed.relatedConversationIds),
-      };
-    },
+    deserialize: deserializePendingConversationPrompt,
   });
 
   if (storedPrompt) {
@@ -317,6 +329,78 @@ export function clearPendingConversationPrompt(sessionId: string, storage: Stora
   inMemoryPendingPrompts.delete(sessionId);
   clearStoredState(storage, buildPendingConversationPromptStorageKey(sessionId));
   emitPendingConversationPromptChanged(sessionId, null, storage);
+}
+
+export function persistPendingPostBashPrompt(
+  sessionId: string,
+  prompt: PendingConversationPrompt,
+  storage: StorageLike | null = getSessionStorage(),
+): void {
+  if (!sessionId) {
+    return;
+  }
+
+  const nextPrompt = normalizePendingConversationPrompt(prompt);
+  if (!nextPrompt) {
+    inMemoryPendingPostBashPrompts.delete(sessionId);
+    clearStoredState(storage, buildPendingPostBashPromptStorageKey(sessionId));
+    return;
+  }
+
+  inMemoryPendingPostBashPrompts.set(sessionId, nextPrompt);
+  persistStoredState({
+    key: buildPendingPostBashPromptStorageKey(sessionId),
+    value: nextPrompt,
+    storage,
+  });
+}
+
+export function readPendingPostBashPrompt(
+  sessionId: string,
+  storage: StorageLike | null = getSessionStorage(),
+): PendingConversationPrompt | null {
+  if (!sessionId) {
+    return null;
+  }
+
+  const inMemoryPrompt = inMemoryPendingPostBashPrompts.get(sessionId);
+  if (inMemoryPrompt) {
+    return inMemoryPrompt;
+  }
+
+  const storedPrompt = readStoredState<PendingConversationPrompt | null>({
+    key: buildPendingPostBashPromptStorageKey(sessionId),
+    fallback: null,
+    storage,
+    deserialize: deserializePendingConversationPrompt,
+  });
+
+  if (storedPrompt) {
+    inMemoryPendingPostBashPrompts.set(sessionId, storedPrompt);
+  }
+  return storedPrompt;
+}
+
+export function consumePendingPostBashPrompt(
+  sessionId: string,
+  storage: StorageLike | null = getSessionStorage(),
+): PendingConversationPrompt | null {
+  const prompt = readPendingPostBashPrompt(sessionId, storage);
+  if (!prompt) {
+    return null;
+  }
+
+  clearPendingPostBashPrompt(sessionId, storage);
+  return prompt;
+}
+
+export function clearPendingPostBashPrompt(sessionId: string, storage: StorageLike | null = getSessionStorage()): void {
+  if (!sessionId) {
+    return;
+  }
+
+  inMemoryPendingPostBashPrompts.delete(sessionId);
+  clearStoredState(storage, buildPendingPostBashPromptStorageKey(sessionId));
 }
 
 export function isPendingConversationPromptDispatching(sessionId: string, storage: StorageLike | null = getSessionStorage()): boolean {

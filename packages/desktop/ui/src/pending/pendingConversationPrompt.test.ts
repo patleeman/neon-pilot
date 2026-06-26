@@ -4,10 +4,14 @@ import { buildConversationComposerStorageKey } from '../conversation/forking';
 import type { StorageLike } from '../local/reloadState';
 import {
   clearPendingConversationPrompt,
+  clearPendingPostBashPrompt,
   consumePendingConversationPrompt,
+  consumePendingPostBashPrompt,
   isPendingConversationPromptDispatching,
   persistPendingConversationPrompt,
+  persistPendingPostBashPrompt,
   readPendingConversationPrompt,
+  readPendingPostBashPrompt,
   setPendingConversationPromptDispatching,
 } from './pendingConversationPrompt';
 
@@ -292,6 +296,72 @@ describe('pendingConversationPrompt helpers', () => {
     });
 
     clearPendingConversationPrompt('session-123', storage);
+  });
+
+  it('persists post-bash follow-up prompts separately from initial prompts', () => {
+    const storage = createStorage();
+
+    persistPendingConversationPrompt(
+      'session-123',
+      {
+        text: 'initial prompt',
+        images: [],
+        attachmentRefs: [],
+      },
+      storage,
+    );
+    persistPendingPostBashPrompt(
+      'session-123',
+      {
+        text: 'after bash',
+        behavior: 'followUp',
+        images: [],
+        attachmentRefs: [],
+        contextMessages: [{ customType: 'browser_changed_context', content: 'changed' }],
+      },
+      storage,
+    );
+
+    expect(readPendingConversationPrompt('session-123', storage)?.text).toBe('initial prompt');
+    expect(readPendingPostBashPrompt('session-123', storage)).toEqual({
+      text: 'after bash',
+      behavior: 'followUp',
+      images: [],
+      attachmentRefs: [],
+      contextMessages: [{ customType: 'browser_changed_context', content: 'changed' }],
+    });
+
+    expect(consumePendingPostBashPrompt('session-123', storage)?.text).toBe('after bash');
+    expect(readPendingPostBashPrompt('session-123', storage)).toBeNull();
+    expect(readPendingConversationPrompt('session-123', storage)?.text).toBe('initial prompt');
+
+    clearPendingConversationPrompt('session-123', storage);
+  });
+
+  it('clears blank post-bash follow-up prompts', () => {
+    const storage = createStorage();
+
+    persistPendingPostBashPrompt(
+      'session-blank-post-bash',
+      {
+        text: 'after bash',
+        images: [],
+        attachmentRefs: [],
+      },
+      storage,
+    );
+    persistPendingPostBashPrompt(
+      'session-blank-post-bash',
+      {
+        text: '   ',
+        images: [],
+        attachmentRefs: [],
+      },
+      storage,
+    );
+
+    expect(readPendingPostBashPrompt('session-blank-post-bash', storage)).toBeNull();
+    clearPendingPostBashPrompt('session-blank-post-bash', storage);
   });
 
   it('drops blank pending prompt context messages before caching', () => {

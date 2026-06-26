@@ -341,13 +341,17 @@ import { normalizeWorkspacePaths, readStoredWorkspacePaths, writeStoredWorkspace
 import { hasSelectableModelId, resolveSelectableModelId } from '../model/modelPreferences';
 import {
   clearPendingConversationPrompt,
+  clearPendingPostBashPrompt,
   consumePendingConversationPrompt,
+  consumePendingPostBashPrompt,
   isPendingConversationPromptDispatching,
   PENDING_CONVERSATION_PROMPT_CHANGED_EVENT,
   type PendingConversationPrompt,
   type PendingConversationPromptChangedDetail,
   persistPendingConversationPrompt,
+  persistPendingPostBashPrompt,
   readPendingConversationPrompt,
+  readPendingPostBashPrompt,
   setPendingConversationPromptDispatching,
 } from '../pending/pendingConversationPrompt';
 import {
@@ -2574,6 +2578,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const wholeLineBashRunningRef = useRef(false);
   const pendingWholeLineBashRef = useRef<{ conversationId: string; command: string } | null>(null);
   const pendingPostBashPromptRef = useRef<(PendingConversationPrompt & { conversationId: string }) | null>(null);
+  const drainingPostBashPromptSessionIdRef = useRef<string | null>(null);
   const composerSubmitRunningRef = useRef(false);
   const [showBackgroundRunDetails, setShowBackgroundRunDetails] = useState(false);
 
@@ -5695,12 +5700,16 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   );
 
   async function drainQueuedPromptAfterWholeLineBash(conversationId: string) {
-    const queuedPrompt = pendingPostBashPromptRef.current;
-    if (!queuedPrompt || queuedPrompt.conversationId !== conversationId) {
+    const queuedPrompt =
+      pendingPostBashPromptRef.current?.conversationId === conversationId
+        ? pendingPostBashPromptRef.current
+        : readPendingPostBashPrompt(conversationId);
+    if (!queuedPrompt) {
       return;
     }
 
     pendingPostBashPromptRef.current = null;
+    consumePendingPostBashPrompt(conversationId);
     setPendingAssistantStatusLabel('Working…');
     try {
       await api.sendConversationMessage(
@@ -5713,15 +5722,34 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         queuedPrompt.contextMessages,
         queuedPrompt.relatedConversationIds,
       );
+      clearPendingPostBashPrompt(conversationId);
       notifyDesktopConversationStateRefresh(conversationId);
       await desktopConversationRefresh().catch(() => null);
     } catch (error) {
+      persistPendingPostBashPrompt(conversationId, queuedPrompt);
       composerController.setText(queuedPrompt.text);
       showNotice('danger', formatConversationMessageActionFailure('Queued follow-up', error), 4000);
     } finally {
       setPendingAssistantStatusLabel(null);
     }
   }
+
+  useEffect(() => {
+    if (draft || !id || conversationRunningForPage || drainingPostBashPromptSessionIdRef.current === id) {
+      return;
+    }
+
+    if (!readPendingPostBashPrompt(id)) {
+      return;
+    }
+
+    drainingPostBashPromptSessionIdRef.current = id;
+    void drainQueuedPromptAfterWholeLineBash(id).finally(() => {
+      if (drainingPostBashPromptSessionIdRef.current === id) {
+        drainingPostBashPromptSessionIdRef.current = null;
+      }
+    });
+  }, [conversationRunningForPage, draft, id]);
 
   async function runWholeLineBashCommand(inputSnapshot: string, command: { command: string; excludeFromContext: boolean }) {
     if (wholeLineBashRunningRef.current) {
@@ -6016,7 +6044,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
         const attachmentRefs = await persistPromptDrawings(pendingBash.conversationId);
         await persistPromptContextDocs(pendingBash.conversationId);
-        pendingPostBashPromptRef.current = {
+        const pendingPostBashPrompt: PendingConversationPrompt & { conversationId: string } = {
           conversationId: pendingBash.conversationId,
           text: textToSend,
           behavior: queuedBehavior ?? 'followUp',
@@ -6024,6 +6052,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           attachmentRefs,
           contextMessages: browserContextMessages,
         };
+        pendingPostBashPromptRef.current = pendingPostBashPrompt;
+        persistPendingPostBashPrompt(pendingBash.conversationId, pendingPostBashPrompt);
         setPendingAssistantStatusLabel('Queued after bash…');
         showNotice('accent', 'Queued follow-up after bash finishes.', 3000);
         return;
