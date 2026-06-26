@@ -118,7 +118,7 @@ type ExtensionManagerNotice = { type: 'info' | 'success' | 'error'; message: str
 
 const ACTIONS_MENU_VIEWPORT_MARGIN = 8;
 const ACTIONS_MENU_BUTTON_GAP = 8;
-const BUILD_EXTENSION_PROMPT = `I want to build a Neon Pilot extension.
+const BUILD_EXTENSION_PROMPT = `I want to build a Neon Pilot extension. Use the local-extension-development skill to guide me through it.
 
 Start by interviewing me before you write code. Ask focused questions until you understand the workflow I want, who it is for, what the first version should do, where it should live in Neon Pilot, and what empty, loading, error, and success states it needs.
 

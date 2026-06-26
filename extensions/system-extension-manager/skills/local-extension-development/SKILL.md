@@ -18,9 +18,58 @@ When a user asks how to create an extension, lead with: describe the feature you
 
 Build native extensions: a folder with `extension.json`, optional `src/frontend.tsx`, optional `src/backend.ts`, and generated `dist/` bundles. The app loads manifest-declared `dist/*` entries. Do not create iframe/webview extensions.
 
+## Guided extension-builder workflow
+
+Use this workflow when a user says they want to build an extension, has a feature idea, or clicks a "build with agent" entrypoint. Do not treat the first message as an implementation ticket unless the user explicitly says they already have a complete spec and wants to skip planning.
+
+### Phase 1: Interview
+
+Start by interviewing the user. Ask focused product questions that would change what gets built:
+
+- What workflow or annoyance should this improve?
+- Who is going to use it?
+- What should the first useful version do, and what can wait?
+- Where should it appear: full page, conversation rail, workbench detail, settings, command, tool, automation, or background capability?
+- What data should it read or store?
+- What actions should the user or agent be able to take?
+- What should the user see when it is empty, loading, successful, blocked, or broken?
+- Does it need secrets, external services, filesystem access, shell access, or Git access?
+- What would make the user say "yes, this feels right" after trying it?
+
+Do not ask implementation trivia the agent can decide from the repo. Recommend defaults when the user is unsure. If the user gives enough detail, state the assumptions and move on.
+
+### Phase 2: UX Brief
+
+Before writing source files, produce a compact brief the user can react to:
+
+- Primary user and job-to-be-done.
+- First-version scope and non-goals.
+- Extension surface and why it fits.
+- Information architecture: sections, list/detail shape, commands, settings, tools, or background behavior.
+- State model: default, empty, loading, error, success, disabled, and long-running states.
+- Data and permissions: storage, secrets, host capabilities, external systems, and destructive actions.
+- UI plan: shared `@neon-pilot/extensions/ui` or `@neon-pilot/extensions/settings` primitives to use.
+- Validation plan: build, validate, reload, app-path QA, screenshots, and representative tool/action invocation.
+
+Ask the user to correct the brief when product choices are still uncertain. If the user clearly approves or says to proceed, build.
+
+### Phase 3: Prototype UI When UI Matters
+
+For pages, rails, workbench details, settings surfaces, and multi-step workflows, create a quick visual prototype before implementation unless the user explicitly skips it. The prototype can be an artifact, a lightweight local HTML mock, or another preview the user can inspect.
+
+The prototype should show the actual product shape: layout density, main controls, copy, empty/error states, and where actions live. Use Neon Pilot taste and shared primitive patterns; do not produce a generic SaaS mockup. Revise the prototype from user feedback before writing the extension when visual direction is still unsettled.
+
+### Phase 4: Build
+
+Once the brief is accepted, create or edit the extension. Keep editable source in `src/`, declare contributions in `extension.json`, use the public extension SDK, and keep generated output in `dist/`. Reuse templates or nearby system extensions before inventing structure.
+
+### Phase 5: Validate and Iterate
+
+Build, validate, reload, and exercise the exact path the user will use. Open every contributed page, rail, workbench detail, settings section, command, composer control, or agent tool. Check important states and take screenshots when UI changed. If the user asks for changes after trying it, treat that as normal iteration, not a failure.
+
 ## First moves
 
-1. Before building, work out the product particulars with the user when the request is ambiguous. Ask concise questions until you know the primary user, core workflow, required data/actions, target surface, persistence needs, error/empty states, and visual tone well enough to one-shot a useful, polished extension. Do not ask about implementation trivia the agent can decide from the repo; do ask about product choices that would change the feature or design.
+1. Run the guided extension-builder workflow above unless the user has already provided a complete spec and explicitly wants implementation.
 2. Inspect installed extensions through Extension Manager.
 3. If editing an existing user extension, snapshot it first from Extension Manager.
 4. If creating a new extension, use Extension Manager **Create**.
@@ -50,16 +99,13 @@ If a user has to point out that a menu is stuck open, a save blanks the page, dr
 Copy-paste user prompt:
 
 ```text
-Build a Neon Pilot extension that [does what].
+Build a Neon Pilot extension that [does what]. Use the local-extension-development skill to guide the work.
 
-Before implementation, ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass.
+Start by interviewing me before you write code. Ask focused product/design questions until you understand the workflow, user, first-version scope, surface, data, actions, states, and permissions.
 
-Use the extension manager/template if helpful. Pick the right surface:
-- main page for a full app/workflow
-- tab-local right rail for a conversation-specific side panel inside the workbench
-- workbench detail for split-pane workflows
+Then write a short UX brief. If the extension has UI, make a quick visual prototype or artifact using Neon Pilot's UI patterns so I can react before implementation.
 
-Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes.
+After I approve the direction, implement it with editable source files, build it, validate it, reload it, test the real app path, and checkpoint the changes.
 ```
 
 Starter create payload:

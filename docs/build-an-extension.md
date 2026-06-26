@@ -7,7 +7,7 @@ Extensions are how Neon Pilot grows new product features. You usually should not
 ## Copy-paste prompt
 
 ```text
-Build a Neon Pilot extension that [does what].
+Build a Neon Pilot extension that [does what]. Use the local-extension-development skill to guide the work.
 
 Start by interviewing me before you write code. Ask focused questions until you understand the workflow I want, who it is for, what the first version should do, where it should live in Neon Pilot, and what empty, loading, error, and success states it needs.
 

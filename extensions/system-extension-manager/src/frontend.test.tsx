@@ -320,6 +320,7 @@ describe('ExtensionManagerPage', () => {
     });
     expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
     expect(screen.getByTestId('location').getAttribute('data-state')).toContain('suppressOnboardingAutoStart');
+    expect(appendedTexts.join('\n')).toContain('Use the local-extension-development skill');
     expect(appendedTexts.join('\n')).toContain('Start by interviewing me before you write code.');
     expect(appendedTexts.join('\n')).toContain('make a quick visual prototype or artifact');
     expect(clearCount).toBeGreaterThan(0);
