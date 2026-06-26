@@ -113,6 +113,53 @@ describe('live session message append operations', () => {
     expect(callbacks.publishSessionMetaChanged).toHaveBeenCalledWith('s1');
   });
 
+  it('sanitizes detached assistant errors before persisting them', () => {
+    const e = entry();
+    const callbacks = { broadcastTitle: vi.fn(), publishSessionMetaChanged: vi.fn() };
+
+    appendDetachedLiveSessionAssistantError(
+      e as never,
+      {
+        promptText: 'failed prompt',
+        errorMessage: [
+          'No API key found for openai-codex.',
+          '',
+          'Use /login to log into a provider via OAuth or API key. See:',
+          '  /Users/patrick/workingdir/neon-pilot/packages/desktop/server/dist/app/chunks/docs/providers.md',
+          '  /Users/patrick/workingdir/neon-pilot/packages/desktop/server/dist/app/chunks/docs/models.md',
+        ].join('\n'),
+      },
+      callbacks,
+    );
+
+    expect(e.session.state.messages.at(-1)).toMatchObject({
+      role: 'assistant',
+      stopReason: 'error',
+      errorMessage: 'No API key found for the selected model. Configure a provider in Neon Pilot, then try again.',
+    });
+  });
+
+  it('sanitizes detached internal module import errors before persisting them', () => {
+    const e = entry();
+    const callbacks = { broadcastTitle: vi.fn(), publishSessionMetaChanged: vi.fn() };
+
+    appendDetachedLiveSessionAssistantError(
+      e as never,
+      {
+        promptText: 'failed prompt',
+        errorMessage:
+          "Cannot find module '/Users/patrick/workingdir/neon-pilot/packages/desktop/server/dist/app/chunks/L7MTGEQK.js' imported from /Users/patrick/workingdir/neon-pilot/packages/desktop/server/dist/app/chunks/7ICDLM2C.js",
+      },
+      callbacks,
+    );
+
+    expect(e.session.state.messages.at(-1)).toMatchObject({
+      role: 'assistant',
+      stopReason: 'error',
+      errorMessage: 'The request could not start because part of the app runtime was unavailable. Restart Neon Pilot, then try again.',
+    });
+  });
+
   it('appends detached bash executions for abortable direct shell runs', () => {
     const e = entry();
 

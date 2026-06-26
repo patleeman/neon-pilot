@@ -1,7 +1,7 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
 import { buildFallbackTitleFromContent, isPlaceholderConversationTitle } from './liveSessionTitle.js';
-import { OVERSIZED_TOOL_OUTPUT_MAX_CHARS, truncateOversizedToolOutput } from './toolResultPresentation.js';
+import { OVERSIZED_TOOL_OUTPUT_MAX_CHARS, presentTranscriptErrorMessage, truncateOversizedToolOutput } from './toolResultPresentation.js';
 
 export interface LiveSessionMessageAppendHost {
   sessionId: string;
@@ -125,7 +125,8 @@ export function appendDetachedLiveSessionAssistantError<TEntry extends LiveSessi
   }
 
   const normalizedPrompt = input.promptText.trim();
-  const normalizedError = input.errorMessage.trim() || 'The model could not start. Configure a model provider, then try again.';
+  const normalizedError =
+    presentTranscriptErrorMessage(input.errorMessage.trim()) || 'The model could not start. Configure a model provider, then try again.';
   if (!normalizedPrompt && !normalizedError) {
     return;
   }

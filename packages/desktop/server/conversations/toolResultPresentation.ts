@@ -45,7 +45,11 @@ export function presentToolResultOutput(input: { text: string; isError: boolean 
 
 export function presentTranscriptErrorMessage(message: string): string {
   const trimmed = message.trim();
-  if (/No API key found for the selected model/i.test(trimmed)) {
+  if (/^Cannot find module\s+['"][^'"]+['"]\s+imported from\s+/i.test(trimmed)) {
+    return 'The request could not start because part of the app runtime was unavailable. Restart Neon Pilot, then try again.';
+  }
+
+  if (/No API key found for (?:the selected model|[\w.-]+)/i.test(trimmed)) {
     return 'No API key found for the selected model. Configure a provider in Neon Pilot, then try again.';
   }
 

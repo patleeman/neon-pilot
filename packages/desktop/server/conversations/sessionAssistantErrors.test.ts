@@ -36,6 +36,16 @@ describe('sessionAssistantErrors', () => {
     ).toBe('No API key is available for provider "opencode-go". Add one in Settings, then try again.');
   });
 
+  it('sanitizes internal module import failures', () => {
+    expect(
+      getAssistantErrorDisplayMessage({
+        stopReason: 'error',
+        errorMessage:
+          "Cannot find module '/Users/patrick/workingdir/neon-pilot/packages/desktop/server/dist/app/chunks/L7MTGEQK.js' imported from /Users/patrick/workingdir/neon-pilot/packages/desktop/server/dist/app/chunks/7ICDLM2C.js",
+      }),
+    ).toBe('The request could not start because part of the app runtime was unavailable. Restart Neon Pilot, then try again.');
+  });
+
   it('falls back when error stop reason has no message', () => {
     expect(getAssistantErrorDisplayMessage({ stopReason: 'error', errorMessage: '  ' })).toBe(
       'The model returned an error before completing its response.',
