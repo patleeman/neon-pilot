@@ -16,6 +16,11 @@ export function isShortcutCaptureEventTarget(target: EventTarget | null): boolea
   return Boolean(target.closest('.ui-shortcut-capture-capturing'));
 }
 
+export function isShortcutCaptureActive(root?: ParentNode): boolean {
+  const targetRoot = root ?? (typeof document !== 'undefined' ? document : null);
+  return Boolean(targetRoot?.querySelector('.ui-shortcut-capture-capturing'));
+}
+
 const MODIFIER_ALIASES: Record<string, 'mod' | 'ctrl' | 'meta' | 'alt' | 'shift'> = {
   mod: 'mod',
   cmd: 'mod',

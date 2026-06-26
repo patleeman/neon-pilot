@@ -438,6 +438,41 @@ describe('Layout workbench toggle', () => {
     window.removeEventListener('pa:workbench-refresh-active-file', refreshListener);
   });
 
+  it('does not execute global keybindings while a shortcut capture control is active', async () => {
+    vi.mocked(api.extensionKeybindings).mockResolvedValue([
+      {
+        extensionId: 'host',
+        surfaceId: 'refresh-workbench-file',
+        packageType: 'system',
+        title: 'Refresh workbench file',
+        keys: ['F5'],
+        command: 'workbench.refreshActiveFile',
+        scope: 'global',
+        defaultKeys: ['F5'],
+        enabled: true,
+      },
+    ]);
+    vi.mocked(api.extensionCommands).mockResolvedValue([]);
+    setWorkbenchModeForCurrentSession();
+    const refreshListener = vi.fn();
+    window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
+    const capture = document.createElement('button');
+    capture.className = 'ui-shortcut-capture ui-shortcut-capture-capturing';
+    document.body.append(capture);
+    renderLayout('/conversations/conv-1?workspaceFile=%2Frepo%2FREADME.md');
+    await waitFor(() => expect(api.extensionKeybindings).toHaveBeenCalled());
+
+    const event = new KeyboardEvent('keydown', { key: 'F5', cancelable: true });
+    act(() => {
+      window.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(refreshListener).not.toHaveBeenCalled();
+    capture.remove();
+    window.removeEventListener('pa:workbench-refresh-active-file', refreshListener);
+  });
+
   it('executes available global keybindings through shared host commands', async () => {
     vi.mocked(api.extensionKeybindings).mockResolvedValue([
       {

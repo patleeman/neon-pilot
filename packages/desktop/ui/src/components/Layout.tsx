@@ -31,7 +31,7 @@ import { canExecuteExtensionCommand, executeExtensionCommand, setExtensionComman
 import { buildExtensionCommandNotification } from '../extensions/extensionCommandNotifications';
 import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from '../extensions/extensionModalCommands';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../extensions/extensionRegistryEvents';
-import { findMatchingExtensionKeybinding, isShortcutCaptureEventTarget } from '../extensions/keybindings';
+import { findMatchingExtensionKeybinding, isShortcutCaptureActive, isShortcutCaptureEventTarget } from '../extensions/keybindings';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
 import {
   type ExtensionCommandRegistration,
@@ -2975,6 +2975,7 @@ export function Layout() {
   useEffect(() => {
     function handleExtensionKeybinding(event: KeyboardEvent) {
       if (event.defaultPrevented) return;
+      if (isShortcutCaptureActive()) return;
       if (isShortcutCaptureEventTarget(event.target)) return;
       const match = findMatchingExtensionKeybinding(
         event,
