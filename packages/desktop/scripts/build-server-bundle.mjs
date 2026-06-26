@@ -89,6 +89,7 @@ const backendApiLazyModuleEntries = [
   ['extensions/extensionPermissions.js', 'server/extensions/extensionPermissions.ts'],
   ['extensions/extensionRegistry.js', 'server/extensions/extensionRegistry.ts'],
   ['extensions/runtimeAgentHooks.js', 'server/extensions/runtimeAgentHooks.ts'],
+  ['extensions/videoProbeAttachmentStore.js', 'server/extensions/videoProbeAttachmentStore.ts'],
 ];
 
 await Promise.all([

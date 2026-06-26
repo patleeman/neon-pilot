@@ -50,7 +50,8 @@ export async function buildPromptContextPlan(input: {
     return { blocks, contextMessages, diagnostics };
   }
 
-  const { contextProviders: providers } = await getExtensionHostClient().listPromptAssemblyContributions();
+  const contributions = await getExtensionHostClient().listPromptAssemblyContributions();
+  const providers = Array.isArray(contributions.contextProviders) ? contributions.contextProviders : [];
 
   await Promise.allSettled(
     providers.map(async (provider) => {

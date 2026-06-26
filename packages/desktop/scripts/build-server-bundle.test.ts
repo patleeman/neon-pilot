@@ -72,6 +72,7 @@ describe('desktop server bundle lazy module entries', () => {
       'knowledge.ts',
       'modelGateway.ts',
       'transcription.ts',
+      'videos.ts',
     ].map((file) => `packages/desktop/server/extensions/backendApi/${file}`);
     const lazyModuleSpecifiers = backendApiFiles.flatMap((path) => extractLazyServerModuleSpecifiers(readRepoFile(path)));
     const buildScript = readRepoFile('packages/desktop/scripts/build-server-bundle.mjs');

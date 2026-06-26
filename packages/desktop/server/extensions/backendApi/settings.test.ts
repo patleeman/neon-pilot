@@ -18,6 +18,7 @@ describe('backendApi/settings', () => {
       read: vi.fn(() => ({ 'caffeinate.autoStart': true })),
       readSchema: vi.fn(() => [{ key: 'caffeinate.autoStart', type: 'boolean' }]),
       update: vi.fn((overrides: Record<string, unknown>) => ({ ...overrides })),
+      reset: vi.fn((keys: string[]) => ({ resetKeys: keys })),
     };
     resolver.callServerModuleExport.mockResolvedValue(store);
     const settings = await import('./settings.js');
@@ -27,11 +28,15 @@ describe('backendApi/settings', () => {
     await expect(settings.updateExtensionSettings({ 'caffeinate.autoStart': false })).resolves.toEqual({
       'caffeinate.autoStart': false,
     });
+    await expect(settings.resetExtensionSettings(['caffeinate.autoStart'])).resolves.toEqual({
+      resetKeys: ['caffeinate.autoStart'],
+    });
 
     expect(resolver.callServerModuleExport).toHaveBeenCalledWith('../../settings/settingsStore.js', 'createSettingsStore');
     expect(store.read).toHaveBeenCalledOnce();
     expect(store.readSchema).toHaveBeenCalledOnce();
     expect(store.update).toHaveBeenCalledWith({ 'caffeinate.autoStart': false });
+    expect(store.reset).toHaveBeenCalledWith(['caffeinate.autoStart']);
   });
 
   it('uses the worker host capability bridge when available', async () => {
@@ -45,10 +50,15 @@ describe('backendApi/settings', () => {
       operation: 'update',
       input: { overrides: { 'caffeinate.autoStart': false } },
     });
+    await expect(settings.resetExtensionSettings(['caffeinate.autoStart'])).resolves.toEqual({
+      operation: 'reset',
+      input: { keys: ['caffeinate.autoStart'] },
+    });
 
     expect(bridge).toHaveBeenNthCalledWith(1, 'settings', 'read');
     expect(bridge).toHaveBeenNthCalledWith(2, 'settings', 'readSchema');
     expect(bridge).toHaveBeenNthCalledWith(3, 'settings', 'update', { overrides: { 'caffeinate.autoStart': false } });
+    expect(bridge).toHaveBeenNthCalledWith(4, 'settings', 'reset', { keys: ['caffeinate.autoStart'] });
     expect(resolver.callServerModuleExport).not.toHaveBeenCalled();
   });
 });

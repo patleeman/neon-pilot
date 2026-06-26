@@ -27,6 +27,23 @@ describe('prompt context inventory', () => {
     ).resolves.toEqual({ blocks: [], contextMessages: [{ customType: 'existing', content: 'keep me' }], diagnostics: [] });
   });
 
+  it('ignores malformed prompt context provider lists', async () => {
+    extensionHostClient.listPromptAssemblyContributions.mockReturnValue({
+      assemblyProviders: [],
+      contextProviders: { bad: 'shape' },
+      hooks: [],
+    } as never);
+
+    await expect(
+      buildPromptContextPlan({
+        prompt: 'hello',
+        conversationId: 'conv-1',
+        contextMessages: [{ customType: 'existing', content: 'keep me' }],
+      }),
+    ).resolves.toEqual({ blocks: [], contextMessages: [{ customType: 'existing', content: 'keep me' }], diagnostics: [] });
+    expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
+  });
+
   it('skips providers for plain prompts without explicit context or related sessions', async () => {
     extensionHostClient.listPromptAssemblyContributions.mockReturnValue({
       assemblyProviders: [],

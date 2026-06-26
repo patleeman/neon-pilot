@@ -121,6 +121,35 @@ describe('SettingsStore', () => {
       const result = store.read();
       expect(result['app.timeout']).toBe(30);
     });
+
+    it('migrates legacy nested values over stale top-level overrides', () => {
+      writeFileSync(
+        join(stateRoot, 'settings.json'),
+        JSON.stringify({
+          'app.timeout': 60,
+          'unknown.key': 'keep',
+          values: {
+            'app.timeout': 30,
+            'app.featureX': true,
+          },
+        }),
+      );
+      const store = createSettingsStore(stateRoot);
+
+      expect(store.read()).toEqual({
+        'app.timeout': 30,
+        'app.featureX': true,
+        'app.mode': 'auto',
+        'unknown.key': 'keep',
+      });
+
+      const raw = JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8')) as Record<string, unknown>;
+      expect(raw).toEqual({
+        'app.timeout': 30,
+        'app.featureX': true,
+        'unknown.key': 'keep',
+      });
+    });
   });
 
   describe('readOverrides()', () => {
@@ -175,6 +204,22 @@ describe('SettingsStore', () => {
       const raw = JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8')) as Record<string, unknown>;
       expect(raw['secrets.provider']).toBe('env-only');
       expect(JSON.parse(readFileSync(join(stateRoot, 'secrets.json'), 'utf-8'))).toEqual({ 'provider:openrouter:apiKey': 'secret' });
+    });
+  });
+
+  describe('reset()', () => {
+    it('removes persisted overrides and returns merged defaults', () => {
+      writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ 'app.timeout': 60, 'app.featureX': true }));
+      const store = createSettingsStore(stateRoot);
+
+      expect(store.reset(['app.timeout'])).toEqual({
+        'app.timeout': 30,
+        'app.featureX': true,
+        'app.mode': 'auto',
+      });
+
+      const raw = JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8')) as Record<string, unknown>;
+      expect(raw).toEqual({ 'app.featureX': true });
     });
   });
 

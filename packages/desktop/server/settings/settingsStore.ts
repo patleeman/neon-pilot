@@ -65,6 +65,38 @@ function mergeDefaults(overrides: Record<string, unknown>, schema: ExtensionSett
   return result;
 }
 
+function migrateLegacyNestedValuesOverrides(
+  overrides: Record<string, unknown>,
+  schema: ExtensionSettingsRegistration[],
+): { overrides: Record<string, unknown>; changed: boolean } {
+  const values = overrides.values;
+  if (!values || typeof values !== 'object' || Array.isArray(values)) {
+    return { overrides, changed: false };
+  }
+
+  const schemaKeys = new Set(schema.map((setting) => setting.key));
+  const migratedEntries = Object.entries(values as Record<string, unknown>).filter(([key]) => schemaKeys.has(key));
+  if (migratedEntries.length === 0) {
+    return { overrides, changed: false };
+  }
+
+  const migrated = { ...overrides };
+  for (const [key, value] of migratedEntries) {
+    migrated[key] = value;
+  }
+  delete migrated.values;
+  return { overrides: migrated, changed: true };
+}
+
+function readMigratedOverrides(stateRoot: string, schema: ExtensionSettingsRegistration[]): Record<string, unknown> {
+  const rawOverrides = readRawOverrides(stateRoot);
+  const migration = migrateLegacyNestedValuesOverrides(rawOverrides, schema);
+  if (migration.changed) {
+    writeOverrides(migration.overrides, stateRoot);
+  }
+  return migration.overrides;
+}
+
 function isSecretBackendId(value: unknown): value is SecretBackendId {
   return value === 'keychain' || value === 'file' || value === 'env-only';
 }
@@ -74,18 +106,18 @@ function isSecretBackendId(value: unknown): value is SecretBackendId {
 export function createSettingsStore(stateRoot: string = getStateRoot()): SettingsStore {
   return {
     read(): Record<string, unknown> {
-      const overrides = readRawOverrides(stateRoot);
       const schema = listExtensionSettingsRegistrations(stateRoot);
+      const overrides = readMigratedOverrides(stateRoot, schema);
       return mergeDefaults(overrides, schema);
     },
 
     readOverrides(): Record<string, unknown> {
-      return readRawOverrides(stateRoot);
+      return readMigratedOverrides(stateRoot, listExtensionSettingsRegistrations(stateRoot));
     },
 
     update(updates: Record<string, unknown>): Record<string, unknown> {
-      const overrides = readRawOverrides(stateRoot);
       const schema = listExtensionSettingsRegistrations(stateRoot);
+      const overrides = readMigratedOverrides(stateRoot, schema);
       const schemaByKey = new Map(schema.map((s) => [s.key, s]));
 
       if (Object.prototype.hasOwnProperty.call(updates, 'secrets.provider')) {
@@ -116,12 +148,13 @@ export function createSettingsStore(stateRoot: string = getStateRoot()): Setting
     },
 
     reset(keys: string[]): Record<string, unknown> {
-      const overrides = readRawOverrides(stateRoot);
+      const schema = listExtensionSettingsRegistrations(stateRoot);
+      const overrides = readMigratedOverrides(stateRoot, schema);
       for (const key of keys.map((entry) => entry.trim()).filter(Boolean)) {
         delete overrides[key];
       }
       writeOverrides(overrides, stateRoot);
-      return mergeDefaults(overrides, listExtensionSettingsRegistrations(stateRoot));
+      return mergeDefaults(overrides, schema);
     },
 
     readSchema(): ExtensionSettingsRegistration[] {

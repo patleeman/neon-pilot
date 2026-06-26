@@ -1346,6 +1346,7 @@ describe('extension backend capability dispatcher', () => {
       read: vi.fn(() => ({ 'caffeinate.autoStart': true })),
       readSchema: vi.fn(() => [{ key: 'caffeinate.autoStart', type: 'boolean' }]),
       update: vi.fn(() => ({ 'caffeinate.autoStart': false })),
+      reset: vi.fn(() => ({ 'caffeinate.autoStart': true })),
     };
     const dispatch = createExtensionBackendCapabilityDispatcher({ settings });
 
@@ -1386,10 +1387,24 @@ describe('extension backend capability dispatcher', () => {
         }),
       ),
     ).resolves.toEqual({ 'caffeinate.autoStart': false });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 4,
+          kind: 'capabilityRequest',
+          extensionId: 'system-caffeinate',
+          capability: 'settings',
+          operation: 'reset',
+          input: { keys: ['caffeinate.autoStart'] },
+          context: { stateRoot: '/state-root' },
+        }),
+      ),
+    ).resolves.toEqual({ 'caffeinate.autoStart': true });
 
     expect(settings.read).toHaveBeenCalledWith('/state-root');
     expect(settings.readSchema).toHaveBeenCalledWith('/state-root');
     expect(settings.update).toHaveBeenCalledWith({ 'caffeinate.autoStart': false }, '/state-root');
+    expect(settings.reset).toHaveBeenCalledWith(['caffeinate.autoStart'], '/state-root');
   });
 
   it('rejects unsupported capabilities and malformed log inputs', async () => {

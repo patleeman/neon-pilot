@@ -4,6 +4,7 @@ const settingsApi = vi.hoisted(() => ({
   readExtensionSettings: vi.fn(),
   readExtensionSettingsSchema: vi.fn(),
   updateExtensionSettings: vi.fn(),
+  resetExtensionSettings: vi.fn(),
 }));
 const cliApi = vi.hoisted(() => ({
   readNeonPilotCliInstallStatus: vi.fn(),
@@ -44,6 +45,10 @@ describe('system-settings backend CLI', () => {
       'conversation.pinnedToolCalls': false,
       'conversation.transcriptDisclosure': 'auto',
     });
+    settingsApi.resetExtensionSettings.mockResolvedValue({
+      'conversation.pinnedToolCalls': true,
+      'conversation.transcriptDisclosure': 'auto',
+    });
     cliApi.readNeonPilotCliInstallStatus.mockResolvedValue({ globallyInstalled: false, linkPath: '/bin/neon-pilot' });
     cliApi.installNeonPilotUserCli.mockResolvedValue({ globallyInstalled: true, linkPath: '/bin/neon-pilot' });
     cliApi.uninstallNeonPilotUserCli.mockResolvedValue({ globallyInstalled: false, linkPath: '/bin/neon-pilot', removed: true });
@@ -75,6 +80,14 @@ describe('system-settings backend CLI', () => {
     await expect(manageSettings({ cli: { command: 'settings set', args: ['unknown.value', 'true'] } }, {} as never)).rejects.toThrow(
       'Unknown setting: unknown.value',
     );
+  });
+
+  it('resets manifest-declared settings through the settings reset API', async () => {
+    await expect(
+      manageSettings({ cli: { command: 'settings reset', args: ['conversation.transcriptDisclosure'] } }, {} as never),
+    ).resolves.toMatchObject({ keys: ['conversation.transcriptDisclosure'] });
+
+    expect(settingsApi.resetExtensionSettings).toHaveBeenCalledWith(['conversation.transcriptDisclosure']);
   });
 
   it('routes CLI install management through the host CLI backend API', async () => {
