@@ -255,7 +255,7 @@ function CoreModelPreferenceControls({
           value={currentServiceTier}
           onChange={(event) => onSelectServiceTier(event.target.value)}
         >
-          <option value="">Automatic</option>
+          <option value="">Use model default</option>
           {serviceTierOptions.map((tier) => (
             <option key={tier} value={tier}>
               {formatServiceTierLabel(tier)}

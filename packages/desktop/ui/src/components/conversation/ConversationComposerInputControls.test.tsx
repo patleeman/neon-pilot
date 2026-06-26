@@ -218,6 +218,28 @@ describe('ConversationComposerInputControls', () => {
     expect(html).toContain('Create drawing');
   });
 
+  it('distinguishes inherited and explicit automatic service tiers in core composer controls', () => {
+    extensionRegistryState.composerControls = [];
+    extensionRegistryState.composerInputTools = [];
+
+    const html = renderControls({
+      models: [
+        {
+          id: 'model-a',
+          provider: 'Provider A',
+          name: 'Model A',
+          context: 128000,
+          supportedServiceTiers: ['auto', 'priority'],
+        },
+      ],
+    });
+
+    expect(html).toContain('aria-label="Service tier"');
+    expect(html).toContain('Use model default');
+    expect(html).toContain('Automatic');
+    expect(html).toContain('Priority');
+  });
+
   it('segments core model options by provider', () => {
     extensionRegistryState.composerControls = [];
     extensionRegistryState.composerInputTools = [];

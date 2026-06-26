@@ -85,7 +85,7 @@ describe('formatModelTriggerLabel', () => {
               name: 'GPT-5.4',
               context: 272000,
               input: ['text'],
-              supportedServiceTiers: ['priority'],
+              supportedServiceTiers: ['auto', 'priority'],
             },
           ],
           currentModel: 'gpt-5.4',
@@ -100,7 +100,8 @@ describe('formatModelTriggerLabel', () => {
     );
 
     expect(screen.getByLabelText('Conversation service tier')).toBeTruthy();
-    expect(screen.getAllByText('Automatic').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Use model default').length).toBeGreaterThan(0);
+    expect(screen.getByText('Automatic')).toBeTruthy();
     expect(screen.getByText('Priority')).toBeTruthy();
   });
 
