@@ -985,6 +985,7 @@ export async function executeSessionBash(
         ensureStaleTurnState,
       }),
     publishSessionMetaChanged,
+    publishSessionFileChanged: (sessionId) => publishAppEvent({ type: 'session_file_changed', sessionId }),
   });
 
   return result;

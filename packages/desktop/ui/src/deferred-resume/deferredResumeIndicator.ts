@@ -90,7 +90,6 @@ export function resolveDeferredResumePresentationState(input: {
     hasReadyResumes: orderedResumes.some((resume) => resume.status === 'ready'),
     autoResumeKey: buildDeferredResumeAutoResumeKey({
       resumes: orderedResumes,
-      isLiveSession: input.isLiveSession,
       sessionFile: input.sessionFile,
     }),
     indicatorText: buildDeferredResumeIndicatorText(orderedResumes, input.nowMs),

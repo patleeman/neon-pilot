@@ -24,21 +24,19 @@ function ready(id: string): DeferredResumeSummary {
 }
 
 describe('buildDeferredResumeAutoResumeKey', () => {
-  it('returns null for live sessions', () => {
+  it('builds a key even when the open conversation is still marked live after restart', () => {
     expect(
       buildDeferredResumeAutoResumeKey({
         resumes: [ready('resume-1')],
-        isLiveSession: true,
         sessionFile: '/tmp/sessions/conv-123.jsonl',
       }),
-    ).toBeNull();
+    ).toBe('/tmp/sessions/conv-123.jsonl::resume-1');
   });
 
   it('returns null when the saved session file is unavailable', () => {
     expect(
       buildDeferredResumeAutoResumeKey({
         resumes: [ready('resume-1')],
-        isLiveSession: false,
         sessionFile: '',
       }),
     ).toBeNull();
@@ -48,7 +46,6 @@ describe('buildDeferredResumeAutoResumeKey', () => {
     expect(
       buildDeferredResumeAutoResumeKey({
         resumes: [scheduled('resume-1')],
-        isLiveSession: false,
         sessionFile: '/tmp/sessions/conv-123.jsonl',
       }),
     ).toBeNull();
@@ -58,7 +55,6 @@ describe('buildDeferredResumeAutoResumeKey', () => {
     expect(
       buildDeferredResumeAutoResumeKey({
         resumes: [scheduled('resume-3'), ready('resume-2'), ready('resume-1')],
-        isLiveSession: false,
         sessionFile: '/tmp/sessions/conv-123.jsonl',
       }),
     ).toBe('/tmp/sessions/conv-123.jsonl::resume-1,resume-2');
@@ -72,7 +68,6 @@ describe('shouldAutoResumeDeferredResumes', () => {
         autoResumeKey: '/tmp/sessions/conv-123.jsonl::resume-1',
         lastAttemptedKey: null,
         draft: false,
-        isLiveSession: false,
         deferredResumesBusy: false,
         resumeConversationBusy: false,
       }),
@@ -85,20 +80,18 @@ describe('shouldAutoResumeDeferredResumes', () => {
         autoResumeKey: '/tmp/sessions/conv-123.jsonl::resume-1',
         lastAttemptedKey: '/tmp/sessions/conv-123.jsonl::resume-1',
         draft: false,
-        isLiveSession: false,
         deferredResumesBusy: false,
         resumeConversationBusy: false,
       }),
     ).toBe(false);
   });
 
-  it('stays idle while the conversation is already live, draft, or busy', () => {
+  it('stays idle while the conversation is draft or busy', () => {
     expect(
       shouldAutoResumeDeferredResumes({
         autoResumeKey: '/tmp/sessions/conv-123.jsonl::resume-1',
         lastAttemptedKey: null,
         draft: true,
-        isLiveSession: false,
         deferredResumesBusy: false,
         resumeConversationBusy: false,
       }),
@@ -109,18 +102,6 @@ describe('shouldAutoResumeDeferredResumes', () => {
         autoResumeKey: '/tmp/sessions/conv-123.jsonl::resume-1',
         lastAttemptedKey: null,
         draft: false,
-        isLiveSession: true,
-        deferredResumesBusy: false,
-        resumeConversationBusy: false,
-      }),
-    ).toBe(false);
-
-    expect(
-      shouldAutoResumeDeferredResumes({
-        autoResumeKey: '/tmp/sessions/conv-123.jsonl::resume-1',
-        lastAttemptedKey: null,
-        draft: false,
-        isLiveSession: false,
         deferredResumesBusy: true,
         resumeConversationBusy: false,
       }),
@@ -131,7 +112,6 @@ describe('shouldAutoResumeDeferredResumes', () => {
         autoResumeKey: '/tmp/sessions/conv-123.jsonl::resume-1',
         lastAttemptedKey: null,
         draft: false,
-        isLiveSession: false,
         deferredResumesBusy: false,
         resumeConversationBusy: true,
       }),
@@ -142,7 +122,6 @@ describe('shouldAutoResumeDeferredResumes', () => {
         autoResumeKey: null,
         lastAttemptedKey: null,
         draft: false,
-        isLiveSession: false,
         deferredResumesBusy: false,
         resumeConversationBusy: false,
       }),

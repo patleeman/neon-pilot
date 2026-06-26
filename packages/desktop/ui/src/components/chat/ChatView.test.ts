@@ -1187,10 +1187,39 @@ describe('chat view streaming disclosure', () => {
     expect(html).not.toContain('ui-message-card-assistant');
   });
 
-  it('renders the system prompt as an optional collapsed transcript disclosure', () => {
+  it('hides the system prompt disclosure by default', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         systemPrompt: 'You are Patrick’s Neon Pilot.\nUse the repo instructions.',
+        toolDefinitions: [
+          {
+            name: 'bash',
+            description: 'Execute a bash command.',
+            parameters: { type: 'object', properties: { command: { type: 'string' } } },
+          },
+        ],
+        messages: [
+          {
+            type: 'user',
+            ts: '2026-03-11T18:00:00.000Z',
+            text: 'Start',
+          },
+        ],
+      }),
+    );
+
+    expect(html).not.toContain('data-context-type="system_prompt"');
+    expect(html).not.toContain('System prompt');
+    expect(html).not.toContain('Runtime instructions');
+    expect(html).not.toContain('Execute a bash command.');
+    expect(html).not.toContain('You are Patrick');
+  });
+
+  it('renders the system prompt as an optional collapsed transcript disclosure when enabled', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        systemPrompt: 'You are Patrick’s Neon Pilot.\nUse the repo instructions.',
+        showSystemPromptDisclosure: true,
         messages: [
           {
             type: 'user',
@@ -1218,6 +1247,7 @@ describe('chat view streaming disclosure', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         systemPrompt: 'Runtime instructions.',
+        showSystemPromptDisclosure: true,
         toolDefinitions: [
           {
             name: 'bash',
@@ -1239,6 +1269,7 @@ describe('chat view streaming disclosure', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         systemPrompt: 'Runtime instructions.',
+        showSystemPromptDisclosure: true,
         messages: [
           {
             type: 'summary',

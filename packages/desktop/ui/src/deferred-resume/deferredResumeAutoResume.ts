@@ -1,14 +1,6 @@
 import type { DeferredResumeSummary } from '../shared/types';
 
-export function buildDeferredResumeAutoResumeKey(input: {
-  resumes: DeferredResumeSummary[];
-  isLiveSession: boolean;
-  sessionFile?: string | null;
-}): string | null {
-  if (input.isLiveSession) {
-    return null;
-  }
-
+export function buildDeferredResumeAutoResumeKey(input: { resumes: DeferredResumeSummary[]; sessionFile?: string | null }): string | null {
   const sessionFile = input.sessionFile?.trim();
   if (!sessionFile) {
     return null;
@@ -30,11 +22,10 @@ export function shouldAutoResumeDeferredResumes(input: {
   autoResumeKey: string | null;
   lastAttemptedKey: string | null;
   draft: boolean;
-  isLiveSession: boolean;
   deferredResumesBusy: boolean;
   resumeConversationBusy: boolean;
 }): boolean {
-  if (input.draft || input.isLiveSession) {
+  if (input.draft) {
     return false;
   }
 

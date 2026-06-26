@@ -81,6 +81,7 @@ export interface ChatViewProps {
   bottomPaddingPx?: number;
   systemPrompt?: string | null;
   toolDefinitions?: LiveSessionToolDefinition[];
+  showSystemPromptDisclosure?: boolean;
   remoteControlled?: boolean;
   remoteControlStatus?: string | null;
   precomputedRenderItems?: TranscriptRenderItem[];
@@ -203,6 +204,7 @@ export const ChatView = memo(function ChatView({
   bottomPaddingPx = 96,
   systemPrompt = null,
   toolDefinitions = [],
+  showSystemPromptDisclosure = false,
   remoteControlled = false,
   remoteControlStatus = null,
   precomputedRenderItems,
@@ -490,7 +492,7 @@ export const ChatView = memo(function ChatView({
     }
     return count;
   })();
-  const hasSystemPromptContext = Boolean(systemPrompt?.trim()) || toolDefinitions.length > 0;
+  const hasSystemPromptContext = showSystemPromptDisclosure && (Boolean(systemPrompt?.trim()) || toolDefinitions.length > 0);
   const shouldGroupIntroContext = !shouldWindowTranscript && (hasSystemPromptContext || leadingContextItemCount > 0 || remoteControlled);
   const introContextItems = shouldGroupIntroContext ? renderItems.slice(0, leadingContextItemCount) : [];
   const transcriptItems = shouldGroupIntroContext ? renderItems.slice(leadingContextItemCount) : renderItems;

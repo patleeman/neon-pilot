@@ -3639,7 +3639,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         autoResumeKey: deferredResumeAutoResumeKey,
         lastAttemptedKey: attemptedDeferredResumeAutoResumeKeyRef.current,
         draft,
-        isLiveSession,
         deferredResumesBusy,
         resumeConversationBusy,
       })

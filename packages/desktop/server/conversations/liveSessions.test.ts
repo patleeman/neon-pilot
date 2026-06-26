@@ -15,6 +15,7 @@ import {
   compactSession,
   destroySession,
   ensureSessionFileExists,
+  executeSessionBash,
   exportSessionHtml,
   getLiveSessionForkEntries,
   getLiveSessions,
@@ -104,6 +105,41 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+describe('executeSessionBash', () => {
+  it('finalizes sequential cwd-backed bash executions and publishes file changes', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pa-live-bash-'));
+    tempDirs.push(dir);
+    const appendMessage = vi.fn();
+    const events: AppEvent[] = [];
+    const unsubscribe = subscribeAppEvents((event) => events.push(event));
+    try {
+      setLiveEntry('session-bash-finalize', {
+        cwd: dir,
+        title: 'New Conversation',
+        session: {
+          isStreaming: false,
+          isBashRunning: false,
+          state: { messages: [] },
+          sessionManager: { appendMessage },
+          getSessionStats: () => ({ tokens: 0, cost: 0 }),
+        },
+      });
+
+      await expect(executeSessionBash('session-bash-finalize', 'printf first')).resolves.toMatchObject({ exitCode: 0 });
+      await expect(executeSessionBash('session-bash-finalize', 'printf second')).resolves.toMatchObject({ exitCode: 0 });
+    } finally {
+      unsubscribe();
+    }
+
+    expect(appendMessage).toHaveBeenCalledTimes(2);
+    expect(appendMessage.mock.calls.map((call) => call[0])).toEqual([
+      expect.objectContaining({ role: 'bashExecution', command: 'printf first', output: 'first', exitCode: 0 }),
+      expect.objectContaining({ role: 'bashExecution', command: 'printf second', output: 'second', exitCode: 0 }),
+    ]);
+    expect(events.filter((event) => event.type === 'session_file_changed' && event.sessionId === 'session-bash-finalize')).toHaveLength(2);
+  });
 });
 
 describe('resolveLastCompletedConversationEntryId', () => {
@@ -1165,6 +1201,7 @@ describe('live session subscriptions', () => {
       totalBlocks: 3,
       isStreaming: true,
       goalState: null,
+      isCompacting: false,
       blocks: [
         {
           type: 'user',
@@ -1560,6 +1597,7 @@ describe('live session subscriptions', () => {
       totalBlocks: 5,
       isStreaming: true,
       goalState: null,
+      isCompacting: false,
       blocks: [
         {
           type: 'user',
@@ -2062,6 +2100,7 @@ describe('live session subscriptions', () => {
       totalBlocks: 2,
       isStreaming: false,
       goalState: null,
+      isCompacting: false,
       blocks: [
         {
           type: 'summary',
@@ -2138,6 +2177,7 @@ describe('live session subscriptions', () => {
       totalBlocks: 2,
       isStreaming: false,
       goalState: null,
+      isCompacting: false,
       blocks: [
         {
           type: 'summary',
@@ -2206,6 +2246,7 @@ describe('live session subscriptions', () => {
       totalBlocks: 2,
       isStreaming: false,
       goalState: null,
+      isCompacting: false,
       blocks: [
         {
           type: 'summary',
@@ -2276,6 +2317,7 @@ describe('live session subscriptions', () => {
       totalBlocks: 1,
       isStreaming: false,
       goalState: null,
+      isCompacting: false,
       blocks: [
         {
           type: 'summary',
@@ -2370,6 +2412,7 @@ describe('live session subscriptions', () => {
       totalBlocks: 4,
       isStreaming: false,
       goalState: null,
+      isCompacting: false,
       blocks: [
         {
           type: 'user',
