@@ -744,6 +744,33 @@ describe('ConversationPage lazy composer metadata', () => {
     expect(setTitle).toHaveBeenCalledWith('conv-regression', 'Header renamed conversation');
   });
 
+  it('hides internal header rename failures while preserving the edit draft', async () => {
+    vi.useRealTimers();
+    apiMock.renameConversation.mockRejectedValue(
+      new Error(
+        'Error: Local API route did not complete for PATCH /api/conversations/conv-regression/title at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/app/localApi.js:132:20)',
+      ),
+    );
+    apiMock.sessionDetail.mockResolvedValue(regressionBootstrapData.sessionDetail);
+
+    renderConversationPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Rename conversation: Regression conversation' }));
+
+    const titleInput = screen.getByPlaceholderText('Name this conversation') as HTMLInputElement;
+    fireEvent.change(titleInput, { target: { value: 'Rename failure stays editable' } });
+    fireEvent.keyDown(titleInput, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(apiMock.renameConversation).toHaveBeenCalledWith('conv-regression', 'Rename failure stays editable', '');
+    });
+    expect(await screen.findByText('Could not rename this conversation. Try again.')).toBeTruthy();
+    expect((screen.getByPlaceholderText('Name this conversation') as HTMLInputElement).value).toBe('Rename failure stays editable');
+    expect(document.body.textContent ?? '').not.toMatch(
+      /Local API route did not complete|\/api\/conversations|file:\/\/|localApi\.js|Module\.ep/i,
+    );
+  });
+
   it('does not write local stream running state into the global session store', async () => {
     desktopConversationState.mode = 'local';
     desktopConversationState.active = true;
