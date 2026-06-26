@@ -1110,7 +1110,7 @@ export function WorkspaceExplorer({
                         node={nodes[entry.path]}
                         nodes={nodes}
                         onToggle={toggleDirectory}
-                        onSelect={selectFile}
+                        onSelect={(entry) => openWorkspaceFile(entry.path)}
                         onDraftPrompt={onDraftPrompt}
                         onCreateFile={(entry) => createPath('file', entry.path)}
                         onCreateFolder={(entry) => createPath('folder', entry.path)}

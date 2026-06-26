@@ -851,6 +851,49 @@ describe('formatWorkspaceEntrySize', () => {
     });
   });
 
+  it('opens files from the rail-only file tree through the workbench detail callback', async () => {
+    apiMocks.workspaceTree.mockResolvedValue({
+      root: '/repo',
+      rootName: 'repo',
+      rootKind: 'git',
+      branch: 'main',
+      changes: [],
+      entries: [{ path: 'notes.md', name: 'notes.md', kind: 'file', size: 11, gitStatus: null, descendantGitStatusCount: null }],
+    });
+    const onOpenFile = vi.fn();
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(
+        React.createElement(WorkspaceExplorer, {
+          cwd: '/repo',
+          railOnly: true,
+          onDraftPrompt: vi.fn(),
+          onOpenFile,
+        }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const fileButton = await vi.waitFor(() => {
+      const button = Array.from(container.querySelectorAll('button')).find((entry) => entry.textContent?.includes('notes.md'));
+      expect(button).toBeTruthy();
+      return button as HTMLButtonElement;
+    });
+
+    act(() => {
+      fileButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(onOpenFile).toHaveBeenCalledWith({ cwd: '/repo', path: 'notes.md' });
+    expect(apiMocks.workspaceFile).not.toHaveBeenCalled();
+  });
+
   it('keeps create file prompts open with a readable error when the name already exists', async () => {
     apiMocks.workspaceTree.mockResolvedValue({
       root: '/repo',
