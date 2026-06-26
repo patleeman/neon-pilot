@@ -1,3 +1,4 @@
+import type { SseEvent } from '../conversations/liveSessionEvents.js';
 import {
   attachGatewayConversation,
   findGatewayChatTarget,
@@ -108,6 +109,7 @@ export interface TelegramGatewayRuntimeDependencies {
     text: string;
     images?: Array<{ data: string; mimeType: string; name?: string }>;
   }) => Promise<void>;
+  subscribeConversationEvents?: (conversationId: string, listener: (event: SseEvent) => void) => (() => void) | null;
   transcribeAudio?: (input: { dataBase64: string; mimeType?: string; fileName?: string; language?: string }) => Promise<{ text: string }>;
   renameConversation: (conversationId: string, title: string) => Promise<void> | void;
   compactConversation: (conversationId: string) => Promise<void>;
@@ -122,6 +124,13 @@ export interface TelegramGatewayRuntimeDependencies {
 
 const TYPING_INTERVAL_MS = 4_000;
 const TELEGRAM_MESSAGE_LIMIT = 4_096;
+const TELEGRAM_TOOL_STATUS_LIMIT = 180;
+
+export interface TelegramToolStatus {
+  toolName: string;
+  summary: string;
+  status: 'running' | 'done' | 'error';
+}
 
 class TypingIndicator {
   private timer: NodeJS.Timeout | null = null;
@@ -148,6 +157,9 @@ export class TelegramGatewayRuntime {
   private nextOffset = 0;
   private typingIndicators = new Map<string, TypingIndicator>();
   private pendingStatusMessages = new Map<string, { chatId: string; messageId: number }>();
+  private streamSubscriptions = new Map<string, () => void>();
+  private toolStatuses = new Map<string, Map<string, TelegramToolStatus>>();
+  private deliveredToolStatusKeys = new Map<string, Set<string>>();
 
   constructor(private readonly dependencies: TelegramGatewayRuntimeDependencies) {}
 
@@ -167,6 +179,10 @@ export class TelegramGatewayRuntime {
     this.abortController = null;
     for (const indicator of this.typingIndicators.values()) indicator.stop();
     this.typingIndicators.clear();
+    for (const unsubscribe of this.streamSubscriptions.values()) unsubscribe();
+    this.streamSubscriptions.clear();
+    this.toolStatuses.clear();
+    this.deliveredToolStatusKeys.clear();
   }
 
   async processUpdate(update: TelegramUpdate): Promise<void> {
@@ -216,6 +232,7 @@ export class TelegramGatewayRuntime {
     if (statusMessage?.message_id) {
       this.pendingStatusMessages.set(target.conversationId, { chatId: externalChatId, messageId: statusMessage.message_id });
     }
+    this.startConversationEventStream(target.conversationId);
     try {
       const voiceTranscript = message.voice ? await this.transcribeTelegramVoice(message.voice) : undefined;
       if (voiceTranscript?.text) {
@@ -227,9 +244,11 @@ export class TelegramGatewayRuntime {
         text: promptText,
         images,
       });
+      this.startConversationEventStream(target.conversationId);
     } catch (error) {
       this.stopTyping(externalChatId);
       this.pendingStatusMessages.delete(target.conversationId);
+      this.stopConversationEventStream(target.conversationId);
       const failure = error instanceof Error ? error.message : String(error);
       if (statusMessage?.message_id) {
         await this.editMessage(externalChatId, statusMessage.message_id, `Telegram prompt failed: ${failure}`);
@@ -254,6 +273,7 @@ export class TelegramGatewayRuntime {
     if (!target) return false;
 
     this.stopTyping(target.externalChatId);
+    this.stopConversationEventStream(input.conversationId);
     const pending = this.pendingStatusMessages.get(input.conversationId);
     if (pending) {
       this.pendingStatusMessages.delete(input.conversationId);
@@ -273,6 +293,66 @@ export class TelegramGatewayRuntime {
       message: `Delivered assistant reply to ${target.externalChatLabel || target.externalChatId}`,
     });
     return true;
+  }
+
+  private startConversationEventStream(conversationId: string): void {
+    if (this.streamSubscriptions.has(conversationId)) return;
+    const unsubscribe = this.dependencies.subscribeConversationEvents?.(conversationId, (event) => {
+      void this.handleConversationStreamEvent(conversationId, event).catch(() => undefined);
+    });
+    if (!unsubscribe) return;
+    this.streamSubscriptions.set(conversationId, unsubscribe);
+  }
+
+  private stopConversationEventStream(conversationId: string): void {
+    this.streamSubscriptions.get(conversationId)?.();
+    this.streamSubscriptions.delete(conversationId);
+    this.toolStatuses.delete(conversationId);
+    this.deliveredToolStatusKeys.delete(conversationId);
+  }
+
+  private async handleConversationStreamEvent(conversationId: string, event: SseEvent): Promise<void> {
+    if (event.type === 'tool_start') {
+      const statuses = this.toolStatuses.get(conversationId) ?? new Map<string, TelegramToolStatus>();
+      statuses.set(event.toolCallId, {
+        toolName: event.toolName,
+        summary: formatTelegramToolSummary(event.toolName, event.args),
+        status: 'running',
+      });
+      this.toolStatuses.set(conversationId, statuses);
+      await this.sendToolStatus(conversationId, event.toolCallId, 'start');
+      return;
+    }
+
+    if (event.type === 'tool_end') {
+      const statuses = this.toolStatuses.get(conversationId) ?? new Map<string, TelegramToolStatus>();
+      const existing = statuses.get(event.toolCallId);
+      statuses.set(event.toolCallId, {
+        toolName: event.toolName,
+        summary: existing?.summary || formatTelegramToolSummary(event.toolName, undefined),
+        status: event.isError ? 'error' : 'done',
+      });
+      this.toolStatuses.set(conversationId, statuses);
+      await this.sendToolStatus(conversationId, event.toolCallId, 'end');
+      return;
+    }
+
+    if (event.type === 'turn_end' || event.type === 'agent_end') {
+      this.stopConversationEventStream(conversationId);
+    }
+  }
+
+  private async sendToolStatus(conversationId: string, toolCallId: string, phase: 'start' | 'end'): Promise<void> {
+    const pending = this.pendingStatusMessages.get(conversationId);
+    if (!pending) return;
+    const status = this.toolStatuses.get(conversationId)?.get(toolCallId);
+    if (!status) return;
+    const statusKey = `${toolCallId}:${phase}:${status.status}`;
+    const delivered = this.deliveredToolStatusKeys.get(conversationId) ?? new Set<string>();
+    if (delivered.has(statusKey)) return;
+    delivered.add(statusKey);
+    this.deliveredToolStatusKeys.set(conversationId, delivered);
+    await this.sendMessage(pending.chatId, renderTelegramToolStatus(status));
   }
 
   private isMessageApproved(input: { externalChatId: string; externalUserId?: string; externalChatLabel: string }): boolean {
@@ -796,6 +876,18 @@ export function buildTelegramPromptText(input: { text?: string; hasPhoto?: boole
   return parts.join('\n\n').trim() || 'Please review this Telegram message.';
 }
 
+export function renderTelegramToolStatus(status: TelegramToolStatus): string {
+  const marker = status.status === 'running' ? '🔧' : status.status === 'error' ? '⚠️' : '✓';
+  const state = status.status === 'running' ? 'Running' : status.status === 'error' ? 'Failed' : 'Done';
+  return `${marker} ${state}: ${status.summary}`;
+}
+
+export function formatTelegramToolSummary(toolName: string, args: unknown): string {
+  const normalizedName = normalizeTelegramToolName(toolName);
+  const detail = readTelegramToolDetail(normalizedName, args);
+  return truncateTelegramStatus(detail ? `${normalizedName}: ${detail}` : normalizedName, TELEGRAM_TOOL_STATUS_LIMIT);
+}
+
 export function splitTelegramMessage(text: string): string[] {
   if (text.length <= TELEGRAM_MESSAGE_LIMIT * 0.8) return [text];
   const chunks: string[] = [];
@@ -809,6 +901,55 @@ export function splitTelegramMessage(text: string): string[] {
   }
   if (remaining) chunks.push(remaining);
   return chunks;
+}
+
+function normalizeTelegramToolName(toolName: string): string {
+  const trimmed = toolName.trim();
+  if (!trimmed) return 'tool';
+  const parts = trimmed.split('.');
+  return parts.at(-1) || trimmed;
+}
+
+function readTelegramToolDetail(toolName: string, args: unknown): string {
+  if (typeof args === 'string') return args.trim();
+  if (!args || typeof args !== 'object') return '';
+  const record = args as Record<string, unknown>;
+  const preferredKeys =
+    toolName === 'bash' || toolName === 'exec_command' || toolName === 'shell'
+      ? ['cmd', 'command', 'script']
+      : ['query', 'q', 'path', 'file', 'url', 'message', 'text', 'name', 'action'];
+  for (const key of preferredKeys) {
+    const value = readShortTelegramValue(record[key]);
+    if (value) return value;
+  }
+  for (const [key, value] of Object.entries(record)) {
+    const rendered = readShortTelegramValue(value);
+    if (rendered) return `${key}=${rendered}`;
+  }
+  return '';
+}
+
+function readShortTelegramValue(value: unknown): string {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    const first = value.map(readShortTelegramValue).find(Boolean);
+    return first ? `[${first}]` : '';
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    for (const key of ['q', 'query', 'path', 'url', 'text', 'name']) {
+      const rendered = readShortTelegramValue(record[key]);
+      if (rendered) return rendered;
+    }
+  }
+  return '';
+}
+
+function truncateTelegramStatus(value: string, limit: number): string {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, Math.max(0, limit - 1)).trimEnd()}…`;
 }
 
 function renderTelegramInlineMarkdown(text: string): string {

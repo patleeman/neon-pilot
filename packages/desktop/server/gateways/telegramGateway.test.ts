@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { SseEvent } from '../conversations/liveSessionEvents.js';
+
 const state = vi.hoisted(() => ({
   attachGatewayConversation: vi.fn(),
   findGatewayChatTarget: vi.fn(),
@@ -16,7 +18,14 @@ const commands = vi.hoisted(() => ({
 vi.mock('./gatewayState.js', () => state);
 vi.mock('./telegramCommands.js', () => commands);
 
-import { buildTelegramPromptText, renderTelegramHtml, splitTelegramMessage, TelegramGatewayRuntime } from './telegramGateway.js';
+import {
+  buildTelegramPromptText,
+  formatTelegramToolSummary,
+  renderTelegramHtml,
+  renderTelegramToolStatus,
+  splitTelegramMessage,
+  TelegramGatewayRuntime,
+} from './telegramGateway.js';
 
 describe('TelegramGatewayRuntime', () => {
   beforeEach(() => {
@@ -58,6 +67,16 @@ describe('TelegramGatewayRuntime', () => {
     expect(renderTelegramHtml('| Name | Status |\n| --- | --- |\n| Gateway | Ready |')).toBe('• Name: Gateway\n  Status: Ready');
     expect(renderTelegramHtml('```ts\nconst x = 1 < 2;\n```')).toBe('<pre>ts\nconst x = 1 &lt; 2;\n</pre>');
     expect(splitTelegramMessage('a'.repeat(9000)).length).toBeGreaterThan(1);
+  });
+
+  it('formats compact Telegram tool status lines', () => {
+    expect(formatTelegramToolSummary('bash', { cmd: 'git status --short' })).toBe('bash: git status --short');
+    expect(formatTelegramToolSummary('web.run', { search_query: [{ q: 'Hermes Agent Telegram speech to text' }] })).toBe(
+      'run: search_query=[Hermes Agent Telegram speech to text]',
+    );
+    expect(renderTelegramToolStatus({ toolName: 'bash', summary: 'bash: pnpm test', status: 'running' })).toBe(
+      '🔧 Running: bash: pnpm test',
+    );
   });
 
   it('ignores updates without messages and creates/binds conversations for new chats', async () => {
@@ -497,6 +516,60 @@ describe('TelegramGatewayRuntime', () => {
       'https://api.telegram.org/bottoken/editMessageText',
       expect.objectContaining({ body: expect.stringContaining('<b>done</b>') }),
     );
+  });
+
+  it('sends new Telegram messages for streamed tool calls', async () => {
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    let streamListener: ((event: SseEvent) => void) | undefined;
+    const unsubscribe = vi.fn();
+    const d = deps({
+      subscribeConversationEvents: vi.fn((_conversationId: string, listener: (event: SseEvent) => void) => {
+        streamListener = listener;
+        return unsubscribe;
+      }),
+      fetch: vi.fn(async (url: string) => ({
+        ok: true,
+        json: async () => ({
+          ok: true,
+          result: url.endsWith('/sendMessage') ? { message_id: 42 } : true,
+        }),
+      })),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: 'hello' } });
+    expect(d.subscribeConversationEvents).toHaveBeenCalledWith('conv-1', expect.any(Function));
+
+    const editCallsBeforeTools = d.fetch.mock.calls.filter(([url]) => String(url).endsWith('/editMessageText')).length;
+
+    streamListener?.({ type: 'tool_start', toolCallId: 'tool-1', toolName: 'bash', args: { cmd: 'pnpm test:dictation' } });
+    await vi.waitFor(() =>
+      expect(d.fetch).toHaveBeenCalledWith(
+        'https://api.telegram.org/bottoken/sendMessage',
+        expect.objectContaining({ body: expect.stringContaining('Running: bash: pnpm test:dictation') }),
+      ),
+    );
+    expect(d.fetch.mock.calls.filter(([url]) => String(url).endsWith('/editMessageText'))).toHaveLength(editCallsBeforeTools);
+
+    streamListener?.({
+      type: 'tool_end',
+      toolCallId: 'tool-1',
+      toolName: 'bash',
+      isError: false,
+      durationMs: 12,
+      output: 'ok',
+    });
+    await vi.waitFor(() =>
+      expect(d.fetch).toHaveBeenCalledWith(
+        'https://api.telegram.org/bottoken/sendMessage',
+        expect.objectContaining({ body: expect.stringContaining('Done: bash: pnpm test:dictation') }),
+      ),
+    );
+    expect(d.fetch.mock.calls.filter(([url]) => String(url).endsWith('/editMessageText'))).toHaveLength(editCallsBeforeTools);
+
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
+    await runtime.deliverAssistantReply({ conversationId: 'conv-1', text: 'final reply' });
+    expect(unsubscribe).toHaveBeenCalled();
   });
 
   it('falls back to a new message when editing the working message fails', async () => {

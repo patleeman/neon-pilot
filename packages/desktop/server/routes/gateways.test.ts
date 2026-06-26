@@ -39,9 +39,10 @@ const runtime = vi.hoisted(() => ({
     start: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
     deliverAssistantReply: ReturnType<typeof vi.fn>;
+    dependencies: Record<string, unknown>;
   }>,
-  TelegramGatewayRuntime: vi.fn(function MockTelegramGatewayRuntime(this: unknown) {
-    const instance = { start: vi.fn(), stop: vi.fn(), deliverAssistantReply: vi.fn(async () => true) };
+  TelegramGatewayRuntime: vi.fn(function MockTelegramGatewayRuntime(this: unknown, dependencies: Record<string, unknown>) {
+    const instance = { start: vi.fn(), stop: vi.fn(), deliverAssistantReply: vi.fn(async () => true), dependencies };
     runtime.instances.push(instance);
     return instance;
   }),
@@ -50,6 +51,7 @@ const lifecycle = vi.hoisted(() => ({ registerLiveSessionLifecycleHandler: vi.fn
 const liveSessions = vi.hoisted(() => ({
   getAvailableModelObjects: vi.fn(async () => []),
   renameSession: vi.fn(),
+  subscribe: vi.fn(() => vi.fn()),
   updateLiveSessionModelPreferences: vi.fn(),
 }));
 const conversationService = vi.hoisted(() => ({
@@ -119,6 +121,21 @@ describe('gateway routes', () => {
   function response() {
     return { status: vi.fn().mockReturnThis(), json: vi.fn() };
   }
+
+  it('passes live session events into the Telegram runtime', () => {
+    register();
+    const instance = ensureTelegramRuntime();
+    const listener = vi.fn();
+    const unsubscribe = vi.fn();
+    liveSessions.subscribe.mockReturnValueOnce(unsubscribe);
+
+    const result = (
+      instance as unknown as { dependencies: { subscribeConversationEvents?: typeof liveSessions.subscribe } }
+    ).dependencies.subscribeConversationEvents?.('conv-1', listener);
+
+    expect(result).toBe(unsubscribe);
+    expect(liveSessions.subscribe).toHaveBeenCalledWith('conv-1', listener, { tailBlocks: 0 });
+  });
 
   function latestRuntime() {
     return runtime.instances[runtime.instances.length - 1];

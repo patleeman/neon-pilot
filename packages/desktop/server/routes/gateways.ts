@@ -7,7 +7,12 @@ import {
   submitLiveSessionPromptCapability,
 } from '../conversations/liveSessionCapability.js';
 import { registerLiveSessionLifecycleHandler } from '../conversations/liveSessionLifecycle.js';
-import { getAvailableModelObjects, renameSession, updateLiveSessionModelPreferences } from '../conversations/liveSessions.js';
+import {
+  getAvailableModelObjects,
+  renameSession,
+  subscribe as subscribeLiveSessionEvents,
+  updateLiveSessionModelPreferences,
+} from '../conversations/liveSessions.js';
 import type { TelegramGatewayHostApi } from '../extensions/backendApi/gateways.js';
 import { TELEGRAM_GATEWAY_HOST_API_GLOBAL } from '../extensions/backendApi/gateways.js';
 import { listExtensionGatewayProviderRegistrations } from '../extensions/extensionRegistry.js';
@@ -215,6 +220,7 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
         liveSessionContext(context),
       );
     },
+    subscribeConversationEvents: (conversationId, listener) => subscribeLiveSessionEvents(conversationId, listener, { tailBlocks: 0 }),
     transcribeAudio,
     renameConversation: (conversationId, title) => renameSession(conversationId, title),
     compactConversation: async (conversationId) => {

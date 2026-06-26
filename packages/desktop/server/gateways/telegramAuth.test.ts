@@ -5,9 +5,14 @@ const authStorage = vi.hoisted(() => ({
   create: vi.fn(),
 }));
 const secrets = vi.hoisted(() => ({ deleteSecret: vi.fn(), resolveSecret: vi.fn(), setSecret: vi.fn() }));
+const providerSecrets = vi.hoisted(() => ({
+  deleteProviderApiKeySecret: vi.fn(),
+  resolveProviderApiKey: vi.fn(),
+  setProviderApiKeySecret: vi.fn(),
+}));
 
 vi.mock('@earendil-works/pi-coding-agent', () => ({ AuthStorage: { create: authStorage.create } }));
-vi.mock('../secrets/secretStore.js', () => secrets);
+vi.mock('../secrets/secretStore.js', () => ({ ...secrets, ...providerSecrets }));
 
 import { readTelegramBotToken, removeTelegramBotToken, writeTelegramBotToken } from './telegramAuth.js';
 
@@ -16,7 +21,18 @@ describe('telegramAuth', () => {
     vi.clearAllMocks();
     authStorage.create.mockReturnValue(authStorage.instance);
     authStorage.instance.get.mockReturnValue(null);
+    providerSecrets.resolveProviderApiKey.mockReturnValue(null);
     secrets.resolveSecret.mockReturnValue(null);
+  });
+
+  it('prefers host-owned provider token storage', () => {
+    providerSecrets.resolveProviderApiKey.mockReturnValue(' provider-token ');
+    secrets.resolveSecret.mockReturnValue(' extension-token ');
+
+    expect(readTelegramBotToken('/auth.json', '/state')).toBe('provider-token');
+    expect(providerSecrets.resolveProviderApiKey).toHaveBeenCalledWith('telegram', '/state');
+    expect(secrets.resolveSecret).not.toHaveBeenCalled();
+    expect(authStorage.create).not.toHaveBeenCalled();
   });
 
   it('prefers token from secret storage over legacy auth file credentials', () => {
@@ -53,23 +69,36 @@ describe('telegramAuth', () => {
     expect(readTelegramBotToken('/auth.json', '/state')).toBeNull();
   });
 
-  it('writes token to secret storage and removes legacy auth entry', () => {
+  it('writes token to host-owned provider secret storage and removes legacy auth entry', () => {
     writeTelegramBotToken('/auth.json', '/state', ' token ');
 
-    expect(secrets.setSecret).toHaveBeenCalledWith('system-gateways', 'telegramBotToken', 'token', '/state');
+    expect(providerSecrets.setProviderApiKeySecret).toHaveBeenCalledWith('telegram', 'token', '/state');
+    expect(secrets.setSecret).not.toHaveBeenCalled();
     expect(authStorage.create).toHaveBeenCalledWith('/auth.json');
     expect(authStorage.instance.remove).toHaveBeenCalledWith('telegram');
   });
 
   it('rejects blank tokens', () => {
     expect(() => writeTelegramBotToken('/auth.json', '/state', '   ')).toThrow('Telegram bot token required');
-    expect(secrets.setSecret).not.toHaveBeenCalled();
+    expect(providerSecrets.setProviderApiKeySecret).not.toHaveBeenCalled();
   });
 
-  it('removes token from secret and legacy auth storage', () => {
+  it('removes token from host and registered extension secret storage plus legacy auth storage', () => {
     removeTelegramBotToken('/auth.json', '/state');
 
+    expect(providerSecrets.deleteProviderApiKeySecret).toHaveBeenCalledWith('telegram', '/state');
     expect(secrets.deleteSecret).toHaveBeenCalledWith('system-gateways', 'telegramBotToken', '/state');
+    expect(authStorage.instance.remove).toHaveBeenCalledWith('telegram');
+  });
+
+  it('removes token when the optional extension secret declaration is absent', () => {
+    secrets.deleteSecret.mockImplementation(() => {
+      throw new Error('Secret "system-gateways/telegramBotToken" is not registered by an enabled extension.');
+    });
+
+    removeTelegramBotToken('/auth.json', '/state');
+
+    expect(providerSecrets.deleteProviderApiKeySecret).toHaveBeenCalledWith('telegram', '/state');
     expect(authStorage.instance.remove).toHaveBeenCalledWith('telegram');
   });
 });

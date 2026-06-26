@@ -1,6 +1,12 @@
 import { AuthStorage } from '@earendil-works/pi-coding-agent';
 
-import { deleteSecret, resolveSecret, setSecret } from '../secrets/secretStore.js';
+import {
+  deleteProviderApiKeySecret,
+  deleteSecret,
+  resolveProviderApiKey,
+  resolveSecret,
+  setProviderApiKeySecret,
+} from '../secrets/secretStore.js';
 
 const TELEGRAM_AUTH_PROVIDER = 'telegram';
 export const TELEGRAM_SECRET_EXTENSION = 'system-gateways';
@@ -16,6 +22,9 @@ function readLegacyTelegramBotToken(authFile: string): string | null {
 }
 
 export function readTelegramBotToken(authFile: string, stateRoot: string): string | null {
+  const providerToken = resolveProviderApiKey(TELEGRAM_AUTH_PROVIDER, stateRoot)?.trim();
+  if (providerToken) return providerToken;
+
   let token: string | undefined;
   try {
     token = resolveSecret(TELEGRAM_SECRET_EXTENSION, TELEGRAM_SECRET_ID, stateRoot);
@@ -37,11 +46,16 @@ export function writeTelegramBotToken(authFile: string, stateRoot: string, token
   if (!normalized) {
     throw new Error('Telegram bot token required');
   }
-  setSecret(TELEGRAM_SECRET_EXTENSION, TELEGRAM_SECRET_ID, normalized, stateRoot);
+  setProviderApiKeySecret(TELEGRAM_AUTH_PROVIDER, normalized, stateRoot);
   AuthStorage.create(authFile).remove(TELEGRAM_AUTH_PROVIDER);
 }
 
 export function removeTelegramBotToken(authFile: string, stateRoot: string): void {
-  deleteSecret(TELEGRAM_SECRET_EXTENSION, TELEGRAM_SECRET_ID, stateRoot);
+  deleteProviderApiKeySecret(TELEGRAM_AUTH_PROVIDER, stateRoot);
+  try {
+    deleteSecret(TELEGRAM_SECRET_EXTENSION, TELEGRAM_SECRET_ID, stateRoot);
+  } catch (error) {
+    if (!isMissingTelegramSecretRegistrationError(error)) throw error;
+  }
   AuthStorage.create(authFile).remove(TELEGRAM_AUTH_PROVIDER);
 }

@@ -60,6 +60,46 @@ function extractAssistantTextContent(content: unknown): string {
     .join('');
 }
 
+function extractLatestAssistantTextFromMessages(messages: unknown): string {
+  if (!Array.isArray(messages)) return '';
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (!isRecord(message) || message.role !== 'assistant') continue;
+    const text = extractAssistantTextContent(message.content);
+    if (text) return text;
+  }
+  return '';
+}
+
+function extractLatestAssistantTextFromSessionFile(session: AgentSession): string {
+  const sessionFile = resolveLiveSessionFile(session, { ensurePersisted: true });
+  if (!sessionFile) return '';
+
+  let latestText = '';
+  try {
+    for (const line of readFileSync(sessionFile, 'utf-8').split('\n')) {
+      if (!line.trim()) continue;
+      const entry = JSON.parse(line) as unknown;
+      if (!isRecord(entry) || entry.type !== 'message' || !isRecord(entry.message) || entry.message.role !== 'assistant') continue;
+      const text = extractAssistantTextContent(entry.message.content);
+      if (text) latestText = text;
+    }
+  } catch {
+    return '';
+  }
+  return latestText;
+}
+
+function extractLatestAssistantTextForAgentEnd(session: AgentSession, event: AgentSessionEvent): string {
+  const eventRecord: Record<string, unknown> = isRecord(event) ? event : {};
+  return (
+    extractLatestAssistantTextFromMessages(eventRecord.messages) ||
+    extractLatestAssistantTextFromMessages((session as { messages?: unknown }).messages) ||
+    extractLatestAssistantTextFromMessages((session as { state?: { messages?: unknown } }).state?.messages) ||
+    extractLatestAssistantTextFromSessionFile(session)
+  );
+}
+
 function stringifyToolError(result: unknown): string | undefined {
   if (result == null) return undefined;
   if (typeof result === 'string') return result;
@@ -549,6 +589,8 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
       const finalText = extractAssistantTextContent(event.message.content);
       if (finalText && !suppressLiveEvent) {
         callbacks.broadcast(entry, { type: 'text_delta', delta: finalText });
+        entry.currentAssistantMessageText = finalText;
+        entry.currentAssistantMessageHadDelta = true;
       }
     }
   }
@@ -588,6 +630,14 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
   }
 
   if (event.type === 'agent_end') {
+    if (entry.currentAssistantMessageText !== undefined && !entry.currentAssistantMessageHadDelta) {
+      const finalText = extractLatestAssistantTextForAgentEnd(entry.session, event);
+      if (finalText && !suppressLiveEvent) {
+        callbacks.broadcast(entry, { type: 'text_delta', delta: finalText });
+        entry.currentAssistantMessageText = finalText;
+        entry.currentAssistantMessageHadDelta = true;
+      }
+    }
     const stats = readTraceStats(entry.session);
     if (stats) {
       persistStatsDelta(entry, stats, callbacks);

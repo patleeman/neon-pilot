@@ -352,6 +352,61 @@ describe('streaming lifecycle callbacks', () => {
     expect(textDeltas).toEqual([{ type: 'text_delta', delta: 'Final answer.' }]);
   });
 
+  it('recovers final assistant text on agent_end when the provider skips live deltas and message_end content', () => {
+    const entry = makeEntry();
+    const cbs = makeCallbacks();
+
+    handleLiveSessionEvent(entry, { type: 'message_start', message: { role: 'assistant', content: [] } } as unknown, cbs);
+    handleLiveSessionEvent(
+      entry,
+      {
+        type: 'agent_end',
+        messages: [
+          { role: 'user', content: [{ type: 'text', text: 'prompt' }] },
+          {
+            role: 'assistant',
+            content: [
+              { type: 'thinking', thinking: 'private thought' },
+              { type: 'text', text: 'Recovered final answer.' },
+            ],
+          },
+        ],
+      } as unknown,
+      cbs,
+    );
+
+    const textDeltas = cbs.broadcast.mock.calls.map((call: unknown[]) => call[1]).filter((event) => event?.type === 'text_delta');
+    const broadcastedTypes = cbs.broadcast.mock.calls.map((call: unknown[]) => call[1]?.type);
+    expect(textDeltas).toEqual([{ type: 'text_delta', delta: 'Recovered final answer.' }]);
+    expect(broadcastedTypes.indexOf('text_delta')).toBeLessThan(broadcastedTypes.indexOf('agent_end'));
+  });
+
+  it('does not duplicate agent_end recovered text after message_end already emitted the fallback', () => {
+    const entry = makeEntry();
+    const cbs = makeCallbacks();
+
+    handleLiveSessionEvent(entry, { type: 'message_start', message: { role: 'assistant', content: [] } } as unknown, cbs);
+    handleLiveSessionEvent(
+      entry,
+      {
+        type: 'message_end',
+        message: { role: 'assistant', stopReason: 'stop', content: [{ type: 'text', text: 'Final once.' }] },
+      } as unknown,
+      cbs,
+    );
+    handleLiveSessionEvent(
+      entry,
+      {
+        type: 'agent_end',
+        messages: [{ role: 'assistant', content: [{ type: 'text', text: 'Final once.' }] }],
+      } as unknown,
+      cbs,
+    );
+
+    const textDeltas = cbs.broadcast.mock.calls.map((call: unknown[]) => call[1]).filter((event) => event?.type === 'text_delta');
+    expect(textDeltas).toEqual([{ type: 'text_delta', delta: 'Final once.' }]);
+  });
+
   it('schedules context usage update on agent_start, message_update, and tool events', () => {
     const entry = makeEntry();
     const cbs = makeCallbacks();
