@@ -1981,6 +1981,38 @@ describe('useDesktopConversationState', () => {
     });
 
     expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hello' })]);
+
+    const perfStore = (
+      globalThis as typeof globalThis & {
+        __NEON_PILOT_APP_PERF__?: { streamCadenceSamples?: Array<Record<string, unknown>> };
+      }
+    ).__NEON_PILOT_APP_PERF__;
+    const flushSamples = (perfStore?.streamCadenceSamples ?? []).filter(
+      (sample) => sample.conversationId === 'conv-1' && sample.phase === 'flush',
+    );
+    expect(flushSamples.at(-1)).toEqual(
+      expect.objectContaining({
+        eventCount: 2,
+        textDeltaCount: 2,
+        textDeltaChars: 5,
+      }),
+    );
+
+    await act(async () => {
+      frameCallbacks[1]?.(performance.now());
+      await flushPromises();
+    });
+
+    const paintSamples = (perfStore?.streamCadenceSamples ?? []).filter(
+      (sample) => sample.conversationId === 'conv-1' && sample.phase === 'paint',
+    );
+    expect(paintSamples.at(-1)).toEqual(
+      expect.objectContaining({
+        eventCount: 2,
+        textDeltaCount: 2,
+        textDeltaChars: 5,
+      }),
+    );
   });
 
   it('ignores session file refreshes while the live stream channel is active', async () => {
@@ -2155,7 +2187,7 @@ describe('useDesktopConversationState', () => {
     });
 
     await act(async () => {
-      frameCallbacks[1]?.(performance.now());
+      frameCallbacks.at(-1)?.(performance.now());
       await flushPromises();
     });
 

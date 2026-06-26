@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '../client/api';
+import { recordConversationStreamCadence } from '../client/perfDiagnostics';
 import { getDesktopBridge } from '../desktop/desktopBridge';
 import { openDesktopRealtimeSocket } from '../desktop/desktopRealtimeConnection';
 import type {
@@ -27,6 +28,11 @@ const RUNNING_SESSION_RECOVERY_REFRESH_DELAYS_MS = [3000, 8000, 16000, 30000, 60
 const DESKTOP_CONVERSATION_STATE_REFRESH_EVENT = 'neon-pilot:desktop-conversation-state-refresh';
 const desktopConversationStateCache = new Map<string, DesktopConversationState>();
 const desktopConversationStateInflight = new Map<string, Promise<DesktopConversationState>>();
+
+interface PendingStreamEventRecord {
+  event: SseEvent;
+  receivedAtMs: number;
+}
 
 function desktopConversationStateFromAggregate(aggregate: ConversationAggregateState): DesktopConversationState {
   const state = !('conversation' in aggregate)
@@ -708,10 +714,11 @@ export function useDesktopConversationState(conversationId: string | null, optio
   const [error, setError] = useState<string | null>(null);
   const [connectVersion, setConnectVersion] = useState(0);
   const [subscriptionVersion, setSubscriptionVersion] = useState(0);
-  const pendingStreamEventsRef = useRef<SseEvent[]>([]);
+  const pendingStreamEventsRef = useRef<PendingStreamEventRecord[]>([]);
   const pendingStreamFrameRef = useRef<number | null>(null);
   const pendingStreamFlushTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const pendingStreamFlushDelayRef = useRef<number | null>(null);
+  const lastStreamCadenceFlushAtMsRef = useRef<number | null>(null);
   const reconnectRetryRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const postSendRefreshTimersRef = useRef<Array<ReturnType<typeof window.setTimeout>>>([]);
   const runningSessionRecoveryRefreshTimersRef = useRef<Array<ReturnType<typeof window.setTimeout>>>([]);
@@ -848,11 +855,12 @@ export function useDesktopConversationState(conversationId: string | null, optio
 
     const flushPendingStreamEvents = () => {
       clearPendingStreamFlush();
-      const events = pendingStreamEventsRef.current;
+      const eventRecords = pendingStreamEventsRef.current;
       pendingStreamEventsRef.current = [];
-      if (events.length === 0) {
+      if (eventRecords.length === 0) {
         return;
       }
+      const events = eventRecords.map((record) => record.event);
 
       const flushStartedAtMs = performance.now();
       let applied = false;
@@ -902,6 +910,57 @@ export function useDesktopConversationState(conversationId: string | null, optio
           metadata: { eventCounts, previousBlockCount, nextBlockCount },
         });
       }
+      if (applied || stateRef.current?.conversationId === conversationId) {
+        const cadenceRecords = eventRecords.filter(
+          ({ event }) => event.type === 'text_delta' || event.type === 'thinking_delta' || event.type === 'tool_update',
+        );
+        if (cadenceRecords.length > 0) {
+          const orderedCadenceRecords = [...cadenceRecords].sort((left, right) => left.receivedAtMs - right.receivedAtMs);
+          let maxInterEventGapMs = 0;
+          for (let index = 1; index < orderedCadenceRecords.length; index += 1) {
+            maxInterEventGapMs = Math.max(
+              maxInterEventGapMs,
+              orderedCadenceRecords[index].receivedAtMs - orderedCadenceRecords[index - 1].receivedAtMs,
+            );
+          }
+          const firstEventAtMs = orderedCadenceRecords[0].receivedAtMs;
+          const lastEventAtMs = orderedCadenceRecords.at(-1)?.receivedAtMs ?? firstEventAtMs;
+          const textDeltaRecords = orderedCadenceRecords.filter(({ event }) => event.type === 'text_delta');
+          const thinkingDeltaRecords = orderedCadenceRecords.filter(({ event }) => event.type === 'thinking_delta');
+          const toolUpdateCount = orderedCadenceRecords.filter(({ event }) => event.type === 'tool_update').length;
+          const textDeltaChars = textDeltaRecords.reduce(
+            (totalChars, { event }) => totalChars + (event.type === 'text_delta' ? event.delta.length : 0),
+            0,
+          );
+          const thinkingDeltaChars = thinkingDeltaRecords.reduce(
+            (totalChars, { event }) => totalChars + (event.type === 'thinking_delta' ? event.delta.length : 0),
+            0,
+          );
+          const previousFlushGapMs =
+            lastStreamCadenceFlushAtMsRef.current === null ? null : flushStartedAtMs - lastStreamCadenceFlushAtMsRef.current;
+          lastStreamCadenceFlushAtMsRef.current = flushStartedAtMs;
+          const cadenceInput = {
+            conversationId,
+            eventCount: events.length,
+            textDeltaCount: textDeltaRecords.length,
+            thinkingDeltaCount: thinkingDeltaRecords.length,
+            toolUpdateCount,
+            textDeltaChars,
+            thinkingDeltaChars,
+            firstEventAtMs,
+            lastEventAtMs,
+            flushedAtMs: flushStartedAtMs,
+            maxInterEventGapMs,
+            previousFlushGapMs,
+            streamBlockCountBefore: previousBlockCount,
+            streamBlockCountAfter: nextBlockCount,
+          };
+          recordConversationStreamCadence({ ...cadenceInput, phase: 'flush' });
+          window.requestAnimationFrame(() => {
+            recordConversationStreamCadence({ ...cadenceInput, phase: 'paint', paintAtMs: performance.now() });
+          });
+        }
+      }
       setError(null);
     };
 
@@ -936,7 +995,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       if (closed) {
         return;
       }
-      pendingStreamEventsRef.current.push(streamEvent);
+      pendingStreamEventsRef.current.push({ event: streamEvent, receivedAtMs: performance.now() });
       if (shouldFlushStreamEventImmediately(streamEvent)) {
         flushPendingStreamEvents();
       } else if (shouldFlushStreamEventOnFrame(streamEvent)) {
@@ -1139,6 +1198,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       socket?.close();
       clearPendingStreamFlush();
       pendingStreamEventsRef.current = [];
+      lastStreamCadenceFlushAtMsRef.current = null;
     };
   }, [
     bridge,

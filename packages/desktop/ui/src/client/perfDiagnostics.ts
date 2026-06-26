@@ -39,6 +39,32 @@ interface ChatRenderSample {
   meta: Record<string, unknown>;
 }
 
+type ConversationStreamCadencePhase = 'flush' | 'paint';
+
+interface ConversationStreamCadenceSample {
+  conversationId: string;
+  route: string | null;
+  recordedAt: string;
+  phase: ConversationStreamCadencePhase;
+  eventCount: number;
+  textDeltaCount: number;
+  thinkingDeltaCount: number;
+  toolUpdateCount: number;
+  textDeltaChars: number;
+  thinkingDeltaChars: number;
+  firstEventAtMs: number;
+  lastEventAtMs: number;
+  flushedAtMs: number;
+  flushDelayMs: number;
+  batchDurationMs: number;
+  maxInterEventGapMs: number;
+  previousFlushGapMs: number | null;
+  paintAtMs?: number;
+  paintDelayMs?: number;
+  streamBlockCountBefore?: number;
+  streamBlockCountAfter?: number;
+}
+
 interface ClientPerfSample {
   name: string;
   recordedAt: string;
@@ -70,6 +96,7 @@ interface PerfStore {
   apiSamples: PerfApiSample[];
   conversationOpenSamples: ConversationOpenPhaseSample[];
   chatRenderSamples: ChatRenderSample[];
+  streamCadenceSamples: ConversationStreamCadenceSample[];
   clientSamples: ClientPerfSample[];
   longTaskSamples: RendererLongTaskSample[];
   interactionSamples: RendererInteractionSample[];
@@ -95,6 +122,7 @@ const perfStore: PerfStore = {
   apiSamples: [],
   conversationOpenSamples: [],
   chatRenderSamples: [],
+  streamCadenceSamples: [],
   clientSamples: [],
   longTaskSamples: [],
   interactionSamples: [],
@@ -175,6 +203,60 @@ export function recordChatRenderTiming(input: {
   if (shouldLogPerfSamples()) {
     console.info('[pa-perf][chat-render]', sample);
   }
+}
+
+export function recordConversationStreamCadence(input: {
+  conversationId: string;
+  phase: ConversationStreamCadencePhase;
+  eventCount: number;
+  textDeltaCount: number;
+  thinkingDeltaCount?: number;
+  toolUpdateCount?: number;
+  textDeltaChars: number;
+  thinkingDeltaChars?: number;
+  firstEventAtMs: number;
+  lastEventAtMs: number;
+  flushedAtMs: number;
+  maxInterEventGapMs: number;
+  previousFlushGapMs?: number | null;
+  paintAtMs?: number;
+  streamBlockCountBefore?: number;
+  streamBlockCountAfter?: number;
+}): ConversationStreamCadenceSample {
+  const sample: ConversationStreamCadenceSample = {
+    conversationId: input.conversationId,
+    route: `${globalThis.location?.pathname ?? ''}${globalThis.location?.search ?? ''}`,
+    recordedAt: new Date().toISOString(),
+    phase: input.phase,
+    eventCount: Math.max(0, input.eventCount),
+    textDeltaCount: Math.max(0, input.textDeltaCount),
+    thinkingDeltaCount: Math.max(0, input.thinkingDeltaCount ?? 0),
+    toolUpdateCount: Math.max(0, input.toolUpdateCount ?? 0),
+    textDeltaChars: Math.max(0, input.textDeltaChars),
+    thinkingDeltaChars: Math.max(0, input.thinkingDeltaChars ?? 0),
+    firstEventAtMs: Math.max(0, input.firstEventAtMs),
+    lastEventAtMs: Math.max(0, input.lastEventAtMs),
+    flushedAtMs: Math.max(0, input.flushedAtMs),
+    flushDelayMs: Math.max(0, input.flushedAtMs - input.lastEventAtMs),
+    batchDurationMs: Math.max(0, input.lastEventAtMs - input.firstEventAtMs),
+    maxInterEventGapMs: Math.max(0, input.maxInterEventGapMs),
+    previousFlushGapMs:
+      typeof input.previousFlushGapMs === 'number' ? Math.max(0, input.previousFlushGapMs) : (input.previousFlushGapMs ?? null),
+    ...(typeof input.paintAtMs === 'number'
+      ? {
+          paintAtMs: Math.max(0, input.paintAtMs),
+          paintDelayMs: Math.max(0, input.paintAtMs - input.flushedAtMs),
+        }
+      : {}),
+    ...(typeof input.streamBlockCountBefore === 'number' ? { streamBlockCountBefore: input.streamBlockCountBefore } : {}),
+    ...(typeof input.streamBlockCountAfter === 'number' ? { streamBlockCountAfter: input.streamBlockCountAfter } : {}),
+  };
+  appendSample(perfStore.streamCadenceSamples, sample);
+  publishPerfStore();
+  if (shouldLogPerfSamples()) {
+    console.info('[pa-perf][stream-cadence]', sample);
+  }
+  return sample;
 }
 
 export function recordClientPerfTiming(input: {

@@ -45,6 +45,49 @@ describe('perfDiagnostics', () => {
     ]);
   });
 
+  it('records conversation stream cadence samples for frontend QA', async () => {
+    const { recordConversationStreamCadence } = await import('./perfDiagnostics');
+
+    recordConversationStreamCadence({
+      conversationId: 'conv-1',
+      phase: 'paint',
+      eventCount: 3,
+      textDeltaCount: 2,
+      thinkingDeltaCount: 1,
+      toolUpdateCount: 0,
+      textDeltaChars: 5,
+      thinkingDeltaChars: 4,
+      firstEventAtMs: 100,
+      lastEventAtMs: 116,
+      flushedAtMs: 132,
+      maxInterEventGapMs: 12,
+      previousFlushGapMs: null,
+      paintAtMs: 148,
+      streamBlockCountBefore: 1,
+      streamBlockCountAfter: 2,
+    });
+
+    const perf = (
+      globalThis as typeof globalThis & {
+        __NEON_PILOT_APP_PERF__?: { streamCadenceSamples?: unknown[] };
+      }
+    ).__NEON_PILOT_APP_PERF__;
+    expect(perf?.streamCadenceSamples).toEqual([
+      expect.objectContaining({
+        conversationId: 'conv-1',
+        phase: 'paint',
+        eventCount: 3,
+        textDeltaCount: 2,
+        thinkingDeltaCount: 1,
+        textDeltaChars: 5,
+        flushDelayMs: 16,
+        batchDurationMs: 16,
+        paintDelayMs: 16,
+        maxInterEventGapMs: 12,
+      }),
+    ]);
+  });
+
   it('records thresholded client timing samples', async () => {
     const { measureClientPerfTiming } = await import('./perfDiagnostics');
 
