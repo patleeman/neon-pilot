@@ -69,6 +69,7 @@ export type SseEvent =
   | { type: 'error'; message: string };
 
 const toolTimings = new Map<string, number>();
+const toolPartialOutputs = new Map<string, string>();
 
 function buildUserMessageBlock(message: {
   content?: unknown;
@@ -142,6 +143,7 @@ export function toSse(event: AgentSessionEvent): SseEvent | null {
 
     case 'tool_execution_start': {
       toolTimings.set(event.toolCallId, Date.now());
+      toolPartialOutputs.set(event.toolCallId, '');
       return {
         type: 'tool_start',
         toolCallId: event.toolCallId,
@@ -150,19 +152,28 @@ export function toSse(event: AgentSessionEvent): SseEvent | null {
       };
     }
 
-    case 'tool_execution_update':
-      if (!readToolPartialText(event.partialResult)) {
+    case 'tool_execution_update': {
+      const partialText = readToolPartialText(event.partialResult);
+      if (!partialText) {
+        return null;
+      }
+      const previousText = toolPartialOutputs.get(event.toolCallId) ?? '';
+      const delta = partialText.startsWith(previousText) ? partialText.slice(previousText.length) : partialText;
+      toolPartialOutputs.set(event.toolCallId, partialText);
+      if (!delta) {
         return null;
       }
       return {
         type: 'tool_update',
         toolCallId: event.toolCallId,
-        partialResult: event.partialResult,
+        partialResult: delta,
       };
+    }
 
     case 'tool_execution_end': {
       const start = toolTimings.get(event.toolCallId) ?? Date.now();
       toolTimings.delete(event.toolCallId);
+      toolPartialOutputs.delete(event.toolCallId);
       const result = event.result as { content?: Array<{ type: string; text?: string }>; details?: unknown } | undefined;
       const rawOutputText =
         result?.content

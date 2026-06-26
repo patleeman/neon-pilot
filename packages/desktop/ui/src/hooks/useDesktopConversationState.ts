@@ -21,6 +21,7 @@ import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
 const MAX_CACHED_DESKTOP_CONVERSATION_STATES = 8;
 const STREAM_CONTROL_FLUSH_INTERVAL_MS = 16;
+const STREAM_FRAME_FALLBACK_FLUSH_INTERVAL_MS = 100;
 const POST_SEND_REFRESH_DELAYS_MS = [500, 1500, 4000] as const;
 const RUNNING_SESSION_RECOVERY_REFRESH_DELAYS_MS = [3000, 8000, 16000, 30000, 60000, 120000, 240000] as const;
 const DESKTOP_CONVERSATION_STATE_REFRESH_EVENT = 'neon-pilot:desktop-conversation-state-refresh';
@@ -888,10 +889,10 @@ export function useDesktopConversationState(conversationId: string | null, optio
     };
 
     const schedulePendingStreamEventsFrameFlush = () => {
-      if (pendingStreamFrameRef.current !== null || pendingStreamFlushTimerRef.current !== null) {
-        return;
+      if (pendingStreamFrameRef.current === null) {
+        pendingStreamFrameRef.current = window.requestAnimationFrame(flushPendingStreamEvents);
       }
-      pendingStreamFrameRef.current = window.requestAnimationFrame(flushPendingStreamEvents);
+      schedulePendingStreamEventsTimerFlush(STREAM_FRAME_FALLBACK_FLUSH_INTERVAL_MS);
     };
 
     const shouldFlushStreamEventImmediately = (streamEvent: SseEvent): boolean =>

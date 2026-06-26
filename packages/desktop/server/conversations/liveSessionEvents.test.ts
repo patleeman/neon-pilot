@@ -104,8 +104,49 @@ describe('toSse tool execution events', () => {
     ).toEqual({
       type: 'tool_update',
       toolCallId: 'tool-structured',
-      partialResult,
+      partialResult: 'streamed output',
     });
+  });
+
+  it('normalizes accumulated tool progress into deltas for transcript streaming', () => {
+    expect(
+      toSse({
+        type: 'tool_execution_start',
+        toolCallId: 'tool-accumulated',
+        toolName: 'bash',
+        args: {},
+      } as never),
+    ).toMatchObject({ type: 'tool_start', toolCallId: 'tool-accumulated' });
+    expect(
+      toSse({
+        type: 'tool_execution_update',
+        toolCallId: 'tool-accumulated',
+        partialResult: { content: [{ type: 'text', text: 'first' }] },
+      } as never),
+    ).toEqual({ type: 'tool_update', toolCallId: 'tool-accumulated', partialResult: 'first' });
+    expect(
+      toSse({
+        type: 'tool_execution_update',
+        toolCallId: 'tool-accumulated',
+        partialResult: { content: [{ type: 'text', text: 'first second' }] },
+      } as never),
+    ).toEqual({ type: 'tool_update', toolCallId: 'tool-accumulated', partialResult: ' second' });
+    expect(
+      toSse({
+        type: 'tool_execution_update',
+        toolCallId: 'tool-accumulated',
+        partialResult: { content: [{ type: 'text', text: 'first second' }] },
+      } as never),
+    ).toBeNull();
+    expect(
+      toSse({
+        type: 'tool_execution_end',
+        toolCallId: 'tool-accumulated',
+        toolName: 'bash',
+        isError: false,
+        result: { content: [{ type: 'text', text: 'first second' }] },
+      } as never),
+    ).toMatchObject({ type: 'tool_end', toolCallId: 'tool-accumulated' });
   });
 
   it('broadcasts bash tool names directly', () => {
