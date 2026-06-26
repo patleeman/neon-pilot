@@ -22,6 +22,24 @@ const SERVICE_TIER_OPTIONS = [
   { value: 'scale', label: 'Scale' },
 ] as const;
 
+const MODEL_PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  'azure-openai-responses': 'Azure OpenAI Responses',
+  'github-copilot': 'GitHub Copilot',
+  google: 'Google Gemini',
+  huggingface: 'Hugging Face',
+  'kimi-coding': 'Kimi Coding',
+  minimax: 'MiniMax',
+  'minimax-cn': 'MiniMax China',
+  openai: 'OpenAI',
+  'openai-codex': 'OpenAI Codex',
+  opencode: 'OpenCode',
+  'opencode-go': 'OpenCode Gateway',
+  openrouter: 'OpenRouter',
+  'vercel-ai-gateway': 'Vercel AI Gateway',
+  xai: 'xAI',
+  zai: 'ZAI',
+};
+
 export function formatServiceTierLabel(value: string): string {
   const option = SERVICE_TIER_OPTIONS.find((candidate) => candidate.value === value);
   if (option) {
@@ -33,6 +51,30 @@ export function formatServiceTierLabel(value: string): string {
     .filter(Boolean)
     .map((part) => (part.length <= 3 ? part.toUpperCase() : `${part[0].toUpperCase()}${part.slice(1)}`))
     .join(' ');
+}
+
+export function formatModelProviderLabel(providerId: string): string {
+  const normalized = providerId.trim();
+  if (!normalized) {
+    return 'Provider';
+  }
+
+  return (
+    MODEL_PROVIDER_DISPLAY_NAMES[normalized] ??
+    normalized
+      .split(/[-_]+/)
+      .filter(Boolean)
+      .map((part) => (part.length <= 3 ? part.toUpperCase() : `${part[0].toUpperCase()}${part.slice(1)}`))
+      .join(' ')
+  );
+}
+
+export function formatModelProviderGroupLabel(providerId: string, providerIds: readonly string[]): string {
+  const label = formatModelProviderLabel(providerId);
+  const duplicateLabel = providerIds.some(
+    (candidate) => candidate !== providerId && formatModelProviderLabel(candidate).toLocaleLowerCase() === label.toLocaleLowerCase(),
+  );
+  return duplicateLabel ? `${label} (${providerId})` : label;
 }
 
 function getModelSupportedServiceTierOptions(model: Pick<ModelInfo, 'supportedServiceTiers'> | null | undefined) {

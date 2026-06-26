@@ -19,6 +19,45 @@ function groupModels(models: Model[]): Array<[string, Model[]]> {
   return [...groups.entries()];
 }
 
+const MODEL_PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  'azure-openai-responses': 'Azure OpenAI Responses',
+  'github-copilot': 'GitHub Copilot',
+  google: 'Google Gemini',
+  huggingface: 'Hugging Face',
+  'kimi-coding': 'Kimi Coding',
+  minimax: 'MiniMax',
+  'minimax-cn': 'MiniMax China',
+  openai: 'OpenAI',
+  'openai-codex': 'OpenAI Codex',
+  opencode: 'OpenCode',
+  'opencode-go': 'OpenCode Gateway',
+  openrouter: 'OpenRouter',
+  'vercel-ai-gateway': 'Vercel AI Gateway',
+  xai: 'xAI',
+  zai: 'ZAI',
+};
+
+function formatModelProviderLabel(providerId: string): string {
+  const normalized = providerId.trim();
+  if (!normalized) return 'Provider';
+  return (
+    MODEL_PROVIDER_DISPLAY_NAMES[normalized] ??
+    normalized
+      .split(/[-_]+/)
+      .filter(Boolean)
+      .map((part) => (part.length <= 3 ? part.toUpperCase() : `${part[0].toUpperCase()}${part.slice(1)}`))
+      .join(' ')
+  );
+}
+
+function formatModelProviderGroupLabel(providerId: string, providerIds: readonly string[]): string {
+  const label = formatModelProviderLabel(providerId);
+  const duplicateLabel = providerIds.some(
+    (candidate) => candidate !== providerId && formatModelProviderLabel(candidate).toLocaleLowerCase() === label.toLocaleLowerCase(),
+  );
+  return duplicateLabel ? `${label} (${providerId})` : label;
+}
+
 function modelIdHasMultipleProviders(models: Model[], modelId: string): boolean {
   return models.filter((model) => model.id === modelId).length > 1;
 }
@@ -612,9 +651,14 @@ function ModelSelect({ context, variant }: { context: ComposerControlContext; va
           className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'left-0 w-full min-w-56' : 'left-0 w-64')}
           style={MODEL_PICKER_MENU_STYLE}
         >
-          {groupModels(context.models).map(([provider, providerModels]) => (
+          {groupModels(context.models).map(([provider, providerModels], _index, groups) => (
             <div key={provider} className="py-1">
-              <MenuGroupLabel className="pb-1">{provider}</MenuGroupLabel>
+              <MenuGroupLabel className="pb-1">
+                {formatModelProviderGroupLabel(
+                  provider,
+                  groups.map(([groupProvider]) => groupProvider),
+                )}
+              </MenuGroupLabel>
               {providerModels.map((model) => {
                 const value = modelSelectionValue(model, context.models);
                 const checked = selectedModel?.provider === model.provider && selectedModel.id === model.id;

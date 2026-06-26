@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  formatModelProviderGroupLabel,
+  formatModelProviderLabel,
   formatServiceTierLabel,
   getModelSelectableServiceTierOptions,
   getModelSelectionValue,
@@ -20,6 +22,16 @@ describe('model preferences helpers', () => {
     expect(formatServiceTierLabel('auto')).toBe('Automatic');
     expect(formatServiceTierLabel('priority')).toBe('Priority');
     expect(formatServiceTierLabel('custom-tier')).toBe('Custom Tier');
+  });
+
+  it('formats provider ids for user-facing model picker groups', () => {
+    expect(formatModelProviderLabel('openai-codex')).toBe('OpenAI Codex');
+    expect(formatModelProviderLabel('opencode-go')).toBe('OpenCode Gateway');
+    expect(formatModelProviderLabel('custom-provider')).toBe('Custom Provider');
+    expect(formatModelProviderGroupLabel('openai-codex', ['openai-codex', 'openai'])).toBe('OpenAI Codex');
+    expect(formatModelProviderGroupLabel('custom-provider', ['custom-provider', 'custom_provider'])).toBe(
+      'Custom Provider (custom-provider)',
+    );
   });
 
   it('builds service tier options in UI order from the tiers supported by the selected model', () => {

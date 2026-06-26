@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -102,5 +102,36 @@ describe('formatModelTriggerLabel', () => {
     expect(screen.getByLabelText('Conversation service tier')).toBeTruthy();
     expect(screen.getAllByText('Automatic').length).toBeGreaterThan(0);
     expect(screen.getByText('Priority')).toBeTruthy();
+  });
+
+  it('uses readable provider group labels in the composer model picker', () => {
+    render(
+      React.createElement(ModelPreferencesComposerControl, {
+        pa: { extensions: { callAction: vi.fn() } },
+        controlContext: {
+          renderMode: 'inline',
+          composerDisabled: false,
+          streamIsStreaming: false,
+          composerHasContent: false,
+          openFilePicker: vi.fn(),
+          addFiles: vi.fn(),
+          insertText: vi.fn(),
+          appendText: vi.fn(),
+          models: [{ id: 'gpt-5.5', provider: 'openai-codex', name: 'GPT-5.5', context: 400000, input: ['text'] }],
+          currentModel: 'gpt-5.5',
+          currentThinkingLevel: '',
+          currentServiceTier: '',
+          savingPreference: null,
+          selectModel: vi.fn(),
+          selectThinkingLevel: vi.fn(),
+          selectServiceTier: vi.fn(),
+        },
+      }),
+    );
+
+    fireEvent.click(screen.getByLabelText('Conversation model'));
+
+    expect(screen.getByText('OpenAI Codex')).toBeTruthy();
+    expect(screen.queryByText('openai-codex')).toBeNull();
   });
 });

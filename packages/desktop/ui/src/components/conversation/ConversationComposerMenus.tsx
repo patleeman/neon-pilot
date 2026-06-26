@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 
 import type { SlashMenuItem } from '../../commands/slashMenu';
 import { filterMentionItems, MAX_MENTION_MENU_ITEMS, type MentionItem } from '../../conversation/conversationMentions';
-import { getModelSelectionValue, groupModelsByProvider } from '../../model/modelPreferences';
+import { formatModelProviderGroupLabel, getModelSelectionValue, groupModelsByProvider } from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
 import { cx, IconButton, MenuGroupLabel, MetaLabel, Pill, RowButton, SectionLabel } from '../ui';
 
@@ -26,6 +26,7 @@ export function ModelPicker({
   onClose: () => void;
 }) {
   const groups = groupModelsByProvider(models);
+  const providerIds = groups.map(([provider]) => provider);
   const selectedModel = models.length > 0 ? models[((idx % models.length) + models.length) % models.length] : null;
   const formatContext = (context: number) => (context >= 1_000_000 ? `${context / 1_000_000}M` : `${context / 1_000}k`);
   const selectedModelValue = selectedModel ? getModelSelectionValue(selectedModel, allModels) : '';
@@ -45,7 +46,7 @@ export function ModelPicker({
       ) : (
         groups.map(([provider, providerModels]) => (
           <div key={provider}>
-            <MenuGroupLabel className="px-3 pt-2 pb-0.5">{provider}</MenuGroupLabel>
+            <MenuGroupLabel className="px-3 pt-2 pb-0.5">{formatModelProviderGroupLabel(provider, providerIds)}</MenuGroupLabel>
             {providerModels.map((model) => {
               const modelValue = getModelSelectionValue(model, allModels);
               const isCurrent = modelValue === currentModel;

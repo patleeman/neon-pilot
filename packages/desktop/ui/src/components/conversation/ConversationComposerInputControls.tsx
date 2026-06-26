@@ -24,6 +24,7 @@ import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import {
+  formatModelProviderGroupLabel,
   formatServiceTierLabel,
   getModelSelectionValue,
   groupModelsByProvider,
@@ -203,6 +204,7 @@ function CoreModelPreferenceControls({
 }) {
   const selectedModel = resolveSelectableModel(models, currentModel);
   const modelGroups = groupModelsByProvider(models);
+  const modelProviderIds = modelGroups.map(([provider]) => provider);
   const serviceTierOptions = selectedModel?.supportedServiceTiers ?? [];
   const selectBaseClassName =
     'h-8 min-w-0 truncate border-transparent bg-transparent px-2 text-xs font-medium text-secondary disabled:opacity-50';
@@ -221,7 +223,7 @@ function CoreModelPreferenceControls({
       >
         {models.length === 0 ? <option value="">Select model</option> : null}
         {modelGroups.map(([provider, providerModels]) => (
-          <optgroup key={provider} label={provider}>
+          <optgroup key={provider} label={formatModelProviderGroupLabel(provider, modelProviderIds)}>
             {providerModels.map((model) => (
               <option key={`${model.provider}:${model.id}`} value={getModelSelectionValue(model, models)}>
                 {modelOptionLabel(model)}
