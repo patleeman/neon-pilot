@@ -56,7 +56,7 @@ export function ConversationComposerMeta({
   conversationCwdBusy: boolean;
   conversationCwdPickBusy: boolean;
   availableConversationWorkspacePaths: string[];
-  onSubmitConversationCwdChange: (cwd?: string | null) => void;
+  onSubmitConversationCwdChange: (cwd?: string | null, workspaceCwd?: string | null) => void;
   onCancelConversationCwdEdit: () => void;
   onPickConversationCwd: () => void;
   onBeginConversationCwdEdit: () => void;
@@ -147,7 +147,7 @@ export function ConversationComposerMeta({
                 onChange={(event) => {
                   const nextWorkspacePath = event.target.value.trim();
                   if (nextWorkspacePath) {
-                    onSubmitConversationCwdChange(nextWorkspacePath);
+                    onSubmitConversationCwdChange(nextWorkspacePath, nextWorkspacePath);
                   }
                 }}
                 aria-label="Conversation working directory"

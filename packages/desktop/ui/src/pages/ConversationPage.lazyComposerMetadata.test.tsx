@@ -1611,7 +1611,7 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.changeConversationCwd).toHaveBeenCalledWith('conv-regression', '/tmp/next-project', 'surface-test');
+    expect(apiMock.changeConversationCwd).toHaveBeenCalledWith('conv-regression', '/tmp/next-project', 'surface-test', '/tmp/next-project');
     expect(apiMock.liveSessionContext).toHaveBeenCalledTimes(2);
 
     await act(async () => {
@@ -1866,7 +1866,7 @@ describe('ConversationPage lazy composer metadata', () => {
 
     expect(apiMock.pickFolder).toHaveBeenCalledWith({ cwd: '/tmp/project', prompt: 'Choose a working directory' });
     expect(apiMock.setSavedWorkspacePaths).toHaveBeenCalledWith(['/tmp/picked-workspace']);
-    expect(apiMock.changeConversationCwd).toHaveBeenCalledWith('conv-regression', '/tmp/picked-workspace', 'surface-test');
+    expect(apiMock.changeConversationCwd).toHaveBeenCalledWith('conv-regression', '/tmp/picked-workspace', 'surface-test', undefined);
   });
 
   it('hides internal folder picker failures when choosing a saved conversation working directory', async () => {

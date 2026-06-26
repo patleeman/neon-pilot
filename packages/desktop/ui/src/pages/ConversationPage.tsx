@@ -4365,7 +4365,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [draft, id, renameConversationTo, showNotice, title, titleDraft]);
 
   const submitConversationCwdChange = useCallback(
-    async (nextCwdOverride?: string | null) => {
+    async (nextCwdOverride?: string | null, nextWorkspaceCwdOverride?: string | null) => {
       if (draft || !id || conversationCwdBusy) {
         return;
       }
@@ -4389,7 +4389,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       setConversationCwdError(null);
 
       try {
-        const result = await api.changeConversationCwd(id, nextCwd, currentSurfaceId);
+        const result = await api.changeConversationCwd(id, nextCwd, currentSurfaceId, nextWorkspaceCwdOverride);
         setConversationCwdEditorOpen(false);
         setConversationCwdDraft(result.cwd ?? '');
 
@@ -7902,8 +7902,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                 conversationCwdBusy={conversationCwdBusy}
                 conversationCwdPickBusy={conversationCwdPickBusy}
                 availableConversationWorkspacePaths={availableConversationWorkspacePaths}
-                onSubmitConversationCwdChange={(cwd) => {
-                  void submitConversationCwdChange(cwd);
+                onSubmitConversationCwdChange={(cwd, workspaceCwd) => {
+                  void submitConversationCwdChange(cwd, workspaceCwd);
                 }}
                 onCancelConversationCwdEdit={cancelConversationCwdEdit}
                 onPickConversationCwd={() => {
