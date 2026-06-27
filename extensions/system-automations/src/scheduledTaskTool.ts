@@ -296,8 +296,13 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
       name: 'scheduled_task',
       label: 'Scheduled Task',
       description: 'Create, inspect, validate, run, and delete daemon-managed scheduled tasks.',
-      promptSnippet: 'Use the scheduled_task tool for daemon-managed recurring or one-time automation.',
-      promptGuidelines: ['Use scheduled_task for persistent one-time/recurring automations; keep schedules and prompts concise.'],
+      promptSnippet:
+        'When the user asks to create, save, schedule, update, inspect, run, or delete an automation, call scheduled_task directly.',
+      promptGuidelines: [
+        'Use scheduled_task for persistent one-time/recurring automations; keep schedules and prompts concise.',
+        'For chat requests to create an automation in this conversation, use action="save", targetType="conversation", and threadMode="existing" unless the user asks for a dedicated or background automation.',
+        'Use action="run" for automation run-now requests after resolving the task id; do not use shell commands or documentation lookup as the first path from inside a model turn.',
+      ],
       parameters: ScheduledTaskToolParams,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
         try {

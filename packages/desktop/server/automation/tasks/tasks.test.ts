@@ -1751,6 +1751,92 @@ describe('tasks module scheduling', () => {
     await module.stop?.(context);
   });
 
+  it('clears stale running task state on startup when no durable run was created', async () => {
+    const taskDir = createTempDir('tasks-module-definitions-');
+    const stateRoot = createTempDir('tasks-module-state-');
+    const task = seedAutomation(stateRoot, {
+      id: 'stale-running',
+      title: 'Stale running',
+      at: '2026-03-03T10:00:00.000Z',
+      prompt: 'This run should not stay running forever.',
+    });
+    const dbPath = resolveRuntimeDbPath(stateRoot);
+
+    saveAutomationRuntimeStateMap(
+      {
+        'stale-running': {
+          id: 'stale-running',
+          filePath: task.filePath,
+          scheduleType: 'at',
+          running: true,
+          runningStartedAt: '2026-03-02T10:00:00.000Z',
+          lastStatus: 'running',
+        },
+      },
+      { dbPath },
+    );
+
+    const currentTime = new Date('2026-03-02T10:30:00.000Z');
+    const runTask = vi.fn(async (request: TaskRunRequest) => createRunResult(request, true, currentTime.toISOString()));
+
+    const module = createTasksModule(
+      {
+        enabled: true,
+        taskDir,
+        tickIntervalSeconds: 30,
+        maxRetries: 3,
+        reapAfterDays: 7,
+        defaultTimeoutSeconds: 1800,
+      },
+      {
+        now: () => currentTime,
+        runTask,
+      },
+    );
+
+    const { context } = createContext(taskDir, stateRoot);
+
+    await module.start(context);
+
+    expect(runTask).not.toHaveBeenCalled();
+
+    const persistedState = loadAutomationRuntimeStateMap({ dbPath });
+    expect(persistedState['stale-running']).toEqual(
+      expect.objectContaining({
+        running: false,
+        activeRunId: undefined,
+        lastRunId: undefined,
+        lastStatus: 'failed',
+        lastRunAt: '2026-03-02T10:30:00.000Z',
+        lastFailureAt: '2026-03-02T10:30:00.000Z',
+        lastError: 'Automation was interrupted before a durable run record was created.',
+      }),
+    );
+    expect(persistedState['stale-running']?.runningStartedAt).toBeUndefined();
+    expect(listAutomationActivityEntries('stale-running', { dbPath })).toEqual([
+      expect.objectContaining({
+        automationId: 'stale-running',
+        kind: 'run-failed',
+        message: 'Automation was interrupted before a durable run record was created.',
+      }),
+    ]);
+    expect(getAlert({ stateRoot, profile: 'assistant', alertId: 'automation-run-failed-stale-running' })).toEqual(
+      expect.objectContaining({
+        kind: 'task-failed',
+        status: 'active',
+        title: 'Automation failed to start: Stale running',
+        sourceKind: 'scheduled-task',
+        sourceId: 'stale-running',
+      }),
+    );
+
+    const status = module.getStatus?.() as { failedRuns?: number; runningTasks?: number };
+    expect(status.failedRuns).toBe(1);
+    expect(status.runningTasks).toBe(0);
+
+    await module.stop?.(context);
+  });
+
   it('does not create shared activity entries when a one-time task is missed while the daemon was offline', async () => {
     const repoRoot = createTempDir('tasks-module-repo-');
     const taskDir = join(repoRoot, 'profiles', 'datadog', 'agent', 'tasks');

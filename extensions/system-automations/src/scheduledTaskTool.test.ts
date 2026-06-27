@@ -30,6 +30,8 @@ import { createScheduledTaskAgentExtension } from './scheduledTaskTool.js';
 type ToolResult = { content: { type: string; text: string }[]; details?: Record<string, unknown>; isError?: boolean };
 
 type RegisteredTool = {
+  promptSnippet?: string;
+  promptGuidelines?: string[];
   execute: (
     toolCallId: string,
     params: Record<string, unknown>,
@@ -92,6 +94,21 @@ describe('scheduledTaskTool', () => {
     expect(result.content[0].text).toContain('- @task-1 [running] Task One · cron 0 9 * * * · job');
     expect(result.content[0].text).toContain('Parse errors: /bad.json: bad json');
     expect(result.details).toMatchObject({ action: 'list', count: 1, taskIds: ['task-1'], parseErrorCount: 1 });
+  });
+
+  it('instructs chat turns to use the tool for automation creation', () => {
+    const tool = registerTool();
+
+    expect(tool.promptSnippet).toContain('create');
+    expect(tool.promptSnippet).toContain('call scheduled_task directly');
+    expect(tool.promptGuidelines).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('action="save"'),
+        expect.stringContaining('targetType="conversation"'),
+        expect.stringContaining('threadMode="existing"'),
+        expect.stringContaining('do not use shell commands'),
+      ]),
+    );
   });
 
   it('formats task detail with thread and callback metadata', async () => {

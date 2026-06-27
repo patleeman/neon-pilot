@@ -704,6 +704,9 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       },
     });
 
+    record.activeRunId = runId;
+    record.lastRunId = runId;
+
     await appendDurableRunEvent(runPaths.eventsPath, {
       version: 1,
       runId,
@@ -716,8 +719,6 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       },
     });
 
-    record.activeRunId = runId;
-    record.lastRunId = runId;
     return { runId, runPaths, attemptsRoot };
   };
 
@@ -1132,6 +1133,52 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
     }
   };
 
+  const clearStaleRunningTaskState = (
+    task: StoredAutomation,
+    record: TaskRuntimeState,
+    context: {
+      logger: { info: (message: string) => void; warn: (message: string) => void };
+      paths: { stateRoot: string };
+    },
+    input: { detectedAt: string; reason: string },
+  ): void => {
+    record.running = false;
+    record.runningStartedAt = undefined;
+    record.activeRunId = undefined;
+    record.lastStatus = 'failed';
+    record.lastRunAt = input.detectedAt;
+    record.lastFailureAt = input.detectedAt;
+    record.lastError = input.reason;
+    state.failedRuns += 1;
+    state.lastError = input.reason;
+    context.logger.warn(`cleared stale running task state id=${task.id}: ${input.reason}`);
+
+    try {
+      if (task.threadConversationId) {
+        openAutomationOwnerThread({ conversationId: task.threadConversationId, stateRoot: context.paths.stateRoot });
+      }
+      appendThreadAutomationEvent(task, { kind: 'crashed', timestamp: input.detectedAt, error: input.reason });
+      const activity = appendAutomationActivityEntry(
+        task.id,
+        {
+          kind: 'run-failed',
+          createdAt: input.detectedAt,
+          message: input.reason,
+        },
+        { dbPath: runtimeDbPath },
+      );
+      upsertTaskRunFailureAlert({
+        task,
+        stateRoot: context.paths.stateRoot,
+        detectedAt: input.detectedAt,
+        message: input.reason,
+        activityId: activity.id,
+      });
+    } catch (activityError) {
+      context.logger.warn(`failed to record stale task state id=${task.id}: ${(activityError as Error).message}`);
+    }
+  };
+
   const recoverInterruptedTaskRuns = async (context: {
     logger: { info: (message: string) => void; warn: (message: string) => void };
     publish: (type: string, payload?: Record<string, unknown>) => boolean;
@@ -1141,11 +1188,38 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
     const recoveryIso = recoveryTime.toISOString();
     for (const task of listStoredAutomations({ dbPath: runtimeDbPath })) {
       const record = ensureTaskRecord(taskState, task);
-      if (!task.enabled || !record.activeRunId || activeRuns.has(task.key)) {
+      if (activeRuns.has(task.key)) {
+        continue;
+      }
+
+      const persistedAsRunning = record.running || record.lastStatus === 'running';
+      if (!record.activeRunId) {
+        if (persistedAsRunning) {
+          clearStaleRunningTaskState(task, record, context, {
+            detectedAt: recoveryIso,
+            reason: 'Automation was interrupted before a durable run record was created.',
+          });
+        }
+        continue;
+      }
+
+      if (!task.enabled) {
+        if (persistedAsRunning) {
+          clearStaleRunningTaskState(task, record, context, {
+            detectedAt: recoveryIso,
+            reason: 'Automation was interrupted while disabled and could not be recovered.',
+          });
+        }
         continue;
       }
 
       if (task.schedule.type === 'at' && record.oneTimeResolvedAt) {
+        if (persistedAsRunning) {
+          clearStaleRunningTaskState(task, record, context, {
+            detectedAt: recoveryIso,
+            reason: 'Automation was interrupted after its one-time schedule was already resolved.',
+          });
+        }
         continue;
       }
 
@@ -1153,6 +1227,12 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       const shouldRecover = Boolean(scannedRun && (scannedRun.recoveryAction === 'rerun' || scannedRun.recoveryAction === 'resume'));
 
       if (!shouldRecover) {
+        if (persistedAsRunning) {
+          clearStaleRunningTaskState(task, record, context, {
+            detectedAt: recoveryIso,
+            reason: `Automation was interrupted but durable run ${record.activeRunId} could not be recovered.`,
+          });
+        }
         continue;
       }
 
