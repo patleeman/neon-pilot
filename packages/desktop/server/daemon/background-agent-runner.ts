@@ -25,6 +25,7 @@ interface RunnerArgs {
   sessionDir?: string;
   continueSession?: boolean;
   noSession?: boolean;
+  systemPromptSupplement?: string;
   model?: string;
   allowedTools?: string[];
 }
@@ -66,6 +67,10 @@ function parseArgs(argv: string[]): RunnerArgs {
       case '--no-session':
         parsed.noSession = true;
         break;
+      case '--system-prompt-supplement':
+        parsed.systemPromptSupplement = readFlagValue(argv, index, arg);
+        index += 1;
+        break;
       case '--model':
         parsed.model = readFlagValue(argv, index, arg);
         index += 1;
@@ -97,6 +102,7 @@ function parseArgs(argv: string[]): RunnerArgs {
     ...(parsed.sessionDir?.trim() ? { sessionDir: parsed.sessionDir.trim() } : {}),
     ...(parsed.continueSession === true ? { continueSession: true } : {}),
     ...(parsed.noSession === true ? { noSession: true } : {}),
+    ...(parsed.systemPromptSupplement?.trim() ? { systemPromptSupplement: parsed.systemPromptSupplement.trim() } : {}),
     ...(parsed.model?.trim() ? { model: parsed.model.trim() } : {}),
     ...(parsed.allowedTools && parsed.allowedTools.length > 0 ? { allowedTools: parsed.allowedTools } : {}),
   };
@@ -226,6 +232,7 @@ export async function main(): Promise<void> {
     options: {
       ...resourceOptions,
       extensionFactories,
+      ...(args.systemPromptSupplement ? { systemPromptSupplement: args.systemPromptSupplement } : {}),
       ...(args.model ? { initialModel: args.model } : {}),
       ...(args.allowedTools ? { allowedToolNames: args.allowedTools } : {}),
     },
@@ -254,7 +261,6 @@ export async function main(): Promise<void> {
           streamedChunks.push(update.delta);
           process.stdout.write(update.delta);
         }
-        if (update.type === 'thinking_delta') process.stdout.write(update.delta);
       }
     });
 

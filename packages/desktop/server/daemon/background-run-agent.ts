@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 export interface BackgroundRunAgentSpec {
   prompt: string;
+  systemPromptSupplement?: string;
   model?: string;
   noSession?: boolean;
   /** When set, only these tool names are exposed to the background agent. */
@@ -52,6 +53,10 @@ export function buildBackgroundAgentArgv(spec: BackgroundRunAgentSpec): string[]
 
   if (spec.noSession === true) {
     argv.push('--no-session');
+  }
+
+  if (spec.systemPromptSupplement) {
+    argv.push('--system-prompt-supplement', spec.systemPromptSupplement);
   }
 
   if (spec.model) {

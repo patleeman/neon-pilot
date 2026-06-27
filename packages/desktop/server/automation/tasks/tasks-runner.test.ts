@@ -256,6 +256,95 @@ describe('runTaskInIsolatedPi', () => {
     expect(result.outputText).toContain('done without start');
   });
 
+  it('keeps hidden thinking out of captured conversation output', async () => {
+    const runsRoot = createTempDir('tasks-runner-runs-');
+    let listener: ((event: unknown) => void) | undefined;
+    const runtime = createRuntime({
+      subscribeConversation: vi.fn().mockImplementation(async (_input, onEvent) => {
+        listener = onEvent;
+        return vi.fn();
+      }),
+      promptConversation: vi.fn().mockImplementation(async () => {
+        queueMicrotask(() => {
+          listener?.({ type: 'agent_start' });
+          listener?.({ type: 'thinking_delta', delta: 'The user wants me to answer exactly.' });
+          listener?.({ type: 'text_delta', delta: 'exact reply' });
+          listener?.({ type: 'turn_end' });
+        });
+        return { ok: true, accepted: true, delivery: 'started' };
+      }),
+      readConversationBootstrap: vi.fn().mockResolvedValue({ sessionMeta: { id: 'conv-nightly', isRunning: false } }),
+    });
+    mocks.resolveCompanionRuntime.mockResolvedValue(runtime);
+
+    const result = await runTaskInIsolatedPi({
+      task: createTask({ cwd: '/repo' }),
+      attempt: 1,
+      runsRoot,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.outputText).toBe('exact reply');
+    const log = readFileSync(result.logPath, 'utf-8');
+    expect(log).toContain('The user wants me to answer exactly.');
+  });
+
+  it('strengthens exact-reply prompts before dispatching them to a conversation', async () => {
+    const runsRoot = createTempDir('tasks-runner-runs-');
+    const runtime = createRuntime();
+    mocks.resolveCompanionRuntime.mockResolvedValue(runtime);
+
+    const result = await runTaskInIsolatedPi({
+      task: createTask({ prompt: 'Reply exactly: nightly check passed', cwd: '/repo' }),
+      attempt: 1,
+      runsRoot,
+    });
+
+    expect(result.success).toBe(true);
+    expect(runtime.promptConversation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining('<exact_reply>\nnightly check passed\n</exact_reply>'),
+      }),
+    );
+    expect(runtime.promptConversation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining('Do not explain, quote, add punctuation'),
+      }),
+    );
+  });
+
+  it('normalizes exact-reply conversation output when the provider emits a visible preface', async () => {
+    const runsRoot = createTempDir('tasks-runner-runs-');
+    let listener: ((event: unknown) => void) | undefined;
+    const runtime = createRuntime({
+      subscribeConversation: vi.fn().mockImplementation(async (_input, onEvent) => {
+        listener = onEvent;
+        return vi.fn();
+      }),
+      promptConversation: vi.fn().mockImplementation(async () => {
+        queueMicrotask(() => {
+          listener?.({ type: 'agent_start' });
+          listener?.({ type: 'text_delta', delta: 'The user wants me to reply exactly.' });
+          listener?.({ type: 'text_delta', delta: 'nightly check passed' });
+          listener?.({ type: 'turn_end' });
+        });
+        return { ok: true, accepted: true, delivery: 'started' };
+      }),
+      readConversationBootstrap: vi.fn().mockResolvedValue({ sessionMeta: { id: 'conv-nightly', isRunning: false } }),
+    });
+    mocks.resolveCompanionRuntime.mockResolvedValue(runtime);
+
+    const result = await runTaskInIsolatedPi({
+      task: createTask({ prompt: 'Reply exactly: nightly check passed', cwd: '/repo' }),
+      attempt: 1,
+      runsRoot,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.outputText).toBe('nightly check passed');
+    expect(readFileSync(result.logPath, 'utf-8')).toContain('The user wants me to reply exactly.');
+  });
+
   it('creates a conversation for threadless automations instead of shelling out to a CLI', async () => {
     const runsRoot = createTempDir('tasks-runner-runs-');
     const runtime = createRuntime();
@@ -327,6 +416,60 @@ describe('runTaskInIsolatedPi', () => {
       ]),
       expect.objectContaining({ cwd: '/repo', env: expect.objectContaining({ ELECTRON_RUN_AS_NODE: '1' }) }),
     );
+    const log = readFileSync(result.logPath, 'utf-8');
+    expect(log).toContain('# mode=standalone-agent-runner');
+    expect(log).toContain('# sessionFile=/sessions/nightly.jsonl');
+  });
+
+  it('keeps conversation-target fallback runs attached to their owner session', async () => {
+    const runsRoot = createTempDir('tasks-runner-runs-');
+    mocks.resolveCompanionRuntime.mockResolvedValue(null);
+    mocks.spawn.mockImplementation(() => {
+      const child = new EventEmitter() as EventEmitter & {
+        stdout: EventEmitter;
+        stderr: EventEmitter;
+        kill: ReturnType<typeof vi.fn>;
+      };
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      child.kill = vi.fn();
+      queueMicrotask(() => {
+        child.stdout.emit('data', 'The user wants me to reply exactly.');
+        child.stdout.emit('data', 'nightly check passed\n');
+        child.emit('close', 0, null);
+      });
+      return child;
+    });
+
+    const result = await runTaskInIsolatedPi({
+      task: createTask({ prompt: 'Reply exactly: nightly check passed', targetType: 'conversation', cwd: '/repo' }),
+      attempt: 1,
+      runsRoot,
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      outputText: 'nightly check passed',
+    });
+    expect(mocks.spawn).toHaveBeenCalledWith(
+      process.execPath,
+      expect.arrayContaining(['--session-file', '/sessions/nightly.jsonl']),
+      expect.objectContaining({ cwd: '/repo' }),
+    );
+    expect(mocks.spawn).toHaveBeenCalledWith(
+      process.execPath,
+      expect.arrayContaining(['--prompt', 'Reply exactly: nightly check passed']),
+      expect.anything(),
+    );
+    expect(mocks.spawn).toHaveBeenCalledWith(
+      process.execPath,
+      expect.arrayContaining([
+        '--system-prompt-supplement',
+        expect.stringContaining('<exact_reply>\nnightly check passed\n</exact_reply>'),
+      ]),
+      expect.anything(),
+    );
+    expect(mocks.spawn).toHaveBeenCalledWith(process.execPath, expect.not.arrayContaining(['--no-session']), expect.anything());
     const log = readFileSync(result.logPath, 'utf-8');
     expect(log).toContain('# mode=standalone-agent-runner');
     expect(log).toContain('# sessionFile=/sessions/nightly.jsonl');

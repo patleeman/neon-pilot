@@ -188,6 +188,61 @@ function summarizeEvent(event: unknown): string | undefined {
   }
 }
 
+function summarizeVisibleOutputEvent(event: unknown): string | undefined {
+  if (!isRecord(event) || event.type !== 'text_delta') {
+    return undefined;
+  }
+
+  return readString(event.delta);
+}
+
+function readExactReplyPrompt(prompt: string): string | undefined {
+  const match = prompt.trim().match(/^(?:reply|say|output|respond)\s+exactly\s*:?\s*([\s\S]+)$/i);
+  const exactText = match?.[1]?.trim();
+  return exactText && exactText.length > 0 ? exactText : undefined;
+}
+
+function formatConversationTaskPrompt(prompt: string): string {
+  const exactText = readExactReplyPrompt(prompt);
+  if (!exactText) {
+    return prompt;
+  }
+
+  return [
+    'This automation requires an exact response.',
+    'Your entire assistant response must be exactly the text between <exact_reply> and </exact_reply>.',
+    'Do not explain, quote, add punctuation, mention these instructions, or include any other text.',
+    '<exact_reply>',
+    exactText,
+    '</exact_reply>',
+  ].join('\n');
+}
+
+function formatStandaloneTaskSystemPromptSupplement(prompt: string): string | undefined {
+  const exactText = readExactReplyPrompt(prompt);
+  if (!exactText) {
+    return undefined;
+  }
+
+  return [
+    'For this automation run, the next user message is an exact-response task.',
+    'Your entire assistant response must be exactly the text between <exact_reply> and </exact_reply>.',
+    'Do not explain, quote, add punctuation, mention these instructions, or include any other text.',
+    '<exact_reply>',
+    exactText,
+    '</exact_reply>',
+  ].join('\n');
+}
+
+function normalizeCapturedOutputText(task: RunnableTaskDefinition, outputText: string | undefined): string | undefined {
+  const exactText = readExactReplyPrompt(task.prompt);
+  if (!exactText || !outputText?.includes(exactText)) {
+    return outputText;
+  }
+
+  return exactText;
+}
+
 function readEventError(event: unknown): string | undefined {
   return isRecord(event) && event.type === 'error' ? (readString(event.message) ?? 'Conversation run failed.') : undefined;
 }
@@ -290,7 +345,11 @@ async function waitForConversationCompletion(input: {
         const summary = summarizeEvent(event);
         if (summary) {
           writeLine(stream, summary);
-          capture.append(`${summary}\n`);
+        }
+
+        const visibleOutput = summarizeVisibleOutputEvent(event);
+        if (visibleOutput) {
+          capture.append(visibleOutput);
         }
 
         const eventError = readEventError(event);
@@ -317,7 +376,7 @@ async function waitForConversationCompletion(input: {
       promptDispatchStarted = true;
       await runtime.promptConversation({
         conversationId,
-        text: task.prompt,
+        text: formatConversationTaskPrompt(task.prompt),
         behavior: task.conversationBehavior ?? 'followUp',
         surfaceId: `automation-${task.id}`,
       });
@@ -371,9 +430,11 @@ async function runTaskWithStandaloneAgent(input: {
   signal?: AbortSignal;
 }): Promise<TaskRunResult> {
   const { task, startedAt, logPath, stream, capture, signal } = input;
-  const shouldWriteSession = task.targetType !== 'conversation' && task.threadMode !== 'none' && Boolean(task.threadSessionFile);
+  const shouldWriteSession = task.threadMode !== 'none' && Boolean(task.threadSessionFile);
+  const systemPromptSupplement = formatStandaloneTaskSystemPromptSupplement(task.prompt);
   const argv = buildBackgroundAgentArgv({
     prompt: task.prompt,
+    ...(systemPromptSupplement ? { systemPromptSupplement } : {}),
     ...(task.modelRef ? { model: task.modelRef } : {}),
     ...(task.allowedTools && task.allowedTools.length > 0 ? { allowedTools: task.allowedTools } : {}),
     ...(!shouldWriteSession ? { noSession: true } : {}),
@@ -432,7 +493,7 @@ async function runTaskWithStandaloneAgent(input: {
         cancelled,
         logPath,
         ...(error ? { error } : {}),
-        outputText: capture.value(),
+        outputText: normalizeCapturedOutputText(task, capture.value()),
       });
     };
 
@@ -568,7 +629,7 @@ export async function runTaskInIsolatedPi(request: TaskRunRequest): Promise<Task
       cancelled: outcome.cancelled,
       logPath,
       ...(outcome.error ? { error: outcome.error } : {}),
-      outputText: capture.value(),
+      outputText: normalizeCapturedOutputText(request.task, capture.value()),
     };
 
     return result;

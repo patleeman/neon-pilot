@@ -28,13 +28,21 @@ describe('background run agent argv', () => {
     fs.existing.add('/repo/packages/desktop/server/dist/daemon/background-agent-runner.js');
 
     expect(
-      buildBackgroundAgentArgv({ prompt: 'do work', noSession: true, model: 'provider/model', allowedTools: ['bash', 'read'] }),
+      buildBackgroundAgentArgv({
+        prompt: 'do work',
+        noSession: true,
+        systemPromptSupplement: 'extra instruction',
+        model: 'provider/model',
+        allowedTools: ['bash', 'read'],
+      }),
     ).toEqual([
       process.execPath,
       '/repo/packages/desktop/server/dist/daemon/background-agent-runner.js',
       '--prompt',
       'do work',
       '--no-session',
+      '--system-prompt-supplement',
+      'extra instruction',
       '--model',
       'provider/model',
       '--tools',
