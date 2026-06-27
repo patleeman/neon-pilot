@@ -42,6 +42,8 @@ scripts/.last-reviewed-sha
 
 # Test coverage output
 coverage/
+playwright-report/
+test-results/
 
 # Local iOS demo transcript snapshots
 apps/ios/PersonalAgentCompanion/demo-data/

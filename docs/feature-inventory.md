@@ -45,22 +45,22 @@ selected model` guidance to friendly setup copy. Focused coverage was added in
 
 Primary validation command families found during the audit:
 
-| Scope                       | Command                              |
-| --------------------------- | ------------------------------------ |
-| All Vitest tests            | `pnpm test`                          |
-| Full repository check       | `pnpm run check`                     |
-| Extension static gates      | `pnpm run check:extensions:static`   |
-| Extension smoke tests       | `pnpm run test:extensions`           |
-| Release hardening tests     | `pnpm run test:release-hardening`    |
-| Release doctor              | `pnpm run check:release:doctor`      |
-| Release QA checklist runner | `pnpm run qa:release`                |
-| Startup smoke               | `pnpm run smoke:startup-idle`        |
-| Chat E2E smoke              | `pnpm run e2e:chat`                  |
-| Desktop fork/rewind smoke   | `pnpm run smoke:desktop:fork-rewind` |
-| Desktop performance smoke   | `pnpm run perf:desktop`              |
-| Extension webapp smoke      | `pnpm run smoke:extension-webapps`   |
-| Model gateway smoke         | `pnpm run smoke:model-gateway`       |
-| Dictation focused suite     | `pnpm run test:dictation`            |
+| Scope                       | Command                                                                               |
+| --------------------------- | ------------------------------------------------------------------------------------- |
+| All Vitest tests            | `pnpm test`                                                                           |
+| Full repository check       | `pnpm run check`                                                                      |
+| Extension static gates      | `pnpm run check:extensions:static`                                                    |
+| Extension smoke tests       | `pnpm run test:extensions`                                                            |
+| Release hardening tests     | `pnpm run test:release-hardening`                                                     |
+| Release doctor              | `pnpm run check:release:doctor`                                                       |
+| Release QA checklist runner | `pnpm run qa:release`                                                                 |
+| Startup smoke               | `pnpm run smoke:startup-idle`                                                         |
+| Chat E2E smoke              | `pnpm run e2e:chat` / `pnpm run test:e2e:runner --grep @chat`                         |
+| Desktop fork/rewind smoke   | `pnpm run smoke:desktop:fork-rewind` / `pnpm run test:e2e:runner --grep @fork-rewind` |
+| Desktop performance smoke   | `pnpm run perf:desktop`                                                               |
+| Extension webapp smoke      | `pnpm run smoke:extension-webapps`                                                    |
+| Model gateway smoke         | `pnpm run smoke:model-gateway`                                                        |
+| Dictation focused suite     | `pnpm run test:dictation`                                                             |
 
 ## Strict QA Evidence Addenda
 

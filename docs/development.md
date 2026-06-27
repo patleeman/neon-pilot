@@ -37,6 +37,7 @@ Focused checks:
 | `pnpm run lint`                   | Lint/import-order risk                                                              |
 | `pnpm run fmt`                    | Formatting-only verification                                                        |
 | `pnpm test`                       | Broad regression pass; deterministic unit, integration, smoke, and regression tests |
+| `pnpm run test:e2e`               | Unified Playwright Electron end-to-end suite with isolated desktop state            |
 | `pnpm run test:extensions`        | Focused extension runtime smoke tests                                               |
 | `pnpm run check:extensions`       | Extension static checks plus focused extension smoke tests                          |
 | `pnpm run test:release-hardening` | Focused tests for release smoke wiring and the extension golden matrix              |
@@ -44,7 +45,16 @@ Focused checks:
 
 `check:extensions:static` enforces the extension/core boundary. Extension runtime source and fenced markdown examples in extension docs must use `@neon-pilot/extensions` public APIs instead of importing `@neon-pilot/core`, `@neon-pilot/desktop`, or app package internals directly. Host backend API modules must stay narrow and lazy-load host implementations rather than statically re-exporting core/desktop modules.
 
-Use `pnpm test` as the default single command for behavior regressions. Keep standalone smoke scripts only for live-app or external-environment checks that should not run in every deterministic test pass.
+Use `pnpm test` as the default single command for deterministic code-level behavior regressions. Use `pnpm run test:e2e` for Electron app-path coverage that needs the real desktop shell, renderer, backend API, and isolated profile state. Legacy focused aliases such as `pnpm run e2e:chat`, `pnpm run smoke:routines-ui`, and `pnpm run smoke:desktop:fork-rewind` now run filtered Playwright E2E specs through the same runner.
+
+Electron E2E:
+
+```bash
+pnpm run test:e2e
+pnpm run test:e2e:runner --grep @chat
+```
+
+The Playwright E2E suite launches Electron directly with a temporary state root, captures traces/screenshots/video on failure, and writes artifacts under `test-results/e2e` and `playwright-report/e2e`. The full command rebuilds the desktop app first; use `test:e2e:runner` only when the build outputs are already fresh.
 
 Startup idle smoke:
 
