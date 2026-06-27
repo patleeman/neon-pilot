@@ -572,6 +572,37 @@ describe('TelegramGatewayRuntime', () => {
     expect(unsubscribe).toHaveBeenCalled();
   });
 
+  it('edits the working message from streamed assistant text on agent end', async () => {
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
+    let streamListener: ((event: SseEvent) => void) | null = null;
+    const unsubscribe = vi.fn();
+    const d = deps({
+      subscribeConversationEvents: vi.fn((_conversationId: string, listener: (event: SseEvent) => void) => {
+        streamListener = listener;
+        return unsubscribe;
+      }),
+      fetch: vi.fn(async (url: string) => ({
+        ok: true,
+        json: async () => ({ ok: true, result: url.endsWith('/sendMessage') ? { message_id: 42 } : true }),
+      })),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: 'hello' } });
+    streamListener?.({ type: 'text_delta', delta: 'final ' });
+    streamListener?.({ type: 'text_delta', delta: 'reply' });
+    streamListener?.({ type: 'agent_end' });
+
+    await vi.waitFor(() =>
+      expect(d.fetch).toHaveBeenCalledWith(
+        'https://api.telegram.org/bottoken/editMessageText',
+        expect.objectContaining({ body: expect.stringContaining('final reply') }),
+      ),
+    );
+    expect(unsubscribe).toHaveBeenCalled();
+  });
+
   it('falls back to a new message when editing the working message fails', async () => {
     state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
     state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });

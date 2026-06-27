@@ -158,6 +158,7 @@ export class TelegramGatewayRuntime {
   private typingIndicators = new Map<string, TypingIndicator>();
   private pendingStatusMessages = new Map<string, { chatId: string; messageId: number }>();
   private streamSubscriptions = new Map<string, () => void>();
+  private streamingAssistantText = new Map<string, string>();
   private toolStatuses = new Map<string, Map<string, TelegramToolStatus>>();
   private deliveredToolStatusKeys = new Map<string, Set<string>>();
 
@@ -181,6 +182,7 @@ export class TelegramGatewayRuntime {
     this.typingIndicators.clear();
     for (const unsubscribe of this.streamSubscriptions.values()) unsubscribe();
     this.streamSubscriptions.clear();
+    this.streamingAssistantText.clear();
     this.toolStatuses.clear();
     this.deliveredToolStatusKeys.clear();
   }
@@ -307,11 +309,19 @@ export class TelegramGatewayRuntime {
   private stopConversationEventStream(conversationId: string): void {
     this.streamSubscriptions.get(conversationId)?.();
     this.streamSubscriptions.delete(conversationId);
+    this.streamingAssistantText.delete(conversationId);
     this.toolStatuses.delete(conversationId);
     this.deliveredToolStatusKeys.delete(conversationId);
   }
 
   private async handleConversationStreamEvent(conversationId: string, event: SseEvent): Promise<void> {
+    if (event.type === 'text_delta') {
+      if (event.delta) {
+        this.streamingAssistantText.set(conversationId, `${this.streamingAssistantText.get(conversationId) ?? ''}${event.delta}`);
+      }
+      return;
+    }
+
     if (event.type === 'tool_start') {
       const statuses = this.toolStatuses.get(conversationId) ?? new Map<string, TelegramToolStatus>();
       statuses.set(event.toolCallId, {
@@ -337,7 +347,17 @@ export class TelegramGatewayRuntime {
       return;
     }
 
-    if (event.type === 'turn_end' || event.type === 'agent_end') {
+    if (event.type === 'agent_end') {
+      const text = this.streamingAssistantText.get(conversationId)?.trim();
+      if (text) {
+        await this.deliverAssistantReply({ conversationId, text });
+        return;
+      }
+      this.stopConversationEventStream(conversationId);
+      return;
+    }
+
+    if (event.type === 'turn_end') {
       this.stopConversationEventStream(conversationId);
     }
   }
