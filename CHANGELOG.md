@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.30 — 2026-06-27
+
+### Highlights
+
+- Promotes Automations to a GA-ready workflow with reliable owner-thread recovery, visible transcripts for background runs, safer run deletion, and reconciled sidebar/table updates when realtime events are missed.
+- Hardens Routines for public use with host-owned Ask confirmations, safer branch execution, repaired invalid parent links, resilient run history, and broader desktop smoke coverage for editing, drag reorder, runs, and deletion.
+- Strengthens Gateways with reliable Telegram multi-chat delivery, clearer runtime failure/status visibility, validated access lists, safer update acknowledgement, and event-driven refresh of the Gateways page.
+- Fixes shared workflow seams across app events, sidebar projection, active transcript reconciliation, checkpoint routine warnings, and Model Gateway streaming contracts.
+- Improves live-session capability caching so repeated resume, rewind, fork, and recovery operations avoid rebuilding extension factories on the hot path.
+- Expands release confidence with focused GA regressions, app-path QA for Automations/Routines/Gateways, extension boundary checks, and release-hardening gates.
+
+### Notes
+
+- 34 commits since the previous release.
+
 ## 0.11.29 — 2026-06-26
 
 ### Highlights

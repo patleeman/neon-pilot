@@ -223,9 +223,12 @@ describe('App recovery workflow', () => {
       expect(screen.getByRole('status').textContent).toBe('Connection reconnecting');
     });
 
+    const sidebarRefreshesBeforeFailure = apiMock.sidebarConversations.mock.calls.length;
+    apiMock.sidebarConversations.mockRejectedValueOnce(new Error('temporary sidebar projection outage'));
     fetchSessionsSnapshotMock.mockRejectedValueOnce(new Error('temporary session catalog outage'));
     await emitDesktopEvent({ type: 'invalidate', topics: ['sessions'] });
-    await waitFor(() => expect(fetchSessionsSnapshotMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(apiMock.sidebarConversations.mock.calls.length).toBeGreaterThan(sidebarRefreshesBeforeFailure));
+    expect(fetchSessionsSnapshotMock).toHaveBeenCalledTimes(1);
 
     expect(screen.getByText('Conversation route conv-recovery')).toBeTruthy();
     expect(screen.getByText('Recovered visible thread')).toBeTruthy();

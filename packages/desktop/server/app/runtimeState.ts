@@ -80,7 +80,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   let mcpConfigReloadTimer: NodeJS.Timeout | null = null;
   let liveSessionResourceOptionsCache: { key: string; value: LiveSessionResourceOptions; updatedAtMs: number } | null = null;
   let liveSessionResourceOptionsPromiseCache: { key: string; promise: Promise<LiveSessionResourceOptions> } | null = null;
-  let liveSessionExtensionFactoriesCache: { key: string; value: ExtensionFactory[] } | null = null;
+  let liveSessionExtensionFactoriesCache: { key: string; value: ExtensionFactory[]; updatedAtMs: number } | null = null;
 
   function withResourceOptionsPerf(value: LiveSessionResourceOptions, perf: Record<string, number>): LiveSessionResourceOptions {
     Object.defineProperty(value, LIVE_SESSION_RESOURCE_OPTIONS_PERF, {
@@ -330,6 +330,10 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
   function buildLiveSessionExtensionFactories(): ExtensionFactory[] {
     clearBashProcessWrappers();
+    if (liveSessionExtensionFactoriesCache && Date.now() - liveSessionExtensionFactoriesCache.updatedAtMs < LIVE_SESSION_HOT_CACHE_TTL_MS) {
+      return liveSessionExtensionFactoriesCache.value;
+    }
+
     const extensionEntries = listRuntimeExtensionBackendEntries();
     const modelRef = readSavedModelRef(settingsFile);
     const cacheKey = JSON.stringify({
@@ -343,6 +347,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       toolRegistrations: listManifestToolAgentExtensionCacheEntries(),
     });
     if (liveSessionExtensionFactoriesCache?.key === cacheKey) {
+      liveSessionExtensionFactoriesCache.updatedAtMs = Date.now();
       return liveSessionExtensionFactoriesCache.value;
     }
 
@@ -370,7 +375,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
       ...agentExtensions.factories,
     ].map(guardExtensionApi);
-    liveSessionExtensionFactoriesCache = { key: cacheKey, value: factories };
+    liveSessionExtensionFactoriesCache = { key: cacheKey, value: factories, updatedAtMs: Date.now() };
     return factories;
   }
 

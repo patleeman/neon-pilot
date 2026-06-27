@@ -4,17 +4,18 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.29** — stable release being prepared locally.
+**v0.11.30** — stable release being prepared locally.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.29
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.30
 
 Highlights in this train:
 
-- Hardens live conversations with more reliable transcript streaming, queued followups, detached-session recovery, workspace state preservation, and clearer provider/error handling.
-- Polishes everyday app navigation across the top bar, sidebar, context menus, command palette, onboarding, composer focus, history, attachments, and route recovery.
-- Expands first-party workflow surfaces with trusted skill search/install approvals, artifact command skills, typed visual artifacts, Gateways packaging, and extension-building chat entry points.
-- Improves File Explorer, Workbench, Browser, Automations, Routines, Settings, and extension pages with focused app-path fixes and QA coverage.
-- Strengthens release readiness with broader feature-inventory QA, design-system guardrails, extension packaging checks, and refreshed Pi runtime packages at `^0.80.2`.
+- Promotes Automations to a GA-ready workflow with reliable owner-thread recovery, visible transcripts for background runs, safer run deletion, and reconciled sidebar/table updates when realtime events are missed.
+- Hardens Routines for public use with host-owned Ask confirmations, safer branch execution, repaired invalid parent links, resilient run history, and broader desktop smoke coverage for editing, drag reorder, runs, and deletion.
+- Strengthens Gateways with reliable Telegram multi-chat delivery, clearer runtime failure/status visibility, validated access lists, safer update acknowledgement, and event-driven refresh of the Gateways page.
+- Fixes shared workflow seams across app events, sidebar projection, active transcript reconciliation, checkpoint routine warnings, and Model Gateway streaming contracts.
+- Improves live-session capability caching so repeated resume, rewind, fork, and recovery operations avoid rebuilding extension factories on the hot path.
+- Expands release confidence with focused GA regressions, app-path QA for Automations/Routines/Gateways, extension boundary checks, and release-hardening gates.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

@@ -297,23 +297,34 @@ describe('createRuntimeState', () => {
     expect(state.buildLiveSessionResourceOptions().additionalSkillPaths).toEqual(expect.any(Array));
   });
 
-  it('caches live session extension factories until registrations change', () => {
-    listManifestAgentExtensionCacheEntriesMock.mockReturnValue([{ extensionId: 'agent-ext', exportName: 'create' }]);
-    listExtensionToolRegistrationsMock.mockReturnValue([{ extensionId: 'tool-ext', id: 'tool', name: 'tool', action: 'run' }]);
-    const state = createTestRuntimeState();
+  it('hot-caches live session extension factories and refreshes after registrations change', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    try {
+      listManifestAgentExtensionCacheEntriesMock.mockReturnValue([{ extensionId: 'agent-ext', exportName: 'create' }]);
+      listExtensionToolRegistrationsMock.mockReturnValue([{ extensionId: 'tool-ext', id: 'tool', name: 'tool', action: 'run' }]);
+      const state = createTestRuntimeState();
 
-    const first = state.buildLiveSessionExtensionFactories();
-    const second = state.buildLiveSessionExtensionFactories();
-    expect(second).toBe(first);
-    expect(createManifestAgentExtensionsMock).toHaveBeenCalledTimes(1);
+      const first = state.buildLiveSessionExtensionFactories();
+      const second = state.buildLiveSessionExtensionFactories();
+      expect(second).toBe(first);
+      expect(createManifestAgentExtensionsMock).toHaveBeenCalledTimes(1);
 
-    listExtensionToolRegistrationsMock.mockReturnValue([
-      { extensionId: 'tool-ext', id: 'tool', name: 'tool', action: 'run' },
-      { extensionId: 'tool-ext', id: 'other-tool', name: 'other_tool', action: 'runOther' },
-    ]);
-    const third = state.buildLiveSessionExtensionFactories();
-    expect(third).not.toBe(first);
-    expect(createManifestAgentExtensionsMock).toHaveBeenCalledTimes(2);
+      listExtensionToolRegistrationsMock.mockReturnValue([
+        { extensionId: 'tool-ext', id: 'tool', name: 'tool', action: 'run' },
+        { extensionId: 'tool-ext', id: 'other-tool', name: 'other_tool', action: 'runOther' },
+      ]);
+      const third = state.buildLiveSessionExtensionFactories();
+      expect(third).toBe(first);
+      expect(createManifestAgentExtensionsMock).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(15_001);
+      const fourth = state.buildLiveSessionExtensionFactories();
+      expect(fourth).not.toBe(first);
+      expect(createManifestAgentExtensionsMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('caches async live session resource options for repeated session creation', async () => {

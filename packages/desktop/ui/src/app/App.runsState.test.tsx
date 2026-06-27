@@ -15,6 +15,7 @@ const apiExecutionsMock = vi.fn();
 const apiTasksMock = vi.fn();
 const apiDaemonMock = vi.fn();
 const apiSessionMetaMock = vi.fn();
+const apiSidebarConversationsMock = vi.fn();
 const fetchSessionsSnapshotMock = vi.fn();
 let desktopListener: { onopen?: () => void; onevent?: (event: DesktopAppEvent) => void } | null = null;
 
@@ -29,6 +30,7 @@ vi.mock('../client/api', () => ({
     tasks: apiTasksMock,
     daemon: apiDaemonMock,
     sessionMeta: apiSessionMetaMock,
+    sidebarConversations: apiSidebarConversationsMock,
   },
 }));
 
@@ -161,6 +163,17 @@ describe('App execution state integration', () => {
     fetchSessionsSnapshotMock.mockResolvedValue([
       { id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' },
     ]);
+    apiSidebarConversationsMock.mockImplementation(async () => {
+      const sessions = await fetchSessionsSnapshotMock();
+      return {
+        sessionIds: sessions.map((session) => session.id),
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        activeConversationId: 'conv-1',
+        workspacePaths: [],
+        sessions,
+      };
+    });
     delete (globalThis as typeof globalThis & { __APP_DATA_ONLY_RENDER_COUNT__?: number }).__APP_DATA_ONLY_RENDER_COUNT__;
   });
 
@@ -509,6 +522,8 @@ describe('App execution state integration', () => {
     apiTasksMock.mockReturnValueOnce(bootstrapTasks.promise).mockReturnValueOnce(refreshTasks.promise);
 
     ({ container, root } = await renderApp());
+    apiTasksMock.mockReset();
+    apiTasksMock.mockReturnValueOnce(refreshTasks.promise);
 
     await emitDesktopEvent({ type: 'invalidate', topics: ['tasks'] });
     await flushInvalidationRefresh();
@@ -525,6 +540,7 @@ describe('App execution state integration', () => {
         },
       ]);
       await refreshTasks.promise;
+      await Promise.resolve();
     });
 
     expect(container.textContent).toContain('tasks version 1');
