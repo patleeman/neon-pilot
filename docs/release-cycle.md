@@ -207,6 +207,16 @@ Release assets must include Electron updater metadata plus signed macOS artifact
 
 The publish script loads Apple credentials from `NEON_PILOT_RELEASE_ENV`, then `.env`, then `~/.config/neon-pilot/release-env`. It maps `APPLE_PASSWORD` to `APPLE_APP_SPECIFIC_PASSWORD` for notarization and can target another public release repo with `NEON_PILOT_RELEASE_REPO`.
 
+If Apple notarization is blocked by an external account issue after the signed app and automated release smokes pass, the publish script can be rerun with an explicit waiver:
+
+```bash
+NEON_PILOT_RELEASE_NOTARIZATION_WAIVED=1 \
+NEON_PILOT_RELEASE_NOTARIZATION_WAIVER_REASON="Apple notary service rejected submission because required account agreements need manual acceptance." \
+pnpm run release:publish
+```
+
+Use this only for an intentional unnotarized release.
+
 ## Gotchas
 
 - `pnpm version prerelease --preid=rc` only bumps the version and creates a git tag. It does not build or upload artifacts. Run `pnpm run release:publish` for the full signed release.

@@ -478,6 +478,20 @@ function notarizeDistributionContainers(env, files) {
   }
 }
 
+function shouldWaiveNotarization(env) {
+  if (!isTruthyEnv(env.NEON_PILOT_RELEASE_NOTARIZATION_WAIVED)) {
+    return false;
+  }
+
+  const reason = String(env.NEON_PILOT_RELEASE_NOTARIZATION_WAIVER_REASON ?? '').trim();
+  if (!reason) {
+    fail('NEON_PILOT_RELEASE_NOTARIZATION_WAIVED=1 requires NEON_PILOT_RELEASE_NOTARIZATION_WAIVER_REASON.');
+  }
+
+  console.warn(`Release notarization waived: ${reason}`);
+  return true;
+}
+
 function resolveReleaseSmokePaths(releaseDir, buildRoot) {
   const appPath = collectPackagedAppPath(releaseDir);
   if (!appPath) {
@@ -705,7 +719,9 @@ requirePreNotarizationSmokeTest(env, releaseDir, buildRoot);
 
 const desktopReleaseFiles = collectReleaseFiles(releaseDir, version);
 const files = desktopReleaseFiles;
-notarizeDistributionContainers(env, desktopReleaseFiles);
+if (!shouldWaiveNotarization(env)) {
+  notarizeDistributionContainers(env, desktopReleaseFiles);
+}
 requireSmokeTestApproval(env, releaseDir, buildRoot);
 requireReleaseQaAcknowledgement(env);
 requireFirstPartyExtensionReleaseGate(env, tag);
