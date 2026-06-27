@@ -205,14 +205,6 @@ const HOOK_POINTS: RoutineHookPoint[] = [
     ],
   },
   {
-    id: 'scratchpad.changed',
-    title: 'Scratchpad changes',
-    group: 'Conversation',
-    description: 'Clean up, summarize, or check scratchpad changes before they affect context.',
-    ownerExtensionId: 'system-scratchpad',
-    variables: [{ name: 'content', label: 'Content' }],
-  },
-  {
     id: 'todo.changed',
     title: 'Todo list changes',
     group: 'Conversation',

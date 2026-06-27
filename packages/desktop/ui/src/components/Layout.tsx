@@ -251,6 +251,7 @@ const WORKBENCH_DOCUMENT_WIDTH_STORAGE_KEY = 'pa:workbench-document-width';
 const WORKBENCH_EXPLORER_WIDTH_STORAGE_KEY = 'pa:workbench-explorer-width';
 const WORKBENCH_EXPLORER_OPEN_STORAGE_KEY = 'pa:workbench-explorer-open';
 const WORKBENCH_TABS_STORAGE_KEY = 'pa:workbench-tabs';
+const REMOVED_WORKBENCH_RAIL_MODES = new Set(['scratchpad']);
 const WORKBENCH_OPEN_TOOL_TAB_EVENT = 'pa:workbench-open-tool-tab';
 const WORKBENCH_OPEN_ARTIFACT_TAB_EVENT = 'pa:workbench-open-artifact-tab';
 const WORKBENCH_OPEN_WORKSPACE_FILE_EVENT = 'pa:workbench-open-workspace-file';
@@ -282,6 +283,7 @@ interface StoredWorkbenchTabsState {
 }
 
 function isStoredWorkbenchRailMode(value: unknown): value is WorkbenchRailMode {
+  if (typeof value === 'string' && REMOVED_WORKBENCH_RAIL_MODES.has(value)) return false;
   if (typeof value === 'string' && /^[A-Za-z0-9:_-]{1,200}$/.test(value)) return true;
   return (
     value === 'new' ||

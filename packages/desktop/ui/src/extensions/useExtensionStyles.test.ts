@@ -13,7 +13,7 @@ describe('useExtensionStyles', () => {
   });
 
   it('does not inject styles for system extensions (Vite handles CSS)', () => {
-    const systemId = 'system-scratchpad';
+    const systemId = 'system-settings';
     expect(systemExtensionModules.has(systemId)).toBe(true);
 
     renderHook(() => useExtensionStyles(systemId, ['src/frontend.css']));

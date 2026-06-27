@@ -244,7 +244,7 @@ describe('Layout workbench rail state', () => {
         tabs: [
           { id: 'files', mode: 'files' },
           { id: 'terminal-1', mode: 'terminal' },
-          { id: 'scratchpad', mode: 'scratchpad' },
+          { id: 'extension-notes', mode: 'extension:system-notes:notes' },
         ],
         activeTabId: 'terminal-1',
       }),
@@ -254,9 +254,31 @@ describe('Layout workbench rail state', () => {
       tabs: [
         { id: 'files', mode: 'files' },
         { id: 'terminal-1', mode: 'terminal' },
-        { id: 'scratchpad', mode: 'scratchpad' },
+        { id: 'extension-notes', mode: 'extension:system-notes:notes' },
       ],
       activeTabId: 'terminal-1',
+    });
+  });
+
+  it('drops persisted tabs for removed workbench tools', () => {
+    const storage = new Map<string, string>();
+    const localStorage = {
+      getItem: (key: string) => storage.get(key) ?? null,
+    } as Storage;
+    storage.set(
+      'pa:workbench-tabs',
+      JSON.stringify({
+        tabs: [
+          { id: 'scratchpad', mode: 'scratchpad' },
+          { id: 'files', mode: 'files' },
+        ],
+        activeTabId: 'scratchpad',
+      }),
+    );
+
+    expect(readStoredWorkbenchTabs(localStorage)).toEqual({
+      tabs: [{ id: 'files', mode: 'files' }],
+      activeTabId: null,
     });
   });
 });

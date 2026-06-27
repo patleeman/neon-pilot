@@ -826,8 +826,7 @@ function inferCliCommandMode(command: string): NonNullable<NeonPilotCliCommandDe
     'workspace',
     'validate',
   ]);
-  if (readVerbs.has(commandTokens(command).at(-1) ?? '') || command.endsWith('open list') || command.endsWith('scratchpad get'))
-    return 'read';
+  if (readVerbs.has(commandTokens(command).at(-1) ?? '') || command.endsWith('open list')) return 'read';
   return 'write';
 }
 

@@ -100,27 +100,29 @@ describe('conversation connection registry', () => {
 
   it('filters by surface, kind, active state, and visibility after normalization', async () => {
     mocks.listExtensionConversationConnectionProviderRegistrations.mockReturnValue([
-      { extensionId: 'system-scratchpad', id: 'scratchpad', action: 'listScratchpadConnections', priority: 40 },
+      { extensionId: 'system-notes', id: 'notes', action: 'listNoteConnections', priority: 40 },
     ]);
     mocks.invokeAction.mockResolvedValue({
       ok: true,
       result: [
         {
-          id: 'scratchpad',
+          id: 'notes',
           kind: 'state',
-          title: 'Scratchpad',
+          title: 'Notes',
           active: false,
           meaningful: true,
           visibility: 'system',
-          source: { type: 'conversation-metadata', id: 'threadScratchpad' },
+          source: { type: 'conversation-metadata', id: 'notes' },
           surfaces: ['rightRail', 'cli'],
           actions: [],
         },
       ],
     });
 
-    await expect(listConversationConnections('conv-1', { kind: 'state', surface: 'rightRail', visibility: 'system' })).resolves.toMatchObject({
-      items: [expect.objectContaining({ id: 'system-scratchpad:scratchpad' })],
+    await expect(
+      listConversationConnections('conv-1', { kind: 'state', surface: 'rightRail', visibility: 'system' }),
+    ).resolves.toMatchObject({
+      items: [expect.objectContaining({ id: 'system-notes:notes' })],
     });
     await expect(listConversationConnections('conv-1', { active: true, kind: 'state', surface: 'rightRail' })).resolves.toMatchObject({
       items: [],

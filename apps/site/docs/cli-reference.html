@@ -842,68 +842,6 @@
           <li><code>neon-pilot conversations run-turn conversation-example --text Hello</code></li>
           <li><code>neon-pilot conversations run-turn conversation-example --text Hello --json</code></li>
         </ul>
-        <h3 id="conversations-scratchpad-get">conversations scratchpad get</h3>
-        <p>Get a conversation scratchpad: conversations scratchpad get &lt;id&gt;</p>
-        <ul>
-          <li>Source: extension (system-scratchpad)</li>
-          <li>Usage: <code>neon-pilot conversations scratchpad get &lt;id&gt; [--json]</code></li>
-          <li>Mode: read</li>
-          <li>Requires app: no</li>
-          <li>Idempotent: yes</li>
-          <li>Destructive: no</li>
-          <li>Dry run: no</li>
-          <li>Output: text, json</li>
-        </ul>
-        <p>Examples:</p>
-        <ul>
-          <li><code>neon-pilot conversations scratchpad get example-id</code></li>
-          <li><code>neon-pilot conversations scratchpad get example-id --json</code></li>
-        </ul>
-        <h3 id="conversations-scratchpad-patch">conversations scratchpad patch</h3>
-        <p>Append/prepend to a scratchpad: conversations scratchpad patch &lt;id&gt; --operation append --content &lt;markdown&gt;</p>
-        <ul>
-          <li>Source: extension (system-scratchpad)</li>
-          <li>
-            Usage:
-            <code
-              >neon-pilot conversations scratchpad patch &lt;conversationId&gt; [--operation append|prepend] [--content &lt;markdown&gt;]
-              [--json]</code
-            >
-          </li>
-          <li>Mode: write</li>
-          <li>Requires app: no</li>
-          <li>Idempotent: no</li>
-          <li>Destructive: no</li>
-          <li>Dry run: yes</li>
-          <li>Output: text, json</li>
-        </ul>
-        <p>Examples:</p>
-        <ul>
-          <li>
-            <code
-              >neon-pilot conversations scratchpad patch conversation-example --operation append --content &quot;Validation
-              passed&quot;</code
-            >
-          </li>
-          <li><code>neon-pilot conversations scratchpad patch conversation-example --json</code></li>
-        </ul>
-        <h3 id="conversations-scratchpad-set">conversations scratchpad set</h3>
-        <p>Replace a conversation scratchpad: conversations scratchpad set &lt;id&gt; --content &lt;markdown&gt;</p>
-        <ul>
-          <li>Source: extension (system-scratchpad)</li>
-          <li>Usage: <code>neon-pilot conversations scratchpad set &lt;conversationId&gt; [--content &lt;markdown&gt;] [--json]</code></li>
-          <li>Mode: write</li>
-          <li>Requires app: no</li>
-          <li>Idempotent: yes</li>
-          <li>Destructive: no</li>
-          <li>Dry run: yes</li>
-          <li>Output: text, json</li>
-        </ul>
-        <p>Examples:</p>
-        <ul>
-          <li><code>neon-pilot conversations scratchpad set conversation-example --content &quot;## Plan&quot;</code></li>
-          <li><code>neon-pilot conversations scratchpad set conversation-example --json</code></li>
-        </ul>
         <h3 id="conversations-search">conversations search</h3>
         <p>Search visible conversation transcript text.</p>
         <ul>

@@ -374,5 +374,3 @@ neon-pilot conversations delete conv-old --json
 neon-pilot conversations retention prune --older-than 180d --archived-only --dry-run --json
 neon-pilot conversations transcript append <id> --type text --data '{"text":"note"}' --json
 ```
-
-Conversation scratchpads are owned by the Scratchpad system extension. Use its `scratchpad` agent tool, Workbench rail pane, or `neon-pilot conversations scratchpad ...` CLI commands for per-conversation working notes.

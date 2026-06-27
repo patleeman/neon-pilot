@@ -914,9 +914,9 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
   &quot;contributes&quot;: {
     &quot;conversationConnectionProviders&quot;: [
       {
-        &quot;id&quot;: &quot;scratchpad&quot;,
-        &quot;title&quot;: &quot;Scratchpad&quot;,
-        &quot;action&quot;: &quot;listScratchpadConnections&quot;,
+        &quot;id&quot;: &quot;todos&quot;,
+        &quot;title&quot;: &quot;Todos&quot;,
+        &quot;action&quot;: &quot;listTodoConnections&quot;,
         &quot;kind&quot;: &quot;state&quot;,
         &quot;surfaces&quot;: [&quot;rightRail&quot;, &quot;cli&quot;],
         &quot;priority&quot;: 40
@@ -931,7 +931,7 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           prefixes returned IDs with the extension ID and silently skips malformed items.
         </p>
         <p>
-          Only return meaningful connections. Empty scratchpads, zero-item todo lists, dormant optional panels, and purely decorative
+          Only return meaningful connections. Empty note files, zero-item todo lists, dormant optional panels, and purely decorative
           surfaces should return <code>{ &quot;items&quot;: [] }</code>.
         </p>
         <h3 id="runtime-providers-runtimeproviders">Runtime Providers (<code>runtimeProviders</code>)</h3>

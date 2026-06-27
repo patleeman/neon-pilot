@@ -91,7 +91,6 @@ describe('workbench rail model', () => {
     expect(isSinglePaneWorkbenchMode('terminal')).toBe(true);
     expect(isSinglePaneWorkbenchMode('files')).toBe(false);
     expect(isSinglePaneWorkbenchMode('files', surface({ toolSlot: 'terminal' }))).toBe(true);
-    expect(isSinglePaneWorkbenchMode('files', surface({ toolSlot: 'scratchpad' }))).toBe(true);
   });
 
   it('opens the paired rail for two-pane extension workbench tools', () => {
@@ -100,14 +99,13 @@ describe('workbench rail model', () => {
     expect(shouldOpenRailForWorkbenchTool('files', surface({ toolSlot: 'files' }))).toBe(false);
   });
 
-  it('assigns scratchpad one singleton tab that follows the active conversation', () => {
-    expect(singletonWorkbenchToolTabId('scratchpad', surface({ toolSlot: 'scratchpad' }), 'conversation-1')).toBe('scratchpad');
-    expect(singletonWorkbenchToolTabId('scratchpad', surface({ toolSlot: 'scratchpad' }), 'conversation-2')).toBe('scratchpad');
+  it('does not assign singleton tabs to generic extension tools', () => {
+    expect(singletonWorkbenchToolTabId('extension:system-notes:notes', surface({ toolSlot: 'notes' }), 'conversation-1')).toBeNull();
     expect(singletonWorkbenchToolTabId('terminal', surface({ toolSlot: 'terminal' }), 'conversation-1')).toBeNull();
   });
 
-  it('keeps scratchpad open when switching to a conversation without a saved workbench selection', () => {
-    expect(shouldKeepActiveToolWhenConversationHasNoSavedSelection('scratchpad')).toBe(true);
+  it('does not keep conversation-scoped extension tools open without a saved workbench selection', () => {
+    expect(shouldKeepActiveToolWhenConversationHasNoSavedSelection('extension:system-notes:notes')).toBe(false);
     expect(shouldKeepActiveToolWhenConversationHasNoSavedSelection('files')).toBe(false);
     expect(shouldKeepActiveToolWhenConversationHasNoSavedSelection('terminal')).toBe(false);
   });

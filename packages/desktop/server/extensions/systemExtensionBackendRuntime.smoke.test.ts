@@ -704,20 +704,6 @@ const smokes = {
     const contributions = await module.listInstalledSkillContributions({}, ctx);
     assert(Array.isArray(contributions.skills), 'skill search installed skill contributions failed');
   },
-  async 'system-scratchpad'() {
-    const empty = await module.scratchpadTool({ action: 'get', conversationId: 'smoke-conversation' }, ctx);
-    assert(
-      empty.details?.conversationId === 'smoke-conversation' && empty.details?.content === '',
-      'scratchpad get should start empty',
-    );
-    const updated = await module.scratchpadTool(
-      { action: 'set', conversationId: 'smoke-conversation', content: 'Smoke scratchpad' },
-      ctx,
-    );
-    assert(updated.details?.content === 'Smoke scratchpad', 'scratchpad set failed');
-    const context = await module.provideTurnContext({}, ctx);
-    assert(context.blocks?.[0]?.content?.includes('Smoke scratchpad'), 'scratchpad turn context missing content');
-  },
   async 'system-suggested-context'() {
     assert(typeof module.warmPointers === 'function', 'warmPointers action missing');
   },

@@ -47,14 +47,11 @@ export function singletonWorkbenchToolTabId(
   if (mode === 'files' || surfaceToolSlot === 'files') {
     return 'files';
   }
-  if (mode === 'scratchpad' || surfaceToolSlot === 'scratchpad') {
-    return 'scratchpad';
-  }
   return null;
 }
 
-export function shouldKeepActiveToolWhenConversationHasNoSavedSelection(activeToolSlot: WorkbenchRailMode): boolean {
-  return activeToolSlot === 'scratchpad';
+export function shouldKeepActiveToolWhenConversationHasNoSavedSelection(_activeToolSlot: WorkbenchRailMode): boolean {
+  return false;
 }
 
 export function isSinglePaneWorkbenchMode(mode: WorkbenchRailMode, surface?: { extensionId?: string } | null): boolean {
@@ -66,8 +63,7 @@ export function isSinglePaneWorkbenchMode(mode: WorkbenchRailMode, surface?: { e
     mode === 'artifacts' ||
     surface?.extensionId === 'system-artifacts' ||
     surface?.extensionId === 'system-excalidraw-input' ||
-    surfaceToolSlot === 'terminal' ||
-    surfaceToolSlot === 'scratchpad'
+    surfaceToolSlot === 'terminal'
   );
 }
 

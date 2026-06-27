@@ -521,9 +521,9 @@ Use `conversationConnectionProviders` when an extension owns conversation-attach
   "contributes": {
     "conversationConnectionProviders": [
       {
-        "id": "scratchpad",
-        "title": "Scratchpad",
-        "action": "listScratchpadConnections",
+        "id": "todos",
+        "title": "Todos",
+        "action": "listTodoConnections",
         "kind": "state",
         "surfaces": ["rightRail", "cli"],
         "priority": 40
@@ -535,7 +535,7 @@ Use `conversationConnectionProviders` when an extension owns conversation-attach
 
 Provider actions receive `{ conversationId, providerId }` and should return either an array of items or `{ "items": [...] }`. Required item fields are `id`, `kind`, `title`, `active`, `meaningful`, `visibility`, `source`, and `surfaces`. The host prefixes returned IDs with the extension ID and silently skips malformed items.
 
-Only return meaningful connections. Empty scratchpads, zero-item todo lists, dormant optional panels, and purely decorative surfaces should return `{ "items": [] }`.
+Only return meaningful connections. Empty note files, zero-item todo lists, dormant optional panels, and purely decorative surfaces should return `{ "items": [] }`.
 
 ### Runtime Providers (`runtimeProviders`)
 

@@ -62,8 +62,8 @@ Built-in connection items use stable prefixed IDs:
 
 Extension providers contribute `contributes.conversationConnectionProviders` and return connection items from their
 backend action. The host prefixes extension item IDs as `<extensionId>:<itemId>` so independent providers cannot collide.
-Providers should return nothing unless the connection is meaningful: an empty scratchpad, a completed zero-item todo
-list, or an inactive optional surface should stay absent.
+Providers should return nothing unless the connection is meaningful: an empty note file, a completed zero-item todo list,
+or an inactive optional surface should stay absent.
 
 `/api/conversations/:id/activity` remains the compatibility projection for activity-shelf rows. It is derived from
 conversation connections with `kind=activity`, `surface=activityShelf`, and built-in providers only. The CLI exposes the

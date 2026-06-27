@@ -964,23 +964,23 @@ describe('CommandsSettingsSection', () => {
   it('restores the visible shortcut when a declared command shortcut save fails', async () => {
     vi.spyOn(api, 'extensionCommands').mockResolvedValue([
       {
-        extensionId: 'system-scratchpad',
-        id: 'scratchpad.open',
-        title: 'Open Scratchpad',
+        extensionId: 'system-notes',
+        id: 'notes.open',
+        title: 'Open Notes',
         action: 'rail.open',
-        args: { extensionId: 'system-scratchpad', surfaceId: 'scratchpad' },
+        args: { extensionId: 'system-notes', surfaceId: 'notes' },
       },
     ]);
     vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
       {
-        extensionId: 'system-scratchpad',
-        surfaceId: 'scratchpad.open',
-        title: 'Open Scratchpad',
-        keys: ['mod+shift+s'],
+        extensionId: 'system-notes',
+        surfaceId: 'notes.open',
+        title: 'Open Notes',
+        keys: ['mod+shift+n'],
         command: 'rail.open',
-        args: { extensionId: 'system-scratchpad', surfaceId: 'scratchpad' },
+        args: { extensionId: 'system-notes', surfaceId: 'notes' },
         scope: 'global',
-        defaultKeys: ['mod+shift+s'],
+        defaultKeys: ['mod+shift+n'],
         enabled: true,
       },
     ]);
@@ -996,9 +996,9 @@ describe('CommandsSettingsSection', () => {
     });
     await flushAsyncWork();
 
-    const shortcutButton = container.querySelector<HTMLButtonElement>('#settings-command-keybinding-system-scratchpad\\:scratchpad\\.open');
+    const shortcutButton = container.querySelector<HTMLButtonElement>('#settings-command-keybinding-system-notes\\:notes\\.open');
     if (!(shortcutButton instanceof HTMLButtonElement)) {
-      throw new Error('Expected Open Scratchpad shortcut capture button');
+      throw new Error('Expected Open Notes shortcut capture button');
     }
 
     act(() => {
@@ -1010,8 +1010,8 @@ describe('CommandsSettingsSection', () => {
       shortcutButton.dispatchEvent(
         new KeyboardEvent('keydown', {
           bubbles: true,
-          key: 's',
-          code: 'KeyS',
+          key: 'n',
+          code: 'KeyN',
           metaKey: true,
           altKey: true,
           shiftKey: true,
@@ -1020,41 +1020,41 @@ describe('CommandsSettingsSection', () => {
     });
     await flushAsyncWork();
 
-    expect(api.updateExtensionKeybinding).toHaveBeenCalledWith('system-scratchpad', 'scratchpad.open', {
-      keys: ['CommandOrControl+Alt+Shift+S'],
+    expect(api.updateExtensionKeybinding).toHaveBeenCalledWith('system-notes', 'notes.open', {
+      keys: ['CommandOrControl+Alt+Shift+N'],
       enabled: true,
     });
-    expect(shortcutButton.textContent).toContain('⌘/Ctrl + Shift + s');
-    expect(shortcutButton.textContent).not.toContain('⌘/Ctrl + Alt + Shift + S');
+    expect(shortcutButton.textContent).toContain('⌘/Ctrl + Shift + n');
+    expect(shortcutButton.textContent).not.toContain('⌘/Ctrl + Alt + Shift + N');
     expect(container.textContent).toContain('Could not save shortcut because its command is no longer available.');
   });
 
   it('sanitizes internal command shortcut save failures', async () => {
     vi.spyOn(api, 'extensionCommands').mockResolvedValue([
       {
-        extensionId: 'system-scratchpad',
-        id: 'scratchpad.open',
-        title: 'Open Scratchpad',
+        extensionId: 'system-notes',
+        id: 'notes.open',
+        title: 'Open Notes',
         action: 'rail.open',
-        args: { extensionId: 'system-scratchpad', surfaceId: 'scratchpad' },
+        args: { extensionId: 'system-notes', surfaceId: 'notes' },
       },
     ]);
     vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
       {
-        extensionId: 'system-scratchpad',
-        surfaceId: 'scratchpad.open',
-        title: 'Open Scratchpad',
-        keys: ['mod+shift+s'],
+        extensionId: 'system-notes',
+        surfaceId: 'notes.open',
+        title: 'Open Notes',
+        keys: ['mod+shift+n'],
         command: 'rail.open',
-        args: { extensionId: 'system-scratchpad', surfaceId: 'scratchpad' },
+        args: { extensionId: 'system-notes', surfaceId: 'notes' },
         scope: 'global',
-        defaultKeys: ['mod+shift+s'],
+        defaultKeys: ['mod+shift+n'],
         enabled: true,
       },
     ]);
     vi.spyOn(api, 'updateExtensionKeybinding').mockRejectedValue(
       new Error(
-        'Local API route did not complete for PATCH /api/extensions/keybindings/system-scratchpad/scratchpad.open at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/app/localApi.js:132:20)',
+        'Local API route did not complete for PATCH /api/extensions/keybindings/system-notes/notes.open at Module.ep (file:///Users/patrick/workingdir/neon-pilot/packages/desktop/dist/app/localApi.js:132:20)',
       ),
     );
 
@@ -1068,9 +1068,9 @@ describe('CommandsSettingsSection', () => {
     });
     await flushAsyncWork();
 
-    const shortcutButton = container.querySelector<HTMLButtonElement>('#settings-command-keybinding-system-scratchpad\\:scratchpad\\.open');
+    const shortcutButton = container.querySelector<HTMLButtonElement>('#settings-command-keybinding-system-notes\\:notes\\.open');
     if (!(shortcutButton instanceof HTMLButtonElement)) {
-      throw new Error('Expected Open Scratchpad shortcut capture button');
+      throw new Error('Expected Open Notes shortcut capture button');
     }
 
     act(() => {
@@ -1082,8 +1082,8 @@ describe('CommandsSettingsSection', () => {
       shortcutButton.dispatchEvent(
         new KeyboardEvent('keydown', {
           bubbles: true,
-          key: 's',
-          code: 'KeyS',
+          key: 'n',
+          code: 'KeyN',
           metaKey: true,
           altKey: true,
           shiftKey: true,
@@ -1092,7 +1092,7 @@ describe('CommandsSettingsSection', () => {
     });
     await flushAsyncWork();
 
-    expect(shortcutButton.textContent).toContain('⌘/Ctrl + Shift + s');
+    expect(shortcutButton.textContent).toContain('⌘/Ctrl + Shift + n');
     expect(container.textContent).toContain('Could not save shortcut. Reload extensions and try again.');
     expect(container.textContent).not.toContain('/api/extensions/keybindings');
     expect(container.textContent).not.toContain('localApi.js');

@@ -489,28 +489,6 @@ describe('extension manifests - structural validation', () => {
     expect(dangling, 'Keybindings must target a known host command or extension command').toEqual([]);
   });
 
-  it('exposes a default scratchpad hotkey for the command palette action', () => {
-    const scratchpadCommand = listExtensionCommandRegistrations().find(
-      (command) => command.extensionId === 'system-scratchpad' && command.surfaceId === 'scratchpad.open',
-    );
-    const scratchpadKeybinding = listExtensionKeybindingRegistrations().find(
-      (keybinding) => keybinding.extensionId === 'system-scratchpad' && keybinding.surfaceId === 'scratchpad.open',
-    );
-
-    expect(scratchpadCommand).toMatchObject({
-      title: 'Open Scratchpad',
-      action: 'rail.open',
-      args: { extensionId: 'system-scratchpad', surfaceId: 'scratchpad' },
-    });
-    expect(scratchpadKeybinding).toMatchObject({
-      title: 'Open Scratchpad',
-      keys: ['mod+shift+s'],
-      command: 'rail.open',
-      args: { extensionId: 'system-scratchpad', surfaceId: 'scratchpad' },
-      scope: 'global',
-    });
-  });
-
   it('exposes caffeinate as a command-backed hotkey', () => {
     const caffeinateCommand = listExtensionCommandRegistrations().find(
       (command) => command.extensionId === 'system-caffeinate' && command.surfaceId === 'caffeinate.toggle',

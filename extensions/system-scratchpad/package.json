@@ -1,9 +1,0 @@
-{
-  "type": "module",
-  "dependencies": {
-    "@neon-pilot/extensions": "workspace:0.9.1-rc.1"
-  },
-  "devDependencies": {
-    "@testing-library/react": "16.3.2"
-  }
-}

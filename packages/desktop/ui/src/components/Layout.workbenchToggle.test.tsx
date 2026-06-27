@@ -396,14 +396,14 @@ describe('Layout workbench toggle', () => {
     const state = closeWorkbenchTabState(
       [
         { id: 'files', mode: 'files' },
-        { id: 'scratchpad', mode: 'scratchpad' },
+        { id: 'extension-notes', mode: 'extension:system-notes:notes' },
       ],
-      'scratchpad',
+      'extension-notes',
       'files',
     );
 
-    expect(state.nextTabs).toEqual([{ id: 'scratchpad', mode: 'scratchpad' }]);
-    expect(state.nextActiveTabId).toBe('scratchpad');
+    expect(state.nextTabs).toEqual([{ id: 'extension-notes', mode: 'extension:system-notes:notes' }]);
+    expect(state.nextActiveTabId).toBe('extension-notes');
     expect(state.nextWouldHaveNoTabs).toBe(false);
     expect(state.shouldClearFileSelection).toBe(true);
   });

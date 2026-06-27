@@ -716,24 +716,22 @@ describe('protocol CLI', () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
       cliCommandRegistrations: [
         {
-          extensionId: 'system-scratchpad',
-          surfaceId: 'conversations-scratchpad-set',
-          command: 'conversations scratchpad set',
-          action: 'scratchpadTool',
+          extensionId: 'system-notes',
+          surfaceId: 'notes-set',
+          command: 'notes set',
+          action: 'notesTool',
           inputAction: 'set',
           jsonDefault: true,
         },
       ],
     });
-    extensionHostClient.invokeAction.mockRejectedValueOnce(new Error('Scratchpad content exceeds 200000 characters.'));
+    extensionHostClient.invokeAction.mockRejectedValueOnce(new Error('Note content exceeds 200000 characters.'));
 
-    await expect(
-      runProtocolCli(['conversations', 'scratchpad', 'set', 'qa-thread', '--content', 'secret note text', '--json']),
-    ).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.runtimeFailure);
-
-    expect(stderrWrite).toHaveBeenCalledWith(
-      expect.stringContaining('"command": "conversations scratchpad set qa-thread --content <redacted> --json"'),
+    await expect(runProtocolCli(['notes', 'set', 'qa-thread', '--content', 'secret note text', '--json'])).resolves.toBe(
+      PROTOCOL_CLI_EXIT_CODES.runtimeFailure,
     );
+
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('"command": "notes set qa-thread --content <redacted> --json"'));
     expect(stderrWrite).not.toHaveBeenCalledWith(expect.stringContaining('secret note text'));
   });
 

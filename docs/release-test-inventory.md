@@ -191,15 +191,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Composer git status indicator.
 - Test clean/dirty repo, branch display, untracked files, non-git cwd, permission errors.
 
-### Scratchpad (`system-scratchpad`)
-
-- View: conversation-scoped scratchpad.
-- Agent tool/action: `scratchpad` with get/set/patch behavior.
-- Conversation connection provider and turn-context provider: `scratchpad`.
-- Command/hotkey: `scratchpad.open` (`Cmd/Ctrl+Shift+S` default when available).
-- CLI commands: `conversations scratchpad get`, `set`, and `patch`.
-- Test open/edit/save/patch, connection shelf display, turn-context inclusion, CLI get/set/patch, empty state, and reload persistence.
-
 ### Suggested Context (`system-suggested-context`, first-party optional)
 
 - Installable new-conversation suggested context UI and prompt context provider.
@@ -497,17 +488,6 @@ Bundled system-extension entries are derived from local `extensions/*/extension.
 - skills: runs
 - tools: bash-background/bash, background-bash/background_bash, subagent/subagent
 - backend actions: bash, background_bash, subagent
-
-### system-scratchpad — Scratchpad
-
-- cliCommands: conversations-scratchpad-get, conversations-scratchpad-set, conversations-scratchpad-patch
-- commands: scratchpad.open
-- conversationConnectionProviders: scratchpad
-- keybindings: scratchpad.open [mod+shift+s]
-- tools: scratchpad/scratchpad
-- turnContextProviders: scratchpad
-- views: scratchpad
-- backend actions: getScratchpad, setScratchpad, patchScratchpad, scratchpadTool, provideTurnContext, listScratchpadConnections
 
 ### system-settings — Settings panels
 
