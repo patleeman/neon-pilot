@@ -118,6 +118,7 @@ describe('ChatView bash trace clusters', () => {
     const { container } = renderChatView([bashBlock], { isStreaming: true });
 
     expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('true');
+    expect(container.textContent).toContain('running…');
     expect(container.textContent).toContain('pwd');
   });
 

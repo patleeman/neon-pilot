@@ -173,6 +173,7 @@ function isCheckpointFailureOutput(block: Extract<MessageBlock, { type: 'tool_us
 export function ToolBlock({
   block,
   autoOpen,
+  live = false,
   onOpenArtifact,
   activeArtifactId,
   onOpenCheckpoint,
@@ -190,6 +191,7 @@ export function ToolBlock({
 }: {
   block: Extract<MessageBlock, { type: 'tool_use' }>;
   autoOpen: boolean;
+  live?: boolean;
   onOpenArtifact?: (artifactId: string) => void;
   activeArtifactId?: string | null;
   onOpenCheckpoint?: (checkpointId: string) => void;
@@ -237,7 +239,7 @@ export function ToolBlock({
   const executionWrappers = useMemo(() => readToolExecutionWrappers(block), [block]);
   const linkedRuns = useMemo(() => readLinkedRuns(block), [block]);
   const fileChanges = useMemo(() => readFileChangesForToolBlock(block), [block]);
-  const isRunning = block.status === 'running' || !!block.running;
+  const isRunning = block.status === 'running' || !!block.running || live;
   const isError = block.status === 'error' || !!block.error || isCheckpointFailureOutput(block);
 
   const subagentPrompt = block.tool === 'subagent' ? readToolInputString(block.input, 'prompt') : undefined;

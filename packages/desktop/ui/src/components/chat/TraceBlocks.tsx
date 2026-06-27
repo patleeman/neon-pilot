@@ -552,6 +552,7 @@ export function TraceClusterBlock({
                     key={`tool-${blockIndex}`}
                     block={block}
                     autoOpen={autoOpen}
+                    live={blockLive}
                     onOpenArtifact={onOpenArtifact}
                     activeArtifactId={activeArtifactId}
                     onOpenCheckpoint={onOpenCheckpoint}
