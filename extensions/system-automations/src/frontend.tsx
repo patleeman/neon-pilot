@@ -33,6 +33,7 @@ import {
   SegmentedControl,
   Select,
   Textarea,
+  TextButton,
   TextInput,
 } from '@neon-pilot/extensions/ui';
 import {
@@ -446,7 +447,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   useEffect(() => {
     if (!rowMenu) return;
     const close = () => setRowMenu(null);
-    const closeOnPointerDown = (event: PointerEvent) => {
+    const closeOnOutsideEvent = (event: Event) => {
       const target = event.target;
       const menuRoot = target instanceof Element ? target.closest('[data-automation-row-menu]') : null;
       if (menuRoot?.getAttribute('data-automation-row-menu') === rowMenu.taskId) return;
@@ -455,12 +456,14 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     const closeOnKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') close();
     };
-    document.addEventListener('pointerdown', closeOnPointerDown);
+    document.addEventListener('pointerdown', closeOnOutsideEvent, true);
+    document.addEventListener('click', closeOnOutsideEvent, true);
     document.addEventListener('keydown', closeOnKeyDown);
     window.addEventListener('resize', close);
     window.addEventListener('scroll', close, true);
     return () => {
-      document.removeEventListener('pointerdown', closeOnPointerDown);
+      document.removeEventListener('pointerdown', closeOnOutsideEvent, true);
+      document.removeEventListener('click', closeOnOutsideEvent, true);
       document.removeEventListener('keydown', closeOnKeyDown);
       window.removeEventListener('resize', close);
       window.removeEventListener('scroll', close, true);
@@ -574,6 +577,21 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     }
   };
 
+  const openOwnerThread = async (task: TaskSummary) => {
+    const conversationId = task.threadConversationId?.trim();
+    if (!conversationId) return;
+    setRowMenu(null);
+    try {
+      const opened = await pa.commands.execute('conversation.open', { conversationId });
+      if (!opened) {
+        const navigated = await pa.commands.execute('app.navigate', { to: `/conversations/${encodeURIComponent(conversationId)}` });
+        if (!navigated) pa.ui.toast('Could not open the owner thread.', 'warning');
+      }
+    } catch (err) {
+      pa.ui.toast(err instanceof Error ? err.message : 'Could not open the owner thread.', 'warning');
+    }
+  };
+
   const pickCwd = async () => {
     setPickingCwd(true);
     try {
@@ -675,7 +693,21 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 </DataTableCell>
                 <DataTableCell className="truncate text-secondary">{nextRunText(task)}</DataTableCell>
                 <DataTableCell className="truncate text-secondary">{lastRunText(task)}</DataTableCell>
-                <DataTableCell className="truncate text-secondary">{task.threadTitle || task.threadConversationId || '—'}</DataTableCell>
+                <DataTableCell className="truncate text-secondary">
+                  {task.threadConversationId ? (
+                    <TextButton
+                      aria-label={`Open owner thread for ${taskTitle(task)}: ${task.threadTitle || task.threadConversationId}`}
+                      title={`Open ${task.threadTitle || task.threadConversationId}`}
+                      tone="accent"
+                      className="max-w-full justify-start truncate text-left text-[13px]"
+                      onClick={() => void openOwnerThread(task)}
+                    >
+                      {task.threadTitle || task.threadConversationId}
+                    </TextButton>
+                  ) : (
+                    '—'
+                  )}
+                </DataTableCell>
                 <DataTableCell className="relative" data-automation-row-menu={task.id}>
                   <DataTableActionGroup>
                     <IconButton

@@ -153,8 +153,22 @@ describe('AutomationsPage', () => {
     expect(container.textContent).toContain('Release watch');
     expect(container.textContent).toContain('*/15 * * * *');
     expect(container.textContent).toContain('Release watch thread');
+    expect(container.querySelector('button[aria-label="Open owner thread for Release watch: Release watch thread"]')).not.toBeNull();
     expect(container.textContent).toContain('Paused check');
     expect(container.textContent).toContain('Paused');
+  });
+
+  it('opens the owner thread from the automations list', async () => {
+    const pa = createPa();
+    const { container } = await renderPage(pa);
+
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Open owner thread for Release watch: Release watch thread"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    expect(pa.commands.execute).toHaveBeenCalledWith('conversation.open', { conversationId: 'conv-owner' });
   });
 
   it('refreshes running automations until the row settles', async () => {
@@ -228,6 +242,12 @@ describe('AutomationsPage', () => {
     expect(trigger?.getAttribute('aria-expanded')).toBe('true');
     const menuId = trigger?.getAttribute('aria-controls');
     expect(Array.from(container.querySelectorAll('[role="menu"]')).some((menu) => menu.id === menuId)).toBe(true);
+
+    await act(async () => document.body.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(container.querySelector('[role="menu"]')).toBeNull();
+    expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+
+    await openReleaseMenu();
     await act(async () =>
       buttons()
         .find((button) => button.textContent === 'Run now')
