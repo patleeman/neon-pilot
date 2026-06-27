@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RoutinesPage } from './RoutinesPage.js';
+import { RoutinesPage, RoutinesSidebar } from './RoutinesPage.js';
 import type { Routine, RoutineRunRecord } from './types.js';
 
 const baseState = {
@@ -104,6 +104,27 @@ function props(pa: never) {
   } as never;
 }
 
+function propsWithContext(pa: never, context: Partial<{ search: string; hash: string; surfaceId: string }> = {}) {
+  return {
+    pa,
+    context: {
+      extensionId: 'system-routines',
+      surfaceId: context.surfaceId ?? 'page',
+      pathname: '/routines',
+      route: '/routines',
+      search: context.search ?? '',
+      hash: context.hash ?? '',
+    },
+    surface: {
+      id: context.surfaceId ?? 'page',
+      title: 'Routines',
+      location: context.surfaceId === 'routines-sidebar' ? 'sidebar' : 'main',
+      component: 'RoutinesPage',
+    },
+    params: {},
+  } as never;
+}
+
 function editReviewRoutine() {
   fireEvent.click(screen.getAllByText('Edit')[0]);
 }
@@ -124,6 +145,58 @@ describe('RoutinesPage', () => {
     expect(screen.getAllByText('Review code changes').length).toBeGreaterThan(0);
     expect(screen.getByText('Add routine ▾')).toBeTruthy();
     expect(screen.getByText('If judge returns pass')).toBeTruthy();
+  });
+
+  it('opens the add menu for the New Routine command route', async () => {
+    const { pa } = createPa();
+    render(<RoutinesPage {...propsWithContext(pa, { search: '?action=new' })} />);
+    await screen.findByText('Checkpoint timeline');
+
+    expect(screen.getByText('Run an agent invocation.')).toBeTruthy();
+    expect(screen.getByText('Assess the event and choose a path.')).toBeTruthy();
+  });
+
+  it('closes transient menus from outside click and Escape', async () => {
+    const { pa } = createPa();
+    render(<RoutinesPage {...props(pa)} />);
+    await screen.findByText('Checkpoint timeline');
+
+    fireEvent.click(screen.getByText('Add routine ▾'));
+    expect(screen.getByText('Run an agent invocation.')).toBeTruthy();
+    fireEvent.pointerDown(document.body);
+    await waitFor(() => expect(screen.queryByText('Run an agent invocation.')).toBeNull());
+
+    fireEvent.click(screen.getByLabelText('More actions for Review code changes'));
+    expect(screen.getByText('Move to After')).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByText('Move to After')).toBeNull());
+  });
+
+  it('asks before discarding an unsaved draft when the selected event changes', async () => {
+    const { pa } = createPa();
+    const confirm = vi.mocked((pa as { ui: { confirm: ReturnType<typeof vi.fn> } }).ui.confirm);
+    confirm.mockResolvedValueOnce(false);
+    const { rerender } = render(<RoutinesPage {...props(pa)} />);
+    await screen.findByText('Checkpoint timeline');
+
+    fireEvent.click(screen.getByText('Add routine ▾'));
+    fireEvent.click(screen.getAllByText('Instruction')[0]);
+    rerender(<RoutinesPage {...propsWithContext(pa, { hash: '#background.command' })} />);
+
+    await waitFor(() =>
+      expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Discard unsaved routine') })),
+    );
+    expect(screen.getByText('Checkpoint timeline')).toBeTruthy();
+  });
+
+  it('renders the real routines sidebar with active event filtering', async () => {
+    const { pa } = createPa();
+    render(<RoutinesSidebar {...propsWithContext(pa, { surfaceId: 'routines-sidebar' })} />);
+
+    expect(await screen.findByRole('searchbox')).toBeTruthy();
+    expect(screen.getByText('Checkpoint')).toBeTruthy();
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'missing-event' } });
+    expect(screen.getByText('No active routine hooks match.')).toBeTruthy();
   });
 
   it('edits paths inline and collapses the form after save', async () => {

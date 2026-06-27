@@ -33,6 +33,12 @@ interface RoutineHookResult {
   message?: string;
 }
 
+function formatAfterRoutineNotice(result: RoutineHookResult | null): string {
+  if (!result?.status || result.status === 'passed' || result.status === 'skipped') return '';
+  const label = result.status === 'warned' ? 'warning' : result.status;
+  return ` Routine ${label}: ${result.message ?? 'A post-checkpoint routine needs attention.'}`;
+}
+
 async function runCheckpointRoutineHook(
   ctx: CheckpointBackendContext,
   input: { position: 'before' | 'after'; cwd: string; conversationId: string; message: string; paths: string[]; result?: unknown },
@@ -375,8 +381,9 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
           linesDeleted: record.linesDeleted,
         },
       });
+      const afterRoutineNotice = formatAfterRoutineNotice(afterRoutine);
       return {
-        text: `Saved checkpoint ${record.shortSha} ${record.subject} (${record.fileCount} files, +${record.linesAdded} -${record.linesDeleted}).${afterRoutine?.status === 'warned' && afterRoutine.message ? ` Routine warning: ${afterRoutine.message}` : ''}`,
+        text: `Saved checkpoint ${record.shortSha} ${record.subject} (${record.fileCount} files, +${record.linesAdded} -${record.linesDeleted}).${afterRoutineNotice}`,
         action: 'save',
         conversationId,
         checkpointId: record.id,
@@ -390,6 +397,7 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
         cwd: record.cwd,
         updatedAt: record.updatedAt,
         paths,
+        ...(afterRoutineNotice ? { routineStatus: afterRoutine?.status } : {}),
       };
     }
     default:

@@ -141,6 +141,55 @@ describe('system-diffs backend', () => {
       );
     });
 
+    it('surfaces after-checkpoint routine failures in the saved checkpoint result', async () => {
+      const shell = {
+        exec: vi.fn(async ({ args }: { args: string[] }) => {
+          const command = args.join(' ');
+          if (command === 'rev-parse --show-toplevel') return { stdout: '/tmp/test-repo\n' };
+          if (command.startsWith('add --all --')) return { stdout: '' };
+          if (command.startsWith('diff --cached --name-only --')) return { stdout: 'src/file.ts\n' };
+          if (command === 'diff --cached --name-only') return { stdout: 'src/file.ts\n' };
+          if (command === 'commit -m msg') return { stdout: '[main abc1234] msg\n' };
+          if (command === 'rev-parse HEAD') return { stdout: 'abc1234def5678\n' };
+          if (command.startsWith('show -s --format=')) {
+            return {
+              stdout: 'abc1234def5678\u0000abc1234\u0000msg\u0000msg\u0000Test User\u0000test@example.com\u00002025-01-01T00:00:00Z',
+            };
+          }
+          if (command.startsWith('show --format= --patch')) {
+            return { stdout: 'diff --git a/src/file.ts b/src/file.ts\n--- a/src/file.ts\n+++ b/src/file.ts\n@@ -1 +1 @@\n-old\n+new\n' };
+          }
+          if (command === 'push') return { stdout: '' };
+          throw new Error(`unexpected git command: ${command}`);
+        }),
+      };
+      const extensions = {
+        callAction: vi.fn(async (_extensionId: string, _actionId: string, input: { position: string }) =>
+          input.position === 'before'
+            ? { blocked: false, status: 'passed' }
+            : { blocked: true, status: 'blocked', message: 'Report failed.' },
+        ),
+      };
+      mockSaveCheckpoint.mockReturnValue({
+        id: 'abc1234def5678',
+        commitSha: 'abc1234def5678',
+        shortSha: 'abc1234',
+        title: 'msg',
+        subject: 'msg',
+        fileCount: 1,
+        linesAdded: 1,
+        linesDeleted: 1,
+        cwd: '/tmp/test-repo',
+        updatedAt: '2025-01-01T00:00:00Z',
+      });
+
+      const result = await checkpoint({ action: 'save', message: 'msg', paths: ['src/file.ts'] }, createCtx({ shell, extensions }));
+
+      expect(result).toMatchObject({ routineStatus: 'blocked' });
+      expect(result.text).toContain('Saved checkpoint abc1234 msg');
+      expect(result.text).toContain('Routine blocked: Report failed.');
+    });
+
     it('does not fail when UI invalidation is unavailable', async () => {
       const shell = {
         exec: vi.fn(async ({ args }: { args: string[] }) => {

@@ -78,6 +78,16 @@ function hookIdFromHash(hash?: string): string | null {
   }
 }
 
+function searchAction(search?: string): string | null {
+  const raw = (search ?? '').replace(/^\?/, '');
+  if (!raw) return null;
+  try {
+    return new URLSearchParams(raw).get('action');
+  } catch {
+    return null;
+  }
+}
+
 function sanitizeRunStepMessage(message: string): string {
   const trimmed = message.trim();
   const jsonStart = trimmed.indexOf('{');
@@ -358,6 +368,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const [dragTargetRoute, setDragTargetRoute] = useState<{ parentRoutineId: string; parentOutcomeId: string } | null>(null);
   const [dragPreview, setDragPreview] = useState<{ x: number; y: number; name: string; type: RoutineType } | null>(null);
   const pointerDragIdRef = useRef<string | null>(null);
+  const handledSearchActionRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -404,8 +415,63 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
 
   useEffect(() => {
     const nextHookId = hookIdFromHash(context.hash);
-    if (nextHookId) setSelectedHookId(nextHookId);
-  }, [context.hash]);
+    if (!nextHookId || nextHookId === selectedHookId) return;
+    const selectedRoutine = selectedRoutineId ? data?.routines.find((routine) => routine.id === selectedRoutineId) : null;
+    if (selectedRoutine && unsavedRoutineIds.has(selectedRoutine.id)) {
+      void (async () => {
+        const confirmed = await pa.ui.confirm({ message: `Discard unsaved routine “${selectedRoutine.name}”?` });
+        if (!confirmed) {
+          void navigateRoutines(pa, selectedHookId);
+          return;
+        }
+        setData((current) =>
+          current ? { ...current, routines: current.routines.filter((routine) => routine.id !== selectedRoutine.id) } : current,
+        );
+        setUnsavedRoutineIds((current) => {
+          const next = new Set(current);
+          next.delete(selectedRoutine.id);
+          return next;
+        });
+        setSelectedRoutineId(null);
+        setDraft(null);
+        setSelectedHookId(nextHookId);
+      })();
+      return;
+    }
+    setSelectedHookId(nextHookId);
+  }, [context.hash, data?.routines, pa, selectedHookId, selectedRoutineId, unsavedRoutineIds]);
+
+  useEffect(() => {
+    const action = searchAction(context.search);
+    const actionKey = `${context.search ?? ''}:${context.hash ?? ''}`;
+    if (action !== 'new' || handledSearchActionRef.current === actionKey) return;
+    handledSearchActionRef.current = actionKey;
+    setShowRuns(false);
+    setShowAdd(true);
+  }, [context.hash, context.search]);
+
+  useEffect(() => {
+    if (!showAdd && !openRoutineMenuId && skillQuery === null) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('[data-routines-menu]') || target?.closest('[data-routines-skill-menu]')) return;
+      setShowAdd(false);
+      setOpenRoutineMenuId(null);
+      setSkillQuery(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setShowAdd(false);
+      setOpenRoutineMenuId(null);
+      setSkillQuery(null);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [openRoutineMenuId, showAdd, skillQuery]);
 
   useEffect(() => {
     void pa.extension
@@ -556,8 +622,22 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         } else {
           const parentRoutine = parent ? data?.routines.find((routine) => routine.id === parent.parentRoutineId) : null;
           const nextPosition = parentRoutine?.position ?? position;
+          const targetRoutine = targetRoutineId ? data?.routines.find((routine) => routine.id === targetRoutineId) : null;
+          const targetParentRoutineId = parent && parentRoutine ? parent.parentRoutineId : '';
+          const targetParentOutcomeId = parent && parentRoutine ? parent.parentOutcomeId : '';
+          const targetLaneOrders = (data?.routines ?? [])
+            .filter(
+              (routine) =>
+                routine.id !== routineId &&
+                routine.hookId === data?.routines.find((item) => item.id === routineId)?.hookId &&
+                routine.position === nextPosition &&
+                (routine.parentRoutineId ?? '') === targetParentRoutineId &&
+                (routine.parentOutcomeId ?? '') === targetParentOutcomeId,
+            )
+            .map((routine) => routine.order);
+          const nextOrder = targetRoutine ? targetRoutine.order - 0.5 : Math.max(-1, ...targetLaneOrders) + 1;
           const applyMove = (routine: Routine): Routine => {
-            const next = { ...routine, position: nextPosition, updatedAt: new Date().toISOString() };
+            const next = { ...routine, position: nextPosition, order: nextOrder, updatedAt: new Date().toISOString() };
             if (parent && parentRoutine)
               return { ...next, parentRoutineId: parent.parentRoutineId, parentOutcomeId: parent.parentOutcomeId };
             delete next.parentRoutineId;
@@ -849,12 +929,16 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   className="min-h-32 w-full resize-y text-[13px]"
                   value={draft.instruction}
                   onFocus={(event) => onInstructionChange(event.currentTarget.value)}
+                  onBlur={() => window.setTimeout(() => setSkillQuery(null), 100)}
+                  onKeyDown={(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+                    if (event.key === 'Escape') setSkillQuery(null);
+                  }}
                   onKeyUp={(event) => onInstructionChange(event.currentTarget.value)}
                   onInput={(event) => onInstructionChange(event.currentTarget.value)}
                   onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onInstructionChange(event.target.value)}
                 />
                 {skillMatches.length ? (
-                  <MenuShell role="listbox" className="static mt-1 w-full">
+                  <MenuShell role="listbox" data-routines-skill-menu="true" className="static mt-1 w-full">
                     {skillMatches.map((skill) => (
                       <MenuItem
                         key={skill.id}
@@ -1192,7 +1276,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 </div>
               ) : null}
             </div>
-            <div className="relative flex items-start gap-1">
+            <div className="relative flex items-start gap-1" data-routines-menu="true">
               <TextButton
                 className={cx('ui-inline-action-link', isEditing && 'text-primary')}
                 onClick={(event) => {
@@ -1369,7 +1453,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               <ToolbarButton type="button" onClick={() => setShowRuns((value) => !value)}>
                 {showRuns ? 'Timeline' : 'Runs'}
               </ToolbarButton>
-              <div className="relative">
+              <div className="relative" data-routines-menu="true">
                 <ToolbarButton type="button" onClick={() => setShowAdd((value) => !value)}>
                   Add routine ▾
                 </ToolbarButton>

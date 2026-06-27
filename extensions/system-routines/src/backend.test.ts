@@ -15,7 +15,7 @@ function createCtx() {
         return { ok: true };
       }),
     },
-    ui: { invalidate: vi.fn() },
+    ui: { invalidate: vi.fn(), confirm: vi.fn(async () => ({ confirmed: true, status: 'confirmed' as const })) },
     extensions: { callAction: vi.fn(async () => ({ skills: [] })) },
   } as never;
 }
@@ -51,6 +51,186 @@ describe('system-routines backend', () => {
     };
     expect(result.blocked).toBe(false);
     expect(result.status).toBe('passed');
+  });
+
+  it('uses a host approval for ask decision outcomes before continuing', async () => {
+    const ctx = createCtx() as {
+      ui: { confirm: ReturnType<typeof vi.fn> };
+    };
+    runAgentTaskMock.mockResolvedValue({ text: 'OUTCOME: unclear' });
+
+    const result = (await runHook({ hookId: 'checkpoint', position: 'before', context: { cwd: '/repo' } }, ctx as never)) as {
+      blocked: boolean;
+      status: string;
+      run: { steps: Array<{ outcome?: string; status: string; message?: string }> };
+    };
+
+    expect(ctx.ui.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Routine needs approval',
+        message: 'Ask user before continuing',
+        confirmLabel: 'Continue',
+        cancelLabel: 'Stop',
+      }),
+    );
+    expect(result.blocked).toBe(false);
+    expect(result.status).toBe('passed');
+    expect(result.run.steps[0]).toMatchObject({ outcome: 'unclear', status: 'passed', message: 'Approved: Ask user before continuing' });
+  });
+
+  it('blocks ask decision outcomes when approval is declined', async () => {
+    const ctx = createCtx() as {
+      ui: { confirm: ReturnType<typeof vi.fn> };
+    };
+    ctx.ui.confirm.mockResolvedValueOnce({ confirmed: false, status: 'declined' });
+    runAgentTaskMock.mockResolvedValue({ text: 'OUTCOME: unclear' });
+
+    const result = (await runHook({ hookId: 'checkpoint', position: 'before', context: { cwd: '/repo' } }, ctx as never)) as {
+      blocked: boolean;
+      status: string;
+      run: { steps: Array<{ outcome?: string; status: string; message?: string }> };
+    };
+
+    expect(result.blocked).toBe(true);
+    expect(result.status).toBe('blocked');
+    expect(result.run.steps[0]).toMatchObject({ outcome: 'unclear', status: 'blocked', message: 'Declined: Ask user before continuing' });
+  });
+
+  it('does not run nested routines under blocked decision outcomes', async () => {
+    const ctx = createCtx();
+    await saveRoutine(
+      {
+        id: 'blocking-decision',
+        hookId: 'background.command',
+        position: 'before',
+        type: 'decision',
+        name: 'Block command',
+        instruction: 'Choose a route.',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'block',
+        outcomes: [{ id: 'stop', label: 'Stop', target: 'Stop this command', behavior: 'block' }],
+      },
+      ctx,
+    );
+    await saveRoutine(
+      {
+        id: 'blocked-child',
+        hookId: 'background.command',
+        position: 'before',
+        parentRoutineId: 'blocking-decision',
+        parentOutcomeId: 'stop',
+        type: 'instruction',
+        name: 'Should not run',
+        instruction: 'This must not execute.',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'continue',
+        outcomes: [],
+      },
+      ctx,
+    );
+    runAgentTaskMock.mockResolvedValue({ text: 'OUTCOME: stop' });
+
+    const result = (await runHook({ hookId: 'background.command', position: 'before', context: { cwd: '/repo' } }, ctx)) as {
+      run: { steps: Array<{ routineName: string; status: string }> };
+    };
+
+    expect(runAgentTaskMock).toHaveBeenCalledTimes(1);
+    expect(result.run.steps.map((step) => step.routineName)).toEqual(['Block command']);
+    expect(result.run.steps[0]?.status).toBe('blocked');
+  });
+
+  it('runs a branch target only once during a hook run', async () => {
+    const ctx = createCtx();
+    await saveRoutine(
+      {
+        id: 'branch-decision',
+        hookId: 'background.command',
+        position: 'before',
+        type: 'decision',
+        name: 'Choose branch',
+        instruction: 'Choose a route.',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'block',
+        outcomes: [{ id: 'branch', label: 'Branch', target: 'Run follow-up', behavior: 'branch', nextRoutineId: 'branch-target' }],
+      },
+      ctx,
+    );
+    await saveRoutine(
+      {
+        id: 'branch-target',
+        hookId: 'background.command',
+        position: 'before',
+        type: 'instruction',
+        name: 'Branch target',
+        instruction: 'Run once.',
+        enabled: true,
+        order: 1,
+        failureBehavior: 'continue',
+        outcomes: [],
+      },
+      ctx,
+    );
+    runAgentTaskMock.mockResolvedValueOnce({ text: 'OUTCOME: branch' }).mockResolvedValueOnce({ text: 'target ran' });
+
+    const result = (await runHook({ hookId: 'background.command', position: 'before', context: { cwd: '/repo' } }, ctx)) as {
+      run: { steps: Array<{ routineName: string }> };
+    };
+
+    expect(runAgentTaskMock).toHaveBeenCalledTimes(2);
+    expect(result.run.steps.map((step) => step.routineName)).toEqual(['Choose branch', 'Branch target']);
+  });
+
+  it('downgrades deleted branch targets so runs are not silent no-ops', async () => {
+    const ctx = createCtx();
+    await saveRoutine(
+      {
+        id: 'branch-decision',
+        hookId: 'background.command',
+        position: 'before',
+        type: 'decision',
+        name: 'Choose branch',
+        instruction: 'Choose a route.',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'block',
+        outcomes: [{ id: 'branch', label: 'Branch', target: 'Run follow-up', behavior: 'branch', nextRoutineId: 'branch-target' }],
+      },
+      ctx,
+    );
+    await saveRoutine(
+      {
+        id: 'branch-target',
+        hookId: 'background.command',
+        position: 'before',
+        type: 'instruction',
+        name: 'Branch target',
+        instruction: 'Run once.',
+        enabled: true,
+        order: 1,
+        failureBehavior: 'continue',
+        outcomes: [],
+      },
+      ctx,
+    );
+
+    const stateAfterDelete = (await deleteRoutine({ routineId: 'branch-target' }, ctx)) as {
+      routines: Array<{ id: string; outcomes: Array<{ id: string; behavior: string; nextRoutineId?: string }> }>;
+    };
+    const branchOutcome = stateAfterDelete.routines.find((routine) => routine.id === 'branch-decision')?.outcomes[0];
+    expect(branchOutcome).toMatchObject({ id: 'branch', behavior: 'warn' });
+    expect(branchOutcome?.nextRoutineId).toBeUndefined();
+
+    runAgentTaskMock.mockResolvedValueOnce({ text: 'OUTCOME: branch' });
+    const result = (await runHook({ hookId: 'background.command', position: 'before', context: { cwd: '/repo' } }, ctx)) as {
+      status: string;
+      run: { steps: Array<{ routineName: string; status: string }> };
+    };
+
+    expect(result.status).toBe('warned');
+    expect(result.run.steps).toEqual([expect.objectContaining({ routineName: 'Choose branch', status: 'warned' })]);
   });
 
   it('marks routine prompts as automated and points back to Routines', async () => {
@@ -285,6 +465,77 @@ describe('system-routines backend', () => {
     const repaired = state.routines.find((routine) => routine.id === 'orphaned-routine');
     expect(repaired?.parentRoutineId).toBeUndefined();
     expect(repaired?.parentOutcomeId).toBeUndefined();
+  });
+
+  it('repairs invalid nested routes before returning saved state', async () => {
+    const ctx = createCtx();
+    await saveRoutine(
+      {
+        id: 'nested-pass',
+        hookId: 'checkpoint',
+        position: 'before',
+        parentRoutineId: 'checkpoint-review-code',
+        parentOutcomeId: 'pass',
+        type: 'instruction',
+        name: 'Pass instruction',
+        instruction: 'Run only on pass',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'continue',
+        outcomes: [],
+      },
+      ctx,
+    );
+
+    const state = (await saveRoutine(
+      {
+        id: 'checkpoint-review-code',
+        hookId: 'checkpoint',
+        position: 'before',
+        type: 'decision',
+        name: 'Review code changes',
+        instruction: 'Choose one.',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'block',
+        outcomes: [{ id: 'renamed', label: 'Renamed', target: 'Continue', behavior: 'continue' }],
+      },
+      ctx,
+    )) as { routines: Array<{ id: string; parentRoutineId?: string; parentOutcomeId?: string }> };
+
+    const repaired = state.routines.find((routine) => routine.id === 'nested-pass');
+    expect(repaired?.id).toBe('nested-pass');
+    expect(repaired?.parentRoutineId).toBeUndefined();
+    expect(repaired?.parentOutcomeId).toBeUndefined();
+  });
+
+  it('normalizes malformed run history before returning state', async () => {
+    const ctx = createCtx();
+    await (ctx as { storage: { put: (key: string, value: unknown) => Promise<unknown> } }).storage.put('routines-state-v1', {
+      version: 1,
+      hookPoints: [],
+      routines: [],
+      runs: [
+        { id: 'bad-run', hookId: 'checkpoint', position: 'before', status: 'passed', startedAt: 'bad-date' },
+        { id: 'bad-step-run', hookId: 'checkpoint', position: 'before', steps: [{ routineId: 'r1', routineName: 'Routine' }] },
+      ],
+    });
+
+    const state = (await getState({}, ctx)) as {
+      runs: Array<{
+        id: string;
+        status: string;
+        steps: Array<{ routineId: string; routineName: string; status: string; skillRefs: string[] }>;
+      }>;
+    };
+
+    expect(state.runs.find((run) => run.id === 'bad-run')).toMatchObject({ status: 'skipped', steps: [] });
+    expect(state.runs.find((run) => run.id === 'bad-step-run')?.steps[0]).toMatchObject({
+      routineId: 'r1',
+      routineName: 'Routine',
+      status: 'passed',
+      skillRefs: [],
+    });
   });
 
   it('moves routines into judge routes', async () => {

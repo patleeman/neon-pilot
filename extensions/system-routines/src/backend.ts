@@ -394,6 +394,58 @@ function normalizeRoutine(value: unknown, fallbackOrder = 0): Routine | null {
   };
 }
 
+function runStepStatusValue(value: unknown): RoutineRunStep['status'] {
+  return value === 'warned' || value === 'blocked' || value === 'failed' || value === 'skipped' ? value : 'passed';
+}
+
+function runStatusValue(value: unknown, steps: RoutineRunStep[]): RoutineRunRecord['status'] {
+  if (value === 'warned' || value === 'blocked' || value === 'failed' || value === 'skipped') return value;
+  if (steps.length === 0) return 'skipped';
+  if (steps.some((step) => step.status === 'blocked')) return 'blocked';
+  if (steps.some((step) => step.status === 'failed')) return 'failed';
+  if (steps.some((step) => step.status === 'warned')) return 'warned';
+  return 'passed';
+}
+
+function normalizeRunStep(value: unknown): RoutineRunStep | null {
+  if (!isRecord(value)) return null;
+  const routineId = stringValue(value.routineId).trim();
+  const routineName = stringValue(value.routineName).trim();
+  if (!routineId || !routineName) return null;
+  return {
+    routineId,
+    routineName,
+    status: runStepStatusValue(value.status),
+    ...(typeof value.outcome === 'string' && value.outcome.trim() ? { outcome: value.outcome.trim() } : {}),
+    ...(typeof value.text === 'string' && value.text.trim() ? { text: value.text } : {}),
+    ...(typeof value.message === 'string' && value.message.trim() ? { message: value.message } : {}),
+    skillRefs: Array.isArray(value.skillRefs)
+      ? value.skillRefs.filter((ref): ref is string => typeof ref === 'string' && ref.length > 0)
+      : [],
+    ...(typeof value.model === 'string' && value.model.trim() ? { model: value.model.trim() } : {}),
+    ...(typeof value.provider === 'string' && value.provider.trim() ? { provider: value.provider.trim() } : {}),
+    ...(typeof value.fallbackUsed === 'boolean' ? { fallbackUsed: value.fallbackUsed } : {}),
+  };
+}
+
+function normalizeRunRecord(value: unknown): RoutineRunRecord | null {
+  if (!isRecord(value)) return null;
+  const hookId = stringValue(value.hookId).trim();
+  if (!hookId) return null;
+  const steps = Array.isArray(value.steps) ? value.steps.map(normalizeRunStep).filter((step): step is RoutineRunStep => Boolean(step)) : [];
+  const startedAt = stringValue(value.startedAt, now());
+  return {
+    id: stringValue(value.id, makeId('run')).trim() || makeId('run'),
+    hookId,
+    position: positionValue(value.position),
+    status: runStatusValue(value.status, steps),
+    startedAt,
+    completedAt: stringValue(value.completedAt, startedAt),
+    context: isRecord(value.context) ? value.context : {},
+    steps,
+  };
+}
+
 function defaultState(): RoutinesState {
   const timestamp = now();
   return {
@@ -479,6 +531,19 @@ function repairRoutineParents(routines: Routine[]): Routine[] {
   });
 }
 
+function repairRoutineReferences(routines: Routine[]): Routine[] {
+  const ids = new Set(routines.map((routine) => routine.id));
+  return repairRoutineParents(routines).map((routine) => ({
+    ...routine,
+    outcomes: routine.outcomes.map((outcome) => {
+      if (!outcome.nextRoutineId || ids.has(outcome.nextRoutineId)) return outcome;
+      const next = { ...outcome, behavior: outcome.behavior === 'branch' ? ('warn' as const) : outcome.behavior };
+      delete next.nextRoutineId;
+      return next;
+    }),
+  }));
+}
+
 async function readState(ctx: ExtensionBackendContext): Promise<RoutinesState> {
   const stored = await ctx.storage.get(STORE_KEY).catch(() => null);
   if (!isRecord(stored)) return defaultState();
@@ -490,13 +555,18 @@ async function readState(ctx: ExtensionBackendContext): Promise<RoutinesState> {
     hookPoints: Array.isArray(stored.hookPoints)
       ? stored.hookPoints.map(normalizeHookPoint).filter((hook): hook is RoutineHookPoint => Boolean(hook))
       : [],
-    routines: repairRoutineParents(routines),
-    runs: Array.isArray(stored.runs) ? (stored.runs.filter(isRecord).slice(0, RUN_LIMIT) as unknown as RoutineRunRecord[]) : [],
+    routines: repairRoutineReferences(routines),
+    runs: Array.isArray(stored.runs)
+      ? stored.runs
+          .map(normalizeRunRecord)
+          .filter((run): run is RoutineRunRecord => Boolean(run))
+          .slice(0, RUN_LIMIT)
+      : [],
   };
 }
 
 async function writeState(ctx: ExtensionBackendContext, state: RoutinesState): Promise<RoutinesState> {
-  const next = { ...state, runs: state.runs.slice(0, RUN_LIMIT) };
+  const next = { ...state, routines: repairRoutineReferences(state.routines), runs: state.runs.slice(0, RUN_LIMIT) };
   await ctx.storage.put(STORE_KEY, next);
   await Promise.resolve(ctx.ui?.invalidate?.(['routines']));
   return next;
@@ -735,6 +805,41 @@ function statusForFailure(behavior: RoutineFailureBehavior): RoutineRunStep['sta
   return 'passed';
 }
 
+async function resolveAskOutcome(
+  routine: Routine,
+  outcome: RoutineOutcome,
+  ctx: ExtensionBackendContext,
+  context: Record<string, unknown>,
+): Promise<Pick<RoutineRunStep, 'status' | 'message'>> {
+  if (!ctx.ui?.confirm) {
+    return { status: 'blocked', message: `Routine needs approval: ${outcome.target}` };
+  }
+
+  const approval = await ctx.ui.confirm({
+    title: 'Routine needs approval',
+    message: outcome.target || `Continue after ${routine.name}?`,
+    confirmLabel: 'Continue',
+    cancelLabel: 'Stop',
+    timeoutMs: 10 * 60 * 1000,
+    details: [
+      { label: 'Routine', value: routine.name },
+      { label: 'Event', value: `${routine.hookId} (${routine.position})` },
+      { label: 'Outcome', value: outcome.id },
+      ...Object.entries(context)
+        .flatMap(([key, value]) => {
+          if (value === undefined || value === null) return [];
+          const rendered = typeof value === 'string' ? value : Array.isArray(value) ? value.join(', ') : JSON.stringify(value);
+          return rendered ? [{ label: key, value: rendered }] : [];
+        })
+        .slice(0, 4),
+    ],
+  });
+
+  if (approval.confirmed) return { status: 'passed', message: `Approved: ${outcome.target}` };
+  if (approval.status === 'timeout') return { status: 'blocked', message: `Approval timed out: ${outcome.target}` };
+  return { status: 'blocked', message: `Declined: ${outcome.target}` };
+}
+
 function formatRoutineError(error: unknown): string {
   const rawMessage = error instanceof Error ? error.message : String(error);
   const trimmed = rawMessage.trim();
@@ -783,16 +888,20 @@ async function runRoutine(
   state: RoutinesState,
   ctx: ExtensionBackendContext,
   context: Record<string, unknown>,
-  visited: Set<string>,
+  activePath: Set<string>,
+  executed: Set<string>,
 ): Promise<RoutineRunStep[]> {
-  if (visited.has(routine.id)) {
+  if (activePath.has(routine.id)) {
     return [
       { routineId: routine.id, routineName: routine.name, status: 'failed', message: 'Routine branch loop detected.', skillRefs: [] },
     ];
   }
-  visited.add(routine.id);
+  if (executed.has(routine.id)) return [];
+  activePath.add(routine.id);
+  executed.add(routine.id);
   const skillRefs = extractSkillRefs(routine.instruction);
   if (routine.type === 'stop') {
+    activePath.delete(routine.id);
     return [{ routineId: routine.id, routineName: routine.name, status: 'blocked', message: routine.instruction, skillRefs }];
   }
   try {
@@ -811,34 +920,69 @@ async function runRoutine(
           },
         ];
       }
+      const askResult = outcome.behavior === 'ask' ? await resolveAskOutcome(routine, outcome, ctx, context) : null;
       const step: RoutineRunStep = {
         routineId: routine.id,
         routineName: routine.name,
-        status: outcome.behavior === 'block' || outcome.behavior === 'ask' ? 'blocked' : outcome.behavior === 'warn' ? 'warned' : 'passed',
+        status: askResult?.status ?? (outcome.behavior === 'block' ? 'blocked' : outcome.behavior === 'warn' ? 'warned' : 'passed'),
         outcome: outcome.id,
         text: result.text,
-        message: outcome.target,
+        message: askResult?.message ?? outcome.target,
         skillRefs,
         model: result.model,
         provider: result.provider,
         fallbackUsed,
       };
+      if (step.status === 'blocked' || step.status === 'failed') {
+        activePath.delete(routine.id);
+        return [step];
+      }
       const routeChildren = state.routines
         .filter((candidate) => candidate.enabled && candidate.parentRoutineId === routine.id && candidate.parentOutcomeId === outcome.id)
         .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
       const childSteps: RoutineRunStep[] = [];
       for (const child of routeChildren) {
-        childSteps.push(...(await runRoutine(child, state, ctx, context, visited)));
+        childSteps.push(...(await runRoutine(child, state, ctx, context, activePath, executed)));
         if (childSteps.some((childStep) => childStep.status === 'blocked' || childStep.status === 'failed')) break;
       }
       if (outcome.behavior === 'branch' && outcome.nextRoutineId) {
         const nextRoutine = state.routines.find((candidate) => candidate.id === outcome.nextRoutineId && candidate.enabled);
-        return nextRoutine
-          ? [step, ...childSteps, ...(await runRoutine(nextRoutine, state, ctx, context, visited))]
-          : [step, ...childSteps];
+        if (!nextRoutine) {
+          activePath.delete(routine.id);
+          return [
+            step,
+            ...childSteps,
+            {
+              routineId: outcome.nextRoutineId,
+              routineName: 'Missing branch target',
+              status: 'failed',
+              message: 'Branch target routine is no longer available.',
+              skillRefs: [],
+            },
+          ];
+        }
+        const branchSteps = await runRoutine(nextRoutine, state, ctx, context, activePath, executed);
+        activePath.delete(routine.id);
+        return [step, ...childSteps, ...branchSteps];
       }
+      if (outcome.behavior === 'branch' && !outcome.nextRoutineId) {
+        activePath.delete(routine.id);
+        return [
+          step,
+          ...childSteps,
+          {
+            routineId: routine.id,
+            routineName: routine.name,
+            status: 'failed',
+            message: 'Choose a routine for this branch before it can run.',
+            skillRefs,
+          },
+        ];
+      }
+      activePath.delete(routine.id);
       return [step, ...childSteps];
     }
+    activePath.delete(routine.id);
     return [
       {
         routineId: routine.id,
@@ -852,6 +996,7 @@ async function runRoutine(
       },
     ];
   } catch (error) {
+    activePath.delete(routine.id);
     return [
       {
         routineId: routine.id,
@@ -874,8 +1019,11 @@ export async function runHook(input: unknown, ctx: ExtensionBackendContext) {
   const routines = routinesFor(state, hookId, position);
   const startedAt = now();
   const steps: RoutineRunStep[] = [];
+  const activePath = new Set<string>();
+  const executed = new Set<string>();
   for (const routine of routines) {
-    steps.push(...(await runRoutine(routine, state, ctx, context, new Set<string>())));
+    if (executed.has(routine.id)) continue;
+    steps.push(...(await runRoutine(routine, state, ctx, context, activePath, executed)));
     if (steps.some((step) => step.status === 'blocked' || step.status === 'failed')) break;
   }
   const status: RoutineRunRecord['status'] =
