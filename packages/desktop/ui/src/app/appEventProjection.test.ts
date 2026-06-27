@@ -24,10 +24,11 @@ describe('app event projection', () => {
   });
 
   it('increments only tracked invalidation topic versions', () => {
-    const next = incrementAppEventVersionsForTopics(INITIAL_APP_EVENT_VERSIONS, ['workspace', 'tasks']);
+    const next = incrementAppEventVersionsForTopics(INITIAL_APP_EVENT_VERSIONS, ['workspace', 'tasks', 'gateways']);
 
     expect(next.workspace).toBe(1);
     expect(next.tasks).toBe(1);
+    expect(next.gateways).toBe(1);
     expect(next.sessions).toBe(0);
   });
 

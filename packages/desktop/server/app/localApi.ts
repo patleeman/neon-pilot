@@ -310,6 +310,7 @@ function isAppEventTopic(value: unknown): value is AppEventTopic {
     value === 'extensions' ||
     value === 'tasks' ||
     value === 'models' ||
+    value === 'gateways' ||
     value === 'runs' ||
     value === 'executions' ||
     value === 'automation' ||

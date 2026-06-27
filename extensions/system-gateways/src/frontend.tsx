@@ -105,6 +105,18 @@ export function GatewaysPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const handleInvalidation = (event: Event) => {
+      const detail = (event as CustomEvent<{ topics?: unknown }>).detail;
+      const topics = Array.isArray(detail?.topics) ? detail.topics : [];
+      if (topics.includes('gateways') || topics.includes('sessions')) {
+        void load();
+      }
+    };
+    window.addEventListener('neon-pilot-app-invalidate', handleInvalidation);
+    return () => window.removeEventListener('neon-pilot-app-invalidate', handleInvalidation);
+  }, [load]);
+
   const telegramProvider = useMemo(
     () => pageState?.gateway.providers.find((provider) => provider.id === TELEGRAM_PROVIDER_ID) ?? null,
     [pageState],
@@ -392,15 +404,28 @@ export function GatewaysSidebar() {
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([apiRequest<GatewayState>('/api/gateways'), apiRequest<TelegramTokenState>('/api/gateways/telegram/token')])
-      .then(([gateway, token]) => {
-        if (!cancelled) setState({ gateway, token });
-      })
-      .catch((err) => {
-        if (!cancelled) setError(errorMessage(err));
-      });
+
+    const load = () =>
+      void Promise.all([apiRequest<GatewayState>('/api/gateways'), apiRequest<TelegramTokenState>('/api/gateways/telegram/token')])
+        .then(([gateway, token]) => {
+          if (!cancelled) setState({ gateway, token });
+        })
+        .catch((err) => {
+          if (!cancelled) setError(errorMessage(err));
+        });
+    const handleInvalidation = (event: Event) => {
+      const detail = (event as CustomEvent<{ topics?: unknown }>).detail;
+      const topics = Array.isArray(detail?.topics) ? detail.topics : [];
+      if (topics.includes('gateways') || topics.includes('sessions')) {
+        load();
+      }
+    };
+
+    load();
+    window.addEventListener('neon-pilot-app-invalidate', handleInvalidation);
     return () => {
       cancelled = true;
+      window.removeEventListener('neon-pilot-app-invalidate', handleInvalidation);
     };
   }, []);
 

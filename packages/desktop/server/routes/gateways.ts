@@ -128,7 +128,12 @@ export function registerTelegramGatewayLifecycleDelivery(): void {
     if (event.trigger !== 'turn_end') return;
     const reply = await readLatestAssistantReply(event.conversationId);
     if (reply && lastTelegramDeliveryByConversation.get(event.conversationId) !== reply.deliveryKey) {
-      const delivered = await ensureTelegramRuntime().deliverAssistantReply({ conversationId: event.conversationId, text: reply.text });
+      const runtime = ensureTelegramRuntime();
+      if (runtime.hasRecentlyDeliveredAssistantReply({ conversationId: event.conversationId, text: reply.text })) {
+        lastTelegramDeliveryByConversation.set(event.conversationId, reply.deliveryKey);
+        return;
+      }
+      const delivered = await runtime.deliverAssistantReply({ conversationId: event.conversationId, text: reply.text });
       if (delivered) {
         lastTelegramDeliveryByConversation.set(event.conversationId, reply.deliveryKey);
       }
@@ -149,7 +154,7 @@ function readCurrentGatewayState() {
 }
 
 function readCurrentGatewayStateAfterMutation() {
-  invalidateAppTopics('sessions');
+  invalidateGatewayState();
   return readCurrentGatewayState();
 }
 
@@ -270,6 +275,23 @@ function readOptionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+function readTelegramIdList(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return [];
+  const result: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string') return null;
+    const trimmed = item.trim();
+    if (!trimmed) continue;
+    if (!/^-?\d+$/.test(trimmed)) return null;
+    if (!result.includes(trimmed)) result.push(trimmed);
+  }
+  return result;
+}
+
+function invalidateGatewayState(): void {
+  invalidateAppTopics('gateways', 'sessions');
+}
+
 function startTelegramRuntimeWithDelivery(): void {
   registerTelegramGatewayLifecycleDelivery();
   ensureTelegramRuntime().start();
@@ -290,7 +312,7 @@ export function stopTelegramGatewayRuntime(): { running: false } {
 }
 
 export function readTelegramGatewayRuntimeStatus(): { running: boolean } {
-  return { running: telegramRuntime !== null };
+  return { running: telegramRuntime?.isRunning() ?? false };
 }
 
 async function readLatestAssistantReply(conversationId: string): Promise<{ text: string; deliveryKey: string } | null> {
@@ -340,7 +362,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
         return;
       }
       ensureGatewayConnection({ ...currentGatewayContext(), provider });
-      invalidateAppTopics('sessions');
+      invalidateGatewayState();
       res.json(readCurrentGatewayState());
     } catch (err) {
       handleGatewayError(res, err);
@@ -357,6 +379,14 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
       }
       const enabled = typeof req.body?.enabled === 'boolean' ? req.body.enabled : undefined;
       const statusMessage = readOptionalString(req.body?.statusMessage);
+      if (
+        provider === 'telegram' &&
+        (enabled === true || status === 'active' || status === 'connected') &&
+        !readTelegramBotToken(getAuthFileFn(), getStateRootFn())
+      ) {
+        res.status(400).json({ error: 'Save a Telegram bot token before enabling the gateway.' });
+        return;
+      }
       updateGatewayConnectionStatus({ ...currentGatewayContext(), provider, status, enabled, statusMessage });
       if (provider === 'telegram') {
         if (enabled === false || status === 'paused' || status === 'needs_attention') {
@@ -365,6 +395,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
           startTelegramRuntimeWithDelivery();
         }
       }
+      invalidateGatewayState();
       res.json(readCurrentGatewayState());
     } catch (err) {
       handleGatewayError(res, err);
@@ -389,9 +420,15 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
 
   router.patch('/api/gateways/telegram/access', (req: Request, res: Response) => {
     try {
-      const approvedUserIds = Array.isArray(req.body?.approvedUserIds) ? req.body.approvedUserIds : [];
-      const approvedChatIds = Array.isArray(req.body?.approvedChatIds) ? req.body.approvedChatIds : [];
-      res.json(writeTelegramAccessPolicy(getStateRootFn(), getRuntimeScopeFn(), { approvedUserIds, approvedChatIds }));
+      const approvedUserIds = readTelegramIdList(req.body?.approvedUserIds);
+      const approvedChatIds = readTelegramIdList(req.body?.approvedChatIds);
+      if (!approvedUserIds || !approvedChatIds) {
+        res.status(400).json({ error: 'Telegram access IDs must be numeric. Chat IDs may start with -.' });
+        return;
+      }
+      const policy = writeTelegramAccessPolicy(getStateRootFn(), getRuntimeScopeFn(), { approvedUserIds, approvedChatIds });
+      invalidateGatewayState();
+      res.json(policy);
     } catch (err) {
       handleGatewayError(res, err);
     }
@@ -431,6 +468,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
       ensureGatewayConnection({ ...currentGatewayContext(), provider: 'telegram' });
       updateGatewayConnectionStatus({ ...currentGatewayContext(), provider: 'telegram', status: 'active', enabled: true });
       startTelegramRuntimeWithDelivery();
+      invalidateGatewayState();
       res.json({ configured: true, state: readCurrentGatewayState() });
     } catch (err) {
       handleGatewayError(res, err);
@@ -448,6 +486,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
         enabled: false,
         statusMessage: 'Telegram bot token removed',
       });
+      invalidateGatewayState();
       res.json({ configured: false, state: readCurrentGatewayState() });
     } catch (err) {
       handleGatewayError(res, err);
@@ -471,6 +510,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
         conversationTitle: '',
         repliesEnabled: false,
       });
+      invalidateGatewayState();
       res.json(readCurrentGatewayState());
     } catch (err) {
       handleGatewayError(res, err);
@@ -493,7 +533,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
         externalChatId: readOptionalString(req.body?.externalChatId),
         externalChatLabel: readOptionalString(req.body?.externalChatLabel),
       });
-      invalidateAppTopics('sessions');
+      invalidateGatewayState();
       res.json(readCurrentGatewayState());
     } catch (err) {
       handleGatewayError(res, err);
@@ -508,7 +548,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
         provider: provider ?? undefined,
         conversationId: req.params.conversationId,
       });
-      invalidateAppTopics('sessions');
+      invalidateGatewayState();
       res.json(readCurrentGatewayState());
     } catch (err) {
       handleGatewayError(res, err);

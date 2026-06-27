@@ -57,7 +57,7 @@ function normalizeTelegramAccessPolicy(value: Partial<TelegramAccessPolicy>): Te
 
 function normalizeIdList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  return [...new Set(value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean))];
+  return [...new Set(value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter((item) => /^-?\d+$/.test(item)))];
 }
 
 function emptyPolicy(): TelegramAccessPolicy {

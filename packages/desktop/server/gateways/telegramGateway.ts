@@ -1,10 +1,11 @@
 import type { SseEvent } from '../conversations/liveSessionEvents.js';
+import { invalidateAppTopics } from '../shared/appEvents.js';
 import {
   attachGatewayConversation,
   findGatewayChatTarget,
   findGatewayChatTargetByConversation,
-  hasGatewayBinding,
   recordGatewayEvent,
+  updateGatewayConnectionStatus,
   upsertGatewayChatTarget,
 } from './gatewayState.js';
 import { hasTelegramAccessApprovals, isTelegramMessageApproved, type TelegramAccessPolicy } from './telegramAccess.js';
@@ -125,6 +126,7 @@ export interface TelegramGatewayRuntimeDependencies {
 const TYPING_INTERVAL_MS = 4_000;
 const TELEGRAM_MESSAGE_LIMIT = 4_096;
 const TELEGRAM_TOOL_STATUS_LIMIT = 180;
+const RECENT_REPLY_DEDUPE_MS = 30_000;
 
 export interface TelegramToolStatus {
   toolName: string;
@@ -161,6 +163,8 @@ export class TelegramGatewayRuntime {
   private streamingAssistantText = new Map<string, string>();
   private toolStatuses = new Map<string, Map<string, TelegramToolStatus>>();
   private deliveredToolStatusKeys = new Map<string, Set<string>>();
+  private lastPollingFailureMessage: string | null = null;
+  private recentDeliveredReplies = new Map<string, { text: string; deliveredAtMs: number }>();
 
   constructor(private readonly dependencies: TelegramGatewayRuntimeDependencies) {}
 
@@ -178,6 +182,7 @@ export class TelegramGatewayRuntime {
     this.polling = false;
     this.abortController?.abort();
     this.abortController = null;
+    this.lastPollingFailureMessage = null;
     for (const indicator of this.typingIndicators.values()) indicator.stop();
     this.typingIndicators.clear();
     for (const unsubscribe of this.streamSubscriptions.values()) unsubscribe();
@@ -185,6 +190,16 @@ export class TelegramGatewayRuntime {
     this.streamingAssistantText.clear();
     this.toolStatuses.clear();
     this.deliveredToolStatusKeys.clear();
+  }
+
+  isRunning(): boolean {
+    return this.polling && this.abortController?.signal.aborted !== true;
+  }
+
+  hasRecentlyDeliveredAssistantReply(input: { conversationId: string; text: string }): boolean {
+    const recent = this.recentDeliveredReplies.get(input.conversationId);
+    if (!recent || recent.text !== input.text.trim()) return false;
+    return Date.now() - recent.deliveredAtMs <= RECENT_REPLY_DEDUPE_MS;
   }
 
   async processUpdate(update: TelegramUpdate): Promise<void> {
@@ -229,6 +244,26 @@ export class TelegramGatewayRuntime {
     }
 
     const images = message.photo?.length ? await this.loadTelegramPhotos(message.photo) : undefined;
+    if (this.pendingStatusMessages.has(target.conversationId)) {
+      try {
+        const voiceTranscript = message.voice ? await this.transcribeTelegramVoice(message.voice) : undefined;
+        if (voiceTranscript?.text) {
+          await this.sendMessage(externalChatId, `🎙️ "${voiceTranscript.text}"`);
+        }
+        await this.sendMessage(externalChatId, 'Queued behind the current Telegram request.');
+        await this.dependencies.submitPrompt({
+          conversationId: target.conversationId,
+          text: buildTelegramPromptText({ text, hasPhoto: Boolean(images?.length), voiceTranscript: voiceTranscript?.text }),
+          images,
+        });
+        return;
+      } catch (error) {
+        const failure = error instanceof Error ? error.message : String(error);
+        await this.sendMessage(externalChatId, `Telegram prompt failed: ${failure}`);
+        throw error;
+      }
+    }
+
     this.startTyping(externalChatId);
     const statusMessage = await this.sendMessage(externalChatId, '⏳ Working…');
     if (statusMessage?.message_id) {
@@ -240,10 +275,9 @@ export class TelegramGatewayRuntime {
       if (voiceTranscript?.text) {
         await this.sendMessage(externalChatId, `🎙️ "${voiceTranscript.text}"`);
       }
-      const promptText = buildTelegramPromptText({ text, hasPhoto: Boolean(images?.length), voiceTranscript: voiceTranscript?.text });
       await this.dependencies.submitPrompt({
         conversationId: target.conversationId,
-        text: promptText,
+        text: buildTelegramPromptText({ text, hasPhoto: Boolean(images?.length), voiceTranscript: voiceTranscript?.text }),
         images,
       });
       this.startConversationEventStream(target.conversationId);
@@ -294,6 +328,7 @@ export class TelegramGatewayRuntime {
       kind: 'outbound',
       message: `Delivered assistant reply to ${target.externalChatLabel || target.externalChatId}`,
     });
+    this.recentDeliveredReplies.set(input.conversationId, { text, deliveredAtMs: Date.now() });
     return true;
   }
 
@@ -466,17 +501,15 @@ export class TelegramGatewayRuntime {
       conversationTitle: title,
     });
 
-    if (!hasGatewayBinding({ stateRoot: this.dependencies.stateRoot, profile: this.dependencies.profile, provider: 'telegram' })) {
-      attachGatewayConversation({
-        stateRoot: this.dependencies.stateRoot,
-        profile: this.dependencies.profile,
-        provider: 'telegram',
-        conversationId: created.id,
-        conversationTitle: title,
-        externalChatId: input.externalChatId,
-        externalChatLabel: input.externalChatLabel,
-      });
-    }
+    attachGatewayConversation({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      conversationId: created.id,
+      conversationTitle: title,
+      externalChatId: input.externalChatId,
+      externalChatLabel: input.externalChatLabel,
+    });
 
     await this.dependencies.renameConversation(created.id, title);
     return { conversationId: created.id, conversationTitle: title };
@@ -735,15 +768,64 @@ export class TelegramGatewayRuntime {
           offset: this.nextOffset || undefined,
           allowed_updates: ['message', 'callback_query'],
         });
+        this.markPollingHealthy();
         for (const update of updates) {
-          this.nextOffset = Math.max(this.nextOffset, update.update_id + 1);
-          await this.processUpdate(update);
+          try {
+            await this.processUpdate(update);
+            this.nextOffset = Math.max(this.nextOffset, update.update_id + 1);
+          } catch (error) {
+            this.recordUpdateFailure(update, error);
+            await sleep(10_000);
+            break;
+          }
         }
       } catch (error) {
         if (signal.aborted) return;
+        this.markPollingFailed(error);
         await sleep(10_000);
       }
     }
+  }
+
+  private markPollingHealthy(): void {
+    if (this.lastPollingFailureMessage === null) return;
+    this.lastPollingFailureMessage = null;
+    updateGatewayConnectionStatus({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      status: 'active',
+      enabled: true,
+      statusMessage: 'Telegram gateway connected',
+    });
+    invalidateAppTopics('gateways', 'sessions');
+  }
+
+  private markPollingFailed(error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    if (this.lastPollingFailureMessage === message) return;
+    this.lastPollingFailureMessage = message;
+    updateGatewayConnectionStatus({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      status: 'needs_attention',
+      enabled: true,
+      statusMessage: `Telegram polling failed: ${message}`,
+    });
+    invalidateAppTopics('gateways', 'sessions');
+  }
+
+  private recordUpdateFailure(update: TelegramUpdate, error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    recordGatewayEvent({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      kind: 'error',
+      message: `Telegram update ${update.update_id} failed: ${message}`,
+    });
+    invalidateAppTopics('gateways', 'sessions');
   }
 
   private async loadTelegramPhotos(

@@ -877,6 +877,7 @@ export type AppEventTopic =
   | 'extensions'
   | 'tasks'
   | 'models'
+  | 'gateways'
   | 'runs'
   | 'executions'
   | 'automation'

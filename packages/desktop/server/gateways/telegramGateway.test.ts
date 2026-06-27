@@ -6,17 +6,19 @@ const state = vi.hoisted(() => ({
   attachGatewayConversation: vi.fn(),
   findGatewayChatTarget: vi.fn(),
   findGatewayChatTargetByConversation: vi.fn(),
-  hasGatewayBinding: vi.fn(() => false),
   recordGatewayEvent: vi.fn(),
+  updateGatewayConnectionStatus: vi.fn(),
   upsertGatewayChatTarget: vi.fn(),
 }));
 const commands = vi.hoisted(() => ({
   formatTelegramGatewayHelp: vi.fn(() => 'help text'),
   parseTelegramGatewayCommand: vi.fn(() => null),
 }));
+const appEvents = vi.hoisted(() => ({ invalidateAppTopics: vi.fn() }));
 
 vi.mock('./gatewayState.js', () => state);
 vi.mock('./telegramCommands.js', () => commands);
+vi.mock('../shared/appEvents.js', () => appEvents);
 
 import {
   buildTelegramPromptText,
@@ -99,6 +101,31 @@ describe('TelegramGatewayRuntime', () => {
     );
     expect(d.renameConversation).toHaveBeenCalledWith('conv-new', 'Telegram: Pat Lee');
     expect(d.submitPrompt).toHaveBeenCalledWith({ conversationId: 'conv-new', text: 'hello', images: undefined });
+  });
+
+  it('binds every new Telegram chat so replies can route back to that chat', async () => {
+    const d = deps({
+      createConversation: vi.fn(async ({ title }: { title: string }) => ({
+        id: title.endsWith('Group B') ? 'conv-b' : 'conv-a',
+      })),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      message: { message_id: 10, chat: { id: 'A', title: 'Group A' }, from: { id: 777 }, text: 'first' },
+    });
+    await runtime.processUpdate({
+      update_id: 2,
+      message: { message_id: 11, chat: { id: 'B', title: 'Group B' }, from: { id: 777 }, text: 'second' },
+    });
+
+    expect(state.attachGatewayConversation).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: 'conv-a', externalChatId: 'A', externalChatLabel: 'Group A' }),
+    );
+    expect(state.attachGatewayConversation).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: 'conv-b', externalChatId: 'B', externalChatLabel: 'Group B' }),
+    );
   });
 
   it('reuses existing chat targets and reports unsupported message types', async () => {
@@ -699,6 +726,7 @@ describe('TelegramGatewayRuntime', () => {
     const d2 = deps({ fetch: vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, result: [] }) })) });
     const runtime2 = new TelegramGatewayRuntime(d2 as never);
     runtime2.start();
+    expect(runtime2.isRunning()).toBe(true);
     await vi.waitFor(() => expect(d2.fetch).toHaveBeenCalledWith('https://api.telegram.org/bottoken/setMyCommands', expect.anything()));
     expect(d2.fetch).toHaveBeenCalledWith(
       'https://api.telegram.org/bottoken/setMyCommands',
@@ -717,5 +745,117 @@ describe('TelegramGatewayRuntime', () => {
       expect.objectContaining({ body: expect.stringContaining('"command":"pause"') }),
     );
     runtime2.stop();
+    expect(runtime2.isRunning()).toBe(false);
+  });
+
+  it('records update failures without acknowledging failed Telegram updates', async () => {
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    let getUpdatesCalls = 0;
+    const d = deps({
+      submitPrompt: vi.fn().mockRejectedValueOnce(new Error('first prompt failed')).mockResolvedValueOnce(undefined),
+      fetch: vi.fn(async (url: string) => {
+        if (url.endsWith('/getUpdates')) {
+          getUpdatesCalls += 1;
+          if (getUpdatesCalls > 1) {
+            return new Promise(() => undefined);
+          }
+          return {
+            ok: true,
+            json: async () => ({
+              ok: true,
+              result: [
+                { update_id: 1, message: { message_id: 10, chat: { id: 123 }, from: { id: 777 }, text: 'first' } },
+                { update_id: 2, message: { message_id: 11, chat: { id: 123 }, from: { id: 777 }, text: 'second' } },
+              ],
+            }),
+          };
+        }
+        return { ok: true, json: async () => ({ ok: true, result: url.endsWith('/sendMessage') ? { message_id: 42 } : true }) };
+      }),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    runtime.start();
+    await vi.waitFor(() => expect(d.submitPrompt).toHaveBeenCalledTimes(1));
+    runtime.stop();
+
+    expect(state.recordGatewayEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'error', message: 'Telegram update 1 failed: first prompt failed' }),
+    );
+    expect(d.submitPrompt).not.toHaveBeenCalledWith(expect.objectContaining({ text: 'second' }));
+    const getUpdatesBodies = d.fetch.mock.calls
+      .filter(([url]) => String(url).endsWith('/getUpdates'))
+      .map(([, init]) => JSON.parse(String((init as RequestInit).body)) as { offset?: number });
+    expect(getUpdatesBodies[1]?.offset).toBeUndefined();
+  });
+
+  it('queues concurrent Telegram prompts without replacing the active working message', async () => {
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps({
+      fetch: vi.fn(async (url: string, init?: RequestInit) => ({
+        ok: true,
+        json: async () => ({
+          ok: true,
+          result: url.endsWith('/sendMessage')
+            ? { message_id: String(init?.body).includes('Working') ? 41 : String(init?.body).includes('Queued') ? 42 : 43 }
+            : true,
+        }),
+      })),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, from: { id: 777 }, text: 'first' } });
+    await runtime.processUpdate({ update_id: 2, message: { message_id: 11, chat: { id: 123 }, from: { id: 777 }, text: 'second' } });
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
+    await runtime.deliverAssistantReply({ conversationId: 'conv-1', text: 'first reply' });
+
+    expect(d.submitPrompt).toHaveBeenNthCalledWith(1, { conversationId: 'conv-1', text: 'first', images: undefined });
+    expect(d.submitPrompt).toHaveBeenNthCalledWith(2, { conversationId: 'conv-1', text: 'second', images: undefined });
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('Queued behind the current Telegram request.') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/editMessageText',
+      expect.objectContaining({ body: expect.stringContaining('"message_id":41') }),
+    );
+  });
+
+  it('surfaces polling failures in gateway state and restores active status after recovery', async () => {
+    vi.useFakeTimers();
+    let getUpdatesCalls = 0;
+    const d = deps({
+      fetch: vi.fn(async (url: string) => {
+        if (url.endsWith('/setMyCommands')) {
+          return { ok: true, json: async () => ({ ok: true, result: true }) };
+        }
+        if (url.endsWith('/getUpdates')) {
+          getUpdatesCalls += 1;
+          if (getUpdatesCalls === 1) {
+            return { ok: false, json: async () => ({ ok: false, description: 'Unauthorized' }) };
+          }
+          if (getUpdatesCalls === 2) {
+            return { ok: true, json: async () => ({ ok: true, result: [] }) };
+          }
+          return new Promise(() => undefined);
+        }
+        return { ok: true, json: async () => ({ ok: true, result: true }) };
+      }),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    runtime.start();
+    await vi.waitFor(() =>
+      expect(state.updateGatewayConnectionStatus).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'needs_attention', statusMessage: 'Telegram polling failed: Unauthorized' }),
+      ),
+    );
+    await vi.advanceTimersByTimeAsync(10_000);
+    await vi.waitFor(() =>
+      expect(state.updateGatewayConnectionStatus).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'active', statusMessage: 'Telegram gateway connected' }),
+      ),
+    );
+    runtime.stop();
   });
 });

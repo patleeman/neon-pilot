@@ -38,11 +38,20 @@ const runtime = vi.hoisted(() => ({
   instances: [] as Array<{
     start: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
+    isRunning: ReturnType<typeof vi.fn>;
+    hasRecentlyDeliveredAssistantReply: ReturnType<typeof vi.fn>;
     deliverAssistantReply: ReturnType<typeof vi.fn>;
     dependencies: Record<string, unknown>;
   }>,
   TelegramGatewayRuntime: vi.fn(function MockTelegramGatewayRuntime(this: unknown, dependencies: Record<string, unknown>) {
-    const instance = { start: vi.fn(), stop: vi.fn(), deliverAssistantReply: vi.fn(async () => true), dependencies };
+    const instance = {
+      start: vi.fn(),
+      stop: vi.fn(),
+      isRunning: vi.fn(() => true),
+      hasRecentlyDeliveredAssistantReply: vi.fn(() => false),
+      deliverAssistantReply: vi.fn(async () => true),
+      dependencies,
+    };
     runtime.instances.push(instance);
     return instance;
   }),
@@ -156,6 +165,14 @@ describe('gateway routes', () => {
     });
     expect(latestRuntime().start).toHaveBeenCalledOnce();
     expect(startTelegramGatewayRuntime()).toEqual({ running: false });
+    latestRuntime().isRunning.mockReturnValueOnce(false);
+    expect(
+      (globalThis as Record<string, { readTelegramGatewayRuntimeStatus: () => unknown }>)[
+        TELEGRAM_GATEWAY_HOST_API_GLOBAL
+      ].readTelegramGatewayRuntimeStatus(),
+    ).toEqual({
+      running: false,
+    });
     expect(stopTelegramGatewayRuntime()).toEqual({ running: false });
     expect(latestRuntime().stop).toHaveBeenCalledOnce();
   });
@@ -216,7 +233,7 @@ describe('gateway routes', () => {
       statusMessage: undefined,
     });
     expect(appEvents.invalidateAppTopics).toHaveBeenCalledTimes(2);
-    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('sessions');
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('gateways', 'sessions');
   });
 
   it('updates connection status and starts or stops telegram runtime', () => {
@@ -236,8 +253,14 @@ describe('gateway routes', () => {
     expect(latestRuntime().stop).toHaveBeenCalledOnce();
 
     const active = response();
+    telegramAuth.readTelegramBotToken.mockReturnValueOnce('token');
     handler({ params: { provider: 'telegram' }, body: { status: 'active', enabled: true } }, active);
     expect(latestRuntime().start).toHaveBeenCalledOnce();
+
+    const missingToken = response();
+    handler({ params: { provider: 'telegram' }, body: { status: 'active', enabled: true } }, missingToken);
+    expect(missingToken.status).toHaveBeenCalledWith(400);
+    expect(missingToken.json).toHaveBeenCalledWith({ error: 'Save a Telegram bot token before enabling the gateway.' });
   });
 
   it('tests the configured Telegram bot token without exposing it', async () => {
@@ -291,6 +314,12 @@ describe('gateway routes', () => {
       approvedChatIds: ['444'],
     });
     expect(written.json).toHaveBeenCalledWith({ approvedUserIds: ['333'], approvedChatIds: ['444'] });
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('gateways', 'sessions');
+
+    const invalid = response();
+    patchAccess({ body: { approvedUserIds: ['@alice'], approvedChatIds: ['-100'] } }, invalid);
+    expect(invalid.status).toHaveBeenCalledWith(400);
+    expect(invalid.json).toHaveBeenCalledWith({ error: 'Telegram access IDs must be numeric. Chat IDs may start with -.' });
   });
 
   it('writes and removes telegram tokens while updating gateway state', () => {
@@ -307,12 +336,14 @@ describe('gateway routes', () => {
     expect(telegramAuth.writeTelegramBotToken).toHaveBeenCalledWith('/auth.json', '/state', 'token');
     expect(latestRuntime().start).toHaveBeenCalled();
     expect(ok.json).toHaveBeenCalledWith({ configured: true, state: { connections: [] } });
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('gateways', 'sessions');
 
     const removed = response();
     deleteToken({}, removed);
     expect(telegramAuth.removeTelegramBotToken).toHaveBeenCalledWith('/auth.json', '/state');
     expect(latestRuntime().stop).toHaveBeenCalled();
     expect(removed.json).toHaveBeenCalledWith({ configured: false, state: { connections: [] } });
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('gateways', 'sessions');
   });
 
   it('binds and detaches gateway conversations with trimmed optional fields', () => {
@@ -381,5 +412,23 @@ describe('gateway routes', () => {
     expect(ensureTelegramRuntime().deliverAssistantReply).toHaveBeenCalledTimes(2);
     expect(ensureTelegramRuntime().deliverAssistantReply).toHaveBeenNthCalledWith(1, { conversationId: 'conv-1', text: 'OK' });
     expect(ensureTelegramRuntime().deliverAssistantReply).toHaveBeenNthCalledWith(2, { conversationId: 'conv-1', text: 'OK' });
+  });
+
+  it('does not deliver lifecycle replies already delivered through the Telegram stream', async () => {
+    register();
+    registerTelegramGatewayLifecycleDelivery();
+    const handler = lifecycle.registerLiveSessionLifecycleHandler.mock.calls[0][0];
+    latestRuntime().hasRecentlyDeliveredAssistantReply.mockReturnValueOnce(true);
+    conversationService.readSessionDetailForRoute.mockResolvedValueOnce({
+      sessionRead: { detail: { blocks: [{ id: 'block-1', type: 'text', text: 'streamed reply' }] } },
+    });
+
+    await handler({ trigger: 'turn_end', conversationId: 'conv-1' });
+
+    expect(latestRuntime().deliverAssistantReply).not.toHaveBeenCalled();
+    expect(latestRuntime().hasRecentlyDeliveredAssistantReply).toHaveBeenCalledWith({
+      conversationId: 'conv-1',
+      text: 'streamed reply',
+    });
   });
 });

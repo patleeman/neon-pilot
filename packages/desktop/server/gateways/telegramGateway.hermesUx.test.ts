@@ -6,8 +6,8 @@ vi.mock('./gatewayState.js', () => ({
   attachGatewayConversation: vi.fn(),
   findGatewayChatTarget: vi.fn(() => ({ conversationId: 'conv-1', conversationTitle: 'Telegram: Pat' })),
   findGatewayChatTargetByConversation: vi.fn(() => ({ externalChatId: '123', externalChatLabel: 'Pat' })),
-  hasGatewayBinding: vi.fn(() => true),
   recordGatewayEvent: vi.fn(),
+  updateGatewayConnectionStatus: vi.fn(),
   upsertGatewayChatTarget: vi.fn(),
 }));
 

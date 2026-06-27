@@ -762,11 +762,48 @@ function piEventToResponsesEvents(
     });
   }
   if (event.type === 'toolcall_end') {
+    let outputIndex = state.outputIndex;
+    if (state.textStarted) {
+      out.push({
+        kind: 'event',
+        event: { type: 'response.output_text.done', output_index: outputIndex, content_index: 0, text: state.currentText },
+      });
+      out.push({
+        kind: 'event',
+        event: {
+          type: 'response.output_item.done',
+          output_index: outputIndex,
+          item: {
+            id: `msg_${outputIndex}`,
+            type: 'message',
+            status: 'completed',
+            role: 'assistant',
+            content: [{ type: 'output_text', text: state.currentText, annotations: [] }],
+          },
+        },
+      });
+      outputIndex += 1;
+    }
+    out.push({
+      kind: 'event',
+      event: {
+        type: 'response.output_item.added',
+        output_index: outputIndex,
+        item: {
+          id: event.toolCall.id,
+          type: 'function_call',
+          status: 'in_progress',
+          call_id: event.toolCall.id,
+          name: event.toolCall.name,
+          arguments: JSON.stringify(event.toolCall.arguments ?? {}),
+        },
+      },
+    });
     out.push({
       kind: 'event',
       event: {
         type: 'response.output_item.done',
-        output_index: state.outputIndex,
+        output_index: outputIndex,
         item: {
           id: event.toolCall.id,
           type: 'function_call',
@@ -777,7 +814,7 @@ function piEventToResponsesEvents(
         },
       },
     });
-    out.push({ kind: 'state', textStarted: state.textStarted, currentText: state.currentText, outputIndex: state.outputIndex + 1 });
+    out.push({ kind: 'state', textStarted: false, currentText: '', outputIndex: outputIndex + 1 });
   }
   if (event.type === 'done') {
     if (state.textStarted) {

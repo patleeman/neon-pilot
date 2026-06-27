@@ -17,8 +17,8 @@ describe('telegram access policy', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'telegram-access-'));
 
     const written = writeTelegramAccessPolicy(stateRoot, 'shared/profile', {
-      approvedUserIds: [' 123 ', '123', '', '456'],
-      approvedChatIds: [' -100 ', '-100'],
+      approvedUserIds: [' 123 ', '123', '', '456', '@alice'],
+      approvedChatIds: [' -100 ', '-100', 'general'],
     });
 
     expect(written).toEqual({ approvedUserIds: ['123', '456'], approvedChatIds: ['-100'] });

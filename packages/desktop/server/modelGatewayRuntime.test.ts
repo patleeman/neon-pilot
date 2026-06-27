@@ -335,9 +335,33 @@ describe('modelGatewayRuntime', () => {
         },
         { type: 'response.output_text.delta', output_index: 0, content_index: 0, delta: 'Hel' },
         { type: 'response.output_text.delta', output_index: 0, content_index: 0, delta: 'lo' },
+        { type: 'response.output_text.done', output_index: 0, content_index: 0, text: 'Hello' },
         {
           type: 'response.output_item.done',
           output_index: 0,
+          item: {
+            id: 'msg_0',
+            type: 'message',
+            status: 'completed',
+            role: 'assistant',
+            content: [{ type: 'output_text', text: 'Hello', annotations: [] }],
+          },
+        },
+        {
+          type: 'response.output_item.added',
+          output_index: 1,
+          item: {
+            id: 'call_1',
+            type: 'function_call',
+            status: 'in_progress',
+            call_id: 'call_1',
+            name: 'lookup',
+            arguments: '{"q":"neon"}',
+          },
+        },
+        {
+          type: 'response.output_item.done',
+          output_index: 1,
           item: {
             id: 'call_1',
             type: 'function_call',
@@ -345,18 +369,6 @@ describe('modelGatewayRuntime', () => {
             call_id: 'call_1',
             name: 'lookup',
             arguments: '{"q":"neon"}',
-          },
-        },
-        { type: 'response.output_text.done', output_index: 1, content_index: 0, text: 'Hello' },
-        {
-          type: 'response.output_item.done',
-          output_index: 1,
-          item: {
-            id: 'msg_1',
-            type: 'message',
-            status: 'completed',
-            role: 'assistant',
-            content: [{ type: 'output_text', text: 'Hello', annotations: [] }],
           },
         },
         expect.objectContaining({

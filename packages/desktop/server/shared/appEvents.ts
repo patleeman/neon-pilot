@@ -28,6 +28,7 @@ export type AppEventTopic =
   | 'extensions'
   | 'tasks'
   | 'models'
+  | 'gateways'
   | 'runs'
   | 'executions'
   | 'automation'
@@ -141,6 +142,7 @@ const ALL_TOPICS: AppEventTopic[] = [
   'extensions',
   'tasks',
   'models',
+  'gateways',
   'runs',
   'executions',
   'automation',
@@ -406,6 +408,7 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
     extensions: [{ path: join(getStateRoot(), 'extensions'), kind: 'directory', eventKinds: ['change', 'rename'] }],
     automation: [],
     models: [],
+    gateways: [],
     daemon: [
       { path: getDaemonConfigFilePath(), kind: 'file' },
       { path: daemonPaths.socketPath, kind: 'file' },

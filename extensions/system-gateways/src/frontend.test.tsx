@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -163,6 +163,90 @@ describe('GatewaysPage', () => {
     );
   });
 
+  it('reloads gateway status when the app invalidates gateways', async () => {
+    const activeGateway = {
+      ...baseGateway,
+      connections: [
+        {
+          id: 'telegram-default',
+          provider: 'telegram',
+          label: 'Telegram',
+          status: 'active',
+          enabled: true,
+          updatedAt: '2026-06-26T12:00:00.000Z',
+        },
+      ],
+    };
+    const failedGateway = {
+      ...activeGateway,
+      connections: [
+        {
+          ...activeGateway.connections[0],
+          status: 'needs_attention',
+          statusMessage: 'Telegram polling failed: Unauthorized',
+        },
+      ],
+      events: [
+        {
+          id: 'event-1',
+          provider: 'telegram',
+          kind: 'error',
+          message: 'Telegram polling failed: Unauthorized',
+          createdAt: '2026-06-26T12:01:00.000Z',
+        },
+      ],
+    };
+    let gateway = activeGateway;
+    globalThis.fetch = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(path);
+      if (url === '/api/gateways') return jsonResponse(gateway);
+      if (url === '/api/gateways/telegram/token' && (!init?.method || init.method === 'GET')) return jsonResponse({ configured: true });
+      if (url === '/api/gateways/telegram/access' && (!init?.method || init.method === 'GET')) {
+        return jsonResponse({ approvedUserIds: [], approvedChatIds: [] });
+      }
+      return jsonResponse({ error: `Unhandled ${url}` }, 404);
+    }) as never;
+
+    render(<GatewaysPage />);
+
+    expect(await screen.findByText('Active')).toBeTruthy();
+    gateway = failedGateway;
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-app-invalidate', { detail: { topics: ['gateways'] } }));
+    });
+
+    expect(await screen.findByText('Needs attention')).toBeTruthy();
+    expect(await screen.findAllByText('Telegram polling failed: Unauthorized')).toHaveLength(2);
+  });
+
+  it('shows server validation errors for invalid Telegram access IDs', async () => {
+    const calls = installFetchMock({
+      token: { configured: true },
+      patchAccess: { error: 'Telegram access IDs must be numeric. Chat IDs may start with -.' },
+    });
+    globalThis.fetch = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(path);
+      calls.push({ path: url, init });
+      if (url === '/api/gateways') return jsonResponse(baseGateway);
+      if (url === '/api/gateways/telegram/token' && (!init?.method || init.method === 'GET')) return jsonResponse({ configured: true });
+      if (url === '/api/gateways/telegram/access' && (!init?.method || init.method === 'GET')) {
+        return jsonResponse({ approvedUserIds: [], approvedChatIds: [] });
+      }
+      if (url === '/api/gateways/telegram/access' && init?.method === 'PATCH') {
+        return jsonResponse({ error: 'Telegram access IDs must be numeric. Chat IDs may start with -.' }, 400);
+      }
+      return jsonResponse({ error: `Unhandled ${url}` }, 404);
+    }) as never;
+
+    render(<GatewaysPage />);
+    await screen.findByRole('heading', { name: 'Telegram' });
+
+    fireEvent.change(screen.getByLabelText('Telegram user ID'), { target: { value: '@alice' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add' })[0]);
+
+    expect(await screen.findByText('Telegram access IDs must be numeric. Chat IDs may start with -.')).toBeTruthy();
+  });
+
   it('shows a recovery state when gateway APIs fail', async () => {
     globalThis.fetch = vi.fn(async () => jsonResponse({ error: 'gateway unavailable' }, 500)) as never;
 
@@ -185,5 +269,28 @@ describe('GatewaysSidebar', () => {
     const providerRow = container.querySelector('.rounded-md.bg-elevated\\/55');
     expect(providerRow).toBeTruthy();
     expect(providerRow?.className).not.toContain('border');
+  });
+
+  it('reloads when gateway state is invalidated', async () => {
+    let gateway = baseGateway;
+    globalThis.fetch = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(path);
+      if (url === '/api/gateways') return jsonResponse(gateway);
+      if (url === '/api/gateways/telegram/token' && (!init?.method || init.method === 'GET')) return jsonResponse({ configured: true });
+      return jsonResponse({ error: `Unhandled ${url}` }, 404);
+    }) as never;
+
+    render(<GatewaysSidebar />);
+
+    expect(await screen.findByText('Needs setup')).toBeTruthy();
+    gateway = {
+      ...baseGateway,
+      connections: [{ ...baseGateway.connections[0], status: 'needs_attention', enabled: true }],
+    };
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-app-invalidate', { detail: { topics: ['gateways'] } }));
+    });
+
+    expect(await screen.findByText('Needs attention')).toBeTruthy();
   });
 });

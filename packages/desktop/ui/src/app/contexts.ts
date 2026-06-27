@@ -37,6 +37,7 @@ export const INITIAL_APP_EVENT_VERSIONS: AppEventVersions = {
   extensions: 0,
   tasks: 0,
   models: 0,
+  gateways: 0,
   runs: 0,
   executions: 0,
   automation: 0,

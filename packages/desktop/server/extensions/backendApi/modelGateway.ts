@@ -16,10 +16,10 @@ export const FAKE_MODEL_GATEWAY_MODEL_ID = 'neon-pilot-fake';
 export const DEFAULT_MODEL_GATEWAY_MODEL_ID = 'auto';
 export type {
   ModelGatewayModel,
+  ModelGatewayResponseOptions,
   ModelGatewayRuntimeContext,
   ModelGatewaySettings,
   ModelGatewayStatus,
-  ModelGatewayResponseOptions,
   ResponsesRequest,
   ResponsesResponse,
 } from '@neon-pilot/extensions/backend/modelGateway';
@@ -45,13 +45,23 @@ export function createModelGatewayResponse(
   return callServerModuleExport(RUNTIME_MODULE, 'createModelGatewayResponse', ctx, body, settings, options) as Promise<ResponsesResponse>;
 }
 
-export async function streamModelGatewayResponseEvents(
+export function streamModelGatewayResponseEvents(
   ctx: ModelGatewayRuntimeContext,
   body: ResponsesRequest,
   settings: ModelGatewaySettings,
   options?: ModelGatewayResponseOptions,
-): Promise<AsyncIterable<Record<string, unknown> | '[DONE]'>> {
-  return callServerModuleExport(RUNTIME_MODULE, 'streamModelGatewayResponseEvents', ctx, body, settings, options) as Promise<
-    AsyncIterable<Record<string, unknown> | '[DONE]'>
-  >;
+): AsyncIterable<Record<string, unknown> | '[DONE]'> {
+  return {
+    async *[Symbol.asyncIterator]() {
+      const events = (await callServerModuleExport(
+        RUNTIME_MODULE,
+        'streamModelGatewayResponseEvents',
+        ctx,
+        body,
+        settings,
+        options,
+      )) as AsyncIterable<Record<string, unknown> | '[DONE]'>;
+      yield* events;
+    },
+  };
 }

@@ -16,12 +16,22 @@ describe('backendApi/modelGateway', () => {
     const ctx = { runtime: 'ctx' };
     const settings = { port: 8766 };
     const request = { model: 'auto', input: 'hello' };
+    const stream = async function* () {
+      yield { type: 'response.created' };
+      yield '[DONE]' as const;
+    };
 
     await modelGateway.modelGatewaySettingsFrom({ port: 9000 });
     await modelGateway.listModelGatewayModels(ctx as never);
     await modelGateway.writeModelGatewayCatalog(ctx as never);
     await modelGateway.createModelGatewayResponse(ctx as never, request as never, settings as never, { signal: undefined });
-    await modelGateway.streamModelGatewayResponseEvents(ctx as never, request as never, settings as never, { signal: undefined });
+    resolver.callServerModuleExport.mockResolvedValueOnce(stream());
+    const streamed = [];
+    for await (const event of modelGateway.streamModelGatewayResponseEvents(ctx as never, request as never, settings as never, {
+      signal: undefined,
+    })) {
+      streamed.push(event);
+    }
 
     expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(1, '../../modelGatewayRuntime.js', 'modelGatewaySettingsFrom', {
       port: 9000,
@@ -46,5 +56,6 @@ describe('backendApi/modelGateway', () => {
       settings,
       { signal: undefined },
     );
+    expect(streamed).toEqual([{ type: 'response.created' }, '[DONE]']);
   });
 });
