@@ -862,6 +862,68 @@ describe('extension backend capability dispatcher', () => {
     expect(secrets.get).not.toHaveBeenCalled();
   });
 
+  it('requires automation permissions before dispatching worker automation helpers', async () => {
+    const automations = { call: vi.fn(async () => ({ ok: true })) };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ automations });
+
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'automations',
+        operation: 'loadScheduledTasksForProfile',
+        input: { args: ['runtime'] },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission automations:read to use automations.loadScheduledTasksForProfile.');
+    await expect(async () =>
+      dispatch({
+        id: 2,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'automations',
+        operation: 'createStoredAutomation',
+        input: { args: [{ title: 'Task' }] },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission automations:write to use automations.createStoredAutomation.');
+    await expect(async () =>
+      dispatch({
+        id: 3,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'automations',
+        operation: 'startScheduledTaskRun',
+        input: { args: ['task-1'] },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission automations:run to use automations.startScheduledTaskRun.');
+    expect(automations.call).not.toHaveBeenCalled();
+
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['automations:readwrite', 'automations:run'] } });
+    await expect(
+      dispatch({
+        id: 4,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'automations',
+        operation: 'deleteStoredAutomation',
+        input: { args: ['task-1'] },
+      }),
+    ).resolves.toEqual({ ok: true });
+    await expect(
+      dispatch({
+        id: 5,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'automations',
+        operation: 'startScheduledTaskRun',
+        input: { args: ['task-1'] },
+      }),
+    ).resolves.toEqual({ ok: true });
+    expect(automations.call).toHaveBeenCalledWith('deleteStoredAutomation', { args: ['task-1'] });
+    expect(automations.call).toHaveBeenCalledWith('startScheduledTaskRun', { args: ['task-1'] });
+  });
+
   it('requires conversation write permission for metadata writes', async () => {
     findExtensionEntry.mockReturnValue({ manifest: { permissions: ['conversations:read'] } });
     const conversations = { metadata: { set: vi.fn() } };

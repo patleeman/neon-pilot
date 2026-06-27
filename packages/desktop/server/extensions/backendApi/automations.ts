@@ -23,6 +23,14 @@ async function callModuleExport<T>(specifier: string, name: string, ...args: unk
   return callServerModuleExport<T>(specifier, name, ...args);
 }
 
+async function callAutomationCapability<T>(operation: string, args: unknown[], fallback: () => Promise<T>): Promise<T> {
+  const bridge = getWorkerCapabilityBridge();
+  if (bridge) {
+    return bridge('automations', operation, { args }) as Promise<T>;
+  }
+  return fallback();
+}
+
 export async function parseFutureHumanDateTime(input: string) {
   return callModuleExport<Record<string, unknown>>('../../automation/humanDateTime.js', 'parseFutureHumanDateTime', input);
 }
@@ -69,55 +77,67 @@ export async function listDeferredResumesForSessionFile(input: unknown) {
   );
 }
 export async function loadScheduledTasksForProfile(profile: string): Promise<LoadedScheduledTasksForProfile> {
-  return callModuleExport<LoadedScheduledTasksForProfile>('../../automation/scheduledTasks.js', 'loadScheduledTasksForProfile', profile);
+  return callAutomationCapability('loadScheduledTasksForProfile', [profile], () =>
+    callModuleExport<LoadedScheduledTasksForProfile>('../../automation/scheduledTasks.js', 'loadScheduledTasksForProfile', profile),
+  );
 }
 export async function resolveScheduledTaskForProfile(profile: string, taskId: string) {
-  return callModuleExport<{ task: Record<string, unknown>; runtime?: Record<string, unknown> }>(
-    '../../automation/scheduledTasks.js',
-    'resolveScheduledTaskForProfile',
-    profile,
-    taskId,
+  return callAutomationCapability('resolveScheduledTaskForProfile', [profile, taskId], () =>
+    callModuleExport<{ task: Record<string, unknown>; runtime?: Record<string, unknown> }>(
+      '../../automation/scheduledTasks.js',
+      'resolveScheduledTaskForProfile',
+      profile,
+      taskId,
+    ),
   );
 }
 export async function validateScheduledTaskDefinition(input: unknown) {
-  return callModuleExport<Record<string, unknown>>('../../automation/scheduledTasks.js', 'validateScheduledTaskDefinition', input);
+  return callAutomationCapability('validateScheduledTaskDefinition', [input], () =>
+    callModuleExport<Record<string, unknown>>('../../automation/scheduledTasks.js', 'validateScheduledTaskDefinition', input),
+  );
 }
 export function toScheduledTaskMetadata(input: unknown) {
   return input;
 }
 export async function resolveScheduledTaskThreadBinding(input: unknown) {
-  return callModuleExport<Record<string, unknown>>('../../automation/scheduledTaskThreads.js', 'resolveScheduledTaskThreadBinding', input);
+  return callAutomationCapability('resolveScheduledTaskThreadBinding', [input], () =>
+    callModuleExport<Record<string, unknown>>('../../automation/scheduledTaskThreads.js', 'resolveScheduledTaskThreadBinding', input),
+  );
 }
 export async function applyScheduledTaskThreadBinding(taskId: string, input: unknown) {
-  return callModuleExport<Record<string, unknown>>(
-    '../../automation/scheduledTaskThreads.js',
-    'applyScheduledTaskThreadBinding',
-    taskId,
-    input,
+  return callAutomationCapability('applyScheduledTaskThreadBinding', [taskId, input], () =>
+    callModuleExport<Record<string, unknown>>('../../automation/scheduledTaskThreads.js', 'applyScheduledTaskThreadBinding', taskId, input),
   );
 }
 export async function buildScheduledTaskThreadDetail(task: unknown, options?: unknown) {
-  return callModuleExport<Record<string, unknown>>(
-    '../../automation/scheduledTaskThreads.js',
-    'buildScheduledTaskThreadDetail',
-    task,
-    options,
+  return callAutomationCapability('buildScheduledTaskThreadDetail', [task, options], () =>
+    callModuleExport<Record<string, unknown>>('../../automation/scheduledTaskThreads.js', 'buildScheduledTaskThreadDetail', task, options),
   );
 }
 export async function createStoredAutomation(input: unknown) {
-  return callModuleExport<Record<string, unknown>>('../../automation/store.js', 'createStoredAutomation', input);
+  return callAutomationCapability('createStoredAutomation', [input], () =>
+    callModuleExport<Record<string, unknown>>('../../automation/store.js', 'createStoredAutomation', input),
+  );
 }
 export async function updateStoredAutomation(taskId: string, input: unknown) {
-  return callModuleExport<Record<string, unknown>>('../../automation/store.js', 'updateStoredAutomation', taskId, input);
+  return callAutomationCapability('updateStoredAutomation', [taskId, input], () =>
+    callModuleExport<Record<string, unknown>>('../../automation/store.js', 'updateStoredAutomation', taskId, input),
+  );
 }
 export async function deleteStoredAutomation(taskId: string, input?: unknown) {
-  return callModuleExport<void>('../../automation/store.js', 'deleteStoredAutomation', taskId, input);
+  return callAutomationCapability('deleteStoredAutomation', [taskId, input], () =>
+    callModuleExport<boolean>('../../automation/store.js', 'deleteStoredAutomation', taskId, input),
+  );
 }
 export async function listStoredAutomations() {
-  return callModuleExport<Array<Record<string, unknown>>>('../../automation/store.js', 'listStoredAutomations');
+  return callAutomationCapability('listStoredAutomations', [], () =>
+    callModuleExport<Array<Record<string, unknown>>>('../../automation/store.js', 'listStoredAutomations'),
+  );
 }
 export async function loadAutomationRuntimeStateMap() {
-  return callModuleExport<Map<string, unknown>>('../../automation/store.js', 'loadAutomationRuntimeStateMap');
+  return callAutomationCapability('loadAutomationRuntimeStateMap', [], () =>
+    callModuleExport<Map<string, unknown>>('../../automation/store.js', 'loadAutomationRuntimeStateMap'),
+  );
 }
 export function normalizeAutomationTargetTypeForSelection(value: unknown) {
   return value === 'conversation' ? 'conversation' : 'background-agent';
@@ -160,13 +180,19 @@ export async function readSessionConversationId(sessionFile: string) {
   return callModuleExport<string | undefined>('@neon-pilot/core', 'readSessionConversationId', sessionFile);
 }
 export async function getTaskCallbackBinding(input: unknown) {
-  return callModuleExport<Record<string, unknown> | undefined>('@neon-pilot/core', 'getTaskCallbackBinding', input);
+  return callAutomationCapability('getTaskCallbackBinding', [input], () =>
+    callModuleExport<Record<string, unknown> | undefined>('@neon-pilot/core', 'getTaskCallbackBinding', input),
+  );
 }
 export async function setTaskCallbackBinding(input: unknown) {
-  return callModuleExport<void>('@neon-pilot/core', 'setTaskCallbackBinding', input);
+  return callAutomationCapability('setTaskCallbackBinding', [input], () =>
+    callModuleExport<void>('@neon-pilot/core', 'setTaskCallbackBinding', input),
+  );
 }
 export async function clearTaskCallbackBinding(input: unknown) {
-  return callModuleExport<void>('@neon-pilot/core', 'clearTaskCallbackBinding', input);
+  return callAutomationCapability('clearTaskCallbackBinding', [input], () =>
+    callModuleExport<void>('@neon-pilot/core', 'clearTaskCallbackBinding', input),
+  );
 }
 export async function pingDaemon(): Promise<boolean> {
   try {
@@ -176,5 +202,7 @@ export async function pingDaemon(): Promise<boolean> {
   }
 }
 export async function startScheduledTaskRun(input: unknown) {
-  return callDaemonExport<Record<string, unknown>>('startScheduledTaskRun', input);
+  return callAutomationCapability('startScheduledTaskRun', [input], () =>
+    callDaemonExport<Record<string, unknown>>('startScheduledTaskRun', input),
+  );
 }

@@ -94,6 +94,22 @@ async function renderPage(pa = createPa(), context: { search?: string } = {}) {
   return { container, pa };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+async function flushPromises(times = 3) {
+  for (let index = 0; index < times; index += 1) {
+    await act(async () => Promise.resolve());
+  }
+}
+
 describe('AutomationsPage', () => {
   it('opens the creation editor from the command-backed route query', async () => {
     expect(shouldOpenNewAutomationFromSearch('?action=new')).toBe(true);
@@ -120,6 +136,28 @@ describe('AutomationsPage', () => {
     expect(document.querySelector('select[name="automation-timeout-preset"]')?.closest('.ui-field')).not.toBeNull();
     expect(document.querySelector('input[name="automation-cwd"]')).not.toBeNull();
     expect(document.querySelector('[aria-label="Enable automation"]')).toBeNull();
+  });
+
+  it('keeps route-opened create drafts when conversations load later', async () => {
+    const conversations = deferred<unknown[]>();
+    const pa = createPa();
+    pa.conversations.list = vi.fn(() => conversations.promise);
+
+    await renderPage(pa, { search: '?action=new' });
+
+    const title = document.querySelector<HTMLInputElement>('input[name="automation-title"]');
+    if (!title) throw new Error('create title input missing');
+
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(title, 'Draft automation');
+      title.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    conversations.resolve([{ id: 'conv-owner', title: 'Release watch thread', cwd: '/repo' }]);
+    await flushPromises();
+
+    expect(document.querySelector<HTMLInputElement>('input[name="automation-title"]')?.value).toBe('Draft automation');
+    expect(document.querySelector<HTMLSelectElement>('select[name="automation-owner-thread"]')?.value).toBe('conv-owner');
   });
 
   it('mounts the creation dialog at document body so the overlay covers desktop chrome', async () => {
@@ -224,6 +262,42 @@ describe('AutomationsPage', () => {
     vi.useRealTimers();
   });
 
+  it('does not offer Run now while an automation is already running', async () => {
+    const pa = createPa({
+      list: vi.fn(async () => [
+        {
+          id: 'release-watch',
+          title: 'Release watch',
+          scheduleType: 'at',
+          targetType: 'conversation',
+          running: true,
+          enabled: true,
+          at: '2026-06-24T12:00:00.000Z',
+          prompt: 'Check release state',
+          threadMode: 'existing',
+          threadConversationId: 'conv-owner',
+          threadTitle: 'Release watch thread',
+        },
+      ]),
+    });
+    const { container } = await renderPage(pa);
+    const buttons = () => Array.from(container.querySelectorAll('button'));
+
+    await act(async () =>
+      buttons()
+        .find((button) => button.getAttribute('aria-label') === 'Actions for Release watch')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    const runNow = buttons().find((button) => button.textContent === 'Run now');
+    expect(runNow).not.toBeUndefined();
+    expect(runNow?.hasAttribute('disabled')).toBe(true);
+
+    await act(async () => runNow?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+
+    expect(pa.automations.run).not.toHaveBeenCalled();
+  });
+
   it('runs, pauses, resumes, and deletes from the row action menu', async () => {
     const pa = createPa();
     const { container } = await renderPage(pa);
@@ -273,6 +347,74 @@ describe('AutomationsPage', () => {
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
     );
     expect(pa.automations.delete).toHaveBeenCalledWith('release-watch');
+  });
+
+  it('ignores stale refresh responses after a newer mutation reloads', async () => {
+    const staleRefresh = deferred<unknown[]>();
+    let listCalls = 0;
+    const list = vi.fn(() => {
+      listCalls += 1;
+      if (listCalls === 2) return staleRefresh.promise;
+      if (listCalls >= 3) return Promise.resolve([]);
+      return Promise.resolve([
+        {
+          id: 'release-watch',
+          title: 'Release watch',
+          scheduleType: 'cron',
+          targetType: 'conversation',
+          running: false,
+          enabled: true,
+          cron: '*/15 * * * *',
+          prompt: 'Check release state',
+          threadMode: 'existing',
+          threadConversationId: 'conv-owner',
+          threadTitle: 'Release watch thread',
+        },
+      ]);
+    });
+    const pa = createPa({ list });
+    const { container } = await renderPage(pa);
+    const buttons = () => Array.from(container.querySelectorAll('button'));
+
+    await act(async () =>
+      buttons()
+        .find((button) => button.getAttribute('aria-label') === 'Refresh automations')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    await act(async () =>
+      buttons()
+        .find((button) => button.getAttribute('aria-label') === 'Actions for Release watch')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+    await act(async () =>
+      buttons()
+        .find((button) => button.textContent === 'Delete')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+    await flushPromises();
+
+    expect(container.textContent).not.toContain('Release watch');
+
+    staleRefresh.resolve([
+      {
+        id: 'release-watch',
+        title: 'Release watch',
+        scheduleType: 'cron',
+        targetType: 'conversation',
+        running: false,
+        enabled: true,
+        cron: '*/15 * * * *',
+        prompt: 'Check release state',
+        threadMode: 'existing',
+        threadConversationId: 'conv-owner',
+        threadTitle: 'Release watch thread',
+      },
+    ]);
+    await flushPromises();
+
+    expect(pa.automations.delete).toHaveBeenCalledWith('release-watch');
+    expect(container.textContent).not.toContain('Release watch');
   });
 
   it('edits an existing automation in the modal instead of an inline details pane', async () => {

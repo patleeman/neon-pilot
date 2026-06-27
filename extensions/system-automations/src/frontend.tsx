@@ -44,6 +44,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -262,7 +263,14 @@ function parseCronPart(part: string, min: number, max: number): Set<number> | nu
   return out;
 }
 
-function cronMatches(expression: string, date: Date): boolean {
+function setContainsRange(values: Set<number>, min: number, max: number): boolean {
+  for (let value = min; value <= max; value += 1) {
+    if (!values.has(value)) return false;
+  }
+  return true;
+}
+
+export function cronMatches(expression: string, date: Date): boolean {
   const parts = expression.trim().split(/\s+/);
   if (parts.length !== 5) return false;
   const minute = parseCronPart(parts[0] ?? '', 0, 59);
@@ -272,13 +280,20 @@ function cronMatches(expression: string, date: Date): boolean {
   const dayOfWeek = parseCronPart(parts[4] ?? '', 0, 7);
   if (!minute || !hour || !dayOfMonth || !month || !dayOfWeek) return false;
   const dow = date.getDay();
-  return (
-    minute.has(date.getMinutes()) &&
-    hour.has(date.getHours()) &&
-    dayOfMonth.has(date.getDate()) &&
-    month.has(date.getMonth() + 1) &&
-    (dayOfWeek.has(dow) || (dow === 0 && dayOfWeek.has(7)))
-  );
+  const dayOfMonthWildcard = setContainsRange(dayOfMonth, 1, 31);
+  const dayOfWeekWildcard = setContainsRange(dayOfWeek, 0, 6);
+  const dayOfMonthMatch = dayOfMonth.has(date.getDate());
+  const dayOfWeekMatch = dayOfWeek.has(dow) || (dow === 0 && dayOfWeek.has(7));
+  const dayMatches =
+    dayOfMonthWildcard && dayOfWeekWildcard
+      ? true
+      : dayOfMonthWildcard
+        ? dayOfWeekMatch
+        : dayOfWeekWildcard
+          ? dayOfMonthMatch
+          : dayOfMonthMatch || dayOfWeekMatch;
+
+  return minute.has(date.getMinutes()) && hour.has(date.getHours()) && month.has(date.getMonth() + 1) && dayMatches;
 }
 
 function nextRunText(task: TaskSummary): string {
@@ -396,8 +411,12 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const [loading, setLoading] = useState(true);
   const titleId = useId();
   const rowMenuBaseId = useId();
+  const loadRequestIdRef = useRef(0);
+  const handledRouteSearchRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
+    const requestId = loadRequestIdRef.current + 1;
+    loadRequestIdRef.current = requestId;
     setError(null);
     try {
       const conversationsApi = (pa as NativeExtensionClient & { conversations?: NativeExtensionClient['conversations'] }).conversations;
@@ -407,13 +426,17 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
         conversationsApi?.list ? conversationsApi.list() : Promise.resolve([]),
         typeof modelsFn === 'function' ? modelsFn() : Promise.resolve([]),
       ]);
+      if (loadRequestIdRef.current !== requestId) return;
       setTasks(readTasks(taskList));
       setConversations(readConversations(conversationList));
       setModels(readModels(modelList));
     } catch (err) {
+      if (loadRequestIdRef.current !== requestId) return;
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      if (loadRequestIdRef.current === requestId) {
+        setLoading(false);
+      }
     }
   }, [pa]);
 
@@ -479,8 +502,20 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   }, [conversations]);
 
   useEffect(() => {
-    if (shouldOpenNewAutomationFromSearch(context?.search)) openCreate();
+    const search = context?.search ?? '';
+    if (!shouldOpenNewAutomationFromSearch(search)) {
+      handledRouteSearchRef.current = null;
+      return;
+    }
+    if (handledRouteSearchRef.current === search) return;
+    handledRouteSearchRef.current = search;
+    openCreate();
   }, [context?.search, openCreate]);
+
+  useEffect(() => {
+    if (!dialogOpen || editingId || form.ownerThreadId || conversations.length === 0) return;
+    setForm((current) => (current.ownerThreadId ? current : { ...current, ownerThreadId: conversations[0]?.id ?? '' }));
+  }, [conversations, dialogOpen, editingId, form.ownerThreadId]);
 
   const visibleTasks = useMemo(() => sortTasks(tasks), [tasks]);
 
@@ -547,6 +582,9 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   };
 
   const runNow = async (task: TaskSummary) => {
+    if (task.running) {
+      return;
+    }
     setBusy(`run:${task.id}`);
     setRowMenu(null);
     try {
@@ -742,7 +780,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       position={rowMenu.position}
                       className="z-50 min-w-36"
                     >
-                      <MenuItem disabled={busy === `run:${task.id}`} onClick={() => void runNow(task)}>
+                      <MenuItem disabled={task.running || busy === `run:${task.id}`} onClick={() => void runNow(task)}>
                         Run now
                       </MenuItem>
                       <MenuItem disabled={busy?.endsWith(`:${task.id}`)} onClick={() => void updateEnabled(task, !task.enabled)}>

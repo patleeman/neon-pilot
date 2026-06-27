@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { automationRowActionMenuPosition, ownerThreadHint, shouldOpenNewAutomationFromSearch } from './frontend';
+import { automationRowActionMenuPosition, cronMatches, ownerThreadHint, shouldOpenNewAutomationFromSearch } from './frontend';
 
 describe('system-automations frontend helpers', () => {
   it('opens the new automation dialog from supported search params', () => {
@@ -26,5 +26,11 @@ describe('system-automations frontend helpers', () => {
       right: 20,
       top: 116,
     });
+  });
+
+  it('matches backend cron day-of-month and day-of-week semantics', () => {
+    expect(cronMatches('0 9 1 * 1', new Date(2026, 5, 29, 9, 0, 0))).toBe(true);
+    expect(cronMatches('0 9 1 * 1', new Date(2026, 6, 1, 9, 0, 0))).toBe(true);
+    expect(cronMatches('0 9 1 * 1', new Date(2026, 5, 30, 9, 0, 0))).toBe(false);
   });
 });

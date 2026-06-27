@@ -731,8 +731,9 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       paths: { root: string; stateRoot: string };
     },
     controller: AbortController,
-    options: { runIdOverride?: string } = {},
+    options: { runIdOverride?: string; resolveOneTimeSchedule?: boolean } = {},
   ): Promise<void> => {
+    const resolveOneTimeSchedule = options.resolveOneTimeSchedule !== false;
     const runnableTask = ensureAutomationThread(task.id, { dbPath: runtimeDbPath, stateRoot: context.paths.stateRoot });
     if (runnableTask.threadMode === 'none' || !runnableTask.threadSessionFile || !runnableTask.threadConversationId) {
       throw new Error(`Automation @${runnableTask.id} requires an owner thread.`);
@@ -742,6 +743,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
 
     const startedAt = record.runningStartedAt ?? now().toISOString();
     const durableRun = await createDurableTaskRunRecord(runnableTask, record, startedAt, options.runIdOverride);
+    persistState(context.logger);
     appendThreadAutomationEvent(runnableTask, { kind: 'started', runId: durableRun.runId, timestamp: startedAt });
     let finalResult: TaskRunResult | undefined;
 
@@ -871,7 +873,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       record.lastError = undefined;
       state.successfulRuns += 1;
 
-      if (runnableTask.schedule.type === 'at') {
+      if (runnableTask.schedule.type === 'at' && resolveOneTimeSchedule) {
         record.oneTimeResolvedAt = finishedAt;
         record.oneTimeResolvedStatus = 'success';
         record.oneTimeCompletedAt = finishedAt;
@@ -923,6 +925,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
         logPath: finalResult.logPath,
       });
     } else if (finalResult?.cancelled) {
+      record.activeRunId = undefined;
       record.lastStatus = 'skipped';
       record.lastError = finalResult.error ?? 'Task run cancelled';
       state.skippedRuns += 1;
@@ -944,6 +947,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
           updatedAt: finishedAt,
           activeAttempt: record.lastAttemptCount ?? 0,
           startedAt,
+          completedAt: finishedAt,
           lastError: record.lastError,
         }),
       );
@@ -954,7 +958,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       record.lastError = finalResult?.error ?? 'Task run failed';
       state.failedRuns += 1;
 
-      if (runnableTask.schedule.type === 'at') {
+      if (runnableTask.schedule.type === 'at' && resolveOneTimeSchedule) {
         record.oneTimeResolvedAt = finishedAt;
         record.oneTimeResolvedStatus = 'failed';
       }
@@ -1020,7 +1024,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       publish: (type: string, payload?: Record<string, unknown>) => boolean;
       paths: { root: string; stateRoot: string };
     },
-    options: { runIdOverride?: string } = {},
+    options: { runIdOverride?: string; resolveOneTimeSchedule?: boolean } = {},
   ): void => {
     const controller = new AbortController();
 
@@ -1112,7 +1116,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       }
 
       context.logger.info(`starting requested task run id=${task.id}${runIdOverride ? ` run=${runIdOverride}` : ''}`);
-      startTaskRun(task, record, context, { runIdOverride });
+      startTaskRun(task, record, context, { runIdOverride, resolveOneTimeSchedule: false });
       persistState(context.logger);
     } catch (error) {
       context.logger.warn(`failed to start requested task run id=${taskId}: ${(error as Error).message}`);

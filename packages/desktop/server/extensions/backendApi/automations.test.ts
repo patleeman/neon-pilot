@@ -117,6 +117,30 @@ describe('backendApi/automations', () => {
     expect(resolver.callServerModuleExport).not.toHaveBeenCalled();
   });
 
+  it('uses the trusted host automations capability bridge for privileged task helpers', async () => {
+    const bridge = vi.fn(async (_capability: string, operation: string) => {
+      if (operation === 'loadScheduledTasksForProfile') return { tasks: [], parseErrors: [] };
+      if (operation === 'createStoredAutomation') return { id: 'task-1' };
+      if (operation === 'deleteStoredAutomation') return true;
+      if (operation === 'startScheduledTaskRun') return { accepted: true, runId: 'run-1' };
+      return undefined;
+    });
+    (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
+    const automations = await import('./automations.js');
+
+    await expect(automations.loadScheduledTasksForProfile('runtime')).resolves.toEqual({ tasks: [], parseErrors: [] });
+    await expect(automations.createStoredAutomation({ title: 'Task' })).resolves.toEqual({ id: 'task-1' });
+    await expect(automations.deleteStoredAutomation('task-1')).resolves.toBe(true);
+    await expect(automations.startScheduledTaskRun('task-1')).resolves.toEqual({ accepted: true, runId: 'run-1' });
+
+    expect(bridge).toHaveBeenNthCalledWith(1, 'automations', 'loadScheduledTasksForProfile', { args: ['runtime'] });
+    expect(bridge).toHaveBeenNthCalledWith(2, 'automations', 'createStoredAutomation', { args: [{ title: 'Task' }] });
+    expect(bridge).toHaveBeenNthCalledWith(3, 'automations', 'deleteStoredAutomation', { args: ['task-1', undefined] });
+    expect(bridge).toHaveBeenNthCalledWith(4, 'automations', 'startScheduledTaskRun', { args: ['task-1'] });
+    expect(resolver.callServerModuleExport).not.toHaveBeenCalled();
+    expect(daemon.callDaemonExport).not.toHaveBeenCalled();
+  });
+
   it('uses core helpers for deferred resume and task callback state', async () => {
     const automations = await import('./automations.js');
     resolver.callServerModuleExport.mockResolvedValueOnce([{ id: 'resume-1' }]);

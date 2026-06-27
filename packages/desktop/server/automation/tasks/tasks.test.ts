@@ -1340,7 +1340,7 @@ describe('tasks module scheduling', () => {
       prompt: 'Run immediately when requested',
     });
 
-    const currentTime = new Date('2026-03-02T10:00:00.000Z');
+    let currentTime = new Date('2026-03-02T10:00:00.000Z');
     const runTask = vi.fn(async (request: TaskRunRequest) => {
       const logPath = join(request.runsRoot, `${request.task.id}-attempt-${request.attempt}.log`);
       mkdirSync(request.runsRoot, { recursive: true });
@@ -1374,6 +1374,7 @@ describe('tasks module scheduling', () => {
     });
 
     expect(runTask).toHaveBeenCalledTimes(1);
+    expect(loadAutomationRuntimeStateMap({ dbPath: resolveRuntimeDbPath(stateRoot) })['run-now']?.oneTimeResolvedAt).toBeUndefined();
 
     const runPaths = resolveDurableRunPaths(resolveDurableRunsRoot(stateRoot), requestedRunId);
     expect(loadDurableRunManifest(runPaths.manifestPath)).toMatchObject({
@@ -1386,6 +1387,74 @@ describe('tasks module scheduling', () => {
     expect(loadDurableRunStatus(runPaths.statusPath)).toMatchObject({
       runId: requestedRunId,
       status: 'completed',
+      completedAt: '2026-03-02T10:00:00.000Z',
+    });
+
+    currentTime = new Date('2026-03-03T10:00:00.000Z');
+    await module.handleEvent(createTimerEvent(), context);
+
+    await waitForCondition(() => {
+      const status = module.getStatus?.() as { totalRuns?: number };
+      return (status.totalRuns ?? 0) === 2;
+    });
+
+    expect(runTask).toHaveBeenCalledTimes(2);
+    expect(loadAutomationRuntimeStateMap({ dbPath: resolveRuntimeDbPath(stateRoot) })['run-now']?.oneTimeResolvedStatus).toBe('success');
+
+    await module.stop?.(context);
+  });
+
+  it('clears active run state when a task run is cancelled', async () => {
+    const taskDir = createTempDir('tasks-module-definitions-');
+    const stateRoot = createTempDir('tasks-module-state-');
+    const requestedRunId = 'task-run-cancelled';
+    seedAutomation(stateRoot, {
+      id: 'cancel-me',
+      title: 'Cancel me',
+      at: '2026-03-03T10:00:00.000Z',
+      prompt: 'Run until cancelled',
+    });
+
+    const currentTime = new Date('2026-03-02T10:00:00.000Z');
+    const runTask = vi.fn(async (request: TaskRunRequest) => ({
+      ...createRunResult(request, false, currentTime.toISOString(), 'cancelled by user'),
+      cancelled: true,
+      exitCode: null,
+    }));
+
+    const module = createTasksModule(
+      {
+        enabled: true,
+        taskDir,
+        tickIntervalSeconds: 30,
+        maxRetries: 3,
+        reapAfterDays: 7,
+        defaultTimeoutSeconds: 1800,
+      },
+      {
+        now: () => currentTime,
+        runTask,
+      },
+    );
+
+    const { context } = createContext(taskDir, stateRoot);
+
+    await module.start(context);
+    await module.handleEvent(createRequestedTaskRunEvent('cancel-me', requestedRunId), context);
+
+    await waitForCondition(() => {
+      const status = module.getStatus?.() as { totalRuns?: number };
+      return (status.totalRuns ?? 0) === 1;
+    });
+
+    const persistedState = loadAutomationRuntimeStateMap({ dbPath: resolveRuntimeDbPath(stateRoot) });
+    expect(persistedState['cancel-me']?.activeRunId).toBeUndefined();
+    expect(persistedState['cancel-me']?.lastStatus).toBe('skipped');
+
+    const runPaths = resolveDurableRunPaths(resolveDurableRunsRoot(stateRoot), requestedRunId);
+    expect(loadDurableRunStatus(runPaths.statusPath)).toMatchObject({
+      runId: requestedRunId,
+      status: 'interrupted',
       completedAt: '2026-03-02T10:00:00.000Z',
     });
 

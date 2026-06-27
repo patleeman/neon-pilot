@@ -34,6 +34,8 @@ import {
   sendAgentMessage,
   streamAgentMessage,
 } from './backendApi/agent.js';
+import { callDaemonExport } from './backendApi/daemonBridge.js';
+import { callServerModuleExport } from './backendApi/serverModuleResolver.js';
 import { emitExtensionToolUpdate } from './extensionBackendLiveHandles.js';
 import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
 import type { ExtensionBackendWorkerCapabilityEvent, ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
@@ -114,6 +116,10 @@ interface ExtensionBackendCapabilityEvents {
   cancelDelayed(input: unknown): Promise<unknown> | unknown;
   prune(input: unknown): Promise<unknown> | unknown;
   processDue(input?: unknown): Promise<unknown> | unknown;
+}
+
+interface ExtensionBackendCapabilityAutomations {
+  call(operation: string, input?: unknown): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendCapabilityImage {
@@ -462,6 +468,7 @@ export async function abortExtensionShellSpawnHandlesForConversation(conversatio
 }
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
+  automations?: ExtensionBackendCapabilityAutomations;
   commands?: ExtensionBackendCapabilityCommands;
   conversations?: ExtensionBackendCapabilityConversations;
   events?: ExtensionBackendCapabilityEvents;
@@ -548,6 +555,31 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
       'prune',
       'processDue',
     ]);
+  }
+
+  if (request.capability === 'automations') {
+    const readOperations = new Set([
+      'loadScheduledTasksForProfile',
+      'resolveScheduledTaskForProfile',
+      'validateScheduledTaskDefinition',
+      'resolveScheduledTaskThreadBinding',
+      'buildScheduledTaskThreadDetail',
+      'listStoredAutomations',
+      'loadAutomationRuntimeStateMap',
+      'getTaskCallbackBinding',
+    ]);
+    const writeOperations = new Set([
+      'applyScheduledTaskThreadBinding',
+      'createStoredAutomation',
+      'updateStoredAutomation',
+      'deleteStoredAutomation',
+      'setTaskCallbackBinding',
+      'clearTaskCallbackBinding',
+    ]);
+    if (request.operation === 'startScheduledTaskRun') return ['automations:run'];
+    if (writeOperations.has(request.operation)) return ['automations:write', 'automations:readwrite'];
+    if (readOperations.has(request.operation)) return ['automations:read', 'automations:readwrite'];
+    return [];
   }
 
   if (request.capability === 'extensions') {
@@ -664,6 +696,54 @@ function dispatchLogCapability(logger: ExtensionBackendCapabilityLogger, request
   const { message, fields } = normalizeLogInput(request.input);
   logger[level](`extension:${request.extensionId} ${message}`, fields);
   return undefined;
+}
+
+function automationCapabilityArgs(input: unknown): unknown[] {
+  const record = normalizeRecordInput(input, 'Automations');
+  if (!Array.isArray(record.args)) {
+    throw new Error('Automations capability input must include args.');
+  }
+  return record.args;
+}
+
+function createDefaultAutomationsCapability(): ExtensionBackendCapabilityAutomations {
+  const moduleOperations: Record<string, { specifier: string; name: string }> = {
+    loadScheduledTasksForProfile: { specifier: '../../automation/scheduledTasks.js', name: 'loadScheduledTasksForProfile' },
+    resolveScheduledTaskForProfile: { specifier: '../../automation/scheduledTasks.js', name: 'resolveScheduledTaskForProfile' },
+    validateScheduledTaskDefinition: { specifier: '../../automation/scheduledTasks.js', name: 'validateScheduledTaskDefinition' },
+    resolveScheduledTaskThreadBinding: { specifier: '../../automation/scheduledTaskThreads.js', name: 'resolveScheduledTaskThreadBinding' },
+    applyScheduledTaskThreadBinding: { specifier: '../../automation/scheduledTaskThreads.js', name: 'applyScheduledTaskThreadBinding' },
+    buildScheduledTaskThreadDetail: { specifier: '../../automation/scheduledTaskThreads.js', name: 'buildScheduledTaskThreadDetail' },
+    createStoredAutomation: { specifier: '../../automation/store.js', name: 'createStoredAutomation' },
+    updateStoredAutomation: { specifier: '../../automation/store.js', name: 'updateStoredAutomation' },
+    deleteStoredAutomation: { specifier: '../../automation/store.js', name: 'deleteStoredAutomation' },
+    listStoredAutomations: { specifier: '../../automation/store.js', name: 'listStoredAutomations' },
+    loadAutomationRuntimeStateMap: { specifier: '../../automation/store.js', name: 'loadAutomationRuntimeStateMap' },
+    getTaskCallbackBinding: { specifier: '@neon-pilot/core', name: 'getTaskCallbackBinding' },
+    setTaskCallbackBinding: { specifier: '@neon-pilot/core', name: 'setTaskCallbackBinding' },
+    clearTaskCallbackBinding: { specifier: '@neon-pilot/core', name: 'clearTaskCallbackBinding' },
+  };
+
+  return {
+    async call(operation, input) {
+      const args = automationCapabilityArgs(input);
+      if (operation === 'startScheduledTaskRun') {
+        return callDaemonExport('startScheduledTaskRun', ...args);
+      }
+      const target = moduleOperations[operation];
+      if (!target) {
+        throw new Error(`Unsupported automations capability operation: ${operation}`);
+      }
+      return callServerModuleExport(target.specifier, target.name, ...args);
+    },
+  };
+}
+
+function dispatchAutomationsCapability(
+  automations: ExtensionBackendCapabilityAutomations,
+  request: ExtensionBackendWorkerCapabilityRequest,
+): unknown {
+  return automations.call(request.operation, request.input);
 }
 
 function dispatchEventsCapability(events: ExtensionBackendCapabilityEvents, request: ExtensionBackendWorkerCapabilityRequest): unknown {
@@ -2114,6 +2194,7 @@ export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
   const filesystemHandles = new Map<string, ScopedFileSystem>();
+  const automations = options.automations ?? createDefaultAutomationsCapability();
   const commands = options.commands ?? {
     list: () => listExtensionCommandRegistrations(),
     execute: async (extensionId: string, commandId: string, args?: unknown) => {
@@ -2452,6 +2533,9 @@ export function createExtensionBackendCapabilityDispatcher(
 
     if (request.capability === 'agent') {
       return dispatchAgentCapability(request, emit);
+    }
+    if (request.capability === 'automations') {
+      return dispatchAutomationsCapability(automations, request);
     }
     if (request.capability === 'browser') {
       return dispatchBrowserCapability(request);

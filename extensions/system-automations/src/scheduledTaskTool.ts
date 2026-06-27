@@ -500,7 +500,10 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
 
             case 'delete': {
               const taskId = readRequiredTaskId(params.taskId);
-              await deleteStoredAutomation(taskId);
+              const deleted = await deleteStoredAutomation(taskId);
+              if (!deleted) {
+                throw new Error(`Task not found: ${taskId}`);
+              }
               await clearTaskCallbackBinding({ profile: runtimeScope, taskId });
               await invalidateAppTopics(['tasks', 'sessions', 'workspace']);
 
