@@ -417,7 +417,7 @@ export function GatewaysSidebar() {
         {error ? <p className="text-xs text-danger">{error}</p> : null}
         {!state && !error ? <p className="text-xs text-secondary">Loading gateway status...</p> : null}
         {state ? (
-          <div className="border border-border bg-surface px-3 py-3">
+          <div className="rounded-md bg-elevated/55 px-3 py-2.5">
             <div className="flex items-center gap-2">
               <StatusDot
                 tone={statusDotTone(telegram?.status ?? 'needs_config', state.token.configured, Boolean(telegram?.enabled))}

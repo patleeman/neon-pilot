@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { GatewaysPage } from './frontend';
+import { GatewaysPage, GatewaysSidebar } from './frontend';
 
 vi.mock('@neon-pilot/extensions/ui', () => ({
   AppPageIntro: ({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) => (
@@ -170,5 +170,20 @@ describe('GatewaysPage', () => {
 
     expect(await screen.findByText('gateway unavailable')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
+  });
+});
+
+describe('GatewaysSidebar', () => {
+  it('renders the Telegram provider as a row, not a bordered card', async () => {
+    installFetchMock({ token: { configured: true } });
+
+    const { container } = render(<GatewaysSidebar />);
+
+    expect(await screen.findByText('Telegram')).toBeTruthy();
+    expect(screen.getByText('Needs setup')).toBeTruthy();
+
+    const providerRow = container.querySelector('.rounded-md.bg-elevated\\/55');
+    expect(providerRow).toBeTruthy();
+    expect(providerRow?.className).not.toContain('border');
   });
 });
