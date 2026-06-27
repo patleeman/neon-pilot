@@ -2371,6 +2371,14 @@ export function Sidebar() {
   }, [baseActivityTreeItems, extensionRegistry.activityTreeItemStyles]);
 
   const activityTreeExtensionActions = extensionRegistry.activityTreeItemActions;
+  const threadsEmptyMessage =
+    loading || !sessionsReady
+      ? 'Loading conversations…'
+      : threadsFilterMode === 'automation'
+        ? 'No automation threads yet.'
+        : threadsFilterMode === 'human'
+          ? 'No human threads yet.'
+          : 'No conversations yet.';
   const activityTreeExtensionContextMenus = useMemo(
     () =>
       extensionRegistry.contextMenus.filter(
@@ -3866,7 +3874,8 @@ export function Sidebar() {
               onDrop={handleWorkbenchChatDrop}
             >
               <div className="py-0.5 space-y-0.5">
-                {!loading &&
+                {LEGACY_THREAD_LIST_ENABLED &&
+                !loading &&
                 sessionsReady &&
                 renderedConversationItems.length === 0 &&
                 !(threadsOrganizeMode === 'project' && groupedConversationRows.length > 0) ? (
@@ -3883,7 +3892,7 @@ export function Sidebar() {
                   <ActivityTreeView
                     items={activityTreeItems}
                     activeItemId={activeActivityTreeItemId}
-                    emptyMessage={loading || !sessionsReady ? 'Loading conversations…' : 'No conversations yet.'}
+                    emptyMessage={threadsEmptyMessage}
                     className="min-h-0"
                     canDragItem={canDragActivityTreeItem}
                     canDropItem={canDropActivityTreeItem}

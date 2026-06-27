@@ -389,6 +389,18 @@ describe('Sidebar', () => {
     expect(html).not.toContain('Human thread');
   });
 
+  it('renders only one empty thread message when there are no conversations', () => {
+    storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+    storage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+    sessionStore.markReady?.();
+
+    const html = renderSidebar('/conversations/new', { sessions: [] });
+
+    expect(html).toContain('No conversations yet.');
+    expect(html).not.toContain('No open conversations yet.');
+    expect((html.match(/No conversations yet\./g) ?? []).length).toBe(1);
+  });
+
   it('renders automation-owned threads as background work when the conversation is not a live local session', () => {
     storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-auto']));
 
