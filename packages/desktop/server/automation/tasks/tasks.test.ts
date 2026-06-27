@@ -34,6 +34,8 @@ import {
   saveDurableRunStatus,
 } from '../../runs/store.js';
 import { subscribeAppEvents } from '../../shared/appEvents.js';
+import { getRuntimeSettingsFilePath } from '../../ui/settingsPersistence.js';
+import { readSavedUiPreferences, writeSavedUiPreferences } from '../../ui/uiPreferences.js';
 import type { DaemonConfig } from '../config.js';
 import {
   appendAutomationActivityEntry,
@@ -49,6 +51,7 @@ import {
   saveAutomationSchedulerState,
   setStoredAutomationThreadBinding,
 } from '../store.js';
+import { ensureAutomationThread } from '../threads.js';
 import { createTasksModule } from './tasks.js';
 import type { TaskRunRequest, TaskRunResult } from './tasks-runner.js';
 import type { DaemonModuleContext } from './types.js';
@@ -2415,6 +2418,78 @@ describe('tasks module scheduling', () => {
       expect(events).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ type: 'invalidate', topics: expect.arrayContaining(['tasks', 'runs', 'sessions', 'workspace']) }),
+        ]),
+      );
+
+      await module.stop?.(context);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it('restores archived owner threads to the open sidebar workspace when a conversation automation runs', async () => {
+    const taskDir = createTempDir('tasks-module-definitions-');
+    const stateRoot = createTempDir('tasks-module-state-');
+    const dbPath = resolveRuntimeDbPath(stateRoot);
+    const settingsFile = getRuntimeSettingsFilePath(stateRoot);
+    const events: Array<{ type: string; sessionIds?: string[]; archivedSessionIds?: string[]; topics?: string[] }> = [];
+    const unsubscribe = subscribeAppEvents((event) => {
+      if (event.type === 'conversation_workspace_changed' || event.type === 'invalidate') events.push(event);
+    });
+
+    try {
+      createStoredAutomation({
+        dbPath,
+        id: 'archived-owner-check',
+        title: 'Archived owner check',
+        enabled: true,
+        at: '2026-03-02T10:00:05.000Z',
+        cwd: '/tmp/workspace',
+        prompt: 'Check the archived owner.',
+        targetType: 'conversation',
+      });
+      const task = ensureAutomationThread('archived-owner-check', { dbPath, stateRoot });
+      writeSavedUiPreferences(
+        {
+          openConversationIds: [],
+          archivedConversationIds: [task!.threadConversationId!],
+          activeConversationId: null,
+          conversationWorkspaceMigrated: true,
+        },
+        settingsFile,
+      );
+
+      let currentTime = new Date('2026-03-02T10:00:00.000Z');
+      const runTask = vi.fn(async (request: TaskRunRequest) => createRunResult(request, true, currentTime.toISOString()));
+      const module = createTasksModule(
+        {
+          enabled: true,
+          taskDir,
+          tickIntervalSeconds: 30,
+          maxRetries: 3,
+          reapAfterDays: 7,
+          defaultTimeoutSeconds: 1800,
+        },
+        { now: () => currentTime, runTask },
+      );
+      const { context } = createContext(taskDir, stateRoot);
+
+      await module.start(context);
+      currentTime = new Date('2026-03-02T10:00:10.000Z');
+      await module.handleEvent(createTimerEvent(), context);
+      await waitForCondition(() => loadAutomationRuntimeStateMap({ dbPath })['archived-owner-check']?.lastStatus === 'success');
+
+      const saved = readSavedUiPreferences(settingsFile);
+      expect(saved.openConversationIds).toContain(task!.threadConversationId);
+      expect(saved.archivedConversationIds).not.toContain(task!.threadConversationId);
+      expect(events).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: 'invalidate', topics: expect.arrayContaining(['sessions', 'workspace']) }),
+          expect.objectContaining({
+            type: 'conversation_workspace_changed',
+            sessionIds: expect.arrayContaining([task!.threadConversationId]),
+            archivedSessionIds: [],
+          }),
         ]),
       );
 

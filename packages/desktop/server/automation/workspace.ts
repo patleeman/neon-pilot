@@ -1,5 +1,6 @@
+import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
-import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPreferences.js';
+import { readSavedUiPreferences, type SavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPreferences.js';
 
 function unique(values: string[]): string[] {
   const seen = new Set<string>();
@@ -28,7 +29,7 @@ export function openAutomationOwnerThread(input: { conversationId?: string; stat
     return false;
   }
 
-  writeSavedUiPreferences(
+  const saved = writeSavedUiPreferences(
     {
       openConversationIds: pinned.has(conversationId)
         ? current.openConversationIds
@@ -43,5 +44,27 @@ export function openAutomationOwnerThread(input: { conversationId?: string; stat
     },
     settingsFile,
   );
+  publishAutomationOwnerThreadWorkspaceChanged(saved);
   return true;
+}
+
+function publishAutomationOwnerThreadWorkspaceChanged(saved: SavedUiPreferences): void {
+  invalidateAppTopics('sessions', 'workspace');
+  publishAppEvent({
+    type: 'conversation_workspace_changed',
+    sessionIds: saved.openConversationIds,
+    pinnedSessionIds: saved.pinnedConversationIds,
+    archivedSessionIds: saved.archivedConversationIds,
+    conversationPlacements: Object.fromEntries([
+      ...saved.openConversationIds.map((id) => [id, 'open'] as const),
+      ...saved.pinnedConversationIds.map((id) => [id, 'pinned'] as const),
+      ...saved.archivedConversationIds.map((id) => [id, 'archived'] as const),
+    ]),
+    activeConversationId: saved.activeConversationId ?? null,
+    workspacePaths: saved.workspacePaths,
+    remoteControlledConversationIds: saved.remoteControlledConversationIds,
+    conversationWorkspaceRevision: saved.conversationWorkspaceRevision,
+    conversationWorkspaceUpdatedAt: saved.conversationWorkspaceUpdatedAt,
+    conversationWorkspaceMigratedAt: saved.conversationWorkspaceMigratedAt,
+  });
 }
