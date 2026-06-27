@@ -1672,6 +1672,33 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('/bin/bash: npm: command not found');
   });
 
+  it('keeps a one-line terminal body for completed bash commands with no output', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        messages: [
+          {
+            type: 'tool_use',
+            ts: '2026-03-11T18:00:00.000Z',
+            tool: 'bash',
+            input: { command: 'true', displayMode: 'terminal' },
+            output: '',
+            status: 'done',
+            details: {
+              displayMode: 'terminal',
+              exitCode: 0,
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(html).toContain('ui-terminal-block');
+    expect(html).toContain('ui-terminal-block__empty-output');
+    expect(html).toContain('aria-label="No terminal output"');
+    expect(html).toContain('exit 0');
+    expect(html).not.toContain('Waiting for output');
+  });
+
   it('does not expose terminal full-output sidecar paths in the transcript', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {

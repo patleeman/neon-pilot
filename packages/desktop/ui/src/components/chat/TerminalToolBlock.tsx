@@ -37,7 +37,13 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
 
     void onHydrateMessage?.(blockId);
   };
-  const hasBody = isRunning || block.output || outputDeferred;
+  const hasOutput = typeof block.output === 'string' && block.output.length > 0;
+  const completedWithoutOutput =
+    !isRunning &&
+    !outputDeferred &&
+    !hasOutput &&
+    (block.status === 'done' || block.status === 'ok' || presentation.exitCode !== undefined || presentation.cancelled);
+  const hasBody = isRunning || hasOutput || outputDeferred || completedWithoutOutput;
   const copyText = block.output ? `$ ${presentation.command}\n${block.output}` : `$ ${presentation.command}`;
   const footerBits: string[] = [];
   const runs = useAllRuns();
@@ -84,7 +90,7 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
 
         {hasBody && (
           <div className="px-3 py-2.5 max-h-96 overflow-y-auto">
-            {block.output ? (
+            {hasOutput ? (
               <pre
                 className={cx(
                   'whitespace-pre-wrap break-all text-[11px] leading-relaxed',
@@ -97,6 +103,14 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
               <p className="ui-terminal-block__muted text-[11px] italic leading-relaxed">Waiting for output…</p>
             ) : outputDeferred ? (
               <p className="ui-terminal-block__muted text-[11px] italic leading-relaxed">Older terminal output is available on demand.</p>
+            ) : completedWithoutOutput ? (
+              <pre
+                aria-label="No terminal output"
+                className={cx(
+                  'ui-terminal-block__empty-output min-h-[1.125rem] whitespace-pre-wrap break-all text-[11px] leading-relaxed',
+                  isError ? 'text-danger/85' : 'ui-terminal-block__output',
+                )}
+              />
             ) : null}
           </div>
         )}
