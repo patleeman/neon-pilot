@@ -2315,6 +2315,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const ensureConversationCanControl = useCallback((_action: string): boolean => {
     return true;
   }, []);
+  const composerSubmitRunningRef = useRef(false);
   const latestInputRef = useRef(input);
   latestInputRef.current = input;
 
@@ -2322,7 +2323,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     (next: string) => {
       latestInputRef.current = next;
       if (draft) {
-        persistDraftConversationComposer(next);
+        if (!(composerSubmitRunningRef.current && next.length === 0)) {
+          persistDraftConversationComposer(next);
+        }
       } else if (id) {
         persistForkPromptDraft(id, next);
       }
@@ -2634,7 +2637,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const pendingWholeLineBashRef = useRef<{ conversationId: string; command: string } | null>(null);
   const pendingPostBashPromptRef = useRef<(PendingConversationPrompt & { conversationId: string }) | null>(null);
   const drainingPostBashPromptSessionIdRef = useRef<string | null>(null);
-  const composerSubmitRunningRef = useRef(false);
   const [showBackgroundRunDetails, setShowBackgroundRunDetails] = useState(false);
 
   const composerDisabled = isConversationComposerDisabled({
@@ -6131,6 +6133,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       );
 
       composerController.clear();
+      if (draft) {
+        // Keep the draft durable until the prompt has been attached to a real conversation.
+        // If conversation reservation or first-send dispatch hangs and the user refreshes,
+        // the composer should reopen with their text instead of losing it.
+        persistDraftConversationComposer(inputSnapshot);
+      }
       setAttachments([]);
       setVideoAttachments([]);
       setDrawingAttachments([]);
@@ -6253,6 +6261,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
             }
             setPendingConversationPromptDispatching(created.id, false);
 
+            clearDraftConversationComposer();
             clearDraftConversationAttachments();
             clearDraftConversationContextDocs();
             clearDraftConversationCwd();
@@ -6466,6 +6475,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           });
 
           window.setTimeout(() => {
+            clearDraftConversationComposer();
             clearDraftConversationAttachments();
             clearDraftConversationContextDocs();
             clearDraftConversationCwd();

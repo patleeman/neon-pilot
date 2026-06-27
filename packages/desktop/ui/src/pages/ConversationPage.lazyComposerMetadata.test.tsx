@@ -1462,6 +1462,31 @@ describe('ConversationPage lazy composer metadata', () => {
     });
   });
 
+  it('keeps draft composer text durable while reservation is pending', async () => {
+    vi.useRealTimers();
+    apiMock.reserveConversation.mockReturnValue(new Promise(() => {}));
+    const sessionStorageSetItem = vi.spyOn(window.sessionStorage.__proto__, 'setItem');
+
+    renderRoutedDraftConversationPage();
+
+    const textarea = screen.getByPlaceholderText(/Message Neon Pilot/i);
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: 'Do not lose this if send hangs' } });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(apiMock.reserveConversation).toHaveBeenCalledWith(undefined);
+    });
+    expect(sessionStorageSetItem).toHaveBeenCalledWith('pa:reload:conversation:draft:composer', '"Do not lose this if send hangs"');
+  });
+
   it('routes a submitted draft prompt to the reserved conversation before live-session creation settles', async () => {
     vi.useRealTimers();
     let resolveCreateLiveSession: (value: { id: string; sessionFile: string; bootstrap: undefined }) => void = () => {};
