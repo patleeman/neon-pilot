@@ -86,7 +86,7 @@ export default function codexCompatibilityExtension(pi: ExtensionAPI): void {
       return;
     }
     ctx.addActiveTools?.(['apply_patch']);
-    ctx.removeActiveTools?.(['write', 'edit']);
+    ctx.removeActiveTools?.(['write', 'edit', 'hashline_edit']);
   };
 
   codexCompactionExtension(pi);

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, relative, resolve } from 'node:path';
 
-import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import type { ExtensionAPI, ExtensionBackendContext } from '@neon-pilot/extensions';
 
 type BackendContext = ExtensionBackendContext & {
   cwd?: string;
@@ -22,6 +22,28 @@ interface Section {
 
 const MAX_READ_LINES = 2000;
 const MAX_READ_BYTES = 512 * 1024;
+
+interface ToolSelectionContext {
+  addActiveTools?: (toolNames: string[]) => void;
+  removeActiveTools?: (toolNames: string[]) => void;
+  getActiveToolNames?: () => string[];
+}
+
+export function activateHashlineTools(ctx: ToolSelectionContext): void {
+  const activeToolNames = ctx.getActiveToolNames?.() ?? [];
+  if (activeToolNames.includes('apply_patch')) {
+    ctx.removeActiveTools?.(['hashline_edit', 'edit']);
+    return;
+  }
+
+  ctx.addActiveTools?.(['read_hashline', 'hashline_edit']);
+  ctx.removeActiveTools?.(['read', 'edit']);
+}
+
+export default function hashlineEditExtension(pi: ExtensionAPI): void {
+  pi.on('session_start', (_event, ctx) => activateHashlineTools(ctx));
+  pi.on('model_select', (_event, ctx) => activateHashlineTools(ctx));
+}
 
 function getCwd(ctx: BackendContext): string {
   return ctx.toolContext?.cwd ?? ctx.cwd ?? process.cwd();

@@ -15,7 +15,7 @@ function ctx(cwd: string) {
 }
 
 describe('codex tool activation', () => {
-  it('adds apply_patch and removes write/edit without clobbering other tools', () => {
+  it('adds apply_patch and removes conflicting edit tools without clobbering other tools', () => {
     const handlers = new Map<string, (event: unknown, ctx: unknown) => void>();
     codexCompatibilityExtension({
       on: (event: string, handler: (event: unknown, ctx: unknown) => void) => handlers.set(event, handler),
@@ -32,7 +32,7 @@ describe('codex tool activation', () => {
     handlers.get('session_start')?.({}, ctx);
 
     expect(added).toEqual([['apply_patch']]);
-    expect(removed).toEqual([['write', 'edit']]);
+    expect(removed).toEqual([['write', 'edit', 'hashline_edit']]);
   });
 
   it('does nothing for non-Codex sessions', () => {

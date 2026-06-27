@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { hashlineEdit, readHashline } from './backend';
+import { activateHashlineTools, hashlineEdit, readHashline } from './backend';
 
 const tempDirs: string[] = [];
 
@@ -25,6 +25,34 @@ function tagFromRead(text: string): string {
 }
 
 describe('system-hashline-edit backend', () => {
+  it('replaces the default read/edit pair with hashline tools when apply_patch is absent', () => {
+    const added: string[][] = [];
+    const removed: string[][] = [];
+
+    activateHashlineTools({
+      getActiveToolNames: () => ['bash', 'read', 'edit'],
+      addActiveTools: (toolNames) => added.push(toolNames),
+      removeActiveTools: (toolNames) => removed.push(toolNames),
+    });
+
+    expect(added).toEqual([['read_hashline', 'hashline_edit']]);
+    expect(removed).toEqual([['read', 'edit']]);
+  });
+
+  it('does not expose hashline_edit when apply_patch is active', () => {
+    const added: string[][] = [];
+    const removed: string[][] = [];
+
+    activateHashlineTools({
+      getActiveToolNames: () => ['bash', 'read_hashline', 'hashline_edit', 'edit', 'apply_patch'],
+      addActiveTools: (toolNames) => added.push(toolNames),
+      removeActiveTools: (toolNames) => removed.push(toolNames),
+    });
+
+    expect(added).toEqual([]);
+    expect(removed).toEqual([['hashline_edit', 'edit']]);
+  });
+
   afterEach(() => {
     for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
   });
