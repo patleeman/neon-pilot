@@ -200,8 +200,8 @@ function appendThreadAutomationEvent(
             : 'failed';
   const lines = [`Automation ${statusText}: ${title}`, '', `Task: @${task.id}`, `Time: ${input.timestamp}`];
   if (input.runId) lines.push(`Run: ${input.runId}`);
-  const error = sanitizeAutomationUserMessage(input.error);
-  if (error) lines.push('', `Error: ${error}`);
+  const sanitizedError = sanitizeAutomationUserMessage(input.error);
+  if (sanitizedError) lines.push('', `Error: ${sanitizedError}`);
   const outputText = formatAutomationTranscriptOutput(input.outputText);
   if (outputText) lines.push('', 'Output:', outputText);
   if (input.logPath) lines.push('', 'Run log: available from the automation run details.');
@@ -219,7 +219,7 @@ function appendThreadAutomationEvent(
         runId: input.runId,
         timestamp: input.timestamp,
         conversationId: task.threadConversationId,
-        error: input.error,
+        error: sanitizedError,
         logPath: input.logPath,
       },
       blockId: `automation_run:${task.id}:${input.runId ?? input.timestamp}:${input.kind}`,

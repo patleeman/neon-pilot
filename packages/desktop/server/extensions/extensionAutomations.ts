@@ -222,6 +222,9 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       const profile = getProfile(context);
       const resolvedTask = findTaskForProfile(profile, taskId);
       if (!resolvedTask) throw new Error('Task not found');
+      if (resolvedTask.runtime?.running) {
+        throw new Error('Automation is running. Pause it and wait for the current run to finish before deleting it.');
+      }
       const deleted = deleteStoredAutomation(resolvedTask.task.id);
       if (!deleted) throw new Error('Task not found');
       clearTaskCallbackBinding({ profile, taskId: resolvedTask.task.id });

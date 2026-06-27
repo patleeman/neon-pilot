@@ -500,6 +500,10 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
 
             case 'delete': {
               const taskId = readRequiredTaskId(params.taskId);
+              const resolved = await resolveScheduledTaskForProfile(runtimeScope, taskId);
+              if ((resolved.runtime as TaskRuntimeEntry | undefined)?.running) {
+                throw new Error('Automation is running. Pause it and wait for the current run to finish before deleting it.');
+              }
               const deleted = await deleteStoredAutomation(taskId);
               if (!deleted) {
                 throw new Error(`Task not found: ${taskId}`);

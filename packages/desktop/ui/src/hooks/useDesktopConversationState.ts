@@ -26,6 +26,7 @@ const STREAM_CONTROL_FLUSH_INTERVAL_MS = 16;
 const STREAM_FRAME_FALLBACK_FLUSH_INTERVAL_MS = 100;
 const POST_SEND_REFRESH_DELAYS_MS = [500, 1500, 4000] as const;
 const RUNNING_SESSION_RECOVERY_REFRESH_DELAYS_MS = [3000, 8000, 16000, 30000, 60000, 120000, 240000] as const;
+const MOUNTED_CONVERSATION_RECONCILE_INTERVAL_MS = 5000;
 const AGGREGATE_DELTA_CATCHUP_LIMIT = 100;
 const DESKTOP_CONVERSATION_STATE_REFRESH_EVENT = 'neon-pilot:desktop-conversation-state-refresh';
 const OPTIMISTIC_USER_BLOCK_ID_PREFIX = 'optimistic-user-';
@@ -1474,6 +1475,12 @@ export function useDesktopConversationState(conversationId: string | null, optio
     };
 
     window.addEventListener(DESKTOP_CONVERSATION_STATE_REFRESH_EVENT, handleLocalRefresh);
+    const mountedConversationReconcileTimer = window.setInterval(() => {
+      if (closed || isConversationLiveStreaming(stateRef.current, conversationId)) {
+        return;
+      }
+      refreshAuthoritativeState();
+    }, MOUNTED_CONVERSATION_RECONCILE_INTERVAL_MS);
 
     void openDesktopRealtimeSocket()
       .then((nextSocket) => {
@@ -1515,6 +1522,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
     return () => {
       closed = true;
       window.removeEventListener(DESKTOP_CONVERSATION_STATE_REFRESH_EVENT, handleLocalRefresh);
+      window.clearInterval(mountedConversationReconcileTimer);
       if (reconnectRetryRef.current !== null) {
         window.clearTimeout(reconnectRetryRef.current);
         reconnectRetryRef.current = null;

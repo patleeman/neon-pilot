@@ -12,6 +12,7 @@ import { INITIAL_APP_EVENT_VERSIONS } from './contexts';
 
 const SESSION_META_REFRESH_DELAY_MS = 750;
 const SESSIONS_SNAPSHOT_RETRY_DELAYS_MS = [500, 1_000, 2_000, 4_000, 8_000];
+const APP_SNAPSHOT_RECONCILE_INTERVAL_MS = 5_000;
 
 type SnapshotRequestKey = 'sessions' | 'tasks' | 'runs' | 'executions' | 'daemon';
 type SseStatus = 'connecting' | 'open' | 'reconnecting' | 'offline';
@@ -167,18 +168,40 @@ export function useDesktopAppEventRuntime() {
         sessionsSnapshotRetryTimerRef.current = null;
       }
       const requestSeq = beginSnapshotRequest('sessions');
-      void fetchSessionsSnapshot()
+      void api
+        .sidebarConversations()
         .then((items) => {
-          if (isLatestSnapshotRequest('sessions', requestSeq)) setSessions(items);
+          if (!isLatestSnapshotRequest('sessions', requestSeq)) return;
+          applyRemoteConversationLayout({
+            sessionIds: items.sessionIds,
+            pinnedSessionIds: items.pinnedSessionIds,
+            archivedSessionIds: items.archivedSessionIds,
+            lockedConversationIds: items.lockedConversationIds,
+            conversationPlacements: items.conversationPlacements,
+            activeSessionId: items.activeConversationId,
+            workspacePaths: items.workspacePaths,
+            remoteControlledConversationIds: items.remoteControlledConversationIds,
+            conversationWorkspaceRevision: items.conversationWorkspaceRevision,
+            conversationWorkspaceUpdatedAt: items.conversationWorkspaceUpdatedAt,
+            conversationWorkspaceMigratedAt: items.conversationWorkspaceMigratedAt,
+          });
+          setSessions(items.sessions);
         })
         .catch(() => {
           if (!isLatestSnapshotRequest('sessions', requestSeq)) return;
-          const retryDelay =
-            SESSIONS_SNAPSHOT_RETRY_DELAYS_MS[Math.min(retryAttempt, SESSIONS_SNAPSHOT_RETRY_DELAYS_MS.length - 1)] ?? 8_000;
-          sessionsSnapshotRetryTimerRef.current = window.setTimeout(() => {
-            sessionsSnapshotRetryTimerRef.current = null;
-            loadSessionsSnapshot(retryAttempt + 1);
-          }, retryDelay);
+          void fetchSessionsSnapshot()
+            .then((items) => {
+              if (isLatestSnapshotRequest('sessions', requestSeq)) setSessions(items);
+            })
+            .catch(() => {
+              if (!isLatestSnapshotRequest('sessions', requestSeq)) return;
+              const retryDelay =
+                SESSIONS_SNAPSHOT_RETRY_DELAYS_MS[Math.min(retryAttempt, SESSIONS_SNAPSHOT_RETRY_DELAYS_MS.length - 1)] ?? 8_000;
+              sessionsSnapshotRetryTimerRef.current = window.setTimeout(() => {
+                sessionsSnapshotRetryTimerRef.current = null;
+                loadSessionsSnapshot(retryAttempt + 1);
+              }, retryDelay);
+            });
         });
     },
     [beginSnapshotRequest, isLatestSnapshotRequest, setSessions],
@@ -438,6 +461,16 @@ export function useDesktopAppEventRuntime() {
       cleanup();
     };
   }, [subscribe]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      loadSessionsSnapshot();
+      loadTasksSnapshot();
+      loadRunsSnapshot();
+      loadDaemonSnapshot();
+    }, APP_SNAPSHOT_RECONCILE_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [loadDaemonSnapshot, loadRunsSnapshot, loadSessionsSnapshot, loadTasksSnapshot]);
 
   return {
     conversationMetadataVersions,

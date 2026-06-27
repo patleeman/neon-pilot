@@ -79,6 +79,7 @@ describe('scheduledTaskTool', () => {
     automations.clearTaskCallbackBinding.mockResolvedValue(undefined);
     automations.setTaskCallbackBinding.mockResolvedValue(undefined);
     automations.deleteStoredAutomation.mockResolvedValue(true);
+    automations.resolveScheduledTaskForProfile.mockResolvedValue({ task: task(), runtime: undefined });
     automations.pingDaemon.mockResolvedValue(true);
   });
 
@@ -335,6 +336,16 @@ describe('scheduledTaskTool', () => {
     expect(result.content[0].text).toBe('Task not found: task-missing');
     expect(automations.clearTaskCallbackBinding).not.toHaveBeenCalled();
     expect(automations.invalidateAppTopics).not.toHaveBeenCalled();
+  });
+
+  it('refuses to delete a running automation from the agent tool', async () => {
+    automations.resolveScheduledTaskForProfile.mockResolvedValueOnce({ task: task(), runtime: { running: true } });
+
+    const result = await registerTool().execute('call-1', { action: 'delete', taskId: 'task-1' });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toBe('Automation is running. Pause it and wait for the current run to finish before deleting it.');
+    expect(automations.deleteStoredAutomation).not.toHaveBeenCalled();
   });
 
   it('ignores background-agent callback delivery flags for conversation automations', async () => {

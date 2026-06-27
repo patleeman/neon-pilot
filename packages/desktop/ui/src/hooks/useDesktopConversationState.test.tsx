@@ -2833,6 +2833,48 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.state?.stream.blocks.map((block) => block.id)).toEqual(['after']);
   });
 
+  it('reconciles mounted conversation transcripts when realtime app events are missed', async () => {
+    vi.useFakeTimers();
+    const conversationAggregate = vi
+      .spyOn(api, 'conversationAggregate')
+      .mockResolvedValueOnce(
+        aggregateState('conv-automation', [{ type: 'text', id: 'before', text: 'Before', ts: '2026-05-24T00:00:00.000Z' }]),
+      )
+      .mockResolvedValue(
+        aggregateState('conv-automation', [
+          { type: 'text', id: 'before', text: 'Before', ts: '2026-05-24T00:00:00.000Z' },
+          { type: 'text', id: 'automation-output', text: 'QA_CHAT_CREATED_AUTOMATION', ts: '2026-05-24T00:00:05.000Z' },
+        ]),
+      );
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-automation" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks.map((block) => block.id)).toEqual(['before']);
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(conversationAggregate).toHaveBeenCalledTimes(2);
+    expect(latestState?.state?.stream.blocks.map((block) => block.id)).toEqual(['before', 'automation-output']);
+  });
+
   it('refreshes conversation state when the renderer requests a local conversation refresh', async () => {
     const conversationAggregate = vi
       .spyOn(api, 'conversationAggregate')

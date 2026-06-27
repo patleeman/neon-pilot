@@ -13,8 +13,9 @@ export interface AppSnapshotRefreshPlan {
 export function buildAppSnapshotRefreshPlan(topics: Iterable<AppEventTopic>): AppSnapshotRefreshPlan {
   const topicSet = new Set(topics);
   const refreshRunProjection = topicSet.has('runs') || topicSet.has('executions');
+  const refreshConversationProjection = topicSet.has('sessions') || topicSet.has('workspace');
   return {
-    sessions: topicSet.has('sessions'),
+    sessions: refreshConversationProjection,
     tasks: topicSet.has('tasks'),
     runs: refreshRunProjection,
     executions: refreshRunProjection,

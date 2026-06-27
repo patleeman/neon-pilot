@@ -521,7 +521,13 @@ describe('scheduledTaskCapability', () => {
     findTaskForProfileMock.mockReturnValueOnce(undefined);
     await expect(deleteScheduledTaskCapability('assistant', 'task-1')).rejects.toThrow('Task not found');
 
-    findTaskForProfileMock.mockReturnValueOnce({ task, runtime: createRuntime() });
+    findTaskForProfileMock.mockReturnValueOnce({ task, runtime: createRuntime({ running: true }) });
+    await expect(deleteScheduledTaskCapability('assistant', 'task-1')).rejects.toThrow(
+      'Automation is running. Pause it and wait for the current run to finish before deleting it.',
+    );
+    expect(deleteStoredAutomationMock).not.toHaveBeenCalled();
+
+    findTaskForProfileMock.mockReturnValueOnce({ task, runtime: createRuntime({ running: false }) });
     deleteStoredAutomationMock.mockReturnValueOnce(true);
     await expect(deleteScheduledTaskCapability('assistant', 'task-1')).resolves.toEqual({
       ok: true,

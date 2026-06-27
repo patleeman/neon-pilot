@@ -190,6 +190,16 @@ describe('extensionAutomations', () => {
     expect(middleware.invalidateAppTopics).toHaveBeenCalledWith('tasks', 'sessions', 'workspace');
   });
 
+  it('refuses to delete a task while its current run is active', async () => {
+    taskService.findTaskForProfile.mockReturnValue({ task: task(), runtime: { running: true } });
+
+    await expect(createExtensionAutomationsCapability(context).delete('task-1')).rejects.toThrow(
+      'Automation is running. Pause it and wait for the current run to finish before deleting it.',
+    );
+    expect(daemon.deleteStoredAutomation).not.toHaveBeenCalled();
+    expect(core.clearTaskCallbackBinding).not.toHaveBeenCalled();
+  });
+
   it('runs tasks and reads available logs', async () => {
     const dir = join(tmpdir(), `extension-automations-${process.pid}`);
     const logPath = join(dir, 'task.log');

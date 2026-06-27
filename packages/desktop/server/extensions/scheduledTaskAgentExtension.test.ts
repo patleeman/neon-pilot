@@ -334,6 +334,17 @@ describe('scheduled task agent extension', () => {
     } as never);
 
     const started = await taskTool.execute('tool-5', { action: 'run', taskId: 'daily-status' });
+    saveAutomationRuntimeStateMap({
+      'daily-status': {
+        id: 'daily-status',
+        filePath: '/__automations__/daily-status.automation.md',
+        scheduleType: 'cron',
+        running: false,
+        lastStatus: 'success',
+        lastRunAt: '2026-04-10T00:01:00.000Z',
+        lastLogPath: '/tmp/run.log',
+      } as never,
+    });
     const deleted = await taskTool.execute('tool-6', { action: 'delete', taskId: 'daily-status' });
 
     expect(startScheduledTaskRunMock).toHaveBeenCalledWith('daily-status');

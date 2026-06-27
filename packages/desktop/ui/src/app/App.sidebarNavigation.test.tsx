@@ -401,8 +401,8 @@ describe('App sidebar conversation navigation workflow', () => {
     await findSidebarRow('conv-second');
     expect(screen.getByText('First persisted thread')).toBeTruthy();
     expect(screen.getByText('Second persisted thread')).toBeTruthy();
-    expect(apiMock.sessionMeta).toHaveBeenCalledWith('conv-first');
-    expect(apiMock.sessionMeta).toHaveBeenCalledWith('conv-second');
+    expect(apiMock.sessionMeta).not.toHaveBeenCalledWith('conv-first');
+    expect(apiMock.sessionMeta).not.toHaveBeenCalledWith('conv-second');
   });
 
   it('waits for workspace bootstrap before redirecting /conversations to a pinned-only conversation', async () => {
@@ -423,7 +423,7 @@ describe('App sidebar conversation navigation workflow', () => {
     expect(screen.queryByText('Draft conversation route')).toBeNull();
   });
 
-  it('uses the backend sidebar projection even while the broader sessions snapshot retries', async () => {
+  it('falls back to the broader sessions snapshot while the backend sidebar projection retries', async () => {
     workspaceLayout = {
       sessionIds: [],
       pinnedSessionIds: [],
@@ -431,6 +431,7 @@ describe('App sidebar conversation navigation workflow', () => {
       activeConversationId: null,
       workspacePaths: [],
     };
+    apiMock.sidebarConversations.mockRejectedValue(new Error('local backend still warming'));
     fetchSessionsSnapshotMock.mockRejectedValueOnce(new Error('local backend still warming')).mockResolvedValue(sessions);
 
     ({ root } = await renderAppAt('/conversations/new'));
@@ -526,6 +527,34 @@ describe('App sidebar conversation navigation workflow', () => {
     await waitFor(() => {
       expect(screen.queryByText('old-workspace')).toBeNull();
     });
+  });
+
+  it('reopens sidebar conversations from the backend projection when sessions are invalidated', async () => {
+    workspaceLayout = {
+      ...workspaceLayout,
+      sessionIds: [],
+      archivedSessionIds: ['conv-second'],
+      activeConversationId: null,
+    };
+    ({ root } = await renderAppAt('/automations'));
+
+    await screen.findByText('No conversations yet.');
+    expect(document.querySelector('[data-sidebar-session-id="conv-second"]')).toBeNull();
+
+    workspaceLayout = {
+      ...workspaceLayout,
+      sessionIds: ['conv-second'],
+      archivedSessionIds: [],
+      activeConversationId: null,
+    };
+
+    await act(async () => {
+      desktopListener?.onevent?.({ type: 'invalidate', topics: ['sessions'] });
+      await new Promise((resolve) => window.setTimeout(resolve, 200));
+    });
+
+    await findSidebarRow('conv-second');
+    expect(screen.queryByText('No conversations yet.')).toBeNull();
   });
 
   it('opens settings from app chrome and hydrates the settings route after reload', async () => {

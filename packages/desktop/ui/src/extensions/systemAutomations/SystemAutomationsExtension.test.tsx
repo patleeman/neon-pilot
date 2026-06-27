@@ -262,7 +262,59 @@ describe('AutomationsPage', () => {
     vi.useRealTimers();
   });
 
-  it('does not offer Run now while an automation is already running', async () => {
+  it('reconciles idle automation rows when push invalidations are missed', async () => {
+    vi.useFakeTimers();
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          id: 'release-watch',
+          title: 'Release watch',
+          scheduleType: 'at',
+          targetType: 'conversation',
+          running: false,
+          enabled: true,
+          at: '2026-06-24T12:00:00.000Z',
+          prompt: 'Check release state',
+          threadMode: 'existing',
+          threadConversationId: 'conv-owner',
+          threadTitle: 'Release watch thread',
+        },
+      ])
+      .mockResolvedValue([
+        {
+          id: 'release-watch',
+          title: 'Release watch',
+          scheduleType: 'at',
+          targetType: 'conversation',
+          running: false,
+          enabled: true,
+          at: '2026-06-24T12:00:00.000Z',
+          prompt: 'Check release state',
+          threadMode: 'existing',
+          threadConversationId: 'conv-owner',
+          threadTitle: 'Release watch thread',
+          lastRunAt: '2026-06-24T12:00:05.000Z',
+          lastStatus: 'success',
+        },
+      ]);
+    const pa = createPa({ list });
+    const { container } = await renderPage(pa);
+
+    expect(container.textContent).toContain('Never');
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+      await Promise.resolve();
+    });
+
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(container.textContent).not.toContain('Never');
+    expect(container.textContent).toContain('Jun 24, 2026');
+    vi.useRealTimers();
+  });
+
+  it('disables run and delete actions while an automation is already running', async () => {
     const pa = createPa({
       list: vi.fn(async () => [
         {
@@ -292,10 +344,15 @@ describe('AutomationsPage', () => {
     const runNow = buttons().find((button) => button.textContent === 'Run now');
     expect(runNow).not.toBeUndefined();
     expect(runNow?.hasAttribute('disabled')).toBe(true);
+    const deleteButton = buttons().find((button) => button.textContent === 'Delete');
+    expect(deleteButton).not.toBeUndefined();
+    expect(deleteButton?.hasAttribute('disabled')).toBe(true);
 
     await act(async () => runNow?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    await act(async () => deleteButton?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 
     expect(pa.automations.run).not.toHaveBeenCalled();
+    expect(pa.automations.delete).not.toHaveBeenCalled();
   });
 
   it('runs, pauses, resumes, and deletes from the row action menu', async () => {

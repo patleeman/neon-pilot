@@ -2801,6 +2801,9 @@ describe('tasks module scheduling', () => {
     expect(failedAuditEntry?.content).toContain('Error: spawn automation runner ENOENT');
     expect(failedAuditEntry?.content).not.toContain('/Users/');
     expect(failedAuditEntry?.content).not.toContain('Neon Pilot Testing.app');
+    expect(failedAuditEntry?.details).toEqual(expect.objectContaining({ error: 'spawn automation runner ENOENT' }));
+    expect(JSON.stringify(failedAuditEntry?.details)).not.toContain('/Users/');
+    expect(JSON.stringify(failedAuditEntry?.details)).not.toContain('Neon Pilot Testing.app');
 
     await module.stop?.(context);
   });

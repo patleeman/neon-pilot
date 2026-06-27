@@ -423,6 +423,9 @@ export async function deleteScheduledTaskCapability(profile: string, taskId: str
   if (!resolvedTask) {
     throw new Error('Task not found');
   }
+  if (resolvedTask.runtime?.running) {
+    throw new Error('Automation is running. Pause it and wait for the current run to finish before deleting it.');
+  }
 
   const deleted = deleteStoredAutomation(resolvedTask.task.id);
   if (!deleted) {

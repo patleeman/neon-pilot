@@ -79,6 +79,9 @@ interface ModelOption {
   label?: string;
 }
 
+const AUTOMATIONS_RECONCILE_INTERVAL_MS = 5_000;
+const RUNNING_AUTOMATIONS_REFRESH_INTERVAL_MS = 2_500;
+
 interface AutomationFormState {
   id: string;
   title: string;
@@ -472,9 +475,16 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     if (!tasks.some((task) => task.running)) return;
     const timer = window.setInterval(() => {
       void load();
-    }, 2500);
+    }, RUNNING_AUTOMATIONS_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [load, tasks]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void load();
+    }, AUTOMATIONS_RECONCILE_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [load]);
 
   useEffect(() => {
     if (!rowMenu) return;
@@ -801,7 +811,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       </MenuItem>
                       <MenuItem onClick={() => openEdit(task)}>Edit</MenuItem>
                       <MenuSeparator />
-                      <MenuItem tone="danger" disabled={busy === `delete:${task.id}`} onClick={() => void deleteTask(task)}>
+                      <MenuItem tone="danger" disabled={task.running || busy === `delete:${task.id}`} onClick={() => void deleteTask(task)}>
                         Delete
                       </MenuItem>
                     </PositionedMenu>

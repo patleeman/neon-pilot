@@ -19,6 +19,10 @@ describe('app event projection', () => {
     });
   });
 
+  it('refreshes the conversation projection when workspace changes without a sessions topic', () => {
+    expect(buildAppSnapshotRefreshPlan(['workspace'])).toMatchObject({ sessions: true });
+  });
+
   it('increments only tracked invalidation topic versions', () => {
     const next = incrementAppEventVersionsForTopics(INITIAL_APP_EVENT_VERSIONS, ['workspace', 'tasks']);
 
