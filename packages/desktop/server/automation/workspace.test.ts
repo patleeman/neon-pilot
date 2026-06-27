@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { type AppEvent, subscribeAppEvents } from '../shared/appEvents.js';
-import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
+import { getRuntimeSettingsFilePath, resolveLocalRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPreferences.js';
 import { openAutomationOwnerThread } from './workspace.js';
 
@@ -86,6 +86,30 @@ describe('automation owner thread workspace', () => {
       );
     } finally {
       unsubscribe();
+    }
+  });
+
+  it('keeps local and runtime workspace settings in sync when reopening an archived owner thread', () => {
+    const stateRoot = createTempDir('automation-workspace-');
+    const localRuntimeConfigDir = createTempDir('automation-local-config-');
+    const runtimeSettingsFile = getRuntimeSettingsFilePath(stateRoot);
+    const localSettingsFile = resolveLocalRuntimeSettingsFilePath(localRuntimeConfigDir);
+    for (const settingsFile of [runtimeSettingsFile, localSettingsFile]) {
+      writeSavedUiPreferences(
+        {
+          archivedConversationIds: ['conv-owner'],
+          conversationWorkspaceMigrated: true,
+        },
+        settingsFile,
+      );
+    }
+
+    expect(openAutomationOwnerThread({ conversationId: 'conv-owner', stateRoot, localRuntimeConfigDir })).toBe(true);
+
+    for (const settingsFile of [runtimeSettingsFile, localSettingsFile]) {
+      const saved = readSavedUiPreferences(settingsFile);
+      expect(saved.openConversationIds).toEqual(['conv-owner']);
+      expect(saved.archivedConversationIds).toEqual([]);
     }
   });
 

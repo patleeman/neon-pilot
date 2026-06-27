@@ -1,5 +1,5 @@
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
-import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
+import { getRuntimeSettingsFilePath, persistSettingsWrite } from '../ui/settingsPersistence.js';
 import { readSavedUiPreferences, type SavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPreferences.js';
 
 function unique(values: string[]): string[] {
@@ -14,7 +14,7 @@ function unique(values: string[]): string[] {
   return output;
 }
 
-export function openAutomationOwnerThread(input: { conversationId?: string; stateRoot?: string }): boolean {
+export function openAutomationOwnerThread(input: { conversationId?: string; stateRoot?: string; localRuntimeConfigDir?: string }): boolean {
   const conversationId = input.conversationId?.trim();
   if (!conversationId) {
     return false;
@@ -29,20 +29,24 @@ export function openAutomationOwnerThread(input: { conversationId?: string; stat
     return false;
   }
 
-  const saved = writeSavedUiPreferences(
-    {
-      openConversationIds: pinned.has(conversationId)
-        ? current.openConversationIds
-        : unique([...current.openConversationIds, conversationId]),
-      pinnedConversationIds: current.pinnedConversationIds,
-      archivedConversationIds: current.archivedConversationIds.filter((id) => id !== conversationId),
-      lockedConversationIds: current.lockedConversationIds,
-      activeConversationId: current.activeConversationId,
-      workspacePaths: current.workspacePaths,
-      remoteControlledConversationIds: current.remoteControlledConversationIds,
-      nodeBrowserViews: current.nodeBrowserViews,
-    },
-    settingsFile,
+  const saved = persistSettingsWrite(
+    (targetSettingsFile) =>
+      writeSavedUiPreferences(
+        {
+          openConversationIds: pinned.has(conversationId)
+            ? current.openConversationIds
+            : unique([...current.openConversationIds, conversationId]),
+          pinnedConversationIds: current.pinnedConversationIds,
+          archivedConversationIds: current.archivedConversationIds.filter((id) => id !== conversationId),
+          lockedConversationIds: current.lockedConversationIds,
+          activeConversationId: current.activeConversationId,
+          workspacePaths: current.workspacePaths,
+          remoteControlledConversationIds: current.remoteControlledConversationIds,
+          nodeBrowserViews: current.nodeBrowserViews,
+        },
+        targetSettingsFile,
+      ),
+    { runtimeSettingsFile: settingsFile, localRuntimeConfigDir: input.localRuntimeConfigDir },
   );
   publishAutomationOwnerThreadWorkspaceChanged(saved);
   return true;
