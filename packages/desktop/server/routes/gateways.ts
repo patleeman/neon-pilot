@@ -270,11 +270,15 @@ function readOptionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+function startTelegramRuntimeWithDelivery(): void {
+  registerTelegramGatewayLifecycleDelivery();
+  ensureTelegramRuntime().start();
+}
+
 export function startTelegramGatewayRuntime(): { running: boolean } {
   const initialTelegramState = readCurrentGatewayState().connections.find((connection) => connection.provider === 'telegram');
   if (initialTelegramState?.enabled && readTelegramBotToken(getAuthFileFn(), getStateRootFn())) {
-    registerTelegramGatewayLifecycleDelivery();
-    ensureTelegramRuntime().start();
+    startTelegramRuntimeWithDelivery();
     return { running: true };
   }
   return { running: false };
@@ -358,7 +362,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
         if (enabled === false || status === 'paused' || status === 'needs_attention') {
           ensureTelegramRuntime().stop();
         } else {
-          ensureTelegramRuntime().start();
+          startTelegramRuntimeWithDelivery();
         }
       }
       res.json(readCurrentGatewayState());
@@ -426,7 +430,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
       writeTelegramBotToken(getAuthFileFn(), getStateRootFn(), token);
       ensureGatewayConnection({ ...currentGatewayContext(), provider: 'telegram' });
       updateGatewayConnectionStatus({ ...currentGatewayContext(), provider: 'telegram', status: 'active', enabled: true });
-      ensureTelegramRuntime().start();
+      startTelegramRuntimeWithDelivery();
       res.json({ configured: true, state: readCurrentGatewayState() });
     } catch (err) {
       handleGatewayError(res, err);
