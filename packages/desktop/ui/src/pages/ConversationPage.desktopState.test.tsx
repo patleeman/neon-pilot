@@ -21,9 +21,12 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
   consoleErrorSpy?.mockRestore();
   consoleErrorSpy = null;
+  const { conversationRuntimeStore, sessionStore } = await import('../store');
+  conversationRuntimeStore.reset();
+  sessionStore.reset?.();
   vi.resetModules();
   vi.clearAllMocks();
   vi.doUnmock('../hooks/useDesktopConversationState');
@@ -218,5 +221,114 @@ describe('ConversationPage desktop local state', () => {
       expect.objectContaining({ tailBlocks: INITIAL_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS, includeToolBlocks: false }),
     );
     expect(html).toContain('Loading messages…');
+  }, 15000);
+
+  it('shows active feedback for a running desktop conversation before messages hydrate', async () => {
+    const runningSession = {
+      id: 'running-empty-conv',
+      file: '/tmp/running-empty-conv.jsonl',
+      timestamp: '2026-04-11T12:00:00.000Z',
+      cwd: '/tmp/project',
+      cwdSlug: 'project',
+      model: 'openai/gpt-5.4',
+      title: 'Running empty state',
+      messageCount: 0,
+      isLive: false,
+      isRunning: false,
+    };
+    const { conversationRuntimeStore, sessionStore } = await import('../store');
+    sessionStore.replaceAll([runningSession]);
+    sessionStore.markReady?.();
+    conversationRuntimeStore.apply({
+      id: 'running-empty-conv',
+      running: true,
+      revision: 1,
+      updatedAt: '2026-04-11T12:00:00.000Z',
+    });
+
+    const desktopConversationState = vi.fn(() => ({
+      mode: 'local',
+      active: true,
+      loading: false,
+      error: null,
+      surfaceId: 'surface-local',
+      reconnect: vi.fn(),
+      send: vi.fn(),
+      abort: vi.fn(),
+      takeover: vi.fn(),
+      state: {
+        conversationId: 'running-empty-conv',
+        sessionDetail: {
+          meta: runningSession,
+          blocks: [],
+          blockOffset: 0,
+          totalBlocks: 0,
+          contextUsage: null,
+        },
+        liveSession: {
+          live: false,
+          id: 'running-empty-conv',
+          cwd: '/tmp/project',
+          sessionFile: '/tmp/running-empty-conv.jsonl',
+          title: 'Running empty state',
+          isStreaming: false,
+          hasStaleTurnState: false,
+        },
+        stream: {
+          blocks: [],
+          blockOffset: 0,
+          totalBlocks: 0,
+          hasSnapshot: true,
+          isStreaming: false,
+          isCompacting: false,
+          error: null,
+          title: 'Running empty state',
+          tokens: null,
+          cost: null,
+          contextUsage: null,
+          pendingQueue: { steering: [], followUp: [] },
+          parallelJobs: [],
+          presence: {
+            surfaces: [],
+            controllerSurfaceId: null,
+            controllerSurfaceType: null,
+            controllerAcquiredAt: null,
+          },
+          autoModeState: null,
+          systemPrompt: null,
+          cwdChange: null,
+        },
+      },
+    }));
+    vi.doMock('../hooks/useDesktopConversationState', () => ({
+      useDesktopConversationState: desktopConversationState,
+    }));
+
+    const { ConversationPage } = await import('./ConversationPage.js');
+    const html = renderToString(
+      <AppDataContext.Provider
+        value={{
+          projects: null,
+          sessions: [runningSession],
+          tasks: null,
+          runs: null,
+          executions: null,
+          setProjects: vi.fn(),
+          setSessions: vi.fn(),
+          setTasks: vi.fn(),
+          setRuns: vi.fn(),
+          setExecutions: vi.fn(),
+        }}
+      >
+        <MemoryRouter initialEntries={['/conversations/running-empty-conv']}>
+          <Routes>
+            <Route path="/conversations/:id" element={<ConversationPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AppDataContext.Provider>,
+    );
+
+    expect(html).toContain('Working…');
+    expect(html).not.toContain('This conversation is empty');
   }, 15000);
 });

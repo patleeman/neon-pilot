@@ -1365,6 +1365,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const isLiveSession = resolveConversationLiveSession({
     streamBlockCount: stream.blocks.length,
     isStreaming: stream.isStreaming,
+    sessionIsRunning: conversationRuntimeIsRunning,
     confirmedLive: useDesktopConversation ? confirmedLiveValue : confirmedLive,
   });
   const conversationLiveDecision =
@@ -7349,6 +7350,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     hasVisibleTranscript: Boolean(visibleTranscriptMessages?.length),
   });
   const showBlockingConversationLoadingState = showConversationLoadingState && !showInlineConversationLoadingState;
+  const conversationLoadingStateLabel = conversationRunningForPage
+    ? (displayedPendingAssistantStatusLabel ?? 'Working…')
+    : 'Loading messages…';
   const newConversationSetupAction = showNewConversationSetup ? (
     <ConversationDraftEmptyAction
       hasDraftCwd={draft ? hasDraftCwd : currentCwdLabel !== 'Chat'}
@@ -7527,9 +7531,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
             </div>
           </div>
           {showBlockingConversationLoadingState ? (
-            <CenteredLoadingState label="Loading messages…" className="h-full flex-1" />
+            <CenteredLoadingState label={conversationLoadingStateLabel} className="h-full flex-1" />
           ) : visibleTranscriptMessages ? (
-            <Suspense fallback={<CenteredLoadingState label="Loading messages…" className="h-full flex-1" />}>
+            <Suspense fallback={<CenteredLoadingState label={conversationLoadingStateLabel} className="h-full flex-1" />}>
               <ChatView
                 key={visibleTranscriptState?.conversationId ?? id ?? 'draft-conversation'}
                 conversationId={visibleTranscriptState?.conversationId ?? id ?? null}
@@ -7662,7 +7666,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         )}
         {showInlineConversationLoadingState && (
           <div className="ui-composer-bottom-fade">
-            <LoadingState label={renderingStaleTranscript ? 'Loading new messages…' : 'Loading messages…'} className="justify-center" />
+            <LoadingState
+              label={renderingStaleTranscript ? 'Loading new messages…' : conversationLoadingStateLabel}
+              className="justify-center"
+            />
           </div>
         )}
       </div>
@@ -7705,6 +7712,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       showScrollToBottomControl,
       stream.isCompacting,
       conversationRunningForPage,
+      conversationLoadingStateLabel,
       conversationPerformanceMode,
       submitAskUserQuestion,
       visibleTranscriptStartPercent,

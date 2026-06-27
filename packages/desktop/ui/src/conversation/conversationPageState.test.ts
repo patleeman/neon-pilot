@@ -335,7 +335,17 @@ describe('conversation page state helpers', () => {
       resolveConversationLiveSession({
         streamBlockCount: 0,
         isStreaming: false,
+        sessionIsRunning: false,
         confirmedLive: true,
+      }),
+    ).toBe(true);
+
+    expect(
+      resolveConversationLiveSession({
+        streamBlockCount: 0,
+        isStreaming: false,
+        sessionIsRunning: true,
+        confirmedLive: false,
       }),
     ).toBe(true);
 

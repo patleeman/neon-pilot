@@ -15,9 +15,10 @@ const AGGRESSIVE_CHAT_RENDERING_MESSAGE_THRESHOLD = 96;
 export function resolveConversationLiveSession(input: {
   streamBlockCount: number;
   isStreaming: boolean;
+  sessionIsRunning?: boolean | null;
   confirmedLive: boolean | null;
 }): boolean {
-  return input.streamBlockCount > 0 || input.isStreaming || input.confirmedLive === true;
+  return input.streamBlockCount > 0 || input.isStreaming || input.sessionIsRunning === true || input.confirmedLive === true;
 }
 
 export function resolveConversationComposerRunState(input: {
