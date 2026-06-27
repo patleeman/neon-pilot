@@ -35,7 +35,16 @@ import {
   Textarea,
   TextInput,
 } from '@neon-pilot/extensions/ui';
-import { type FormEvent, useCallback, useEffect, useId, useMemo, useState } from 'react';
+import {
+  type CSSProperties,
+  type FormEvent,
+  type MouseEvent as ReactMouseEvent,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+} from 'react';
 
 interface TaskSummary {
   id: string;
@@ -83,6 +92,15 @@ interface AutomationFormState {
 }
 
 type AutomationsPageContext = { search?: string };
+type RowMenuState = {
+  taskId: string;
+  position: Pick<CSSProperties, 'top' | 'right' | 'bottom'>;
+};
+
+const ROW_ACTION_MENU_GAP = 4;
+const ROW_ACTION_MENU_MARGIN = 8;
+const ROW_ACTION_MENU_MIN_WIDTH = 144;
+const ROW_ACTION_MENU_ESTIMATED_HEIGHT = 168;
 
 const CRON_PRESETS: ReadonlyArray<{ value: string; label: string }> = [
   { value: '0 9 * * *', label: 'Every day at 9:00 AM' },
@@ -93,6 +111,26 @@ const CRON_PRESETS: ReadonlyArray<{ value: string; label: string }> = [
   { value: '0 9 * * 1-5', label: 'Weekdays at 9:00 AM' },
   { value: '0 9 1 * *', label: 'First of the month at 9:00 AM' },
 ];
+
+export function automationRowActionMenuPosition(
+  anchorRect: Pick<DOMRect, 'top' | 'right' | 'bottom'>,
+  viewport: { width: number; height: number },
+): Pick<CSSProperties, 'top' | 'right' | 'bottom'> {
+  const maxRight = Math.max(ROW_ACTION_MENU_MARGIN, viewport.width - ROW_ACTION_MENU_MARGIN - ROW_ACTION_MENU_MIN_WIDTH);
+  const right = Math.min(Math.max(ROW_ACTION_MENU_MARGIN, viewport.width - anchorRect.right), maxRight);
+  const availableBelow = viewport.height - anchorRect.bottom - ROW_ACTION_MENU_GAP - ROW_ACTION_MENU_MARGIN;
+  const availableAbove = anchorRect.top - ROW_ACTION_MENU_GAP - ROW_ACTION_MENU_MARGIN;
+  if (availableBelow < ROW_ACTION_MENU_ESTIMATED_HEIGHT && availableAbove > availableBelow) {
+    return {
+      right,
+      bottom: Math.max(ROW_ACTION_MENU_MARGIN, viewport.height - anchorRect.top + ROW_ACTION_MENU_GAP),
+    };
+  }
+  return {
+    right,
+    top: Math.max(ROW_ACTION_MENU_MARGIN, anchorRect.bottom + ROW_ACTION_MENU_GAP),
+  };
+}
 
 const TIMEOUT_PRESETS: ReadonlyArray<{ value: number; label: string }> = [
   { value: 300, label: '5 minutes' },
@@ -349,7 +387,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const [form, setForm] = useState<AutomationFormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [menuTaskId, setMenuTaskId] = useState<string | null>(null);
+  const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [pickingCwd, setPickingCwd] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -405,11 +443,35 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     return () => window.clearInterval(timer);
   }, [load, tasks]);
 
+  useEffect(() => {
+    if (!rowMenu) return;
+    const close = () => setRowMenu(null);
+    const closeOnPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      const menuRoot = target instanceof Element ? target.closest('[data-automation-row-menu]') : null;
+      if (menuRoot?.getAttribute('data-automation-row-menu') === rowMenu.taskId) return;
+      close();
+    };
+    const closeOnKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    document.addEventListener('pointerdown', closeOnPointerDown);
+    document.addEventListener('keydown', closeOnKeyDown);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnPointerDown);
+      document.removeEventListener('keydown', closeOnKeyDown);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [rowMenu]);
+
   const openCreate = useCallback(() => {
     setEditingId(null);
     setForm({ ...EMPTY_FORM, ownerThreadId: conversations[0]?.id ?? '' });
     setFormError(null);
-    setMenuTaskId(null);
+    setRowMenu(null);
     setDialogOpen(true);
   }, [conversations]);
 
@@ -423,7 +485,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     setEditingId(task.id);
     setForm(formFromTask(task));
     setFormError(null);
-    setMenuTaskId(null);
+    setRowMenu(null);
     setDialogOpen(true);
   }, []);
 
@@ -470,7 +532,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
 
   const updateEnabled = async (task: TaskSummary, enabled: boolean) => {
     setBusy(`${enabled ? 'resume' : 'pause'}:${task.id}`);
-    setMenuTaskId(null);
+    setRowMenu(null);
     try {
       await pa.automations.update(task.id, { enabled, threadConversationId: task.threadConversationId, targetType: 'conversation' });
       await load();
@@ -483,7 +545,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
 
   const runNow = async (task: TaskSummary) => {
     setBusy(`run:${task.id}`);
-    setMenuTaskId(null);
+    setRowMenu(null);
     try {
       await pa.automations.run(task.id);
       await load();
@@ -495,7 +557,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   };
 
   const deleteTask = async (task: TaskSummary) => {
-    setMenuTaskId(null);
+    setRowMenu(null);
     const confirmed = await pa.ui.confirm({
       title: 'Delete automation',
       message: `Delete automation "${taskTitle(task)}"? This cannot be undone.`,
@@ -614,26 +676,39 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 <DataTableCell className="truncate text-secondary">{nextRunText(task)}</DataTableCell>
                 <DataTableCell className="truncate text-secondary">{lastRunText(task)}</DataTableCell>
                 <DataTableCell className="truncate text-secondary">{task.threadTitle || task.threadConversationId || '—'}</DataTableCell>
-                <DataTableCell className="relative">
+                <DataTableCell className="relative" data-automation-row-menu={task.id}>
                   <DataTableActionGroup>
                     <IconButton
                       aria-label={`Actions for ${taskTitle(task)}`}
                       title={`Actions for ${taskTitle(task)}`}
                       aria-haspopup="menu"
-                      aria-expanded={menuTaskId === task.id}
-                      aria-controls={menuTaskId === task.id ? `${rowMenuBaseId}-${task.id}` : undefined}
-                      onClick={() => setMenuTaskId((current) => (current === task.id ? null : task.id))}
+                      aria-expanded={rowMenu?.taskId === task.id}
+                      aria-controls={rowMenu?.taskId === task.id ? `${rowMenuBaseId}-${task.id}` : undefined}
+                      onClick={(event: ReactMouseEvent<HTMLButtonElement>) => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        setRowMenu((current) =>
+                          current?.taskId === task.id
+                            ? null
+                            : {
+                                taskId: task.id,
+                                position: automationRowActionMenuPosition(rect, {
+                                  width: window.innerWidth,
+                                  height: window.innerHeight,
+                                }),
+                              },
+                        );
+                      }}
                     >
                       <MoreIcon />
                     </IconButton>
                   </DataTableActionGroup>
-                  {menuTaskId === task.id ? (
+                  {rowMenu?.taskId === task.id ? (
                     <PositionedMenu
                       id={`${rowMenuBaseId}-${task.id}`}
                       aria-label={`Actions for ${taskTitle(task)}`}
-                      placement="absolute"
-                      position={{ top: 34, right: 8 }}
-                      className="z-20 min-w-36"
+                      data-automation-row-menu={task.id}
+                      position={rowMenu.position}
+                      className="z-50 min-w-36"
                     >
                       <MenuItem disabled={busy === `run:${task.id}`} onClick={() => void runNow(task)}>
                         Run now
