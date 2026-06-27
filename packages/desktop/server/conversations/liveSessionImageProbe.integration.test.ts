@@ -68,6 +68,7 @@ describe('text-only live session image probing flow', () => {
       'What does this screenshot show?',
       undefined,
       [{ type: 'image', data: originalImageData, mimeType: 'image/png', name: 'screen.png' }],
+      undefined,
       {
         repairLiveSessionTranscriptTail: vi.fn(),
         broadcastQueueState: vi.fn(),

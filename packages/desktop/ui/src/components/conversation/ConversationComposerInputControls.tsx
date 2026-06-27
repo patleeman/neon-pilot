@@ -205,7 +205,9 @@ function CoreModelPreferenceControls({
   const selectedModel = resolveSelectableModel(models, currentModel);
   const modelGroups = groupModelsByProvider(models);
   const modelProviderIds = modelGroups.map(([provider]) => provider);
-  const serviceTierOptions = selectedModel?.supportedServiceTiers ?? [];
+  const serviceTierOptions = Array.from(
+    new Set([...(selectedModel?.supportedServiceTiers ?? []), ...(currentServiceTier.trim() ? [currentServiceTier.trim()] : [])]),
+  );
   const selectBaseClassName =
     'h-8 min-w-0 truncate border-transparent bg-transparent px-2 text-xs font-medium text-secondary disabled:opacity-50';
   const modelSelectClassName = cx(selectBaseClassName, compact ? 'max-w-[8.25rem]' : 'max-w-[10rem]');

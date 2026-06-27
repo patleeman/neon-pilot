@@ -1,12 +1,5 @@
-import {
-  type Api,
-  type Context,
-  type Model,
-  type ProviderStreamOptions,
-  type SimpleStreamOptions,
-  stream,
-  streamSimple,
-} from '@earendil-works/pi-ai';
+import { type Api, type Context, type Model, type ProviderStreamOptions, type SimpleStreamOptions } from '@earendil-works/pi-ai';
+import { stream, streamSimple } from '@earendil-works/pi-ai/compat';
 import { type AgentSession, type ModelRegistry, type SessionManager } from '@earendil-works/pi-coding-agent';
 
 import { readSavedModelPreferences } from '../models/modelPreferences.js';

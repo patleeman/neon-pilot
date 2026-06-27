@@ -562,6 +562,8 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
         '--max-long-transcript-open-ms=10000',
         '--max-related-conversation-results-ms=1500',
         '--max-recovery-ms=3000',
+        '--max-fork-ms=2500',
+        '--max-conversation-switch-content-ms=300',
         '--max-conversation-content-open-phase-ms=1500',
         '--max-conversation-extension-open-phase-ms=1500',
       ],
@@ -624,7 +626,10 @@ function requireReleaseQaAcknowledgement(env) {
 
 function readExpectedFirstPartyExtensionAssets() {
   const source = readFileSync(installableExtensionCatalogPath, 'utf8');
-  const ids = [...source.matchAll(/\bid:\s*'([^']+)'/g)].map((match) => match[1]).filter(Boolean).sort();
+  const ids = [...source.matchAll(/\bid:\s*'([^']+)'/g)]
+    .map((match) => match[1])
+    .filter(Boolean)
+    .sort();
   if (ids.length === 0) {
     fail(`No first-party installable extension IDs found in ${installableExtensionCatalogPath}.`);
   }
@@ -635,9 +640,7 @@ function requireFirstPartyExtensionReleaseGate(env, tag) {
   if (isTruthyEnv(env.NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVED)) {
     const reason = String(env.NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVER_REASON ?? '').trim();
     if (!reason) {
-      fail(
-        'NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVED=1 requires NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVER_REASON.',
-      );
+      fail('NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVED=1 requires NEON_PILOT_FIRST_PARTY_EXTENSIONS_RELEASE_WAIVER_REASON.');
     }
     console.warn(`First-party extension release gate waived: ${reason}`);
     return;

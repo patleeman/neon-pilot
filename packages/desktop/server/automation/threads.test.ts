@@ -65,19 +65,19 @@ describe('automation threads', () => {
   });
 
   it('normalizes thread mode selections and resolves display titles', () => {
-    expect(normalizeAutomationThreadModeForSelection('none')).toBe('none');
+    expect(normalizeAutomationThreadModeForSelection('none')).toBe('dedicated');
     expect(normalizeAutomationThreadModeForSelection('existing')).toBe('existing');
     expect(normalizeAutomationThreadModeForSelection('dedicated')).toBe('dedicated');
     expect(normalizeAutomationThreadModeForSelection('bad')).toBe('dedicated');
     expect(resolveAutomationThreadTitle({ id: 'task-1', title: 'Title', threadMode: 'dedicated' })).toBe('Automation: Title');
     expect(resolveAutomationThreadTitle({ id: 'task-1', title: ' ', threadMode: 'existing' })).toBe('Automation: task-1');
-    expect(resolveAutomationThreadTitle({ id: 'task-1', title: 'Title', threadMode: 'none' })).toBeUndefined();
+    expect(resolveAutomationThreadTitle({ id: 'task-1', title: 'Title', threadMode: 'none' })).toBe('Automation: Title');
   });
 
-  it('returns none-mode automations unchanged and errors for missing tasks', () => {
+  it('rejects none-mode automations and errors for missing tasks', () => {
     const noneTask = task({ threadMode: 'none' });
     store.getStoredAutomation.mockReturnValueOnce(noneTask);
-    expect(ensureAutomationThread('task-1')).toBe(noneTask);
+    expect(() => ensureAutomationThread('task-1')).toThrow('Automation @task-1 is missing an owner thread.');
 
     store.getStoredAutomation.mockReturnValueOnce(undefined);
     expect(() => ensureAutomationThread('missing')).toThrow('Automation not found: missing');

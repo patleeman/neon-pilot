@@ -10,7 +10,9 @@ const tempRoot = mkdtempSync('/tmp/np-cli-');
 const repeat = readRepeat(process.argv.slice(2));
 const failures = [];
 const { runProtocolCli } = await import(cliSource);
-const { disposeExtensionBackendWorkers } = await import(pathToFileURL(resolve(repoRoot, 'packages/desktop/server/extensions/extensionBackend.ts')).href);
+const { disposeExtensionBackendWorkers } = await import(
+  pathToFileURL(resolve(repoRoot, 'packages/desktop/server/extensions/extensionBackend.ts')).href
+);
 
 function readRepeat(args) {
   const index = args.findIndex((arg) => arg === '--repeat' || arg.startsWith('--repeat='));
@@ -39,18 +41,18 @@ async function runCli(args) {
   process.env.NEON_PILOT_CONFIG_ROOT = join(tempRoot, 'config');
   process.env.NEON_PILOT_RUNTIME_CHANNEL = 'test';
   process.env.NEON_PILOT_FORCE_SOURCE_CLI = '1';
-  process.stdout.write = ((chunk, encoding, callback) => {
+  process.stdout.write = (chunk, encoding, callback) => {
     stdout += typeof chunk === 'string' ? chunk : chunk.toString(typeof encoding === 'string' ? encoding : 'utf8');
     if (typeof encoding === 'function') encoding();
     if (typeof callback === 'function') callback();
     return true;
-  });
-  process.stderr.write = ((chunk, encoding, callback) => {
+  };
+  process.stderr.write = (chunk, encoding, callback) => {
     stderr += typeof chunk === 'string' ? chunk : chunk.toString(typeof encoding === 'string' ? encoding : 'utf8');
     if (typeof encoding === 'function') encoding();
     if (typeof callback === 'function') callback();
     return true;
-  });
+  };
   let status = 1;
   let error;
   try {
@@ -138,7 +140,10 @@ function validateManifestCliCommands(commands) {
     if (command.examples !== undefined) {
       assert(Array.isArray(command.examples), `${label} examples must be an array.`);
       for (const [exampleIndex, example] of (command.examples ?? []).entries()) {
-        assert(typeof example === 'string' && example.includes('neon-pilot '), `${label} examples[${exampleIndex}] must be copy-pasteable.`);
+        assert(
+          typeof example === 'string' && example.includes('neon-pilot '),
+          `${label} examples[${exampleIndex}] must be copy-pasteable.`,
+        );
       }
     }
     assert(Array.isArray(command.examples) && command.examples.length > 0, `${label} (${command.command}) needs at least one example.`);
@@ -182,7 +187,10 @@ function validateRuntimeCommands(discoveredCommands, manifestCommands) {
     assert(Array.isArray(command.examples) && command.examples.length > 0, `Runtime command "${command.command}" needs examples.`);
     assert(isRecord(command.argsSchema), `Runtime command "${command.command}" needs argsSchema.`);
     assert(isRecord(command.flagsSchema), `Runtime command "${command.command}" needs flagsSchema.`);
-    assert(['read', 'write', 'destructive', 'background', 'streaming'].includes(command.mode), `Runtime command "${command.command}" needs mode.`);
+    assert(
+      ['read', 'write', 'destructive', 'background', 'streaming'].includes(command.mode),
+      `Runtime command "${command.command}" needs mode.`,
+    );
     assert(typeof command.requiresApp === 'boolean', `Runtime command "${command.command}" needs requiresApp.`);
     assert(typeof command.idempotent === 'boolean', `Runtime command "${command.command}" needs idempotent.`);
     assert(Array.isArray(command.outputModes) && command.outputModes.length > 0, `Runtime command "${command.command}" needs outputModes.`);
@@ -234,7 +242,7 @@ async function runDryRunSmoke(command, iteration) {
   const label = `iteration ${iteration}: dry-run ${command.command}`;
   const argv = [
     ...command.command.split(/\s+/),
-    ...(sampleArgs(command.argsSchema) ?? []),
+    ...(sampleDryRunArgs(command) ?? []),
     ...(sampleRequiredFlags(command.flagsSchema) ?? []),
     '--dry-run',
   ];
@@ -251,6 +259,13 @@ function sampleArgs(argsSchema) {
   const minItems = Number.isInteger(argsSchema?.minItems) ? argsSchema.minItems : 0;
   if (minItems <= 0) return [];
   return Array.from({ length: minItems }, (_, index) => `sample-${index + 1}`);
+}
+
+function sampleDryRunArgs(command) {
+  const args = sampleArgs(command.argsSchema);
+  if (args.length > 0) return args;
+  if (command.command === 'ask') return ['Check work.'];
+  return args;
 }
 
 function sampleRequiredFlags(flagsSchema) {
@@ -335,4 +350,6 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`CLI surface check passed: ${lastRuntimeCommands.length} commands, ${manifestCommands.length} manifest commands, repeat=${repeat}.`);
+console.log(
+  `CLI surface check passed: ${lastRuntimeCommands.length} commands, ${manifestCommands.length} manifest commands, repeat=${repeat}.`,
+);

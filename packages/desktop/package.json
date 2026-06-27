@@ -1,6 +1,6 @@
 {
   "name": "@neon-pilot/desktop",
-  "version": "0.11.28",
+  "version": "0.11.29",
   "license": "MIT",
   "description": "Neon Pilot Electron desktop shell",
   "repository": "github:patleeman/neon-pilot",
@@ -22,14 +22,14 @@
     "clean": "rm -rf dist ui/dist server/dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@earendil-works/pi-agent-core": "^0.79.10",
-    "@earendil-works/pi-coding-agent": "^0.79.10",
+    "@earendil-works/pi-agent-core": "^0.80.2",
+    "@earendil-works/pi-coding-agent": "^0.80.2",
     "@silvia-odwyer/photon-node": "0.3.4",
     "@fontsource-variable/geist": "5.2.9",
     "@fontsource-variable/geist-mono": "5.2.8",
-    "@neon-pilot/core": "workspace:0.11.28",
-    "@neon-pilot/extensions": "workspace:0.11.28",
-    "@neon-pilot/ui": "workspace:0.11.28",
+    "@neon-pilot/core": "workspace:0.11.29",
+    "@neon-pilot/extensions": "workspace:0.11.29",
+    "@neon-pilot/ui": "workspace:0.11.29",
     "@ffmpeg-installer/ffmpeg": "1.1.0",
     "electron-updater": "6.8.3",
     "jsdom": "24.1.3",

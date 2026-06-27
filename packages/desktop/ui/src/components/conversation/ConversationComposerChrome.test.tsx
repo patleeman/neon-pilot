@@ -33,7 +33,7 @@ describe('ConversationComposerChrome', () => {
         hasInteractiveOverlay: true,
         autoModeEnabled: true,
       }),
-    ).toContain('border-accent/50');
+    ).toContain('ui-composer-state-focus');
 
     expect(
       resolveConversationComposerShellStateClassName({
@@ -41,7 +41,7 @@ describe('ConversationComposerChrome', () => {
         hasInteractiveOverlay: true,
         autoModeEnabled: true,
       }),
-    ).toContain('border-accent/40');
+    ).toContain('ui-composer-state-drag');
 
     expect(
       resolveConversationComposerShellStateClassName({
@@ -86,9 +86,7 @@ describe('ConversationComposerChrome', () => {
     });
 
     expect(result).toContain('ui-input-shell-streaming');
-    expect(result).toContain('border-accent/20');
-    expect(result).toContain('ring-1');
-    expect(result).toContain('ring-accent/8');
+    expect(result).toContain('ui-composer-state-streaming');
   });
 
   it('streaming shell class takes priority over auto-mode', () => {
@@ -115,7 +113,7 @@ describe('ConversationComposerChrome', () => {
         streamIsStreaming: true,
         autoModeEnabled: true,
       }),
-    ).toContain('border-accent/50');
+    ).toContain('ui-composer-state-focus');
 
     // interactive overlay yields when drag is false
     expect(
@@ -125,7 +123,7 @@ describe('ConversationComposerChrome', () => {
         streamIsStreaming: true,
         autoModeEnabled: true,
       }),
-    ).toContain('border-accent/40');
+    ).toContain('ui-composer-state-drag');
 
     // streaming yields when both drag and overlay are false
     expect(

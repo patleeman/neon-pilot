@@ -226,6 +226,19 @@ export function resolveConversationInitialPendingPromptState(input: {
   };
 }
 
+export function hasConversationInitialPendingPromptState(input: {
+  draft: boolean;
+  conversationId: string | null | undefined;
+  locationState: unknown;
+}): boolean {
+  if (input.draft || !input.conversationId || !input.locationState || typeof input.locationState !== 'object') {
+    return false;
+  }
+
+  const candidate = (input.locationState as ConversationLocationState).initialPendingPromptState;
+  return Boolean(candidate && typeof candidate === 'object' && candidate.conversationId === input.conversationId);
+}
+
 export function hasConversationInitialPromptAlreadySubmitted(input: {
   draft: boolean;
   conversationId: string | null | undefined;

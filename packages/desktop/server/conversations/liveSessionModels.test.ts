@@ -14,7 +14,7 @@ const conversationPrefs = vi.hoisted(() => ({
   resolveConversationModelPreferenceState: vi.fn(() => ({ currentModel: 'resolved' })),
 }));
 
-vi.mock('@earendil-works/pi-ai', () => piAi);
+vi.mock('@earendil-works/pi-ai/compat', () => piAi);
 vi.mock('../models/modelPreferences.js', () => prefs);
 vi.mock('../models/modelServiceTiers.js', () => tiers);
 vi.mock('../extensions/extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient.client }));

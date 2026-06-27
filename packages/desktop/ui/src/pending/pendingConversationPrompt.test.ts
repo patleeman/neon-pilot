@@ -57,6 +57,7 @@ describe('pendingConversationPrompt helpers', () => {
     expect(readPendingConversationPrompt('session-memory-only', storage)).toEqual({
       text: 'hello world',
       images: [],
+      videos: [],
       attachmentRefs: [],
       contextMessages: [],
       relatedConversationIds: [],
@@ -218,6 +219,7 @@ describe('pendingConversationPrompt helpers', () => {
       text: 'restore me',
       behavior: 'followUp',
       images: [],
+      videos: [],
       attachmentRefs: [],
       contextMessages: [],
       relatedConversationIds: [],
@@ -290,6 +292,7 @@ describe('pendingConversationPrompt helpers', () => {
     expect(readPendingConversationPrompt('session-123', storage)).toEqual({
       text: 'restore me',
       images: [],
+      videos: [],
       attachmentRefs: [],
       contextMessages: [],
       relatedConversationIds: [],

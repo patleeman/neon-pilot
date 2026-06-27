@@ -1,9 +1,7 @@
 import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { AuthStorage, ModelRegistry } from '@earendil-works/pi-coding-agent';
 import {
-  stream,
   type Api,
   type AssistantMessage,
   type AssistantMessageEvent,
@@ -14,6 +12,8 @@ import {
   type TextContent,
   Type,
 } from '@earendil-works/pi-ai';
+import { stream } from '@earendil-works/pi-ai/compat';
+import { AuthStorage, ModelRegistry } from '@earendil-works/pi-coding-agent';
 
 import { readSavedModelRef } from './models/modelPreferences.js';
 
@@ -152,7 +152,11 @@ function readContentBlocks(value: unknown): string | Array<TextContent | ImageCo
   };
   visit(value);
   const textBlocks = blocks.filter((block) => block.type === 'text');
-  if (textBlocks.length === blocks.length) return textBlocks.map((block) => block.text).filter(Boolean).join('\n');
+  if (textBlocks.length === blocks.length)
+    return textBlocks
+      .map((block) => block.text)
+      .filter(Boolean)
+      .join('\n');
   return blocks;
 }
 
@@ -318,7 +322,13 @@ export function responsesInputToPiMessages(input: unknown): Message[] {
       }
       const role = record.role === 'assistant' ? 'assistant' : 'user';
       const content = readContentBlocks(record.content);
-      const text = typeof content === 'string' ? content : content.filter((block) => block.type === 'text').map((block) => block.text).join('\n');
+      const text =
+        typeof content === 'string'
+          ? content
+          : content
+              .filter((block) => block.type === 'text')
+              .map((block) => block.text)
+              .join('\n');
       if (role !== 'assistant') flushPendingToolCalls();
       if (role === 'assistant') {
         const assistantMessage: Message = {
@@ -352,7 +362,9 @@ function developerInstructionsFromResponsesInput(input: unknown): string {
       if (!item || typeof item !== 'object') return '';
       const record = item as Record<string, unknown>;
       const type = typeof record.type === 'string' ? record.type : 'message';
-      return (type === 'message' || record.role) && (record.role === 'developer' || record.role === 'system') ? readText(record.content) : '';
+      return (type === 'message' || record.role) && (record.role === 'developer' || record.role === 'system')
+        ? readText(record.content)
+        : '';
     })
     .filter(Boolean)
     .join('\n\n');
@@ -424,7 +436,8 @@ export function modelGatewaySettingsFrom(value: unknown): ModelGatewaySettings {
   const rawPort = typeof record.port === 'number' ? record.port : DEFAULT_MODEL_GATEWAY_PORT;
   const port = Number.isSafeInteger(rawPort) && rawPort > 0 && rawPort < 65536 ? rawPort : DEFAULT_MODEL_GATEWAY_PORT;
   const host = typeof record.host === 'string' && record.host.trim() ? record.host.trim() : '127.0.0.1';
-  const defaultModel = typeof record.defaultModel === 'string' && record.defaultModel.trim() ? record.defaultModel.trim() : DEFAULT_MODEL_GATEWAY_MODEL_ID;
+  const defaultModel =
+    typeof record.defaultModel === 'string' && record.defaultModel.trim() ? record.defaultModel.trim() : DEFAULT_MODEL_GATEWAY_MODEL_ID;
   const authToken = typeof record.authToken === 'string' && record.authToken.trim() ? record.authToken.trim() : '';
   return { port, host, defaultModel, authToken };
 }
@@ -460,12 +473,7 @@ export function listModelGatewayModels(ctx: RuntimeContext): ModelGatewayModel[]
       context_window: model.contextWindow,
       input_modalities: model.input,
     };
-    return [
-      { ...base, id },
-      ...(models.filter((candidate) => candidate.id === model.id).length === 1
-        ? [{ ...base, id: model.id }]
-        : []),
-    ];
+    return [{ ...base, id }, ...(models.filter((candidate) => candidate.id === model.id).length === 1 ? [{ ...base, id: model.id }] : [])];
   });
   entries.unshift({
     id: FAKE_MODEL_GATEWAY_MODEL_ID,
@@ -596,10 +604,14 @@ function fakeResponse(body: ResponsesRequest, model: string): ResponsesResponse 
   };
 }
 
-async function resolveModel(ctx: RuntimeContext, modelRef: string): Promise<{ model: Model<Api>; apiKey?: string; headers?: Record<string, string> }> {
+async function resolveModel(
+  ctx: RuntimeContext,
+  modelRef: string,
+): Promise<{ model: Model<Api>; apiKey?: string; headers?: Record<string, string> }> {
   const registry = createModelRegistry(ctx.runtimeDir);
   const models = registry.getAvailable();
-  const resolvedRef = modelRef === DEFAULT_MODEL_GATEWAY_MODEL_ID ? resolveDefaultModelRef(ctx, models) || DEFAULT_MODEL_GATEWAY_MODEL_ID : modelRef;
+  const resolvedRef =
+    modelRef === DEFAULT_MODEL_GATEWAY_MODEL_ID ? resolveDefaultModelRef(ctx, models) || DEFAULT_MODEL_GATEWAY_MODEL_ID : modelRef;
   const model = parseModelRef(resolvedRef, models);
   if (!model) throw new Error(`Unknown or unavailable model: ${modelRef}`);
   const auth = await registry.getApiKeyAndHeaders(model);
@@ -608,7 +620,8 @@ async function resolveModel(ctx: RuntimeContext, modelRef: string): Promise<{ mo
 }
 
 export function buildContext(body: ResponsesRequest): Context {
-  const systemPrompt = [readText(body.instructions), developerInstructionsFromResponsesInput(body.input)].filter(Boolean).join('\n\n') || undefined;
+  const systemPrompt =
+    [readText(body.instructions), developerInstructionsFromResponsesInput(body.input)].filter(Boolean).join('\n\n') || undefined;
   return {
     systemPrompt,
     messages: responsesInputToPiMessages(body.input),
@@ -652,12 +665,29 @@ export async function* streamModelGatewayResponseEvents(
 ): AsyncIterable<Record<string, unknown> | '[DONE]'> {
   const id = responseId();
   const requestedModel = typeof body.model === 'string' && body.model.trim() ? body.model.trim() : settings.defaultModel;
-  yield { type: 'response.created', response: { id, object: 'response', created_at: nowSeconds(), status: 'in_progress', model: requestedModel } };
+  yield {
+    type: 'response.created',
+    response: { id, object: 'response', created_at: nowSeconds(), status: 'in_progress', model: requestedModel },
+  };
   if (requestedModel === FAKE_MODEL_GATEWAY_MODEL_ID) {
-    yield { type: 'response.output_item.added', output_index: 0, item: { id: 'msg_0', type: 'message', status: 'in_progress', role: 'assistant', content: [] } };
+    yield {
+      type: 'response.output_item.added',
+      output_index: 0,
+      item: { id: 'msg_0', type: 'message', status: 'in_progress', role: 'assistant', content: [] },
+    };
     yield { type: 'response.output_text.delta', output_index: 0, content_index: 0, delta: 'Gateway smoke OK.' };
     yield { type: 'response.output_text.done', output_index: 0, content_index: 0, text: 'Gateway smoke OK.' };
-    yield { type: 'response.output_item.done', output_index: 0, item: { id: 'msg_0', type: 'message', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text: 'Gateway smoke OK.', annotations: [] }] } };
+    yield {
+      type: 'response.output_item.done',
+      output_index: 0,
+      item: {
+        id: 'msg_0',
+        type: 'message',
+        status: 'completed',
+        role: 'assistant',
+        content: [{ type: 'output_text', text: 'Gateway smoke OK.', annotations: [] }],
+      },
+    };
     yield { type: 'response.completed', response: fakeResponse(body, requestedModel) };
     yield '[DONE]';
     return;
@@ -692,8 +722,12 @@ export async function* streamModelGatewayResponseEvents(
 function piEventToResponsesEvents(
   event: AssistantMessageEvent,
   state: { textStarted: boolean; currentText: string; outputIndex: number },
-): Array<{ kind: 'event'; event: Record<string, unknown> } | { kind: 'state'; textStarted: boolean; currentText: string; outputIndex: number }> {
-  const out: Array<{ kind: 'event'; event: Record<string, unknown> } | { kind: 'state'; textStarted: boolean; currentText: string; outputIndex: number }> = [];
+): Array<
+  { kind: 'event'; event: Record<string, unknown> } | { kind: 'state'; textStarted: boolean; currentText: string; outputIndex: number }
+> {
+  const out: Array<
+    { kind: 'event'; event: Record<string, unknown> } | { kind: 'state'; textStarted: boolean; currentText: string; outputIndex: number }
+  > = [];
   if (event.type === 'text_start' && !state.textStarted) {
     out.push({
       kind: 'event',
@@ -716,7 +750,10 @@ function piEventToResponsesEvents(
         },
       });
     }
-    out.push({ kind: 'event', event: { type: 'response.output_text.delta', output_index: state.outputIndex, content_index: 0, delta: event.delta } });
+    out.push({
+      kind: 'event',
+      event: { type: 'response.output_text.delta', output_index: state.outputIndex, content_index: 0, delta: event.delta },
+    });
     out.push({
       kind: 'state',
       textStarted: true,
@@ -744,7 +781,10 @@ function piEventToResponsesEvents(
   }
   if (event.type === 'done') {
     if (state.textStarted) {
-      out.push({ kind: 'event', event: { type: 'response.output_text.done', output_index: state.outputIndex, content_index: 0, text: state.currentText } });
+      out.push({
+        kind: 'event',
+        event: { type: 'response.output_text.done', output_index: state.outputIndex, content_index: 0, text: state.currentText },
+      });
       out.push({
         kind: 'event',
         event: {

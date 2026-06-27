@@ -32,24 +32,24 @@ function sanitizeProviderAuthError(provider: string, error: string): string {
   return error;
 }
 
-function applyNeonPilotRegistryOverrides(registry: ModelRegistry, authStorage: AuthStorage): ModelRegistry {
-  if (typeof authStorage.setFallbackResolver === 'function') {
-    authStorage.setFallbackResolver((provider) => resolveIndexedProviderApiKey(provider));
-  }
-
+function applyNeonPilotRegistryOverrides(registry: ModelRegistry): ModelRegistry {
   const originalGetAll = registry.getAll.bind(registry);
   const originalGetAvailable = registry.getAvailable.bind(registry);
   const originalFind = registry.find.bind(registry);
   const originalGetApiKeyAndHeaders = registry.getApiKeyAndHeaders.bind(registry);
+  const modelKey = (model: RegistryModel) => `${model.provider}\0${model.id}`;
 
   registry.getAll = () =>
     originalGetAll()
       .filter((model) => !shouldHideNeonPilotModel(model))
       .map(applyNeonPilotModelMetadataOverrides);
-  registry.getAvailable = () =>
-    originalGetAvailable()
+  registry.getAvailable = () => {
+    const piAvailableModels = new Set(originalGetAvailable().map(modelKey));
+    return originalGetAll()
+      .filter((model) => piAvailableModels.has(modelKey(model)) || Boolean(resolveIndexedProviderApiKey(model.provider)))
       .filter((model) => !shouldHideNeonPilotModel(model))
       .map(applyNeonPilotModelMetadataOverrides);
+  };
   registry.find = (provider: string, modelId: string) => {
     const model = originalFind(provider, modelId);
     if (model && shouldHideNeonPilotModel(model)) {
@@ -63,18 +63,18 @@ function applyNeonPilotRegistryOverrides(registry: ModelRegistry, authStorage: A
     if (result.ok === false) {
       result.error = sanitizeProviderAuthError(model.provider, result.error);
     }
-    if (!apiKey || (result.ok === false && !result.error.includes('No API key found'))) return result;
-    return { ...result, ok: true, apiKey };
+    if (!apiKey) return result;
+    return result.ok ? { ...result, apiKey } : { ok: true, apiKey };
   };
 
   return registry;
 }
 
 export function createRuntimeModelRegistry(authStorage: AuthStorage): ModelRegistry {
-  return applyNeonPilotRegistryOverrides(ModelRegistry.create(authStorage, join(getPiAgentRuntimeDir(), 'models.json')), authStorage);
+  return applyNeonPilotRegistryOverrides(ModelRegistry.create(authStorage, join(getPiAgentRuntimeDir(), 'models.json')));
 }
 
 export function createModelRegistryForAuthFile(authFile: string): ModelRegistry {
   const authStorage = AuthStorage.create(authFile);
-  return applyNeonPilotRegistryOverrides(ModelRegistry.create(authStorage, join(dirname(authFile), 'models.json')), authStorage);
+  return applyNeonPilotRegistryOverrides(ModelRegistry.create(authStorage, join(dirname(authFile), 'models.json')));
 }

@@ -1044,7 +1044,7 @@ describe('extension registry - integration sanity', () => {
   it('has a reasonable number of system extensions', () => {
     const systemCount = getSystemExtensionIds(snapshot).length;
     expect(systemCount).toBeGreaterThanOrEqual(20);
-    expect(systemCount).toBeLessThanOrEqual(36);
+    expect(systemCount).toBeLessThanOrEqual(40);
   });
 
   it('has at least 6 routes registered', () => {

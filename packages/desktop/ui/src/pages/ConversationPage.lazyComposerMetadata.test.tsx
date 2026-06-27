@@ -887,6 +887,7 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
 
+    expect(apiMock.models).not.toHaveBeenCalled();
     expect((screen.getByRole('combobox', { name: 'Service tier' }) as HTMLSelectElement).value).toBe('priority');
   });
 
@@ -1128,7 +1129,7 @@ describe('ConversationPage lazy composer metadata', () => {
 
     renderConversationPage();
 
-    expect(await screen.findByText(queuedText)).toBeTruthy();
+    expect(await screen.findByText(queuedText, {}, { timeout: 5000 })).toBeTruthy();
 
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));

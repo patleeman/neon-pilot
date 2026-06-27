@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { type Api, completeSimple, type Model } from '@earendil-works/pi-ai';
+import { type Api, type Model } from '@earendil-works/pi-ai';
+import { completeSimple } from '@earendil-works/pi-ai/compat';
 import { AuthStorage } from '@earendil-works/pi-coding-agent';
 import { type SqliteDatabase } from '@neon-pilot/core';
 

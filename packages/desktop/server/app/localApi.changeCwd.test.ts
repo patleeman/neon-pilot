@@ -53,6 +53,9 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
     listPromptAssemblyContributions: async () => ({ assemblyProviders: [], contextProviders: [], hooks: [] }),
     listStaticContributions: async () => ({ skills: [], tools: [], modelDiscovery: [] }),
     invokeAction: mocks.invokeExtensionAction,
+    beginStartupGuard: async () => ({ safeMode: false, disabledIds: [] }),
+    completeStartupGuard: async () => undefined,
+    startStartupActions: async () => [],
   }),
 }));
 

@@ -264,7 +264,13 @@ describe('recoverConversationCapability', () => {
       pendingOperation,
     });
     expect(queuePromptContextMock).toHaveBeenCalledWith('conversation-1-live', 'referenced_context', 'Remember the staging note.');
-    expect(promptSessionMock).toHaveBeenCalledWith('conversation-1-live', 'Continue the deployment review.', 'followUp', undefined);
+    expect(promptSessionMock).toHaveBeenCalledWith(
+      'conversation-1-live',
+      'Continue the deployment review.',
+      'followUp',
+      undefined,
+      undefined,
+    );
     expect(result).toEqual({
       conversationId: 'conversation-1-live',
       live: true,

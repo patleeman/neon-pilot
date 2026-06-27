@@ -22,6 +22,7 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
   }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string; tone?: string }) => <button {...props}>{children}</button>,
   CenteredLoadingState: ({ label }: { label: string }) => <div>{label}</div>,
   ErrorState: ({ message }: { message: string }) => <div>{message}</div>,
+  Notice: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   StatusDot: () => <span data-testid="status-dot" />,
   TextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   ToolbarButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
@@ -52,13 +53,7 @@ const baseGateway = {
   events: [],
 };
 
-function installFetchMock(input?: {
-  gateway?: unknown;
-  token?: unknown;
-  access?: unknown;
-  testResult?: unknown;
-  patchAccess?: unknown;
-}) {
+function installFetchMock(input?: { gateway?: unknown; token?: unknown; access?: unknown; testResult?: unknown; patchAccess?: unknown }) {
   const calls: Array<{ path: string; init?: RequestInit }> = [];
   const gateway = input?.gateway ?? baseGateway;
   const token = input?.token ?? { configured: false };

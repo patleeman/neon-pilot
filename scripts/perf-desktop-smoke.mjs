@@ -250,6 +250,10 @@ function connectCdp(url) {
 async function evalJs(cdp, expression) {
   if (typeof expression !== 'string') throw new Error(`Runtime.evaluate expression must be string, got ${typeof expression}`);
   const r = await cdp.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
+  if (r?.exceptionDetails) {
+    const text = r.exceptionDetails.exception?.description ?? r.exceptionDetails.text ?? 'unknown Runtime.evaluate exception';
+    throw new Error(text);
+  }
   return r?.result?.value;
 }
 async function waitForPage(port, child, timeoutMs = 45_000) {
@@ -310,6 +314,12 @@ async function waitChatUsable(cdp, child, timeoutMs = 45_000) {
       loader: Boolean(document.querySelector('#app-loader')),
       textareaCount: document.querySelectorAll('textarea').length,
       enabledTextareaCount: document.querySelectorAll('textarea:not([disabled])').length,
+      textareas: Array.from(document.querySelectorAll('textarea')).map((textarea) => ({
+        value: textarea.value,
+        placeholder: textarea.getAttribute('placeholder'),
+        disabled: textarea.disabled,
+        focused: document.activeElement === textarea,
+      })),
       buttonCount: document.querySelectorAll('button').length,
       bodyText: (document.body?.innerText || '').slice(0, 1200),
       perf: globalThis.__NEON_PILOT_APP_PERF__ ? {
@@ -377,12 +387,18 @@ async function sampleCpu(rootPid) {
   const offenders = rows.filter((r) => desc.has(r.pid) && r.cpu > 5).map((r) => ({ ...r, command: r.command.slice(0, 140) }));
   return { total: rows.filter((r) => desc.has(r.pid)).reduce((s, r) => s + r.cpu, 0), offenders };
 }
+function sessionCwdSlug(cwd) {
+  const slug = cwd.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'workspace';
+  return `--${slug}--`;
+}
 function writeLongTranscript() {
-  const dir = join(stateRoot, 'sync', 'pi-agent', 'sessions', 'perf-long');
+  const cwd = join(root, 'workspaces', 'perf-long');
+  mkdirSync(cwd, { recursive: true });
+  const dir = join(stateRoot, 'sync', 'pi-agent', 'sessions', sessionCwdSlug(cwd));
   mkdirSync(dir, { recursive: true });
   const id = 'perf-long-transcript';
   const lines = [
-    { type: 'session', id, timestamp: new Date().toISOString(), cwd: '/tmp/perf-long' },
+    { type: 'session', id, timestamp: new Date().toISOString(), cwd },
     { type: 'session_info', name: 'Perf long transcript' },
   ];
   let parentId = null;
@@ -393,7 +409,7 @@ function writeLongTranscript() {
       id: entryId,
       parentId,
       timestamp: new Date(Date.now() + i).toISOString(),
-      message: { role: i % 2 ? 'assistant' : 'user', content: `Long transcript message ${i} ${'x'.repeat(120)}` },
+      message: { role: i % 2 ? 'assistant' : 'user', content: [{ type: 'text', text: `Long transcript message ${i} ${'x'.repeat(120)}` }] },
     });
     parentId = entryId;
   }
@@ -420,6 +436,61 @@ function installTodoExtensionFixture() {
     )}\n`,
   );
 }
+function seedSkippedOnboardingTour() {
+  const dbPath = join(stateRoot, 'app-state', 'app-state.sqlite');
+  mkdirSync(dirname(dbPath), { recursive: true });
+  const originalEmitWarning = process.emitWarning.bind(process);
+  let DatabaseSync;
+  try {
+    process.emitWarning = (warning, ...args) => {
+      const message = typeof warning === 'string' ? warning : warning.message;
+      if (message.includes('SQLite is an experimental feature')) return;
+      originalEmitWarning(warning, ...args);
+    };
+    ({ DatabaseSync } = require('node:sqlite'));
+  } catch (error) {
+    throw new Error(`Could not load node:sqlite for performance smoke setup: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    process.emitWarning = originalEmitWarning;
+  }
+  if (typeof DatabaseSync !== 'function') {
+    throw new Error('Could not load node:sqlite DatabaseSync for performance smoke setup.');
+  }
+  const db = new DatabaseSync(dbPath);
+  const timestamp = new Date().toISOString();
+  const now = Date.now();
+  const value = {
+    status: 'skipped',
+    stepIndex: 0,
+    skippedAt: timestamp,
+    updatedAt: timestamp,
+  };
+  try {
+    db.exec('PRAGMA journal_mode = WAL');
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS extension_state (
+        extension_id TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value_json TEXT NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        PRIMARY KEY (extension_id, key)
+      );
+    `);
+    db.prepare(
+      `INSERT INTO extension_state (extension_id, key, value_json, version, created_at, updated_at)
+       VALUES (?, ?, ?, 1, ?, ?)
+       ON CONFLICT(extension_id, key) DO UPDATE SET
+         value_json = excluded.value_json,
+         version = extension_state.version + 1,
+         updated_at = excluded.updated_at`,
+    ).run('system-onboarding', 'onboarding:tour:v1', JSON.stringify(value), now, now);
+    db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+  } finally {
+    db.close();
+  }
+}
 async function measure(name, fn) {
   const t = performance.now();
   const result = await fn();
@@ -440,6 +511,12 @@ async function waitForExpression(cdp, child, expression, timeoutMs = 30_000, pol
       loader: Boolean(document.querySelector('#app-loader')),
       textareaCount: document.querySelectorAll('textarea').length,
       enabledTextareaCount: document.querySelectorAll('textarea:not([disabled])').length,
+      textareas: Array.from(document.querySelectorAll('textarea')).map((textarea) => ({
+        value: textarea.value,
+        placeholder: textarea.getAttribute('placeholder'),
+        disabled: textarea.disabled,
+        focused: document.activeElement === textarea,
+      })),
       buttonCount: document.querySelectorAll('button').length,
       bodyText: (document.body?.innerText || '').slice(0, 1200),
       bodyTextTail: (document.body?.innerText || '').slice(-1200)
@@ -662,6 +739,7 @@ async function main() {
   ]);
   const longId = writeLongTranscript();
   installTodoExtensionFixture();
+  seedSkippedOnboardingTour();
   const port = await allocatePort();
   const isPackagedApp = Boolean(app);
   const env = {
@@ -737,7 +815,7 @@ async function main() {
       const prompt = `Perf draft submit ${Date.now()}`;
       await cdp.send('Page.navigate', { url: 'neon-pilot://app/conversations/new' });
       await waitAppHydrated(cdp, child);
-      await waitForExpression(cdp, child, `Boolean(document.querySelector('textarea'))`);
+      await waitForExpression(cdp, child, `Boolean(document.querySelector('textarea:not([disabled])'))`);
       if (traceDraftRoute) {
         await evalJs(
           cdp,
@@ -772,8 +850,57 @@ async function main() {
         );
       }
       if (draftSubmitWaitMs > 0) await sleep(draftSubmitWaitMs);
-      await evalJs(cdp, `document.querySelector('textarea')?.focus()`);
+      await waitForExpression(cdp, child, `Boolean(document.querySelector('textarea:not([disabled])'))`, 10_000, 16);
+      await cdp.send('Page.bringToFront').catch(() => undefined);
+      const composerPoint = JSON.parse(
+        await evalJs(
+          cdp,
+          `(() => {
+          const textarea =
+            Array.from(document.querySelectorAll('textarea')).find((element) => !element.disabled && element.offsetParent !== null) ??
+            document.querySelector('textarea:not([disabled])');
+          if (!textarea) throw new Error('enabled textarea not found');
+          const rect = textarea.getBoundingClientRect();
+          return JSON.stringify({ x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + Math.min(20, rect.height / 2)) });
+        })()`,
+        ),
+      );
+      await cdp.send('Input.dispatchMouseEvent', {
+        type: 'mousePressed',
+        x: composerPoint.x,
+        y: composerPoint.y,
+        button: 'left',
+        clickCount: 1,
+      });
+      await cdp.send('Input.dispatchMouseEvent', {
+        type: 'mouseReleased',
+        x: composerPoint.x,
+        y: composerPoint.y,
+        button: 'left',
+        clickCount: 1,
+      });
       await cdp.send('Input.insertText', { text: prompt });
+      if (!(await evalJs(cdp, `document.querySelector('textarea')?.value === ${JSON.stringify(prompt)}`))) {
+        await evalJs(
+          cdp,
+          `(() => {
+          const textarea =
+            Array.from(document.querySelectorAll('textarea')).find((element) => !element.disabled && element.offsetParent !== null) ??
+            document.querySelector('textarea:not([disabled])');
+          if (!textarea) throw new Error('enabled textarea not found');
+          const inserted = document.execCommand('insertText', false, ${JSON.stringify(prompt)});
+          if (!inserted || textarea.value !== ${JSON.stringify(prompt)}) {
+            const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+            if (!setter) throw new Error('textarea value setter not found');
+            setter.call(textarea, ${JSON.stringify(prompt)});
+            textarea._valueTracker?.setValue('');
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            textarea.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          return textarea.value;
+        })()`,
+        );
+      }
       await waitForExpression(cdp, child, `document.querySelector('textarea')?.value === ${JSON.stringify(prompt)}`, 5_000, 16);
       await evalJs(
         cdp,
@@ -1962,8 +2089,10 @@ async function main() {
         cdp,
         `(async()=> {
           const response = await fetch('/api/conversations/${encodeURIComponent(longId)}/recover', { method: 'POST' });
-          const body = await response.json().catch(() => ({}));
-          if (!response.ok) return { skipped: true, reason: body?.error || 'recover failed', status: response.status };
+          const text = await response.text().catch(() => '');
+          let body = {};
+          try { body = text ? JSON.parse(text) : {}; } catch {}
+          if (!response.ok) return { skipped: true, reason: body?.error || body?.message || text || 'recover failed', status: response.status };
           return { skipped: false, result: body, perf: body.perf || null };
         })()`,
       ),
@@ -2230,9 +2359,23 @@ async function main() {
       }
     }
     const draftClickStartMs = postDraftPerfStore?.smokeDraftClickStartMs;
+    const draftImmediateEndMs =
+      typeof draftClickStartMs === 'number'
+        ? draftClickStartMs +
+          Math.max(
+            draftSubmitResult.result.routeMs ?? 0,
+            draftSubmitResult.result.promptTextVisibleMs ?? 0,
+            draftSubmitResult.result.pendingPromptBlockVisibleMs ?? 0,
+            draftSubmitResult.result.reservedConversationAttachMs ?? 0,
+          )
+        : null;
     const postDraftApiPaths = (postDraftPerfStore?.apiSamples ?? [])
       .filter(
-        (sample) => typeof draftClickStartMs !== 'number' || typeof sample.endTimeMs !== 'number' || sample.endTimeMs >= draftClickStartMs,
+        (sample) =>
+          typeof draftClickStartMs !== 'number' ||
+          typeof sample.startTimeMs !== 'number' ||
+          (sample.startTimeMs >= draftClickStartMs &&
+            (typeof draftImmediateEndMs !== 'number' || sample.startTimeMs <= draftImmediateEndMs)),
       )
       .map((sample) => sample.path)
       .filter((path) => typeof path === 'string');

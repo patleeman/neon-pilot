@@ -280,7 +280,9 @@ function formatModelPreferenceSaveError(error: unknown, field: 'model' | 'vision
 export function scrollSettingsSectionIntoView(container: HTMLElement | null, sectionId: SettingsQuickLinkId) {
   const section = typeof document === 'undefined' ? null : document.getElementById(sectionId);
   if (section && container?.contains(section)) {
-    section.scrollIntoView({ block: 'start' });
+    if (typeof section.scrollIntoView === 'function') {
+      section.scrollIntoView({ block: 'start' });
+    }
     const sectionRect = section.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
     const sectionTop = sectionRect.top - containerRect.top;

@@ -543,7 +543,7 @@ describe('live session routes', () => {
       invalidBehaviorRes,
     );
     expect(invalidBehaviorRes.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
-    expect(submitLocalPromptSessionMock).toHaveBeenCalledWith('live-1', 'hello', undefined, undefined, undefined);
+    expect(submitLocalPromptSessionMock).toHaveBeenCalledWith('live-1', 'hello', undefined, undefined, undefined, undefined);
     submitLocalPromptSessionMock.mockClear();
 
     resolveConversationAttachmentPromptFilesMock.mockImplementationOnce(() => {

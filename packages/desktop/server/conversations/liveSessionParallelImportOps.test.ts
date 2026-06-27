@@ -114,7 +114,7 @@ describe('live session parallel import operations', () => {
     ).resolves.toEqual({ jobId: 'job-1', childConversationId: 'child-1' });
     expect(callbacks.forkSession).toHaveBeenCalledWith('parent', 'entry-1', { preserveSource: true, model: 'm1' });
     expect(callbacks.queuePromptContext).toHaveBeenCalledWith('child-1', 'ctx', 'context');
-    expect(callbacks.submitPromptSession).toHaveBeenCalledWith('child-1', 'prompt', undefined, undefined);
+    expect(callbacks.submitPromptSession).toHaveBeenCalledWith('child-1', 'prompt', undefined, undefined, undefined);
     expect(e.parallelJobs[0]).toMatchObject({
       id: 'job-1',
       prompt: 'prompt',

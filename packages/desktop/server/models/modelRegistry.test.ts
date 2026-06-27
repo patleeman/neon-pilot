@@ -60,26 +60,29 @@ describe('model registry helpers', () => {
     expect(modelRegistryCreateMock).toHaveBeenCalledWith(authStorage, '/runtime/neon-pilot-runtime/models.json');
   });
 
-  it('registers provider secret lookup as an auth fallback for runtime registries', () => {
-    const authStorage = { kind: 'auth-storage', setFallbackResolver: vi.fn() };
+  it('includes models backed by Neon Pilot provider secrets in runtime registries', async () => {
+    const authStorage = { kind: 'auth-storage' };
+    const secretBackedModel = { id: 'secret-model', provider: 'opencode-go', contextWindow: 128_000 };
     const registry = {
-      getAll: vi.fn(() => []),
+      getAll: vi.fn(() => [secretBackedModel]),
       getAvailable: vi.fn(() => []),
       find: vi.fn(),
-      getApiKeyAndHeaders: vi.fn(async () => ({ ok: true })),
+      getApiKeyAndHeaders: vi.fn(async () => ({ ok: false, error: 'No API key found for provider opencode-go' })),
     };
     getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
     resolveIndexedProviderApiKeyMock.mockReturnValue('secure-key');
+    resolveProviderApiKeyMock.mockReturnValue('secure-key');
     modelRegistryCreateMock.mockReturnValue(registry);
 
     const created = createRuntimeModelRegistry(authStorage as never);
 
-    expect(authStorage.setFallbackResolver).toHaveBeenCalledTimes(1);
     expect(created).toBe(registry);
-
-    const resolver = authStorage.setFallbackResolver.mock.calls[0]?.[0] as (provider: string) => string | undefined;
-    expect(resolver('opencode-go')).toBe('secure-key');
+    expect(created.getAvailable()).toEqual([secretBackedModel]);
     expect(resolveIndexedProviderApiKeyMock).toHaveBeenCalledWith('opencode-go');
+    await expect(created.getApiKeyAndHeaders(secretBackedModel as never)).resolves.toEqual({
+      ok: true,
+      apiKey: 'secure-key',
+    });
   });
 
   it('creates a registry beside the provided auth file', () => {
@@ -102,7 +105,10 @@ describe('model registry helpers', () => {
   it('normalizes GPT-5.5 context metadata returned by runtime registries', () => {
     const authStorage = { kind: 'auth-storage' };
     const registry = {
-      getAll: vi.fn(() => [{ id: 'gpt-5.5', provider: 'openai-codex', contextWindow: 272_000 }]),
+      getAll: vi.fn(() => [
+        { id: 'gpt-5.5', provider: 'openai-codex', contextWindow: 272_000 },
+        { id: 'gpt-5.4', provider: 'openai-codex', contextWindow: 272_000 },
+      ]),
       getAvailable: vi.fn(() => [
         { id: 'gpt-5.5', provider: 'openai-codex', contextWindow: 272_000 },
         { id: 'gpt-5.4', provider: 'openai-codex', contextWindow: 272_000 },
@@ -119,7 +125,10 @@ describe('model registry helpers', () => {
       { id: 'gpt-5.5', provider: 'openai-codex', contextWindow: 400_000 },
       { id: 'gpt-5.4', provider: 'openai-codex', contextWindow: 272_000 },
     ]);
-    expect(created.getAll()).toEqual([{ id: 'gpt-5.5', provider: 'openai-codex', contextWindow: 400_000 }]);
+    expect(created.getAll()).toEqual([
+      { id: 'gpt-5.5', provider: 'openai-codex', contextWindow: 400_000 },
+      { id: 'gpt-5.4', provider: 'openai-codex', contextWindow: 272_000 },
+    ]);
     expect(created.find('openai-codex', 'gpt-5.5')).toEqual({
       id: 'gpt-5.5',
       provider: 'openai-codex',

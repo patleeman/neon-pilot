@@ -19,7 +19,7 @@ describe('buildActivityTreeUnsafeCss', () => {
     ]);
 
     expect(buildActivityTreeUnsafeCss(model)).toContain(
-      'button[data-item-path="Build tree"] { box-shadow: inset 2px 0 0 #8b5cf6; background: rgba(139, 92, 246, 0.12); }',
+      'button[data-item-path="Build tree"] { background: linear-gradient(to right, #8b5cf6 0 2px, transparent 2px), rgba(139, 92, 246, 0.12); }',
     );
   });
 

@@ -112,6 +112,7 @@ import { formatThinkingLevelLabel } from '../conversation/conversationHeader';
 import {
   buildConversationInitialModelPreferenceState,
   consumeConversationInitialPromptAlreadySubmitted,
+  hasConversationInitialPendingPromptState,
   hasConversationInitialPromptAlreadySubmitted,
   resolveConversationDraftHydrationState,
   resolveConversationInitialComposerDraftState,
@@ -1933,11 +1934,39 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     const timeout = window.setTimeout(() => setNonCriticalComposerMetadataReady(true), 10_000);
     return () => window.clearTimeout(timeout);
   }, [draft, id]);
+  const hasLocationInitialPendingPrompt = hasConversationInitialPendingPromptState({
+    draft,
+    conversationId: id,
+    locationState: location.state,
+  });
+  const hasStoredInitialPendingPrompt = !draft && id ? readPendingConversationPrompt(id) !== null : false;
+  const shouldDeferModelCatalogForInitialPromptRoute =
+    hasLocationInitialPendingPrompt ||
+    hasStoredInitialPendingPrompt ||
+    Boolean(pendingInitialPrompt) ||
+    pendingInitialPromptDispatching ||
+    hasPendingInitialPromptInFlight;
+  const [deferredModelCatalogReadyConversationId, setDeferredModelCatalogReadyConversationId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!shouldDeferModelCatalogForInitialPromptRoute || !id) {
+      setDeferredModelCatalogReadyConversationId(null);
+      return;
+    }
+
+    setDeferredModelCatalogReadyConversationId(null);
+    const timeout = window.setTimeout(() => setDeferredModelCatalogReadyConversationId(id), 1_500);
+    return () => window.clearTimeout(timeout);
+  }, [id, shouldDeferModelCatalogForInitialPromptRoute]);
+  const deferredModelCatalogReady =
+    shouldDeferModelCatalogForInitialPromptRoute && Boolean(id) && deferredModelCatalogReadyConversationId === id;
+  const shouldDeferModelCatalogForRoute = draft || shouldDeferModelCatalogForInitialPromptRoute;
+  const modelCatalogReadyForRoute = draft ? false : shouldDeferModelCatalogForInitialPromptRoute ? deferredModelCatalogReady : true;
 
   const shouldLoadModels = shouldLoadConversationModelsAfterMetadataReady({
     draft,
     hasPendingInitialPrompt: Boolean(pendingInitialPrompt),
     hasPendingInitialPromptInFlight,
+    nonCriticalComposerMetadataReady: modelCatalogReadyForRoute,
   });
 
   // Model
@@ -1946,15 +1975,19 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const [currentThinkingLevel, setCurrentThinkingLevel] = useState<string>('');
   const [currentServiceTier, setCurrentServiceTier] = useState<string>('');
   const [hasExplicitServiceTier, setHasExplicitServiceTier] = useState(false);
-  const resolvedCurrentModelId = useMemo(
-    () =>
-      resolveSelectableModelId({
-        requestedModel: currentModel,
-        defaultModel,
-        models,
-      }),
-    [currentModel, defaultModel, models],
-  );
+  const resolvedCurrentModelId = useMemo(() => {
+    if (models.length === 0) {
+      return (currentModel || defaultModel).trim();
+    }
+
+    return resolveSelectableModelId({
+      requestedModel: currentModel,
+      defaultModel,
+      models,
+    });
+  }, [currentModel, defaultModel, models]);
+  const composerCurrentModel = currentModel || model || defaultModel;
+  const hasAvailableComposerModel = shouldDeferModelCatalogForRoute || models.length > 0 || composerCurrentModel.trim().length > 0;
   const selectedComposerModel = useMemo(
     () => selectComposerModel(models, currentModel, defaultModel),
     [currentModel, defaultModel, models],
@@ -2608,7 +2641,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     conversationNeedsTakeover,
     preparingRelatedThreadContext,
     wholeLineBashRunning,
-    hasAvailableModel: models.length > 0,
+    hasAvailableModel: hasAvailableComposerModel,
   });
 
   useEffect(() => {
@@ -7988,7 +8021,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
               composerShellWidth={composerShellWidth}
               streamIsStreaming={composerRunState.streamControlsActive}
               models={models}
-              currentModel={models.length > 0 ? currentModel || model || defaultModel : ''}
+              currentModel={composerCurrentModel}
               currentThinkingLevel={currentThinkingLevel}
               currentServiceTier={displayedCurrentServiceTier}
               savingPreference={savingPreference}

@@ -8,13 +8,7 @@ const { streamMock } = vi.hoisted(() => ({
   streamMock: vi.fn(),
 }));
 
-vi.mock('@earendil-works/pi-ai', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@earendil-works/pi-ai')>();
-  return {
-    ...actual,
-    stream: streamMock,
-  };
-});
+vi.mock('@earendil-works/pi-ai/compat', () => ({ stream: streamMock }));
 
 import {
   buildContext,
@@ -299,7 +293,7 @@ describe('modelGatewayRuntime', () => {
   it('streams non-fake provider text, tool calls, completion, and done sentinel as Responses events', async () => {
     const runtimeDir = createRuntimeWithModel('model-gateway-stream-');
     try {
-      async function* events() {
+      const events = async function* () {
         yield { type: 'text_delta', delta: 'Hel' };
         yield { type: 'text_delta', delta: 'lo' };
         yield { type: 'toolcall_end', toolCall: { id: 'call_1', name: 'lookup', arguments: { q: 'neon' } } };
@@ -317,7 +311,7 @@ describe('modelGatewayRuntime', () => {
             responseId: 'resp_done',
           },
         };
-      }
+      };
       streamMock.mockReturnValueOnce(events());
 
       const output = [];
@@ -330,8 +324,15 @@ describe('modelGatewayRuntime', () => {
       }
 
       expect(output).toEqual([
-        expect.objectContaining({ type: 'response.created', response: expect.objectContaining({ status: 'in_progress', model: 'test/alpha' }) }),
-        { type: 'response.output_item.added', output_index: 0, item: { id: 'msg_0', type: 'message', status: 'in_progress', role: 'assistant', content: [] } },
+        expect.objectContaining({
+          type: 'response.created',
+          response: expect.objectContaining({ status: 'in_progress', model: 'test/alpha' }),
+        }),
+        {
+          type: 'response.output_item.added',
+          output_index: 0,
+          item: { id: 'msg_0', type: 'message', status: 'in_progress', role: 'assistant', content: [] },
+        },
         { type: 'response.output_text.delta', output_index: 0, content_index: 0, delta: 'Hel' },
         { type: 'response.output_text.delta', output_index: 0, content_index: 0, delta: 'lo' },
         {
@@ -423,5 +424,4 @@ describe('modelGatewayRuntime', () => {
       rmSync(runtimeDir, { recursive: true, force: true });
     }
   });
-
 });

@@ -100,6 +100,45 @@ describe('settings section scrolling', () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' });
   });
 
+  it('uses container scrolling when the DOM environment has no scrollIntoView', () => {
+    const container = document.createElement('div');
+    const section = document.createElement('section');
+    const scrollTo = vi.fn();
+    section.id = 'settings-conversation';
+    section.getBoundingClientRect = () =>
+      ({
+        top: 120,
+        bottom: 160,
+        left: 0,
+        right: 0,
+        width: 100,
+        height: 40,
+        x: 0,
+        y: 120,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    container.getBoundingClientRect = () =>
+      ({
+        top: 20,
+        bottom: 420,
+        left: 0,
+        right: 0,
+        width: 100,
+        height: 400,
+        x: 0,
+        y: 20,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    container.scrollTop = 10;
+    container.scrollTo = scrollTo;
+    container.appendChild(section);
+    document.body.appendChild(container);
+
+    scrollSettingsSectionIntoView(container, 'settings-conversation');
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 94 });
+  });
+
   it('falls back to the container top when the anchor is not rendered', () => {
     const container = document.createElement('div');
     const scrollTo = vi.fn();

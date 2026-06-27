@@ -1,18 +1,12 @@
-import {
-  shouldFetchConversationAttachments,
-  shouldFetchConversationLiveSessionGitContext,
-} from './conversationPageState';
+import { shouldFetchConversationAttachments, shouldFetchConversationLiveSessionGitContext } from './conversationPageState';
 
 export function shouldLoadConversationModelsAfterMetadataReady(input: {
   draft: boolean;
   hasPendingInitialPrompt: boolean;
   hasPendingInitialPromptInFlight: boolean;
+  nonCriticalComposerMetadataReady: boolean;
 }): boolean {
-  if (input.draft) {
-    return !input.hasPendingInitialPrompt && !input.hasPendingInitialPromptInFlight;
-  }
-
-  return !input.hasPendingInitialPrompt && !input.hasPendingInitialPromptInFlight;
+  return input.nonCriticalComposerMetadataReady && !input.hasPendingInitialPrompt && !input.hasPendingInitialPromptInFlight;
 }
 
 export function shouldFetchConversationAttachmentsNow(input: {

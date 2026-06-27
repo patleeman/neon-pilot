@@ -734,6 +734,7 @@ describe('api desktop transport', () => {
       behavior: 'followUp',
       surfaceId: 'surface-1',
       images: [],
+      videos: [],
       attachmentRefs: [],
     });
     expect(restoreQueuedLiveSessionMessage).toHaveBeenCalledWith({

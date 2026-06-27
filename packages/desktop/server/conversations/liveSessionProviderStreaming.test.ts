@@ -1,4 +1,4 @@
-import { streamOpenAICodexResponses } from '@earendil-works/pi-ai/openai-codex-responses';
+import { stream as streamOpenAICodexResponses } from '@earendil-works/pi-ai/api/openai-codex-responses';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 type StreamEvent = { type: string; delta?: string; content?: string; message?: unknown };

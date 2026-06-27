@@ -12,4 +12,4 @@ allowBuilds:
   node-pty: true
 
 patchedDependencies:
-  '@earendil-works/pi-ai@0.79.10': patches/@earendil-works__pi-ai@0.79.10.patch
+  '@earendil-works/pi-ai@0.80.2': patches/@earendil-works__pi-ai@0.80.2.patch

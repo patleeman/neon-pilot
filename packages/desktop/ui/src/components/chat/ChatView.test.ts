@@ -527,7 +527,7 @@ describe('chat view streaming disclosure', () => {
               tool: 'subagent',
               input: { prompt: 'Review the UI surface', taskSlug: 'scout-ui-surface' },
               output: 'Started subagent run-child for subagent-child-session.',
-              status: 'ok',
+              status: 'running',
               details: {
                 childConversationId: 'subagent-child-session',
                 branchKind: 'subagent',
@@ -661,7 +661,7 @@ describe('chat view streaming disclosure', () => {
               tool: 'bash',
               input: { command: 'echo run-ui-preview-check-2026-03-25T00-53-25-347Z-903aa31b' },
               output: 'run-ui-preview-check-2026-03-25T00-53-25-347Z-903aa31b',
-              status: 'ok',
+              status: 'running',
             },
           ],
           isStreaming: false,

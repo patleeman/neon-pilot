@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.28** — stable release being prepared locally.
+**v0.11.29** — stable release being prepared locally.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.28
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.29
 
 Highlights in this train:
 
-- Improves the Telegram Gateway with safer approved-user access, richer message rendering, inline thread/model controls, command aliases, and clearer prompt-failure feedback.
-- Adds Computer Use, AST grep, and Hashline Edit as system extensions so packaged builds expose more first-party agent capabilities.
-- Makes conversation CLI turns return quickly by default while keeping `--wait`, `--follow`, and JSONL streaming for completion-aware workflows.
-- Refines Routines event selection and setup flows so empty or newly configured profiles are easier to recover from.
-- Hardens packaged app/runtime behavior with canonical live-session running state, packaging external checks, stale callback tolerance, and refreshed Pi runtime packages.
+- Hardens live conversations with more reliable transcript streaming, queued followups, detached-session recovery, workspace state preservation, and clearer provider/error handling.
+- Polishes everyday app navigation across the top bar, sidebar, context menus, command palette, onboarding, composer focus, history, attachments, and route recovery.
+- Expands first-party workflow surfaces with trusted skill search/install approvals, artifact command skills, typed visual artifacts, Gateways packaging, and extension-building chat entry points.
+- Improves File Explorer, Workbench, Browser, Automations, Routines, Settings, and extension pages with focused app-path fixes and QA coverage.
+- Strengthens release readiness with broader feature-inventory QA, design-system guardrails, extension packaging checks, and refreshed Pi runtime packages at `^0.80.2`.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

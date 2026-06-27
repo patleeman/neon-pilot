@@ -16,7 +16,12 @@ type SettingsSectionId =
 
 function SettingsSectionPage({ sectionIds }: { sectionIds: SettingsSectionId[] }) {
   useEffect(() => {
-    window.requestAnimationFrame(() => document.getElementById(sectionIds[0])?.scrollIntoView({ block: 'start' }));
+    window.requestAnimationFrame(() => {
+      const section = document.getElementById(sectionIds[0]);
+      if (typeof section?.scrollIntoView === 'function') {
+        section.scrollIntoView({ block: 'start' });
+      }
+    });
   }, [sectionIds]);
 
   return <SettingsPage sectionIds={sectionIds} />;

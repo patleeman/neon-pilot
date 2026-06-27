@@ -116,7 +116,7 @@ export function ChatRenderItemView({
           }
           summary={item.summary}
           live={live}
-          keepOpenUntilFollowed={live}
+          keepOpenUntilFollowed={live || item.summary.hasRunning}
           followedByTranscriptContent={followedByTranscriptContent}
           onOpenArtifact={onOpenArtifact}
           activeArtifactId={activeArtifactId}

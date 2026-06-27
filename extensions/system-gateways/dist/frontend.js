@@ -8,7 +8,7 @@ import {
   getExtensionRegistryRevision,
   systemExtensionModules,
   useExtensionRegistry
-} from "./chunks/chunk-YWOALOZN.js";
+} from "./chunks/chunk-M52V62KH.js";
 import "./chunks/chunk-4YPGCSK5.js";
 import "./chunks/chunk-24DU7J3C.js";
 import {
@@ -1704,7 +1704,9 @@ function CoreModelPreferenceControls({
   const selectedModel = resolveSelectableModel(models, currentModel);
   const modelGroups = groupModelsByProvider(models);
   const modelProviderIds = modelGroups.map(([provider]) => provider);
-  const serviceTierOptions = selectedModel?.supportedServiceTiers ?? [];
+  const serviceTierOptions = Array.from(
+    /* @__PURE__ */ new Set([...selectedModel?.supportedServiceTiers ?? [], ...currentServiceTier.trim() ? [currentServiceTier.trim()] : []])
+  );
   const selectBaseClassName = "h-8 min-w-0 truncate border-transparent bg-transparent px-2 text-xs font-medium text-secondary disabled:opacity-50";
   const modelSelectClassName = cx(selectBaseClassName, compact ? "max-w-[8.25rem]" : "max-w-[10rem]");
   const thinkingSelectClassName = cx(selectBaseClassName, compact ? "max-w-[5.75rem]" : "max-w-[7rem]");
@@ -2302,7 +2304,7 @@ var ConversationArtifactModal = lazy(
 var ConversationDrawingsPickerModal = lazy(
   () => import("./chunks/ConversationDrawingsPickerModal-O2ZQLINY.js").then((module) => ({ default: module.ConversationDrawingsPickerModal }))
 );
-var loadChatView = () => import("./chunks/ChatView-MJAN44FH.js").then((module) => ({ default: module.ChatView }));
+var loadChatView = () => import("./chunks/ChatView-EEVW7NVN.js").then((module) => ({ default: module.ChatView }));
 var ChatView = lazy(loadChatView);
 var ConversationActivityShelf = lazy(
   () => import("./chunks/ConversationActivityShelf-5ERBADU4.js").then((module) => ({ default: module.ConversationActivityShelf }))

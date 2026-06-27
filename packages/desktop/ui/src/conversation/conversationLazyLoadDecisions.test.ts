@@ -7,12 +7,21 @@ import {
 } from './conversationLazyLoadDecisions';
 
 describe('conversationLazyLoadDecisions', () => {
-  it('loads models for idle draft mode without waiting for non-critical composer metadata', () => {
+  it('defers models until composer metadata is ready', () => {
     expect(
       shouldLoadConversationModelsAfterMetadataReady({
         draft: true,
         hasPendingInitialPrompt: false,
         hasPendingInitialPromptInFlight: false,
+        nonCriticalComposerMetadataReady: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldLoadConversationModelsAfterMetadataReady({
+        draft: true,
+        hasPendingInitialPrompt: false,
+        hasPendingInitialPromptInFlight: false,
+        nonCriticalComposerMetadataReady: true,
       }),
     ).toBe(true);
   });
@@ -23,6 +32,7 @@ describe('conversationLazyLoadDecisions', () => {
         draft: true,
         hasPendingInitialPrompt: true,
         hasPendingInitialPromptInFlight: false,
+        nonCriticalComposerMetadataReady: true,
       }),
     ).toBe(false);
     expect(
@@ -30,16 +40,18 @@ describe('conversationLazyLoadDecisions', () => {
         draft: true,
         hasPendingInitialPrompt: false,
         hasPendingInitialPromptInFlight: true,
+        nonCriticalComposerMetadataReady: true,
       }),
     ).toBe(false);
   });
 
-  it('loads models for existing conversations without waiting for non-critical composer metadata', () => {
+  it('loads models for existing conversations after non-critical composer metadata is ready', () => {
     expect(
       shouldLoadConversationModelsAfterMetadataReady({
         draft: false,
         hasPendingInitialPrompt: false,
         hasPendingInitialPromptInFlight: false,
+        nonCriticalComposerMetadataReady: true,
       }),
     ).toBe(true);
   });

@@ -30,8 +30,8 @@ describe('scheduledTaskThreads', () => {
     daemon.resolveAutomationThreadTitle.mockReturnValue('Dedicated thread');
   });
 
-  it('resolves none and dedicated modes without requiring conversation state', () => {
-    expect(resolveScheduledTaskThreadBinding({ threadMode: 'none' })).toEqual({ mode: 'none' });
+  it('rejects none mode and resolves dedicated mode without requiring conversation state', () => {
+    expect(() => resolveScheduledTaskThreadBinding({ threadMode: 'none' })).toThrow('Automations require an owner thread.');
     expect(resolveScheduledTaskThreadBinding({ threadMode: 'dedicated' })).toEqual({ mode: 'dedicated' });
     expect(conversationService.resolveConversationSessionFile).not.toHaveBeenCalled();
   });
@@ -88,7 +88,7 @@ describe('scheduledTaskThreads', () => {
     );
   });
 
-  it('applies thread bindings through daemon storage and ensures threads unless mode is none', () => {
+  it('applies thread bindings through daemon storage and ensures owner threads', () => {
     daemon.setStoredAutomationThreadBinding.mockReturnValueOnce({ id: 'task-1', threadMode: 'existing' });
     daemon.ensureAutomationThread.mockReturnValueOnce({ id: 'task-1', threadMode: 'existing', threadConversationId: 'conv-1' });
 
@@ -105,8 +105,7 @@ describe('scheduledTaskThreads', () => {
     });
     expect(daemon.ensureAutomationThread).toHaveBeenCalledWith('task-1', { dbPath: '/db' });
 
-    daemon.setStoredAutomationThreadBinding.mockReturnValueOnce({ id: 'task-1', threadMode: 'none' });
-    expect(applyScheduledTaskThreadBinding('task-1', { threadMode: 'none' })).toEqual({ id: 'task-1', threadMode: 'none' });
+    expect(() => applyScheduledTaskThreadBinding('task-1', { threadMode: 'none' })).toThrow('Automations require an owner thread.');
   });
 
   it('builds thread details from conversation metadata or daemon title fallback', () => {

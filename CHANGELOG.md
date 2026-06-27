@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.29 — 2026-06-26
+
+### Highlights
+
+- Hardens live conversations with more reliable transcript streaming, queued followups, detached-session recovery, workspace state preservation, and clearer provider/error handling.
+- Polishes everyday app navigation across the top bar, sidebar, context menus, command palette, onboarding, composer focus, history, attachments, and route recovery.
+- Expands first-party workflow surfaces with trusted skill search/install approvals, artifact command skills, typed visual artifacts, Gateways packaging, and extension-building chat entry points.
+- Improves File Explorer, Workbench, Browser, Automations, Routines, Settings, and extension pages with focused app-path fixes and QA coverage.
+- Strengthens release readiness with broader feature-inventory QA, design-system guardrails, extension packaging checks, and refreshed Pi runtime packages at `^0.80.2`.
+
+### Notes
+
+- 276 commits since the previous release.
+
 ## 0.11.28 — 2026-06-22
 
 ### Highlights

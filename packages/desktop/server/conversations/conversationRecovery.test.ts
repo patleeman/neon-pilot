@@ -169,7 +169,7 @@ describe('conversation recovery', () => {
       contextMessages: [{ customType: 'ctx', content: 'context' }],
     });
     expect(liveSessions.queuePromptContext).toHaveBeenCalledWith('resumed-id', 'ctx', 'context');
-    expect(liveSessions.promptSession).toHaveBeenCalledWith('resumed-id', 'continue', 'followUp', [{ data: 'x' }]);
+    expect(liveSessions.promptSession).toHaveBeenCalledWith('resumed-id', 'continue', 'followUp', [{ data: 'x' }], undefined);
     expect(runs.syncWebLiveConversationRun).toHaveBeenCalledWith(
       expect.objectContaining({ state: 'running', pendingOperation: expect.any(Object) }),
     );
