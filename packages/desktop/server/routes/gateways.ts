@@ -116,6 +116,8 @@ function initializeGatewayRoutesContext(context: ServerRouteContext): void {
   getStateRootFn = context.getStateRoot;
   getAuthFileFn = context.getAuthFile;
   routeContext = context;
+  lifecycleRegistered = false;
+  lastTelegramDeliveryByConversation.clear();
   publishTelegramGatewayHostApi();
 }
 
@@ -271,6 +273,7 @@ function readOptionalString(value: unknown): string | undefined {
 export function startTelegramGatewayRuntime(): { running: boolean } {
   const initialTelegramState = readCurrentGatewayState().connections.find((connection) => connection.provider === 'telegram');
   if (initialTelegramState?.enabled && readTelegramBotToken(getAuthFileFn(), getStateRootFn())) {
+    registerTelegramGatewayLifecycleDelivery();
     ensureTelegramRuntime().start();
     return { running: true };
   }

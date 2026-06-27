@@ -234,7 +234,6 @@ export function GatewaysPage() {
       <AppPageLayout contentClassName="space-y-6">
         <AppPageIntro
           title="Gateways"
-          subtitle="Connect Neon Pilot to external chats."
           actions={
             <ToolbarButton type="button" disabled={busy} onClick={() => void load()}>
               Refresh
@@ -245,9 +244,9 @@ export function GatewaysPage() {
         {error ? <Notice tone="danger">{error}</Notice> : null}
         {notice ? <Notice tone="success">{notice}</Notice> : null}
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.7fr)]">
-          <div className="space-y-4">
-            <div className="border border-border bg-surface px-5 py-4">
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="space-y-6">
+            <div className="border-b border-border-subtle pb-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                   <div className="flex items-center gap-2">
@@ -261,7 +260,7 @@ export function GatewaysPage() {
                 <ConnectionStatusLabel status={connectionStatus} enabled={Boolean(telegramConnection?.enabled)} />
               </div>
 
-              <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
+              <dl className="mt-5 grid gap-px overflow-hidden rounded-md border border-border-subtle bg-border-subtle text-sm sm:grid-cols-3">
                 <StatusMetric label="Token" value={tokenConfigured ? 'Configured' : 'Missing'} />
                 <StatusMetric label="Connection" value={telegramConnection ? 'Created' : 'Not created'} />
                 <StatusMetric label="Runtime" value={telegramConnection?.enabled ? 'Enabled' : 'Paused'} />
@@ -288,7 +287,7 @@ export function GatewaysPage() {
               {telegramConnection?.statusMessage ? <p className="mt-3 text-xs text-secondary">{telegramConnection.statusMessage}</p> : null}
             </div>
 
-            <div className="border border-border bg-surface px-5 py-4">
+            <div className="border-b border-border-subtle pb-5">
               <div className="space-y-1">
                 <h2 className="text-base font-semibold text-primary">Bot token</h2>
                 <p className="text-sm text-secondary">Paste a BotFather token. Neon Pilot stores it in the host secret store.</p>
@@ -354,8 +353,8 @@ export function GatewaysPage() {
           </div>
 
           <aside className="space-y-4">
-            <div className="border border-border bg-surface px-5 py-4">
-              <h2 className="text-base font-semibold text-primary">Provider details</h2>
+            <div className="border-b border-border-subtle pb-5">
+              <h2 className="text-sm font-semibold text-primary">Provider details</h2>
               <div className="mt-4 space-y-3 text-sm">
                 <DetailRow label="Setup" value={telegramProvider?.setupRoute ?? '/gateways'} />
                 <DetailRow label="Configuration" value={formatConfigurationLocation(telegramProvider?.configurationLocation)} />
@@ -363,8 +362,8 @@ export function GatewaysPage() {
               </div>
             </div>
 
-            <div className="border border-border bg-surface px-5 py-4">
-              <h2 className="text-base font-semibold text-primary">Recent activity</h2>
+            <div className="border-b border-border-subtle pb-5">
+              <h2 className="text-sm font-semibold text-primary">Recent activity</h2>
               {telegramEvents.length > 0 ? (
                 <ol className="mt-4 space-y-3">
                   {telegramEvents.map((event) => (
@@ -472,7 +471,7 @@ function AccessEditor({
   onRemoveChat: (value: string) => void;
 }) {
   return (
-    <div className="border border-border bg-surface px-5 py-4">
+    <div className="pb-5">
       <div className="space-y-1">
         <h2 className="text-base font-semibold text-primary">Telegram access</h2>
         <p className="text-sm text-secondary">Only approved users and chats can send work to Neon Pilot.</p>
@@ -554,7 +553,7 @@ function AllowlistEditor({
       {values.length > 0 ? (
         <ul className="space-y-2">
           {values.map((entry) => (
-            <li key={entry} className="flex min-w-0 items-center justify-between gap-2 border border-border px-3 py-2">
+            <li key={entry} className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-surface px-3 py-2">
               <span className="truncate font-mono text-xs text-primary">{entry}</span>
               <ToolbarButton type="button" disabled={busy} onClick={() => onRemove(entry)}>
                 Remove
@@ -571,7 +570,7 @@ function AllowlistEditor({
 
 function StatusMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border border-border px-3 py-2">
+    <div className="bg-surface px-3 py-2">
       <dt className="text-xs text-secondary">{label}</dt>
       <dd className="mt-1 font-medium text-primary">{value}</dd>
     </div>
@@ -589,7 +588,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 function ConnectionStatusLabel({ status, enabled }: { status: GatewayStatus; enabled: boolean }) {
   return (
-    <div className="border border-border px-3 py-1.5 text-xs font-medium text-secondary">
+    <div className="rounded-md bg-surface px-3 py-1.5 text-xs font-medium text-secondary">
       {enabled ? formatGatewayStatus(status) : 'Paused'}
     </div>
   );

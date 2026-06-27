@@ -2483,15 +2483,14 @@ function GatewaysPage() {
       AppPageIntro,
       {
         title: "Gateways",
-        subtitle: "Connect Neon Pilot to external chats.",
         actions: /* @__PURE__ */ jsx(ToolbarButton, { type: "button", disabled: busy, onClick: () => void load(), children: "Refresh" })
       }
     ),
     error ? /* @__PURE__ */ jsx(Notice, { tone: "danger", children: error }) : null,
     notice ? /* @__PURE__ */ jsx(Notice, { tone: "success", children: notice }) : null,
-    /* @__PURE__ */ jsxs("section", { className: "grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.7fr)]", children: [
-      /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxs("div", { className: "border border-border bg-surface px-5 py-4", children: [
+    /* @__PURE__ */ jsxs("section", { className: "grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]", children: [
+      /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
+        /* @__PURE__ */ jsxs("div", { className: "border-b border-border-subtle pb-5", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxs("div", { className: "min-w-0 space-y-1", children: [
               /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
@@ -2502,7 +2501,7 @@ function GatewaysPage() {
             ] }),
             /* @__PURE__ */ jsx(ConnectionStatusLabel, { status: connectionStatus, enabled: Boolean(telegramConnection?.enabled) })
           ] }),
-          /* @__PURE__ */ jsxs("dl", { className: "mt-5 grid gap-3 text-sm sm:grid-cols-3", children: [
+          /* @__PURE__ */ jsxs("dl", { className: "mt-5 grid gap-px overflow-hidden rounded-md border border-border-subtle bg-border-subtle text-sm sm:grid-cols-3", children: [
             /* @__PURE__ */ jsx(StatusMetric, { label: "Token", value: tokenConfigured ? "Configured" : "Missing" }),
             /* @__PURE__ */ jsx(StatusMetric, { label: "Connection", value: telegramConnection ? "Created" : "Not created" }),
             /* @__PURE__ */ jsx(StatusMetric, { label: "Runtime", value: telegramConnection?.enabled ? "Enabled" : "Paused" })
@@ -2513,7 +2512,7 @@ function GatewaysPage() {
           ] }),
           telegramConnection?.statusMessage ? /* @__PURE__ */ jsx("p", { className: "mt-3 text-xs text-secondary", children: telegramConnection.statusMessage }) : null
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "border border-border bg-surface px-5 py-4", children: [
+        /* @__PURE__ */ jsxs("div", { className: "border-b border-border-subtle pb-5", children: [
           /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
             /* @__PURE__ */ jsx("h2", { className: "text-base font-semibold text-primary", children: "Bot token" }),
             /* @__PURE__ */ jsx("p", { className: "text-sm text-secondary", children: "Paste a BotFather token. Neon Pilot stores it in the host secret store." })
@@ -2575,16 +2574,16 @@ function GatewaysPage() {
         )
       ] }),
       /* @__PURE__ */ jsxs("aside", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxs("div", { className: "border border-border bg-surface px-5 py-4", children: [
-          /* @__PURE__ */ jsx("h2", { className: "text-base font-semibold text-primary", children: "Provider details" }),
+        /* @__PURE__ */ jsxs("div", { className: "border-b border-border-subtle pb-5", children: [
+          /* @__PURE__ */ jsx("h2", { className: "text-sm font-semibold text-primary", children: "Provider details" }),
           /* @__PURE__ */ jsxs("div", { className: "mt-4 space-y-3 text-sm", children: [
             /* @__PURE__ */ jsx(DetailRow, { label: "Setup", value: telegramProvider?.setupRoute ?? "/gateways" }),
             /* @__PURE__ */ jsx(DetailRow, { label: "Configuration", value: formatConfigurationLocation(telegramProvider?.configurationLocation) }),
             /* @__PURE__ */ jsx(DetailRow, { label: "Docs", value: telegramProvider?.docsUrl ?? "Telegram Bot API" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "border border-border bg-surface px-5 py-4", children: [
-          /* @__PURE__ */ jsx("h2", { className: "text-base font-semibold text-primary", children: "Recent activity" }),
+        /* @__PURE__ */ jsxs("div", { className: "border-b border-border-subtle pb-5", children: [
+          /* @__PURE__ */ jsx("h2", { className: "text-sm font-semibold text-primary", children: "Recent activity" }),
           telegramEvents.length > 0 ? /* @__PURE__ */ jsx("ol", { className: "mt-4 space-y-3", children: telegramEvents.map((event) => /* @__PURE__ */ jsxs("li", { className: "border-l border-border pl-3", children: [
             /* @__PURE__ */ jsx("div", { className: "text-sm text-primary", children: event.message }),
             /* @__PURE__ */ jsxs("div", { className: "mt-1 text-xs text-secondary", children: [
@@ -2652,7 +2651,7 @@ function AccessEditor({
   onRemoveUser,
   onRemoveChat
 }) {
-  return /* @__PURE__ */ jsxs("div", { className: "border border-border bg-surface px-5 py-4", children: [
+  return /* @__PURE__ */ jsxs("div", { className: "pb-5", children: [
     /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
       /* @__PURE__ */ jsx("h2", { className: "text-base font-semibold text-primary", children: "Telegram access" }),
       /* @__PURE__ */ jsx("p", { className: "text-sm text-secondary", children: "Only approved users and chats can send work to Neon Pilot." })
@@ -2724,14 +2723,14 @@ function AllowlistEditor({
       ),
       /* @__PURE__ */ jsx(ToolbarButton, { type: "button", disabled: busy || !value.trim(), onClick: onAdd, children: "Add" })
     ] }),
-    values.length > 0 ? /* @__PURE__ */ jsx("ul", { className: "space-y-2", children: values.map((entry) => /* @__PURE__ */ jsxs("li", { className: "flex min-w-0 items-center justify-between gap-2 border border-border px-3 py-2", children: [
+    values.length > 0 ? /* @__PURE__ */ jsx("ul", { className: "space-y-2", children: values.map((entry) => /* @__PURE__ */ jsxs("li", { className: "flex min-w-0 items-center justify-between gap-2 rounded-md bg-surface px-3 py-2", children: [
       /* @__PURE__ */ jsx("span", { className: "truncate font-mono text-xs text-primary", children: entry }),
       /* @__PURE__ */ jsx(ToolbarButton, { type: "button", disabled: busy, onClick: () => onRemove(entry), children: "Remove" })
     ] }, entry)) }) : /* @__PURE__ */ jsx("p", { className: "text-sm text-secondary", children: emptyLabel })
   ] });
 }
 function StatusMetric({ label, value }) {
-  return /* @__PURE__ */ jsxs("div", { className: "border border-border px-3 py-2", children: [
+  return /* @__PURE__ */ jsxs("div", { className: "bg-surface px-3 py-2", children: [
     /* @__PURE__ */ jsx("dt", { className: "text-xs text-secondary", children: label }),
     /* @__PURE__ */ jsx("dd", { className: "mt-1 font-medium text-primary", children: value })
   ] });
@@ -2743,7 +2742,7 @@ function DetailRow({ label, value }) {
   ] });
 }
 function ConnectionStatusLabel({ status, enabled }) {
-  return /* @__PURE__ */ jsx("div", { className: "border border-border px-3 py-1.5 text-xs font-medium text-secondary", children: enabled ? formatGatewayStatus(status) : "Paused" });
+  return /* @__PURE__ */ jsx("div", { className: "rounded-md bg-surface px-3 py-1.5 text-xs font-medium text-secondary", children: enabled ? formatGatewayStatus(status) : "Paused" });
 }
 async function apiRequest(path, init = {}) {
   const response = await fetch(path, {
