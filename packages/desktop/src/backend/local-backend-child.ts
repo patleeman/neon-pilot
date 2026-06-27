@@ -303,6 +303,9 @@ async function main(): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(`[desktop-backend] failed to load local API module: ${message}\n`);
+    await stopDaemon();
+    sendParentMessage({ type: 'fatal', error: `Failed to load local API module: ${message}` });
+    process.exit(1);
   }
 
   const server = createServer((request, response) => {

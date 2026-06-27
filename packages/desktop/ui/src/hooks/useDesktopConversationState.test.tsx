@@ -1225,7 +1225,9 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(latestState?.state?.stream.blocks).toEqual([]);
+    expect(latestState?.state?.stream.blocks).toEqual([
+      expect.objectContaining({ id: expect.stringMatching(/^optimistic-user-/), text: 'Run this shell command: echo row94' }),
+    ]);
 
     await act(async () => {
       vi.advanceTimersByTime(500);
@@ -1234,7 +1236,111 @@ describe('useDesktopConversationState', () => {
     });
 
     expect(conversationAggregate).toHaveBeenCalledTimes(4);
-    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ text: 'Run this shell command: echo row94' })]);
+    expect(latestState?.state?.stream.blocks).toEqual([
+      expect.objectContaining({ id: 'user-1', text: 'Run this shell command: echo row94' }),
+    ]);
+  });
+
+  it('renders an optimistic user message immediately while send dispatch is still pending', async () => {
+    let resolveSend: (value: Awaited<ReturnType<typeof api.sendConversationMessage>>) => void = () => {};
+    const sendRequest = new Promise<Awaited<ReturnType<typeof api.sendConversationMessage>>>((resolve) => {
+      resolveSend = resolve;
+    });
+    vi.spyOn(api, 'conversationAggregate').mockResolvedValue(aggregateState('conv-optimistic', []));
+    vi.spyOn(api, 'sendConversationMessage').mockReturnValue(sendRequest);
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-optimistic" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    let sendPromise: Promise<unknown> | undefined;
+    await act(async () => {
+      sendPromise = latestState?.send('Patch the file');
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks).toEqual([
+      expect.objectContaining({ id: expect.stringMatching(/^optimistic-user-/), type: 'user', text: 'Patch the file' }),
+    ]);
+
+    resolveSend({
+      ok: true,
+      accepted: true,
+      delivery: 'started',
+      referencedTaskIds: [],
+      referencedMemoryDocIds: [],
+      referencedKnowledgeFileIds: [],
+      referencedAttachmentIds: [],
+    });
+    await act(async () => {
+      await sendPromise;
+      await flushPromises();
+    });
+  });
+
+  it('removes an optimistic user message when send dispatch fails', async () => {
+    vi.spyOn(api, 'conversationAggregate').mockResolvedValue(aggregateState('conv-optimistic-fail', []));
+    vi.spyOn(api, 'sendConversationMessage').mockRejectedValue(new Error('provider unavailable'));
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-optimistic-fail" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    await act(async () => {
+      await expect(latestState?.send('Patch the file')).rejects.toThrow('provider unavailable');
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks).toEqual([]);
+  });
+
+  it('replaces an optimistic user message when the realtime user event arrives', () => {
+    const optimistic = {
+      type: 'user',
+      id: 'optimistic-user-test',
+      ts: '2026-05-30T00:00:00.000Z',
+      text: 'Patch the file',
+    } as const;
+    const confirmed = {
+      type: 'user',
+      id: 'user-confirmed',
+      ts: '2026-05-30T00:00:01.000Z',
+      text: 'Patch the file',
+    } as const;
+
+    const stream = applyDesktopConversationStreamEvent(
+      {
+        ...aggregateState('conv-optimistic', [optimistic]).stream,
+        isStreaming: true,
+      },
+      { type: 'user_message', block: confirmed },
+    );
+
+    expect(stream.blocks).toEqual([confirmed]);
   });
 
   it('refreshes a mounted running session when terminal stream events are missed', async () => {
@@ -2249,9 +2355,7 @@ describe('useDesktopConversationState', () => {
 
     expect(conversationAggregate).toHaveBeenCalledTimes(2);
     expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hel' })]);
-    expect(latestState?.state?.stream.blocks[0]).not.toEqual(
-      expect.objectContaining({ text: 'Hello from the persisted session file' }),
-    );
+    expect(latestState?.state?.stream.blocks[0]).not.toEqual(expect.objectContaining({ text: 'Hello from the persisted session file' }));
   });
 
   it('flushes tool updates on a fallback timer when animation frames stall', async () => {
@@ -2322,18 +2426,14 @@ describe('useDesktopConversationState', () => {
 
     expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1);
     expect(frameCallbacks).toHaveLength(1);
-    expect(latestState?.state?.stream.blocks).toEqual([
-      expect.objectContaining({ type: 'tool_use', toolCallId: 'tool-1', output: '' }),
-    ]);
+    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'tool_use', toolCallId: 'tool-1', output: '' })]);
 
     await act(async () => {
       vi.advanceTimersByTime(99);
       await flushPromises();
     });
 
-    expect(latestState?.state?.stream.blocks).toEqual([
-      expect.objectContaining({ type: 'tool_use', toolCallId: 'tool-1', output: '' }),
-    ]);
+    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'tool_use', toolCallId: 'tool-1', output: '' })]);
 
     await act(async () => {
       vi.advanceTimersByTime(1);

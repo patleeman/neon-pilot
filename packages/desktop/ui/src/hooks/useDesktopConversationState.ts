@@ -27,6 +27,7 @@ const STREAM_FRAME_FALLBACK_FLUSH_INTERVAL_MS = 100;
 const POST_SEND_REFRESH_DELAYS_MS = [500, 1500, 4000] as const;
 const RUNNING_SESSION_RECOVERY_REFRESH_DELAYS_MS = [3000, 8000, 16000, 30000, 60000, 120000, 240000] as const;
 const DESKTOP_CONVERSATION_STATE_REFRESH_EVENT = 'neon-pilot:desktop-conversation-state-refresh';
+const OPTIMISTIC_USER_BLOCK_ID_PREFIX = 'optimistic-user-';
 const desktopConversationStateCache = new Map<string, DesktopConversationState>();
 const desktopConversationStateInflight = new Map<string, Promise<DesktopConversationState>>();
 
@@ -159,6 +160,91 @@ function presentDesktopConversationState(state: DesktopConversationState): Deskt
       ...state.stream,
       blocks: presentStreamBlocks(state.stream.blocks),
     },
+  };
+}
+
+function isOptimisticUserBlock(block: DisplayBlock): block is Extract<DisplayBlock, { type: 'user' }> {
+  return block.type === 'user' && block.id.startsWith(OPTIMISTIC_USER_BLOCK_ID_PREFIX);
+}
+
+function userBlocksRepresentSamePrompt(
+  left: Extract<DisplayBlock, { type: 'user' }>,
+  right: Extract<DisplayBlock, { type: 'user' }>,
+): boolean {
+  return left.text === right.text && (left.images?.length ?? 0) === (right.images?.length ?? 0);
+}
+
+function appendOptimisticUserBlockIfMissing(
+  stream: DesktopConversationState['stream'],
+  optimisticBlock: Extract<DisplayBlock, { type: 'user' }>,
+): DesktopConversationState['stream'] {
+  if (
+    stream.blocks.some(
+      (block) =>
+        block.type === 'user' &&
+        (block.id === optimisticBlock.id || (!isOptimisticUserBlock(block) && userBlocksRepresentSamePrompt(block, optimisticBlock))),
+    )
+  ) {
+    return stream;
+  }
+
+  const blocks = [...stream.blocks, optimisticBlock];
+  return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
+}
+
+function removeOptimisticUserBlock(
+  stream: DesktopConversationState['stream'],
+  optimisticBlock: Extract<DisplayBlock, { type: 'user' }>,
+): DesktopConversationState['stream'] {
+  const blocks = stream.blocks.filter((block) => block.id !== optimisticBlock.id);
+  if (blocks.length === stream.blocks.length) {
+    return stream;
+  }
+  return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks - 1, stream.blockOffset + blocks.length) };
+}
+
+function mergeOptimisticUserBlocks(previous: DesktopConversationState | null, next: DesktopConversationState): DesktopConversationState {
+  if (previous?.conversationId !== next.conversationId) {
+    return next;
+  }
+
+  const pendingOptimisticBlocks = previous.stream.blocks.filter((block) => {
+    if (!isOptimisticUserBlock(block)) {
+      return false;
+    }
+    return !next.stream.blocks.some(
+      (nextBlock) => nextBlock.type === 'user' && !isOptimisticUserBlock(nextBlock) && userBlocksRepresentSamePrompt(nextBlock, block),
+    );
+  });
+
+  if (pendingOptimisticBlocks.length === 0) {
+    return next;
+  }
+
+  let stream = next.stream;
+  for (const optimisticBlock of pendingOptimisticBlocks) {
+    stream = appendOptimisticUserBlockIfMissing(stream, optimisticBlock);
+  }
+  return { ...next, stream };
+}
+
+function createOptimisticUserBlock(text: string, images?: PromptImageInput[]): Extract<DisplayBlock, { type: 'user' }> | null {
+  const normalizedText = text.trim();
+  const messageImages: Extract<DisplayBlock, { type: 'user' }>['images'] = (images ?? []).map((image, index) => ({
+    alt: image.name?.trim() ? `Attached image: ${image.name.trim()}` : `Attached image ${index + 1}`,
+    src: image.previewUrl || `data:${image.mimeType};base64,${image.data}`,
+    mimeType: image.mimeType,
+  }));
+  if (!normalizedText && messageImages.length === 0) {
+    return null;
+  }
+
+  return {
+    type: 'user',
+    id: `${OPTIMISTIC_USER_BLOCK_ID_PREFIX}${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    ts: new Date().toISOString(),
+    text: normalizedText,
+    ...(messageImages.length > 0 ? { images: messageImages } : {}),
   };
 }
 
@@ -340,7 +426,14 @@ export function applyDesktopConversationStreamEvent(
       return { ...stream, cwdChange: { newConversationId: event.newConversationId, cwd: event.cwd, autoContinued: event.autoContinued } };
     case 'user_message': {
       const blocks = [...stream.blocks];
-      blocks.push(event.block);
+      const optimisticIndex = blocks.findLastIndex(
+        (block) => isOptimisticUserBlock(block) && userBlocksRepresentSamePrompt(block, event.block),
+      );
+      if (optimisticIndex >= 0) {
+        blocks[optimisticIndex] = event.block;
+      } else {
+        blocks.push(event.block);
+      }
       return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
     }
     case 'text_delta': {
@@ -522,15 +615,16 @@ function mergeDesktopConversationState(
           },
         }
       : nextWithPreservedOptimisticLive;
+  const nextWithOptimisticUserBlocks = mergeOptimisticUserBlocks(previous, nextWithPreservedLiveTail);
 
-  if (!previousCwdChange || nextWithPreservedLiveTail.stream.cwdChange) {
-    return nextWithPreservedLiveTail;
+  if (!previousCwdChange || nextWithOptimisticUserBlocks.stream.cwdChange) {
+    return nextWithOptimisticUserBlocks;
   }
 
   return {
-    ...nextWithPreservedLiveTail,
+    ...nextWithOptimisticUserBlocks,
     stream: {
-      ...nextWithPreservedLiveTail.stream,
+      ...nextWithOptimisticUserBlocks.stream,
       cwdChange: previousCwdChange,
     },
   };
@@ -990,8 +1084,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       streamEvent.type === 'text_delta' ||
       streamEvent.type === 'thinking_delta';
 
-    const shouldFlushStreamEventOnFrame = (streamEvent: SseEvent): boolean =>
-      streamEvent.type === 'tool_update';
+    const shouldFlushStreamEventOnFrame = (streamEvent: SseEvent): boolean => streamEvent.type === 'tool_update';
 
     const enqueueStreamEvent = (streamEvent: SseEvent) => {
       if (closed) {
@@ -1317,48 +1410,81 @@ export function useDesktopConversationState(conversationId: string | null, optio
         return;
       }
 
+      const optimisticBlock = createOptimisticUserBlock(text, images);
+      if (optimisticBlock) {
+        setState((previous) => {
+          if (previous?.conversationId !== conversationId) {
+            return previous;
+          }
+          return {
+            ...previous,
+            stream: appendOptimisticUserBlockIfMissing(previous.stream, optimisticBlock),
+          };
+        });
+      }
+
       const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
       const requestOptions = {
         ...(tailBlocks !== undefined ? { tailBlocks } : {}),
         ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
         ...(options?.version !== undefined ? { version: options.version } : {}),
       } satisfies DesktopConversationStateOptions;
-      let stateForSend = matchedState;
-      if (!stateForSend) {
-        stateForSend = desktopConversationStateFromAggregate(
-          await api.conversationAggregate(conversationId, {
-            ...(tailBlocks !== undefined ? { tailBlocks } : {}),
-            ...(requestOptions.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
-          }),
-        );
-        setState((previous) => {
-          if (
-            activeConversationIdRef.current !== conversationId ||
-            (previous?.conversationId && previous.conversationId !== conversationId)
-          ) {
-            return previous;
-          }
-          return mergeDesktopConversationState(previous, stateForSend);
-        });
-      }
+      try {
+        let stateForSend = matchedState;
+        if (!stateForSend) {
+          stateForSend = desktopConversationStateFromAggregate(
+            await api.conversationAggregate(conversationId, {
+              ...(tailBlocks !== undefined ? { tailBlocks } : {}),
+              ...(requestOptions.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+            }),
+          );
+          setState((previous) => {
+            if (
+              activeConversationIdRef.current !== conversationId ||
+              (previous?.conversationId && previous.conversationId !== conversationId)
+            ) {
+              return previous;
+            }
+            const mergedState = mergeDesktopConversationState(previous, stateForSend);
+            return optimisticBlock
+              ? {
+                  ...mergedState,
+                  stream: appendOptimisticUserBlockIfMissing(mergedState.stream, optimisticBlock),
+                }
+              : mergedState;
+          });
+        }
 
-      const result = await api.sendConversationMessage(
-        conversationId,
-        text,
-        behavior,
-        images,
-        videos,
-        attachmentRefs,
-        surfaceId,
-        contextMessages,
-        relatedConversationIds,
-      );
-      void refresh().catch((nextError) => {
-        setError(nextError instanceof Error ? nextError.message : String(nextError));
-      });
-      schedulePostSendRefreshes();
-      setSubscriptionVersion((current) => current + 1);
-      return result;
+        const result = await api.sendConversationMessage(
+          conversationId,
+          text,
+          behavior,
+          images,
+          videos,
+          attachmentRefs,
+          surfaceId,
+          contextMessages,
+          relatedConversationIds,
+        );
+        void refresh().catch((nextError) => {
+          setError(nextError instanceof Error ? nextError.message : String(nextError));
+        });
+        schedulePostSendRefreshes();
+        setSubscriptionVersion((current) => current + 1);
+        return result;
+      } catch (sendError) {
+        if (optimisticBlock) {
+          setState((previous) =>
+            previous?.conversationId === conversationId
+              ? {
+                  ...previous,
+                  stream: removeOptimisticUserBlock(previous.stream, optimisticBlock),
+                }
+              : previous,
+          );
+        }
+        throw sendError;
+      }
     },
     [
       conversationId,
