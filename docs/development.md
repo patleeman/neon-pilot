@@ -52,9 +52,10 @@ Electron E2E:
 ```bash
 pnpm run test:e2e
 pnpm run test:e2e:runner --grep @chat
+pnpm run test:e2e:runner --grep @core
 ```
 
-The Playwright E2E suite launches Electron directly with a temporary state root, captures traces/screenshots/video on failure, and writes artifacts under `test-results/e2e` and `playwright-report/e2e`. The full command rebuilds the desktop app first; use `test:e2e:runner` only when the build outputs are already fresh.
+The Playwright E2E suite launches Electron directly with a temporary state root, captures traces/screenshots/video on failure, and writes artifacts under `test-results/e2e` and `playwright-report/e2e`. The full command rebuilds the desktop app first; use `test:e2e:runner` only when the build outputs are already fresh. Core happy-path coverage lives under `@core-conversations` and `@core-shell`: seeded conversation navigation/sidebar placement/reload, command palette, app-shell routes, extension routes, routines, and settings.
 
 Startup idle smoke:
 

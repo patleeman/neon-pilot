@@ -55,6 +55,7 @@ Primary validation command families found during the audit:
 | Release doctor              | `pnpm run check:release:doctor`                                                       |
 | Release QA checklist runner | `pnpm run qa:release`                                                                 |
 | Startup smoke               | `pnpm run smoke:startup-idle`                                                         |
+| Core Electron E2E           | `pnpm run test:e2e` / `pnpm run test:e2e:runner --grep @core`                         |
 | Chat E2E smoke              | `pnpm run e2e:chat` / `pnpm run test:e2e:runner --grep @chat`                         |
 | Desktop fork/rewind smoke   | `pnpm run smoke:desktop:fork-rewind` / `pnpm run test:e2e:runner --grep @fork-rewind` |
 | Desktop performance smoke   | `pnpm run perf:desktop`                                                               |

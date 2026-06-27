@@ -1,9 +1,9 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-import { _electron as electron, type ElectronApplication, expect, type Page, type TestInfo } from '@playwright/test';
+import { _electron as electron, type ElectronApplication, expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 
 interface LaunchOptions {
   initialRoute?: string;
@@ -19,6 +19,28 @@ interface TestApp {
   stateRoot: string;
   logs: () => string;
   close: () => Promise<void>;
+}
+
+interface SeedConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface SeedConversationOptions {
+  id: string;
+  title: string;
+  workspace?: string;
+  cwd?: string;
+  modelId?: string;
+  messages?: SeedConversationMessage[];
+}
+
+export interface SeedWorkspaceOptions {
+  openConversationIds?: string[];
+  pinnedConversationIds?: string[];
+  archivedConversationIds?: string[];
+  activeConversationId?: string | null;
+  workspacePaths?: string[];
 }
 
 const repoRoot = process.cwd();
@@ -134,8 +156,155 @@ export async function assertDesktopApiEndpoints(page: Page): Promise<void> {
   expect(checks.filter((check) => !check.ok)).toEqual([]);
 }
 
+export async function apiJson<T = unknown>(page: Page, path: string, init?: { method?: string; body?: unknown }): Promise<T> {
+  const result = await page.evaluate(
+    async ({ requestPath, requestInit }) => {
+      const response = await fetch(requestPath, {
+        method: requestInit?.method,
+        headers: requestInit?.body === undefined ? undefined : { 'content-type': 'application/json' },
+        body: requestInit?.body === undefined ? undefined : JSON.stringify(requestInit.body),
+      });
+      const text = await response.text();
+      let body: unknown = null;
+      try {
+        body = text ? JSON.parse(text) : null;
+      } catch {
+        body = text;
+      }
+      return { ok: response.ok, status: response.status, body, preview: text.slice(0, 500) };
+    },
+    { requestPath: path, requestInit: init },
+  );
+  expect(result, `${path} returned ${result.status}: ${result.preview}`).toEqual(expect.objectContaining({ ok: true }));
+  return result.body as T;
+}
+
+export async function readSessions(page: Page, limit = 100): Promise<Array<Record<string, unknown>>> {
+  const body = await apiJson<unknown>(page, `/api/sessions?limit=${limit}`);
+  expect(Array.isArray(body)).toBe(true);
+  return body as Array<Record<string, unknown>>;
+}
+
+export async function readSessionMeta(page: Page, sessionId: string): Promise<Record<string, unknown>> {
+  return apiJson<Record<string, unknown>>(page, `/api/sessions/${encodeURIComponent(sessionId)}/meta`);
+}
+
+export async function resumeSession(page: Page, input: { sessionFile: string; cwd: string }): Promise<string> {
+  const result = await apiJson<{ id?: unknown; error?: unknown }>(page, '/api/live-sessions/resume', {
+    method: 'POST',
+    body: { sessionFile: input.sessionFile, cwd: input.cwd },
+  });
+  expect(typeof result.id).toBe('string');
+  return result.id as string;
+}
+
 export async function waitForNoComposerRunIndicators(page: Page): Promise<void> {
   await expect(page.getByRole('button', { name: 'Stop' })).toHaveCount(0, { timeout: 45_000 });
   await expect(page.locator('.ui-composer-state-streaming')).toHaveCount(0, { timeout: 45_000 });
   await expect(page.getByText('Working…')).toHaveCount(0, { timeout: 45_000 });
+}
+
+export function composer(page: Page): Locator {
+  return page.locator('textarea[placeholder*="Message Neon Pilot"]').first();
+}
+
+export function sidebarConversationRow(page: Page, sessionId: string): Locator {
+  return page.locator(`[data-sidebar-session-id="${sessionId}"]`).first();
+}
+
+export async function openSidebarConversation(page: Page, sessionId: string): Promise<void> {
+  await sidebarConversationRow(page, sessionId).click();
+  await page.waitForURL((url) => url.pathname === `/conversations/${sessionId}`, { timeout: 30_000 });
+  await waitForAppReady(page);
+}
+
+export function seedConversationSession(stateRoot: string, options: SeedConversationOptions): string {
+  const workspace = options.workspace ?? 'e2e-workspace';
+  const cwd = options.cwd ?? join(tmpdir(), workspace);
+  const sessionDir = join(stateRoot, 'sync', 'pi-agent', 'sessions', workspace);
+  const sessionFile = join(sessionDir, `${options.id}.jsonl`);
+  mkdirSync(sessionDir, { recursive: true });
+  const now = Date.now();
+  const lines: Array<Record<string, unknown>> = [
+    { type: 'session', id: options.id, timestamp: new Date(now).toISOString(), cwd, version: 3 },
+    {
+      type: 'model_change',
+      id: `${options.id}-model`,
+      parentId: null,
+      modelId: options.modelId ?? 'openrouter/e2e-core-model',
+    },
+    {
+      type: 'session_info',
+      id: `${options.id}-title`,
+      parentId: `${options.id}-model`,
+      name: options.title,
+    },
+  ];
+  let parentId = `${options.id}-title`;
+  for (const [index, message] of (options.messages ?? []).entries()) {
+    const id = `${options.id}-message-${index}`;
+    lines.push({
+      type: 'message',
+      id,
+      parentId,
+      timestamp: new Date(now + (index + 1) * 1_000).toISOString(),
+      message: { role: message.role, content: message.content },
+    });
+    parentId = id;
+  }
+  writeFileSync(sessionFile, `${lines.map(JSON.stringify).join('\n')}\n`);
+  return sessionFile;
+}
+
+export function seedRuntimeSettings(stateRoot: string, workspace: SeedWorkspaceOptions = {}): void {
+  const runtimeDir = join(stateRoot, 'neon-pilot-runtime');
+  mkdirSync(runtimeDir, { recursive: true });
+  writeFileSync(join(runtimeDir, 'auth.json'), '{}\n');
+  writeFileSync(
+    join(runtimeDir, 'settings.json'),
+    `${JSON.stringify(
+      {
+        conversationAutoTitle: { reasoning: false },
+        ui: {
+          openConversationIds: workspace.openConversationIds ?? [],
+          pinnedConversationIds: workspace.pinnedConversationIds ?? [],
+          archivedConversationIds: workspace.archivedConversationIds ?? [],
+          activeConversationId: workspace.activeConversationId ?? null,
+          workspacePaths: workspace.workspacePaths ?? [],
+          conversationWorkspaceRevision: 1,
+          conversationWorkspaceUpdatedAt: new Date().toISOString(),
+          conversationWorkspaceMigratedAt: new Date().toISOString(),
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
+export async function readConversationWorkspace(page: Page): Promise<Record<string, unknown>> {
+  return apiJson<Record<string, unknown>>(page, '/api/conversation-workspace');
+}
+
+export async function waitForConversationWorkspace(
+  page: Page,
+  predicate: (workspace: Record<string, unknown>) => boolean,
+): Promise<Record<string, unknown>> {
+  let latest: Record<string, unknown> = {};
+  await expect
+    .poll(
+      async () => {
+        latest = await readConversationWorkspace(page);
+        return predicate(latest);
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
+  return latest;
+}
+
+export async function expectCleanViewport(page: Page): Promise<void> {
+  await expect(page.locator('body')).not.toContainText(
+    /Unhandled rejection|Cannot find module|Local API route|file:\/\/|TypeError|ReferenceError|ENOENT|Module\./i,
+  );
 }
