@@ -62,6 +62,8 @@ Opening a conversation is a read. The frontend asks for conversation state/boots
 
 Conversation route state uses an aggregate model for the transcript snapshot plus durable activity/runtime state. The initial load is HTTP; live changes arrive as revisioned WebSocket deltas with `fromRevision` and `toRevision`. If the renderer misses a delta, it first requests the missing aggregate delta range from `/api/conversations/:id/aggregate/deltas?after=<revision>` and applies those patches in memory. Only expired or too-large gaps should fall back to a full aggregate snapshot refresh.
 
+The desktop renderer keeps a shared in-memory write-through conversation state cache for aggregate snapshots, realtime deltas, prefetches, optimistic sends, aborts, and manual refreshes. Conversation views subscribe to that cache instead of deciding whether state came from transcript storage, bootstrap data, or a live stream. This keeps route swaps and remounts from dropping visible user messages or reprocessing transcript Markdown unnecessarily.
+
 Sending or explicitly resuming a saved conversation is semantic from the frontend's perspective. The UI calls the conversation message/resume API; the backend may hydrate a live session from the transcript internally when needed. Frontend code should not call recovery/hydration endpoints or branch on recovery details.
 
 Conversation-adjacent UI should keep this same split:

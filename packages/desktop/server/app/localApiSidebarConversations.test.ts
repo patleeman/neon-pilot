@@ -38,6 +38,11 @@ describe('localApiSidebarConversations', () => {
       pinnedSessionIds: ['pinned-a'],
       archivedSessionIds: ['archived-a'],
       lockedConversationIds: ['open-a', 'archived-a'],
+      conversationPlacements: {
+        'archived-a': 'archived',
+        'open-a': 'open',
+        'pinned-a': 'pinned',
+      },
       activeConversationId: null,
       workspacePaths: ['/repo'],
       remoteControlledConversationIds: ['remote-a'],

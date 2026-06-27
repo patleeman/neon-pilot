@@ -1,5 +1,6 @@
 import type { SessionMeta } from '../conversations/conversationTypes.js';
 import type { SavedUiPreferences } from '../ui/uiPreferences.js';
+import { type DesktopConversationPlacement, projectDesktopConversationPlacements } from './localApiConversationWorkspace.js';
 import { buildDesktopConversationWorkspaceResponse } from './localApiConversationWorkspacePresentation.js';
 
 export interface DesktopSidebarConversationSnapshot {
@@ -7,6 +8,7 @@ export interface DesktopSidebarConversationSnapshot {
   pinnedSessionIds: string[];
   archivedSessionIds: string[];
   lockedConversationIds: string[];
+  conversationPlacements: Record<string, DesktopConversationPlacement>;
   activeConversationId: string | null;
   workspacePaths: string[];
   remoteControlledConversationIds: string[];
@@ -42,6 +44,13 @@ export function buildDesktopSidebarConversationSnapshot(input: {
     pinnedSessionIds,
     archivedSessionIds,
     lockedConversationIds,
+    conversationPlacements: projectDesktopConversationPlacements({
+      sessionIds,
+      pinnedSessionIds,
+      archivedSessionIds,
+      lockedConversationIds,
+      activeConversationId,
+    }),
     activeConversationId,
     sessions: input.sessions,
   };

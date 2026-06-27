@@ -885,6 +885,8 @@ export type AppEventTopic =
   | 'workspace'
   | 'knowledgeBase';
 
+export type ConversationPlacement = 'closed' | 'open' | 'pinned' | 'archived';
+
 export type AppEvent =
   | { type: 'connected' }
   | { type: 'invalidate'; topics: AppEventTopic[] }
@@ -897,6 +899,7 @@ export type AppEvent =
       sessionIds: string[];
       pinnedSessionIds: string[];
       archivedSessionIds: string[];
+      conversationPlacements?: Record<string, ConversationPlacement>;
       activeConversationId: string | null;
       workspacePaths: string[];
       remoteControlledConversationIds: string[];
@@ -934,6 +937,7 @@ export type DesktopAppEvent =
       sessionIds: string[];
       pinnedSessionIds: string[];
       archivedSessionIds: string[];
+      conversationPlacements?: Record<string, ConversationPlacement>;
       activeConversationId: string | null;
       workspacePaths: string[];
       remoteControlledConversationIds: string[];

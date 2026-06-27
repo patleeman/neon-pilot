@@ -66,7 +66,7 @@ describe('TraceClusterBlock commands', () => {
       root?.render(renderTraceCluster([thinkingBlock('first trace detail')]));
     });
 
-    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('1 step');
     expect(container.textContent).toContain('show');
     expect(container.textContent).not.toContain('first trace detail');
 

@@ -23,23 +23,30 @@ export function resolveConversationLiveSession(input: {
 
 export function resolveConversationComposerRunState(input: {
   streamIsStreaming: boolean;
+  conversationRuntimeIsRunning?: boolean | null;
   sessionIsRunning?: boolean | null;
   recoveredLiveSessionIsRunning?: boolean | null;
   bootstrapLiveSessionIsStreaming?: boolean | null;
   desktopLiveSessionIsStreaming?: boolean | null;
   hasStaleTurnState: boolean;
 }): { allowQueuedPrompts: boolean; defaultComposerBehavior: 'steer' | 'followUp' | undefined; streamControlsActive: boolean } {
-  const liveSessionIsStreaming = input.bootstrapLiveSessionIsStreaming === true || input.desktopLiveSessionIsStreaming === true;
-  const recoveredLiveSessionIsRunning = input.recoveredLiveSessionIsRunning === true;
+  const backendRuntimeIsExplicitlyIdle = input.conversationRuntimeIsRunning === false;
+  const liveSessionIsStreaming =
+    !backendRuntimeIsExplicitlyIdle && (input.bootstrapLiveSessionIsStreaming === true || input.desktopLiveSessionIsStreaming === true);
+  const recoveredLiveSessionIsRunning = !backendRuntimeIsExplicitlyIdle && input.recoveredLiveSessionIsRunning === true;
+  const streamIsStreaming = !backendRuntimeIsExplicitlyIdle && input.streamIsStreaming;
+  const hasStaleTurnState = !backendRuntimeIsExplicitlyIdle && input.hasStaleTurnState;
   const sessionIsRunning = input.sessionIsRunning === true || recoveredLiveSessionIsRunning;
   const explicitlyIdle =
-    input.sessionIsRunning === false && !recoveredLiveSessionIsRunning && !liveSessionIsStreaming && !input.hasStaleTurnState;
-  const streamControlsActive =
-    !input.hasStaleTurnState && !explicitlyIdle && (input.streamIsStreaming || liveSessionIsStreaming || sessionIsRunning);
+    (input.sessionIsRunning === false || backendRuntimeIsExplicitlyIdle) &&
+    !recoveredLiveSessionIsRunning &&
+    !liveSessionIsStreaming &&
+    !hasStaleTurnState;
+  const streamControlsActive = !hasStaleTurnState && !explicitlyIdle && (streamIsStreaming || liveSessionIsStreaming || sessionIsRunning);
 
   return {
-    allowQueuedPrompts: streamControlsActive || input.hasStaleTurnState,
-    defaultComposerBehavior: streamControlsActive ? 'steer' : input.hasStaleTurnState ? 'followUp' : undefined,
+    allowQueuedPrompts: streamControlsActive || hasStaleTurnState,
+    defaultComposerBehavior: streamControlsActive ? 'steer' : hasStaleTurnState ? 'followUp' : undefined,
     streamControlsActive,
   };
 }

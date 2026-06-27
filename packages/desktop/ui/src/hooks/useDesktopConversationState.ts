@@ -31,6 +31,7 @@ const DESKTOP_CONVERSATION_STATE_REFRESH_EVENT = 'neon-pilot:desktop-conversatio
 const OPTIMISTIC_USER_BLOCK_ID_PREFIX = 'optimistic-user-';
 const desktopConversationStateCache = new Map<string, DesktopConversationState>();
 const desktopConversationStateInflight = new Map<string, Promise<DesktopConversationState>>();
+const desktopConversationStateCacheListeners = new Map<string, Set<() => void>>();
 
 interface PendingStreamEventRecord {
   event: SseEvent;
@@ -61,6 +62,7 @@ interface UseDesktopConversationStateOptions extends DesktopConversationStateOpt
 export function clearDesktopConversationStateCacheForTests(): void {
   desktopConversationStateCache.clear();
   desktopConversationStateInflight.clear();
+  desktopConversationStateCacheListeners.clear();
 }
 
 function createEmptyDesktopConversationStreamState(): DesktopConversationState['stream'] {
@@ -145,22 +147,41 @@ function presentStreamBlock(block: DisplayBlock): DisplayBlock {
 }
 
 function presentStreamBlocks(blocks: DisplayBlock[]): DisplayBlock[] {
-  return blocks.map(presentStreamBlock);
+  let changed = false;
+  const nextBlocks = blocks.map((block) => {
+    const nextBlock = presentStreamBlock(block);
+    if (nextBlock !== block) {
+      changed = true;
+    }
+    return nextBlock;
+  });
+  return changed ? nextBlocks : blocks;
 }
 
 function presentDesktopConversationState(state: DesktopConversationState): DesktopConversationState {
-  return {
-    ...state,
-    sessionDetail: state.sessionDetail
+  const sessionDetailBlocks = state.sessionDetail ? presentStreamBlocks(state.sessionDetail.blocks) : null;
+  const streamBlocks = presentStreamBlocks(state.stream.blocks);
+  const sessionDetail =
+    state.sessionDetail && sessionDetailBlocks !== state.sessionDetail.blocks
       ? {
           ...state.sessionDetail,
-          blocks: presentStreamBlocks(state.sessionDetail.blocks),
+          blocks: sessionDetailBlocks,
         }
-      : state.sessionDetail,
-    stream: {
-      ...state.stream,
-      blocks: presentStreamBlocks(state.stream.blocks),
-    },
+      : state.sessionDetail;
+  const stream =
+    streamBlocks !== state.stream.blocks
+      ? {
+          ...state.stream,
+          blocks: streamBlocks,
+        }
+      : state.stream;
+  if (sessionDetail === state.sessionDetail && stream === state.stream) {
+    return state;
+  }
+  return {
+    ...state,
+    sessionDetail,
+    stream,
   };
 }
 
@@ -719,6 +740,43 @@ function rememberDesktopConversationState(
     }
     cache.delete(oldestKey);
   }
+  if (cache === desktopConversationStateCache) {
+    const listeners = desktopConversationStateCacheListeners.get(key);
+    if (listeners) {
+      for (const listener of listeners) {
+        queueMicrotask(listener);
+      }
+    }
+  }
+}
+
+function readDesktopConversationStateCache(key: string): DesktopConversationState | null {
+  return desktopConversationStateCache.get(key) ?? null;
+}
+
+function subscribeDesktopConversationStateCache(key: string, listener: () => void): () => void {
+  let listeners = desktopConversationStateCacheListeners.get(key);
+  if (!listeners) {
+    listeners = new Set();
+    desktopConversationStateCacheListeners.set(key, listeners);
+  }
+  listeners.add(listener);
+  return () => {
+    listeners?.delete(listener);
+    if (listeners?.size === 0) {
+      desktopConversationStateCacheListeners.delete(key);
+    }
+  };
+}
+
+function forgetDesktopConversationStateCache(key: string): void {
+  desktopConversationStateCache.delete(key);
+  const listeners = desktopConversationStateCacheListeners.get(key);
+  if (listeners) {
+    for (const listener of listeners) {
+      queueMicrotask(listener);
+    }
+  }
 }
 
 export function primeDesktopConversationStateCache(
@@ -818,7 +876,7 @@ function fetchDesktopConversationStateCached(
     })
     .then((nextAggregate: ConversationAggregateState) => {
       const nextState = desktopConversationStateFromAggregate(nextAggregate);
-      const previous = desktopConversationStateCache.get(cacheKey) ?? null;
+      const previous = readDesktopConversationStateCache(cacheKey);
       const mergedState = mergeDesktopConversationState(previous, nextState);
       rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
       return mergedState;
@@ -926,7 +984,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       requestOptions.includeToolBlocks,
       requestOptions.version,
     );
-    const cachedState = desktopConversationStateCache.get(cacheKey) ?? null;
+    const cachedState = readDesktopConversationStateCache(cacheKey);
     setState((current) => (current?.conversationId === conversationId ? current : cachedState));
     setError(null);
 
@@ -961,6 +1019,40 @@ export function useDesktopConversationState(conversationId: string | null, optio
     surfaceId,
     surfaceType,
   ]);
+
+  useEffect(() => {
+    if (mode !== 'local' || !conversationId) {
+      return;
+    }
+
+    const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
+    const cacheKey = buildDesktopConversationStateCacheKey(
+      conversationId,
+      tailBlocks,
+      options?.includeToolBlocks === false ? false : undefined,
+      options?.version,
+    );
+    return subscribeDesktopConversationStateCache(cacheKey, () => {
+      const cachedState = readDesktopConversationStateCache(cacheKey);
+      if (!cachedState || cachedState.conversationId !== conversationId) {
+        return;
+      }
+      setState((previous) => {
+        if (previous?.conversationId && previous.conversationId !== conversationId) {
+          return previous;
+        }
+        if (
+          previous?.conversationId === conversationId &&
+          typeof previous.revision === 'number' &&
+          typeof cachedState.revision === 'number' &&
+          cachedState.revision <= previous.revision
+        ) {
+          return previous;
+        }
+        return mergeDesktopConversationState(previous, cachedState);
+      });
+    });
+  }, [conversationId, mode, options?.includeToolBlocks, options?.tailBlocks, options?.version]);
 
   useEffect(() => {
     if (mode !== 'local' || !conversationId) {
@@ -1034,7 +1126,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         if (stream === previous.stream && latestTitleEvent?.type !== 'title_update') {
           return previous;
         }
-        return {
+        const nextState = {
           ...previous,
           stream,
           liveSession: previous.liveSession?.live
@@ -1045,6 +1137,8 @@ export function useDesktopConversationState(conversationId: string | null, optio
               }
             : previous.liveSession,
         };
+        rememberDesktopConversationState(desktopConversationStateCache, cacheKey, nextState);
+        return nextState;
       });
       const durationMs = performance.now() - flushStartedAtMs;
       if (
@@ -1163,28 +1257,34 @@ export function useDesktopConversationState(conversationId: string | null, optio
 
     const applyAggregateActivityDelta = (delta: Extract<ConversationAggregateDelta, { type: 'activity' }>) => {
       latestAggregateRevision = Math.max(latestAggregateRevision, readAggregateDeltaToRevision(delta));
-      setState((previous) =>
-        previous?.conversationId === conversationId
-          ? {
-              ...previous,
-              activity: delta.activity,
-              revision: readAggregateDeltaToRevision(delta),
-            }
-          : previous,
-      );
+      setState((previous) => {
+        if (previous?.conversationId !== conversationId) {
+          return previous;
+        }
+        const nextState = {
+          ...previous,
+          activity: delta.activity,
+          revision: readAggregateDeltaToRevision(delta),
+        };
+        rememberDesktopConversationState(desktopConversationStateCache, cacheKey, nextState);
+        return nextState;
+      });
     };
 
     const markAggregateRevisionApplied = (delta: ConversationAggregateDelta) => {
       const toRevision = readAggregateDeltaToRevision(delta);
       latestAggregateRevision = Math.max(latestAggregateRevision, toRevision);
-      setState((previous) =>
-        previous?.conversationId === conversationId && (previous.revision ?? 0) < toRevision
-          ? {
-              ...previous,
-              revision: toRevision,
-            }
-          : previous,
-      );
+      setState((previous) => {
+        if (previous?.conversationId !== conversationId || (previous.revision ?? 0) >= toRevision) {
+          return previous;
+        }
+        const nextState = {
+          ...previous,
+          revision: toRevision,
+        };
+        rememberDesktopConversationState(desktopConversationStateCache, cacheKey, nextState);
+        return nextState;
+      });
     };
 
     const applyAggregateSnapshot = (aggregate: ConversationAggregateState) => {
@@ -1542,28 +1642,37 @@ export function useDesktopConversationState(conversationId: string | null, optio
         return;
       }
 
-      const optimisticBlock = createOptimisticUserBlock(text, images);
-      if (optimisticBlock) {
-        setState((previous) => {
-          if (!previous) {
-            return createOptimisticSendState(conversationId, optimisticBlock);
-          }
-          if (previous.conversationId !== conversationId) {
-            return previous;
-          }
-          return {
-            ...previous,
-            stream: appendOptimisticUserBlockIfMissing(previous.stream, optimisticBlock),
-          };
-        });
-      }
-
       const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
       const requestOptions = {
         ...(tailBlocks !== undefined ? { tailBlocks } : {}),
         ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
         ...(options?.version !== undefined ? { version: options.version } : {}),
       } satisfies DesktopConversationStateOptions;
+      const cacheKey = buildDesktopConversationStateCacheKey(
+        conversationId,
+        tailBlocks,
+        requestOptions.includeToolBlocks,
+        requestOptions.version,
+      );
+      const optimisticBlock = createOptimisticUserBlock(text, images);
+      if (optimisticBlock) {
+        setState((previous) => {
+          const nextState = !previous
+            ? createOptimisticSendState(conversationId, optimisticBlock)
+            : previous.conversationId === conversationId
+              ? {
+                  ...previous,
+                  stream: appendOptimisticUserBlockIfMissing(previous.stream, optimisticBlock),
+                }
+              : previous;
+          if (nextState.conversationId !== conversationId) {
+            return nextState;
+          }
+          rememberDesktopConversationState(desktopConversationStateCache, cacheKey, nextState);
+          return nextState;
+        });
+      }
+
       try {
         let stateForSend = matchedState;
         if (!stateForSend) {
@@ -1581,12 +1690,14 @@ export function useDesktopConversationState(conversationId: string | null, optio
               return previous;
             }
             const mergedState = mergeDesktopConversationState(previous, stateForSend);
-            return optimisticBlock
+            const nextState = optimisticBlock
               ? {
                   ...mergedState,
                   stream: appendOptimisticUserBlockIfMissing(mergedState.stream, optimisticBlock),
                 }
               : mergedState;
+            rememberDesktopConversationState(desktopConversationStateCache, cacheKey, nextState);
+            return nextState;
           });
         }
 
@@ -1614,12 +1725,15 @@ export function useDesktopConversationState(conversationId: string | null, optio
               return previous;
             }
             if (isOptimisticSendOnlyState(previous, optimisticBlock)) {
+              forgetDesktopConversationStateCache(cacheKey);
               return null;
             }
-            return {
+            const nextState = {
               ...previous,
               stream: removeOptimisticUserBlock(previous.stream, optimisticBlock),
             };
+            rememberDesktopConversationState(desktopConversationStateCache, cacheKey, nextState);
+            return nextState;
           });
         }
         throw sendError;
@@ -1645,7 +1759,21 @@ export function useDesktopConversationState(conversationId: string | null, optio
     }
 
     await api.abortSession(conversationId, surfaceId);
-    setState((previous) => (previous?.conversationId === conversationId ? clearDesktopConversationStreamingState(previous) : previous));
+    const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
+    const cacheKey = buildDesktopConversationStateCacheKey(
+      conversationId,
+      tailBlocks,
+      options?.includeToolBlocks === false ? false : undefined,
+      options?.version,
+    );
+    setState((previous) => {
+      if (previous?.conversationId !== conversationId) {
+        return previous;
+      }
+      const nextState = clearDesktopConversationStreamingState(previous);
+      rememberDesktopConversationState(desktopConversationStateCache, cacheKey, nextState);
+      return nextState;
+    });
     void refresh().catch((nextError) => {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
     });

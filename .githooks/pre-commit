@@ -72,7 +72,7 @@ run_pnpm() {
   PATH="$pnpm_dir:/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH" "$PNPM" "$@"
 }
 
-# ── 3. Typecheck (fast — whole project) ──────────────────
+# ── 3. Typecheck (full TypeScript project build) ──────────
 
 if run_pnpm run check:types &>/dev/null; then
   green "✓ typecheck passed"

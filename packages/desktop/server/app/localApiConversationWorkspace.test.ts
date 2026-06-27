@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   applyDesktopConversationWorkspaceOperation,
+  buildDesktopConversationPlacements,
   desktopConversationWorkspaceInvalidationTopics,
   filterDesktopConversationWorkspaceLayoutBySessionIds,
+  normalizeDesktopConversationWorkspaceLayout,
+  projectDesktopConversationPlacements,
+  readDesktopConversationPlacement,
   validateDesktopConversationWorkspaceOperation,
   validateDesktopConversationWorkspaceUpdate,
 } from './localApiConversationWorkspace';
@@ -82,6 +86,40 @@ describe('localApiConversationWorkspace', () => {
       archivedSessionIds: ['archived-a'],
       lockedConversationIds: ['open-a', 'archived-a'],
       activeConversationId: null,
+    });
+  });
+
+  it('normalizes legacy placement conflicts into one backend-owned placement', () => {
+    const layout = normalizeDesktopConversationWorkspaceLayout({
+      sessionIds: ['open-only', 'conflict-open-archived', 'conflict-pinned-open'],
+      pinnedSessionIds: ['pinned-only', 'conflict-pinned-open', 'conflict-pinned-archived'],
+      archivedSessionIds: ['archived-only', 'conflict-open-archived', 'conflict-pinned-archived'],
+      activeConversationId: 'conflict-pinned-open',
+    });
+
+    expect(Object.fromEntries(buildDesktopConversationPlacements(layout))).toEqual({
+      'archived-only': 'archived',
+      'conflict-open-archived': 'open',
+      'conflict-pinned-archived': 'pinned',
+      'conflict-pinned-open': 'pinned',
+      'open-only': 'open',
+      'pinned-only': 'pinned',
+    });
+    expect(projectDesktopConversationPlacements(layout)).toEqual({
+      'archived-only': 'archived',
+      'conflict-open-archived': 'open',
+      'conflict-pinned-archived': 'pinned',
+      'conflict-pinned-open': 'pinned',
+      'open-only': 'open',
+      'pinned-only': 'pinned',
+    });
+    expect(readDesktopConversationPlacement(layout, 'conflict-open-archived')).toBe('open');
+    expect(readDesktopConversationPlacement(layout, 'missing')).toBe('closed');
+    expect(layout).toMatchObject({
+      sessionIds: ['open-only', 'conflict-open-archived'],
+      pinnedSessionIds: ['pinned-only', 'conflict-pinned-open', 'conflict-pinned-archived'],
+      archivedSessionIds: ['archived-only'],
+      activeConversationId: 'conflict-pinned-open',
     });
   });
 

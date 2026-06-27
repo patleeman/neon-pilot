@@ -2446,6 +2446,7 @@ function publishConversationWorkspaceChanged(input: ReturnType<typeof buildDeskt
     sessionIds: input.sessionIds,
     pinnedSessionIds: input.pinnedSessionIds,
     archivedSessionIds: input.archivedSessionIds,
+    conversationPlacements: input.conversationPlacements,
     activeConversationId: input.activeConversationId,
     workspacePaths: input.workspacePaths,
     remoteControlledConversationIds: input.remoteControlledConversationIds,

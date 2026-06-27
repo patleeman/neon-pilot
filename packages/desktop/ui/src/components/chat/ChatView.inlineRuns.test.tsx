@@ -463,7 +463,7 @@ describe('ChatView inline run cards', () => {
     expect(container.textContent).not.toContain('OUTPUT');
 
     const clusterButton = container.querySelector('button[aria-expanded]') as HTMLButtonElement | null;
-    expect(clusterButton?.textContent).toContain('Internal work');
+    expect(clusterButton?.textContent).toContain('1 step');
     await act(async () => {
       clusterButton?.click();
       await flushAsyncWork();
@@ -535,7 +535,7 @@ describe('ChatView inline run cards', () => {
       { listedRuns: [] },
     );
 
-    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('1 step');
     expect(container.textContent).toContain('scout-ui-surface');
     expect(container.textContent).not.toContain('Detailed status');
 

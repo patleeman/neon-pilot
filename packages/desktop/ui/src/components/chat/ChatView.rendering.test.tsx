@@ -223,14 +223,15 @@ describe('ChatView rendering stability', () => {
     } satisfies Extract<MessageBlock, { type: 'tool_use' }>;
     const { container, root } = renderChatView([toolBlock], { isStreaming: true });
 
-    expect(container.textContent).toContain('Working');
+    expect(container.textContent).toContain('1 step');
+    expect(container.textContent).toContain('live');
     expect(container.textContent).toContain('npm test -- --runInBand');
 
     act(() => {
       root.render(<ChatView messages={[toolBlock, createAssistantBlock()]} isStreaming />);
     });
 
-    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('1 step');
     expect(container.textContent).toContain('Stable assistant reply');
     expect(container.textContent).not.toContain('npm test -- --runInBand');
 
@@ -244,7 +245,7 @@ describe('ChatView rendering stability', () => {
       vi.advanceTimersByTime(1);
     });
 
-    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('1 step');
     expect(container.textContent).not.toContain('npm test -- --runInBand');
 
     act(() => {
@@ -269,7 +270,7 @@ describe('ChatView rendering stability', () => {
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('1 step');
     expect(container.textContent).toContain('Stable assistant reply');
     expect(container.textContent).not.toContain('The assistant is planning the answer.');
 
@@ -294,7 +295,8 @@ describe('ChatView rendering stability', () => {
     } satisfies Extract<MessageBlock, { type: 'tool_use' }>;
     const { container } = renderChatView([toolBlock], { isStreaming: true });
 
-    expect(container.textContent).toContain('Working');
+    expect(container.textContent).toContain('1 step');
+    expect(container.textContent).toContain('live');
     expect(container.textContent).toContain('pnpm vitest run');
     expect(container.textContent).toContain('RUN  v4.0.18');
   });

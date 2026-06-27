@@ -269,6 +269,7 @@ export function useDesktopAppEventRuntime() {
             sessionIds: payload.sessionIds,
             pinnedSessionIds: payload.pinnedSessionIds,
             archivedSessionIds: payload.archivedSessionIds,
+            conversationPlacements: payload.conversationPlacements,
             activeSessionId: payload.activeConversationId,
             workspacePaths: payload.workspacePaths,
             remoteControlledConversationIds: payload.remoteControlledConversationIds,

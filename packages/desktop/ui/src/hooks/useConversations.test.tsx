@@ -108,7 +108,12 @@ function mergeSessions(previous: SessionMeta[] | null, items: SessionMeta[]): Se
   return next;
 }
 
-function renderProbe(input: { sessions: SessionMeta[]; tasks: ScheduledTaskSummary[] | null; liveTitles?: Map<string, string> }) {
+function renderProbe(input: {
+  sessions: SessionMeta[];
+  tasks: ScheduledTaskSummary[] | null;
+  liveTitles?: Map<string, string>;
+  sseStatus?: React.ContextType<typeof SseConnectionContext>['status'];
+}) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -120,7 +125,12 @@ function renderProbe(input: { sessions: SessionMeta[]; tasks: ScheduledTaskSumma
 
 function renderProbeIntoRoot(
   root: Root,
-  input: { sessions: SessionMeta[]; tasks: ScheduledTaskSummary[] | null; liveTitles?: Map<string, string> },
+  input: {
+    sessions: SessionMeta[];
+    tasks: ScheduledTaskSummary[] | null;
+    liveTitles?: Map<string, string>;
+    sseStatus?: React.ContextType<typeof SseConnectionContext>['status'];
+  },
 ) {
   // Seed the reactive entity store so hooks read the same data the test expects
   // via AppDataContext (backward compat during migration).
@@ -132,7 +142,7 @@ function renderProbeIntoRoot(
 
   act(() => {
     root.render(
-      <SseConnectionContext.Provider value={{ status: 'offline' }}>
+      <SseConnectionContext.Provider value={{ status: input.sseStatus ?? 'offline' }}>
         <AppDataContext.Provider
           value={{
             projects: null,
@@ -395,6 +405,32 @@ describe('useConversations', () => {
     expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['conv-auto']);
     expect(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY)).toBeNull();
     expect(apiMocks.updateConversationWorkspace).toHaveBeenCalledWith({ operation: 'open', sessionId: 'conv-auto', active: false });
+  });
+
+  it('does not keep the conversation list loading just because app events are reconnecting', async () => {
+    apiMocks.sidebarConversations.mockResolvedValueOnce({
+      sessionIds: ['conv-ready'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'conv-ready',
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+      conversationWorkspaceRevision: 1,
+      conversationWorkspaceUpdatedAt: '2026-04-01T00:00:00.000Z',
+      conversationWorkspaceMigratedAt: '2026-04-01T00:00:00.000Z',
+      sessions: [createSession({ id: 'conv-ready', title: 'Ready Thread' })],
+    });
+
+    renderProbe({
+      sessions: [createSession({ id: 'conv-ready', title: 'Ready Thread' })],
+      tasks: [],
+      sseStatus: 'connecting',
+    });
+
+    await flushAsyncWork();
+
+    expect(latestHookResult?.loading).toBe(false);
+    expect(latestHookResult?.tabs.map((session) => session.title)).toEqual(['Ready Thread']);
   });
 
   it('does not accept a stale open operation response that drops existing threads', async () => {

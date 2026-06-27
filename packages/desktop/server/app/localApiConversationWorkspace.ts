@@ -37,6 +37,8 @@ export interface DesktopConversationWorkspaceLayout {
   activeConversationId: string | null;
 }
 
+export type DesktopConversationPlacement = 'closed' | 'open' | 'pinned' | 'archived';
+
 export function validateDesktopConversationWorkspaceUpdate(input: unknown): asserts input is DesktopConversationWorkspaceUpdateInput {
   if (!input || typeof input !== 'object') {
     throw new Error('conversation workspace update must be an object');
@@ -149,11 +151,11 @@ export function normalizeDesktopConversationWorkspaceLayout(input: {
   lockedConversationIds?: Iterable<unknown>;
   activeConversationId?: unknown;
 }): DesktopConversationWorkspaceLayout {
-  const pinnedSessionIds = normalizeSessionIds(input.pinnedSessionIds ?? []);
-  const pinnedIdSet = new Set(pinnedSessionIds);
-  const sessionIds = normalizeSessionIds(input.sessionIds ?? []).filter((id) => !pinnedIdSet.has(id));
+  const placements = buildDesktopConversationPlacements(input);
+  const pinnedSessionIds = normalizeSessionIds(input.pinnedSessionIds ?? []).filter((id) => placements.get(id) === 'pinned');
+  const sessionIds = normalizeSessionIds(input.sessionIds ?? []).filter((id) => placements.get(id) === 'open');
   const workspaceIdSet = new Set([...sessionIds, ...pinnedSessionIds]);
-  const archivedSessionIds = normalizeSessionIds(input.archivedSessionIds ?? []).filter((id) => !workspaceIdSet.has(id));
+  const archivedSessionIds = normalizeSessionIds(input.archivedSessionIds ?? []).filter((id) => placements.get(id) === 'archived');
   const activeConversationId = normalizeSessionId(input.activeConversationId);
   return {
     sessionIds,
@@ -162,6 +164,41 @@ export function normalizeDesktopConversationWorkspaceLayout(input: {
     lockedConversationIds: normalizeSessionIds(input.lockedConversationIds ?? []),
     activeConversationId: activeConversationId && workspaceIdSet.has(activeConversationId) ? activeConversationId : null,
   };
+}
+
+export function buildDesktopConversationPlacements(input: {
+  sessionIds?: Iterable<unknown>;
+  pinnedSessionIds?: Iterable<unknown>;
+  archivedSessionIds?: Iterable<unknown>;
+}): Map<string, DesktopConversationPlacement> {
+  const placements = new Map<string, DesktopConversationPlacement>();
+  for (const id of normalizeSessionIds(input.archivedSessionIds ?? [])) {
+    placements.set(id, 'archived');
+  }
+  for (const id of normalizeSessionIds(input.sessionIds ?? [])) {
+    placements.set(id, 'open');
+  }
+  for (const id of normalizeSessionIds(input.pinnedSessionIds ?? [])) {
+    placements.set(id, 'pinned');
+  }
+  return placements;
+}
+
+export function projectDesktopConversationPlacements(
+  layout: DesktopConversationWorkspaceLayout,
+): Record<string, DesktopConversationPlacement> {
+  return Object.fromEntries(buildDesktopConversationPlacements(layout));
+}
+
+export function readDesktopConversationPlacement(
+  layout: DesktopConversationWorkspaceLayout,
+  conversationId: string | null | undefined,
+): DesktopConversationPlacement {
+  const normalizedConversationId = normalizeSessionId(conversationId);
+  if (!normalizedConversationId) {
+    return 'closed';
+  }
+  return buildDesktopConversationPlacements(layout).get(normalizedConversationId) ?? 'closed';
 }
 
 function listWorkspaceSessionIds(layout: DesktopConversationWorkspaceLayout): string[] {

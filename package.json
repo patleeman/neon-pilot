@@ -40,7 +40,7 @@
     "lint:fix": "eslint packages --ext .ts,.tsx --fix",
     "fmt": "prettier --check .",
     "fmt:fix": "prettier --write .",
-    "check:types": "tsc --noEmit",
+    "check:types": "tsc --build --force",
     "check:dead": "knip --no-config-hints",
     "check:coverage": "vitest run --coverage --reporter=verbose || echo '⚠ Coverage check complete — review numbers above'",
     "check": "pnpm run check:types && pnpm run lint && pnpm run fmt && UI_PATTERN_MAX_FINDINGS=0 pnpm run check:ui-patterns && pnpm test && pnpm run check:extensions:static && pnpm run check:cli && pnpm run check:dead:advisory",

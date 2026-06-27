@@ -62,6 +62,7 @@ export type AppEvent =
       sessionIds: string[];
       pinnedSessionIds: string[];
       archivedSessionIds: string[];
+      conversationPlacements?: Record<string, 'closed' | 'open' | 'pinned' | 'archived'>;
       activeConversationId: string | null;
       workspacePaths: string[];
       remoteControlledConversationIds: string[];

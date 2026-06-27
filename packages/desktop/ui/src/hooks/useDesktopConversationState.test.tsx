@@ -1417,6 +1417,58 @@ describe('useDesktopConversationState', () => {
     ]);
   });
 
+  it('keeps an optimistic user message visible from the shared cache across a route remount', async () => {
+    vi.spyOn(api, 'conversationAggregate').mockReturnValue(new Promise(() => undefined));
+    vi.spyOn(api, 'sendConversationMessage').mockResolvedValue({
+      ok: true,
+      accepted: true,
+      delivery: 'started',
+      referencedTaskIds: [],
+      referencedMemoryDocIds: [],
+      referencedKnowledgeFileIds: [],
+      referencedAttachmentIds: [],
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-remount-send" />);
+      await flushPromises();
+    });
+    await act(async () => {
+      void latestState?.send('Stay visible');
+      await flushPromises();
+    });
+    expect(latestState?.state?.stream.blocks).toEqual([
+      expect.objectContaining({ id: expect.stringMatching(/^optimistic-user-/), type: 'user', text: 'Stay visible' }),
+    ]);
+
+    await act(async () => {
+      root.render(null);
+      await flushPromises();
+    });
+    latestState = null;
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-remount-send" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.conversationId).toBe('conv-remount-send');
+    expect(latestState?.state?.stream.blocks).toEqual([
+      expect.objectContaining({ id: expect.stringMatching(/^optimistic-user-/), type: 'user', text: 'Stay visible' }),
+    ]);
+  });
+
   it('removes an optimistic user message when send dispatch fails', async () => {
     vi.spyOn(api, 'conversationAggregate').mockResolvedValue(aggregateState('conv-optimistic-fail', []));
     vi.spyOn(api, 'sendConversationMessage').mockRejectedValue(new Error('provider unavailable'));

@@ -8,6 +8,7 @@ import type { LiveSessionToolDefinition, MessageBlock, TranscriptRenderItem } fr
 import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../../transcript/askUserQuestions';
 import { spotlightTranscriptTarget, type TranscriptSpotlightTarget } from '../../transcript/spotlight';
+import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput.js';
 import { ChatRenderItemView } from './ChatRenderItemView.js';
 import { SelectionContextMenu, StreamingIndicator } from './ChatTranscriptChrome.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
@@ -172,9 +173,6 @@ function areChatViewPropsEqual(previous: ChatViewProps, next: ChatViewProps): bo
     (previous.activeArtifactId ?? null) === (next.activeArtifactId ?? null) &&
     (previous.activeCheckpointId ?? null) === (next.activeCheckpointId ?? null) &&
     (previous.askUserQuestionDisplayMode ?? 'inline') === (next.askUserQuestionDisplayMode ?? 'inline') &&
-    (previous.resumeConversationBusy ?? false) === (next.resumeConversationBusy ?? false) &&
-    (previous.resumeConversationTitle ?? null) === (next.resumeConversationTitle ?? null) &&
-    (previous.resumeConversationLabel ?? 'continue') === (next.resumeConversationLabel ?? 'continue') &&
     previous.windowingHeaderContent === next.windowingHeaderContent &&
     (previous.anchorWindowingToTail ?? false) === (next.anchorWindowingToTail ?? false) &&
     (previous.bottomPaddingPx ?? 96) === (next.bottomPaddingPx ?? 96) &&
@@ -215,11 +213,7 @@ export const ChatView = memo(function ChatView({
   validatedFilePathTargets,
   onSubmitAskUserQuestion,
   askUserQuestionDisplayMode = 'inline',
-  onResumeConversation,
   onFocusComposerRequest,
-  resumeConversationBusy = false,
-  resumeConversationTitle,
-  resumeConversationLabel = 'continue',
   windowingHeaderContent,
   anchorWindowingToTail = false,
   bottomPaddingPx = 96,
@@ -397,9 +391,14 @@ export const ChatView = memo(function ChatView({
     };
   }, [expandInlineRun, messageIndexOffset, renderItems, runLookups, runRecords]);
 
-  const streamingStatusLabel = isCompacting
+  const streamingThroughputLabel = getStreamingThroughputLabel(messages, isStreaming);
+  const baseStreamingStatusLabel = isCompacting
     ? 'Compacting context…'
     : (pendingStatusLabel ?? getStreamingStatusLabel(messages, isStreaming));
+  const streamingStatusLabel =
+    baseStreamingStatusLabel && streamingThroughputLabel
+      ? `${baseStreamingStatusLabel} · ${streamingThroughputLabel}`
+      : baseStreamingStatusLabel;
   const renderingProfile = CHAT_VIEW_RENDERING_PROFILE[performanceMode];
   const lastBlock = messages[messages.length - 1];
   // Don't show the streaming indicator when the last message is an error block
@@ -487,10 +486,6 @@ export const ChatView = memo(function ChatView({
       validatedFilePathTargets={validatedFilePathTargets}
       onSubmitAskUserQuestion={onSubmitAskUserQuestion}
       askUserQuestionDisplayMode={askUserQuestionDisplayMode}
-      onResumeConversation={onResumeConversation}
-      resumeConversationBusy={resumeConversationBusy}
-      resumeConversationTitle={resumeConversationTitle}
-      resumeConversationLabel={resumeConversationLabel}
       isInlineRunExpanded={isInlineRunExpanded}
       onToggleInlineRun={toggleInlineRun}
       onInspectImage={setSelectedImage}

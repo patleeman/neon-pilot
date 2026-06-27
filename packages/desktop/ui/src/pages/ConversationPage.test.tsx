@@ -304,6 +304,20 @@ describe('desktop conversation state fallback', () => {
     ).toEqual({ allowQueuedPrompts: true, defaultComposerBehavior: 'steer', streamControlsActive: true });
   });
 
+  it('lets explicit idle runtime state clear stale transcript and composer run indicators', () => {
+    expect(
+      resolveConversationComposerRunState({
+        streamIsStreaming: true,
+        conversationRuntimeIsRunning: false,
+        sessionIsRunning: false,
+        recoveredLiveSessionIsRunning: true,
+        bootstrapLiveSessionIsStreaming: true,
+        desktopLiveSessionIsStreaming: true,
+        hasStaleTurnState: true,
+      }),
+    ).toEqual({ allowQueuedPrompts: false, defaultComposerBehavior: undefined, streamControlsActive: false });
+  });
+
   it('treats recovered live-session running metadata as authoritative over stale idle session rows', () => {
     expect(
       resolveConversationComposerRunState({

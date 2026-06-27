@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
-import { Button, MetaLabel, Notice, Pill, RowButton, SectionLabel, SurfacePanel, TextButton } from '../ui';
+import { Button, MetaLabel, Notice, Pill, RowButton, SectionLabel, SurfacePanel } from '../ui';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { readLinkedRuns } from './linkedRuns.js';
 import { ContextShelf } from './MessageBlocks.js';
@@ -329,7 +329,6 @@ export function TraceClusterBlock({
   deferredBlockIds = [],
   summary,
   live,
-  keepOpenUntilFollowed = false,
   followedByTranscriptContent = false,
   onOpenArtifact,
   activeArtifactId,
@@ -340,10 +339,6 @@ export function TraceClusterBlock({
   validatedFilePathTargets,
   onHydrateMessage,
   hydratingMessageBlockIds,
-  onResume,
-  resumeBusy,
-  resumeTitle,
-  resumeLabel,
   layout = 'default',
   transcriptDisclosureMode,
   diffDisclosureMode,
@@ -353,7 +348,6 @@ export function TraceClusterBlock({
   deferredBlockIds?: string[];
   summary: TraceClusterSummary;
   live: boolean;
-  keepOpenUntilFollowed?: boolean;
   followedByTranscriptContent?: boolean;
   onOpenArtifact?: (artifactId: string) => void;
   activeArtifactId?: string | null;
@@ -364,10 +358,6 @@ export function TraceClusterBlock({
   validatedFilePathTargets?: ReadonlySet<string>;
   onHydrateMessage?: (blockId: string) => Promise<void> | void;
   hydratingMessageBlockIds?: ReadonlySet<string>;
-  onResume?: () => Promise<void> | void;
-  resumeBusy?: boolean;
-  resumeTitle?: string | null;
-  resumeLabel?: string;
   layout?: ChatViewLayout;
   transcriptDisclosureMode: ConversationTranscriptDisclosureMode;
   diffDisclosureMode: ConversationDiffDisclosureMode;
@@ -383,8 +373,7 @@ export function TraceClusterBlock({
   const stableActive = useGracefulTraceClusterActive(isActive, followedByTranscriptContent);
   const throughputLabel = useMemo(() => getStreamingThroughputLabel(blocks, stableActive), [blocks, stableActive]);
   const compact = layout === 'compact';
-  const title = stableActive ? 'Working' : 'Internal work';
-  const autoOpen = keepOpenUntilFollowed && shouldAutoOpenTraceCluster(stableActive, false);
+  const autoOpen = shouldAutoOpenTraceCluster(stableActive, summary.hasRunning);
   const open = resolveDisclosureOpen(autoOpen, preference);
   const toggleTraceCluster = useCallback(() => {
     setPreference((current) => toggleDisclosurePreference(autoOpen, current));
@@ -476,9 +465,8 @@ export function TraceClusterBlock({
               : 'flex min-w-0 max-w-[78vw] items-center gap-1.5 bg-transparent p-0 text-dim/70 sm:max-w-[42rem]'
           }
         >
-          <span className="shrink-0 font-medium text-primary">{title}</span>
-          <span className="shrink-0 text-secondary">
-            · {summary.stepCount} step{summary.stepCount === 1 ? '' : 's'}
+          <span className="shrink-0 font-medium text-primary">
+            {summary.stepCount} step{summary.stepCount === 1 ? '' : 's'}
           </span>
           {summary.categories.length > 0 && (
             <span className="flex min-w-0 flex-wrap items-center gap-1">
@@ -506,7 +494,6 @@ export function TraceClusterBlock({
         </RowButton>
         <span className={compact ? 'h-px min-w-8 flex-1 bg-border-subtle' : 'h-px bg-border-subtle'} aria-hidden="true" />
       </div>
-      <ResumeConversationAction onResume={onResume} busy={resumeBusy} title={resumeTitle} label={resumeLabel} variant="inline" />
 
       {!open && (
         <PinnedToolBlocks
@@ -598,44 +585,6 @@ export function TraceClusterBlock({
   );
 }
 
-// ── ImageBlock ────────────────────────────────────────────────────────────────
-
-function ResumeConversationAction({
-  onResume,
-  busy = false,
-  title,
-  label = 'continue',
-  variant = 'compact',
-}: {
-  onResume?: () => Promise<void> | void;
-  busy?: boolean;
-  title?: string | null;
-  label?: string;
-  variant?: 'compact' | 'inline';
-}) {
-  if (!onResume) {
-    return null;
-  }
-
-  const compactClassName =
-    'shrink-0 text-[11px] font-medium text-secondary transition-colors hover:text-primary disabled:cursor-default disabled:text-dim';
-  const inlineClassName =
-    'group inline-flex shrink-0 items-center gap-1.5 self-start px-2 py-1 text-[11px] font-medium text-secondary disabled:cursor-default disabled:text-dim sm:self-center';
-
-  return (
-    <TextButton
-      onClick={() => {
-        void onResume();
-      }}
-      disabled={busy}
-      title={title ?? 'Resume this conversation'}
-      className={variant === 'inline' ? inlineClassName : compactClassName}
-    >
-      {busy ? 'opening…' : label}
-    </TextButton>
-  );
-}
-
 // ── ErrorBlock ────────────────────────────────────────────────────────────────
 
 function presentTraceErrorMessage(message: string): string {
@@ -660,20 +609,12 @@ function presentTraceErrorMessage(message: string): string {
 export const ErrorBlock = memo(function ErrorBlock({
   block,
   messageIndex,
-  onResume,
-  resumeBusy,
-  resumeTitle,
-  resumeLabel,
   onOpenFilePath: _onOpenFilePath,
   validatedFilePathTargets: _validatedFilePathTargets,
   onSelectionGesture,
 }: {
   block: Extract<MessageBlock, { type: 'error' }>;
   messageIndex?: number;
-  onResume?: () => Promise<void> | void;
-  resumeBusy?: boolean;
-  resumeTitle?: string | null;
-  resumeLabel?: string;
   onOpenFilePath?: (path: string) => void;
   validatedFilePathTargets?: ReadonlySet<string>;
   onSelectionGesture?: ReplySelectionGestureHandler;
@@ -688,10 +629,6 @@ export const ErrorBlock = memo(function ErrorBlock({
         <div {...replySelectionScopeProps}>
           {block.tool && <span className="text-danger/70 font-semibold">{block.tool} ·</span>}
           <span className="text-danger/85 leading-relaxed">{message}</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex-1" />
-          <ResumeConversationAction onResume={onResume} busy={resumeBusy} title={resumeTitle} label={resumeLabel} variant="inline" />
         </div>
       </div>
     </Notice>

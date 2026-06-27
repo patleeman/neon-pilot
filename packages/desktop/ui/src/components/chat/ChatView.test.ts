@@ -57,7 +57,8 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('Working');
+    expect(html).toContain('1 step');
+    expect(html).toContain('live');
     expect(html).toContain('running…');
     expect(html).toContain('>input<');
   });
@@ -133,7 +134,8 @@ describe('chat view streaming disclosure', () => {
     expect(workingHtml).toContain('Working…');
     expect(thinkingHtml).toContain('Working');
     expect(thinkingHtml).toContain('>Thinking<');
-    expect(toolHtml).toContain('Working');
+    expect(toolHtml).toContain('1 step');
+    expect(toolHtml).toContain('live');
     expect(toolHtml).toContain('running…');
     expect(textHtml).toContain('animation:cursorBlink');
   });
@@ -483,7 +485,7 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('Internal work');
+    expect(html).toContain('1 step');
     expect(html).not.toContain('related background work');
     expect(html).not.toContain('background task mentioned in this step');
     expect(html).not.toContain('show details');
@@ -863,7 +865,6 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('Internal work');
     expect(html).toContain('1 step');
   });
 
@@ -1726,7 +1727,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('background task');
   });
 
-  it('renders a continue action for the tail internal-work cluster when recovery is available', () => {
+  it('does not render a continue action for the tail trace cluster when recovery is available', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         messages: [
@@ -1744,11 +1745,11 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('continue');
-    expect(html).toContain('Internal work');
+    expect(html).not.toContain('continue');
+    expect(html).toContain('1 step');
   });
 
-  it('renders a continue action for a tail error trace when recovery is available', () => {
+  it('does not render a continue action for a tail error trace when recovery is available', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         messages: [
@@ -1763,8 +1764,8 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('continue');
-    expect(html).toContain('Internal work');
+    expect(html).not.toContain('continue');
+    expect(html).toContain('1 step');
     expect(html).toContain('ui-pill-danger');
   });
 

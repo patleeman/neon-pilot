@@ -30,6 +30,7 @@ import type {
   ConversationConnectionsResult,
   ConversationContentSearchResult,
   ConversationContextDocRef,
+  ConversationPlacement,
   ConversationSummaryRecord,
   DefaultCwdState,
   DeferredResumeSummary,
@@ -580,6 +581,7 @@ export const api = {
       pinnedSessionIds: string[];
       archivedSessionIds: string[];
       lockedConversationIds: string[];
+      conversationPlacements?: Record<string, ConversationPlacement>;
       workspacePaths: string[];
       activeConversationId?: string | null;
       remoteControlledConversationIds?: string[];
@@ -593,6 +595,7 @@ export const api = {
       pinnedSessionIds: string[];
       archivedSessionIds: string[];
       lockedConversationIds: string[];
+      conversationPlacements?: Record<string, ConversationPlacement>;
       workspacePaths: string[];
       activeConversationId?: string | null;
       remoteControlledConversationIds?: string[];
@@ -633,6 +636,7 @@ export const api = {
       pinnedSessionIds: string[];
       archivedSessionIds: string[];
       lockedConversationIds: string[];
+      conversationPlacements?: Record<string, ConversationPlacement>;
       workspacePaths: string[];
       activeConversationId?: string | null;
       remoteControlledConversationIds?: string[];
@@ -666,6 +670,7 @@ export const api = {
       pinnedSessionIds: string[];
       archivedSessionIds: string[];
       lockedConversationIds: string[];
+      conversationPlacements?: Record<string, ConversationPlacement>;
       workspacePaths: string[];
       activeConversationId?: string | null;
       remoteControlledConversationIds?: string[];

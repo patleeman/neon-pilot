@@ -136,7 +136,7 @@ describe('ChatView bash trace clusters', () => {
     const { container } = renderChatView([bashBlock]);
 
     expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('false');
-    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('1 step');
     expect(container.textContent).not.toContain('pwd');
   });
 
@@ -153,7 +153,7 @@ describe('ChatView bash trace clusters', () => {
 
     const { container } = renderChatView([bashBlock, followedByAssistantMessage]);
 
-    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('1 step');
     expect(container.textContent).not.toContain('pwd');
     expect(container.querySelector('[data-extension-tool-host="true"]')).toBeNull();
   });
@@ -171,7 +171,7 @@ describe('ChatView bash trace clusters', () => {
 
     const { container } = renderChatView([bashBlock, followedByAssistantMessage]);
 
-    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('1 step');
     expect(container.textContent).not.toContain('pwd');
 
     const toggle = container.querySelector('button[aria-expanded]');
@@ -291,7 +291,7 @@ describe('ChatView bash trace clusters', () => {
 
     const { container } = renderChatView([editBlock, followedByAssistantMessage]);
 
-    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('1 step');
     expect(container.textContent).not.toContain('src/app.ts');
     expect(container.textContent).not.toContain('View diff');
     expect(container.textContent).not.toContain('edited src/app.ts');

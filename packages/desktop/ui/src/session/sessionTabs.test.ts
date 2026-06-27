@@ -149,6 +149,27 @@ describe('sessionTabs', () => {
     expect(readConversationPlacement(layout, 'missing')).toBe('closed');
   });
 
+  it('prefers backend canonical placement over conflicting legacy arrays', () => {
+    applyRemoteConversationLayout({
+      sessionIds: ['pinned-in-map', 'archived-in-map', 'open-in-map'],
+      pinnedSessionIds: ['open-in-map', 'pinned-in-map'],
+      archivedSessionIds: ['open-in-map', 'archived-in-map'],
+      conversationPlacements: {
+        'archived-in-map': 'archived',
+        'open-in-map': 'open',
+        'pinned-in-map': 'pinned',
+      },
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+    });
+
+    const layout = readConversationLayout();
+    expect(layout.sessionIds).toEqual(['open-in-map']);
+    expect(layout.pinnedSessionIds).toEqual(['pinned-in-map']);
+    expect(layout.archivedSessionIds).toEqual(['archived-in-map']);
+    expect(readConversationPlacement(layout, 'pinned-in-map')).toBe('pinned');
+  });
+
   it('coalesces concurrent remote layout reads', async () => {
     apiMocks.sidebarConversations.mockResolvedValueOnce({
       sessionIds: ['session-1'],

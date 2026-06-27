@@ -1,3 +1,5 @@
+import { type DesktopConversationPlacement, projectDesktopConversationPlacements } from './localApiConversationWorkspace.js';
+
 export interface SavedConversationWorkspaceLike {
   openConversationIds: string[];
   pinnedConversationIds: string[];
@@ -16,6 +18,7 @@ export function buildDesktopConversationWorkspaceResponse(saved: SavedConversati
   pinnedSessionIds: string[];
   archivedSessionIds: string[];
   lockedConversationIds: string[];
+  conversationPlacements: Record<string, DesktopConversationPlacement>;
   activeConversationId: string | null;
   workspacePaths: string[];
   remoteControlledConversationIds: string[];
@@ -28,6 +31,13 @@ export function buildDesktopConversationWorkspaceResponse(saved: SavedConversati
     pinnedSessionIds: saved.pinnedConversationIds,
     archivedSessionIds: saved.archivedConversationIds,
     lockedConversationIds: saved.lockedConversationIds,
+    conversationPlacements: projectDesktopConversationPlacements({
+      sessionIds: saved.openConversationIds,
+      pinnedSessionIds: saved.pinnedConversationIds,
+      archivedSessionIds: saved.archivedConversationIds,
+      lockedConversationIds: saved.lockedConversationIds,
+      activeConversationId: saved.activeConversationId ?? null,
+    }),
     activeConversationId: saved.activeConversationId ?? null,
     workspacePaths: saved.workspacePaths,
     remoteControlledConversationIds: saved.remoteControlledConversationIds,

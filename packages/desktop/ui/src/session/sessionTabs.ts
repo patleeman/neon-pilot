@@ -43,6 +43,7 @@ interface ConversationLayoutInput {
   pinnedSessionIds?: Iterable<unknown>;
   archivedSessionIds?: Iterable<unknown>;
   lockedConversationIds?: Iterable<unknown>;
+  conversationPlacements?: Record<string, unknown> | null;
   activeSessionId?: unknown;
 }
 
@@ -79,6 +80,18 @@ function normalizeSessionIds(values: Iterable<unknown>): string[] {
 
 export function buildConversationPlacements(input: ConversationLayoutInput): Map<string, ConversationPlacement> {
   const placements = new Map<string, ConversationPlacement>();
+  if (input.conversationPlacements && typeof input.conversationPlacements === 'object') {
+    for (const [rawId, rawPlacement] of Object.entries(input.conversationPlacements)) {
+      const id = normalizeSessionId(rawId);
+      if (!id || (rawPlacement !== 'open' && rawPlacement !== 'pinned' && rawPlacement !== 'archived')) {
+        continue;
+      }
+      placements.set(id, rawPlacement);
+    }
+    if (placements.size > 0) {
+      return placements;
+    }
+  }
   for (const id of normalizeSessionIds(input.archivedSessionIds ?? [])) {
     placements.set(id, 'archived');
   }
@@ -183,6 +196,7 @@ function normalizeRemoteConversationLayout(input: RemoteConversationLayoutInput)
     pinnedSessionIds: input.pinnedSessionIds,
     archivedSessionIds: input.archivedSessionIds,
     lockedConversationIds: input.lockedConversationIds,
+    conversationPlacements: input.conversationPlacements,
     activeSessionId: input.activeSessionId ?? input.activeConversationId,
   });
   return {

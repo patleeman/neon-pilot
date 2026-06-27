@@ -11,7 +11,7 @@
  */
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import { LiveTitlesContext, useSseConnection } from '../app/contexts';
+import { LiveTitlesContext } from '../app/contexts';
 import { api } from '../client/api';
 import { NEW_CONVERSATION_TITLE, normalizeConversationTitle } from '../conversation/conversationTitle';
 import {
@@ -102,6 +102,7 @@ function applySidebarConversationSnapshot(
     pinnedSessionIds: snapshot.pinnedSessionIds,
     archivedSessionIds: snapshot.archivedSessionIds,
     lockedConversationIds: snapshot.lockedConversationIds,
+    conversationPlacements: snapshot.conversationPlacements,
     activeSessionId: snapshot.activeConversationId,
     workspacePaths: snapshot.workspacePaths,
     remoteControlledConversationIds: snapshot.remoteControlledConversationIds,
@@ -132,7 +133,6 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   const conversationActivityStatusVersion = useConversationActivityStatusVersion();
   const sessionsReady = useSessionsReady();
   const tasks = useAllTasks();
-  const { status: sseStatus } = useSseConnection();
   const seenRunningAutomationIdsRef = useRef<Set<string>>(new Set());
   const missingSessionMetaInflightRef = useRef<Set<string>>(new Set());
   const latestRefetchRequestIdRef = useRef(0);
@@ -423,7 +423,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
         : withTitles.filter((session) => !openIdSet.has(session.id) && !pinnedIdSet.has(session.id)).sort(compareSessionsByRecentActivity),
     [openIdSet, options.includeArchivedSessions, pinnedIdSet, withTitles],
   );
-  const loading = layoutHydrating || !sessionsReady || sseStatus === 'connecting' || sseStatus === 'reconnecting';
+  const loading = layoutHydrating || !sessionsReady;
 
   return {
     pinnedIds,

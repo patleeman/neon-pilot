@@ -1397,6 +1397,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const conversationNeedsTakeover = false;
   const rawComposerRunState = resolveConversationComposerRunState({
     streamIsStreaming: stream.isStreaming,
+    conversationRuntimeIsRunning: conversationRuntime?.running,
     sessionIsRunning: conversationRuntimeIsRunning,
     recoveredLiveSessionIsRunning,
     bootstrapLiveSessionIsStreaming:
@@ -1408,6 +1409,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const [latchedStreamControlsActive, setLatchedStreamControlsActive] = useState(rawComposerRunState.streamControlsActive);
 
   useEffect(() => {
+    if (conversationRuntime?.running === false) {
+      setLatchedStreamControlsActive(false);
+      return;
+    }
+
     if (rawComposerRunState.streamControlsActive) {
       setLatchedStreamControlsActive(true);
       return;
@@ -1420,19 +1426,24 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [rawComposerRunState.streamControlsActive]);
+  }, [conversationRuntime?.running, rawComposerRunState.streamControlsActive]);
 
   const composerRunState = useMemo(
     () => ({
-      allowQueuedPrompts: latchedStreamControlsActive || liveSessionHasStaleTurnState,
-      defaultComposerBehavior: latchedStreamControlsActive ? 'steer' : liveSessionHasStaleTurnState ? 'followUp' : undefined,
+      allowQueuedPrompts: latchedStreamControlsActive || (conversationRuntime?.running !== false && liveSessionHasStaleTurnState),
+      defaultComposerBehavior: latchedStreamControlsActive
+        ? 'steer'
+        : conversationRuntime?.running !== false && liveSessionHasStaleTurnState
+          ? 'followUp'
+          : undefined,
       streamControlsActive: latchedStreamControlsActive,
     }),
-    [latchedStreamControlsActive, liveSessionHasStaleTurnState],
+    [conversationRuntime?.running, latchedStreamControlsActive, liveSessionHasStaleTurnState],
   );
   const allowQueuedPrompts = composerRunState.allowQueuedPrompts;
   const defaultComposerBehavior = composerRunState.defaultComposerBehavior;
-  const conversationRunningForPage = composerRunState.streamControlsActive || liveSessionHasStaleTurnState;
+  const conversationRunningForPage =
+    composerRunState.streamControlsActive || (conversationRuntime?.running !== false && liveSessionHasStaleTurnState);
 
   useEffect(() => {
     setHistoricalTailBlocks(INITIAL_HISTORICAL_TAIL_BLOCKS);
