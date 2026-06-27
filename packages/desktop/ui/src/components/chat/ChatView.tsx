@@ -134,6 +134,27 @@ function isLeadingContextItem(item: ChatRenderItem): boolean {
   );
 }
 
+function readMessageBlockStableId(block: MessageBlock): string | null {
+  const id = (block as { id?: unknown }).id;
+  return typeof id === 'string' && id.trim().length > 0 ? id.trim() : null;
+}
+
+function buildMessageRenderKey(block: MessageBlock, absoluteIndex: number): string {
+  const stableId = readMessageBlockStableId(block);
+  return stableId ? `message:${block.type}:${stableId}` : `message-index:${absoluteIndex}`;
+}
+
+function buildClusterRenderKey(
+  item: Extract<ChatRenderItem, { type: 'context_cluster' | 'trace_cluster' }>,
+  messageIndexOffset: number,
+): string {
+  const firstBlock = item.blocks[0];
+  const firstBlockStableId = firstBlock ? readMessageBlockStableId(firstBlock) : null;
+  return firstBlockStableId
+    ? `${item.type}:${firstBlock.type}:${firstBlockStableId}`
+    : `${item.type}-index:${messageIndexOffset + item.startIndex}`;
+}
+
 function areChatViewPropsEqual(previous: ChatViewProps, next: ChatViewProps): boolean {
   return (
     previous.messages === next.messages &&
@@ -436,13 +457,11 @@ export const ChatView = memo(function ChatView({
   const renderChatItem = (item: ChatRenderItem, itemIndex: number, renderItemsLength = renderItems.length) => (
     <ChatRenderItemView
       key={
-        item.type === 'trace_cluster'
-          ? // Use only startIndex so the component stays mounted when new blocks
-            // append to the cluster during streaming. Using endIndex would change
-            // the key on every append, unmounting all child ToolBlocks and losing
-            // their expansion (preference) state.
-            `trace-${messageIndexOffset + item.startIndex}`
-          : messageIndexOffset + item.index
+        item.type === 'trace_cluster' || item.type === 'context_cluster'
+          ? // Key clusters by their first stable block id so prepending older
+            // history does not remount already-rendered transcript content.
+            buildClusterRenderKey(item, messageIndexOffset)
+          : buildMessageRenderKey(item.block, messageIndexOffset + item.index)
       }
       item={item}
       itemIndex={itemIndex}

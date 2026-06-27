@@ -115,6 +115,33 @@ describe('ChatView rendering stability', () => {
     expect(timeAgoSpy).toHaveBeenCalledWith(updatedTail.ts);
   });
 
+  it('keeps assistant message nodes mounted when earlier history is prepended', () => {
+    const userBlock = createUserBlock();
+    const assistantBlock = createAssistantBlock();
+    const olderBlock = {
+      id: 'assistant-older',
+      type: 'text' as const,
+      ts: '2026-04-23T17:59:59.000Z',
+      text: 'Earlier assistant reply',
+    };
+    const { container, root } = renderChatView([userBlock, assistantBlock], { isStreaming: false });
+
+    const initialAssistantNode = Array.from(container.querySelectorAll<HTMLElement>('[data-message-index]')).find((node) =>
+      node.textContent?.includes('Stable assistant reply'),
+    );
+    expect(initialAssistantNode).toBeTruthy();
+
+    act(() => {
+      root.render(<ChatView messages={[olderBlock, userBlock, assistantBlock]} isStreaming={false} />);
+    });
+
+    const nextAssistantNode = Array.from(container.querySelectorAll<HTMLElement>('[data-message-index]')).find((node) =>
+      node.textContent?.includes('Stable assistant reply'),
+    );
+    expect(nextAssistantNode).toBe(initialAssistantNode);
+    expect(nextAssistantNode?.getAttribute('data-message-index')).toBe('2');
+  });
+
   it('renders the streaming assistant tail as plain text until the stream settles', () => {
     const streamingTail = createStreamingTail('**streaming** tail');
     const { container, root } = renderChatView([streamingTail], { isStreaming: true });

@@ -248,6 +248,42 @@ function createOptimisticUserBlock(text: string, images?: PromptImageInput[]): E
   };
 }
 
+function createOptimisticSendState(
+  conversationId: string,
+  optimisticBlock: Extract<DisplayBlock, { type: 'user' }>,
+): DesktopConversationState {
+  const stream = appendOptimisticUserBlockIfMissing(
+    {
+      ...createEmptyDesktopConversationStreamState(),
+      isStreaming: true,
+    },
+    optimisticBlock,
+  );
+
+  return {
+    conversationId,
+    sessionDetail: null,
+    liveSession: {
+      live: true,
+      id: conversationId,
+      cwd: '',
+      sessionFile: '',
+      isStreaming: true,
+    },
+    stream,
+  };
+}
+
+function isOptimisticSendOnlyState(state: DesktopConversationState, optimisticBlock: Extract<DisplayBlock, { type: 'user' }>): boolean {
+  return (
+    state.sessionDetail === null &&
+    state.liveSession.live === true &&
+    state.liveSession.sessionFile === '' &&
+    state.stream.blocks.length === 1 &&
+    state.stream.blocks[0]?.id === optimisticBlock.id
+  );
+}
+
 function clearDesktopConversationStreamingState(state: DesktopConversationState): DesktopConversationState {
   return {
     ...state,
@@ -1413,7 +1449,10 @@ export function useDesktopConversationState(conversationId: string | null, optio
       const optimisticBlock = createOptimisticUserBlock(text, images);
       if (optimisticBlock) {
         setState((previous) => {
-          if (previous?.conversationId !== conversationId) {
+          if (!previous) {
+            return createOptimisticSendState(conversationId, optimisticBlock);
+          }
+          if (previous.conversationId !== conversationId) {
             return previous;
           }
           return {
@@ -1474,14 +1513,18 @@ export function useDesktopConversationState(conversationId: string | null, optio
         return result;
       } catch (sendError) {
         if (optimisticBlock) {
-          setState((previous) =>
-            previous?.conversationId === conversationId
-              ? {
-                  ...previous,
-                  stream: removeOptimisticUserBlock(previous.stream, optimisticBlock),
-                }
-              : previous,
-          );
+          setState((previous) => {
+            if (previous?.conversationId !== conversationId) {
+              return previous;
+            }
+            if (isOptimisticSendOnlyState(previous, optimisticBlock)) {
+              return null;
+            }
+            return {
+              ...previous,
+              stream: removeOptimisticUserBlock(previous.stream, optimisticBlock),
+            };
+          });
         }
         throw sendError;
       }

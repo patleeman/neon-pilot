@@ -14,6 +14,7 @@ import {
   resolveConversationPerformanceMode,
   resolveConversationStreamTitleSync,
   resolveConversationVisibleScrollBinding,
+  resolveConversationVisibleTranscriptState,
   resolveDisplayedConversationPendingStatusLabel,
   shouldDeferConversationFileRefresh,
   shouldFetchConversationAttachments,
@@ -404,6 +405,41 @@ describe('conversation page state helpers', () => {
       isStreaming: false,
       usingStableTranscript: true,
     });
+  });
+
+  it('mounts an empty transcript for a running saved conversation', () => {
+    expect(
+      resolveConversationVisibleTranscriptState({
+        draft: false,
+        conversationId: 'conv-running',
+        hasRenderableMessages: false,
+        realMessages: undefined,
+        historicalBlockOffset: 0,
+        historicalTotalBlocks: 0,
+        showConversationLoadingState: false,
+        stableTranscriptState: null,
+        conversationRunningForPage: true,
+      }),
+    ).toEqual({
+      conversationId: 'conv-running',
+      messages: [],
+      historicalBlockOffset: 0,
+      historicalTotalBlocks: 0,
+    });
+
+    expect(
+      resolveConversationVisibleTranscriptState({
+        draft: false,
+        conversationId: 'conv-idle',
+        hasRenderableMessages: false,
+        realMessages: undefined,
+        historicalBlockOffset: 0,
+        historicalTotalBlocks: 0,
+        showConversationLoadingState: false,
+        stableTranscriptState: null,
+        conversationRunningForPage: false,
+      }),
+    ).toBeNull();
   });
 
   it('formats connected background-run indicators from latest run status', () => {

@@ -1290,6 +1290,47 @@ describe('useDesktopConversationState', () => {
     });
   });
 
+  it('renders an optimistic user message before the initial aggregate finishes loading', async () => {
+    vi.spyOn(api, 'conversationAggregate').mockReturnValue(new Promise(() => undefined));
+    vi.spyOn(api, 'sendConversationMessage').mockResolvedValue({
+      ok: true,
+      accepted: true,
+      delivery: 'started',
+      referencedTaskIds: [],
+      referencedMemoryDocIds: [],
+      referencedKnowledgeFileIds: [],
+      referencedAttachmentIds: [],
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-loading-send" />);
+      await flushPromises();
+    });
+
+    expect(latestState?.state).toBeNull();
+
+    await act(async () => {
+      void latestState?.send('Patch before load');
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.conversationId).toBe('conv-loading-send');
+    expect(latestState?.state?.stream.isStreaming).toBe(true);
+    expect(latestState?.state?.stream.blocks).toEqual([
+      expect.objectContaining({ id: expect.stringMatching(/^optimistic-user-/), type: 'user', text: 'Patch before load' }),
+    ]);
+  });
+
   it('removes an optimistic user message when send dispatch fails', async () => {
     vi.spyOn(api, 'conversationAggregate').mockResolvedValue(aggregateState('conv-optimistic-fail', []));
     vi.spyOn(api, 'sendConversationMessage').mockRejectedValue(new Error('provider unavailable'));

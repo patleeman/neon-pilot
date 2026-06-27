@@ -100,7 +100,6 @@ export function ChatRenderItemView({
 
     return (
       <div
-        key={`trace-${messageIndexOffset + item.startIndex}`}
         data-trace-cluster-start-index={messageIndexOffset + item.startIndex}
         data-chat-tail={isTailItem ? '1' : undefined}
         style={contentVisibilityStyle}
@@ -143,11 +142,7 @@ export function ChatRenderItemView({
   if (item.type === 'context_cluster') {
     const isTailContextItem = itemIndex === renderItemsLength - 1;
     return (
-      <div
-        key={`context-${messageIndexOffset + item.startIndex}`}
-        data-chat-tail={isTailContextItem ? '1' : undefined}
-        style={contentVisibilityStyle}
-      >
+      <div data-chat-tail={isTailContextItem ? '1' : undefined} style={contentVisibilityStyle}>
         {item.blocks.map((_, offset) => {
           const absoluteIndex = messageIndexOffset + item.startIndex + offset;
           return <span key={`anchor-${absoluteIndex}`} id={`msg-${absoluteIndex}`} className="block h-0 overflow-hidden" aria-hidden />;
@@ -289,7 +284,6 @@ export function ChatRenderItemView({
 
   return el ? (
     <div
-      key={absoluteIndex}
       id={`msg-${absoluteIndex}`}
       data-message-index={absoluteIndex}
       data-chat-tail={isTailItem ? '1' : undefined}

@@ -157,6 +157,7 @@ import {
   resolveConversationPerformanceMode,
   resolveConversationStreamTitleSync,
   resolveConversationVisibleScrollBinding,
+  resolveConversationVisibleTranscriptState,
   resolveDisplayedConversationPendingStatusLabel,
   shouldDeferConversationFileRefresh,
   shouldShowConversationBootstrapLoadingState,
@@ -7211,17 +7212,17 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const conversationPerformanceMode = resolveConversationPerformanceMode({
     messageCount: realMessages?.length ?? 0,
   });
-  const visibleTranscriptState =
-    hasRenderableMessages && realMessages
-      ? {
-          conversationId: id ?? 'draft-conversation',
-          messages: realMessages,
-          historicalBlockOffset,
-          historicalTotalBlocks,
-        }
-      : showConversationLoadingState && !draft
-        ? stableTranscriptState
-        : null;
+  const visibleTranscriptState = resolveConversationVisibleTranscriptState({
+    draft,
+    conversationId: id,
+    hasRenderableMessages,
+    realMessages,
+    historicalBlockOffset,
+    historicalTotalBlocks,
+    showConversationLoadingState,
+    stableTranscriptState,
+    conversationRunningForPage,
+  });
   const visibleTranscriptMessages = visibleTranscriptState?.messages;
   const visibleTranscriptMessageIndexOffset = visibleTranscriptState?.historicalBlockOffset ?? 0;
   const visibleTranscriptTotalBlocks = visibleTranscriptState?.historicalTotalBlocks ?? 0;

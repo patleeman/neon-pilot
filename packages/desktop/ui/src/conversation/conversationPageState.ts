@@ -566,6 +566,52 @@ export function resolveConversationVisibleScrollBinding(input: {
   };
 }
 
+export function resolveConversationVisibleTranscriptState(input: {
+  draft: boolean;
+  conversationId: string | null | undefined;
+  hasRenderableMessages: boolean;
+  realMessages: MessageBlock[] | undefined;
+  historicalBlockOffset: number;
+  historicalTotalBlocks: number;
+  showConversationLoadingState: boolean;
+  stableTranscriptState: {
+    conversationId: string;
+    messages: MessageBlock[];
+    historicalBlockOffset: number;
+    historicalTotalBlocks: number;
+  } | null;
+  conversationRunningForPage: boolean;
+}): {
+  conversationId: string;
+  messages: MessageBlock[];
+  historicalBlockOffset: number;
+  historicalTotalBlocks: number;
+} | null {
+  if (input.hasRenderableMessages && input.realMessages) {
+    return {
+      conversationId: input.conversationId ?? 'draft-conversation',
+      messages: input.realMessages,
+      historicalBlockOffset: input.historicalBlockOffset,
+      historicalTotalBlocks: input.historicalTotalBlocks,
+    };
+  }
+
+  if (input.showConversationLoadingState && !input.draft) {
+    return input.stableTranscriptState;
+  }
+
+  if (!input.draft && input.conversationId && input.conversationRunningForPage) {
+    return {
+      conversationId: input.conversationId,
+      messages: [],
+      historicalBlockOffset: input.historicalBlockOffset,
+      historicalTotalBlocks: input.historicalTotalBlocks,
+    };
+  }
+
+  return null;
+}
+
 export function resolveConversationPerformanceMode(input: { messageCount: number }): 'default' | 'aggressive' {
   return input.messageCount >= AGGRESSIVE_CHAT_RENDERING_MESSAGE_THRESHOLD ? 'aggressive' : 'default';
 }
