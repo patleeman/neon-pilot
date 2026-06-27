@@ -499,12 +499,14 @@ function TopNavItem({
   label,
   badge,
   forceActive = false,
+  documentNavigationRoutes = [],
 }: {
   to: string;
   icon: string;
   label: string;
   badge?: number | null;
   forceActive?: boolean;
+  documentNavigationRoutes?: readonly string[];
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -518,13 +520,13 @@ function TopNavItem({
       if (browserPath === to && routerPath !== to) {
         window.history.replaceState(window.history.state, '', routerPath);
       }
-      if (shouldUseDocumentNavigationForSidebarRoute(location.pathname, to) && typeof window !== 'undefined') {
+      if (shouldUseDocumentNavigationForSidebarRoute(location.pathname, to, documentNavigationRoutes) && typeof window !== 'undefined') {
         window.location.assign(to);
         return;
       }
       navigate(to);
     },
-    [location.hash, location.pathname, location.search, navigate, to],
+    [documentNavigationRoutes, location.hash, location.pathname, location.search, navigate, to],
   );
 
   return (
@@ -563,6 +565,8 @@ function SidebarPrimaryNav({
   onOpenChat: () => void;
   onNewConversation: () => void;
 }) {
+  const documentNavigationRoutes = useMemo(() => items.map((item) => item.route), [items]);
+
   return (
     <nav className="relative z-20 shrink-0 space-y-px bg-panel pb-1 pt-3" aria-label="Primary navigation">
       <div className="grid grid-cols-[minmax(0,1fr)_32px] gap-1 px-1">
@@ -581,13 +585,21 @@ function SidebarPrimaryNav({
         </SidebarNavButton>
       </div>
       {items.map((item) => (
-        <TopNavItem key={`${item.extensionId}:${item.id}`} to={item.route} icon={getExtensionNavIcon(item.icon)} label={item.label} />
+        <TopNavItem
+          key={`${item.extensionId}:${item.id}`}
+          to={item.route}
+          icon={getExtensionNavIcon(item.icon)}
+          label={item.label}
+          documentNavigationRoutes={documentNavigationRoutes}
+        />
       ))}
     </nav>
   );
 }
 
 function SidebarSettingsNav({ items, notice }: { items: SidebarExtensionNavItem[]; notice: string | null }) {
+  const documentNavigationRoutes = useMemo(() => items.map((item) => item.route), [items]);
+
   return (
     <div className="relative z-20 shrink-0 bg-panel">
       {notice ? (
@@ -597,7 +609,13 @@ function SidebarSettingsNav({ items, notice }: { items: SidebarExtensionNavItem[
       ) : null}
       <div className="border-t border-border-subtle px-0 py-2 space-y-0.5">
         {items.map((item) => (
-          <TopNavItem key={`${item.extensionId}:${item.id}`} to={item.route} icon={getExtensionNavIcon(item.icon)} label={item.label} />
+          <TopNavItem
+            key={`${item.extensionId}:${item.id}`}
+            to={item.route}
+            icon={getExtensionNavIcon(item.icon)}
+            label={item.label}
+            documentNavigationRoutes={documentNavigationRoutes}
+          />
         ))}
       </div>
     </div>
