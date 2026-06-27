@@ -1143,10 +1143,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const shouldFetchSavedDesktopSessionDetailFallback =
     useDesktopConversation &&
     Boolean(id) &&
-    visibleDesktopConversationState?.liveSession?.live === false &&
     !visibleDesktopSessionDetail &&
-    visibleDesktopConversationState.stream.hasSnapshot === false &&
-    visibleDesktopConversationState.stream.blocks.length === 0;
+    ((visibleDesktopConversationState?.liveSession?.live === false &&
+      visibleDesktopConversationState.stream.hasSnapshot === false &&
+      visibleDesktopConversationState.stream.blocks.length === 0) ||
+      (desktopConversation.mode === 'local' && Boolean(desktopConversation.error)));
   const conversationVersionKey = `${effectiveConversationEventVersion}`;
   const webConversationBootstrap = null;
   const webConversationBootstrapLoading = false;
@@ -1482,7 +1483,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       : (visibleDesktopSessionDetail ?? bootstrapSessionDetail ?? webSessionDetail)
     : webSessionDetail;
   const sessionLoading = useDesktopConversation
-    ? desktopConversation.loading && !sessionDetail
+    ? (desktopConversation.loading || (shouldFetchSavedDesktopSessionDetailFallback && webSessionLoading)) && !sessionDetail
     : desktopConversationChecking
       ? true
       : webSessionLoading;
@@ -2806,6 +2807,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const lastHistoricalPrefetchRequestedAtRef = useRef(0);
   const pendingJumpMessageIndexRef = useRef<number | null>(null);
   const [requestedFocusMessageIndex, setRequestedFocusMessageIndex] = useState<number | null>(null);
+  const [desktopMissingConversationRecoveryExpiredId, setDesktopMissingConversationRecoveryExpiredId] = useState<string | null>(null);
 
   useEffect(() => {
     setComposerQuestionIndex(0);
@@ -7776,16 +7778,54 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     hasSavedConversationSessionFile: Boolean(savedConversationSessionFile),
     hasPendingInitialPrompt: Boolean(pendingInitialPrompt),
   });
+  const deferLocalDesktopMissingConversation =
+    missingConversation && Boolean(id) && desktopConversation.mode === 'local' && desktopMissingConversationRecoveryExpiredId !== id;
+  const shouldRenderMissingConversation = missingConversation && !deferLocalDesktopMissingConversation;
+
+  useEffect(() => {
+    setDesktopMissingConversationRecoveryExpiredId(null);
+  }, [id, visibleSessionDetail]);
 
   useEffect(() => {
     if (!missingConversation || !id) {
       return;
     }
 
-    forgetConversationTab(id);
-  }, [id, missingConversation]);
+    if (desktopConversation.mode !== 'local') {
+      forgetConversationTab(id);
+      return;
+    }
 
-  if (missingConversation) {
+    let cancelled = false;
+    const retryTimers: Array<ReturnType<typeof window.setTimeout>> = [];
+    const refreshMissingConversation = () => {
+      if (cancelled) {
+        return;
+      }
+      void desktopConversationRefresh();
+    };
+
+    refreshMissingConversation();
+    for (const delayMs of [500, 1500, 3500]) {
+      retryTimers.push(window.setTimeout(refreshMissingConversation, delayMs));
+    }
+    const forgetTimer = window.setTimeout(() => {
+      if (!cancelled) {
+        setDesktopMissingConversationRecoveryExpiredId(id);
+        forgetConversationTab(id);
+      }
+    }, 8000);
+
+    return () => {
+      cancelled = true;
+      for (const timer of retryTimers) {
+        window.clearTimeout(timer);
+      }
+      window.clearTimeout(forgetTimer);
+    };
+  }, [desktopConversation.mode, desktopConversationRefresh, id, missingConversation]);
+
+  if (shouldRenderMissingConversation) {
     return (
       <div className="flex flex-col h-full">
         <PageHeader className="gap-3 py-2">

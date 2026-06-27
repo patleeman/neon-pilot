@@ -715,6 +715,44 @@ describe('ConversationPage lazy composer metadata', () => {
     expect(sessionTabsMock.setActiveConversationTab).not.toHaveBeenCalledWith('missing-conv');
   });
 
+  it('refreshes a desktop-backed missing conversation before forgetting its restored tab', async () => {
+    vi.useRealTimers();
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.error = 'Conversation not found';
+    desktopConversationState.refresh.mockResolvedValue(undefined);
+
+    renderMissingConversationPage();
+
+    await waitFor(() => {
+      expect(desktopConversationState.refresh).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByText('This conversation no longer exists or the live session has ended.')).toBeNull();
+    expect(sessionTabsMock.forgetConversationTab).not.toHaveBeenCalledWith('missing-conv');
+  });
+
+  it('renders saved transcript fallback for a restored desktop conversation before showing not found', async () => {
+    vi.useRealTimers();
+    const restoredConversation = createRegressionBootstrapData('missing-conv');
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.error = 'Conversation not found';
+    apiMock.sessionDetail.mockResolvedValue(restoredConversation.sessionDetail);
+
+    renderMissingConversationPage();
+
+    await waitFor(() => {
+      expect(apiMock.sessionDetail).toHaveBeenCalledWith('missing-conv', expect.objectContaining({ tailBlocks: expect.any(Number) }));
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('chat-view').textContent).toContain('hi');
+    });
+
+    expect(screen.queryByText('This conversation no longer exists or the live session has ended.')).toBeNull();
+    expect(sessionTabsMock.forgetConversationTab).not.toHaveBeenCalledWith('missing-conv');
+  });
+
   it('keeps extension slash and mention registrations off the route hot path until their composer triggers appear', async () => {
     renderConversationPage();
 
