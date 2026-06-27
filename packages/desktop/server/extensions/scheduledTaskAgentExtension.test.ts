@@ -391,10 +391,8 @@ describe('scheduled task agent extension', () => {
 
     expect(missingConversation.isError).toBe(true);
     expect(missingConversation.content[0]?.text).toContain('deliverResultToConversation requires an active persisted conversation.');
-    expect(invalidConversationCallback.isError).toBe(true);
-    expect(invalidConversationCallback.content[0]?.text).toContain(
-      'deliverResultToConversation is only supported for background-agent automations.',
-    );
+    expect(invalidConversationCallback.isError).toBeUndefined();
+    expect(invalidConversationCallback.content[0]?.text).toContain('Saved scheduled task @thread-ping');
     expect(missingTask.isError).toBe(true);
     expect(missingTask.content[0]?.text).toContain('Task not found: missing-task');
     expect(rejectedRun.isError).toBe(true);

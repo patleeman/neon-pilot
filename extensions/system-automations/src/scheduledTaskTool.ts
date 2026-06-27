@@ -26,7 +26,7 @@ import { recordTelemetryEvent as recordBackendTelemetryEvent } from '@neon-pilot
 
 const SCHEDULED_TASK_ACTION_VALUES = ['list', 'get', 'save', 'delete', 'validate', 'run'] as const;
 const SCHEDULED_TASK_TARGET_VALUES = ['background-agent', 'conversation'] as const;
-const SCHEDULED_TASK_THREAD_MODE_VALUES = ['dedicated', 'existing'] as const;
+const SCHEDULED_TASK_THREAD_MODE_VALUES = ['current', 'dedicated', 'existing'] as const;
 const SCHEDULED_TASK_DELIVER_AS_VALUES = ['steer', 'followUp'] as const;
 
 type ScheduledTaskAction = (typeof SCHEDULED_TASK_ACTION_VALUES)[number];
@@ -39,8 +39,8 @@ const ScheduledTaskToolParams = {
   type: 'object',
   properties: {
     action: { type: 'string', enum: SCHEDULED_TASK_ACTION_VALUES },
-    taskId: { type: 'string', description: 'Task id for get/save/delete/run/validate.' },
-    title: { type: 'string', description: 'Human-readable title for the automation. Defaults to taskId.' },
+    taskId: { type: 'string', description: 'Task id for get/save/delete/run/validate. Optional for save; defaults from the title.' },
+    title: { type: 'string', description: 'Human-readable title for the automation. Defaults to taskId or a generated title.' },
     enabled: { type: 'boolean', description: 'Whether the task is enabled when saving.' },
     cron: { type: 'string', description: 'Recurring 5-field cron expression.' },
     at: {
@@ -55,11 +55,12 @@ const ScheduledTaskToolParams = {
     threadMode: {
       type: 'string',
       enum: SCHEDULED_TASK_THREAD_MODE_VALUES,
-      description: 'Owner thread binding mode: dedicated or existing.',
+      description:
+        'Owner thread binding mode. Use current for the current conversation; use existing only when threadConversationId names a different thread.',
     },
     threadConversationId: {
       type: 'string',
-      description: 'Existing conversation id when binding the automation to an existing thread.',
+      description: 'Existing conversation id when binding to a different thread. Omit this for the current conversation.',
     },
     deliverAs: {
       type: 'string',
@@ -85,7 +86,7 @@ const ScheduledTaskToolParams = {
     prompt: { type: 'string', description: 'Task prompt body.' },
     deliverResultToConversation: {
       type: 'boolean',
-      description: 'Whether task completions should wake the current conversation later.',
+      description: 'Only for background-agent automations: whether task completions should wake the current conversation later.',
     },
     notifyOnSuccess: {
       type: 'boolean',
@@ -104,18 +105,27 @@ const ScheduledTaskToolParams = {
   required: ['action'],
 } as const;
 
-function readRequiredString(value: string | undefined, label: string): string {
-  const normalized = value?.trim();
-  if (!normalized) {
-    throw new Error(`${label} is required.`);
-  }
-
-  return normalized;
-}
-
 function readOptionalString(value: string | undefined): string | undefined {
   const normalized = value?.trim();
   return normalized && normalized.length > 0 ? normalized : undefined;
+}
+
+function readOptionalTaskId(value: string | undefined): string | undefined {
+  const normalized = readOptionalString(value);
+  if (!normalized) {
+    return undefined;
+  }
+
+  return readOptionalString(normalized.startsWith('@') ? normalized.slice(1) : normalized);
+}
+
+function readRequiredTaskId(value: string | undefined): string {
+  const taskId = readOptionalTaskId(value);
+  if (!taskId) {
+    throw new Error('taskId is required.');
+  }
+
+  return taskId;
 }
 
 async function resolveOptionalScheduleAt(
@@ -143,6 +153,10 @@ function readConversationBehavior(value: string | undefined): 'steer' | 'followU
 }
 
 function readThreadMode(value: string | undefined): 'dedicated' | 'existing' | undefined {
+  if (value === 'current') {
+    return 'existing';
+  }
+
   return value === 'dedicated' || value === 'existing' ? value : undefined;
 }
 
@@ -295,12 +309,17 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
     pi.registerTool({
       name: 'scheduled_task',
       label: 'Scheduled Task',
-      description: 'Create, inspect, validate, run, and delete daemon-managed scheduled tasks.',
+      description:
+        'Create, inspect, validate, run, and delete daemon-managed scheduled tasks. For a request about this/current conversation, save with targetType="conversation" and threadMode="current"; omit taskId and threadConversationId. Do not use shell commands, databases, files, or admin tools to discover the current conversation id.',
       promptSnippet:
         'When the user asks to create, save, schedule, update, inspect, run, or delete an automation, call scheduled_task directly.',
       promptGuidelines: [
         'Use scheduled_task for persistent one-time/recurring automations; keep schedules and prompts concise.',
-        'For chat requests to create an automation in this conversation, use action="save", targetType="conversation", and threadMode="existing" unless the user asks for a dedicated or background automation.',
+        'Pass natural schedule text such as "tomorrow at 9:30 AM" in at; the tool resolves future local times, so do not run date/timezone shell commands first.',
+        'For chat requests to create an automation in this conversation, use action="save", targetType="conversation", and threadMode="current" unless the user asks for a dedicated or background automation; taskId and threadConversationId can both be omitted.',
+        'When the user asks the automation to reply/say exactly some text, set prompt to an instruction such as "Reply exactly: <text>" and preserve the requested text verbatim.',
+        'For current-conversation automations, do not inspect files, databases, admin commands, or shell output to discover the conversation id; the tool receives the active conversation context.',
+        'Only set deliverResultToConversation for background-agent automations; conversation automations deliver in their owner thread.',
         'Use action="run" for automation run-now requests after resolving the task id; do not use shell commands or documentation lookup as the first path from inside a model turn.',
       ],
       parameters: ScheduledTaskToolParams,
@@ -323,7 +342,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
             }
 
             case 'get': {
-              const taskId = readRequiredString(params.taskId, 'taskId');
+              const taskId = readRequiredTaskId(params.taskId);
               const { task, runtime } = await resolveScheduledTaskForProfile(runtimeScope, taskId);
               const callbackBinding = await getTaskCallbackBinding({ profile: runtimeScope, taskId });
               return {
@@ -338,8 +357,8 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
 
             case 'save': {
               const loaded = await loadScheduledTasksForProfile(runtimeScope);
-              const taskId = readRequiredString(params.taskId, 'taskId');
-              const existing = loaded.tasks.find((task) => task.id === taskId);
+              const requestedTaskId = readOptionalTaskId(params.taskId);
+              const existing = requestedTaskId ? loaded.tasks.find((task) => task.id === requestedTaskId) : undefined;
               const targetType =
                 params.targetType === undefined
                   ? (existing?.targetType ?? 'conversation')
@@ -370,9 +389,6 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                 throw new Error('Provide exactly one schedule for a new automation: cron or at.');
               }
 
-              if (targetType === 'conversation' && params.deliverResultToConversation === true) {
-                throw new Error('deliverResultToConversation is only supported for background-agent automations.');
-              }
               if (
                 targetType !== 'conversation' &&
                 params.deliverResultToConversation === true &&
@@ -400,8 +416,8 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                       : undefined;
 
               const saved = existing
-                ? await updateStoredAutomation(taskId, {
-                    title: readOptionalString(params.title) ?? existing.title ?? taskId,
+                ? await updateStoredAutomation(existing.id, {
+                    title: readOptionalString(params.title) ?? existing.title ?? existing.id,
                     enabled: params.enabled ?? existing.enabled,
                     cron: resolvedCron,
                     at: resolvedAt,
@@ -419,8 +435,8 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                     conversationBehavior: deliverAs,
                   })
                 : await createStoredAutomation({
-                    id: taskId,
-                    title: readOptionalString(params.title) ?? taskId,
+                    id: requestedTaskId,
+                    title: readOptionalString(params.title) ?? requestedTaskId ?? 'Scheduled automation',
                     enabled: params.enabled ?? true,
                     cron: params.cron,
                     at: scheduledAt?.dueAt,
@@ -441,11 +457,11 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
               });
 
               if (targetType === 'conversation') {
-                await clearTaskCallbackBinding({ profile: runtimeScope, taskId });
+                await clearTaskCallbackBinding({ profile: runtimeScope, taskId: task.id });
               } else if (params.deliverResultToConversation === true) {
                 await setTaskCallbackBinding({
                   profile: runtimeScope,
-                  taskId,
+                  taskId: task.id,
                   conversationId: currentConversationId,
                   sessionFile,
                   deliverOnSuccess: params.notifyOnSuccess ?? true,
@@ -456,7 +472,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                   autoResumeIfOpen: params.autoResumeIfOpen ?? true,
                 });
               } else if (params.deliverResultToConversation === false) {
-                await clearTaskCallbackBinding({ profile: runtimeScope, taskId });
+                await clearTaskCallbackBinding({ profile: runtimeScope, taskId: task.id });
               }
 
               await invalidateAppTopics(['tasks', 'sessions', 'workspace']);
@@ -465,14 +481,14 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                 content: [
                   {
                     type: 'text' as const,
-                    text: `${existing ? 'Updated' : 'Saved'} scheduled task @${taskId}${
+                    text: `${existing ? 'Updated' : 'Saved'} scheduled task @${task.id}${
                       scheduledAt ? ` for ${scheduledAt.interpretation}` : ''
                     }.`,
                   },
                 ],
                 details: {
                   action: 'save',
-                  taskId,
+                  taskId: task.id,
                   filePath: task.filePath,
                   targetType,
                   ...(scheduledAt
@@ -483,7 +499,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
             }
 
             case 'delete': {
-              const taskId = readRequiredString(params.taskId, 'taskId');
+              const taskId = readRequiredTaskId(params.taskId);
               await deleteStoredAutomation(taskId);
               await clearTaskCallbackBinding({ profile: runtimeScope, taskId });
               await invalidateAppTopics(['tasks', 'sessions', 'workspace']);
@@ -500,7 +516,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
             case 'validate': {
               const loaded = await loadScheduledTasksForProfile(runtimeScope);
               if (params.taskId) {
-                const taskId = readRequiredString(params.taskId, 'taskId');
+                const taskId = readRequiredTaskId(params.taskId);
                 const match = loaded.tasks.find((task) => task.id === taskId);
                 const parseError = loaded.parseErrors.find((entry) => entry.filePath.includes(taskId));
 
@@ -548,7 +564,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
             }
 
             case 'run': {
-              const taskId = readRequiredString(params.taskId, 'taskId');
+              const taskId = readRequiredTaskId(params.taskId);
               const { task } = await resolveScheduledTaskForProfile(runtimeScope, taskId);
               if (!(await pingDaemon())) throw new Error('Daemon is not responding. Ensure the desktop app is running.');
               const result = await startScheduledTaskRun(task.id);

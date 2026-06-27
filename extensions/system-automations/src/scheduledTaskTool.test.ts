@@ -105,10 +105,18 @@ describe('scheduledTaskTool', () => {
       expect.arrayContaining([
         expect.stringContaining('action="save"'),
         expect.stringContaining('targetType="conversation"'),
-        expect.stringContaining('threadMode="existing"'),
+        expect.stringContaining('threadMode="current"'),
+        expect.stringContaining('natural schedule text'),
+        expect.stringContaining('taskId and threadConversationId can both be omitted'),
+        expect.stringContaining('Reply exactly: <text>'),
+        expect.stringContaining('do not inspect files, databases, admin commands, or shell output'),
+        expect.stringContaining('Only set deliverResultToConversation for background-agent'),
         expect.stringContaining('do not use shell commands'),
       ]),
     );
+    expect(tool.description).toContain('threadMode="current"');
+    expect(tool.description).toContain('omit taskId and threadConversationId');
+    expect(tool.description).toContain('Do not use shell commands, databases, files, or admin tools');
   });
 
   it('formats task detail with thread and callback metadata', async () => {
@@ -129,7 +137,7 @@ describe('scheduledTaskTool', () => {
       notifyOnFailure: 'none',
     });
 
-    const result = await registerTool().execute('call-1', { action: 'get', taskId: ' task-1 ' });
+    const result = await registerTool().execute('call-1', { action: 'get', taskId: ' @task-1 ' });
 
     expect(automations.resolveScheduledTaskForProfile).toHaveBeenCalledWith('runtime', 'task-1');
     expect(result.content[0].text).toContain('threadConversationId: conv-1');
@@ -178,9 +186,85 @@ describe('scheduledTaskTool', () => {
     expect(result.content[0].text).toBe('Saved scheduled task @task-1 for tomorrow at 6pm.');
   });
 
+  it('saves a current-thread conversation automation without requiring the model to choose a task id', async () => {
+    automations.loadScheduledTasksForProfile.mockResolvedValue({ tasks: [], parseErrors: [], runtimeState: {} });
+    automations.parseFutureHumanDateTime.mockResolvedValue({
+      dueAt: '2026-05-23T13:30:00.000Z',
+      interpretation: 'tomorrow at 9:30 AM',
+      input: 'tomorrow at 9:30 AM',
+    });
+    automations.readSessionConversationId.mockResolvedValue('conv-natural');
+    automations.resolveScheduledTaskThreadBinding.mockResolvedValue({
+      mode: 'existing',
+      conversationId: 'conv-natural',
+      sessionFile: '/session-natural.json',
+    });
+    automations.createStoredAutomation.mockResolvedValue(
+      task({
+        id: 'qa-natural-chat-automation-a1b2c3d4',
+        title: 'QA Natural Chat Automation',
+        schedule: { type: 'at', at: '2026-05-23T13:30:00.000Z' },
+        targetType: 'conversation',
+      }),
+    );
+    automations.applyScheduledTaskThreadBinding.mockResolvedValue(
+      task({
+        id: 'qa-natural-chat-automation-a1b2c3d4',
+        title: 'QA Natural Chat Automation',
+        targetType: 'conversation',
+        threadMode: 'existing',
+        threadConversationId: 'conv-natural',
+      }),
+    );
+
+    const result = await registerTool().execute(
+      'call-1',
+      {
+        action: 'save',
+        title: 'QA Natural Chat Automation',
+        at: 'tomorrow at 9:30 AM',
+        targetType: 'conversation',
+        threadMode: 'current',
+        prompt: 'Reply exactly QA natural fired.',
+      },
+      undefined,
+      undefined,
+      { sessionManager: { getSessionFile: () => '/session-natural.json' } },
+    );
+
+    expect(automations.createStoredAutomation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: undefined,
+        title: 'QA Natural Chat Automation',
+        at: '2026-05-23T13:30:00.000Z',
+        targetType: 'conversation',
+        prompt: 'Reply exactly QA natural fired.',
+      }),
+    );
+    expect(automations.applyScheduledTaskThreadBinding).toHaveBeenCalledWith(
+      'qa-natural-chat-automation-a1b2c3d4',
+      expect.objectContaining({
+        threadMode: 'existing',
+        threadConversationId: 'conv-natural',
+        threadSessionFile: '/session-natural.json',
+      }),
+    );
+    expect(automations.clearTaskCallbackBinding).toHaveBeenCalledWith({
+      profile: 'runtime',
+      taskId: 'qa-natural-chat-automation-a1b2c3d4',
+    });
+    expect(result.content[0].text).toBe('Saved scheduled task @qa-natural-chat-automation-a1b2c3d4 for tomorrow at 9:30 AM.');
+    expect(result.details).toMatchObject({ action: 'save', taskId: 'qa-natural-chat-automation-a1b2c3d4' });
+  });
+
   it('saves a background-agent automation with callback delivery to the current conversation', async () => {
     automations.loadScheduledTasksForProfile.mockResolvedValue({ tasks: [], parseErrors: [], runtimeState: {} });
     automations.readSessionConversationId.mockResolvedValue('conv-1');
+    automations.resolveScheduledTaskThreadBinding.mockResolvedValue({
+      mode: 'existing',
+      conversationId: 'conv-1',
+      sessionFile: '/session.json',
+    });
     automations.createStoredAutomation.mockResolvedValue(
       task({ id: 'agent-check', schedule: { type: 'cron', expression: '*/15 * * * *' }, targetType: 'background-agent' }),
     );
@@ -241,35 +325,47 @@ describe('scheduledTaskTool', () => {
     expect(result.details).toMatchObject({ action: 'delete', taskId: 'task-1' });
   });
 
-  it('rejects conversation automations that also request background-agent callback delivery', async () => {
+  it('ignores background-agent callback delivery flags for conversation automations', async () => {
     automations.loadScheduledTasksForProfile.mockResolvedValue({ tasks: [], parseErrors: [], runtimeState: {} });
     automations.parseFutureHumanDateTime.mockResolvedValue({
       dueAt: '2026-05-23T01:00:00.000Z',
       interpretation: 'tomorrow at 6pm',
       input: 'tomorrow 6pm',
     });
-
-    await expect(
-      registerTool().execute(
-        'call-1',
-        {
-          action: 'save',
-          taskId: 'conversation-check',
-          at: 'tomorrow 6pm',
-          targetType: 'conversation',
-          deliverResultToConversation: true,
-          prompt: 'Follow up in this thread',
-        },
-        undefined,
-        undefined,
-        { sessionManager: { getSessionFile: () => '/session.json' } },
-      ),
-    ).resolves.toMatchObject({
-      isError: true,
-      content: [{ text: 'deliverResultToConversation is only supported for background-agent automations.' }],
+    automations.readSessionConversationId.mockResolvedValue('conv-callback');
+    automations.resolveScheduledTaskThreadBinding.mockResolvedValue({
+      mode: 'existing',
+      conversationId: 'conv-callback',
+      sessionFile: '/session.json',
     });
-    expect(automations.createStoredAutomation).not.toHaveBeenCalled();
+    automations.createStoredAutomation.mockResolvedValue(task({ id: 'conversation-check', targetType: 'conversation' }));
+    automations.applyScheduledTaskThreadBinding.mockResolvedValue(
+      task({
+        id: 'conversation-check',
+        targetType: 'conversation',
+        threadMode: 'existing',
+        threadConversationId: 'conv-callback',
+      }),
+    );
+
+    const result = await registerTool().execute(
+      'call-1',
+      {
+        action: 'save',
+        taskId: 'conversation-check',
+        at: 'tomorrow 6pm',
+        targetType: 'conversation',
+        deliverResultToConversation: true,
+        prompt: 'Follow up in this thread',
+      },
+      undefined,
+      undefined,
+      { sessionManager: { getSessionFile: () => '/session.json' } },
+    );
+
+    expect(result.content[0].text).toBe('Saved scheduled task @conversation-check for tomorrow at 6pm.');
     expect(automations.setTaskCallbackBinding).not.toHaveBeenCalled();
+    expect(automations.clearTaskCallbackBinding).toHaveBeenCalledWith({ profile: 'runtime', taskId: 'conversation-check' });
   });
 
   it('runs a task through the daemon and records telemetry', async () => {
