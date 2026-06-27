@@ -26,7 +26,7 @@ From `/automations`, click **New automation**. Choose:
 | Schedule          | Recurring cron or one-time ISO/natural time.   |
 | Instructions      | Prompt the agent runs when the schedule fires. |
 | Working directory | Optional cwd for the run.                      |
-| Timeout seconds   | Per-run timeout.                               |
+| Timeout seconds   | Per-run timeout from 1 second to 7 days.       |
 | Enabled           | Whether the schedule is active.                |
 
 Creating from chat through the `scheduled_task` tool defaults to the current conversation when available; otherwise it creates a dedicated owner thread. Creating from the Automations page requires selecting an existing owner thread.
@@ -74,6 +74,8 @@ now+1d@20:00
 5. If only the standalone runner is available, it runs without writing a hidden session branch and the captured result is appended as an automation transcript entry.
 6. Durable run logs and status are still written for inspection.
 7. Task snapshots update the shelf/table/sidebar.
+
+On startup, the scheduler recovers interrupted durable scheduled-task runs by task id even if the crash happened before the runtime state persisted the active run id.
 
 ## Missed, skipped, and failed runs
 

@@ -65,8 +65,11 @@ export function resolveScheduledTaskThreadBinding(input: ScheduledTaskThreadInpu
   const sessionMeta = sessionFile
     ? readConversationSessionMetaByFile(sessionFile)
     : readConversationSessionMeta(conversationId, { profile });
+  if (!sessionMeta) {
+    throw new Error('Selected thread was not found.');
+  }
   const expectedCwd = readOptionalString(input.cwd ?? undefined);
-  if (expectedCwd && sessionMeta?.cwd && sessionMeta.cwd !== expectedCwd) {
+  if (expectedCwd && sessionMeta.cwd && sessionMeta.cwd !== expectedCwd) {
     throw new Error('Selected thread must use the same working directory as the automation.');
   }
 

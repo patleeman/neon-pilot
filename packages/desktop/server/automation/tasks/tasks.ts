@@ -23,6 +23,7 @@ import {
   saveDurableRunManifest,
   saveDurableRunStatus,
   scanDurableRun,
+  scanDurableRunsForRecovery,
 } from '../../runs/store.js';
 import { invalidateAppTopics, publishAppEvent } from '../../shared/appEvents.js';
 import {
@@ -1190,6 +1191,24 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
   }): Promise<void> => {
     const recoveryTime = now();
     const recoveryIso = recoveryTime.toISOString();
+    const orphanRecoverableRunByTaskId = new Map<string, { runId: string; updatedAtMs: number }>();
+    for (const run of scanDurableRunsForRecovery(durableRunsRoot)) {
+      if (
+        run.manifest?.kind !== 'scheduled-task' ||
+        run.manifest.source?.type !== 'scheduled-task' ||
+        typeof run.manifest.source.id !== 'string' ||
+        (run.recoveryAction !== 'rerun' && run.recoveryAction !== 'resume')
+      ) {
+        continue;
+      }
+
+      const parsedUpdatedAtMs = Date.parse(run.status?.updatedAt ?? run.manifest.createdAt);
+      const updatedAtMs = Number.isFinite(parsedUpdatedAtMs) ? parsedUpdatedAtMs : 0;
+      const existing = orphanRecoverableRunByTaskId.get(run.manifest.source.id);
+      if (!existing || updatedAtMs > existing.updatedAtMs) {
+        orphanRecoverableRunByTaskId.set(run.manifest.source.id, { runId: run.runId, updatedAtMs });
+      }
+    }
     for (const task of listStoredAutomations({ dbPath: runtimeDbPath })) {
       const record = ensureTaskRecord(taskState, task);
       if (activeRuns.has(task.key)) {
@@ -1197,6 +1216,14 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       }
 
       const persistedAsRunning = record.running || record.lastStatus === 'running';
+      if (!record.activeRunId) {
+        const orphanRunId = orphanRecoverableRunByTaskId.get(task.id)?.runId;
+        if (orphanRunId) {
+          record.activeRunId = orphanRunId;
+          record.lastRunId = orphanRunId;
+          context.logger.info(`reattached orphan scheduled task run id=${task.id} run=${orphanRunId}`);
+        }
+      }
       if (!record.activeRunId) {
         if (persistedAsRunning) {
           clearStaleRunningTaskState(task, record, context, {

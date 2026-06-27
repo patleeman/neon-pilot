@@ -478,4 +478,52 @@ describe('AutomationsPage', () => {
       }),
     );
   });
+
+  it('validates custom timeout before creating an automation', async () => {
+    const pa = createPa();
+    await renderPage(pa, { search: '?action=new' });
+    const title = document.querySelector<HTMLInputElement>('input[name="automation-title"]');
+    const owner = document.querySelector<HTMLSelectElement>('select[name="automation-owner-thread"]');
+    const prompt = document.querySelector<HTMLTextAreaElement>('textarea[name="automation-prompt"]');
+    const timeoutPreset = document.querySelector<HTMLSelectElement>('select[name="automation-timeout-preset"]');
+    if (!title || !owner || !prompt || !timeoutPreset) throw new Error('editor controls missing');
+
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(title, 'Timeout check');
+      title.dispatchEvent(new Event('input', { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(owner, 'conv-owner');
+      owner.dispatchEvent(new Event('change', { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(prompt, 'Check timeout validation.');
+      prompt.dispatchEvent(new Event('input', { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(timeoutPreset, '__custom');
+      timeoutPreset.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const timeout = document.querySelector<HTMLInputElement>('input[name="automation-timeout"]');
+    if (!timeout) throw new Error('custom timeout input missing');
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(timeout, 'abc');
+      timeout.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () =>
+      Array.from(document.querySelectorAll('button'))
+        .find((button) => button.textContent === 'Create automation')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    expect(pa.automations.create).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('Enter a whole-number timeout from 1 second to 7 days.');
+
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(timeout, '45');
+      timeout.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () =>
+      Array.from(document.querySelectorAll('button'))
+        .find((button) => button.textContent === 'Create automation')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    expect(pa.automations.create).toHaveBeenCalledWith(expect.objectContaining({ timeoutSeconds: 45 }));
+  });
 });

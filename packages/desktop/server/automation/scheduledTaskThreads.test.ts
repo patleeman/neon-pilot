@@ -86,6 +86,14 @@ describe('scheduledTaskThreads', () => {
     expect(() => resolveScheduledTaskThreadBinding({ threadMode: 'existing', threadConversationId: 'conv-1', cwd: '/repo' })).toThrow(
       'Selected thread must use the same working directory as the automation.',
     );
+    conversationService.readConversationSessionMetaByFile.mockReturnValueOnce(undefined);
+    expect(() =>
+      resolveScheduledTaskThreadBinding({
+        threadMode: 'existing',
+        threadConversationId: 'conv-1',
+        threadSessionFile: '/missing.json',
+      }),
+    ).toThrow('Selected thread was not found.');
   });
 
   it('applies thread bindings through daemon storage and ensures owner threads', () => {

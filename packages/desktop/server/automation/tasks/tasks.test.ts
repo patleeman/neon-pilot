@@ -1820,6 +1820,94 @@ describe('tasks module scheduling', () => {
     await module.stop?.(context);
   });
 
+  it('reattaches orphan durable scheduled task runs on startup', async () => {
+    const repoRoot = createTempDir('tasks-module-repo-');
+    const taskDir = join(repoRoot, 'profiles', 'datadog', 'agent', 'tasks');
+    mkdirSync(taskDir, { recursive: true });
+    const stateRoot = createTempDir('tasks-module-state-');
+    const priorRunId = 'task-recover-orphan-prior';
+    const task = seedAutomation(stateRoot, {
+      id: 'recover-orphan',
+      title: 'Recover orphan',
+      at: '2026-03-02T10:00:00.000Z',
+      prompt: 'Recover orphan after restart',
+    });
+
+    const runsRoot = resolveDurableRunsRoot(stateRoot);
+    const priorRunPaths = resolveDurableRunPaths(runsRoot, priorRunId);
+    saveDurableRunManifest(
+      priorRunPaths.manifestPath,
+      createDurableRunManifest({
+        id: priorRunId,
+        kind: 'scheduled-task',
+        resumePolicy: 'rerun',
+        createdAt: '2026-03-02T10:00:00.000Z',
+        source: {
+          type: 'scheduled-task',
+          id: 'recover-orphan',
+          filePath: task.filePath,
+        },
+      }),
+    );
+    saveDurableRunStatus(
+      priorRunPaths.statusPath,
+      createInitialDurableRunStatus({
+        runId: priorRunId,
+        status: 'running',
+        createdAt: '2026-03-02T10:00:00.000Z',
+        updatedAt: '2026-03-02T10:05:00.000Z',
+        activeAttempt: 1,
+        startedAt: '2026-03-02T10:00:00.000Z',
+      }),
+    );
+
+    const currentTime = new Date('2026-03-02T10:30:00.000Z');
+    const runTask = vi.fn(async (request: TaskRunRequest) =>
+      createRunResult(request, true, currentTime.toISOString(), undefined, 'Recovered orphan successfully.'),
+    );
+
+    const module = createTasksModule(
+      {
+        enabled: true,
+        taskDir,
+        tickIntervalSeconds: 30,
+        maxRetries: 3,
+        reapAfterDays: 7,
+        defaultTimeoutSeconds: 1800,
+      },
+      {
+        now: () => currentTime,
+        runTask,
+      },
+    );
+
+    const { context } = createContext(taskDir, stateRoot);
+
+    await module.start(context);
+
+    await waitForCondition(() => {
+      const status = module.getStatus?.() as { totalRuns?: number };
+      if ((status.totalRuns ?? 0) !== 1) {
+        return false;
+      }
+
+      const persistedState = loadAutomationRuntimeStateMap({ dbPath: resolveRuntimeDbPath(stateRoot) });
+      const taskState = persistedState['recover-orphan'];
+      return taskState?.activeRunId === undefined && taskState.lastRunId !== priorRunId && taskState.oneTimeResolvedStatus === 'success';
+    });
+
+    expect(runTask).toHaveBeenCalledTimes(1);
+    expect(runTask.mock.calls[0]?.[0].task.id).toBe('recover-orphan');
+
+    const persistedState = loadAutomationRuntimeStateMap({ dbPath: resolveRuntimeDbPath(stateRoot) });
+    expect(persistedState['recover-orphan']?.filePath).toBe(task.filePath);
+    expect(persistedState['recover-orphan']?.activeRunId).toBeUndefined();
+    expect(persistedState['recover-orphan']?.lastRunId).not.toBe(priorRunId);
+    expect(persistedState['recover-orphan']?.oneTimeResolvedStatus).toBe('success');
+
+    await module.stop?.(context);
+  });
+
   it('clears stale running task state on startup when no durable run was created', async () => {
     const taskDir = createTempDir('tasks-module-definitions-');
     const stateRoot = createTempDir('tasks-module-state-');

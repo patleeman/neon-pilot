@@ -103,6 +103,7 @@ const ROW_ACTION_MENU_GAP = 4;
 const ROW_ACTION_MENU_MARGIN = 8;
 const ROW_ACTION_MENU_MIN_WIDTH = 144;
 const ROW_ACTION_MENU_ESTIMATED_HEIGHT = 168;
+const MAX_TIMEOUT_SECONDS = 7 * 24 * 60 * 60;
 
 const CRON_PRESETS: ReadonlyArray<{ value: string; label: string }> = [
   { value: '0 9 * * *', label: 'Every day at 9:00 AM' },
@@ -354,6 +355,13 @@ function timeoutSelectValue(timeoutSeconds: string): string {
   return TIMEOUT_PRESETS.some((preset) => preset.value === numeric) ? timeoutSeconds : CUSTOM_VALUE;
 }
 
+function parseTimeoutSeconds(raw: string): number | undefined {
+  const normalized = raw.trim();
+  if (!/^\d+$/.test(normalized)) return undefined;
+  const value = Number(normalized);
+  return Number.isSafeInteger(value) && value > 0 && value <= MAX_TIMEOUT_SECONDS ? value : undefined;
+}
+
 function formFromTask(task: TaskSummary): AutomationFormState {
   return {
     id: task.id,
@@ -371,6 +379,7 @@ function formFromTask(task: TaskSummary): AutomationFormState {
 }
 
 function buildSaveInput(form: AutomationFormState): Record<string, unknown> {
+  const timeoutSeconds = parseTimeoutSeconds(form.timeoutSeconds);
   return {
     title: form.title.trim(),
     prompt: form.prompt.trim(),
@@ -380,7 +389,7 @@ function buildSaveInput(form: AutomationFormState): Record<string, unknown> {
     threadConversationId: form.ownerThreadId,
     cwd: form.cwd.trim() || undefined,
     model: form.model.trim() || undefined,
-    timeoutSeconds: Number(form.timeoutSeconds) || undefined,
+    timeoutSeconds,
     cron: form.scheduleType === 'cron' ? form.cron.trim() : null,
     at: form.scheduleType === 'at' ? localInputToIso(form.atLocal) : null,
   };
@@ -544,6 +553,10 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     }
     if (form.scheduleType === 'cron' && !form.cron.trim()) {
       setFormError('Choose a recurring schedule.');
+      return;
+    }
+    if (!parseTimeoutSeconds(form.timeoutSeconds)) {
+      setFormError('Enter a whole-number timeout from 1 second to 7 days.');
       return;
     }
     setBusy('save');
@@ -848,7 +861,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       value={cronValue}
                       onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
                         const next = event.target.value;
-                        setForm((current) => ({ ...current, cron: next === CUSTOM_VALUE ? current.cron : next }));
+                        setForm((current) => ({ ...current, cron: next === CUSTOM_VALUE ? '' : next }));
                       }}
                     >
                       {CRON_PRESETS.map((preset) => (
@@ -932,7 +945,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       value={timeoutValue}
                       onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
                         const next = event.target.value;
-                        setForm((current) => ({ ...current, timeoutSeconds: next === CUSTOM_VALUE ? current.timeoutSeconds : next }));
+                        setForm((current) => ({ ...current, timeoutSeconds: next === CUSTOM_VALUE ? '' : next }));
                       }}
                     >
                       {TIMEOUT_PRESETS.map((preset) => (
@@ -954,6 +967,9 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                             setForm({ ...form, timeoutSeconds: event.target.value })
                           }
                         />
+                        {!parseTimeoutSeconds(form.timeoutSeconds) ? (
+                          <FieldError>Enter a whole number from 1 to 604800 seconds.</FieldError>
+                        ) : null}
                         <FieldHint>Seconds before the run is stopped.</FieldHint>
                       </div>
                     ) : null}

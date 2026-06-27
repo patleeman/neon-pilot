@@ -43,6 +43,8 @@ describe('deferred resume state', () => {
     expect(parseDeferredResumeDelayMs('2 hours')).toBe(7_200_000);
     expect(parseDeferredResumeDelayMs('1 day')).toBe(86_400_000);
     expect(parseDeferredResumeDelayMs('later')).toBeUndefined();
+    expect(parseDeferredResumeDelayMs('36501 days')).toBeUndefined();
+    expect(parseDeferredResumeDelayMs('999999999999999999999999d')).toBeUndefined();
   });
 
   it('creates the state directory before acquiring the first write lock', () => {

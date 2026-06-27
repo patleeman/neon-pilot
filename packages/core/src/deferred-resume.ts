@@ -4,6 +4,7 @@ import { dirname, join } from 'path';
 import { getStateRoot } from './runtime/paths.js';
 
 export const DEFERRED_RESUME_STATE_FILE_NAME = 'deferred-resumes-state.json';
+const MAX_DEFERRED_RESUME_DELAY_MS = 100 * 365 * 24 * 60 * 60_000;
 
 export type DeferredResumeStatus = 'scheduled' | 'ready';
 export type DeferredResumeKind = 'continue' | 'task-callback';
@@ -160,32 +161,39 @@ export function parseDeferredResumeDelayMs(raw: string): number | undefined {
     return undefined;
   }
 
+  let delayMs: number | undefined;
   switch (unit) {
     case 's':
     case 'sec':
     case 'secs':
     case 'second':
     case 'seconds':
-      return value * 1_000;
+      delayMs = value * 1_000;
+      break;
     case 'm':
     case 'min':
     case 'mins':
     case 'minute':
     case 'minutes':
-      return value * 60_000;
+      delayMs = value * 60_000;
+      break;
     case 'h':
     case 'hr':
     case 'hrs':
     case 'hour':
     case 'hours':
-      return value * 60 * 60_000;
+      delayMs = value * 60 * 60_000;
+      break;
     case 'd':
     case 'day':
     case 'days':
-      return value * 24 * 60 * 60_000;
+      delayMs = value * 24 * 60 * 60_000;
+      break;
     default:
       return undefined;
   }
+
+  return Number.isSafeInteger(delayMs) && delayMs <= MAX_DEFERRED_RESUME_DELAY_MS ? delayMs : undefined;
 }
 
 function compareDeferredResumeRecords(left: DeferredResumeRecord, right: DeferredResumeRecord): number {

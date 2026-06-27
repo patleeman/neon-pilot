@@ -322,6 +322,12 @@ describe('deferredResumes', () => {
         delay: 'later',
       }),
     ).rejects.toThrow('Invalid delay. Use forms like 30s, 10m, 10 minutes, 2h, or 1d.');
+    await expect(
+      scheduleDeferredResumeForSessionFile({
+        sessionFile: '/tmp/sessions/current.jsonl',
+        delay: '999999999999999999999999d',
+      }),
+    ).rejects.toThrow('Invalid delay. Use forms like 30s, 10m, 10 minutes, 2h, or 1d.');
   });
 
   it('rejects non-ISO at timestamps', async () => {
