@@ -14,7 +14,7 @@ describe('useComposerController', () => {
     });
   });
 
-  it('inserts through host state without mutating textarea value directly', () => {
+  it('inserts through host state and updates the visible textarea immediately', () => {
     const inputRef = { current: 'hello world' };
     const textareaRef = createRef<HTMLTextAreaElement>();
     const selectionRef = { current: { start: 6, end: 11 } };
@@ -26,7 +26,6 @@ describe('useComposerController', () => {
     const textarea = document.createElement('textarea');
     textarea.value = 'hello world';
     textarea.setSelectionRange(6, 11);
-    const valueSetter = vi.spyOn(textarea, 'value', 'set');
     textareaRef.current = textarea;
 
     const { result } = renderHook(() =>
@@ -36,7 +35,7 @@ describe('useComposerController', () => {
     act(() => result.current.insertText(' user '));
 
     expect(setInput).toHaveBeenCalledWith('hello user');
-    expect(valueSetter).not.toHaveBeenCalled();
+    expect(textarea.value).toBe('hello user');
     expect(onTextInserted).toHaveBeenCalledOnce();
     expect(scheduleResize).toHaveBeenCalledOnce();
     expect(selectionRef.current).toEqual({ start: 10, end: 10 });

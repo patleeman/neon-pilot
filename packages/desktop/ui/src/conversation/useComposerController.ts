@@ -70,6 +70,11 @@ export function useComposerController({
   const setText = useCallback(
     (text: string, options: ComposerTextUpdateOptions = {}) => {
       setInput(text);
+      const el = textareaRef.current;
+      if (el && el.value !== text) {
+        const valueSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+        valueSetter?.call(el, text);
+      }
       onTextInserted?.();
 
       const nextSelection = options.selection;
