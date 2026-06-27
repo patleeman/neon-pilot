@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { type AppEvent,subscribeAppEvents } from '../shared/appEvents.js';
+import { type AppEvent, subscribeAppEvents } from '../shared/appEvents.js';
 import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPreferences.js';
 import { openAutomationOwnerThread } from './workspace.js';
