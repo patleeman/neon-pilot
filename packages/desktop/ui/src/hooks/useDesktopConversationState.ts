@@ -26,6 +26,7 @@ const STREAM_CONTROL_FLUSH_INTERVAL_MS = 16;
 const STREAM_FRAME_FALLBACK_FLUSH_INTERVAL_MS = 100;
 const POST_SEND_REFRESH_DELAYS_MS = [500, 1500, 4000] as const;
 const RUNNING_SESSION_RECOVERY_REFRESH_DELAYS_MS = [3000, 8000, 16000, 30000, 60000, 120000, 240000] as const;
+const AGGREGATE_DELTA_CATCHUP_LIMIT = 100;
 const DESKTOP_CONVERSATION_STATE_REFRESH_EVENT = 'neon-pilot:desktop-conversation-state-refresh';
 const OPTIMISTIC_USER_BLOCK_ID_PREFIX = 'optimistic-user-';
 const desktopConversationStateCache = new Map<string, DesktopConversationState>();
@@ -161,6 +162,27 @@ function presentDesktopConversationState(state: DesktopConversationState): Deskt
       blocks: presentStreamBlocks(state.stream.blocks),
     },
   };
+}
+
+function readAggregateDeltaFromRevision(delta: ConversationAggregateDelta): number {
+  return typeof delta.fromRevision === 'number' && Number.isSafeInteger(delta.fromRevision) && delta.fromRevision >= 0
+    ? delta.fromRevision
+    : Math.max(0, delta.revision - 1);
+}
+
+function readAggregateDeltaToRevision(delta: ConversationAggregateDelta): number {
+  return typeof delta.toRevision === 'number' && Number.isSafeInteger(delta.toRevision) && delta.toRevision >= 0
+    ? delta.toRevision
+    : delta.revision;
+}
+
+function readAggregateStateRevision(aggregate: ConversationAggregateState, state: DesktopConversationState): number {
+  if (typeof state.revision === 'number' && Number.isSafeInteger(state.revision) && state.revision >= 0) {
+    return state.revision;
+  }
+  return typeof aggregate.revision === 'number' && Number.isSafeInteger(aggregate.revision) && aggregate.revision >= 0
+    ? aggregate.revision
+    : 0;
 }
 
 function isOptimisticUserBlock(block: DisplayBlock): block is Extract<DisplayBlock, { type: 'user' }> {
@@ -960,6 +982,9 @@ export function useDesktopConversationState(conversationId: string | null, optio
     let closed = false;
     let socket: WebSocket | null = null;
     let subscriptionId: string | null = null;
+    let aggregateDeltaCatchupInFlight: Promise<void> | null = null;
+    let latestAggregateRevision =
+      stateRef.current?.conversationId === conversationId && typeof stateRef.current.revision === 'number' ? stateRef.current.revision : 0;
 
     const clearPendingStreamFlushTimer = () => {
       if (pendingStreamFlushTimerRef.current === null) {
@@ -1137,12 +1162,26 @@ export function useDesktopConversationState(conversationId: string | null, optio
     };
 
     const applyAggregateActivityDelta = (delta: Extract<ConversationAggregateDelta, { type: 'activity' }>) => {
+      latestAggregateRevision = Math.max(latestAggregateRevision, readAggregateDeltaToRevision(delta));
       setState((previous) =>
         previous?.conversationId === conversationId
           ? {
               ...previous,
               activity: delta.activity,
-              revision: delta.revision,
+              revision: readAggregateDeltaToRevision(delta),
+            }
+          : previous,
+      );
+    };
+
+    const markAggregateRevisionApplied = (delta: ConversationAggregateDelta) => {
+      const toRevision = readAggregateDeltaToRevision(delta);
+      latestAggregateRevision = Math.max(latestAggregateRevision, toRevision);
+      setState((previous) =>
+        previous?.conversationId === conversationId && (previous.revision ?? 0) < toRevision
+          ? {
+              ...previous,
+              revision: toRevision,
             }
           : previous,
       );
@@ -1153,6 +1192,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         return;
       }
       const nextState = desktopConversationStateFromAggregate(aggregate);
+      latestAggregateRevision = readAggregateStateRevision(aggregate, nextState);
       setState((previous) => {
         const mergedState = mergeDesktopConversationState(previous, nextState);
         rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
@@ -1161,7 +1201,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       setError(null);
     };
 
-    const handleAggregateDelta = (delta: ConversationAggregateDelta) => {
+    const applyAggregateDelta = (delta: ConversationAggregateDelta) => {
       if (delta.conversationId !== conversationId) {
         return;
       }
@@ -1172,14 +1212,69 @@ export function useDesktopConversationState(conversationId: string | null, optio
       for (const streamEvent of delta.events) {
         enqueueStreamEvent(streamEvent);
       }
+      markAggregateRevisionApplied(delta);
       if (delta.activity) {
         applyAggregateActivityDelta({
           type: 'activity',
           conversationId: delta.conversationId,
+          fromRevision: readAggregateDeltaFromRevision(delta),
+          toRevision: readAggregateDeltaToRevision(delta),
           revision: delta.revision,
           activity: delta.activity,
         });
       }
+    };
+
+    const catchUpAggregateDeltas = async (afterRevision: number) => {
+      if (aggregateDeltaCatchupInFlight) {
+        return aggregateDeltaCatchupInFlight;
+      }
+      aggregateDeltaCatchupInFlight = api
+        .conversationAggregateDeltas(conversationId, {
+          afterRevision,
+          limit: AGGREGATE_DELTA_CATCHUP_LIMIT,
+        })
+        .then((result) => {
+          if (closed) return;
+          if (result.resyncRequired) {
+            refreshAuthoritativeState();
+            return;
+          }
+          flushPendingStreamEvents();
+          for (const delta of result.deltas) {
+            applyAggregateDelta(delta);
+          }
+          setError(null);
+        })
+        .catch((nextError) => {
+          if (!closed) {
+            setError(nextError instanceof Error ? nextError.message : String(nextError));
+            refreshAuthoritativeState();
+          }
+        })
+        .finally(() => {
+          aggregateDeltaCatchupInFlight = null;
+        });
+      return aggregateDeltaCatchupInFlight;
+    };
+
+    const handleAggregateDelta = (delta: ConversationAggregateDelta) => {
+      if (delta.conversationId !== conversationId) {
+        return;
+      }
+      const stateRevision = stateRef.current?.conversationId === conversationId ? (stateRef.current.revision ?? 0) : 0;
+      const currentRevision = Math.max(latestAggregateRevision, stateRevision);
+      const fromRevision = readAggregateDeltaFromRevision(delta);
+      const toRevision = readAggregateDeltaToRevision(delta);
+      if (toRevision <= currentRevision) {
+        return;
+      }
+      if (fromRevision > currentRevision) {
+        flushPendingStreamEvents();
+        void catchUpAggregateDeltas(currentRevision);
+        return;
+      }
+      applyAggregateDelta(delta);
     };
 
     const handleRealtimeMessage = (event: MessageEvent) => {
@@ -1245,6 +1340,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         .then((nextAggregate) => {
           if (closed) return;
           const nextState = desktopConversationStateFromAggregate(nextAggregate);
+          latestAggregateRevision = readAggregateStateRevision(nextAggregate, nextState);
           setState((previous) => {
             const mergedState = mergeDesktopConversationState(previous, nextState);
             rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);

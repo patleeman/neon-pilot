@@ -36,7 +36,7 @@ import {
 } from '../automation/scheduledTaskCapability.js';
 import { loadScheduledTasksForProfile } from '../automation/scheduledTasks.js';
 import { buildScheduledTaskThreadDetail } from '../automation/scheduledTaskThreads.js';
-import { readConversationAggregateState } from '../conversations/conversationAggregate.js';
+import { readConversationAggregateDeltas, readConversationAggregateState } from '../conversations/conversationAggregate.js';
 import {
   createConversationAttachmentCapability,
   deleteConversationArtifactCapability,
@@ -1705,6 +1705,16 @@ async function dispatchDesktopLocalProductApiRequest(input: {
         profile: capabilityContext.getRuntimeScope(),
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
         tasks: capabilityContext.listTasksForRuntimeScope?.().map((task) => ({ ...task, title: task.title ?? task.id })),
+      }),
+    );
+  }
+  const conversationAggregateDeltasMatch = /^\/api\/conversations\/([^/]+)\/aggregate\/deltas$/.exec(path);
+  if (method === 'GET' && conversationAggregateDeltasMatch) {
+    return createDesktopLocalApiJsonResponse(
+      readConversationAggregateDeltas({
+        conversationId: decodeURIComponent(conversationAggregateDeltasMatch[1] ?? ''),
+        afterRevision: input.url.searchParams.has('after') ? Number(input.url.searchParams.get('after')) : 0,
+        limit: input.url.searchParams.has('limit') ? Number(input.url.searchParams.get('limit')) : undefined,
       }),
     );
   }

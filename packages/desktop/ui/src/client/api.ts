@@ -22,6 +22,7 @@ import type {
   CacheEfficiencyAggregate,
   CacheEfficiencyPoint,
   ContextPointerUsageResult,
+  ConversationAggregateDeltaListResult,
   ConversationAggregateState,
   ConversationAttachmentAssetData,
   ConversationCheckpointReviewContext,
@@ -878,6 +879,11 @@ export const api = {
       },
     });
     return result;
+  },
+  conversationAggregateDeltas: async (id: string, options: { afterRevision: number; limit?: number }) => {
+    const params = new URLSearchParams({ after: String(options.afterRevision) });
+    if (options.limit !== undefined) params.set('limit', String(options.limit));
+    return get<ConversationAggregateDeltaListResult>(`/conversations/${encodeURIComponent(id)}/aggregate/deltas?${params.toString()}`);
   },
   conversationPlansWorkspace: async () => get<ConversationAutomationWorkspaceState>('/conversation-plans/workspace'),
   conversationArtifacts: async (id: string) =>

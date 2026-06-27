@@ -18,6 +18,7 @@ export function resetLocalWriteGrace(): void {
 
 export type OpenConversationDropPosition = 'before' | 'after';
 export type ConversationShelf = 'open' | 'pinned';
+export type ConversationPlacement = 'closed' | 'open' | 'pinned' | 'archived';
 
 export interface ConversationLayout {
   sessionIds: string[];
@@ -76,12 +77,34 @@ function normalizeSessionIds(values: Iterable<unknown>): string[] {
   return ids;
 }
 
+export function buildConversationPlacements(input: ConversationLayoutInput): Map<string, ConversationPlacement> {
+  const placements = new Map<string, ConversationPlacement>();
+  for (const id of normalizeSessionIds(input.archivedSessionIds ?? [])) {
+    placements.set(id, 'archived');
+  }
+  for (const id of normalizeSessionIds(input.sessionIds ?? [])) {
+    placements.set(id, 'open');
+  }
+  for (const id of normalizeSessionIds(input.pinnedSessionIds ?? [])) {
+    placements.set(id, 'pinned');
+  }
+  return placements;
+}
+
+export function readConversationPlacement(layout: ConversationLayout, sessionId: string | null | undefined): ConversationPlacement {
+  const normalizedSessionId = normalizeSessionId(sessionId);
+  if (!normalizedSessionId) {
+    return 'closed';
+  }
+  return buildConversationPlacements(layout).get(normalizedSessionId) ?? 'closed';
+}
+
 function normalizeConversationLayout(input: ConversationLayoutInput): ConversationLayout {
-  const pinnedSessionIds = normalizeSessionIds(input.pinnedSessionIds ?? []);
-  const pinnedIdSet = new Set(pinnedSessionIds);
-  const sessionIds = normalizeSessionIds(input.sessionIds ?? []).filter((id) => !pinnedIdSet.has(id));
+  const placements = buildConversationPlacements(input);
+  const pinnedSessionIds = normalizeSessionIds(input.pinnedSessionIds ?? []).filter((id) => placements.get(id) === 'pinned');
+  const sessionIds = normalizeSessionIds(input.sessionIds ?? []).filter((id) => placements.get(id) === 'open');
+  const archivedSessionIds = normalizeSessionIds(input.archivedSessionIds ?? []).filter((id) => placements.get(id) === 'archived');
   const workspaceIdSet = new Set([...sessionIds, ...pinnedSessionIds]);
-  const archivedSessionIds = normalizeSessionIds(input.archivedSessionIds ?? []).filter((id) => !workspaceIdSet.has(id));
   const activeSessionId = normalizeSessionId(input.activeSessionId);
 
   return {

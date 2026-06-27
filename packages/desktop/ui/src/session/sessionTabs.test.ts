@@ -19,6 +19,7 @@ import {
 } from '../local/localSettings';
 import {
   applyRemoteConversationLayout,
+  buildConversationPlacements,
   closeConversationTab,
   ensureConversationTabOpen,
   fetchRemoteConversationLayout,
@@ -26,6 +27,7 @@ import {
   pinConversationTab,
   readArchivedSessionIds,
   readConversationLayout,
+  readConversationPlacement,
   readOpenSessionIds,
   readPinnedSessionIds,
   reopenMostRecentlyArchivedConversation,
@@ -112,6 +114,39 @@ describe('sessionTabs', () => {
     expect(readOpenSessionIds()).toEqual([]);
     expect(readPinnedSessionIds()).toEqual([]);
     expect(readArchivedSessionIds()).toEqual([]);
+  });
+
+  it('normalizes legacy placement conflicts into one canonical conversation placement', () => {
+    const placements = buildConversationPlacements({
+      sessionIds: ['open-only', 'conflict-open-archived', 'conflict-pinned-open'],
+      pinnedSessionIds: ['pinned-only', 'conflict-pinned-open', 'conflict-pinned-archived'],
+      archivedSessionIds: ['archived-only', 'conflict-open-archived', 'conflict-pinned-archived'],
+    });
+
+    expect(Object.fromEntries(placements)).toEqual({
+      'archived-only': 'archived',
+      'conflict-open-archived': 'open',
+      'conflict-pinned-archived': 'pinned',
+      'conflict-pinned-open': 'pinned',
+      'open-only': 'open',
+      'pinned-only': 'pinned',
+    });
+
+    applyRemoteConversationLayout({
+      sessionIds: ['open-only', 'conflict-open-archived', 'conflict-pinned-open'],
+      pinnedSessionIds: ['pinned-only', 'conflict-pinned-open', 'conflict-pinned-archived'],
+      archivedSessionIds: ['archived-only', 'conflict-open-archived', 'conflict-pinned-archived'],
+      activeConversationId: 'conflict-open-archived',
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+    });
+
+    const layout = readConversationLayout();
+    expect(layout.sessionIds).toEqual(['open-only', 'conflict-open-archived']);
+    expect(layout.pinnedSessionIds).toEqual(['pinned-only', 'conflict-pinned-open', 'conflict-pinned-archived']);
+    expect(layout.archivedSessionIds).toEqual(['archived-only']);
+    expect(readConversationPlacement(layout, 'conflict-pinned-archived')).toBe('pinned');
+    expect(readConversationPlacement(layout, 'missing')).toBe('closed');
   });
 
   it('coalesces concurrent remote layout reads', async () => {

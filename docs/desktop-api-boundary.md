@@ -21,6 +21,8 @@ Examples:
 
 HTTP responses must be bounded, paginated, or streamed. Large binary/text payloads should flow as bytes/streams instead of deeply nested objects.
 
+Conversation aggregate reads follow a snapshot-plus-delta contract. The initial route/bootstrap read uses HTTP for the bounded aggregate snapshot. If a realtime subscriber detects a revision gap, it should request the missing range with the aggregate delta HTTP endpoint before refreshing the full snapshot. Snapshot fallback is for expired or intentionally capped delta ranges, not the normal recovery path.
+
 ### WebSocket: realtime events and control
 
 Use WebSocket for long-lived realtime flows and bidirectional control. The desktop realtime endpoint is `/api/realtime`; clients send typed `subscribe` / `unsubscribe` messages for stream paths and receive small `stream`, `app_event`, `subscribed`, `unsubscribed`, and `error` messages. When the Electron renderer is loaded through the `neon-pilot://app` custom protocol, Chromium cannot resolve `ws://app`; the shell uses the desktop protocol's `text/event-stream` adapter for stream subscriptions instead of opening that WebSocket URL.
@@ -34,6 +36,8 @@ Examples:
 - optional background execution realtime events such as log tails or status deltas
 
 WebSocket messages should be small deltas, invalidations, or control messages. Do not routinely broadcast full sessions lists, transcripts, logs, artifacts, or other large snapshots over WebSocket.
+
+Conversation aggregate deltas must carry monotonic `fromRevision` and `toRevision` fields. Receivers use those revisions to drop stale events, detect gaps, and keep their in-memory projection current without re-reading the whole transcript or activity snapshot.
 
 ### Electron IPC: native/bootstrap only
 

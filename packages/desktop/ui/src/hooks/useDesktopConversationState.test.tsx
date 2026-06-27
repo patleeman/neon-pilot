@@ -15,6 +15,7 @@ class FakeRealtimeSocket extends EventTarget {
   closed = false;
   sent: string[] = [];
   conversationId = 'conv-1';
+  nextRevision = 1;
 
   override addEventListener(
     type: string,
@@ -59,13 +60,17 @@ class FakeRealtimeSocket extends EventTarget {
       }
       return;
     }
+    const revision = this.nextRevision;
+    this.nextRevision += 1;
     this.receive({
       type: 'conversation_delta',
       subscriptionId: 'sub-test',
       delta: {
         type: 'stream_events',
         conversationId: this.conversationId,
-        revision: 1,
+        fromRevision: revision - 1,
+        toRevision: revision,
+        revision,
         events: [data],
       },
     });
@@ -698,6 +703,87 @@ describe('useDesktopConversationState', () => {
       1,
     );
     expect(JSON.parse(eventSources[0]?.sent[0] ?? '{}')).toMatchObject({ type: 'conversation_subscribe', conversationId: 'conv-empty' });
+  });
+
+  it('fetches missing aggregate deltas before falling back to a snapshot refresh', async () => {
+    const conversationAggregate = vi.spyOn(api, 'conversationAggregate').mockResolvedValue(aggregateState('conv-gap', []));
+    const conversationAggregateDeltas = vi.spyOn(api, 'conversationAggregateDeltas').mockResolvedValue({
+      conversationId: 'conv-gap',
+      fromRevision: 0,
+      toRevision: 4,
+      deltas: [
+        {
+          type: 'stream_events',
+          conversationId: 'conv-gap',
+          fromRevision: 0,
+          toRevision: 1,
+          revision: 1,
+          events: [{ type: 'agent_start' }],
+        },
+        {
+          type: 'stream_events',
+          conversationId: 'conv-gap',
+          fromRevision: 1,
+          toRevision: 2,
+          revision: 2,
+          events: [{ type: 'text_delta', delta: 'Caught up' }],
+        },
+        {
+          type: 'stream_events',
+          conversationId: 'conv-gap',
+          fromRevision: 2,
+          toRevision: 3,
+          revision: 3,
+          events: [{ type: 'agent_end' }],
+        },
+        {
+          type: 'stream_events',
+          conversationId: 'conv-gap',
+          fromRevision: 3,
+          toRevision: 4,
+          revision: 4,
+          events: [{ type: 'text_delta', delta: ' latest' }],
+        },
+      ],
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-gap" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    await act(async () => {
+      eventSources[0]?.receive({
+        type: 'conversation_delta',
+        subscriptionId: 'sub-test',
+        delta: {
+          type: 'stream_events',
+          conversationId: 'conv-gap',
+          fromRevision: 3,
+          toRevision: 4,
+          revision: 4,
+          events: [{ type: 'text_delta', delta: ' latest' }],
+        },
+      });
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(conversationAggregateDeltas).toHaveBeenCalledWith('conv-gap', { afterRevision: 0, limit: 100 });
+    expect(conversationAggregate).toHaveBeenCalledTimes(1);
+    expect(latestState?.state?.revision).toBe(4);
+    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Caught up latest' })]);
   });
 
   it('reuses an in-flight desktop conversation prefetch when the page opens', async () => {
@@ -2548,7 +2634,8 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(latestState?.state).toBe(previousState);
+    expect(latestState?.state?.stream).toBe(previousState?.stream);
+    expect(latestState?.state?.revision).toBe(1);
   });
 
   it('keeps live state healthy when a malformed SSE frame arrives', async () => {

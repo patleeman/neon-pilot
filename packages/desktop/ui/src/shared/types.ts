@@ -1249,6 +1249,8 @@ export type ConversationAggregateDelta =
   | {
       type: 'stream_events';
       conversationId: string;
+      fromRevision?: number;
+      toRevision?: number;
       revision: number;
       events: SseEvent[];
       activity?: ConversationActivityResult;
@@ -1256,9 +1258,20 @@ export type ConversationAggregateDelta =
   | {
       type: 'activity';
       conversationId: string;
+      fromRevision?: number;
+      toRevision?: number;
       revision: number;
       activity: ConversationActivityResult;
     };
+
+export interface ConversationAggregateDeltaListResult {
+  conversationId: string;
+  fromRevision: number;
+  toRevision: number;
+  deltas: ConversationAggregateDelta[];
+  resyncRequired?: boolean;
+  reason?: 'delta_range_expired' | 'delta_range_too_large';
+}
 
 // ── Conversation stream events carried by aggregate realtime deltas ──────────
 

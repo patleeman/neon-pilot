@@ -156,6 +156,56 @@ describe('conversation aggregate', () => {
     unsubscribe();
   });
 
+  it('keeps a bounded aggregate delta range for catch-up before snapshot resync', async () => {
+    let liveListener: ((event: { type: 'text_delta'; delta: string }) => void) | null = null;
+    mocks.subscribeLiveSession.mockImplementation((_conversationId, listener) => {
+      liveListener = listener;
+      return vi.fn();
+    });
+    const onDelta = vi.fn();
+    const { readConversationAggregateDeltas, subscribeConversationAggregate } = await import('./conversationAggregate.js');
+
+    const unsubscribe = subscribeConversationAggregate({ conversationId: 'conv-1', profile: 'shared', onDelta });
+    liveListener?.({ type: 'text_delta', delta: 'Hello' });
+    liveListener?.({ type: 'text_delta', delta: ' world' });
+
+    expect(readConversationAggregateDeltas({ conversationId: 'conv-1', afterRevision: 0 })).toMatchObject({
+      conversationId: 'conv-1',
+      fromRevision: 0,
+      toRevision: 2,
+      deltas: [
+        expect.objectContaining({ fromRevision: 0, toRevision: 1, revision: 1 }),
+        expect.objectContaining({ fromRevision: 1, toRevision: 2, revision: 2 }),
+      ],
+    });
+    expect(readConversationAggregateDeltas({ conversationId: 'conv-1', afterRevision: 1 })).toMatchObject({
+      deltas: [expect.objectContaining({ fromRevision: 1, toRevision: 2, revision: 2 })],
+    });
+
+    unsubscribe();
+  });
+
+  it('asks callers to resync when the requested aggregate delta range is too large', async () => {
+    let liveListener: ((event: { type: 'text_delta'; delta: string }) => void) | null = null;
+    mocks.subscribeLiveSession.mockImplementation((_conversationId, listener) => {
+      liveListener = listener;
+      return vi.fn();
+    });
+    const { readConversationAggregateDeltas, subscribeConversationAggregate } = await import('./conversationAggregate.js');
+
+    const unsubscribe = subscribeConversationAggregate({ conversationId: 'conv-1', profile: 'shared', onDelta: vi.fn() });
+    liveListener?.({ type: 'text_delta', delta: 'Hello' });
+    liveListener?.({ type: 'text_delta', delta: ' world' });
+
+    expect(readConversationAggregateDeltas({ conversationId: 'conv-1', afterRevision: 0, limit: 1 })).toMatchObject({
+      resyncRequired: true,
+      reason: 'delta_range_too_large',
+      deltas: [],
+    });
+
+    unsubscribe();
+  });
+
   it('attaches to a live runtime after a subscribed persisted conversation becomes live', async () => {
     let appListener: ((event: { type: 'session_meta_changed'; sessionId: string }) => void) | null = null;
     let liveListener: ((event: { type: 'text_delta'; delta: string }) => void) | null = null;
@@ -164,12 +214,10 @@ describe('conversation aggregate', () => {
       appListener = listener;
       return vi.fn();
     });
-    mocks.subscribeLiveSession
-      .mockReturnValueOnce(null)
-      .mockImplementationOnce((_conversationId, listener) => {
-        liveListener = listener;
-        return liveUnsubscribe;
-      });
+    mocks.subscribeLiveSession.mockReturnValueOnce(null).mockImplementationOnce((_conversationId, listener) => {
+      liveListener = listener;
+      return liveUnsubscribe;
+    });
     const onDelta = vi.fn();
     const { subscribeConversationAggregate } = await import('./conversationAggregate.js');
 

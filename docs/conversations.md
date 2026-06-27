@@ -50,6 +50,8 @@ Conversation read models live in `<state-root>/sync/pi-agent/conversations.db`. 
 
 The backend is the source of truth for sidebar conversation state. The desktop UI hydrates the sidebar from `GET /api/sidebar/conversations`, which returns one coherent projection: open IDs, pinned IDs, archived IDs, locked IDs, active ID, workspace metadata, and the session rows needed to render them. The projection filters stale workspace IDs that no longer resolve to known conversations, so the frontend must not create durable ghost rows for unknown IDs. Temporary optimistic UI is allowed only while a new conversation is being reserved or sent.
 
+Conversation placement is canonical even though legacy response shapes still expose separate arrays. A conversation is exactly one of `closed`, `open`, `pinned`, or `archived`; pinned, open, and archived membership must not conflict. When old or out-of-order payloads contain conflicts, normalization resolves them into one placement before the sidebar or route state reacts.
+
 The backend is also the source of truth for durable conversation runtime state such as whether a conversation is running. Backend publishers emit revisioned `conversation_state_changed` records for running state; `session_meta_changed` only signals metadata refresh and must not carry or author running state. Frontend live-stream hooks may render transcript deltas and local loading affordances, but they must not author global conversation state. Running indicators in the sidebar, command palette, activity tree, and conversation chrome read backend-published state from the shared conversation projection. A derived conversation activity status may combine that backend runtime record with backend task/execution snapshots for background-work badges, but it is presentation-only and cannot mark a conversation itself as running.
 
 Conversation workspace writes go through `/api/conversation-workspace` and `/api/conversation-workspace/operation`. The older `/api/ui/open-conversations` route has been removed; new code must use the semantic workspace routes.
@@ -57,6 +59,8 @@ Conversation workspace writes go through `/api/conversation-workspace` and `/api
 The renderer may keep presentation-only seeds such as saved workspace path labels for first paint, but those seeds must be refreshed from the sidebar projection and must not decide whether a conversation exists or is open.
 
 Opening a conversation is a read. The frontend asks for conversation state/bootstrap by ID and the backend decides whether the conversation is already live, can be read from transcript state, or is missing. If a requested conversation ID is unknown, the UI should show the conversation error state instead of redirecting to `/conversations/new`.
+
+Conversation route state uses an aggregate model for the transcript snapshot plus durable activity/runtime state. The initial load is HTTP; live changes arrive as revisioned WebSocket deltas with `fromRevision` and `toRevision`. If the renderer misses a delta, it first requests the missing aggregate delta range from `/api/conversations/:id/aggregate/deltas?after=<revision>` and applies those patches in memory. Only expired or too-large gaps should fall back to a full aggregate snapshot refresh.
 
 Sending or explicitly resuming a saved conversation is semantic from the frontend's perspective. The UI calls the conversation message/resume API; the backend may hydrate a live session from the transcript internally when needed. Frontend code should not call recovery/hydration endpoints or branch on recovery details.
 
@@ -245,14 +249,14 @@ Default desktop shortcuts are configurable in Settings → Desktop. Host and ext
 
 The desktop app and system extensions register these routes:
 
-| Route                | Page                                                                          |
-| -------------------- | ----------------------------------------------------------------------------- |
-| `/conversations`     | Active or new conversation redirect                                           |
-| `/conversations/new` | New conversation                                                              |
-| `/conversations/:id` | Existing conversation                                                         |
-| `/settings`          | Settings page                                                                 |
-| `/knowledge`         | Knowledge browser                                                             |
-| `/automations`       | Automation list                                                               |
-| `/automations/:id`   | Automation detail                                                             |
-| `/telemetry`         | Telemetry traces                                                              |
-| `/gateways`          | Gateway connections                                                           |
+| Route                | Page                                |
+| -------------------- | ----------------------------------- |
+| `/conversations`     | Active or new conversation redirect |
+| `/conversations/new` | New conversation                    |
+| `/conversations/:id` | Existing conversation               |
+| `/settings`          | Settings page                       |
+| `/knowledge`         | Knowledge browser                   |
+| `/automations`       | Automation list                     |
+| `/automations/:id`   | Automation detail                   |
+| `/telemetry`         | Telemetry traces                    |
+| `/gateways`          | Gateway connections                 |
