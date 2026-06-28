@@ -115,6 +115,18 @@ describe('live session recovery', () => {
       expect(plan).toBeNull();
     });
 
+    it('does not inject stale recovery context over a later topic-pivot user message', () => {
+      const plan = resolveTranscriptTailRecoveryPlan({
+        getBranch: () => [
+          user('user-1', null, 'Fix CUA.'),
+          assistantToolCall('assistant-1', 'user-1', 'call_cua'),
+          user('user-2', 'assistant-1', "I'm talking about Telegram right now, forget CUA."),
+        ],
+      } as never);
+
+      expect(plan).toBeNull();
+    });
+
     it('does not recover when the tail tool call has a matching result', () => {
       const plan = resolveTranscriptTailRecoveryPlan({
         getBranch: () => [user('user-1', null), assistantToolCall('assistant-1', 'user-1'), toolResult('tool-1', 'assistant-1')],
@@ -217,6 +229,9 @@ describe('live session recovery', () => {
       const appendMessage = vi.fn();
       const buildSessionContext = vi.fn(() => ({ messages: [{ role: 'toolResult', toolCallId: 'call_stale' }] }));
       const state = { messages: [{ role: 'assistant', content: [{ type: 'toolCall', id: 'call_stale', name: 'read', arguments: {} }] }] };
+      const branch = vi.fn();
+      const branchWithSummary = vi.fn();
+      const resetLeaf = vi.fn();
 
       const repaired = repairDanglingToolCallContext({
         state,
@@ -224,11 +239,17 @@ describe('live session recovery', () => {
           getBranch: () => [user('user-1', null), assistantToolCall('assistant-1', 'user-1', 'call_stale')],
           appendMessage,
           buildSessionContext,
+          branch,
+          branchWithSummary,
+          resetLeaf,
         },
       } as never);
 
       expect(repaired).toBe(true);
       expect(appendMessage).toHaveBeenCalledTimes(2);
+      expect(branch).not.toHaveBeenCalled();
+      expect(branchWithSummary).not.toHaveBeenCalled();
+      expect(resetLeaf).not.toHaveBeenCalled();
       expect(state.messages).toEqual([{ role: 'toolResult', toolCallId: 'call_stale' }]);
     });
   });
