@@ -361,6 +361,7 @@ export declare const SettingsSection: HostComponent;
 export declare const ShelfBody: HostComponent;
 export declare const ShelfHeader: HostComponent;
 export declare const ShelfSection: HostComponent;
+export declare const ShelfStatusRow: HostComponent;
 export declare const SidebarActionHeader: HostComponent;
 export declare const SidebarList: HostComponent;
 export declare const SidebarMessage: HostComponent;

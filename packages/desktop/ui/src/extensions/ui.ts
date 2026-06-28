@@ -144,6 +144,7 @@ export {
   ShelfBody,
   ShelfHeader,
   ShelfSection,
+  ShelfStatusRow,
   type SidebarAction,
   SidebarActionHeader,
   SidebarList,

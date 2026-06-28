@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { setExtensionCommandContext } from '../../extensions/commands';
 import type { ThreadGoal } from '../../shared/types';
-import { Button, cx, MetaLabel, Spinner } from '../ui';
+import { Button, cx, ShelfStatusRow, Spinner } from '../ui';
 import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversationGoalCommands';
 
 export interface GoalPanelProps {
@@ -63,29 +63,34 @@ export function ConversationGoalPanel({ goal, onCancel }: GoalPanelProps) {
 
   return (
     <div className="border-b border-border-subtle/60 bg-surface/20 px-4 py-2.5">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
-        {goal.status === 'active' ? (
-          <span className="inline-flex h-3 w-3 shrink-0 items-center justify-center text-accent" aria-hidden="true">
-            <Spinner size="xs" />
+      <ShelfStatusRow
+        label="Goal"
+        leading={
+          goal.status === 'active' ? (
+            <span className="inline-flex h-3 w-3 items-center justify-center text-accent" aria-hidden="true">
+              <Spinner size="xs" />
+            </span>
+          ) : null
+        }
+        status={
+          <span className={cx('text-[11px] font-medium', statusConfig.className)}>
+            {statusConfig.label}
+            {elapsedTime ? ` ${elapsedTime}` : ''}
           </span>
-        ) : null}
-        <MetaLabel tone="accent" className="font-bold">
-          Goal
-        </MetaLabel>
-        <span className="min-w-0 flex-1 truncate text-primary">{goal.objective}</span>
-        <span className={cx('shrink-0 text-[11px] font-medium', statusConfig.className)}>
-          {statusConfig.label}
-          {elapsedTime ? ` ${elapsedTime}` : ''}
-        </span>
-        {goal.status === 'active' ? (
-          <Button variant="action" tone="danger" type="button" onClick={onCancel} className="shrink-0 text-[11px]" aria-label="Cancel goal">
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-              <rect x="3.25" y="3.25" width="9.5" height="9.5" rx="1.2" />
-            </svg>
-            Cancel
-          </Button>
-        ) : null}
-      </div>
+        }
+        actions={
+          goal.status === 'active' ? (
+            <Button variant="action" tone="danger" type="button" onClick={onCancel} className="text-[11px]" aria-label="Cancel goal">
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <rect x="3.25" y="3.25" width="9.5" height="9.5" rx="1.2" />
+              </svg>
+              Cancel
+            </Button>
+          ) : null
+        }
+      >
+        <span className="block truncate text-primary">{goal.objective}</span>
+      </ShelfStatusRow>
     </div>
   );
 }

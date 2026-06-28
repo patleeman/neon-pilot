@@ -77,6 +77,7 @@ import {
   SettingToggleRow,
   ShelfHeader,
   ShelfSection,
+  ShelfStatusRow,
   SidebarActionHeader,
   SidebarList,
   SidebarMessage,
@@ -556,6 +557,28 @@ describe('design-system primitives', () => {
     expect(html).toContain('Background Work');
     expect(html).toContain('2 running');
     expect(html).toContain('Run summary');
+  });
+
+  it('renders reusable shelf status rows', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        ShelfStatusRow,
+        {
+          label: 'Goal',
+          leading: createElement('span', null, '↻'),
+          status: createElement('span', null, 'Active 1m'),
+          actions: createElement(Button, { variant: 'action' }, 'Cancel'),
+        },
+        'Ship the reusable shelf row',
+      ),
+    );
+
+    expect(html).toContain('ui-shelf-status-row');
+    expect(html).toContain('ui-shelf-status-row-with-leading');
+    expect(html).toContain('Goal');
+    expect(html).toContain('Ship the reusable shelf row');
+    expect(html).toContain('Active 1m');
+    expect(html).toContain('Cancel');
   });
 
   it('renders setting toggle rows with switch semantics', () => {

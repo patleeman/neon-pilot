@@ -1988,6 +1988,36 @@ export function ShelfSection({
   );
 }
 
+export function ShelfStatusRow({
+  label,
+  children,
+  leading,
+  status,
+  actions,
+  className,
+  labelTone = 'accent',
+  ...props
+}: {
+  label: ReactNode;
+  children?: ReactNode;
+  leading?: ReactNode;
+  status?: ReactNode;
+  actions?: ReactNode;
+  labelTone?: MetaLabelTone;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-shelf-status-row', Boolean(leading) && 'ui-shelf-status-row-with-leading', className)} {...props}>
+      {leading ? <span className="ui-shelf-status-row-leading">{leading}</span> : null}
+      <MetaLabel tone={labelTone} className="ui-shelf-status-row-label">
+        {label}
+      </MetaLabel>
+      <div className="ui-shelf-status-row-content">{children}</div>
+      {status ? <div className="ui-shelf-status-row-status">{status}</div> : null}
+      {actions ? <div className="ui-shelf-status-row-actions">{actions}</div> : null}
+    </div>
+  );
+}
+
 export function ShelfHeader({
   title,
   detail,

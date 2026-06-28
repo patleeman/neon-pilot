@@ -41,6 +41,7 @@ import {
   SectionLabel,
   ShelfHeader,
   ShelfSection,
+  ShelfStatusRow,
   Spinner,
   Stat,
   StatGrid,
@@ -164,13 +165,41 @@ export const CardsAndLists: Story = {
               />
             }
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-              <MetaLabel tone="accent">Agent</MetaLabel>
-              <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <ShelfStatusRow label="Agent" actions={<TextButton tone="accent">open</TextButton>}>
+              <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 Building extension UI primitives
               </span>
-              <TextButton tone="accent">open</TextButton>
-            </div>
+            </ShelfStatusRow>
+          </ShelfSection>
+          <ShelfSection>
+            <ShelfStatusRow
+              label="Goal"
+              leading={<Spinner size="xs" />}
+              status={<span style={{ color: 'rgb(var(--color-success))' }}>Active 1m 6s</span>}
+              actions={
+                <Button variant="action" tone="danger">
+                  Cancel
+                </Button>
+              }
+            >
+              <span
+                style={{
+                  display: 'block',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  color: 'rgb(var(--color-primary))',
+                }}
+              >
+                Replace local shelf recipes with reusable shared treatments
+              </span>
+            </ShelfStatusRow>
+            <ShelfStatusRow label="Queued" actions={<TextButton>restore</TextButton>}>
+              <span style={{ color: 'rgb(var(--color-secondary))' }}>Queued prompt styled like the goal label</span>
+            </ShelfStatusRow>
+            <ShelfStatusRow label="Follow up" actions={<TextButton>restore</TextButton>}>
+              <span style={{ color: 'rgb(var(--color-secondary))' }}>Run QA and add tests thoroughly</span>
+            </ShelfStatusRow>
           </ShelfSection>
         </StorySection>
       </SurfacePanel>

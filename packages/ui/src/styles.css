@@ -3164,6 +3164,48 @@ body {
   padding: 0.625rem 0.75rem;
 }
 
+.ui-shelf-status-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: 0.25rem 0.5rem;
+  color: rgb(var(--color-secondary));
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.ui-shelf-status-row-with-leading {
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+}
+
+.ui-shelf-status-row-leading,
+.ui-shelf-status-row-status,
+.ui-shelf-status-row-actions {
+  flex-shrink: 0;
+}
+
+.ui-shelf-status-row-label {
+  padding-top: 0.125rem;
+  font-weight: 700;
+}
+
+.ui-shelf-status-row-content {
+  min-width: 0;
+}
+
+.ui-shelf-status-row-status {
+  color: rgb(var(--color-dim));
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.ui-shelf-status-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .ui-stat-grid {
   display: grid;
   gap: 0.5rem;
