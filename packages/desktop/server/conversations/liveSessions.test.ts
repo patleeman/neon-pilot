@@ -447,6 +447,7 @@ describe('repairLiveSessionTranscriptTail', () => {
       messages: [
         { role: 'assistant', content: [{ type: 'toolCall', id: 'call_1', name: 'read', arguments: { path: 'README.md' } }] },
         { role: 'toolResult', toolCallId: 'call_1', toolName: 'read', content: [{ type: 'text', text: 'aborted' }] },
+        { role: 'custom', customType: 'conversation_recovery_turn_aborted', content: '<turn_aborted>marker</turn_aborted>' },
       ],
     }));
     const state = {
@@ -509,7 +510,8 @@ describe('repairLiveSessionTranscriptTail', () => {
       reason: 'dangling_tool_call',
       summary: 'Recovered from an unfinished tool-use tail so the conversation can continue from the last stable point.',
     });
-    expect(appendMessage).toHaveBeenCalledWith(
+    expect(appendMessage).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
         role: 'toolResult',
         toolCallId: 'call_1',
@@ -518,10 +520,20 @@ describe('repairLiveSessionTranscriptTail', () => {
         isError: true,
       }),
     );
+    expect(appendMessage).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        role: 'custom',
+        customType: 'conversation_recovery_turn_aborted',
+        display: false,
+        content: expect.stringContaining('<turn_aborted>'),
+      }),
+    );
     expect(buildSessionContext).toHaveBeenCalledOnce();
     expect(state.messages).toEqual([
       { role: 'assistant', content: [{ type: 'toolCall', id: 'call_1', name: 'read', arguments: { path: 'README.md' } }] },
       { role: 'toolResult', toolCallId: 'call_1', toolName: 'read', content: [{ type: 'text', text: 'aborted' }] },
+      { role: 'custom', customType: 'conversation_recovery_turn_aborted', content: '<turn_aborted>marker</turn_aborted>' },
     ]);
   });
 });
@@ -4033,6 +4045,7 @@ describe('promptSession', () => {
     const repairedMessages = [
       { role: 'assistant', content: [{ type: 'toolCall', id: 'call_1', name: 'read', arguments: { path: 'README.md' } }] },
       { role: 'toolResult', toolCallId: 'call_1', toolName: 'read', content: [{ type: 'text', text: 'aborted' }] },
+      { role: 'custom', customType: 'conversation_recovery_turn_aborted', content: '<turn_aborted>marker</turn_aborted>' },
     ];
     const state = {
       messages: [{ role: 'assistant', content: [{ type: 'toolCall', id: 'call_1', name: 'read', arguments: { path: 'README.md' } }] }],
@@ -4122,13 +4135,23 @@ describe('promptSession', () => {
 
     expect(branch).not.toHaveBeenCalled();
     expect(resetLeaf).not.toHaveBeenCalled();
-    expect(appendMessage).toHaveBeenCalledWith(
+    expect(appendMessage).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
         role: 'toolResult',
         toolCallId: 'call_1',
         toolName: 'read',
         content: [{ type: 'text', text: 'aborted' }],
         isError: true,
+      }),
+    );
+    expect(appendMessage).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        role: 'custom',
+        customType: 'conversation_recovery_turn_aborted',
+        display: false,
+        content: expect.stringContaining('<turn_aborted>'),
       }),
     );
     expect(state.messages).toBe(repairedMessages);

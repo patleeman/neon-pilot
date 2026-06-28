@@ -53,14 +53,31 @@ function resolveDanglingToolCallTail(sessionManager: Pick<SessionManager, 'getBr
   return [];
 }
 
-function buildSyntheticAbortedToolResult(toolCall: DanglingToolCall) {
+function buildSyntheticAbortedToolResult(toolCall: DanglingToolCall, timestamp: number) {
+  const toolName = toolCall.toolName ?? 'unknown';
   return {
     role: 'toolResult' as const,
     toolCallId: toolCall.toolCallId,
-    toolName: toolCall.toolName ?? 'unknown',
+    toolName,
     content: [{ type: 'text' as const, text: 'aborted' }],
     isError: true,
-    timestamp: Date.now(),
+    timestamp,
+    details: {
+      source: 'conversation-recovery',
+      reason: 'dangling_tool_call',
+      synthetic: true,
+    },
+  };
+}
+
+function buildTurnAbortedRecoveryMarker(timestamp: number) {
+  return {
+    role: 'custom' as const,
+    customType: 'conversation_recovery_turn_aborted',
+    display: false,
+    content:
+      "<turn_aborted>\nThe previous assistant turn was interrupted before one or more tool calls completed. Missing tool results were marked aborted. Continue from the user's latest message.\n</turn_aborted>",
+    timestamp,
     details: {
       source: 'conversation-recovery',
       reason: 'dangling_tool_call',
@@ -88,9 +105,11 @@ export function repairDanglingToolCallContext(session: Pick<AgentSession, 'sessi
     return false;
   }
 
+  const timestamp = Date.now();
   for (const toolCall of danglingToolCalls) {
-    sessionManager.appendMessage(buildSyntheticAbortedToolResult(toolCall));
+    sessionManager.appendMessage(buildSyntheticAbortedToolResult(toolCall, timestamp));
   }
+  sessionManager.appendMessage(buildTurnAbortedRecoveryMarker(timestamp));
   session.state.messages = sessionManager.buildSessionContext().messages;
   return true;
 }
@@ -104,7 +123,6 @@ export interface TranscriptTailRecoveryPlan {
   details?: unknown;
   danglingToolCalls?: DanglingToolCall[];
 }
-
 
 function buildTranscriptTailRecoveryPlan(input: {
   targetEntryId: string | null;

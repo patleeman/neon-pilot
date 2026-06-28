@@ -173,6 +173,7 @@ describe('live session recovery', () => {
           { role: 'user', content: [{ type: 'text', text: 'prompt' }] },
           { role: 'assistant', content: [{ type: 'toolCall', id: 'call_stale', name: 'read', arguments: {} }] },
           { role: 'toolResult', toolCallId: 'call_stale', content: [{ type: 'text', text: 'aborted' }] },
+          { role: 'custom', customType: 'conversation_recovery_turn_aborted', content: '<turn_aborted>marker</turn_aborted>' },
         ],
       }));
       const state = { messages: [{ role: 'assistant', content: [{ type: 'toolCall', id: 'call_stale', name: 'read', arguments: {} }] }] };
@@ -188,7 +189,8 @@ describe('live session recovery', () => {
       } as never);
 
       expect(repaired).toBe(true);
-      expect(appendMessage).toHaveBeenCalledWith(
+      expect(appendMessage).toHaveBeenNthCalledWith(
+        1,
         expect.objectContaining({
           role: 'toolResult',
           toolCallId: 'call_stale',
@@ -198,8 +200,18 @@ describe('live session recovery', () => {
           details: expect.objectContaining({ source: 'conversation-recovery', reason: 'dangling_tool_call', synthetic: true }),
         }),
       );
+      expect(appendMessage).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          role: 'custom',
+          customType: 'conversation_recovery_turn_aborted',
+          display: false,
+          content: expect.stringContaining('<turn_aborted>'),
+          details: expect.objectContaining({ source: 'conversation-recovery', reason: 'dangling_tool_call', synthetic: true }),
+        }),
+      );
       expect(buildSessionContext).toHaveBeenCalledOnce();
-      expect(state.messages.at(-1)).toMatchObject({ role: 'toolResult', toolCallId: 'call_stale' });
+      expect(state.messages.at(-1)).toMatchObject({ role: 'custom', customType: 'conversation_recovery_turn_aborted' });
     });
   });
 });
