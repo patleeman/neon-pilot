@@ -118,6 +118,20 @@ inject: true
           <code>system.md</code>, scope memory, or skills. Review drafts and move stable preferences, project facts, or recurring workflow
           rules into the correct injected memory file when they are worth keeping.
         </p>
+        <p>
+          Reflection drafts include structured candidate updates and ignored signals. The extractor is intentionally conservative: stable
+          user preferences target <code>system.md</code>, repository facts target the active scope, repeated workflows target skill drafts,
+          and duplicate, sensitive, or short-lived details are rejected.
+        </p>
+        <h2 id="eval-and-tuning">Eval and tuning</h2>
+        <p>Run the deterministic memory reflection evals with:</p>
+        <pre><code>pnpm run eval:memory</code></pre>
+        <p>
+          The scorecard reports candidate precision, candidate recall, and reject recall across golden fixtures in
+          <code>packages/desktop/server/memory/memoryReflectionEval.fixtures.ts</code>. Add a fixture whenever dogfooding finds a bad memory
+          draft: include the summary input, existing memory state, expected candidates, and expected rejects. The eval command should stay
+          fast and deterministic so it can run before changing promotion policy or extraction rules.
+        </p>
         <h2 id="relation-to-knowledge">Relation to Knowledge</h2>
         <p>
           Memory is behavior and stable agent context. Legacy knowledge files remain reference material for browsing, search, and explicit
@@ -129,7 +143,7 @@ inject: true
       <aside class="docs-toc">
         <h2>On this page</h2>
         <a href="#runtime-behavior">Runtime behavior</a><a href="#desktop-ui">Desktop UI</a><a href="#reflection">Reflection</a
-        ><a href="#relation-to-knowledge">Relation to Knowledge</a>
+        ><a href="#eval-and-tuning">Eval and tuning</a><a href="#relation-to-knowledge">Relation to Knowledge</a>
       </aside>
     </main>
   </body>

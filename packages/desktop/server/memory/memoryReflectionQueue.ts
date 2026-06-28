@@ -6,10 +6,11 @@ import { parseDocument, stringify as stringifyYaml } from 'yaml';
 
 import { readConversationSessionMeta } from '../conversations/conversationService.js';
 import { readConversationSummary } from '../conversations/conversationSummaries.js';
+import type { SessionMeta } from '../conversations/conversationTypes.js';
 import { type LiveSessionLifecycleEvent, registerLiveSessionLifecycleHandler } from '../conversations/liveSessionLifecycle.js';
-import type { SessionMeta } from '../conversations/sessions.js';
 import { logError } from '../shared/logging.js';
-import { writeMemoryFile } from './memoryStore.js';
+import { extractMemoryReflection, type MemoryReflectionResult } from './memoryReflectionEngine.js';
+import { getMemoryState, writeMemoryFile } from './memoryStore.js';
 
 export type MemoryReflectionTrigger = 'turn_end' | 'auto_compaction_end' | 'close' | 'archive';
 
@@ -73,6 +74,7 @@ function buildReflectionBody(input: {
   event: MemoryReflectionJob;
   meta: SessionMeta;
   summary: ReturnType<typeof readConversationSummary>;
+  reflection: MemoryReflectionResult;
 }): string {
   const title = input.summary?.title || input.meta.title || input.event.title || input.event.conversationId;
   const lines = [
@@ -96,10 +98,27 @@ function buildReflectionBody(input: {
       '',
       '## Candidate Memory Updates',
       '',
-      '- Review whether any stable user preference belongs in `memory/system.md`.',
-      '- Review whether any repository-specific behavior belongs in an active scope.',
-      '- Keep reference-only material out of injected memory.',
     );
+    if (input.reflection.candidates.length > 0) {
+      for (const candidate of input.reflection.candidates) {
+        lines.push(
+          `### ${candidate.kind} -> ${candidate.targetPath}`,
+          '',
+          `- Statement: ${candidate.statement}`,
+          `- Confidence: ${candidate.confidence.toFixed(2)}`,
+          `- Evidence: ${candidate.evidence}`,
+          '',
+        );
+      }
+    } else {
+      lines.push('No durable memory candidates were detected.', '');
+    }
+    if (input.reflection.rejects.length > 0) {
+      lines.push('## Ignored Signals', '');
+      for (const reject of input.reflection.rejects) {
+        lines.push(`- ${reject.reason}: ${reject.evidence}`);
+      }
+    }
     if (input.summary.keyTerms.length > 0) {
       lines.push('', `Key terms: ${input.summary.keyTerms.join(', ')}`);
     }
@@ -127,6 +146,22 @@ async function runReflectionJob(job: MemoryReflectionJob): Promise<void> {
 
   const relativePath = reflectionPathForConversation(job.conversationId);
   if (readStoredFingerprint(relativePath) === fingerprint) return;
+  const state = await getMemoryState({ cwd: summary?.cwd || meta.cwd || job.cwd });
+  const reflection = extractMemoryReflection({
+    title: summary?.title || meta.title || job.title,
+    cwd: summary?.cwd || meta.cwd || job.cwd,
+    displaySummary: summary?.displaySummary,
+    outcome: summary?.outcome,
+    promptSummary: summary?.promptSummary,
+    searchText: summary?.searchText,
+    keyTerms: summary?.keyTerms,
+    filesTouched: summary?.filesTouched,
+    existingMemory: {
+      system: state.system.content,
+      scopes: state.scopes.map((scope) => ({ name: scope.name, content: scope.content })),
+      skills: state.skills.map((skill) => ({ name: skill.name, description: skill.description, content: skill.content })),
+    },
+  });
 
   const content = stringifyMarkdown(
     {
@@ -136,9 +171,11 @@ async function runReflectionJob(job: MemoryReflectionJob): Promise<void> {
       trigger: job.trigger,
       fingerprint,
       inject: false,
+      candidateCount: reflection.candidates.length,
+      rejectCount: reflection.rejects.length,
       reflectedAt: new Date().toISOString(),
     },
-    buildReflectionBody({ event: job, meta, summary }),
+    buildReflectionBody({ event: job, meta, summary, reflection }),
   );
 
   await writeMemoryFile({

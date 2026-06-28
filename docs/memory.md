@@ -62,6 +62,18 @@ Memory writes do not require approval. Use the history surface to inspect commit
 
 Neon Pilot queues memory reflection after conversation turn-end events, auto-compaction, and close/archive operations. Reflection writes a committed draft under `memory/reflections/` with `inject: false`; it does not directly mutate `system.md`, scope memory, or skills. Review drafts and move stable preferences, project facts, or recurring workflow rules into the correct injected memory file when they are worth keeping.
 
+Reflection drafts include structured candidate updates and ignored signals. The extractor is intentionally conservative: stable user preferences target `system.md`, repository facts target the active scope, repeated workflows target skill drafts, and duplicate, sensitive, or short-lived details are rejected.
+
+## Eval and tuning
+
+Run the deterministic memory reflection evals with:
+
+```sh
+pnpm run eval:memory
+```
+
+The scorecard reports candidate precision, candidate recall, and reject recall across golden fixtures in `packages/desktop/server/memory/memoryReflectionEval.fixtures.ts`. Add a fixture whenever dogfooding finds a bad memory draft: include the summary input, existing memory state, expected candidates, and expected rejects. The eval command should stay fast and deterministic so it can run before changing promotion policy or extraction rules.
+
 ## Relation to Knowledge
 
 Memory is behavior and stable agent context. Legacy knowledge files remain reference material for browsing, search, and explicit context attachment. Importing knowledge into Memory creates `memory/scopes/imported-knowledge/memory.md` with `inject: false`, so old notes are visible for review without changing agent behavior automatically.

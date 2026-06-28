@@ -51,7 +51,7 @@ function summary() {
     fingerprint: 'fingerprint-1',
     title: 'Discuss memory',
     cwd: '/repo/app',
-    displaySummary: 'The user wants durable memory with scopes and skills.',
+    displaySummary: 'The user prefers durable memory with scopes and skills.',
     outcome: 'Memory design was clarified.',
     status: 'done',
     promptSummary: 'Discuss memory',
@@ -92,7 +92,9 @@ describe('memory reflection queue', () => {
     const reflectionPath = join(process.env.NEON_PILOT_KNOWLEDGE_ROOT!, 'memory', 'reflections', 'conversation-1.md');
     expect(existsSync(reflectionPath)).toBe(true);
     const content = readFileSync(reflectionPath, 'utf-8');
-    expect(content).toContain('The user wants durable memory with scopes and skills.');
+    expect(content).toContain('The user prefers durable memory with scopes and skills.');
+    expect(content).toContain('candidateCount: 1');
+    expect(content).toContain('### preference -> system.md');
     expect(content).toContain('inject: false');
   });
 
