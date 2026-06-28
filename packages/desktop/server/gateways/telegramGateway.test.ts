@@ -148,6 +148,64 @@ describe('TelegramGatewayRuntime', () => {
     );
   });
 
+  it('reports command failures without throwing so Telegram can acknowledge the update', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'compact' });
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps({ compactConversation: vi.fn().mockRejectedValue(new Error('Nothing to compact')) });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await expect(
+      runtime.processUpdate({
+        update_id: 1,
+        message: { message_id: 10, chat: { id: 'C1', title: 'Group' }, from: { id: 777 }, text: '/compact' },
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(state.findGatewayChatTarget).toHaveBeenCalledWith(expect.objectContaining({ externalChatId: 'C1' }));
+    expect(d.compactConversation).toHaveBeenCalledWith('conv-1');
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('Telegram command failed: Nothing to compact') }),
+    );
+  });
+
+  it('does not submit normal messages while replies are paused for the chat target', async () => {
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing', repliesEnabled: false });
+    const d = deps();
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      message: { message_id: 10, chat: { id: 'C1', title: 'Group' }, from: { id: 777 }, text: 'do not answer' },
+    });
+
+    expect(d.submitPrompt).not.toHaveBeenCalled();
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('Telegram replies are paused') }),
+    );
+  });
+
+  it('recreates stale chat targets that point at missing conversations', async () => {
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'missing-conv', conversationTitle: 'Missing' });
+    const d = deps();
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      message: { message_id: 10, chat: { id: 'C1', title: 'Group' }, from: { id: 777 }, text: 'hello again' },
+    });
+
+    expect(state.recordGatewayEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'routing', message: expect.stringContaining('pointed at a missing conversation') }),
+    );
+    expect(d.createConversation).toHaveBeenCalledWith({ title: 'Telegram: Group' });
+    expect(state.upsertGatewayChatTarget).toHaveBeenCalledWith(
+      expect.objectContaining({ externalChatId: 'C1', conversationId: 'conv-new', conversationTitle: 'Telegram: Group' }),
+    );
+    expect(d.submitPrompt).toHaveBeenCalledWith({ conversationId: 'conv-new', text: 'hello again', images: undefined });
+  });
+
   it('builds prompt text from Telegram voice transcripts and captions', () => {
     expect(buildTelegramPromptText({ voiceTranscript: 'pick up milk' })).toBe(
       '[The user sent a Telegram voice message. Transcript: "pick up milk"]',

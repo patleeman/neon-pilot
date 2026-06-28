@@ -244,13 +244,23 @@ export class TelegramGatewayRuntime {
     const target = await this.ensureChatTarget({ externalChatId, externalChatLabel, forceNew: command?.kind === 'new' });
 
     if (command) {
-      await this.handleCommand(command, {
-        conversationId: target.conversationId,
-        conversationTitle: target.conversationTitle,
-        externalChatId,
-        externalChatLabel,
-        externalUserId,
-      });
+      try {
+        await this.handleCommand(command, {
+          conversationId: target.conversationId,
+          conversationTitle: target.conversationTitle,
+          externalChatId,
+          externalChatLabel,
+          externalUserId,
+        });
+      } catch (error) {
+        const failure = error instanceof Error ? error.message : String(error);
+        await this.sendMessage(externalChatId, `Telegram command failed: ${failure}`);
+      }
+      return;
+    }
+
+    if (!target.repliesEnabled) {
+      await this.sendMessage(externalChatId, 'Telegram replies are paused for this conversation. Use /resume to re-enable.');
       return;
     }
 
@@ -509,7 +519,7 @@ export class TelegramGatewayRuntime {
     externalChatId: string;
     externalChatLabel: string;
     forceNew?: boolean;
-  }): Promise<{ conversationId: string; conversationTitle: string }> {
+  }): Promise<{ conversationId: string; conversationTitle: string; repliesEnabled: boolean }> {
     const existing = input.forceNew
       ? null
       : findGatewayChatTarget({
@@ -519,7 +529,21 @@ export class TelegramGatewayRuntime {
           externalChatId: input.externalChatId,
         });
     if (existing && existing.conversationId) {
-      return { conversationId: existing.conversationId, conversationTitle: existing.conversationTitle || existing.conversationId };
+      const conversations = await this.dependencies.listConversations();
+      if (conversations.some((conversation) => conversation.id === existing.conversationId)) {
+        return {
+          conversationId: existing.conversationId,
+          conversationTitle: existing.conversationTitle || existing.conversationId,
+          repliesEnabled: existing.repliesEnabled !== false,
+        };
+      }
+      recordGatewayEvent({
+        stateRoot: this.dependencies.stateRoot,
+        profile: this.dependencies.profile,
+        provider: 'telegram',
+        kind: 'routing',
+        message: `Telegram chat target ${input.externalChatId} pointed at a missing conversation; creating a new thread.`,
+      });
     }
 
     const title = `Telegram: ${input.externalChatLabel || input.externalChatId}`;
@@ -546,7 +570,7 @@ export class TelegramGatewayRuntime {
     });
 
     await this.dependencies.renameConversation(created.id, title);
-    return { conversationId: created.id, conversationTitle: title };
+    return { conversationId: created.id, conversationTitle: title, repliesEnabled: true };
   }
 
   private async handleCommand(
