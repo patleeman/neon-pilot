@@ -64,6 +64,22 @@ const liveSessions = vi.hoisted(() => ({
   updateLiveSessionModelPreferences: vi.fn(),
 }));
 const conversationService = vi.hoisted(() => ({
+  listConversationSessionsSnapshot: vi.fn(() => [
+    {
+      id: 'conv-1',
+      title: 'Open one',
+      timestamp: '2026-06-28T12:00:00.000Z',
+      lastActivityAt: '2026-06-28T12:00:00.000Z',
+      isRunning: false,
+    },
+    {
+      id: 'archived-1',
+      title: 'Archived one',
+      timestamp: '2026-06-27T12:00:00.000Z',
+      lastActivityAt: '2026-06-27T12:00:00.000Z',
+      isRunning: false,
+    },
+  ]),
   readSessionDetailForRoute: vi.fn(async () => ({ sessionRead: { detail: { blocks: [{ type: 'text', text: ' latest reply ' }] } } })),
 }));
 const capability = vi.hoisted(() => ({
@@ -113,6 +129,19 @@ describe('gateway routes', () => {
       getAuthFile: () => '/auth.json',
       getRepoRoot: () => '/repo',
       getDefaultWebCwd: () => '/repo',
+      getSavedUiPreferences: () => ({
+        openConversationIds: ['conv-1'],
+        pinnedConversationIds: [],
+        archivedConversationIds: ['archived-1'],
+        lockedConversationIds: [],
+        activeConversationId: 'conv-1',
+        workspacePaths: [],
+        remoteControlledConversationIds: [],
+        conversationWorkspaceRevision: 1,
+        conversationWorkspaceUpdatedAt: null,
+        conversationWorkspaceMigratedAt: null,
+        nodeBrowserViews: [],
+      }),
       buildLiveSessionResourceOptions: () => ({}),
       buildLiveSessionExtensionFactories: () => [],
       flushLiveDeferredResumes: vi.fn(),
@@ -144,6 +173,50 @@ describe('gateway routes', () => {
 
     expect(result).toBe(unsubscribe);
     expect(liveSessions.subscribe).toHaveBeenCalledWith('conv-1', listener, { tailBlocks: 0 });
+  });
+
+  it('passes active and archived sidebar-scoped conversation lists into the Telegram runtime', () => {
+    register();
+    const instance = ensureTelegramRuntime();
+    const listConversations = (instance as unknown as { dependencies: { listConversations: (input?: unknown) => unknown } }).dependencies
+      .listConversations;
+
+    expect(listConversations({ scope: 'active' })).toEqual([
+      expect.objectContaining({ id: 'conv-1', title: 'Open one', placement: 'active' }),
+    ]);
+    expect(listConversations({ scope: 'archived', query: 'archived' })).toEqual([
+      expect.objectContaining({ id: 'archived-1', title: 'Archived one', placement: 'archived' }),
+    ]);
+  });
+
+  it('passes real transcript tail reads into the Telegram runtime', async () => {
+    conversationService.readSessionDetailForRoute.mockResolvedValueOnce({
+      sessionRead: {
+        detail: {
+          blocks: [
+            { type: 'user', text: 'hello', ts: '2026-06-28T12:00:00.000Z' },
+            { type: 'text', text: 'hi there', ts: '2026-06-28T12:00:01.000Z' },
+            { type: 'tool_use', tool: 'bash', status: 'error', output: 'failed', ts: '2026-06-28T12:00:02.000Z' },
+          ],
+        },
+      },
+    });
+    register();
+    const instance = ensureTelegramRuntime();
+    const readConversationTail = (
+      instance as unknown as { dependencies: { readConversationTail: (conversationId: string, count: number) => Promise<unknown> } }
+    ).dependencies.readConversationTail;
+
+    await expect(readConversationTail('conv-1', 3)).resolves.toEqual([
+      { role: 'user', text: 'hello', timestamp: '2026-06-28T12:00:00.000Z' },
+      { role: 'assistant', text: 'hi there', timestamp: '2026-06-28T12:00:01.000Z' },
+      { role: 'tool', text: 'bash failed: failed', timestamp: '2026-06-28T12:00:02.000Z' },
+    ]);
+    expect(conversationService.readSessionDetailForRoute).toHaveBeenCalledWith({
+      conversationId: 'conv-1',
+      profile: 'shared',
+      tailBlocks: 20,
+    });
   });
 
   function latestRuntime() {

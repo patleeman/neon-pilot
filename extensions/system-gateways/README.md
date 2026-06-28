@@ -12,3 +12,11 @@ The first bundled provider is Telegram. The extension contributes the `telegram`
 4. Add approved Telegram user IDs or chat IDs before sharing the bot.
 
 Saving a token creates and enables the Telegram gateway connection. Removing the token disables the connection and stops the runtime.
+
+## Telegram conversation commands
+
+One Telegram chat has one active Neon Pilot conversation binding. Use `/threads` to list conversations currently visible in the sidebar, then tap a thread or send `/switch <number|title|id>` to make that conversation active for the Telegram chat. Numbered choices are resolved against the last list shown in that Telegram chat so `/switch 2` keeps matching what the user saw.
+
+Use `/peek [number|title|id]` to preview a conversation without switching. Sending `/peek` with no target asks which active sidebar conversation to preview. Use `/tail [count]` for a short catch-up view of the current conversation and `/transcript [count]` or `/export [count]` for a longer bounded transcript output.
+
+Archived conversations are separate from the active thread picker. Use `/archives [search]` or `/archived [search]` to find archived conversations and preview them before switching.

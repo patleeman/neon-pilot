@@ -32,6 +32,7 @@ import {
 } from '../gateways/gatewayState.js';
 import { readTelegramAccessPolicy, writeTelegramAccessPolicy } from '../gateways/telegramAccess.js';
 import { readTelegramBotToken, removeTelegramBotToken, writeTelegramBotToken } from '../gateways/telegramAuth.js';
+import type { TelegramGatewayConversationSummary, TelegramGatewayTranscriptEntry } from '../gateways/telegramGateway.js';
 import { TelegramGatewayRuntime } from '../gateways/telegramGateway.js';
 import { logError } from '../middleware/index.js';
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
@@ -51,6 +52,13 @@ let routeContext: ServerRouteContext | null = null;
 let telegramRuntime: TelegramGatewayRuntime | null = null;
 let lifecycleRegistered = false;
 const lastTelegramDeliveryByConversation = new Map<string, string>();
+const TELEGRAM_GATEWAY_LIST_LIMIT = 200;
+
+type TelegramTranscriptBlock =
+  | { type: 'user'; text: string; ts?: string }
+  | { type: 'text'; text: string; ts?: string }
+  | { type: 'summary'; title: string; text?: string; detail?: string; ts?: string }
+  | { type: 'tool_use'; tool: string; status?: 'running' | 'ok' | 'error'; output?: string; outputDeferred?: boolean; ts?: string };
 
 function publishTelegramGatewayHostApi(): void {
   (globalThis as typeof globalThis & { __neonPilotTelegramGatewayHostApi?: TelegramGatewayHostApi })[TELEGRAM_GATEWAY_HOST_API_GLOBAL] = {
@@ -189,6 +197,71 @@ function liveSessionContext(context: ServerRouteContext) {
   };
 }
 
+function listTelegramGatewayConversations(
+  context: ServerRouteContext,
+  input: { scope?: 'active' | 'archived' | 'all'; query?: string } = {},
+): TelegramGatewayConversationSummary[] {
+  const scope = input.scope ?? 'active';
+  const query = input.query?.trim().toLowerCase() ?? '';
+  const sessions = listConversationSessionsSnapshot({
+    includeLive: true,
+    limit: TELEGRAM_GATEWAY_LIST_LIMIT,
+    profile: context.getRuntimeScope(),
+  });
+  const saved = context.getSavedUiPreferences();
+  const sessionById = new Map(sessions.map((session) => [session.id, session]));
+  const archivedIds = new Set(saved.archivedConversationIds);
+  const activeIds = uniqueStrings([...saved.pinnedConversationIds, ...saved.openConversationIds, saved.activeConversationId ?? '']).filter(
+    (id) => !archivedIds.has(id),
+  );
+
+  const active = activeIds.flatMap((id) => {
+    const session = sessionById.get(id);
+    return session ? [toTelegramConversationSummary(session, 'active')] : [];
+  });
+  const archived = saved.archivedConversationIds.flatMap((id) => {
+    const session = sessionById.get(id);
+    return session ? [toTelegramConversationSummary(session, 'archived')] : [];
+  });
+
+  const activeSet = new Set(active.map((session) => session.id));
+  const archivedSet = new Set(archived.map((session) => session.id));
+  const closed = sessions
+    .filter((session) => !activeSet.has(session.id) && !archivedSet.has(session.id))
+    .map((session) => toTelegramConversationSummary(session, 'closed'));
+
+  const scoped = scope === 'active' ? active : scope === 'archived' ? archived : [...active, ...archived, ...closed];
+  if (!query) return scoped;
+  return scoped.filter((session) =>
+    [session.id, session.title ?? '', session.snippet ?? ''].some((value) => value.toLowerCase().includes(query)),
+  );
+}
+
+function uniqueStrings(values: string[]): string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    unique.push(trimmed);
+  }
+  return unique;
+}
+
+function toTelegramConversationSummary(
+  session: ReturnType<typeof listConversationSessionsSnapshot>[number],
+  placement: 'active' | 'archived' | 'closed',
+): TelegramGatewayConversationSummary {
+  return {
+    id: session.id,
+    title: session.title,
+    updatedAt: session.lastActivityAt ?? session.timestamp,
+    snippet: session.isRunning ? 'running' : undefined,
+    placement,
+  };
+}
+
 export function ensureTelegramRuntime(): TelegramGatewayRuntime {
   if (!routeContext) {
     throw new Error('Gateway routes are not initialized');
@@ -203,12 +276,7 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
     authFile: context.getAuthFile(),
     readBotToken: () => readTelegramBotToken(context.getAuthFile(), context.getStateRoot()),
     readAccessPolicy: () => readTelegramAccessPolicy(context.getStateRoot(), context.getRuntimeScope()),
-    listConversations: () =>
-      listConversationSessionsSnapshot({ includeLive: true, limit: 50, profile: context.getRuntimeScope() }).map((session) => ({
-        id: session.id,
-        title: session.title,
-        updatedAt: session.lastActivityAt ?? session.timestamp,
-      })),
+    listConversations: (input) => listTelegramGatewayConversations(context, input),
     listModels: async () =>
       (await getAvailableModelObjects()).map((model) => ({
         id: model.id,
@@ -228,6 +296,7 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
       );
     },
     readLatestAssistantReply,
+    readConversationTail,
     subscribeConversationEvents: (conversationId, listener) => subscribeLiveSessionEvents(conversationId, listener, { tailBlocks: 0 }),
     transcribeAudio,
     renameConversation: (conversationId, title) => renameSession(conversationId, title),
@@ -331,6 +400,40 @@ async function readLatestAssistantReply(conversationId: string): Promise<{ text:
     timestamp: typeof block.ts === 'string' ? block.ts : undefined,
     deliveryKey: identity ? `block:${identity}` : `text:${text}`,
   };
+}
+
+async function readConversationTail(conversationId: string, count: number): Promise<TelegramGatewayTranscriptEntry[]> {
+  const safeCount = Math.min(Math.max(Math.trunc(count), 1), 50);
+  const tailBlocks = Math.min(Math.max(safeCount * 4, 20), 200);
+  const { sessionRead } = await readSessionDetailForRoute({ conversationId, profile: getRuntimeScopeFn(), tailBlocks });
+  return (sessionRead.detail?.blocks ?? [])
+    .flatMap((block) => telegramTranscriptEntryFromBlock(block as TelegramTranscriptBlock))
+    .filter((entry) => entry.text.trim().length > 0)
+    .slice(-safeCount);
+}
+
+function telegramTranscriptEntryFromBlock(block: TelegramTranscriptBlock): TelegramGatewayTranscriptEntry[] {
+  switch (block.type) {
+    case 'user':
+      return [{ role: 'user', text: block.text, timestamp: block.ts }];
+    case 'text':
+      return [{ role: 'assistant', text: block.text, timestamp: block.ts }];
+    case 'summary':
+      return [
+        {
+          role: 'system',
+          text: [block.title, block.text || block.detail].filter(Boolean).join(': '),
+          timestamp: block.ts,
+        },
+      ];
+    case 'tool_use': {
+      const state = block.status === 'running' ? 'running' : block.status === 'error' ? 'failed' : 'finished';
+      const output = block.outputDeferred ? 'output deferred' : block.output;
+      return [{ role: 'tool', text: `${block.tool} ${state}${output ? `: ${output}` : ''}`, timestamp: block.ts }];
+    }
+    default:
+      return [];
+  }
 }
 
 function handleGatewayError(res: Response, err: unknown): void {

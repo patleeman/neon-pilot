@@ -8,6 +8,8 @@ export type TelegramGatewayCommand =
   | { kind: 'new' }
   | { kind: 'threads' }
   | { kind: 'tail'; count?: number }
+  | { kind: 'transcript'; count?: number }
+  | { kind: 'peek'; target?: string }
   | { kind: 'switch'; target?: string }
   | { kind: 'attach' }
   | { kind: 'detach' }
@@ -15,7 +17,8 @@ export type TelegramGatewayCommand =
   | { kind: 'compact' }
   | { kind: 'title' }
   | { kind: 'rename'; title: string }
-  | { kind: 'archive' };
+  | { kind: 'archive' }
+  | { kind: 'archives'; query?: string };
 
 export function parseTelegramGatewayCommand(text: string): TelegramGatewayCommand | null {
   const trimmed = text.trim();
@@ -46,11 +49,17 @@ export function parseTelegramGatewayCommand(text: string): TelegramGatewayComman
     case '/threads':
     case '/sessions':
       return { kind: 'threads' };
-    case '/tail':
-    case '/transcript': {
+    case '/tail': {
       const count = arg ? Number.parseInt(arg, 10) : undefined;
       return { kind: 'tail', count: Number.isFinite(count) ? count : undefined };
     }
+    case '/transcript':
+    case '/export': {
+      const count = arg ? Number.parseInt(arg, 10) : undefined;
+      return { kind: 'transcript', count: Number.isFinite(count) ? count : undefined };
+    }
+    case '/peek':
+      return arg ? { kind: 'peek', target: arg } : { kind: 'peek' };
     case '/thread':
     case '/switch':
       return arg ? { kind: 'switch', target: arg } : { kind: 'switch' };
@@ -70,6 +79,9 @@ export function parseTelegramGatewayCommand(text: string): TelegramGatewayComman
       return arg ? { kind: 'rename', title: arg } : null;
     case '/archive':
       return { kind: 'archive' };
+    case '/archives':
+    case '/archived':
+      return arg ? { kind: 'archives', query: arg } : { kind: 'archives' };
     default:
       return null;
   }
@@ -81,9 +93,12 @@ export function formatTelegramGatewayHelp(): string {
     '/status — show gateway status',
     '/whoami — show your Telegram IDs and access status',
     '/new or /reset — start a new conversation',
-    '/threads — list recent conversations',
+    '/threads — list active sidebar conversations',
+    '/archives [search] — search archived conversations',
     '/switch <number|id|title> — switch this chat to another conversation',
+    '/peek [number|id|title] — preview a conversation without switching',
     '/tail [count] — show recent messages in the current thread',
+    '/transcript [count] — output more recent transcript messages',
     '/attach — attach this chat as the main gateway thread',
     '/detach — detach this chat',
     '/stop or /pause — stop replies',

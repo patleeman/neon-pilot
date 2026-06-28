@@ -11,6 +11,13 @@ describe('parseTelegramGatewayCommand', () => {
     expect(parseTelegramGatewayCommand('/whoami')).toEqual({ kind: 'whoami' });
     expect(parseTelegramGatewayCommand('/reset')).toEqual({ kind: 'new' });
     expect(parseTelegramGatewayCommand('/threads')).toEqual({ kind: 'threads' });
+    expect(parseTelegramGatewayCommand('/archives build')).toEqual({ kind: 'archives', query: 'build' });
+    expect(parseTelegramGatewayCommand('/archived')).toEqual({ kind: 'archives' });
+    expect(parseTelegramGatewayCommand('/peek')).toEqual({ kind: 'peek' });
+    expect(parseTelegramGatewayCommand('/peek 2')).toEqual({ kind: 'peek', target: '2' });
+    expect(parseTelegramGatewayCommand('/tail 10')).toEqual({ kind: 'tail', count: 10 });
+    expect(parseTelegramGatewayCommand('/transcript 20')).toEqual({ kind: 'transcript', count: 20 });
+    expect(parseTelegramGatewayCommand('/export')).toEqual({ kind: 'transcript' });
     expect(parseTelegramGatewayCommand('/switch 2')).toEqual({ kind: 'switch', target: '2' });
     expect(parseTelegramGatewayCommand('/resume Project planning')).toEqual({ kind: 'switch', target: 'Project planning' });
     expect(parseTelegramGatewayCommand('/resume')).toEqual({ kind: 'resume' });

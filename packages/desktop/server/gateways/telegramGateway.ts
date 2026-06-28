@@ -94,6 +94,7 @@ export interface TelegramGatewayConversationSummary {
   title?: string;
   updatedAt?: string;
   snippet?: string;
+  placement?: 'active' | 'archived' | 'closed';
 }
 
 export interface TelegramGatewayTranscriptEntry {
@@ -108,12 +109,18 @@ interface TelegramGatewayModelSummary {
   provider?: string;
 }
 
+type TelegramConversationScope = 'active' | 'archived' | 'all';
+type TelegramConversationListAction = 'switch' | 'peek';
+
 export interface TelegramGatewayRuntimeDependencies {
   stateRoot: string;
   profile: string;
   authFile: string;
   createConversation: (input: { title: string }) => Promise<{ id: string }>;
-  listConversations: () => Promise<TelegramGatewayConversationSummary[]> | TelegramGatewayConversationSummary[];
+  listConversations: (input?: {
+    scope?: TelegramConversationScope;
+    query?: string;
+  }) => Promise<TelegramGatewayConversationSummary[]> | TelegramGatewayConversationSummary[];
   listModels: () => Promise<TelegramGatewayModelSummary[]> | TelegramGatewayModelSummary[];
   submitPrompt: (input: {
     conversationId: string;
@@ -140,6 +147,7 @@ const TELEGRAM_MESSAGE_LIMIT = 4_096;
 const TELEGRAM_TOOL_STATUS_LIMIT = 180;
 const RECENT_REPLY_DEDUPE_MS = 30_000;
 const TELEGRAM_GATEWAY_LOCK_FILE = 'telegram-gateway.poller.lock';
+const TELEGRAM_PICKER_TTL_MS = 10 * 60_000;
 
 export interface TelegramToolStatus {
   toolName: string;
@@ -180,6 +188,14 @@ export class TelegramGatewayRuntime {
   private deliveredToolStatusKeys = new Map<string, Set<string>>();
   private lastPollingFailureMessage: string | null = null;
   private recentDeliveredReplies = new Map<string, { text: string; deliveredAtMs: number }>();
+  private conversationPickers = new Map<
+    string,
+    {
+      conversations: TelegramGatewayConversationSummary[];
+      scope: TelegramConversationScope;
+      createdAtMs: number;
+    }
+  >();
 
   constructor(private readonly dependencies: TelegramGatewayRuntimeDependencies) {}
 
@@ -485,9 +501,15 @@ export class TelegramGatewayRuntime {
     await this.answerCallbackQuery(callback.id).catch(() => undefined);
     const data = callback.data.trim();
     if (data.startsWith('threadpage:')) {
-      const page = Number.parseInt(data.slice(11), 10);
-      await this.sendMessage(String(callback.message.chat.id), await this.formatConversationList('Recent Neon Pilot conversations:'), {
-        reply_markup: await this.conversationKeyboard(Number.isFinite(page) ? page : 0),
+      const parts = data.split(':');
+      const action = readConversationListAction(parts[1]) ?? 'switch';
+      const scope = readConversationScope(parts[2]) ?? 'active';
+      const page = Number.parseInt(parts[3] ?? parts[1] ?? '0', 10);
+      const chatId = String(callback.message.chat.id);
+      const conversations = await this.loadConversationList({ scope });
+      this.rememberConversationPicker(chatId, conversations, scope);
+      await this.sendMessage(chatId, this.formatConversationList(conversations, conversationListPrefix(scope, action)), {
+        reply_markup: this.conversationKeyboard(conversations, { page: Number.isFinite(page) ? page : 0, action, scope }),
       });
       return;
     }
@@ -513,9 +535,11 @@ export class TelegramGatewayRuntime {
       ? data.slice(4)
       : data.startsWith('switch:')
         ? `/switch ${data.slice(7)}`
-        : data.startsWith('model:')
-          ? `/model ${data.slice(6)}`
-          : '';
+        : data.startsWith('peek:')
+          ? `/peek ${data.slice(5)}`
+          : data.startsWith('model:')
+            ? `/model ${data.slice(6)}`
+            : '';
     if (!text) return;
     await this.processUpdate({
       update_id: 0,
@@ -604,7 +628,14 @@ export class TelegramGatewayRuntime {
         const model = await this.dependencies.getCurrentModel(target.conversationId);
         await this.sendMessage(
           target.externalChatId,
-          `Telegram gateway active. Conversation: ${target.conversationId}${model ? `\nModel: ${model}` : ''}`,
+          [
+            'Telegram gateway active.',
+            `Conversation: ${target.conversationTitle || shortConversationId(target.conversationId)}`,
+            `ID: ${shortConversationId(target.conversationId)}`,
+            model ? `Model: ${model}` : null,
+          ]
+            .filter(Boolean)
+            .join('\n'),
           { reply_markup: statusKeyboard() },
         );
         return;
@@ -626,8 +657,10 @@ export class TelegramGatewayRuntime {
         return;
       }
       case 'threads':
-        await this.sendMessage(target.externalChatId, await this.formatConversationList(), {
-          reply_markup: await this.conversationKeyboard(),
+        await this.sendConversationList(target.externalChatId, {
+          scope: 'active',
+          action: 'switch',
+          prefix: 'Active sidebar conversations:',
         });
         return;
       case 'tail':
@@ -639,16 +672,46 @@ export class TelegramGatewayRuntime {
           },
         );
         return;
+      case 'transcript':
+        await this.sendMessage(
+          target.externalChatId,
+          await this.formatThreadPreview(target.conversationId, target.conversationTitle, command.count ?? 20, {
+            maxCount: 50,
+            label: 'Recent transcript:',
+            continuationHint: 'Send a message to continue, or use /transcript 50 for more.',
+          }),
+          { reply_markup: statusKeyboard() },
+        );
+        return;
+      case 'peek':
+        if (!command.target) {
+          await this.sendConversationList(target.externalChatId, {
+            scope: 'active',
+            action: 'peek',
+            prefix: 'Which conversation should I preview? Send /peek <number>, /peek <title>, or tap one:',
+          });
+          return;
+        }
+        await this.peekConversation(command.target, target.externalChatId);
+        return;
       case 'switch':
         if (!command.target) {
-          await this.sendMessage(
-            target.externalChatId,
-            await this.formatConversationList('Send /switch <number>, /switch <title>, or /switch <id>.'),
-            { reply_markup: await this.conversationKeyboard() },
-          );
+          await this.sendConversationList(target.externalChatId, {
+            scope: 'active',
+            action: 'switch',
+            prefix: 'Send /switch <number>, /switch <title>, or /switch <id>.',
+          });
           return;
         }
         await this.switchConversation(command.target, target);
+        return;
+      case 'archives':
+        await this.sendConversationList(target.externalChatId, {
+          scope: 'archived',
+          action: 'peek',
+          query: command.query,
+          prefix: command.query ? `Archived conversations matching "${command.query}":` : 'Archived conversations:',
+        });
         return;
       case 'stop':
       case 'detach':
@@ -716,24 +779,89 @@ export class TelegramGatewayRuntime {
     }
   }
 
-  private async formatConversationList(prefix = 'Recent Neon Pilot conversations:'): Promise<string> {
-    const conversations = (await this.dependencies.listConversations()).slice(0, 12);
-    if (conversations.length === 0) return 'No Neon Pilot conversations found. Send /new to start one.';
+  private async loadConversationList(
+    input: {
+      scope?: TelegramConversationScope;
+      query?: string;
+    } = {},
+  ): Promise<TelegramGatewayConversationSummary[]> {
+    return this.dependencies.listConversations(input);
+  }
+
+  private rememberConversationPicker(
+    externalChatId: string,
+    conversations: TelegramGatewayConversationSummary[],
+    scope: TelegramConversationScope,
+  ): void {
+    this.conversationPickers.set(externalChatId, { conversations, scope, createdAtMs: Date.now() });
+  }
+
+  private readConversationPicker(externalChatId: string): TelegramGatewayConversationSummary[] | null {
+    const picker = this.conversationPickers.get(externalChatId);
+    if (!picker) return null;
+    if (Date.now() - picker.createdAtMs > TELEGRAM_PICKER_TTL_MS) {
+      this.conversationPickers.delete(externalChatId);
+      return null;
+    }
+    return picker.conversations;
+  }
+
+  private async sendConversationList(
+    externalChatId: string,
+    input: {
+      scope: TelegramConversationScope;
+      action: TelegramConversationListAction;
+      prefix: string;
+      query?: string;
+      page?: number;
+    },
+  ): Promise<void> {
+    const conversations = await this.loadConversationList({ scope: input.scope, query: input.query });
+    this.rememberConversationPicker(externalChatId, conversations, input.scope);
+    await this.sendMessage(externalChatId, this.formatConversationList(conversations, input.prefix, input.scope), {
+      reply_markup: this.conversationKeyboard(conversations, {
+        page: input.page ?? 0,
+        action: input.action,
+        scope: input.scope,
+      }),
+    });
+  }
+
+  private formatConversationList(
+    conversations: TelegramGatewayConversationSummary[],
+    prefix: string,
+    scope: TelegramConversationScope = 'active',
+  ): string {
+    const visible = conversations.slice(0, 12);
+    if (visible.length === 0) {
+      return scope === 'archived'
+        ? 'No archived conversations found. Try /archives <search text>.'
+        : 'No active sidebar conversations found. Send /new to start one.';
+    }
     return [
       prefix,
-      ...conversations.map((conversation, index) => {
+      ...visible.map((conversation, index) => {
         const title = conversation.title || conversation.id;
         const snippet = conversation.snippet ? ` — ${truncateText(conversation.snippet, 80)}` : '';
-        return `${index + 1}. ${title}${snippet}\n   ${conversation.id}`;
+        return `${index + 1}. ${title}${snippet}\n   ${shortConversationId(conversation.id)}`;
       }),
     ].join('\n');
   }
 
-  private async formatThreadPreview(conversationId: string, conversationTitle?: string, count = 6): Promise<string> {
-    const safeCount = Math.min(Math.max(Math.trunc(count), 1), 20);
+  private async formatThreadPreview(
+    conversationId: string,
+    conversationTitle?: string,
+    count = 6,
+    options: { maxCount?: number; label?: string; continuationHint?: string } = {},
+  ): Promise<string> {
+    const safeCount = Math.min(Math.max(Math.trunc(count), 1), options.maxCount ?? 20);
     const model = await Promise.resolve(this.dependencies.getCurrentModel(conversationId)).catch(() => null);
     const tail = this.dependencies.readConversationTail ? await this.dependencies.readConversationTail(conversationId, safeCount) : [];
-    const heading = [`Thread: ${conversationTitle || conversationId}`, `ID: ${conversationId}`, model ? `Model: ${model}` : null]
+    const heading = [
+      `Thread: ${conversationTitle || conversationId}`,
+      `ID: ${shortConversationId(conversationId)}`,
+      model ? `Model: ${model}` : null,
+    ]
       .filter(Boolean)
       .join('\n');
     if (tail.length === 0) {
@@ -742,36 +870,49 @@ export class TelegramGatewayRuntime {
     return [
       heading,
       '',
-      'Recent transcript:',
+      options.label ?? 'Recent transcript:',
       ...tail.map((entry) => `${formatTranscriptRole(entry.role)}: ${truncateText(entry.text.replace(/\s+/g, ' ').trim(), 500)}`),
       '',
-      'Send a message to continue, or use /tail 20 for more.',
+      options.continuationHint ?? 'Send a message to continue, or use /tail 20 for more.',
     ].join('\n');
   }
 
-  private async conversationKeyboard(page = 0): Promise<{ inline_keyboard: TelegramInlineKeyboardButton[][] }> {
+  private conversationKeyboard(
+    conversations: TelegramGatewayConversationSummary[],
+    input: {
+      page?: number;
+      action?: TelegramConversationListAction;
+      scope?: TelegramConversationScope;
+    } = {},
+  ): { inline_keyboard: TelegramInlineKeyboardButton[][] } {
+    const page = input.page ?? 0;
+    const action = input.action ?? 'switch';
+    const scope = input.scope ?? 'active';
     const pageSize = 8;
-    const conversations = await this.dependencies.listConversations();
     const pageCount = Math.max(1, Math.ceil(conversations.length / pageSize));
     const safePage = Math.min(Math.max(0, page), pageCount - 1);
     const visibleConversations = conversations.slice(safePage * pageSize, safePage * pageSize + pageSize);
     const rows = visibleConversations.map((conversation, index) => [
       {
         text: `${safePage * pageSize + index + 1}. ${truncateButtonText(conversation.title || conversation.id)}`,
-        callback_data: `switch:${conversation.id}`,
+        callback_data: `${action}:${conversation.id}`,
       },
     ]);
     if (pageCount > 1) {
       rows.push([
-        { text: '‹ Prev', callback_data: `threadpage:${Math.max(0, safePage - 1)}` },
-        { text: `${safePage + 1}/${pageCount}`, callback_data: `threadpage:${safePage}` },
-        { text: 'Next ›', callback_data: `threadpage:${Math.min(pageCount - 1, safePage + 1)}` },
+        { text: '‹ Prev', callback_data: `threadpage:${action}:${scope}:${Math.max(0, safePage - 1)}` },
+        { text: `${safePage + 1}/${pageCount}`, callback_data: `threadpage:${action}:${scope}:${safePage}` },
+        { text: 'Next ›', callback_data: `threadpage:${action}:${scope}:${Math.min(pageCount - 1, safePage + 1)}` },
       ]);
     }
-    rows.push([
-      { text: 'New thread', callback_data: 'cmd:/new' },
-      { text: 'Refresh list', callback_data: `threadpage:${safePage}` },
-    ]);
+    if (scope === 'active') {
+      rows.push([
+        { text: 'New thread', callback_data: 'cmd:/new' },
+        { text: 'Refresh list', callback_data: `threadpage:${action}:${scope}:${safePage}` },
+      ]);
+    } else {
+      rows.push([{ text: 'Refresh archive', callback_data: `threadpage:${action}:${scope}:${safePage}` }]);
+    }
     return { inline_keyboard: rows };
   }
 
@@ -805,21 +946,22 @@ export class TelegramGatewayRuntime {
     target: string,
     chat: { conversationId: string; externalChatId: string; externalChatLabel: string },
   ): Promise<void> {
-    const conversations = await this.dependencies.listConversations();
-    const normalizedTarget = target.trim().toLowerCase();
-    const byNumber = /^\d+$/.test(normalizedTarget) ? conversations[Number.parseInt(normalizedTarget, 10) - 1] : undefined;
-    const matches = conversations.filter(
-      (conversation) =>
-        conversation.id.toLowerCase() === normalizedTarget || (conversation.title || '').toLowerCase().includes(normalizedTarget),
-    );
-    const selected = byNumber ?? (matches.length === 1 ? matches[0] : undefined);
+    const result = await this.resolveConversationTarget(target, chat.externalChatId);
+    const selected = result.selected;
     if (!selected) {
+      const visibleChoices = result.matches.length > 1 ? result.matches : result.fallback;
+      this.rememberConversationPicker(chat.externalChatId, visibleChoices, 'active');
       await this.sendMessage(
         chat.externalChatId,
-        matches.length > 1
-          ? `Multiple conversations matched "${target}".\n${await this.formatConversationList('Pick one with /switch <number>:')}`
-          : `No conversation matched "${target}".\n${await this.formatConversationList('Pick one with /switch <number>:')}`,
-        { reply_markup: await this.conversationKeyboard() },
+        result.matches.length > 1
+          ? `Multiple conversations matched "${target}".\n${this.formatConversationList(result.matches, 'Pick one with /switch <number>:')}`
+          : `No conversation matched "${target}".\n${this.formatConversationList(result.fallback, 'Pick one with /switch <number>:')}`,
+        {
+          reply_markup: this.conversationKeyboard(visibleChoices, {
+            action: 'switch',
+            scope: 'active',
+          }),
+        },
       );
       return;
     }
@@ -848,6 +990,67 @@ export class TelegramGatewayRuntime {
     });
   }
 
+  private async peekConversation(target: string, externalChatId: string): Promise<void> {
+    const result = await this.resolveConversationTarget(target, externalChatId, { scope: 'all' });
+    const selected = result.selected;
+    if (!selected) {
+      const visibleChoices = result.matches.length > 1 ? result.matches : result.fallback;
+      this.rememberConversationPicker(externalChatId, visibleChoices, 'all');
+      await this.sendMessage(
+        externalChatId,
+        result.matches.length > 1
+          ? `Multiple conversations matched "${target}".\n${this.formatConversationList(result.matches, 'Pick one with /peek <number>:', 'all')}`
+          : `No conversation matched "${target}".\n${this.formatConversationList(result.fallback, 'Pick one with /peek <number>:', 'all')}`,
+        {
+          reply_markup: this.conversationKeyboard(visibleChoices, {
+            action: 'peek',
+            scope: 'all',
+          }),
+        },
+      );
+      return;
+    }
+
+    await this.sendMessage(
+      externalChatId,
+      await this.formatThreadPreview(selected.id, selected.title, 6, {
+        continuationHint: 'This was only a preview. Use /switch to make it active, or /threads to choose another conversation.',
+      }),
+      { reply_markup: statusKeyboard() },
+    );
+  }
+
+  private async resolveConversationTarget(
+    target: string,
+    externalChatId: string,
+    input: { scope?: TelegramConversationScope } = {},
+  ): Promise<{
+    selected?: TelegramGatewayConversationSummary;
+    matches: TelegramGatewayConversationSummary[];
+    fallback: TelegramGatewayConversationSummary[];
+  }> {
+    const normalizedTarget = target.trim().toLowerCase();
+    const picker = this.readConversationPicker(externalChatId);
+    if (/^\d+$/.test(normalizedTarget) && picker) {
+      const selected = picker[Number.parseInt(normalizedTarget, 10) - 1];
+      if (selected) return { selected, matches: [selected], fallback: picker.slice(0, 12) };
+    }
+
+    const conversations = await this.loadConversationList({ scope: input.scope ?? 'active' });
+    const byNumber = /^\d+$/.test(normalizedTarget) ? conversations[Number.parseInt(normalizedTarget, 10) - 1] : undefined;
+    const matches = conversations.filter(
+      (conversation) =>
+        conversation.id.toLowerCase() === normalizedTarget ||
+        shortConversationId(conversation.id).toLowerCase() === normalizedTarget ||
+        (conversation.title || '').toLowerCase().includes(normalizedTarget),
+    );
+    return {
+      selected: byNumber ?? (matches.length === 1 ? matches[0] : undefined),
+      matches,
+      fallback: conversations.slice(0, 12),
+    };
+  }
+
   private async configureBotCommands(token: string): Promise<void> {
     await this.telegramRequest(token, 'setMyCommands', {
       commands: [
@@ -857,8 +1060,13 @@ export class TelegramGatewayRuntime {
         { command: 'reset', description: 'Reset this chat to a new conversation' },
         { command: 'threads', description: 'List and switch conversations' },
         { command: 'sessions', description: 'List and switch conversations' },
+        { command: 'switch', description: 'Switch to a conversation' },
+        { command: 'archives', description: 'Search archived conversations' },
+        { command: 'archived', description: 'Search archived conversations' },
+        { command: 'peek', description: 'Preview a conversation without switching' },
         { command: 'tail', description: 'Show recent thread messages' },
         { command: 'transcript', description: 'Show recent thread messages' },
+        { command: 'export', description: 'Output recent transcript messages' },
         { command: 'model', description: 'Show or change the model' },
         { command: 'status', description: 'Show current gateway status' },
         { command: 'whoami', description: 'Show your Telegram IDs and access status' },
@@ -1375,6 +1583,25 @@ function formatTranscriptRole(role: TelegramGatewayTranscriptEntry['role']): str
     case 'system':
       return 'System';
   }
+}
+
+function readConversationListAction(value: string | undefined): TelegramConversationListAction | null {
+  return value === 'switch' || value === 'peek' ? value : null;
+}
+
+function readConversationScope(value: string | undefined): TelegramConversationScope | null {
+  return value === 'active' || value === 'archived' || value === 'all' ? value : null;
+}
+
+function conversationListPrefix(scope: TelegramConversationScope, action: TelegramConversationListAction): string {
+  if (scope === 'archived') return action === 'peek' ? 'Archived conversations to preview:' : 'Archived conversations:';
+  return action === 'peek' ? 'Conversations to preview:' : 'Active sidebar conversations:';
+}
+
+function shortConversationId(conversationId: string): string {
+  const trimmed = conversationId.trim();
+  if (!trimmed) return conversationId;
+  return trimmed.length <= 8 ? trimmed : trimmed.slice(0, 8);
 }
 
 function formatTelegramChatLabel(chat: TelegramChat): string {

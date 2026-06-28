@@ -309,10 +309,105 @@ describe('TelegramGatewayRuntime', () => {
 
     expect(d.fetch).toHaveBeenCalledWith(
       'https://api.telegram.org/bottoken/sendMessage',
-      expect.objectContaining({ body: expect.stringContaining('Project planning — conv-2') }),
+      expect.objectContaining({ body: expect.stringContaining('Thread: Project planning') }),
     );
     expect(state.attachGatewayConversation).toHaveBeenCalledWith(
       expect.objectContaining({ conversationId: 'conv-2', conversationTitle: 'Project planning', externalChatId: '123' }),
+    );
+  });
+
+  it('remembers the shown thread picker for numeric switches', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'threads' }).mockReturnValueOnce({ kind: 'switch', target: '2' });
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps({
+      listConversations: vi.fn((input?: { scope?: string }) => {
+        if (input?.scope === 'active') {
+          return [
+            { id: 'conv-1', title: 'First shown' },
+            { id: 'conv-2', title: 'Second shown' },
+          ];
+        }
+        return [{ id: 'conv-1', title: 'Existing' }];
+      }),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: '/threads' } });
+    await runtime.processUpdate({ update_id: 2, message: { message_id: 11, chat: { id: 123 }, text: '/switch 2' } });
+
+    expect(state.attachGatewayConversation).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: 'conv-2', conversationTitle: 'Second shown', externalChatId: '123' }),
+    );
+  });
+
+  it('previews conversations without switching and lists choices when /peek has no target', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'peek' }).mockReturnValueOnce({ kind: 'peek', target: '2' });
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps({
+      readConversationTail: vi.fn(async () => [
+        { role: 'user', text: 'What changed?' },
+        { role: 'assistant', text: 'The gateway preview works.' },
+      ]),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: '/peek' } });
+    await runtime.processUpdate({ update_id: 2, message: { message_id: 11, chat: { id: 123 }, text: '/peek 2' } });
+
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('callback_data":"peek:conv-2') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('This was only a preview') }),
+    );
+    expect(state.attachGatewayConversation).not.toHaveBeenCalled();
+  });
+
+  it('searches archived conversations separately from active threads', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'archives', query: 'old' });
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps({
+      listConversations: vi.fn((input?: { scope?: string; query?: string }) => {
+        if (input?.scope === 'archived' && input.query === 'old') {
+          return [{ id: 'archived-1', title: 'Old build plan', placement: 'archived' }];
+        }
+        return [{ id: 'conv-1', title: 'Existing' }];
+      }),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: '/archives old' } });
+
+    expect(d.listConversations).toHaveBeenCalledWith({ scope: 'archived', query: 'old' });
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('Archived conversations matching') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('callback_data":"peek:archived-1') }),
+    );
+  });
+
+  it('uses readConversationTail for /tail previews', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'tail', count: 5 });
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps({
+      readConversationTail: vi.fn(async () => [
+        { role: 'user', text: 'Where are we?' },
+        { role: 'assistant', text: 'In the Telegram gateway.' },
+      ]),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: '/tail 5' } });
+
+    expect(d.readConversationTail).toHaveBeenCalledWith('conv-1', 5);
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('In the Telegram gateway.') }),
     );
   });
 
