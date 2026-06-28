@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   attachGatewayConversation: vi.fn(),
   findGatewayChatTarget: vi.fn(),
   findGatewayChatTargetByConversation: vi.fn(),
+  readGatewayState: vi.fn(() => ({ connections: [], bindings: [], chatTargets: [], events: [] })),
   recordGatewayEvent: vi.fn(),
   updateGatewayConnectionStatus: vi.fn(),
   upsertGatewayChatTarget: vi.fn(),
@@ -976,6 +977,90 @@ describe('TelegramGatewayRuntime', () => {
     await expect(runtime.deliverAssistantReply({ conversationId: 'conv-1', text: '   ' })).resolves.toBe(false);
     state.findGatewayChatTargetByConversation.mockReturnValueOnce(null);
     await expect(runtime.deliverAssistantReply({ conversationId: 'conv-1', text: 'hello' })).resolves.toBe(false);
+  });
+
+  it('delivers desktop user prompts to bound chats and records events', async () => {
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
+    const d = deps();
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await expect(runtime.deliverDesktopUserPrompt({ conversationId: 'conv-1', text: ' hello from desktop ' })).resolves.toBe(true);
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('Desktop') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('hello from desktop') }),
+    );
+    expect(state.recordGatewayEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'outbound', message: 'Delivered desktop prompt to Pat' }),
+    );
+
+    await expect(runtime.deliverDesktopUserPrompt({ conversationId: 'conv-1', text: '   ' })).resolves.toBe(false);
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce(null);
+    await expect(runtime.deliverDesktopUserPrompt({ conversationId: 'conv-1', text: 'hello' })).resolves.toBe(false);
+  });
+
+  it('does not echo Telegram-originated prompts as desktop prompts', async () => {
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps();
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: 'hello from telegram' } });
+    const fetchCallCount = d.fetch.mock.calls.length;
+    state.findGatewayChatTargetByConversation.mockClear();
+
+    await expect(runtime.deliverDesktopUserPrompt({ conversationId: 'conv-1', text: ' hello from telegram ' })).resolves.toBe(true);
+
+    expect(state.findGatewayChatTargetByConversation).not.toHaveBeenCalled();
+    expect(d.fetch.mock.calls).toHaveLength(fetchCallCount);
+  });
+
+  it('mirrors desktop live user messages for bound conversations', async () => {
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
+    let streamListener: ((event: SseEvent) => void) | undefined;
+    const d = deps({
+      subscribeConversationEvents: vi.fn((_conversationId: string, listener: (event: SseEvent) => void) => {
+        streamListener = listener;
+        return vi.fn();
+      }),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    runtime.startMirroringConversation('conv-1');
+    streamListener?.({ type: 'user_message', block: { type: 'user', text: 'desktop hello' } as never });
+
+    await vi.waitFor(() =>
+      expect(d.fetch).toHaveBeenCalledWith(
+        'https://api.telegram.org/bottoken/sendMessage',
+        expect.objectContaining({ body: expect.stringContaining('desktop hello') }),
+      ),
+    );
+  });
+
+  it('delivers the latest assistant reply when mirrored desktop turns end without text deltas', async () => {
+    state.findGatewayChatTargetByConversation.mockReturnValue({ externalChatId: '123', externalChatLabel: 'Pat' });
+    let streamListener: ((event: SseEvent) => void) | undefined;
+    const d = deps({
+      readLatestAssistantReply: vi.fn(async () => ({ text: 'persisted reply', timestamp: new Date(Date.now() + 1000).toISOString() })),
+      subscribeConversationEvents: vi.fn((_conversationId: string, listener: (event: SseEvent) => void) => {
+        streamListener = listener;
+        return vi.fn();
+      }),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    runtime.startMirroringConversation('conv-1');
+    streamListener?.({ type: 'user_message', block: { type: 'user', text: 'desktop hello' } as never });
+    streamListener?.({ type: 'turn_end' });
+
+    await vi.waitFor(() =>
+      expect(d.fetch).toHaveBeenCalledWith(
+        'https://api.telegram.org/bottoken/sendMessage',
+        expect.objectContaining({ body: expect.stringContaining('persisted reply') }),
+      ),
+    );
   });
 
   it('start/stop respect bot token availability, publishes Telegram commands, and aborts polling', async () => {

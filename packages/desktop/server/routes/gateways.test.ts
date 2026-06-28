@@ -40,7 +40,10 @@ const runtime = vi.hoisted(() => ({
     stop: ReturnType<typeof vi.fn>;
     isRunning: ReturnType<typeof vi.fn>;
     hasRecentlyDeliveredAssistantReply: ReturnType<typeof vi.fn>;
+    deliverDesktopUserPrompt: ReturnType<typeof vi.fn>;
     deliverAssistantReply: ReturnType<typeof vi.fn>;
+    startMirroringBoundConversations: ReturnType<typeof vi.fn>;
+    startMirroringConversation: ReturnType<typeof vi.fn>;
     dependencies: Record<string, unknown>;
   }>,
   TelegramGatewayRuntime: vi.fn(function MockTelegramGatewayRuntime(this: unknown, dependencies: Record<string, unknown>) {
@@ -49,7 +52,10 @@ const runtime = vi.hoisted(() => ({
       stop: vi.fn(),
       isRunning: vi.fn(() => true),
       hasRecentlyDeliveredAssistantReply: vi.fn(() => false),
+      deliverDesktopUserPrompt: vi.fn(async () => true),
       deliverAssistantReply: vi.fn(async () => true),
+      startMirroringBoundConversations: vi.fn(),
+      startMirroringConversation: vi.fn(),
       dependencies,
     };
     runtime.instances.push(instance);
@@ -59,6 +65,7 @@ const runtime = vi.hoisted(() => ({
 const lifecycle = vi.hoisted(() => ({ registerLiveSessionLifecycleHandler: vi.fn() }));
 const liveSessions = vi.hoisted(() => ({
   getAvailableModelObjects: vi.fn(async () => []),
+  registerLiveSessionLifecycleHandler: lifecycle.registerLiveSessionLifecycleHandler,
   renameSession: vi.fn(),
   subscribe: vi.fn(() => vi.fn()),
   updateLiveSessionModelPreferences: vi.fn(),
@@ -485,6 +492,45 @@ describe('gateway routes', () => {
     expect(ensureTelegramRuntime().deliverAssistantReply).toHaveBeenCalledTimes(2);
     expect(ensureTelegramRuntime().deliverAssistantReply).toHaveBeenNthCalledWith(1, { conversationId: 'conv-1', text: 'OK' });
     expect(ensureTelegramRuntime().deliverAssistantReply).toHaveBeenNthCalledWith(2, { conversationId: 'conv-1', text: 'OK' });
+  });
+
+  it('delivers desktop user prompts before assistant replies through the lifecycle hook', async () => {
+    register();
+    registerTelegramGatewayLifecycleDelivery();
+    const handler = lifecycle.registerLiveSessionLifecycleHandler.mock.calls[0][0];
+    conversationService.readSessionDetailForRoute.mockResolvedValueOnce({
+      sessionRead: {
+        detail: {
+          blocks: [
+            { id: 'user-1', type: 'user', text: ' desktop question ' },
+            { id: 'reply-1', type: 'text', text: ' assistant answer ' },
+          ],
+        },
+      },
+    });
+
+    await handler({ trigger: 'turn_end', conversationId: 'conv-1' });
+
+    expect(latestRuntime().deliverDesktopUserPrompt).toHaveBeenCalledWith({ conversationId: 'conv-1', text: 'desktop question' });
+    expect(latestRuntime().deliverAssistantReply).toHaveBeenCalledWith({ conversationId: 'conv-1', text: 'assistant answer' });
+
+    latestRuntime().deliverDesktopUserPrompt.mockClear();
+    latestRuntime().deliverAssistantReply.mockClear();
+    conversationService.readSessionDetailForRoute.mockResolvedValueOnce({
+      sessionRead: {
+        detail: {
+          blocks: [
+            { id: 'user-1', type: 'user', text: ' desktop question ' },
+            { id: 'reply-1', type: 'text', text: ' assistant answer ' },
+          ],
+        },
+      },
+    });
+
+    await handler({ trigger: 'turn_end', conversationId: 'conv-1' });
+
+    expect(latestRuntime().deliverDesktopUserPrompt).not.toHaveBeenCalled();
+    expect(latestRuntime().deliverAssistantReply).not.toHaveBeenCalled();
   });
 
   it('does not deliver lifecycle replies already delivered through the Telegram stream', async () => {

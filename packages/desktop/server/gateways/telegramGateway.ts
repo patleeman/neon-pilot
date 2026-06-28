@@ -7,6 +7,7 @@ import {
   attachGatewayConversation,
   findGatewayChatTarget,
   findGatewayChatTargetByConversation,
+  readGatewayState,
   recordGatewayEvent,
   updateGatewayConnectionStatus,
   upsertGatewayChatTarget,
@@ -148,6 +149,7 @@ const TELEGRAM_TOOL_STATUS_LIMIT = 180;
 const TELEGRAM_TRANSCRIPT_ENTRY_LIMIT = 280;
 const TELEGRAM_TRANSCRIPT_FETCH_MULTIPLIER = 4;
 const RECENT_REPLY_DEDUPE_MS = 30_000;
+const RECENT_TELEGRAM_PROMPT_DEDUPE_MS = 10 * 60_000;
 const TELEGRAM_GATEWAY_LOCK_FILE = 'telegram-gateway.poller.lock';
 const TELEGRAM_PICKER_TTL_MS = 10 * 60_000;
 
@@ -185,11 +187,14 @@ export class TelegramGatewayRuntime {
   private typingIndicators = new Map<string, TypingIndicator>();
   private pendingStatusMessages = new Map<string, { chatId: string; messageId: number }>();
   private streamSubscriptions = new Map<string, () => void>();
+  private mirroredConversations = new Set<string>();
   private streamingAssistantText = new Map<string, string>();
+  private streamUserMessageStartedAtMs = new Map<string, number>();
   private toolStatuses = new Map<string, Map<string, TelegramToolStatus>>();
   private deliveredToolStatusKeys = new Map<string, Set<string>>();
   private lastPollingFailureMessage: string | null = null;
   private recentDeliveredReplies = new Map<string, { text: string; deliveredAtMs: number }>();
+  private recentTelegramPrompts = new Map<string, Map<string, number>>();
   private conversationPickers = new Map<
     string,
     {
@@ -229,9 +234,12 @@ export class TelegramGatewayRuntime {
     this.typingIndicators.clear();
     for (const unsubscribe of this.streamSubscriptions.values()) unsubscribe();
     this.streamSubscriptions.clear();
+    this.mirroredConversations.clear();
     this.streamingAssistantText.clear();
+    this.streamUserMessageStartedAtMs.clear();
     this.toolStatuses.clear();
     this.deliveredToolStatusKeys.clear();
+    this.recentTelegramPrompts.clear();
   }
 
   isRunning(): boolean {
@@ -303,9 +311,11 @@ export class TelegramGatewayRuntime {
           await this.sendMessage(externalChatId, `🎙️ "${voiceTranscript.text}"`);
         }
         await this.sendMessage(externalChatId, 'Queued behind the current Telegram request.');
+        const promptText = buildTelegramPromptText({ text, hasPhoto: Boolean(images?.length), voiceTranscript: voiceTranscript?.text });
+        this.rememberTelegramPrompt(target.conversationId, promptText);
         await this.dependencies.submitPrompt({
           conversationId: target.conversationId,
-          text: buildTelegramPromptText({ text, hasPhoto: Boolean(images?.length), voiceTranscript: voiceTranscript?.text }),
+          text: promptText,
           images,
         });
         return;
@@ -328,9 +338,11 @@ export class TelegramGatewayRuntime {
         await this.sendMessage(externalChatId, `🎙️ "${voiceTranscript.text}"`);
       }
       const promptStartedAtMs = Date.now();
+      const promptText = buildTelegramPromptText({ text, hasPhoto: Boolean(images?.length), voiceTranscript: voiceTranscript?.text });
+      this.rememberTelegramPrompt(target.conversationId, promptText);
       await this.dependencies.submitPrompt({
         conversationId: target.conversationId,
-        text: buildTelegramPromptText({ text, hasPhoto: Boolean(images?.length), voiceTranscript: voiceTranscript?.text }),
+        text: promptText,
         images,
       });
       await this.deliverLatestAssistantReplyWhenAvailable(target.conversationId, promptStartedAtMs);
@@ -350,19 +362,30 @@ export class TelegramGatewayRuntime {
   }
 
   private async deliverLatestAssistantReplyWhenAvailable(conversationId: string, promptStartedAtMs: number): Promise<void> {
+    await this.deliverFreshLatestAssistantReplyWhenAvailable(conversationId, promptStartedAtMs, { requirePendingStatus: true });
+  }
+
+  private async deliverFreshLatestAssistantReplyWhenAvailable(
+    conversationId: string,
+    promptStartedAtMs: number,
+    options?: { requirePendingStatus?: boolean; attempts?: number },
+  ): Promise<boolean> {
     const readLatestAssistantReply = this.dependencies.readLatestAssistantReply;
-    if (!readLatestAssistantReply) return;
-    for (let attempt = 0; attempt < 40; attempt += 1) {
+    if (!readLatestAssistantReply) return false;
+    const requirePendingStatus = options?.requirePendingStatus ?? false;
+    const attempts = options?.attempts ?? 40;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
       const reply = await readLatestAssistantReply(conversationId);
       const replyTimeMs = reply?.timestamp ? Date.parse(reply.timestamp) : Number.NaN;
       const isFreshReply = reply && (!Number.isFinite(replyTimeMs) || replyTimeMs >= promptStartedAtMs);
       if (isFreshReply && !this.hasRecentlyDeliveredAssistantReply({ conversationId, text: reply.text })) {
         const delivered = await this.deliverAssistantReply({ conversationId, text: reply.text });
-        if (delivered) return;
+        if (delivered) return true;
       }
-      if (!this.pendingStatusMessages.has(conversationId)) return;
+      if (requirePendingStatus && !this.pendingStatusMessages.has(conversationId)) return false;
       await sleep(500);
     }
+    return false;
   }
 
   async deliverAssistantReply(input: { conversationId: string; text: string }): Promise<boolean> {
@@ -402,6 +425,78 @@ export class TelegramGatewayRuntime {
     return true;
   }
 
+  async deliverDesktopUserPrompt(input: { conversationId: string; text: string }): Promise<boolean> {
+    const text = input.text.trim();
+    if (!text) return false;
+    if (this.consumeRecentTelegramPrompt(input.conversationId, text)) return true;
+
+    const target = findGatewayChatTargetByConversation({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      conversationId: input.conversationId,
+    });
+    if (!target) return false;
+
+    await this.sendMessage(target.externalChatId, `Desktop:\n${text}`);
+    recordGatewayEvent({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      conversationId: input.conversationId,
+      kind: 'outbound',
+      message: `Delivered desktop prompt to ${target.externalChatLabel || target.externalChatId}`,
+    });
+    return true;
+  }
+
+  startMirroringBoundConversations(): void {
+    const state = readGatewayState({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+    });
+    for (const target of state.chatTargets) {
+      if (target.provider !== 'telegram' || !target.conversationId || target.repliesEnabled === false) continue;
+      this.startMirroringConversation(target.conversationId);
+    }
+  }
+
+  startMirroringConversation(conversationId: string): void {
+    if (!conversationId.trim()) return;
+    this.mirroredConversations.add(conversationId);
+    this.startConversationEventStream(conversationId);
+  }
+
+  private rememberTelegramPrompt(conversationId: string, text: string): void {
+    const key = normalizeTelegramPromptKey(text);
+    if (!key) return;
+    this.cleanupRecentTelegramPrompts();
+    const prompts = this.recentTelegramPrompts.get(conversationId) ?? new Map<string, number>();
+    prompts.set(key, Date.now());
+    this.recentTelegramPrompts.set(conversationId, prompts);
+  }
+
+  private consumeRecentTelegramPrompt(conversationId: string, text: string): boolean {
+    const key = normalizeTelegramPromptKey(text);
+    if (!key) return false;
+    this.cleanupRecentTelegramPrompts();
+    const prompts = this.recentTelegramPrompts.get(conversationId);
+    if (!prompts?.has(key)) return false;
+    prompts.delete(key);
+    if (prompts.size === 0) this.recentTelegramPrompts.delete(conversationId);
+    return true;
+  }
+
+  private cleanupRecentTelegramPrompts(): void {
+    const cutoff = Date.now() - RECENT_TELEGRAM_PROMPT_DEDUPE_MS;
+    for (const [conversationId, prompts] of this.recentTelegramPrompts) {
+      for (const [key, timestampMs] of prompts) {
+        if (timestampMs < cutoff) prompts.delete(key);
+      }
+      if (prompts.size === 0) this.recentTelegramPrompts.delete(conversationId);
+    }
+  }
+
   private startConversationEventStream(conversationId: string): void {
     if (this.streamSubscriptions.has(conversationId)) return;
     const unsubscribe = this.dependencies.subscribeConversationEvents?.(conversationId, (event) => {
@@ -412,14 +507,29 @@ export class TelegramGatewayRuntime {
   }
 
   private stopConversationEventStream(conversationId: string): void {
+    if (this.mirroredConversations.has(conversationId)) {
+      this.clearConversationStreamState(conversationId);
+      return;
+    }
     this.streamSubscriptions.get(conversationId)?.();
     this.streamSubscriptions.delete(conversationId);
+    this.clearConversationStreamState(conversationId);
+  }
+
+  private clearConversationStreamState(conversationId: string): void {
     this.streamingAssistantText.delete(conversationId);
+    this.streamUserMessageStartedAtMs.delete(conversationId);
     this.toolStatuses.delete(conversationId);
     this.deliveredToolStatusKeys.delete(conversationId);
   }
 
   private async handleConversationStreamEvent(conversationId: string, event: SseEvent): Promise<void> {
+    if (event.type === 'user_message') {
+      this.streamUserMessageStartedAtMs.set(conversationId, Date.now());
+      await this.deliverDesktopUserPrompt({ conversationId, text: event.block.text });
+      return;
+    }
+
     if (event.type === 'text_delta') {
       if (event.delta) {
         this.streamingAssistantText.set(conversationId, `${this.streamingAssistantText.get(conversationId) ?? ''}${event.delta}`);
@@ -452,18 +562,22 @@ export class TelegramGatewayRuntime {
       return;
     }
 
-    if (event.type === 'agent_end') {
+    if (event.type === 'agent_end' || event.type === 'turn_end') {
       const text = this.streamingAssistantText.get(conversationId)?.trim();
       if (text) {
         await this.deliverAssistantReply({ conversationId, text });
+        this.clearConversationStreamState(conversationId);
         return;
+      }
+      const promptStartedAtMs = this.streamUserMessageStartedAtMs.get(conversationId);
+      if (promptStartedAtMs) {
+        await this.deliverFreshLatestAssistantReplyWhenAvailable(conversationId, promptStartedAtMs, {
+          requirePendingStatus: false,
+          attempts: 12,
+        });
       }
       this.stopConversationEventStream(conversationId);
       return;
-    }
-
-    if (event.type === 'turn_end') {
-      this.stopConversationEventStream(conversationId);
     }
   }
 
@@ -1370,6 +1484,10 @@ export function buildTelegramPromptText(input: { text?: string; hasPhoto?: boole
     parts.push('[The user also attached a Telegram photo.]');
   }
   return parts.join('\n\n').trim() || 'Please review this Telegram message.';
+}
+
+function normalizeTelegramPromptKey(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
 }
 
 export function renderTelegramToolStatus(status: TelegramToolStatus): string {

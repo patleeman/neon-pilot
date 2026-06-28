@@ -66,8 +66,9 @@ import { type LiveContextUsage, type SseEvent } from './liveSessionEvents.js';
 import { makeAuth as makeFactoryAuth, makeRegistry, warmLiveSessionToolSelection } from './liveSessionFactory.js';
 import {
   getDefaultLifecycleHandlers,
+  type LiveSessionLifecycleHandler,
   notifyLiveSessionLifecycleHandlers,
-  registerLiveSessionLifecycleHandler,
+  registerLiveSessionLifecycleHandler as registerDefaultLiveSessionLifecycleHandler,
 } from './liveSessionLifecycle.js';
 import { type LiveSessionLoaderOptions } from './liveSessionLoader.js';
 import {
@@ -140,7 +141,20 @@ import { type BeforeAgentStartProbeMessage, inspectAvailableLiveSessionTools } f
 import { repairLiveSessionTranscriptTail as repairLiveSessionTranscriptTailWithCallbacks } from './liveSessionTranscriptRepair.js';
 import { getAssistantErrorDisplayMessage } from './sessionAssistantErrors.js';
 
-export { registerLiveSessionLifecycleHandler };
+export function registerLiveSessionLifecycleHandler(handler: LiveSessionLifecycleHandler): () => void {
+  const unregisterDefault = registerDefaultLiveSessionLifecycleHandler(handler);
+  for (const entry of registry.values()) {
+    if (!entry.lifecycleHandlers.includes(handler)) {
+      entry.lifecycleHandlers.push(handler);
+    }
+  }
+  return () => {
+    unregisterDefault();
+    for (const entry of registry.values()) {
+      entry.lifecycleHandlers = entry.lifecycleHandlers.filter((candidate) => candidate !== handler);
+    }
+  };
+}
 
 export { readConversationAutoModeStateFromEntries } from './conversationAutoMode.js';
 export { type LiveContextUsage, type LiveContextUsageSegment, type SseEvent, toSse } from './liveSessionEvents.js';

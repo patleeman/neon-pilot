@@ -171,6 +171,7 @@ function models(): Promise<ModelProviderModules> {
   return modelProviderModulesPromise;
 }
 import type { ServerRouteContext } from '../routes/context.js';
+import { registerGatewayRoutes } from '../routes/gateways.js';
 import { registerServerRoutes } from '../routes/registerAll.js';
 import { buildToolsRouteState } from '../routes/tools.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
@@ -865,6 +866,9 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   process.stderr.write(`[perf] buildLocalContexts: routeContext ${Math.round(routeContextAtMs - attentionAtMs)}ms\n`);
 
   localServerRouteContext = context;
+
+  const gatewayWarmupRoutes: RegisteredRoute[] = [];
+  registerGatewayRoutes(createRouteCollector(gatewayWarmupRoutes) as never, context);
 
   const liveSessionCapabilityContext: LiveSessionCapabilityContext = {
     getRuntimeScope: context.getRuntimeScope,

@@ -6,9 +6,9 @@ import {
   createLiveSessionCapability,
   submitLiveSessionPromptCapability,
 } from '../conversations/liveSessionCapability.js';
-import { registerLiveSessionLifecycleHandler } from '../conversations/liveSessionLifecycle.js';
 import {
   getAvailableModelObjects,
+  registerLiveSessionLifecycleHandler,
   renameSession,
   subscribe as subscribeLiveSessionEvents,
   updateLiveSessionModelPreferences,
@@ -51,14 +51,24 @@ let getAuthFileFn: () => string = () => {
 let routeContext: ServerRouteContext | null = null;
 let telegramRuntime: TelegramGatewayRuntime | null = null;
 let lifecycleRegistered = false;
+let unregisterTelegramLifecycleDelivery: (() => void) | null = null;
+const lastTelegramUserDeliveryByConversation = new Map<string, string>();
 const lastTelegramDeliveryByConversation = new Map<string, string>();
 const TELEGRAM_GATEWAY_LIST_LIMIT = 200;
+const TELEGRAM_LIFECYCLE_DELIVERY_ATTEMPTS = 6;
+const TELEGRAM_LIFECYCLE_DELIVERY_RETRY_MS = 500;
 
 type TelegramTranscriptBlock =
-  | { type: 'user'; text: string; ts?: string }
-  | { type: 'text'; text: string; ts?: string }
+  | { type: 'user'; text: string; ts?: string; id?: unknown; blockId?: unknown; entryId?: unknown }
+  | { type: 'text'; text: string; ts?: string; id?: unknown; blockId?: unknown; entryId?: unknown }
   | { type: 'summary'; title: string; text?: string; detail?: string; ts?: string }
   | { type: 'tool_use'; tool: string; status?: 'running' | 'ok' | 'error'; output?: string; outputDeferred?: boolean; ts?: string };
+
+interface TelegramLifecycleMessage {
+  text: string;
+  timestamp?: string;
+  deliveryKey: string;
+}
 
 function publishTelegramGatewayHostApi(): void {
   (globalThis as typeof globalThis & { __neonPilotTelegramGatewayHostApi?: TelegramGatewayHostApi })[TELEGRAM_GATEWAY_HOST_API_GLOBAL] = {
@@ -124,7 +134,10 @@ function initializeGatewayRoutesContext(context: ServerRouteContext): void {
   getStateRootFn = context.getStateRoot;
   getAuthFileFn = context.getAuthFile;
   routeContext = context;
+  unregisterTelegramLifecycleDelivery?.();
+  unregisterTelegramLifecycleDelivery = null;
   lifecycleRegistered = false;
+  lastTelegramUserDeliveryByConversation.clear();
   lastTelegramDeliveryByConversation.clear();
   publishTelegramGatewayHostApi();
 }
@@ -132,21 +145,41 @@ function initializeGatewayRoutesContext(context: ServerRouteContext): void {
 export function registerTelegramGatewayLifecycleDelivery(): void {
   if (lifecycleRegistered) return;
   lifecycleRegistered = true;
-  registerLiveSessionLifecycleHandler(async (event) => {
+  unregisterTelegramLifecycleDelivery = registerLiveSessionLifecycleHandler(async (event) => {
     if (event.trigger !== 'turn_end') return;
-    const reply = await readLatestAssistantReply(event.conversationId);
-    if (reply && lastTelegramDeliveryByConversation.get(event.conversationId) !== reply.deliveryKey) {
-      const runtime = ensureTelegramRuntime();
-      if (runtime.hasRecentlyDeliveredAssistantReply({ conversationId: event.conversationId, text: reply.text })) {
-        lastTelegramDeliveryByConversation.set(event.conversationId, reply.deliveryKey);
-        return;
-      }
-      const delivered = await runtime.deliverAssistantReply({ conversationId: event.conversationId, text: reply.text });
-      if (delivered) {
-        lastTelegramDeliveryByConversation.set(event.conversationId, reply.deliveryKey);
-      }
+    for (let attempt = 0; attempt < TELEGRAM_LIFECYCLE_DELIVERY_ATTEMPTS; attempt += 1) {
+      const handled = await deliverTelegramLifecycleTurn(event.conversationId);
+      if (handled) return;
+      await sleep(TELEGRAM_LIFECYCLE_DELIVERY_RETRY_MS);
     }
   });
+}
+
+async function deliverTelegramLifecycleTurn(conversationId: string): Promise<boolean> {
+  const turn = await readLatestTelegramLifecycleTurn(conversationId);
+  const runtime = ensureTelegramRuntime();
+  if (turn.userPrompt && lastTelegramUserDeliveryByConversation.get(conversationId) !== turn.userPrompt.deliveryKey) {
+    const delivered = await runtime.deliverDesktopUserPrompt({ conversationId, text: turn.userPrompt.text });
+    if (delivered) {
+      lastTelegramUserDeliveryByConversation.set(conversationId, turn.userPrompt.deliveryKey);
+    }
+  }
+  const reply = turn.assistantReply;
+  if (reply && lastTelegramDeliveryByConversation.get(conversationId) !== reply.deliveryKey) {
+    if (runtime.hasRecentlyDeliveredAssistantReply({ conversationId, text: reply.text })) {
+      lastTelegramDeliveryByConversation.set(conversationId, reply.deliveryKey);
+    } else {
+      const delivered = await runtime.deliverAssistantReply({ conversationId, text: reply.text });
+      if (delivered) {
+        lastTelegramDeliveryByConversation.set(conversationId, reply.deliveryKey);
+      }
+    }
+  }
+  return Boolean(reply);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function currentGatewayContext(): { stateRoot: string; profile: string } {
@@ -364,7 +397,9 @@ function invalidateGatewayState(): void {
 
 function startTelegramRuntimeWithDelivery(): void {
   registerTelegramGatewayLifecycleDelivery();
-  ensureTelegramRuntime().start();
+  const runtime = ensureTelegramRuntime();
+  runtime.start();
+  runtime.startMirroringBoundConversations();
 }
 
 export function startTelegramGatewayRuntime(): { running: boolean } {
@@ -386,15 +421,29 @@ export function readTelegramGatewayRuntimeStatus(): { running: boolean } {
 }
 
 async function readLatestAssistantReply(conversationId: string): Promise<{ text: string; timestamp?: string; deliveryKey: string } | null> {
+  return (await readLatestTelegramLifecycleTurn(conversationId)).assistantReply;
+}
+
+async function readLatestTelegramLifecycleTurn(
+  conversationId: string,
+): Promise<{ userPrompt: TelegramLifecycleMessage | null; assistantReply: TelegramLifecycleMessage | null }> {
   const { sessionRead } = await readSessionDetailForRoute({ conversationId, profile: getRuntimeScopeFn(), tailBlocks: 20 });
-  const block = [...(sessionRead.detail?.blocks ?? [])].reverse().find((candidate) => candidate.type === 'text');
-  if (!block || block.type !== 'text') return null;
+  const blocks = [...(sessionRead.detail?.blocks ?? [])].reverse() as TelegramTranscriptBlock[];
+  return {
+    userPrompt: readLatestTelegramLifecycleMessage(blocks, 'user'),
+    assistantReply: readLatestTelegramLifecycleMessage(blocks, 'text'),
+  };
+}
+
+function readLatestTelegramLifecycleMessage(
+  reversedBlocks: TelegramTranscriptBlock[],
+  type: 'user' | 'text',
+): TelegramLifecycleMessage | null {
+  const block = reversedBlocks.find((candidate) => candidate.type === type);
+  if (!block || (block.type !== 'user' && block.type !== 'text')) return null;
   const text = block.text.trim();
   if (!text) return null;
-  const candidate = block as typeof block & { id?: unknown; blockId?: unknown; entryId?: unknown };
-  const identity = [candidate.id, candidate.blockId, candidate.entryId].find(
-    (value): value is string => typeof value === 'string' && value.length > 0,
-  );
+  const identity = [block.id, block.blockId, block.entryId].find((value): value is string => typeof value === 'string' && value.length > 0);
   return {
     text,
     timestamp: typeof block.ts === 'string' ? block.ts : undefined,
@@ -641,6 +690,9 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
         externalChatId: readOptionalString(req.body?.externalChatId),
         externalChatLabel: readOptionalString(req.body?.externalChatLabel),
       });
+      if (provider === 'telegram') {
+        ensureTelegramRuntime().startMirroringConversation(conversationId);
+      }
       invalidateGatewayState();
       res.json(readCurrentGatewayState());
     } catch (err) {
