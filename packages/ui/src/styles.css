@@ -1007,6 +1007,12 @@ body {
   color: rgb(var(--color-primary));
 }
 
+.ui-text-button.ui-conversation-status-strip {
+  min-height: 2.25rem;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+}
+
 .ui-title-button {
   display: inline;
   max-width: 100%;

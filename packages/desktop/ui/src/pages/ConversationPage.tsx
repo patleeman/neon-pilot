@@ -7474,7 +7474,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                   visibleTranscriptHasOlderBlocks ? (
                     <div className="relative my-2 flex items-center gap-3 py-3 text-[11px] text-secondary/80">
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border-subtle to-border-subtle" aria-hidden />
-                      <div className="ui-conversation-status-strip">
+                      <TextButton
+                        onClick={() => loadOlderMessages(undefined, { tailBlockStep: previousTranscriptBlockStep })}
+                        disabled={sessionLoading}
+                        aria-label={sessionLoading ? 'Loading earlier conversation' : `Load previous ${previousTranscriptPercent}%`}
+                        className="ui-conversation-status-strip group inline-flex min-h-9 cursor-pointer items-center px-4 py-2 text-left transition-colors hover:border-border hover:bg-surface/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-wait disabled:opacity-70"
+                      >
                         <span>Earlier conversation hidden</span>
                         <span className="text-dim" aria-hidden>
                           ·
@@ -7485,14 +7490,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                         <span className="text-dim" aria-hidden>
                           ·
                         </span>
-                        <TextButton
-                          onClick={() => loadOlderMessages(undefined, { tailBlockStep: previousTranscriptBlockStep })}
-                          disabled={sessionLoading}
-                          className="font-medium text-accent hover:text-primary disabled:pointer-events-none disabled:text-secondary/60"
-                        >
+                        <span className="font-medium text-accent group-hover:text-primary">
                           {sessionLoading ? 'Loading earlier…' : `Load previous ${previousTranscriptPercent}%`}
-                        </TextButton>
-                      </div>
+                        </span>
+                      </TextButton>
                       <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border-subtle to-border-subtle" aria-hidden />
                     </div>
                   ) : undefined

@@ -809,7 +809,9 @@ describe('ConversationPage lazy composer metadata', () => {
       .then(() => document.querySelector('[data-conversation-scroll-shell="1"]') as HTMLDivElement);
     expect(scrollShell).toBeTruthy();
     expect(scrollShell.getAttribute('data-historical-tail-blocks')).toBe('120');
-    expect(await screen.findByRole('button', { name: 'Load previous 10%' })).toBeTruthy();
+    const loadPreviousButton = await screen.findByRole('button', { name: 'Load previous 10%' });
+    expect(loadPreviousButton.textContent).toContain('Earlier conversation hidden');
+    expect(loadPreviousButton.textContent).toContain('Viewing 40–100%');
 
     fireEvent.wheel(scrollShell, { deltaY: -400 });
     fireEvent.scroll(scrollShell, { target: { scrollTop: 0 } });
@@ -819,7 +821,7 @@ describe('ConversationPage lazy composer metadata', () => {
 
     expect(scrollShell.getAttribute('data-historical-tail-blocks')).toBe('120');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Load previous 10%' }));
+    fireEvent.click(loadPreviousButton);
 
     await waitFor(() => {
       expect(scrollShell.getAttribute('data-historical-tail-blocks')).toBe('140');
