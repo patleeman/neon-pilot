@@ -3073,12 +3073,19 @@ export async function updateDesktopConversationModelPreferences(input: {
   }
 
   const sessionFile = resolveConversationSessionFile(conversationId);
-  if (!sessionFile || !existsSync(sessionFile)) {
-    throw new Error('Conversation not found');
-  }
-
   const availableModels = await getAvailableModelObjects();
   const settingsFile = (await getLocalServerRouteContext()).getSettingsFile();
+
+  if (!sessionFile || !existsSync(sessionFile)) {
+    const saved = (await models()).writeSavedModelPreferences(nextInput, settingsFile, availableModels);
+    return {
+      currentModel: saved.currentModel,
+      currentThinkingLevel: saved.currentThinkingLevel,
+      currentServiceTier: saved.currentServiceTier,
+      hasExplicitServiceTier: Boolean(saved.currentServiceTier),
+    };
+  }
+
   const sessionManager = SessionManager.open(sessionFile);
   const state = applyConversationModelPreferencesToSessionManager(
     sessionManager,
