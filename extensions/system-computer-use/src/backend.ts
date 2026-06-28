@@ -54,7 +54,7 @@ function cuaServerConfig(resolution = resolveCuaDriver()) {
     transport: 'stdio' as const,
     command: resolution.command,
     args: ['mcp'],
-    env: { CUA_DRIVER_RS_TELEMETRY_ENABLED: '0' },
+    env: resolution.env,
     raw: { allowToolCalls: true },
   };
 }
