@@ -297,8 +297,11 @@ vi.mock('../extensions/StatusBarItemHost', () => ({
 }));
 
 vi.mock('../components/chat/ChatView', () => ({
-  ChatView: ({ messages }: { messages?: Array<{ text?: string }> }) => (
-    <div data-testid="chat-view">{messages?.map((message) => message.text).join('\n')}</div>
+  ChatView: ({ messages, windowingHeaderContent }: { messages?: Array<{ text?: string }>; windowingHeaderContent?: React.ReactNode }) => (
+    <div data-testid="chat-view">
+      {windowingHeaderContent}
+      <div>{messages?.map((message) => message.text).join('\n')}</div>
+    </div>
   ),
 }));
 
@@ -778,6 +781,49 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
     expect(apiMock.extensionMentions).toHaveBeenCalledTimes(2);
+  });
+
+  it('loads hidden transcript pages only from the Load previous action', async () => {
+    vi.useRealTimers();
+    const blocks = Array.from({ length: 120 }, (_, index) => ({
+      type: index % 2 === 0 ? ('user' as const) : ('text' as const),
+      id: `history-${index}`,
+      ts: `2026-05-27T12:${String(index).padStart(2, '0')}:00.000Z`,
+      text: `visible history ${index}`,
+    }));
+    const longConversation = {
+      ...regressionBootstrapData,
+      sessionDetail: {
+        ...regressionBootstrapData.sessionDetail,
+        blocks,
+        blockOffset: 80,
+        totalBlocks: 200,
+      },
+    };
+    setDesktopConversationFixture(longConversation);
+
+    renderConversationPage();
+
+    const scrollShell = await screen
+      .findByTestId('chat-view')
+      .then(() => document.querySelector('[data-conversation-scroll-shell="1"]') as HTMLDivElement);
+    expect(scrollShell).toBeTruthy();
+    expect(scrollShell.getAttribute('data-historical-tail-blocks')).toBe('120');
+    expect(await screen.findByRole('button', { name: 'Load previous 10%' })).toBeTruthy();
+
+    fireEvent.wheel(scrollShell, { deltaY: -400 });
+    fireEvent.scroll(scrollShell, { target: { scrollTop: 0 } });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(scrollShell.getAttribute('data-historical-tail-blocks')).toBe('120');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load previous 10%' }));
+
+    await waitFor(() => {
+      expect(scrollShell.getAttribute('data-historical-tail-blocks')).toBe('140');
+    });
   });
 
   it('publishes header rename results so the sidebar title can refresh immediately', async () => {

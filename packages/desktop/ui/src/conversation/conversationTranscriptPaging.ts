@@ -27,23 +27,6 @@ export function resolveNextConversationTranscriptTailBlocks({
   return Math.min(normalizedTotalBlocks, Math.max(normalizedCurrentTailBlocks, minimumTailBlocks));
 }
 
-export function resolveNextConversationTranscriptPrefetchTailBlocks({
-  currentTailBlocks,
-  totalBlocks,
-  requestedTailBlockStep = CONVERSATION_TRANSCRIPT_TAIL_BLOCKS_STEP,
-}: {
-  currentTailBlocks: number;
-  totalBlocks: number;
-  requestedTailBlockStep?: number;
-}): number {
-  const normalizedTotalBlocks = Math.max(0, Math.floor(totalBlocks));
-  return resolveNextConversationTranscriptTailBlocks({
-    currentTailBlocks,
-    requestedTailBlockStep,
-    totalBlocks: normalizedTotalBlocks,
-  });
-}
-
 export function shouldResetConversationTranscriptTailBlocksForLiveTransition({
   conversationId,
   currentTailBlocks,

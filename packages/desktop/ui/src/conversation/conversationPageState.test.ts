@@ -9,7 +9,6 @@ import {
   mergeConversationSessionMeta,
   replaceConversationMetaInSessionList,
   resolveConversationBackgroundRunState,
-  resolveConversationInitialHistoricalWarmupTarget,
   resolveConversationLiveSession,
   resolveConversationPerformanceMode,
   resolveConversationStreamTitleSync,
@@ -21,7 +20,6 @@ import {
   shouldFetchConversationLiveSessionGitContext,
   shouldLoadConversationModels,
   shouldShowConversationBootstrapLoadingState,
-  shouldShowConversationInitialHistoricalWarmupLoader,
   shouldShowMissingConversationState,
   shouldSubscribeToDesktopConversationState,
   shouldUseHealthyDesktopConversationState,
@@ -351,40 +349,6 @@ describe('conversation page state helpers', () => {
 
     expect(hasConversationLoadedHistoricalTailBlocks({ blocks: [{ id: 'a' }], totalBlocks: 1 }, 10)).toBe(true);
     expect(hasConversationLoadedHistoricalTailBlocks({ blocks: [{ id: 'a' }], totalBlocks: 1 }, Number.MAX_SAFE_INTEGER + 1)).toBe(false);
-    expect(
-      resolveConversationInitialHistoricalWarmupTarget({
-        draft: false,
-        conversationId: 'conv-1',
-        liveDecision: false,
-        historicalTotalBlocks: 96,
-        historicalHasOlderBlocks: true,
-      }),
-    ).toBe(96);
-    expect(
-      resolveConversationInitialHistoricalWarmupTarget({
-        draft: false,
-        conversationId: 'conv-1',
-        liveDecision: false,
-        historicalTotalBlocks: 500,
-        historicalHasOlderBlocks: true,
-      }),
-    ).toBeNull();
-    expect(
-      shouldShowConversationInitialHistoricalWarmupLoader({
-        warmupActive: true,
-        targetTailBlocks: 10,
-        currentTailBlocks: 5,
-        loadedTailBlocks: false,
-      }),
-    ).toBe(true);
-    expect(
-      shouldShowConversationInitialHistoricalWarmupLoader({
-        warmupActive: true,
-        targetTailBlocks: Number.MAX_SAFE_INTEGER + 1,
-        currentTailBlocks: 5,
-        loadedTailBlocks: false,
-      }),
-    ).toBe(false);
     expect(
       shouldShowConversationBootstrapLoadingState({
         draft: false,

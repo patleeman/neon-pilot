@@ -150,7 +150,6 @@ import {
   mergeConversationSessionMeta,
   resolveConversationComposerRunState,
   resolveConversationCwdChangeAction,
-  resolveConversationInitialHistoricalWarmupTarget,
   resolveConversationLiveSession,
   resolveConversationPageTitle,
   resolveConversationPendingStatusLabel,
@@ -161,7 +160,6 @@ import {
   resolveDisplayedConversationPendingStatusLabel,
   shouldDeferConversationFileRefresh,
   shouldShowConversationBootstrapLoadingState,
-  shouldShowConversationInitialHistoricalWarmupLoader,
   shouldShowConversationInlineLoadingState,
   shouldShowMissingConversationState,
   shouldSubscribeToDesktopConversationState,
@@ -620,8 +618,6 @@ const RELATED_THREAD_RECENT_WINDOW_DAYS = 3;
 const MAX_RELATED_THREAD_CANDIDATES = 24;
 
 const MAX_RENDERED_BLOCKS = 300;
-const HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX = 700;
-const HISTORICAL_PREFETCH_COOLDOWN_MS = 800;
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 const WORKBENCH_OPEN_WORKSPACE_FILE_EVENT = 'pa:workbench-open-workspace-file';
 const TRANSCRIPT_PATH_LINK_TARGET_SETTING_KEY = 'systemFiles.transcriptPathLinkTarget';
@@ -1116,7 +1112,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       : conversationEventVersion;
 
   const [historicalTailBlocks, setHistoricalTailBlocks] = useState(INITIAL_HISTORICAL_TAIL_BLOCKS);
-  const [initialHistoricalWarmupConversationId, setInitialHistoricalWarmupConversationId] = useState<string | null>(null);
   const [autoAnchorTranscriptTail, setAutoAnchorTranscriptTail] = useState(true);
   const previousConversationLiveDecisionRef = useRef<{
     conversationId: string | null;
@@ -1448,7 +1443,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
   useEffect(() => {
     setHistoricalTailBlocks(INITIAL_HISTORICAL_TAIL_BLOCKS);
-    setInitialHistoricalWarmupConversationId(draft || !id ? null : id);
     setAutoAnchorTranscriptTail(true);
   }, [draft, id]);
 
@@ -1753,18 +1747,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     computedMessages && computedMessages.length > 0
       ? computedHistoricalTotalBlocks
       : (preservedTranscriptState?.historicalTotalBlocks ?? computedHistoricalTotalBlocks);
-  const knownHistoricalTotalBlocks = Math.max(historicalTotalBlocks, sessionSnapshot?.messageCount ?? 0);
   const historicalHasOlderBlocks = historicalBlockOffset > 0;
-  const knownHistoricalHasOlderBlocks = knownHistoricalTotalBlocks > historicalTailBlocks;
-  const initialHistoricalWarmupActive = Boolean(id) && initialHistoricalWarmupConversationId === id;
-  const initialHistoricalWarmupTarget = resolveConversationInitialHistoricalWarmupTarget({
-    draft,
-    conversationId: initialHistoricalWarmupActive ? id : null,
-    liveDecision: conversationLiveDecision,
-    historicalTotalBlocks: knownHistoricalTotalBlocks,
-    historicalHasOlderBlocks: historicalHasOlderBlocks || knownHistoricalHasOlderBlocks,
-  });
-  const initialHistoricalWarmupTailLoaded = hasConversationLoadedHistoricalTailBlocks(visibleSessionDetail, initialHistoricalWarmupTarget);
   const showHistoricalLoadMore = historicalHasOlderBlocks;
   const messageIndexOffset = historicalBlockOffset;
   const messageCount = realMessages?.length ?? 0;
@@ -2803,8 +2786,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const composerResizeFrameRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const scrollPrefetchUserIntentRef = useRef(false);
-  const lastHistoricalPrefetchRequestedAtRef = useRef(0);
   const pendingJumpMessageIndexRef = useRef<number | null>(null);
   const [requestedFocusMessageIndex, setRequestedFocusMessageIndex] = useState<number | null>(null);
   const [desktopMissingConversationRecoveryExpiredId, setDesktopMissingConversationRecoveryExpiredId] = useState<string | null>(null);
@@ -2866,82 +2847,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     prependRestoreKey: historicalBlockOffset,
     messageIndexOffset,
   });
-  const showInitialHistoricalWarmupLoader = shouldShowConversationInitialHistoricalWarmupLoader({
-    warmupActive: initialHistoricalWarmupActive,
-    targetTailBlocks: initialHistoricalWarmupTarget,
-    currentTailBlocks: historicalTailBlocks,
-    loadedTailBlocks: initialHistoricalWarmupTailLoaded,
-  });
-  const previousInitialHistoricalWarmupLoaderRef = useRef(false);
-
-  useEffect(() => {
-    if (!initialHistoricalWarmupActive || !id) {
-      return;
-    }
-
-    if (conversationLiveDecision === true || knownHistoricalTotalBlocks <= 0) {
-      setInitialHistoricalWarmupConversationId(null);
-      return;
-    }
-
-    if (!historicalHasOlderBlocks && !knownHistoricalHasOlderBlocks) {
-      if (conversationBootstrapLoading || sessionLoading) {
-        return;
-      }
-
-      setInitialHistoricalWarmupConversationId(null);
-      return;
-    }
-
-    if (conversationLiveDecision !== false || !initialHistoricalWarmupTarget) {
-      return;
-    }
-
-    if (historicalTailBlocks < initialHistoricalWarmupTarget) {
-      setHistoricalTailBlocks(initialHistoricalWarmupTarget);
-      return;
-    }
-
-    if (!initialHistoricalWarmupTailLoaded) {
-      return;
-    }
-
-    setInitialHistoricalWarmupConversationId(null);
-  }, [
-    conversationBootstrapLoading,
-    conversationLiveDecision,
-    historicalHasOlderBlocks,
-    historicalTailBlocks,
-    id,
-    initialHistoricalWarmupActive,
-    initialHistoricalWarmupTailLoaded,
-    initialHistoricalWarmupTarget,
-    knownHistoricalHasOlderBlocks,
-    knownHistoricalTotalBlocks,
-    sessionLoading,
-  ]);
-
-  useEffect(() => {
-    previousInitialHistoricalWarmupLoaderRef.current = false;
-  }, [id]);
-
-  useEffect(() => {
-    const wasLoading = previousInitialHistoricalWarmupLoaderRef.current;
-    previousInitialHistoricalWarmupLoaderRef.current = showInitialHistoricalWarmupLoader;
-
-    if (!wasLoading || showInitialHistoricalWarmupLoader || !id || !realMessages?.length) {
-      return;
-    }
-
-    const frame = window.requestAnimationFrame(() => {
-      scrollToBottom();
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-    };
-  }, [id, realMessages, scrollToBottom, showInitialHistoricalWarmupLoader]);
-
   const loadOlderMessages = useCallback(
     (targetMessageIndex?: number, options?: { tailBlockStep?: number }) => {
       if (!id || sessionLoading || historicalTotalBlocks <= 0) {
@@ -2950,8 +2855,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
       if (targetMessageIndex === undefined) {
         setAutoAnchorTranscriptTail(false);
-        scrollPrefetchUserIntentRef.current = false;
-        lastHistoricalPrefetchRequestedAtRef.current = performance.now();
         capturePrependRestore();
       }
 
@@ -4230,38 +4133,13 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   // Scroll tracking
   const handleScroll = useCallback(() => {
     syncScrollStateFromDom();
-
-    const el = scrollRef.current;
-    if (!el) {
-      return;
-    }
-
-    if (
-      scrollPrefetchUserIntentRef.current &&
-      historicalHasOlderBlocks &&
-      !sessionLoading &&
-      el.scrollTop <= HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX
-    ) {
-      const now = performance.now();
-      if (now - lastHistoricalPrefetchRequestedAtRef.current < HISTORICAL_PREFETCH_COOLDOWN_MS) {
-        return;
-      }
-      lastHistoricalPrefetchRequestedAtRef.current = now;
-      loadOlderMessages();
-    }
-  }, [historicalHasOlderBlocks, loadOlderMessages, sessionLoading, syncScrollStateFromDom]);
-
-  useEffect(() => {
-    scrollPrefetchUserIntentRef.current = false;
-    lastHistoricalPrefetchRequestedAtRef.current = 0;
-  }, [id]);
+  }, [syncScrollStateFromDom]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const markUserScrollIntent = () => {
       setAutoAnchorTranscriptTail(false);
-      scrollPrefetchUserIntentRef.current = true;
     };
     el.addEventListener('wheel', markUserScrollIntent, { passive: true });
     el.addEventListener('touchstart', markUserScrollIntent, { passive: true });

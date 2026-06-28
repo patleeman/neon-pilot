@@ -379,29 +379,6 @@ export function buildConversationSessionSummaryNotice(input: {
   return details.join(' · ');
 }
 
-export function resolveConversationInitialHistoricalWarmupTarget(input: {
-  draft: boolean;
-  conversationId: string | null | undefined;
-  liveDecision: boolean | null | undefined;
-  historicalTotalBlocks: number;
-  historicalHasOlderBlocks: boolean;
-}): number | null {
-  if (
-    input.draft ||
-    !input.conversationId ||
-    input.liveDecision !== false ||
-    !input.historicalHasOlderBlocks ||
-    input.historicalTotalBlocks <= 0
-  ) {
-    return null;
-  }
-
-  // Keep the first paint small when switching threads. Older history can load
-  // lazily in the background for small transcripts or on demand for larger ones.
-  const smallTranscriptWarmupLimit = 120;
-  return input.historicalTotalBlocks <= smallTranscriptWarmupLimit ? input.historicalTotalBlocks : null;
-}
-
 export function hasConversationLoadedHistoricalTailBlocks(
   detail: Pick<SessionDetail, 'blocks' | 'totalBlocks'> | null | undefined,
   targetTailBlocks: number | null,
@@ -411,24 +388,6 @@ export function hasConversationLoadedHistoricalTailBlocks(
   }
 
   return detail.blocks.length >= Math.min(targetTailBlocks, detail.totalBlocks);
-}
-
-export function shouldShowConversationInitialHistoricalWarmupLoader(input: {
-  warmupActive: boolean;
-  targetTailBlocks: number | null;
-  currentTailBlocks: number;
-  loadedTailBlocks: boolean;
-}): boolean {
-  if (
-    !input.warmupActive ||
-    typeof input.targetTailBlocks !== 'number' ||
-    !Number.isSafeInteger(input.targetTailBlocks) ||
-    input.targetTailBlocks <= 0
-  ) {
-    return false;
-  }
-
-  return input.currentTailBlocks < input.targetTailBlocks || !input.loadedTailBlocks;
 }
 
 export function shouldShowConversationBootstrapLoadingState(input: {

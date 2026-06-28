@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   CONVERSATION_TRANSCRIPT_JUMP_PADDING_BLOCKS,
   CONVERSATION_TRANSCRIPT_TAIL_BLOCKS_STEP,
-  resolveNextConversationTranscriptPrefetchTailBlocks,
   resolveNextConversationTranscriptTailBlocks,
   shouldResetConversationTranscriptTailBlocksForLiveTransition,
 } from './conversationTranscriptPaging';
@@ -45,26 +44,6 @@ describe('resolveNextConversationTranscriptTailBlocks', () => {
       resolveNextConversationTranscriptTailBlocks({
         currentTailBlocks: 900,
         requestedTailBlockStep: 500,
-        totalBlocks: 1000,
-      }),
-    ).toBe(1000);
-  });
-});
-
-describe('resolveNextConversationTranscriptPrefetchTailBlocks', () => {
-  it('prefetches the next fixed-size historical page', () => {
-    expect(
-      resolveNextConversationTranscriptPrefetchTailBlocks({
-        currentTailBlocks: 24,
-        totalBlocks: 5000,
-      }),
-    ).toBe(144);
-  });
-
-  it('does not grow past the transcript size', () => {
-    expect(
-      resolveNextConversationTranscriptPrefetchTailBlocks({
-        currentTailBlocks: 980,
         totalBlocks: 1000,
       }),
     ).toBe(1000);
