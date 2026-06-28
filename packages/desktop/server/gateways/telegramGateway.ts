@@ -7,6 +7,8 @@ import {
   attachGatewayConversation,
   findGatewayChatTarget,
   findGatewayChatTargetByConversation,
+  type GatewayChatTarget,
+  type GatewayMirrorMode,
   readGatewayState,
   recordGatewayEvent,
   updateGatewayConnectionStatus,
@@ -39,6 +41,14 @@ interface TelegramVoice {
   file_size?: number;
 }
 
+interface TelegramDocument {
+  file_id: string;
+  file_unique_id?: string;
+  file_name?: string;
+  mime_type?: string;
+  file_size?: number;
+}
+
 interface TelegramUser {
   id: number | string;
   first_name?: string;
@@ -54,6 +64,7 @@ interface TelegramMessage {
   caption?: string;
   photo?: TelegramPhotoSize[];
   voice?: TelegramVoice;
+  document?: TelegramDocument;
 }
 
 interface TelegramCallbackQuery {
@@ -112,12 +123,13 @@ interface TelegramGatewayModelSummary {
 
 type TelegramConversationScope = 'active' | 'archived' | 'all';
 type TelegramConversationListAction = 'switch' | 'peek';
+type TelegramRunState = 'idle' | 'running' | 'queued' | 'unknown';
 
 export interface TelegramGatewayRuntimeDependencies {
   stateRoot: string;
   profile: string;
   authFile: string;
-  createConversation: (input: { title: string }) => Promise<{ id: string }>;
+  createConversation: (input: { title: string; cwd?: string; model?: string }) => Promise<{ id: string }>;
   listConversations: (input?: {
     scope?: TelegramConversationScope;
     query?: string;
@@ -135,6 +147,8 @@ export interface TelegramGatewayRuntimeDependencies {
   renameConversation: (conversationId: string, title: string) => Promise<void> | void;
   compactConversation: (conversationId: string) => Promise<void>;
   archiveConversation: (conversationId: string) => Promise<void>;
+  abortConversation?: (conversationId: string) => Promise<void>;
+  readConversationStatus?: (conversationId: string) => Promise<{ state: TelegramRunState; detail?: string }>;
   getCurrentModel: (conversationId: string) => Promise<string | null> | string | null;
   setModel: (conversationId: string, model: string) => Promise<void>;
   readBotToken: () => string | null;
@@ -275,9 +289,8 @@ export class TelegramGatewayRuntime {
       return;
     }
     const command = parseTelegramGatewayCommand(text);
-    const target = await this.ensureChatTarget({ externalChatId, externalChatLabel, forceNew: command?.kind === 'new' });
-
     if (command) {
+      const target = await this.resolveCommandTarget(command, { externalChatId, externalChatLabel });
       try {
         await this.handleCommand(command, {
           conversationId: target.conversationId,
@@ -293,17 +306,28 @@ export class TelegramGatewayRuntime {
       return;
     }
 
+    const target = await this.ensureChatTarget({ externalChatId, externalChatLabel });
+
     if (!target.repliesEnabled) {
       await this.sendMessage(externalChatId, 'Telegram replies are paused for this conversation. Use /resume to re-enable.');
       return;
     }
 
-    if (!text && !message.photo?.length && !message.voice) {
-      await this.sendMessage(externalChatId, 'Unsupported Telegram message type. Send text, a photo, or a voice message.');
+    if (!text && !message.photo?.length && !message.voice && !message.document) {
+      await this.sendMessage(externalChatId, 'Unsupported Telegram message type. Send text, a photo, a voice message, or an image file.');
       return;
     }
 
-    const images = message.photo?.length ? await this.loadTelegramPhotos(message.photo) : undefined;
+    const documentImage = message.document ? await this.loadTelegramDocumentImage(message.document) : undefined;
+    if (message.document && !documentImage?.length) {
+      await this.sendMessage(
+        externalChatId,
+        `Telegram file "${message.document.file_name || 'attachment'}" is not an image I can submit yet. Send it as a photo/image, or export transcripts with /export.`,
+      );
+      return;
+    }
+    const photoImages = message.photo?.length ? await this.loadTelegramPhotos(message.photo) : undefined;
+    const images = [...(photoImages ?? []), ...(documentImage ?? [])];
     if (this.pendingStatusMessages.has(target.conversationId)) {
       try {
         const voiceTranscript = message.voice ? await this.transcribeTelegramVoice(message.voice) : undefined;
@@ -311,12 +335,12 @@ export class TelegramGatewayRuntime {
           await this.sendMessage(externalChatId, `🎙️ "${voiceTranscript.text}"`);
         }
         await this.sendMessage(externalChatId, 'Queued behind the current Telegram request.');
-        const promptText = buildTelegramPromptText({ text, hasPhoto: Boolean(images?.length), voiceTranscript: voiceTranscript?.text });
+        const promptText = buildTelegramPromptText({ text, hasPhoto: images.length > 0, voiceTranscript: voiceTranscript?.text });
         this.rememberTelegramPrompt(target.conversationId, promptText);
         await this.dependencies.submitPrompt({
           conversationId: target.conversationId,
           text: promptText,
-          images,
+          images: images.length > 0 ? images : undefined,
         });
         return;
       } catch (error) {
@@ -338,12 +362,12 @@ export class TelegramGatewayRuntime {
         await this.sendMessage(externalChatId, `🎙️ "${voiceTranscript.text}"`);
       }
       const promptStartedAtMs = Date.now();
-      const promptText = buildTelegramPromptText({ text, hasPhoto: Boolean(images?.length), voiceTranscript: voiceTranscript?.text });
+      const promptText = buildTelegramPromptText({ text, hasPhoto: images.length > 0, voiceTranscript: voiceTranscript?.text });
       this.rememberTelegramPrompt(target.conversationId, promptText);
       await this.dependencies.submitPrompt({
         conversationId: target.conversationId,
         text: promptText,
-        images,
+        images: images.length > 0 ? images : undefined,
       });
       await this.deliverLatestAssistantReplyWhenAvailable(target.conversationId, promptStartedAtMs);
       this.startConversationEventStream(target.conversationId);
@@ -400,18 +424,24 @@ export class TelegramGatewayRuntime {
       conversationId: input.conversationId,
     });
     if (!target) return false;
+    if (!shouldDeliverAssistantReply(target)) return false;
 
     this.stopTyping(target.externalChatId);
     this.stopConversationEventStream(input.conversationId);
     const pending = this.pendingStatusMessages.get(input.conversationId);
-    if (pending) {
-      this.pendingStatusMessages.delete(input.conversationId);
-      const edited = await this.tryEditMessage(pending.chatId, pending.messageId, text);
-      if (!edited) {
-        await this.sendMessage(target.externalChatId, text);
+    try {
+      if (pending) {
+        this.pendingStatusMessages.delete(input.conversationId);
+        const edited = await this.tryEditMessage(pending.chatId, pending.messageId, formatMirroredThreadMessage(target, text));
+        if (!edited) {
+          await this.sendMessage(target.externalChatId, formatMirroredThreadMessage(target, text));
+        }
+      } else {
+        await this.sendMessage(target.externalChatId, formatMirroredThreadMessage(target, text));
       }
-    } else {
-      await this.sendMessage(target.externalChatId, text);
+    } catch (error) {
+      this.recordTelegramDeliveryFailure(input.conversationId, error);
+      throw error;
     }
     recordGatewayEvent({
       stateRoot: this.dependencies.stateRoot,
@@ -437,8 +467,14 @@ export class TelegramGatewayRuntime {
       conversationId: input.conversationId,
     });
     if (!target) return false;
+    if (!shouldDeliverDesktopPrompt(target)) return false;
 
-    await this.sendMessage(target.externalChatId, `Desktop:\n${text}`);
+    try {
+      await this.sendMessage(target.externalChatId, formatMirroredThreadMessage(target, `Desktop:\n${text}`));
+    } catch (error) {
+      this.recordTelegramDeliveryFailure(input.conversationId, error);
+      throw error;
+    }
     recordGatewayEvent({
       stateRoot: this.dependencies.stateRoot,
       profile: this.dependencies.profile,
@@ -448,6 +484,19 @@ export class TelegramGatewayRuntime {
       message: `Delivered desktop prompt to ${target.externalChatLabel || target.externalChatId}`,
     });
     return true;
+  }
+
+  private recordTelegramDeliveryFailure(conversationId: string, error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    recordGatewayEvent({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      conversationId,
+      kind: 'error',
+      message: `Telegram delivery failed: ${message}`,
+    });
+    invalidateAppTopics('gateways', 'sessions');
   }
 
   startMirroringBoundConversations(): void {
@@ -668,14 +717,13 @@ export class TelegramGatewayRuntime {
     externalChatLabel: string;
     forceNew?: boolean;
   }): Promise<{ conversationId: string; conversationTitle: string; repliesEnabled: boolean }> {
-    const existing = input.forceNew
-      ? null
-      : findGatewayChatTarget({
-          stateRoot: this.dependencies.stateRoot,
-          profile: this.dependencies.profile,
-          provider: 'telegram',
-          externalChatId: input.externalChatId,
-        });
+    const previousTarget = findGatewayChatTarget({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      externalChatId: input.externalChatId,
+    });
+    const existing = input.forceNew ? null : previousTarget;
     if (existing && existing.conversationId) {
       const conversations = await this.dependencies.listConversations();
       if (conversations.some((conversation) => conversation.id === existing.conversationId)) {
@@ -695,7 +743,11 @@ export class TelegramGatewayRuntime {
     }
 
     const title = `Telegram: ${input.externalChatLabel || input.externalChatId}`;
-    const created = await this.dependencies.createConversation({ title });
+    const created = await this.dependencies.createConversation({
+      title,
+      cwd: previousTarget?.defaultCwd,
+      model: previousTarget?.defaultModel,
+    });
     void this.dependencies.notifyNewConversation?.(created.id);
     upsertGatewayChatTarget({
       stateRoot: this.dependencies.stateRoot,
@@ -705,6 +757,10 @@ export class TelegramGatewayRuntime {
       externalChatLabel: input.externalChatLabel,
       conversationId: created.id,
       conversationTitle: title,
+      mirrorMode: previousTarget?.mirrorMode,
+      pinnedConversationIds: previousTarget?.pinnedConversationIds,
+      defaultModel: previousTarget?.defaultModel,
+      defaultCwd: previousTarget?.defaultCwd,
     });
 
     attachGatewayConversation({
@@ -719,6 +775,30 @@ export class TelegramGatewayRuntime {
 
     await this.dependencies.renameConversation(created.id, title);
     return { conversationId: created.id, conversationTitle: title, repliesEnabled: true };
+  }
+
+  private async resolveCommandTarget(
+    command: NonNullable<ReturnType<typeof parseTelegramGatewayCommand>>,
+    input: { externalChatId: string; externalChatLabel: string },
+  ): Promise<{ conversationId: string; conversationTitle?: string; repliesEnabled: boolean }> {
+    if (command.kind === 'new') {
+      return this.ensureChatTarget({ ...input, forceNew: true });
+    }
+
+    const existing = this.readChatTarget(input.externalChatId);
+    if (existing?.conversationId) {
+      return {
+        conversationId: existing.conversationId,
+        conversationTitle: existing.conversationTitle || existing.conversationId,
+        repliesEnabled: existing.repliesEnabled !== false,
+      };
+    }
+
+    if (canHandleTelegramCommandWithoutConversation(command.kind)) {
+      return { conversationId: '', conversationTitle: undefined, repliesEnabled: existing?.repliesEnabled !== false };
+    }
+
+    return this.ensureChatTarget(input);
   }
 
   private async handleCommand(
@@ -742,12 +822,17 @@ export class TelegramGatewayRuntime {
         return;
       case 'status': {
         const model = await this.dependencies.getCurrentModel(target.conversationId);
+        const chatTarget = this.readChatTarget(target.externalChatId);
+        const runStatus = await this.readConversationStatusLine(target.conversationId);
         await this.sendMessage(
           target.externalChatId,
           [
             'Telegram gateway active.',
             `Conversation: ${target.conversationTitle || shortConversationId(target.conversationId)}`,
             `ID: ${shortConversationId(target.conversationId)}`,
+            `Run: ${runStatus}`,
+            `Mirror: ${formatMirrorMode(chatTarget?.mirrorMode)}`,
+            `Replies: ${chatTarget?.repliesEnabled === false ? 'paused' : 'enabled'}`,
             model ? `Model: ${model}` : null,
           ]
             .filter(Boolean)
@@ -756,6 +841,9 @@ export class TelegramGatewayRuntime {
         );
         return;
       }
+      case 'diagnostics':
+        await this.sendDiagnostics(target.externalChatId, target.conversationId);
+        return;
       case 'whoami': {
         const policy = this.dependencies.readAccessPolicy();
         const approvedByChat = policy.approvedChatIds.includes(target.externalChatId);
@@ -776,7 +864,8 @@ export class TelegramGatewayRuntime {
         await this.sendConversationList(target.externalChatId, {
           scope: 'active',
           action: 'switch',
-          prefix: 'Active sidebar conversations:',
+          query: command.query,
+          prefix: command.query ? `Active sidebar conversations matching "${command.query}":` : 'Active sidebar conversations:',
         });
         return;
       case 'tail':
@@ -796,6 +885,16 @@ export class TelegramGatewayRuntime {
             label: 'Recent transcript:',
             continuationHint: 'Send a message to continue, or use /transcript 50 for more.',
           }),
+          { reply_markup: statusKeyboard() },
+        );
+        return;
+      case 'export':
+        await this.exportTranscript(target.externalChatId, target.conversationId, target.conversationTitle, command.count ?? 50);
+        return;
+      case 'summary':
+        await this.sendMessage(
+          target.externalChatId,
+          await this.formatThreadSummary(target.conversationId, target.conversationTitle, command.count ?? 20),
           { reply_markup: statusKeyboard() },
         );
         return;
@@ -842,6 +941,17 @@ export class TelegramGatewayRuntime {
         });
         await this.sendMessage(target.externalChatId, 'Telegram replies paused for this conversation. Use /resume to re-enable.');
         return;
+      case 'cancel':
+        if (!this.dependencies.abortConversation) {
+          await this.sendMessage(target.externalChatId, 'Cancel is unavailable for this gateway runtime.');
+          return;
+        }
+        await this.dependencies.abortConversation(target.conversationId);
+        await this.sendMessage(
+          target.externalChatId,
+          `Cancel requested for ${target.conversationTitle || shortConversationId(target.conversationId)}.`,
+        );
+        return;
       case 'resume':
       case 'attach':
         upsertGatewayChatTarget({
@@ -863,6 +973,25 @@ export class TelegramGatewayRuntime {
         });
         await this.sendMessage(target.externalChatId, 'Telegram replies enabled and this chat is attached.');
         return;
+      case 'mirror':
+        if (!command.mode) {
+          await this.sendMessage(target.externalChatId, this.formatMirrorStatus(target.externalChatId), { reply_markup: mirrorKeyboard() });
+          return;
+        }
+        upsertGatewayChatTarget({
+          stateRoot: this.dependencies.stateRoot,
+          profile: this.dependencies.profile,
+          provider: 'telegram',
+          externalChatId: target.externalChatId,
+          externalChatLabel: target.externalChatLabel,
+          conversationId: target.conversationId,
+          conversationTitle: target.conversationTitle,
+          mirrorMode: command.mode,
+        });
+        await this.sendMessage(target.externalChatId, `Telegram mirror mode set to ${formatMirrorMode(command.mode)}.`, {
+          reply_markup: mirrorKeyboard(),
+        });
+        return;
       case 'new':
         await this.sendMessage(target.externalChatId, 'Started a new Telegram conversation.');
         return;
@@ -877,6 +1006,27 @@ export class TelegramGatewayRuntime {
         await this.dependencies.setModel(target.conversationId, command.model);
         await this.sendMessage(target.externalChatId, `Model set to ${command.model}.`);
         return;
+      case 'defaults':
+        await this.sendMessage(target.externalChatId, this.formatDefaultSettings(target.externalChatId));
+        return;
+      case 'default_model':
+        await this.updateDefaultModel(
+          target.externalChatId,
+          target.externalChatLabel,
+          target.conversationId,
+          target.conversationTitle,
+          command.model,
+        );
+        return;
+      case 'default_cwd':
+        await this.updateDefaultCwd(
+          target.externalChatId,
+          target.externalChatLabel,
+          target.conversationId,
+          target.conversationTitle,
+          command.cwd,
+        );
+        return;
       case 'compact':
         await this.dependencies.compactConversation(target.conversationId);
         await this.sendMessage(target.externalChatId, 'Compaction requested.');
@@ -888,11 +1038,264 @@ export class TelegramGatewayRuntime {
         await this.dependencies.renameConversation(target.conversationId, command.title);
         await this.sendMessage(target.externalChatId, `Renamed thread to ${command.title}.`);
         return;
+      case 'pins':
+        await this.sendPinnedConversations(target.externalChatId);
+        return;
+      case 'pin':
+        await this.updatePinnedConversation(
+          target.externalChatId,
+          target.externalChatLabel,
+          target.conversationId,
+          target.conversationTitle,
+          command.target,
+          true,
+        );
+        return;
+      case 'unpin':
+        await this.updatePinnedConversation(
+          target.externalChatId,
+          target.externalChatLabel,
+          target.conversationId,
+          target.conversationTitle,
+          command.target,
+          false,
+        );
+        return;
       case 'archive':
         await this.dependencies.archiveConversation(target.conversationId);
         await this.sendMessage(target.externalChatId, 'Archived and detached this thread.');
         return;
     }
+  }
+
+  private readChatTarget(externalChatId: string): GatewayChatTarget | null {
+    return findGatewayChatTarget({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      externalChatId,
+    });
+  }
+
+  private async readConversationStatusLine(conversationId: string): Promise<string> {
+    const status = await this.dependencies.readConversationStatus?.(conversationId).catch(() => null);
+    if (!status) return 'unknown';
+    return status.detail ? `${status.state} (${status.detail})` : status.state;
+  }
+
+  private async sendDiagnostics(externalChatId: string, conversationId: string): Promise<void> {
+    const state = readGatewayState({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+    });
+    const connection = state.connections.find((candidate) => candidate.provider === 'telegram');
+    const target = this.readChatTarget(externalChatId);
+    const events = state.events
+      .filter((event) => event.provider === 'telegram' && (!event.conversationId || event.conversationId === conversationId))
+      .slice(0, 8);
+    await this.sendMessage(
+      externalChatId,
+      [
+        'Telegram diagnostics:',
+        `Runtime: ${this.isRunning() ? 'running' : 'stopped'}`,
+        `Connection: ${connection?.status ?? 'missing'}${connection?.enabled === false ? ' (disabled)' : ''}`,
+        connection?.statusMessage ? `Status: ${connection.statusMessage}` : null,
+        `Replies: ${target?.repliesEnabled === false ? 'paused' : 'enabled'}`,
+        `Mirror: ${formatMirrorMode(target?.mirrorMode)}`,
+        target?.defaultModel ? `Default model: ${target.defaultModel}` : null,
+        target?.defaultCwd ? `Default cwd: ${target.defaultCwd}` : null,
+        '',
+        'Recent gateway events:',
+        events.length ? events.map((event) => `- ${event.kind}: ${event.message}`).join('\n') : 'No recent Telegram events.',
+      ]
+        .filter((line) => line !== null)
+        .join('\n'),
+    );
+  }
+
+  private async formatThreadSummary(conversationId: string, conversationTitle?: string, count = 20): Promise<string> {
+    const safeCount = Math.min(Math.max(Math.trunc(count), 3), 50);
+    const tail = this.dependencies.readConversationTail ? await this.dependencies.readConversationTail(conversationId, safeCount) : [];
+    const visible = tail.filter((entry) => entry.role === 'user' || entry.role === 'assistant');
+    const userMessages = visible.filter((entry) => entry.role === 'user');
+    const assistantMessages = visible.filter((entry) => entry.role === 'assistant');
+    const latestUser = userMessages.at(-1);
+    const latestAssistant = assistantMessages.at(-1);
+    const recent = visible.slice(-6);
+    return [
+      `Thread: ${conversationTitle || conversationId}`,
+      `ID: ${shortConversationId(conversationId)}`,
+      '',
+      'Recent activity summary:',
+      `Messages reviewed: ${visible.length}`,
+      latestUser ? `Latest you: ${truncateText(normalizeTranscriptText(latestUser.text), 240)}` : 'Latest you: none',
+      latestAssistant ? `Latest assistant: ${truncateText(normalizeTranscriptText(latestAssistant.text), 240)}` : 'Latest assistant: none',
+      '',
+      'Last turns:',
+      recent.length
+        ? recent
+            .map((entry) => `- ${formatTranscriptRole(entry.role)}: ${truncateText(normalizeTranscriptText(entry.text), 180)}`)
+            .join('\n')
+        : 'No recent user or assistant messages.',
+    ].join('\n');
+  }
+
+  private async exportTranscript(
+    externalChatId: string,
+    conversationId: string,
+    conversationTitle: string | undefined,
+    count: number,
+  ): Promise<void> {
+    const safeCount = Math.min(Math.max(Math.trunc(count), 1), 50);
+    const tail = this.dependencies.readConversationTail ? await this.dependencies.readConversationTail(conversationId, safeCount) : [];
+    const body = [
+      `Thread: ${conversationTitle || conversationId}`,
+      `ID: ${conversationId}`,
+      `Exported: ${new Date().toISOString()}`,
+      '',
+      ...tail.map((entry, index) => {
+        const timestamp = entry.timestamp ? ` (${entry.timestamp})` : '';
+        return `${index + 1}. ${formatTranscriptRole(entry.role)}${timestamp}\n${entry.text.trim()}`;
+      }),
+      '',
+    ].join('\n\n');
+    await this.sendDocument(externalChatId, {
+      fileName: `telegram-transcript-${shortConversationId(conversationId)}.txt`,
+      data: body,
+      mimeType: 'text/plain',
+      caption: `Transcript export for ${conversationTitle || shortConversationId(conversationId)}`,
+    });
+  }
+
+  private formatMirrorStatus(externalChatId: string): string {
+    const target = this.readChatTarget(externalChatId);
+    return [
+      `Mirror mode: ${formatMirrorMode(target?.mirrorMode)}`,
+      '',
+      'Modes:',
+      '- all: desktop prompts and assistant replies are sent to Telegram',
+      '- notify: only assistant replies are sent',
+      '- muted: desktop activity is not sent',
+      '',
+      'Use /mirror all, /mirror notify, or /mirror muted.',
+    ].join('\n');
+  }
+
+  private formatDefaultSettings(externalChatId: string): string {
+    const target = this.readChatTarget(externalChatId);
+    return [
+      'Telegram defaults:',
+      `Mirror: ${formatMirrorMode(target?.mirrorMode)}`,
+      `Default model: ${target?.defaultModel || 'not set'}`,
+      `Default cwd: ${target?.defaultCwd || 'not set'}`,
+      '',
+      'Use /defaultmodel <model>, /defaultmodel clear, /defaultcwd <path>, or /defaultcwd clear.',
+    ].join('\n');
+  }
+
+  private async updateDefaultModel(
+    externalChatId: string,
+    externalChatLabel: string,
+    conversationId: string,
+    conversationTitle: string | undefined,
+    model: string | null | undefined,
+  ): Promise<void> {
+    if (model === undefined) {
+      await this.sendMessage(externalChatId, this.formatDefaultSettings(externalChatId));
+      return;
+    }
+    if (model !== null) {
+      const models = await this.dependencies.listModels();
+      if (models.length > 0 && !models.some((candidate) => candidate.id === model || candidate.label === model)) {
+        await this.sendMessage(externalChatId, `No model named ${model}. Use /model to choose from available models.`);
+        return;
+      }
+    }
+    upsertGatewayChatTarget({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      externalChatId,
+      externalChatLabel,
+      conversationId,
+      conversationTitle,
+      defaultModel: model,
+    });
+    await this.sendMessage(externalChatId, model ? `Default model set to ${model}.` : 'Default model cleared.');
+  }
+
+  private async updateDefaultCwd(
+    externalChatId: string,
+    externalChatLabel: string,
+    conversationId: string,
+    conversationTitle: string | undefined,
+    cwd: string | null | undefined,
+  ): Promise<void> {
+    if (cwd === undefined) {
+      await this.sendMessage(externalChatId, this.formatDefaultSettings(externalChatId));
+      return;
+    }
+    upsertGatewayChatTarget({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      externalChatId,
+      externalChatLabel,
+      conversationId,
+      conversationTitle,
+      defaultCwd: cwd,
+    });
+    await this.sendMessage(externalChatId, cwd ? `Default cwd set to ${cwd}.` : 'Default cwd cleared.');
+  }
+
+  private async sendPinnedConversations(externalChatId: string): Promise<void> {
+    const target = this.readChatTarget(externalChatId);
+    const ids = target?.pinnedConversationIds ?? [];
+    if (ids.length === 0) {
+      await this.sendMessage(externalChatId, 'No Telegram-pinned conversations yet. Use /pin to pin the current conversation.');
+      return;
+    }
+    const conversations = await this.loadConversationList({ scope: 'all' });
+    const byId = new Map(conversations.map((conversation) => [conversation.id, conversation]));
+    const pinned = ids.map((id) => byId.get(id) ?? ({ id, title: id, placement: 'closed' } satisfies TelegramGatewayConversationSummary));
+    this.rememberConversationPicker(externalChatId, pinned, 'all');
+    await this.sendMessage(externalChatId, this.formatConversationList(pinned, 'Telegram-pinned conversations:', 'all'), {
+      reply_markup: this.conversationKeyboard(pinned, { action: 'switch', scope: 'all' }),
+    });
+  }
+
+  private async updatePinnedConversation(
+    externalChatId: string,
+    externalChatLabel: string,
+    conversationId: string,
+    conversationTitle: string | undefined,
+    target: string | undefined,
+    pinned: boolean,
+  ): Promise<void> {
+    const selected = target
+      ? (await this.resolveConversationTarget(target, externalChatId, { scope: 'all' })).selected
+      : { id: conversationId, title: conversationTitle };
+    if (!selected) {
+      await this.sendMessage(externalChatId, pinned ? 'No matching conversation to pin.' : 'No matching conversation to unpin.');
+      return;
+    }
+    const chatTarget = this.readChatTarget(externalChatId);
+    const ids = chatTarget?.pinnedConversationIds ?? [];
+    const next = pinned ? [selected.id, ...ids.filter((id) => id !== selected.id)] : ids.filter((id) => id !== selected.id);
+    upsertGatewayChatTarget({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      externalChatId,
+      externalChatLabel,
+      conversationId,
+      conversationTitle,
+      pinnedConversationIds: next.slice(0, 20),
+    });
+    await this.sendMessage(
+      externalChatId,
+      pinned ? `Pinned ${selected.title || selected.id}.` : `Unpinned ${selected.title || selected.id}.`,
+    );
   }
 
   private async loadConversationList(
@@ -932,7 +1335,10 @@ export class TelegramGatewayRuntime {
       page?: number;
     },
   ): Promise<void> {
-    const conversations = await this.loadConversationList({ scope: input.scope, query: input.query });
+    const conversations = this.sortConversationsForChat(
+      externalChatId,
+      await this.loadConversationList({ scope: input.scope, query: input.query }),
+    );
     this.rememberConversationPicker(externalChatId, conversations, input.scope);
     await this.sendMessage(externalChatId, this.formatConversationList(conversations, input.prefix, input.scope), {
       reply_markup: this.conversationKeyboard(conversations, {
@@ -940,6 +1346,23 @@ export class TelegramGatewayRuntime {
         action: input.action,
         scope: input.scope,
       }),
+    });
+  }
+
+  private sortConversationsForChat(
+    externalChatId: string,
+    conversations: TelegramGatewayConversationSummary[],
+  ): TelegramGatewayConversationSummary[] {
+    const pins = this.readChatTarget(externalChatId)?.pinnedConversationIds ?? [];
+    if (pins.length === 0) return conversations;
+    const pinOrder = new Map(pins.map((id, index) => [id, index]));
+    return [...conversations].sort((left, right) => {
+      const leftPin = pinOrder.get(left.id);
+      const rightPin = pinOrder.get(right.id);
+      if (leftPin !== undefined || rightPin !== undefined) {
+        return (leftPin ?? Number.MAX_SAFE_INTEGER) - (rightPin ?? Number.MAX_SAFE_INTEGER);
+      }
+      return 0;
     });
   }
 
@@ -1185,12 +1608,20 @@ export class TelegramGatewayRuntime {
         { command: 'archives', description: 'Search archived conversations' },
         { command: 'archived', description: 'Search archived conversations' },
         { command: 'peek', description: 'Preview a conversation without switching' },
+        { command: 'pins', description: 'List pinned Telegram conversations' },
+        { command: 'pin', description: 'Pin a conversation in Telegram' },
+        { command: 'unpin', description: 'Unpin a conversation in Telegram' },
         { command: 'tail', description: 'Show recent thread messages' },
         { command: 'transcript', description: 'Show recent thread messages' },
         { command: 'export', description: 'Output recent transcript messages' },
+        { command: 'summary', description: 'Summarize recent thread activity' },
+        { command: 'mirror', description: 'Control desktop-to-Telegram delivery' },
         { command: 'model', description: 'Show or change the model' },
+        { command: 'defaults', description: 'Show Telegram defaults' },
         { command: 'status', description: 'Show current gateway status' },
+        { command: 'diagnostics', description: 'Show gateway diagnostics' },
         { command: 'whoami', description: 'Show your Telegram IDs and access status' },
+        { command: 'cancel', description: 'Stop the running agent turn' },
         { command: 'stop', description: 'Pause replies for this conversation' },
         { command: 'pause', description: 'Pause replies for this conversation' },
         { command: 'resume', description: 'Resume replies or switch to a named thread' },
@@ -1351,6 +1782,28 @@ export class TelegramGatewayRuntime {
     return [{ data: bytesToBase64(bytes), mimeType: response.headers.get('content-type') || 'image/jpeg', name: 'telegram-photo.jpg' }];
   }
 
+  private async loadTelegramDocumentImage(
+    document: TelegramDocument,
+  ): Promise<Array<{ data: string; mimeType: string; name?: string }> | undefined> {
+    const mimeType = document.mime_type?.trim() || '';
+    if (!mimeType.startsWith('image/')) return undefined;
+    const token = this.dependencies.readBotToken();
+    if (!token) return undefined;
+    const file = await this.telegramRequest<{ file_path?: string }>(token, 'getFile', { file_id: document.file_id });
+    if (!file.file_path) return undefined;
+    const fetchImpl = this.dependencies.fetch ?? fetch;
+    const response = await fetchImpl(`https://api.telegram.org/file/bot${token}/${file.file_path}`);
+    if (!response.ok) return undefined;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return [
+      {
+        data: bytesToBase64(bytes),
+        mimeType: response.headers.get('content-type') || mimeType,
+        name: document.file_name || file.file_path.split('/').pop() || 'telegram-image',
+      },
+    ];
+  }
+
   private async transcribeTelegramVoice(voice: TelegramVoice): Promise<{ text: string } | undefined> {
     if (!this.dependencies.transcribeAudio) {
       throw new Error('Telegram voice transcription is unavailable.');
@@ -1399,6 +1852,29 @@ export class TelegramGatewayRuntime {
       });
     }
     return lastMessage;
+  }
+
+  private async sendDocument(
+    chatId: string,
+    input: { fileName: string; data: string; mimeType: string; caption?: string },
+  ): Promise<TelegramSentMessage | null> {
+    const token = this.dependencies.readBotToken();
+    if (!token) return null;
+    const form = new FormData();
+    form.set('chat_id', chatId);
+    if (input.caption?.trim()) form.set('caption', input.caption.trim());
+    form.set('document', new Blob([input.data], { type: input.mimeType }), input.fileName);
+    const fetchImpl = this.dependencies.fetch ?? fetch;
+    const response = await fetchImpl(`https://api.telegram.org/bot${token}/sendDocument`, {
+      method: 'POST',
+      body: form,
+      signal: this.abortController?.signal,
+    });
+    const payload = (await response.json()) as TelegramApiResponse<TelegramSentMessage>;
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.description || 'Telegram sendDocument failed');
+    }
+    return payload.result ?? null;
   }
 
   private async editMessage(chatId: string, messageId: number, text: string): Promise<void> {
@@ -1649,10 +2125,21 @@ function statusKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] }
         { text: 'Threads', callback_data: 'cmd:/threads' },
         { text: 'Recent messages', callback_data: 'cmd:/tail' },
       ],
-      [{ text: 'Model', callback_data: 'cmd:/model' }],
+      [
+        { text: 'Summary', callback_data: 'cmd:/summary' },
+        { text: 'Pins', callback_data: 'cmd:/pins' },
+      ],
+      [
+        { text: 'Model', callback_data: 'cmd:/model' },
+        { text: 'Mirror', callback_data: 'cmd:/mirror' },
+      ],
       [
         { text: 'Pause replies', callback_data: 'cmd:/stop' },
         { text: 'Resume replies', callback_data: 'cmd:/resume' },
+      ],
+      [
+        { text: 'Cancel run', callback_data: 'cmd:/cancel' },
+        { text: 'Diagnostics', callback_data: 'cmd:/diagnostics' },
       ],
       [
         { text: 'Compact', callback_data: 'cmd:/compact' },
@@ -1667,8 +2154,73 @@ function statusKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] }
   };
 }
 
+function mirrorKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] } {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'Mirror all', callback_data: 'cmd:/mirror all' },
+        { text: 'Notify only', callback_data: 'cmd:/mirror notify' },
+      ],
+      [{ text: 'Muted', callback_data: 'cmd:/mirror muted' }],
+      [{ text: 'Status', callback_data: 'cmd:/status' }],
+    ],
+  };
+}
+
 function isTelegramSilenceToken(text: string): boolean {
   return /^(?:\[?SILENT\]?|NO[_\s-]?REPLY)$/i.test(text.trim());
+}
+
+function readTargetMirrorMode(target: GatewayChatTarget): GatewayMirrorMode {
+  return target.mirrorMode ?? 'mirror_all';
+}
+
+function shouldDeliverDesktopPrompt(target: GatewayChatTarget): boolean {
+  return readTargetMirrorMode(target) === 'mirror_all';
+}
+
+function shouldDeliverAssistantReply(target: GatewayChatTarget): boolean {
+  return readTargetMirrorMode(target) !== 'muted';
+}
+
+function formatMirrorMode(mode: GatewayMirrorMode | undefined): string {
+  switch (mode ?? 'mirror_all') {
+    case 'mirror_all':
+      return 'all';
+    case 'notify_only':
+      return 'notify only';
+    case 'muted':
+      return 'muted';
+  }
+}
+
+function formatMirroredThreadMessage(target: GatewayChatTarget, text: string): string {
+  const title = target.conversationTitle || (target.conversationId ? shortConversationId(target.conversationId) : 'current thread');
+  return [`Thread: ${title}`, '', text].join('\n');
+}
+
+function canHandleTelegramCommandWithoutConversation(
+  commandKind: ReturnType<typeof parseTelegramGatewayCommand> extends infer Command
+    ? Command extends { kind: infer Kind }
+      ? Kind
+      : never
+    : never,
+): boolean {
+  return (
+    commandKind === 'start' ||
+    commandKind === 'help' ||
+    commandKind === 'diagnostics' ||
+    commandKind === 'whoami' ||
+    commandKind === 'threads' ||
+    commandKind === 'peek' ||
+    commandKind === 'switch' ||
+    commandKind === 'archives' ||
+    commandKind === 'mirror' ||
+    commandKind === 'defaults' ||
+    commandKind === 'default_model' ||
+    commandKind === 'default_cwd' ||
+    commandKind === 'pins'
+  );
 }
 
 function commandKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] } {
@@ -1677,6 +2229,10 @@ function commandKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] 
       [
         { text: 'Threads', callback_data: 'cmd:/threads' },
         { text: 'New thread', callback_data: 'cmd:/new' },
+      ],
+      [
+        { text: 'Pins', callback_data: 'cmd:/pins' },
+        { text: 'Mirror', callback_data: 'cmd:/mirror' },
       ],
       [
         { text: 'Status', callback_data: 'cmd:/status' },

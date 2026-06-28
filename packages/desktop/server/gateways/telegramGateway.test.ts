@@ -207,6 +207,36 @@ describe('TelegramGatewayRuntime', () => {
     expect(d.submitPrompt).toHaveBeenCalledWith({ conversationId: 'conv-new', text: 'hello again', images: undefined });
   });
 
+  it('handles diagnostics commands even when the attached conversation is not in the active list', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'diagnostics' });
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'missing-conv', conversationTitle: 'Missing' });
+    state.readGatewayState.mockReturnValueOnce({
+      connections: [{ provider: 'telegram', status: 'active', enabled: true }],
+      bindings: [],
+      chatTargets: [],
+      events: [],
+    });
+    const d = deps({
+      listConversations: vi.fn(() => []),
+      createConversation: vi.fn(async () => {
+        throw new Error('should not create');
+      }),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      message: { message_id: 10, chat: { id: 'C1', title: 'Group' }, from: { id: 777 }, text: '/diagnostics' },
+    });
+
+    expect(d.listConversations).not.toHaveBeenCalled();
+    expect(d.createConversation).not.toHaveBeenCalled();
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('Telegram diagnostics:') }),
+    );
+  });
+
   it('builds prompt text from Telegram voice transcripts and captions', () => {
     expect(buildTelegramPromptText({ voiceTranscript: 'pick up milk' })).toBe(
       '[The user sent a Telegram voice message. Transcript: "pick up milk"]',
@@ -264,6 +294,14 @@ describe('TelegramGatewayRuntime', () => {
 
   it('treats /reset as starting a new Telegram conversation', async () => {
     commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'new' });
+    state.findGatewayChatTarget.mockReturnValueOnce({
+      conversationId: 'old-conv',
+      conversationTitle: 'Old',
+      defaultCwd: '/repo',
+      defaultModel: 'provider/model',
+      mirrorMode: 'notify_only',
+      pinnedConversationIds: ['old-conv'],
+    });
     const d = deps();
     const runtime = new TelegramGatewayRuntime(d as never);
 
@@ -272,8 +310,16 @@ describe('TelegramGatewayRuntime', () => {
       message: { message_id: 10, chat: { id: 123, username: 'pat' }, from: { id: 777 }, text: '/reset' },
     });
 
-    expect(state.findGatewayChatTarget).not.toHaveBeenCalled();
-    expect(d.createConversation).toHaveBeenCalledWith({ title: 'Telegram: pat' });
+    expect(d.createConversation).toHaveBeenCalledWith({ title: 'Telegram: pat', cwd: '/repo', model: 'provider/model' });
+    expect(state.upsertGatewayChatTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'conv-new',
+        mirrorMode: 'notify_only',
+        pinnedConversationIds: ['old-conv'],
+        defaultCwd: '/repo',
+        defaultModel: 'provider/model',
+      }),
+    );
     expect(d.fetch).toHaveBeenCalledWith(
       'https://api.telegram.org/bottoken/sendMessage',
       expect.objectContaining({ body: expect.stringContaining('Started a new Telegram conversation.') }),
@@ -707,6 +753,49 @@ describe('TelegramGatewayRuntime', () => {
     });
   });
 
+  it('submits Telegram image documents and rejects non-image files with a clear message', async () => {
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps({
+      fetch: vi.fn(async (url: string) => {
+        if (url.endsWith('/getFile')) return { ok: true, json: async () => ({ ok: true, result: { file_path: 'docs/file.png' } }) };
+        if (url.includes('/file/bot'))
+          return { ok: true, headers: { get: () => 'image/png' }, arrayBuffer: async () => Uint8Array.from([1, 2, 3]).buffer };
+        return { ok: true, json: async () => ({ ok: true, result: true }) };
+      }),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      message: {
+        message_id: 10,
+        chat: { id: 123 },
+        caption: ' see file image ',
+        document: { file_id: 'doc-image', file_name: 'diagram.png', mime_type: 'image/png' },
+      },
+    });
+
+    expect(d.submitPrompt).toHaveBeenCalledWith({
+      conversationId: 'conv-1',
+      text: 'see file image',
+      images: [{ data: 'AQID', mimeType: 'image/png', name: 'diagram.png' }],
+    });
+
+    await runtime.processUpdate({
+      update_id: 2,
+      message: {
+        message_id: 11,
+        chat: { id: 123 },
+        document: { file_id: 'doc-pdf', file_name: 'report.pdf', mime_type: 'application/pdf' },
+      },
+    });
+
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('report.pdf') }),
+    );
+  });
+
   it('rejects messages from unapproved Telegram users and chats', async () => {
     const d = deps({ readAccessPolicy: vi.fn(() => ({ approvedUserIds: [], approvedChatIds: ['999'] })) });
     const runtime = new TelegramGatewayRuntime(d as never);
@@ -1000,6 +1089,92 @@ describe('TelegramGatewayRuntime', () => {
     await expect(runtime.deliverDesktopUserPrompt({ conversationId: 'conv-1', text: '   ' })).resolves.toBe(false);
     state.findGatewayChatTargetByConversation.mockReturnValueOnce(null);
     await expect(runtime.deliverDesktopUserPrompt({ conversationId: 'conv-1', text: 'hello' })).resolves.toBe(false);
+  });
+
+  it('respects mirror modes for desktop-originated delivery', async () => {
+    const d = deps();
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce({
+      externalChatId: '123',
+      externalChatLabel: 'Pat',
+      mirrorMode: 'notify_only',
+    });
+    await expect(runtime.deliverDesktopUserPrompt({ conversationId: 'conv-1', text: 'desktop hello' })).resolves.toBe(false);
+
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce({
+      externalChatId: '123',
+      externalChatLabel: 'Pat',
+      mirrorMode: 'muted',
+    });
+    await expect(runtime.deliverAssistantReply({ conversationId: 'conv-1', text: 'assistant hello' })).resolves.toBe(false);
+
+    expect(d.fetch).not.toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('desktop hello') }),
+    );
+    expect(d.fetch).not.toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('assistant hello') }),
+    );
+  });
+
+  it('handles mirror, cancel, summary, export, pins, diagnostics, and defaults commands', async () => {
+    commands.parseTelegramGatewayCommand
+      .mockReturnValueOnce({ kind: 'mirror', mode: 'notify_only' })
+      .mockReturnValueOnce({ kind: 'cancel' })
+      .mockReturnValueOnce({ kind: 'summary', count: 4 })
+      .mockReturnValueOnce({ kind: 'export', count: 4 })
+      .mockReturnValueOnce({ kind: 'pin' })
+      .mockReturnValueOnce({ kind: 'pins' })
+      .mockReturnValueOnce({ kind: 'default_model', model: 'provider/model-a' })
+      .mockReturnValueOnce({ kind: 'default_cwd', cwd: '/repo' })
+      .mockReturnValueOnce({ kind: 'defaults' })
+      .mockReturnValueOnce({ kind: 'diagnostics' });
+    state.findGatewayChatTarget.mockReturnValue({
+      conversationId: 'conv-1',
+      conversationTitle: 'Existing',
+      externalChatId: '123',
+      repliesEnabled: true,
+      pinnedConversationIds: ['conv-1'],
+      defaultModel: 'provider/model-a',
+      defaultCwd: '/repo',
+      mirrorMode: 'notify_only',
+    });
+    state.readGatewayState.mockReturnValue({
+      connections: [{ provider: 'telegram', status: 'active', enabled: true }],
+      bindings: [],
+      chatTargets: [],
+      events: [{ provider: 'telegram', kind: 'outbound', message: 'Delivered', createdAt: 'now' }],
+    });
+    const d = deps({
+      abortConversation: vi.fn(async () => undefined),
+      readConversationTail: vi.fn(async () => [
+        { role: 'user', text: 'question' },
+        { role: 'assistant', text: 'answer' },
+      ]),
+      listModels: vi.fn(() => [{ id: 'provider/model-a' }]),
+      fetch: vi.fn(async (url: string) => ({
+        ok: true,
+        json: async () => ({
+          ok: true,
+          result: url.endsWith('/sendMessage') || url.endsWith('/sendDocument') ? { message_id: 42 } : true,
+        }),
+      })),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+    const message = { message_id: 10, chat: { id: 123 }, from: { id: 777 }, text: '/cmd' };
+
+    for (let updateId = 1; updateId <= 10; updateId += 1) {
+      await runtime.processUpdate({ update_id: updateId, message });
+    }
+
+    expect(state.upsertGatewayChatTarget).toHaveBeenCalledWith(expect.objectContaining({ mirrorMode: 'notify_only' }));
+    expect(d.abortConversation).toHaveBeenCalledWith('conv-1');
+    expect(d.fetch).toHaveBeenCalledWith('https://api.telegram.org/bottoken/sendDocument', expect.anything());
+    expect(state.upsertGatewayChatTarget).toHaveBeenCalledWith(expect.objectContaining({ pinnedConversationIds: ['conv-1'] }));
+    expect(state.upsertGatewayChatTarget).toHaveBeenCalledWith(expect.objectContaining({ defaultModel: 'provider/model-a' }));
+    expect(state.upsertGatewayChatTarget).toHaveBeenCalledWith(expect.objectContaining({ defaultCwd: '/repo' }));
   });
 
   it('does not echo Telegram-originated prompts as desktop prompts', async () => {

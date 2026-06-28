@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 export type GatewayProviderId = string;
 export type GatewayStatus = 'needs_config' | 'connected' | 'active' | 'paused' | 'needs_attention';
 export type GatewayConfigurationLocation = 'gateways' | 'settings' | 'extension' | 'external';
+export type GatewayMirrorMode = 'mirror_all' | 'notify_only' | 'muted';
 
 export interface GatewayProviderSummary {
   id: GatewayProviderId;
@@ -52,6 +53,10 @@ export interface GatewayChatTarget {
   conversationTitle?: string;
   lastExternalMessageId?: string;
   repliesEnabled: boolean;
+  mirrorMode?: GatewayMirrorMode;
+  pinnedConversationIds?: string[];
+  defaultModel?: string;
+  defaultCwd?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -149,9 +154,7 @@ export function attachGatewayConversation(input: {
 
     const existingBinding = state.bindings.find((binding) =>
       input.externalChatId
-        ? binding.provider === input.provider &&
-          binding.connectionId === connection.id &&
-          binding.externalChatId === input.externalChatId
+        ? binding.provider === input.provider && binding.connectionId === connection.id && binding.externalChatId === input.externalChatId
         : binding.provider === input.provider &&
           binding.connectionId === connection.id &&
           binding.conversationId === input.conversationId &&
@@ -224,6 +227,10 @@ export function upsertGatewayChatTarget(input: {
   conversationTitle?: string;
   lastExternalMessageId?: string;
   repliesEnabled?: boolean;
+  mirrorMode?: GatewayMirrorMode;
+  pinnedConversationIds?: string[];
+  defaultModel?: string | null;
+  defaultCwd?: string | null;
 }): GatewayChatTarget {
   return updateGatewayState(input, (state) => {
     const connection = ensureConnectionInState(state, input.provider);
@@ -238,6 +245,14 @@ export function upsertGatewayChatTarget(input: {
       existing.conversationTitle = input.conversationTitle ?? existing.conversationTitle;
       existing.lastExternalMessageId = input.lastExternalMessageId ?? existing.lastExternalMessageId;
       existing.repliesEnabled = input.repliesEnabled ?? existing.repliesEnabled;
+      existing.mirrorMode = input.mirrorMode ?? existing.mirrorMode;
+      existing.pinnedConversationIds = input.pinnedConversationIds ?? existing.pinnedConversationIds;
+      if (input.defaultModel !== undefined) {
+        existing.defaultModel = input.defaultModel === null ? undefined : input.defaultModel;
+      }
+      if (input.defaultCwd !== undefined) {
+        existing.defaultCwd = input.defaultCwd === null ? undefined : input.defaultCwd;
+      }
       existing.updatedAt = now;
       return existing;
     }
@@ -252,6 +267,10 @@ export function upsertGatewayChatTarget(input: {
       conversationTitle: input.conversationTitle,
       lastExternalMessageId: input.lastExternalMessageId,
       repliesEnabled: input.repliesEnabled ?? true,
+      mirrorMode: input.mirrorMode,
+      pinnedConversationIds: input.pinnedConversationIds,
+      defaultModel: input.defaultModel ?? undefined,
+      defaultCwd: input.defaultCwd ?? undefined,
       createdAt: now,
       updatedAt: now,
     };
@@ -437,7 +456,7 @@ function readPersistedGatewayState(file: string): PersistedGatewayState {
       version: GATEWAY_STATE_VERSION,
       connections: Array.isArray(parsed.connections) ? parsed.connections.filter(isGatewayConnection) : [],
       bindings: Array.isArray(parsed.bindings) ? parsed.bindings.filter(isGatewayThreadBinding) : [],
-      chatTargets: Array.isArray(parsed.chatTargets) ? parsed.chatTargets.filter(isGatewayChatTarget) : [],
+      chatTargets: Array.isArray(parsed.chatTargets) ? parsed.chatTargets.filter(isGatewayChatTarget).map(normalizeGatewayChatTarget) : [],
       events: Array.isArray(parsed.events) ? parsed.events.filter(isGatewayEvent).slice(-MAX_GATEWAY_EVENTS) : [],
     };
   } catch {
@@ -575,6 +594,20 @@ function isGatewayChatTarget(value: unknown): value is GatewayChatTarget {
   );
 }
 
+function normalizeGatewayChatTarget(target: GatewayChatTarget): GatewayChatTarget {
+  const mirrorMode = isGatewayMirrorMode(target.mirrorMode) ? target.mirrorMode : undefined;
+  const pinnedConversationIds = Array.isArray(target.pinnedConversationIds)
+    ? [...new Set(target.pinnedConversationIds.filter((id) => typeof id === 'string' && id.trim()).map((id) => id.trim()))]
+    : undefined;
+  return {
+    ...target,
+    ...(mirrorMode ? { mirrorMode } : {}),
+    ...(pinnedConversationIds?.length ? { pinnedConversationIds } : {}),
+    ...(typeof target.defaultModel === 'string' && target.defaultModel.trim() ? { defaultModel: target.defaultModel.trim() } : {}),
+    ...(typeof target.defaultCwd === 'string' && target.defaultCwd.trim() ? { defaultCwd: target.defaultCwd.trim() } : {}),
+  };
+}
+
 function isGatewayEvent(value: unknown): value is GatewayEvent {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as GatewayEvent;
@@ -583,4 +616,8 @@ function isGatewayEvent(value: unknown): value is GatewayEvent {
 
 function isGatewayStatus(value: unknown): value is GatewayStatus {
   return value === 'needs_config' || value === 'connected' || value === 'active' || value === 'paused' || value === 'needs_attention';
+}
+
+function isGatewayMirrorMode(value: unknown): value is GatewayMirrorMode {
+  return value === 'mirror_all' || value === 'notify_only' || value === 'muted';
 }

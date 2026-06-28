@@ -2,6 +2,7 @@ import type { Express, Request, Response } from 'express';
 
 import { listConversationSessionsSnapshot, readSessionDetailForRoute } from '../conversations/conversationService.js';
 import {
+  abortLiveSessionCapability,
   compactLiveSessionCapability,
   createLiveSessionCapability,
   submitLiveSessionPromptCapability,
@@ -315,7 +316,13 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
         id: model.id,
       })),
     createConversation: async (input) => {
-      const created = await createLiveSessionCapability({}, liveSessionContext(context));
+      const created = await createLiveSessionCapability(
+        {
+          ...(input.cwd ? { cwd: input.cwd } : {}),
+          ...(input.model !== undefined ? { model: input.model } : {}),
+        },
+        liveSessionContext(context),
+      );
       renameSession(created.id, input.title);
       return { id: created.id };
     },
@@ -336,6 +343,10 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
     compactConversation: async (conversationId) => {
       await compactLiveSessionCapability({ conversationId });
     },
+    abortConversation: async (conversationId) => {
+      await abortLiveSessionCapability({ conversationId });
+    },
+    readConversationStatus: async (conversationId) => readTelegramConversationStatus(conversationId),
     archiveConversation: async (conversationId) => {
       detachGatewayConversation({
         stateRoot: context.getStateRoot(),
@@ -350,6 +361,20 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
     },
   });
   return telegramRuntime;
+}
+
+async function readTelegramConversationStatus(
+  conversationId: string,
+): Promise<{ state: 'idle' | 'running' | 'queued' | 'unknown'; detail?: string }> {
+  const sessions = listConversationSessionsSnapshot({
+    includeLive: true,
+    limit: TELEGRAM_GATEWAY_LIST_LIMIT,
+    profile: getRuntimeScopeFn(),
+  });
+  const session = sessions.find((candidate) => candidate.id === conversationId);
+  if (!session) return { state: 'unknown', detail: 'conversation not found' };
+  if (session.isRunning) return { state: 'running' };
+  return { state: 'idle' };
 }
 
 function readProvider(value: unknown): GatewayProviderId | null {

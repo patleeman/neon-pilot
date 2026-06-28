@@ -90,6 +90,7 @@ const conversationService = vi.hoisted(() => ({
   readSessionDetailForRoute: vi.fn(async () => ({ sessionRead: { detail: { blocks: [{ type: 'text', text: ' latest reply ' }] } } })),
 }));
 const capability = vi.hoisted(() => ({
+  abortLiveSessionCapability: vi.fn(),
   compactLiveSessionCapability: vi.fn(),
   createLiveSessionCapability: vi.fn(async () => ({ id: 'conv-new' })),
   submitLiveSessionPromptCapability: vi.fn(),
@@ -224,6 +225,32 @@ describe('gateway routes', () => {
       profile: 'shared',
       tailBlocks: 20,
     });
+  });
+
+  it('passes Telegram defaults and cancel requests into live session capabilities', async () => {
+    register();
+    const instance = ensureTelegramRuntime();
+    const dependencies = (
+      instance as unknown as {
+        dependencies: {
+          createConversation: (input: { title: string; cwd?: string; model?: string }) => Promise<{ id: string }>;
+          abortConversation: (conversationId: string) => Promise<void>;
+          readConversationStatus: (conversationId: string) => Promise<unknown>;
+        };
+      }
+    ).dependencies;
+
+    await expect(dependencies.createConversation({ title: 'Telegram: Pat', cwd: '/repo', model: 'provider/model' })).resolves.toEqual({
+      id: 'conv-new',
+    });
+    expect(capability.createLiveSessionCapability).toHaveBeenCalledWith(
+      { cwd: '/repo', model: 'provider/model' },
+      expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
+    );
+
+    await dependencies.abortConversation('conv-1');
+    expect(capability.abortLiveSessionCapability).toHaveBeenCalledWith({ conversationId: 'conv-1' });
+    await expect(dependencies.readConversationStatus('conv-1')).resolves.toEqual({ state: 'idle' });
   });
 
   function latestRuntime() {
