@@ -146,7 +146,7 @@ const TYPING_INTERVAL_MS = 4_000;
 const TELEGRAM_MESSAGE_LIMIT = 4_096;
 const TELEGRAM_TOOL_STATUS_LIMIT = 180;
 const TELEGRAM_TRANSCRIPT_ENTRY_LIMIT = 280;
-const TELEGRAM_TRANSCRIPT_TOOL_PAYLOAD_LIMIT = 110;
+const TELEGRAM_TRANSCRIPT_FETCH_MULTIPLIER = 4;
 const RECENT_REPLY_DEDUPE_MS = 30_000;
 const TELEGRAM_GATEWAY_LOCK_FILE = 'telegram-gateway.poller.lock';
 const TELEGRAM_PICKER_TTL_MS = 10 * 60_000;
@@ -858,7 +858,9 @@ export class TelegramGatewayRuntime {
   ): Promise<string> {
     const safeCount = Math.min(Math.max(Math.trunc(count), 1), options.maxCount ?? 20);
     const model = await Promise.resolve(this.dependencies.getCurrentModel(conversationId)).catch(() => null);
-    const tail = this.dependencies.readConversationTail ? await this.dependencies.readConversationTail(conversationId, safeCount) : [];
+    const readCount = Math.min(Math.max(safeCount * TELEGRAM_TRANSCRIPT_FETCH_MULTIPLIER, safeCount), 100);
+    const tail = this.dependencies.readConversationTail ? await this.dependencies.readConversationTail(conversationId, readCount) : [];
+    const visibleTail = tail.filter((entry) => entry.role !== 'tool').slice(-safeCount);
     const heading = [
       `Thread: ${conversationTitle || conversationId}`,
       `ID: ${shortConversationId(conversationId)}`,
@@ -869,11 +871,14 @@ export class TelegramGatewayRuntime {
     if (tail.length === 0) {
       return `${heading}\n\nNo recent transcript available. Send a message to continue, or use /threads to switch.`;
     }
+    if (visibleTail.length === 0) {
+      return `${heading}\n\nNo recent user or assistant messages available. Tool output is hidden in Telegram previews.`;
+    }
     return [
       heading,
       '',
       options.label ?? 'Recent transcript:',
-      ...tail.map((entry, index) => formatTranscriptEntry(entry, index)),
+      ...visibleTail.map((entry, index) => formatTranscriptEntry(entry, index)),
       '',
       options.continuationHint ?? 'Send a message to continue, or use /tail 20 for more.',
     ].join('\n');
@@ -1576,45 +1581,12 @@ function truncateText(value: string, maxLength: number): string {
 
 function formatTranscriptEntry(entry: TelegramGatewayTranscriptEntry, index: number): string {
   const role = formatTranscriptRole(entry.role);
-  if (entry.role === 'tool') {
-    return formatToolTranscriptEntry(entry.text, index);
-  }
   const text = normalizeTranscriptText(entry.text);
   return `${index + 1}. ${role}\n   ${truncateText(text, TELEGRAM_TRANSCRIPT_ENTRY_LIMIT)}`;
 }
 
-function formatToolTranscriptEntry(text: string, index: number): string {
-  const normalized = normalizeTranscriptText(text);
-  const { title, payload } = splitToolTranscriptText(normalized);
-  const renderedTitle = truncateText(title || 'Tool', 80);
-  const payloadSummary = summarizeToolTranscriptPayload(payload);
-  return `${index + 1}. Tool - ${renderedTitle}${payloadSummary ? `\n   ${payloadSummary}` : ''}`;
-}
-
-function splitToolTranscriptText(text: string): { title: string; payload: string } {
-  const match = /^([^:\n]{1,120}):\s*([\s\S]+)$/.exec(text);
-  if (!match) return { title: text, payload: '' };
-  return { title: match[1]?.trim() ?? text, payload: match[2]?.trim() ?? '' };
-}
-
-function summarizeToolTranscriptPayload(payload: string): string {
-  if (!payload) return '';
-  if (isCodeLikeTranscriptPayload(payload)) {
-    return `code/log output omitted (${payload.length.toLocaleString('en-US')} chars)`;
-  }
-  return truncateText(normalizeTranscriptText(payload), TELEGRAM_TRANSCRIPT_TOOL_PAYLOAD_LIMIT);
-}
-
 function normalizeTranscriptText(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
-}
-
-function isCodeLikeTranscriptPayload(payload: string): boolean {
-  const compact = payload.trim();
-  if (compact.length > 220 && /(?:^|[\s;])(?:import|export|const|let|function|class|type|interface)\s/.test(compact)) return true;
-  if (compact.length > 220 && /(?:\.\.\/|\.\/|\/Users\/|node_modules\/|packages\/).*(?:;|{)/.test(compact)) return true;
-  const punctuationDensity = (compact.match(/[{};=<>]/g)?.length ?? 0) / Math.max(compact.length, 1);
-  return compact.length > 350 && punctuationDensity > 0.04;
 }
 
 function formatTranscriptRole(role: TelegramGatewayTranscriptEntry['role']): string {

@@ -404,14 +404,14 @@ describe('TelegramGatewayRuntime', () => {
 
     await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: '/tail 5' } });
 
-    expect(d.readConversationTail).toHaveBeenCalledWith('conv-1', 5);
+    expect(d.readConversationTail).toHaveBeenCalledWith('conv-1', 20);
     expect(d.fetch).toHaveBeenCalledWith(
       'https://api.telegram.org/bottoken/sendMessage',
       expect.objectContaining({ body: expect.stringContaining('In the Telegram gateway.') }),
     );
   });
 
-  it('formats tool-heavy tail previews as readable summaries', async () => {
+  it('omits tool calls from tail previews', async () => {
     commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'tail', count: 5 });
     state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
     const longImportOutput = [
@@ -424,6 +424,7 @@ describe('TelegramGatewayRuntime', () => {
     const d = deps({
       readConversationTail: vi.fn(async () => [
         { role: 'tool', text: 'bash finished: f5d453b8c fix: restore side chat rail marker 8c40b7308 Use main conversation page' },
+        { role: 'user', text: 'Can you catch me up?' },
         { role: 'tool', text: `bash finished: ${longImportOutput}` },
         { role: 'assistant', text: 'The gateway preview works.' },
       ]),
@@ -433,11 +434,32 @@ describe('TelegramGatewayRuntime', () => {
     await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: '/tail 5' } });
 
     const sendMessageBody = String(d.fetch.mock.calls.at(-1)?.[1]?.body ?? '');
-    expect(sendMessageBody).toContain('1. Tool - bash finished');
-    expect(sendMessageBody).toContain('2. Tool - bash finished');
-    expect(sendMessageBody).toContain('code/log output omitted');
+    expect(sendMessageBody).toContain('1. You');
+    expect(sendMessageBody).toContain('Can you catch me up?');
+    expect(sendMessageBody).toContain('2. Assistant');
+    expect(sendMessageBody).toContain('The gateway preview works.');
+    expect(sendMessageBody).not.toContain('Tool');
+    expect(sendMessageBody).not.toContain('bash finished');
     expect(sendMessageBody).not.toContain('useCallback');
-    expect(sendMessageBody).toContain('3. Assistant');
+  });
+
+  it('explains when a tail preview only has tool calls', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'tail', count: 5 });
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const d = deps({
+      readConversationTail: vi.fn(async () => [
+        { role: 'tool', text: 'bash finished: f5d453b8c fix: restore side chat rail marker' },
+        { role: 'tool', text: 'read finished: source file contents' },
+      ]),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: '/tail 5' } });
+
+    const sendMessageBody = String(d.fetch.mock.calls.at(-1)?.[1]?.body ?? '');
+    expect(sendMessageBody).toContain('No recent user or assistant messages available.');
+    expect(sendMessageBody).toContain('Tool output is hidden in Telegram previews.');
+    expect(sendMessageBody).not.toContain('bash finished');
   });
 
   it('shows and renames the thread title with /title', async () => {
