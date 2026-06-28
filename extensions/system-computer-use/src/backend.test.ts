@@ -29,7 +29,7 @@ describe('system-computer-use backend', () => {
       expect.objectContaining({
         ok: false,
         installed: false,
-        message: 'Cua Driver is not installed or is not on PATH.',
+        message: 'Cua Driver is not installed or is not reachable by Neon Pilot.',
         installHint: expect.stringContaining('Install Cua Driver'),
       }),
     );
@@ -52,7 +52,7 @@ describe('system-computer-use backend', () => {
     expect(callMcpToolDirectMock).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'cua-driver',
-        command: 'cua-driver',
+        command: expect.stringContaining('cua-driver'),
         args: ['mcp'],
         env: expect.objectContaining({ CUA_DRIVER_RS_TELEMETRY_ENABLED: '0', PATH: expect.stringContaining('/.local/bin') }),
       }),
@@ -69,7 +69,7 @@ describe('system-computer-use backend', () => {
     await expect(computerUseDoctor({}, createCtx())).resolves.toEqual(
       expect.objectContaining({
         ok: false,
-        message: 'Cua Driver is not installed or is not on PATH.',
+        message: 'Cua Driver is not installed or is not reachable by Neon Pilot.',
         error: 'spawn cua-driver ENOENT',
         installHint: expect.stringContaining('Install Cua Driver'),
       }),
@@ -77,7 +77,7 @@ describe('system-computer-use backend', () => {
     expect(callMcpToolDirectMock).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'cua-driver',
-        command: 'cua-driver',
+        command: expect.stringContaining('cua-driver'),
         args: ['mcp'],
         env: expect.objectContaining({ CUA_DRIVER_RS_TELEMETRY_ENABLED: '0', PATH: expect.stringContaining('/.local/bin') }),
       }),
@@ -93,13 +93,13 @@ describe('system-computer-use backend', () => {
     await expect(computerUse({ action: 'capture' }, createCtx())).resolves.toEqual(
       expect.objectContaining({
         ok: false,
-        message: 'Cua Driver is not installed or is not on PATH.',
+        message: 'Cua Driver is not installed or is not reachable by Neon Pilot.',
         error: 'spawn cua-driver ENOENT',
         installHint: expect.stringContaining('Install Cua Driver'),
       }),
     );
     expect(callMcpToolDirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({ command: 'cua-driver' }),
+      expect.objectContaining({ command: expect.stringContaining('cua-driver') }),
       'get_accessibility_tree',
       {},
       expect.objectContaining({ timeoutMs: 30_000 }),
@@ -206,10 +206,10 @@ describe('system-computer-use backend', () => {
     );
     expect(shellExec).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ command: 'cua-driver', args: ['--version'], timeoutMs: 10_000 }),
+      expect.objectContaining({ command: expect.stringContaining('cua-driver'), args: ['--version'], timeoutMs: 10_000 }),
     );
     expect(callMcpToolDirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({ command: 'cua-driver' }),
+      expect.objectContaining({ command: expect.stringContaining('cua-driver') }),
       'health_report',
       {},
       expect.objectContaining({ timeoutMs: 20_000 }),

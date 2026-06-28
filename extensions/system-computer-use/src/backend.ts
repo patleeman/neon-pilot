@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { callMcpToolDirect } from '@neon-pilot/extensions/backend/mcp';
 
@@ -33,6 +35,10 @@ type CuaDriverResolution = {
 
 const CUA_DRIVER_COMMAND = 'cua-driver';
 const CUA_DRIVER_PATH_DIRS = [`${process.env.HOME ?? ''}/.local/bin`, '/opt/homebrew/bin', '/usr/local/bin'].filter(Boolean);
+const CUA_DRIVER_KNOWN_PATHS = [
+  '/Applications/CuaDriver.app/Contents/MacOS/cua-driver',
+  `${process.env.HOME ?? ''}/Applications/CuaDriver.app/Contents/MacOS/cua-driver`,
+].filter(Boolean);
 
 function buildCuaDriverEnv(): Record<string, string> {
   const env = Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
@@ -45,6 +51,10 @@ function buildCuaDriverEnv(): Record<string, string> {
 }
 
 function resolveCuaDriver(command = CUA_DRIVER_COMMAND): CuaDriverResolution {
+  if (command === CUA_DRIVER_COMMAND) {
+    const bundledAppCommand = CUA_DRIVER_KNOWN_PATHS.find((candidate) => existsSync(candidate));
+    if (bundledAppCommand) return { command: bundledAppCommand, env: buildCuaDriverEnv() };
+  }
   return { command, env: buildCuaDriverEnv() };
 }
 
@@ -84,10 +94,10 @@ function isCuaDriverUnavailable(error: unknown): boolean {
 function cuaDriverUnavailableResult(error: unknown): Record<string, unknown> {
   return {
     ok: false,
-    message: 'Cua Driver is not installed or is not on PATH.',
+    message: 'Cua Driver is not installed or is not reachable by Neon Pilot.',
     error: messageFrom(error),
     installHint:
-      'Run the “Install Cua Driver” command, then grant Accessibility and Screen Recording permissions when prompted by your OS.',
+      'Run Computer Use: Install Cua Driver, then run Computer Use: Run Computer Use doctor and grant Accessibility and Screen Recording permissions when macOS prompts.',
   };
 }
 

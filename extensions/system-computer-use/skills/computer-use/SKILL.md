@@ -25,7 +25,8 @@ Rules:
 
 Troubleshooting:
 
-- macOS needs Accessibility and Screen Recording permissions for the app/terminal running Neon Pilot.
-- Cua Driver is installed separately by the `Install Cua Driver` command. The currently tested public workflow uses `cua-driver 0.6.8`.
+- macOS needs Accessibility and Screen Recording permissions for Cua Driver.
+- Cua Driver is not bundled or auto-installed on first use. It is installed by the `Install Cua Driver` command, then verified with the `Run Computer Use doctor` command.
+- The currently tested public workflow uses `cua-driver 0.6.8`.
 - Windows over SSH may not have an interactive desktop; use an RDP/console session or Cua Driver's autostart pattern.
 - Linux needs a reachable display server and AT-SPI.
