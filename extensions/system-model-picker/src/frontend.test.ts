@@ -100,7 +100,7 @@ describe('formatModelTriggerLabel', () => {
     );
 
     expect(screen.getByLabelText('Conversation service tier')).toBeTruthy();
-    expect(screen.getAllByText('Use model default').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Standard queue').length).toBeGreaterThan(0);
     expect(screen.getByText('Automatic')).toBeTruthy();
     expect(screen.getByText('Priority')).toBeTruthy();
   });

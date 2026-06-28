@@ -2777,7 +2777,7 @@ export function SettingsPage({
     return resolveSettingsModelOption(modelState.models, modelState.currentModel);
   }, [modelState]);
   const selectedModelServiceTierOptions = useMemo(
-    () => getModelSelectableServiceTierOptions(selectedModel, { includeDefaultOption: true, defaultLabel: 'Use model default' }),
+    () => getModelSelectableServiceTierOptions(selectedModel, { includeDefaultOption: true, defaultLabel: 'Standard queue' }),
     [selectedModel],
   );
   const availableModelProviderIds = useMemo(
@@ -3851,9 +3851,7 @@ export function SettingsPage({
                               savingPreference === 'serviceTier'
                                 ? 'Saving...'
                                 : `Default for ${selectedModel?.name ?? 'the selected model'}: ${
-                                    modelState.currentServiceTier
-                                      ? formatServiceTierLabel(modelState.currentServiceTier)
-                                      : 'Use model default'
+                                    modelState.currentServiceTier ? formatServiceTierLabel(modelState.currentServiceTier) : 'Standard queue'
                                   }`
                             }
                           >

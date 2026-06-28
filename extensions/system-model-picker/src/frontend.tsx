@@ -302,8 +302,8 @@ function useDs4Health(
 
 function thinkingOptions(model: Model | null): Array<{ value: string; label: string }> {
   const all = [
-    { value: '', label: 'Unset' },
-    { value: 'off', label: 'Off' },
+    { value: '', label: 'Default thinking' },
+    { value: 'off', label: 'Thinking off' },
     { value: 'low', label: 'Low' },
     { value: 'medium', label: 'Medium' },
     { value: 'high', label: 'High' },
@@ -732,7 +732,7 @@ function ServiceTierSelect({ context, variant }: { context: ComposerControlConte
     return null;
   }
 
-  const selectedLabel = context.currentServiceTier ? formatServiceTierLabel(context.currentServiceTier) : 'Use model default';
+  const selectedLabel = context.currentServiceTier ? formatServiceTierLabel(context.currentServiceTier) : 'Standard queue';
   const disabled = context.savingPreference !== null;
   const triggerClass = variant === 'menu' ? MENU_TRIGGER_CLASS : cx(INLINE_TRIGGER_CLASS, 'max-w-[6.5rem] min-w-[5.75rem]');
   return (
@@ -764,7 +764,7 @@ function ServiceTierSelect({ context, variant }: { context: ComposerControlConte
           className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'w-full min-w-44' : 'w-40')}
         >
           <MenuButton onClick={() => context.selectServiceTier('')} checked={!context.currentServiceTier}>
-            Use model default
+            Standard queue
           </MenuButton>
           {serviceTiers.map((tier) => (
             <MenuButton key={tier} onClick={() => context.selectServiceTier(tier)} checked={tier === context.currentServiceTier}>

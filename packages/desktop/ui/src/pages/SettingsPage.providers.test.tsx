@@ -651,13 +651,9 @@ describe('SettingsPage provider model editor', () => {
       throw new Error('Expected service tier select');
     }
 
-    expect(Array.from(serviceTierSelect.options).map((option) => option.textContent)).toEqual([
-      'Use model default',
-      'Automatic',
-      'Priority',
-    ]);
+    expect(Array.from(serviceTierSelect.options).map((option) => option.textContent)).toEqual(['Standard queue', 'Automatic', 'Priority']);
     expect(container.textContent).toContain('Service tier');
-    expect(container.textContent).toContain('Default for GPT-5.4: Use model default');
+    expect(container.textContent).toContain('Default for GPT-5.4: Standard queue');
     expect(container.textContent).not.toContain('priority');
 
     updateSelectValue(serviceTierSelect, 'priority');

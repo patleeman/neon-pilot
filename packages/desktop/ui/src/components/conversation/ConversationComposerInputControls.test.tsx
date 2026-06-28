@@ -247,7 +247,7 @@ describe('ConversationComposerInputControls', () => {
     });
 
     expect(html).toContain('aria-label="Service tier"');
-    expect(html).toContain('Use model default');
+    expect(html).toContain('Standard queue');
     expect(html).toContain('Automatic');
     expect(html).toContain('Priority');
   });

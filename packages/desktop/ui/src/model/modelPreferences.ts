@@ -5,8 +5,8 @@ function normalizeModelId(value: unknown): string {
 }
 
 export const THINKING_LEVEL_OPTIONS = [
-  { value: '', label: 'Unset' },
-  { value: 'off', label: 'Off' },
+  { value: '', label: 'Default thinking' },
+  { value: 'off', label: 'Thinking off' },
   { value: 'low', label: 'Low' },
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
