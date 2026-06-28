@@ -68,6 +68,7 @@ describe('model registry helpers', () => {
       getAvailable: vi.fn(() => []),
       find: vi.fn(),
       getApiKeyAndHeaders: vi.fn(async () => ({ ok: false, error: 'No API key found for provider opencode-go' })),
+      hasConfiguredAuth: vi.fn(() => false),
     };
     getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
     resolveIndexedProviderApiKeyMock.mockReturnValue('secure-key');
@@ -79,6 +80,7 @@ describe('model registry helpers', () => {
     expect(created).toBe(registry);
     expect(created.getAvailable()).toEqual([secretBackedModel]);
     expect(resolveIndexedProviderApiKeyMock).toHaveBeenCalledWith('opencode-go');
+    expect(created.hasConfiguredAuth(secretBackedModel as never)).toBe(true);
     await expect(created.getApiKeyAndHeaders(secretBackedModel as never)).resolves.toEqual({
       ok: true,
       apiKey: 'secure-key',

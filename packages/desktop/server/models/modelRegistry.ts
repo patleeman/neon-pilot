@@ -37,6 +37,8 @@ function applyNeonPilotRegistryOverrides(registry: ModelRegistry): ModelRegistry
   const originalGetAvailable = registry.getAvailable.bind(registry);
   const originalFind = registry.find.bind(registry);
   const originalGetApiKeyAndHeaders = registry.getApiKeyAndHeaders.bind(registry);
+  const originalHasConfiguredAuth =
+    typeof registry.hasConfiguredAuth === 'function' ? registry.hasConfiguredAuth.bind(registry) : undefined;
   const modelKey = (model: RegistryModel) => `${model.provider}\0${model.id}`;
 
   registry.getAll = () =>
@@ -66,6 +68,9 @@ function applyNeonPilotRegistryOverrides(registry: ModelRegistry): ModelRegistry
     if (!apiKey) return result;
     return result.ok ? { ...result, apiKey } : { ok: true, apiKey };
   };
+  if (originalHasConfiguredAuth) {
+    registry.hasConfiguredAuth = (model) => originalHasConfiguredAuth(model) || Boolean(resolveIndexedProviderApiKey(model.provider));
+  }
 
   return registry;
 }
