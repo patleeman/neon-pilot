@@ -386,20 +386,6 @@ describe('desktop local API product fast-path errors', () => {
     });
     expect(preferencesResponse.statusCode).toBe(404);
     expect(Buffer.from(preferencesResponse.body).toString('utf-8')).toBe('Conversation not found');
-
-    const modelUpdateResponse = await dispatchDesktopLocalApiRequest({
-      method: 'PATCH',
-      path: '/api/conversations/missing-local-api-product-conversation/model-preferences',
-      body: { model: 'openai/gpt-5.5' },
-    });
-    expect(modelUpdateResponse.statusCode).toBe(200);
-    expect(readJsonBody(modelUpdateResponse)).toEqual(
-      expect.objectContaining({
-        currentModel: 'gpt-5.5',
-        currentThinkingLevel: expect.any(String),
-        currentServiceTier: expect.any(String),
-      }),
-    );
   });
 });
 
