@@ -26,14 +26,38 @@ type McpOperationResult<T = unknown> = {
   data?: T;
 };
 
-const CUA_SERVER = {
-  name: 'cua-driver',
-  transport: 'stdio' as const,
-  command: 'cua-driver',
-  args: ['mcp'],
-  env: { CUA_DRIVER_RS_TELEMETRY_ENABLED: '0' },
-  raw: { allowToolCalls: true },
+type CuaDriverResolution = {
+  command: string;
+  env: Record<string, string>;
 };
+
+const CUA_DRIVER_COMMAND = 'cua-driver';
+const CUA_DRIVER_PATH_DIRS = [`${process.env.HOME ?? ''}/.local/bin`, '/opt/homebrew/bin', '/usr/local/bin'].filter(Boolean);
+
+function buildCuaDriverEnv(): Record<string, string> {
+  const env = Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
+  const pathEntries = [...CUA_DRIVER_PATH_DIRS, env.PATH ?? ''].filter(Boolean);
+  return {
+    ...env,
+    PATH: pathEntries.join(':'),
+    CUA_DRIVER_RS_TELEMETRY_ENABLED: '0',
+  };
+}
+
+function resolveCuaDriver(command = CUA_DRIVER_COMMAND): CuaDriverResolution {
+  return { command, env: buildCuaDriverEnv() };
+}
+
+function cuaServerConfig(resolution = resolveCuaDriver()) {
+  return {
+    name: 'cua-driver',
+    transport: 'stdio' as const,
+    command: resolution.command,
+    args: ['mcp'],
+    env: { CUA_DRIVER_RS_TELEMETRY_ENABLED: '0' },
+    raw: { allowToolCalls: true },
+  };
+}
 
 const MUTATING_ACTIONS = new Set<ComputerUseAction>(['click', 'type', 'key', 'scroll', 'drag', 'focus_app']);
 const BLOCKED_KEY_PATTERNS = [/lock/i, /logout/i, /log\s*out/i, /force\s*quit/i, /delete/i, /trash/i];
@@ -143,8 +167,10 @@ function assertSafeInput(input: ComputerUseInput): void {
 async function callCuaTool(input: ComputerUseInput, ctx: ExtensionBackendContext): Promise<unknown> {
   assertSafeInput(input);
   const { tool, args } = mcpToolFor(input);
-  ctx.log.info('Calling Cua Driver tool', { action: input.action, tool });
-  const result = (await callMcpToolDirect(CUA_SERVER, tool, args, {
+  const resolution = resolveCuaDriver();
+  ctx.log.info('Calling Cua Driver tool', { action: input.action, tool, command: resolution.command });
+  const result = (await callMcpToolDirect(cuaServerConfig(resolution), tool, args, {
+    env: resolution.env,
     timeoutMs: input.action === 'doctor' || input.action === 'status' ? 20_000 : 30_000,
     log: (message: string) => ctx.log.info(message),
   })) as McpOperationResult;
@@ -180,7 +206,8 @@ export async function computerUse(input: ComputerUseInput, ctx: ExtensionBackend
 
 export async function computerUseStatus(_input: unknown, ctx: ExtensionBackendContext): Promise<unknown> {
   try {
-    const version = await ctx.shell.exec({ command: 'cua-driver', args: ['--version'], timeoutMs: 10_000 });
+    const resolution = resolveCuaDriver();
+    const version = await ctx.shell.exec({ command: resolution.command, args: ['--version'], env: resolution.env, timeoutMs: 10_000 });
     const health = await callCuaTool({ action: 'status' }, ctx).catch((error) => ({ error: messageFrom(error) }));
     return {
       ok: true,
@@ -229,8 +256,9 @@ export async function computerUseInstall(_input: unknown, ctx: ExtensionBackendC
       installCommand: command,
     };
   }
+  const resolution = resolveCuaDriver();
   const version = await ctx.shell
-    .exec({ command: 'cua-driver', args: ['--version'], timeoutMs: 10_000 })
+    .exec({ command: resolution.command, args: ['--version'], env: resolution.env, timeoutMs: 10_000 })
     .then((output) => output.stdout.trim() || output.stderr.trim())
     .catch((error) => `Unable to verify version: ${messageFrom(error)}`);
   const health = await callCuaTool({ action: 'status' }, ctx).catch((error) => ({ error: messageFrom(error) }));

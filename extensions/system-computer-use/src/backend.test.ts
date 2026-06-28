@@ -58,8 +58,9 @@ describe('system-computer-use backend', () => {
       }),
       'health_report',
       {},
-      expect.objectContaining({ timeoutMs: 20_000 }),
+      expect.objectContaining({ timeoutMs: 20_000, env: expect.objectContaining({ CUA_DRIVER_RS_TELEMETRY_ENABLED: '0' }) }),
     );
+    expect(callMcpToolDirectMock.mock.calls[0]?.[3]?.env?.PATH).toContain('/.local/bin');
   });
 
   it('reports a recovery hint when the Cua Driver doctor cannot run', async () => {
