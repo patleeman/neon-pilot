@@ -16,14 +16,16 @@ describe('extension command notifications', () => {
       buildExtensionCommandNotification(command, {
         ok: false,
         installed: false,
-        message: 'Cua Driver is not installed or is not on PATH.',
+        message: 'Cua Driver is not installed or is not reachable by Neon Pilot.',
         error: 'spawn cua-driver ENOENT',
-        installHint: 'Run the Install Cua Driver command, then grant Accessibility and Screen Recording permissions.',
+        installHint:
+          'Run Computer Use: Install Cua Driver, then run Computer Use: Run Computer Use doctor and grant Accessibility and Screen Recording permissions when macOS prompts.',
       }),
     ).toEqual({
       type: 'warning',
-      message: 'Cua Driver is not installed or is not on PATH.',
-      details: 'Run the Install Cua Driver command, then grant Accessibility and Screen Recording permissions.',
+      message: 'Cua Driver is not installed or is not reachable by Neon Pilot.',
+      details:
+        'Run Computer Use: Install Cua Driver, then run Computer Use: Run Computer Use doctor and grant Accessibility and Screen Recording permissions when macOS prompts.',
       source: 'Computer Use',
     });
   });
