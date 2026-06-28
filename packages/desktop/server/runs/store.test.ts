@@ -1,5 +1,5 @@
 import { openSqliteDatabase } from '@neon-pilot/core';
-import { existsSync, mkdtempSync, readdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -9,6 +9,7 @@ import {
   appendDurableRunEvent,
   createDurableRunManifest,
   createInitialDurableRunStatus,
+  deleteDurableRun,
   type DurableRunCheckpointFile,
   listDurableRunIds,
   loadDurableRunCheckpoint,
@@ -187,6 +188,45 @@ describe('durable run store', () => {
     expect(existsSync(paths.manifestPath)).toBe(false);
     expect(existsSync(paths.statusPath)).toBe(false);
     expect(existsSync(paths.checkpointPath)).toBe(false);
+  });
+
+  it('deletes durable run rows, events, and run files', async () => {
+    const runsRoot = createTempDir('durable-runs-store-delete-');
+    const paths = resolveDurableRunPaths(runsRoot, 'run-delete');
+    saveDurableRunManifest(
+      paths.manifestPath,
+      createDurableRunManifest({
+        id: 'run-delete',
+        kind: 'raw-shell',
+        resumePolicy: 'manual',
+        createdAt: '2026-03-12T18:00:00Z',
+      }),
+    );
+    saveDurableRunStatus(
+      paths.statusPath,
+      createInitialDurableRunStatus({
+        runId: 'run-delete',
+        status: 'completed',
+        createdAt: '2026-03-12T18:00:00Z',
+        updatedAt: '2026-03-12T18:01:00Z',
+      }),
+    );
+    await appendDurableRunEvent(paths.eventsPath, {
+      version: 1,
+      runId: 'run-delete',
+      timestamp: '2026-03-12T18:00:30.000Z',
+      type: 'started',
+    });
+    mkdirSync(paths.root, { recursive: true });
+    writeFileSync(paths.outputLogPath, 'hello\n');
+
+    expect(listDurableRunIds(runsRoot)).toContain('run-delete');
+    expect(readDurableRunEvents(paths.eventsPath)).toHaveLength(1);
+
+    expect(deleteDurableRun(runsRoot, 'run-delete')).toBe(true);
+    expect(listDurableRunIds(runsRoot)).not.toContain('run-delete');
+    expect(readDurableRunEvents(paths.eventsPath)).toEqual([]);
+    expect(existsSync(paths.root)).toBe(false);
   });
 
   it('quarantines and recreates a corrupt runtime sqlite database', () => {

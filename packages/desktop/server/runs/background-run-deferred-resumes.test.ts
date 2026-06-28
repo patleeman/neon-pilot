@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'fs';
+import { mkdtempSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -299,5 +299,54 @@ describe('background run result surfacing', () => {
     expect(surfaced.resultId).toBeTruthy();
     const checkpoint = loadDurableRunCheckpoint(run.checkpointPath);
     expect((checkpoint?.payload?.backgroundRunResume as { surfacedAt?: string } | undefined)?.surfacedAt).toBe('2026-03-22T19:00:05.000Z');
+  });
+
+  it('does not surface results when callback metadata points at a different session owner', async () => {
+    const tempRoot = createTempDir('pa-background-run-results-');
+    const runsRoot = join(tempRoot, 'runs');
+    const sessionDir = createTempDir('pa-background-run-session-');
+    const sessionFile = join(sessionDir, 'conversation.jsonl');
+
+    const record = await createBackgroundRunRecord(tempRoot, {
+      taskSlug: 'mismatched-owner-task',
+      cwd: createTempDir('bg-run-mismatched-cwd-'),
+      argv: [process.execPath, '-e', 'console.log("done")'],
+      source: {
+        type: 'tool',
+        id: 'conv-new',
+        filePath: sessionFile,
+      },
+      callbackConversation: {
+        conversationId: 'conv-new',
+        sessionFile,
+        profile: 'shared',
+      },
+      checkpointPayload: {
+        resumeParentOnExit: true,
+      },
+      createdAt: '2026-03-22T19:00:00.000Z',
+    });
+    writeFileSync(sessionFile, '{"type":"session","id":"conv-original","timestamp":"2026-03-22T19:00:00.000Z","cwd":"/tmp/workspace"}\n');
+
+    await finalizeBackgroundRun({
+      runId: record.runId,
+      runPaths: record.paths,
+      taskSlug: 'mismatched-owner-task',
+      cwd: createTempDir('bg-run-mismatched-finished-cwd-'),
+      startedAt: '2026-03-22T19:00:01.000Z',
+      endedAt: '2026-03-22T19:00:05.000Z',
+      exitCode: 0,
+      signal: null,
+      cancelled: false,
+    });
+
+    await expect(
+      surfaceBackgroundRunResultsIfReady({
+        runsRoot,
+        triggerRunId: record.runId,
+        now: new Date('2026-03-22T19:00:05.000Z'),
+      }),
+    ).resolves.toEqual({ surfacedRunIds: [] });
+    expect(listPendingBackgroundRunResults({ runsRoot, sessionFile })).toEqual([]);
   });
 });

@@ -432,13 +432,15 @@ describe('createAttentionEventFlusher', () => {
 
     await flush();
 
-    const visiblePrompt = 'Background task information-architecture-eval completed';
+    const visiblePrompt = 'System resumed after a background task completed.';
     expect(queuePromptContextMock).toHaveBeenCalledWith(
       'conv-1',
       'background_auto_resume',
       expect.stringContaining('Background task run-123 has finished.'),
     );
     expect(promptSessionMock).toHaveBeenCalledWith('conv-1', visiblePrompt, undefined);
+    expect(promptSessionMock.mock.calls[0]?.[1]).not.toContain('information-architecture-eval');
+    expect(promptSessionMock.mock.calls[0]?.[1]).not.toContain('run-123');
     expect(syncWebLiveConversationRunMock).toHaveBeenCalledWith(
       expect.objectContaining({
         pendingOperation: expect.objectContaining({
@@ -575,9 +577,9 @@ describe('createAttentionEventFlusher', () => {
     await flush();
 
     expect(promptSessionMock).toHaveBeenCalledTimes(1);
-    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', expect.stringContaining('Multiple wakeups are ready'), undefined);
-    expect(promptSessionMock.mock.calls[0]?.[1]).toContain('Background task publish failed');
-    expect(promptSessionMock.mock.calls[0]?.[1]).toContain('Background task publish retry failed');
+    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', 'System resumed after background tasks completed.', undefined);
+    expect(promptSessionMock.mock.calls[0]?.[1]).not.toContain('publish failed');
+    expect(promptSessionMock.mock.calls[0]?.[1]).not.toContain('publish retry failed');
     expect(queuePromptContextMock).toHaveBeenCalledTimes(2);
     expect(queuePromptContextMock).toHaveBeenCalledWith(
       'conv-1',

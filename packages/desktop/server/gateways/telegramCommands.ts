@@ -7,6 +7,7 @@ export type TelegramGatewayCommand =
   | { kind: 'resume' }
   | { kind: 'new' }
   | { kind: 'threads' }
+  | { kind: 'tail'; count?: number }
   | { kind: 'switch'; target?: string }
   | { kind: 'attach' }
   | { kind: 'detach' }
@@ -45,6 +46,11 @@ export function parseTelegramGatewayCommand(text: string): TelegramGatewayComman
     case '/threads':
     case '/sessions':
       return { kind: 'threads' };
+    case '/tail':
+    case '/transcript': {
+      const count = arg ? Number.parseInt(arg, 10) : undefined;
+      return { kind: 'tail', count: Number.isFinite(count) ? count : undefined };
+    }
     case '/thread':
     case '/switch':
       return arg ? { kind: 'switch', target: arg } : { kind: 'switch' };
@@ -77,6 +83,7 @@ export function formatTelegramGatewayHelp(): string {
     '/new or /reset — start a new conversation',
     '/threads — list recent conversations',
     '/switch <number|id|title> — switch this chat to another conversation',
+    '/tail [count] — show recent messages in the current thread',
     '/attach — attach this chat as the main gateway thread',
     '/detach — detach this chat',
     '/stop or /pause — stop replies',

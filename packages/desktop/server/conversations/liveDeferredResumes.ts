@@ -32,6 +32,8 @@ import {
 } from './liveSessions.js';
 
 const DEFAULT_RETRY_DELAY_MS = 30_000;
+const BACKGROUND_RUN_AUTO_RESUME_VISIBLE_PROMPT = 'System resumed after a background task completed.';
+const BACKGROUND_RUN_BATCH_AUTO_RESUME_VISIBLE_PROMPT = 'System resumed after background tasks completed.';
 
 type DeliveryMode = 'batchable' | 'sequential' | 'isolated';
 
@@ -134,9 +136,8 @@ function buildPromptDeliveryForDeferredResume(entry: DeferredResumeLike): {
     };
   }
 
-  const title = entry.title?.trim() || (entry.source.id ? `Background task ${entry.source.id} finished` : 'Background task finished');
   return {
-    visiblePrompt: title,
+    visiblePrompt: BACKGROUND_RUN_AUTO_RESUME_VISIBLE_PROMPT,
     contextMessages: [
       {
         customType: 'background_auto_resume',
@@ -163,15 +164,22 @@ function buildPromptDeliveryForDeferredResumeBatch(entries: DeferredResumeLike[]
   }
 
   const contextMessages: Array<{ customType: string; content: string }> = [];
-  const lines = ['Multiple wakeups are ready. Handle them in priority/order.', '', 'Events:'];
+  const allBackgroundRuns = entries.every((entry) => entry.source?.kind === 'background-run');
+  const lines = allBackgroundRuns
+    ? [BACKGROUND_RUN_BATCH_AUTO_RESUME_VISIBLE_PROMPT]
+    : ['Multiple wakeups are ready. Handle them in priority/order.', '', 'Events:'];
 
   entries.forEach((entry, index) => {
     const title = entry.title?.trim() || `Wakeup ${index + 1}`;
     const kind = entry.source?.kind ?? 'deferred-resume';
-    lines.push('', `${index + 1}. [${kind}] ${title}`);
+    if (!allBackgroundRuns) {
+      lines.push('', `${index + 1}. [${kind}] ${kind === 'background-run' ? 'Background task completed' : title}`);
+    }
 
     if (entry.source?.kind === 'background-run') {
-      lines.push('   Details are available in internal context.');
+      if (!allBackgroundRuns) {
+        lines.push('   Details are available in internal context.');
+      }
       contextMessages.push({
         customType: 'background_auto_resume',
         content: [
@@ -193,11 +201,13 @@ function buildPromptDeliveryForDeferredResumeBatch(entries: DeferredResumeLike[]
     });
   });
 
-  lines.push(
-    '',
-    'Automated wakeup · all events above were injected by the system, not the user.',
-    'Execute each task and give the user one concise update unless an event requires a separate action.',
-  );
+  if (!allBackgroundRuns) {
+    lines.push(
+      '',
+      'Automated wakeup · all events above were injected by the system, not the user.',
+      'Execute each task and give the user one concise update unless an event requires a separate action.',
+    );
+  }
   return {
     visiblePrompt: lines.join('\n'),
     contextMessages,

@@ -2,6 +2,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import { dirname } from 'path';
 
 import { type BackgroundRunAgentSpec, buildBackgroundAgentArgv } from '../daemon/background-run-agent.js';
+import { findBackgroundRunCallbackOwnerMismatch } from './background-run-callback-ownership.js';
 import { scheduleRun, type ScheduleRunInput, type TargetAgent, type TargetShell, type TriggerNow } from './schedule-run.js';
 import {
   appendDurableRunEvent,
@@ -153,6 +154,16 @@ function ensureCommandSpec(input: StartBackgroundRunInput): {
   };
 }
 
+function assertCallbackConversationOwnerConsistent(input: StartBackgroundRunInput): void {
+  const mismatch = findBackgroundRunCallbackOwnerMismatch({
+    source: input.source,
+    owner: input.callbackConversation,
+  });
+  if (mismatch) {
+    throw new Error(`Background run callback conversation does not match the source: ${mismatch}.`);
+  }
+}
+
 function appendOutputLog(path: string, text: string): void {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   appendFileSync(path, text, 'utf-8');
@@ -176,6 +187,7 @@ export function createBackgroundRunId(taskSlug: string, createdAt: string): stri
 
 export async function createBackgroundRunRecord(runsRoot: string, input: StartBackgroundRunInput): Promise<StartBackgroundRunRecord> {
   const { argv, shellCommand, agent } = ensureCommandSpec(input);
+  assertCallbackConversationOwnerConsistent(input);
 
   const scheduleInput = buildScheduleRunInputFromBackgroundRun(input, argv, shellCommand, agent);
 

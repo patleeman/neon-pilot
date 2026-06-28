@@ -93,6 +93,13 @@ export interface TelegramGatewayConversationSummary {
   id: string;
   title?: string;
   updatedAt?: string;
+  snippet?: string;
+}
+
+export interface TelegramGatewayTranscriptEntry {
+  role: 'user' | 'assistant' | 'system' | 'tool';
+  text: string;
+  timestamp?: string;
 }
 
 interface TelegramGatewayModelSummary {
@@ -114,6 +121,7 @@ export interface TelegramGatewayRuntimeDependencies {
     images?: Array<{ data: string; mimeType: string; name?: string }>;
   }) => Promise<void>;
   readLatestAssistantReply?: (conversationId: string) => Promise<{ text: string; timestamp?: string } | null>;
+  readConversationTail?: (conversationId: string, count: number) => Promise<TelegramGatewayTranscriptEntry[]>;
   subscribeConversationEvents?: (conversationId: string, listener: (event: SseEvent) => void) => (() => void) | null;
   transcribeAudio?: (input: { dataBase64: string; mimeType?: string; fileName?: string; language?: string }) => Promise<{ text: string }>;
   renameConversation: (conversationId: string, title: string) => Promise<void> | void;
@@ -622,6 +630,15 @@ export class TelegramGatewayRuntime {
           reply_markup: await this.conversationKeyboard(),
         });
         return;
+      case 'tail':
+        await this.sendMessage(
+          target.externalChatId,
+          await this.formatThreadPreview(target.conversationId, target.conversationTitle, command.count ?? 8),
+          {
+            reply_markup: statusKeyboard(),
+          },
+        );
+        return;
       case 'switch':
         if (!command.target) {
           await this.sendMessage(
@@ -704,7 +721,31 @@ export class TelegramGatewayRuntime {
     if (conversations.length === 0) return 'No Neon Pilot conversations found. Send /new to start one.';
     return [
       prefix,
-      ...conversations.map((conversation, index) => `${index + 1}. ${conversation.title || conversation.id} — ${conversation.id}`),
+      ...conversations.map((conversation, index) => {
+        const title = conversation.title || conversation.id;
+        const snippet = conversation.snippet ? ` — ${truncateText(conversation.snippet, 80)}` : '';
+        return `${index + 1}. ${title}${snippet}\n   ${conversation.id}`;
+      }),
+    ].join('\n');
+  }
+
+  private async formatThreadPreview(conversationId: string, conversationTitle?: string, count = 6): Promise<string> {
+    const safeCount = Math.min(Math.max(Math.trunc(count), 1), 20);
+    const model = await Promise.resolve(this.dependencies.getCurrentModel(conversationId)).catch(() => null);
+    const tail = this.dependencies.readConversationTail ? await this.dependencies.readConversationTail(conversationId, safeCount) : [];
+    const heading = [`Thread: ${conversationTitle || conversationId}`, `ID: ${conversationId}`, model ? `Model: ${model}` : null]
+      .filter(Boolean)
+      .join('\n');
+    if (tail.length === 0) {
+      return `${heading}\n\nNo recent transcript available. Send a message to continue, or use /threads to switch.`;
+    }
+    return [
+      heading,
+      '',
+      'Recent transcript:',
+      ...tail.map((entry) => `${formatTranscriptRole(entry.role)}: ${truncateText(entry.text.replace(/\s+/g, ' ').trim(), 500)}`),
+      '',
+      'Send a message to continue, or use /tail 20 for more.',
     ].join('\n');
   }
 
@@ -783,6 +824,16 @@ export class TelegramGatewayRuntime {
       return;
     }
 
+    upsertGatewayChatTarget({
+      stateRoot: this.dependencies.stateRoot,
+      profile: this.dependencies.profile,
+      provider: 'telegram',
+      externalChatId: chat.externalChatId,
+      externalChatLabel: chat.externalChatLabel,
+      conversationId: selected.id,
+      conversationTitle: selected.title,
+      repliesEnabled: true,
+    });
     attachGatewayConversation({
       stateRoot: this.dependencies.stateRoot,
       profile: this.dependencies.profile,
@@ -792,7 +843,9 @@ export class TelegramGatewayRuntime {
       externalChatId: chat.externalChatId,
       externalChatLabel: chat.externalChatLabel,
     });
-    await this.sendMessage(chat.externalChatId, `Switched this Telegram chat to ${selected.title || selected.id}.`);
+    await this.sendMessage(chat.externalChatId, await this.formatThreadPreview(selected.id, selected.title, 6), {
+      reply_markup: statusKeyboard(),
+    });
   }
 
   private async configureBotCommands(token: string): Promise<void> {
@@ -804,6 +857,8 @@ export class TelegramGatewayRuntime {
         { command: 'reset', description: 'Reset this chat to a new conversation' },
         { command: 'threads', description: 'List and switch conversations' },
         { command: 'sessions', description: 'List and switch conversations' },
+        { command: 'tail', description: 'Show recent thread messages' },
+        { command: 'transcript', description: 'Show recent thread messages' },
         { command: 'model', description: 'Show or change the model' },
         { command: 'status', description: 'Show current gateway status' },
         { command: 'whoami', description: 'Show your Telegram IDs and access status' },
@@ -1259,8 +1314,9 @@ function statusKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] }
     inline_keyboard: [
       [
         { text: 'Threads', callback_data: 'cmd:/threads' },
-        { text: 'Model', callback_data: 'cmd:/model' },
+        { text: 'Recent messages', callback_data: 'cmd:/tail' },
       ],
+      [{ text: 'Model', callback_data: 'cmd:/model' }],
       [
         { text: 'Pause replies', callback_data: 'cmd:/stop' },
         { text: 'Resume replies', callback_data: 'cmd:/resume' },
@@ -1301,6 +1357,24 @@ function commandKeyboard(): { inline_keyboard: TelegramInlineKeyboardButton[][] 
 function truncateButtonText(value: string): string {
   const trimmed = value.trim();
   return trimmed.length > 36 ? `${trimmed.slice(0, 33)}…` : trimmed;
+}
+
+function truncateText(value: string, maxLength: number): string {
+  const trimmed = value.trim();
+  return trimmed.length > maxLength ? `${trimmed.slice(0, Math.max(0, maxLength - 1))}…` : trimmed;
+}
+
+function formatTranscriptRole(role: TelegramGatewayTranscriptEntry['role']): string {
+  switch (role) {
+    case 'user':
+      return 'You';
+    case 'assistant':
+      return 'Assistant';
+    case 'tool':
+      return 'Tool';
+    case 'system':
+      return 'System';
+  }
 }
 
 function formatTelegramChatLabel(chat: TelegramChat): string {

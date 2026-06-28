@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 
+import { isBackgroundRunCallbackOwnerConsistent } from './background-run-callback-ownership.js';
 import { getBackgroundRunCallbackDelivery } from './background-run-callbacks.js';
 import {
   type DurableRunCheckpointFile,
@@ -108,6 +109,10 @@ function resolveEligibleBackgroundRun(run: ScannedDurableRun): EligibleBackgroun
   const resumeParentOnExit = isRecord(payload.metadata) && payload.metadata.resumeParentOnExit === true;
 
   if (!resumeParentOnExit) {
+    return undefined;
+  }
+
+  if (!isBackgroundRunCallbackOwnerConsistent(run)) {
     return undefined;
   }
 

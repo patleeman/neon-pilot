@@ -1,5 +1,5 @@
 import { loadAttentionEventsState, resolveAttentionEventsStateFile } from '@neon-pilot/core';
-import { mkdtempSync } from 'fs';
+import { mkdtempSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
@@ -273,6 +273,59 @@ describe('background run callbacks', () => {
         stateRoot,
         runsRoot,
         runId: run.runId,
+      }),
+    ).resolves.toEqual({ delivered: false });
+
+    const attentionState = loadAttentionEventsState(resolveAttentionEventsStateFile(stateRoot));
+    expect(Object.keys(attentionState.events)).toEqual([]);
+  });
+
+  it('does not create callback wakeups when callback metadata points at a different session owner', async () => {
+    const daemonRoot = createTempDir('pa-background-run-callback-daemon-');
+    const stateRoot = createTempDir('pa-background-run-callback-state-');
+    const runsRoot = join(daemonRoot, 'runs');
+    const sessionDir = createTempDir('pa-background-run-callback-session-');
+    const sessionFile = join(sessionDir, 'conversation.jsonl');
+
+    const record = await createBackgroundRunRecord(daemonRoot, {
+      taskSlug: 'mismatched-callback',
+      cwd: createTempDir('bg-run-callback-mismatched-cwd-'),
+      argv: [process.execPath, '-e', 'console.log("done")'],
+      source: {
+        type: 'tool',
+        id: 'conv-new',
+        filePath: sessionFile,
+      },
+      callbackConversation: {
+        conversationId: 'conv-new',
+        sessionFile,
+        profile: 'shared',
+      },
+      checkpointPayload: {
+        resumeParentOnExit: true,
+      },
+      createdAt: '2026-04-04T01:00:00.000Z',
+    });
+    writeFileSync(sessionFile, '{"type":"session","id":"conv-original","timestamp":"2026-04-04T01:00:00.000Z","cwd":"/tmp/workspace"}\n');
+
+    await finalizeBackgroundRun({
+      runId: record.runId,
+      runPaths: record.paths,
+      taskSlug: 'mismatched-callback',
+      cwd: createTempDir('bg-run-callback-mismatched-finished-cwd-'),
+      startedAt: '2026-04-04T01:00:01.000Z',
+      endedAt: '2026-04-04T01:05:00.000Z',
+      exitCode: 0,
+      signal: null,
+      cancelled: false,
+    });
+
+    await expect(
+      deliverBackgroundRunCallbackWakeup({
+        daemonRoot,
+        stateRoot,
+        runsRoot,
+        runId: record.runId,
       }),
     ).resolves.toEqual({ delivered: false });
 

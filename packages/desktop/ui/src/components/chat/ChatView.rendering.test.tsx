@@ -142,12 +142,12 @@ describe('ChatView rendering stability', () => {
     expect(nextAssistantNode?.getAttribute('data-message-index')).toBe('2');
   });
 
-  it('renders the streaming assistant tail as plain text until the stream settles', () => {
+  it('renders markdown in the streaming assistant tail before the stream settles', () => {
     const streamingTail = createStreamingTail('**streaming** tail');
     const { container, root } = renderChatView([streamingTail], { isStreaming: true });
 
-    expect(container.textContent).toContain('**streaming** tail');
-    expect(container.querySelector('strong')).toBeNull();
+    expect(container.textContent).toContain('streaming tail');
+    expect(container.querySelector('strong')?.textContent).toBe('streaming');
 
     act(() => {
       root.render(<ChatView messages={[streamingTail]} isStreaming={false} />);
@@ -157,14 +157,22 @@ describe('ChatView rendering stability', () => {
     expect(container.querySelector('strong')?.textContent).toBe('streaming');
   });
 
-  it('keeps completed markdown-looking chunks plain while the stream is active', () => {
+  it('renders completed markdown-looking chunks while the stream is active', () => {
     const streamingTail = createStreamingTail(['# Streaming title', '', '**active** tail'].join('\n'));
     const { container } = renderChatView([streamingTail], { isStreaming: true });
 
-    expect(container.textContent).toContain('# Streaming title');
-    expect(container.textContent).toContain('**active** tail');
-    expect(container.querySelector('h1')).toBeNull();
-    expect(container.querySelector('strong')).toBeNull();
+    expect(container.textContent).toContain('Streaming title');
+    expect(container.textContent).toContain('active tail');
+    expect(container.querySelector('h1')?.textContent).toBe('Streaming title');
+    expect(container.querySelector('strong')?.textContent).toBe('active');
+  });
+
+  it('renders an unfinished streaming code fence as a code block', () => {
+    const streamingTail = createStreamingTail(['```ts', 'const value = 1;'].join('\n'));
+    const { container } = renderChatView([streamingTail], { isStreaming: true });
+
+    expect(container.querySelector('pre')?.textContent).toContain('const value = 1;');
+    expect(container.textContent).not.toContain('```');
   });
 
   it('keeps assistant ordered-list markers out of clipped overflow', () => {

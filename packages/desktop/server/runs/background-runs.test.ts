@@ -237,6 +237,28 @@ describe('background runs', () => {
     ).rejects.toThrow('Background agent run prompt must be non-empty.');
   });
 
+  it('rejects callback-bound runs when callback ownership contradicts the source', async () => {
+    const runsRoot = createTempDir('pa-background-run-callback-owner-errors-');
+
+    await expect(
+      createBackgroundRunRecord(runsRoot, {
+        taskSlug: 'bad-callback-owner',
+        cwd: '/tmp/workspace',
+        shellCommand: 'echo hi',
+        source: {
+          type: 'tool',
+          id: 'conv-source',
+          filePath: '/tmp/sessions/conv-source.jsonl',
+        },
+        callbackConversation: {
+          conversationId: 'conv-callback',
+          sessionFile: '/tmp/sessions/conv-source.jsonl',
+          profile: 'shared',
+        },
+      }),
+    ).rejects.toThrow('Background run callback conversation does not match the source');
+  });
+
   it('marks a run started and preserves checkpoint payload', async () => {
     const runsRoot = createTempDir('pa-background-run-started-');
     const record = await createBackgroundRunRecord(runsRoot, {

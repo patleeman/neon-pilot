@@ -1,12 +1,4 @@
-import React, {
-  Children,
-  cloneElement,
-  isValidElement,
-  memo,
-  type ReactElement,
-  type ReactNode,
-  useId,
-} from 'react';
+import React, { Children, cloneElement, isValidElement, memo, type ReactElement, type ReactNode, useId } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
@@ -505,19 +497,45 @@ export function renderMarkdownText(
   );
 }
 
-function renderPlainText(text: string) {
-  return <div className="whitespace-pre-wrap break-words">{text}</div>;
+export function prepareStreamingMarkdownText(text: string): string {
+  const lines = text.split('\n');
+  let openFence: { marker: string; length: number } | null = null;
+
+  for (const line of lines) {
+    const match = line.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (!match) {
+      continue;
+    }
+
+    const marker = match[1] ?? '';
+    const markerChar = marker[0] ?? '`';
+    if (!openFence) {
+      openFence = { marker: markerChar, length: marker.length };
+      continue;
+    }
+
+    if (markerChar === openFence.marker && marker.length >= openFence.length) {
+      openFence = null;
+    }
+  }
+
+  if (!openFence) {
+    return text;
+  }
+
+  const closingFence = openFence.marker.repeat(openFence.length);
+  return `${text}${text.endsWith('\n') ? '' : '\n'}${closingFence}`;
 }
 
 export function renderStreamingMarkdownText(
   text: string,
-  _options?: {
+  options?: {
     onOpenFilePath?: (path: string) => void;
     onOpenCheckpoint?: (checkpointId: string) => void;
     validatedFilePathTargets?: ReadonlySet<string>;
   },
 ) {
-  return renderPlainText(text);
+  return renderMarkdownText(prepareStreamingMarkdownText(text), options);
 }
 
 function parseSkillContentSections(content: string): { relativeTo: string | null; body: string } {

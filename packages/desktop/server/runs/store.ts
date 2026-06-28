@@ -1,5 +1,5 @@
 import type { SqliteDatabase } from '@neon-pilot/core';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, rmSync } from 'fs';
 import { basename, dirname, join } from 'path';
 
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
@@ -765,6 +765,28 @@ export function listDurableRunIds(runsRoot: string): string[] {
   const db = openRuntimeDb(resolveRuntimeDbPathFromRunsRoot(runsRoot));
   const rows = db.prepare('SELECT run_id FROM runs ORDER BY run_id ASC').all() as Array<{ run_id: string }>;
   return rows.map((row) => row.run_id);
+}
+
+export function deleteDurableRun(runsRoot: string, runId: string): boolean {
+  const paths = resolveDurableRunPaths(runsRoot, runId);
+  let deleted = false;
+
+  if (runtimeDbExists(runsRoot)) {
+    const db = openRuntimeDb(resolveRuntimeDbPathFromRunsRoot(runsRoot));
+    const tx = db.transaction(() => {
+      db.prepare('DELETE FROM run_events WHERE run_id = ?').run(runId);
+      const result = db.prepare('DELETE FROM runs WHERE run_id = ?').run(runId);
+      deleted = result.changes > 0;
+    });
+    tx();
+  }
+
+  if (existsSync(paths.root)) {
+    rmSync(paths.root, { recursive: true, force: true });
+    deleted = true;
+  }
+
+  return deleted;
 }
 
 export function scanDurableRun(runsRoot: string, runId: string): ScannedDurableRun | undefined {

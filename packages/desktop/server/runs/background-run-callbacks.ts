@@ -6,6 +6,7 @@ import {
   saveAttentionEventsState,
 } from '@neon-pilot/core';
 
+import { isBackgroundRunCallbackOwnerConsistent, readBackgroundRunCallbackOwner } from './background-run-callback-ownership.js';
 import {
   loadDurableRunCheckpoint,
   resolveDurableRunPaths,
@@ -136,15 +137,14 @@ function getBackgroundRunCallbackBinding(run: ScannedDurableRun): BackgroundRunC
     return undefined;
   }
 
-  const metadata = readMetadata(run);
-  const raw = isRecord(metadata?.callbackConversation) ? metadata.callbackConversation : undefined;
-  if (!raw) {
+  if (!isBackgroundRunCallbackOwnerConsistent(run)) {
     return undefined;
   }
 
-  const conversationId = readOptionalString(raw.conversationId);
-  const sessionFile = readOptionalString(raw.sessionFile);
-  const profile = readOptionalString(raw.profile);
+  const owner = readBackgroundRunCallbackOwner(run);
+  const conversationId = owner?.conversationId;
+  const sessionFile = owner?.sessionFile;
+  const profile = owner?.profile;
   if (!conversationId || !sessionFile || !profile) {
     return undefined;
   }
@@ -155,7 +155,7 @@ function getBackgroundRunCallbackBinding(run: ScannedDurableRun): BackgroundRunC
     conversationId,
     sessionFile,
     profile,
-    ...(readOptionalString(raw.repoRoot) ? { repoRoot: readOptionalString(raw.repoRoot) } : {}),
+    ...(owner.repoRoot ? { repoRoot: owner.repoRoot } : {}),
     alertLevel: readAlertLevel(callback?.alertLevel) ?? 'passive',
     autoResumeIfOpen: readOptionalBoolean(callback?.autoResumeIfOpen) ?? true,
     requireAck: readOptionalBoolean(callback?.requireAck) ?? false,

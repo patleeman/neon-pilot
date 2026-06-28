@@ -81,6 +81,20 @@ function isActiveExecutionStatus(status: string | undefined): boolean {
   return status === 'queued' || status === 'waiting' || status === 'running' || status === 'recovering';
 }
 
+function hasPendingOperation(run: ScannedDurableRun): boolean {
+  const payload = readRecord(run.checkpoint?.payload);
+  const pendingOperation = readRecord(payload?.pendingOperation);
+  return Boolean(readString(pendingOperation?.type));
+}
+
+function shouldListExecution(run: ScannedDurableRun): boolean {
+  if (run.manifest?.source?.type !== 'web-live-session' || run.status?.status !== 'waiting') {
+    return true;
+  }
+
+  return hasPendingOperation(run);
+}
+
 function readShellCommand(spec: Record<string, unknown> | undefined): string | undefined {
   const direct = readString(spec?.shellCommand);
   if (direct) return direct;
@@ -204,7 +218,7 @@ function sortExecutions(left: ExecutionRecord, right: ExecutionRecord): number {
 
 export async function listExecutions(): Promise<{ executions: ExecutionRecord[] }> {
   const result = await listDurableRuns();
-  return { executions: result.runs.map(projectExecution).sort(sortExecutions) };
+  return { executions: result.runs.filter(shouldListExecution).map(projectExecution).sort(sortExecutions) };
 }
 
 export async function listConversationExecutions(

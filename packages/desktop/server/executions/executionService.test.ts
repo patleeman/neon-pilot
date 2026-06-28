@@ -1,7 +1,26 @@
 import type { ScannedDurableRun } from '@neon-pilot/daemon';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { isExecutionActive, projectExecution } from './executionService.js';
+const { cancelDurableRunMock, followUpDurableRunMock, getDurableRunLogMock, getDurableRunMock, listDurableRunsMock, rerunDurableRunMock } =
+  vi.hoisted(() => ({
+    cancelDurableRunMock: vi.fn(),
+    followUpDurableRunMock: vi.fn(),
+    getDurableRunLogMock: vi.fn(),
+    getDurableRunMock: vi.fn(),
+    listDurableRunsMock: vi.fn(),
+    rerunDurableRunMock: vi.fn(),
+  }));
+
+vi.mock('../automation/durableRuns.js', () => ({
+  cancelDurableRun: cancelDurableRunMock,
+  followUpDurableRun: followUpDurableRunMock,
+  getDurableRun: getDurableRunMock,
+  getDurableRunLog: getDurableRunLogMock,
+  listDurableRuns: listDurableRunsMock,
+  rerunDurableRun: rerunDurableRunMock,
+}));
+
+import { isExecutionActive, listExecutions, projectExecution } from './executionService.js';
 
 function run(overrides: Partial<ScannedDurableRun>): ScannedDurableRun {
   return {
@@ -40,6 +59,15 @@ function run(overrides: Partial<ScannedDurableRun>): ScannedDurableRun {
 }
 
 describe('Execution projection', () => {
+  beforeEach(() => {
+    cancelDurableRunMock.mockReset();
+    followUpDurableRunMock.mockReset();
+    getDurableRunLogMock.mockReset();
+    getDurableRunMock.mockReset();
+    listDurableRunsMock.mockReset();
+    rerunDurableRunMock.mockReset();
+  });
+
   it('projects shell durable runs as primary background command executions', () => {
     expect(projectExecution(run({}))).toMatchObject({
       id: 'run-123',
@@ -150,8 +178,69 @@ describe('Execution projection', () => {
       },
     });
 
-    expect(projectExecution({ ...backgroundRun, status: { ...backgroundRun.status, status: 'running' } }).capabilities.canFollowUp).toBe(false);
-    expect(projectExecution({ ...backgroundRun, status: { ...backgroundRun.status, status: 'completed' } }).capabilities.canFollowUp).toBe(true);
-    expect(projectExecution({ ...backgroundRun, status: { ...backgroundRun.status, status: 'unknown' } }).capabilities.canFollowUp).toBe(false);
+    expect(projectExecution({ ...backgroundRun, status: { ...backgroundRun.status, status: 'running' } }).capabilities.canFollowUp).toBe(
+      false,
+    );
+    expect(projectExecution({ ...backgroundRun, status: { ...backgroundRun.status, status: 'completed' } }).capabilities.canFollowUp).toBe(
+      true,
+    );
+    expect(projectExecution({ ...backgroundRun, status: { ...backgroundRun.status, status: 'unknown' } }).capabilities.canFollowUp).toBe(
+      false,
+    );
+  });
+
+  it('filters idle live conversation bookkeeping rows from execution lists', async () => {
+    const idleLiveRun = run({
+      runId: 'conversation-live-idle',
+      manifest: {
+        version: 1,
+        id: 'conversation-live-idle',
+        kind: 'conversation',
+        resumePolicy: 'continue',
+        createdAt: '2026-05-15T00:00:00.000Z',
+        spec: {},
+        source: { type: 'web-live-session', id: 'conversation-live-idle' },
+      },
+      status: { ...run({}).status!, runId: 'conversation-live-idle', status: 'waiting' },
+      checkpoint: {
+        version: 1,
+        runId: 'conversation-live-idle',
+        updatedAt: '2026-05-15T00:01:00.000Z',
+        payload: { conversationId: 'idle' },
+      },
+    });
+    const pendingLiveRun = run({
+      runId: 'conversation-live-pending',
+      manifest: {
+        version: 1,
+        id: 'conversation-live-pending',
+        kind: 'conversation',
+        resumePolicy: 'continue',
+        createdAt: '2026-05-15T00:00:00.000Z',
+        spec: {},
+        source: { type: 'web-live-session', id: 'conversation-live-pending' },
+      },
+      status: { ...run({}).status!, runId: 'conversation-live-pending', status: 'waiting' },
+      checkpoint: {
+        version: 1,
+        runId: 'conversation-live-pending',
+        updatedAt: '2026-05-15T00:01:00.000Z',
+        payload: {
+          conversationId: 'pending',
+          pendingOperation: { type: 'prompt', text: 'continue' },
+        },
+      },
+    });
+
+    listDurableRunsMock.mockResolvedValue({ runs: [idleLiveRun, pendingLiveRun, run({ runId: 'run-shell' })] });
+
+    await expect(listExecutions()).resolves.toMatchObject({
+      executions: expect.arrayContaining([
+        expect.objectContaining({ id: 'conversation-live-pending' }),
+        expect.objectContaining({ id: 'run-shell' }),
+      ]),
+    });
+    const result = await listExecutions();
+    expect(result.executions.map((execution) => execution.id)).not.toContain('conversation-live-idle');
   });
 });

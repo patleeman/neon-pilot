@@ -66,6 +66,7 @@ import {
 import { applyConversationModelPreferencesToSessionManager } from '../conversations/conversationModelPreferences.js';
 import { recoverConversationCapability } from '../conversations/conversationRecovery.js';
 import { reserveConversationSession } from '../conversations/conversationReservation.js';
+import { cleanupDeletedConversationRuntime } from '../conversations/conversationRunCleanup.js';
 import { searchIndexedConversationContent } from '../conversations/conversationSearchIndex.js';
 import {
   appendConversationOffshootDetachedMetadata,
@@ -2203,6 +2204,15 @@ export async function syncDesktopDeletedConversations(input: { conversationIds?:
       destroySession(conversationId);
     }
   }
+  await cleanupDeletedConversationRuntime(
+    conversationIds.map((id) => {
+      const meta = readConversationSessionMeta(id);
+      return {
+        id,
+        ...(meta?.file ? { sessionFile: meta.file } : {}),
+      };
+    }),
+  );
   const result = deleteStoredConversations(conversationIds);
 
   const context = await getLocalServerRouteContext();

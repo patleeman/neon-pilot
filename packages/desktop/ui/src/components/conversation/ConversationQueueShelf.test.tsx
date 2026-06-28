@@ -5,8 +5,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ConversationQueueShelf } from './ConversationQueueShelf';
 import { CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT } from './conversationQueueCommands';
+import { ConversationQueueShelf } from './ConversationQueueShelf';
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -35,10 +35,11 @@ describe('ConversationQueueShelf', () => {
     );
 
     expect(html).toContain('Queued');
-    expect(html).toContain('⤵ steer');
     expect(html).toContain('Steer this');
     expect(html).toContain('restore');
-    expect(html).toContain('↷ followup');
+    expect(html).toContain('Follow up');
+    expect(html).not.toContain('⤵ steer');
+    expect(html).not.toContain('↷ followup');
     expect(html).toContain('(image only)');
     expect(html).toContain('2 images attached');
     expect(html).toContain('remote');

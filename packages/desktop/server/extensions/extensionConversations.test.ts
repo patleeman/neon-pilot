@@ -29,6 +29,10 @@ const live = vi.hoisted(() => ({
 const sessions = vi.hoisted(() => ({
   deleteSessions: vi.fn(),
   pruneSessionsByRetention: vi.fn(),
+  readSessionMeta: vi.fn(),
+}));
+const conversationRunCleanup = vi.hoisted(() => ({
+  cleanupDeletedConversationRuntime: vi.fn(),
 }));
 const titles = vi.hoisted(() => ({
   resolveStableSessionTitle: vi.fn((session: { name?: string }) => session.name ?? 'Stable Title'),
@@ -68,6 +72,7 @@ vi.mock('../conversations/liveSessionBroadcasts.js', () => broadcasts);
 vi.mock('../conversations/conversationReservation.js', () => reservation);
 vi.mock('../conversations/liveSessionCapability.js', () => liveSessionCapability);
 vi.mock('../conversations/conversationService.js', () => conversationService);
+vi.mock('../conversations/conversationRunCleanup.js', () => conversationRunCleanup);
 vi.mock('../conversations/liveSessions.js', () => live);
 vi.mock('../conversations/sessions.js', () => sessions);
 vi.mock('../conversations/liveSessionTitle.js', () => titles);
@@ -114,6 +119,7 @@ describe('extensionConversations', () => {
       live.registry.delete(conversationId);
     });
     sessions.deleteSessions.mockReturnValue({ deleted: [], missing: [] });
+    sessions.readSessionMeta.mockReturnValue(null);
     sessions.pruneSessionsByRetention.mockReturnValue({
       ok: true,
       dryRun: true,
@@ -121,6 +127,12 @@ describe('extensionConversations', () => {
       candidates: [],
       deleted: [],
       skipped: 0,
+    });
+    conversationRunCleanup.cleanupDeletedConversationRuntime.mockResolvedValue({
+      deletedRunIds: [],
+      cancelledRunIds: [],
+      removedAttentionEventIds: [],
+      failedCancellationRunIds: [],
     });
     liveSessionCapability.submitLiveSessionPromptCapability.mockResolvedValue({
       ok: true,
@@ -237,6 +249,7 @@ describe('extensionConversations', () => {
       remoteControlledConversationIds: ['live-delete', 'keep-remote'],
     };
     live.registry.set('live-delete', liveEntry());
+    sessions.readSessionMeta.mockReturnValue({ id: 'live-delete', file: '/sessions/live-delete.jsonl' });
     sessions.deleteSessions.mockReturnValue({
       deleted: [{ id: 'live-delete', file: '/sessions/live-delete.jsonl' }],
       missing: [],
@@ -254,6 +267,12 @@ describe('extensionConversations', () => {
 
     expect(live.destroySession).toHaveBeenCalledWith('live-delete');
     expect(live.destroySession.mock.invocationCallOrder[0]).toBeLessThan(sessions.deleteSessions.mock.invocationCallOrder[0] ?? 0);
+    expect(conversationRunCleanup.cleanupDeletedConversationRuntime).toHaveBeenCalledWith([
+      { id: 'live-delete', sessionFile: '/sessions/live-delete.jsonl' },
+    ]);
+    expect(conversationRunCleanup.cleanupDeletedConversationRuntime.mock.invocationCallOrder[0]).toBeLessThan(
+      sessions.deleteSessions.mock.invocationCallOrder[0] ?? 0,
+    );
     expect(uiPreferences.writeSavedUiPreferences).toHaveBeenCalledWith(
       {
         openConversationIds: ['keep-open'],
@@ -327,6 +346,12 @@ describe('extensionConversations', () => {
     });
     expect(live.destroySession).toHaveBeenCalledWith('live-old');
     expect(live.destroySession.mock.invocationCallOrder[0]).toBeLessThan(sessions.deleteSessions.mock.invocationCallOrder[0] ?? 0);
+    expect(conversationRunCleanup.cleanupDeletedConversationRuntime).toHaveBeenCalledWith([
+      { id: 'live-old', sessionFile: '/sessions/live-old.jsonl' },
+    ]);
+    expect(conversationRunCleanup.cleanupDeletedConversationRuntime.mock.invocationCallOrder[0]).toBeLessThan(
+      sessions.deleteSessions.mock.invocationCallOrder[0] ?? 0,
+    );
     expect(uiPreferences.writeSavedUiPreferences).toHaveBeenCalledWith(
       expect.objectContaining({
         archivedConversationIds: ['keep-archived'],

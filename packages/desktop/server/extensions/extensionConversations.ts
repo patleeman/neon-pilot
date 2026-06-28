@@ -437,7 +437,17 @@ export function createExtensionConversationsCapability(
       const conversationIds = [...new Set((input.conversationIds ?? []).map((id) => id.trim()).filter(Boolean))];
       if (conversationIds.length === 0) throw new Error('At least one conversation id is required.');
       await destroyLiveConversationsBeforeDeleting(conversationIds);
-      const { deleteSessions } = await import('../conversations/sessions.js');
+      const { cleanupDeletedConversationRuntime } = await import('../conversations/conversationRunCleanup.js');
+      const { deleteSessions, readSessionMeta } = await import('../conversations/sessions.js');
+      await cleanupDeletedConversationRuntime(
+        conversationIds.map((id) => {
+          const meta = readSessionMeta(id);
+          return {
+            id,
+            ...(meta?.file ? { sessionFile: meta.file } : {}),
+          };
+        }),
+      );
       const result = deleteSessions(conversationIds);
       await removeDeletedConversationWorkspaceReferences(conversationIds);
       invalidateAppTopics('sessions');
@@ -468,6 +478,8 @@ export function createExtensionConversationsCapability(
         return candidates;
       }
       await destroyLiveConversationsBeforeDeleting(candidates.candidates.map((entry) => entry.id));
+      const { cleanupDeletedConversationRuntime } = await import('../conversations/conversationRunCleanup.js');
+      await cleanupDeletedConversationRuntime(candidates.candidates.map((entry) => ({ id: entry.id, sessionFile: entry.file })));
       const { deleteSessions } = await import('../conversations/sessions.js');
       const deletedResult = deleteSessions(candidates.candidates.map((entry) => entry.id));
       const result = { ...candidates, dryRun: false, deleted: deletedResult.deleted };

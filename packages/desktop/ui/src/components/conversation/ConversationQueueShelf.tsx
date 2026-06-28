@@ -7,7 +7,7 @@ import {
   truncateConversationShelfText,
 } from '../../conversation/conversationComposerPresentation';
 import { setExtensionCommandContext } from '../../extensions/commands';
-import { Pill, SectionLabel, ShelfSection, TextButton } from '../ui';
+import { MetaLabel, ShelfSection, TextButton } from '../ui';
 import { CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT } from './conversationQueueCommands';
 
 export interface ConversationPendingQueueItem {
@@ -48,16 +48,17 @@ export function ConversationQueueShelf({
   return (
     <>
       {pendingQueue.length > 0 && (
-        <ShelfSection header={<SectionLabel className="px-3 pt-2.5">Queued</SectionLabel>} bodyClassName="gap-1.5 pt-1.5 pb-2">
+        <ShelfSection bodyClassName="gap-1.5 px-4 py-2.5">
           {pendingQueue.map((message) => {
             const runCallbackSummary = summarizeQueuedRunCallbackPrompt(message.text);
             const imageSummary = formatQueuedPromptImageSummary(message.imageCount);
+            const label = message.type === 'steer' ? 'Queued' : 'Follow up';
 
             return (
-              <div key={message.id} className="grid min-w-0 grid-cols-[auto,minmax(0,1fr),auto] items-start gap-x-2 gap-y-1">
-                <Pill tone={message.type === 'steer' ? 'warning' : 'teal'} className="mt-0.5">
-                  {message.type === 'steer' ? '⤵ steer' : '↷ followup'}
-                </Pill>
+              <div key={message.id} className="grid min-w-0 grid-cols-[auto,minmax(0,1fr),auto] items-start gap-x-2 gap-y-1 text-[12px]">
+                <MetaLabel tone="accent" className="pt-0.5 font-bold">
+                  {label}
+                </MetaLabel>
                 <div className="min-w-0">
                   {runCallbackSummary ? (
                     <>
