@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   CONVERSATION_TRANSCRIPT_JUMP_PADDING_BLOCKS,
   CONVERSATION_TRANSCRIPT_TAIL_BLOCKS_STEP,
+  hasReachedConversationTranscriptTailLimit,
+  MAX_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS,
   resolveNextConversationTranscriptTailBlocks,
   shouldResetConversationTranscriptTailBlocksForLiveTransition,
 } from './conversationTranscriptPaging';
@@ -39,14 +41,56 @@ describe('resolveNextConversationTranscriptTailBlocks', () => {
     ).toBe(500 - 120 + CONVERSATION_TRANSCRIPT_JUMP_PADDING_BLOCKS);
   });
 
-  it('clamps to the total transcript size', () => {
+  it('clamps to the supported window before the total transcript size', () => {
     expect(
       resolveNextConversationTranscriptTailBlocks({
-        currentTailBlocks: 900,
+        currentTailBlocks: MAX_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS - 50,
         requestedTailBlockStep: 500,
         totalBlocks: 1000,
       }),
-    ).toBe(1000);
+    ).toBe(MAX_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS);
+  });
+
+  it('clamps to the total transcript size when it is below the supported window', () => {
+    expect(
+      resolveNextConversationTranscriptTailBlocks({
+        currentTailBlocks: 240,
+        requestedTailBlockStep: 500,
+        totalBlocks: 500,
+      }),
+    ).toBe(500);
+  });
+
+  it('clamps to the supported rendered transcript window for very large conversations', () => {
+    expect(
+      resolveNextConversationTranscriptTailBlocks({
+        currentTailBlocks: MAX_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS - 50,
+        requestedTailBlockStep: 5000,
+        totalBlocks: 50000,
+      }),
+    ).toBe(MAX_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS);
+  });
+});
+
+describe('hasReachedConversationTranscriptTailLimit', () => {
+  it('reports when older history remains but the supported tail window is already loaded', () => {
+    expect(
+      hasReachedConversationTranscriptTailLimit({
+        hasOlderBlocks: true,
+        loadedBlockCount: MAX_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS,
+        requestedTailBlocks: MAX_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS,
+      }),
+    ).toBe(true);
+  });
+
+  it('does not report a limit while a capped request is still loading', () => {
+    expect(
+      hasReachedConversationTranscriptTailLimit({
+        hasOlderBlocks: true,
+        loadedBlockCount: 120,
+        requestedTailBlocks: MAX_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS,
+      }),
+    ).toBe(false);
   });
 });
 

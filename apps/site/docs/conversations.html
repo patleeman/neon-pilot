@@ -168,9 +168,10 @@
         </p>
         <p>
           Long saved conversations open on their latest transcript segment. When earlier history is hidden, the transcript renders an inline
-          cutoff marker with the visible percentage range and a small <strong>Load previous</strong> action. Earlier transcript pages load
-          only when that action is clicked; scrolling near the top does not auto-load hidden history. Implementation counts such as block
-          totals and windowed chunks stay out of the main UI.
+          cutoff marker with the visible percentage range; the whole marker is the <strong>Load previous</strong> action. Earlier transcript
+          pages load only when that action is clicked; scrolling near the top does not auto-load hidden history. If the supported local
+          history window is exhausted for a very large transcript, the marker switches to a disabled limit state instead of remaining
+          clickable. Implementation counts such as block totals and windowed chunks stay out of the main UI.
         </p>
         <p>
           Saved-conversation summaries are cache-first. UI and suggested-context reads only return summaries already present in the local

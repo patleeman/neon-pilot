@@ -1,6 +1,7 @@
 export const INITIAL_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS = 120;
 export const CONVERSATION_TRANSCRIPT_TAIL_BLOCKS_STEP = 120;
 export const CONVERSATION_TRANSCRIPT_JUMP_PADDING_BLOCKS = 40;
+export const MAX_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS = 600;
 
 export function resolveNextConversationTranscriptTailBlocks({
   currentTailBlocks,
@@ -14,7 +15,7 @@ export function resolveNextConversationTranscriptTailBlocks({
   totalBlocks: number;
 }): number {
   const normalizedCurrentTailBlocks = Math.max(0, Math.floor(currentTailBlocks));
-  const normalizedTotalBlocks = Math.max(0, Math.floor(totalBlocks));
+  const normalizedTotalBlocks = Math.min(MAX_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS, Math.max(0, Math.floor(totalBlocks)));
   const tailBlockStep = Math.max(1, Math.ceil(requestedTailBlockStep));
   const minimumTailBlocks =
     typeof targetMessageIndex === 'number'
@@ -48,5 +49,21 @@ export function shouldResetConversationTranscriptTailBlocksForLiveTransition({
     previousIsLive === false &&
     isLive &&
     currentTailBlocks > initialTailBlocks,
+  );
+}
+
+export function hasReachedConversationTranscriptTailLimit({
+  hasOlderBlocks,
+  loadedBlockCount,
+  requestedTailBlocks,
+}: {
+  hasOlderBlocks: boolean;
+  loadedBlockCount: number;
+  requestedTailBlocks: number;
+}): boolean {
+  return (
+    hasOlderBlocks &&
+    requestedTailBlocks >= MAX_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS &&
+    loadedBlockCount >= MAX_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS
   );
 }

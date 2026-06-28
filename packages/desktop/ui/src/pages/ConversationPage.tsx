@@ -210,6 +210,7 @@ import {
 import { buildSuggestedContextShelfState } from '../conversation/conversationSuggestedContextShelf';
 import { NEW_CONVERSATION_TITLE } from '../conversation/conversationTitle';
 import {
+  hasReachedConversationTranscriptTailLimit,
   INITIAL_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS,
   resolveNextConversationTranscriptTailBlocks,
   shouldResetConversationTranscriptTailBlocksForLiveTransition,
@@ -1487,6 +1488,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     : sessionDetail?.meta.id === id
       ? sessionDetail
       : bootstrapSessionDetail;
+  const loadingHistoricalTranscriptPage = Boolean(
+    visibleSessionDetail && !hasConversationLoadedHistoricalTailBlocks(visibleSessionDetail, historicalTailBlocks) && !sessionError,
+  );
 
   useEffect(() => {
     if (draft || !id) {
@@ -7168,6 +7172,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     totalBlocks: visibleTranscriptTotalBlocks,
     anchoredToTail: visibleTranscriptAnchoredToTail,
   });
+  const transcriptHistoryTailLimitReached = hasReachedConversationTranscriptTailLimit({
+    hasOlderBlocks: visibleTranscriptHasOlderBlocks,
+    loadedBlockCount: visibleSessionDetail?.blocks.length ?? 0,
+    requestedTailBlocks: historicalTailBlocks,
+  });
   const previousTranscriptPercent = Math.min(HISTORICAL_TAIL_BLOCKS_STEP_PERCENT, Math.max(1, visibleTranscriptStartPercent));
   const previousTranscriptBlockStep = Math.max(1, Math.ceil((visibleTranscriptTotalBlocks * previousTranscriptPercent) / 100));
   const renderingStaleTranscript = Boolean(visibleTranscriptState?.conversationId && id && visibleTranscriptState.conversationId !== id);
@@ -7476,8 +7485,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border-subtle to-border-subtle" aria-hidden />
                       <TextButton
                         onClick={() => loadOlderMessages(undefined, { tailBlockStep: previousTranscriptBlockStep })}
-                        disabled={sessionLoading}
-                        aria-label={sessionLoading ? 'Loading earlier conversation' : `Load previous ${previousTranscriptPercent}%`}
+                        disabled={sessionLoading || loadingHistoricalTranscriptPage || transcriptHistoryTailLimitReached}
+                        aria-label={
+                          transcriptHistoryTailLimitReached
+                            ? 'History limit reached'
+                            : sessionLoading || loadingHistoricalTranscriptPage
+                              ? 'Loading earlier conversation'
+                              : `Load previous ${previousTranscriptPercent}%`
+                        }
                         className="ui-conversation-status-strip group inline-flex min-h-9 cursor-pointer items-center px-4 py-2 text-left transition-colors hover:border-border hover:bg-surface/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-wait disabled:opacity-70"
                       >
                         <span>Earlier conversation hidden</span>
@@ -7491,7 +7506,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                           ·
                         </span>
                         <span className="font-medium text-accent group-hover:text-primary">
-                          {sessionLoading ? 'Loading earlier…' : `Load previous ${previousTranscriptPercent}%`}
+                          {transcriptHistoryTailLimitReached
+                            ? 'History limit reached'
+                            : sessionLoading || loadingHistoricalTranscriptPage
+                              ? 'Loading earlier…'
+                              : `Load previous ${previousTranscriptPercent}%`}
                         </span>
                       </TextButton>
                       <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border-subtle to-border-subtle" aria-hidden />
@@ -7583,6 +7602,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       id,
       isLiveSession,
       jumpToMessage,
+      loadingHistoricalTranscriptPage,
       loadOlderMessages,
       openArtifact,
       openCheckpoint,
@@ -7633,6 +7653,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       title,
       titleDraft,
       titleSaving,
+      transcriptHistoryTailLimitReached,
       transcriptBottomPaddingPx,
       validatedTranscriptPathTargets,
       visibleTranscriptHasOlderBlocks,

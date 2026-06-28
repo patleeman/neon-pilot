@@ -812,6 +812,7 @@ describe('ConversationPage lazy composer metadata', () => {
     const loadPreviousButton = await screen.findByRole('button', { name: 'Load previous 10%' });
     expect(loadPreviousButton.textContent).toContain('Earlier conversation hidden');
     expect(loadPreviousButton.textContent).toContain('Viewing 40–100%');
+    expect((loadPreviousButton as HTMLButtonElement).disabled).toBe(false);
 
     fireEvent.wheel(scrollShell, { deltaY: -400 });
     fireEvent.scroll(scrollShell, { target: { scrollTop: 0 } });
@@ -826,6 +827,39 @@ describe('ConversationPage lazy composer metadata', () => {
     await waitFor(() => {
       expect(scrollShell.getAttribute('data-historical-tail-blocks')).toBe('140');
     });
+    const loadingPreviousButton = await screen.findByRole('button', { name: 'Loading earlier conversation' });
+    expect((loadingPreviousButton as HTMLButtonElement).disabled).toBe(true);
+    expect(loadingPreviousButton.textContent).toContain('Loading earlier…');
+
+    fireEvent.click(loadingPreviousButton);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(scrollShell.getAttribute('data-historical-tail-blocks')).toBe('140');
+  });
+
+  it('hides the Load previous action when the full transcript is visible', async () => {
+    vi.useRealTimers();
+    const blocks = Array.from({ length: 120 }, (_, index) => ({
+      type: index % 2 === 0 ? ('user' as const) : ('text' as const),
+      id: `full-history-${index}`,
+      ts: `2026-05-27T13:${String(index).padStart(2, '0')}:00.000Z`,
+      text: `full history ${index}`,
+    }));
+    setDesktopConversationFixture({
+      ...regressionBootstrapData,
+      sessionDetail: {
+        ...regressionBootstrapData.sessionDetail,
+        blocks,
+        blockOffset: 0,
+        totalBlocks: blocks.length,
+      },
+    });
+
+    renderConversationPage();
+
+    await screen.findByTestId('chat-view');
+    expect(screen.queryByRole('button', { name: /Load previous/i })).toBeNull();
   });
 
   it('publishes header rename results so the sidebar title can refresh immediately', async () => {
