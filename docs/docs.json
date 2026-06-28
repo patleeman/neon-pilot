@@ -66,7 +66,7 @@
         { "title": "Configuration", "path": "configuration.md" },
         { "title": "Development Workflow", "path": "development.md" },
         { "title": "Memory", "path": "memory.md" },
-        { "title": "Knowledge Base Sync", "path": "knowledge-base.md" },
+        { "title": "Legacy Knowledge Files", "path": "knowledge-base.md" },
         { "title": "Release Cycle", "path": "release-cycle.md" },
         { "title": "Release QA", "path": "release-qa.md" },
         { "title": "Release Test Inventory", "path": "release-test-inventory.md" }

@@ -6,13 +6,13 @@ Neon Pilot no longer has user-selectable profiles. Some storage paths and compat
 
 ## Path roots
 
-| Root                | Default                                                     | Override                       | Purpose                                                                         |
-| ------------------- | ----------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------- |
-| `<state-root>`      | `~/.local/state/neon-pilot` or `$XDG_STATE_HOME/neon-pilot` | `NEON_PILOT_STATE_ROOT`        | Runtime state, daemon DBs, extension installs, active agent files               |
-| `<config-root>`     | `<state-root>/config`                                       | `NEON_PILOT_CONFIG_ROOT`       | Machine-local durable config                                                    |
-| Machine agent dir   | `~/.config/agents`                                          | none                           | Canonical secondary location for machine-local agent files                      |
-| Machine config file | `<config-root>/config.json`                                 | `NEON_PILOT_CONFIG_FILE`       | Knowledge root/sync, extra instruction files, skill folders, daemon/ui sections |
-| Local config dir    | `<config-root>/local`                                       | none                           | Local settings mirror for active runtime settings                               |
+| Root                | Default                                                     | Override                 | Purpose                                                                                  |
+| ------------------- | ----------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------- |
+| `<state-root>`      | `~/.local/state/neon-pilot` or `$XDG_STATE_HOME/neon-pilot` | `NEON_PILOT_STATE_ROOT`  | Runtime state, daemon DBs, extension installs, active agent files                        |
+| `<config-root>`     | `<state-root>/config`                                       | `NEON_PILOT_CONFIG_ROOT` | Machine-local durable config                                                             |
+| Machine agent dir   | `~/.config/agents`                                          | none                     | Canonical secondary location for machine-local agent files                               |
+| Machine config file | `<config-root>/config.json`                                 | `NEON_PILOT_CONFIG_FILE` | Knowledge root compatibility, extra instruction files, skill folders, daemon/ui sections |
+| Local config dir    | `<config-root>/local`                                       | none                     | Local settings mirror for active runtime settings                                        |
 
 ## Machine config
 
@@ -22,9 +22,9 @@ Current machine config keys:
 
 | Key                    | Type     | Used for                                                                     |
 | ---------------------- | -------- | ---------------------------------------------------------------------------- |
-| `knowledgeRoot`        | string   | Explicit knowledge base root                                                 |
-| `knowledgeBaseRepoUrl` | string   | Managed git-backed knowledge base repo                                       |
-| `knowledgeBaseBranch`  | string   | Managed knowledge base branch, default `main`                                |
+| `knowledgeRoot`        | string   | Explicit root for memory and legacy knowledge files                          |
+| `knowledgeBaseRepoUrl` | string   | Legacy managed knowledge mirror URL                                          |
+| `knowledgeBaseBranch`  | string   | Legacy managed knowledge mirror branch, default `main`                       |
 | `instructionFiles`     | string[] | Extra AGENTS.md-style files appended to runtime instructions                 |
 | `skillDirs`            | string[] | Extra skill directories loaded alongside the knowledge base skills directory |
 | `daemon`               | object   | Daemon machine config section                                                |
@@ -34,14 +34,13 @@ Example:
 
 ```json
 {
-  "knowledgeBaseRepoUrl": "git@github.com:user/neon-pilot-kb.git",
-  "knowledgeBaseBranch": "main",
+  "knowledgeRoot": "/Users/me/Documents/neon-pilot",
   "instructionFiles": ["/Users/me/agent/extra-AGENTS.md"],
   "skillDirs": ["/Users/me/agent/skills"]
 }
 ```
 
-Machine config augments the built-in machine-local defaults. Neon Pilot always checks `~/.config/agents/AGENTS.md` as the canonical secondary instruction file and `~/.config/agents/skill` plus `~/.config/agents/skills` as canonical secondary skill roots. The knowledge base remains the primary durable source; use the machine agent dir for personal files that should stay local to this machine.
+Machine config augments the built-in machine-local defaults. Neon Pilot always checks `~/.config/agents/AGENTS.md` as the canonical secondary instruction file and `~/.config/agents/skill` plus `~/.config/agents/skills` as canonical secondary skill roots. Memory under the knowledge root is the primary durable agent-behavior source; use the machine agent dir for personal files that should stay local to this machine.
 
 ## Runtime agent settings
 
@@ -102,16 +101,16 @@ Enabled extensions may contribute `modelProfiles` that match provider/model refs
 
 If no enabled profile extension matches, Neon Pilot uses the normal default runtime behavior. Explicit per-run allowed tool lists still take precedence.
 
-## Knowledge base resolution
+## Root Resolution
 
-The effective knowledge base root resolves in this order:
+The effective knowledge root resolves in this order. Memory lives under this root as `memory/`.
 
 1. `NEON_PILOT_KNOWLEDGE_ROOT`
 2. Managed knowledge-base mirror at `<state-root>/knowledge-base/repo` when `knowledgeBaseRepoUrl` is configured
 3. `knowledgeRoot` from machine config
 4. `~/Documents/neon-pilot`
 
-Knowledge UI and sync behavior live in the Knowledge system extension. Machine config only stores the machine-level root/sync inputs.
+Knowledge extension UI, when installed, uses the same root for legacy reference files. Configure Memory remote and sync from the Memory page.
 
 ## Agent file discovery
 

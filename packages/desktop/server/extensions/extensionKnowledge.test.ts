@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -37,6 +37,37 @@ describe('extensionKnowledge', () => {
       content: 'hello world',
       updatedAt: expect.any(String),
     });
+  });
+
+  it('routes memory-shaped writes through the Git-backed memory store', async () => {
+    const knowledge = createExtensionKnowledgeCapability('system-knowledge');
+
+    const entry = await knowledge.write('memory/system.md', '# System Memory\n\nWritten through extension.\n');
+
+    expect(entry).toMatchObject({ id: 'memory/system.md', kind: 'file', name: 'system.md' });
+    expect(readFileSync(join(knowledgeRoot, 'memory', 'system.md'), 'utf-8')).toContain('Written through extension.');
+    expect(existsSync(join(knowledgeRoot, 'memory', '.git'))).toBe(true);
+  });
+
+  it('creates parent directories for valid memory-shaped extension writes', async () => {
+    const knowledge = createExtensionKnowledgeCapability('system-knowledge');
+
+    await knowledge.write(
+      'memory/scopes/ext/memory.md',
+      '---\nname: Extension scope\ntype: workspace\nroots: []\naliases: []\ninject: false\n---\n\n# Extension scope\n',
+    );
+
+    expect(readFileSync(join(knowledgeRoot, 'memory', 'scopes', 'ext', 'memory.md'), 'utf-8')).toContain('Extension scope');
+    expect(existsSync(join(knowledgeRoot, 'memory', '.git'))).toBe(true);
+  });
+
+  it('rejects unsafe memory-shaped extension writes before mutating memory', async () => {
+    const knowledge = createExtensionKnowledgeCapability('system-knowledge');
+    await knowledge.write('memory/system.md', '# System Memory\n\nOriginal.\n');
+
+    await expect(knowledge.write('memory/scopes/../system.md', '# System Memory\n\nMutated.\n')).rejects.toThrow('Invalid knowledge path');
+    expect(readFileSync(join(knowledgeRoot, 'memory', 'system.md'), 'utf-8')).toContain('Original.');
+    expect(readFileSync(join(knowledgeRoot, 'memory', 'system.md'), 'utf-8')).not.toContain('Mutated.');
   });
 
   it('lists visible files and folders, skipping dotfiles and symlinks', async () => {

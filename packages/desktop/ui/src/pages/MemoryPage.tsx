@@ -14,7 +14,7 @@ import {
   Textarea,
   TextInput,
 } from '../components/ui';
-import type { ManagedMemoryState, MemoryGitChange, MemoryScope } from '../shared/types';
+import type { ManagedMemoryState, MemoryGitChange, MemoryIssue, MemoryScope } from '../shared/types';
 
 type Selection = { kind: 'system' } | { kind: 'scope'; slug: string } | { kind: 'skill'; relativePath: string } | { kind: 'activity' };
 
@@ -55,6 +55,20 @@ function ChangeList({ changes, emptyText = 'No memory changes yet.' }: { changes
   );
 }
 
+function IssueList({ issues }: { issues: MemoryIssue[] }) {
+  if (issues.length === 0) return null;
+  return (
+    <div className="border-b border-border-subtle">
+      {issues.map((issue) => (
+        <Notice key={`${issue.code}:${issue.relativePath ?? issue.message}`} tone={issue.severity === 'error' ? 'danger' : 'warning'}>
+          <span className="block text-[12px]">{issue.message}</span>
+          {issue.relativePath ? <code className="mt-1 block text-[11px] text-dim">{issue.relativePath}</code> : null}
+        </Notice>
+      ))}
+    </div>
+  );
+}
+
 function NavRow({ active, title, meta, onClick }: { active: boolean; title: string; meta?: string; onClick: () => void }) {
   return (
     <Button
@@ -68,6 +82,61 @@ function NavRow({ active, title, meta, onClick }: { active: boolean; title: stri
       <span className="block truncate text-[13px] font-medium">{title}</span>
       {meta ? <span className="mt-0.5 block truncate text-[11px] text-dim">{meta}</span> : null}
     </Button>
+  );
+}
+
+function MemoryOperations({
+  state,
+  busy,
+  onSetRemote,
+  onSync,
+  onImportKnowledge,
+}: {
+  state: ManagedMemoryState;
+  busy: string | null;
+  onSetRemote: (url: string) => Promise<void>;
+  onSync: () => Promise<void>;
+  onImportKnowledge: () => Promise<void>;
+}) {
+  const [remoteUrl, setRemoteUrl] = useState(state.git.remoteUrl ?? '');
+
+  useEffect(() => {
+    setRemoteUrl(state.git.remoteUrl ?? '');
+  }, [state.git.remoteUrl]);
+
+  return (
+    <div className="border-t border-border-subtle px-3 py-3">
+      <SectionLabel tone="muted">Repository</SectionLabel>
+      <div className="mt-2 space-y-2">
+        <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2 text-[12px]">
+          <span className="text-dim">Branch</span>
+          <span className="truncate text-secondary">{state.git.branch ?? 'Git'}</span>
+          <span className="text-dim">Remote</span>
+          <span className="truncate text-secondary">{state.git.remoteUrl ? 'Configured' : 'Local only'}</span>
+          <span className="text-dim">Sync</span>
+          <span className="truncate text-secondary">
+            {state.git.ahead || state.git.behind ? `${state.git.ahead} ahead, ${state.git.behind} behind` : 'Up to date locally'}
+          </span>
+        </div>
+        <TextInput
+          value={remoteUrl}
+          onChange={(event) => setRemoteUrl(event.target.value)}
+          placeholder="Git remote URL"
+          className="w-full rounded-md border border-border bg-base px-2 py-1.5 text-[12px] text-primary outline-none focus:border-accent"
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={!remoteUrl.trim() || busy === 'remote'} onClick={() => onSetRemote(remoteUrl)}>
+            Save remote
+          </Button>
+          <Button disabled={!state.git.remoteUrl || busy === 'sync'} onClick={onSync}>
+            Sync
+          </Button>
+          <Button disabled={busy === 'import'} onClick={onImportKnowledge}>
+            Import knowledge
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -241,10 +310,26 @@ export function MemoryPage() {
   const [historyPath, setHistoryPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
 
   async function reload() {
     setError(null);
+    setActionError(null);
     setState(await api.managedMemory());
+  }
+
+  async function runAction(key: string, action: () => Promise<ManagedMemoryState | { state: ManagedMemoryState }>) {
+    setActionError(null);
+    setBusy(key);
+    try {
+      const result = await action();
+      setState('state' in result ? result.state : result);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(null);
+    }
   }
 
   useEffect(() => {
@@ -271,6 +356,10 @@ export function MemoryPage() {
     selection.kind === 'skill' ? (state?.skills.find((skill) => skill.relativePath === selection.relativePath) ?? null) : null;
   const selectedPath = selection.kind === 'system' ? 'system.md' : (selectedScope?.relativePath ?? selectedSkill?.relativePath ?? null);
   const latestChangeHash = state?.recentChanges[0]?.hash ?? '';
+
+  useEffect(() => {
+    setActionError(null);
+  }, [selection]);
 
   useEffect(() => {
     if (!selectedPath || selection.kind === 'activity') {
@@ -375,6 +464,19 @@ export function MemoryPage() {
           ) : (
             <p className="px-3 py-2 text-[12px] text-dim">No scopes.</p>
           )}
+          {activeScopes.length === 0 ? (
+            <div className="border-t border-border-subtle p-3">
+              <Button
+                className="w-full"
+                disabled={busy === 'scope-current'}
+                onClick={() =>
+                  runAction('scope-current', () => api.createMemoryScopeFromCwd({ reason: 'Add current workspace memory scope' }))
+                }
+              >
+                Scope current workspace
+              </Button>
+            </div>
+          ) : null}
           <ScopeForm
             onCreate={async (input) => {
               setState(
@@ -403,50 +505,70 @@ export function MemoryPage() {
           </div>
           <NavRow active={selection.kind === 'activity'} title="Recent changes" onClick={() => setSelection({ kind: 'activity' })} />
         </aside>
-        <main className="min-h-0 overflow-hidden bg-base">
-          {selection.kind === 'system' ? (
-            <MemoryEditor
-              relativePath="system.md"
-              title="System memory"
-              description="Always injected into agent context."
-              content={state.system.content}
-              onSave={async (content, reason) => setState(await api.writeMemoryFile({ relativePath: 'system.md', content, reason }))}
-            />
-          ) : selectedScope ? (
-            <MemoryEditor
-              relativePath={selectedScope.relativePath}
-              title={selectedScope.name}
-              description={selectedScope.active ? 'Active for the current workspace.' : 'Loaded when its activation rules match.'}
-              content={selectedScope.content}
-              onSave={async (content, reason) =>
-                setState(await api.writeMemoryFile({ relativePath: selectedScope.relativePath, content, reason }))
-              }
-            />
-          ) : selectedSkill ? (
-            <MemoryEditor
-              relativePath={selectedSkill.relativePath}
-              title={selectedSkill.name}
-              description="Description is discoverable; full skill loads on demand."
-              content={selectedSkill.content}
-              onSave={async (content, reason) =>
-                setState(await api.writeMemoryFile({ relativePath: selectedSkill.relativePath, content, reason }))
-              }
-            />
-          ) : selection.kind === 'activity' ? (
-            <div className="h-full overflow-auto">
-              <div className="border-b border-border-subtle px-4 py-3">
-                <h2 className="text-[16px] font-semibold text-primary">Recent changes</h2>
-                <p className="mt-1 text-[12px] text-secondary">Git commits created by memory initialization and edits.</p>
-              </div>
-              <ChangeList changes={state.recentChanges} />
+        <main className="flex min-h-0 flex-col overflow-hidden bg-base">
+          {actionError ? (
+            <div className="shrink-0 border-b border-border-subtle">
+              <Notice tone="danger">{actionError}</Notice>
             </div>
           ) : null}
+          <div className="min-h-0 flex-1 overflow-hidden">
+            {selection.kind === 'system' ? (
+              <MemoryEditor
+                relativePath="system.md"
+                title="System memory"
+                description="Always injected into agent context."
+                content={state.system.content}
+                onSave={async (content, reason) => {
+                  setActionError(null);
+                  setState(await api.writeMemoryFile({ relativePath: 'system.md', content, reason }));
+                }}
+              />
+            ) : selectedScope ? (
+              <MemoryEditor
+                relativePath={selectedScope.relativePath}
+                title={selectedScope.name}
+                description={selectedScope.active ? 'Active for the current workspace.' : 'Loaded when its activation rules match.'}
+                content={selectedScope.content}
+                onSave={async (content, reason) => {
+                  setActionError(null);
+                  setState(await api.writeMemoryFile({ relativePath: selectedScope.relativePath, content, reason }));
+                }}
+              />
+            ) : selectedSkill ? (
+              <MemoryEditor
+                relativePath={selectedSkill.relativePath}
+                title={selectedSkill.name}
+                description="Description is discoverable; full skill loads on demand."
+                content={selectedSkill.content}
+                onSave={async (content, reason) => {
+                  setActionError(null);
+                  setState(await api.writeMemoryFile({ relativePath: selectedSkill.relativePath, content, reason }));
+                }}
+              />
+            ) : selection.kind === 'activity' ? (
+              <div className="h-full overflow-auto">
+                <div className="border-b border-border-subtle px-4 py-3">
+                  <h2 className="text-[16px] font-semibold text-primary">Recent changes</h2>
+                  <p className="mt-1 text-[12px] text-secondary">Git commits created by memory initialization and edits.</p>
+                </div>
+                <ChangeList changes={state.recentChanges} />
+              </div>
+            ) : null}
+          </div>
         </main>
         <aside className="min-h-0 overflow-auto border-l border-border-subtle bg-panel">
+          <IssueList issues={state.issues} />
           <div className="border-b border-border-subtle px-3 py-2">
             <SectionLabel tone="muted">{historyPath ? 'File History' : 'Recent Changes'}</SectionLabel>
           </div>
           <ChangeList changes={historyPath ? history : state.recentChanges} />
+          <MemoryOperations
+            state={state}
+            busy={busy}
+            onSetRemote={(url) => runAction('remote', () => api.setMemoryRemote({ url }))}
+            onSync={() => runAction('sync', () => api.syncMemoryRemote())}
+            onImportKnowledge={() => runAction('import', () => api.importKnowledgeMemory())}
+          />
           <div className="border-t border-border-subtle px-3 py-2">
             <CardMeta as="div">{state.root}</CardMeta>
           </div>

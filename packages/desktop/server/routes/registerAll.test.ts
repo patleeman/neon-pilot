@@ -10,6 +10,8 @@ const routeModules = vi.hoisted(() => ({
   registerFilePickerRoutes: vi.fn(),
   registerGatewayRoutes: vi.fn(),
   registerLiveSessionRoutes: vi.fn(),
+  registerMemoryReflectionLifecycleHandler: vi.fn(),
+  registerMemoryRoutes: vi.fn(),
   registerModelRoutes: vi.fn(),
   registerRunAppRoutes: vi.fn(),
   registerSecretRoutes: vi.fn(),
@@ -28,6 +30,10 @@ vi.mock('./extensions.js', () => ({ registerExtensionRoutes: routeModules.regist
 vi.mock('./filePicker.js', () => ({ registerFilePickerRoutes: routeModules.registerFilePickerRoutes }));
 vi.mock('./gateways.js', () => ({ registerGatewayRoutes: routeModules.registerGatewayRoutes }));
 vi.mock('./liveSessions.js', () => ({ registerLiveSessionRoutes: routeModules.registerLiveSessionRoutes }));
+vi.mock('./memory.js', () => ({ registerMemoryRoutes: routeModules.registerMemoryRoutes }));
+vi.mock('../memory/memoryReflectionQueue.js', () => ({
+  registerMemoryReflectionLifecycleHandler: routeModules.registerMemoryReflectionLifecycleHandler,
+}));
 vi.mock('./models.js', () => ({ registerModelRoutes: routeModules.registerModelRoutes }));
 vi.mock('./runsApp.js', () => ({ registerRunAppRoutes: routeModules.registerRunAppRoutes }));
 vi.mock('./secrets.js', () => ({ registerSecretRoutes: routeModules.registerSecretRoutes }));
@@ -60,6 +66,7 @@ describe('registerServerRoutes', () => {
       routeModules.registerExtensionRoutes,
       routeModules.registerModelRoutes,
       routeModules.registerToolsRoutes,
+      routeModules.registerMemoryRoutes,
       routeModules.registerSystemRoutes,
       routeModules.registerConversationRoutes,
       routeModules.registerConversationStateRoutes,
@@ -80,6 +87,8 @@ describe('registerServerRoutes', () => {
       routeModules.registerExtensionRoutes,
       routeModules.registerModelRoutes,
       routeModules.registerToolsRoutes,
+      routeModules.registerMemoryRoutes,
+      routeModules.registerMemoryReflectionLifecycleHandler,
       routeModules.registerSystemRoutes,
       routeModules.registerConversationRoutes,
       routeModules.registerConversationStateRoutes,

@@ -56,53 +56,37 @@
         </section>
       </aside>
       <article class="docs-content">
-        <h1 id="knowledge-base-sync">Knowledge base sync</h1>
+        <h1 id="legacy-knowledge-files">Legacy knowledge files</h1>
         <p>
-          The knowledge base is durable reference material backed by a git repository. Use it for reusable notes, project context, files,
-          and workflow knowledge that should survive app reinstalls or move between machines.
+          Knowledge files are legacy durable reference material. Use <a href="./memory.html">Memory</a> for agent-owned standing behavior,
+          workspace scopes, skills, Git history, remote setup, and sync.
         </p>
         <p>
-          For agent-owned standing behavior, use <a href="./memory.html">Memory</a>. Memory owns <code>memory/system.md</code>, memory
-          scopes, and memory skills.
+          The optional Knowledge extension, when installed, can browse and edit reference files beside conversations. It is not the GA
+          source of truth for agent memory.
         </p>
         <h2 id="what-to-store">What to store</h2>
-        <p>Good knowledge base content is stable, useful across conversations, and safe to keep in git:</p>
+        <p>Good legacy knowledge content is stable, useful across conversations, and safe to keep in files:</p>
         <ul>
           <li>Repo or project notes that help the agent orient quickly.</li>
-          <li>Personal workflow preferences and recurring task checklists.</li>
-          <li>Reusable instructions, skills, and reference material.</li>
+          <li>Reference material that should be searched or explicitly attached.</li>
           <li>Decisions or summaries you want future conversations to find.</li>
         </ul>
         <p>Do not store API keys, tokens, passwords, private credentials, or one-off scratch output that does not need to be durable.</p>
-        <h2 id="repository-setup">Repository setup</h2>
-        <p>The knowledge base can be backed by any git repository that <code>git clone</code> can read.</p>
+        <h2 id="migration-to-memory">Migration to Memory</h2>
         <p>
-          The repository setting accepts SSH remotes, HTTPS remotes, and local repository paths. Local paths are useful when the remote is
-          already configured with the right authentication, because Neon Pilot clones from that path into its managed runtime mirror instead
-          of guessing a GitHub URL or credential mode.
-        </p>
-        <p>Typical setup path:</p>
-        <ol>
-          <li>Create or choose a private git repository for durable knowledge.</li>
-          <li>Make sure the machine can clone it from a terminal using the same account that runs Neon Pilot.</li>
-          <li>Open <strong>Settings</strong> and configure the knowledge repository.</li>
-          <li>Run sync, then confirm the latest files appear in the Knowledge surface or managed mirror.</li>
-          <li>Add a small note, sync again, and confirm the git remote receives the change.</li>
-        </ol>
-        <h2 id="how-sync-works">How sync works</h2>
-        <p>
-          The Knowledge extension stores its managed mirror under the runtime state directory and syncs it through extension backend
-          actions. Git operations run through the extension backend context so process policy stays host-owned while Knowledge-specific
-          state and behavior remain extension-owned.
+          Open <strong>Memory</strong> and use <strong>Import knowledge</strong> to create
+          <code>memory/scopes/imported-knowledge/memory.md</code>.
         </p>
         <p>
-          Keep edits in the app or in the repository cleanly synced before switching machines. If a sync reports a git conflict, resolve it
-          in the repository or managed mirror like a normal git conflict, then run sync again.
+          The imported scope uses <code>inject: false</code>. Review it, move durable behavior into <code>memory/system.md</code> or a
+          scoped <code>memory.md</code>, and keep pure reference material outside injected memory.
         </p>
+        <p>Configure the Memory remote from the Memory page when you want Git-backed sync between machines.</p>
         <h2 id="related-docs">Related docs</h2>
         <ul>
           <li><a href="./getting-started.html">Getting Started</a> — first-run app and provider verification</li>
-          <li><a href="./configuration.html">Configuration</a> — state, config, and knowledge root paths</li>
+          <li><a href="./configuration.html">Configuration</a> — state, config, and root paths</li>
           <li>
             <a href="./extension-distribution.html">Extension distribution</a> — installing optional Knowledge-related extension surfaces
           </li>
@@ -113,8 +97,8 @@
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#what-to-store">What to store</a><a href="#repository-setup">Repository setup</a
-        ><a href="#how-sync-works">How sync works</a><a href="#related-docs">Related docs</a>
+        <a href="#what-to-store">What to store</a><a href="#migration-to-memory">Migration to Memory</a
+        ><a href="#related-docs">Related docs</a>
       </aside>
     </main>
   </body>

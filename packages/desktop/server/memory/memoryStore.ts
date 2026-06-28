@@ -10,9 +10,12 @@ import {
 } from '@neon-pilot/core';
 import { parseDocument, stringify as stringifyYaml } from 'yaml';
 
+import { listMemoryDocs } from '../knowledge/memoryDocs.js';
 import { execGitProcess } from '../shared/processLauncher.js';
 
 const MEMORY_COMMIT_AUTHOR = ['-c', 'user.name=Neon Pilot Memory', '-c', 'user.email=memory@neonpilot.local'];
+const LEGACY_IMPORT_START = '<!-- legacy-knowledge-import:start -->';
+const LEGACY_IMPORT_END = '<!-- legacy-knowledge-import:end -->';
 
 export interface MemoryGitChange {
   hash: string;
@@ -20,6 +23,13 @@ export interface MemoryGitChange {
   date: string;
   subject: string;
   files: string[];
+}
+
+export interface MemoryIssue {
+  severity: 'info' | 'warning' | 'error';
+  code: string;
+  message: string;
+  relativePath?: string;
 }
 
 export interface MemorySystemFile {
@@ -61,10 +71,14 @@ export interface MemoryState {
   scopes: MemoryScope[];
   skills: MemorySkill[];
   recentChanges: MemoryGitChange[];
+  issues: MemoryIssue[];
   git: {
     initialized: boolean;
     branch: string | null;
     remoteUrl: string | null;
+    dirty: boolean;
+    ahead: number;
+    behind: number;
   };
 }
 
@@ -86,6 +100,11 @@ export interface WriteMemoryFileInput {
   relativePath: string;
   content: string;
   reason?: string;
+}
+
+export interface MemoryImportResult {
+  importedCount: number;
+  state: MemoryState;
 }
 
 function memoryRoot(): string {
@@ -140,7 +159,45 @@ function isEditableMemoryRelativePath(relativePath: string): boolean {
   if (relativePath === 'system.md') return true;
   if (/^scopes\/[^/]+\/memory\.md$/.test(relativePath)) return true;
   if (/^skills\/[^/]+\/(SKILL|INDEX)\.md$/.test(relativePath)) return true;
+  if (/^reflections\/[^/]+\.md$/.test(relativePath)) return true;
   return false;
+}
+
+function frontmatterErrorMessage(content: string, relativePath: string): string | null {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
+  if (!match) return null;
+  const document = parseDocument(match[1] ?? '', { prettyErrors: true, uniqueKeys: true });
+  if (document.errors.length > 0) {
+    return `Invalid frontmatter in ${relativePath}: ${document.errors[0]?.message ?? 'YAML could not be parsed.'}`;
+  }
+  const parsed = document.toJS() as unknown;
+  if (parsed !== null && parsed !== undefined && (typeof parsed !== 'object' || Array.isArray(parsed))) {
+    return `Invalid frontmatter in ${relativePath}: frontmatter must be a mapping.`;
+  }
+  const data = (parsed && typeof parsed === 'object' ? parsed : {}) as Record<string, unknown>;
+  const stringFields = ['name', 'type', 'description'];
+  for (const field of stringFields) {
+    if (data[field] !== undefined && typeof data[field] !== 'string') {
+      return `Invalid frontmatter in ${relativePath}: ${field} must be a string.`;
+    }
+  }
+  for (const field of ['roots', 'aliases']) {
+    if (
+      data[field] !== undefined &&
+      (!Array.isArray(data[field]) || !(data[field] as unknown[]).every((entry) => typeof entry === 'string'))
+    ) {
+      return `Invalid frontmatter in ${relativePath}: ${field} must be a list of strings.`;
+    }
+  }
+  if (data.inject !== undefined && typeof data.inject !== 'boolean') {
+    return `Invalid frontmatter in ${relativePath}: inject must be true or false.`;
+  }
+  return null;
+}
+
+function validateMemoryFileContent(relativePath: string, content: string): void {
+  const message = frontmatterErrorMessage(content, relativePath);
+  if (message) throw new Error(message);
 }
 
 function parseFrontmatter(content: string): { data: Record<string, unknown>; body: string } {
@@ -184,6 +241,64 @@ async function commitMemoryChanges(subject: string): Promise<void> {
   await git([...MEMORY_COMMIT_AUTHOR, 'commit', '-m', subject || 'Update memory']);
 }
 
+async function readDirtyState(): Promise<boolean> {
+  const status = await git(['status', '--porcelain'], { allowFailure: true });
+  return Boolean(status);
+}
+
+async function readAheadBehind(ref = '@{upstream}'): Promise<{ ahead: number; behind: number }> {
+  const output = await git(['rev-list', '--left-right', '--count', `HEAD...${ref}`], { allowFailure: true });
+  const [aheadRaw, behindRaw] = (output ?? '').split(/\s+/);
+  const ahead = Number.parseInt(aheadRaw ?? '', 10);
+  const behind = Number.parseInt(behindRaw ?? '', 10);
+  return {
+    ahead: Number.isFinite(ahead) ? ahead : 0,
+    behind: Number.isFinite(behind) ? behind : 0,
+  };
+}
+
+function collectFrontmatterIssues(): MemoryIssue[] {
+  const candidates: string[] = [];
+  if (existsSync(systemFilePath())) candidates.push('system.md');
+  if (existsSync(scopesDir())) {
+    for (const scope of readdirSync(scopesDir()).filter((entry) => !entry.startsWith('.'))) {
+      candidates.push(`scopes/${scope}/memory.md`);
+    }
+  }
+  if (existsSync(skillsDir())) {
+    for (const skill of readdirSync(skillsDir()).filter((entry) => !entry.startsWith('.'))) {
+      for (const fileName of ['SKILL.md', 'INDEX.md']) {
+        const relativePath = `skills/${skill}/${fileName}`;
+        if (existsSync(join(memoryRoot(), relativePath))) candidates.push(relativePath);
+      }
+    }
+  }
+
+  return candidates.flatMap((relativePath) => {
+    const message = frontmatterErrorMessage(readText(join(memoryRoot(), relativePath)), relativePath);
+    return message ? [{ severity: 'error' as const, code: 'invalid_frontmatter', message, relativePath }] : [];
+  });
+}
+
+function collectMemoryIssues(input: { dirty: boolean; ahead: number; behind: number }): MemoryIssue[] {
+  const issues = collectFrontmatterIssues();
+  if (input.dirty) {
+    issues.push({
+      severity: 'warning',
+      code: 'uncommitted_changes',
+      message: 'Memory has uncommitted file changes outside Neon Pilot.',
+    });
+  }
+  if (input.behind > 0) {
+    issues.push({
+      severity: 'warning',
+      code: 'remote_behind',
+      message: `Memory is ${input.behind} commit${input.behind === 1 ? '' : 's'} behind its remote.`,
+    });
+  }
+  return issues;
+}
+
 async function ensureGitRepository(): Promise<void> {
   if (!existsSync(join(memoryRoot(), '.git'))) {
     await git(['init']);
@@ -216,15 +331,66 @@ function defaultScopeMarkdown(input: CreateMemoryScopeInput & { slug: string }):
   );
 }
 
+function importedKnowledgeMarkdown(): { content: string; count: number } {
+  const docs = listMemoryDocs({ includeSearchText: false });
+  const rows = docs.map((doc) => {
+    const details = [
+      `- Path: ${doc.path}`,
+      doc.summary ? `- Summary: ${doc.summary}` : null,
+      doc.description ? `- Description: ${doc.description}` : null,
+      doc.type ? `- Type: ${doc.type}` : null,
+      doc.updated ? `- Updated: ${doc.updated}` : null,
+    ].filter(Boolean);
+    return `## ${doc.title}\n\n${details.join('\n')}\n`;
+  });
+  return {
+    count: docs.length,
+    content: stringifyMarkdown(
+      {
+        name: 'Imported knowledge',
+        type: 'legacy-knowledge',
+        roots: [],
+        aliases: ['knowledge base'],
+        inject: false,
+      },
+      `# Imported Knowledge\n\nLegacy knowledge notes imported for review. This scope is not injected into agent context by default.\n\n${LEGACY_IMPORT_START}\n${rows.join('\n')}${LEGACY_IMPORT_END}\n`,
+    ),
+  };
+}
+
+function replaceLegacyImportBlock(existing: string, next: string): string {
+  const nextStart = next.indexOf(LEGACY_IMPORT_START);
+  const nextEnd = next.indexOf(LEGACY_IMPORT_END, nextStart);
+  if (nextStart < 0 || nextEnd < 0) return next;
+  const nextBlock = next.slice(nextStart, nextEnd + LEGACY_IMPORT_END.length);
+  const existingStart = existing.indexOf(LEGACY_IMPORT_START);
+  const existingEnd = existing.indexOf(LEGACY_IMPORT_END, existingStart);
+  if (existingStart < 0 || existingEnd < 0) return next;
+  return normalizeNewlines(`${existing.slice(0, existingStart)}${nextBlock}${existing.slice(existingEnd + LEGACY_IMPORT_END.length)}`);
+}
+
+function validateRemoteUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) throw new Error('Remote URL is required.');
+  if (/[\n\r\0]/.test(trimmed)) throw new Error('Remote URL is invalid.');
+  return trimmed;
+}
+
 export async function initializeMemory(options: InitializeMemoryOptions = {}): Promise<MemoryState> {
   mkdirSync(scopesDir(), { recursive: true });
   mkdirSync(skillsDir(), { recursive: true });
   mkdirSync(join(memoryRoot(), 'archive'), { recursive: true });
+  mkdirSync(join(memoryRoot(), 'reflections'), { recursive: true });
 
   if (!existsSync(systemFilePath())) {
     writeFileSync(systemFilePath(), defaultSystemMarkdown(), 'utf-8');
   }
-  for (const marker of [join(scopesDir(), '.gitkeep'), join(skillsDir(), '.gitkeep'), join(memoryRoot(), 'archive', '.gitkeep')]) {
+  for (const marker of [
+    join(scopesDir(), '.gitkeep'),
+    join(skillsDir(), '.gitkeep'),
+    join(memoryRoot(), 'archive', '.gitkeep'),
+    join(memoryRoot(), 'reflections', '.gitkeep'),
+  ]) {
     if (!existsSync(marker)) writeFileSync(marker, '', 'utf-8');
   }
 
@@ -353,6 +519,8 @@ export async function getMemoryState(options: { cwd?: string } = {}): Promise<Me
   const initialized = existsSync(systemFilePath()) && existsSync(join(root, '.git'));
   const branch = initialized ? await git(['rev-parse', '--abbrev-ref', 'HEAD'], { allowFailure: true }) : null;
   const remoteUrl = initialized ? await git(['config', '--get', 'remote.origin.url'], { allowFailure: true }) : null;
+  const dirty = initialized ? await readDirtyState() : false;
+  const { ahead, behind } = initialized ? await readAheadBehind() : { ahead: 0, behind: 0 };
   const systemContent = readText(systemFilePath());
   return {
     initialized,
@@ -368,10 +536,14 @@ export async function getMemoryState(options: { cwd?: string } = {}): Promise<Me
     scopes: listScopes(options.cwd),
     skills: listMemorySkills(),
     recentChanges: initialized ? await readRecentChanges() : [],
+    issues: initialized ? collectMemoryIssues({ dirty, ahead, behind }) : [],
     git: {
       initialized: existsSync(join(root, '.git')),
       branch: branch && branch !== 'HEAD' ? branch : null,
       remoteUrl,
+      dirty,
+      ahead,
+      behind,
     },
   };
 }
@@ -391,11 +563,57 @@ export async function createMemoryScope(input: CreateMemoryScopeInput): Promise<
 
 export async function writeMemoryFile(input: WriteMemoryFileInput): Promise<MemoryState> {
   const relativePath = safeRelativePath(input.relativePath);
+  validateMemoryFileContent(relativePath, input.content);
   await initializeMemory();
   const target = join(memoryRoot(), relativePath);
+  mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, normalizeNewlines(input.content), 'utf-8');
   await commitMemoryChanges(input.reason?.trim() || `Update ${relativePath}`);
   return getMemoryState();
+}
+
+export async function setMemoryRemote(url: string): Promise<MemoryState> {
+  const remoteUrl = validateRemoteUrl(url);
+  await initializeMemory();
+  const existing = await git(['remote', 'get-url', 'origin'], { allowFailure: true });
+  await git(existing ? ['remote', 'set-url', 'origin', remoteUrl] : ['remote', 'add', 'origin', remoteUrl]);
+  await commitMemoryChanges('chore: configure memory remote');
+  return getMemoryState();
+}
+
+export async function syncMemoryRemote(): Promise<MemoryState> {
+  if (!existsSync(systemFilePath()) || !existsSync(join(memoryRoot(), '.git'))) {
+    await initializeMemory();
+  }
+  const remoteUrl = await git(['remote', 'get-url', 'origin'], { allowFailure: true });
+  if (!remoteUrl) throw new Error('Configure a memory remote before syncing.');
+  const branch = (await git(['rev-parse', '--abbrev-ref', 'HEAD'], { allowFailure: true })) || 'main';
+  await git(['fetch', 'origin']);
+  const remoteBranch = await git(['rev-parse', '--verify', `origin/${branch}`], { allowFailure: true });
+  if (remoteBranch) {
+    const status = await git(['status', '--porcelain'], { allowFailure: true });
+    const { behind } = await readAheadBehind(`origin/${branch}`);
+    if (status && behind > 0) {
+      throw new Error('Memory has local file changes and the remote has new commits. Sync after saving or resolving memory changes.');
+    }
+  }
+  await commitMemoryChanges('chore: save memory before sync');
+  if (remoteBranch) {
+    await git(['pull', '--ff-only', 'origin', branch]);
+  }
+  await git(['push', '-u', 'origin', branch]);
+  return getMemoryState();
+}
+
+export async function importKnowledgeMemoryDocs(): Promise<MemoryImportResult> {
+  await initializeMemory();
+  const { content, count } = importedKnowledgeMarkdown();
+  const target = join(scopesDir(), 'imported-knowledge', 'memory.md');
+  const nextContent = existsSync(target) ? replaceLegacyImportBlock(readText(target), content) : content;
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, nextContent, 'utf-8');
+  await commitMemoryChanges('Import legacy knowledge notes');
+  return { importedCount: count, state: await getMemoryState() };
 }
 
 export async function listMemoryFileHistory(relativePath: string): Promise<MemoryGitChange[]> {

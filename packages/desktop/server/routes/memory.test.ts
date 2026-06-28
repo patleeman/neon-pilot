@@ -3,9 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const memoryStore = vi.hoisted(() => ({
   createMemoryScope: vi.fn(),
   getMemoryState: vi.fn(),
+  importKnowledgeMemoryDocs: vi.fn(),
   initializeMemory: vi.fn(),
   listMemoryFileHistory: vi.fn(),
   memoryScopeSlugForPath: vi.fn(() => 'workspace'),
+  setMemoryRemote: vi.fn(),
+  syncMemoryRemote: vi.fn(),
   writeMemoryFile: vi.fn(),
 }));
 
@@ -51,6 +54,9 @@ describe('registerMemoryRoutes', () => {
     memoryStore.initializeMemory.mockResolvedValue({ initialized: true, root: '/memory' });
     memoryStore.createMemoryScope.mockResolvedValue({ initialized: true, scopes: [{ slug: 'app' }] });
     memoryStore.writeMemoryFile.mockResolvedValue({ initialized: true });
+    memoryStore.setMemoryRemote.mockResolvedValue({ initialized: true, git: { remoteUrl: 'git@example.test:memory.git' } });
+    memoryStore.syncMemoryRemote.mockResolvedValue({ initialized: true, synced: true });
+    memoryStore.importKnowledgeMemoryDocs.mockResolvedValue({ importedCount: 2, state: { initialized: true } });
     memoryStore.listMemoryFileHistory.mockResolvedValue([{ hash: 'abc' }]);
   });
 
@@ -111,5 +117,21 @@ describe('registerMemoryRoutes', () => {
     expect(memoryStore.writeMemoryFile).toHaveBeenCalledWith({ relativePath: 'system.md', content: '# Memory', reason: 'Update memory' });
     expect(memoryStore.listMemoryFileHistory).toHaveBeenCalledWith('system.md');
     expect(historyRes.json).toHaveBeenCalledWith({ history: [{ hash: 'abc' }] });
+  });
+
+  it('sets remote, syncs, and imports legacy knowledge', async () => {
+    const routes = createHarness();
+    const remoteRes = createResponse();
+    const syncRes = createResponse();
+    const importRes = createResponse();
+
+    await routes.get('POST /api/memory/remote')!({ body: { url: 'git@example.test:memory.git' } }, remoteRes);
+    await routes.get('POST /api/memory/sync')!({ body: {} }, syncRes);
+    await routes.get('POST /api/memory/import/knowledge')!({ body: {} }, importRes);
+
+    expect(memoryStore.setMemoryRemote).toHaveBeenCalledWith('git@example.test:memory.git');
+    expect(memoryStore.syncMemoryRemote).toHaveBeenCalled();
+    expect(memoryStore.importKnowledgeMemoryDocs).toHaveBeenCalled();
+    expect(importRes.json).toHaveBeenCalledWith({ importedCount: 2, state: { initialized: true, root: '/memory' } });
   });
 });

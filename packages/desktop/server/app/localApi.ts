@@ -140,6 +140,7 @@ import { notifyExtensionStartupStatus } from '../extensions/extensionNotificatio
 import { requestExtensionUiConfirm } from '../extensions/extensionUiConfirmBridge.js';
 import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../extensions/workbenchBrowserToolHost.js';
 import { listMemoryDocs, listSkillsForProfile } from '../knowledge/memoryDocs.js';
+import { queueMemoryReflectionForConversationOperation } from '../memory/memoryReflectionQueue.js';
 import type { ProviderDesktopCapabilityContext } from '../models/providerDesktopCapability.js';
 import { invokeToolByName } from '../tools/toolGateway.js';
 
@@ -2452,6 +2453,14 @@ export async function updateDesktopConversationWorkspaceByOperation(
     ...buildDesktopConversationWorkspaceResponse(saved),
   };
   publishConversationWorkspaceChanged(response);
+  try {
+    void queueMemoryReflectionForConversationOperation({
+      conversationId: 'sessionId' in input ? input.sessionId : undefined,
+      operation: input.operation,
+    });
+  } catch {
+    // Reflection is background-only; workspace operations must stay authoritative.
+  }
   return response;
 }
 

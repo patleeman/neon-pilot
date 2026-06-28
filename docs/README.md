@@ -25,7 +25,7 @@ Pick the shortest path for what you are doing:
 | Audience                            | First docs to read                                                                                                  | Success check                                                                            |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | **New user**                        | [Getting Started](getting-started.md), then [Views](views.md) and [Conversations](conversations.md)                 | App opens, provider is configured, and a first conversation gets a reply.                |
-| **Power user organizing context**   | [Conversation context](conversation-context.md), [Memory](memory.md), [Knowledge base sync](knowledge-base.md)      | Durable memory, useful files, notes, and project records are available to conversations. |
+| **Power user organizing context**   | [Conversation context](conversation-context.md), [Memory](memory.md), [Legacy knowledge files](knowledge-base.md)   | Durable memory, useful files, notes, and project records are available to conversations. |
 | **External agent or script author** | [Agent bootstrap](agent-bootstrap.md), [Neon Pilot CLI](cli.md), [CLI reference](cli-reference.md)                  | `neon-pilot bootstrap doctor` passes and reports usable provider setup.                  |
 | **Extension builder**               | [Build an extension with your agent](build-an-extension.md), then [Extension authoring](extensions.md)              | The extension installs, its route/action works through the app, and its build passes.    |
 | **Repo contributor**                | [Development workflow](development.md), then the owning package or extension README                                 | Focused validation passes and the app can still start when touched code affects startup. |
@@ -35,7 +35,7 @@ Pick the shortest path for what you are doing:
 
 - **Install and verify Neon Pilot** — use [Getting Started](getting-started.md), then run the first conversation.
 - **Give the agent useful context** — use [Conversation context](conversation-context.md) for files, folders, images, drawings, and generated context; use [Memory](memory.md) for durable agent behavior.
-- **Keep work organized** — use [Conversations](conversations.md), [Projects](projects.md), and [Knowledge base sync](knowledge-base.md).
+- **Keep work organized** — use [Conversations](conversations.md), [Projects](projects.md), and [Memory](memory.md).
 - **Let work continue later** — use [Conversations](conversations.md) for follow-ups/deferred resumes and [Daemon](daemon.md) for background runtime behavior.
 - **Install more capabilities** — use [Extension distribution](extension-distribution.md) and the first-party optional extension repo.
 - **Build a custom capability** — start with [Build an extension with your agent](build-an-extension.md).
@@ -133,7 +133,7 @@ Optional first-party extensions from [`patleeman/neon-pilot-extensions`](https:/
 - [Dynamic Workflows](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-dynamic-workflows) — workflow coordinators that fan out daemon-backed subagents
 - [DS4](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-ds4) — local DeepSeek V4 Flash provider/profile for antirez/ds4
 - [Exa Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-exa-search) — Exa web search
-- [Knowledge](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge) — knowledge base browsing, editing, references, and sync
+- [Knowledge](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge) — legacy knowledge/reference browsing and editing
 - [Suggested Context](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context) — related conversation suggestions
 - [Writing Studio](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-writing-studio) — document-first collaborative writing surface
 

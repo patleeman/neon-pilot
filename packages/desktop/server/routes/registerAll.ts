@@ -1,3 +1,4 @@
+import { registerMemoryReflectionLifecycleHandler } from '../memory/memoryReflectionQueue.js';
 import { registerAppTelemetryRoutes } from './appTelemetry.js';
 import { registerCompanionProxyRoutes } from './companionProxy.js';
 import type { RegisterServerRoutesInput } from './context.js';
@@ -36,6 +37,7 @@ export function registerServerRoutes({ app, context }: RegisterServerRoutesInput
   registerToolsRoutes(app, context);
 
   registerMemoryRoutes(app, context);
+  registerMemoryReflectionLifecycleHandler();
 
   registerSystemRoutes(app, context);
 

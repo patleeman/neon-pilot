@@ -10,9 +10,13 @@ import { MemoryPage } from './MemoryPage';
 vi.mock('../client/api', () => ({
   api: {
     createMemoryScope: vi.fn(),
+    createMemoryScopeFromCwd: vi.fn(),
+    importKnowledgeMemory: vi.fn(),
     initializeManagedMemory: vi.fn(),
     managedMemory: vi.fn(),
     memoryFileHistory: vi.fn(),
+    setMemoryRemote: vi.fn(),
+    syncMemoryRemote: vi.fn(),
     writeMemoryFile: vi.fn(),
   },
 }));
@@ -62,10 +66,14 @@ const initializedState: ManagedMemoryState = {
       files: ['system.md'],
     },
   ],
+  issues: [],
   git: {
     initialized: true,
     branch: 'main',
     remoteUrl: null,
+    dirty: false,
+    ahead: 0,
+    behind: 0,
   },
 };
 
@@ -135,5 +143,34 @@ describe('MemoryPage', () => {
     );
     expect(await screen.findByText(/Updated/)).toBeTruthy();
     await waitFor(() => expect(api.memoryFileHistory).toHaveBeenCalledTimes(historyCallsBeforeSave + 1));
+  });
+
+  it('creates a current workspace scope and imports legacy knowledge', async () => {
+    const noScopeState = { ...initializedState, scopes: [] };
+    const importedState = {
+      ...initializedState,
+      scopes: [
+        ...initializedState.scopes,
+        {
+          ...initializedState.scopes[0],
+          slug: 'imported-knowledge',
+          name: 'Imported knowledge',
+          inject: false,
+          active: false,
+        },
+      ],
+    };
+    vi.mocked(api.managedMemory).mockResolvedValue(noScopeState);
+    vi.mocked(api.createMemoryScopeFromCwd).mockResolvedValue(initializedState);
+    vi.mocked(api.importKnowledgeMemory).mockResolvedValue({ importedCount: 1, state: importedState });
+
+    render(<MemoryPage />);
+
+    fireEvent.click(await screen.findByText('Scope current workspace'));
+    await waitFor(() => expect(api.createMemoryScopeFromCwd).toHaveBeenCalledWith({ reason: 'Add current workspace memory scope' }));
+
+    fireEvent.click(await screen.findByText('Import knowledge'));
+    await waitFor(() => expect(api.importKnowledgeMemory).toHaveBeenCalled());
+    expect(await screen.findByText('Imported knowledge')).toBeTruthy();
   });
 });

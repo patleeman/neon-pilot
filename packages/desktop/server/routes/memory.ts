@@ -3,9 +3,12 @@ import type { Express } from 'express';
 import {
   createMemoryScope,
   getMemoryState,
+  importKnowledgeMemoryDocs,
   initializeMemory,
   listMemoryFileHistory,
   memoryScopeSlugForPath,
+  setMemoryRemote,
+  syncMemoryRemote,
   writeMemoryFile,
 } from '../memory/memoryStore.js';
 import type { ServerRouteContext } from './context.js';
@@ -46,6 +49,39 @@ export function registerMemoryRoutes(router: Pick<Express, 'get' | 'post' | 'put
     }
   });
 
+  router.post('/api/memory/remote', async (req, res) => {
+    try {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const url = optionalString(body.url);
+      if (!url) {
+        res.status(400).json({ error: 'Remote URL is required.' });
+        return;
+      }
+      await setMemoryRemote(url);
+      res.json(await getMemoryState({ cwd: context.getDefaultWebCwd() }));
+    } catch (error) {
+      res.status(400).json({ error: errorMessage(error) });
+    }
+  });
+
+  router.post('/api/memory/sync', async (_req, res) => {
+    try {
+      await syncMemoryRemote();
+      res.json(await getMemoryState({ cwd: context.getDefaultWebCwd() }));
+    } catch (error) {
+      res.status(400).json({ error: errorMessage(error) });
+    }
+  });
+
+  router.post('/api/memory/import/knowledge', async (_req, res) => {
+    try {
+      const result = await importKnowledgeMemoryDocs();
+      res.json({ importedCount: result.importedCount, state: await getMemoryState({ cwd: context.getDefaultWebCwd() }) });
+    } catch (error) {
+      res.status(400).json({ error: errorMessage(error) });
+    }
+  });
+
   router.post('/api/memory/scopes', async (req, res) => {
     try {
       const body = (req.body ?? {}) as Record<string, unknown>;
@@ -54,17 +90,16 @@ export function registerMemoryRoutes(router: Pick<Express, 'get' | 'post' | 'put
         res.status(400).json({ error: 'Scope name is required.' });
         return;
       }
-      res.json(
-        await createMemoryScope({
-          name,
-          slug: optionalString(body.slug),
-          roots: stringArray(body.roots),
-          aliases: stringArray(body.aliases),
-          type: optionalString(body.type),
-          inject: typeof body.inject === 'boolean' ? body.inject : undefined,
-          reason: optionalString(body.reason),
-        }),
-      );
+      await createMemoryScope({
+        name,
+        slug: optionalString(body.slug),
+        roots: stringArray(body.roots),
+        aliases: stringArray(body.aliases),
+        type: optionalString(body.type),
+        inject: typeof body.inject === 'boolean' ? body.inject : undefined,
+        reason: optionalString(body.reason),
+      });
+      res.json(await getMemoryState({ cwd: context.getDefaultWebCwd() }));
     } catch (error) {
       res.status(400).json({ error: errorMessage(error) });
     }
@@ -75,17 +110,16 @@ export function registerMemoryRoutes(router: Pick<Express, 'get' | 'post' | 'put
       const body = (req.body ?? {}) as Record<string, unknown>;
       const cwd = optionalString(body.cwd) ?? context.getDefaultWebCwd();
       const name = optionalString(body.name) ?? memoryScopeSlugForPath(cwd);
-      res.json(
-        await createMemoryScope({
-          name,
-          slug: optionalString(body.slug),
-          roots: [cwd],
-          aliases: stringArray(body.aliases),
-          type: 'workspace',
-          inject: true,
-          reason: optionalString(body.reason) ?? `Add ${name} memory scope`,
-        }),
-      );
+      await createMemoryScope({
+        name,
+        slug: optionalString(body.slug),
+        roots: [cwd],
+        aliases: stringArray(body.aliases),
+        type: 'workspace',
+        inject: true,
+        reason: optionalString(body.reason) ?? `Add ${name} memory scope`,
+      });
+      res.json(await getMemoryState({ cwd }));
     } catch (error) {
       res.status(400).json({ error: errorMessage(error) });
     }
@@ -100,7 +134,8 @@ export function registerMemoryRoutes(router: Pick<Express, 'get' | 'post' | 'put
         res.status(400).json({ error: 'relativePath and content are required.' });
         return;
       }
-      res.json(await writeMemoryFile({ relativePath, content, reason: optionalString(body.reason) }));
+      await writeMemoryFile({ relativePath, content, reason: optionalString(body.reason) });
+      res.json(await getMemoryState({ cwd: context.getDefaultWebCwd() }));
     } catch (error) {
       res.status(400).json({ error: errorMessage(error) });
     }

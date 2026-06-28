@@ -1379,6 +1379,13 @@ export interface MemoryGitChange {
   files: string[];
 }
 
+export interface MemoryIssue {
+  severity: 'info' | 'warning' | 'error';
+  code: string;
+  message: string;
+  relativePath?: string;
+}
+
 export interface MemorySystemFile {
   relativePath: string;
   path: string;
@@ -1418,10 +1425,14 @@ export interface ManagedMemoryState {
   scopes: MemoryScope[];
   skills: MemoryManagedSkill[];
   recentChanges: MemoryGitChange[];
+  issues: MemoryIssue[];
   git: {
     initialized: boolean;
     branch: string | null;
     remoteUrl: string | null;
+    dirty: boolean;
+    ahead: number;
+    behind: number;
   };
 }
 

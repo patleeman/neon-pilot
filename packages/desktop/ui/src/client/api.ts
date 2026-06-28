@@ -851,6 +851,9 @@ export const api = {
   createMemoryScopeFromCwd: (input: { cwd?: string; name?: string; slug?: string; aliases?: string[]; reason?: string }) =>
     post<ManagedMemoryState>('/memory/scopes/from-cwd', input),
   writeMemoryFile: (input: { relativePath: string; content: string; reason?: string }) => put<ManagedMemoryState>('/memory/file', input),
+  setMemoryRemote: (input: { url: string }) => post<ManagedMemoryState>('/memory/remote', input),
+  syncMemoryRemote: () => post<ManagedMemoryState>('/memory/sync', {}),
+  importKnowledgeMemory: () => post<{ importedCount: number; state: ManagedMemoryState }>('/memory/import/knowledge', {}),
   memoryFileHistory: async (relativePath: string) => {
     const params = new URLSearchParams({ relativePath });
     return get<{ history: ManagedMemoryState['recentChanges'] }>(`/memory/file/history?${params.toString()}`);

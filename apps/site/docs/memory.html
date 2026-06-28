@@ -67,6 +67,8 @@
   skills/
     &lt;skill&gt;/
       SKILL.md
+  reflections/
+    &lt;conversation&gt;.md
   archive/</code></pre>
         <h2 id="runtime-behavior">Runtime behavior</h2>
         <ul>
@@ -76,7 +78,14 @@
             frontmatter.
           </li>
           <li><code>memory/skills/&lt;skill&gt;/SKILL.md</code> is discovered by the skill inventory alongside legacy durable skills.</li>
+          <li>
+            <code>memory/reflections/&lt;conversation&gt;.md</code> stores non-injected reflection drafts created from conversation
+            lifecycle events.
+          </li>
           <li>Memory edits are committed to the memory Git repository by Neon Pilot.</li>
+          <li>
+            A remote can be configured from the Memory page. Sync fetches, fast-forwards when possible, and pushes the current branch.
+          </li>
         </ul>
         <p>Scope frontmatter controls activation:</p>
         <pre><code>---
@@ -96,19 +105,30 @@ inject: true
           <li>System memory editing</li>
           <li>scope browsing and creation</li>
           <li>memory skill browsing and editing</li>
+          <li>current workspace scoping</li>
+          <li>repository health, remote setup, and sync</li>
+          <li>import from legacy knowledge notes into a non-injected review scope</li>
           <li>recent changes and per-file Git history</li>
         </ul>
         <p>Memory writes do not require approval. Use the history surface to inspect commits and recover from bad edits.</p>
+        <h2 id="reflection">Reflection</h2>
+        <p>
+          Neon Pilot queues memory reflection after conversation turn-end events, auto-compaction, and close/archive operations. Reflection
+          writes a committed draft under <code>memory/reflections/</code> with <code>inject: false</code>; it does not directly mutate
+          <code>system.md</code>, scope memory, or skills. Review drafts and move stable preferences, project facts, or recurring workflow
+          rules into the correct injected memory file when they are worth keeping.
+        </p>
         <h2 id="relation-to-knowledge">Relation to Knowledge</h2>
         <p>
-          Memory is behavior and stable agent context. The knowledge base is reference material for browsing, search, sync, and explicit
-          context attachment.
+          Memory is behavior and stable agent context. Legacy knowledge files remain reference material for browsing, search, and explicit
+          context attachment. Importing knowledge into Memory creates <code>memory/scopes/imported-knowledge/memory.md</code> with
+          <code>inject: false</code>, so old notes are visible for review without changing agent behavior automatically.
         </p>
         <p class="edit-link"><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/memory.md">Edit this page on GitHub →</a></p>
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#runtime-behavior">Runtime behavior</a><a href="#desktop-ui">Desktop UI</a
+        <a href="#runtime-behavior">Runtime behavior</a><a href="#desktop-ui">Desktop UI</a><a href="#reflection">Reflection</a
         ><a href="#relation-to-knowledge">Relation to Knowledge</a>
       </aside>
     </main>
