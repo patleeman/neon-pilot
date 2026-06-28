@@ -50,10 +50,22 @@ vi.mock('../../extensions/ComposerButtonHost', () => ({
     controlContext,
     registration,
   }: {
-    controlContext: { currentModel: string; currentThinkingLevel: string; models: ModelInfo[] };
+    controlContext: {
+      appendText?: (text: string) => void;
+      currentModel: string;
+      currentThinkingLevel: string;
+      models: ModelInfo[];
+    };
     registration: { id: string };
   }) => {
     if (registration.id === 'attach-files') return <button title="Attach file">Attach</button>;
+    if (registration.id === 'dictation') {
+      return (
+        <button type="button" aria-label="Mock dictation" onClick={() => controlContext.appendText?.('dictated words')}>
+          Dictate
+        </button>
+      );
+    }
     if (registration.id === 'model-preferences') {
       const selectedModel = controlContext.models.find((model) => model.id === controlContext.currentModel);
       const modelLabel = selectedModel?.name ?? (controlContext.currentModel.trim() || 'Select model');
@@ -577,6 +589,82 @@ describe('ConversationComposerInputControls', () => {
 
       rendered.rerender(<ConversationComposerInputControls {...baseProps} input="" />);
       expect(textarea!.value).toBe('');
+    } finally {
+      rendered.unmount();
+    }
+  });
+
+  it('shows text inserted by an async composer extension immediately', () => {
+    extensionRegistryState.composerControls = [
+      {
+        extensionId: 'system-local-dictation',
+        id: 'dictation',
+        component: 'DictationButton',
+        slot: 'actions',
+        priority: 100,
+      },
+    ];
+    const textareaRef: React.RefObject<HTMLTextAreaElement> = { current: null };
+    let parentInput = '';
+    const onAppendComposerText = vi.fn((text: string) => {
+      parentInput = parentInput ? `${parentInput} ${text}` : text;
+      if (textareaRef.current) {
+        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+        setter?.call(textareaRef.current, parentInput);
+      }
+    });
+    const rendered = renderInteractive(
+      <ConversationComposerInputControls
+        fileInputRef={{ current: null }}
+        textareaRef={textareaRef}
+        input=""
+        pendingAskUserQuestion={false}
+        composerDisabled={false}
+        composerShellWidth={800}
+        streamIsStreaming={false}
+        models={models}
+        currentModel="model-a"
+        currentThinkingLevel="medium"
+        currentServiceTier=""
+        savingPreference={null}
+        conversationNeedsTakeover={false}
+        composerHasContent={false}
+        composerShowsQuestionSubmit={false}
+        composerQuestionCanSubmit={false}
+        composerQuestionRemainingCount={0}
+        composerQuestionSubmitting={false}
+        composerSubmitLabel="Send"
+        composerAltHeld={false}
+        onFilesSelected={vi.fn()}
+        onInputChange={vi.fn()}
+        onRememberComposerSelection={vi.fn()}
+        onKeyDown={vi.fn()}
+        onPaste={vi.fn()}
+        onOpenFilePicker={vi.fn()}
+        onUpsertDrawingAttachment={vi.fn()}
+        onSelectModel={vi.fn()}
+        onSelectThinkingLevel={vi.fn()}
+        onSelectServiceTier={vi.fn()}
+        onInsertComposerText={vi.fn()}
+        onAppendComposerText={onAppendComposerText}
+        onSubmitComposerQuestion={vi.fn()}
+        onSubmitComposerActionForModifiers={vi.fn()}
+        onAbortStream={vi.fn()}
+      />,
+    );
+
+    try {
+      const textarea = rendered.container.querySelector<HTMLTextAreaElement>('textarea');
+      const dictation = rendered.container.querySelector<HTMLButtonElement>('button[aria-label="Mock dictation"]');
+      expect(textarea).toBeTruthy();
+      expect(dictation).toBeTruthy();
+
+      act(() => {
+        dictation!.click();
+      });
+
+      expect(onAppendComposerText).toHaveBeenCalledWith('dictated words');
+      expect(textarea!.value).toBe('dictated words');
     } finally {
       rendered.unmount();
     }

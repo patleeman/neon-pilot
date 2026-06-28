@@ -545,6 +545,23 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
     setLocalInputState(nextInput);
   };
 
+  const syncLocalInputFromHostInsertion = () => {
+    const nextInput = textareaRef.current?.value;
+    if (typeof nextInput === 'string' && nextInput !== localInputRef.current) {
+      setLocalInput(nextInput);
+    }
+  };
+
+  const insertComposerTextFromExtension = (text: string) => {
+    onInsertComposerText(text);
+    syncLocalInputFromHostInsertion();
+  };
+
+  const appendComposerTextFromExtension = (text: string) => {
+    onAppendComposerText(text);
+    syncLocalInputFromHostInsertion();
+  };
+
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -621,8 +638,8 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
     composerHasContent,
     openFilePicker: onOpenFilePicker,
     addFiles: onFilesSelected,
-    insertText: onInsertComposerText,
-    appendText: onAppendComposerText,
+    insertText: insertComposerTextFromExtension,
+    appendText: appendComposerTextFromExtension,
     models,
     currentModel,
     currentThinkingLevel,
@@ -787,8 +804,8 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
               composerQuestionSubmitting={composerQuestionSubmitting}
               composerSubmitLabel={composerSubmitLabel}
               composerAltHeld={composerAltHeld}
-              onInsertComposerText={onInsertComposerText}
-              onAppendComposerText={onAppendComposerText}
+              onInsertComposerText={insertComposerTextFromExtension}
+              onAppendComposerText={appendComposerTextFromExtension}
               onSubmitComposerQuestion={onSubmitComposerQuestion}
               onSubmitComposerActionForModifiers={onSubmitComposerActionForModifiers}
               onAbortStream={onAbortStream}
