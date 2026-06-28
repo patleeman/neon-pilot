@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SseEvent } from '../conversations/liveSessionEvents.js';
@@ -37,7 +41,7 @@ describe('TelegramGatewayRuntime', () => {
 
   function deps(overrides: Record<string, unknown> = {}) {
     return {
-      stateRoot: '/state',
+      stateRoot: mkdtempSync(join(tmpdir(), 'telegram-gateway-test-')),
       profile: 'shared',
       authFile: '/auth',
       createConversation: vi.fn(async () => ({ id: 'conv-new' })),
@@ -744,6 +748,7 @@ describe('TelegramGatewayRuntime', () => {
       'https://api.telegram.org/bottoken/setMyCommands',
       expect.objectContaining({ body: expect.stringContaining('"command":"pause"') }),
     );
+    expect(runtime2.isRunning()).toBe(true);
     runtime2.stop();
     expect(runtime2.isRunning()).toBe(false);
   });
@@ -857,5 +862,26 @@ describe('TelegramGatewayRuntime', () => {
       ),
     );
     runtime.stop();
+  });
+
+  it('prevents two runtime instances in this app from polling the same state root', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'telegram-gateway-lock-test-'));
+    const fetch = vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, result: [] }) }));
+    const first = new TelegramGatewayRuntime(deps({ stateRoot, fetch }) as never);
+    const second = new TelegramGatewayRuntime(deps({ stateRoot, fetch }) as never);
+
+    first.start();
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledWith('https://api.telegram.org/bottoken/setMyCommands', expect.anything()));
+    second.start();
+
+    expect(second.isRunning()).toBe(false);
+    expect(state.recordGatewayEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'error', message: expect.stringContaining('already polling') }),
+    );
+    first.stop();
+    second.start();
+    expect(second.isRunning()).toBe(true);
+    second.stop();
+    rmSync(stateRoot, { recursive: true, force: true });
   });
 });

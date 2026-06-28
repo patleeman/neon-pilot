@@ -1,3 +1,6 @@
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+
 import type { SseEvent } from '../conversations/liveSessionEvents.js';
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import {
@@ -127,6 +130,7 @@ const TYPING_INTERVAL_MS = 4_000;
 const TELEGRAM_MESSAGE_LIMIT = 4_096;
 const TELEGRAM_TOOL_STATUS_LIMIT = 180;
 const RECENT_REPLY_DEDUPE_MS = 30_000;
+const TELEGRAM_GATEWAY_LOCK_FILE = 'telegram-gateway.poller.lock';
 
 export interface TelegramToolStatus {
   toolName: string;
@@ -156,6 +160,8 @@ class TypingIndicator {
 export class TelegramGatewayRuntime {
   private abortController: AbortController | null = null;
   private polling = false;
+  private lockPath: string | null = null;
+  private readonly runtimeId = `${process.pid}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2)}`;
   private nextOffset = 0;
   private typingIndicators = new Map<string, TypingIndicator>();
   private pendingStatusMessages = new Map<string, { chatId: string; messageId: number }>();
@@ -172,10 +178,18 @@ export class TelegramGatewayRuntime {
     if (this.polling) return;
     const token = this.dependencies.readBotToken();
     if (!token) return;
-    this.abortController = new AbortController();
+    if (!this.acquirePollerLock()) return;
+    const abortController = new AbortController();
+    this.abortController = abortController;
     this.polling = true;
     void this.configureBotCommands(token).catch(() => undefined);
-    void this.pollLoop(token, this.abortController.signal);
+    void this.pollLoop(token, abortController.signal).finally(() => {
+      if (this.abortController === abortController) {
+        this.polling = false;
+        this.abortController = null;
+        this.releasePollerLock();
+      }
+    });
   }
 
   stop(): void {
@@ -183,6 +197,7 @@ export class TelegramGatewayRuntime {
     this.abortController?.abort();
     this.abortController = null;
     this.lastPollingFailureMessage = null;
+    this.releasePollerLock();
     for (const indicator of this.typingIndicators.values()) indicator.stop();
     this.typingIndicators.clear();
     for (const unsubscribe of this.streamSubscriptions.values()) unsubscribe();
@@ -760,14 +775,78 @@ export class TelegramGatewayRuntime {
     });
   }
 
+  private acquirePollerLock(): boolean {
+    const lockPath = join(this.dependencies.stateRoot, TELEGRAM_GATEWAY_LOCK_FILE);
+    mkdirSync(dirname(lockPath), { recursive: true });
+    const payload = JSON.stringify({
+      pid: process.pid,
+      runtimeId: this.runtimeId,
+      profile: this.dependencies.profile,
+      startedAt: new Date().toISOString(),
+    });
+    try {
+      writeFileSync(lockPath, payload, { flag: 'wx' });
+      this.lockPath = lockPath;
+      return true;
+    } catch {
+      const existing = this.readPollerLock(lockPath);
+      if (existing?.pid && this.isProcessAlive(existing.pid)) {
+        void recordGatewayEvent({
+          stateRoot: this.dependencies.stateRoot,
+          profile: this.dependencies.profile,
+          provider: 'telegram',
+          kind: 'error',
+          message: `Telegram gateway is already polling in process ${existing.pid}.`,
+        });
+        return false;
+      }
+      rmSync(lockPath, { force: true });
+      writeFileSync(lockPath, payload, { flag: 'wx' });
+      this.lockPath = lockPath;
+      return true;
+    }
+  }
+
+  private readPollerLock(lockPath: string): { pid?: number } | null {
+    try {
+      const parsed = JSON.parse(readFileSync(lockPath, 'utf8')) as { pid?: unknown };
+      return typeof parsed.pid === 'number' ? { pid: parsed.pid } : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private isProcessAlive(pid: number): boolean {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private releasePollerLock(): void {
+    if (!this.lockPath) return;
+    const existing = this.readPollerLock(this.lockPath);
+    if (existing?.pid === process.pid) {
+      rmSync(this.lockPath, { force: true });
+    }
+    this.lockPath = null;
+  }
+
   private async pollLoop(token: string, signal: AbortSignal): Promise<void> {
     while (this.polling && !signal.aborted) {
       try {
-        const updates = await this.telegramRequest<TelegramUpdate[]>(token, 'getUpdates', {
-          timeout: 50,
-          offset: this.nextOffset || undefined,
-          allowed_updates: ['message', 'callback_query'],
-        });
+        const updates = await this.telegramRequest<TelegramUpdate[]>(
+          token,
+          'getUpdates',
+          {
+            timeout: 50,
+            offset: this.nextOffset || undefined,
+            allowed_updates: ['message', 'callback_query'],
+          },
+          signal,
+        );
         this.markPollingHealthy();
         for (const update of updates) {
           try {
@@ -928,13 +1007,13 @@ export class TelegramGatewayRuntime {
     await this.telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callbackQueryId });
   }
 
-  private async telegramRequest<T>(token: string, method: string, body: unknown): Promise<T> {
+  private async telegramRequest<T>(token: string, method: string, body: unknown, signal = this.abortController?.signal): Promise<T> {
     const fetchImpl = this.dependencies.fetch ?? fetch;
     const response = await fetchImpl(`https://api.telegram.org/bot${token}/${method}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      signal: this.abortController?.signal,
+      signal,
     });
     const payload = (await response.json()) as TelegramApiResponse<T>;
     if (!response.ok || !payload.ok) {
