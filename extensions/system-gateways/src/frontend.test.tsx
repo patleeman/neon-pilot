@@ -24,12 +24,8 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
   ErrorState: ({ message }: { message: string }) => <div>{message}</div>,
   Notice: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   StatusDot: () => <span data-testid="status-dot" />,
-  Switch: ({
-    checked,
-    onCheckedChange,
-    ...props
-  }: React.InputHTMLAttributes<HTMLInputElement> & { onCheckedChange?: (checked: boolean) => void }) => (
-    <input type="checkbox" checked={checked} onChange={(event) => onCheckedChange?.(event.currentTarget.checked)} {...props} />
+  Switch: ({ checked, onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { checked: boolean }) => (
+    <button type="button" role="switch" aria-checked={checked} onClick={onClick} {...props} />
   ),
   TextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   ToolbarButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,

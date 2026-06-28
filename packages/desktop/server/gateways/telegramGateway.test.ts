@@ -603,6 +603,59 @@ describe('TelegramGatewayRuntime', () => {
     expect(unsubscribe).toHaveBeenCalled();
   });
 
+  it('edits the working message from the latest assistant reply after prompt submission', async () => {
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
+    const d = deps({
+      readLatestAssistantReply: vi.fn(async () => ({ text: 'final reply' })),
+      fetch: vi.fn(async (url: string) => ({
+        ok: true,
+        json: async () => ({ ok: true, result: url.endsWith('/sendMessage') ? { message_id: 42 } : true }),
+      })),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: 'hello' } });
+
+    expect(d.readLatestAssistantReply).toHaveBeenCalledWith('conv-1');
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/editMessageText',
+      expect.objectContaining({ body: expect.stringContaining('final reply') }),
+    );
+  });
+
+  it('waits for a fresh assistant reply instead of delivering a stale previous reply', async () => {
+    vi.useFakeTimers();
+    state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
+    const staleTimestamp = new Date(Date.now() - 10_000).toISOString();
+    const freshTimestamp = new Date(Date.now() + 1_000).toISOString();
+    const d = deps({
+      readLatestAssistantReply: vi
+        .fn()
+        .mockResolvedValueOnce({ text: 'stale reply', timestamp: staleTimestamp })
+        .mockResolvedValueOnce({ text: 'fresh reply', timestamp: freshTimestamp }),
+      fetch: vi.fn(async (url: string) => ({
+        ok: true,
+        json: async () => ({ ok: true, result: url.endsWith('/sendMessage') ? { message_id: 42 } : true }),
+      })),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    const updatePromise = runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: 'hello' } });
+    await vi.advanceTimersByTimeAsync(500);
+    await updatePromise;
+
+    expect(d.fetch).not.toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/editMessageText',
+      expect.objectContaining({ body: expect.stringContaining('stale reply') }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/editMessageText',
+      expect.objectContaining({ body: expect.stringContaining('fresh reply') }),
+    );
+  });
+
   it('edits the working message from streamed assistant text on agent end', async () => {
     state.findGatewayChatTarget.mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' });
     state.findGatewayChatTargetByConversation.mockReturnValueOnce({ externalChatId: '123', externalChatLabel: 'Pat' });
@@ -864,7 +917,7 @@ describe('TelegramGatewayRuntime', () => {
     runtime.stop();
   });
 
-  it('prevents two runtime instances in this app from polling the same state root', async () => {
+  it('prevents two runtime instances in this app from polling the same state root without a false conflict event', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'telegram-gateway-lock-test-'));
     const fetch = vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, result: [] }) }));
     const first = new TelegramGatewayRuntime(deps({ stateRoot, fetch }) as never);
@@ -875,7 +928,7 @@ describe('TelegramGatewayRuntime', () => {
     second.start();
 
     expect(second.isRunning()).toBe(false);
-    expect(state.recordGatewayEvent).toHaveBeenCalledWith(
+    expect(state.recordGatewayEvent).not.toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'error', message: expect.stringContaining('already polling') }),
     );
     first.stop();

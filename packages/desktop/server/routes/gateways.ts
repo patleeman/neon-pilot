@@ -227,6 +227,7 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
         liveSessionContext(context),
       );
     },
+    readLatestAssistantReply,
     subscribeConversationEvents: (conversationId, listener) => subscribeLiveSessionEvents(conversationId, listener, { tailBlocks: 0 }),
     transcribeAudio,
     renameConversation: (conversationId, title) => renameSession(conversationId, title),
@@ -315,7 +316,7 @@ export function readTelegramGatewayRuntimeStatus(): { running: boolean } {
   return { running: telegramRuntime?.isRunning() ?? false };
 }
 
-async function readLatestAssistantReply(conversationId: string): Promise<{ text: string; deliveryKey: string } | null> {
+async function readLatestAssistantReply(conversationId: string): Promise<{ text: string; timestamp?: string; deliveryKey: string } | null> {
   const { sessionRead } = await readSessionDetailForRoute({ conversationId, profile: getRuntimeScopeFn(), tailBlocks: 20 });
   const block = [...(sessionRead.detail?.blocks ?? [])].reverse().find((candidate) => candidate.type === 'text');
   if (!block || block.type !== 'text') return null;
@@ -325,7 +326,11 @@ async function readLatestAssistantReply(conversationId: string): Promise<{ text:
   const identity = [candidate.id, candidate.blockId, candidate.entryId].find(
     (value): value is string => typeof value === 'string' && value.length > 0,
   );
-  return { text, deliveryKey: identity ? `block:${identity}` : `text:${text}` };
+  return {
+    text,
+    timestamp: typeof block.ts === 'string' ? block.ts : undefined,
+    deliveryKey: identity ? `block:${identity}` : `text:${text}`,
+  };
 }
 
 function handleGatewayError(res: Response, err: unknown): void {

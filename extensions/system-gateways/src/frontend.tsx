@@ -251,15 +251,15 @@ export function GatewaysPage() {
           title="Gateways"
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <label className="flex items-center gap-2 text-sm text-secondary">
+              <div className="flex items-center gap-2 text-sm text-secondary">
                 <span>Telegram gateway</span>
                 <Switch
                   checked={gatewayEnabled}
                   disabled={gatewayToggleDisabled}
                   aria-label={gatewayEnabled ? 'Pause Telegram gateway' : 'Enable Telegram gateway'}
-                  onCheckedChange={(checked) => setConnectionEnabled(Boolean(checked))}
+                  onClick={() => setConnectionEnabled(!gatewayEnabled)}
                 />
-              </label>
+              </div>
               <ToolbarButton type="button" disabled={busy || !tokenConfigured} onClick={testToken}>
                 Test bot
               </ToolbarButton>

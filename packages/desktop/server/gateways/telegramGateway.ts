@@ -113,6 +113,7 @@ export interface TelegramGatewayRuntimeDependencies {
     text: string;
     images?: Array<{ data: string; mimeType: string; name?: string }>;
   }) => Promise<void>;
+  readLatestAssistantReply?: (conversationId: string) => Promise<{ text: string; timestamp?: string } | null>;
   subscribeConversationEvents?: (conversationId: string, listener: (event: SseEvent) => void) => (() => void) | null;
   transcribeAudio?: (input: { dataBase64: string; mimeType?: string; fileName?: string; language?: string }) => Promise<{ text: string }>;
   renameConversation: (conversationId: string, title: string) => Promise<void> | void;
@@ -290,11 +291,13 @@ export class TelegramGatewayRuntime {
       if (voiceTranscript?.text) {
         await this.sendMessage(externalChatId, `🎙️ "${voiceTranscript.text}"`);
       }
+      const promptStartedAtMs = Date.now();
       await this.dependencies.submitPrompt({
         conversationId: target.conversationId,
         text: buildTelegramPromptText({ text, hasPhoto: Boolean(images?.length), voiceTranscript: voiceTranscript?.text }),
         images,
       });
+      await this.deliverLatestAssistantReplyWhenAvailable(target.conversationId, promptStartedAtMs);
       this.startConversationEventStream(target.conversationId);
     } catch (error) {
       this.stopTyping(externalChatId);
@@ -307,6 +310,22 @@ export class TelegramGatewayRuntime {
         await this.sendMessage(externalChatId, `Telegram prompt failed: ${failure}`);
       }
       throw error;
+    }
+  }
+
+  private async deliverLatestAssistantReplyWhenAvailable(conversationId: string, promptStartedAtMs: number): Promise<void> {
+    const readLatestAssistantReply = this.dependencies.readLatestAssistantReply;
+    if (!readLatestAssistantReply) return;
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const reply = await readLatestAssistantReply(conversationId);
+      const replyTimeMs = reply?.timestamp ? Date.parse(reply.timestamp) : Number.NaN;
+      const isFreshReply = reply && (!Number.isFinite(replyTimeMs) || replyTimeMs >= promptStartedAtMs);
+      if (isFreshReply && !this.hasRecentlyDeliveredAssistantReply({ conversationId, text: reply.text })) {
+        const delivered = await this.deliverAssistantReply({ conversationId, text: reply.text });
+        if (delivered) return;
+      }
+      if (!this.pendingStatusMessages.has(conversationId)) return;
+      await sleep(500);
     }
   }
 
@@ -791,13 +810,15 @@ export class TelegramGatewayRuntime {
     } catch {
       const existing = this.readPollerLock(lockPath);
       if (existing?.pid && this.isProcessAlive(existing.pid)) {
-        void recordGatewayEvent({
-          stateRoot: this.dependencies.stateRoot,
-          profile: this.dependencies.profile,
-          provider: 'telegram',
-          kind: 'error',
-          message: `Telegram gateway is already polling in process ${existing.pid}.`,
-        });
+        if (existing.pid !== process.pid) {
+          void recordGatewayEvent({
+            stateRoot: this.dependencies.stateRoot,
+            profile: this.dependencies.profile,
+            provider: 'telegram',
+            kind: 'error',
+            message: `Telegram gateway is already polling in process ${existing.pid}.`,
+          });
+        }
         return false;
       }
       rmSync(lockPath, { force: true });
