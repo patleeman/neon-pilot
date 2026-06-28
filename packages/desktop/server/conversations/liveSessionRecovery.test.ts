@@ -77,19 +77,20 @@ function overflowRecoverySummary(id: string, parentId: string | null): BranchEnt
 
 describe('live session recovery', () => {
   describe('resolveTranscriptTailRecoveryPlan', () => {
-    it('recovers a tail assistant tool call with no result', () => {
+    it('recovers a tail assistant tool call with no result by planning synthetic aborted output', () => {
       const plan = resolveTranscriptTailRecoveryPlan({
         getBranch: () => [user('user-1', null), assistantToolCall('assistant-1', 'user-1')],
       } as never);
 
       expect(plan).toMatchObject({
-        targetEntryId: 'user-1',
+        targetEntryId: null,
         reason: 'dangling_tool_call',
         summary: 'Recovered from an unfinished tool-use tail so the conversation can continue from the last stable point.',
+        danglingToolCalls: [{ toolCallId: 'call_1', toolName: 'read' }],
       });
     });
 
-    it('recovers an earlier dangling tool call before a later final assistant answer', () => {
+    it('does not rewrite older dangling tool calls before a later final assistant answer', () => {
       const plan = resolveTranscriptTailRecoveryPlan({
         getBranch: () => [
           user('user-1', null),
@@ -99,13 +100,10 @@ describe('live session recovery', () => {
         ],
       } as never);
 
-      expect(plan).toMatchObject({
-        targetEntryId: 'user-1',
-        reason: 'dangling_tool_call',
-      });
+      expect(plan).toBeNull();
     });
 
-    it('recovers when an unfinished tool-use tail already has a later user message', () => {
+    it('does not repair after a later user message because the missing output is no longer the tail', () => {
       const plan = resolveTranscriptTailRecoveryPlan({
         getBranch: () => [
           user('user-1', null),
@@ -114,10 +112,7 @@ describe('live session recovery', () => {
         ],
       } as never);
 
-      expect(plan).toMatchObject({
-        targetEntryId: 'user-1',
-        reason: 'dangling_tool_call',
-      });
+      expect(plan).toBeNull();
     });
 
     it('does not recover when the tail tool call has a matching result', () => {
@@ -147,8 +142,9 @@ describe('live session recovery', () => {
       } as never);
 
       expect(plan).toMatchObject({
-        targetEntryId: 'user-1',
+        targetEntryId: null,
         reason: 'dangling_tool_call',
+        danglingToolCalls: [{ toolCallId: 'call_2', toolName: 'bash' }],
       });
     });
 
@@ -170,33 +166,40 @@ describe('live session recovery', () => {
   });
 
   describe('repairDanglingToolCallContext', () => {
-    it('branches backward for stale dangling tool calls before a stable tail', () => {
-      const branch = vi.fn();
-      const resetLeaf = vi.fn();
-      const buildSessionContext = vi.fn(() => ({ messages: [{ role: 'user', content: [{ type: 'text', text: 'prompt' }] }] }));
-      const state = { messages: [{ role: 'assistant', content: [{ type: 'text', text: 'done' }] }] };
+    it('appends synthetic aborted tool results for dangling tail calls', () => {
+      const appendMessage = vi.fn();
+      const buildSessionContext = vi.fn(() => ({
+        messages: [
+          { role: 'user', content: [{ type: 'text', text: 'prompt' }] },
+          { role: 'assistant', content: [{ type: 'toolCall', id: 'call_stale', name: 'read', arguments: {} }] },
+          { role: 'toolResult', toolCallId: 'call_stale', content: [{ type: 'text', text: 'aborted' }] },
+        ],
+      }));
+      const state = { messages: [{ role: 'assistant', content: [{ type: 'toolCall', id: 'call_stale', name: 'read', arguments: {} }] }] };
 
       const repaired = repairDanglingToolCallContext({
         state,
         sessionManager: {
-          getBranch: () => [
-            user('user-1', null),
-            assistantToolCall('assistant-1', 'user-1', 'call_stale'),
-            user('user-2', 'assistant-1', 'continue'),
-            assistantText('assistant-2', 'user-2'),
-          ],
+          getBranch: () => [user('user-1', null), assistantToolCall('assistant-1', 'user-1', 'call_stale')],
           getEntry: vi.fn(),
-          branch,
-          resetLeaf,
+          appendMessage,
           buildSessionContext,
         },
       } as never);
 
       expect(repaired).toBe(true);
-      expect(branch).toHaveBeenCalledWith('user-1');
-      expect(resetLeaf).not.toHaveBeenCalled();
+      expect(appendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: 'toolResult',
+          toolCallId: 'call_stale',
+          toolName: 'read',
+          content: [{ type: 'text', text: 'aborted' }],
+          isError: true,
+          details: expect.objectContaining({ source: 'conversation-recovery', reason: 'dangling_tool_call', synthetic: true }),
+        }),
+      );
       expect(buildSessionContext).toHaveBeenCalledOnce();
-      expect(state.messages).toEqual([{ role: 'user', content: [{ type: 'text', text: 'prompt' }] }]);
+      expect(state.messages.at(-1)).toMatchObject({ role: 'toolResult', toolCallId: 'call_stale' });
     });
   });
 });

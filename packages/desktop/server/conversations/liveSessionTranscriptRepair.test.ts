@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const recovery = vi.hoisted(() => ({ resolveTranscriptTailRecoveryPlan: vi.fn() }));
+const recovery = vi.hoisted(() => ({ repairDanglingToolCallContext: vi.fn(), resolveTranscriptTailRecoveryPlan: vi.fn() }));
 vi.mock('./liveSessionRecovery.js', () => recovery);
 
 import { repairLiveSessionTranscriptTail } from './liveSessionTranscriptRepair.js';
@@ -55,7 +55,7 @@ describe('live session transcript repair', () => {
   it('resets leaf for root repairs and refreshes session state', () => {
     recovery.resolveTranscriptTailRecoveryPlan.mockReturnValueOnce({
       targetEntryId: null,
-      reason: 'empty_context',
+      reason: 'assistant_error',
       summary: 'Reset transcript',
     });
     const manager = {
@@ -70,7 +70,7 @@ describe('live session transcript repair', () => {
     expect(repairLiveSessionTranscriptTail(e as never, cb)).toEqual({
       recoverable: true,
       repaired: true,
-      reason: 'empty_context',
+      reason: 'assistant_error',
       summary: 'Reset transcript',
     });
     expect(manager.resetLeaf).toHaveBeenCalledOnce();
@@ -80,6 +80,45 @@ describe('live session transcript repair', () => {
     expect(cb.clearContextUsageTimer).toHaveBeenCalledWith(e);
     expect(cb.broadcastContextUsage).toHaveBeenCalledWith(e, true);
     expect(cb.publishSessionMetaChanged).toHaveBeenCalledOnce();
+  });
+
+  it('appends synthetic aborted tool results for dangling tool repairs', () => {
+    recovery.resolveTranscriptTailRecoveryPlan.mockReturnValueOnce({
+      targetEntryId: null,
+      reason: 'dangling_tool_call',
+      summary: 'Repair dangling tool',
+      danglingToolCalls: [{ toolCallId: 'call-1' }],
+    });
+    recovery.repairDanglingToolCallContext.mockReturnValueOnce(true);
+    const manager = { getBranch: vi.fn(), getEntry: vi.fn(), appendMessage: vi.fn(), buildSessionContext: vi.fn(() => ({ messages: [] })) };
+    const e = entry(manager);
+    const cb = callbacks();
+
+    expect(repairLiveSessionTranscriptTail(e as never, cb)).toEqual({
+      recoverable: true,
+      repaired: true,
+      reason: 'dangling_tool_call',
+      summary: 'Repair dangling tool',
+    });
+    expect(recovery.repairDanglingToolCallContext).toHaveBeenCalledWith(e.session);
+    expect(cb.broadcastSnapshot).toHaveBeenCalledWith(e);
+  });
+
+  it('reports dangling tool repairs as unrepaired when append APIs are unavailable', () => {
+    recovery.resolveTranscriptTailRecoveryPlan.mockReturnValueOnce({
+      targetEntryId: null,
+      reason: 'dangling_tool_call',
+      summary: 'Repair dangling tool',
+    });
+    recovery.repairDanglingToolCallContext.mockReturnValueOnce(false);
+    const manager = { getBranch: vi.fn(), getEntry: vi.fn() };
+
+    expect(repairLiveSessionTranscriptTail(entry(manager) as never, callbacks())).toEqual({
+      recoverable: true,
+      repaired: false,
+      reason: 'dangling_tool_call',
+      summary: 'Repair dangling tool',
+    });
   });
 
   it('prefers branchWithSummary over branch for targeted repairs', () => {

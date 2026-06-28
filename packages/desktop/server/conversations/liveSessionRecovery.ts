@@ -2,84 +2,94 @@ import { type AgentSession, type SessionManager } from '@earendil-works/pi-codin
 
 import { getAssistantErrorDisplayMessage } from './sessionAssistantErrors.js';
 
-function resolveDanglingToolCallRepairLeafId(sessionManager: Pick<SessionManager, 'getBranch'>): string | null | undefined {
-  const branch = sessionManager.getBranch();
-  if (branch.length === 0) {
-    return undefined;
+interface DanglingToolCall {
+  toolCallId: string;
+  toolName?: string;
+}
+
+function extractAssistantToolCalls(entry: ReturnType<SessionManager['getBranch']>[number]): DanglingToolCall[] {
+  if (entry?.type !== 'message' || entry.message.role !== 'assistant' || !Array.isArray(entry.message.content)) {
+    return [];
   }
 
-  let pendingAssistant:
-    | {
-        parentId: string | null | undefined;
-        unresolvedToolCallIds: Set<string>;
-      }
-    | undefined;
-
-  for (const entry of branch) {
-    if (pendingAssistant) {
-      if (entry?.type === 'message' && entry.message.role === 'toolResult') {
-        const toolCallId = entry.message.toolCallId?.trim();
-        if (toolCallId) {
-          pendingAssistant.unresolvedToolCallIds.delete(toolCallId);
-        }
-        if (pendingAssistant.unresolvedToolCallIds.size === 0) {
-          pendingAssistant = undefined;
-        }
-        continue;
-      }
-
-      if (pendingAssistant.unresolvedToolCallIds.size > 0) {
-        return pendingAssistant.parentId ?? null;
-      }
+  return entry.message.content.flatMap((part) => {
+    if (!part || typeof part !== 'object' || (part as { type?: unknown }).type !== 'toolCall') {
+      return [];
     }
+    const toolCallId = typeof (part as { id?: unknown }).id === 'string' ? (part as { id: string }).id.trim() : '';
+    if (!toolCallId) {
+      return [];
+    }
+    const toolName = typeof (part as { name?: unknown }).name === 'string' ? (part as { name: string }).name.trim() : undefined;
+    return [{ toolCallId, ...(toolName ? { toolName } : {}) }];
+  });
+}
 
-    if (entry?.type !== 'message' || entry.message.role !== 'assistant') {
+function resolveDanglingToolCallTail(sessionManager: Pick<SessionManager, 'getBranch'>): DanglingToolCall[] {
+  const branch = sessionManager.getBranch();
+  if (branch.length === 0) {
+    return [];
+  }
+
+  const trailingToolResultIds = new Set<string>();
+  for (let index = branch.length - 1; index >= 0; index -= 1) {
+    const entry = branch[index];
+    if (entry?.type === 'message' && entry.message.role === 'toolResult') {
+      const toolCallId = typeof entry.message.toolCallId === 'string' ? entry.message.toolCallId.trim() : '';
+      if (toolCallId) {
+        trailingToolResultIds.add(toolCallId);
+      }
       continue;
     }
 
-    const toolCallIds = entry.message.content.flatMap((part) => {
-      if (part.type !== 'toolCall') {
-        return [];
-      }
-      const toolCallId = part.id?.trim();
-      return toolCallId ? [toolCallId] : [];
-    });
-
-    if (toolCallIds.length > 0) {
-      pendingAssistant = {
-        parentId: entry.parentId,
-        unresolvedToolCallIds: new Set(toolCallIds),
-      };
+    const toolCalls = extractAssistantToolCalls(entry);
+    if (toolCalls.length === 0) {
+      return [];
     }
+
+    return toolCalls.filter((toolCall) => !trailingToolResultIds.has(toolCall.toolCallId));
   }
 
-  return pendingAssistant && pendingAssistant.unresolvedToolCallIds.size > 0 ? (pendingAssistant.parentId ?? null) : undefined;
+  return [];
+}
+
+function buildSyntheticAbortedToolResult(toolCall: DanglingToolCall) {
+  return {
+    role: 'toolResult' as const,
+    toolCallId: toolCall.toolCallId,
+    toolName: toolCall.toolName ?? 'unknown',
+    content: [{ type: 'text' as const, text: 'aborted' }],
+    isError: true,
+    timestamp: Date.now(),
+    details: {
+      source: 'conversation-recovery',
+      reason: 'dangling_tool_call',
+      synthetic: true,
+    },
+  };
 }
 
 export function repairDanglingToolCallContext(session: Pick<AgentSession, 'sessionManager' | 'state'>): boolean {
   const sessionManager = session.sessionManager as
-    | Partial<Pick<SessionManager, 'getBranch' | 'getEntry' | 'branch' | 'resetLeaf' | 'buildSessionContext'>>
+    | Partial<Pick<SessionManager, 'getBranch' | 'getEntry' | 'appendMessage' | 'buildSessionContext'>>
     | undefined;
   if (
     !sessionManager ||
     typeof sessionManager.getBranch !== 'function' ||
     typeof sessionManager.getEntry !== 'function' ||
-    typeof sessionManager.branch !== 'function' ||
-    typeof sessionManager.resetLeaf !== 'function' ||
+    typeof sessionManager.appendMessage !== 'function' ||
     typeof sessionManager.buildSessionContext !== 'function'
   ) {
     return false;
   }
 
-  const repairLeafId = resolveDanglingToolCallRepairLeafId(sessionManager as Pick<SessionManager, 'getBranch'>);
-  if (repairLeafId === undefined) {
+  const danglingToolCalls = resolveDanglingToolCallTail(sessionManager as Pick<SessionManager, 'getBranch'>);
+  if (danglingToolCalls.length === 0) {
     return false;
   }
 
-  if (repairLeafId === null) {
-    sessionManager.resetLeaf();
-  } else {
-    sessionManager.branch(repairLeafId);
+  for (const toolCall of danglingToolCalls) {
+    sessionManager.appendMessage(buildSyntheticAbortedToolResult(toolCall));
   }
   session.state.messages = sessionManager.buildSessionContext().messages;
   return true;
@@ -92,16 +102,15 @@ export interface TranscriptTailRecoveryPlan {
   reason: TranscriptTailRecoveryReason;
   summary: string;
   details?: unknown;
+  danglingToolCalls?: DanglingToolCall[];
 }
 
-function resolveVisibleSessionBranchTargetId(entryId: string | null | undefined): string | null {
-  return entryId ?? null;
-}
 
 function buildTranscriptTailRecoveryPlan(input: {
   targetEntryId: string | null;
   reason: TranscriptTailRecoveryReason;
   errorMessage?: string;
+  danglingToolCalls?: DanglingToolCall[];
 }): TranscriptTailRecoveryPlan {
   const summaryLines =
     input.reason === 'assistant_error'
@@ -121,7 +130,9 @@ function buildTranscriptTailRecoveryPlan(input: {
       source: 'conversation-recovery',
       reason: input.reason,
       ...(errorMessage ? { errorMessage } : {}),
+      ...(input.danglingToolCalls ? { danglingToolCalls: input.danglingToolCalls } : {}),
     },
+    ...(input.danglingToolCalls ? { danglingToolCalls: input.danglingToolCalls } : {}),
   };
 }
 
@@ -158,18 +169,19 @@ export function resolveTranscriptTailRecoveryPlan(sessionManager: Pick<SessionMa
         return null;
       }
       return buildTranscriptTailRecoveryPlan({
-        targetEntryId: resolveVisibleSessionBranchTargetId(leafEntry.parentId ?? null),
+        targetEntryId: leafEntry.parentId ?? null,
         reason: 'assistant_error',
         errorMessage,
       });
     }
   }
 
-  const danglingToolCallRepairLeafId = resolveDanglingToolCallRepairLeafId(sessionManager);
-  if (danglingToolCallRepairLeafId !== undefined) {
+  const danglingToolCalls = resolveDanglingToolCallTail(sessionManager);
+  if (danglingToolCalls.length > 0) {
     return buildTranscriptTailRecoveryPlan({
-      targetEntryId: danglingToolCallRepairLeafId,
+      targetEntryId: null,
       reason: 'dangling_tool_call',
+      danglingToolCalls,
     });
   }
 
