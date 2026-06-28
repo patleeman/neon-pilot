@@ -8,12 +8,13 @@ vi.mock('@neon-pilot/extensions/backend/mcp', () => ({
   callMcpToolDirect: callMcpToolDirectMock,
 }));
 
-import { computerUse, computerUseDoctor, computerUseInstall, computerUseStatus } from './backend';
+import { computerUse, computerUseDoctor, computerUseInstall, computerUseStartup, computerUseStatus } from './backend';
 
-function createCtx(shellExec: ReturnType<typeof vi.fn> = vi.fn()) {
+function createCtx(shellExec: ReturnType<typeof vi.fn> = vi.fn(), notifyToast: ReturnType<typeof vi.fn> = vi.fn()) {
   return {
     shell: { exec: shellExec },
     log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    notify: { toast: notifyToast },
   } as never;
 }
 
@@ -228,5 +229,40 @@ describe('system-computer-use backend', () => {
       }),
     );
     expect(callMcpToolDirectMock).not.toHaveBeenCalled();
+  });
+
+  it('warns on startup when Computer Use is enabled but Cua Driver is missing', async () => {
+    const shellExec = vi.fn().mockRejectedValue(new Error('spawn cua-driver ENOENT'));
+    const notifyToast = vi.fn();
+
+    await expect(computerUseStartup({}, createCtx(shellExec, notifyToast))).resolves.toEqual(
+      expect.objectContaining({ installed: false, ok: false }),
+    );
+
+    expect(notifyToast).toHaveBeenCalledWith(expect.stringContaining('Run Computer Use: Install Cua Driver'), 'warning');
+  });
+
+  it('warns on startup when Cua Driver is installed but permissions are not ready', async () => {
+    const shellExec = vi.fn().mockResolvedValue({ stdout: 'cua-driver 0.6.8\n', stderr: '', exitCode: 0 });
+    const notifyToast = vi.fn();
+    callMcpToolDirectMock.mockResolvedValue({ data: { parsed: { structuredContent: { overall: 'needs_attention' } } }, exitCode: 0 });
+
+    await expect(computerUseStartup({}, createCtx(shellExec, notifyToast))).resolves.toEqual(
+      expect.objectContaining({ installed: true, ok: true }),
+    );
+
+    expect(notifyToast).toHaveBeenCalledWith(expect.stringContaining('grant Accessibility and Screen Recording permissions'), 'warning');
+  });
+
+  it('does not warn on startup when Cua Driver and permissions are ready', async () => {
+    const shellExec = vi.fn().mockResolvedValue({ stdout: 'cua-driver 0.6.8\n', stderr: '', exitCode: 0 });
+    const notifyToast = vi.fn();
+    callMcpToolDirectMock.mockResolvedValue({ data: { parsed: { structuredContent: { overall: 'ok' } } }, exitCode: 0 });
+
+    await expect(computerUseStartup({}, createCtx(shellExec, notifyToast))).resolves.toEqual(
+      expect.objectContaining({ installed: true, ok: true }),
+    );
+
+    expect(notifyToast).not.toHaveBeenCalled();
   });
 });

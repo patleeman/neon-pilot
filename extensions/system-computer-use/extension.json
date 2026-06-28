@@ -5,8 +5,10 @@
   "packageType": "system",
   "description": "Drive native desktop apps through Cua Driver in the background.",
   "version": "0.1.0",
+  "permissions": ["ui:notify"],
   "backend": {
     "entry": "dist/backend.mjs",
+    "startupAction": "computerUseStartup",
     "actions": [
       {
         "id": "computerUse",
@@ -36,6 +38,14 @@
         "id": "computerUseInstall",
         "handler": "computerUseInstall",
         "title": "Install Cua Driver",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "computerUseStartup",
+        "handler": "computerUseStartup",
+        "title": "Computer Use startup check",
         "worker": {
           "enabled": true
         }

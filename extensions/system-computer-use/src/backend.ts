@@ -33,6 +33,17 @@ type CuaDriverResolution = {
   env: Record<string, string>;
 };
 
+type ComputerUseStatusResult = {
+  ok?: boolean;
+  installed?: boolean;
+  version?: string;
+  telemetry?: string;
+  health?: unknown;
+  message?: string;
+  error?: string;
+  installHint?: string;
+};
+
 const CUA_DRIVER_COMMAND = 'cua-driver';
 const CUA_DRIVER_PATH_DIRS = [`${process.env.HOME ?? ''}/.local/bin`, '/opt/homebrew/bin', '/usr/local/bin'].filter(Boolean);
 const CUA_DRIVER_KNOWN_PATHS = [
@@ -214,7 +225,7 @@ export async function computerUse(input: ComputerUseInput, ctx: ExtensionBackend
   }
 }
 
-export async function computerUseStatus(_input: unknown, ctx: ExtensionBackendContext): Promise<unknown> {
+export async function computerUseStatus(_input: unknown, ctx: ExtensionBackendContext): Promise<ComputerUseStatusResult> {
   try {
     const resolution = resolveCuaDriver();
     const version = await ctx.shell.exec({ command: resolution.command, args: ['--version'], env: resolution.env, timeoutMs: 10_000 });
@@ -229,6 +240,34 @@ export async function computerUseStatus(_input: unknown, ctx: ExtensionBackendCo
   } catch (error) {
     return { installed: false, ...cuaDriverUnavailableResult(error) };
   }
+}
+
+function readHealthOverall(health: unknown): string | null {
+  if (!isRecord(health)) return null;
+  const structured =
+    isRecord(health.parsed) && isRecord(health.parsed.structuredContent) ? health.parsed.structuredContent : health.structuredContent;
+  return isRecord(structured) && typeof structured.overall === 'string' ? structured.overall : null;
+}
+
+function computerUseSetupIssue(status: ComputerUseStatusResult): string | null {
+  if (!status.installed) return status.message ?? 'Cua Driver is not installed or is not reachable by Neon Pilot.';
+  if (isRecord(status.health) && typeof status.health.error === 'string')
+    return 'Computer Use needs setup before agents can control desktop apps.';
+  const overall = readHealthOverall(status.health);
+  if (overall && overall !== 'ok') return 'Computer Use needs macOS permissions before agents can control desktop apps.';
+  return null;
+}
+
+export async function computerUseStartup(_input: unknown, ctx: ExtensionBackendContext): Promise<ComputerUseStatusResult> {
+  const status = await computerUseStatus({}, ctx);
+  const issue = computerUseSetupIssue(status);
+  if (issue) {
+    ctx.notify.toast(
+      `${issue} Run Computer Use: Install Cua Driver, then Computer Use: Run Computer Use doctor and grant Accessibility and Screen Recording permissions.`,
+      'warning',
+    );
+  }
+  return status;
 }
 
 export async function computerUseDoctor(input: ComputerUseInput, ctx: ExtensionBackendContext): Promise<unknown> {
