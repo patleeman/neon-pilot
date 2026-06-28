@@ -1,4 +1,4 @@
-import { CheckButton, IconButton, Notice, TaskListItem, TextButton } from '@neon-pilot/extensions/ui';
+import { CheckButton, IconButton, Notice, TaskListItem } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type TodoStatus = 'todo' | 'doing' | 'blocked' | 'done';
@@ -72,8 +72,6 @@ export function TodoShelf({
   activeCacheKeyRef.current = activeCacheKey;
 
   const openItems = useMemo(() => state.items.filter((item) => !isDone(item)), [state.items]);
-  const doneItems = useMemo(() => state.items.filter(isDone), [state.items]);
-  const visibleItems = useMemo(() => [...openItems, ...doneItems], [doneItems, openItems]);
 
   const invoke = useCallback(
     async <T,>(action: string, input: Record<string, unknown> = {}) => {
@@ -116,6 +114,8 @@ export function TodoShelf({
       }
       if (key && nextState.items.length > 0) {
         todoStateCache.set(key, nextState);
+      } else if (key) {
+        todoStateCache.delete(key);
       }
       setState(nextState);
       setLoadedConversationId(conversationId);
@@ -141,6 +141,8 @@ export function TodoShelf({
             const normalized = normalizeTodoState(next);
             if (activeCacheKey && normalized.items.length > 0) {
               todoStateCache.set(activeCacheKey, normalized);
+            } else if (activeCacheKey) {
+              todoStateCache.delete(activeCacheKey);
             }
             setState(normalized);
             setLoadedConversationId(conversationId);
@@ -164,6 +166,8 @@ export function TodoShelf({
       const nextState = normalizeTodoState(await action());
       if (activeCacheKey && nextState.items.length > 0) {
         todoStateCache.set(activeCacheKey, nextState);
+      } else if (activeCacheKey) {
+        todoStateCache.delete(activeCacheKey);
       }
       setState(nextState);
       setLoadedConversationId(conversationId);
@@ -176,7 +180,7 @@ export function TodoShelf({
     }
   }
 
-  if (!conversationId || loadedConversationId !== conversationId || state.items.length === 0) return null;
+  if (!conversationId || loadedConversationId !== conversationId || openItems.length === 0) return null;
 
   return (
     <div className="border-b border-border-subtle/60 px-3 py-1.5 text-[12px] text-primary">
@@ -191,17 +195,8 @@ export function TodoShelf({
           {collapsed ? '▸' : '▾'}
         </IconButton>
         <span className="font-medium text-primary">Todos</span>
-        <span className="text-dim">{`${openItems.length} open${doneItems.length ? ` · ${doneItems.length} done` : ''}`}</span>
+        <span className="text-dim">{`${openItems.length} open`}</span>
         <span className="flex-1" />
-        {doneItems.length > 0 ? (
-          <TextButton
-            className="text-[11px]"
-            disabled={Boolean(busyId)}
-            onClick={() => void run('clear-done', () => invoke<TodoState>('clearItems', { scope: 'done' }))}
-          >
-            Clear done
-          </TextButton>
-        ) : null}
       </div>
 
       {!collapsed ? (
@@ -211,7 +206,7 @@ export function TodoShelf({
               {error}
             </Notice>
           ) : null}
-          {visibleItems.map((item) => (
+          {openItems.map((item) => (
             <TaskListItem
               key={item.id}
               checked={isDone(item)}

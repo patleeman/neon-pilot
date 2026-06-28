@@ -39,10 +39,10 @@ describe('system-todo backend', () => {
     const id = state.items[0]!.id;
 
     state = await updateItem({ id, status: 'done', note: 'Validated' }, ctx);
-    expect(state.items[0]).toMatchObject({ id, text: 'Fix goal mode', status: 'done', note: 'Validated' });
+    expect(state.items).toEqual([]);
 
     state = await addItem({ text: 'Keep another open' }, ctx);
-    expect(state.items).toHaveLength(2);
+    expect(state.items).toHaveLength(1);
 
     state = await clearItems({ scope: 'done' }, ctx);
     expect(state.items).toMatchObject([{ text: 'Keep another open', status: 'todo' }]);
@@ -90,7 +90,6 @@ describe('system-todo backend', () => {
     );
 
     expect(state.items.map((item) => ({ text: item.text, status: item.status }))).toEqual([
-      { text: 'Inspect files', status: 'done' },
       { text: 'Implement change', status: 'doing' },
       { text: 'Run validation', status: 'todo' },
     ]);
@@ -132,9 +131,10 @@ describe('system-todo backend', () => {
     await expect(todoTool({ action: 'add', text: 'One' }, ctx)).resolves.toMatchObject({ text: expect.stringContaining('Added todo') });
     const state = await getState({}, ctx);
     await expect(todoTool({ action: 'update', id: state.items[0]!.id, status: 'done' }, ctx)).resolves.toMatchObject({
-      text: expect.stringContaining('Updated todo'),
+      text: expect.stringContaining('0 open'),
     });
-    await expect(todoTool({ action: 'list' }, ctx)).resolves.toMatchObject({ text: expect.stringContaining('One') });
+    const listed = (await todoTool({ action: 'list' }, ctx)) as { text: string };
+    expect(listed.text).not.toContain('One');
     await expect(todoTool({ action: 'update_plan', plan: [{ step: 'Next', status: 'in_progress' }] }, ctx)).resolves.toMatchObject({
       text: expect.stringContaining('Set todo plan'),
     });

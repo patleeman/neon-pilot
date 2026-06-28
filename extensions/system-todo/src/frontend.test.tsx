@@ -28,8 +28,8 @@ const state = {
 
 function renderShelf(invoke = vi.fn().mockResolvedValue(state)) {
   const notify = vi.fn();
-  render(<TodoShelf pa={{ extension: { invoke }, ui: { notify } }} shelfContext={{ conversationId: 'conv-1' }} />);
-  return { invoke, notify };
+  const rendered = render(<TodoShelf pa={{ extension: { invoke }, ui: { notify } }} shelfContext={{ conversationId: 'conv-1' }} />);
+  return { invoke, notify, ...rendered };
 }
 
 describe('TodoShelf', () => {
@@ -37,22 +37,22 @@ describe('TodoShelf', () => {
     clearTodoShelfStateCacheForTests();
   });
 
-  it('renders compact counts and todo rows from extension state', async () => {
+  it('renders compact counts and open todo rows from extension state', async () => {
     renderShelf();
 
     expect(await screen.findByText('Todos')).toBeTruthy();
-    expect(screen.getByText('1 open · 1 done')).toBeTruthy();
+    expect(screen.getByText('1 open')).toBeTruthy();
     expect(screen.getByText('Open todo')).toBeTruthy();
-    expect(screen.getByText('Done todo')).toBeTruthy();
+    expect(screen.queryByText('Done todo')).toBeNull();
+    expect(screen.queryByText('Clear done')).toBeNull();
     expect(screen.queryByText('Doing')).toBeNull();
     expect(screen.queryByText('Block')).toBeNull();
   });
 
-  it('marks open items done and can clear completed items', async () => {
-    const nextState = { ...state, items: [{ ...state.items[0]!, status: 'done' as const }, state.items[1]!] };
-    const clearedState = { ...state, items: [state.items[0]!] };
-    const invoke = vi.fn().mockResolvedValueOnce(state).mockResolvedValueOnce(nextState).mockResolvedValueOnce(clearedState);
-    renderShelf(invoke);
+  it('marks open items done and removes the shelf when none remain', async () => {
+    const nextState = { ...state, items: [] };
+    const invoke = vi.fn().mockResolvedValueOnce(state).mockResolvedValueOnce(nextState);
+    const { container } = renderShelf(invoke);
 
     await screen.findByText('Open todo');
     fireEvent.click(screen.getByTitle('Mark complete'));
@@ -60,10 +60,8 @@ describe('TodoShelf', () => {
     await waitFor(() => {
       expect(invoke).toHaveBeenCalledWith('updateItem', { conversationId: 'conv-1', id: 'td_open', status: 'done' });
     });
-
-    fireEvent.click(screen.getByText('Clear done'));
     await waitFor(() => {
-      expect(invoke).toHaveBeenCalledWith('clearItems', { conversationId: 'conv-1', scope: 'done' });
+      expect(container.textContent).toBe('');
     });
   });
 

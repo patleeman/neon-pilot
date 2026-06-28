@@ -73,7 +73,7 @@ function normalizeState(value: unknown): TodoState {
   return {
     schemaVersion: 1,
     updatedAt: typeof record.updatedAt === 'string' && record.updatedAt.trim() ? record.updatedAt : nowIso(),
-    items: items.slice(0, MAX_ITEMS),
+    items: items.filter((item) => item.status !== 'done').slice(0, MAX_ITEMS),
   };
 }
 
@@ -86,7 +86,10 @@ async function writeState(conversationId: string, state: TodoState, ctx: Extensi
     ...state,
     schemaVersion: 1 as const,
     updatedAt: nowIso(),
-    items: state.items.slice(0, MAX_ITEMS).map(todoItemWithOptionalNote),
+    items: state.items
+      .filter((item) => item.status !== 'done')
+      .slice(0, MAX_ITEMS)
+      .map(todoItemWithOptionalNote),
   };
   await ctx.conversations.metadata.set({
     conversationId,
