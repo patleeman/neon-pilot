@@ -6,6 +6,7 @@ import {
   ErrorState,
   Notice,
   StatusDot,
+  Switch,
   TextInput,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
@@ -238,8 +239,10 @@ export function GatewaysPage() {
 
   const tokenConfigured = pageState.token.configured;
   const connectionStatus = telegramConnection?.status ?? 'needs_config';
-  const statusTone = statusDotTone(connectionStatus, tokenConfigured, Boolean(telegramConnection?.enabled));
+  const gatewayEnabled = Boolean(telegramConnection?.enabled);
+  const statusTone = statusDotTone(connectionStatus, tokenConfigured, gatewayEnabled);
   const busy = operation !== null;
+  const gatewayToggleDisabled = busy || !telegramConnection || !tokenConfigured;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -247,9 +250,23 @@ export function GatewaysPage() {
         <AppPageIntro
           title="Gateways"
           actions={
-            <ToolbarButton type="button" disabled={busy} onClick={() => void load()}>
-              Refresh
-            </ToolbarButton>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <label className="flex items-center gap-2 text-sm text-secondary">
+                <span>Telegram gateway</span>
+                <Switch
+                  checked={gatewayEnabled}
+                  disabled={gatewayToggleDisabled}
+                  aria-label={gatewayEnabled ? 'Pause Telegram gateway' : 'Enable Telegram gateway'}
+                  onCheckedChange={(checked) => setConnectionEnabled(Boolean(checked))}
+                />
+              </label>
+              <ToolbarButton type="button" disabled={busy || !tokenConfigured} onClick={testToken}>
+                Test bot
+              </ToolbarButton>
+              <ToolbarButton type="button" disabled={busy} onClick={() => void load()}>
+                Refresh
+              </ToolbarButton>
+            </div>
           }
         />
 
@@ -269,34 +286,23 @@ export function GatewaysPage() {
                     {telegramProvider?.description ?? 'Run Neon Pilot from Telegram DMs, groups, and topics.'}
                   </p>
                 </div>
-                <ConnectionStatusLabel status={connectionStatus} enabled={Boolean(telegramConnection?.enabled)} />
+                <ConnectionStatusLabel status={connectionStatus} enabled={gatewayEnabled} />
               </div>
 
               <dl className="mt-5 grid gap-px overflow-hidden rounded-md border border-border-subtle bg-border-subtle text-sm sm:grid-cols-3">
                 <StatusMetric label="Token" value={tokenConfigured ? 'Configured' : 'Missing'} />
                 <StatusMetric label="Connection" value={telegramConnection ? 'Created' : 'Not created'} />
-                <StatusMetric label="Runtime" value={telegramConnection?.enabled ? 'Enabled' : 'Paused'} />
+                <StatusMetric label="Runtime" value={gatewayEnabled ? 'Enabled' : 'Paused'} />
               </dl>
 
-              <div className="mt-5 flex flex-wrap gap-2">
-                {!telegramConnection ? (
+              {!telegramConnection ? (
+                <div className="mt-5">
                   <Button variant="action" disabled={busy} onClick={createConnection}>
                     Create connection
                   </Button>
-                ) : telegramConnection.enabled ? (
-                  <Button variant="ghost" disabled={busy} onClick={() => setConnectionEnabled(false)}>
-                    Pause gateway
-                  </Button>
-                ) : (
-                  <Button variant="action" disabled={busy || !tokenConfigured} onClick={() => setConnectionEnabled(true)}>
-                    Enable gateway
-                  </Button>
-                )}
-                <Button variant="toolbar" disabled={busy || !tokenConfigured} onClick={testToken}>
-                  Test bot
-                </Button>
-              </div>
-              {telegramConnection?.statusMessage ? <p className="mt-3 text-xs text-secondary">{telegramConnection.statusMessage}</p> : null}
+                </div>
+              ) : null}
+              {telegramConnection?.statusMessage ? <p className="mt-5 text-xs text-secondary">{telegramConnection.statusMessage}</p> : null}
             </div>
 
             <div className="border-b border-border-subtle pb-5">

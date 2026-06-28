@@ -24,6 +24,13 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
   ErrorState: ({ message }: { message: string }) => <div>{message}</div>,
   Notice: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   StatusDot: () => <span data-testid="status-dot" />,
+  Switch: ({
+    checked,
+    onCheckedChange,
+    ...props
+  }: React.InputHTMLAttributes<HTMLInputElement> & { onCheckedChange?: (checked: boolean) => void }) => (
+    <input type="checkbox" checked={checked} onChange={(event) => onCheckedChange?.(event.currentTarget.checked)} {...props} />
+  ),
   TextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   ToolbarButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
 }));
@@ -133,6 +140,25 @@ describe('GatewaysPage', () => {
         expect.objectContaining({
           path: '/api/gateways/telegram/token',
           init: expect.objectContaining({ method: 'DELETE' }),
+        }),
+      ),
+    );
+  });
+
+  it('keeps Telegram gateway controls in the page toolbar', async () => {
+    const calls = installFetchMock({ token: { configured: true } });
+
+    render(<GatewaysPage />);
+    const toggle = await screen.findByLabelText('Enable Telegram gateway');
+    expect(screen.getByRole('button', { name: 'Test bot' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Enable gateway' })).toBeNull();
+
+    fireEvent.click(toggle);
+    await waitFor(() =>
+      expect(calls).toContainEqual(
+        expect.objectContaining({
+          path: '/api/gateways/connections/telegram',
+          init: expect.objectContaining({ method: 'PATCH', body: expect.stringContaining('"enabled":true') }),
         }),
       ),
     );
