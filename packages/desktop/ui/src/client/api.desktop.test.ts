@@ -29,6 +29,23 @@ describe('api desktop transport', () => {
     });
   });
 
+  it('preserves plain text model preference API errors', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('No API key is available for provider "opencode-go". Add one in Settings, then try again.', {
+        status: 500,
+        statusText: 'Internal Server Error',
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { api } = await import('./api');
+
+    await expect(api.updateConversationModelPreferences('live-1', { model: 'opencode-go/deepseek-v4-flash' }, 'surface-1')).rejects.toThrow(
+      'No API key is available for provider "opencode-go". Add one in Settings, then try again.',
+    );
+  });
+
   it('falls back to app-protocol API routes when the local desktop bridge omits memory and tools readers', async () => {
     const fetchMock = vi
       .fn()

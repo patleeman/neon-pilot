@@ -236,6 +236,11 @@ async function readApiError(res: Response, path?: string): Promise<string> {
   }
 
   const preview = formatResponsePreview(text);
+  const contentType = (res.headers.get('Content-Type') ?? '').toLowerCase();
+  if (preview && contentType.startsWith('text/plain')) {
+    return preview;
+  }
+
   return `${res.status} ${res.statusText}${path ? ` from ${path}` : ''}${preview ? `: ${preview}` : ''}`;
 }
 

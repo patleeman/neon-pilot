@@ -973,6 +973,51 @@ describe('ConversationPage lazy composer metadata', () => {
     );
   });
 
+  it('shows actionable model preference save failures from the composer controls', async () => {
+    apiMock.models.mockResolvedValue({
+      models: [
+        { id: 'openai/gpt-5.5', name: 'GPT-5.5', provider: 'openai' },
+        { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', provider: 'opencode-go' },
+        { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', provider: 'ds4' },
+      ],
+      currentModel: 'openai/gpt-5.5',
+      currentVisionModel: '',
+      currentThinkingLevel: 'medium',
+      currentServiceTier: '',
+    });
+    apiMock.updateConversationModelPreferences.mockRejectedValue(
+      new Error('No API key is available for provider "opencode-go". Add one in Settings, then try again.'),
+    );
+
+    renderConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole('button', { name: 'More composer settings' }), { key: 'Enter' });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox', { name: 'Conversation model' }), {
+        target: { value: 'opencode-go/deepseek-v4-flash' },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiMock.updateConversationModelPreferences).toHaveBeenCalledWith(
+      'conv-regression',
+      { model: 'opencode-go/deepseek-v4-flash' },
+      '',
+    );
+    expect(screen.getByText('No API key is available for provider "opencode-go". Add one in Settings, then try again.')).toBeTruthy();
+    expect(screen.queryByText('Could not save the model preference. Try again.')).toBeNull();
+  });
+
   it('loads saved-conversation git metadata from the visible workspace cwd', async () => {
     renderConversationPage();
 
