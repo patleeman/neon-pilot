@@ -172,7 +172,7 @@ function models(): Promise<ModelProviderModules> {
   return modelProviderModulesPromise;
 }
 import type { ServerRouteContext } from '../routes/context.js';
-import { registerGatewayRoutes } from '../routes/gateways.js';
+import { registerGatewayRoutes, startTelegramGatewayRuntime, stopTelegramGatewayRuntime } from '../routes/gateways.js';
 import { registerServerRoutes } from '../routes/registerAll.js';
 import { buildToolsRouteState } from '../routes/tools.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
@@ -495,10 +495,44 @@ export function setDesktopLocalBackendBaseUrl(baseUrl: string | undefined): { ok
   return { ok: true };
 }
 
+function startTelegramGatewayRuntimeWhenReady(): void {
+  if (!process.argv.some((arg) => arg.includes('local-backend-child'))) {
+    return;
+  }
+  try {
+    getExtensionHostClient();
+  } catch {
+    return;
+  }
+  try {
+    startTelegramGatewayRuntime();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes('not initialized')) {
+      return;
+    }
+    logError('gateway runtime startup failed', {
+      message,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+  }
+}
+
 export function configureDesktopExtensionHostClient(input: { baseUrl?: string | null; token?: string | null }): { ok: true } {
   const baseUrl = typeof input.baseUrl === 'string' ? input.baseUrl.trim() : '';
   const token = typeof input.token === 'string' ? input.token.trim() : '';
-  setExtensionHostClient(baseUrl && token ? createExtensionHostRpcClient({ baseUrl, token }) : undefined);
+  if (baseUrl && token) {
+    setExtensionHostClient(createExtensionHostRpcClient({ baseUrl, token }));
+    startTelegramGatewayRuntimeWhenReady();
+  } else {
+    setExtensionHostClient(undefined);
+    stopTelegramGatewayRuntime();
+  }
+  return { ok: true };
+}
+
+export async function warmDesktopLocalApiRuntime(): Promise<{ ok: true }> {
+  await getLocalContexts();
   return { ok: true };
 }
 
@@ -870,6 +904,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
 
   const gatewayWarmupRoutes: RegisteredRoute[] = [];
   registerGatewayRoutes(createRouteCollector(gatewayWarmupRoutes) as never, context);
+  startTelegramGatewayRuntimeWhenReady();
 
   const liveSessionCapabilityContext: LiveSessionCapabilityContext = {
     getRuntimeScope: context.getRuntimeScope,

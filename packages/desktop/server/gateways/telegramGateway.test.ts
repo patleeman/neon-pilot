@@ -237,6 +237,33 @@ describe('TelegramGatewayRuntime', () => {
     );
   });
 
+  it('filters diagnostics events to the current runtime', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-28T12:00:00.000Z'));
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'diagnostics' });
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    state.readGatewayState.mockReturnValueOnce({
+      connections: [{ provider: 'telegram', status: 'active', enabled: true }],
+      bindings: [],
+      chatTargets: [],
+      events: [
+        { provider: 'telegram', kind: 'error', message: 'old startup error', createdAt: '2026-06-28T11:59:59.000Z' },
+        { provider: 'telegram', kind: 'status', message: 'runtime healthy', createdAt: '2026-06-28T12:00:01.000Z' },
+      ],
+    });
+    const d = deps();
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({
+      update_id: 1,
+      message: { message_id: 10, chat: { id: 123 }, from: { id: 777 }, text: '/diagnostics' },
+    });
+
+    const body = JSON.parse(String(d.fetch.mock.calls.at(-1)?.[1]?.body)) as { text: string };
+    expect(body.text).toContain('runtime healthy');
+    expect(body.text).not.toContain('old startup error');
+  });
+
   it('builds prompt text from Telegram voice transcripts and captions', () => {
     expect(buildTelegramPromptText({ voiceTranscript: 'pick up milk' })).toBe(
       '[The user sent a Telegram voice message. Transcript: "pick up milk"]',
@@ -510,8 +537,14 @@ describe('TelegramGatewayRuntime', () => {
   });
 
   it('shows and renames the thread title with /title', async () => {
-    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'title' }).mockReturnValueOnce({ kind: 'rename', title: 'New name' });
-    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    commands.parseTelegramGatewayCommand
+      .mockReturnValueOnce({ kind: 'title' })
+      .mockReturnValueOnce({ kind: 'rename', title: 'New name' })
+      .mockReturnValueOnce({ kind: 'title' });
+    state.findGatewayChatTarget
+      .mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' })
+      .mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'Existing' })
+      .mockReturnValueOnce({ conversationId: 'conv-1', conversationTitle: 'New name' });
     const d = deps();
     const runtime = new TelegramGatewayRuntime(d as never);
 
@@ -520,12 +553,31 @@ describe('TelegramGatewayRuntime', () => {
       update_id: 2,
       message: { message_id: 11, chat: { id: 123 }, from: { id: 777 }, text: '/title New name' },
     });
+    await runtime.processUpdate({ update_id: 3, message: { message_id: 12, chat: { id: 123 }, from: { id: 777 }, text: '/title' } });
 
     expect(d.fetch).toHaveBeenCalledWith(
       'https://api.telegram.org/bottoken/sendMessage',
       expect.objectContaining({ body: expect.stringContaining('Current thread title: Existing') }),
     );
     expect(d.renameConversation).toHaveBeenCalledWith('conv-1', 'New name');
+    expect(state.upsertGatewayChatTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        externalChatId: '123',
+        conversationId: 'conv-1',
+        conversationTitle: 'New name',
+      }),
+    );
+    expect(state.attachGatewayConversation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        externalChatId: '123',
+        conversationId: 'conv-1',
+        conversationTitle: 'New name',
+      }),
+    );
+    expect(d.fetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bottoken/sendMessage',
+      expect.objectContaining({ body: expect.stringContaining('Current thread title: New name') }),
+    );
   });
 
   it('shows status with inline management buttons', async () => {
@@ -1065,7 +1117,40 @@ describe('TelegramGatewayRuntime', () => {
     );
     await expect(runtime.deliverAssistantReply({ conversationId: 'conv-1', text: '   ' })).resolves.toBe(false);
     state.findGatewayChatTargetByConversation.mockReturnValueOnce(null);
-    await expect(runtime.deliverAssistantReply({ conversationId: 'conv-1', text: 'hello' })).resolves.toBe(false);
+    await expect(runtime.deliverAssistantReply({ conversationId: 'conv-1', text: 'missing target' })).resolves.toBe(false);
+  });
+
+  it('deduplicates concurrent assistant reply deliveries', async () => {
+    state.findGatewayChatTargetByConversation.mockReturnValue({ externalChatId: '123', externalChatLabel: 'Pat' });
+    let resolveFirstSend: (() => void) | undefined;
+    let notifyFirstSendStarted: (() => void) | undefined;
+    const firstSendStarted = new Promise<void>((resolve) => {
+      notifyFirstSendStarted = resolve;
+    });
+    const d = deps({
+      fetch: vi.fn(async (url: string) => {
+        if (url.includes('/sendMessage') && !resolveFirstSend) {
+          notifyFirstSendStarted?.();
+          await new Promise<void>((resolve) => {
+            resolveFirstSend = resolve;
+          });
+        }
+        return {
+          ok: true,
+          json: async () => ({ ok: true, result: true }),
+        } as Response;
+      }),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    const first = runtime.deliverAssistantReply({ conversationId: 'conv-1', text: 'same reply' });
+    await firstSendStarted;
+    await expect(runtime.deliverAssistantReply({ conversationId: 'conv-1', text: 'same reply' })).resolves.toBe(true);
+    resolveFirstSend?.();
+    await first;
+
+    const sendCalls = d.fetch.mock.calls.filter(([url]) => String(url).includes('/sendMessage'));
+    expect(sendCalls).toHaveLength(1);
   });
 
   it('delivers desktop user prompts to bound chats and records events', async () => {

@@ -348,6 +348,7 @@ export interface LocalApiModule {
   publishDesktopAppEventFromExtensionHost(event: unknown): Promise<{ ok: true }>;
   setDesktopLocalBackendBaseUrl(baseUrl: string | undefined): { ok: true };
   configureDesktopExtensionHostClient(input: { baseUrl?: string | null; token?: string | null }): { ok: true };
+  warmDesktopLocalApiRuntime(): Promise<{ ok: true }>;
   createDesktopLocalRealtimeUpgradeHandler(options?: {
     getRuntimeScope?: () => string;
     subscribeLocalApiStreamByUrl?: (
@@ -380,6 +381,7 @@ const MAIN_PROCESS_LOCAL_API_METHODS = new Set<keyof LocalApiModule>([
   'publishDesktopAppEventFromExtensionHost',
   'setDesktopLocalBackendBaseUrl',
   'configureDesktopExtensionHostClient',
+  'warmDesktopLocalApiRuntime',
   'createDesktopLocalRealtimeUpgradeHandler',
   'setDesktopWorkbenchBrowserToolHost',
 ]);

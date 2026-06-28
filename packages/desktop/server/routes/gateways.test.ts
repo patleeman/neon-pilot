@@ -88,6 +88,7 @@ const conversationService = vi.hoisted(() => ({
     },
   ]),
   readSessionDetailForRoute: vi.fn(async () => ({ sessionRead: { detail: { blocks: [{ type: 'text', text: ' latest reply ' }] } } })),
+  renameStoredConversation: vi.fn(),
 }));
 const capability = vi.hoisted(() => ({
   abortLiveSessionCapability: vi.fn(),
@@ -261,7 +262,7 @@ describe('gateway routes', () => {
     return router[method].mock.calls.find(([registeredPath]) => registeredPath === path)?.[1];
   }
 
-  it('publishes the telegram host api and starts runtime only when enabled and token is configured', () => {
+  it('publishes the telegram host api without starting the runtime during route registration', () => {
     gatewayState.readGatewayState.mockReturnValueOnce({ connections: [{ provider: 'telegram', enabled: true }] });
     telegramAuth.readTelegramBotToken.mockReturnValueOnce('token');
     register();
@@ -270,6 +271,9 @@ describe('gateway routes', () => {
       startTelegramGatewayRuntime: expect.any(Function),
       stopTelegramGatewayRuntime: expect.any(Function),
     });
+    expect(runtime.TelegramGatewayRuntime).not.toHaveBeenCalled();
+
+    expect(startTelegramGatewayRuntime()).toEqual({ running: true });
     expect(latestRuntime().start).toHaveBeenCalledOnce();
     expect(startTelegramGatewayRuntime()).toEqual({ running: false });
     latestRuntime().isRunning.mockReturnValueOnce(false);
@@ -282,6 +286,16 @@ describe('gateway routes', () => {
     });
     expect(stopTelegramGatewayRuntime()).toEqual({ running: false });
     expect(latestRuntime().stop).toHaveBeenCalledOnce();
+  });
+
+  it('renames telegram conversations through stored conversation metadata', async () => {
+    register();
+
+    const instance = latestRuntime();
+    await (instance.dependencies.renameConversation as (conversationId: string, title: string) => Promise<void>)('conv-1', 'Stored title');
+
+    expect(conversationService.renameStoredConversation).toHaveBeenCalledWith('conv-1', 'Stored title');
+    expect(liveSessions.renameSession).not.toHaveBeenCalled();
   });
 
   it('validates and creates gateway connections', () => {

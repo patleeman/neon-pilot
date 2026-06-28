@@ -291,6 +291,7 @@ async function main(): Promise<void> {
   try {
     localApi = await loadRawLocalApiModule();
     localApi.configureDesktopExtensionHostClient({ baseUrl: extensionHostBaseUrl, token: extensionHostToken });
+    await localApi.warmDesktopLocalApiRuntime();
     installNativeWorkbenchBrowserBridge(localApi);
     localApiReady = true;
     localhostWebappProxy = await localApi.startDesktopLocalhostWebappProxy({

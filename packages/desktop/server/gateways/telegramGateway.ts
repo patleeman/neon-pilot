@@ -207,6 +207,7 @@ export class TelegramGatewayRuntime {
   private toolStatuses = new Map<string, Map<string, TelegramToolStatus>>();
   private deliveredToolStatusKeys = new Map<string, Set<string>>();
   private lastPollingFailureMessage: string | null = null;
+  private currentRuntimeStartedAt = new Date().toISOString();
   private recentDeliveredReplies = new Map<string, { text: string; deliveredAtMs: number }>();
   private recentTelegramPrompts = new Map<string, Map<string, number>>();
   private conversationPickers = new Map<
@@ -228,6 +229,7 @@ export class TelegramGatewayRuntime {
     const abortController = new AbortController();
     this.abortController = abortController;
     this.polling = true;
+    this.currentRuntimeStartedAt = new Date().toISOString();
     void this.configureBotCommands(token).catch(() => undefined);
     void this.pollLoop(token, abortController.signal).finally(() => {
       if (this.abortController === abortController) {
@@ -416,6 +418,7 @@ export class TelegramGatewayRuntime {
     const text = input.text.trim();
     if (!text) return false;
     if (isTelegramSilenceToken(text)) return true;
+    if (this.hasRecentlyDeliveredAssistantReply({ conversationId: input.conversationId, text })) return true;
 
     const target = findGatewayChatTargetByConversation({
       stateRoot: this.dependencies.stateRoot,
@@ -426,6 +429,8 @@ export class TelegramGatewayRuntime {
     if (!target) return false;
     if (!shouldDeliverAssistantReply(target)) return false;
 
+    const previousRecentReply = this.recentDeliveredReplies.get(input.conversationId);
+    this.recentDeliveredReplies.set(input.conversationId, { text, deliveredAtMs: Date.now() });
     this.stopTyping(target.externalChatId);
     this.stopConversationEventStream(input.conversationId);
     const pending = this.pendingStatusMessages.get(input.conversationId);
@@ -440,6 +445,11 @@ export class TelegramGatewayRuntime {
         await this.sendMessage(target.externalChatId, formatMirroredThreadMessage(target, text));
       }
     } catch (error) {
+      if (previousRecentReply) {
+        this.recentDeliveredReplies.set(input.conversationId, previousRecentReply);
+      } else {
+        this.recentDeliveredReplies.delete(input.conversationId);
+      }
       this.recordTelegramDeliveryFailure(input.conversationId, error);
       throw error;
     }
@@ -1036,6 +1046,24 @@ export class TelegramGatewayRuntime {
         return;
       case 'rename':
         await this.dependencies.renameConversation(target.conversationId, command.title);
+        upsertGatewayChatTarget({
+          stateRoot: this.dependencies.stateRoot,
+          profile: this.dependencies.profile,
+          provider: 'telegram',
+          externalChatId: target.externalChatId,
+          externalChatLabel: target.externalChatLabel,
+          conversationId: target.conversationId,
+          conversationTitle: command.title,
+        });
+        attachGatewayConversation({
+          stateRoot: this.dependencies.stateRoot,
+          profile: this.dependencies.profile,
+          provider: 'telegram',
+          conversationId: target.conversationId,
+          conversationTitle: command.title,
+          externalChatId: target.externalChatId,
+          externalChatLabel: target.externalChatLabel,
+        });
         await this.sendMessage(target.externalChatId, `Renamed thread to ${command.title}.`);
         return;
       case 'pins':
@@ -1092,6 +1120,7 @@ export class TelegramGatewayRuntime {
     const target = this.readChatTarget(externalChatId);
     const events = state.events
       .filter((event) => event.provider === 'telegram' && (!event.conversationId || event.conversationId === conversationId))
+      .filter((event) => event.createdAt >= this.currentRuntimeStartedAt)
       .slice(0, 8);
     await this.sendMessage(
       externalChatId,

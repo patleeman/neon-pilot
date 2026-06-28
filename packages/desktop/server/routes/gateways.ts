@@ -1,6 +1,10 @@
 import type { Express, Request, Response } from 'express';
 
-import { listConversationSessionsSnapshot, readSessionDetailForRoute } from '../conversations/conversationService.js';
+import {
+  listConversationSessionsSnapshot,
+  readSessionDetailForRoute,
+  renameStoredConversation,
+} from '../conversations/conversationService.js';
 import {
   abortLiveSessionCapability,
   compactLiveSessionCapability,
@@ -339,7 +343,9 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
     readConversationTail,
     subscribeConversationEvents: (conversationId, listener) => subscribeLiveSessionEvents(conversationId, listener, { tailBlocks: 0 }),
     transcribeAudio,
-    renameConversation: (conversationId, title) => renameSession(conversationId, title),
+    renameConversation: (conversationId, title) => {
+      renameStoredConversation(conversationId, title);
+    },
     compactConversation: async (conversationId) => {
       await compactLiveSessionCapability({ conversationId });
     },
@@ -520,14 +526,6 @@ function handleGatewayError(res: Response, err: unknown): void {
 
 export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'patch' | 'delete'>, context: ServerRouteContext): void {
   initializeGatewayRoutesContext(context);
-  try {
-    startTelegramGatewayRuntime();
-  } catch (err) {
-    logError('gateway runtime startup failed', {
-      message: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
-    });
-  }
   router.get('/api/gateways', (_req, res) => {
     try {
       res.json(readCurrentGatewayState());
