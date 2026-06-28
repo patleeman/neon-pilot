@@ -411,6 +411,35 @@ describe('TelegramGatewayRuntime', () => {
     );
   });
 
+  it('formats tool-heavy tail previews as readable summaries', async () => {
+    commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'tail', count: 5 });
+    state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
+    const longImportOutput = [
+      "import { useCallback, useEffect, useMemo, useRef, useState } from 'react';",
+      "import { useAppEvents } from '../../app/contexts.js';",
+      "import { api } from '../../client/api.js';",
+      "import { dispatchOpenCompanionChat } from '../companion/companionEvents.js';",
+      "import { buildComposerShelfContext } from './conversationComposerShelves.js';",
+    ].join(' ');
+    const d = deps({
+      readConversationTail: vi.fn(async () => [
+        { role: 'tool', text: 'bash finished: f5d453b8c fix: restore side chat rail marker 8c40b7308 Use main conversation page' },
+        { role: 'tool', text: `bash finished: ${longImportOutput}` },
+        { role: 'assistant', text: 'The gateway preview works.' },
+      ]),
+    });
+    const runtime = new TelegramGatewayRuntime(d as never);
+
+    await runtime.processUpdate({ update_id: 1, message: { message_id: 10, chat: { id: 123 }, text: '/tail 5' } });
+
+    const sendMessageBody = String(d.fetch.mock.calls.at(-1)?.[1]?.body ?? '');
+    expect(sendMessageBody).toContain('1. Tool - bash finished');
+    expect(sendMessageBody).toContain('2. Tool - bash finished');
+    expect(sendMessageBody).toContain('code/log output omitted');
+    expect(sendMessageBody).not.toContain('useCallback');
+    expect(sendMessageBody).toContain('3. Assistant');
+  });
+
   it('shows and renames the thread title with /title', async () => {
     commands.parseTelegramGatewayCommand.mockReturnValueOnce({ kind: 'title' }).mockReturnValueOnce({ kind: 'rename', title: 'New name' });
     state.findGatewayChatTarget.mockReturnValue({ conversationId: 'conv-1', conversationTitle: 'Existing' });
