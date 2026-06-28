@@ -64,7 +64,7 @@ export function TodoShelf({
   const [state, setState] = useState<TodoState>(cachedState ?? EMPTY_STATE);
   const [loadedConversationId, setLoadedConversationId] = useState<string | null>(cachedState ? conversationId : null);
   const [error, setError] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const paRef = useRef(pa);
   paRef.current = pa;

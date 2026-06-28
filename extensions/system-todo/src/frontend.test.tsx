@@ -37,12 +37,13 @@ describe('TodoShelf', () => {
     clearTodoShelfStateCacheForTests();
   });
 
-  it('renders compact counts and open todo rows from extension state', async () => {
+  it('renders compact counts collapsed by default', async () => {
     renderShelf();
 
     expect(await screen.findByText('Todos')).toBeTruthy();
     expect(screen.getByText('1 open')).toBeTruthy();
-    expect(screen.getByText('Open todo')).toBeTruthy();
+    expect(screen.getByText('▸')).toBeTruthy();
+    expect(screen.queryByText('Open todo')).toBeNull();
     expect(screen.queryByText('Done todo')).toBeNull();
     expect(screen.queryByText('Clear done')).toBeNull();
     expect(screen.queryByText('Doing')).toBeNull();
@@ -54,8 +55,9 @@ describe('TodoShelf', () => {
     const invoke = vi.fn().mockResolvedValueOnce(state).mockResolvedValueOnce(nextState);
     const { container } = renderShelf(invoke);
 
-    await screen.findByText('Open todo');
-    fireEvent.click(screen.getByTitle('Mark complete'));
+    await screen.findByText('Todos');
+    fireEvent.click(screen.getByText('▸'));
+    fireEvent.click(await screen.findByTitle('Mark complete'));
 
     await waitFor(() => {
       expect(invoke).toHaveBeenCalledWith('updateItem', { conversationId: 'conv-1', id: 'td_open', status: 'done' });
@@ -65,14 +67,15 @@ describe('TodoShelf', () => {
     });
   });
 
-  it('collapses and re-expands the shelf without losing state', async () => {
+  it('expands and re-collapses the shelf without losing state', async () => {
     renderShelf();
 
-    await screen.findByText('Open todo');
-    fireEvent.click(screen.getByText('▾'));
+    await screen.findByText('Todos');
     expect(screen.queryByText('Open todo')).toBeNull();
     fireEvent.click(screen.getByText('▸'));
     expect(screen.getByText('Open todo')).toBeTruthy();
+    fireEvent.click(screen.getByText('▾'));
+    expect(screen.queryByText('Open todo')).toBeNull();
   });
 
   it('renders nothing when there are no todos', async () => {
@@ -111,7 +114,7 @@ describe('TodoShelf', () => {
       .mockReturnValueOnce(new Promise(() => {}));
     const { container, rerender } = render(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1' }} />);
 
-    expect(await screen.findByText('Open todo')).toBeTruthy();
+    expect(await screen.findByText('Todos')).toBeTruthy();
 
     rerender(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-2' }} />);
 
@@ -140,7 +143,9 @@ describe('TodoShelf', () => {
 
     resolveFirst(state);
 
-    expect(await screen.findByText('Second conversation todo')).toBeTruthy();
+    expect(await screen.findByText('Todos')).toBeTruthy();
+    fireEvent.click(screen.getByText('▸'));
+    expect(screen.getByText('Second conversation todo')).toBeTruthy();
     expect(screen.queryByText('Open todo')).toBeNull();
   });
 
@@ -163,7 +168,9 @@ describe('TodoShelf', () => {
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('getState', { conversationId: 'conv-1' }));
     rerender(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-2' }} />);
 
-    expect(await screen.findByText('Second conversation todo')).toBeTruthy();
+    expect(await screen.findByText('Todos')).toBeTruthy();
+    fireEvent.click(screen.getByText('▸'));
+    expect(screen.getByText('Second conversation todo')).toBeTruthy();
 
     resolveFirst(state);
     await Promise.resolve();
@@ -176,7 +183,7 @@ describe('TodoShelf', () => {
     const invoke = vi.fn().mockResolvedValue(state);
     const { rerender } = render(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1' }} />);
 
-    expect(await screen.findByText('Open todo')).toBeTruthy();
+    expect(await screen.findByText('Todos')).toBeTruthy();
     expect(invoke).toHaveBeenCalledTimes(1);
 
     rerender(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1' }} />);
@@ -195,7 +202,7 @@ describe('TodoShelf', () => {
       <TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1', conversationVersion: 1, metadataVersion: 1 }} />,
     );
 
-    expect(await screen.findByText('Open todo')).toBeTruthy();
+    expect(await screen.findByText('Todos')).toBeTruthy();
     rerender(
       <TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1', conversationVersion: 2, metadataVersion: 1 }} />,
     );
@@ -207,8 +214,9 @@ describe('TodoShelf', () => {
       <TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1', conversationVersion: 2, metadataVersion: 2 }} />,
     );
 
-    expect(await screen.findByText('Updated todo')).toBeTruthy();
-    expect(invoke).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(invoke).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByText('▸'));
+    expect(screen.getByText('Updated todo')).toBeTruthy();
   });
 
   it('skips shelf rerenders for transcript-only version changes', async () => {
@@ -217,7 +225,7 @@ describe('TodoShelf', () => {
       <TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1', conversationVersion: 1, metadataVersion: 1 }} />,
     );
 
-    expect(await screen.findByText('Open todo')).toBeTruthy();
+    expect(await screen.findByText('Todos')).toBeTruthy();
     const shelfNode = container.firstElementChild;
 
     rerender(
@@ -235,7 +243,7 @@ describe('TodoShelf', () => {
       <TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1', conversationVersion: 1, metadataVersion: 1 }} />,
     );
 
-    expect(await screen.findByText('Open todo')).toBeTruthy();
+    expect(await screen.findByText('Todos')).toBeTruthy();
     expect(invoke).toHaveBeenCalledTimes(1);
     unmount();
 
@@ -243,7 +251,7 @@ describe('TodoShelf', () => {
       <TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1', conversationVersion: 1, metadataVersion: 1 }} />,
     );
 
-    expect(await screen.findByText('Open todo')).toBeTruthy();
+    expect(await screen.findByText('Todos')).toBeTruthy();
     expect(invoke).toHaveBeenCalledTimes(1);
   });
 
@@ -264,7 +272,7 @@ describe('TodoShelf', () => {
       <TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1', conversationVersion: 1, metadataVersion: 1 }} />,
     );
 
-    expect(await screen.findByText('Open todo')).toBeTruthy();
+    expect(await screen.findByText('Todos')).toBeTruthy();
     expect(invoke).toHaveBeenCalledTimes(2);
   });
 
@@ -285,7 +293,7 @@ describe('TodoShelf', () => {
 
     expect(invoke).toHaveBeenCalledTimes(1);
     resolveState(state);
-    expect(await screen.findByText('Open todo')).toBeTruthy();
+    expect(await screen.findByText('Todos')).toBeTruthy();
     expect(invoke).toHaveBeenCalledTimes(1);
   });
 });

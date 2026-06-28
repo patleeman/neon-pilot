@@ -25,4 +25,4 @@ Agents should prefer Codex-style full-plan updates for multi-step work or multip
 
 ## UI
 
-When enabled, the extension renders a compact composer shelf above the input. The shelf shows only open todos, keeps a small max height with scrolling, and lets the user mark items done or delete items. Completed todos are removed from conversation state automatically.
+When enabled, the extension renders a compact composer shelf above the input. The shelf starts collapsed, shows the open-todo count, expands to show only open todos, keeps a small max height with scrolling, and lets the user mark items done or delete items. Completed todos are removed from conversation state automatically.
