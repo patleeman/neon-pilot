@@ -113,7 +113,7 @@
   }
 
   .ui-kbd.ui-desktop-top-bar__search-keycap {
-    @apply shrink-0 rounded-sm border-border-subtle/70 bg-transparent px-1 text-[10px] text-dim;
+    @apply min-w-0 shrink-0 rounded-none border-0 bg-transparent px-0 text-[10px] text-dim shadow-none;
   }
 
   @media (max-width: 640px) {
@@ -283,7 +283,8 @@
   }
 
   .ui-command-palette-shell {
-    @apply rounded-md border-border-default bg-panel shadow-none;
+    @apply border-border-default bg-panel shadow-none;
+    border-radius: 2px !important;
     box-shadow:
       0 18px 48px rgb(0 0 0 / 0.34),
       0 0 0 1px rgb(var(--color-border-subtle) / 0.86);
@@ -294,7 +295,7 @@
   }
 
   .ui-command-palette-header-anchored {
-    @apply px-2.5 pb-2 pt-1.5;
+    @apply px-2.5 pb-2 pt-0.5;
   }
 
   .ui-command-palette-search-row {
@@ -322,7 +323,7 @@
   }
 
   .ui-command-palette-keycap {
-    @apply shrink-0 rounded-sm border-border-subtle/70 bg-surface/35 px-1 text-[10px] text-dim shadow-none;
+    @apply min-w-0 shrink-0 rounded-none border-0 bg-transparent px-0 text-[10px] text-dim shadow-none;
   }
 
   .ui-command-palette-toolbar {

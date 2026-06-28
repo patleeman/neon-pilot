@@ -34,6 +34,7 @@ export const THREAD_COMMAND_PALETTE_SECTIONS: CommandPaletteSection[] = ['open',
 
 export const COMMAND_PALETTE_SECTION_LABELS: Record<CommandPaletteSection, string> = {
   open: 'Open threads',
+  commands: 'Commands',
   archived: 'Archived threads',
 };
 
@@ -263,7 +264,8 @@ export function selectCommandPaletteScopedItems<TAction>(input: {
 }
 
 const EMPTY_QUERY_LIMITS: Record<string, number> = {
-  open: 12,
+  open: 6,
+  commands: 12,
   archived: 8,
 };
 const DEFAULT_QUICK_OPEN_EMPTY_QUERY_LIMIT = 30;
@@ -283,9 +285,9 @@ function readVisibleCommandPaletteSections<TAction>(
   }
 
   const sections = new Set<CommandPaletteSection>();
-  for (const threadSection of THREAD_COMMAND_PALETTE_SECTIONS) {
-    sections.add(threadSection);
-  }
+  sections.add('open');
+  sections.add('commands');
+  sections.add('archived');
   for (const item of items) {
     sections.add(item.section);
   }
