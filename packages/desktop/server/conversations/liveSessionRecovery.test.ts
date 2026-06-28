@@ -182,7 +182,6 @@ describe('live session recovery', () => {
         state,
         sessionManager: {
           getBranch: () => [user('user-1', null), assistantToolCall('assistant-1', 'user-1', 'call_stale')],
-          getEntry: vi.fn(),
           appendMessage,
           buildSessionContext,
         },
@@ -212,6 +211,25 @@ describe('live session recovery', () => {
       );
       expect(buildSessionContext).toHaveBeenCalledOnce();
       expect(state.messages.at(-1)).toMatchObject({ role: 'custom', customType: 'conversation_recovery_turn_aborted' });
+    });
+
+    it('does not require branch lookup APIs when appending synthetic repair messages', () => {
+      const appendMessage = vi.fn();
+      const buildSessionContext = vi.fn(() => ({ messages: [{ role: 'toolResult', toolCallId: 'call_stale' }] }));
+      const state = { messages: [{ role: 'assistant', content: [{ type: 'toolCall', id: 'call_stale', name: 'read', arguments: {} }] }] };
+
+      const repaired = repairDanglingToolCallContext({
+        state,
+        sessionManager: {
+          getBranch: () => [user('user-1', null), assistantToolCall('assistant-1', 'user-1', 'call_stale')],
+          appendMessage,
+          buildSessionContext,
+        },
+      } as never);
+
+      expect(repaired).toBe(true);
+      expect(appendMessage).toHaveBeenCalledTimes(2);
+      expect(state.messages).toEqual([{ role: 'toolResult', toolCallId: 'call_stale' }]);
     });
   });
 });

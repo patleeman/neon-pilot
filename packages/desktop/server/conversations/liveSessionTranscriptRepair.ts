@@ -1,6 +1,10 @@
 import type { SessionManager } from '@earendil-works/pi-coding-agent';
 
-import { repairDanglingToolCallContext, resolveTranscriptTailRecoveryPlan, type TranscriptTailRecoveryReason } from './liveSessionRecovery.js';
+import {
+  repairDanglingToolCallContext,
+  resolveTranscriptTailRecoveryPlan,
+  type TranscriptTailRecoveryReason,
+} from './liveSessionRecovery.js';
 
 export interface LiveSessionTranscriptRepairHost {
   session: {
@@ -25,9 +29,9 @@ export function repairLiveSessionTranscriptTail<TEntry extends LiveSessionTransc
   summary?: string;
 } {
   const sessionManager = entry.session.sessionManager as
-    | Partial<Pick<SessionManager, 'getBranch' | 'getEntry' | 'branch' | 'branchWithSummary' | 'resetLeaf' | 'buildSessionContext' | 'appendMessage'>>
+    | Partial<Pick<SessionManager, 'getBranch' | 'branch' | 'branchWithSummary' | 'resetLeaf' | 'buildSessionContext' | 'appendMessage'>>
     | undefined;
-  if (!sessionManager || typeof sessionManager.getBranch !== 'function' || typeof sessionManager.getEntry !== 'function') {
+  if (!sessionManager || typeof sessionManager.getBranch !== 'function') {
     return {
       recoverable: false,
       repaired: false,
@@ -35,7 +39,7 @@ export function repairLiveSessionTranscriptTail<TEntry extends LiveSessionTransc
     };
   }
 
-  const plan = resolveTranscriptTailRecoveryPlan(sessionManager as Pick<SessionManager, 'getBranch' | 'getEntry'>);
+  const plan = resolveTranscriptTailRecoveryPlan(sessionManager as Pick<SessionManager, 'getBranch'>);
   if (!plan) {
     return {
       recoverable: false,

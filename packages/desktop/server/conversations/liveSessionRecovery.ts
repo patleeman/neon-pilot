@@ -88,12 +88,11 @@ function buildTurnAbortedRecoveryMarker(timestamp: number) {
 
 export function repairDanglingToolCallContext(session: Pick<AgentSession, 'sessionManager' | 'state'>): boolean {
   const sessionManager = session.sessionManager as
-    | Partial<Pick<SessionManager, 'getBranch' | 'getEntry' | 'appendMessage' | 'buildSessionContext'>>
+    | Partial<Pick<SessionManager, 'getBranch' | 'appendMessage' | 'buildSessionContext'>>
     | undefined;
   if (
     !sessionManager ||
     typeof sessionManager.getBranch !== 'function' ||
-    typeof sessionManager.getEntry !== 'function' ||
     typeof sessionManager.appendMessage !== 'function' ||
     typeof sessionManager.buildSessionContext !== 'function'
   ) {

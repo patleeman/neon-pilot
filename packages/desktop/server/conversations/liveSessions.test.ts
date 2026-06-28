@@ -4040,6 +4040,7 @@ describe('promptSession', () => {
   it('appends an aborted tool result for dangling tool calls before sending a fresh prompt', async () => {
     const prompt = vi.fn(async () => undefined);
     const branch = vi.fn();
+    const branchWithSummary = vi.fn();
     const resetLeaf = vi.fn();
     const appendMessage = vi.fn();
     const repairedMessages = [
@@ -4121,6 +4122,7 @@ describe('promptSession', () => {
               }) as Record<string, unknown>
             )[id],
           branch,
+          branchWithSummary,
           resetLeaf,
           appendMessage,
           buildSessionContext: () => ({ messages: repairedMessages, thinkingLevel: 'off', model: null }),
@@ -4131,9 +4133,10 @@ describe('promptSession', () => {
       },
     });
 
-    await promptSession('session-dangling-tool-repair', 'continue working');
+    await promptSession('session-dangling-tool-repair', "I'm talking about Telegram right now, forget CUA");
 
     expect(branch).not.toHaveBeenCalled();
+    expect(branchWithSummary).not.toHaveBeenCalled();
     expect(resetLeaf).not.toHaveBeenCalled();
     expect(appendMessage).toHaveBeenNthCalledWith(
       1,
@@ -4155,7 +4158,7 @@ describe('promptSession', () => {
       }),
     );
     expect(state.messages).toBe(repairedMessages);
-    expect(prompt).toHaveBeenCalledWith('continue working');
+    expect(prompt).toHaveBeenCalledWith("I'm talking about Telegram right now, forget CUA");
   });
 
   it('keeps matched tool call history intact when the transcript is already valid', async () => {
