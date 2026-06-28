@@ -13,6 +13,14 @@ import { closeWorkbenchTabState, Layout } from './Layout';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
+vi.mock('./chat/ChatRail', async () => {
+  const { createElement } = await import('react');
+  return {
+    ChatRail: ({ conversationId }: { conversationId?: string | null }) =>
+      createElement('div', { 'data-chat-rail': '1' }, `Chat rail ${conversationId ?? ''}`),
+  };
+});
+
 function installLocalStorageShim() {
   const items = new Map<string, string>();
   Object.defineProperty(window, 'localStorage', {
