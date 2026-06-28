@@ -32,8 +32,9 @@
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a
           ><a class="active" href="./conversation-context.html">Conversation Context</a><a class="" href="./projects.html">Projects</a
-          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
-          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./memory.html">Memory</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -114,6 +115,12 @@ Agent sees: contents of auth.ts + auth.test.ts + the prompt</code></pre>
           <code>img_&lt;hash&gt;</code> IDs, and injects the <code>probe_image</code> tool only when a preferred vision model is configured
           in Settings. The agent calls <code>probe_image</code> with one or more image IDs and a focused question; multi-image calls handle
           comparisons. Other binary formats are stored as conversation attachments but may not be visible to all models.
+        </p>
+        <p>
+          Videos are attached by local file path rather than copied into prompt storage. Neon Pilot records path-backed metadata, assigns
+          stable <code>vid_&lt;hash&gt;</code> IDs, and injects a video attachment notice into the prompt. Agents inspect video content with
+          <code>extract_video_frame</code>, <code>sample_video_frames</code>, and <code>transcribe_video</code>; transcript segment
+          timestamps remain absolute to the original video.
         </p>
         <p>
           Existing conversations can also reopen saved drawings through the <code>Open Drawing Picker</code> conversation command, then

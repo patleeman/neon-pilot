@@ -198,6 +198,22 @@ export function getDurableAgentFilePath(knowledgeRoot: string = getKnowledgeRoot
   return join(knowledgeRoot, 'AGENTS.md');
 }
 
+export function getDurableMemoryRoot(knowledgeRoot: string = getKnowledgeRoot()): string {
+  return join(knowledgeRoot, 'memory');
+}
+
+export function getDurableMemorySystemFilePath(knowledgeRoot: string = getKnowledgeRoot()): string {
+  return join(getDurableMemoryRoot(knowledgeRoot), 'system.md');
+}
+
+export function getDurableMemoryScopesDir(knowledgeRoot: string = getKnowledgeRoot()): string {
+  return join(getDurableMemoryRoot(knowledgeRoot), 'scopes');
+}
+
+export function getDurableMemorySkillsDir(knowledgeRoot: string = getKnowledgeRoot()): string {
+  return join(getDurableMemoryRoot(knowledgeRoot), 'skills');
+}
+
 export function getDurableRuntimeScopeDir(runtimeScope: string, runtimeConfigRoot: string = getDurableRuntimeConfigRoot()): string {
   return join(runtimeConfigRoot, runtimeScope);
 }

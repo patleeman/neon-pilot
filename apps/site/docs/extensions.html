@@ -31,9 +31,9 @@
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
-          ><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./memory.html">Memory</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -985,6 +985,15 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           <code>detachGatewayConversation(...)</code> when a binding is removed, and <code>recordGatewayEvent(...)</code> for user-visible
           gateway activity. Extension code must not import <code>packages/desktop/server/gateways/*</code> directly.
         </p>
+        <p>Gateway runtimes or other extensions that need speech-to-text should call the host transcription seam:</p>
+        <pre><code>import { transcribeAudio } from '@neon-pilot/extensions/backend/transcription';
+
+const transcript = await transcribeAudio({ dataBase64, mimeType: 'audio/ogg', fileName: 'voice.ogg' });</code></pre>
+        <p>
+          The transcription API accepts normal audio payload metadata and currently routes through the host-owned local Whisper.cpp
+          provider. The host owns model install/status, shared model caching, native module loading, and audio decoding; extension code
+          should not import <code>whisper-cpp-node</code>, desktop server files, or the Local Dictation extension implementation.
+        </p>
         <h3 id="composer-attachments">Composer Attachments</h3>
         <p>
           Use <code>composerAttachmentProviders</code> for buttons above the composer attachment shelf. The provider action receives
@@ -1647,12 +1656,12 @@ export function MyPanel({ pa, context }: ExtensionSurfaceProps) {
           Backend-only host APIs that should stay narrow can also be exposed through focused SDK subpaths such as
           <code>@neon-pilot/extensions/backend/artifacts</code>, <code>/automations</code>, <code>/browser</code>, <code>/compaction</code>,
           <code>/conversations</code>, <code>/images</code>, <code>/mcp</code>, <code>/runs</code>, <code>/runtime</code>,
-          <code>/telemetry</code>, <code>/terminal</code>, and <code>/webContent</code>. Prefer a focused subpath over the broad backend
-          barrel when bundling a system extension that only needs one backend service. Feature-specific data planes such as Knowledge should
-          live inside their owning extension and use generic host capabilities (<code>ctx.storage</code>, <code>ctx.filesystem</code>,
-          <code>ctx.shell</code>, <code>ctx.git</code>, events, and UI invalidation) rather than dedicated host subpaths. For daemon-backed
-          shell work in a packaged system extension, keep the foreground path free of daemon imports and lazy-load background-run support
-          only when the action actually starts or inspects background work.
+          <code>/telemetry</code>, <code>/terminal</code>, <code>/transcription</code>, and <code>/webContent</code>. Prefer a focused
+          subpath over the broad backend barrel when bundling a system extension that only needs one backend service. Feature-specific data
+          planes such as Knowledge should live inside their owning extension and use generic host capabilities (<code>ctx.storage</code>,
+          <code>ctx.filesystem</code>, <code>ctx.shell</code>, <code>ctx.git</code>, events, and UI invalidation) rather than dedicated host
+          subpaths. For daemon-backed shell work in a packaged system extension, keep the foreground path free of daemon imports and
+          lazy-load background-run support only when the action actually starts or inspects background work.
         </p>
         <p>
           The backend API is deliberately two-layered: public stubs under <code>packages/extensions/src/backend/*.ts</code>, and host
@@ -1704,16 +1713,22 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
           current extension id to metadata automatically.
         </p>
         <h2 id="main-page-layout">Main page layout</h2>
-        <p>Main-route extension pages should use the shared app page primitives instead of hand-rolled widths or padding:</p>
+        <p>
+          Main-route extension pages must use the shared app page primitives instead of hand-rolled widths, padding, title scales, or local
+          page chrome:
+        </p>
         <pre><code>&lt;div className=&quot;h-full overflow-y-auto&quot;&gt;
-  &lt;AppPageLayout shellClassName=&quot;max-w-[72rem]&quot; contentClassName=&quot;space-y-10&quot;&gt;
-    &lt;AppPageIntro title=&quot;Page title&quot; summary=&quot;One sentence explaining what this page controls.&quot; actions={actions} /&gt;
+  &lt;AppPageLayout contentClassName=&quot;space-y-6&quot;&gt;
+    &lt;AppPageIntro title=&quot;Page title&quot; actions={actions} /&gt;
     {/* page sections */}
   &lt;/AppPageLayout&gt;
 &lt;/div&gt;</code></pre>
         <p>
-          Use the same <code>max-w-[72rem]</code>, <code>space-y-10</code>, and <code>AppPageIntro</code> title/summary pattern for normal
-          pages. Only use a wider shell for table-heavy management surfaces that genuinely need it.
+          <code>AppPageLayout</code> owns canonical page padding, left-aligned header rhythm, and responsive behavior.
+          <code>AppPageIntro</code> should be title-only by default; avoid page-level eyebrows, subtitles, or divider lines that make
+          sibling pages look unrelated. Do not pass custom <code>max-w-*</code>, page padding, or large <code>space-y-*</code> values for
+          normal pages. If a workflow needs a list/detail, editor, or split-pane layout, keep the same <code>AppPageLayout</code> shell and
+          use shared workbench/list primitives inside it instead of inventing a separate full-page frame.
         </p>
         <h2 id="styling-guidance">Styling guidance</h2>
         <p>
@@ -1740,8 +1755,9 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
             alignment should do most of the hierarchy work.
           </li>
           <li>
-            Keep typography consistent: page titles come from <code>AppPageIntro</code>; section titles are usually
-            <code>text-[18px] font-semibold tracking-tight</code>; body copy is usually <code>text-[13px] leading-6 text-secondary</code>.
+            Keep typography consistent: page titles come from <code>AppPageIntro</code>; section titles come from
+            <code>AppPageSection</code>; body copy uses compact <code>text-[12px]</code>/<code>text-[13px]</code> secondary text. Do not
+            hard-code oversized page titles.
           </li>
           <li>
             Prefer shared UI from <code>@neon-pilot/extensions/ui</code> over local lookalikes. Common first choices are
@@ -1811,10 +1827,10 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
           non-streaming Knowledge routes including binary assets, local dictation settings/model install/transcription, MCP
           settings/config/test/auth/logout actions and read-only tool inspection, onboarding bootstrap, prompt assembly inspection/toggles,
           skills inventory and enablement, telemetry aggregate reads, todos, web fetch, installable web search tools, installable local
-          model lookup/discovery actions, installable DS4 provider/tool/runtime-control actions, Video Probe local runtime controls,
-          Suggested Context cache warming, and background work (<code>system-runs</code>) run their declared worker-safe actions through
-          this lane; broader backend handler execution still runs through the in-process runner until the remaining live capabilities are
-          implemented on top of those capability handles.
+          model lookup/discovery actions, installable DS4 provider/tool/runtime-control actions, Video Probe frame sampling and
+          transcription tools, Suggested Context cache warming, and background work (<code>system-runs</code>) run their declared
+          worker-safe actions through this lane; broader backend handler execution still runs through the in-process runner until the
+          remaining live capabilities are implemented on top of those capability handles.
         </p>
         <p>
           Backend actions can opt into worker execution with <code>worker.enabled: true</code> when every code path they expose only needs
@@ -2138,6 +2154,11 @@ await ctx.conversations.getMeta(conversationId);
 await ctx.conversations.get(conversationId, { tailBlocks: 20 });
 await ctx.conversations.searchIndex(sessionIds);</code></pre>
         <p><strong>Permission required:</strong> <code>conversations:readwrite</code> for write operations.</p>
+        <p>
+          Messages sent by extensions through <code>ctx.conversations.sendMessage(...)</code> are wrapped before they reach the agent in a
+          standard <code>&lt;neon_pilot_injected_turn&gt;</code> envelope. The envelope identifies the injecting extension and delivery
+          mode, so the agent can distinguish a human prompt from an extension-triggered extra turn.
+        </p>
         <p>The <code>conversations</code> capability also exposes first-class lifecycle helpers:</p>
         <pre><code>const created = await ctx.conversations.create({ title: 'Research thread', cwd, initialPrompt: 'Start here' });
 const forked = await ctx.conversations.fork({ conversationId, title: 'Bug bash branch' });</code></pre>
@@ -2688,6 +2709,31 @@ await cacheFiles.writeJson('remote-index.json', index);</code></pre>
           points at built output such as <code>dist/backend.mjs</code>, both dev and packaged builds load that file directly. System
           extension frontends are bundled into the desktop renderer from source so they share the app's React singleton; their
           <code>dist/frontend.js</code> bundles are still built and validated as release artifacts.
+        </p>
+        <p>When changing a bundled system extension in this repo, run the repo workflow rather than stopping at a package build:</p>
+        <ol>
+          <li>Build the extension release artifacts with <code>pnpm run extension:build -- extensions/&lt;id&gt;</code>.</li>
+          <li>
+            For frontend, route, nav, sidebar, manifest, or shared UI changes, run <code>pnpm --dir packages/desktop run build:ui</code> so
+            the desktop renderer sees the current source and contributions.
+          </li>
+          <li>
+            Restart the dev app before visual QA; otherwise stale renderer chunks or cached component registrations can make the app show
+            old UI.
+          </li>
+          <li>
+            Open the exact app route/surface and click through each touched interaction, including create/edit/save/delete, dropdowns/menus,
+            autocomplete, drag/reorder, sidebar navigation/search, empty states, and persistence after refresh or reopen.
+          </li>
+          <li>
+            Compare the full app frame against the closest existing product surface before calling the UI done. If a feature is modeled on
+            Automations, Settings, Diffs, or Runs, inspect that surface in the app and align shell spacing, toolbar treatment, sidebar
+            behavior, typography, and right-rail density.
+          </li>
+        </ol>
+        <p>
+          Do not treat passing unit tests, <code>extension:build</code>, manifest checks, or a cropped screenshot as proof that a
+          user-facing extension surface works. They are required support checks; the app-path interaction pass is the acceptance check.
         </p>
         <p>
           Optional extension repo packages are not bundled or auto-loaded. Users install released optional extensions from

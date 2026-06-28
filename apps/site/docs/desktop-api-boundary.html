@@ -31,9 +31,9 @@
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
-          ><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./memory.html">Memory</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -82,6 +82,12 @@
           HTTP responses must be bounded, paginated, or streamed. Large binary/text payloads should flow as bytes/streams instead of deeply
           nested objects.
         </p>
+        <p>
+          Conversation aggregate reads follow a snapshot-plus-delta contract. The initial route/bootstrap read uses HTTP for the bounded
+          aggregate snapshot. If a realtime subscriber detects a revision gap, it should request the missing range with the aggregate delta
+          HTTP endpoint before refreshing the full snapshot. Snapshot fallback is for expired or intentionally capped delta ranges, not the
+          normal recovery path.
+        </p>
         <h3 id="websocket-realtime-events-and-control">WebSocket: realtime events and control</h3>
         <p>
           Use WebSocket for long-lived realtime flows and bidirectional control. The desktop realtime endpoint is
@@ -111,6 +117,11 @@
         <p>
           WebSocket messages should be small deltas, invalidations, or control messages. Do not routinely broadcast full sessions lists,
           transcripts, logs, artifacts, or other large snapshots over WebSocket.
+        </p>
+        <p>
+          Conversation aggregate deltas must carry monotonic <code>fromRevision</code> and <code>toRevision</code> fields. Receivers use
+          those revisions to drop stale events, detect gaps, and keep their in-memory projection current without re-reading the whole
+          transcript or activity snapshot.
         </p>
         <h3 id="electron-ipc-native-bootstrap-only">Electron IPC: native/bootstrap only</h3>
         <p>Use IPC only when the renderer needs Electron or OS capability, or to bootstrap HTTP/WebSocket access.</p>

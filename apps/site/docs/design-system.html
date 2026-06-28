@@ -31,8 +31,9 @@
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="active" href="./design-system.html">Design System</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./memory.html">Memory</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
+          ><a class="active" href="./design-system.html">Design System</a
           ><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
@@ -105,6 +106,31 @@
           <code>BUTTON_CLASS</code> constants, <code>details</code>/<code>summary</code>, and hand-written empty/error/loading text. Most of
           those should collapse into an existing primitive.
         </p>
+        <p>The UI-pattern guardrail is blocking by default:</p>
+        <pre><code>pnpm run check:ui-patterns</code></pre>
+        <p>
+          The scan covers desktop UI, first-party extensions, extension webapps, and docs extension templates. It allows zero findings
+          unless a finding is narrowly documented. Use report-only mode only for exploratory audits:
+        </p>
+        <pre><code>pnpm run check:ui-patterns -- --report-only
+UI_PATTERN_MAX_FINDINGS=unbounded pnpm run check:ui-patterns</code></pre>
+        <p>Inline exceptions must be structured and rule-specific:</p>
+        <pre><code>{
+  /* ui-pattern-ok raw-control reason=&quot;embedded third-party editor requires native file input semantics&quot; */
+}
+&lt;input type=&quot;file&quot; /&gt;;</code></pre>
+        <p>
+          Bare <code>ui-pattern-ok</code> comments do not suppress findings and are reported as invalid. Prefer moving the surface to
+          <code>@neon-pilot/ui</code> or <code>@neon-pilot/extensions/ui</code>; use an exception only when a narrow host, browser, or
+          third-party constraint makes a shared primitive the wrong tool.
+        </p>
+        <p>
+          The committed/default check must not hide live migration debt behind a broad allowlist. If you add an allowlist entry for local
+          investigation, keep it out of the default path and verify the default audit still matches an allowlist-free audit. Desktop host
+          CSS is not a blanket design-system escape hatch: app-level component recipes in
+          <code>packages/desktop/ui/src/app/index.css</code> need selector-level <code>ui-pattern-ok</code> reasons unless they move into
+          <code>packages/ui</code> primitive styling.
+        </p>
         <h2 id="commands">Commands</h2>
         <p>Run the component package build:</p>
         <pre><code>pnpm --dir packages/ui run build</code></pre>
@@ -130,7 +156,7 @@
           <li>
             Surfaces: <code>SurfacePanel</code>, <code>PanelHeader</code>, <code>PanelMessage</code>, <code>CompactCard</code>,
             <code>WorkbenchShell</code>, <code>WorkbenchHeader</code>, <code>RailSection</code>, <code>RailSubsection</code>,
-            <code>ShelfSection</code>, <code>ShelfHeader</code>, <code>ShelfBody</code>
+            <code>ShelfSection</code>, <code>ShelfHeader</code>, <code>ShelfBody</code>, <code>ShelfStatusRow</code>
           </li>
           <li>
             Overlays: <code>Dialog</code>, <code>DialogHeader</code>, <code>DialogBody</code>, <code>DialogFooter</code>,
@@ -304,8 +330,8 @@
             <code>CodeBlock</code>.
           </li>
           <li>
-            <code>../neon-pilot-extensions/system-local-models/src/page.tsx</code> and <code>system-video-probe/src/frontend.tsx</code>:
-            selected-model/runtime summaries use <code>DashboardGrid</code> and <code>MetricTile</code>.
+            <code>../neon-pilot-extensions/system-video-probe/src/frontend.tsx</code>: selected-model/runtime summaries use
+            <code>DashboardGrid</code> and <code>MetricTile</code>.
           </li>
           <li>
             <code>../neon-pilot-extensions/system-browser/src/panels.tsx</code>: browser tab rail uses <code>RailSection</code> and
@@ -331,6 +357,10 @@
           <li>
             Keep domain behavior local, but move generic chrome, spacing, state color, empty/error/loading presentation, and
             modal/list/table shells to shared primitives.
+          </li>
+          <li>
+            Run <code>pnpm run check:ui-patterns</code> before handoff; do not use report-only or an allowlist as proof that first-party UI
+            is migrated.
           </li>
           <li>
             When adding a new primitive, update <code>packages/ui/src/index.ts</code>,

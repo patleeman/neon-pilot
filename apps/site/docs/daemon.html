@@ -31,9 +31,9 @@
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
-          ><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./memory.html">Memory</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -138,10 +138,10 @@
         <p>
           The daemon stores its state in <code>&lt;state-root&gt;/daemon/</code> by default. If <code>NEON_PILOT_DAEMON_NAMESPACE</code> is
           set, daemon runtime files live in <code>&lt;state-root&gt;/daemon-&lt;namespace&gt;/</code>; the namespace is sanitized for path
-          safety. Dev/test desktop processes set a unique namespace per invocation unless one is explicitly provided, so multiple dev/test
-          apps can run without sharing sockets, pid locks, runtime DBs, or logs. If <code>NEON_PILOT_DAEMON_SOCKET_PATH</code> is set,
-          daemon runtime files live beside that explicit socket path instead and the namespace is ignored; this lets dev hosts pin a
-          specific isolated runtime DB.
+          safety. Dev/test desktop processes use stable <code>dev</code> or <code>test</code> namespaces unless one is explicitly provided,
+          so scheduled automations persist across local restarts. If you need an isolated dev/test daemon, set
+          <code>NEON_PILOT_DAEMON_NAMESPACE</code> or <code>NEON_PILOT_DAEMON_SOCKET_PATH</code>; with an explicit socket path, daemon
+          runtime files live beside that socket and the namespace is ignored.
         </p>
         <table>
           <thead>

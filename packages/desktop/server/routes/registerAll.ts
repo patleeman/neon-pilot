@@ -1,14 +1,15 @@
 import { registerAppTelemetryRoutes } from './appTelemetry.js';
 import { registerCompanionProxyRoutes } from './companionProxy.js';
 import type { RegisterServerRoutesInput } from './context.js';
-import { registerConversationRoutes } from './conversations.js';
 import { registerConversationActivityRoutes } from './conversationActivity.js';
+import { registerConversationRoutes } from './conversations.js';
 import { registerConversationStateRoutes } from './conversationState.js';
 import { registerExecutionRoutes } from './executions.js';
 import { registerExtensionRoutes } from './extensions.js';
 import { registerFilePickerRoutes } from './filePicker.js';
 import { registerGatewayRoutes } from './gateways.js';
 import { registerLiveSessionRoutes } from './liveSessions.js';
+import { registerMemoryRoutes } from './memory.js';
 import { registerModelRoutes } from './models.js';
 import { registerRunAppRoutes } from './runsApp.js';
 import { registerSecretRoutes } from './secrets.js';
@@ -33,6 +34,8 @@ export function registerServerRoutes({ app, context }: RegisterServerRoutesInput
   registerModelRoutes(app, context);
 
   registerToolsRoutes(app, context);
+
+  registerMemoryRoutes(app, context);
 
   registerSystemRoutes(app, context);
 

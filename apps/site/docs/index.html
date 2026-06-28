@@ -31,9 +31,9 @@
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
-          ><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./memory.html">Memory</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -97,10 +97,10 @@
             <tr>
               <td><strong>Power user organizing context</strong></td>
               <td>
-                <a href="./conversation-context.html">Conversation context</a>, <a href="./knowledge-base.html">Knowledge base sync</a>,
-                <a href="./projects.html">Projects</a>
+                <a href="./conversation-context.html">Conversation context</a>, <a href="./memory.html">Memory</a>,
+                <a href="./knowledge-base.html">Knowledge base sync</a>
               </td>
-              <td>Useful files, folders, notes, and project records are available to conversations.</td>
+              <td>Durable memory, useful files, notes, and project records are available to conversations.</td>
             </tr>
             <tr>
               <td><strong>External agent or script author</strong></td>
@@ -141,7 +141,7 @@
           </li>
           <li>
             <strong>Give the agent useful context</strong> — use <a href="./conversation-context.html">Conversation context</a> for files,
-            folders, images, drawings, and generated context.
+            folders, images, drawings, and generated context; use <a href="./memory.html">Memory</a> for durable agent behavior.
           </li>
           <li>
             <strong>Keep work organized</strong> — use <a href="./conversations.html">Conversations</a>,
@@ -167,6 +167,7 @@
             verification
           </li>
           <li><a href="./projects.html">Projects</a> — project records and workspace metadata</li>
+          <li><a href="./memory.html">Memory</a> — Git-backed Markdown memory, scopes, memory skills, and the Memory page</li>
           <li><a href="./configuration.html">Configuration</a> — file-based config and settings stores</li>
           <li>
             <a href="./cli.html">Neon Pilot CLI</a> — local control plane; extensions add administration commands with
@@ -192,6 +193,10 @@
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/release-test-inventory.md">Release test inventory</a> — broad
             release-risk checklist
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/feature-inventory.md">Feature inventory</a> — user-perspective
+            feature list for QA planning and coverage mapping
           </li>
         </ul>
         <p>
@@ -370,6 +375,10 @@
             attachment inspection with a vision agent
           </li>
           <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-video-probe/README.md">Video Probe</a> — local
+            video frame sampling and transcription tools
+          </li>
+          <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-local-dictation/README.md">Local Dictation</a> —
             Whisper.cpp dictation controls and settings
           </li>
@@ -391,7 +400,7 @@
           </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-onboarding/README.md">Onboarding</a> — first-run
-            onboarding bootstrap and conversation flow
+            guided tour over real app pages
           </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-prompt-assembly/README.md">Prompt Assembly</a> —
@@ -458,32 +467,12 @@
           </li>
           <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-exa-search">Exa Search</a> — Exa web search</li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-hermes-agent">Hermes Agent</a> — Hermes Agent API
-            session interface
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-alleycat">Kitty Litter Mobile Pairing</a> — mobile
-            pairing bridge
-          </li>
-          <li>
             <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge">Knowledge</a> — knowledge base browsing,
             editing, references, and sync
           </li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-local-models">Local Models</a> — MLX and GGUF model
-            runtime management
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-self-preservation">Self Preservation</a> — process
-            self-preservation guard
-          </li>
-          <li>
             <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context">Suggested Context</a> — related
             conversation suggestions
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-video-probe">Video Probe</a> — video analysis via
-            local or remote video-capable models
           </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-writing-studio">Writing Studio</a> — document-first

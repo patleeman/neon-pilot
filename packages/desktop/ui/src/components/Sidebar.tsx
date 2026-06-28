@@ -584,6 +584,7 @@ function SidebarPrimaryNav({
           <Ico d={PATH.plus} size={15} />
         </SidebarNavButton>
       </div>
+      <TopNavItem to="/memory" icon={PATH.notes} label="Memory" documentNavigationRoutes={documentNavigationRoutes} />
       {items.map((item) => (
         <TopNavItem
           key={`${item.extensionId}:${item.id}`}

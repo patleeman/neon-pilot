@@ -31,9 +31,9 @@
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
-          ><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./memory.html">Memory</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -104,6 +104,10 @@ pnpm run check    # types, lint, format, full test suite, extension static check
               <td>Broad regression pass; deterministic unit, integration, smoke, and regression tests</td>
             </tr>
             <tr>
+              <td><code>pnpm run test:e2e</code></td>
+              <td>Unified Playwright Electron end-to-end suite with isolated desktop state</td>
+            </tr>
+            <tr>
               <td><code>pnpm run test:extensions</code></td>
               <td>Focused extension runtime smoke tests</td>
             </tr>
@@ -128,8 +132,21 @@ pnpm run check    # types, lint, format, full test suite, extension static check
           implementations rather than statically re-exporting core/desktop modules.
         </p>
         <p>
-          Use <code>pnpm test</code> as the default single command for behavior regressions. Keep standalone smoke scripts only for live-app
-          or external-environment checks that should not run in every deterministic test pass.
+          Use <code>pnpm test</code> as the default single command for deterministic code-level behavior regressions. Use
+          <code>pnpm run test:e2e</code> for Electron app-path coverage that needs the real desktop shell, renderer, backend API, and
+          isolated profile state. Legacy focused aliases such as <code>pnpm run e2e:chat</code>, <code>pnpm run smoke:routines-ui</code>,
+          and <code>pnpm run smoke:desktop:fork-rewind</code> now run filtered Playwright E2E specs through the same runner.
+        </p>
+        <p>Electron E2E:</p>
+        <pre><code>pnpm run test:e2e
+pnpm run test:e2e:runner --grep @chat
+pnpm run test:e2e:runner --grep @core</code></pre>
+        <p>
+          The Playwright E2E suite launches Electron directly with a temporary state root, captures traces/screenshots/video on failure, and
+          writes artifacts under <code>test-results/e2e</code> and <code>playwright-report/e2e</code>. The full command rebuilds the desktop
+          app first; use <code>test:e2e:runner</code> only when the build outputs are already fresh. Core happy-path coverage lives under
+          <code>@core-conversations</code> and <code>@core-shell</code>: seeded conversation navigation/sidebar placement/reload, command
+          palette, app-shell routes, extension routes, routines, and settings.
         </p>
         <p>Startup idle smoke:</p>
         <pre><code>pnpm run smoke:startup-idle -- --seconds=30 --sessions=2500 --blocks=80</code></pre>
@@ -212,16 +229,38 @@ pnpm run ab:cleanup -- --session &lt;name&gt;</code></pre>
           <code>neon-pilot</code>; RC uses <code>neon-pilot-rc</code>; dev uses <code>neon-pilot-dev</code>; test launches use
           <code>neon-pilot-testing</code>. The user-facing CLI command remains <code>neon-pilot</code> for every channel; channel-local app
           shells prepend that channel's managed CLI bin directory, and user shell installation is opt-in with
-          <code>neon-pilot cli install</code>. Dev/test ports default to random/unset (<code>0</code>) and each dev/test app process gets a
-          unique <code>NEON_PILOT_DAEMON_NAMESPACE</code> unless one is explicitly provided, so multiple dev/test app invocations do not
-          share daemon sockets, pid locks, runtime DBs, or companion ports. Override only for dev/test with
-          <code>NEON_PILOT_RUNTIME_CHANNEL</code>, <code>NEON_PILOT_DAEMON_NAMESPACE</code>, or <code>NEON_PILOT_DAEMON_SOCKET_PATH</code>.
+          <code>neon-pilot cli install</code>. Dev/test ports default to random/unset (<code>0</code>) and use stable <code>dev</code>/<code
+            >test</code
+          >
+          daemon namespaces by default, so scheduled automations persist across local restarts. Override only for dev/test with
+          <code>NEON_PILOT_RUNTIME_CHANNEL</code>, <code>NEON_PILOT_DAEMON_NAMESPACE</code>, or
+          <code>NEON_PILOT_DAEMON_SOCKET_PATH</code> when you need an isolated daemon socket, pid lock, runtime DB, or log directory.
         </p>
         <p>
           Before launching or closing <code>Neon Pilot Testing.app</code>, check whether another instance already exists. Do not quit, kill,
           or recycle a process you did not start; connect to it when appropriate or use a separate debug port/session. After QA, close only
           the app process and browser session you started.
         </p>
+        <h3 id="ui-extension-done-checklist">UI extension done checklist</h3>
+        <p>For any user-visible extension UI, “done” means the app path was exercised, not just that tests and builds passed:</p>
+        <ul>
+          <li>Open the exact route, rail, sidebar view, Settings section, transcript renderer, or composer control in the desktop app.</li>
+          <li>Compare the full app frame against the closest existing product surface before inventing layout or spacing.</li>
+          <li>
+            Click every control touched by the change: add/create, edit, save, delete, menus, dropdowns, autocomplete, filters/search,
+            drag/reorder, dialogs, and run/history toggles.
+          </li>
+          <li>Verify state after save/delete/reorder by refreshing or reopening the surface.</li>
+          <li>
+            Capture or inspect a full-frame screenshot for density, typography, clipping, overlapping popovers, sticky menus,
+            empty/error/loading states, and sidebar/right-rail fit.
+          </li>
+          <li>
+            Run the focused package/extension build plus <code>pnpm --dir packages/desktop run build:ui</code> when frontend, route, nav,
+            sidebar, manifest, or shared UI behavior changed.
+          </li>
+        </ul>
+        <p>If a user can plausibly discover an issue by clicking a visible control once, the agent should catch it before checkpointing.</p>
         <h2 id="checkpoints">Checkpoints</h2>
         <p>
           Before final summary, use the checkpoint skill/tool. In this repo, checkpoint commits go directly to <code>main</code>; no branch

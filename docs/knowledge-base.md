@@ -1,6 +1,8 @@
 # Knowledge base sync
 
-The knowledge base is durable agent memory backed by a git repository. Use it for instruction files, reusable notes, project context, and workflow knowledge that should survive app reinstalls or move between machines.
+The knowledge base is durable reference material backed by a git repository. Use it for reusable notes, project context, files, and workflow knowledge that should survive app reinstalls or move between machines.
+
+For agent-owned standing behavior, use [Memory](memory.md). Memory owns `memory/system.md`, memory scopes, and memory skills.
 
 ## What to store
 

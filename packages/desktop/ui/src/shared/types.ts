@@ -1371,6 +1371,60 @@ export interface MemoryData {
   memoryDocs: MemoryDocItem[];
 }
 
+export interface MemoryGitChange {
+  hash: string;
+  author: string;
+  date: string;
+  subject: string;
+  files: string[];
+}
+
+export interface MemorySystemFile {
+  relativePath: string;
+  path: string;
+  exists: boolean;
+  content: string;
+  loaded: true;
+  updatedAt?: string;
+}
+
+export interface MemoryScope {
+  slug: string;
+  name: string;
+  type: string;
+  relativePath: string;
+  path: string;
+  roots: string[];
+  aliases: string[];
+  inject: boolean;
+  active: boolean;
+  content: string;
+  updatedAt?: string;
+}
+
+export interface MemoryManagedSkill {
+  name: string;
+  description: string;
+  relativePath: string;
+  path: string;
+  content: string;
+  source: 'memory';
+}
+
+export interface ManagedMemoryState {
+  initialized: boolean;
+  root: string;
+  system: MemorySystemFile;
+  scopes: MemoryScope[];
+  skills: MemoryManagedSkill[];
+  recentChanges: MemoryGitChange[];
+  git: {
+    initialized: boolean;
+    branch: string | null;
+    remoteUrl: string | null;
+  };
+}
+
 export interface KnowledgeFileSummary {
   id: string;
   kind: 'file' | 'folder';

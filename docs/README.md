@@ -25,7 +25,7 @@ Pick the shortest path for what you are doing:
 | Audience                            | First docs to read                                                                                                  | Success check                                                                            |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | **New user**                        | [Getting Started](getting-started.md), then [Views](views.md) and [Conversations](conversations.md)                 | App opens, provider is configured, and a first conversation gets a reply.                |
-| **Power user organizing context**   | [Conversation context](conversation-context.md), [Knowledge base sync](knowledge-base.md), [Projects](projects.md)  | Useful files, folders, notes, and project records are available to conversations.        |
+| **Power user organizing context**   | [Conversation context](conversation-context.md), [Memory](memory.md), [Knowledge base sync](knowledge-base.md)      | Durable memory, useful files, notes, and project records are available to conversations. |
 | **External agent or script author** | [Agent bootstrap](agent-bootstrap.md), [Neon Pilot CLI](cli.md), [CLI reference](cli-reference.md)                  | `neon-pilot bootstrap doctor` passes and reports usable provider setup.                  |
 | **Extension builder**               | [Build an extension with your agent](build-an-extension.md), then [Extension authoring](extensions.md)              | The extension installs, its route/action works through the app, and its build passes.    |
 | **Repo contributor**                | [Development workflow](development.md), then the owning package or extension README                                 | Focused validation passes and the app can still start when touched code affects startup. |
@@ -34,7 +34,7 @@ Pick the shortest path for what you are doing:
 ## Common Tasks
 
 - **Install and verify Neon Pilot** — use [Getting Started](getting-started.md), then run the first conversation.
-- **Give the agent useful context** — use [Conversation context](conversation-context.md) for files, folders, images, drawings, and generated context.
+- **Give the agent useful context** — use [Conversation context](conversation-context.md) for files, folders, images, drawings, and generated context; use [Memory](memory.md) for durable agent behavior.
 - **Keep work organized** — use [Conversations](conversations.md), [Projects](projects.md), and [Knowledge base sync](knowledge-base.md).
 - **Let work continue later** — use [Conversations](conversations.md) for follow-ups/deferred resumes and [Daemon](daemon.md) for background runtime behavior.
 - **Install more capabilities** — use [Extension distribution](extension-distribution.md) and the first-party optional extension repo.
@@ -44,6 +44,7 @@ Pick the shortest path for what you are doing:
 
 - [Agent bootstrap](agent-bootstrap.md) — packaged install, CLI setup, provider configuration, and external-agent verification
 - [Projects](projects.md) — project records and workspace metadata
+- [Memory](memory.md) — Git-backed Markdown memory, scopes, memory skills, and the Memory page
 - [Configuration](configuration.md) — file-based config and settings stores
 - [Neon Pilot CLI](cli.md) — local control plane; extensions add administration commands with `contributes.cliCommands`
 - [CLI reference](cli-reference.md) — generated command contract reference for automation and scripts

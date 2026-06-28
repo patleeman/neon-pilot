@@ -31,9 +31,9 @@
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
-          ><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./memory.html">Memory</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -68,7 +68,10 @@
         <pre><code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap</code></pre>
         <p>Use <code>--channel rc</code> when you want the release-candidate app.</p>
         <h2 id="configure-a-model-provider">Configure a model provider</h2>
-        <p>Open <strong>Neon Pilot.app</strong>. The desktop app manages the local daemon automatically.</p>
+        <p>
+          Open <strong>Neon Pilot.app</strong>. The desktop app manages the local daemon automatically. On a fresh install, Neon Pilot
+          starts a short guided tour over the real app pages instead of a separate setup wizard.
+        </p>
         <p>
           In the app, open <strong>Settings</strong> and confirm the model provider and default model you want to use. If you installed the
           CLI, you can do the same setup from a terminal:
@@ -105,10 +108,11 @@ printf '%s' &quot;$OPENAI_API_KEY&quot; | neon-pilot bootstrap provider set-key 
         </ul>
         <h2 id="first-run-checklist">First run checklist</h2>
         <ol>
-          <li>Open <strong>Settings</strong> and confirm your model provider and default model.</li>
+          <li>Follow the guided tour, or open <strong>Settings</strong> and confirm your model provider and default model.</li>
           <li>Start a new conversation and verify the agent replies to a small prompt.</li>
           <li>Attach a file or folder when the task needs project context.</li>
           <li>Ask for a bounded first task, such as summarizing a file, explaining a code path, or drafting a plan.</li>
+          <li>Open <strong>Extensions</strong> to inspect built-in capabilities and install or build workflow-specific extensions.</li>
           <li>Use the Workbench to inspect files, artifacts, browser views, extensions, and other surfaces beside the conversation.</li>
           <li>
             If you want durable notes or instructions, configure <a href="./knowledge-base.html">Knowledge base sync</a> after the first

@@ -31,9 +31,9 @@
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
-          ><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./memory.html">Memory</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -65,20 +65,47 @@
           material for the agent and for debugging.
         </p>
         <h2 id="copy-paste-prompt">Copy-paste prompt</h2>
-        <pre><code>Build a Neon Pilot extension that [does what].
+        <pre><code>Build a Neon Pilot extension that [does what]. Use the local-extension-development skill to guide the work.
 
-Before implementation, produce a short UX brief and ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass. The brief must name the primary user, the job-to-be-done, the primary surface, the default/empty/loading/error/success states, the main actions, and the shared UI primitives you will reuse from `@neon-pilot/extensions/ui`.
+Start by interviewing me before you write code. Ask focused questions until you understand the workflow I want, who it is for, what the first version should do, where it should live in Neon Pilot, and what empty, loading, error, and success states it needs.
 
-Use the extension manager/template if helpful. Pick the right surface:
-- main page for a full app/workflow
-- tab-local right rail for a compact conversation-specific tool panel inside the workbench
-- workbench detail for split-pane workflows
+Then write a short UX brief. If the extension has UI, make a quick visual prototype or artifact using Neon Pilot's UI patterns so I can react before implementation.
 
-Implement it with editable source files, build it, reload it, visually test the exact user path, fix any layout or interaction problems you see, and checkpoint the changes.</code></pre>
+After I approve the direction, build the extension, reload it, test the real app path, and keep iterating with me until it feels right.</code></pre>
         <p>
           Add concrete product details after the first sentence: what data it should show, what actions it should support, and what “done”
           looks like.
         </p>
+        <h2 id="extension-building-workflow">Extension-building workflow</h2>
+        <p>Use this sequence when an agent helps a user create a new extension:</p>
+        <ol>
+          <li>
+            <strong>Interview first.</strong> Ask enough questions to understand the job, the user, the data involved, the first useful
+            version, the expected controls, and what the user should see when nothing is configured or something fails. Do not start coding
+            while the product shape is still vague.
+          </li>
+          <li>
+            <strong>Write the brief.</strong> Summarize the primary user, job-to-be-done, first-version scope, chosen extension surface,
+            state model, main actions, and validation plan. State any assumptions so the user can correct them.
+          </li>
+          <li>
+            <strong>Prototype UI when UI matters.</strong> For pages, panels, settings, or workflow surfaces, make a quick artifact or local
+            prototype before implementation. Use Neon Pilot's density, shared primitives, and copy rules so the user reacts to the product
+            shape, not a generic mockup.
+          </li>
+          <li>
+            <strong>Build the extension.</strong> Create editable source in <code>src/</code>, declare contributions in
+            <code>extension.json</code>, use the public extension SDK, and keep generated output in <code>dist/</code>.
+          </li>
+          <li>
+            <strong>Reload and test in the app.</strong> Build, validate, reload extensions, open the actual contributed surface, and
+            exercise default, empty, loading, error, success, disabled, and long-running states that apply.
+          </li>
+          <li>
+            <strong>Iterate with the user.</strong> Adjust scope, copy, layout, actions, or state behavior from what the user sees.
+            Checkpoint only when the extension is working through the real app path.
+          </li>
+        </ol>
         <h2 id="production-agent-loop">Production agent loop</h2>
         <p>Use this as the no-ambiguity loop for an agent building an extension in a repo checkout:</p>
         <ol>
@@ -109,6 +136,11 @@ Implement it with editable source files, build it, reload it, visually test the 
           <li>
             Ask focused questions for unresolved UX/product decisions before writing code. If the user gave enough detail, state the
             assumptions and proceed.
+          </li>
+          <li>
+            For user-visible UI, make a quick artifact or local prototype before implementation unless the user explicitly wants to skip
+            straight to code. The prototype should show the chosen surface, primary actions, and important states; use the shared Neon Pilot
+            UI patterns instead of generic app chrome.
           </li>
           <li>
             Start from
@@ -388,9 +420,10 @@ neon-pilot-extension build /path/to/my-extension</code></pre>
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#copy-paste-prompt">Copy-paste prompt</a><a href="#production-agent-loop">Production agent loop</a
-        ><a href="#templates">Templates</a><a href="#pick-the-right-surface">Pick the right surface</a
-        ><a href="#what-your-agent-should-do">What your agent should do</a><a href="#where-files-live">Where files live</a
+        <a href="#copy-paste-prompt">Copy-paste prompt</a><a href="#extension-building-workflow">Extension-building workflow</a
+        ><a href="#production-agent-loop">Production agent loop</a><a href="#templates">Templates</a
+        ><a href="#pick-the-right-surface">Pick the right surface</a><a href="#what-your-agent-should-do">What your agent should do</a
+        ><a href="#where-files-live">Where files live</a
         ><a href="#extension-repositories-and-releases">Extension repositories and releases</a
         ><a href="#good-extension-requests">Good extension requests</a><a href="#build-reload-validate">Build, reload, validate</a
         ><a href="#troubleshooting">Troubleshooting</a><a href="#reference">Reference</a>

@@ -31,9 +31,9 @@
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="active" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
-          ><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./memory.html">Memory</a
+          ><a class="active" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -58,8 +58,12 @@
       <article class="docs-content">
         <h1 id="knowledge-base-sync">Knowledge base sync</h1>
         <p>
-          The knowledge base is durable agent memory backed by a git repository. Use it for instruction files, reusable notes, project
-          context, and workflow knowledge that should survive app reinstalls or move between machines.
+          The knowledge base is durable reference material backed by a git repository. Use it for reusable notes, project context, files,
+          and workflow knowledge that should survive app reinstalls or move between machines.
+        </p>
+        <p>
+          For agent-owned standing behavior, use <a href="./memory.html">Memory</a>. Memory owns <code>memory/system.md</code>, memory
+          scopes, and memory skills.
         </p>
         <h2 id="what-to-store">What to store</h2>
         <p>Good knowledge base content is stable, useful across conversations, and safe to keep in git:</p>

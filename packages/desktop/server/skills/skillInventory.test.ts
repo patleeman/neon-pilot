@@ -10,6 +10,7 @@ vi.mock('@neon-pilot/core', async () => {
     ...actual,
     getStateRoot: () => stateRoot,
     getDurableSkillsDir: () => durableSkillsDir,
+    getDurableMemorySkillsDir: () => memorySkillsDir,
     resolveRuntimeResources: () => ({
       skillDirs: [],
       extensionEntries: [],
@@ -78,6 +79,7 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
 
 let stateRoot = '';
 let durableSkillsDir = '';
+let memorySkillsDir = '';
 let extensionRoot = '';
 
 describe('buildSkillInventory', () => {
@@ -85,6 +87,7 @@ describe('buildSkillInventory', () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-skill-inventory-'));
     stateRoot = join(root, 'state');
     durableSkillsDir = join(root, 'knowledge', 'skills');
+    memorySkillsDir = join(root, 'knowledge', 'memory', 'skills');
     extensionRoot = join(root, 'extension');
     mkdirSync(join(extensionRoot, 'skills', 'alpha'), { recursive: true });
     mkdirSync(join(extensionRoot, 'skills', 'beta'), { recursive: true });
@@ -110,11 +113,40 @@ describe('buildSkillInventory', () => {
           .map((skill) => skill.id),
       ).toEqual([]);
       expect(
-        (await buildSkillInventoryAsync({ runtimeScope: 'test', repoRoot: root })).filter((skill) => skill.enabled).map((skill) => skill.id),
+        (await buildSkillInventoryAsync({ runtimeScope: 'test', repoRoot: root }))
+          .filter((skill) => skill.enabled)
+          .map((skill) => skill.id),
       ).toEqual([]);
     } finally {
       unregisterFirst();
       unregisterSecond();
     }
+  });
+
+  it('discovers skills stored under memory/skills', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-memory-skill-inventory-'));
+    stateRoot = join(root, 'state');
+    durableSkillsDir = join(root, 'knowledge', 'skills');
+    memorySkillsDir = join(root, 'knowledge', 'memory', 'skills');
+    extensionRoot = join(root, 'extension');
+    mkdirSync(join(memorySkillsDir, 'memory-review'), { recursive: true });
+    writeFileSync(
+      join(memorySkillsDir, 'memory-review', 'SKILL.md'),
+      '---\nname: Memory Review\ndescription: Review memory updates\n---\n',
+    );
+
+    const { buildSkillInventory } = await import('./skillInventory.js');
+
+    expect(buildSkillInventory({ runtimeScope: 'test', repoRoot: root })).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'memory-review',
+          title: 'Memory Review',
+          description: 'Review memory updates',
+          source: expect.objectContaining({ kind: 'knowledge', label: 'Knowledge', root: memorySkillsDir }),
+          location: expect.objectContaining({ path: join(memorySkillsDir, 'memory-review', 'SKILL.md') }),
+        }),
+      ]),
+    );
   });
 });

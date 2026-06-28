@@ -335,6 +335,24 @@ The time window in which a missed scheduled automation may still fire after the 
 
 ## 5. Knowledge model
 
+### Memory
+
+Git-backed Markdown files that define durable agent behavior and stable context. Memory is managed by Neon Pilot at `<knowledge-root>/memory`.
+
+Use **memory** for agent-owned standing context such as `memory/system.md`, scoped memory files, and memory skills. Do not use **knowledge base** for this behavior layer.
+
+### System memory
+
+The always-loaded memory file at `memory/system.md`.
+
+Use **system memory** for global standing preferences and instructions that should be injected into every agent run.
+
+### Memory scope
+
+A named memory subdivision under `memory/scopes/<scope>/memory.md`. Scopes can activate from frontmatter rules such as workspace roots, aliases, or an explicit thread selection.
+
+Use **memory scope** rather than **project** when the grouping is generic or activation-based. A project can be represented as a memory scope, but not every memory scope is a project.
+
 ### Knowledge base
 
 The durable collection of reusable reference material that the agent can browse, search, cite, or inject through explicit context such as `@` file mentions.

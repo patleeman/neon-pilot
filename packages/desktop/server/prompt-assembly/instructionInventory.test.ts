@@ -21,6 +21,9 @@ const core = vi.hoisted(() => ({
 const extensionHostClient = vi.hoisted(() => ({
   listPromptAssemblyContributions: vi.fn(() => ({ assemblyProviders: [], contextProviders: [], hooks: [] })),
 }));
+const memoryStore = vi.hoisted(() => ({
+  getActiveMemoryInstructionFiles: vi.fn(() => []),
+}));
 const providerRuntime = vi.hoisted(() => ({
   invokePromptAssemblyProvider: vi.fn(),
   isRecord: (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value),
@@ -30,6 +33,7 @@ const runtimeScope = vi.hoisted(() => ({ getAssemblyRuntimeScope: vi.fn(() => 's
 vi.mock('node:fs', () => fs);
 vi.mock('@neon-pilot/core', () => core);
 vi.mock('../extensions/extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient }));
+vi.mock('../memory/memoryStore.js', () => memoryStore);
 vi.mock('./providerRuntime.js', () => providerRuntime);
 vi.mock('./runtimeScope.js', () => runtimeScope);
 
@@ -43,6 +47,7 @@ describe('instruction inventory', () => {
     fs.existsSync.mockReturnValue(true);
     fs.readFileSync.mockImplementation((path: string) => `content:${path}`);
     template.renderSystemPromptTemplate.mockReturnValue('generated template');
+    memoryStore.getActiveMemoryInstructionFiles.mockReturnValue([]);
     extensionHostClient.listPromptAssemblyContributions.mockReturnValue({ assemblyProviders: [], contextProviders: [], hooks: [] });
   });
 
@@ -84,6 +89,48 @@ describe('instruction inventory', () => {
 
     expect(plan.layers.map((layer) => layer.id)).toEqual(['agents:/repo/AGENTS.md']);
     expect(plan.finalSystemPrompt).toBe('content:/repo/AGENTS.md');
+  });
+
+  it('injects memory system and active scope files as mutable instruction layers', async () => {
+    memoryStore.getActiveMemoryInstructionFiles.mockReturnValue([
+      {
+        id: 'memory-system:/knowledge/memory/system.md',
+        title: 'system.md',
+        path: '/knowledge/memory/system.md',
+        content: 'system memory',
+        priority: 80,
+      },
+      {
+        id: 'memory-scope:neon-pilot',
+        title: 'Neon Pilot memory',
+        path: '/knowledge/memory/scopes/neon-pilot/memory.md',
+        content: 'scope memory',
+        priority: 160,
+      },
+    ]);
+
+    const plan = await buildInstructionPlan(ctx);
+
+    expect(plan.layers.map((layer) => layer.id)).toEqual([
+      'system:/repo/SYSTEM.md',
+      'memory-system:/knowledge/memory/system.md',
+      'agents:/repo/AGENTS.md',
+      'memory-scope:neon-pilot',
+      'runtime:generated-system-template',
+      'append-system:/repo/APPEND.md',
+    ]);
+    expect(plan.layers.find((layer) => layer.id === 'memory-system:/knowledge/memory/system.md')).toMatchObject({
+      providerId: 'memory',
+      content: 'system memory',
+      mutable: true,
+      scope: 'global',
+    });
+    expect(plan.layers.find((layer) => layer.id === 'memory-scope:neon-pilot')).toMatchObject({
+      providerId: 'memory',
+      content: 'scope memory',
+      mutable: true,
+      scope: 'workspace',
+    });
   });
 
   it('records provider failures and supports custom provider disposal', async () => {

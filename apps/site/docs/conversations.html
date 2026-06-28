@@ -32,8 +32,9 @@
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="active" href="./conversations.html">Conversations</a
           ><a class="" href="./conversation-context.html">Conversation Context</a><a class="" href="./projects.html">Projects</a
-          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
-          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./memory.html">Memory</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -167,8 +168,9 @@
         </p>
         <p>
           Long saved conversations open on their latest transcript segment. When earlier history is hidden, the transcript renders an inline
-          cutoff marker with the visible percentage range and a small <strong>Load previous</strong> action; implementation counts such as
-          block totals and windowed chunks stay out of the main UI.
+          cutoff marker with the visible percentage range and a small <strong>Load previous</strong> action. Earlier transcript pages load
+          only when that action is clicked; scrolling near the top does not auto-load hidden history. Implementation counts such as block
+          totals and windowed chunks stay out of the main UI.
         </p>
         <p>
           Saved-conversation summaries are cache-first. UI and suggested-context reads only return summaries already present in the local
@@ -189,6 +191,12 @@
           IDs, active ID, workspace metadata, and the session rows needed to render them. The projection filters stale workspace IDs that no
           longer resolve to known conversations, so the frontend must not create durable ghost rows for unknown IDs. Temporary optimistic UI
           is allowed only while a new conversation is being reserved or sent.
+        </p>
+        <p>
+          Conversation placement is canonical even though legacy response shapes still expose separate arrays. A conversation is exactly one
+          of <code>closed</code>, <code>open</code>, <code>pinned</code>, or <code>archived</code>; pinned, open, and archived membership
+          must not conflict. When old or out-of-order payloads contain conflicts, normalization resolves them into one placement before the
+          sidebar or route state reacts.
         </p>
         <p>
           The backend is also the source of truth for durable conversation runtime state such as whether a conversation is running. Backend
@@ -212,6 +220,19 @@
           Opening a conversation is a read. The frontend asks for conversation state/bootstrap by ID and the backend decides whether the
           conversation is already live, can be read from transcript state, or is missing. If a requested conversation ID is unknown, the UI
           should show the conversation error state instead of redirecting to <code>/conversations/new</code>.
+        </p>
+        <p>
+          Conversation route state uses an aggregate model for the transcript snapshot plus durable activity/runtime state. The initial load
+          is HTTP; live changes arrive as revisioned WebSocket deltas with <code>fromRevision</code> and <code>toRevision</code>. If the
+          renderer misses a delta, it first requests the missing aggregate delta range from
+          <code>/api/conversations/:id/aggregate/deltas?after=&lt;revision&gt;</code> and applies those patches in memory. Only expired or
+          too-large gaps should fall back to a full aggregate snapshot refresh.
+        </p>
+        <p>
+          The desktop renderer keeps a shared in-memory write-through conversation state cache for aggregate snapshots, realtime deltas,
+          prefetches, optimistic sends, aborts, and manual refreshes. Conversation views subscribe to that cache instead of deciding whether
+          state came from transcript storage, bootstrap data, or a live stream. This keeps route swaps and remounts from dropping visible
+          user messages or reprocessing transcript Markdown unnecessarily.
         </p>
         <p>
           Sending or explicitly resuming a saved conversation is semantic from the frontend's perspective. The UI calls the conversation
@@ -590,7 +611,7 @@ Fork from msg2:
           <tbody>
             <tr>
               <td><code>/conversations</code></td>
-              <td>Conversation list</td>
+              <td>Active or new conversation redirect</td>
             </tr>
             <tr>
               <td><code>/conversations/new</code></td>
