@@ -441,7 +441,14 @@ describe('repairLiveSessionTranscriptTail', () => {
     expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: 'snapshot' }));
   });
 
-  it('reports recoverable dangling tool-call tails even when summaries are unavailable', () => {
+  it('repairs dangling tool-call tails by appending synthetic aborted tool results', () => {
+    const appendMessage = vi.fn();
+    const buildSessionContext = vi.fn(() => ({
+      messages: [
+        { role: 'assistant', content: [{ type: 'toolCall', id: 'call_1', name: 'read', arguments: { path: 'README.md' } }] },
+        { role: 'toolResult', toolCallId: 'call_1', toolName: 'read', content: [{ type: 'text', text: 'aborted' }] },
+      ],
+    }));
     const state = {
       messages: [{ role: 'assistant', content: [{ type: 'toolCall', id: 'call_1', name: 'read', arguments: { path: 'README.md' } }] }],
       streamingMessage: null,
@@ -488,6 +495,8 @@ describe('repairLiveSessionTranscriptTail', () => {
                 },
               }) as Record<string, unknown>
             )[id],
+          appendMessage,
+          buildSessionContext,
         },
       },
     });
@@ -496,10 +505,24 @@ describe('repairLiveSessionTranscriptTail', () => {
 
     expect(result).toEqual({
       recoverable: true,
-      repaired: false,
+      repaired: true,
       reason: 'dangling_tool_call',
       summary: 'Recovered from an unfinished tool-use tail so the conversation can continue from the last stable point.',
     });
+    expect(appendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        role: 'toolResult',
+        toolCallId: 'call_1',
+        toolName: 'read',
+        content: [{ type: 'text', text: 'aborted' }],
+        isError: true,
+      }),
+    );
+    expect(buildSessionContext).toHaveBeenCalledOnce();
+    expect(state.messages).toEqual([
+      { role: 'assistant', content: [{ type: 'toolCall', id: 'call_1', name: 'read', arguments: { path: 'README.md' } }] },
+      { role: 'toolResult', toolCallId: 'call_1', toolName: 'read', content: [{ type: 'text', text: 'aborted' }] },
+    ]);
   });
 });
 
@@ -4002,11 +4025,15 @@ describe('promptSession', () => {
     expect(followUp).not.toHaveBeenCalled();
   });
 
-  it('branches away from dangling tool calls before sending a fresh prompt', async () => {
+  it('appends an aborted tool result for dangling tool calls before sending a fresh prompt', async () => {
     const prompt = vi.fn(async () => undefined);
     const branch = vi.fn();
     const resetLeaf = vi.fn();
-    const sanitizedMessages = [{ role: 'assistant', content: [{ type: 'text', text: 'Stable answer' }] }];
+    const appendMessage = vi.fn();
+    const repairedMessages = [
+      { role: 'assistant', content: [{ type: 'toolCall', id: 'call_1', name: 'read', arguments: { path: 'README.md' } }] },
+      { role: 'toolResult', toolCallId: 'call_1', toolName: 'read', content: [{ type: 'text', text: 'aborted' }] },
+    ];
     const state = {
       messages: [{ role: 'assistant', content: [{ type: 'toolCall', id: 'call_1', name: 'read', arguments: { path: 'README.md' } }] }],
       streamingMessage: null,
@@ -4082,7 +4109,8 @@ describe('promptSession', () => {
             )[id],
           branch,
           resetLeaf,
-          buildSessionContext: () => ({ messages: sanitizedMessages, thinkingLevel: 'off', model: null }),
+          appendMessage,
+          buildSessionContext: () => ({ messages: repairedMessages, thinkingLevel: 'off', model: null }),
         },
         getContextUsage: () => null,
         isStreaming: false,
@@ -4092,9 +4120,18 @@ describe('promptSession', () => {
 
     await promptSession('session-dangling-tool-repair', 'continue working');
 
-    expect(branch).toHaveBeenCalledWith('hidden-1');
+    expect(branch).not.toHaveBeenCalled();
     expect(resetLeaf).not.toHaveBeenCalled();
-    expect(state.messages).toBe(sanitizedMessages);
+    expect(appendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        role: 'toolResult',
+        toolCallId: 'call_1',
+        toolName: 'read',
+        content: [{ type: 'text', text: 'aborted' }],
+        isError: true,
+      }),
+    );
+    expect(state.messages).toBe(repairedMessages);
     expect(prompt).toHaveBeenCalledWith('continue working');
   });
 
