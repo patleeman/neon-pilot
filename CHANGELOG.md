@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.31 — 2026-06-28
+
+### Highlights
+
+- Makes Computer Use setup more reliable by finding the installed Cua Driver app bundle directly, even when shell PATH updates are not visible to Neon Pilot yet.
+- Warns users on startup when Computer Use is enabled but Cua Driver is missing or macOS Accessibility/Screen Recording permissions still need setup.
+- Improves Computer Use setup guidance in command notifications, extension docs, and agent instructions so users know to install Cua Driver, run doctor, and grant permissions.
+- Hardens Telegram Gateway polling and reply delivery so local duplicate pollers are blocked and mobile replies reach the selected thread more reliably.
+- Polishes recent workflow seams around model preference errors, dictation insertion visibility, command palette styling, gateway controls, and completed todo persistence.
+
+### Notes
+
+- 15 commits since the previous release.
+
 ## 0.11.30 — 2026-06-27
 
 ### Highlights

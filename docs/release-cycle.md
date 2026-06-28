@@ -4,18 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.30** — stable release being prepared locally.
+**v0.11.31** — stable release being prepared locally.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.30
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.31
 
 Highlights in this train:
 
-- Promotes Automations to a GA-ready workflow with reliable owner-thread recovery, visible transcripts for background runs, safer run deletion, and reconciled sidebar/table updates when realtime events are missed.
-- Hardens Routines for public use with host-owned Ask confirmations, safer branch execution, repaired invalid parent links, resilient run history, and broader desktop smoke coverage for editing, drag reorder, runs, and deletion.
-- Strengthens Gateways with reliable Telegram multi-chat delivery, clearer runtime failure/status visibility, validated access lists, safer update acknowledgement, and event-driven refresh of the Gateways page.
-- Fixes shared workflow seams across app events, sidebar projection, active transcript reconciliation, checkpoint routine warnings, and Model Gateway streaming contracts.
-- Improves live-session capability caching so repeated resume, rewind, fork, and recovery operations avoid rebuilding extension factories on the hot path.
-- Expands release confidence with focused GA regressions, app-path QA for Automations/Routines/Gateways, extension boundary checks, and release-hardening gates.
+- Makes Computer Use setup more reliable by finding the installed Cua Driver app bundle directly, even when shell PATH updates are not visible to Neon Pilot yet.
+- Warns users on startup when Computer Use is enabled but Cua Driver is missing or macOS Accessibility/Screen Recording permissions still need setup.
+- Improves Computer Use setup guidance in command notifications, extension docs, and agent instructions so users know to install Cua Driver, run doctor, and grant permissions.
+- Hardens Telegram Gateway polling and reply delivery so local duplicate pollers are blocked and mobile replies reach the selected thread more reliably.
+- Polishes recent workflow seams around model preference errors, dictation insertion visibility, command palette styling, gateway controls, and completed todo persistence.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
