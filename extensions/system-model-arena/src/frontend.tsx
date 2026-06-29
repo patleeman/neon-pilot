@@ -1,5 +1,5 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageIntro, AppPageLayout, Button, ErrorState, SegmentedControl, Select, StatusDot, TextInput } from '@neon-pilot/extensions/ui';
+import { AppPageIntro, AppPageLayout, Button, ErrorState, Select, StatusDot, Switch, TextInput } from '@neon-pilot/extensions/ui';
 import React, { useEffect, useMemo, useState } from 'react';
 
 type ArenaSettings = {
@@ -215,14 +215,12 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
           actions={
             <div className="flex items-center gap-2">
               {state ? (
-                <SegmentedControl
-                  ariaLabel="Model Arena"
-                  value={state.settings.automaticDuels ? 'on' : 'off'}
-                  options={[
-                    { label: 'On', value: 'on' },
-                    { label: 'Off', value: 'off' },
-                  ]}
-                  onChange={(value) => void save({ automaticDuels: value === 'on' })}
+                <Switch
+                  checked={state.settings.automaticDuels}
+                  disabled={saving}
+                  aria-label={state.settings.automaticDuels ? 'Disable Model Arena' : 'Enable Model Arena'}
+                  label={state.settings.automaticDuels ? 'On' : 'Off'}
+                  onClick={() => void save({ automaticDuels: !state.settings.automaticDuels })}
                 />
               ) : null}
               <Button variant="secondary" disabled={saving} onClick={() => void refresh()}>
