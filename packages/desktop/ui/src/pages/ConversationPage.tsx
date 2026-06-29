@@ -10,9 +10,11 @@ import {
   measureClientPerfTiming,
   recordClientPerfTiming,
 } from '../client/perfDiagnostics';
+import { type SlashCommandSuggestionContext, validateStructuredSlashCommand } from '../commands/slashCommandSchema';
 import { buildSlashMenuItems, parseSlashInput, type SlashMenuItem } from '../commands/slashMenu';
 import { ComposerAttachmentShelf } from '../components/chat/ComposerAttachmentShelf';
 import { detectTranscriptPathCandidates, normalizeTranscriptPathTarget } from '../components/chat/transcriptPathLinks';
+import { COMPOSER_CREATE_DRAWING_COMMAND_EVENT } from '../components/conversation/composerInputCommands';
 import { ConversationApprovalShelf } from '../components/conversation/ConversationApprovalShelf';
 import { ConversationComposer } from '../components/conversation/ConversationComposer';
 import { ConversationComposerInputControls } from '../components/conversation/ConversationComposerInputControls';
@@ -62,7 +64,7 @@ import { getConversationArtifactIdFromSearch, readArtifactPresentation } from '.
 import { appendIfPresent } from '../conversation/conversationAttachments';
 import { parseWholeLineBashCommand } from '../conversation/conversationBashCommand';
 import { hasBlockingOverlayOpen } from '../conversation/conversationBlockingOverlay';
-import { getConversationCheckpointIdFromSearch } from '../conversation/conversationCheckpoints';
+import { getConversationCheckpointIdFromSearch, setConversationCheckpointIdInSearch } from '../conversation/conversationCheckpoints';
 import { shouldHandlePastedComposerFiles } from '../conversation/conversationClipboard';
 import {
   isConversationComposerDisabled,
@@ -108,7 +110,7 @@ import {
 } from '../conversation/conversationExecutionActivity';
 import { buildComposerShelfContext, buildNewConversationPanelContext } from '../conversation/conversationExtensionContexts';
 import { buildMissionAutoModeInputFromDraft, createDraftMissionTask } from '../conversation/conversationGoalMode';
-import { formatThinkingLevelLabel } from '../conversation/conversationHeader';
+import { formatContextUsageLabel, formatThinkingLevelLabel } from '../conversation/conversationHeader';
 import {
   buildConversationInitialModelPreferenceState,
   consumeConversationInitialPromptAlreadySubmitted,
@@ -1010,7 +1012,20 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     [location.pathname, location.search, navigate, selectedArtifactId],
   );
 
-  const openCheckpoint = useCallback(() => undefined, []);
+  const openCheckpoint = useCallback(
+    (checkpointId: string) => {
+      const normalizedCheckpointId = checkpointId.trim();
+      if (!normalizedCheckpointId || selectedCheckpointId === normalizedCheckpointId) {
+        return;
+      }
+
+      navigate({
+        pathname: location.pathname,
+        search: setConversationCheckpointIdInSearch(location.search, normalizedCheckpointId),
+      });
+    },
+    [location.pathname, location.search, navigate, selectedCheckpointId],
+  );
 
   const openRun = useCallback((runId: string) => {
     window.dispatchEvent(new CustomEvent('pa:focus-background-run', { detail: { runId } }));
@@ -2287,6 +2302,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   } | null>(null);
 
   const [notice, setNotice] = useState<{ tone: 'accent' | 'danger' | 'warning'; text: string } | null>(null);
+  const [ephemeralSlashBlocks, setEphemeralSlashBlocks] = useState<MessageBlock[]>([]);
   const [savingPreference, setSavingPreference] = useState<'model' | 'thinking' | 'serviceTier' | null>(null);
   const noticeTimeoutRef = useRef<number | null>(null);
   const showNotice = useCallback((tone: 'accent' | 'danger' | 'warning', text: string, durationMs = 2500) => {
@@ -2301,6 +2317,17 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       }, durationMs);
     }
   }, []);
+  const appendEphemeralSlashBlock = useCallback((title: string, body: string) => {
+    setEphemeralSlashBlocks((current) => [
+      ...current.slice(-7),
+      {
+        type: 'text',
+        id: `slash-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        ts: new Date().toISOString(),
+        text: `${title}\n\n${body}`.trim(),
+      },
+    ]);
+  }, []);
 
   const cancelConversationGoal = useCallback(
     () =>
@@ -2312,6 +2339,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       }),
     [desktopConversationRefresh, id, showNotice],
   );
+
+  useEffect(() => {
+    setEphemeralSlashBlocks([]);
+  }, [id]);
 
   const ensureConversationCanControl = useCallback((_action: string): boolean => {
     return true;
@@ -2906,9 +2937,43 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     () => formatConversationComposerPlaceholder(extensionMentionRegistrations),
     [extensionMentionRegistrations],
   );
+  const slashSuggestionContext = useMemo<SlashCommandSuggestionContext>(
+    () => ({
+      models,
+      activeTools: stream.toolDefinitions.map((tool) => tool.name),
+      queuedPromptIds: pendingQueue.map((item) => item.id),
+      deferredResumeIds: deferredResumes.map((resume) => resume.id),
+      backgroundCommandIds: runRecords.filter((run) => run.conversationId === id).map((run) => run.runId),
+      scheduledTaskIds: tasks.filter((task) => !id || task.threadConversationId === id).map((task) => task.id),
+      skillNames: memoryData?.skills.map((skill) => skill.name) ?? [],
+    }),
+    [deferredResumes, id, memoryData?.skills, models, pendingQueue, runRecords, stream.toolDefinitions, tasks],
+  );
   const slashItems = useMemo(
-    () => buildSlashMenuItems(input, memoryData?.skills ?? [], extensionSlashCommands),
-    [extensionSlashCommands, input, memoryData],
+    () => buildSlashMenuItems(input, memoryData?.skills ?? [], extensionSlashCommands, slashSuggestionContext),
+    [extensionSlashCommands, input, memoryData?.skills, slashSuggestionContext],
+  );
+  const slashValidation = useMemo(
+    () =>
+      validateStructuredSlashCommand(input, {
+        ...slashSuggestionContext,
+        hasConversation: Boolean(id && !draft),
+        isStreaming: conversationRunningForPage,
+        hasQueuedPrompts: pendingQueue.length > 0,
+        hasDeferredResumes: deferredResumes.length > 0,
+        contextUsage: stream.contextUsage ?? visibleSessionDetail?.contextUsage ?? null,
+      }),
+    [
+      conversationRunningForPage,
+      deferredResumes.length,
+      draft,
+      id,
+      input,
+      pendingQueue.length,
+      slashSuggestionContext,
+      stream.contextUsage,
+      visibleSessionDetail?.contextUsage,
+    ],
   );
   const currentSessionMeta = useMemo(() => {
     const merged = mergeConversationSessionMeta(visibleSessionDetail?.meta, sessionSnapshot);
@@ -5664,10 +5729,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         }
         return { kind: 'handled' };
       }
-      case 'name': {
+      case 'rename': {
         const nextTitle = command.name?.trim();
         if (!nextTitle) {
-          showNotice('danger', 'Usage: /name <title>', 4000);
+          showNotice('danger', 'Usage: /rename <title>', 4000);
           return { kind: 'handled' };
         }
 
@@ -5691,6 +5756,532 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         } catch (error) {
           showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
         }
+        return { kind: 'handled' };
+      }
+      case 'status': {
+        appendEphemeralSlashBlock(
+          'Thread status',
+          [
+            `State: ${conversationRunningForPage ? 'Running' : stream.isCompacting ? 'Compacting' : 'Idle'}`,
+            `Model: ${currentModel || 'Default'}`,
+            `Thinking: ${formatThinkingLevelLabel(currentThinkingLevel)}`,
+            `Working directory: ${currentCwd || 'Not set'}`,
+            `Queued follow-ups: ${visiblePendingQueue.length}`,
+            `Deferred resumes: ${orderedDeferredResumes.length}`,
+            `Background work: ${visibleActiveConversationBackgroundExecutions.length}`,
+            stream.goalState?.status ? `Goal: ${stream.goalState.status}` : null,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+        );
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'heartbeat': {
+        appendEphemeralSlashBlock(
+          'Heartbeat',
+          [
+            `Thread: ${id ?? 'draft'}`,
+            `Runtime: ${conversationRunningForPage ? 'active' : 'ready'}`,
+            `Updated: ${new Date().toLocaleTimeString()}`,
+          ].join('\n'),
+        );
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'context_usage': {
+        const usage = stream.contextUsage ?? visibleSessionDetail?.contextUsage ?? null;
+        const tokens = resolveConversationContextUsageTokens({
+          isLiveSession,
+          liveUsage: stream.contextUsage,
+          historicalUsage: visibleSessionDetail?.contextUsage,
+          models,
+          currentModel,
+          routeModel: model,
+        });
+        const label =
+          tokens && typeof tokens.contextWindow === 'number'
+            ? formatContextUsageLabel(tokens.total, tokens.contextWindow)
+            : usage?.tokens !== undefined
+              ? `${usage.tokens ?? '?'} tokens`
+              : 'Context usage is unavailable.';
+        appendEphemeralSlashBlock(
+          'Context usage',
+          [label, ...(usage?.segments ?? []).map((segment) => `${segment.label}: ${segment.tokens.toLocaleString()} tokens`)].join('\n'),
+        );
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'queue': {
+        if (!command.subcommand) {
+          appendEphemeralSlashBlock(
+            'Queued follow-ups',
+            visiblePendingQueue.length
+              ? visiblePendingQueue.map((item, index) => `${index + 1}. ${item.type}: ${item.text.slice(0, 120) || item.id}`).join('\n')
+              : 'No queued follow-ups.',
+          );
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'clear') {
+          if (!id) {
+            showNotice('danger', 'Queue commands require an existing conversation.', 4000);
+            return { kind: 'handled' };
+          }
+          try {
+            const cleared = await api.clearQueuedMessages(id, currentSurfaceId);
+            showNotice(
+              'accent',
+              cleared.items.length ? `Cleared ${cleared.items.length} queued follow-up(s).` : 'No queued follow-ups to clear.',
+            );
+          } catch (error) {
+            showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+          }
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'restore') {
+          const first = visiblePendingQueue.find((item) => item.restorable);
+          if (!first) {
+            showNotice('danger', 'No restorable queued follow-up is available.', 4000);
+            return { kind: 'handled' };
+          }
+          await restoreQueuedPromptToComposer(first.type, first.queueIndex, first.id);
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        return { kind: 'handled' };
+      }
+      case 'deferred_resume': {
+        if (!command.subcommand) {
+          appendEphemeralSlashBlock(
+            'Deferred resumes',
+            orderedDeferredResumes.length
+              ? orderedDeferredResumes
+                  .map((resume, index) => `${index + 1}. ${resume.id}: ${describeDeferredResumeStatus(resume)}`)
+                  .join('\n')
+              : 'No deferred resumes.',
+          );
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'add') {
+          const argument = command.argument?.trim() ?? '';
+          const [delay = '', ...rest] = argument.split(/\s+/);
+          if (!delay) {
+            showNotice('danger', 'Usage: /deferred_resume add <delay> [--follow-up] [prompt]', 4000);
+            return { kind: 'handled' };
+          }
+          const behavior = rest[0] === '--follow-up' || rest[0] === '--followup' ? ('followUp' as const) : undefined;
+          const prompt = (behavior ? rest.slice(1) : rest).join(' ').trim();
+          await scheduleDeferredResume(delay, prompt || undefined, behavior);
+          return { kind: 'handled' };
+        }
+        const resolveResumeId = () => {
+          const argument = command.argument?.trim();
+          if (!argument || argument === 'first') return orderedDeferredResumes[0]?.id ?? null;
+          return argument;
+        };
+        if (command.subcommand === 'fire') {
+          const resumeId = resolveResumeId();
+          if (!resumeId) {
+            showNotice('danger', 'No deferred resume is available to fire.', 4000);
+            return { kind: 'handled' };
+          }
+          await fireDeferredResumeNow(resumeId);
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'cancel') {
+          const argument = command.argument?.trim();
+          const ids = argument === 'all' ? orderedDeferredResumes.map((resume) => resume.id) : [resolveResumeId()].filter(Boolean);
+          if (ids.length === 0) {
+            showNotice('danger', 'No deferred resume is available to cancel.', 4000);
+            return { kind: 'handled' };
+          }
+          for (const resumeId of ids) {
+            await cancelDeferredResume(resumeId as string);
+          }
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        return { kind: 'handled' };
+      }
+      case 'cwd': {
+        if (!command.subcommand) {
+          appendEphemeralSlashBlock('Working directory', currentCwd || 'No working directory is set.');
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'set') {
+          const nextCwd = command.argument?.trim();
+          if (!nextCwd) {
+            showNotice('danger', 'Usage: /cwd set <path>', 4000);
+            return { kind: 'handled' };
+          }
+          await submitConversationCwdChange(nextCwd);
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'clear') {
+          await submitConversationCwdChange(null);
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        return { kind: 'handled' };
+      }
+      case 'model': {
+        if (!command.subcommand) {
+          appendEphemeralSlashBlock('Model', currentModel || 'Using default model.');
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        await saveModelPreference(command.subcommand === 'clear' ? defaultModel : (command.argument?.trim() ?? ''));
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'thinking_level': {
+        if (!command.subcommand) {
+          appendEphemeralSlashBlock('Thinking level', formatThinkingLevelLabel(currentThinkingLevel));
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        await saveThinkingLevelPreference(command.subcommand === 'clear' ? '' : (command.argument?.trim() ?? ''));
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'service_tier': {
+        if (!command.subcommand) {
+          appendEphemeralSlashBlock('Service tier', currentServiceTier || 'Use model default');
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        await saveServiceTierPreference(command.subcommand === 'clear' ? '' : (command.argument?.trim() ?? ''));
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'goal': {
+        if (!command.subcommand) {
+          appendEphemeralSlashBlock(
+            'Goal',
+            stream.goalState ? `${stream.goalState.status}: ${stream.goalState.objective ?? 'No objective'}` : 'No active goal.',
+          );
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'set') {
+          const objective = command.argument?.trim();
+          if (!objective) {
+            showNotice('danger', 'Usage: /goal set <objective>', 4000);
+            return { kind: 'handled' };
+          }
+          const extensionSlash = findExtensionSlashCommand(`/goal ${objective}`);
+          if (extensionSlash) return executeExtensionSlashCommand(extensionSlash.command, `/goal ${objective}`, objective);
+        } else {
+          const extensionSlash = findExtensionSlashCommand(`/goal ${command.subcommand}`);
+          if (extensionSlash)
+            return executeExtensionSlashCommand(extensionSlash.command, `/goal ${command.subcommand}`, command.subcommand);
+        }
+        return { kind: 'handled' };
+      }
+      case 'auto_mode': {
+        appendEphemeralSlashBlock(
+          'Auto mode',
+          command.subcommand
+            ? `/${command.action} ${command.subcommand} is not wired to a local thread control yet. Use the command palette for auto-mode controls.`
+            : stream.goalState?.status
+              ? `Goal mode is ${stream.goalState.status}.`
+              : 'No automatic continuation mode is active for this thread.',
+        );
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'tools': {
+        appendEphemeralSlashBlock(
+          'Thread tools',
+          stream.toolDefinitions.length
+            ? stream.toolDefinitions.map((tool) => `- ${tool.name}${tool.description ? `: ${tool.description}` : ''}`).join('\n')
+            : 'No tools are currently exposed to this thread.',
+        );
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'context': {
+        if (!command.subcommand || command.subcommand === 'list') {
+          appendEphemeralSlashBlock(
+            'Attached context',
+            attachedContextDocs.length
+              ? attachedContextDocs.map((doc, index) => `${index + 1}. ${doc.path} - ${doc.title || doc.summary || doc.id}`).join('\n')
+              : 'No context is attached to this thread.',
+          );
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'add') {
+          const target = command.argument?.trim();
+          if (!target) {
+            showNotice('danger', 'Usage: /context add <path>', 4000);
+            return { kind: 'handled' };
+          }
+          if (!currentCwd) {
+            showNotice('danger', 'Set a working directory before attaching a workspace path.', 4000);
+            return { kind: 'handled' };
+          }
+          await attachDroppedWorkspacePath(target);
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'remove') {
+          const target = command.argument?.trim();
+          if (!target) {
+            showNotice('danger', 'Usage: /context remove <path>', 4000);
+            return { kind: 'handled' };
+          }
+          await removeAttachedContextDoc(target);
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'clear') {
+          await saveAttachedContextDocs([]);
+          composerController.clear();
+          showNotice('accent', 'Cleared attached context.');
+          return { kind: 'handled' };
+        }
+        return { kind: 'handled' };
+      }
+      case 'artifact': {
+        if (!id) {
+          showNotice('danger', 'Artifact commands require an existing conversation.', 4000);
+          return { kind: 'handled' };
+        }
+        if (!command.subcommand || command.subcommand === 'list') {
+          try {
+            const result = await api.conversationArtifacts(id);
+            appendEphemeralSlashBlock(
+              'Artifacts',
+              result.artifacts.length
+                ? result.artifacts
+                    .map(
+                      (artifact, index) => `${index + 1}. ${artifact.id} - ${artifact.title} (${artifact.kind}, rev ${artifact.revision})`,
+                    )
+                    .join('\n')
+                : 'No artifacts saved for this thread.',
+            );
+          } catch (error) {
+            showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+          }
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'open') {
+          const artifactId = command.argument?.trim();
+          if (!artifactId) {
+            showNotice('danger', 'Usage: /artifact open <id>', 4000);
+            return { kind: 'handled' };
+          }
+          openArtifact(artifactId);
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'close') {
+          navigate({ pathname: location.pathname, search: buildOpenArtifactSearch(location.search, '') });
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        return { kind: 'handled' };
+      }
+      case 'checkpoint': {
+        if (command.subcommand === 'save') {
+          const message = command.argument?.trim();
+          if (!message) {
+            showNotice('danger', 'Usage: /checkpoint save <message>', 4000);
+            return { kind: 'handled' };
+          }
+          return { kind: 'send', text: `Save a code checkpoint with message: ${message}` };
+        }
+        if (!id) {
+          showNotice('danger', 'Checkpoint commands require an existing conversation.', 4000);
+          return { kind: 'handled' };
+        }
+        if (!command.subcommand || command.subcommand === 'list') {
+          try {
+            const result = await api.conversationCheckpoints(id);
+            appendEphemeralSlashBlock(
+              'Checkpoints',
+              result.checkpoints.length
+                ? result.checkpoints
+                    .map((checkpoint, index) => `${index + 1}. ${checkpoint.id} - ${checkpoint.subject} (${checkpoint.shortSha})`)
+                    .join('\n')
+                : 'No checkpoints saved for this thread.',
+            );
+          } catch (error) {
+            showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+          }
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'open') {
+          const checkpointId = command.argument?.trim();
+          if (!checkpointId) {
+            showNotice('danger', 'Usage: /checkpoint open <id>', 4000);
+            return { kind: 'handled' };
+          }
+          openCheckpoint(checkpointId);
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        return { kind: 'handled' };
+      }
+      case 'background_command':
+      case 'subagent': {
+        const label = command.action === 'subagent' ? 'Subagents' : 'Background commands';
+        if (!id) {
+          showNotice('danger', `${label} commands require an existing conversation.`, 4000);
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'start') {
+          const prompt = command.argument?.trim();
+          if (!prompt) {
+            showNotice(
+              'danger',
+              `Usage: /${command.action} start <${command.action === 'subagent' ? 'objective' : 'shell command'}>`,
+              4000,
+            );
+            return { kind: 'handled' };
+          }
+          return {
+            kind: 'send',
+            text:
+              command.action === 'subagent'
+                ? `Start a thread-linked subagent with this objective: ${prompt}`
+                : `Start this as a durable background command for the current thread: ${prompt}`,
+          };
+        }
+        if (!command.subcommand || command.subcommand === 'list') {
+          try {
+            const result = await api.conversationExecutions(id, { visibility: 'visible' });
+            const executions = result.executions.filter((execution) =>
+              command.action === 'subagent' ? execution.kind === 'subagent' : execution.kind === 'background-command',
+            );
+            appendEphemeralSlashBlock(
+              label,
+              executions.length
+                ? executions
+                    .map((execution, index) => `${index + 1}. ${execution.id} - ${execution.title} [${execution.status}]`)
+                    .join('\n')
+                : `No ${label.toLowerCase()} for this thread.`,
+            );
+          } catch (error) {
+            showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+          }
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        const executionInput = command.argument?.trim() ?? '';
+        const [executionId = '', ...executionRest] = executionInput.split(/\s+/);
+        if (!executionId) {
+          showNotice('danger', `Usage: /${command.action} ${command.subcommand} <id>`, 4000);
+          return { kind: 'handled' };
+        }
+        try {
+          if (command.subcommand === 'cancel') {
+            await api.cancelExecution(executionId);
+            showNotice('accent', `Cancel requested for ${executionId}.`);
+          } else if (command.subcommand === 'rerun') {
+            await api.rerunExecution(executionId);
+            showNotice('accent', `Rerun requested for ${executionId}.`);
+          } else if (command.subcommand === 'follow_up') {
+            const prompt = executionRest.join(' ').trim();
+            if (!prompt) {
+              showNotice('danger', 'Usage: /subagent follow_up <id> <message>', 4000);
+            } else {
+              await api.followUpExecution(executionId, prompt);
+              showNotice('accent', `Follow-up sent to ${executionId}.`);
+            }
+          } else if (command.subcommand === 'logs') {
+            const log = await api.executionLog(executionId, 200);
+            appendEphemeralSlashBlock(`${label} logs`, log.log.trim() || 'No log output is available.');
+          }
+        } catch (error) {
+          showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+        }
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'scheduled_task': {
+        if (!command.subcommand || command.subcommand === 'list') {
+          appendEphemeralSlashBlock(
+            'Scheduled tasks',
+            conversationScheduledTasks.length
+              ? conversationScheduledTasks
+                  .map(
+                    (task, index) =>
+                      `${index + 1}. ${task.id} - ${task.title ?? task.prompt.slice(0, 80)} [${task.enabled ? 'enabled' : 'paused'}]`,
+                  )
+                  .join('\n')
+              : 'No scheduled tasks are attached to this thread.',
+          );
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        if (command.subcommand === 'run') {
+          const taskId = command.argument?.trim();
+          if (!taskId) {
+            showNotice('danger', 'Usage: /scheduled_task run <id>', 4000);
+            return { kind: 'handled' };
+          }
+          await runScheduledTaskFromShelf(taskId);
+          showNotice('accent', `Started scheduled task ${taskId}.`);
+          composerController.clear();
+          return { kind: 'handled' };
+        }
+        return {
+          kind: 'send',
+          text: `Handle this scheduled task command for the current thread: ${command.subcommand} ${command.argument ?? ''}`.trim(),
+        };
+      }
+      case 'mcp_tools': {
+        appendEphemeralSlashBlock(
+          'MCP tools',
+          stream.toolDefinitions.length
+            ? stream.toolDefinitions.map((tool) => `- ${tool.name}${tool.description ? `: ${tool.description}` : ''}`).join('\n')
+            : 'No MCP tools are currently exposed to this thread.',
+        );
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'prompt_context': {
+        const contextMessages = visibleTranscriptMessages?.filter((block) => block.type === 'context') ?? [];
+        appendEphemeralSlashBlock(
+          'Prompt context',
+          contextMessages.length
+            ? contextMessages
+                .slice(-8)
+                .map((block, index) => `${index + 1}. ${block.text.slice(0, 180)}`)
+                .join('\n')
+            : 'No visible context blocks are attached to this thread.',
+        );
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'attach': {
+        openFilePicker();
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'drawing': {
+        window.dispatchEvent(new CustomEvent(COMPOSER_CREATE_DRAWING_COMMAND_EVENT));
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'dictation': {
+        window.dispatchEvent(new CustomEvent('neon-pilot:dictation-toggle'));
+        composerController.clear();
+        return { kind: 'handled' };
+      }
+      case 'ephemeral': {
+        appendEphemeralSlashBlock(command.title, command.text);
+        composerController.clear();
         return { kind: 'handled' };
       }
     }
@@ -5982,6 +6573,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
               deferredResumeSlash.command.behavior,
             );
           }
+          return;
+        }
+
+        if (!slashValidation.ok) {
+          showNotice('danger', slashValidation.message ?? 'Check this slash command.', 4000);
           return;
         }
 
@@ -6953,6 +7549,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     composerAltHeld,
     liveSessionHasStaleTurnState,
   );
+  const composerNotice = slashValidation.ok
+    ? notice
+    : { tone: 'danger' as const, text: slashValidation.message ?? 'Check this slash command.' };
   const showScrollToBottomControl = shouldShowScrollToBottomControl(messageCount, atBottom);
   const renameConversationDisabled =
     conversationNeedsTakeover ||
@@ -7133,6 +7732,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const visibleTranscriptRenderItems = useMemo(
     () =>
       visibleSessionDetail?.renderItems &&
+      ephemeralSlashBlocks.length === 0 &&
       visibleTranscriptMessages &&
       !draft &&
       !pendingInitialPrompt &&
@@ -7143,6 +7743,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         : undefined,
     [
       draft,
+      ephemeralSlashBlocks.length,
       hydratedHistoricalBlocks,
       hydratedHistoricalEntryClusters,
       pendingInitialPrompt,
@@ -7152,6 +7753,15 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       visibleTranscriptMessageIndexOffset,
       visibleTranscriptMessages,
     ],
+  );
+  const visibleTranscriptMessagesWithEphemeral = useMemo(
+    () =>
+      visibleTranscriptMessages
+        ? [...visibleTranscriptMessages, ...ephemeralSlashBlocks]
+        : ephemeralSlashBlocks.length > 0
+          ? ephemeralSlashBlocks
+          : visibleTranscriptMessages,
+    [ephemeralSlashBlocks, visibleTranscriptMessages],
   );
   const visibleTranscriptCount = visibleTranscriptMessages?.length ?? 0;
   const visibleTranscriptHasOlderBlocks = shouldShowEarlierTranscriptBoundary({
@@ -7432,12 +8042,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           </div>
           {showBlockingConversationLoadingState ? (
             <CenteredLoadingState label={conversationLoadingStateLabel} className="h-full flex-1" />
-          ) : visibleTranscriptMessages ? (
+          ) : visibleTranscriptMessagesWithEphemeral ? (
             <Suspense fallback={<CenteredLoadingState label={conversationLoadingStateLabel} className="h-full flex-1" />}>
               <ChatView
                 key={visibleTranscriptState?.conversationId ?? id ?? 'draft-conversation'}
                 conversationId={visibleTranscriptState?.conversationId ?? id ?? null}
-                messages={visibleTranscriptMessages}
+                messages={visibleTranscriptMessagesWithEphemeral}
                 precomputedRenderItems={visibleTranscriptRenderItems}
                 systemPrompt={isLiveSession ? stream.systemPrompt : null}
                 toolDefinitions={isLiveSession ? stream.toolDefinitions : EMPTY_TOOL_DEFINITIONS}
@@ -7762,7 +8372,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           streamIsStreaming={composerRunState.streamControlsActive}
           shellRef={composerShellRef}
           shellClassName={undefined}
-          notice={notice}
+          notice={composerNotice}
           childrenClassName="conversation-composer-inner relative mx-auto w-full max-w-6xl"
           dragOverlay={
             dragOver ? (

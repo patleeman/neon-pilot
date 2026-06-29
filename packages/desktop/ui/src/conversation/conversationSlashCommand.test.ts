@@ -14,7 +14,7 @@ describe('parseConversationSlashCommand', () => {
     });
   });
 
-  it('parses export and name with optional arguments', () => {
+  it('parses export and rename with optional arguments', () => {
     expect(parseConversationSlashCommand('/export')).toEqual({
       kind: 'command',
       command: { action: 'export' },
@@ -23,13 +23,13 @@ describe('parseConversationSlashCommand', () => {
       kind: 'command',
       command: { action: 'export', outputPath: '/tmp/session.html' },
     });
-    expect(parseConversationSlashCommand('/name')).toEqual({
+    expect(parseConversationSlashCommand('/rename')).toEqual({
       kind: 'command',
-      command: { action: 'name' },
+      command: { action: 'rename' },
     });
-    expect(parseConversationSlashCommand('/name Better title')).toEqual({
+    expect(parseConversationSlashCommand('/rename Better title')).toEqual({
       kind: 'command',
-      command: { action: 'name', name: 'Better title' },
+      command: { action: 'rename', name: 'Better title' },
     });
   });
 
@@ -70,14 +70,53 @@ describe('parseConversationSlashCommand', () => {
   it('ignores slash commands that are handled elsewhere', () => {
     expect(parseConversationSlashCommand('/project')).toBeNull();
     expect(parseConversationSlashCommand('/resume 10m')).toBeNull();
-    expect(parseConversationSlashCommand('/model')).toBeNull();
+  });
+
+  it('parses thread-level local slash commands', () => {
+    expect(parseConversationSlashCommand('/status')).toEqual({ kind: 'command', command: { action: 'status' } });
+    expect(parseConversationSlashCommand('/queue clear')).toEqual({
+      kind: 'command',
+      command: { action: 'queue', subcommand: 'clear', argument: '' },
+    });
+    expect(parseConversationSlashCommand('/deferred_resume add 10m check logs')).toEqual({
+      kind: 'command',
+      command: { action: 'deferred_resume', subcommand: 'add', argument: '10m check logs' },
+    });
+    expect(parseConversationSlashCommand('/model set gpt-5.4')).toEqual({
+      kind: 'command',
+      command: { action: 'model', subcommand: 'set', argument: 'gpt-5.4' },
+    });
+    expect(parseConversationSlashCommand('/artifact open artifact-1')).toEqual({
+      kind: 'command',
+      command: { action: 'artifact', subcommand: 'open', argument: 'artifact-1' },
+    });
+    expect(parseConversationSlashCommand('/checkpoint list')).toEqual({
+      kind: 'command',
+      command: { action: 'checkpoint', subcommand: 'list', argument: '' },
+    });
+    expect(parseConversationSlashCommand('/background_command logs run-1')).toEqual({
+      kind: 'command',
+      command: { action: 'background_command', subcommand: 'logs', argument: 'run-1' },
+    });
+    expect(parseConversationSlashCommand('/context clear')).toEqual({
+      kind: 'command',
+      command: { action: 'context', subcommand: 'clear', argument: '' },
+    });
+    expect(parseConversationSlashCommand('/attach')).toEqual({ kind: 'command', command: { action: 'attach' } });
   });
 
   it('classifies every built-in command as local or prompt-sending work', () => {
     expect(resolveConversationSlashCommandExecution({ action: 'compact' })).toEqual({ kind: 'local' });
     expect(resolveConversationSlashCommandExecution({ action: 'export', outputPath: '/tmp/session.html' })).toEqual({ kind: 'local' });
-    expect(resolveConversationSlashCommandExecution({ action: 'name', name: 'Better title' })).toEqual({ kind: 'local' });
+    expect(resolveConversationSlashCommandExecution({ action: 'rename', name: 'Better title' })).toEqual({ kind: 'local' });
     expect(resolveConversationSlashCommandExecution({ action: 'copy' })).toEqual({ kind: 'local' });
+    expect(resolveConversationSlashCommandExecution({ action: 'status' })).toEqual({ kind: 'local' });
+    expect(resolveConversationSlashCommandExecution({ action: 'queue' })).toEqual({ kind: 'local' });
+    expect(resolveConversationSlashCommandExecution({ action: 'artifact', subcommand: 'list' })).toEqual({ kind: 'local' });
+    expect(resolveConversationSlashCommandExecution({ action: 'checkpoint', subcommand: 'open', argument: 'abc1234' })).toEqual({
+      kind: 'local',
+    });
+    expect(resolveConversationSlashCommandExecution({ action: 'attach' })).toEqual({ kind: 'local' });
     expect(resolveConversationSlashCommandExecution({ action: 'run', command: 'git status' })).toEqual({
       kind: 'send',
       text: 'Run this shell command: git status',

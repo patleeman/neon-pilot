@@ -13,9 +13,9 @@ export interface ConversationComposerMenuState {
 
 export function resolveConversationComposerMenuState(input: string): ConversationComposerMenuState {
   const slashInput = parseSlashInput(input);
-  const showModelPicker = slashInput?.command === '/model' && input.startsWith('/model ');
+  const showModelPicker = false;
   const mentionMatch = input.match(/(^|.*\s)(@[\w./-]*)$/);
-  const showSlash = !!slashInput && input === slashInput.command && !showModelPicker;
+  const showSlash = !!slashInput && !input.includes('\n') && !showModelPicker;
   const showMention = !!mentionMatch && !showSlash && !showModelPicker;
 
   return {

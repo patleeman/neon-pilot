@@ -1,4 +1,10 @@
 import type { MemorySkillItem } from '../shared/types';
+import {
+  parseStructuredSlashCommand,
+  type SlashCommandSuggestionContext,
+  STRUCTURED_SLASH_COMMANDS,
+  valuesForSlashArgument,
+} from './slashCommandSchema';
 
 export interface ExtensionSlashCommandItem {
   extensionId: string;
@@ -21,49 +27,6 @@ export interface SlashMenuItem {
   extensionId?: string;
   action?: string;
 }
-
-const BASE_SLASH_COMMANDS = [
-  {
-    cmd: '/compact',
-    icon: '◌',
-    desc: 'Manually compact the current conversation. Add text to guide the summary.',
-  },
-  {
-    cmd: '/copy',
-    icon: '⎘',
-    desc: 'Copy the last assistant response.',
-  },
-  {
-    cmd: '/export',
-    icon: '⇩',
-    desc: 'Export the current conversation. Add a path to choose where it saves.',
-  },
-  {
-    cmd: '/name',
-    icon: '✎',
-    desc: 'Rename this conversation. Add the new title after the command.',
-  },
-  {
-    cmd: '/run',
-    icon: '$',
-    desc: 'Ask Neon Pilot to run a shell command.',
-  },
-  {
-    cmd: '/search',
-    icon: '⌕',
-    desc: 'Ask Neon Pilot to search the web.',
-  },
-  {
-    cmd: '/summarize',
-    icon: '≡',
-    desc: 'Ask Neon Pilot to summarize the conversation so far.',
-  },
-  {
-    cmd: '/think',
-    icon: '◇',
-    desc: 'Ask Neon Pilot to think through a topic or next step.',
-  },
-] as const;
 
 interface ParsedSlashInput {
   command: string;
@@ -211,51 +174,74 @@ export function buildSlashMenuItems(
   query: string,
   skills: MemorySkillItem[],
   extensionCommands: ExtensionSlashCommandItem[] = [],
+  suggestionContext: SlashCommandSuggestionContext = {},
 ): SlashMenuItem[] {
   const parsedInput = parseSlashInput(query);
   const commandQuery = parsedInput?.command ?? query;
   const normalized = normalizeSlashQuery(commandQuery);
 
-  const commandItems: SlashMenuItem[] = BASE_SLASH_COMMANDS.map((command) => ({
+  const structuredItems = buildStructuredSlashMenuItems(query, suggestionContext);
+  if (structuredItems !== null) {
+    return [...structuredItems, ...buildExtensionSlashItems(query, extensionCommands), ...buildSkillSlashItems(query, skills, normalized)];
+  }
+
+  const commandItems: SlashMenuItem[] = STRUCTURED_SLASH_COMMANDS.map((command) => ({
     command,
-    score: normalized.length === 0 ? 0 : fuzzyScore(normalized, command.cmd.slice(1)),
+    score: normalized.length === 0 ? 0 : fuzzyScore(normalized, command.name),
   }))
     .filter((entry) => normalized.length === 0 || entry.score !== null)
-    .sort((left, right) => (right.score ?? 0) - (left.score ?? 0) || left.command.cmd.localeCompare(right.command.cmd))
+    .sort((left, right) => (right.score ?? 0) - (left.score ?? 0) || left.command.name.localeCompare(right.command.name))
     .map(({ command }) => ({
-      key: command.cmd,
-      insertText: `${command.cmd} `,
-      displayCmd: command.cmd,
-      icon: command.icon,
-      desc: command.desc,
+      key: command.name,
+      insertText: `/${command.name}${command.subcommands?.length ? ' ' : ' '}`,
+      displayCmd: `/${command.name}`,
+      icon: commandIcon(command.owner),
+      desc: command.description,
       section: 'Commands',
       kind: 'command',
     }));
 
+  return [...commandItems, ...buildExtensionSlashItems(query, extensionCommands), ...buildSkillSlashItems(query, skills, normalized)];
+}
+
+function commandIcon(owner: string): string {
+  if (owner === 'core') return '◇';
+  if (owner === 'system-model-picker') return '◉';
+  if (owner === 'system-auto-mode') return '∞';
+  if (owner === 'system-artifacts') return '▣';
+  if (owner === 'system-runs') return '$';
+  return '•';
+}
+
+function buildSkillSlashItems(query: string, skills: MemorySkillItem[], normalized: string): SlashMenuItem[] {
   const explicitSkillQuery = getExplicitSkillFilterQuery(query);
   const skillQuery = explicitSkillQuery ?? (normalized.length > 0 ? normalized : null);
-  const skillItems: SlashMenuItem[] =
-    skillQuery === null
-      ? []
-      : [...skills]
-          .map((skill) => ({
-            skill,
-            score: scoreSkill(skillQuery, skill, normalized, explicitSkillQuery !== null),
-          }))
-          .filter((entry) => entry.score !== null)
-          .sort((left, right) => (right.score ?? 0) - (left.score ?? 0) || left.skill.name.localeCompare(right.skill.name))
-          .map(({ skill }) => ({
-            key: `skill:${skill.name}`,
-            insertText: `/skill:${skill.name} `,
-            displayCmd: `/skill:${skill.name}`,
-            icon: '✦',
-            desc: skill.description,
-            section: 'Skills',
-            source: skill.source,
-            kind: 'skill',
-          }));
+  return skillQuery === null
+    ? []
+    : [...skills]
+        .map((skill) => ({
+          skill,
+          score: scoreSkill(skillQuery, skill, normalized, explicitSkillQuery !== null),
+        }))
+        .filter((entry) => entry.score !== null)
+        .sort((left, right) => (right.score ?? 0) - (left.score ?? 0) || left.skill.name.localeCompare(right.skill.name))
+        .map(({ skill }) => ({
+          key: `skill:${skill.name}`,
+          insertText: `/skill use ${skill.name} `,
+          displayCmd: `/skill use ${skill.name}`,
+          icon: '✦',
+          desc: skill.description,
+          section: 'Skills',
+          source: skill.source,
+          kind: 'skill',
+        }));
+}
 
-  const extensionItems: SlashMenuItem[] = [...extensionCommands]
+function buildExtensionSlashItems(query: string, extensionCommands: ExtensionSlashCommandItem[]): SlashMenuItem[] {
+  const parsedInput = parseSlashInput(query);
+  const commandQuery = parsedInput?.command ?? query;
+  const normalized = normalizeSlashQuery(commandQuery);
+  return [...extensionCommands]
     .map((command) => ({
       command,
       score: normalized.length === 0 ? 0 : fuzzyScore(normalized, command.name),
@@ -274,6 +260,60 @@ export function buildSlashMenuItems(
       extensionId: command.extensionId,
       action: command.action,
     }));
+}
 
-  return [...commandItems, ...extensionItems, ...skillItems];
+function buildStructuredSlashMenuItems(query: string, suggestionContext: SlashCommandSuggestionContext): SlashMenuItem[] | null {
+  const parsed = parseStructuredSlashCommand(query);
+  if (!parsed?.command) return null;
+  const command = parsed.command;
+  const afterCommand = query.slice(query.indexOf(command.name) + command.name.length);
+  if (!command.subcommands?.length) {
+    return null;
+  }
+
+  const isAtSubcommandPosition = afterCommand.length > 0 && !parsed.subcommand && !afterCommand.trimStart().includes(' ');
+  const isAfterCommandSpace = afterCommand.length > 0 && afterCommand.trim().length === 0;
+  if (isAtSubcommandPosition || isAfterCommandSpace) {
+    const subquery = afterCommand.trimStart().toLowerCase();
+    return command.subcommands
+      .map((subcommand) => ({
+        subcommand,
+        score: subquery.length === 0 ? 0 : fuzzyScore(subquery, subcommand.name),
+      }))
+      .filter((entry) => subquery.length === 0 || entry.score !== null)
+      .sort((left, right) => (right.score ?? 0) - (left.score ?? 0) || left.subcommand.name.localeCompare(right.subcommand.name))
+      .map(({ subcommand }) => ({
+        key: `${command.name}:${subcommand.name}`,
+        insertText: `/${command.name} ${subcommand.name} `,
+        displayCmd: `/${command.name} ${subcommand.name}`,
+        icon: commandIcon(command.owner),
+        desc: subcommand.description,
+        section: 'Commands',
+        kind: 'command',
+      }));
+  }
+
+  const argument = parsed.subcommand?.argument;
+  const values = valuesForSlashArgument(argument, suggestionContext);
+  if (!argument || values.length === 0 || !parsed.subcommand) {
+    return null;
+  }
+
+  const argumentQuery = parsed.argument.trim().toLowerCase();
+  return values
+    .map((value) => ({
+      value,
+      score: argumentQuery.length === 0 ? 0 : fuzzyScore(argumentQuery, value),
+    }))
+    .filter((entry) => argumentQuery.length === 0 || entry.score !== null)
+    .sort((left, right) => (right.score ?? 0) - (left.score ?? 0) || left.value.localeCompare(right.value))
+    .map(({ value }) => ({
+      key: `${command.name}:${parsed.subcommand?.name}:${value}`,
+      insertText: `/${command.name} ${parsed.subcommand?.name} ${value} `,
+      displayCmd: value,
+      icon: commandIcon(command.owner),
+      desc: argument.name,
+      section: 'Commands',
+      kind: 'command',
+    }));
 }
