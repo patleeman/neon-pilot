@@ -40,6 +40,15 @@
         "worker": {
           "enabled": true
         }
+      },
+      {
+        "id": "promptAssemblyCli",
+        "handler": "promptAssemblyCli",
+        "title": "Prompt Assembly CLI",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["inspect", "skill-enable", "skill-disable", "capability-enable", "capability-disable"]
+        }
       }
     ]
   },
@@ -63,6 +72,142 @@
           "to": "/settings#settings-prompt-assembly"
         },
         "icon": "sparkle"
+      }
+    ],
+    "cliCommands": [
+      {
+        "id": "prompt-assembly-inspect",
+        "command": "prompt-assembly inspect",
+        "description": "Inspect assembled agent runtime capabilities.",
+        "action": "promptAssemblyCli",
+        "inputAction": "inspect",
+        "jsonDefault": true,
+        "usage": "prompt-assembly inspect [--cwd <path>] [--repo-root <path>] [--json]",
+        "examples": ["neon-pilot prompt-assembly inspect --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "cwd": { "type": "string", "description": "Working directory used for runtime inspection." },
+            "repo-root": { "type": "string", "description": "Repository root used for runtime inspection." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": { "argv": ["prompt-assembly", "inspect"], "expectJsonFields": [] }
+      },
+      {
+        "id": "prompt-assembly-skill-enable",
+        "command": "prompt-assembly skill enable",
+        "description": "Enable a prompt assembly skill by id.",
+        "action": "promptAssemblyCli",
+        "inputAction": "skill-enable",
+        "jsonDefault": true,
+        "usage": "prompt-assembly skill enable <skill-id> [--json]",
+        "examples": ["neon-pilot prompt-assembly skill enable code-review --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "prompt-assembly-skill-disable",
+        "command": "prompt-assembly skill disable",
+        "description": "Disable a prompt assembly skill by id.",
+        "action": "promptAssemblyCli",
+        "inputAction": "skill-disable",
+        "jsonDefault": true,
+        "usage": "prompt-assembly skill disable <skill-id> [--json]",
+        "examples": ["neon-pilot prompt-assembly skill disable code-review --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "prompt-assembly-capability-enable",
+        "command": "prompt-assembly capability enable",
+        "description": "Enable an agent capability by id and kind.",
+        "action": "promptAssemblyCli",
+        "inputAction": "capability-enable",
+        "jsonDefault": true,
+        "usage": "prompt-assembly capability enable <id> --kind <skill|extension> [--json]",
+        "examples": ["neon-pilot prompt-assembly capability enable system-mcp --kind extension --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "kind": { "type": "string", "description": "Capability kind, usually skill or extension." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "prompt-assembly-capability-disable",
+        "command": "prompt-assembly capability disable",
+        "description": "Disable an agent capability by id and kind.",
+        "action": "promptAssemblyCli",
+        "inputAction": "capability-disable",
+        "jsonDefault": true,
+        "usage": "prompt-assembly capability disable <id> --kind <skill|extension> [--json]",
+        "examples": ["neon-pilot prompt-assembly capability disable system-mcp --kind extension --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "kind": { "type": "string", "description": "Capability kind, usually skill or extension." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
       }
     ]
   },

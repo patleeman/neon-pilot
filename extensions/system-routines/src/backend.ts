@@ -752,6 +752,51 @@ export async function listSkills(_input: unknown, ctx: ExtensionBackendContext) 
   return ctx.extensions.callAction('system-skills', 'listSkills', {});
 }
 
+export async function routinesCli(input: unknown, ctx: ExtensionBackendContext) {
+  const body = isRecord(input) ? input : {};
+  const cli = isRecord(body.cli) ? body.cli : {};
+  const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+  const flags = isRecord(cli.flags) ? cli.flags : {};
+  const action = typeof body.action === 'string' ? body.action : 'list';
+  if (action === 'list') return getState(input, ctx);
+  if (action === 'skills') return listSkills(input, ctx);
+  if (action === 'save') return saveRoutine(jsonInput(flags.routine ?? flags.json, 'routine'), ctx);
+  if (action === 'delete') return deleteRoutine({ routineId: args[0] ?? flags.routineId ?? flags['routine-id'] }, ctx);
+  if (action === 'reorder') return reorderRoutines({ routineIds: jsonInput(flags['routine-ids'] ?? flags.routineIds, 'routine-ids') }, ctx);
+  if (action === 'move') {
+    return moveRoutine(
+      {
+        routineId: args[0] ?? flags.routineId ?? flags['routine-id'],
+        position: flags.position,
+        targetRoutineId: flags.targetRoutineId ?? flags['target-routine-id'],
+        parentRoutineId: flags.parentRoutineId ?? flags['parent-routine-id'],
+        parentOutcomeId: flags.parentOutcomeId ?? flags['parent-outcome-id'],
+      },
+      ctx,
+    );
+  }
+  if (action === 'run-hook') {
+    return runHook(
+      {
+        hookId: args[0] ?? flags.hookId ?? flags['hook-id'],
+        position: flags.position,
+        context: flags.context === undefined ? {} : jsonInput(flags.context, 'context'),
+      },
+      ctx,
+    );
+  }
+  throw new Error(`Unsupported routines CLI action: ${action}`);
+}
+
+function jsonInput(value: unknown, name: string): unknown {
+  if (typeof value !== 'string') throw new Error(`${name} is required.`);
+  try {
+    return JSON.parse(value) as unknown;
+  } catch (error) {
+    throw new Error(`${name} must be valid JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 function extractSkillRefs(instruction: string): string[] {
   const refs = new Set<string>();
   for (const match of instruction.matchAll(/\/skill:([A-Za-z0-9._-]+)/g)) refs.add(match[1] ?? '');

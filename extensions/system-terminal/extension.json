@@ -16,7 +16,13 @@
       { "id": "terminalWrite", "handler": "writeTerminal", "title": "Write to terminal", "worker": { "enabled": true } },
       { "id": "terminalDrain", "handler": "drainTerminal", "title": "Drain terminal output", "worker": { "enabled": true } },
       { "id": "terminalResize", "handler": "resizeTerminal", "title": "Resize terminal", "worker": { "enabled": true } },
-      { "id": "terminalClose", "handler": "closeTerminal", "title": "Close terminal", "worker": { "enabled": true } }
+      { "id": "terminalClose", "handler": "closeTerminal", "title": "Close terminal", "worker": { "enabled": true } },
+      {
+        "id": "terminalCli",
+        "handler": "terminalCli",
+        "title": "Terminal CLI",
+        "worker": { "enabled": true, "inputActions": ["create", "write", "drain", "resize", "close"] }
+      }
     ],
     "routes": [
       {
@@ -41,6 +47,129 @@
         "placement": "workbench-tool",
         "activation": "on-demand",
         "toolSlot": "terminal"
+      }
+    ],
+    "cliCommands": [
+      {
+        "id": "terminal-create",
+        "command": "terminal create",
+        "description": "Create a terminal session.",
+        "action": "terminalCli",
+        "inputAction": "create",
+        "jsonDefault": true,
+        "usage": "terminal create [--cwd <path>] [--json]",
+        "examples": ["neon-pilot terminal create --cwd /tmp --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "cwd": { "type": "string" }, "json": { "type": "boolean" }, "dry-run": { "type": "boolean" } },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "terminal-write",
+        "command": "terminal write",
+        "description": "Write text to a terminal session.",
+        "action": "terminalCli",
+        "inputAction": "write",
+        "jsonDefault": true,
+        "usage": "terminal write <terminal-id> <text> [--json]",
+        "examples": ["neon-pilot terminal write term_123 \"pwd\" --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "data": { "type": "string" }, "json": { "type": "boolean" }, "dry-run": { "type": "boolean" } },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "terminal-drain",
+        "command": "terminal drain",
+        "description": "Read buffered terminal output.",
+        "action": "terminalCli",
+        "inputAction": "drain",
+        "jsonDefault": true,
+        "usage": "terminal drain <terminal-id> [--json]",
+        "examples": ["neon-pilot terminal drain term_123 --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean" } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "terminal-resize",
+        "command": "terminal resize",
+        "description": "Resize a terminal session.",
+        "action": "terminalCli",
+        "inputAction": "resize",
+        "jsonDefault": true,
+        "usage": "terminal resize <terminal-id> --cols <cols> --rows <rows> [--json]",
+        "examples": ["neon-pilot terminal resize term_123 --cols 120 --rows 40 --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "cols": { "type": "string", "enum": ["80"] },
+            "rows": { "type": "string", "enum": ["24"] },
+            "json": { "type": "boolean" },
+            "dry-run": { "type": "boolean" }
+          },
+          "required": ["cols", "rows"],
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "terminal-close",
+        "command": "terminal close",
+        "description": "Close a terminal session.",
+        "action": "terminalCli",
+        "inputAction": "close",
+        "jsonDefault": true,
+        "usage": "terminal close <terminal-id> [--json]",
+        "examples": ["neon-pilot terminal close term_123 --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean" }, "dry-run": { "type": "boolean" } },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
       }
     ]
   },

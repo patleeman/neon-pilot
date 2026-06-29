@@ -39,6 +39,106 @@
         "action": "caffeinateToggle"
       }
     ],
+    "cliCommands": [
+      {
+        "id": "caffeinate-status",
+        "command": "caffeinate status",
+        "description": "Read macOS caffeinate status.",
+        "action": "caffeinateStatus",
+        "jsonDefault": true,
+        "usage": "caffeinate status [--json]",
+        "examples": ["neon-pilot caffeinate status --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": { "argv": ["caffeinate", "status"], "expectJsonFields": [] }
+      },
+      {
+        "id": "caffeinate-start",
+        "command": "caffeinate start",
+        "description": "Start macOS caffeinate.",
+        "action": "caffeinateStart",
+        "jsonDefault": true,
+        "usage": "caffeinate start [--json]",
+        "examples": ["neon-pilot caffeinate start --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "caffeinate-stop",
+        "command": "caffeinate stop",
+        "description": "Stop macOS caffeinate.",
+        "action": "caffeinateStop",
+        "jsonDefault": true,
+        "usage": "caffeinate stop [--json]",
+        "examples": ["neon-pilot caffeinate stop --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "caffeinate-toggle",
+        "command": "caffeinate toggle",
+        "description": "Toggle macOS caffeinate.",
+        "action": "caffeinateToggle",
+        "jsonDefault": true,
+        "usage": "caffeinate toggle [--json]",
+        "examples": ["neon-pilot caffeinate toggle --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      }
+    ],
     "keybindings": [
       {
         "id": "caffeinate.toggle",

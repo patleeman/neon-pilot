@@ -189,6 +189,29 @@ export async function updateRuntimeCapability(input: unknown, ctx: ExtensionBack
   return { ok: true, id, kind, enabled };
 }
 
+export async function promptAssemblyCli(input: unknown, ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const cli = asRecord(body.cli);
+  const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+  const flags = asRecord(cli.flags);
+  const action = typeof body.action === 'string' ? body.action : 'inspect';
+  if (action === 'inspect') {
+    return inspectAgentRuntime({ ...body, cwd: stringFlag(flags, 'cwd'), repoRoot: stringFlag(flags, 'repo-root') }, ctx);
+  }
+  if (action === 'skill-enable' || action === 'skill-disable') {
+    return updateSkillEnabled({ id: args[0], enabled: action === 'skill-enable' }, ctx);
+  }
+  if (action === 'capability-enable' || action === 'capability-disable') {
+    return updateRuntimeCapability({ id: args[0], kind: stringFlag(flags, 'kind'), enabled: action === 'capability-enable' }, ctx);
+  }
+  throw new Error(`Unsupported prompt assembly CLI action: ${action}`);
+}
+
+function stringFlag(flags: Record<string, unknown>, key: string): string | undefined {
+  const value = flags[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
 function extensionToCapability(extension: Record<string, unknown>): RuntimeCapability {
   const status = typeof extension.status === 'string' ? extension.status : extension.enabled ? 'enabled' : 'disabled';
   const manifest = asRecord(extension.manifest);

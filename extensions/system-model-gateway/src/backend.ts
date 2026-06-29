@@ -2,12 +2,11 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
 import type { ExtensionBackendContext, ExtensionRouteRequest, ExtensionRouteResponse } from '@neon-pilot/extensions';
-
 import {
   createModelGatewayResponse,
   listModelGatewayModels,
-  modelGatewaySettingsFrom,
   type ModelGatewaySettings,
+  modelGatewaySettingsFrom,
   type ModelGatewayStatus,
   type ResponsesRequest,
   streamModelGatewayResponseEvents,
@@ -100,7 +99,8 @@ async function statusFor(ctx: ExtensionBackendContext, settings: ModelGatewaySet
 }
 
 async function loopbackHealthFor(ctx: ExtensionBackendContext, settings: ModelGatewaySettings): Promise<Omit<GatewayState, 'authToken'>> {
-  const { authToken: _authToken, ...state } = await statusFor(ctx, settings);
+  const state = await statusFor(ctx, settings);
+  delete (state as Partial<GatewayState>).authToken;
   return state;
 }
 
@@ -130,6 +130,28 @@ export async function updateSettings(input: unknown, ctx: ExtensionBackendContex
 export async function clearLogs(_input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
   logs.splice(0);
   return statusFor(ctx, await readSettings(ctx));
+}
+
+export async function gatewayCli(input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
+  const body = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  const cli = body.cli && typeof body.cli === 'object' ? (body.cli as Record<string, unknown>) : {};
+  const flags = cli.flags && typeof cli.flags === 'object' ? (cli.flags as Record<string, unknown>) : {};
+  const action = typeof body.action === 'string' ? body.action : 'status';
+  if (action === 'status') return status(input, ctx);
+  if (action === 'clear-logs') return clearLogs(input, ctx);
+  if (action === 'settings-set') {
+    return updateSettings(
+      {
+        enabled: flags.enabled,
+        host: flags.host,
+        port: flags.port,
+        defaultModel: flags['default-model'] ?? flags.defaultModel,
+        authToken: flags['auth-token'] ?? flags.authToken,
+      },
+      ctx,
+    );
+  }
+  throw new Error(`Unsupported AI Gateway CLI action: ${action}`);
 }
 
 export async function startGatewayService(_input: unknown, ctx: ExtensionBackendContext): Promise<GatewayState> {
@@ -367,7 +389,9 @@ async function handleHttpRequest(
     if (!response.headersSent) {
       sendJson(response, 500, { error: { message: lastError } });
     } else {
-      response.write(`data: ${JSON.stringify({ type: 'response.failed', response: { status: 'failed', error: { message: lastError } } })}\n\n`);
+      response.write(
+        `data: ${JSON.stringify({ type: 'response.failed', response: { status: 'failed', error: { message: lastError } } })}\n\n`,
+      );
       response.write('data: [DONE]\n\n');
       response.end();
     }

@@ -5,13 +5,7 @@
  * handlers calculate dashboard view models from recent trace events on demand.
  */
 
-import {
-  queryAppTelemetryEvents,
-  readTraceTelemetryEvents,
-  type AppTelemetryEventRow,
-  type TraceTelemetryLogEvent,
-  type TraceTelemetryLogEventType,
-} from '@neon-pilot/extensions/backend/telemetry';
+import { queryAppTelemetryEvents, readTraceTelemetryEvents, type TraceTelemetryLogEvent } from '@neon-pilot/extensions/backend/telemetry';
 
 interface ExtensionRouteRequest {
   query: Record<string, string | string[]>;
@@ -731,4 +725,39 @@ export async function getTelemetryData(input: TelemetryDataInput = {}) {
     contextPointers: (await contextPointers(req)).body,
     sessionIntegrity: (await sessionIntegrity(req)).body,
   };
+}
+
+export async function diagnosticsCli(input: unknown) {
+  const body = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  const cli = body.cli && typeof body.cli === 'object' ? (body.cli as Record<string, unknown>) : {};
+  const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+  const flags = cli.flags && typeof cli.flags === 'object' ? (cli.flags as Record<string, unknown>) : {};
+  const action = typeof body.action === 'string' ? body.action : undefined;
+  const section = action && action !== 'diagnostics' ? action : (args[0] ?? 'summary');
+  const data = await getTelemetryData({ range: typeof flags.range === 'string' ? flags.range : undefined });
+  if (section === 'all') return data;
+  const key = telemetryKeyFor(section);
+  return { ok: true, section, [key]: data[key] };
+}
+
+function telemetryKeyFor(section: string): Exclude<keyof Awaited<ReturnType<typeof getTelemetryData>>, 'ok'> {
+  const normalized = section.replace(/-([a-z])/g, (_match, char: string) => char.toUpperCase());
+  if (
+    normalized === 'summary' ||
+    normalized === 'modelUsage' ||
+    normalized === 'costByConversation' ||
+    normalized === 'toolHealth' ||
+    normalized === 'context' ||
+    normalized === 'agentLoop' ||
+    normalized === 'tokensDaily' ||
+    normalized === 'toolFlow' ||
+    normalized === 'autoMode' ||
+    normalized === 'cacheEfficiency' ||
+    normalized === 'systemPrompt' ||
+    normalized === 'contextPointers' ||
+    normalized === 'sessionIntegrity'
+  ) {
+    return normalized;
+  }
+  throw new Error(`Unknown diagnostics section: ${section}`);
 }

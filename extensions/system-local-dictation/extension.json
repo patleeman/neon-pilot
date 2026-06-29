@@ -16,7 +16,13 @@
       { "id": "updateSettings", "handler": "updateSettings", "title": "Update dictation settings", "worker": { "enabled": true } },
       { "id": "modelStatus", "handler": "modelStatus", "title": "Read dictation model status", "worker": { "enabled": true } },
       { "id": "installModel", "handler": "installModel", "title": "Install dictation model", "worker": { "enabled": true } },
-      { "id": "transcribeFile", "handler": "transcribeFile", "title": "Transcribe dictation audio", "worker": { "enabled": true } }
+      { "id": "transcribeFile", "handler": "transcribeFile", "title": "Transcribe dictation audio", "worker": { "enabled": true } },
+      {
+        "id": "dictationCli",
+        "handler": "dictationCli",
+        "title": "Dictation CLI",
+        "worker": { "enabled": true, "inputActions": ["settings", "settings-set", "model-status", "model-install", "transcribe"] }
+      }
     ]
   },
   "contributes": {
@@ -46,7 +52,136 @@
       "label": "Dictation",
       "description": "Choose the local speech-to-text model used by the mic button in the message composer. Install a model here before using dictation.",
       "order": 30
-    }
+    },
+    "cliCommands": [
+      {
+        "id": "dictation-settings",
+        "command": "dictation settings",
+        "description": "Read local dictation settings.",
+        "action": "dictationCli",
+        "inputAction": "settings",
+        "jsonDefault": true,
+        "usage": "dictation settings [--json]",
+        "examples": ["neon-pilot dictation settings --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": { "argv": ["dictation", "settings"], "expectJsonFields": [] }
+      },
+      {
+        "id": "dictation-settings-set",
+        "command": "dictation settings set",
+        "description": "Update local dictation settings.",
+        "action": "dictationCli",
+        "inputAction": "settings-set",
+        "jsonDefault": true,
+        "usage": "dictation settings set --model <model> [--json]",
+        "examples": ["neon-pilot dictation settings set --model base.en --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "model": { "type": "string", "description": "Dictation model id." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "dictation-model-status",
+        "command": "dictation model status",
+        "description": "Read local dictation model install status.",
+        "action": "dictationCli",
+        "inputAction": "model-status",
+        "jsonDefault": true,
+        "usage": "dictation model status [model] [--json]",
+        "examples": ["neon-pilot dictation model status --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "dictation-model-install",
+        "command": "dictation model install",
+        "description": "Install a local dictation model.",
+        "action": "dictationCli",
+        "inputAction": "model-install",
+        "jsonDefault": true,
+        "usage": "dictation model install [model] [--json]",
+        "examples": ["neon-pilot dictation model install base.en --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "dictation-transcribe",
+        "command": "dictation transcribe",
+        "description": "Transcribe an audio file with the configured local model.",
+        "action": "dictationCli",
+        "inputAction": "transcribe",
+        "jsonDefault": true,
+        "usage": "dictation transcribe <audio-file> [--mime-type <type>] [--language <lang>] [--json]",
+        "examples": ["neon-pilot dictation transcribe ./sample.wav --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "mime-type": { "type": "string", "description": "Audio MIME type." },
+            "language": { "type": "string", "description": "Transcription language hint." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      }
+    ]
   },
-  "permissions": ["settings:read", "settings:write"]
+  "permissions": ["settings:read", "settings:write", "filesystem:read"]
 }

@@ -84,6 +84,15 @@
         "worker": {
           "enabled": true
         }
+      },
+      {
+        "id": "todoCli",
+        "handler": "todoCli",
+        "title": "Todos CLI",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["list", "add", "update", "delete", "clear", "set-plan"]
+        }
       }
     ]
   },
@@ -118,15 +127,7 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": [
-                "list",
-                "add",
-                "update",
-                "delete",
-                "clear",
-                "set",
-                "update_plan"
-              ]
+              "enum": ["list", "add", "update", "delete", "clear", "set", "update_plan"]
             },
             "id": {
               "type": "string",
@@ -138,15 +139,7 @@
             },
             "status": {
               "type": "string",
-              "enum": [
-                "todo",
-                "doing",
-                "done",
-                "blocked",
-                "pending",
-                "in_progress",
-                "completed"
-              ],
+              "enum": ["todo", "doing", "done", "blocked", "pending", "in_progress", "completed"],
               "description": "Optional status for add/update. Codex-style aliases are accepted."
             },
             "note": {
@@ -155,10 +148,7 @@
             },
             "scope": {
               "type": "string",
-              "enum": [
-                "done",
-                "all"
-              ],
+              "enum": ["done", "all"],
               "description": "Clear only done todos or all todos."
             },
             "items": {
@@ -172,24 +162,13 @@
                   },
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "todo",
-                      "doing",
-                      "done",
-                      "blocked",
-                      "pending",
-                      "in_progress",
-                      "completed"
-                    ]
+                    "enum": ["todo", "doing", "done", "blocked", "pending", "in_progress", "completed"]
                   },
                   "note": {
                     "type": "string"
                   }
                 },
-                "required": [
-                  "text",
-                  "status"
-                ],
+                "required": ["text", "status"],
                 "additionalProperties": false
               }
             },
@@ -204,24 +183,13 @@
                   },
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "pending",
-                      "in_progress",
-                      "completed",
-                      "todo",
-                      "doing",
-                      "done",
-                      "blocked"
-                    ]
+                    "enum": ["pending", "in_progress", "completed", "todo", "doing", "done", "blocked"]
                   },
                   "note": {
                     "type": "string"
                   }
                 },
-                "required": [
-                  "step",
-                  "status"
-                ],
+                "required": ["step", "status"],
                 "additionalProperties": false
               }
             },
@@ -230,9 +198,7 @@
               "description": "Optional explanation for set/update_plan updates."
             }
           },
-          "required": [
-            "action"
-          ],
+          "required": ["action"],
           "additionalProperties": false
         },
         "promptGuidelines": [
@@ -245,19 +211,185 @@
         ]
       }
     ],
+    "cliCommands": [
+      {
+        "id": "todos-list",
+        "command": "todos list",
+        "description": "List conversation todos.",
+        "action": "todoCli",
+        "inputAction": "list",
+        "jsonDefault": true,
+        "usage": "todos list --conversation-id <conversation-id> [--json]",
+        "examples": ["neon-pilot todos list --conversation-id conv_123 --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "conversation-id": { "type": "string" }, "json": { "type": "boolean" } },
+          "required": ["conversation-id"],
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": { "argv": ["todos", "list", "--conversation-id", "conv_smoke"], "expectJsonFields": [] }
+      },
+      {
+        "id": "todos-add",
+        "command": "todos add",
+        "description": "Add a conversation todo.",
+        "action": "todoCli",
+        "inputAction": "add",
+        "jsonDefault": true,
+        "usage": "todos add --conversation-id <conversation-id> <text> [--status <status>] [--note <note>] [--json]",
+        "examples": ["neon-pilot todos add --conversation-id conv_123 \"Run QA\" --status doing --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "conversation-id": { "type": "string" },
+            "status": { "type": "string" },
+            "note": { "type": "string" },
+            "json": { "type": "boolean" },
+            "dry-run": { "type": "boolean" }
+          },
+          "required": ["conversation-id"],
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "todos-update",
+        "command": "todos update",
+        "description": "Update a conversation todo.",
+        "action": "todoCli",
+        "inputAction": "update",
+        "jsonDefault": true,
+        "usage": "todos update --conversation-id <conversation-id> <todo-id> [--text <text>] [--status <status>] [--note <note>] [--json]",
+        "examples": ["neon-pilot todos update --conversation-id conv_123 todo_123 --status done --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "conversation-id": { "type": "string" },
+            "text": { "type": "string" },
+            "status": { "type": "string" },
+            "note": { "type": "string" },
+            "json": { "type": "boolean" },
+            "dry-run": { "type": "boolean" }
+          },
+          "required": ["conversation-id"],
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "todos-delete",
+        "command": "todos delete",
+        "description": "Delete a conversation todo.",
+        "action": "todoCli",
+        "inputAction": "delete",
+        "jsonDefault": true,
+        "usage": "todos delete --conversation-id <conversation-id> <todo-id> [--json]",
+        "examples": ["neon-pilot todos delete --conversation-id conv_123 todo_123 --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "conversation-id": { "type": "string" }, "json": { "type": "boolean" }, "dry-run": { "type": "boolean" } },
+          "required": ["conversation-id"],
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": true,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "todos-clear",
+        "command": "todos clear",
+        "description": "Clear done or all conversation todos.",
+        "action": "todoCli",
+        "inputAction": "clear",
+        "jsonDefault": true,
+        "usage": "todos clear --conversation-id <conversation-id> [--scope done|all] [--json]",
+        "examples": ["neon-pilot todos clear --conversation-id conv_123 --scope done --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "conversation-id": { "type": "string" },
+            "scope": { "type": "string", "enum": ["done", "all"] },
+            "json": { "type": "boolean" },
+            "dry-run": { "type": "boolean" }
+          },
+          "required": ["conversation-id"],
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": true,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "todos-set-plan",
+        "command": "todos set-plan",
+        "description": "Replace a conversation todo plan from JSON.",
+        "action": "todoCli",
+        "inputAction": "set-plan",
+        "jsonDefault": true,
+        "usage": "todos set-plan --conversation-id <conversation-id> --plan <json> [--json]",
+        "examples": ["neon-pilot todos set-plan --conversation-id conv_123 --plan '[{\"step\":\"Run QA\",\"status\":\"pending\"}]' --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "conversation-id": { "type": "string" },
+            "plan": { "type": "string" },
+            "json": { "type": "boolean" },
+            "dry-run": { "type": "boolean" }
+          },
+          "required": ["conversation-id", "plan"],
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": true,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      }
+    ],
     "turnContextProviders": [
       {
         "id": "todos",
         "handler": "provideTurnContext",
         "title": "Todos",
         "priority": 70,
-        "scope": [
-          "conversation"
-        ]
+        "scope": ["conversation"]
       }
     ]
   },
-  "permissions": [
-    "conversations:readwrite"
-  ]
+  "permissions": ["conversations:readwrite"]
 }

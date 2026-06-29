@@ -202,6 +202,40 @@ export async function logoutMcpServer(input: unknown): Promise<{ ok: boolean; me
   return { ok: true, message: `Cleared stored OAuth state for ${server}.` };
 }
 
+export async function mcpCli(input: unknown, ctx: McpRuntimeContext) {
+  const body = asRecord(input);
+  const cli = asRecord(body.cli);
+  const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+  const flags = asRecord(cli.flags);
+  const action = typeof body.action === 'string' ? body.action : 'inspect';
+  if (action === 'inspect') return inspectMcpSettings(body, ctx);
+  if (action === 'save')
+    return saveExplicitMcpConfig({ json: stringInput(flags.jsonConfig ?? flags.config ?? flags.fileContents, 'config') }, ctx);
+  if (action === 'test') return testMcpServer({ server: args[0] ?? flags.server });
+  if (action === 'auth') return authMcpServer({ server: args[0] ?? flags.server });
+  if (action === 'logout') return logoutMcpServer({ server: args[0] ?? flags.server });
+  if (action === 'list' || action === 'info' || action === 'grep' || action === 'call') {
+    return mcpTool({
+      action,
+      server: args[0] ?? flags.server,
+      tool: args[1] ?? flags.tool,
+      pattern: flags.pattern,
+      arguments: flags.arguments ?? flags.args,
+      probe: flags.probe === true,
+    });
+  }
+  throw new Error(`Unsupported MCP CLI action: ${action}`);
+}
+
+function stringInput(value: unknown, label: string): string {
+  if (typeof value !== 'string' || !value.trim()) throw new Error(`${label} is required.`);
+  return value;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
 export async function inspectMcpSettings(_input: unknown, ctx: McpRuntimeContext): Promise<McpSettingsState> {
   const resourceOptions = ctx.runtime.getLiveSessionResourceOptions();
   const skillDirs = resourceOptions.additionalSkillPaths ?? [];

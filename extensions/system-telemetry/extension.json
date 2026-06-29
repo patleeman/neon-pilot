@@ -12,7 +12,15 @@
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "getTelemetryData", "handler": "getTelemetryData", "title": "Get diagnostics data", "worker": { "enabled": true } }
+      { "id": "getTelemetryData", "handler": "getTelemetryData", "title": "Get diagnostics data", "worker": { "enabled": true } },
+      {
+        "id": "diagnosticsCli",
+        "handler": "diagnosticsCli",
+        "title": "Diagnostics CLI",
+        "worker": {
+          "enabled": true
+        }
+      }
     ],
     "routes": [
       { "method": "GET", "path": "/traces/summary", "handler": "summary", "worker": { "enabled": true } },
@@ -49,6 +57,57 @@
         "label": "Diagnostics",
         "route": "/telemetry",
         "icon": "graph"
+      }
+    ],
+    "cliCommands": [
+      {
+        "id": "diagnostics",
+        "command": "diagnostics",
+        "description": "Read Diagnostics data.",
+        "action": "diagnosticsCli",
+        "jsonDefault": true,
+        "usage": "diagnostics [section] [--range <range>] [--json]",
+        "examples": [
+          "neon-pilot diagnostics summary --json",
+          "neon-pilot diagnostics model-usage --range 7d --json",
+          "neon-pilot diagnostics all --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "all",
+              "summary",
+              "model-usage",
+              "cost-by-conversation",
+              "tool-health",
+              "context",
+              "agent-loop",
+              "tokens-daily",
+              "tool-flow",
+              "cache-efficiency",
+              "system-prompt",
+              "auto-mode",
+              "context-pointers",
+              "session-integrity"
+            ]
+          },
+          "maxItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "range": { "type": "string" }, "json": { "type": "boolean" } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": { "argv": ["diagnostics", "summary"], "expectJsonFields": [] }
       }
     ]
   },
