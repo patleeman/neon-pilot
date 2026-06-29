@@ -14,7 +14,7 @@ vi.mock('@neon-pilot/extensions/backend/extensions', () => ({
   invalidateExtensionRegistryReadCaches: mocks.invalidateExtensionRegistryReadCaches,
 }));
 
-import { addPlugin, listPlugins, setPluginEnabled } from './backend.js';
+import { addPlugin, agentPluginsCli, listPlugins, setPluginEnabled } from './backend.js';
 
 function createContext(runtimeDir: string) {
   return {
@@ -31,6 +31,7 @@ function createContext(runtimeDir: string) {
       exec: vi.fn(),
     },
     extensions: {
+      getStatus: vi.fn(() => ({ enabled: true, healthy: true })),
       setEnabled: vi.fn(),
     },
   } as never;
@@ -116,6 +117,72 @@ describe('system-agent-plugins backend', () => {
     expect(ctx.extensions.setEnabled).toHaveBeenCalledWith('imported-codex-agent-review-pack', true);
   });
 
+  it('repairs enabled plugin records whose wrapper extension is still disabled', async () => {
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'np-agent-plugin-runtime-'));
+    const ctx = createContext(runtimeDir);
+    const source = createLocalPlugin();
+    const added = await addPlugin({ sourceKind: 'local', source, ecosystem: 'codex' }, ctx);
+    ctx.extensions.getStatus.mockReturnValueOnce({ enabled: false, healthy: true });
+
+    const listed = await listPlugins({}, ctx);
+
+    expect(listed.plugins[0]).toMatchObject({ id: added.plugin.id, enabled: true, status: 'enabled' });
+    expect(ctx.extensions.setEnabled).toHaveBeenCalledWith('imported-codex-agent-review-pack', true);
+    expect(mocks.invalidateExtensionRegistryReadCaches).toHaveBeenCalled();
+    expect(ctx.runtime.refreshSkillMcpConfig).toHaveBeenCalled();
+  });
+
+  it('recreates enabled plugin wrappers that disappeared from the extension registry', async () => {
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'np-agent-plugin-runtime-'));
+    const ctx = createContext(runtimeDir);
+    const source = createLocalPlugin();
+    const added = await addPlugin({ sourceKind: 'local', source, ecosystem: 'codex' }, ctx);
+    mocks.installMarketplacePackageAsExtension.mockResolvedValueOnce({
+      installed: true,
+      alreadyPresent: true,
+      source,
+      target: 'local',
+      settingsPath: join(runtimeDir, 'settings.json'),
+      extension: {
+        id: 'imported-codex-agent-review-pack-repaired',
+        packageRoot: join(runtimeDir, 'extensions', 'imported-codex-agent-review-pack-repaired'),
+        skillCount: 1,
+        copiedSource: true,
+      },
+    });
+    ctx.extensions.getStatus.mockReturnValueOnce({ enabled: false, healthy: false });
+
+    const listed = await listPlugins({}, ctx);
+
+    expect(listed.plugins[0]).toMatchObject({
+      id: added.plugin.id,
+      enabled: true,
+      wrapperExtensionId: 'imported-codex-agent-review-pack-repaired',
+    });
+    expect(mocks.installMarketplacePackageAsExtension).toHaveBeenLastCalledWith(
+      expect.objectContaining({ ecosystem: 'codex', packageType: 'agent', source }),
+    );
+    expect(ctx.extensions.setEnabled).toHaveBeenCalledWith('imported-codex-agent-review-pack-repaired', true);
+    expect(mocks.invalidateExtensionRegistryReadCaches).toHaveBeenCalled();
+    expect(ctx.runtime.refreshSkillMcpConfig).toHaveBeenCalled();
+  });
+
+  it('does not mark a plugin enabled when wrapper extension enablement fails', async () => {
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'np-agent-plugin-runtime-'));
+    const ctx = createContext(runtimeDir);
+    const source = createLocalPlugin();
+    const added = await addPlugin({ sourceKind: 'local', source, ecosystem: 'codex' }, ctx);
+    await setPluginEnabled({ id: added.plugin.id, enabled: false }, ctx);
+    ctx.extensions.setEnabled.mockImplementationOnce(() => {
+      throw new Error('requires permission extensions:write');
+    });
+
+    await expect(setPluginEnabled({ id: added.plugin.id, enabled: true }, ctx)).rejects.toThrow('requires permission extensions:write');
+
+    const listed = await listPlugins({}, ctx);
+    expect(listed.plugins[0]).toMatchObject({ id: added.plugin.id, enabled: false, status: 'disabled' });
+  });
+
   it('rejects missing local plugin directories', async () => {
     const runtimeDir = mkdtempSync(join(tmpdir(), 'np-agent-plugin-runtime-'));
     const ctx = createContext(runtimeDir);
@@ -123,5 +190,18 @@ describe('system-agent-plugins backend', () => {
     await expect(addPlugin({ sourceKind: 'local', source: join(runtimeDir, 'missing') }, ctx)).rejects.toThrow(
       'Local plugin source must be an existing directory.',
     );
+  });
+
+  it('installs and lists plugins through the CLI dispatcher', async () => {
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'np-agent-plugin-runtime-'));
+    const ctx = createContext(runtimeDir);
+    const source = createLocalPlugin();
+
+    const installed = await agentPluginsCli({ action: 'install', cli: { args: [source], flags: { local: true, json: true } } }, ctx);
+    const listed = await agentPluginsCli({ action: 'list', cli: { args: [], flags: { json: true } } }, ctx);
+
+    expect(installed.plugin).toMatchObject({ displayName: 'Review Pack', enabled: true });
+    expect(listed.plugins).toHaveLength(1);
+    expect(listed.plugins[0]).toMatchObject({ displayName: 'Review Pack', enabled: true });
   });
 });

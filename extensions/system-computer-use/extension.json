@@ -73,6 +73,78 @@
         "action": "computerUseInstall"
       }
     ],
+    "cliCommands": [
+      {
+        "id": "computer-use-status",
+        "command": "computer-use status",
+        "description": "Read Computer Use driver status.",
+        "action": "computerUseStatus",
+        "jsonDefault": true,
+        "usage": "computer-use status [--json]",
+        "examples": ["neon-pilot computer-use status --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": { "argv": ["computer-use", "status"], "expectJsonFields": [] }
+      },
+      {
+        "id": "computer-use-doctor",
+        "command": "computer-use doctor",
+        "description": "Run Computer Use diagnostics.",
+        "action": "computerUseDoctor",
+        "jsonDefault": true,
+        "usage": "computer-use doctor [--json]",
+        "examples": ["neon-pilot computer-use doctor --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "computer-use-install",
+        "command": "computer-use install",
+        "description": "Install Cua Driver for Computer Use.",
+        "action": "computerUseInstall",
+        "jsonDefault": true,
+        "usage": "computer-use install [--json]",
+        "examples": ["neon-pilot computer-use install --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      }
+    ],
     "tools": [
       {
         "id": "computer-use",

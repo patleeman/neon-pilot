@@ -5,7 +5,7 @@ import { getDurableMemorySkillsDir, getDurableSkillsDir, getStateRoot, resolveRu
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
-import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';
+import { invokePromptAssemblyProvider, isRecord, type PromptAssemblyProviderRef } from '../prompt-assembly/providerRuntime.js';
 import { getAssemblyRuntimeScope } from '../prompt-assembly/runtimeScope.js';
 
 const REGISTRY_FILE = 'skills-registry.json';
@@ -114,7 +114,7 @@ async function listSkillDefinitionsWithDiagnosticsAsync(
   }
   skills = dedupeSkills(skills);
   const diagnostics: SkillDiagnostic[] = [];
-  const { assemblyProviders } = await getExtensionHostClient().listPromptAssemblyContributions();
+  const assemblyProviders = await listSkillAssemblyProvidersAsync();
   const providers = assemblyProviders.filter((provider) => provider.kind === 'skills');
   await Promise.allSettled(
     providers.map(async (provider) => {
@@ -256,7 +256,14 @@ function listExtensionSkillDefinitions(): SkillDefinition[] {
 }
 
 async function listExtensionSkillDefinitionsAsync(): Promise<SkillDefinition[]> {
-  const { skills } = await getExtensionHostClient().listStaticContributions();
+  let skills: ReturnType<typeof listExtensionSkillRegistrations>;
+  try {
+    const contributions = await getExtensionHostClient().listStaticContributions();
+    skills = contributions.skills as ReturnType<typeof listExtensionSkillRegistrations>;
+  } catch (error) {
+    if (!isExtensionHostClientUnavailable(error)) throw error;
+    skills = listExtensionSkillRegistrations();
+  }
   return skills.map(
     (skill): SkillDefinition => ({
       id: skill.id,
@@ -268,6 +275,22 @@ async function listExtensionSkillDefinitionsAsync(): Promise<SkillDefinition[]> 
       metadata: { packageType: skill.packageType },
     }),
   );
+}
+
+type SkillAssemblyProviderRef = PromptAssemblyProviderRef & { kind?: unknown };
+
+async function listSkillAssemblyProvidersAsync(): Promise<SkillAssemblyProviderRef[]> {
+  try {
+    const { assemblyProviders } = await getExtensionHostClient().listPromptAssemblyContributions();
+    return assemblyProviders;
+  } catch (error) {
+    if (!isExtensionHostClientUnavailable(error)) throw error;
+    return [];
+  }
+}
+
+function isExtensionHostClientUnavailable(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('Extension host client is not configured');
 }
 
 function listSkillDefinitionsFromParents(parents: readonly string[], kind: SkillSourceKind): SkillDefinition[] {

@@ -213,6 +213,37 @@ export async function setPlan(input: unknown, ctx: ExtensionBackendContext): Pro
   return writeState(conversationId, { ...state, items }, ctx);
 }
 
+export async function todoCli(input: unknown, ctx: ExtensionBackendContext): Promise<TodoState> {
+  const body = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  const cli = body.cli && typeof body.cli === 'object' ? (body.cli as Record<string, unknown>) : {};
+  const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+  const flags = cli.flags && typeof cli.flags === 'object' ? (cli.flags as Record<string, unknown>) : {};
+  const action = typeof body.action === 'string' ? body.action : 'list';
+  const base = { conversationId: stringFromFlag(flags['conversation-id'] ?? flags.conversationId, 'conversation-id') };
+  if (action === 'list') return getState(base, ctx);
+  if (action === 'add') return addItem({ ...base, text: args.join(' ') || flags.text, status: flags.status, note: flags.note }, ctx);
+  if (action === 'update')
+    return updateItem({ ...base, id: args[0] ?? flags.id, text: flags.text, status: flags.status, note: flags.note }, ctx);
+  if (action === 'delete') return deleteItem({ ...base, id: args[0] ?? flags.id }, ctx);
+  if (action === 'clear') return clearItems({ ...base, scope: flags.scope }, ctx);
+  if (action === 'set-plan') return setPlan({ ...base, plan: jsonFlag(flags.plan, 'plan') }, ctx);
+  throw new Error(`Unsupported todos CLI action: ${action}`);
+}
+
+function stringFromFlag(value: unknown, name: string): string {
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  throw new Error(`${name} is required.`);
+}
+
+function jsonFlag(value: unknown, name: string): unknown {
+  if (typeof value !== 'string') throw new Error(`${name} is required.`);
+  try {
+    return JSON.parse(value) as unknown;
+  } catch (error) {
+    throw new Error(`${name} must be valid JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 export async function todoTool(input: unknown, ctx: ExtensionBackendContext): Promise<unknown> {
   const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
   if (action === 'list') {

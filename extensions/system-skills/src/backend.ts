@@ -2,9 +2,7 @@ import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { buildSkillInventoryAsync, setSkillEnabled } from '@neon-pilot/extensions/backend/skills';
 
 export async function listSkills(_input: unknown, ctx: ExtensionBackendContext) {
-  const skills = (
-    await buildSkillInventoryAsync({ runtimeScope: ctx.runtimeScope, repoRoot: ctx.runtime.getRepoRoot() })
-  ).map((skill) => ({
+  const skills = (await buildSkillInventoryAsync({ runtimeScope: ctx.runtimeScope, repoRoot: ctx.runtime.getRepoRoot() })).map((skill) => ({
     id: skill.id,
     name: skill.title,
     description: skill.description,
@@ -26,6 +24,19 @@ export async function updateSkillEnabled(input: unknown, _ctx: ExtensionBackendC
   await setSkillEnabled(id, enabled);
   await _ctx.runtime.refreshSkillMcpConfig();
   return { ok: true, id, enabled };
+}
+
+export async function skillsCli(input: unknown, ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const action = typeof body.action === 'string' ? body.action : 'list';
+  const cli = asRecord(body.cli);
+  const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+  if (action === 'list') return listSkills(body, ctx);
+  if (action === 'enable' || action === 'disable') {
+    const id = args[0] ?? (typeof body.id === 'string' ? body.id : undefined);
+    return updateSkillEnabled({ id, enabled: action === 'enable' }, ctx);
+  }
+  throw new Error(`Unsupported skills CLI action: ${action}`);
 }
 
 function asRecord(input: unknown): Record<string, unknown> {

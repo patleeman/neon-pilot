@@ -1,4 +1,5 @@
-import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { basename, join } from 'node:path';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { installTranscriptionModel, readTranscriptionModelStatus, transcribeAudio } from '@neon-pilot/extensions/backend/transcription';
@@ -68,4 +69,35 @@ export async function transcribeFile(
     language: readOptionalString(input.language),
     model: settings.model,
   });
+}
+
+export async function dictationCli(input: unknown, ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const cli = asRecord(body.cli);
+  const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+  const flags = asRecord(cli.flags);
+  const action = typeof body.action === 'string' ? body.action : 'settings';
+  if (action === 'settings') return readSettings(body, ctx);
+  if (action === 'settings-set') return updateSettings({ model: flags.model }, ctx);
+  if (action === 'model-status') return modelStatus({ model: flags.model ?? args[0] }, ctx);
+  if (action === 'model-install') return installModel({ model: flags.model ?? args[0] }, ctx);
+  if (action === 'transcribe') {
+    const path = args[0];
+    if (!path) throw new Error('audio file path is required.');
+    const data = readFileSync(path);
+    return transcribeFile(
+      {
+        dataBase64: data.toString('base64'),
+        mimeType: readOptionalString(flags.mimeType) ?? readOptionalString(flags['mime-type']),
+        fileName: readOptionalString(flags.fileName) ?? basename(path),
+        language: flags.language,
+      },
+      ctx,
+    );
+  }
+  throw new Error(`Unsupported dictation CLI action: ${action}`);
+}
+
+function asRecord(input: unknown): Record<string, unknown> {
+  return input && typeof input === 'object' && !Array.isArray(input) ? (input as Record<string, unknown>) : {};
 }

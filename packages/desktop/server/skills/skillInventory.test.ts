@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@neon-pilot/core', async () => {
   const actual = await vi.importActual<typeof import('@neon-pilot/core')>('@neon-pilot/core');
@@ -46,43 +46,53 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
 }));
 
 vi.mock('../extensions/extensionHostClient.js', () => ({
-  getExtensionHostClient: () => ({
-    listPromptAssemblyContributions: async () => ({ assemblyProviders: [], contextProviders: [], hooks: [] }),
-    listStaticContributions: async () => ({
-      tools: [],
-      modelDiscovery: [],
-      skills: [
-        {
-          extensionId: 'test-extension',
-          packageType: 'system',
-          id: 'alpha',
-          name: 'alpha',
-          title: 'Alpha',
-          description: 'Alpha skill',
-          path: join(extensionRoot, 'skills', 'alpha', 'SKILL.md'),
-          packageRoot: extensionRoot,
-        },
-        {
-          extensionId: 'test-extension',
-          packageType: 'system',
-          id: 'beta',
-          name: 'beta',
-          title: 'Beta',
-          description: 'Beta skill',
-          path: join(extensionRoot, 'skills', 'beta', 'SKILL.md'),
-          packageRoot: extensionRoot,
-        },
-      ],
-    }),
-  }),
+  getExtensionHostClient: () => {
+    if (extensionHostClientUnavailable) {
+      throw new Error('Extension host client is not configured. Product runtime must connect to the extension host RPC process.');
+    }
+    return {
+      listPromptAssemblyContributions: async () => ({ assemblyProviders: [], contextProviders: [], hooks: [] }),
+      listStaticContributions: async () => ({
+        tools: [],
+        modelDiscovery: [],
+        skills: [
+          {
+            extensionId: 'test-extension',
+            packageType: 'system',
+            id: 'alpha',
+            name: 'alpha',
+            title: 'Alpha',
+            description: 'Alpha skill',
+            path: join(extensionRoot, 'skills', 'alpha', 'SKILL.md'),
+            packageRoot: extensionRoot,
+          },
+          {
+            extensionId: 'test-extension',
+            packageType: 'system',
+            id: 'beta',
+            name: 'beta',
+            title: 'Beta',
+            description: 'Beta skill',
+            path: join(extensionRoot, 'skills', 'beta', 'SKILL.md'),
+            packageRoot: extensionRoot,
+          },
+        ],
+      }),
+    };
+  },
 }));
 
 let stateRoot = '';
 let durableSkillsDir = '';
 let memorySkillsDir = '';
 let extensionRoot = '';
+let extensionHostClientUnavailable = false;
 
 describe('buildSkillInventory', () => {
+  beforeEach(() => {
+    extensionHostClientUnavailable = false;
+  });
+
   it('runs all beforeSkillInjection hooks in priority order', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-skill-inventory-'));
     stateRoot = join(root, 'state');
@@ -147,6 +157,26 @@ describe('buildSkillInventory', () => {
           location: expect.objectContaining({ path: join(memorySkillsDir, 'memory-review', 'SKILL.md') }),
         }),
       ]),
+    );
+  });
+
+  it('falls back to registry skills when async discovery runs without an extension host client', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-skill-inventory-fallback-'));
+    stateRoot = join(root, 'state');
+    durableSkillsDir = join(root, 'knowledge', 'skills');
+    memorySkillsDir = join(root, 'knowledge', 'memory', 'skills');
+    extensionRoot = join(root, 'extension');
+    mkdirSync(join(extensionRoot, 'skills', 'alpha'), { recursive: true });
+    mkdirSync(join(extensionRoot, 'skills', 'beta'), { recursive: true });
+    writeFileSync(join(extensionRoot, 'skills', 'alpha', 'SKILL.md'), '---\nname: Alpha\ndescription: Alpha skill\n---\n');
+    writeFileSync(join(extensionRoot, 'skills', 'beta', 'SKILL.md'), '---\nname: Beta\ndescription: Beta skill\n---\n');
+    extensionHostClientUnavailable = true;
+
+    const { buildSkillInjectionPlanAsync } = await import('./skillInventory.js');
+    const plan = await buildSkillInjectionPlanAsync({ runtimeScope: 'test', repoRoot: root });
+
+    expect(plan.skillPaths).toEqual(
+      expect.arrayContaining([join(extensionRoot, 'skills', 'alpha'), join(extensionRoot, 'skills', 'beta')]),
     );
   });
 });

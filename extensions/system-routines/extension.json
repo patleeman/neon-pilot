@@ -19,7 +19,13 @@
       { "id": "moveRoutine", "handler": "moveRoutine", "title": "Move routine", "worker": { "enabled": true } },
       { "id": "runHook", "handler": "runHook", "title": "Run routine hook", "worker": { "enabled": true } },
       { "id": "registerHookPoint", "handler": "registerHookPoint", "title": "Register routine hook point", "worker": { "enabled": true } },
-      { "id": "listSkills", "handler": "listSkills", "title": "List skills for routines", "worker": { "enabled": true } }
+      { "id": "listSkills", "handler": "listSkills", "title": "List skills for routines", "worker": { "enabled": true } },
+      {
+        "id": "routinesCli",
+        "handler": "routinesCli",
+        "title": "Routines CLI",
+        "worker": { "enabled": true, "inputActions": ["list", "skills", "save", "delete", "reorder", "move", "run-hook"] }
+      }
     ]
   },
   "contributes": {
@@ -74,6 +80,179 @@
         "icon": "automation",
         "section": "primary",
         "sidebarView": "routines-sidebar"
+      }
+    ],
+    "cliCommands": [
+      {
+        "id": "routines-list",
+        "command": "routines list",
+        "description": "List routines.",
+        "action": "routinesCli",
+        "inputAction": "list",
+        "jsonDefault": true,
+        "usage": "routines list [--json]",
+        "examples": ["neon-pilot routines list --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": { "type": "object", "properties": { "json": { "type": "boolean" } }, "additionalProperties": true },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": { "argv": ["routines", "list"], "expectJsonFields": [] }
+      },
+      {
+        "id": "routines-skills",
+        "command": "routines skills",
+        "description": "List skills available to routines.",
+        "action": "routinesCli",
+        "inputAction": "skills",
+        "jsonDefault": true,
+        "usage": "routines skills [--json]",
+        "examples": ["neon-pilot routines skills --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": { "type": "object", "properties": { "json": { "type": "boolean" } }, "additionalProperties": true },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "routines-save",
+        "command": "routines save",
+        "description": "Create or update a routine from JSON.",
+        "action": "routinesCli",
+        "inputAction": "save",
+        "jsonDefault": true,
+        "usage": "routines save --routine <json> [--json]",
+        "examples": [
+          "neon-pilot routines save --routine '{\"name\":\"Review\",\"hookId\":\"agent.after_turn\",\"instruction\":\"Summarize\",\"enabled\":true}' --json"
+        ],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "routine": { "type": "string" }, "json": { "type": "boolean" }, "dry-run": { "type": "boolean" } },
+          "required": ["routine"],
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "routines-delete",
+        "command": "routines delete",
+        "description": "Delete a routine.",
+        "action": "routinesCli",
+        "inputAction": "delete",
+        "jsonDefault": true,
+        "usage": "routines delete <routine-id> [--json]",
+        "examples": ["neon-pilot routines delete routine_123 --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean" }, "dry-run": { "type": "boolean" } },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": true,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "routines-reorder",
+        "command": "routines reorder",
+        "description": "Set routine order from a JSON array of routine IDs.",
+        "action": "routinesCli",
+        "inputAction": "reorder",
+        "jsonDefault": true,
+        "usage": "routines reorder --routine-ids <json-array> [--json]",
+        "examples": ["neon-pilot routines reorder --routine-ids '[\"routine_1\",\"routine_2\"]' --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "routine-ids": { "type": "string" }, "json": { "type": "boolean" }, "dry-run": { "type": "boolean" } },
+          "required": ["routine-ids"],
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "routines-move",
+        "command": "routines move",
+        "description": "Move a routine.",
+        "action": "routinesCli",
+        "inputAction": "move",
+        "jsonDefault": true,
+        "usage": "routines move <routine-id> --position before|after|inside [--target-routine-id <id>] [--json]",
+        "examples": ["neon-pilot routines move routine_123 --position after --target-routine-id routine_456 --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "position": { "type": "string" },
+            "target-routine-id": { "type": "string" },
+            "parent-routine-id": { "type": "string" },
+            "parent-outcome-id": { "type": "string" },
+            "json": { "type": "boolean" },
+            "dry-run": { "type": "boolean" }
+          },
+          "required": ["position"],
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "routines-run-hook",
+        "command": "routines run-hook",
+        "description": "Run routines for a hook.",
+        "action": "routinesCli",
+        "inputAction": "run-hook",
+        "jsonDefault": true,
+        "usage": "routines run-hook <hook-id> [--position before|after] [--context <json>] [--json]",
+        "examples": ["neon-pilot routines run-hook agent.after_turn --context '{\"conversationId\":\"conv_123\"}' --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "position": { "type": "string" },
+            "context": { "type": "string" },
+            "json": { "type": "boolean" },
+            "dry-run": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
       }
     ]
   },

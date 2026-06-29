@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   formatSettingsModelOptionValue,
+  readSettingsSectionIdFromContext,
   readSettingsSectionIdFromHash,
   readSettingsSectionIdFromPathname,
   resolveSettingsModelOption,
@@ -75,8 +76,25 @@ describe('settings hash section parsing', () => {
     expect(readSettingsSectionIdFromPathname('/settings/security/')).toBe('settings-security');
     expect(readSettingsSectionIdFromPathname('/settings/extensions')).toBe('settings-extensions');
     expect(readSettingsSectionIdFromPathname('/settings/extensions/')).toBe('settings-extensions');
+    expect(readSettingsSectionIdFromPathname('/settings/extensions/system-reply-actions')).toBe('settings-extension-system-reply-actions');
+    expect(readSettingsSectionIdFromPathname('/settings/extensions/system%3Alocal')).toBe('settings-extension-system-local');
     expect(readSettingsSectionIdFromPathname('/settings/desktop')).toBe('settings-desktop');
-    expect(readSettingsSectionIdFromPathname('/settings')).toBe('');
+    expect(readSettingsSectionIdFromPathname('/settings')).toBe('settings-extensions');
+  });
+
+  it('prefers the concrete browser pathname over the matched extension surface route', () => {
+    expect(
+      readSettingsSectionIdFromContext(
+        { pathname: '/settings/extensions', hash: '', search: '' },
+        { pathname: '/settings/extensions/system-reply-actions', hash: '' },
+      ),
+    ).toBe('settings-extension-system-reply-actions');
+    expect(
+      readSettingsSectionIdFromContext(
+        { pathname: '/settings/extensions', hash: '', search: '' },
+        { pathname: '/settings/extensions/system-reply-actions', hash: '#settings-extensions' },
+      ),
+    ).toBe('settings-extension-system-reply-actions');
   });
 });
 

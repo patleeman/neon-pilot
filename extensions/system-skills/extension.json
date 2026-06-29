@@ -27,9 +27,97 @@
         "worker": {
           "enabled": true
         }
+      },
+      {
+        "id": "skillsCli",
+        "handler": "skillsCli",
+        "title": "Skills CLI",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["list", "enable", "disable"]
+        }
       }
     ]
   },
-  "contributes": {},
+  "contributes": {
+    "cliCommands": [
+      {
+        "id": "skills-list",
+        "command": "skills list",
+        "description": "List skills available to agents.",
+        "action": "skillsCli",
+        "inputAction": "list",
+        "jsonDefault": true,
+        "usage": "skills list [--json]",
+        "examples": ["neon-pilot skills list --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": { "argv": ["skills", "list"], "expectJsonFields": [] }
+      },
+      {
+        "id": "skills-enable",
+        "command": "skills enable",
+        "description": "Enable a skill by id.",
+        "action": "skillsCli",
+        "inputAction": "enable",
+        "jsonDefault": true,
+        "usage": "skills enable <skill-id> [--json]",
+        "examples": ["neon-pilot skills enable code-review --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "skills-disable",
+        "command": "skills disable",
+        "description": "Disable a skill by id.",
+        "action": "skillsCli",
+        "inputAction": "disable",
+        "jsonDefault": true,
+        "usage": "skills disable <skill-id> [--json]",
+        "examples": ["neon-pilot skills disable code-review --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      }
+    ]
+  },
   "permissions": ["extensions:read", "mcp:write"]
 }

@@ -106,6 +106,13 @@ describe('buildSlashMenuItems', () => {
     );
   });
 
+  it('shows skill entries for the literal /skill command query', () => {
+    const items = buildSlashMenuItems('/skill', SKILLS);
+    expect(items.map((item) => item.displayCmd)).toEqual(
+      expect.arrayContaining(['/skill', '/skill use frontend-design', '/skill use react']),
+    );
+  });
+
   it('fuzzy-filters skills by name after /skill:', () => {
     const items = buildSlashMenuItems('/skill:rea', SKILLS);
     expect(items[0]?.displayCmd).toBe('/skill use react');

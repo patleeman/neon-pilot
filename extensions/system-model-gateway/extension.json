@@ -5,7 +5,6 @@
   "packageType": "system",
   "description": "Local Responses API proxy for external coding agents, backed by Neon Pilot model providers.",
   "version": "0.1.0",
-  "defaultEnabled": false,
   "frontend": {
     "entry": "dist/frontend.js",
     "styles": ["dist/frontend.css"]
@@ -26,7 +25,13 @@
     "actions": [
       { "id": "status", "handler": "status", "title": "AI Gateway status", "worker": { "enabled": true } },
       { "id": "updateSettings", "handler": "updateSettings", "title": "Update AI Gateway settings", "worker": { "enabled": true } },
-      { "id": "clearLogs", "handler": "clearLogs", "title": "Clear AI Gateway logs", "worker": { "enabled": true } }
+      { "id": "clearLogs", "handler": "clearLogs", "title": "Clear AI Gateway logs", "worker": { "enabled": true } },
+      {
+        "id": "gatewayCli",
+        "handler": "gatewayCli",
+        "title": "AI Gateway CLI",
+        "worker": { "enabled": true, "inputActions": ["status", "settings-set", "clear-logs"] }
+      }
     ],
     "routes": [
       {
@@ -81,6 +86,86 @@
           "to": "/settings#settings-model-gateway"
         },
         "icon": "graph"
+      }
+    ],
+    "cliCommands": [
+      {
+        "id": "ai-gateway-status",
+        "command": "ai-gateway status",
+        "description": "Read AI Gateway status.",
+        "action": "gatewayCli",
+        "inputAction": "status",
+        "jsonDefault": true,
+        "usage": "ai-gateway status [--json]",
+        "examples": ["neon-pilot ai-gateway status --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean" } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": { "argv": ["ai-gateway", "status"], "expectJsonFields": [] }
+      },
+      {
+        "id": "ai-gateway-settings-set",
+        "command": "ai-gateway settings set",
+        "description": "Update AI Gateway settings.",
+        "action": "gatewayCli",
+        "inputAction": "settings-set",
+        "jsonDefault": true,
+        "usage": "ai-gateway settings set [--host <host>] [--port <port>] [--default-model <model>] [--auth-token <token>] [--json]",
+        "examples": ["neon-pilot ai-gateway settings set --port 8788 --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "host": { "type": "string" },
+            "port": { "type": "number" },
+            "default-model": { "type": "string" },
+            "auth-token": { "type": "string" },
+            "json": { "type": "boolean" },
+            "dry-run": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "ai-gateway-clear-logs",
+        "command": "ai-gateway logs clear",
+        "description": "Clear AI Gateway logs.",
+        "action": "gatewayCli",
+        "inputAction": "clear-logs",
+        "jsonDefault": true,
+        "usage": "ai-gateway logs clear [--json]",
+        "examples": ["neon-pilot ai-gateway logs clear --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean" }, "dry-run": { "type": "boolean" } },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": true,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
       }
     ]
   },

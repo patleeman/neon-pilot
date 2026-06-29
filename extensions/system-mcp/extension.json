@@ -60,6 +60,15 @@
         "worker": {
           "enabled": true
         }
+      },
+      {
+        "id": "mcpCli",
+        "handler": "mcpCli",
+        "title": "MCP CLI",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["inspect", "list", "info", "grep", "call", "save", "test", "auth", "logout"]
+        }
       }
     ]
   },
@@ -100,7 +109,238 @@
       "label": "MCP servers",
       "description": "MCP wrapper config for explicit tool servers, active skill-local mcp.json detection, and runtime tool orchestration.",
       "order": 40
-    }
+    },
+    "cliCommands": [
+      {
+        "id": "mcp-inspect",
+        "command": "mcp inspect",
+        "description": "Inspect configured MCP servers and skill-provided MCP manifests.",
+        "action": "mcpCli",
+        "inputAction": "inspect",
+        "jsonDefault": true,
+        "usage": "mcp inspect [--json]",
+        "examples": ["neon-pilot mcp inspect --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": { "argv": ["mcp", "inspect"], "expectJsonFields": [] }
+      },
+      {
+        "id": "mcp-list",
+        "command": "mcp list",
+        "description": "List MCP servers, optionally probing tools.",
+        "action": "mcpCli",
+        "inputAction": "list",
+        "jsonDefault": true,
+        "usage": "mcp list [--probe] [--json]",
+        "examples": ["neon-pilot mcp list --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "probe": { "type": "boolean", "description": "Probe servers for tools." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "mcp-info",
+        "command": "mcp info",
+        "description": "Inspect an MCP server or one server tool.",
+        "action": "mcpCli",
+        "inputAction": "info",
+        "jsonDefault": true,
+        "usage": "mcp info <server> [tool] [--json]",
+        "examples": ["neon-pilot mcp info github --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 2 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "mcp-grep",
+        "command": "mcp grep",
+        "description": "Search tools on an MCP server.",
+        "action": "mcpCli",
+        "inputAction": "grep",
+        "jsonDefault": true,
+        "usage": "mcp grep <server> --pattern <glob> [--json]",
+        "examples": ["neon-pilot mcp grep github --pattern '*issue*' --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "pattern": { "type": "string", "description": "Tool glob pattern." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "mcp-call",
+        "command": "mcp call",
+        "description": "Call an MCP tool with JSON arguments.",
+        "action": "mcpCli",
+        "inputAction": "call",
+        "jsonDefault": true,
+        "usage": "mcp call <server> <tool> --arguments <json> [--json]",
+        "examples": ["neon-pilot mcp call github search_issues --arguments '{\"query\":\"bug\"}' --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "arguments": { "type": "string", "description": "JSON tool arguments." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "mcp-test",
+        "command": "mcp test",
+        "description": "Test an MCP server connection.",
+        "action": "mcpCli",
+        "inputAction": "test",
+        "jsonDefault": true,
+        "usage": "mcp test <server> [--json]",
+        "examples": ["neon-pilot mcp test github --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "mcp-save",
+        "command": "mcp save",
+        "description": "Save the explicit MCP configuration JSON.",
+        "action": "mcpCli",
+        "inputAction": "save",
+        "jsonDefault": true,
+        "usage": "mcp save --config <json> [--json]",
+        "examples": ["neon-pilot mcp save --config '{\"mcpServers\":{}}' --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "config": { "type": "string", "description": "MCP configuration JSON." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "required": ["config"],
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "mcp-auth",
+        "command": "mcp auth",
+        "description": "Authenticate an MCP server.",
+        "action": "mcpCli",
+        "inputAction": "auth",
+        "jsonDefault": true,
+        "usage": "mcp auth <server> [--json]",
+        "examples": ["neon-pilot mcp auth github --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "mcp-logout",
+        "command": "mcp logout",
+        "description": "Clear stored OAuth state for an MCP server.",
+        "action": "mcpCli",
+        "inputAction": "logout",
+        "jsonDefault": true,
+        "usage": "mcp logout <server> [--json]",
+        "examples": ["neon-pilot mcp logout github --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      }
+    ]
   },
   "permissions": ["mcp:read", "mcp:write"]
 }

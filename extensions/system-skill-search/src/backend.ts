@@ -307,6 +307,29 @@ export async function listState(_input: unknown, ctx: ExtensionBackendContext) {
   };
 }
 
+export async function skillSearchCli(input: unknown, ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const cli = asRecord(body.cli);
+  const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+  const flags = asRecord(cli.flags);
+  const action = typeof body.action === 'string' ? body.action : 'installed';
+  if (action === 'search') {
+    return searchSkills(
+      {
+        intent: args.join(' ') || readString(flags.intent) || readString(flags.query),
+        context: readString(flags.context),
+        limit: readNumber(flags.limit),
+      },
+      ctx,
+    );
+  }
+  if (action === 'preview') return previewSkill({ candidateId: args[0] ?? flags.candidateId }, ctx);
+  if (action === 'install') return installSkill({ candidateId: args[0] ?? flags.candidateId }, ctx);
+  if (action === 'state') return listState(body, ctx);
+  if (action === 'installed') return listInstalledSkillContributions(body, ctx);
+  throw new Error(`Unsupported skill search CLI action: ${action}`);
+}
+
 async function requireCandidate(input: unknown, ctx: ExtensionBackendContext): Promise<SkillCandidate> {
   const body = asRecord(input);
   const candidateId = readString(body.candidateId);
@@ -1360,6 +1383,14 @@ function parseJsonObject(text: string): Record<string, unknown> {
 
 function readString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function readNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const text = readString(value);
+  if (!text) return undefined;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function readErrorMessage(error: unknown): string {

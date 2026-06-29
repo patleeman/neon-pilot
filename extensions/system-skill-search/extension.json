@@ -41,6 +41,12 @@
         "handler": "listInstalledSkillContributions",
         "title": "List installed upstream skills",
         "worker": { "enabled": true }
+      },
+      {
+        "id": "skillSearchCli",
+        "handler": "skillSearchCli",
+        "title": "Skill Search CLI",
+        "worker": { "enabled": true, "inputActions": ["search", "preview", "install", "state", "installed"], "timeoutMs": 120000 }
       }
     ]
   },
@@ -132,6 +138,130 @@
         "action": "app.navigate",
         "args": { "to": "/settings#settings-skill-search" },
         "icon": "sparkle"
+      }
+    ],
+    "cliCommands": [
+      {
+        "id": "skills-search-upstream",
+        "command": "skills search",
+        "description": "Search upstream skill repositories.",
+        "action": "skillSearchCli",
+        "inputAction": "search",
+        "jsonDefault": true,
+        "usage": "skills search <intent> [--context <text>] [--limit <n>] [--json]",
+        "examples": ["neon-pilot skills search \"code review\" --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "context": { "type": "string", "description": "Task context for ranking." },
+            "limit": { "type": "string", "description": "Maximum search results." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "skills-preview-upstream",
+        "command": "skills preview",
+        "description": "Preview and vet an upstream skill candidate.",
+        "action": "skillSearchCli",
+        "inputAction": "preview",
+        "jsonDefault": true,
+        "usage": "skills preview <candidate-id> [--json]",
+        "examples": ["neon-pilot skills preview candidate-id --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "skills-install-upstream",
+        "command": "skills install",
+        "description": "Install a vetted upstream skill candidate.",
+        "action": "skillSearchCli",
+        "inputAction": "install",
+        "jsonDefault": true,
+        "usage": "skills install <candidate-id> [--json]",
+        "examples": ["neon-pilot skills install candidate-id --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing app state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "skills-installed-upstream",
+        "command": "skills installed",
+        "description": "List installed upstream skill contributions.",
+        "action": "skillSearchCli",
+        "inputAction": "installed",
+        "jsonDefault": true,
+        "usage": "skills installed [--json]",
+        "examples": ["neon-pilot skills installed --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "skills-search-state",
+        "command": "skills search-state",
+        "description": "List Skill Search candidates, previews, and installed records.",
+        "action": "skillSearchCli",
+        "inputAction": "state",
+        "jsonDefault": true,
+        "usage": "skills search-state [--json]",
+        "examples": ["neon-pilot skills search-state --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
       }
     ]
   },
