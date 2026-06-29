@@ -400,7 +400,7 @@ async function assertActions(cdp, matrix) {
   }
 }
 
-async function suppressOnboardingTour(cdp, child) {
+async function suppressOnboardingTour(cdp, child, returnPath = '/conversations/new') {
   try {
     await postJson(cdp, '/api/extensions/system-onboarding/actions/update', { status: 'skipped', stepIndex: 0 });
   } catch (error) {
@@ -416,7 +416,7 @@ async function suppressOnboardingTour(cdp, child) {
       return Boolean(skipButton);
     })()`,
   );
-  await cdp.send('Page.navigate', { url: 'neon-pilot://app/conversations/new' });
+  await cdp.send('Page.navigate', { url: `neon-pilot://app${returnPath}` });
   await waitForLoadedBody(cdp, child, 'post-onboarding release smoke route');
 }
 
@@ -458,7 +458,9 @@ async function assertAgentTools(cdp, child, matrix) {
       console.log(`  context agent tool ok: ${invocation.name}`);
     }
 
-    await cdp.send('Page.navigate', { url: `neon-pilot://app/conversations/${encodeURIComponent(conversationId)}` });
+    const conversationPath = `/conversations/${encodeURIComponent(conversationId)}`;
+    await cdp.send('Page.navigate', { url: `neon-pilot://app${conversationPath}` });
+    await suppressOnboardingTour(cdp, child, conversationPath);
     await waitForBodyText(cdp, child, `context tool conversation ${conversationId}`, ['Release smoke context todo']);
     console.log(`  context agent tool conversation ok: ${conversationId}`);
   }
