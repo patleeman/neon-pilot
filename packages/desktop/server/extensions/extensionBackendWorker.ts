@@ -307,6 +307,9 @@ function createWorkerBackendContext(
       connections: (conversationId: string, options?: { active?: boolean; kind?: string; surface?: string; visibility?: string }) =>
         callHostCapability(extensionId, 'conversations', 'connections', { conversationId, ...(options ?? {}) }),
       get: (conversationId: string) => callHostCapability(extensionId, 'conversations', 'get', { conversationId }),
+      getMeta: (conversationId: string) => callHostCapability(extensionId, 'conversations', 'getMeta', { conversationId }),
+      getBlocks: (conversationId: string, options?: { tailBlocks?: number }) =>
+        callHostCapability(extensionId, 'conversations', 'getBlocks', { conversationId, ...(options ?? {}) }),
       create: (input?: {
         cwd?: string;
         live?: boolean;

@@ -153,6 +153,8 @@ interface ExtensionBackendCapabilityConversations {
     },
   ): Promise<unknown> | unknown;
   get(extensionId: string, conversationId: string): Promise<unknown> | unknown;
+  getMeta?(extensionId: string, conversationId: string): Promise<unknown> | unknown;
+  getBlocks?(extensionId: string, conversationId: string, options?: { tailBlocks?: number }): Promise<unknown> | unknown;
   create?(
     extensionId: string,
     input?: {
@@ -924,6 +926,22 @@ function dispatchConversationsCapability(
 
   if (request.operation === 'get') {
     return conversations.get(request.extensionId, requireString(input.conversationId, 'Conversation id'));
+  }
+
+  if (request.operation === 'getMeta') {
+    if (!conversations.getMeta) {
+      throw new Error('Conversation getMeta capability is unavailable.');
+    }
+    return conversations.getMeta(request.extensionId, requireString(input.conversationId, 'Conversation id'));
+  }
+
+  if (request.operation === 'getBlocks') {
+    if (!conversations.getBlocks) {
+      throw new Error('Conversation getBlocks capability is unavailable.');
+    }
+    return conversations.getBlocks(request.extensionId, requireString(input.conversationId, 'Conversation id'), {
+      ...(input.tailBlocks !== undefined ? { tailBlocks: optionalNumber(input.tailBlocks, 'Conversation tailBlocks') } : {}),
+    });
   }
 
   if (request.operation === 'create') {
@@ -2393,6 +2411,9 @@ export function createExtensionBackendCapabilityDispatcher(
       ).create(input),
     setActiveTools: (_extensionId: string, conversationId: string, toolNames: string[]) =>
       createExtensionConversationsCapability().setActiveTools(conversationId, toolNames),
+    getMeta: (_extensionId: string, conversationId: string) => createExtensionConversationsCapability().getMeta(conversationId),
+    getBlocks: (_extensionId: string, conversationId: string, options?: { tailBlocks?: number }) =>
+      createExtensionConversationsCapability().getBlocks(conversationId, options),
     appendCustomEntry: (_extensionId: string, conversationId: string, customType: string, data?: unknown) =>
       createExtensionConversationsCapability().appendCustomEntry(conversationId, customType, data),
     appendTranscriptBlock: (

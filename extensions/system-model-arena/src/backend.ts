@@ -41,6 +41,12 @@ interface Duel {
   error?: string;
 }
 
+interface StartedChallengerRun {
+  childConversationId: string;
+  jobId: string;
+  parallelJobCleared?: boolean;
+}
+
 interface ModelStat {
   modelRef: string;
   rating: number;
@@ -167,7 +173,26 @@ async function updateBlock(ctx: ExtensionBackendContext, duel: Duel) {
 
 function readBlocks(value: unknown): Array<Record<string, unknown>> {
   if (isRecord(value) && Array.isArray(value.blocks)) return value.blocks.filter(isRecord);
+  if (isRecord(value) && isRecord(value.detail) && Array.isArray(value.detail.blocks)) return value.detail.blocks.filter(isRecord);
+  if (isRecord(value) && isRecord(value.sessionRead)) return readBlocks(value.sessionRead);
   return [];
+}
+
+function blockId(block: Record<string, unknown>): string {
+  return asString(block.id) || asString(block.blockId);
+}
+
+function promptBeforeBlock(blocks: Array<Record<string, unknown>>, selectedBlockId: string): string {
+  const selectedIndex = selectedBlockId ? blocks.findIndex((block) => blockId(block) === selectedBlockId) : -1;
+  const endIndex = selectedIndex >= 0 ? selectedIndex : blocks.length;
+  for (let i = endIndex - 1; i >= 0; i -= 1) {
+    const block = blocks[i];
+    if (block?.type === 'user') {
+      const text = asString(block.text);
+      if (text) return text;
+    }
+  }
+  return '';
 }
 
 async function latestAssistantText(ctx: ExtensionBackendContext, conversationId: string) {
@@ -182,6 +207,14 @@ async function latestAssistantText(ctx: ExtensionBackendContext, conversationId:
   return '';
 }
 
+async function conversationModelMeta(ctx: ExtensionBackendContext, conversationId: string): Promise<Record<string, unknown> | null> {
+  const meta = await ctx.conversations.getMeta(conversationId).catch(() => null);
+  if (isRecord(meta) && (asString(meta.currentModel) || asString(meta.model))) return meta;
+  const conversation = await ctx.conversations.get(conversationId).catch(() => null);
+  if (isRecord(conversation)) return conversation;
+  return isRecord(meta) ? meta : null;
+}
+
 function primaryModelRef(model: string, provider?: string | null): string {
   const normalizedModel = model.trim();
   const normalizedProvider = provider?.trim();
@@ -192,7 +225,7 @@ function primaryModelRef(model: string, provider?: string | null): string {
 
 function sameModelRef(a: string, b: string) {
   if (a === b) return true;
-  if (a.includes('/') && b.includes('/')) return false;
+  if (a.includes('/') || b.includes('/')) return false;
   const bare = (value: string) => value.split('/').at(-1) ?? value;
   return bare(a) === bare(b);
 }
@@ -235,11 +268,12 @@ async function createDuel(
   const id = crypto.randomUUID();
   const sideA: Side = Math.random() < 0.5 ? 'primary' : 'challenger';
   const taskType = classify(input.prompt);
-  const started = await ctx.conversations.startParallelPrompt(input.conversationId, {
-    text: input.prompt,
-    model: input.challengerModel,
-    purpose: 'model_arena_duel',
-    metadata: { duelId: id, taskType },
+  const started = await startChallengerRun(ctx, {
+    parentConversationId: input.conversationId,
+    prompt: input.prompt,
+    challengerModel: input.challengerModel,
+    duelId: id,
+    taskType,
   });
   const now = new Date().toISOString();
   const duel: Duel = {
@@ -253,6 +287,7 @@ async function createDuel(
     challengerModel: input.challengerModel,
     childConversationId: started.childConversationId,
     jobId: started.jobId,
+    parallelJobCleared: started.parallelJobCleared,
     sideA,
     sideB: sideA === 'primary' ? 'challenger' : 'primary',
     status: 'running',
@@ -269,6 +304,43 @@ async function createDuel(
   });
   await saveDuel(ctx, duel);
   return duel;
+}
+
+async function startChallengerRun(
+  ctx: ExtensionBackendContext,
+  input: {
+    parentConversationId: string;
+    prompt: string;
+    challengerModel: string;
+    duelId: string;
+    taskType: string;
+  },
+): Promise<StartedChallengerRun> {
+  try {
+    const started = await ctx.conversations.startParallelPrompt(input.parentConversationId, {
+      text: input.prompt,
+      model: input.challengerModel,
+      purpose: 'model_arena_duel',
+      metadata: { duelId: input.duelId, taskType: input.taskType },
+    });
+    return { childConversationId: started.childConversationId, jobId: started.jobId };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/only available while the conversation is busy/i.test(message)) throw error;
+  }
+
+  const created = (await ctx.conversations.create({
+    title: 'Model Arena challenger',
+    prompt: input.prompt,
+    model: input.challengerModel,
+  })) as { id?: unknown; conversationId?: unknown };
+  const childConversationId = asString(created.conversationId) || asString(created.id);
+  if (!childConversationId) throw new Error('Failed to create challenger conversation.');
+  return {
+    childConversationId,
+    jobId: `conversation:${childConversationId}`,
+    parallelJobCleared: true,
+  };
 }
 
 export async function onPromptSubmitted(input: { payload?: unknown }, ctx: ExtensionBackendContext) {
@@ -345,18 +417,21 @@ export async function onConversationRunEnded(input: { payload?: unknown }, ctx: 
 export async function startManualDuel(input: unknown, ctx: ExtensionBackendContext) {
   const record = isRecord(input) ? input : {};
   const conversationId = asString(record.conversationId);
+  const selectedBlockId = asString(record.blockId);
   const primaryText = asString(record.messageText);
   if (!conversationId || !primaryText) throw new Error('Choose an assistant message inside a conversation to compare models.');
   const config = await settings(ctx);
   const blocks = readBlocks(await ctx.conversations.getBlocks(conversationId, { tailBlocks: 120 }));
-  const prompt = asString([...blocks].reverse().find((block) => block.type === 'user')?.text);
-  const meta = (await ctx.conversations.getMeta(conversationId).catch(() => null)) as { currentModel?: unknown } | null;
+  const prompt = promptBeforeBlock(blocks, selectedBlockId);
+  const meta = await conversationModelMeta(ctx, conversationId);
   const primaryModel = primaryModelRef(
-    asString(meta?.currentModel) || 'current model',
+    asString(meta?.currentModel) || asString(meta?.model) || 'current model',
     asString((meta as { currentProvider?: unknown } | null)?.currentProvider) || null,
   );
   const challengerModel = challenger(config, primaryModel);
-  if (!prompt || !challengerModel) throw new Error('Configure challenger models before starting a duel.');
+  if (!prompt) throw new Error('Choose an assistant message with a prompt to compare models.');
+  if (!config.challengerModels.length) throw new Error('Add challenger models before starting a duel.');
+  if (!challengerModel) throw new Error('Add a challenger model different from the current conversation model before starting a duel.');
   const duel = await createDuel(ctx, { conversationId, prompt, primaryModel, challengerModel, primaryText });
   return { text: `Started model duel ${duel.id}.`, duelId: duel.id };
 }

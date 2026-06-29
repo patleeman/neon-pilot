@@ -84,6 +84,8 @@ describe('extension backend capability dispatcher', () => {
   it('dispatches extension-scoped live conversation capability calls', async () => {
     const conversations = {
       get: vi.fn(async () => ({ id: 'conv-1', running: false, toolNames: ['read'] })),
+      getMeta: vi.fn(async () => ({ id: 'conv-1', currentModel: 'gpt-5' })),
+      getBlocks: vi.fn(async () => ({ blocks: [{ type: 'user', text: 'Prompt' }] })),
       create: vi.fn(async () => ({ id: 'conv-2', conversationId: 'conv-2' })),
       setActiveTools: vi.fn(async () => ({ conversationId: 'conv-1', toolNames: ['read'] })),
       appendCustomEntry: vi.fn(async () => ({ ok: true })),
@@ -120,6 +122,30 @@ describe('extension backend capability dispatcher', () => {
         }),
       ),
     ).resolves.toEqual({ id: 'conv-1', running: false, toolNames: ['read'] });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 17,
+          kind: 'capabilityRequest',
+          extensionId: 'system-model-arena',
+          capability: 'conversations',
+          operation: 'getMeta',
+          input: { conversationId: 'conv-1' },
+        }),
+      ),
+    ).resolves.toEqual({ id: 'conv-1', currentModel: 'gpt-5' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 18,
+          kind: 'capabilityRequest',
+          extensionId: 'system-model-arena',
+          capability: 'conversations',
+          operation: 'getBlocks',
+          input: { conversationId: 'conv-1', tailBlocks: 120 },
+        }),
+      ),
+    ).resolves.toEqual({ blocks: [{ type: 'user', text: 'Prompt' }] });
     await expect(
       Promise.resolve(
         dispatch({
@@ -326,6 +352,8 @@ describe('extension backend capability dispatcher', () => {
     ).resolves.toEqual({ ok: true, deleted: [{ id: 'conv-old' }] });
 
     expect(conversations.get).toHaveBeenCalledWith('system-conversation-tools', 'conv-1');
+    expect(conversations.getMeta).toHaveBeenCalledWith('system-model-arena', 'conv-1');
+    expect(conversations.getBlocks).toHaveBeenCalledWith('system-model-arena', 'conv-1', { tailBlocks: 120 });
     expect(conversations.setActiveTools).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', ['read']);
     expect(conversations.appendCustomEntry).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 'conversation-tools-state', {
       enabled: true,

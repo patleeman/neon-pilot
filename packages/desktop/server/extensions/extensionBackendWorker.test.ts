@@ -506,6 +506,8 @@ export async function doThing(_input, ctx) {
       `
 export async function doThing(_input, ctx) {
   const before = await ctx.conversations.get('conv-1');
+  const meta = await ctx.conversations.getMeta('conv-1');
+  const blocks = await ctx.conversations.getBlocks('conv-1', { tailBlocks: 5 });
   const created = await ctx.conversations.create({ cwd: '/repo', title: 'Welcome', live: false });
   const tools = await ctx.conversations.setActiveTools('conv-1', ['exec_code']);
   const entry = await ctx.conversations.appendCustomEntry('conv-1', 'code-mode-state', { enabled: true });
@@ -534,14 +536,14 @@ export async function doThing(_input, ctx) {
   const titled = await ctx.conversations.setTitle('conv-1', 'New Title');
   const deleted = await ctx.conversations.delete({ conversationIds: ['conv-old'] });
   const connections = await ctx.conversations.connections('conv-1', { kind: 'state', surface: 'cli' });
-  return { before, created, tools, entry, block, updated, workspaceBefore, workspaceAfter, rollback, ensured, cwdQueued, sent, aborted, compacted, forked, titled, deleted, connections };
+  return { before, meta, blocks, created, tools, entry, block, updated, workspaceBefore, workspaceAfter, rollback, ensured, cwdQueued, sent, aborted, compacted, forked, titled, deleted, connections };
 }
 `,
     );
 
     await loadWorker();
     workerThreads.messageHandler?.({
-      id: 19,
+      id: 21,
       type: 'runExport',
       extensionId: 'worker-ext',
       compiled: { path: backendPath, hash: 'hash-live-conversations' },
@@ -564,13 +566,33 @@ export async function doThing(_input, ctx) {
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
-      operation: 'create',
-      input: expect.objectContaining({ cwd: '/repo', title: 'Welcome', live: false }),
+      operation: 'getMeta',
+      input: { conversationId: 'conv-1' },
     });
-    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { id: 'conv-2', conversationId: 'conv-2' } });
+    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { id: 'conv-1', currentModel: 'gpt-5' } });
 
     await waitForPostMessage({
       id: 3,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'getBlocks',
+      input: { conversationId: 'conv-1', tailBlocks: 5 },
+    });
+    workerThreads.messageHandler?.({ id: 3, kind: 'capabilityResponse', ok: true, result: { blocks: [{ type: 'user', text: 'Prompt' }] } });
+
+    await waitForPostMessage({
+      id: 4,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'create',
+      input: expect.objectContaining({ cwd: '/repo', title: 'Welcome', live: false }),
+    });
+    workerThreads.messageHandler?.({ id: 4, kind: 'capabilityResponse', ok: true, result: { id: 'conv-2', conversationId: 'conv-2' } });
+
+    await waitForPostMessage({
+      id: 5,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
@@ -578,24 +600,24 @@ export async function doThing(_input, ctx) {
       input: { conversationId: 'conv-1', toolNames: ['exec_code'] },
     });
     workerThreads.messageHandler?.({
-      id: 3,
+      id: 5,
       kind: 'capabilityResponse',
       ok: true,
       result: { conversationId: 'conv-1', toolNames: ['exec_code'] },
     });
 
     await waitForPostMessage({
-      id: 4,
+      id: 6,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'appendCustomEntry',
       input: { conversationId: 'conv-1', customType: 'code-mode-state', data: { enabled: true } },
     });
-    workerThreads.messageHandler?.({ id: 4, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+    workerThreads.messageHandler?.({ id: 6, kind: 'capabilityResponse', ok: true, result: { ok: true } });
 
     await waitForPostMessage({
-      id: 5,
+      id: 7,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
@@ -607,10 +629,10 @@ export async function doThing(_input, ctx) {
         data: { source: 'worker-ext' },
       },
     });
-    workerThreads.messageHandler?.({ id: 5, kind: 'capabilityResponse', ok: true, result: { blockId: 'block-1' } });
+    workerThreads.messageHandler?.({ id: 7, kind: 'capabilityResponse', ok: true, result: { blockId: 'block-1' } });
 
     await waitForPostMessage({
-      id: 6,
+      id: 8,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
@@ -623,10 +645,10 @@ export async function doThing(_input, ctx) {
         data: { source: 'worker-ext', updated: true },
       },
     });
-    workerThreads.messageHandler?.({ id: 6, kind: 'capabilityResponse', ok: true, result: { blockId: 'block-1' } });
+    workerThreads.messageHandler?.({ id: 8, kind: 'capabilityResponse', ok: true, result: { blockId: 'block-1' } });
 
     await waitForPostMessage({
-      id: 7,
+      id: 9,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
@@ -634,14 +656,14 @@ export async function doThing(_input, ctx) {
       input: { runtimeScope: 'shared', runtimeSettingsFilePath: expect.stringMatching(/neon-pilot-runtime\/settings\.json$/) },
     });
     workerThreads.messageHandler?.({
-      id: 7,
+      id: 9,
       kind: 'capabilityResponse',
       ok: true,
       result: { openConversationIds: ['conv-1'], activeConversationId: 'conv-1' },
     });
 
     await waitForPostMessage({
-      id: 8,
+      id: 10,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
@@ -653,34 +675,34 @@ export async function doThing(_input, ctx) {
       },
     });
     workerThreads.messageHandler?.({
-      id: 8,
+      id: 10,
       kind: 'capabilityResponse',
       ok: true,
       result: { openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' },
     });
 
     await waitForPostMessage({
-      id: 9,
+      id: 11,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'rollback',
       input: { conversationId: 'conv-1', count: 2 },
     });
-    workerThreads.messageHandler?.({ id: 9, kind: 'capabilityResponse', ok: true, result: { rolledBackTo: 'entry-1' } });
+    workerThreads.messageHandler?.({ id: 11, kind: 'capabilityResponse', ok: true, result: { rolledBackTo: 'entry-1' } });
 
     await waitForPostMessage({
-      id: 10,
+      id: 12,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'ensureLive',
       input: { conversationId: 'conv-1', cwd: '/repo' },
     });
-    workerThreads.messageHandler?.({ id: 10, kind: 'capabilityResponse', ok: true, result: { id: 'conv-1', conversationId: 'conv-1' } });
+    workerThreads.messageHandler?.({ id: 12, kind: 'capabilityResponse', ok: true, result: { id: 'conv-1', conversationId: 'conv-1' } });
 
     await waitForPostMessage({
-      id: 11,
+      id: 13,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
@@ -688,44 +710,44 @@ export async function doThing(_input, ctx) {
       input: { conversationId: 'conv-1', cwd: '/next', continuePrompt: 'Continue there.' },
     });
     workerThreads.messageHandler?.({
-      id: 11,
+      id: 13,
       kind: 'capabilityResponse',
       ok: true,
       result: { conversationId: 'conv-1', cwd: '/next', queued: true },
     });
 
     await waitForPostMessage({
-      id: 12,
+      id: 14,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'sendMessage',
       input: { conversationId: 'conv-1', text: 'Go', steer: true },
     });
-    workerThreads.messageHandler?.({ id: 12, kind: 'capabilityResponse', ok: true, result: { accepted: true } });
+    workerThreads.messageHandler?.({ id: 14, kind: 'capabilityResponse', ok: true, result: { accepted: true } });
 
     await waitForPostMessage({
-      id: 13,
+      id: 15,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'abort',
       input: { conversationId: 'conv-1' },
     });
-    workerThreads.messageHandler?.({ id: 13, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+    workerThreads.messageHandler?.({ id: 15, kind: 'capabilityResponse', ok: true, result: { ok: true } });
 
     await waitForPostMessage({
-      id: 14,
+      id: 16,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'compact',
       input: { conversationId: 'conv-1', customInstructions: 'short' },
     });
-    workerThreads.messageHandler?.({ id: 14, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+    workerThreads.messageHandler?.({ id: 16, kind: 'capabilityResponse', ok: true, result: { ok: true } });
 
     await waitForPostMessage({
-      id: 15,
+      id: 17,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
@@ -733,24 +755,24 @@ export async function doThing(_input, ctx) {
       input: { conversationId: 'conv-1', targetCwd: '/fork', title: 'Fork' },
     });
     workerThreads.messageHandler?.({
-      id: 15,
+      id: 17,
       kind: 'capabilityResponse',
       ok: true,
       result: { id: 'conv-fork', conversationId: 'conv-fork' },
     });
 
     await waitForPostMessage({
-      id: 16,
+      id: 18,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'setTitle',
       input: { conversationId: 'conv-1', title: 'New Title' },
     });
-    workerThreads.messageHandler?.({ id: 16, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+    workerThreads.messageHandler?.({ id: 18, kind: 'capabilityResponse', ok: true, result: { ok: true } });
 
     await waitForPostMessage({
-      id: 17,
+      id: 19,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
@@ -762,14 +784,14 @@ export async function doThing(_input, ctx) {
       },
     });
     workerThreads.messageHandler?.({
-      id: 17,
+      id: 19,
       kind: 'capabilityResponse',
       ok: true,
       result: { ok: true, deleted: [{ id: 'conv-old' }] },
     });
 
     await waitForPostMessage({
-      id: 18,
+      id: 20,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
@@ -777,17 +799,19 @@ export async function doThing(_input, ctx) {
       input: { conversationId: 'conv-1', kind: 'state', surface: 'cli' },
     });
     workerThreads.messageHandler?.({
-      id: 18,
+      id: 20,
       kind: 'capabilityResponse',
       ok: true,
       result: { items: [{ id: 'system-todo:todos', kind: 'state' }] },
     });
 
     await waitForPostMessage({
-      id: 19,
+      id: 21,
       ok: true,
       result: {
         before: { id: 'conv-1', toolNames: ['read'] },
+        meta: { id: 'conv-1', currentModel: 'gpt-5' },
+        blocks: { blocks: [{ type: 'user', text: 'Prompt' }] },
         created: { id: 'conv-2', conversationId: 'conv-2' },
         tools: { conversationId: 'conv-1', toolNames: ['exec_code'] },
         entry: { ok: true },
