@@ -186,6 +186,7 @@ export interface ManageLiveSessionParallelJobCapabilityInput {
   conversationId: string;
   jobId: string;
   action: 'importNow' | 'skip' | 'cancel';
+  callerExtensionId?: string;
 }
 
 export interface TakeOverLiveSessionCapabilityInput {
@@ -1255,6 +1256,7 @@ export async function manageLiveSessionParallelJobCapability(
   return manageParallelPromptJob(conversationId, {
     jobId,
     action: input.action,
+    ...(input.callerExtensionId ? { callerExtensionId: input.callerExtensionId } : {}),
   });
 }
 

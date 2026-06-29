@@ -25,6 +25,7 @@ import {
   readFileSync,
   readSync,
   rmSync,
+  writeFileSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
 
@@ -274,6 +275,10 @@ type RawLine =
   | RawCompaction
   | RawBranchSummary;
 type RawDisplayLine = RawMessage | RawCustomMessage | RawCompaction | RawBranchSummary;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
 
 interface TailScanDisplayEntrySummary {
   kind: 'display';
@@ -1807,6 +1812,53 @@ export function appendStoredVisibleCustomMessage(input: {
   clearSessionCaches();
   refreshCatalogEntryFromSessionFile(input.sessionFile);
   return blockId;
+}
+
+export function updateStoredVisibleCustomMessage(input: {
+  sessionFile: string;
+  customType: string;
+  content: string;
+  details?: unknown;
+  blockId: string;
+}): boolean {
+  const customType = input.customType.trim();
+  const content = input.content.trim();
+  const blockId = input.blockId.trim();
+  if (!customType || !content || !blockId) {
+    return false;
+  }
+
+  let updated = false;
+  const lines = readFileSync(input.sessionFile, 'utf-8')
+    .split(/\r?\n/)
+    .map((line) => {
+      if (!line.trim()) return line;
+      const parsed = parseJsonLine(line);
+      if (!parsed || parsed.type !== 'custom_message' || parsed.customType !== customType) return line;
+      const details = isRecord(parsed.details) ? parsed.details : {};
+      if (details.extensionBlockId !== blockId) return line;
+      updated = true;
+      return JSON.stringify({
+        ...parsed,
+        content,
+        timestamp: new Date().toISOString(),
+        details: {
+          ...(input.details && typeof input.details === 'object' && !Array.isArray(input.details)
+            ? (input.details as Record<string, unknown>)
+            : { value: input.details }),
+          extensionBlockId: blockId,
+        },
+      });
+    });
+
+  if (!updated) {
+    return false;
+  }
+
+  writeFileSync(input.sessionFile, `${lines.join('\n').replace(/\n*$/, '')}\n`, 'utf-8');
+  clearSessionCaches();
+  refreshCatalogEntryFromSessionFile(input.sessionFile);
+  return true;
 }
 
 function refreshCatalogEntryFromSessionFile(sessionFile: string): void {

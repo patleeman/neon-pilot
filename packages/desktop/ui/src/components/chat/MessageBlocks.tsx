@@ -765,6 +765,7 @@ export const UserMessage = memo(function UserMessage({
 
 export const AssistantMessage = memo(function AssistantMessage({
   block,
+  conversationId,
   messageIndex,
   onForkMessage,
   onRewindMessage,
@@ -778,6 +779,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   showCursor = false,
 }: {
   block: Extract<MessageBlock, { type: 'text' }>;
+  conversationId?: string;
   messageIndex?: number;
   onForkMessage?: (messageIndex: number) => Promise<void> | void;
   onRewindMessage?: (messageIndex: number) => Promise<void> | void;
@@ -846,6 +848,7 @@ export const AssistantMessage = memo(function AssistantMessage({
           <MessageActions
             blockText={block.text}
             blockId={blockId}
+            conversationId={conversationId}
             copyText={block.text}
             onRewind={onRewindMessage && typeof messageIndex === 'number' ? handleRewind : undefined}
             onFork={onForkMessage && typeof messageIndex === 'number' ? handleFork : undefined}

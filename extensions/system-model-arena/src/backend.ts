@@ -28,6 +28,7 @@ interface Duel {
   challengerModel: string;
   childConversationId: string;
   jobId: string;
+  parallelJobCleared?: boolean;
   sideA: Side;
   sideB: Side;
   status: 'running' | 'ready' | 'failed' | 'voted';
@@ -68,6 +69,20 @@ const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(v
 const asString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+function normalizeModelList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const models: string[] = [];
+  for (const item of value) {
+    const model = asString(item);
+    if (!model || seen.has(model)) continue;
+    seen.add(model);
+    models.push(model);
+    if (models.length >= 50) break;
+  }
+  return models;
+}
+
 function normalizeSettings(value: unknown): Settings {
   const base = defaultSettings();
   if (!isRecord(value)) return base;
@@ -79,7 +94,7 @@ function normalizeSettings(value: unknown): Settings {
       Math.round(typeof value.rampDownAfterVotes === 'number' ? value.rampDownAfterVotes : base.rampDownAfterVotes),
     ),
     rampedSampleRate: clamp(typeof value.rampedSampleRate === 'number' ? value.rampedSampleRate : base.rampedSampleRate, 0, 1),
-    challengerModels: Array.isArray(value.challengerModels) ? value.challengerModels.map(asString).filter(Boolean) : base.challengerModels,
+    challengerModels: normalizeModelList(value.challengerModels),
     minPromptChars: Math.max(0, Math.round(typeof value.minPromptChars === 'number' ? value.minPromptChars : base.minPromptChars)),
   };
 }
@@ -160,9 +175,43 @@ async function latestAssistantText(ctx: ExtensionBackendContext, conversationId:
   return '';
 }
 
+function primaryModelRef(model: string, provider?: string | null): string {
+  const normalizedModel = model.trim();
+  const normalizedProvider = provider?.trim();
+  return normalizedProvider && normalizedModel && !normalizedModel.includes('/')
+    ? `${normalizedProvider}/${normalizedModel}`
+    : normalizedModel;
+}
+
+function sameModelRef(a: string, b: string) {
+  if (a === b) return true;
+  if (a.includes('/') && b.includes('/')) return false;
+  const bare = (value: string) => value.split('/').at(-1) ?? value;
+  return bare(a) === bare(b);
+}
+
 function challenger(config: Settings, primary: string) {
-  const models = config.challengerModels.filter((model) => model && model !== primary);
+  const models = config.challengerModels.filter((model) => model && !sameModelRef(model, primary));
   return models[Math.floor(Math.random() * models.length)] ?? null;
+}
+
+async function cleanupParallelJob(ctx: ExtensionBackendContext, duel: Duel) {
+  if (duel.parallelJobCleared) return false;
+  try {
+    await ctx.conversations.manageParallelJob({ conversationId: duel.conversationId, jobId: duel.jobId, action: 'skip' });
+    duel.parallelJobCleared = true;
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/running/i.test(message)) return false;
+    try {
+      await ctx.conversations.manageParallelJob({ conversationId: duel.conversationId, jobId: duel.jobId, action: 'cancel' });
+      duel.parallelJobCleared = true;
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 async function createDuel(
@@ -219,7 +268,7 @@ export async function onPromptSubmitted(input: { payload?: unknown }, ctx: Exten
   const payload = isRecord(input.payload) ? input.payload : {};
   const prompt = asString(payload.prompt);
   const conversationId = asString(payload.conversationId);
-  const primaryModel = asString(payload.currentModel);
+  const primaryModel = primaryModelRef(asString(payload.currentModel), asString(payload.currentProvider) || null);
   const config = await settings(ctx);
   const currentStats = await stats(ctx);
   const voteCount = Object.values(currentStats.models).reduce((sum, item) => sum + item.votes, 0);
@@ -240,21 +289,39 @@ export async function onPromptSubmitted(input: { payload?: unknown }, ctx: Exten
 export async function onConversationRunEnded(input: { payload?: unknown }, ctx: ExtensionBackendContext) {
   const payload = isRecord(input.payload) ? input.payload : {};
   const conversationId = asString(payload.conversationId);
+  const runError = asString(payload.error);
   if (!conversationId) return { updated: 0 };
   let updated = 0;
   for (const entry of await ctx.storage.list<Duel>(DUEL_PREFIX)) {
     const duel = entry.value;
     if (!isRecord(duel) || duel.status === 'voted') continue;
     let changed = false;
-    if (duel.conversationId === conversationId && !duel.primaryText) {
-      duel.primaryText = await latestAssistantText(ctx, duel.conversationId);
-      changed = Boolean(duel.primaryText);
+    if (duel.conversationId === conversationId) {
+      if (!duel.primaryText) {
+        duel.primaryText = await latestAssistantText(ctx, duel.conversationId);
+        changed = Boolean(duel.primaryText);
+      }
+      if (runError || !duel.primaryText) {
+        duel.error = runError || 'Primary model ended without an answer.';
+        duel.status = 'failed';
+        changed = true;
+      }
     }
-    if (duel.childConversationId === conversationId && !duel.challengerText) {
-      duel.challengerText = await latestAssistantText(ctx, duel.childConversationId);
-      changed = Boolean(duel.challengerText);
+    if (duel.childConversationId === conversationId) {
+      if (!duel.challengerText) {
+        duel.challengerText = await latestAssistantText(ctx, duel.childConversationId);
+        changed = Boolean(duel.challengerText);
+      }
+      if (runError || !duel.challengerText) {
+        duel.error = runError || 'Challenger model ended without an answer.';
+        duel.status = 'failed';
+        changed = true;
+      }
+      if (await cleanupParallelJob(ctx, duel)) {
+        changed = true;
+      }
     }
-    if (duel.primaryText && duel.challengerText && duel.status !== 'ready') {
+    if (duel.primaryText && duel.challengerText && duel.status !== 'ready' && duel.status !== 'failed') {
       duel.status = 'ready';
       changed = true;
     }
@@ -272,14 +339,17 @@ export async function startManualDuel(input: unknown, ctx: ExtensionBackendConte
   const record = isRecord(input) ? input : {};
   const conversationId = asString(record.conversationId);
   const primaryText = asString(record.messageText);
+  if (!conversationId || !primaryText) throw new Error('Choose an assistant message inside a conversation to compare models.');
   const config = await settings(ctx);
   const blocks = readBlocks(await ctx.conversations.getBlocks(conversationId, { tailBlocks: 120 }));
   const prompt = asString([...blocks].reverse().find((block) => block.type === 'user')?.text);
   const meta = (await ctx.conversations.getMeta(conversationId).catch(() => null)) as { currentModel?: unknown } | null;
-  const primaryModel = asString(meta?.currentModel) || 'current model';
+  const primaryModel = primaryModelRef(
+    asString(meta?.currentModel) || 'current model',
+    asString((meta as { currentProvider?: unknown } | null)?.currentProvider) || null,
+  );
   const challengerModel = challenger(config, primaryModel);
-  if (!conversationId || !prompt || !primaryText || !challengerModel)
-    throw new Error('Configure challenger models before starting a duel.');
+  if (!prompt || !challengerModel) throw new Error('Configure challenger models before starting a duel.');
   const duel = await createDuel(ctx, { conversationId, prompt, primaryModel, challengerModel, primaryText });
   return { text: `Started model duel ${duel.id}.`, duelId: duel.id };
 }

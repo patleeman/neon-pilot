@@ -60,6 +60,7 @@ import {
   renameStoredSession as renameStoredConversationSession,
   type SessionImageAsset,
   type ThreadGoal,
+  updateStoredVisibleCustomMessage as updateSessionStoredVisibleCustomMessage,
 } from './sessions.js';
 
 export type { ThreadGoal } from './sessions.js';
@@ -634,6 +635,10 @@ export function appendConversationWorkspaceMetadata(input: Parameters<typeof app
 
 export function appendStoredVisibleCustomMessage(input: Parameters<typeof appendSessionStoredVisibleCustomMessage>[0]): string | null {
   return appendSessionStoredVisibleCustomMessage(input);
+}
+
+export function updateStoredVisibleCustomMessage(input: Parameters<typeof updateSessionStoredVisibleCustomMessage>[0]): boolean {
+  return updateSessionStoredVisibleCustomMessage(input);
 }
 
 export function renameStoredConversation(conversationId: string, nextName: string): ReturnType<typeof renameStoredConversationSession> {

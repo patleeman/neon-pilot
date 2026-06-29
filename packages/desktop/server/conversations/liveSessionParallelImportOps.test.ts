@@ -293,6 +293,15 @@ describe('live session parallel import operations', () => {
         callbacks as never,
       ),
     ).rejects.toThrow('Use cancel to stop a running parallel prompt.');
+    await expect(
+      manageParallelPromptJob(
+        entry({
+          parallelJobs: [{ id: 'job-1', status: 'ready', childConversationId: 'child', ownerExtensionId: 'arena-ext' }],
+        }) as never,
+        { jobId: 'job-1', action: 'skip', callerExtensionId: 'other-ext' },
+        callbacks as never,
+      ),
+    ).rejects.toThrow('Parallel prompt is owned by another extension.');
 
     await expect(
       manageParallelPromptJob(

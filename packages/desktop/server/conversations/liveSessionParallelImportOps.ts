@@ -380,7 +380,7 @@ export async function tryImportReadyParallelJobs<TEntry extends LiveSessionParal
 
 export async function manageParallelPromptJob<TEntry extends LiveSessionParallelImportHost>(
   entry: TEntry,
-  input: { jobId: string; action: 'importNow' | 'skip' | 'cancel' },
+  input: { jobId: string; action: 'importNow' | 'skip' | 'cancel'; callerExtensionId?: string },
   callbacks: Pick<
     LiveSessionParallelImportCallbacks<TEntry>,
     'persistParallelJobs' | 'broadcastParallelState' | 'finalizeParallelChildLiveSession'
@@ -400,6 +400,10 @@ export async function manageParallelPromptJob<TEntry extends LiveSessionParallel
   }
 
   const job = entry.parallelJobs[jobIndex]!;
+  const callerExtensionId = input.callerExtensionId?.trim();
+  if (job.ownerExtensionId && callerExtensionId && job.ownerExtensionId !== callerExtensionId) {
+    throw new Error('Parallel prompt is owned by another extension.');
+  }
   if (input.action === 'skip') {
     if (job.status === 'running') {
       throw new Error('Use cancel to stop a running parallel prompt.');

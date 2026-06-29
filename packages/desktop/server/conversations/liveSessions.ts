@@ -587,6 +587,35 @@ export async function getAvailableModels() {
   return formatAvailableModels(await getAvailableModelObjects());
 }
 
+function assertResolvableModelOverride(
+  modelRef: string | null | undefined,
+  models: Awaited<ReturnType<typeof getAvailableModelObjects>>,
+): void {
+  const normalized = typeof modelRef === 'string' ? modelRef.trim() : '';
+  if (!normalized) {
+    return;
+  }
+
+  const slashIndex = normalized.indexOf('/');
+  if (slashIndex > 0 && slashIndex < normalized.length - 1) {
+    const provider = normalized.slice(0, slashIndex);
+    const id = normalized.slice(slashIndex + 1);
+    if (models.some((model) => model.provider === provider && model.id === id)) {
+      return;
+    }
+    throw new Error(`Model "${normalized}" is not available.`);
+  }
+
+  const matches = models.filter((model) => model.id === normalized);
+  if (matches.length === 1) {
+    return;
+  }
+  if (matches.length > 1) {
+    throw new Error(`Model "${normalized}" is ambiguous. Use provider/model.`);
+  }
+  throw new Error(`Model "${normalized}" is not available.`);
+}
+
 export async function inspectAvailableTools(
   cwd: string,
   options: LiveSessionLoaderOptions = {},
@@ -921,6 +950,7 @@ export async function startParallelPromptSession(
     throw new Error(`Session ${sessionId} is not live`);
   }
   const availableModelsForTier = await getAvailableModelObjects();
+  assertResolvableModelOverride(input.model, availableModelsForTier);
   return startParallelPromptSessionWithCallbacks(entry, input, options, {
     createJobId: createParallelPromptJobId,
     createSession,
@@ -942,7 +972,7 @@ export async function startParallelPromptSession(
 
 export async function manageParallelPromptJob(
   sessionId: string,
-  input: { jobId: string; action: 'importNow' | 'skip' | 'cancel' },
+  input: { jobId: string; action: 'importNow' | 'skip' | 'cancel'; callerExtensionId?: string },
 ): Promise<{ ok: true; status: 'imported' | 'queued' | 'skipped' | 'cancelled' }> {
   const entry = registry.get(sessionId);
   if (!entry) {

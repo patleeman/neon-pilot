@@ -6,6 +6,7 @@ import {
   publishConversationSessionMetaChanged,
   renameStoredConversation,
   resolveConversationSessionFile,
+  updateStoredVisibleCustomMessage,
 } from '../conversations/conversationService.js';
 import { readConversationSessionsCapability } from '../conversations/conversationSessionCapability.js';
 import { broadcastTitle } from '../conversations/liveSessionBroadcasts.js';
@@ -32,6 +33,7 @@ import type { ServerRouteContext } from '../routes/context.js';
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
 import { assertExtensionAnyPermission } from './extensionPermissions.js';
+import { findExtensionEntry } from './extensionRegistry.js';
 import { publishExtensionHostEvent } from './extensionSubscriptions.js';
 import { buildLiveSessionExtensionFactoriesForRuntime, buildLiveSessionResourceOptionsForRuntime } from './runtimeAgentHooks.js';
 
@@ -139,6 +141,19 @@ export function createExtensionConversationsCapability(
       capability,
     );
   };
+  const assertTranscriptBlockContribution = (blockType: string, capability: string) => {
+    if (!options.enforceManifestPermissions) return;
+    const normalized = blockType.trim();
+    const entry = findExtensionEntry(extensionId);
+    const contributions = entry?.manifest.contributes?.transcriptBlocks ?? [];
+    if (!contributions.some((contribution) => contribution.id === normalized)) {
+      throw new Error(`${capability} requires ${extensionId} to contribute transcript block "${normalized}".`);
+    }
+  };
+  const ownedTranscriptDetails = (data: unknown) => ({
+    ...(data && typeof data === 'object' && !Array.isArray(data) ? (data as Record<string, unknown>) : { value: data }),
+    ownerExtensionId: extensionId,
+  });
 
   const findLiveEntry = (conversationId: string) => {
     const entry = liveSessionRegistry.get(conversationId);
@@ -759,7 +774,7 @@ export function createExtensionConversationsCapability(
       action: 'importNow' | 'skip' | 'cancel';
     }): Promise<{ ok: true; status: 'imported' | 'queued' | 'skipped' | 'cancelled' }> {
       assertConversationPermission('write', 'conversations.manageParallelJob');
-      return manageLiveSessionParallelJobCapability(input);
+      return manageLiveSessionParallelJobCapability({ ...input, callerExtensionId: extensionId });
     },
 
     /**
@@ -932,7 +947,9 @@ export function createExtensionConversationsCapability(
       blockId?: string;
     }): Promise<{ blockId: string }> {
       assertConversationPermission('write', 'conversations.appendTranscriptBlock');
+      assertTranscriptBlockContribution(input.blockType, 'conversations.appendTranscriptBlock');
       const content = input.title ?? input.blockType;
+      const details = ownedTranscriptDetails(input.data);
       if (!liveSessionRegistry.has(input.conversationId)) {
         const sessionFile = resolveConversationSessionFile(input.conversationId) ?? reservedConversationFiles.get(input.conversationId);
         if (!sessionFile) {
@@ -942,14 +959,15 @@ export function createExtensionConversationsCapability(
           sessionFile,
           customType: input.blockType,
           content,
-          details: input.data,
+          details,
           blockId: input.blockId,
+          display: false,
         });
         invalidateAppTopics('sessions');
         return { blockId: blockId ?? input.blockId ?? `${input.blockType}:${Date.now()}` };
       }
 
-      const blockId = await appendVisibleLiveSessionCustomMessage(input.conversationId, input.blockType, content, input.data, {
+      const blockId = await appendVisibleLiveSessionCustomMessage(input.conversationId, input.blockType, content, details, {
         blockId: input.blockId,
       });
       invalidateAppTopics('sessions');
@@ -964,12 +982,30 @@ export function createExtensionConversationsCapability(
       blockId: string;
     }): Promise<{ blockId: string }> {
       assertConversationPermission('write', 'conversations.updateTranscriptBlock');
+      assertTranscriptBlockContribution(input.blockType, 'conversations.updateTranscriptBlock');
+      const details = ownedTranscriptDetails(input.data);
+      if (!liveSessionRegistry.has(input.conversationId)) {
+        const sessionFile = resolveConversationSessionFile(input.conversationId) ?? reservedConversationFiles.get(input.conversationId);
+        if (!sessionFile) {
+          throw new Error(`Conversation "${input.conversationId}" was not found.`);
+        }
+        const updated = updateStoredVisibleCustomMessage({
+          sessionFile,
+          customType: input.blockType,
+          content: input.title ?? input.blockType,
+          details,
+          blockId: input.blockId,
+        });
+        if (!updated) throw new Error(`Transcript block "${input.blockId}" was not found.`);
+        invalidateAppTopics('sessions');
+        return { blockId: input.blockId };
+      }
       const updated = updateVisibleLiveSessionCustomMessage(
         input.conversationId,
         input.blockId,
         input.blockType,
         input.title ?? input.blockType,
-        input.data,
+        details,
       );
       if (!updated) throw new Error(`Transcript block "${input.blockId}" was not found.`);
       invalidateAppTopics('sessions');

@@ -13,6 +13,7 @@ import {
   appendConversationOffshootMetadata,
   appendConversationWorkspaceMetadata,
   appendParentConversationBacklinkEntry,
+  appendStoredVisibleCustomMessage,
   buildAppendOnlySessionDetailResponse,
   buildDisplayBlocksFromEntries,
   clearSessionCaches,
@@ -28,6 +29,7 @@ import {
   readSessionMetaByFile,
   readSessionSearchText,
   renameStoredSession,
+  updateStoredVisibleCustomMessage,
 } from './sessions.js';
 
 const originalEnv = process.env;
@@ -1586,6 +1588,37 @@ describe('sessions', () => {
     const detail = readSessionBlocks('session-custom');
     expect(detail?.meta.messageCount).toBe(2);
     expect(detail?.blocks.filter((block) => block.type === 'text').map((block) => block.text)).toContain('Imported summary note.');
+  });
+
+  it('updates stored visible custom messages by extension block id', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+    const sessionFile = writeSessionFile({ sessionsDir, sessionId: 'session-custom-update' });
+
+    expect(
+      appendStoredVisibleCustomMessage({
+        sessionFile,
+        customType: 'model_arena_duel',
+        content: 'Model Arena duel',
+        details: { status: 'running' },
+        blockId: 'duel-1',
+        display: false,
+      }),
+    ).toBe('duel-1');
+    expect(
+      updateStoredVisibleCustomMessage({
+        sessionFile,
+        customType: 'model_arena_duel',
+        content: 'Model Arena duel',
+        details: { status: 'voted' },
+        blockId: 'duel-1',
+      }),
+    ).toBe(true);
+
+    const block = readSessionBlocks('session-custom-update')?.blocks.find(
+      (candidate) => candidate.type === 'context' && candidate.customType === 'model_arena_duel',
+    );
+    expect(block).toMatchObject({ details: { status: 'voted', extensionBlockId: 'duel-1' } });
   });
 
   it('renders persisted automation run custom messages as collapsed transcript context', () => {

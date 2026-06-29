@@ -4,6 +4,7 @@ const sessionsCapability = vi.hoisted(() => ({ readConversationSessionsCapabilit
 const broadcasts = vi.hoisted(() => ({ broadcastTitle: vi.fn() }));
 const reservation = vi.hoisted(() => ({ reserveConversationSession: vi.fn() }));
 const liveSessionCapability = vi.hoisted(() => ({
+  manageLiveSessionParallelJobCapability: vi.fn(),
   submitLiveSessionPromptCapability: vi.fn(),
 }));
 const conversationService = vi.hoisted(() => ({
@@ -11,6 +12,7 @@ const conversationService = vi.hoisted(() => ({
   publishConversationSessionMetaChanged: vi.fn(),
   renameStoredConversation: vi.fn(),
   resolveConversationSessionFile: vi.fn(),
+  updateStoredVisibleCustomMessage: vi.fn(),
 }));
 const live = vi.hoisted(() => ({
   registry: new Map<string, unknown>(),
@@ -25,6 +27,14 @@ const live = vi.hoisted(() => ({
   resumeSession: vi.fn(),
   subscribe: vi.fn(),
   updateVisibleCustomMessage: vi.fn(),
+}));
+const extensionRegistry = vi.hoisted(() => ({
+  findExtensionEntry: vi.fn(() => ({
+    manifest: {
+      permissions: ['conversations:readwrite'],
+      contributes: { transcriptBlocks: [{ id: 'welcome', component: 'WelcomeBlock' }] },
+    },
+  })),
 }));
 const sessions = vi.hoisted(() => ({
   deleteSessions: vi.fn(),
@@ -75,6 +85,7 @@ vi.mock('../conversations/conversationService.js', () => conversationService);
 vi.mock('../conversations/conversationRunCleanup.js', () => conversationRunCleanup);
 vi.mock('../conversations/liveSessions.js', () => live);
 vi.mock('../conversations/sessions.js', () => sessions);
+vi.mock('./extensionRegistry.js', () => extensionRegistry);
 vi.mock('../conversations/liveSessionTitle.js', () => titles);
 vi.mock('../shared/appEvents.js', () => appEvents);
 vi.mock('./extensionConversationMetadata.js', () => metadata);
@@ -143,10 +154,18 @@ describe('extensionConversations', () => {
       referencedKnowledgeFileIds: [],
       referencedAttachmentIds: [],
     });
+    liveSessionCapability.manageLiveSessionParallelJobCapability.mockResolvedValue({ ok: true, status: 'skipped' });
     reservation.reserveConversationSession.mockReturnValue({ id: 'reserved-1', sessionFile: '/sessions/reserved-1.jsonl', cwd: '/repo' });
     conversationService.resolveConversationSessionFile.mockReturnValue('/sessions/persisted.jsonl');
     conversationService.appendStoredVisibleCustomMessage.mockReturnValue('block-1');
+    conversationService.updateStoredVisibleCustomMessage.mockReturnValue(true);
     conversationService.renameStoredConversation.mockReturnValue({ id: 'stored-1', title: 'Stored Title' });
+    extensionRegistry.findExtensionEntry.mockReturnValue({
+      manifest: {
+        permissions: ['conversations:readwrite'],
+        contributes: { transcriptBlocks: [{ id: 'welcome', component: 'WelcomeBlock' }] },
+      },
+    });
     uiPreferences.saved = {
       openConversationIds: ['existing-open'],
       pinnedConversationIds: ['existing-pinned'],
@@ -384,13 +403,68 @@ describe('extensionConversations', () => {
       sessionFile: '/sessions/reserved-1.jsonl',
       customType: 'welcome',
       content: 'Hello',
-      details: { ok: true },
+      details: { ok: true, ownerExtensionId: 'extension' },
       blockId: undefined,
+      display: false,
     });
     expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
       type: 'session.created',
       conversationId: 'reserved-1',
       cwd: '/repo',
+    });
+  });
+
+  it('updates persisted transcript blocks and stamps the owning extension', async () => {
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' }, 'arena-ext', {
+      enforceManifestPermissions: true,
+    });
+
+    await expect(
+      capability.updateTranscriptBlock({
+        conversationId: 'stored-1',
+        blockType: 'welcome',
+        title: 'Updated',
+        blockId: 'block-1',
+        data: { ok: true },
+      }),
+    ).resolves.toEqual({ blockId: 'block-1' });
+
+    expect(conversationService.updateStoredVisibleCustomMessage).toHaveBeenCalledWith({
+      sessionFile: '/sessions/persisted.jsonl',
+      customType: 'welcome',
+      content: 'Updated',
+      details: { ok: true, ownerExtensionId: 'arena-ext' },
+      blockId: 'block-1',
+    });
+  });
+
+  it('rejects transcript blocks the extension does not contribute', async () => {
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' }, 'arena-ext', {
+      enforceManifestPermissions: true,
+    });
+
+    await expect(
+      capability.appendTranscriptBlock({
+        conversationId: 'stored-1',
+        blockType: 'model_arena_duel',
+        data: {},
+      }),
+    ).rejects.toThrow('requires arena-ext to contribute transcript block "model_arena_duel"');
+  });
+
+  it('passes the extension owner through parallel job management', async () => {
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' }, 'arena-ext');
+
+    await expect(capability.manageParallelJob({ conversationId: 'conv-1', jobId: 'job-1', action: 'skip' })).resolves.toEqual({
+      ok: true,
+      status: 'skipped',
+    });
+
+    expect(liveSessionCapability.manageLiveSessionParallelJobCapability).toHaveBeenCalledWith({
+      conversationId: 'conv-1',
+      jobId: 'job-1',
+      action: 'skip',
+      callerExtensionId: 'arena-ext',
     });
   });
 

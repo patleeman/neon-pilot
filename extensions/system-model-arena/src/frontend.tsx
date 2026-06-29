@@ -54,14 +54,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parseModels(value: string): string[] {
+  const seen = new Set<string>();
   return value
     .split(/[\n,;]+/)
     .map((item) => item.trim())
-    .filter(Boolean);
+    .filter((item) => {
+      if (!item || seen.has(item)) return false;
+      seen.add(item);
+      return true;
+    })
+    .slice(0, 50);
 }
 
 function percent(value: number): string {
   return `${Math.round(value * 100)}%`;
+}
+
+function confidenceLabel(votes: number): string {
+  if (votes >= 30) return 'Usable';
+  if (votes >= 10) return 'Building';
+  return 'Low';
+}
+
+function taskSummary(model: ModelStat): string {
+  return Object.entries(model.byTask)
+    .sort(([, a], [, b]) => b.votes - a.votes)
+    .slice(0, 3)
+    .map(([task, stat]) => `${task} ${stat.wins}W/${stat.losses}L/${stat.ties}T`)
+    .join(' · ');
 }
 
 export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
@@ -177,6 +197,40 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
                     onBlur={() => void save()}
                   />
                 </label>
+                <label className="grid grid-cols-[1fr_5rem] items-center gap-3 px-3 py-2">
+                  <span>
+                    <span className="block text-primary">Ramp down after</span>
+                    <span className="text-dim">Votes to collect before using the later sample rate.</span>
+                  </span>
+                  <TextInput
+                    className="text-right"
+                    type="number"
+                    min={0}
+                    max={5000}
+                    value={state.settings.rampDownAfterVotes}
+                    onChange={(event) =>
+                      setState({ ...state, settings: { ...state.settings, rampDownAfterVotes: Number(event.target.value) } })
+                    }
+                    onBlur={() => void save()}
+                  />
+                </label>
+                <label className="grid grid-cols-[1fr_5rem] items-center gap-3 px-3 py-2">
+                  <span>
+                    <span className="block text-primary">Minimum prompt length</span>
+                    <span className="text-dim">Shorter prompts are skipped.</span>
+                  </span>
+                  <TextInput
+                    className="text-right"
+                    type="number"
+                    min={0}
+                    max={2000}
+                    value={state.settings.minPromptChars}
+                    onChange={(event) =>
+                      setState({ ...state, settings: { ...state.settings, minPromptChars: Number(event.target.value) } })
+                    }
+                    onBlur={() => void save()}
+                  />
+                </label>
                 <label className="block px-3 py-2">
                   <span className="mb-1 block text-primary">Challenger models</span>
                   <Textarea
@@ -192,24 +246,29 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
           </section>
 
           <section className="rounded-md border border-border-subtle bg-panel/60">
-            <div className="grid grid-cols-[1fr_5rem_5rem_5rem_5rem] border-b border-border-subtle px-3 py-2 text-[11px] font-medium uppercase text-dim">
+            <div className="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem_6rem] border-b border-border-subtle px-3 py-2 text-[11px] font-medium uppercase text-dim">
               <span>Model</span>
               <span className="text-right">Rating</span>
               <span className="text-right">Votes</span>
               <span className="text-right">Wins</span>
               <span className="text-right">Losses</span>
+              <span className="text-right">Confidence</span>
             </div>
             <div className="divide-y divide-border-subtle text-[12px]">
               {ranked.length === 0 ? (
                 <div className="px-3 py-8 text-center text-dim">No votes recorded yet.</div>
               ) : (
                 ranked.map((model) => (
-                  <div key={model.modelRef} className="grid grid-cols-[1fr_5rem_5rem_5rem_5rem] items-center px-3 py-2">
-                    <span className="min-w-0 truncate font-mono text-primary">{model.modelRef}</span>
+                  <div key={model.modelRef} className="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem_6rem] items-center px-3 py-2">
+                    <span className="min-w-0">
+                      <span className="block truncate font-mono text-primary">{model.modelRef}</span>
+                      {taskSummary(model) ? <span className="block truncate text-[11px] text-dim">{taskSummary(model)}</span> : null}
+                    </span>
                     <span className="text-right tabular-nums">{model.rating}</span>
                     <span className="text-right tabular-nums">{model.votes}</span>
                     <span className="text-right tabular-nums">{model.wins}</span>
                     <span className="text-right tabular-nums">{model.losses}</span>
+                    <span className="text-right text-[11px] text-dim">{confidenceLabel(model.votes)}</span>
                   </div>
                 ))
               )}
@@ -247,8 +306,9 @@ export function ModelArenaDuelBlock({
 
   if (!local) return null;
   const ready = local.status === 'ready' || local.status === 'voted';
-  const sideA = local.sideA?.text?.trim() || (ready ? 'No answer captured.' : 'Waiting for answer...');
-  const sideB = local.sideB?.text?.trim() || (ready ? 'No answer captured.' : 'Waiting for answer...');
+  const failed = local.status === 'failed';
+  const sideA = local.sideA?.text?.trim() || (ready || failed ? 'No answer captured.' : 'Waiting for answer...');
+  const sideB = local.sideB?.text?.trim() || (ready || failed ? 'No answer captured.' : 'Waiting for answer...');
 
   const vote = async (choice: 'a' | 'b' | 'tie' | 'neither') => {
     if (voting || !ready) return;
@@ -297,6 +357,7 @@ export function ModelArenaDuelBlock({
         </Button>
         {local.vote ? <span className="text-dim">Vote recorded: {local.vote}</span> : null}
         {voting ? <span className="text-dim">Saving...</span> : null}
+        {failed && local.error ? <span className="text-danger">{local.error}</span> : null}
         {error ? <span className="text-danger">{error}</span> : null}
       </div>
     </section>

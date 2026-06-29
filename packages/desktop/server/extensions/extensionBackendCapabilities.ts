@@ -2323,13 +2323,13 @@ export function createExtensionBackendCapabilityDispatcher(
     appendCustomEntry: (_extensionId: string, conversationId: string, customType: string, data?: unknown) =>
       createExtensionConversationsCapability().appendCustomEntry(conversationId, customType, data),
     appendTranscriptBlock: (
-      _extensionId: string,
+      extensionId: string,
       input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['appendTranscriptBlock']>[0],
-    ) => createExtensionConversationsCapability().appendTranscriptBlock(input),
+    ) => createExtensionConversationsCapability(undefined, extensionId, { enforceManifestPermissions: true }).appendTranscriptBlock(input),
     updateTranscriptBlock: (
-      _extensionId: string,
+      extensionId: string,
       input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['updateTranscriptBlock']>[0],
-    ) => createExtensionConversationsCapability().updateTranscriptBlock(input),
+    ) => createExtensionConversationsCapability(undefined, extensionId, { enforceManifestPermissions: true }).updateTranscriptBlock(input),
     getWorkspace: (_extensionId: string, input?: { runtimeScope?: string; runtimeSettingsFilePath?: string }) =>
       createExtensionConversationsCapability(
         input?.runtimeSettingsFilePath
@@ -2372,9 +2372,9 @@ export function createExtensionBackendCapabilityDispatcher(
       input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['startParallelPrompt']>[1],
     ) => createExtensionConversationsCapability(undefined, extensionId).startParallelPrompt(conversationId, input),
     manageParallelJob: (
-      _extensionId: string,
+      extensionId: string,
       input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['manageParallelJob']>[0],
-    ) => createExtensionConversationsCapability().manageParallelJob(input),
+    ) => createExtensionConversationsCapability(undefined, extensionId).manageParallelJob(input),
     runTurn: (
       _extensionId: string,
       conversationId: string,

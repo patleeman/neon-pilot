@@ -62,6 +62,7 @@ export function MessageActions({
   const [isForking, setIsForking] = useState(false);
   const [isRewinding, setIsRewinding] = useState(false);
   const [busyActionIds, setBusyActionIds] = useState<Set<string>>(new Set());
+  const [actionErrors, setActionErrors] = useState<Map<string, string>>(new Map());
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const copyResetTimeoutRef = useRef<number | null>(null);
   const canCopy = typeof copyText === 'string' && copyText.length > 0;
@@ -236,6 +237,7 @@ export function MessageActions({
       {messageActions.map((action) => {
         if (!matchMessageActionWhen(action, isUser, blockText)) return null;
         const busy = busyActionIds.has(action.id);
+        const actionError = actionErrors.get(action.id);
         return (
           <MessageActionButton
             key={action.id}
@@ -244,11 +246,22 @@ export function MessageActions({
               void (async () => {
                 setBusyActionIds((prev) => new Set(prev).add(action.id));
                 try {
+                  setActionErrors((prev) => {
+                    const next = new Map(prev);
+                    next.delete(action.id);
+                    return next;
+                  });
                   await getPaClient(action.extensionId).extension.invoke(action.action, {
                     messageText: blockText ?? '',
                     messageRole: isUser ? 'user' : 'assistant',
                     blockId: blockId ?? '',
                     conversationId: conversationId ?? '',
+                  });
+                } catch (error) {
+                  setActionErrors((prev) => {
+                    const next = new Map(prev);
+                    next.set(action.id, error instanceof Error ? error.message : String(error));
+                    return next;
                   });
                 } finally {
                   setBusyActionIds((prev) => {
@@ -259,11 +272,11 @@ export function MessageActions({
                 }
               })();
             }}
-            tone={busy ? 'accent' : 'default'}
-            title={action.title}
+            tone={actionError ? 'danger' : busy ? 'accent' : 'default'}
+            title={actionError ? `${action.title} failed: ${actionError}` : action.title}
             disabled={busy}
           >
-            {action.title}
+            {actionError ? `${action.title} failed` : action.title}
           </MessageActionButton>
         );
       })}
