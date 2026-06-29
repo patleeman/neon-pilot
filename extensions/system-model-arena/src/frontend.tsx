@@ -242,9 +242,9 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
                     <div className="text-primary">Status</div>
                     <div className="text-dim">
                       {state.settings.automaticDuels && state.settings.challengerModels.length > 0
-                        ? 'Arena is sampling normal conversations.'
+                        ? 'Arena is comparing challenger runs against each conversation’s selected model.'
                         : state.settings.challengerModels.length === 0
-                          ? 'Add at least one challenger model to start.'
+                          ? 'Add challenger models to compare against the model selected in each conversation.'
                           : 'Arena is paused.'}
                     </div>
                   </div>
@@ -271,7 +271,9 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
                   </div>
                   <div className="divide-y divide-border-subtle rounded-md border border-border-subtle">
                     {selectedModels.length === 0 ? (
-                      <div className="px-3 py-3 text-dim">No challenger models selected.</div>
+                      <div className="px-3 py-3 text-dim">
+                        No challenger models selected. Challengers run against the active conversation model.
+                      </div>
                     ) : (
                       selectedModels.map(({ ref, model }) => (
                         <div key={ref} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2">
