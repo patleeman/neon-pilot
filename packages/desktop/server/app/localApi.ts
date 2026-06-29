@@ -3428,6 +3428,12 @@ export async function submitDesktopLiveSessionParallelPrompt(input: {
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;
   surfaceId?: string;
+  model?: string | null;
+  thinkingLevel?: string | null;
+  serviceTier?: string | null;
+  ownerExtensionId?: string;
+  purpose?: string;
+  metadata?: Record<string, unknown>;
 }): Promise<{
   ok: true;
   accepted: true;

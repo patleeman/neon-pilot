@@ -1202,6 +1202,9 @@ export interface ParallelPromptPreview {
   sideEffects?: string[];
   resultPreview?: string;
   error?: string;
+  ownerExtensionId?: string;
+  purpose?: string;
+  modelRef?: string;
 }
 
 export interface LiveSessionToolDefinition {

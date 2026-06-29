@@ -206,7 +206,6 @@ class ExtensionToolBlockErrorBoundary extends React.Component<
     return this.state.message ? <ErrorState message={this.state.message} /> : this.props.children;
   }
 }
-
 export function NativeExtensionTranscriptBlockHost({
   extension,
   renderer,

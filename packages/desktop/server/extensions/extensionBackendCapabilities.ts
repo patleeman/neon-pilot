@@ -1193,6 +1193,57 @@ function dispatchConversationsCapability(
     }));
   }
 
+  if (request.operation === 'startParallelPrompt') {
+    if (!conversations.startParallelPrompt) {
+      throw new Error('Conversation startParallelPrompt capability is unavailable.');
+    }
+    return conversations.startParallelPrompt(request.extensionId, requireString(input.conversationId, 'Conversation id'), {
+      text: requireString(input.text, 'Parallel prompt text'),
+      ...(input.images !== undefined ? { images: input.images as Array<{ data: string; mimeType: string; name?: string }> } : {}),
+      ...(input.videos !== undefined
+        ? { videos: input.videos as Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }> }
+        : {}),
+      ...(input.attachmentRefs !== undefined ? { attachmentRefs: input.attachmentRefs } : {}),
+      ...(input.contextMessages !== undefined ? { contextMessages: input.contextMessages } : {}),
+      ...(input.relatedConversationIds !== undefined ? { relatedConversationIds: input.relatedConversationIds } : {}),
+      ...(input.surfaceId !== undefined ? { surfaceId: optionalString(input.surfaceId, 'Parallel prompt surface id') } : {}),
+      ...(input.model === null
+        ? { model: null }
+        : input.model !== undefined
+          ? { model: optionalString(input.model, 'Parallel prompt model') }
+          : {}),
+      ...(input.thinkingLevel === null
+        ? { thinkingLevel: null }
+        : input.thinkingLevel !== undefined
+          ? { thinkingLevel: optionalString(input.thinkingLevel, 'Parallel prompt thinking level') }
+          : {}),
+      ...(input.serviceTier === null
+        ? { serviceTier: null }
+        : input.serviceTier !== undefined
+          ? { serviceTier: optionalString(input.serviceTier, 'Parallel prompt service tier') }
+          : {}),
+      ...(input.purpose !== undefined ? { purpose: optionalString(input.purpose, 'Parallel prompt purpose') } : {}),
+      ...(input.metadata && typeof input.metadata === 'object' && !Array.isArray(input.metadata)
+        ? { metadata: input.metadata as Record<string, unknown> }
+        : {}),
+    });
+  }
+
+  if (request.operation === 'manageParallelJob') {
+    if (!conversations.manageParallelJob) {
+      throw new Error('Conversation manageParallelJob capability is unavailable.');
+    }
+    const action = requireString(input.action, 'Parallel prompt action');
+    if (action !== 'importNow' && action !== 'skip' && action !== 'cancel') {
+      throw new Error('Parallel prompt action must be importNow, skip, or cancel.');
+    }
+    return conversations.manageParallelJob(request.extensionId, {
+      conversationId: requireString(input.conversationId, 'Conversation id'),
+      jobId: requireString(input.jobId, 'Parallel prompt job id'),
+      action,
+    });
+  }
+
   if (request.operation === 'abort') {
     if (!conversations.abort) {
       throw new Error('Conversation abort capability is unavailable.');
