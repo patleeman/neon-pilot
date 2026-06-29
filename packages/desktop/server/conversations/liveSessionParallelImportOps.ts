@@ -120,13 +120,24 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
       })
     : await callbacks.createSession(entry.cwd, {
         ...options,
-        initialModel: input.model ?? (options.initialModel === undefined ? (entry.session.model?.id ?? null) : options.initialModel),
+        initialModel:
+          input.model !== undefined
+            ? input.model
+            : options.initialModel === undefined
+              ? (entry.session.model?.id ?? null)
+              : options.initialModel,
         initialThinkingLevel:
-          input.thinkingLevel ??
-          (options.initialThinkingLevel === undefined ? (entry.session.thinkingLevel ?? null) : options.initialThinkingLevel),
+          input.thinkingLevel !== undefined
+            ? input.thinkingLevel
+            : options.initialThinkingLevel === undefined
+              ? (entry.session.thinkingLevel ?? null)
+              : options.initialThinkingLevel,
         initialServiceTier:
-          input.serviceTier ??
-          (options.initialServiceTier === undefined ? callbacks.resolveDefaultServiceTier(entry) : options.initialServiceTier),
+          input.serviceTier !== undefined
+            ? input.serviceTier
+            : options.initialServiceTier === undefined
+              ? callbacks.resolveDefaultServiceTier(entry)
+              : options.initialServiceTier,
       });
 
   const childConversationId = 'id' in forked ? forked.id : forked.newSessionId;
@@ -196,7 +207,7 @@ export function createRunningParallelPromptJob(input: {
   cwd: string;
   ownerExtensionId?: string;
   purpose?: string;
-  modelRef?: string;
+  modelRef?: string | null;
   metadata?: Record<string, unknown>;
   autoImport?: boolean;
 }): ParallelPromptJob {
@@ -223,6 +234,10 @@ export function createRunningParallelPromptJob(input: {
     ...(input.forkEntryId ? { forkEntryId: input.forkEntryId } : {}),
     ...(input.repoRoot ? { repoRoot: input.repoRoot } : {}),
     worktreeDirtyPathsAtStart: readParallelCurrentWorktreeDirtyPaths(input.cwd, input.repoRoot),
+    ...(input.modelRef ? { modelRef: input.modelRef } : {}),
+    ...(input.ownerExtensionId ? { ownerExtensionId: input.ownerExtensionId } : {}),
+    ...(input.purpose ? { purpose: input.purpose } : {}),
+    ...(input.metadata ? { metadata: input.metadata } : {}),
   };
 }
 

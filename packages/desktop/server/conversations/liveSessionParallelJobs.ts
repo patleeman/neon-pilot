@@ -143,6 +143,10 @@ function normalizeParallelPromptJob(candidate: unknown): ParallelPromptJob | nul
     worktreeDirtyPathsAtStart: normalizeParallelPromptList(job.worktreeDirtyPathsAtStart, 128),
     ...(typeof job.resultText === 'string' && job.resultText.trim().length > 0 ? { resultText: job.resultText } : {}),
     ...(typeof job.error === 'string' && job.error.trim().length > 0 ? { error: job.error.trim() } : {}),
+    ...(ownerExtensionId ? { ownerExtensionId } : {}),
+    ...(purpose ? { purpose } : {}),
+    ...(modelRef ? { modelRef } : {}),
+    ...(metadata ? { metadata } : {}),
   };
 }
 
@@ -210,6 +214,9 @@ function buildParallelPromptPreview(job: ParallelPromptJob): ParallelPromptPrevi
     sideEffects: sideEffects.slice(0, PARALLEL_PREVIEW_SIDE_EFFECT_LIMIT),
     ...(job.resultText ? { resultPreview: truncateParallelPreviewText(job.resultText) } : {}),
     ...(job.error ? { error: truncateParallelPreviewText(job.error) } : {}),
+    ...(job.ownerExtensionId ? { ownerExtensionId: job.ownerExtensionId } : {}),
+    ...(job.purpose ? { purpose: job.purpose } : {}),
+    ...(job.modelRef ? { modelRef: job.modelRef } : {}),
   };
 }
 
