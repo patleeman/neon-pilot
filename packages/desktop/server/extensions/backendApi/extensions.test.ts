@@ -16,6 +16,13 @@ vi.mock('./serverModuleResolver.js', () => ({
 }));
 
 describe('backendApi/extensions', () => {
+  function mockRuntimeExtensionRoot(extensionRoot: string): void {
+    resolverMocks.importServerExtensionModule.mockImplementation(async (specifier: string) => {
+      if (specifier === '../extensionRegistry.js') return { getRuntimeExtensionsRoot: () => extensionRoot };
+      throw new Error(`unexpected specifier ${specifier}`);
+    });
+  }
+
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
@@ -148,6 +155,8 @@ describe('backendApi/extensions', () => {
     const { installMarketplacePackageAsExtension } = await import('./extensions.js');
     const sourceRoot = mkdtempSync(join(tmpdir(), 'np-marketplace-source-'));
     const runtimeDir = mkdtempSync(join(tmpdir(), 'np-marketplace-runtime-'));
+    const extensionRoot = mkdtempSync(join(tmpdir(), 'np-marketplace-extensions-'));
+    mockRuntimeExtensionRoot(extensionRoot);
     mkdirSync(join(sourceRoot, 'skills', 'review-code'), { recursive: true });
     writeFileSync(join(sourceRoot, 'skills', 'review-code', 'SKILL.md'), '---\nname: review-code\n---\n');
     resolverMocks.installPackageSource.mockReturnValueOnce({
@@ -173,7 +182,9 @@ describe('backendApi/extensions', () => {
       extension: { skillCount: 1, copiedSource: true },
     });
     expect(result.extension.id).toContain('imported-codex-skill');
+    expect(result.extension.packageRoot).toBe(join(extensionRoot, result.extension.id));
     expect(existsSync(join(result.extension.packageRoot, 'extension.json'))).toBe(true);
+    expect(existsSync(join(result.extension.packageRoot, 'dist', 'build-manifest.json'))).toBe(true);
     expect(JSON.parse(readFileSync(join(result.extension.packageRoot, 'extension.json'), 'utf-8'))).toMatchObject({
       importedPackage: { ecosystem: 'codex', packageType: 'skill', source: sourceRoot, copiedSource: true },
       contributes: { skills: [{ id: 'review-code', path: 'package/skills/review-code/SKILL.md' }] },
@@ -188,6 +199,8 @@ describe('backendApi/extensions', () => {
   it('records remote marketplace packages as managed extension wrappers without copied skills', async () => {
     const { installMarketplacePackageAsExtension } = await import('./extensions.js');
     const runtimeDir = mkdtempSync(join(tmpdir(), 'np-marketplace-runtime-remote-'));
+    const extensionRoot = mkdtempSync(join(tmpdir(), 'np-marketplace-extensions-'));
+    mockRuntimeExtensionRoot(extensionRoot);
     resolverMocks.installPackageSource.mockReturnValueOnce({
       installed: true,
       alreadyPresent: false,
@@ -218,7 +231,9 @@ describe('backendApi/extensions', () => {
     const { installMarketplacePackageAsExtension } = await import('./extensions.js');
     const sourceRoot = mkdtempSync(join(tmpdir(), 'np-marketplace-source-symlink-'));
     const runtimeDir = mkdtempSync(join(tmpdir(), 'np-marketplace-runtime-'));
+    const extensionRoot = mkdtempSync(join(tmpdir(), 'np-marketplace-extensions-'));
     const targetRoot = mkdtempSync(join(tmpdir(), 'np-marketplace-target-'));
+    mockRuntimeExtensionRoot(extensionRoot);
     symlinkSync(targetRoot, join(sourceRoot, 'linked-target'));
     resolverMocks.installPackageSource.mockReturnValueOnce({
       installed: true,

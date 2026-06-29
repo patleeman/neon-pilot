@@ -20,6 +20,7 @@ interface ExtensionBackendModule {
 }
 
 interface ExtensionRegistryModule {
+  getRuntimeExtensionsRoot(): string;
   invalidateExtensionRegistryReadCaches(): void;
   listExtensionInstallSummaries(): unknown;
 }
@@ -159,6 +160,7 @@ export async function installMarketplacePackageAsExtension(input: {
   const ecosystem = typeof input.ecosystem === 'string' && input.ecosystem.trim() ? input.ecosystem.trim() : 'external';
   const runtimeDir = typeof input.runtimeDir === 'string' && input.runtimeDir.trim() ? input.runtimeDir : undefined;
   if (!runtimeDir) throw new Error('runtimeDir is required.');
+  const registry = await importExtensionRegistry();
 
   const result = await installMarketplacePackageSource({
     source: input.source,
@@ -169,7 +171,7 @@ export async function installMarketplacePackageAsExtension(input: {
     ecosystem,
     packageType,
     source: result.source,
-    runtimeDir,
+    extensionRoot: registry.getRuntimeExtensionsRoot(),
   });
   return { ...result, extension };
 }
@@ -265,7 +267,7 @@ function writeSettingsValue(path: string, key: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(settings, null, 2)}\n`);
 }
 
-function createImportedPackageExtension(input: { ecosystem: string; packageType: string; source: string; runtimeDir: string }): {
+function createImportedPackageExtension(input: { ecosystem: string; packageType: string; source: string; extensionRoot: string }): {
   id: string;
   packageRoot: string;
   skillCount: number;
@@ -273,7 +275,7 @@ function createImportedPackageExtension(input: { ecosystem: string; packageType:
 } {
   const sourceLabel = labelForPackageSource(input.source);
   const id = importedPackageExtensionId(input.ecosystem, input.packageType, input.source);
-  const packageRoot = join(input.runtimeDir, 'extensions', id);
+  const packageRoot = join(input.extensionRoot, id);
   const packageDir = join(packageRoot, 'package');
   const sourceIsLocalDirectory = existsSync(input.source) && statSync(input.source).isDirectory();
 
@@ -329,6 +331,11 @@ function createImportedPackageExtension(input: { ecosystem: string; packageType:
         : 'Remote package contents remain registered as a package source; this wrapper records the install in the extension registry.',
       '',
     ].join('\n'),
+  );
+  mkdirSync(join(packageRoot, 'dist'), { recursive: true });
+  writeFileSync(
+    join(packageRoot, 'dist', 'build-manifest.json'),
+    `${JSON.stringify({ kind: 'imported-package-wrapper', generatedAt: new Date().toISOString() }, null, 2)}\n`,
   );
 
   return { id, packageRoot, skillCount: skills.length, copiedSource: sourceIsLocalDirectory };

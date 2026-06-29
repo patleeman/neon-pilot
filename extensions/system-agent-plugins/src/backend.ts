@@ -495,18 +495,43 @@ async function synchronizePluginWrapperExtensions(
   ctx: ExtensionBackendContext,
   registry: AgentPluginRegistry,
 ): Promise<AgentPluginRegistry> {
+  let nextRegistry = registry;
   let repaired = false;
   for (const plugin of registry.plugins) {
     if (!plugin.wrapperExtensionId) continue;
     const status = await Promise.resolve(ctx.extensions.getStatus(plugin.wrapperExtensionId));
+    if (plugin.wrapperExtensionRoot && ensureWrapperBuildManifest(plugin.wrapperExtensionRoot)) {
+      repaired = true;
+    }
+    if (plugin.enabled && !status.healthy && !status.errors?.length) {
+      const wrapper = await wrapPluginAsExtension({ sourcePath: plugin.source.path, ecosystem: plugin.ecosystem, ctx });
+      await Promise.resolve(ctx.extensions.setEnabled(wrapper.extension.id, true));
+      nextRegistry = updatePluginRecord(nextRegistry, plugin.id, {
+        wrapperExtensionId: wrapper.extension.id,
+        wrapperExtensionRoot: wrapper.extension.packageRoot,
+        updatedAt: now(),
+      });
+      repaired = true;
+      continue;
+    }
     if (status.enabled === plugin.enabled) continue;
     await Promise.resolve(ctx.extensions.setEnabled(plugin.wrapperExtensionId, plugin.enabled));
     repaired = true;
   }
   if (repaired) {
+    writeRegistry(ctx, nextRegistry);
+    await invalidateExtensionRegistryReadCaches();
     await ctx.runtime.refreshSkillMcpConfig();
   }
-  return registry;
+  return nextRegistry;
+}
+
+function ensureWrapperBuildManifest(wrapperRoot: string): boolean {
+  const buildManifest = join(wrapperRoot, 'dist', 'build-manifest.json');
+  if (existsSync(buildManifest)) return false;
+  mkdirSync(dirname(buildManifest), { recursive: true });
+  writeFileSync(buildManifest, `${JSON.stringify({ kind: 'imported-package-wrapper', repairedAt: new Date().toISOString() }, null, 2)}\n`);
+  return true;
 }
 
 function requirePluginId(input: Record<string, unknown>): string {

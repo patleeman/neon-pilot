@@ -1,5 +1,6 @@
 import './frontend.css';
 
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
 import { useEffect } from 'react';
 
 import { SettingsPage, SettingsSidebar } from './SettingsPage';
@@ -14,7 +15,7 @@ type SettingsSectionId =
   | 'settings-providers'
   | 'settings-desktop';
 
-function SettingsSectionPage({ sectionIds }: { sectionIds: SettingsSectionId[] }) {
+function SettingsSectionPage({ sectionIds, context }: ExtensionSurfaceProps & { sectionIds: SettingsSectionId[] }) {
   useEffect(() => {
     window.requestAnimationFrame(() => {
       const section = document.getElementById(sectionIds[0]);
@@ -24,31 +25,31 @@ function SettingsSectionPage({ sectionIds }: { sectionIds: SettingsSectionId[] }
     });
   }, [sectionIds]);
 
-  return <SettingsPage sectionIds={sectionIds} />;
+  return <SettingsPage sectionIds={sectionIds} context={context} />;
 }
 
 export { SettingsPage, SettingsSidebar };
 
-export function ProviderSettingsPage() {
-  return <SettingsSectionPage sectionIds={['settings-providers']} />;
+export function ProviderSettingsPage(props: ExtensionSurfaceProps) {
+  return <SettingsSectionPage {...props} sectionIds={['settings-providers']} />;
 }
 
-export function WorkspaceSettingsPage() {
-  return <SettingsSectionPage sectionIds={['settings-workspace']} />;
+export function WorkspaceSettingsPage(props: ExtensionSurfaceProps) {
+  return <SettingsSectionPage {...props} sectionIds={['settings-workspace']} />;
 }
 
-export function CommandsSettingsPage() {
-  return <SettingsSectionPage sectionIds={['settings-commands']} />;
+export function CommandsSettingsPage(props: ExtensionSurfaceProps) {
+  return <SettingsSectionPage {...props} sectionIds={['settings-commands']} />;
 }
 
-export function SecuritySettingsPage() {
-  return <SettingsSectionPage sectionIds={['settings-security']} />;
+export function SecuritySettingsPage(props: ExtensionSurfaceProps) {
+  return <SettingsSectionPage {...props} sectionIds={['settings-security']} />;
 }
 
-export function ExtensionsSettingsPage() {
-  return <SettingsSectionPage sectionIds={['settings-extensions']} />;
+export function ExtensionsSettingsPage(props: ExtensionSurfaceProps) {
+  return <SettingsSectionPage {...props} sectionIds={['settings-extensions']} />;
 }
 
-export function DesktopSettingsPage() {
-  return <SettingsSectionPage sectionIds={['settings-desktop']} />;
+export function DesktopSettingsPage(props: ExtensionSurfaceProps) {
+  return <SettingsSectionPage {...props} sectionIds={['settings-desktop']} />;
 }

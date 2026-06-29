@@ -5,12 +5,13 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
-  CardMeta,
   CenteredLoadingState,
-  EmptyState,
+  EditorToolbar,
+  EditorToolbarButton,
+  EditorToolbarGroup,
   Notice,
+  RowButton,
   SectionLabel,
-  SurfacePanel,
   Textarea,
   TextInput,
 } from '../components/ui';
@@ -69,19 +70,17 @@ function IssueList({ issues }: { issues: MemoryIssue[] }) {
   );
 }
 
-function NavRow({ active, title, meta, onClick }: { active: boolean; title: string; meta?: string; onClick: () => void }) {
+function FileRow({ active, title, meta, onClick }: { active: boolean; title: string; meta?: string; onClick: () => void }) {
   return (
-    <Button
-      variant="ghost"
+    <RowButton
       type="button"
+      selected={active}
       onClick={onClick}
-      className={`w-full min-w-0 px-3 py-2 text-left hover:bg-surface-hover focus:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
-        active ? 'bg-surface-selected text-primary' : 'text-secondary'
-      }`}
+      className="items-center justify-between gap-3 rounded-none px-3 py-1.5 text-left"
     >
-      <span className="block truncate text-[13px] font-medium">{title}</span>
-      {meta ? <span className="mt-0.5 block truncate text-[11px] text-dim">{meta}</span> : null}
-    </Button>
+      <span className="min-w-0 truncate font-mono text-[12px]">{title}</span>
+      {meta ? <span className="shrink-0 truncate text-[11px] text-dim">{meta}</span> : null}
+    </RowButton>
   );
 }
 
@@ -105,36 +104,28 @@ function MemoryOperations({
   }, [state.git.remoteUrl]);
 
   return (
-    <div className="border-t border-border-subtle px-3 py-3">
-      <SectionLabel tone="muted">Repository</SectionLabel>
-      <div className="mt-2 space-y-2">
-        <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2 text-[12px]">
-          <span className="text-dim">Branch</span>
-          <span className="truncate text-secondary">{state.git.branch ?? 'Git'}</span>
-          <span className="text-dim">Remote</span>
-          <span className="truncate text-secondary">{state.git.remoteUrl ? 'Configured' : 'Local only'}</span>
-          <span className="text-dim">Sync</span>
-          <span className="truncate text-secondary">
-            {state.git.ahead || state.git.behind ? `${state.git.ahead} ahead, ${state.git.behind} behind` : 'Up to date locally'}
-          </span>
-        </div>
-        <TextInput
-          value={remoteUrl}
-          onChange={(event) => setRemoteUrl(event.target.value)}
-          placeholder="Git remote URL"
-          className="w-full rounded-md border border-border bg-base px-2 py-1.5 text-[12px] text-primary outline-none focus:border-accent"
-        />
-        <div className="flex flex-wrap gap-2">
-          <Button disabled={!remoteUrl.trim() || busy === 'remote'} onClick={() => onSetRemote(remoteUrl)}>
-            Save remote
-          </Button>
-          <Button disabled={!state.git.remoteUrl || busy === 'sync'} onClick={onSync}>
-            Sync
-          </Button>
-          <Button disabled={busy === 'import'} onClick={onImportKnowledge}>
-            Import knowledge
-          </Button>
-        </div>
+    <div className="flex min-h-0 flex-col gap-2">
+      <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2 text-[12px]">
+        <span className="text-dim">Branch</span>
+        <span className="truncate text-secondary">{state.git.branch ?? 'Git'}</span>
+        <span className="text-dim">Remote</span>
+        <span className="truncate text-secondary">{state.git.remoteUrl ? 'Configured' : 'Local only'}</span>
+        <span className="text-dim">Sync</span>
+        <span className="truncate text-secondary">
+          {state.git.ahead || state.git.behind ? `${state.git.ahead} ahead, ${state.git.behind} behind` : 'Up to date locally'}
+        </span>
+      </div>
+      <TextInput value={remoteUrl} onChange={(event) => setRemoteUrl(event.target.value)} placeholder="Git remote URL" />
+      <div className="flex flex-wrap gap-2">
+        <Button disabled={!remoteUrl.trim() || busy === 'remote'} onClick={() => onSetRemote(remoteUrl)}>
+          Save remote
+        </Button>
+        <Button disabled={!state.git.remoteUrl || busy === 'sync'} onClick={onSync}>
+          Sync
+        </Button>
+        <Button disabled={busy === 'import'} onClick={onImportKnowledge}>
+          Import knowledge
+        </Button>
       </div>
     </div>
   );
@@ -155,7 +146,13 @@ function ScopeForm({ onCreate }: { onCreate: (input: { name: string; roots: stri
   const [saving, setSaving] = useState(false);
 
   if (!open) {
-    return <Button onClick={() => setOpen(true)}>New scope</Button>;
+    return (
+      <div className="px-3 py-2">
+        <Button className="w-full justify-start" onClick={() => setOpen(true)}>
+          New scope
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -163,11 +160,7 @@ function ScopeForm({ onCreate }: { onCreate: (input: { name: string; roots: stri
       <div className="space-y-2">
         <label className="block">
           <span className="text-[11px] font-medium uppercase text-dim">Name</span>
-          <TextInput
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className="mt-1 w-full rounded-md border border-border bg-base px-2 py-1.5 text-[13px] text-primary outline-none focus:border-accent"
-          />
+          <TextInput value={name} onChange={(event) => setName(event.target.value)} className="mt-1" />
         </label>
         <label className="block">
           <span className="text-[11px] font-medium uppercase text-dim">Roots</span>
@@ -175,7 +168,7 @@ function ScopeForm({ onCreate }: { onCreate: (input: { name: string; roots: stri
             value={roots}
             onChange={(event) => setRoots(event.target.value)}
             rows={2}
-            className="mt-1 w-full resize-none rounded-md border border-border bg-base px-2 py-1.5 font-mono text-[12px] text-primary outline-none focus:border-accent"
+            className="mt-1 resize-none font-mono text-[12px]"
           />
         </label>
         <label className="block">
@@ -184,7 +177,7 @@ function ScopeForm({ onCreate }: { onCreate: (input: { name: string; roots: stri
             value={aliases}
             onChange={(event) => setAliases(event.target.value)}
             rows={2}
-            className="mt-1 w-full resize-none rounded-md border border-border bg-base px-2 py-1.5 text-[12px] text-primary outline-none focus:border-accent"
+            className="mt-1 resize-none text-[12px]"
           />
         </label>
       </div>
@@ -240,42 +233,43 @@ function MemoryEditor({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="shrink-0 border-b border-border-subtle px-4 py-3">
-        <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="truncate text-[16px] font-semibold text-primary">{title}</h2>
             <p className="mt-1 truncate text-[12px] text-secondary">{description}</p>
           </div>
-          <div className="flex shrink-0 gap-2">
-            {editing ? (
-              <>
-                <Button
-                  variant="action"
-                  disabled={saving}
-                  onClick={async () => {
-                    setSaving(true);
-                    try {
-                      await onSave(draft, reason || `Update ${relativePath}`);
+          <EditorToolbar className="shrink-0">
+            <EditorToolbarGroup>
+              {editing ? (
+                <>
+                  <EditorToolbarButton
+                    disabled={saving}
+                    onClick={async () => {
+                      setSaving(true);
+                      try {
+                        await onSave(draft, reason || `Update ${relativePath}`);
+                        setEditing(false);
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                  >
+                    Save
+                  </EditorToolbarButton>
+                  <EditorToolbarButton
+                    onClick={() => {
+                      setDraft(content);
                       setEditing(false);
-                    } finally {
-                      setSaving(false);
-                    }
-                  }}
-                >
-                  Save
-                </Button>
-                <Button
-                  onClick={() => {
-                    setDraft(content);
-                    setEditing(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-              </>
-            ) : (
-              <Button onClick={() => setEditing(true)}>Edit</Button>
-            )}
-          </div>
+                    }}
+                  >
+                    Cancel
+                  </EditorToolbarButton>
+                </>
+              ) : (
+                <EditorToolbarButton onClick={() => setEditing(true)}>Edit</EditorToolbarButton>
+              )}
+            </EditorToolbarGroup>
+          </EditorToolbar>
         </div>
         <div className="mt-2 truncate font-mono text-[11px] text-dim">{relativePath}</div>
       </div>
@@ -284,7 +278,7 @@ function MemoryEditor({
           <Textarea
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            className="min-h-0 flex-1 resize-none rounded-md border border-border bg-base p-3 font-mono text-[12px] leading-5 text-primary outline-none focus:border-accent"
+            className="min-h-0 flex-1 resize-none border-0 bg-transparent p-0 font-mono text-[12px] leading-5 shadow-none"
             spellCheck={false}
           />
           <TextInput
@@ -295,11 +289,127 @@ function MemoryEditor({
           />
         </div>
       ) : (
-        <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-[12px] leading-5 text-primary">
+        <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words bg-base p-4 font-mono text-[12px] leading-5 text-primary">
           {content || 'No content.'}
         </pre>
       )}
     </div>
+  );
+}
+
+function MemoryInspector({
+  state,
+  history,
+  historyPath,
+  busy,
+  onSetRemote,
+  onSync,
+  onImportKnowledge,
+}: {
+  state: ManagedMemoryState;
+  history: MemoryGitChange[];
+  historyPath: string | null;
+  busy: string | null;
+  onSetRemote: (url: string) => Promise<void>;
+  onSync: () => Promise<void>;
+  onImportKnowledge: () => Promise<void>;
+}) {
+  return (
+    <section className="grid min-h-0 grid-cols-[minmax(0,1fr)_22rem] border-t border-border-subtle bg-panel/55">
+      <div className="min-h-0 overflow-auto border-r border-border-subtle">
+        <IssueList issues={state.issues} />
+        <div className="border-b border-border-subtle px-3 py-2">
+          <SectionLabel tone="muted">{historyPath ? 'File History' : 'Recent Changes'}</SectionLabel>
+        </div>
+        <ChangeList changes={historyPath ? history : state.recentChanges} />
+      </div>
+      <div className="min-h-0 overflow-auto px-3 py-2">
+        <SectionLabel tone="muted">Repository</SectionLabel>
+        <div className="mt-2">
+          <MemoryOperations state={state} busy={busy} onSetRemote={onSetRemote} onSync={onSync} onImportKnowledge={onImportKnowledge} />
+        </div>
+        <div className="mt-3 truncate border-t border-border-subtle pt-2 font-mono text-[11px] text-dim">{state.root}</div>
+      </div>
+    </section>
+  );
+}
+
+function MemoryFileNavigator({
+  state,
+  selection,
+  activeScopes,
+  busy,
+  onSelect,
+  onCreateCurrentScope,
+  onCreateScope,
+}: {
+  state: ManagedMemoryState;
+  selection: Selection;
+  activeScopes: MemoryScope[];
+  busy: string | null;
+  onSelect: (selection: Selection) => void;
+  onCreateCurrentScope: () => void;
+  onCreateScope: (input: { name: string; roots: string[]; aliases: string[] }) => Promise<void>;
+}) {
+  return (
+    <aside className="flex min-h-0 flex-col border-r border-border-subtle bg-panel/70">
+      <div className="shrink-0 border-b border-border-subtle px-3 py-2">
+        <SectionLabel tone="muted">Files</SectionLabel>
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="border-b border-border-subtle px-3 py-2">
+          <SectionLabel tone="muted">System</SectionLabel>
+        </div>
+        <FileRow active={selection.kind === 'system'} title="system.md" meta="always loaded" onClick={() => onSelect({ kind: 'system' })} />
+        <div className="border-y border-border-subtle px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <SectionLabel tone="muted">Scopes</SectionLabel>
+            <span className="text-[11px] text-dim">{activeScopes.length} active</span>
+          </div>
+        </div>
+        {state.scopes.length > 0 ? (
+          state.scopes.map((scope: MemoryScope) => (
+            <FileRow
+              key={scope.slug}
+              active={selection.kind === 'scope' && selection.slug === scope.slug}
+              title={`${scope.slug}/memory.md`}
+              meta={scope.active ? 'active' : scope.type}
+              onClick={() => onSelect({ kind: 'scope', slug: scope.slug })}
+            />
+          ))
+        ) : (
+          <p className="px-3 py-2 text-[12px] text-dim">No scope files.</p>
+        )}
+        {activeScopes.length === 0 ? (
+          <div className="border-t border-border-subtle px-3 py-2">
+            <Button className="w-full justify-start" disabled={busy === 'scope-current'} onClick={onCreateCurrentScope}>
+              Scope current workspace
+            </Button>
+          </div>
+        ) : null}
+        <ScopeForm onCreate={onCreateScope} />
+        <div className="border-y border-border-subtle px-3 py-2">
+          <SectionLabel tone="muted">Skills</SectionLabel>
+        </div>
+        {state.skills.length > 0 ? (
+          state.skills.map((skill) => (
+            <FileRow
+              key={skill.relativePath}
+              active={selection.kind === 'skill' && selection.relativePath === skill.relativePath}
+              title={skill.relativePath.replace(/^skills\//, '')}
+              meta={skill.description || fileLabel(skill.relativePath)}
+              onClick={() => onSelect({ kind: 'skill', relativePath: skill.relativePath })}
+            />
+          ))
+        ) : (
+          <p className="px-3 py-2 text-[12px] text-dim">No skill files.</p>
+        )}
+        <div className="border-y border-border-subtle px-3 py-2">
+          <SectionLabel tone="muted">Activity</SectionLabel>
+        </div>
+        <FileRow active={selection.kind === 'activity'} title="Recent changes" onClick={() => onSelect({ kind: 'activity' })} />
+      </div>
+    </aside>
   );
 }
 
@@ -394,37 +504,75 @@ export function MemoryPage() {
 
   if (!state?.initialized) {
     return (
-      <AppPageLayout>
-        <AppPageIntro title="Memory" />
-        <SurfacePanel className="max-w-2xl p-5">
-          <EmptyState
-            title="Create local memory"
-            body={`Neon Pilot will create a Git-backed memory folder at ${state?.root ?? 'the configured memory root'}. Agents can update it directly; every change is committed for inspection and recovery.`}
-            action={
-              <Button
-                variant="action"
-                onClick={async () => {
-                  setLoading(true);
-                  try {
-                    setState(await api.initializeManagedMemory());
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                Create memory
-              </Button>
-            }
-          />
-        </SurfacePanel>
+      <AppPageLayout shellClassName="flex h-full min-h-0 flex-col p-0" contentClassName="flex h-full min-h-0 flex-col">
+        <AppPageIntro
+          title="Memory"
+          className="shrink-0 border-b border-border-subtle px-5 py-3"
+          actions={
+            <Button
+              variant="action"
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  setState(await api.initializeManagedMemory());
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              Create memory
+            </Button>
+          }
+        />
+        <div className="grid min-h-0 flex-1 grid-cols-[17rem_minmax(0,1fr)] overflow-hidden bg-base">
+          <aside className="flex min-h-0 flex-col border-r border-border-subtle bg-panel/70">
+            <div className="shrink-0 border-b border-border-subtle px-3 py-2">
+              <SectionLabel tone="muted">Files</SectionLabel>
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto">
+              <div className="border-b border-border-subtle px-3 py-2">
+                <SectionLabel tone="muted">System</SectionLabel>
+              </div>
+              <FileRow active title="system.md" meta="pending" onClick={() => undefined} />
+              <div className="border-y border-border-subtle px-3 py-2">
+                <SectionLabel tone="muted">Scopes</SectionLabel>
+              </div>
+              <p className="px-3 py-2 text-[12px] text-dim">No scope files.</p>
+              <div className="border-y border-border-subtle px-3 py-2">
+                <SectionLabel tone="muted">Skills</SectionLabel>
+              </div>
+              <p className="px-3 py-2 text-[12px] text-dim">No skill files.</p>
+            </div>
+          </aside>
+          <main className="flex min-h-0 flex-col overflow-hidden">
+            <div className="shrink-0 border-b border-border-subtle px-4 py-3">
+              <div className="flex min-w-0 items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="truncate text-[16px] font-semibold text-primary">system.md</h2>
+                  <p className="mt-1 truncate text-[12px] text-secondary">Memory repository is not initialized.</p>
+                </div>
+              </div>
+              <div className="mt-2 truncate font-mono text-[11px] text-dim">{state?.root ?? 'memory/'}</div>
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto p-4 font-mono text-[12px] leading-5 text-secondary">
+              <p className="font-sans text-[13px] text-primary">Create memory to initialize the Git-backed file tree.</p>
+              <p className="mt-3">memory/</p>
+              <p> system.md</p>
+              <p> scopes/</p>
+              <p> skills/</p>
+              <p> reflections/</p>
+            </div>
+          </main>
+        </div>
       </AppPageLayout>
     );
   }
 
   return (
-    <AppPageLayout contentClassName="h-full min-h-0">
+    <AppPageLayout shellClassName="flex h-full min-h-0 flex-col p-0" contentClassName="flex h-full min-h-0 flex-col">
       <AppPageIntro
         title="Memory"
+        className="shrink-0 border-b border-border-subtle px-5 py-3"
         actions={
           <div className="flex items-center gap-2">
             <span className="text-[12px] text-secondary">
@@ -434,145 +582,82 @@ export function MemoryPage() {
           </div>
         }
       />
-      <div className="grid min-h-0 flex-1 grid-cols-[16rem_minmax(0,1fr)_20rem] overflow-hidden rounded-lg border border-border bg-panel">
-        <aside className="min-h-0 overflow-auto border-r border-border-subtle">
-          <div className="border-b border-border-subtle px-3 py-2">
-            <SectionLabel tone="muted">System</SectionLabel>
-          </div>
-          <NavRow
-            active={selection.kind === 'system'}
-            title="system.md"
-            meta="Always loaded"
-            onClick={() => setSelection({ kind: 'system' })}
-          />
-          <div className="mt-2 border-y border-border-subtle px-3 py-2">
-            <div className="flex items-center justify-between gap-2">
-              <SectionLabel tone="muted">Scopes</SectionLabel>
-              <span className="text-[11px] text-dim">{activeScopes.length} active</span>
-            </div>
-          </div>
-          {state.scopes.length > 0 ? (
-            state.scopes.map((scope: MemoryScope) => (
-              <NavRow
-                key={scope.slug}
-                active={selection.kind === 'scope' && selection.slug === scope.slug}
-                title={scope.name}
-                meta={scope.active ? 'Active for current workspace' : scope.roots[0] || scope.type}
-                onClick={() => setSelection({ kind: 'scope', slug: scope.slug })}
-              />
-            ))
-          ) : (
-            <p className="px-3 py-2 text-[12px] text-dim">No scopes.</p>
-          )}
-          {activeScopes.length === 0 ? (
-            <div className="border-t border-border-subtle p-3">
-              <Button
-                className="w-full"
-                disabled={busy === 'scope-current'}
-                onClick={() =>
-                  runAction('scope-current', () => api.createMemoryScopeFromCwd({ reason: 'Add current workspace memory scope' }))
-                }
-              >
-                Scope current workspace
-              </Button>
-            </div>
-          ) : null}
-          <ScopeForm
-            onCreate={async (input) => {
-              setState(
-                await api.createMemoryScope({ ...input, type: 'workspace', inject: true, reason: `Add ${input.name} memory scope` }),
-              );
-            }}
-          />
-          <div className="mt-2 border-y border-border-subtle px-3 py-2">
-            <SectionLabel tone="muted">Skills</SectionLabel>
-          </div>
-          {state.skills.length > 0 ? (
-            state.skills.map((skill) => (
-              <NavRow
-                key={skill.relativePath}
-                active={selection.kind === 'skill' && selection.relativePath === skill.relativePath}
-                title={skill.name}
-                meta={skill.description || fileLabel(skill.relativePath)}
-                onClick={() => setSelection({ kind: 'skill', relativePath: skill.relativePath })}
-              />
-            ))
-          ) : (
-            <p className="px-3 py-2 text-[12px] text-dim">No memory skills.</p>
-          )}
-          <div className="mt-2 border-y border-border-subtle px-3 py-2">
-            <SectionLabel tone="muted">Activity</SectionLabel>
-          </div>
-          <NavRow active={selection.kind === 'activity'} title="Recent changes" onClick={() => setSelection({ kind: 'activity' })} />
-        </aside>
-        <main className="flex min-h-0 flex-col overflow-hidden bg-base">
-          {actionError ? (
-            <div className="shrink-0 border-b border-border-subtle">
-              <Notice tone="danger">{actionError}</Notice>
-            </div>
-          ) : null}
-          <div className="min-h-0 flex-1 overflow-hidden">
-            {selection.kind === 'system' ? (
-              <MemoryEditor
-                relativePath="system.md"
-                title="System memory"
-                description="Always injected into agent context."
-                content={state.system.content}
-                onSave={async (content, reason) => {
-                  setActionError(null);
-                  setState(await api.writeMemoryFile({ relativePath: 'system.md', content, reason }));
-                }}
-              />
-            ) : selectedScope ? (
-              <MemoryEditor
-                relativePath={selectedScope.relativePath}
-                title={selectedScope.name}
-                description={selectedScope.active ? 'Active for the current workspace.' : 'Loaded when its activation rules match.'}
-                content={selectedScope.content}
-                onSave={async (content, reason) => {
-                  setActionError(null);
-                  setState(await api.writeMemoryFile({ relativePath: selectedScope.relativePath, content, reason }));
-                }}
-              />
-            ) : selectedSkill ? (
-              <MemoryEditor
-                relativePath={selectedSkill.relativePath}
-                title={selectedSkill.name}
-                description="Description is discoverable; full skill loads on demand."
-                content={selectedSkill.content}
-                onSave={async (content, reason) => {
-                  setActionError(null);
-                  setState(await api.writeMemoryFile({ relativePath: selectedSkill.relativePath, content, reason }));
-                }}
-              />
-            ) : selection.kind === 'activity' ? (
-              <div className="h-full overflow-auto">
-                <div className="border-b border-border-subtle px-4 py-3">
-                  <h2 className="text-[16px] font-semibold text-primary">Recent changes</h2>
-                  <p className="mt-1 text-[12px] text-secondary">Git commits created by memory initialization and edits.</p>
-                </div>
-                <ChangeList changes={state.recentChanges} />
+      <div className="grid min-h-0 flex-1 grid-cols-[17rem_minmax(0,1fr)] overflow-hidden bg-base">
+        <MemoryFileNavigator
+          state={state}
+          selection={selection}
+          activeScopes={activeScopes}
+          busy={busy}
+          onSelect={setSelection}
+          onCreateCurrentScope={() =>
+            runAction('scope-current', () => api.createMemoryScopeFromCwd({ reason: 'Add current workspace memory scope' }))
+          }
+          onCreateScope={async (input) => {
+            setState(await api.createMemoryScope({ ...input, type: 'workspace', inject: true, reason: `Add ${input.name} memory scope` }));
+          }}
+        />
+        <main className="grid min-h-0 grid-rows-[minmax(0,1fr)_12.5rem] overflow-hidden bg-base">
+          <section className="min-h-0 overflow-hidden">
+            {actionError ? (
+              <div className="shrink-0 border-b border-border-subtle">
+                <Notice tone="danger">{actionError}</Notice>
               </div>
             ) : null}
-          </div>
-        </main>
-        <aside className="min-h-0 overflow-auto border-l border-border-subtle bg-panel">
-          <IssueList issues={state.issues} />
-          <div className="border-b border-border-subtle px-3 py-2">
-            <SectionLabel tone="muted">{historyPath ? 'File History' : 'Recent Changes'}</SectionLabel>
-          </div>
-          <ChangeList changes={historyPath ? history : state.recentChanges} />
-          <MemoryOperations
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {selection.kind === 'system' ? (
+                <MemoryEditor
+                  relativePath="system.md"
+                  title="System memory"
+                  description="Always injected into agent context."
+                  content={state.system.content}
+                  onSave={async (content, reason) => {
+                    setActionError(null);
+                    setState(await api.writeMemoryFile({ relativePath: 'system.md', content, reason }));
+                  }}
+                />
+              ) : selectedScope ? (
+                <MemoryEditor
+                  relativePath={selectedScope.relativePath}
+                  title={selectedScope.name}
+                  description={selectedScope.active ? 'Active for the current workspace.' : 'Loaded when its activation rules match.'}
+                  content={selectedScope.content}
+                  onSave={async (content, reason) => {
+                    setActionError(null);
+                    setState(await api.writeMemoryFile({ relativePath: selectedScope.relativePath, content, reason }));
+                  }}
+                />
+              ) : selectedSkill ? (
+                <MemoryEditor
+                  relativePath={selectedSkill.relativePath}
+                  title={selectedSkill.name}
+                  description="Description is discoverable; full skill loads on demand."
+                  content={selectedSkill.content}
+                  onSave={async (content, reason) => {
+                    setActionError(null);
+                    setState(await api.writeMemoryFile({ relativePath: selectedSkill.relativePath, content, reason }));
+                  }}
+                />
+              ) : selection.kind === 'activity' ? (
+                <div className="h-full overflow-auto">
+                  <div className="border-b border-border-subtle px-4 py-3">
+                    <h2 className="text-[16px] font-semibold text-primary">Recent changes</h2>
+                    <p className="mt-1 text-[12px] text-secondary">Git commits created by memory initialization and edits.</p>
+                  </div>
+                  <ChangeList changes={state.recentChanges} />
+                </div>
+              ) : null}
+            </div>
+          </section>
+          <MemoryInspector
             state={state}
+            history={history}
+            historyPath={historyPath}
             busy={busy}
             onSetRemote={(url) => runAction('remote', () => api.setMemoryRemote({ url }))}
             onSync={() => runAction('sync', () => api.syncMemoryRemote())}
             onImportKnowledge={() => runAction('import', () => api.importKnowledgeMemory())}
           />
-          <div className="border-t border-border-subtle px-3 py-2">
-            <CardMeta as="div">{state.root}</CardMeta>
-          </div>
-        </aside>
+        </main>
       </div>
     </AppPageLayout>
   );

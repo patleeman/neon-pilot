@@ -132,6 +132,41 @@ describe('system-agent-plugins backend', () => {
     expect(ctx.runtime.refreshSkillMcpConfig).toHaveBeenCalled();
   });
 
+  it('recreates enabled plugin wrappers that disappeared from the extension registry', async () => {
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'np-agent-plugin-runtime-'));
+    const ctx = createContext(runtimeDir);
+    const source = createLocalPlugin();
+    const added = await addPlugin({ sourceKind: 'local', source, ecosystem: 'codex' }, ctx);
+    mocks.installMarketplacePackageAsExtension.mockResolvedValueOnce({
+      installed: true,
+      alreadyPresent: true,
+      source,
+      target: 'local',
+      settingsPath: join(runtimeDir, 'settings.json'),
+      extension: {
+        id: 'imported-codex-agent-review-pack-repaired',
+        packageRoot: join(runtimeDir, 'extensions', 'imported-codex-agent-review-pack-repaired'),
+        skillCount: 1,
+        copiedSource: true,
+      },
+    });
+    ctx.extensions.getStatus.mockReturnValueOnce({ enabled: false, healthy: false });
+
+    const listed = await listPlugins({}, ctx);
+
+    expect(listed.plugins[0]).toMatchObject({
+      id: added.plugin.id,
+      enabled: true,
+      wrapperExtensionId: 'imported-codex-agent-review-pack-repaired',
+    });
+    expect(mocks.installMarketplacePackageAsExtension).toHaveBeenLastCalledWith(
+      expect.objectContaining({ ecosystem: 'codex', packageType: 'agent', source }),
+    );
+    expect(ctx.extensions.setEnabled).toHaveBeenCalledWith('imported-codex-agent-review-pack-repaired', true);
+    expect(mocks.invalidateExtensionRegistryReadCaches).toHaveBeenCalled();
+    expect(ctx.runtime.refreshSkillMcpConfig).toHaveBeenCalled();
+  });
+
   it('does not mark a plugin enabled when wrapper extension enablement fails', async () => {
     const runtimeDir = mkdtempSync(join(tmpdir(), 'np-agent-plugin-runtime-'));
     const ctx = createContext(runtimeDir);

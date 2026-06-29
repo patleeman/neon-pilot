@@ -93,7 +93,7 @@ describe('MemoryPage', () => {
 
     render(<MemoryPage />);
 
-    expect(await screen.findByText('Create local memory')).toBeTruthy();
+    expect(await screen.findByText('Memory repository is not initialized.')).toBeTruthy();
     fireEvent.click(screen.getByText('Create memory'));
 
     await waitFor(() => expect(api.initializeManagedMemory).toHaveBeenCalled());
@@ -122,8 +122,8 @@ describe('MemoryPage', () => {
     render(<MemoryPage />);
 
     await waitFor(() => expect(screen.getAllByText('system.md').length).toBeGreaterThan(0));
-    expect(screen.getByText('Neon Pilot')).toBeTruthy();
-    expect(screen.getByText('code-review')).toBeTruthy();
+    expect(screen.getByText('neon-pilot/memory.md')).toBeTruthy();
+    expect(screen.getByText('code-review/SKILL.md')).toBeTruthy();
     expect(screen.getAllByText('Remember concise output').length).toBeGreaterThan(0);
     const historyCallsBeforeSave = vi.mocked(api.memoryFileHistory).mock.calls.length;
 
@@ -171,6 +171,6 @@ describe('MemoryPage', () => {
 
     fireEvent.click(await screen.findByText('Import knowledge'));
     await waitFor(() => expect(api.importKnowledgeMemory).toHaveBeenCalled());
-    expect(await screen.findByText('Imported knowledge')).toBeTruthy();
+    expect(await screen.findByText('imported-knowledge/memory.md')).toBeTruthy();
   });
 });
