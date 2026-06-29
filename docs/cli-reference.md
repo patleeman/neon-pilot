@@ -147,7 +147,7 @@ Examples:
 Update AI Gateway settings.
 
 - Source: extension (system-model-gateway)
-- Usage: `neon-pilot ai-gateway settings set [--host <host>] [--port <port>] [--default-model <model>] [--auth-token <token>] [--json]`
+- Usage: `neon-pilot ai-gateway settings set [--enabled] [--host <host>] [--port <port>] [--default-model <model>] [--auth-token <token>] [--json]`
 - Mode: write
 - Requires app: yes
 - Idempotent: yes
@@ -2019,7 +2019,7 @@ Examples:
 Move a routine.
 
 - Source: extension (system-routines)
-- Usage: `neon-pilot routines move <routine-id> --position before|after|inside [--target-routine-id <id>] [--json]`
+- Usage: `neon-pilot routines move <routine-id> --position before|after|inside [--target-routine-id <id>] [--parent-routine-id <id>] [--parent-outcome-id <id>] [--json]`
 - Mode: write
 - Requires app: yes
 - Idempotent: yes
@@ -2526,7 +2526,7 @@ Examples:
 Write text to a terminal session.
 
 - Source: extension (system-terminal)
-- Usage: `neon-pilot terminal write <terminal-id> <text> [--json]`
+- Usage: `neon-pilot terminal write <terminal-id> <text> [--data <text>] [--json]`
 - Mode: write
 - Requires app: yes
 - Idempotent: no
