@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.32** — stable release being prepared locally.
+**v0.11.33** — stable release being prepared locally.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.32
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.33
 
 Highlights in this train:
 
-- Removes the managed Memory product surface while preserving existing Knowledge/reference flows.
-- Improves transcript resilience with repaired dangling tool tails, aborted-tool markers, progressive Markdown streaming, and more deliberate history pagination.
-- Hardens Telegram Gateway delivery with richer previews, thread switching controls, slash commands, and mirrored desktop turns.
-- Adds Agent Plugins and system-extension CLI administration workflows.
-- Polishes composer labels, todo shelf defaults, model-switch auth, and release/automation documentation.
+- Adds Model Arena blind duels with GA-ready setup, clearer baseline/challenger language, and shared design-system controls.
+- Restores composer dictation/active-composer routing so global controls reach the focused composer reliably.
+- Wires extension transcript block clients through the local API and preserves context details in rendered transcript blocks.
+- Exposes extension parallel prompt controls while preserving prompt metadata and auto-import state through live-session persistence.
+- Tightens design-system guardrails so first-party UI work uses shared primitives by default.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.33 — 2026-06-29
+
+### Highlights
+
+- Adds Model Arena blind duels so users can compare two candidate model responses without seeing which model is which until judging.
+- Hardens Model Arena setup with clearer challenger/baseline wording, a shared switch control, safer extension settings, and GA-ready docs.
+- Restores composer dictation and active-composer routing so global dictation controls target the focused composer instance reliably.
+- Preserves extension transcript block details and wires transcript-block clients through the local API so extension-rendered context stays inspectable.
+- Exposes parallel prompt controls to extensions and preserves prompt metadata/auto-import state through live-session persistence.
+- Tightens design-system guardrails so new UI work defaults to shared primitives instead of ad hoc local controls.
+
+### Notes
+
+- 13 commits since the previous release.
+
 ## 0.11.32 — 2026-06-29
 
 ### Highlights
