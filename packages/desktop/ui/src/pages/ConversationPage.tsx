@@ -2812,6 +2812,26 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     };
   }, [shouldLoadMemoryData]);
 
+  useEffect(() => {
+    if (!requestedMemoryDataRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    api
+      .memory()
+      .then((data) => {
+        if (!cancelled) {
+          setMemoryData(data);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [versions.extensions, versions.knowledgeBase]);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const composerShellRef = useRef<HTMLDivElement | null>(null);
   const [composerShellWidth, setComposerShellWidth] = useState<number | null>(null);

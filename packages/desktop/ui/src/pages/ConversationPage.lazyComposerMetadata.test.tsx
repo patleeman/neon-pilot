@@ -4,8 +4,9 @@ import React from 'react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AppDataContext, LiveTitlesContext } from '../app/contexts';
+import { AppDataContext, AppEventsContext, INITIAL_APP_EVENT_VERSIONS, LiveTitlesContext } from '../app/contexts';
 import { DRAWING_PICKER_OPEN_COMMAND_EVENT } from '../components/conversation/drawingPickerCommands';
+import { INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS } from '../conversation/conversationEventVersions';
 import { SAVED_WORKSPACE_PATHS_STORAGE_KEY } from '../local/localSettings';
 import { sessionStore } from '../store';
 import { ConversationPage } from './ConversationPage';
@@ -384,6 +385,81 @@ function renderConversationPage(options?: { setTitle?: (id: string, title: strin
       </MemoryRouter>
     </AppDataContext.Provider>,
   );
+}
+
+function renderConversationPageWithMutableAppEvents() {
+  function Harness() {
+    const [extensionVersion, setExtensionVersion] = React.useState(0);
+    return (
+      <AppEventsContext.Provider
+        value={{
+          versions: { ...INITIAL_APP_EVENT_VERSIONS, extensions: extensionVersion },
+          conversationVersions: INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS,
+          conversationMetadataVersions: INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS,
+        }}
+      >
+        <button type="button" onClick={() => setExtensionVersion((version) => version + 1)}>
+          Bump extensions
+        </button>
+        <AppDataContext.Provider
+          value={{
+            projects: null,
+            sessions: [
+              {
+                id: 'conv-regression',
+                file: '/tmp/conv-regression.jsonl',
+                timestamp: '2026-05-27T12:00:00.000Z',
+                cwd: '/tmp/project',
+                cwdSlug: 'project',
+                model: 'openai/gpt-5.4',
+                title: 'Regression conversation',
+                messageCount: 2,
+                isLive: false,
+              },
+            ],
+            tasks: [],
+            runs: null,
+            executions: null,
+            setProjects: vi.fn(),
+            setSessions: vi.fn(),
+            setTasks: vi.fn(),
+            setRuns: vi.fn(),
+            setExecutions: vi.fn(),
+          }}
+        >
+          <MemoryRouter initialEntries={['/conversations/conv-regression']}>
+            <Routes>
+              <Route
+                path="/conversations/:id"
+                element={
+                  <LiveTitlesContext.Provider value={{ titles: new Map(), setTitle: vi.fn() }}>
+                    <ConversationPage />
+                  </LiveTitlesContext.Provider>
+                }
+              />
+            </Routes>
+          </MemoryRouter>
+        </AppDataContext.Provider>
+      </AppEventsContext.Provider>
+    );
+  }
+
+  sessionStore.replaceAll([
+    {
+      id: 'conv-regression',
+      file: '/tmp/conv-regression.jsonl',
+      timestamp: '2026-05-27T12:00:00.000Z',
+      cwd: '/tmp/project',
+      cwdSlug: 'project',
+      model: 'openai/gpt-5.4',
+      title: 'Regression conversation',
+      messageCount: 2,
+      isLive: false,
+    },
+  ]);
+  sessionStore.markReady?.();
+
+  return render(<Harness />);
 }
 
 function renderDraftConversationPage() {
@@ -781,6 +857,44 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
     expect(apiMock.extensionMentions).toHaveBeenCalledTimes(2);
+  });
+
+  it('refreshes slash skill suggestions after extension capabilities change', async () => {
+    vi.useRealTimers();
+    apiMock.memory
+      .mockResolvedValueOnce({
+        memoryDocs: [],
+        skills: [{ name: 'initial-skill', source: 'global', description: 'Initial skill.', path: '/skills/initial/SKILL.md' }],
+      })
+      .mockResolvedValueOnce({
+        memoryDocs: [],
+        skills: [
+          { name: 'initial-skill', source: 'global', description: 'Initial skill.', path: '/skills/initial/SKILL.md' },
+          {
+            name: 'agent-plugin/code-review',
+            source: 'extension:agent-plugin',
+            description: 'Review code with the imported agent plugin.',
+            path: '/plugins/agent-plugin/skills/code-review/SKILL.md',
+          },
+        ],
+      });
+
+    renderConversationPageWithMutableAppEvents();
+
+    const textarea = screen.getByPlaceholderText(/Message Neon Pilot/i);
+    fireEvent.change(textarea, { target: { value: '/skill' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('/skill use initial-skill')).toBeTruthy();
+    });
+    expect(screen.queryByText('/skill use agent-plugin/code-review')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bump extensions' }));
+
+    await waitFor(() => {
+      expect(apiMock.memory).toHaveBeenCalledTimes(2);
+    });
+    expect(await screen.findByText('/skill use agent-plugin/code-review')).toBeTruthy();
   });
 
   it('loads hidden transcript pages only from the Load previous action', async () => {
