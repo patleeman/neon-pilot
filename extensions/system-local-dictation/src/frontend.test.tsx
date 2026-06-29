@@ -266,7 +266,6 @@ describe('DictationButton', () => {
     expect(activeAppendText).toHaveBeenCalledWith('active transcript');
     expect(inactiveAppendText).not.toHaveBeenCalled();
   });
-
   it('installs the selected model while recording and waits before first transcription', async () => {
     const setContext = vi.fn();
     const appendText = vi.fn();
