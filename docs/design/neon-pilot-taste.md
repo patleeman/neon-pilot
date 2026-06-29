@@ -140,6 +140,10 @@ Avoid secondary text that merely rephrases the label. Avoid marketing language, 
 
 ## Controls
 
+Use the design system before local markup. App UI should import shared primitives from `@neon-pilot/ui` or `@neon-pilot/ui/shared`; first-party extension UI should import from `@neon-pilot/extensions/ui` and settings-specific surfaces from `@neon-pilot/extensions/settings`.
+
+Do not hand-roll lookalike controls or chrome when a primitive exists. This includes buttons, icon buttons, toggles, selects, inputs, segmented controls, menus, tabs, tables, lists, cards, page shells, settings rows, loading states, empty states, and error states. Local JSX is for product-specific layout and content, not for rebuilding the component library. If a primitive cannot express the needed workflow, keep the exception narrow, document why near the code, and consider adding or extending a shared primitive instead.
+
 Always choose the friendliest constrained control that matches the data.
 
 - Boolean: switch or checkbox.

@@ -12,6 +12,7 @@
 - For web UI, prefer server-pushed updates over polling when the backend can publish events.
 - Multiple agents may be working here. Do targeted changes and targeted checkpoints; stop if unrelated edits conflict with your work.
 - For desktop app UI, use shared primitives from `@neon-pilot/ui`/`@neon-pilot/ui/shared` instead of hand-rolled Tailwind component chrome. For first-party extension UI and settings surfaces, use `@neon-pilot/extensions/ui` and `@neon-pilot/extensions/settings`. If a raw HTML/Tailwind pattern is genuinely needed, keep the exception narrow and update the UI-pattern guardrail or docs so future agents do not silently bypass the design system.
+- Treat design-system components as the default implementation path, not an optional polish pass. Before adding local JSX for buttons, toggles, selects, inputs, toolbars, tabs, menus, cards, tables, lists, empty/error/loading states, settings rows, or page chrome, first check whether the needed primitive already exists in `@neon-pilot/ui`, `@neon-pilot/ui/shared`, `@neon-pilot/extensions/ui`, or `@neon-pilot/extensions/settings`. Local markup is acceptable for product-specific layout and content only after that check; do not create extension-local lookalikes of shared controls.
 
 ## Prompt and knowledge rules
 
@@ -53,6 +54,7 @@
 ## UI design bans
 
 - Before creating or modifying user-visible app or extension UI, read `docs/design/neon-pilot-taste.md`. For generated extension UI, also read `benchmarks/extension-quality/visual-rubric.md` and use `docs/design/extension-visual-refinement.md` when iterating with screenshot-backed judges.
+- Design-system first. If a shared primitive exists, use it. Raw `<button>`, `<select>`, `<input>`, custom toggle/segmented controls, ad hoc menu chrome, locally styled table/list/card chrome, and one-off loading/empty/error treatments are banned unless the existing primitives cannot express the workflow; document that exception near the code and update the guardrail or docs if the pattern should recur.
 - Always choose the most user-friendly control for the job. Prefer constrained controls such as dropdowns, segmented controls, checkboxes, toggles, sliders, steppers, pickers, and resource choosers over free-form text inputs when the valid values are known. Prefer key/value or structured row editors for individual settings over a raw JSON textarea unless the data is genuinely large, deeply nested, or expert-only.
 - User-reachable actions should be command-backed so they can appear in the command palette and be hot-keyed. Add command contributions for meaningful buttons, navigation actions, workflow operations, and toolbar actions; wire default or user-editable keybindings when a shortcut is part of the expected workflow.
 - Avoid nested bordered containers/cards unless truly unavoidable.
