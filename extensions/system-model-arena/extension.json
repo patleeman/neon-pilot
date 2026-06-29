@@ -10,6 +10,7 @@
     "entry": "dist/backend.mjs",
     "actions": [
       { "id": "getArenaState", "handler": "getArenaState", "title": "Get Model Arena state", "worker": { "enabled": true } },
+      { "id": "listArenaModels", "handler": "listArenaModels", "title": "List Model Arena models", "worker": { "enabled": true } },
       { "id": "saveArenaSettings", "handler": "saveArenaSettings", "title": "Save Model Arena settings", "worker": { "enabled": true } },
       { "id": "voteDuel", "handler": "voteDuel", "title": "Vote on Model Arena duel", "worker": { "enabled": true } },
       { "id": "startManualDuel", "handler": "startManualDuel", "title": "Start model duel", "worker": { "enabled": true } }

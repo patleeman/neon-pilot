@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { onConversationRunEnded, saveArenaSettings, voteDuel } from './backend.js';
+import { getArenaState, listArenaModels, onConversationRunEnded, saveArenaSettings, voteDuel } from './backend.js';
 
 type StorageEntry = { key: string; value: unknown };
 
@@ -8,6 +8,7 @@ function createContext(initial: Record<string, unknown> = {}) {
   const store = new Map<string, unknown>(Object.entries(initial));
   const manageParallelJob = vi.fn(async () => ({ ok: true, status: 'skipped' as const }));
   const updateTranscriptBlock = vi.fn(async () => ({ blockId: 'block-1' }));
+  const listModels = vi.fn(async () => []);
   return {
     store,
     ctx: {
@@ -26,7 +27,11 @@ function createContext(initial: Record<string, unknown> = {}) {
         manageParallelJob,
         updateTranscriptBlock,
       },
+      models: {
+        list: listModels,
+      },
     },
+    listModels,
     manageParallelJob,
     updateTranscriptBlock,
   };
@@ -90,6 +95,29 @@ describe('Model Arena backend', () => {
       rampDownAfterVotes: 13,
       minPromptChars: 4,
       challengerModels: ['openai/gpt-5', 'anthropic/claude-sonnet'],
+    });
+  });
+
+  it('returns normal model dropdown options for arena challengers', async () => {
+    const harness = createContext({ settings: { challengerModels: ['openai/gpt-5'] } });
+    harness.listModels.mockResolvedValue([
+      { id: 'gpt-5', name: 'GPT-5', provider: 'openai', input: ['text', 'image'] },
+      { id: 'claude-sonnet', name: 'Claude Sonnet', provider: 'anthropic' },
+      { id: '', name: 'Broken', provider: 'openai' },
+      { id: 'no-provider', name: 'No Provider', provider: '' },
+    ]);
+
+    await expect(listArenaModels({}, harness.ctx as never)).resolves.toEqual([
+      { id: 'gpt-5', name: 'GPT-5', provider: 'openai', input: ['text', 'image'] },
+      { id: 'claude-sonnet', name: 'Claude Sonnet', provider: 'anthropic', input: ['text'] },
+    ]);
+
+    await expect(getArenaState({}, harness.ctx as never)).resolves.toMatchObject({
+      settings: { challengerModels: ['openai/gpt-5'] },
+      models: [
+        { id: 'gpt-5', name: 'GPT-5', provider: 'openai' },
+        { id: 'claude-sonnet', name: 'Claude Sonnet', provider: 'anthropic' },
+      ],
     });
   });
 

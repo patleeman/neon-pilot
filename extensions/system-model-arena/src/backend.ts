@@ -56,6 +56,13 @@ interface Stats {
   models: Record<string, ModelStat>;
 }
 
+interface ArenaModel {
+  id: string;
+  name: string;
+  provider: string;
+  input: readonly string[];
+}
+
 const defaultSettings = (): Settings => ({
   automaticDuels: true,
   sampleRate: 0.35,
@@ -428,11 +435,24 @@ export async function voteDuel(input: unknown, ctx: ExtensionBackendContext) {
 
 export async function getArenaState(_input: unknown, ctx: ExtensionBackendContext) {
   const duels = (await ctx.storage.list<Duel>(DUEL_PREFIX)).map((entry) => entry.value).filter(isRecord);
-  return { settings: await settings(ctx), stats: await stats(ctx), duels };
+  return { settings: await settings(ctx), stats: await stats(ctx), duels, models: await listArenaModels({}, ctx) };
 }
 
 export async function saveArenaSettings(input: unknown, ctx: ExtensionBackendContext) {
   const next = normalizeSettings(input);
   await ctx.storage.put(SETTINGS_KEY, next);
   return { settings: next };
+}
+
+export async function listArenaModels(_input: unknown, ctx: ExtensionBackendContext): Promise<ArenaModel[]> {
+  const models = (await ctx.models.list().catch(() => [])) as unknown[];
+  return models
+    .filter(isRecord)
+    .map((model) => ({
+      id: asString(model.id),
+      name: asString(model.name) || asString(model.id),
+      provider: asString(model.provider),
+      input: Array.isArray(model.input) ? model.input.filter((item): item is string => typeof item === 'string') : ['text'],
+    }))
+    .filter((model) => model.id && model.provider);
 }

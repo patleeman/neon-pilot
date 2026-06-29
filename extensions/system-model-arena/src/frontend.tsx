@@ -1,14 +1,5 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import {
-  AppPageIntro,
-  AppPageLayout,
-  Button,
-  ErrorState,
-  SegmentedControl,
-  StatusDot,
-  Textarea,
-  TextInput,
-} from '@neon-pilot/extensions/ui';
+import { AppPageIntro, AppPageLayout, Button, ErrorState, SegmentedControl, Select, StatusDot, TextInput } from '@neon-pilot/extensions/ui';
 import React, { useEffect, useMemo, useState } from 'react';
 
 type ArenaSettings = {
@@ -35,6 +26,25 @@ type ArenaState = {
   settings: ArenaSettings;
   stats: { models: Record<string, ModelStat> };
   duels: Array<Record<string, unknown>>;
+  models: ArenaModel[];
+};
+
+type ArenaModel = {
+  id: string;
+  name: string;
+  provider: string;
+  input?: string[];
+};
+
+type RankedModelRow = {
+  modelRef: string;
+  rating: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  neither: number;
+  votes: number;
+  summary: string;
 };
 
 type DuelBlockData = {
@@ -53,10 +63,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function parseModels(value: string): string[] {
+function normalizeModels(models: string[]): string[] {
   const seen = new Set<string>();
-  return value
-    .split(/[\n,;]+/)
+  return models
     .map((item) => item.trim())
     .filter((item) => {
       if (!item || seen.has(item)) return false;
@@ -76,7 +85,11 @@ function confidenceLabel(votes: number): string {
   return 'Low';
 }
 
-function taskSummary(model: ModelStat): string {
+function taskSummary(model: ModelStat, selectedTask: string): string {
+  if (selectedTask !== 'all') {
+    const stat = model.byTask[selectedTask];
+    return stat ? `${selectedTask} ${stat.wins}W/${stat.losses}L/${stat.ties}T` : '';
+  }
   return Object.entries(model.byTask)
     .sort(([, a], [, b]) => b.votes - a.votes)
     .slice(0, 3)
@@ -84,9 +97,33 @@ function taskSummary(model: ModelStat): string {
     .join(' · ');
 }
 
+function modelRef(model: ArenaModel): string {
+  return `${model.provider}/${model.id}`;
+}
+
+function modelLabel(model: ArenaModel): string {
+  return `${model.name || model.id} · ${model.provider}`;
+}
+
+function firstAvailableModelRef(models: ArenaModel[], challengerModels: string[], current = ''): string {
+  const available = models.map(modelRef).filter((ref) => !challengerModels.includes(ref));
+  return current && available.includes(current) ? current : (available[0] ?? '');
+}
+
+function uniqueTasks(stats: ArenaState['stats'] | undefined): string[] {
+  const tasks = new Set<string>();
+  for (const model of Object.values(stats?.models ?? {})) {
+    for (const task of Object.keys(model.byTask ?? {})) {
+      tasks.add(task);
+    }
+  }
+  return [...tasks].sort((a, b) => a.localeCompare(b));
+}
+
 export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
   const [state, setState] = useState<ArenaState | null>(null);
-  const [modelsText, setModelsText] = useState('');
+  const [selectedModelRef, setSelectedModelRef] = useState('');
+  const [taskFilter, setTaskFilter] = useState('all');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -94,7 +131,7 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
     try {
       const next = (await pa.extension.invoke('getArenaState', {})) as ArenaState;
       setState(next);
-      setModelsText(next.settings.challengerModels.join('\n'));
+      setSelectedModelRef((current) => firstAvailableModelRef(next.models, next.settings.challengerModels, current));
       setError('');
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
@@ -105,22 +142,61 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
     void refresh();
   }, []);
 
-  const ranked = useMemo(() => Object.values(state?.stats.models ?? {}).sort((a, b) => b.rating - a.rating || b.votes - a.votes), [state]);
+  const tasks = useMemo(() => uniqueTasks(state?.stats), [state?.stats]);
+  const selectableModels = useMemo(
+    () => (state?.models ?? []).filter((model) => !state?.settings.challengerModels.includes(modelRef(model))),
+    [state?.models, state?.settings.challengerModels],
+  );
+  const selectedModels = useMemo(() => {
+    const byRef = new Map((state?.models ?? []).map((model) => [modelRef(model), model]));
+    return (state?.settings.challengerModels ?? []).map((ref) => ({ ref, model: byRef.get(ref) }));
+  }, [state?.models, state?.settings.challengerModels]);
+  const ranked = useMemo<RankedModelRow[]>(() => {
+    return Object.values(state?.stats.models ?? {})
+      .map((model) => {
+        if (taskFilter === 'all') {
+          return { ...model, summary: taskSummary(model, taskFilter) };
+        }
+        const task = model.byTask[taskFilter];
+        return {
+          modelRef: model.modelRef,
+          rating: model.rating,
+          wins: task?.wins ?? 0,
+          losses: task?.losses ?? 0,
+          ties: task?.ties ?? 0,
+          neither: task?.neither ?? 0,
+          votes: task?.votes ?? 0,
+          summary: taskSummary(model, taskFilter),
+        };
+      })
+      .filter((model) => taskFilter === 'all' || model.votes > 0)
+      .sort((a, b) => b.rating - a.rating || b.votes - a.votes);
+  }, [state?.stats.models, taskFilter]);
 
   const save = async (patch: Partial<ArenaSettings> = {}) => {
     if (!state || saving) return;
     setSaving(true);
     try {
-      const settings = { ...state.settings, ...patch, challengerModels: parseModels(modelsText) };
+      const settings = { ...state.settings, ...patch };
       const result = (await pa.extension.invoke('saveArenaSettings', settings)) as { settings: ArenaSettings };
       setState({ ...state, settings: result.settings });
-      setModelsText(result.settings.challengerModels.join('\n'));
+      setSelectedModelRef((current) => firstAvailableModelRef(state.models, result.settings.challengerModels, current));
       setError('');
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : String(saveError));
     } finally {
       setSaving(false);
     }
+  };
+
+  const addModel = async () => {
+    if (!state || !selectedModelRef) return;
+    await save({ challengerModels: normalizeModels([...state.settings.challengerModels, selectedModelRef]) });
+  };
+
+  const removeModel = async (ref: string) => {
+    if (!state) return;
+    await save({ challengerModels: state.settings.challengerModels.filter((model) => model !== ref) });
   };
 
   if (error && !state) {
@@ -137,31 +213,79 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
         <AppPageIntro
           title="Model Arena"
           actions={
-            <Button variant="secondary" disabled={saving} onClick={() => void refresh()}>
-              Refresh
-            </Button>
+            <div className="flex items-center gap-2">
+              {state ? (
+                <SegmentedControl
+                  ariaLabel="Model Arena"
+                  value={state.settings.automaticDuels ? 'on' : 'off'}
+                  options={[
+                    { label: 'On', value: 'on' },
+                    { label: 'Off', value: 'off' },
+                  ]}
+                  onChange={(value) => void save({ automaticDuels: value === 'on' })}
+                />
+              ) : null}
+              <Button variant="secondary" disabled={saving} onClick={() => void refresh()}>
+                Refresh
+              </Button>
+            </div>
           }
         />
 
         <div className="grid gap-4 lg:grid-cols-[minmax(20rem,0.8fr)_minmax(28rem,1.2fr)]">
           <section className="rounded-md border border-border-subtle bg-panel/60">
-            <div className="border-b border-border-subtle px-3 py-2 text-[12px] font-medium text-primary">Sampling</div>
+            <div className="border-b border-border-subtle px-3 py-2 text-[12px] font-medium text-primary">Setup</div>
             {state ? (
               <div className="divide-y divide-border-subtle text-[12px]">
                 <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-2">
                   <div>
-                    <div className="text-primary">Automatic duels</div>
-                    <div className="text-dim">Runs challenger models on sampled eligible prompts.</div>
+                    <div className="text-primary">Status</div>
+                    <div className="text-dim">
+                      {state.settings.automaticDuels && state.settings.challengerModels.length > 0
+                        ? 'Arena is sampling normal conversations.'
+                        : state.settings.challengerModels.length === 0
+                          ? 'Add at least one challenger model to start.'
+                          : 'Arena is paused.'}
+                    </div>
                   </div>
-                  <SegmentedControl
-                    ariaLabel="Automatic duels"
-                    value={state.settings.automaticDuels ? 'on' : 'off'}
-                    options={[
-                      { label: 'On', value: 'on' },
-                      { label: 'Off', value: 'off' },
-                    ]}
-                    onChange={(value) => void save({ automaticDuels: value === 'on' })}
-                  />
+                  <StatusDot tone={state.settings.automaticDuels && state.settings.challengerModels.length > 0 ? 'success' : 'warning'} />
+                </div>
+                <div className="space-y-2 px-3 py-2">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                    <Select
+                      aria-label="Challenger model"
+                      value={selectedModelRef}
+                      onChange={(event) => setSelectedModelRef(event.target.value)}
+                      disabled={selectableModels.length === 0 || saving}
+                    >
+                      {selectableModels.length === 0 ? <option value="">No more models available</option> : null}
+                      {selectableModels.map((model) => (
+                        <option key={modelRef(model)} value={modelRef(model)}>
+                          {modelLabel(model)}
+                        </option>
+                      ))}
+                    </Select>
+                    <Button variant="secondary" disabled={!selectedModelRef || saving} onClick={() => void addModel()}>
+                      Add
+                    </Button>
+                  </div>
+                  <div className="divide-y divide-border-subtle rounded-md border border-border-subtle">
+                    {selectedModels.length === 0 ? (
+                      <div className="px-3 py-3 text-dim">No challenger models selected.</div>
+                    ) : (
+                      selectedModels.map(({ ref, model }) => (
+                        <div key={ref} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2">
+                          <div className="min-w-0">
+                            <div className="truncate text-primary">{model ? modelLabel(model) : ref}</div>
+                            <div className="truncate font-mono text-[11px] text-dim">{ref}</div>
+                          </div>
+                          <Button variant="ghost" disabled={saving} onClick={() => void removeModel(ref)}>
+                            Remove
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
                 <label className="grid grid-cols-[1fr_5rem] items-center gap-3 px-3 py-2">
                   <span>
@@ -231,21 +355,22 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
                     onBlur={() => void save()}
                   />
                 </label>
-                <label className="block px-3 py-2">
-                  <span className="mb-1 block text-primary">Challenger models</span>
-                  <Textarea
-                    className="min-h-28 w-full resize-y font-mono text-[12px]"
-                    value={modelsText}
-                    onChange={(event) => setModelsText(event.target.value)}
-                    onBlur={() => void save()}
-                    placeholder="provider/model-id or model-id"
-                  />
-                </label>
               </div>
             ) : null}
           </section>
 
           <section className="rounded-md border border-border-subtle bg-panel/60">
+            <div className="grid grid-cols-[1fr_12rem] items-center gap-3 border-b border-border-subtle px-3 py-2">
+              <div className="text-[12px] font-medium text-primary">Preferences</div>
+              <Select aria-label="Task type" value={taskFilter} onChange={(event) => setTaskFilter(event.target.value)}>
+                <option value="all">All task types</option>
+                {tasks.map((task) => (
+                  <option key={task} value={task}>
+                    {task}
+                  </option>
+                ))}
+              </Select>
+            </div>
             <div className="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem_6rem] border-b border-border-subtle px-3 py-2 text-[11px] font-medium uppercase text-dim">
               <span>Model</span>
               <span className="text-right">Rating</span>
@@ -262,7 +387,7 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
                   <div key={model.modelRef} className="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem_6rem] items-center px-3 py-2">
                     <span className="min-w-0">
                       <span className="block truncate font-mono text-primary">{model.modelRef}</span>
-                      {taskSummary(model) ? <span className="block truncate text-[11px] text-dim">{taskSummary(model)}</span> : null}
+                      {model.summary ? <span className="block truncate text-[11px] text-dim">{model.summary}</span> : null}
                     </span>
                     <span className="text-right tabular-nums">{model.rating}</span>
                     <span className="text-right tabular-nums">{model.votes}</span>
