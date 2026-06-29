@@ -291,9 +291,7 @@ async function waitForBodyText(cdp, child, label, expectedText, timeoutMs = 30_0
     if (lastMissing.length === 0) return body;
     await sleep(500);
   }
-  throw new Error(
-    `${label} did not render expected text: ${lastMissing.join(', ')}. Last body text tail:\n${lastBody.slice(-1200)}`,
-  );
+  throw new Error(`${label} did not render expected text: ${lastMissing.join(', ')}. Last body text tail:\n${lastBody.slice(-1200)}`);
 }
 
 async function assertRequiredExtensions(cdp, matrix) {
@@ -402,6 +400,26 @@ async function assertActions(cdp, matrix) {
   }
 }
 
+async function suppressOnboardingTour(cdp, child) {
+  try {
+    await postJson(cdp, '/api/extensions/system-onboarding/actions/update', { status: 'skipped', stepIndex: 0 });
+  } catch (error) {
+    throw new Error(`Could not seed skipped onboarding state for release smoke: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  await evalJs(
+    cdp,
+    `(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const skipButton = buttons.find((button) => button.textContent?.trim().toLowerCase() === 'skip tour');
+      skipButton?.click();
+      return Boolean(skipButton);
+    })()`,
+  );
+  await cdp.send('Page.navigate', { url: 'neon-pilot://app/conversations/new' });
+  await waitForLoadedBody(cdp, child, 'post-onboarding release smoke route');
+}
+
 async function assertAgentTools(cdp, child, matrix) {
   const inventory = await fetchFromRenderer(cdp, '/api/tools');
   if (!inventory.ok) throw new Error(`/api/tools returned ${inventory.status}: ${JSON.stringify(inventory.body)}`);
@@ -508,6 +526,7 @@ export async function runGoldenSmoke({ appPath, matrixPath = defaultMatrixPath, 
       "Boolean(document.querySelector('textarea')) || (document.body.innerText || '').length > 0",
       45_000,
     );
+    await suppressOnboardingTour(cdp, child);
 
     await installMatrixPackages(cdp, matrix);
     await assertRequiredExtensions(cdp, matrix);
