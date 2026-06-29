@@ -4,11 +4,13 @@
 
 ### Highlights
 
-- TODO: Replace this with 3-6 human-written bullets summarizing the release by user-visible outcome, not raw commit messages.
+- Clarifies Agent Plugins copy and CLI docs around Codex and Claude Code marketplace plugins, making plugin discovery/install wording more consistent across the app and command surface.
+- Updates the release performance smoke so it verifies the visible collapsed todo shelf and the real todo extension backend state instead of expecting expanded todo item text.
+- Refreshes generated CLI reference docs for the marketplace plugin terminology so release checks and published docs stay aligned.
 
 ### Notes
 
-- 2 commits since the previous release.
+- 3 commits since the previous release.
 
 ## 0.11.33 — 2026-06-29
 
