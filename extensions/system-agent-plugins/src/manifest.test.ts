@@ -23,7 +23,7 @@ describe('system-agent-plugins manifest', () => {
     expect(manifest.name).toBe('Agent Plugins');
     expect(manifest.contributes.settingsComponent).toMatchObject({
       label: 'Agent plugins',
-      description: expect.stringContaining('Codex or Claude Code style plugin repositories'),
+      description: expect.stringContaining('Codex or Claude Code marketplace plugins'),
     });
   });
 

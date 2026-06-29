@@ -3,7 +3,7 @@
   "id": "system-agent-plugins",
   "name": "Agent Plugins",
   "packageType": "system",
-  "description": "Install Codex and Claude Code plugins to give agents their skills, instructions, and MCP servers.",
+  "description": "Install Codex and Claude Code marketplace plugins to give agents their skills, instructions, and MCP servers.",
   "version": "0.1.0",
   "defaultEnabled": true,
   "frontend": {
@@ -86,14 +86,14 @@
       "component": "AgentPluginsSettingsPanel",
       "sectionId": "settings-agent-plugins",
       "label": "Agent plugins",
-      "description": "Install Codex or Claude Code style plugin repositories with skills, instructions, docs, and MCP server definitions.",
+      "description": "Install Codex or Claude Code marketplace plugins with skills, instructions, docs, and MCP server definitions.",
       "order": 35
     },
     "cliCommands": [
       {
         "id": "agent-plugins-list",
         "command": "agent-plugins list",
-        "description": "List installed Codex and Claude Code style agent plugins.",
+        "description": "List installed Codex and Claude Code marketplace plugins.",
         "action": "agentPluginsCli",
         "inputAction": "list",
         "jsonDefault": true,
@@ -394,7 +394,7 @@
       {
         "id": "agent-plugin-installation",
         "title": "Agent Plugin Installation",
-        "description": "Use when installing, inspecting, or explaining Codex and Claude Code style agent plugins in Neon Pilot.",
+        "description": "Use when installing, inspecting, or explaining Codex and Claude Code marketplace plugins in Neon Pilot.",
         "path": "skills/agent-plugin-installation/SKILL.md"
       }
     ]

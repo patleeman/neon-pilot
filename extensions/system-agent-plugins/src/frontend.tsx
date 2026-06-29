@@ -267,7 +267,7 @@ export function AgentPluginsSettingsPanel() {
               </div>
               <div className="space-y-1">
                 <SupportingText>
-                  Install Codex or Claude Code style plugin repositories with skills, instructions, docs, and MCP server definitions. Agent
+                  Install Codex or Claude Code marketplace plugins with skills, instructions, docs, and MCP server definitions. Agent
                   plugins are turned on immediately after install.
                 </SupportingText>
                 <SupportingText>
@@ -315,7 +315,7 @@ export function AgentPluginsSettingsPanel() {
               </div>
             ) : (
               <SupportingText>
-                No agent plugins installed. Install a Codex or Claude Code plugin repository to give agents its skills, instructions, docs,
+                No agent plugins installed. Install a Codex or Claude Code marketplace plugin to give agents its skills, instructions, docs,
                 and MCP server definitions.
               </SupportingText>
             )}
