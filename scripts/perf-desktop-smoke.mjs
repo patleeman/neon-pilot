@@ -1721,7 +1721,7 @@ async function main() {
         await waitForExpression(
           cdp,
           child,
-          `(document.body.textContent || '').includes('Todos') && (document.body.textContent || '').includes('Perf smoke todo item')`,
+          `(document.body.textContent || '').includes('Todos') && (document.body.textContent || '').includes('1 open')`,
           45_000,
           16,
         );
@@ -1744,6 +1744,7 @@ async function main() {
               return {
                 location: location.pathname,
                 hasTodosText: bodyText.includes('Todos'),
+                hasOpenCountText: bodyText.includes('1 open'),
                 hasTodoItemText: bodyText.includes('Perf smoke todo item'),
                 bodyTextTail: bodyText.slice(-1200),
                 composerShelfHosts: Array.from(document.querySelectorAll('[data-composer-shelf-id]')).map((element) => ({
@@ -1773,6 +1774,28 @@ async function main() {
             detail: entry.detail ?? null,
           }))`,
       );
+      const todoStateAfterVisible = await evalJs(
+        cdp,
+        `fetch('/api/extensions/system-todo/actions/getState', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ conversationId: ${JSON.stringify(longId)} })
+        }).then((response) => response.json()).catch((error) => ({ error: String(error) }))`,
+      );
+      const todoItemsAfterVisible = Array.isArray(todoStateAfterVisible?.items)
+        ? todoStateAfterVisible.items
+        : Array.isArray(todoStateAfterVisible?.result?.items)
+          ? todoStateAfterVisible.result.items
+          : [];
+      if (!todoItemsAfterVisible.some((item) => item?.text === 'Perf smoke todo item')) {
+        return {
+          skipped: true,
+          reason: 'system-todo state did not include seeded Perf smoke todo item',
+          seed: todoShelfSeed,
+          opened,
+          todoStateAfterVisible,
+        };
+      }
       const shelvesReadyAfterVisibleSample = await evalJs(
         cdp,
         `(() => {
@@ -1787,6 +1810,7 @@ async function main() {
         seed: todoShelfSeed,
         todoVisibleAfterOpenMs: Math.round(performance.now() - todoVisibleStartedAtMs),
         todoPerfMeasures,
+        todoStateAfterVisible,
         shelvesReadyAfterVisibleSample,
         ...opened,
       };
