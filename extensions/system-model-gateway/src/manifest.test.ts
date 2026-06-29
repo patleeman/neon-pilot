@@ -11,7 +11,7 @@ describe('system-model-gateway manifest', () => {
   it('contributes a command to open AI Gateway settings', () => {
     expect(manifest.contributes.commands).toContainEqual(
       expect.objectContaining({
-        id: 'open-settings',
+        id: 'open-model-gateway-settings',
         title: 'Open AI Gateway Settings',
         action: 'app.navigate',
         args: { to: '/settings#settings-model-gateway' },

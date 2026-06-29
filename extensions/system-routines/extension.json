@@ -202,7 +202,7 @@
         "action": "routinesCli",
         "inputAction": "move",
         "jsonDefault": true,
-        "usage": "routines move <routine-id> --position before|after|inside [--target-routine-id <id>] [--json]",
+        "usage": "routines move <routine-id> --position before|after|inside [--target-routine-id <id>] [--parent-routine-id <id>] [--parent-outcome-id <id>] [--json]",
         "examples": ["neon-pilot routines move routine_123 --position after --target-routine-id routine_456 --json"],
         "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 1 },
         "flagsSchema": {

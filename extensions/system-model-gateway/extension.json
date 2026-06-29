@@ -77,7 +77,7 @@
     },
     "commands": [
       {
-        "id": "open-settings",
+        "id": "open-model-gateway-settings",
         "title": "Open AI Gateway Settings",
         "category": "Settings",
         "description": "Open the AI Gateway setup panel.",
@@ -120,7 +120,7 @@
         "action": "gatewayCli",
         "inputAction": "settings-set",
         "jsonDefault": true,
-        "usage": "ai-gateway settings set [--host <host>] [--port <port>] [--default-model <model>] [--auth-token <token>] [--json]",
+        "usage": "ai-gateway settings set [--enabled] [--host <host>] [--port <port>] [--default-model <model>] [--auth-token <token>] [--json]",
         "examples": ["neon-pilot ai-gateway settings set --port 8788 --json"],
         "argsSchema": { "type": "array", "items": { "type": "string" }, "maxItems": 0 },
         "flagsSchema": {

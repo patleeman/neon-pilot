@@ -2960,7 +2960,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const slashSuggestionContext = useMemo<SlashCommandSuggestionContext>(
     () => ({
       models,
-      activeTools: stream.toolDefinitions.map((tool) => tool.name),
+      activeTools: (stream.toolDefinitions ?? []).map((tool) => tool.name),
       queuedPromptIds: pendingQueue.map((item) => item.id),
       deferredResumeIds: deferredResumes.map((resume) => resume.id),
       backgroundCommandIds: runRecords.filter((run) => run.conversationId === id).map((run) => run.runId),

@@ -244,7 +244,7 @@ export function readSettingsSectionIdFromPathname(pathname: string): SettingsQui
     case '/settings/extensions':
       return 'settings-extensions';
     case '/settings':
-      return 'settings-extensions';
+      return '';
     case '/settings/desktop':
       return 'settings-desktop';
     default:
@@ -1033,10 +1033,9 @@ function useSettingsNavigation(sectionIds?: readonly SettingsQuickLinkId[]) {
     );
   }, [effectiveExtensionSettingsQuickLinks]);
   const shellQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
-    return desktopEnvironment?.isElectron || isDesktopShell()
-      ? settingsQuickLinks
-      : settingsQuickLinks.filter((item) => item.id !== 'settings-desktop');
-  }, [desktopEnvironment?.isElectron, settingsQuickLinks]);
+    const includeDesktopSection = desktopEnvironment?.isElectron || isDesktopShell() || visibleSectionIds?.has('settings-desktop');
+    return includeDesktopSection ? settingsQuickLinks : settingsQuickLinks.filter((item) => item.id !== 'settings-desktop');
+  }, [desktopEnvironment?.isElectron, settingsQuickLinks, visibleSectionIds]);
   const visibleQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
     if (!visibleSectionIds) return shellQuickLinks;
     return shellQuickLinks
@@ -2742,8 +2741,8 @@ export function SettingsPage({
     return visibleTocLinks.find((item) => item.id === effectiveActiveQuickLinkId && item.extensionId) ?? null;
   }, [effectiveActiveQuickLinkId, activeRootSectionId, visibleTocLinks]);
   const renderedSectionIds = useMemo(
-    () => visibleSectionIds ?? new Set<SettingsQuickLinkId>([activeRootSectionId]),
-    [activeRootSectionId, visibleSectionIds],
+    () => visibleSectionIds ?? (routeQuickLinkId ? new Set<SettingsQuickLinkId>([activeRootSectionId]) : null),
+    [activeRootSectionId, routeQuickLinkId, visibleSectionIds],
   );
 
   useEffect(() => {
@@ -4102,7 +4101,15 @@ export function SettingsPage({
                     />
                   </>
                 ) : (
-                  <ExtensionSettingsIndex items={settingsNavLinks} />
+                  <>
+                    <ExtensionSettingsSection
+                      excludeExtensionIds={['system-settings']}
+                      groupByExtension
+                      extensionLabels={extensionLabels}
+                    />
+                    <ExtensionSettingsComponentPanels registrations={extensionRegistry.settingsComponents} />
+                    <ExtensionSettingsIndex items={settingsNavLinks} />
+                  </>
                 )}
               </SettingsSection>
 

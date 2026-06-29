@@ -80,7 +80,7 @@
         "action": "terminalCli",
         "inputAction": "write",
         "jsonDefault": true,
-        "usage": "terminal write <terminal-id> <text> [--json]",
+        "usage": "terminal write <terminal-id> <text> [--data <text>] [--json]",
         "examples": ["neon-pilot terminal write term_123 \"pwd\" --json"],
         "argsSchema": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
         "flagsSchema": {
