@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "system-agent-plugins",
-  "name": "Plugins",
+  "name": "Agent Plugins",
   "packageType": "system",
   "description": "Install Codex and Claude Code plugins to give agents their skills, instructions, and MCP servers.",
   "version": "0.1.0",
@@ -68,6 +68,15 @@
         "worker": {
           "enabled": true
         }
+      },
+      {
+        "id": "agentPluginsCli",
+        "handler": "agentPluginsCli",
+        "title": "Agent plugins CLI",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["list", "install", "enable", "disable", "check-updates", "update", "remove"]
+        }
       }
     ]
   },
@@ -76,16 +85,297 @@
       "id": "agent-plugins",
       "component": "AgentPluginsSettingsPanel",
       "sectionId": "settings-agent-plugins",
-      "label": "Plugins",
-      "description": "Install Codex and Claude Code plugins. Agents get their skills, instructions, and MCP server definitions.",
+      "label": "Agent plugins",
+      "description": "Install Codex or Claude Code style plugin repositories with skills, instructions, docs, and MCP server definitions.",
       "order": 35
     },
+    "cliCommands": [
+      {
+        "id": "agent-plugins-list",
+        "command": "agent-plugins list",
+        "description": "List installed Codex and Claude Code style agent plugins.",
+        "action": "agentPluginsCli",
+        "inputAction": "list",
+        "jsonDefault": true,
+        "usage": "agent-plugins list [--json]",
+        "examples": ["neon-pilot agent-plugins list", "neon-pilot agent-plugins list --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 0
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": {
+          "argv": ["agent-plugins", "list"],
+          "expectJsonFields": []
+        }
+      },
+      {
+        "id": "agent-plugins-install",
+        "command": "agent-plugins install",
+        "description": "Install an agent plugin from a Git repository URL or local folder. Installed plugins are turned on by default.",
+        "action": "agentPluginsCli",
+        "inputAction": "install",
+        "jsonDefault": true,
+        "usage": "agent-plugins install <git-url|local-folder> [--local] [--ref <ref>] [--json]",
+        "examples": [
+          "neon-pilot agent-plugins install https://github.com/owner/agent-plugin --json",
+          "neon-pilot agent-plugins install /path/to/plugin --local --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1,
+          "description": "Positional args: Git URL or local folder."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "local": {
+              "type": "boolean",
+              "description": "Treat the source as a local folder path."
+            },
+            "ref": {
+              "type": "string",
+              "description": "Optional Git branch, tag, or ref to install."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing app state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "agent-plugins-enable",
+        "command": "agent-plugins enable",
+        "description": "Turn an installed agent plugin on.",
+        "action": "agentPluginsCli",
+        "inputAction": "enable",
+        "jsonDefault": true,
+        "usage": "agent-plugins enable <plugin-id> [--json]",
+        "examples": ["neon-pilot agent-plugins enable codex-source-example --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing app state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "agent-plugins-disable",
+        "command": "agent-plugins disable",
+        "description": "Turn an installed agent plugin off.",
+        "action": "agentPluginsCli",
+        "inputAction": "disable",
+        "jsonDefault": true,
+        "usage": "agent-plugins disable <plugin-id> [--json]",
+        "examples": ["neon-pilot agent-plugins disable codex-source-example --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing app state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "agent-plugins-check-updates",
+        "command": "agent-plugins check-updates",
+        "description": "Check installed agent plugins for source updates.",
+        "action": "agentPluginsCli",
+        "inputAction": "check-updates",
+        "jsonDefault": true,
+        "usage": "agent-plugins check-updates [plugin-id] [--json]",
+        "examples": ["neon-pilot agent-plugins check-updates --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "agent-plugins-update",
+        "command": "agent-plugins update",
+        "description": "Update a Git-backed agent plugin.",
+        "action": "agentPluginsCli",
+        "inputAction": "update",
+        "jsonDefault": true,
+        "usage": "agent-plugins update <plugin-id> [--json]",
+        "examples": ["neon-pilot agent-plugins update codex-source-example --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing app state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "agent-plugins-remove",
+        "command": "agent-plugins remove",
+        "description": "Remove an installed agent plugin.",
+        "action": "agentPluginsCli",
+        "inputAction": "remove",
+        "jsonDefault": true,
+        "usage": "agent-plugins remove <plugin-id> [--json]",
+        "examples": ["neon-pilot agent-plugins remove codex-source-example --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing app state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "destructive",
+        "requiresApp": true,
+        "destructive": true,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      }
+    ],
     "commands": [
       {
         "id": "open-agent-plugins",
-        "title": "Open plugins",
-        "category": "Plugins",
-        "description": "Open plugin settings.",
+        "title": "Open Agent Plugins",
+        "category": "Agent Plugins",
+        "description": "Open agent plugin settings.",
         "action": "app.navigate",
         "args": {
           "to": "/settings#settings-agent-plugins"
@@ -94,12 +384,20 @@
       },
       {
         "id": "check-agent-plugin-updates",
-        "title": "Check plugin updates",
-        "category": "Plugins",
-        "description": "Check installed plugins for source updates.",
+        "title": "Check Agent Plugin Updates",
+        "category": "Agent Plugins",
+        "description": "Check installed agent plugins for source updates.",
         "action": "checkPluginUpdates"
+      }
+    ],
+    "skills": [
+      {
+        "id": "agent-plugin-installation",
+        "title": "Agent Plugin Installation",
+        "description": "Use when installing, inspecting, or explaining Codex and Claude Code style agent plugins in Neon Pilot.",
+        "path": "skills/agent-plugin-installation/SKILL.md"
       }
     ]
   },
-  "permissions": ["shell:execute", "filesystem:read", "filesystem:write"]
+  "permissions": ["shell:execute", "filesystem:read", "filesystem:write", "extensions:read", "extensions:write", "mcp:write"]
 }

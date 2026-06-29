@@ -11,6 +11,29 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@neon-pilot/extensions/settings', () => ({
   api: mocks.api,
+  SettingToggleRow: ({
+    title,
+    description,
+    checked,
+    onCheckedChange,
+  }: {
+    title: React.ReactNode;
+    description?: React.ReactNode;
+    checked: boolean;
+    onCheckedChange: (checked: boolean) => void;
+  }) => (
+    <section>
+      <h4>{title}</h4>
+      {description ? <p>{description}</p> : null}
+      <button type="button" role="switch" aria-checked={checked} onClick={() => onCheckedChange(!checked)}>
+        {checked ? 'On' : 'Off'}
+      </button>
+    </section>
+  ),
+  useApi: mocks.useApi,
+}));
+
+vi.mock('@neon-pilot/extensions/ui', () => ({
   Field: ({ label, children }: { label?: React.ReactNode; children: React.ReactNode }) => (
     <label>
       {label}
@@ -25,23 +48,19 @@ vi.mock('@neon-pilot/extensions/settings', () => ({
       {children}
     </section>
   ),
-  Select: ({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props}>{children}</select>,
-  SettingsRow: ({ title, description, children }: { title: React.ReactNode; description?: React.ReactNode; children: React.ReactNode }) => (
-    <section>
-      <h4>{title}</h4>
-      {description ? <p>{description}</p> : null}
-      {children}
-    </section>
+  RowButton: ({ children, selected: _selected, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { selected?: boolean }) => (
+    <button {...props}>{children}</button>
   ),
+  Select: ({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props}>{children}</select>,
   SupportingText: ({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => <p {...props}>{children}</p>,
   Switch: ({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (checked: boolean) => void }) => (
     <button type="button" aria-pressed={checked} onClick={() => onCheckedChange(!checked)}>
       {checked ? 'On' : 'Off'}
     </button>
   ),
+  TextLink: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a>,
   TextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   ToolbarButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
-  useApi: mocks.useApi,
 }));
 
 import { AgentPluginsSettingsPanel } from './frontend';
@@ -94,8 +113,12 @@ describe('AgentPluginsSettingsPanel', () => {
     render(<AgentPluginsSettingsPanel />);
 
     expect(screen.getAllByText('Review Pack').length).toBeGreaterThan(0);
-    expect(screen.getByText('Available to agents')).toBeTruthy();
+    expect(screen.getByText('Plugin is on')).toBeTruthy();
     expect(screen.getByText('1 skill · 1 MCP server · 1 doc')).toBeTruthy();
+    expect(screen.getByText('Skills (1)')).toBeTruthy();
+    expect(screen.getByText('Instructions and docs (1)')).toBeTruthy();
+    expect(screen.getByText('MCP servers (1)')).toBeTruthy();
+    expect(screen.getByText('Ignored hooks (1)')).toBeTruthy();
     expect(screen.getByText('Hook files are indexed but not executed until mapped to Neon Pilot lifecycle boundaries.')).toBeTruthy();
     // Raw file paths should not be shown
     expect(screen.queryByText('review - skills/review/SKILL.md')).toBeNull();
@@ -108,10 +131,10 @@ describe('AgentPluginsSettingsPanel', () => {
 
     render(<AgentPluginsSettingsPanel />);
 
-    fireEvent.change(screen.getByPlaceholderText('https://github.com/owner/plugin'), {
+    fireEvent.change(screen.getByPlaceholderText('https://github.com/owner/agent-plugin'), {
       target: { value: 'https://github.com/example/review-pack' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Install' }));
 
     await waitFor(() =>
       expect(mocks.api.invokeExtensionAction).toHaveBeenCalledWith('system-agent-plugins', 'addPlugin', {
@@ -120,5 +143,32 @@ describe('AgentPluginsSettingsPanel', () => {
       }),
     );
     expect(mocks.refetch).toHaveBeenCalled();
+  });
+
+  it('toggles plugin availability and auto update through backend actions', async () => {
+    mocks.useApi.mockReturnValue(buildUseApiResult({ storageRoot: '/runtime/plugins', plugins: [plugin] }));
+    mocks.api.invokeExtensionAction.mockResolvedValue({ result: { plugin } });
+
+    render(<AgentPluginsSettingsPanel />);
+
+    const switches = screen.getAllByRole('switch');
+    fireEvent.click(switches[0]);
+
+    await waitFor(() =>
+      expect(mocks.api.invokeExtensionAction).toHaveBeenCalledWith('system-agent-plugins', 'setPluginEnabled', {
+        id: 'codex-review-pack-1234',
+        enabled: false,
+      }),
+    );
+    expect(mocks.refetch).toHaveBeenCalled();
+
+    fireEvent.click(switches[1]);
+
+    await waitFor(() =>
+      expect(mocks.api.invokeExtensionAction).toHaveBeenCalledWith('system-agent-plugins', 'setPluginAutoUpdate', {
+        id: 'codex-review-pack-1234',
+        autoUpdate: true,
+      }),
+    );
   });
 });

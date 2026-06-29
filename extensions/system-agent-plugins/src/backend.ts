@@ -62,7 +62,7 @@ interface AgentPluginRegistry {
 const REGISTRY_FILE = 'registry.json';
 
 export async function listPlugins(_input: unknown, ctx: ExtensionBackendContext) {
-  const registry = readRegistry(ctx);
+  const registry = await synchronizePluginWrapperExtensions(ctx, readRegistry(ctx));
   return { ok: true, plugins: registry.plugins, storageRoot: pluginsRoot(ctx) };
 }
 
@@ -82,7 +82,7 @@ export async function addPlugin(input: unknown, ctx: ExtensionBackendContext) {
   const registry = readRegistry(ctx);
   const existing = registry.plugins.find((plugin) => plugin.id === id);
   const wrapper = await wrapPluginAsExtension({ sourcePath: prepared.path, ecosystem: scan.ecosystem, ctx });
-  ctx.extensions.setEnabled(wrapper.extension.id, true);
+  await Promise.resolve(ctx.extensions.setEnabled(wrapper.extension.id, true));
   const record: AgentPluginRecord = {
     id,
     displayName: scan.displayName,
@@ -114,9 +114,10 @@ export async function setPluginEnabled(input: unknown, ctx: ExtensionBackendCont
   const body = asRecord(input);
   const id = requirePluginId(body);
   const enabled = body.enabled === true;
+  const current = readRegistry(ctx).plugins.find((candidate) => candidate.id === id);
+  if (!current) throw new Error(`Unknown agent plugin: ${id}`);
+  if (current.wrapperExtensionId) await Promise.resolve(ctx.extensions.setEnabled(current.wrapperExtensionId, enabled));
   const registry = mutatePlugin(ctx, id, (plugin) => ({ ...plugin, enabled, status: enabled ? 'enabled' : 'disabled', updatedAt: now() }));
-  const plugin = registry.plugins.find((candidate) => candidate.id === id);
-  if (plugin?.wrapperExtensionId) ctx.extensions.setEnabled(plugin.wrapperExtensionId, enabled);
   await invalidateExtensionRegistryReadCaches();
   await ctx.runtime.refreshSkillMcpConfig();
   return { ok: true, plugin: registry.plugins.find((plugin) => plugin.id === id) };
@@ -180,6 +181,46 @@ export async function updatePlugin(input: unknown, ctx: ExtensionBackendContext)
   return { ok: nextPlugin?.status !== 'update-blocked', plugin: nextPlugin };
 }
 
+export async function agentPluginsCli(input: unknown, ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const action = typeof body.action === 'string' ? body.action : '';
+  const cli = asRecord(body.cli ?? {});
+  const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+  const flags = asRecord(cli.flags ?? {});
+  const source = args[0];
+  const id = args[0];
+  switch (action) {
+    case 'list':
+      return listPlugins({}, ctx);
+    case 'install':
+      if (!source) throw new Error('Plugin source is required.');
+      return addPlugin(
+        {
+          sourceKind: flags.local === true ? 'local' : 'git',
+          source,
+          ...(typeof flags.ref === 'string' && flags.ref.trim() ? { ref: flags.ref.trim() } : {}),
+        },
+        ctx,
+      );
+    case 'enable':
+      if (!id) throw new Error('Plugin id is required.');
+      return setPluginEnabled({ id, enabled: true }, ctx);
+    case 'disable':
+      if (!id) throw new Error('Plugin id is required.');
+      return setPluginEnabled({ id, enabled: false }, ctx);
+    case 'check-updates':
+      return checkPluginUpdates(id ? { id } : {}, ctx);
+    case 'update':
+      if (!id) throw new Error('Plugin id is required.');
+      return updatePlugin({ id }, ctx);
+    case 'remove':
+      if (!id) throw new Error('Plugin id is required.');
+      return removePlugin({ id }, ctx);
+    default:
+      throw new Error(`Unknown agent plugin CLI action: ${action || 'unknown'}.`);
+  }
+}
+
 async function applyPluginUpdate(plugin: AgentPluginRecord, ctx: ExtensionBackendContext): Promise<AgentPluginRecord> {
   if (plugin.source.kind !== 'git' || !plugin.source.url) throw new Error('Only Git-backed plugins can be updated.');
   const sourceRoot = plugin.source.path;
@@ -201,7 +242,7 @@ async function applyPluginUpdate(plugin: AgentPluginRecord, ctx: ExtensionBacken
     };
   }
   const wrapper = await wrapPluginAsExtension({ sourcePath: cloned.path, ecosystem: scan.ecosystem, ctx });
-  ctx.extensions.setEnabled(wrapper.extension.id, plugin.enabled);
+  await Promise.resolve(ctx.extensions.setEnabled(wrapper.extension.id, plugin.enabled));
   return {
     ...plugin,
     displayName: scan.displayName,
@@ -448,6 +489,24 @@ function mutatePlugin(
 
 function updatePluginRecord(registry: AgentPluginRegistry, id: string, patch: Partial<AgentPluginRecord>): AgentPluginRegistry {
   return { version: 1, plugins: registry.plugins.map((plugin) => (plugin.id === id ? { ...plugin, ...patch } : plugin)) };
+}
+
+async function synchronizePluginWrapperExtensions(
+  ctx: ExtensionBackendContext,
+  registry: AgentPluginRegistry,
+): Promise<AgentPluginRegistry> {
+  let repaired = false;
+  for (const plugin of registry.plugins) {
+    if (!plugin.wrapperExtensionId) continue;
+    const status = await Promise.resolve(ctx.extensions.getStatus(plugin.wrapperExtensionId));
+    if (status.enabled === plugin.enabled) continue;
+    await Promise.resolve(ctx.extensions.setEnabled(plugin.wrapperExtensionId, plugin.enabled));
+    repaired = true;
+  }
+  if (repaired) {
+    await ctx.runtime.refreshSkillMcpConfig();
+  }
+  return registry;
 }
 
 function requirePluginId(input: Record<string, unknown>): string {

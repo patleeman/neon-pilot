@@ -1,4 +1,4 @@
-import { api, SettingsRow, useApi } from '@neon-pilot/extensions/settings';
+import { api, SettingToggleRow, useApi } from '@neon-pilot/extensions/settings';
 import {
   Field,
   Notice,
@@ -7,8 +7,8 @@ import {
   RowButton,
   Select,
   SupportingText,
-  Switch,
   TextInput,
+  TextLink,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
 import React, { type FormEvent, useMemo, useState } from 'react';
@@ -90,6 +90,14 @@ function statusTone(status: AgentPlugin['status']): 'accent' | 'muted' | 'warnin
   return 'muted';
 }
 
+function statusLabel(plugin: AgentPlugin): string {
+  if (!plugin.enabled) return 'Off';
+  if (plugin.status === 'update-available') return 'Update available';
+  if (plugin.status === 'update-blocked') return 'Update blocked';
+  if (plugin.status === 'error') return 'Error';
+  return 'On';
+}
+
 function pluginSourceLabel(plugin: AgentPlugin): string {
   if (plugin.source.kind === 'git') return plugin.source.url ?? plugin.source.path;
   return plugin.source.path;
@@ -107,6 +115,30 @@ function capabilitySummary(plugin: AgentPlugin): string {
     parts.push(`${plugin.capabilities.docs.length} doc${plugin.capabilities.docs.length === 1 ? '' : 's'}`);
   }
   return parts.length > 0 ? parts.join(' · ') : 'No supported capabilities';
+}
+
+function basename(path: string): string {
+  return path.split('/').filter(Boolean).pop() ?? path;
+}
+
+function CapabilityList({ title, empty, items }: { title: string; empty: string; items: Array<{ label: string; detail?: string }> }) {
+  return (
+    <div className="min-w-0">
+      <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{title}</div>
+      {items.length > 0 ? (
+        <ul className="space-y-1">
+          {items.map((item) => (
+            <li key={`${item.label}:${item.detail ?? ''}`} className="min-w-0 text-[12px] text-secondary">
+              <span className="text-primary">{item.label}</span>
+              {item.detail ? <span className="ml-2 break-all font-mono text-[11px] text-muted">{item.detail}</span> : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <SupportingText>{empty}</SupportingText>
+      )}
+    </div>
+  );
 }
 
 export function AgentPluginsSettingsPanel() {
@@ -193,15 +225,15 @@ export function AgentPluginsSettingsPanel() {
   return (
     <div className="space-y-5">
       {loading && !data ? (
-        <SupportingText>Loading plugins...</SupportingText>
+        <SupportingText>Loading agent plugins...</SupportingText>
       ) : error && !data ? (
-        <p className="text-[12px] text-danger">Failed to load plugins: {error}</p>
+        <p className="text-[12px] text-danger">Failed to load agent plugins: {error}</p>
       ) : data ? (
         <>
           {operation.error ? <Notice tone="danger">{operation.error}</Notice> : null}
           {operation.message ? <Notice tone="success">{operation.message}</Notice> : null}
 
-          <RailSubsection title="Add a plugin">
+          <RailSubsection title="Install an agent plugin">
             <form className="space-y-3" onSubmit={handleAddPlugin}>
               <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)_auto]">
                 <Field label="Source">
@@ -217,7 +249,7 @@ export function AgentPluginsSettingsPanel() {
                   <TextInput
                     value={draft.source}
                     onChange={(event) => setDraft({ ...draft, source: event.target.value })}
-                    placeholder={draft.sourceKind === 'git' ? 'https://github.com/owner/plugin' : '/path/to/plugin'}
+                    placeholder={draft.sourceKind === 'git' ? 'https://github.com/owner/agent-plugin' : '/path/to/plugin'}
                     autoComplete="off"
                     spellCheck={false}
                   />
@@ -229,17 +261,31 @@ export function AgentPluginsSettingsPanel() {
                     </ToolbarButton>
                   ) : null}
                   <ToolbarButton type="submit" disabled={operation.busy || !draft.source.trim()}>
-                    {operation.busy ? 'Adding...' : 'Add'}
+                    {operation.busy ? 'Installing...' : 'Install'}
                   </ToolbarButton>
                 </div>
               </div>
-              <SupportingText>
-                Ecosystem (Codex or Claude) is detected automatically from the plugin files. Plugins are enabled immediately when added.
-              </SupportingText>
+              <div className="space-y-1">
+                <SupportingText>
+                  Install Codex or Claude Code style plugin repositories with skills, instructions, docs, and MCP server definitions. Agent
+                  plugins are turned on immediately after install.
+                </SupportingText>
+                <SupportingText>
+                  Read the{' '}
+                  <TextLink href="https://developers.openai.com/codex/plugins/build" target="_blank" rel="noreferrer">
+                    Codex plugin guide
+                  </TextLink>{' '}
+                  or{' '}
+                  <TextLink href="https://docs.anthropic.com/en/docs/claude-code/plugins" target="_blank" rel="noreferrer">
+                    Claude Code plugin guide
+                  </TextLink>
+                  .
+                </SupportingText>
+              </div>
             </form>
           </RailSubsection>
 
-          <RailSubsection title="Installed plugins">
+          <RailSubsection title="Installed agent plugins">
             {plugins.length > 0 ? (
               <div className="space-y-2">
                 {plugins.map((plugin) => {
@@ -258,8 +304,9 @@ export function AgentPluginsSettingsPanel() {
                         <Pill tone={plugin.ecosystem === 'claude' ? 'accent' : plugin.ecosystem === 'codex' ? 'teal' : 'muted'}>
                           {ecosystemLabel(plugin.ecosystem)}
                         </Pill>
-                        <Pill tone={statusTone(plugin.status)}>{plugin.status.replace(/-/g, ' ')}</Pill>
+                        <Pill tone={statusTone(plugin.status)}>{statusLabel(plugin)}</Pill>
                         {plugin.autoUpdate ? <Pill tone="warning">auto update</Pill> : null}
+                        <span className="text-[12px] text-secondary">{capabilitySummary(plugin)}</span>
                       </span>
                       <span className="ui-supporting-text mt-1 block break-all">{pluginSourceLabel(plugin)}</span>
                     </RowButton>
@@ -268,28 +315,32 @@ export function AgentPluginsSettingsPanel() {
               </div>
             ) : (
               <SupportingText>
-                No plugins installed. Add a Codex or Claude Code plugin repository to give agents its skills and MCP servers.
+                No agent plugins installed. Install a Codex or Claude Code plugin repository to give agents its skills, instructions, docs,
+                and MCP server definitions.
               </SupportingText>
             )}
           </RailSubsection>
 
-          <RailSubsection title={selectedPlugin ? selectedPlugin.displayName : 'Plugin details'}>
+          <RailSubsection title={selectedPlugin ? selectedPlugin.displayName : 'Agent plugin details'}>
             {selectedPlugin ? (
               <div className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <SettingsRow
-                    title="Available to agents"
+                  <SettingToggleRow
+                    title={selectedPlugin.enabled ? 'Plugin is on' : 'Plugin is off'}
                     description={
                       selectedPlugin.enabled
-                        ? 'Skills and instructions from this plugin are available to agents.'
-                        : 'Skills and instructions are installed but not available to agents.'
+                        ? 'Agents can use the supported skills, instructions, docs, and MCP definitions from this plugin.'
+                        : 'The plugin is installed, but its capabilities are not available to agents.'
                     }
-                  >
-                    <Switch checked={selectedPlugin.enabled} onCheckedChange={() => void togglePlugin(selectedPlugin)} />
-                  </SettingsRow>
-                  <SettingsRow title="Auto update" description="Download and apply Git updates automatically after validation.">
-                    <Switch checked={selectedPlugin.autoUpdate} onCheckedChange={() => void toggleAutoUpdate(selectedPlugin)} />
-                  </SettingsRow>
+                    checked={selectedPlugin.enabled}
+                    onCheckedChange={() => void togglePlugin(selectedPlugin)}
+                  />
+                  <SettingToggleRow
+                    title="Auto update"
+                    description="Download and apply Git updates automatically after validation."
+                    checked={selectedPlugin.autoUpdate}
+                    onCheckedChange={() => void toggleAutoUpdate(selectedPlugin)}
+                  />
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -313,6 +364,29 @@ export function AgentPluginsSettingsPanel() {
                   </ToolbarButton>
                 </div>
 
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <CapabilityList
+                    title={`Skills (${selectedPlugin.capabilities.skills.length})`}
+                    empty="No skills found."
+                    items={selectedPlugin.capabilities.skills.map((skill) => ({ label: skill.id, detail: skill.path }))}
+                  />
+                  <CapabilityList
+                    title={`Instructions and docs (${selectedPlugin.capabilities.docs.length})`}
+                    empty="No instruction or doc files found."
+                    items={selectedPlugin.capabilities.docs.map((doc) => ({ label: basename(doc.path), detail: doc.path }))}
+                  />
+                  <CapabilityList
+                    title={`MCP servers (${selectedPlugin.capabilities.mcp.length})`}
+                    empty="No MCP server definitions found."
+                    items={selectedPlugin.capabilities.mcp.map((mcp) => ({ label: basename(mcp.path), detail: mcp.path }))}
+                  />
+                  <CapabilityList
+                    title={`Ignored hooks (${selectedPlugin.capabilities.hooks.length})`}
+                    empty="No unsupported hook files found."
+                    items={selectedPlugin.capabilities.hooks.map((hook) => ({ label: hook.kind, detail: hook.path }))}
+                  />
+                </div>
+
                 <div className="text-[12px] text-secondary">
                   <span className="break-all">{pluginSourceLabel(selectedPlugin)}</span>
                   {selectedPlugin.source.resolvedCommit ? (
@@ -325,8 +399,6 @@ export function AgentPluginsSettingsPanel() {
                   ) : null}
                 </div>
 
-                <div className="text-[12px] text-secondary">{capabilitySummary(selectedPlugin)}</div>
-
                 {selectedPlugin.compatibility.warnings.length > 0 ? (
                   <Notice tone="warning">{selectedPlugin.compatibility.warnings.join(' ')}</Notice>
                 ) : null}
@@ -336,7 +408,7 @@ export function AgentPluginsSettingsPanel() {
                 {selectedPlugin.lastError ? <Notice tone="danger">{selectedPlugin.lastError}</Notice> : null}
               </div>
             ) : (
-              <SupportingText>Select a plugin to inspect its status and settings.</SupportingText>
+              <SupportingText>Select an agent plugin to inspect its capabilities, status, and settings.</SupportingText>
             )}
           </RailSubsection>
         </>
