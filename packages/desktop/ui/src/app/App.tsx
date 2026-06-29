@@ -15,7 +15,6 @@ import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
 import { ExtensionRegistryProvider } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import { ConversationPage } from '../pages/ConversationPage';
-import { MemoryPage } from '../pages/MemoryPage';
 import { ThemeProvider } from '../ui-state/theme';
 import { AppDataContext, AppEventsContext, LiveTitlesContext, SseConnectionContext, SystemStatusContext } from './contexts';
 import { useDesktopAppEventRuntime } from './useDesktopAppEventRuntime';
@@ -192,7 +191,6 @@ export function App() {
                           <Route path="conversations" element={<ConversationsRouteRedirect />} />
                           <Route path="conversations/new" element={<DraftConversationRoute />} />
                           <Route path="conversations/:id" element={<SavedConversationRoute />} />
-                          <Route path="memory" element={suspendRoute(<MemoryPage />)} />
                           <Route path="*" element={<ExtensionRouteHost />} />
                         </Route>
                       </Routes>

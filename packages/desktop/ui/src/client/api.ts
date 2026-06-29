@@ -44,7 +44,6 @@ import type {
   LiveSessionExportResult,
   LiveSessionMeta,
   LiveSessionPresenceState,
-  ManagedMemoryState,
   MemoryData,
   ModelProviderState,
   ModelState,
@@ -268,7 +267,7 @@ async function getMemoryData(): Promise<MemoryData> {
     .then((actionPath) => extensionPost<{ ok: true; result: MemoryData } | { ok: false; error: string }>(actionPath, {}))
     .then((response) => {
       if (response.ok === false) {
-        throw new Error(response.error || 'Memory data is unavailable.');
+        throw new Error(response.error || 'Knowledge data is unavailable.');
       }
       return response.result;
     })
@@ -831,33 +830,8 @@ export const api = {
   },
   pickFiles: async (cwd?: string) => post<FilePickerResult>('/file-picker', cwd !== undefined ? { cwd } : {}),
 
-  // ── Memory browser ────────────────────────────────────────────────────────
+  // ── Knowledge browser ─────────────────────────────────────────────────────
   memory: () => getMemoryData(),
-  managedMemory: (cwd?: string) => {
-    const params = new URLSearchParams();
-    if (cwd) params.set('cwd', cwd);
-    return get<ManagedMemoryState>(`/memory${params.size > 0 ? `?${params.toString()}` : ''}`);
-  },
-  initializeManagedMemory: (cwd?: string) => post<ManagedMemoryState>('/memory/init', cwd ? { cwd } : {}),
-  createMemoryScope: (input: {
-    name: string;
-    slug?: string;
-    roots?: string[];
-    aliases?: string[];
-    type?: string;
-    inject?: boolean;
-    reason?: string;
-  }) => post<ManagedMemoryState>('/memory/scopes', input),
-  createMemoryScopeFromCwd: (input: { cwd?: string; name?: string; slug?: string; aliases?: string[]; reason?: string }) =>
-    post<ManagedMemoryState>('/memory/scopes/from-cwd', input),
-  writeMemoryFile: (input: { relativePath: string; content: string; reason?: string }) => put<ManagedMemoryState>('/memory/file', input),
-  setMemoryRemote: (input: { url: string }) => post<ManagedMemoryState>('/memory/remote', input),
-  syncMemoryRemote: () => post<ManagedMemoryState>('/memory/sync', {}),
-  importKnowledgeMemory: () => post<{ importedCount: number; state: ManagedMemoryState }>('/memory/import/knowledge', {}),
-  memoryFileHistory: async (relativePath: string) => {
-    const params = new URLSearchParams({ relativePath });
-    return get<{ history: ManagedMemoryState['recentChanges'] }>(`/memory/file/history?${params.toString()}`);
-  },
 
   markConversationAttentionRead: async (id: string, read = true) => {
     return post<{ ok: true }>(`/conversations/${encodeURIComponent(id)}/attention`, { read });

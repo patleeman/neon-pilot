@@ -117,7 +117,7 @@ import { ContextMenu, ContextMenuSection, ContextMenuSections } from './shared/C
 import { estimateContextMenuHeight } from './shared/contextMenuPosition';
 import { TextPromptDialog } from './shared/TextPromptDialog';
 import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
-import { CardMeta, IconButton, MenuItem, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
+import { CardMeta, IconButton, MenuItem, RowButton, SectionLabel, SidebarNavButton } from './ui';
 import { useSidebarConversationScope } from './useSidebarConversationScope';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 
@@ -584,7 +584,6 @@ function SidebarPrimaryNav({
           <Ico d={PATH.plus} size={15} />
         </SidebarNavButton>
       </div>
-      <TopNavItem to="/memory" icon={PATH.notes} label="Memory" documentNavigationRoutes={documentNavigationRoutes} />
       {items.map((item) => (
         <TopNavItem
           key={`${item.extensionId}:${item.id}`}

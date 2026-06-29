@@ -157,8 +157,8 @@ function createWorkspaceEditorExtensions(path: string, theme: string) {
           fontFamily: '"Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
           lineHeight: '1.65',
         },
-        '.cm-content': { padding: '14px 0 24px' },
-        '.cm-line': { paddingLeft: '0' },
+        '.cm-content': { padding: '16px 24px 24px 0' },
+        '.cm-line': { paddingLeft: '16px', paddingRight: '8px' },
         '.cm-gutters': {
           background: 'rgb(var(--color-surface))',
           color: 'rgb(var(--color-dim))',

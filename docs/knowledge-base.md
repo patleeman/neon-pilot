@@ -1,8 +1,8 @@
-# Legacy knowledge files
+# Knowledge files
 
-Knowledge files are legacy durable reference material. Use [Memory](memory.md) for agent-owned standing behavior, workspace scopes, skills, Git history, remote setup, and sync.
+Knowledge files are durable reference material that can be browsed, edited, searched, or attached to conversations.
 
-The optional Knowledge extension, when installed, can browse and edit reference files beside conversations. It is not the GA source of truth for agent memory.
+The optional Knowledge extension, when installed, can browse and edit reference files beside conversations.
 
 ## What to store
 
@@ -13,14 +13,6 @@ Good legacy knowledge content is stable, useful across conversations, and safe t
 - Decisions or summaries you want future conversations to find.
 
 Do not store API keys, tokens, passwords, private credentials, or one-off scratch output that does not need to be durable.
-
-## Migration to Memory
-
-Open **Memory** and use **Import knowledge** to create `memory/scopes/imported-knowledge/memory.md`.
-
-The imported scope uses `inject: false`. Review it, move durable behavior into `memory/system.md` or a scoped `memory.md`, and keep pure reference material outside injected memory.
-
-Configure the Memory remote from the Memory page when you want Git-backed sync between machines.
 
 ## Related docs
 

@@ -14,7 +14,6 @@ import {
 } from '@neon-pilot/core';
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
-import { getActiveMemoryInstructionFiles } from '../memory/memoryStore.js';
 import { invokePromptAssemblyProvider, isRecord } from './providerRuntime.js';
 import { getAssemblyRuntimeScope } from './runtimeScope.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from './types.js';
@@ -49,11 +48,6 @@ const instructionProviders: InstructionProvider[] = [
     id: 'runtime-files',
     title: 'Runtime instruction files',
     provide: listFileInstructionLayers,
-  },
-  {
-    id: 'memory-files',
-    title: 'Memory instruction files',
-    provide: listMemoryInstructionLayers,
   },
   {
     id: 'runtime-template',
@@ -169,20 +163,6 @@ function listFileInstructionLayers(ctx: AssemblyRuntimeContext): InstructionLaye
     });
   }
   return layers;
-}
-
-function listMemoryInstructionLayers(ctx: AssemblyRuntimeContext): InstructionLayer[] {
-  return getActiveMemoryInstructionFiles({ cwd: ctx.cwd, repoRoot: ctx.repoRoot }).map((file) => ({
-    id: file.id,
-    providerId: 'memory',
-    title: file.title,
-    content: file.content,
-    source: { kind: 'configured-folder', label: file.path, root: file.path },
-    scope: file.id.startsWith('memory-scope:') ? 'workspace' : 'global',
-    priority: file.priority,
-    mutable: true,
-    risk: 'normal',
-  }));
 }
 
 async function generatedRuntimeLayer(ctx: AssemblyRuntimeContext): Promise<InstructionLayer | null> {

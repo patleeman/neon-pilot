@@ -31,9 +31,9 @@
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./memory.html">Memory</a
-          ><a class="" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
-          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -170,8 +170,7 @@
         <p>
           Machine config augments the built-in machine-local defaults. Neon Pilot always checks <code>~/.config/agents/AGENTS.md</code> as
           the canonical secondary instruction file and <code>~/.config/agents/skill</code> plus <code>~/.config/agents/skills</code> as
-          canonical secondary skill roots. Memory under the knowledge root is the primary durable agent-behavior source; use the machine
-          agent dir for personal files that should stay local to this machine.
+          canonical secondary skill roots. Use the machine agent dir for personal files that should stay local to this machine.
         </p>
         <h2 id="runtime-agent-settings">Runtime agent settings</h2>
         <p>The active agent/runtime settings file is:</p>
@@ -311,7 +310,7 @@
           still take precedence.
         </p>
         <h2 id="root-resolution">Root Resolution</h2>
-        <p>The effective knowledge root resolves in this order. Memory lives under this root as <code>memory/</code>.</p>
+        <p>The effective knowledge root resolves in this order.</p>
         <ol>
           <li><code>NEON_PILOT_KNOWLEDGE_ROOT</code></li>
           <li>
@@ -321,10 +320,7 @@
           <li><code>knowledgeRoot</code> from machine config</li>
           <li><code>~/Documents/neon-pilot</code></li>
         </ol>
-        <p>
-          Knowledge extension UI, when installed, uses the same root for legacy reference files. Configure Memory remote and sync from the
-          Memory page.
-        </p>
+        <p>Knowledge extension UI, when installed, uses the same root for reference files.</p>
         <h2 id="agent-file-discovery">Agent file discovery</h2>
         <p>Global agent files use a primary/secondary model:</p>
         <table>

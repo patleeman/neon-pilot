@@ -66,20 +66,124 @@ vi.mock('./WorkspaceCodeEditor', () => ({
 }));
 
 vi.mock('@pierre/trees/react', () => ({
-  FileTree: ({ renderContextMenu }: { renderContextMenu?: (item: { path: string }, context: { close: () => void }) => React.ReactNode }) =>
-    React.createElement('div', { 'data-testid': 'mock-file-tree' }, renderContextMenu?.({ path: 'tmp/' }, { close: () => undefined })),
+  FileTree: ({
+    model,
+    renderContextMenu,
+  }: {
+    model: MockFileTreeModel;
+    renderContextMenu?: (item: { path: string }, context: { close: () => void }) => React.ReactNode;
+  }) => {
+    const [, setVersion] = React.useState(0);
+    React.useEffect(() => model.__subscribeRender(() => setVersion((value) => value + 1)), [model]);
+    const paths = model.__paths;
+    return React.createElement(
+      'div',
+      { 'data-testid': 'mock-file-tree' },
+      paths.map((path) =>
+        React.createElement(
+          'button',
+          {
+            key: path,
+            type: 'button',
+            role: 'button',
+            'aria-selected': model.__selected.includes(path),
+            onClick: () => model.__activate(path),
+            onContextMenu: (event: React.MouseEvent) => {
+              event.preventDefault();
+              model.__contextPath = path;
+              model.__notify();
+            },
+          },
+          path.replace(/\/$/, '').split('/').pop() || path,
+        ),
+      ),
+      renderContextMenu?.({ path: model.__contextPath ?? paths[0] ?? 'tmp/' }, { close: () => undefined }),
+    );
+  },
 }));
 
+type MockFileTreeModel = {
+  __paths: string[];
+  __selected: string[];
+  __expanded: Set<string>;
+  __contextPath: string | null;
+  __activate: (path: string) => void;
+  __notify: () => void;
+  __subscribeRender: (listener: () => void) => () => void;
+  subscribe: (listener: () => void) => () => void;
+  getSelectedPaths: () => readonly string[];
+  getItem: (path: string) => { isDirectory: () => boolean; isExpanded: () => boolean; expand: () => void } | null;
+  startRenaming: () => undefined;
+};
+
 vi.mock('../shared/useFileTreeModel', () => ({
-  useFileTreeModel: () => ({
-    model: {
-      subscribe: () => () => undefined,
-      getItem: () => null,
-      startRenaming: () => undefined,
-    },
-    resetTree: () => undefined,
-    nativeContextMenuOpenRef: { current: null },
-  }),
+  useFileTreeModel: ({ onSelectionChange }: { onSelectionChange?: (paths: readonly string[]) => void }) => {
+    const modelRef = React.useRef<MockFileTreeModel | null>(null);
+    const onSelectionChangeRef = React.useRef(onSelectionChange);
+    onSelectionChangeRef.current = onSelectionChange;
+    if (!modelRef.current) {
+      const listeners = new Set<() => void>();
+      const renderListeners = new Set<() => void>();
+      modelRef.current = {
+        __paths: [],
+        __selected: [],
+        __expanded: new Set<string>(),
+        __contextPath: null,
+        __activate(path: string) {
+          if (path.endsWith('/')) {
+            if (this.__expanded.has(path)) {
+              this.__expanded.delete(path);
+            } else {
+              this.__expanded.add(path);
+            }
+            this.__notify();
+            return;
+          }
+          this.__selected = [path];
+          onSelectionChangeRef.current?.([path]);
+          this.__notify();
+        },
+        __notify() {
+          listeners.forEach((listener) => listener());
+          renderListeners.forEach((listener) => listener());
+        },
+        __subscribeRender(listener: () => void) {
+          renderListeners.add(listener);
+          return () => renderListeners.delete(listener);
+        },
+        subscribe(listener: () => void) {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+        getSelectedPaths() {
+          return this.__selected;
+        },
+        getItem(path: string) {
+          if (!this.__paths.includes(path)) return null;
+          return {
+            isDirectory: () => path.endsWith('/'),
+            isExpanded: () => this.__expanded.has(path),
+            expand: () => {
+              this.__expanded.add(path);
+              this.__notify();
+            },
+          };
+        },
+        startRenaming: () => undefined,
+      };
+    }
+    return {
+      model: modelRef.current,
+      resetTree: (paths: readonly string[], options?: { initialSelectedPaths?: readonly string[] }) => {
+        const model = modelRef.current;
+        if (!model) return;
+        model.__paths = [...paths];
+        model.__selected = [...(options?.initialSelectedPaths ?? [])];
+        model.__notify();
+      },
+      nativeContextMenuOpenRef: { current: null },
+    };
+  },
 }));
 
 import {
@@ -966,7 +1070,9 @@ describe('formatWorkspaceEntrySize', () => {
       setInputValue(input, 'renamed.md');
     });
 
-    const confirmButton = Array.from(document.body.querySelectorAll('button')).find((entry) => entry.textContent?.includes('Rename'));
+    const confirmButton = Array.from(document.body.querySelectorAll('button'))
+      .reverse()
+      .find((entry) => entry.textContent?.includes('Rename'));
     expect(confirmButton).toBeTruthy();
     await act(async () => {
       confirmButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

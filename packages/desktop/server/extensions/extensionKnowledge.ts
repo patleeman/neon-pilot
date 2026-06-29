@@ -3,7 +3,6 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 
 import { getKnowledgeRoot } from '@neon-pilot/core';
 
-import { writeMemoryFile } from '../memory/memoryStore.js';
 import { assertExtensionAnyPermission } from './extensionPermissions.js';
 
 interface KnowledgeEntry {
@@ -32,17 +31,6 @@ function safePath(id = ''): string {
   const abs = resolve(root, clean);
   if (!isInsideRoot(root, abs)) throw new Error('Invalid knowledge path.');
   return abs;
-}
-
-function memoryRelativePath(id: string): string | null {
-  const clean = id.replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+$/, '').trim();
-  if (!clean.startsWith('memory/')) return null;
-  if (clean.includes('\0')) throw new Error('Invalid knowledge path.');
-  const memoryPath = clean.slice('memory/'.length);
-  if (!memoryPath || memoryPath.split('/').some((segment) => segment === '.' || segment === '..')) {
-    throw new Error('Invalid knowledge path.');
-  }
-  return memoryPath;
 }
 
 interface ExtensionKnowledgeCapabilityOptions {
@@ -82,12 +70,6 @@ export function createExtensionKnowledgeCapability(extensionId = 'extension', op
     async write(path: string, content: string) {
       assertKnowledgePermission('write', 'knowledge.write');
       if (typeof content !== 'string') throw new Error('content must be a string.');
-      const memoryPath = memoryRelativePath(path);
-      if (memoryPath) {
-        safePath(path);
-        await writeMemoryFile({ relativePath: memoryPath, content, reason: `Update ${memoryPath} from ${extensionId}` });
-        return entryFromPath(getRoot(), safePath(path));
-      }
       const abs = safePath(path);
       mkdirSync(dirname(abs), { recursive: true });
       writeFileSync(abs, content, 'utf-8');

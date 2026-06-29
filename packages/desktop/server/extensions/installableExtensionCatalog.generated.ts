@@ -56,8 +56,7 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
   {
     id: 'system-knowledge',
     name: 'Knowledge',
-    description:
-      'Browse legacy knowledge/reference files beside the active conversation. Use Memory for agent behavior and Git-backed sync.',
+    description: 'Browse and edit durable knowledge/reference files beside the active conversation.',
     version: '0.1.0',
     tag: 'v0.11.7',
     compatibility: {

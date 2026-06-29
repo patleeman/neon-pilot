@@ -17,7 +17,6 @@ const pages = [
   { file: 'conversations.md', slug: 'conversations', title: 'Conversations', group: 'Product' },
   { file: 'conversation-context.md', slug: 'conversation-context', title: 'Conversation Context', group: 'Product' },
   { file: 'projects.md', slug: 'projects', title: 'Projects', group: 'Product' },
-  { file: 'memory.md', slug: 'memory', title: 'Memory', group: 'Product' },
   { file: 'knowledge-base.md', slug: 'knowledge-base', title: 'Knowledge Base', group: 'Product' },
   { file: 'activity-tree.md', slug: 'activity-tree', title: 'Activity Tree', group: 'Product' },
   { file: 'design-system.md', slug: 'design-system', title: 'Design System', group: 'Product' },

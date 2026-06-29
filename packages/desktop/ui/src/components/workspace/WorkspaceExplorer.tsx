@@ -63,6 +63,9 @@ interface WorkspaceExplorerProps {
   activeFilePath?: string | null;
   openFilesScope?: string | null;
   railOnly?: boolean;
+  readOnlyTree?: boolean;
+  hideDotEntries?: boolean;
+  showDraftActions?: boolean;
 }
 
 type LoadState<T> = { status: 'idle' | 'loading'; data: T | null; error: string | null };
@@ -495,6 +498,8 @@ function WorkspaceTreeRow({
   onCreateFolder,
   onMove,
   root,
+  hideDotEntries,
+  showDraftActions,
 }: {
   entry: WorkspaceEntry;
   depth: number;
@@ -509,6 +514,8 @@ function WorkspaceTreeRow({
   onCreateFolder?: (entry: WorkspaceEntry) => void;
   onMove?: (entry: WorkspaceEntry) => void;
   root: string | null;
+  hideDotEntries: boolean;
+  showDraftActions: boolean;
 }) {
   const selected = selectedPath === entry.path;
   const isDirectory = entry.kind === 'directory';
@@ -533,16 +540,18 @@ function WorkspaceTreeRow({
           )}
           <WorkspaceStatusBadge status={entry.gitStatus} count={entry.descendantGitStatusCount} />
         </RowButton>
-        <TextButton
-          className="mr-1 hidden shrink-0 px-1 py-0.5 text-[10px] text-dim group-hover:inline-flex group-focus-within:inline-flex"
-          title="Draft an agent prompt for this path"
-          onClick={(event) => {
-            event.stopPropagation();
-            onDraftPrompt(buildPrompt(root, 'inspect this path', entry.path));
-          }}
-        >
-          ask
-        </TextButton>
+        {showDraftActions ? (
+          <TextButton
+            className="mr-1 hidden shrink-0 px-1 py-0.5 text-[10px] text-dim group-hover:inline-flex group-focus-within:inline-flex"
+            title="Draft an agent prompt for this path"
+            onClick={(event) => {
+              event.stopPropagation();
+              onDraftPrompt(buildPrompt(root, 'inspect this path', entry.path));
+            }}
+          >
+            ask
+          </TextButton>
+        ) : null}
         {isDirectory && onCreateFile ? (
           <TextButton
             className="hidden shrink-0 px-1 py-0.5 text-[10px] text-dim group-hover:inline-flex group-focus-within:inline-flex"
@@ -589,7 +598,7 @@ function WorkspaceTreeRow({
               {node.error}
             </div>
           )}
-          {node.entries?.map((child) => (
+          {filterWorkspaceEntries(node.entries ?? [], hideDotEntries).map((child) => (
             <WorkspaceTreeBranch
               key={child.path}
               entry={child}
@@ -605,6 +614,8 @@ function WorkspaceTreeRow({
               onCreateFolder={onCreateFolder}
               onMove={onMove}
               root={root}
+              hideDotEntries={hideDotEntries}
+              showDraftActions={showDraftActions}
             />
           ))}
         </div>
@@ -617,6 +628,10 @@ function WorkspaceTreeBranch(props: Parameters<typeof WorkspaceTreeRow>[0]) {
   return <WorkspaceTreeRow {...props} />;
 }
 
+function filterWorkspaceEntries(entries: readonly WorkspaceEntry[], hideDotEntries: boolean): WorkspaceEntry[] {
+  return hideDotEntries ? entries.filter((entry) => !entry.name.startsWith('.')) : [...entries];
+}
+
 export function WorkspaceExplorer({
   cwd,
   onDraftPrompt,
@@ -625,6 +640,9 @@ export function WorkspaceExplorer({
   activeFilePath = null,
   openFilesScope = null,
   railOnly = false,
+  readOnlyTree = false,
+  hideDotEntries = false,
+  showDraftActions = true,
 }: WorkspaceExplorerProps) {
   const { theme, availableThemes = [] } = useTheme();
   const themeAppearance = availableThemes.find((candidate) => candidate.id === theme)?.appearance ?? (theme === 'dark' ? 'dark' : 'light');
@@ -659,6 +677,7 @@ export function WorkspaceExplorer({
       onDraftPrompt(buildPrompt(root, 'inspect this file', entry.path));
     },
     onRename: ({ sourcePath, destinationPath }: FileTreeRenameEvent) => {
+      if (readOnlyTree) return;
       if (!cwd) return;
       const entry = workspaceEntryMap.get(treePathToWorkspacePath(sourcePath));
       const nextName = destinationPath.split('/').filter(Boolean).pop()?.trim() ?? '';
@@ -866,11 +885,15 @@ export function WorkspaceExplorer({
   const [pathPromptError, setPathPromptError] = useState<string | null>(null);
   const [pathPromptSubmitting, setPathPromptSubmitting] = useState(false);
 
-  const createPath = useCallback((kind: 'file' | 'folder', directory: string) => {
-    setPathPromptError(null);
-    setPathPromptSubmitting(false);
-    setCreatePathPrompt({ kind, directory });
-  }, []);
+  const createPath = useCallback(
+    (kind: 'file' | 'folder', directory: string) => {
+      if (readOnlyTree) return;
+      setPathPromptError(null);
+      setPathPromptSubmitting(false);
+      setCreatePathPrompt({ kind, directory });
+    },
+    [readOnlyTree],
+  );
 
   const submitCreatePath = useCallback(
     async (kind: 'file' | 'folder', directory: string, name: string) => {
@@ -904,11 +927,15 @@ export function WorkspaceExplorer({
     [cwd, loadDirectory, loadRoot, openWorkspaceFile],
   );
 
-  const renamePath = useCallback((entry: WorkspaceEntry) => {
-    setPathPromptError(null);
-    setPathPromptSubmitting(false);
-    setRenamePathPrompt(entry);
-  }, []);
+  const renamePath = useCallback(
+    (entry: WorkspaceEntry) => {
+      if (readOnlyTree) return;
+      setPathPromptError(null);
+      setPathPromptSubmitting(false);
+      setRenamePathPrompt(entry);
+    },
+    [readOnlyTree],
+  );
 
   const submitRenamePath = useCallback(
     async (entry: WorkspaceEntry, newName: string) => {
@@ -948,6 +975,7 @@ export function WorkspaceExplorer({
 
   const deletePath = useCallback(
     async (entry: WorkspaceEntry) => {
+      if (readOnlyTree) return;
       if (!cwd) return;
       if (!window.confirm(`Delete ${entry.path}? This cannot be undone.`)) return;
       await api.deleteWorkspacePath(cwd, entry.path);
@@ -965,20 +993,18 @@ export function WorkspaceExplorer({
       const parent = parentDirectory(entry.path);
       if (parent) await loadDirectory(parent);
     },
-    [activeFilePath, cwd, loadDirectory, loadRoot, onActiveFilePathChange, openFilesScope],
+    [activeFilePath, cwd, loadDirectory, loadRoot, onActiveFilePathChange, openFilesScope, readOnlyTree],
   );
 
-  const movePath = useCallback((entry: WorkspaceEntry) => {
-    setPathPromptError(null);
-    setPathPromptSubmitting(false);
-    setMovePathPrompt(entry);
-  }, []);
-
-  const openEntryContextMenu = useCallback((entry: WorkspaceEntry, event: ReactMouseEvent<HTMLElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setEntryContextMenu({ entry, x: event.clientX, y: event.clientY });
-  }, []);
+  const movePath = useCallback(
+    (entry: WorkspaceEntry) => {
+      if (readOnlyTree) return;
+      setPathPromptError(null);
+      setPathPromptSubmitting(false);
+      setMovePathPrompt(entry);
+    },
+    [readOnlyTree],
+  );
 
   const closeEntryContextMenu = useCallback(() => {
     setEntryContextMenu(null);
@@ -1016,16 +1042,16 @@ export function WorkspaceExplorer({
   const changes = rootListing.data?.changes ?? [];
   const workspaceEntryMap = useMemo(() => {
     const map = new Map<string, WorkspaceEntry>();
-    for (const entry of rootListing.data?.entries ?? []) {
+    for (const entry of filterWorkspaceEntries(rootListing.data?.entries ?? [], hideDotEntries)) {
       map.set(entry.path, entry);
     }
     for (const node of Object.values(nodes)) {
-      for (const entry of node.entries ?? []) {
+      for (const entry of filterWorkspaceEntries(node.entries ?? [], hideDotEntries)) {
         map.set(entry.path, entry);
       }
     }
     return map;
-  }, [nodes, rootListing.data?.entries]);
+  }, [hideDotEntries, nodes, rootListing.data?.entries]);
   const workspaceTreePaths = useMemo(() => buildWorkspaceTreePaths(workspaceEntryMap.values(), nodes), [nodes, workspaceEntryMap]);
   const workspaceTreePathSignature = useMemo(() => workspaceTreePaths.join('\n'), [workspaceTreePaths]);
   const workspaceTreeResetRef = useRef({ entryMap: workspaceEntryMap, paths: workspaceTreePaths });
@@ -1174,11 +1200,13 @@ export function WorkspaceExplorer({
     const snapshot = workspaceTreeResetRef.current;
     resetTree(snapshot.paths, {
       initialExpandedPaths: collectExpandedWorkspaceFolderPaths(model, snapshot.entryMap.values()),
+      initialSelectedPaths: activeFilePath ? [activeFilePath] : [],
     });
-  }, [model, resetTree, workspaceTreePathSignature]);
+  }, [activeFilePath, model, resetTree, workspaceTreePathSignature]);
 
   useEffect(() => {
     nativeContextMenuOpenRef.current = (item, context) => {
+      if (readOnlyTree) return;
       const entry = workspaceEntryMap.get(treePathToWorkspacePath(item.path));
       if (!entry || !cwd) return;
       const desktopBridge = getDesktopBridge();
@@ -1203,16 +1231,27 @@ export function WorkspaceExplorer({
               entry.kind === 'directory' ? `${root ?? cwd}/${entry.path}` : `${root ?? cwd}/${parentDirectory(entry.path)}`,
             );
           }
-          if (action === 'rename') model.startRenaming(workspaceEntryToTreePath(entry));
+          if (action === 'rename') renamePath(entry);
           if (action === 'move') void movePath(entry);
           if (action === 'delete') void deletePath(entry);
         });
     };
-  }, [createPath, cwd, deletePath, model, movePath, root, workspaceEntryMap]);
+  }, [createPath, cwd, deletePath, movePath, nativeContextMenuOpenRef, readOnlyTree, renamePath, root, workspaceEntryMap]);
 
   useEffect(() => {
     if (!railOnly) return;
     const unsubscribe = model.subscribe(() => {
+      for (const selectedTreePath of model.getSelectedPaths()) {
+        const selectedEntry = workspaceEntryMap.get(treePathToWorkspacePath(selectedTreePath));
+        if (!selectedEntry || selectedEntry.kind !== 'directory') continue;
+        const selectedItem = model.getItem(workspaceEntryToTreePath(selectedEntry));
+        if (selectedItem?.isDirectory() && !selectedItem.isExpanded()) {
+          selectedItem.expand();
+        }
+        if (!nodes[selectedEntry.path]?.entries && !nodes[selectedEntry.path]?.loading) {
+          void loadDirectory(selectedEntry.path);
+        }
+      }
       for (const entry of workspaceEntryMap.values()) {
         if (entry.kind !== 'directory') continue;
         const item = model.getItem(workspaceEntryToTreePath(entry));
@@ -1246,37 +1285,64 @@ export function WorkspaceExplorer({
             ) : rootListing.error ? (
               <EmptyState title="Workspace unavailable" body={rootListing.error} className="px-3 py-8" />
             ) : rootListing.data ? (
-              <div className="h-full overflow-auto">
-                {rootListing.data.entries.length === 0 ? (
-                  <EmptyState title="No files" body="This workspace folder is empty." className="px-3 py-8" />
-                ) : (
-                  <div className="py-1">
-                    {rootListing.data.entries.map((entry) => (
-                      <WorkspaceTreeRow
-                        key={entry.path}
-                        entry={entry}
-                        depth={0}
-                        selectedPath={selectedPath}
-                        node={nodes[entry.path]}
-                        nodes={nodes}
-                        onToggle={toggleDirectory}
-                        onSelect={(entry) => openWorkspaceFile(entry.path)}
-                        onDraftPrompt={onDraftPrompt}
-                        onContextMenu={openEntryContextMenu}
-                        onCreateFile={(entry) => createPath('file', entry.path)}
-                        onCreateFolder={(entry) => createPath('folder', entry.path)}
-                        onMove={(entry) => movePath(entry)}
-                        root={root}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+              filterWorkspaceEntries(rootListing.data.entries, hideDotEntries).length === 0 ? (
+                <EmptyState title="No files" body="This workspace folder is empty." className="px-3 py-8" />
+              ) : (
+                <TreesFileTree
+                  className="h-full rounded-none"
+                  model={model}
+                  {...(!readOnlyTree && !useNativeWorkspaceContextMenu
+                    ? {
+                        renderContextMenu: (item: FileTreeContextMenuItem, context: FileTreeContextMenuOpenContext) => {
+                          const entry = workspaceEntryMap.get(treePathToWorkspacePath(item.path));
+                          if (!entry) return null;
+                          const directory = entry.kind === 'directory' ? entry.path : parentDirectory(entry.path);
+                          const desktopBridge = getDesktopBridge();
+                          return (
+                            <WorkspaceTreeContextMenu
+                              onCreateFile={() => {
+                                context.close();
+                                void createPath('file', directory);
+                              }}
+                              onCreateFolder={() => {
+                                context.close();
+                                void createPath('folder', directory);
+                              }}
+                              onOpenInFinder={
+                                desktopBridge?.openPath
+                                  ? () => {
+                                      context.close();
+                                      void desktopBridge.openPath(
+                                        entry.kind === 'directory' ? `${root ?? cwd}/${entry.path}` : `${root ?? cwd}/${directory}`,
+                                      );
+                                    }
+                                  : undefined
+                              }
+                              onRename={() => {
+                                context.close();
+                                renamePath(entry);
+                              }}
+                              onMove={() => {
+                                context.close();
+                                void movePath(entry);
+                              }}
+                              onDelete={() => {
+                                context.close();
+                                void deletePath(entry);
+                              }}
+                            />
+                          );
+                        },
+                      }
+                    : {})}
+                  style={TREE_HOST_STYLE}
+                />
+              )
             ) : (
               <TreesFileTree
                 className="h-full rounded-none"
                 model={model}
-                {...(!useNativeWorkspaceContextMenu
+                {...(!readOnlyTree && !useNativeWorkspaceContextMenu
                   ? {
                       renderContextMenu: (item: FileTreeContextMenuItem, context: FileTreeContextMenuOpenContext) => {
                         const entry = workspaceEntryMap.get(treePathToWorkspacePath(item.path));
@@ -1304,8 +1370,8 @@ export function WorkspaceExplorer({
                                 : undefined
                             }
                             onRename={() => {
-                              context.close({ restoreFocus: false });
-                              window.setTimeout(() => model.startRenaming(workspaceEntryToTreePath(entry)), 0);
+                              context.close();
+                              renamePath(entry);
                             }}
                             onMove={() => {
                               context.close();
@@ -1384,7 +1450,7 @@ export function WorkspaceExplorer({
         <div className="min-h-0 flex-1 overflow-auto p-1.5">
           {rootListing.status === 'loading' && !rootListing.data ? <LoadingState label="Loading files…" className="px-3 py-6" /> : null}
           {rootListing.error ? <EmptyState title="Workspace unavailable" body={rootListing.error} className="px-3 py-8" /> : null}
-          {rootListing.data?.entries.map((entry) => (
+          {filterWorkspaceEntries(rootListing.data?.entries ?? [], hideDotEntries).map((entry) => (
             <WorkspaceTreeRow
               key={entry.path}
               entry={entry}
@@ -1396,6 +1462,8 @@ export function WorkspaceExplorer({
               onSelect={selectFile}
               onDraftPrompt={onDraftPrompt}
               root={root}
+              hideDotEntries={hideDotEntries}
+              showDraftActions={showDraftActions}
             />
           ))}
         </div>
@@ -1509,11 +1577,13 @@ export function WorkspaceFileDocument({
   cwd,
   path,
   onReplyWithSelection,
+  onSaveFile,
   hideHeader = false,
 }: {
   cwd: string;
   path: string;
   onReplyWithSelection?: (selection: { filePath: string; text: string }) => void;
+  onSaveFile?: (input: { cwd: string; path: string; content: string }) => Promise<WorkspaceFileContent>;
   hideHeader?: boolean;
 }) {
   const { theme, availableThemes = [] } = useTheme();
@@ -1523,6 +1593,7 @@ export function WorkspaceFileDocument({
   const [diffState, setDiffState] = useState<LoadState<WorkspaceDiffOverlay>>({ status: 'idle', data: null, error: null });
   const [draftContent, setDraftContent] = useState('');
   const [saveState, setSaveState] = useState<{ error: string | null }>({ error: null });
+  const [savePhase, setSavePhase] = useState<'saved' | 'unsaved' | 'saving'>('saved');
 
   const [selectionContextMenu, setSelectionContextMenu] = useState<{ x: number; y: number; text: string } | null>(null);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1545,7 +1616,8 @@ export function WorkspaceFileDocument({
         }
         setFileState({ status: 'idle', data: file, error: null });
         setDraftContent(file.content ?? '');
-        setSaveState({ status: 'idle', error: null });
+        setSaveState({ error: null });
+        setSavePhase('saved');
         if (file.gitStatus && !file.binary && !file.tooLarge) {
           setDiffState({ status: 'loading', data: null, error: null });
           try {
@@ -1585,6 +1657,7 @@ export function WorkspaceFileDocument({
 
   useEffect(() => {
     saveRequestIdRef.current += 1;
+    setSavePhase('saved');
   }, [cwd, path]);
 
   useEffect(() => {
@@ -1645,8 +1718,11 @@ export function WorkspaceFileDocument({
     const isCurrentSaveRequest = () => saveRequestIdRef.current === saveRequestId;
 
     const timer = window.setTimeout(() => {
-      void api
-        .writeWorkspaceFile(cwd, selectedFile.path, draftContent)
+      setSavePhase('saving');
+      const writeFile =
+        onSaveFile ??
+        ((input: { cwd: string; path: string; content: string }) => api.writeWorkspaceFile(input.cwd, input.path, input.content));
+      void writeFile({ cwd, path: selectedFile.path, content: draftContent })
         .then((saved) => {
           if (!isCurrentSaveRequest()) {
             return;
@@ -1654,6 +1730,7 @@ export function WorkspaceFileDocument({
           setFileState({ status: 'idle', data: saved, error: null });
           setDraftContent(saved.content ?? draftContent);
           setSaveState({ error: null });
+          setSavePhase('saved');
           if (saved.gitStatus && !saved.binary && !saved.tooLarge) {
             void api
               .workspaceDiff(cwd, saved.path)
@@ -1676,13 +1753,14 @@ export function WorkspaceFileDocument({
             return;
           }
           setSaveState({ error: formatWorkspaceLoadError(error, 'Could not save this file. Check the file and try again.') });
+          setSavePhase('unsaved');
         });
     }, 800);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [draftContent, selectedFile, cwd]);
+  }, [draftContent, selectedFile, cwd, onSaveFile]);
 
   useEffect(() => {
     writeStoredBoolean(WORKSPACE_EXPLORER_DIFF_KEY, showDiff);
@@ -1715,6 +1793,9 @@ export function WorkspaceFileDocument({
   }, [closeSelectionContextMenu, selectionContextMenu]);
 
   const diffSpec = showDiff && diffState.data ? diffState.data : { addedLines: [], deletedBlocks: [] };
+  const isEditableTextFile = Boolean(selectedFile && !selectedFile.binary && !(selectedFile.tooLarge && !selectedFile.content));
+  const isDirty = isEditableTextFile && draftContent !== (selectedFile?.content ?? '');
+  const saveLabel = saveState.error ? 'Save failed' : savePhase === 'saving' ? 'Saving...' : isDirty ? 'Unsaved' : 'Saved';
 
   const copySelectedText = useCallback(
     async (text: string) => {
@@ -1813,11 +1894,25 @@ export function WorkspaceFileDocument({
               theme={themeAppearance}
               diffSpec={diffSpec}
               editable
-              onChange={setDraftContent}
+              onChange={(value) => {
+                setDraftContent(value);
+                setSavePhase(value === (selectedFile.content ?? '') ? 'saved' : 'unsaved');
+              }}
             />
           </Suspense>
         )}
       </div>
+      {isEditableTextFile ? (
+        <div className="flex shrink-0 items-center gap-2 border-t border-border-subtle bg-surface px-3 py-1.5 text-[11px] text-dim">
+          <span className="font-medium text-secondary">Editable</span>
+          <span aria-hidden="true">·</span>
+          <span>Autosaves</span>
+          <span aria-hidden="true">·</span>
+          <span className={cx(saveState.error ? 'text-danger' : savePhase === 'saving' || isDirty ? 'text-secondary' : 'text-dim')}>
+            {saveLabel}
+          </span>
+        </div>
+      ) : null}
       {saveState.error ? <div className="ui-surface-danger-soft px-3 py-1 text-[11px] text-danger">{saveState.error}</div> : null}
       {selectionContextMenu ? (
         <ContextMenu

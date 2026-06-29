@@ -10,7 +10,6 @@ vi.mock('@neon-pilot/core', async () => {
     ...actual,
     getStateRoot: () => stateRoot,
     getDurableSkillsDir: () => durableSkillsDir,
-    getDurableMemorySkillsDir: () => memorySkillsDir,
     resolveRuntimeResources: () => ({
       skillDirs: [configuredSkillsDir],
       extensionEntries: [],
@@ -168,7 +167,6 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
 
 let stateRoot = '';
 let durableSkillsDir = '';
-let memorySkillsDir = '';
 let configuredSkillsDir = '';
 let promptTemplatePath = '';
 let extensionRoot = '';
@@ -180,7 +178,6 @@ describe('buildPromptAssemblyPlan', () => {
     const root = mkdtempSync(join(tmpdir(), 'neon-pilot-prompt-assembly-'));
     stateRoot = join(root, 'state');
     durableSkillsDir = join(root, 'knowledge', 'skills');
-    memorySkillsDir = join(root, 'knowledge', 'memory', 'skills');
     configuredSkillsDir = join(root, 'configured-skills');
     extensionRoot = join(root, 'extension');
     promptTemplatePath = join(root, 'prompts', 'summary.md');
@@ -226,7 +223,6 @@ describe('buildPromptAssemblyPlan', () => {
     const root = mkdtempSync(join(tmpdir(), 'neon-pilot-prompt-assembly-hooks-'));
     stateRoot = join(root, 'state');
     durableSkillsDir = join(root, 'knowledge', 'skills');
-    memorySkillsDir = join(root, 'knowledge', 'memory', 'skills');
     configuredSkillsDir = join(root, 'configured-skills');
     extensionRoot = join(root, 'extension');
     promptTemplatePath = join(root, 'prompts', 'summary.md');

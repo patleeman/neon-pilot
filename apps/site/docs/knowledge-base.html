@@ -31,9 +31,9 @@
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./memory.html">Memory</a
-          ><a class="active" href="./knowledge-base.html">Knowledge Base</a><a class="" href="./activity-tree.html">Activity Tree</a
-          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./projects.html">Projects</a><a class="active" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
+          ><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
@@ -56,15 +56,9 @@
         </section>
       </aside>
       <article class="docs-content">
-        <h1 id="legacy-knowledge-files">Legacy knowledge files</h1>
-        <p>
-          Knowledge files are legacy durable reference material. Use <a href="./memory.html">Memory</a> for agent-owned standing behavior,
-          workspace scopes, skills, Git history, remote setup, and sync.
-        </p>
-        <p>
-          The optional Knowledge extension, when installed, can browse and edit reference files beside conversations. It is not the GA
-          source of truth for agent memory.
-        </p>
+        <h1 id="knowledge-files">Knowledge files</h1>
+        <p>Knowledge files are durable reference material that can be browsed, edited, searched, or attached to conversations.</p>
+        <p>The optional Knowledge extension, when installed, can browse and edit reference files beside conversations.</p>
         <h2 id="what-to-store">What to store</h2>
         <p>Good legacy knowledge content is stable, useful across conversations, and safe to keep in files:</p>
         <ul>
@@ -73,16 +67,6 @@
           <li>Decisions or summaries you want future conversations to find.</li>
         </ul>
         <p>Do not store API keys, tokens, passwords, private credentials, or one-off scratch output that does not need to be durable.</p>
-        <h2 id="migration-to-memory">Migration to Memory</h2>
-        <p>
-          Open <strong>Memory</strong> and use <strong>Import knowledge</strong> to create
-          <code>memory/scopes/imported-knowledge/memory.md</code>.
-        </p>
-        <p>
-          The imported scope uses <code>inject: false</code>. Review it, move durable behavior into <code>memory/system.md</code> or a
-          scoped <code>memory.md</code>, and keep pure reference material outside injected memory.
-        </p>
-        <p>Configure the Memory remote from the Memory page when you want Git-backed sync between machines.</p>
         <h2 id="related-docs">Related docs</h2>
         <ul>
           <li><a href="./getting-started.html">Getting Started</a> — first-run app and provider verification</li>
@@ -97,8 +81,7 @@
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#what-to-store">What to store</a><a href="#migration-to-memory">Migration to Memory</a
-        ><a href="#related-docs">Related docs</a>
+        <a href="#what-to-store">What to store</a><a href="#related-docs">Related docs</a>
       </aside>
     </main>
   </body>

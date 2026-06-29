@@ -55,7 +55,7 @@ The setup is healthy when `doctor` passes, the conversation view loads, and the 
 4. Ask for a bounded first task, such as summarizing a file, explaining a code path, or drafting a plan.
 5. Open **Extensions** to inspect built-in capabilities and install or build workflow-specific extensions.
 6. Use the Workbench to inspect files, artifacts, browser views, extensions, and other surfaces beside the conversation.
-7. If you want durable agent behavior or workspace context, configure [Memory](memory.md) after the first conversation works.
+7. Use conversation attachments, projects, and knowledge files when you want reusable context.
 
 ## What to try next
 
@@ -72,5 +72,4 @@ For source builds and repo development, use [Development workflow](development.m
 - [Views](views.md) — understand Conversation and Workbench layout modes
 - [Conversations](conversations.md) — how to work with agent conversations
 - [Desktop App](desktop-app.md) — Electron shell and shortcuts
-- [Memory](memory.md) — Git-backed durable agent behavior, scopes, skills, and sync
 - [Configuration](configuration.md) — config files and environment variables

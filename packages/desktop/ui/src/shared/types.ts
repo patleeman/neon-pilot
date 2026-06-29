@@ -1326,7 +1326,7 @@ export type DurableRunSseEvent =
   | { type: 'deleted'; runId: string }
   | { type: 'error'; message: string };
 
-// ── Memory browser ────────────────────────────────────────────────────────────
+// ── Knowledge browser ─────────────────────────────────────────────────────────
 
 interface MemoryAgentsItem {
   source: string;
@@ -1369,71 +1369,6 @@ export interface MemoryData {
   agentsMd: MemoryAgentsItem[];
   skills: MemorySkillItem[];
   memoryDocs: MemoryDocItem[];
-}
-
-export interface MemoryGitChange {
-  hash: string;
-  author: string;
-  date: string;
-  subject: string;
-  files: string[];
-}
-
-export interface MemoryIssue {
-  severity: 'info' | 'warning' | 'error';
-  code: string;
-  message: string;
-  relativePath?: string;
-}
-
-export interface MemorySystemFile {
-  relativePath: string;
-  path: string;
-  exists: boolean;
-  content: string;
-  loaded: true;
-  updatedAt?: string;
-}
-
-export interface MemoryScope {
-  slug: string;
-  name: string;
-  type: string;
-  relativePath: string;
-  path: string;
-  roots: string[];
-  aliases: string[];
-  inject: boolean;
-  active: boolean;
-  content: string;
-  updatedAt?: string;
-}
-
-export interface MemoryManagedSkill {
-  name: string;
-  description: string;
-  relativePath: string;
-  path: string;
-  content: string;
-  source: 'memory';
-}
-
-export interface ManagedMemoryState {
-  initialized: boolean;
-  root: string;
-  system: MemorySystemFile;
-  scopes: MemoryScope[];
-  skills: MemoryManagedSkill[];
-  recentChanges: MemoryGitChange[];
-  issues: MemoryIssue[];
-  git: {
-    initialized: boolean;
-    branch: string | null;
-    remoteUrl: string | null;
-    dirty: boolean;
-    ahead: number;
-    behind: number;
-  };
 }
 
 export interface KnowledgeFileSummary {

@@ -40,7 +40,7 @@ Example:
 }
 ```
 
-Machine config augments the built-in machine-local defaults. Neon Pilot always checks `~/.config/agents/AGENTS.md` as the canonical secondary instruction file and `~/.config/agents/skill` plus `~/.config/agents/skills` as canonical secondary skill roots. Memory under the knowledge root is the primary durable agent-behavior source; use the machine agent dir for personal files that should stay local to this machine.
+Machine config augments the built-in machine-local defaults. Neon Pilot always checks `~/.config/agents/AGENTS.md` as the canonical secondary instruction file and `~/.config/agents/skill` plus `~/.config/agents/skills` as canonical secondary skill roots. Use the machine agent dir for personal files that should stay local to this machine.
 
 ## Runtime agent settings
 
@@ -103,14 +103,14 @@ If no enabled profile extension matches, Neon Pilot uses the normal default runt
 
 ## Root Resolution
 
-The effective knowledge root resolves in this order. Memory lives under this root as `memory/`.
+The effective knowledge root resolves in this order.
 
 1. `NEON_PILOT_KNOWLEDGE_ROOT`
 2. Managed knowledge-base mirror at `<state-root>/knowledge-base/repo` when `knowledgeBaseRepoUrl` is configured
 3. `knowledgeRoot` from machine config
 4. `~/Documents/neon-pilot`
 
-Knowledge extension UI, when installed, uses the same root for legacy reference files. Configure Memory remote and sync from the Memory page.
+Knowledge extension UI, when installed, uses the same root for reference files.
 
 ## Agent file discovery
 
