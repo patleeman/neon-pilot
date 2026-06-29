@@ -251,6 +251,33 @@
     @apply absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-border-default bg-surface shadow-xl overflow-hidden z-50;
   }
 
+  .conversation-composer-menu {
+    border-radius: 8px !important;
+    border-color: rgb(var(--color-border-subtle));
+    background: rgb(var(--color-elevated) / 0.95);
+    box-shadow:
+      0 12px 36px rgb(0 0 0 / 0.24),
+      0 1px 0 rgb(255 255 255 / 0.04) inset;
+  }
+
+  .conversation-composer-menu .ui-row-button {
+    gap: 0.5rem;
+    border-radius: 6px;
+    padding: 0.375rem 0.625rem;
+  }
+
+  .conversation-slash-menu .ui-row-button {
+    align-items: center;
+  }
+
+  .conversation-rich-menu .ui-row-button {
+    align-items: flex-start;
+  }
+
+  .conversation-composer-menu .ui-row-button-selected {
+    background: rgb(var(--color-surface) / 0.62);
+  }
+
   .ui-menu-header {
     @apply px-3 pt-2.5 pb-1.5 border-b border-border-subtle flex items-center justify-between gap-2;
   }

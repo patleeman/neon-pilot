@@ -32,8 +32,8 @@ export function ModelPicker({
   const selectedModelValue = selectedModel ? getModelSelectionValue(selectedModel, allModels) : '';
 
   return (
-    <div className="ui-menu-shell">
-      <div className="ui-menu-header">
+    <div className="ui-menu-shell conversation-composer-menu conversation-rich-menu">
+      <div className="ui-menu-header px-2.5 pt-1.5 pb-1">
         <SectionLabel>Switch model</SectionLabel>
         <IconButton onClick={onClose} title="Close model picker" aria-label="Close model picker" compact>
           <span className="text-[11px] font-mono">esc</span>
@@ -46,7 +46,7 @@ export function ModelPicker({
       ) : (
         groups.map(([provider, providerModels]) => (
           <div key={provider}>
-            <MenuGroupLabel className="px-3 pt-2 pb-0.5">{formatModelProviderGroupLabel(provider, providerIds)}</MenuGroupLabel>
+            <MenuGroupLabel className="px-2.5 pt-1.5 pb-0.5">{formatModelProviderGroupLabel(provider, providerIds)}</MenuGroupLabel>
             {providerModels.map((model) => {
               const modelValue = getModelSelectionValue(model, allModels);
               const isCurrent = modelValue === currentModel;
@@ -54,12 +54,13 @@ export function ModelPicker({
               return (
                 <RowButton
                   key={modelValue}
+                  compact
                   onMouseDown={(event) => {
                     event.preventDefault();
                     onSelect(modelValue);
                   }}
                   selected={isFocused}
-                  className={cx('flex w-full items-center gap-3 px-3 py-2.5', !isFocused && 'text-secondary')}
+                  className={cx('flex w-full items-center gap-2 px-2.5 py-1.5', !isFocused && 'text-secondary')}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -92,26 +93,25 @@ export function SlashMenu({ items, idx, onSelect }: { items: SlashMenuItem[]; id
   }, [selectedIndex]);
 
   return (
-    <div className="ui-menu-shell max-h-[28rem] overflow-y-auto py-1.5">
+    <div className="ui-menu-shell conversation-composer-menu conversation-slash-menu max-h-[18rem] overflow-y-auto py-1">
       {items.map((item, itemIndex) => (
         <RowButton
           key={item.key}
           ref={itemIndex === selectedIndex ? selectedItemRef : undefined}
+          compact
           onMouseDown={(event) => {
             event.preventDefault();
             onSelect(item);
           }}
           selected={itemIndex === selectedIndex}
-          className={cx('flex w-full items-start gap-3 px-3 py-2.5', itemIndex !== selectedIndex && 'text-secondary')}
+          className={cx('flex w-full items-center gap-2 px-2.5 py-1', itemIndex !== selectedIndex && 'text-secondary')}
         >
-          <span className="w-5 pt-0.5 text-center text-[13px] select-none text-dim/70">{item.icon}</span>
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="min-w-0 max-w-[26rem] truncate whitespace-nowrap font-mono text-[12px] text-accent">{item.displayCmd}</span>
-              {item.source && <MetaLabel tone="muted">{item.source}</MetaLabel>}
-            </div>
-            <p className="mt-0.5 truncate text-[12px] text-dim/90">{item.desc}</p>
-          </div>
+          <span className="w-4 text-center text-[11px] select-none text-dim/70">{item.icon}</span>
+          <span className="min-w-0 max-w-[18rem] truncate whitespace-nowrap font-mono text-[12px] leading-4 text-accent">
+            {item.displayCmd}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-[11px] leading-4 text-dim/85">{item.desc}</span>
+          {item.source && <MetaLabel tone="muted">{item.source}</MetaLabel>}
         </RowButton>
       ))}
     </div>
@@ -140,26 +140,27 @@ export function MentionMenu({
   }, [selectedIndex]);
 
   return (
-    <div className="ui-menu-shell max-h-[18rem] overflow-y-auto py-1.5">
-      <div className="px-3 pt-2 pb-1">
+    <div className="ui-menu-shell conversation-composer-menu conversation-rich-menu max-h-[18rem] overflow-y-auto py-1">
+      <div className="px-2.5 pt-1.5 pb-1">
         <SectionLabel>Mention</SectionLabel>
       </div>
       {filtered.map((item, index) => (
         <RowButton
           key={`${item.kind}:${item.id}`}
           ref={index === selectedIndex ? selectedItemRef : undefined}
+          compact
           onMouseDown={(event) => {
             event.preventDefault();
             onSelect(item.id);
           }}
           selected={index === selectedIndex}
-          className={cx('flex w-full items-start gap-3 px-3 py-2.5', index !== selectedIndex && 'text-secondary')}
+          className={cx('flex w-full items-start gap-2 px-2.5 py-1.5', index !== selectedIndex && 'text-secondary')}
         >
           <Pill tone="muted">{item.kind}</Pill>
           <div className="min-w-0 flex-1">
-            <p className="font-mono text-[13px] text-accent truncate">{item.id}</p>
+            <p className="truncate font-mono text-[12px] leading-4 text-accent">{item.id}</p>
             {(item.summary || (item.title && item.title !== item.label)) && (
-              <p className="mt-0.5 truncate text-[12px] text-dim/90">{item.summary || item.title}</p>
+              <p className="truncate text-[11px] leading-4 text-dim/85">{item.summary || item.title}</p>
             )}
           </div>
         </RowButton>
