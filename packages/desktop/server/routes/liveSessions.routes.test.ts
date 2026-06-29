@@ -26,6 +26,7 @@ const {
   extractMentionIdsMock,
   pickPromptReferencesInOrderMock,
   queuePromptContextMock,
+  readConversationSessionMetaMock,
   readGitStatusSummaryWithTelemetryMock,
   readSessionBlocksMock,
   readSessionMetaMock,
@@ -47,6 +48,7 @@ const {
   buildReferencedMemoryDocsContextMock,
   buildReferencedTasksContextMock,
   expandPromptReferencesWithNodeGraphMock,
+  publishExtensionHostEventMock,
   publishAppEventMock,
   createSessionListenerUnsubscribeMock,
   writeAppTelemetryEventMock,
@@ -77,6 +79,7 @@ const {
   extractMentionIdsMock: vi.fn(),
   pickPromptReferencesInOrderMock: vi.fn(),
   queuePromptContextMock: vi.fn(),
+  readConversationSessionMetaMock: vi.fn(),
   readGitStatusSummaryWithTelemetryMock: vi.fn(),
   readSessionBlocksMock: vi.fn(),
   readSessionMetaMock: vi.fn(),
@@ -98,6 +101,7 @@ const {
   buildReferencedMemoryDocsContextMock: vi.fn(),
   buildReferencedTasksContextMock: vi.fn(),
   expandPromptReferencesWithNodeGraphMock: vi.fn(),
+  publishExtensionHostEventMock: vi.fn(),
   publishAppEventMock: vi.fn(),
   writeAppTelemetryEventMock: vi.fn(),
 }));
@@ -154,6 +158,7 @@ vi.mock('../middleware/index.js', () => ({
 
 vi.mock('../conversations/conversationService.js', () => ({
   parseTailBlocksQuery: parseTailBlocksQueryMock,
+  readConversationSessionMeta: readConversationSessionMetaMock,
   resolveConversationSessionFile: resolveConversationSessionFileMock,
 }));
 
@@ -189,6 +194,7 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
   getExtensionHostClient: () => ({
     invokeAction: vi.fn(),
     listPromptAssemblyContributions: vi.fn(async () => ({ contextProviders: [], assemblyProviders: [], hooks: [] })),
+    publishEvent: publishExtensionHostEventMock,
     resolvePromptReferences: resolveExtensionPromptReferencesMock,
   }),
 }));
@@ -327,6 +333,7 @@ describe('live session routes', () => {
     extractMentionIdsMock.mockReset();
     pickPromptReferencesInOrderMock.mockReset();
     queuePromptContextMock.mockReset();
+    readConversationSessionMetaMock.mockReset();
     readGitStatusSummaryWithTelemetryMock.mockReset();
     readSessionBlocksMock.mockReset();
     readSessionMetaMock.mockReset();
@@ -347,6 +354,7 @@ describe('live session routes', () => {
     buildReferencedMemoryDocsContextMock.mockReset();
     buildReferencedTasksContextMock.mockReset();
     expandPromptReferencesWithNodeGraphMock.mockReset();
+    publishExtensionHostEventMock.mockReset();
     liveRegistry.clear();
     vi.useRealTimers();
 
@@ -383,6 +391,7 @@ describe('live session routes', () => {
         durationMs: 12,
       },
     });
+    readConversationSessionMetaMock.mockReturnValue(null);
     readSessionBlocksMock.mockReturnValue(null);
     readSessionMetaMock.mockReturnValue(null);
     resolveConversationAttachmentPromptFilesMock.mockReturnValue([]);
@@ -400,6 +409,7 @@ describe('live session routes', () => {
     buildReferencedMemoryDocsContextMock.mockReturnValue('Memory docs context');
     buildReferencedTasksContextMock.mockReturnValue('Task context');
     expandPromptReferencesWithNodeGraphMock.mockReturnValue({ projectIds: [], memoryDocIds: [], skillNames: [] });
+    publishExtensionHostEventMock.mockResolvedValue(undefined);
   });
 
   it('skips reference catalog lookups for plain prompts without mentions', async () => {
