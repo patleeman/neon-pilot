@@ -46,17 +46,20 @@ describe('MessageActions commands', () => {
   it('labels prompt and assistant copy actions from the matching user perspective', () => {
     const { rerender } = render(<MessageActions isUser blockText="Prompt" copyText="Prompt to copy" />);
 
-    expect(document.querySelector('button[title="Copy this prompt to the clipboard"]')).not.toBeNull();
-    expect(document.querySelector('button[aria-label="Copy this prompt to the clipboard"]')?.textContent).toBe('⎘');
-    expect(document.body.textContent).not.toContain('copy');
+    const promptCopyButton = document.querySelector('button[aria-label="Copy this prompt to the clipboard"]');
+    expect(promptCopyButton?.getAttribute('title')).toBeNull();
+    expect(promptCopyButton?.textContent).toBe('⎘');
+    expect(document.querySelector('.ui-tooltip')?.textContent).toBe('Copy this prompt to the clipboard');
 
     rerender(<MessageActions blockText="Reply" copyText="Reply to copy" />);
 
-    expect(document.querySelector('button[title="Copy this assistant message to the clipboard"]')).not.toBeNull();
-    expect(document.querySelector('button[aria-label="Copy this assistant message to the clipboard"]')?.textContent).toBe('⎘');
+    const assistantCopyButton = document.querySelector('button[aria-label="Copy this assistant message to the clipboard"]');
+    expect(assistantCopyButton?.getAttribute('title')).toBeNull();
+    expect(assistantCopyButton?.textContent).toBe('⎘');
+    expect(document.querySelector('.ui-tooltip')?.textContent).toBe('Copy this assistant message to the clipboard');
   });
 
-  it('renders extension message actions as icon-only controls with tooltip labels', () => {
+  it('renders extension message actions as icon-only controls with shared tooltip labels', () => {
     mockRegistry.messageActions = [
       {
         extensionId: 'system-model-arena',
@@ -71,9 +74,9 @@ describe('MessageActions commands', () => {
 
     const compareButton = document.querySelector<HTMLButtonElement>('button[aria-label="Compare models"]');
     expect(compareButton).not.toBeNull();
-    expect(compareButton?.getAttribute('title')).toBe('Compare models');
+    expect(compareButton?.getAttribute('title')).toBeNull();
     expect(compareButton?.textContent).toBe('⇄');
-    expect(document.body.textContent).not.toContain('Compare models');
+    expect([...document.querySelectorAll('.ui-tooltip')].map((tooltip) => tooltip.textContent)).toContain('Compare models');
   });
 
   it('handles shared first message action commands', async () => {

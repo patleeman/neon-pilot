@@ -56,7 +56,7 @@ export const StatusIndicators: Story = {
           <Keycap>Cmd</Keycap>
           <Keycap>K</Keycap>
           <span
-            className="group"
+            className="ui-tooltip-host"
             tabIndex={0}
             style={{
               position: 'relative',

@@ -1103,11 +1103,11 @@ body {
 
 .ui-message-action-button-icon {
   justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.625rem;
+  height: 1.625rem;
   border-radius: 0.1875rem;
   padding: 0;
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   line-height: 1;
 }
 
@@ -1633,9 +1633,12 @@ body {
   margin-top: 0.5rem;
 }
 
-.group:hover .ui-tooltip,
-.group:focus-within .ui-tooltip,
-.group:focus-visible .ui-tooltip {
+.ui-tooltip-host:hover > .ui-tooltip,
+.ui-tooltip-host:focus-within > .ui-tooltip,
+.ui-tooltip-host:focus-visible > .ui-tooltip,
+.group:hover > .ui-tooltip,
+.group:focus-within > .ui-tooltip,
+.group:focus-visible > .ui-tooltip {
   opacity: 1;
 }
 

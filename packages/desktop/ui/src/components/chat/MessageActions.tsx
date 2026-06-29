@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { writeClipboardText } from '../../desktop/clipboard';
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import type { ExtensionMessageActionRegistration } from '../../extensions/useExtensionRegistry';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
-import { MessageActionButton } from '../ui';
+import { MessageActionButton, Tooltip } from '../ui';
 import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail, registerMessageActionCapability } from './messageActionCommands';
 
 /**
@@ -41,6 +41,15 @@ function matchMessageActionWhen(
 }
 
 const iconButtonClassName = 'ui-message-action-button-icon';
+
+function MessageActionTooltip({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <span className="ui-tooltip-host relative inline-flex">
+      {children}
+      <Tooltip position="top-right">{label}</Tooltip>
+    </span>
+  );
+}
 
 function extensionActionIcon(action: ExtensionMessageActionRegistration): string {
   const title = action.title.trim().toLowerCase();
@@ -202,63 +211,71 @@ export function MessageActions({
       }`}
     >
       {canCopy && (
-        <MessageActionButton
-          type="button"
-          onClick={() => {
-            void handleCopy();
-          }}
-          tone={copyState === 'copied' ? 'accent' : copyState === 'failed' ? 'danger' : 'default'}
-          title={copyState === 'failed' ? 'Copy to clipboard failed' : copyTitle}
-          aria-label={copyState === 'failed' ? 'Copy to clipboard failed' : copyTitle}
-          className={iconButtonClassName}
-        >
-          {copyState === 'copied' ? '✓' : copyState === 'failed' ? '!' : '⎘'}
-        </MessageActionButton>
+        <MessageActionTooltip label={copyState === 'failed' ? 'Copy to clipboard failed' : copyTitle}>
+          <MessageActionButton
+            type="button"
+            onClick={() => {
+              void handleCopy();
+            }}
+            tone={copyState === 'copied' ? 'accent' : copyState === 'failed' ? 'danger' : 'default'}
+            aria-label={copyState === 'failed' ? 'Copy to clipboard failed' : copyTitle}
+            className={iconButtonClassName}
+          >
+            {copyState === 'copied' ? '✓' : copyState === 'failed' ? '!' : '⎘'}
+          </MessageActionButton>
+        </MessageActionTooltip>
       )}
       {onEdit && (
-        <MessageActionButton
-          type="button"
-          onClick={onEdit}
-          title="Edit this prompt and rerun the conversation from here"
-          aria-label="Edit this prompt and rerun the conversation from here"
-          className={iconButtonClassName}
-        >
-          ✎
-        </MessageActionButton>
+        <MessageActionTooltip label="Edit this prompt and rerun the conversation from here">
+          <MessageActionButton
+            type="button"
+            onClick={onEdit}
+            aria-label="Edit this prompt and rerun the conversation from here"
+            className={iconButtonClassName}
+          >
+            ✎
+          </MessageActionButton>
+        </MessageActionTooltip>
       )}
       {onRewind && (
-        <MessageActionButton
-          type="button"
-          onClick={() => {
-            void handleRewind();
-          }}
-          tone={isRewinding ? 'accent' : 'default'}
-          title={
+        <MessageActionTooltip
+          label={
             isUser ? 'Rewind into a new conversation from this prompt' : 'Rewind into a new conversation from the prompt that led here'
           }
-          aria-label={
-            isUser ? 'Rewind into a new conversation from this prompt' : 'Rewind into a new conversation from the prompt that led here'
-          }
-          disabled={isRewinding}
-          className={iconButtonClassName}
         >
-          {isRewinding ? '…' : '↩'}
-        </MessageActionButton>
+          <MessageActionButton
+            type="button"
+            onClick={() => {
+              void handleRewind();
+            }}
+            tone={isRewinding ? 'accent' : 'default'}
+            aria-label={
+              isUser ? 'Rewind into a new conversation from this prompt' : 'Rewind into a new conversation from the prompt that led here'
+            }
+            disabled={isRewinding}
+            className={iconButtonClassName}
+          >
+            {isRewinding ? '…' : '↩'}
+          </MessageActionButton>
+        </MessageActionTooltip>
       )}
       {onFork && (
-        <MessageActionButton
-          type="button"
-          onClick={() => {
-            void handleFork();
-          }}
-          tone={isForking ? 'accent' : 'default'}
-          title={isUser ? 'Fork into a new conversation with this prompt in the input' : 'Fork into a new conversation from here'}
-          aria-label={isUser ? 'Fork into a new conversation with this prompt in the input' : 'Fork into a new conversation from here'}
-          disabled={isForking}
-          className={iconButtonClassName}
+        <MessageActionTooltip
+          label={isUser ? 'Fork into a new conversation with this prompt in the input' : 'Fork into a new conversation from here'}
         >
-          {isForking ? '…' : '⑂'}
-        </MessageActionButton>
+          <MessageActionButton
+            type="button"
+            onClick={() => {
+              void handleFork();
+            }}
+            tone={isForking ? 'accent' : 'default'}
+            aria-label={isUser ? 'Fork into a new conversation with this prompt in the input' : 'Fork into a new conversation from here'}
+            disabled={isForking}
+            className={iconButtonClassName}
+          >
+            {isForking ? '…' : '⑂'}
+          </MessageActionButton>
+        </MessageActionTooltip>
       )}
       {messageActions.map((action) => {
         if (!matchMessageActionWhen(action, isUser, blockText)) return null;
@@ -266,47 +283,47 @@ export function MessageActions({
         const actionError = actionErrors.get(action.id);
         const title = actionError ? `${action.title} failed: ${actionError}` : action.title;
         return (
-          <MessageActionButton
-            key={action.id}
-            type="button"
-            onClick={() => {
-              void (async () => {
-                setBusyActionIds((prev) => new Set(prev).add(action.id));
-                try {
-                  setActionErrors((prev) => {
-                    const next = new Map(prev);
-                    next.delete(action.id);
-                    return next;
-                  });
-                  await getPaClient(action.extensionId).extension.invoke(action.action, {
-                    messageText: blockText ?? '',
-                    messageRole: isUser ? 'user' : 'assistant',
-                    blockId: blockId ?? '',
-                    conversationId: conversationId ?? '',
-                  });
-                } catch (error) {
-                  setActionErrors((prev) => {
-                    const next = new Map(prev);
-                    next.set(action.id, error instanceof Error ? error.message : String(error));
-                    return next;
-                  });
-                } finally {
-                  setBusyActionIds((prev) => {
-                    const next = new Set(prev);
-                    next.delete(action.id);
-                    return next;
-                  });
-                }
-              })();
-            }}
-            tone={actionError ? 'danger' : busy ? 'accent' : 'default'}
-            title={title}
-            aria-label={title}
-            disabled={busy}
-            className={iconButtonClassName}
-          >
-            {actionError ? '!' : busy ? '…' : extensionActionIcon(action)}
-          </MessageActionButton>
+          <MessageActionTooltip key={action.id} label={title}>
+            <MessageActionButton
+              type="button"
+              onClick={() => {
+                void (async () => {
+                  setBusyActionIds((prev) => new Set(prev).add(action.id));
+                  try {
+                    setActionErrors((prev) => {
+                      const next = new Map(prev);
+                      next.delete(action.id);
+                      return next;
+                    });
+                    await getPaClient(action.extensionId).extension.invoke(action.action, {
+                      messageText: blockText ?? '',
+                      messageRole: isUser ? 'user' : 'assistant',
+                      blockId: blockId ?? '',
+                      conversationId: conversationId ?? '',
+                    });
+                  } catch (error) {
+                    setActionErrors((prev) => {
+                      const next = new Map(prev);
+                      next.set(action.id, error instanceof Error ? error.message : String(error));
+                      return next;
+                    });
+                  } finally {
+                    setBusyActionIds((prev) => {
+                      const next = new Set(prev);
+                      next.delete(action.id);
+                      return next;
+                    });
+                  }
+                })();
+              }}
+              tone={actionError ? 'danger' : busy ? 'accent' : 'default'}
+              aria-label={title}
+              disabled={busy}
+              className={iconButtonClassName}
+            >
+              {actionError ? '!' : busy ? '…' : extensionActionIcon(action)}
+            </MessageActionButton>
+          </MessageActionTooltip>
         );
       })}
     </div>
