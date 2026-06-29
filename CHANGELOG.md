@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.34 — 2026-06-29
+
+### Highlights
+
+- TODO: Replace this with 3-6 human-written bullets summarizing the release by user-visible outcome, not raw commit messages.
+
+### Notes
+
+- 2 commits since the previous release.
+
 ## 0.11.33 — 2026-06-29
 
 ### Highlights

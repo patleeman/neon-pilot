@@ -75,7 +75,7 @@ Examples:
 
 ### agent-plugins list
 
-List installed Codex and Claude Code style agent plugins.
+List installed Codex and Claude Code marketplace plugins.
 
 - Source: extension (system-agent-plugins)
 - Usage: `neon-pilot agent-plugins list [--json]`
