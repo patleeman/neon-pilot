@@ -7,6 +7,7 @@ import { _electron as electron, type ElectronApplication, expect, type Locator, 
 
 interface LaunchOptions {
   initialRoute?: string;
+  electronArgs?: string[];
   stateRoot?: string;
   testInfo: TestInfo;
   prepareState?: (stateRoot: string) => Promise<void> | void;
@@ -46,6 +47,7 @@ export interface SeedWorkspaceOptions {
 const repoRoot = process.cwd();
 const desktopMainFile = resolve(repoRoot, 'packages/desktop/dist/main.js');
 const require = createRequire(resolve(repoRoot, 'package.json'));
+const APP_CLOSE_TIMEOUT_MS = 5_000;
 
 function normalizeInitialRoute(route: string | undefined): string {
   if (!route || !route.startsWith('/') || route.startsWith('//')) {
@@ -86,7 +88,7 @@ export async function launchTestApp(options: LaunchOptions): Promise<TestApp> {
   const logs: string[] = [];
   const app = await electron.launch({
     executablePath: electronExecutable,
-    args: [desktopMainFile, '--no-quit-confirmation', `--neon-pilot-initial-route=${initialRoute}`],
+    args: [...(options.electronArgs ?? []), desktopMainFile, '--no-quit-confirmation', `--neon-pilot-initial-route=${initialRoute}`],
     env: buildLaunchEnv(tempRoot, stateRoot),
   });
   const child = app.process();
@@ -106,7 +108,16 @@ export async function launchTestApp(options: LaunchOptions): Promise<TestApp> {
         body: logs.join(''),
         contentType: 'text/plain',
       });
-      await app.close().catch(() => undefined);
+      let closed = false;
+      await Promise.race([
+        app.close().then(() => {
+          closed = true;
+        }),
+        new Promise<void>((resolve) => setTimeout(resolve, APP_CLOSE_TIMEOUT_MS)),
+      ]).catch(() => undefined);
+      if (!closed && !child?.killed) {
+        child?.kill();
+      }
       rmSync(tempRoot, { recursive: true, force: true });
     },
   };
@@ -275,6 +286,27 @@ export function seedRuntimeSettings(stateRoot: string, workspace: SeedWorkspaceO
           conversationWorkspaceUpdatedAt: new Date().toISOString(),
           conversationWorkspaceMigratedAt: new Date().toISOString(),
         },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
+export function seedDisabledExtensions(stateRoot: string, extensionIds: string[]): void {
+  const extensionsDir = join(stateRoot, 'extensions');
+  mkdirSync(extensionsDir, { recursive: true });
+  writeFileSync(
+    join(extensionsDir, 'registry.json'),
+    `${JSON.stringify(
+      {
+        disabledIds: [...new Set(extensionIds)].sort((left, right) => left.localeCompare(right)),
+        enabledIds: [],
+        removedDefaultInstalledIds: [],
+        disabledKeybindings: [],
+        keybindingOverrides: {},
+        commandKeybindings: {},
+        quarantined: {},
       },
       null,
       2,

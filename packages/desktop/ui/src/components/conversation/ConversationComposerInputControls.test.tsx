@@ -226,35 +226,16 @@ describe('ConversationComposerInputControls', () => {
     const html = renderControls();
 
     expect(html).toContain('Attach file');
-    expect(html).toContain('Conversation model');
+    expect(html).toContain('/model');
+    expect(html).toContain('Use /model, /thinking_level, or /service_tier');
     expect(html).toContain('Create drawing');
+    expect(html).not.toContain('Model, reasoning, and speed');
   });
 
-  it('distinguishes inherited and explicit automatic service tiers in core composer controls', () => {
+  it('uses slash commands as the core model preference fallback', () => {
     extensionRegistryState.composerControls = [];
     extensionRegistryState.composerInputTools = [];
-
-    const html = renderControls({
-      models: [
-        {
-          id: 'model-a',
-          provider: 'Provider A',
-          name: 'Model A',
-          context: 128000,
-          supportedServiceTiers: ['auto', 'priority'],
-        },
-      ],
-    });
-
-    expect(html).toContain('aria-label="Service tier"');
-    expect(html).toContain('Standard queue');
-    expect(html).toContain('Automatic');
-    expect(html).toContain('Priority');
-  });
-
-  it('updates core service tier controls when the inherited tier changes after metadata loads', () => {
-    extensionRegistryState.composerControls = [];
-    extensionRegistryState.composerInputTools = [];
+    const onInsertComposerText = vi.fn();
 
     const view = renderInteractive(
       <ConversationComposerInputControls
@@ -288,7 +269,7 @@ describe('ConversationComposerInputControls', () => {
         onSelectModel={vi.fn()}
         onSelectThinkingLevel={vi.fn()}
         onSelectServiceTier={vi.fn()}
-        onInsertComposerText={vi.fn()}
+        onInsertComposerText={onInsertComposerText}
         onAppendComposerText={vi.fn()}
         onSubmitComposerQuestion={vi.fn()}
         onSubmitComposerActionForModifiers={vi.fn()}
@@ -296,67 +277,24 @@ describe('ConversationComposerInputControls', () => {
       />,
     );
 
-    const select = view.container.querySelector('select[aria-label="Service tier"]');
-    expect(select).toBeInstanceOf(HTMLSelectElement);
-    expect((select as HTMLSelectElement).value).toBe('');
+    try {
+      const slashFallback = view.container.querySelector<HTMLButtonElement>('button[aria-label="Use model preference slash commands"]');
+      expect(slashFallback).toBeTruthy();
+      expect(slashFallback?.textContent).toBe('/model');
 
-    view.rerender(
-      <ConversationComposerInputControls
-        fileInputRef={{ current: null }}
-        textareaRef={{ current: null }}
-        input=""
-        pendingAskUserQuestion={false}
-        composerDisabled={false}
-        composerShellWidth={800}
-        streamIsStreaming={false}
-        models={models}
-        currentModel="model-a"
-        currentThinkingLevel="medium"
-        currentServiceTier="priority"
-        savingPreference={null}
-        conversationNeedsTakeover={false}
-        composerHasContent={false}
-        composerShowsQuestionSubmit={false}
-        composerQuestionCanSubmit={false}
-        composerQuestionRemainingCount={0}
-        composerQuestionSubmitting={false}
-        composerSubmitLabel="Send"
-        composerAltHeld={false}
-        onFilesSelected={vi.fn()}
-        onInputChange={vi.fn()}
-        onRememberComposerSelection={vi.fn()}
-        onKeyDown={vi.fn()}
-        onPaste={vi.fn()}
-        onOpenFilePicker={vi.fn()}
-        onUpsertDrawingAttachment={vi.fn()}
-        onSelectModel={vi.fn()}
-        onSelectThinkingLevel={vi.fn()}
-        onSelectServiceTier={vi.fn()}
-        onInsertComposerText={vi.fn()}
-        onAppendComposerText={vi.fn()}
-        onSubmitComposerQuestion={vi.fn()}
-        onSubmitComposerActionForModifiers={vi.fn()}
-        onAbortStream={vi.fn()}
-      />,
-    );
+      act(() => {
+        slashFallback!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      });
+      expect(onInsertComposerText).toHaveBeenCalledWith('/model ');
 
-    expect((view.container.querySelector('select[aria-label="Service tier"]') as HTMLSelectElement | null)?.value).toBe('priority');
-    view.unmount();
-  });
-
-  it('segments core model options by provider', () => {
-    extensionRegistryState.composerControls = [];
-    extensionRegistryState.composerInputTools = [];
-
-    const html = renderControls({
-      models: [
-        { id: 'model-a', provider: 'Provider A', name: 'Model A', context: 128000 },
-        { id: 'model-b', provider: 'Provider B', name: 'Model B', context: 128000 },
-      ],
-    });
-
-    expect(html).toContain('<optgroup label="Provider A">');
-    expect(html).toContain('<optgroup label="Provider B">');
+      act(() => {
+        window.dispatchEvent(new CustomEvent(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT));
+      });
+      expect(onInsertComposerText).toHaveBeenCalledWith('/model ');
+      expect(document.body.querySelector('[aria-label="Composer settings"]')).toBeNull();
+    } finally {
+      view.unmount();
+    }
   });
 
   it('allows the composer action row to wrap in narrow rail layouts', () => {

@@ -771,14 +771,6 @@ export function focusComposerTextarea(): boolean {
   return document.activeElement === textarea;
 }
 
-function cycleSelectByLabel(label: string): boolean {
-  const select = document.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`);
-  if (!select || select.disabled || select.options.length === 0) return false;
-  select.selectedIndex = (select.selectedIndex + 1) % select.options.length;
-  select.dispatchEvent(new Event('change', { bubbles: true }));
-  return true;
-}
-
 export function shouldResetEmptyArtifactsRail(input: {
   activeTool: WorkbenchRailMode;
   artifactsLoading: boolean;
@@ -2849,10 +2841,12 @@ export function Layout() {
         return true;
       },
       cycleModel() {
-        return cycleSelectByLabel('Conversation model');
+        window.dispatchEvent(new CustomEvent(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT));
+        return true;
       },
       cycleThinking() {
-        return cycleSelectByLabel('Conversation thinking level');
+        window.dispatchEvent(new CustomEvent(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT));
+        return true;
       },
       newConversation(args?: { initialComposerText?: string | null; initialPromptText?: string | null; cwd?: string | null }) {
         return startNewConversationFromLayout(false, args);

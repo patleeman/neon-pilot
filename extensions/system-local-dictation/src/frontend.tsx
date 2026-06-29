@@ -112,7 +112,10 @@ export function DictationButton({
 }: {
   pa: NativeExtensionClient;
   controlContext: {
+    composerId?: string;
+    composerActive?: boolean;
     composerDisabled: boolean;
+    activateComposer?: () => void;
     insertText: (text: string) => void;
     appendText?: (text: string) => void;
     renderMode?: 'inline' | 'menu';
@@ -249,14 +252,22 @@ export function DictationButton({
   }, [busy, controlContext.composerDisabled, ensureModelInstalled, pa]);
 
   useEffect(() => {
-    const handleDictationToggleCommand = () => {
+    const handleDictationToggleCommand = (event: Event) => {
+      const detail = event instanceof CustomEvent && event.detail && typeof event.detail === 'object' ? event.detail : {};
+      const targetComposerId = (detail as { composerId?: unknown }).composerId;
+      if (typeof targetComposerId === 'string') {
+        if (controlContext.composerId !== targetComposerId) return;
+      } else if (controlContext.composerActive === false) {
+        return;
+      }
+      controlContext.activateComposer?.();
       if (captureRef.current || pendingStartRef.current) void stop();
       else void start();
     };
 
     window.addEventListener('neon-pilot:dictation-toggle', handleDictationToggleCommand);
     return () => window.removeEventListener('neon-pilot:dictation-toggle', handleDictationToggleCommand);
-  }, [start, stop]);
+  }, [controlContext, start, stop]);
 
   return (
     <>
@@ -266,6 +277,7 @@ export function DictationButton({
         onPointerDown={(event) => {
           if (event.button !== 0 || controlContext.composerDisabled || busy) return;
           event.preventDefault();
+          controlContext.activateComposer?.();
           event.currentTarget.setPointerCapture(event.pointerId);
           const startedExistingRecording = captureRef.current !== null;
           pointerRef.current = { pointerId: event.pointerId, startedAt: performance.now(), startedExistingRecording };

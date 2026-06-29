@@ -50,6 +50,9 @@ function dispatchPointerUp(button: HTMLButtonElement) {
 
 function renderDictationButton(input: {
   composerDisabled: boolean;
+  composerId?: string;
+  composerActive?: boolean;
+  activateComposer?: ReturnType<typeof vi.fn>;
   setContext: ReturnType<typeof vi.fn>;
   invoke?: ReturnType<typeof vi.fn>;
   appendText?: ReturnType<typeof vi.fn>;
@@ -71,7 +74,10 @@ function renderDictationButton(input: {
           } as never
         }
         controlContext={{
+          composerId: input.composerId,
+          composerActive: input.composerActive,
           composerDisabled: input.composerDisabled,
+          activateComposer: input.activateComposer,
           insertText: input.insertText ?? vi.fn(),
           appendText: input.appendText,
         }}
@@ -205,6 +211,60 @@ describe('DictationButton', () => {
     expect(stop).toHaveBeenCalledTimes(1);
     expect(invoke).toHaveBeenCalledWith('transcribeFile', expect.objectContaining({ mimeType: 'audio/pcm', fileName: 'dictation.pcm' }));
     expect(appendText).toHaveBeenCalledWith('hello world');
+  });
+
+  it('routes global toggle commands only to the active composer instance', async () => {
+    const setContext = vi.fn();
+    const inactiveAppendText = vi.fn();
+    const activeAppendText = vi.fn();
+    const activeActivateComposer = vi.fn();
+    const inactiveInvoke = vi.fn(async () => ({ installed: true, model: 'base.en' }));
+    const activeInvoke = vi.fn(async (action: string) =>
+      action === 'modelStatus' ? { installed: true, model: 'base.en' } : { text: ' active transcript ' },
+    );
+    const activeStop = vi.fn(async () => ({
+      audio: new Uint8Array([4, 5, 6]),
+      durationMs: 500,
+      mimeType: 'audio/pcm',
+      fileName: 'dictation.pcm',
+    }));
+    startCaptureMock.mockResolvedValueOnce({ stop: activeStop });
+
+    renderDictationButton({
+      composerDisabled: false,
+      composerId: 'inactive-composer',
+      composerActive: false,
+      setContext,
+      invoke: inactiveInvoke,
+      appendText: inactiveAppendText,
+    });
+    renderDictationButton({
+      composerDisabled: false,
+      composerId: 'active-composer',
+      composerActive: true,
+      activateComposer: activeActivateComposer,
+      setContext,
+      invoke: activeInvoke,
+      appendText: activeAppendText,
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('neon-pilot:dictation-toggle'));
+      await flushMicrotasks();
+    });
+
+    expect(startCaptureMock).toHaveBeenCalledTimes(1);
+    expect(activeActivateComposer).toHaveBeenCalledTimes(1);
+    expect(inactiveInvoke).not.toHaveBeenCalled();
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('neon-pilot:dictation-toggle'));
+      await flushMicrotasks();
+    });
+
+    expect(activeStop).toHaveBeenCalledTimes(1);
+    expect(activeAppendText).toHaveBeenCalledWith('active transcript');
+    expect(inactiveAppendText).not.toHaveBeenCalled();
   });
 
   it('installs the selected model while recording and waits before first transcription', async () => {

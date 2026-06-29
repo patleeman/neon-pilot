@@ -12,10 +12,16 @@ export type ComposerControlSlot = 'leading' | 'preferences' | 'actions';
 export type ComposerControlRenderMode = 'inline' | 'menu';
 
 export interface ComposerControlContext {
+  /** Stable host-owned id for the composer instance rendering this control. */
+  composerId?: string;
+  /** True when this composer is the active target for composer-scoped commands. */
+  composerActive?: boolean;
   composerDisabled: boolean;
   streamIsStreaming: boolean;
   composerHasContent: boolean;
   renderMode: ComposerControlRenderMode;
+  /** Mark this composer as the active target for composer-scoped commands. */
+  activateComposer?: () => void;
   /** Request the host-owned file picker. Extensions must not query or mutate host DOM. */
   openFilePicker: () => void;
   /** Request host-owned composer attachment ingestion. */

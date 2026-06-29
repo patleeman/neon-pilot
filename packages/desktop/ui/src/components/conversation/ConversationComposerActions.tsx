@@ -20,6 +20,7 @@ export function ConversationComposerActions({
   composerQuestionSubmitting,
   composerSubmitLabel,
   composerAltHeld,
+  currentServiceTier,
   onInsertComposerText,
   onAppendComposerText,
   onSubmitComposerQuestion,
@@ -36,6 +37,7 @@ export function ConversationComposerActions({
   composerQuestionSubmitting: boolean;
   composerSubmitLabel: ConversationComposerSubmitLabel;
   composerAltHeld: boolean;
+  currentServiceTier: string;
   onInsertComposerText: (text: string) => void;
   onAppendComposerText: (text: string) => void;
   onSubmitComposerQuestion: () => void;
@@ -128,9 +130,11 @@ export function ConversationComposerActions({
             models: [],
             currentModel: '',
             currentThinkingLevel: '',
+            currentServiceTier,
             savingPreference: null,
             selectModel: () => {},
             selectThinkingLevel: () => {},
+            selectServiceTier: () => {},
           }}
         />
       ))}

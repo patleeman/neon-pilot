@@ -65,7 +65,8 @@ describe('formatModelTriggerLabel', () => {
     await waitFor(() => expect(screen.getByLabelText('DS4 offline menu')).toBeTruthy());
   });
 
-  it('shows service tier choices for models that support them', () => {
+  it('shows service tier choices inside the combined picker for models that support them', () => {
+    const selectServiceTier = vi.fn();
     render(
       React.createElement(ModelPreferencesComposerControl, {
         pa: { extensions: { callAction: vi.fn() } },
@@ -94,15 +95,68 @@ describe('formatModelTriggerLabel', () => {
           savingPreference: null,
           selectModel: vi.fn(),
           selectThinkingLevel: vi.fn(),
+          selectServiceTier,
+        },
+      }),
+    );
+
+    expect(screen.getByLabelText('Conversation model preferences')).toBeTruthy();
+    fireEvent.pointerEnter(screen.getByText('Speed'));
+
+    expect(screen.getAllByText('Standard').length).toBeGreaterThan(0);
+    expect(screen.getByText('Automatic')).toBeTruthy();
+    expect(screen.getByText('Priority')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Priority'));
+    expect(selectServiceTier).toHaveBeenCalledWith('priority');
+  });
+
+  it('uses a three-category parent menu with hover flyouts', () => {
+    render(
+      React.createElement(ModelPreferencesComposerControl, {
+        pa: { extensions: { callAction: vi.fn() } },
+        controlContext: {
+          renderMode: 'inline',
+          composerDisabled: false,
+          streamIsStreaming: false,
+          composerHasContent: false,
+          openFilePicker: vi.fn(),
+          addFiles: vi.fn(),
+          insertText: vi.fn(),
+          appendText: vi.fn(),
+          models: [
+            {
+              id: 'gpt-5.5',
+              provider: 'openai-codex',
+              name: 'GPT-5.5',
+              context: 400000,
+              input: ['text'],
+              supportedServiceTiers: ['priority'],
+              reasoning: true,
+            },
+          ],
+          currentModel: 'gpt-5.5',
+          currentThinkingLevel: 'medium',
+          currentServiceTier: '',
+          savingPreference: null,
+          selectModel: vi.fn(),
+          selectThinkingLevel: vi.fn(),
           selectServiceTier: vi.fn(),
         },
       }),
     );
 
-    expect(screen.getByLabelText('Conversation service tier')).toBeTruthy();
-    expect(screen.getAllByText('Standard queue').length).toBeGreaterThan(0);
-    expect(screen.getByText('Automatic')).toBeTruthy();
-    expect(screen.getByText('Priority')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Conversation model preferences'));
+
+    const parentRows = screen
+      .getAllByRole('menuitem')
+      .filter(
+        (item) => item.textContent === 'ModelGPT-5.5' || item.textContent === 'ThinkingMedium' || item.textContent === 'SpeedStandard',
+      );
+    expect(parentRows.map((item) => item.textContent)).toEqual(['ModelGPT-5.5', 'ThinkingMedium', 'SpeedStandard']);
+
+    fireEvent.pointerEnter(screen.getByText('Thinking'));
+    expect(screen.getByText('Extra High')).toBeTruthy();
   });
 
   it('labels an inherited visible service tier instead of the default placeholder', () => {
@@ -139,10 +193,12 @@ describe('formatModelTriggerLabel', () => {
       }),
     );
 
-    expect(screen.getByLabelText('Conversation service tier').textContent).toContain('Priority');
+    expect(screen.getByLabelText('Conversation model preferences').textContent).toContain('Priority');
+    expect(screen.getByText('Speed').parentElement?.textContent).toContain('Priority');
   });
 
-  it('uses readable provider group labels in the composer model picker', () => {
+  it('uses readable provider group labels in the combined composer picker', () => {
+    const selectModel = vi.fn();
     render(
       React.createElement(ModelPreferencesComposerControl, {
         pa: { extensions: { callAction: vi.fn() } },
@@ -160,16 +216,18 @@ describe('formatModelTriggerLabel', () => {
           currentThinkingLevel: '',
           currentServiceTier: '',
           savingPreference: null,
-          selectModel: vi.fn(),
+          selectModel,
           selectThinkingLevel: vi.fn(),
           selectServiceTier: vi.fn(),
         },
       }),
     );
 
-    fireEvent.click(screen.getByLabelText('Conversation model'));
-
+    fireEvent.click(screen.getByLabelText('Conversation model preferences'));
     expect(screen.getByText('OpenAI Codex')).toBeTruthy();
     expect(screen.queryByText('openai-codex')).toBeNull();
+
+    fireEvent.click(screen.getAllByText('GPT-5.5').at(-1)!);
+    expect(selectModel).toHaveBeenCalledWith('gpt-5.5');
   });
 });

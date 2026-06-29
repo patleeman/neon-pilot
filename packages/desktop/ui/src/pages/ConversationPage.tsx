@@ -1976,7 +1976,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const deferredModelCatalogReady =
     shouldDeferModelCatalogForInitialPromptRoute && Boolean(id) && deferredModelCatalogReadyConversationId === id;
   const shouldDeferModelCatalogForRoute = draft || shouldDeferModelCatalogForInitialPromptRoute;
-  const modelCatalogReadyForRoute = draft ? false : shouldDeferModelCatalogForInitialPromptRoute ? deferredModelCatalogReady : true;
+  const modelCatalogReadyForRoute = draft ? true : shouldDeferModelCatalogForInitialPromptRoute ? deferredModelCatalogReady : true;
 
   const shouldLoadModels = shouldLoadConversationModelsAfterMetadataReady({
     draft,

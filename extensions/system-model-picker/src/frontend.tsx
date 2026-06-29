@@ -1,10 +1,8 @@
 import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
-import { cx, MenuGroupLabel, MenuItem, MenuSeparator, PositionedMenu, SectionLabel, StatusDot } from '@neon-pilot/extensions/ui';
+import { cx, MenuGroupLabel, MenuItem, MenuSeparator, PositionedMenu, StatusDot } from '@neon-pilot/extensions/ui';
 import React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
-const INLINE_TRIGGER_CLASS = 'ui-menu-trigger-inline truncate disabled:cursor-default disabled:opacity-40';
-const MENU_TRIGGER_CLASS = 'ui-menu-trigger-block truncate disabled:cursor-default disabled:opacity-40';
 export const MODEL_PICKER_MENU_STYLE = {
   maxHeight: 'min(20rem, calc(100vh - 7rem))',
   overflowY: 'auto',
@@ -302,12 +300,12 @@ function useDs4Health(
 
 function thinkingOptions(model: Model | null): Array<{ value: string; label: string }> {
   const all = [
-    { value: '', label: 'Default thinking' },
-    { value: 'off', label: 'Thinking off' },
-    { value: 'low', label: 'Low' },
+    { value: '', label: 'Default' },
+    { value: 'off', label: 'Off' },
+    { value: 'low', label: 'Light' },
     { value: 'medium', label: 'Medium' },
     { value: 'high', label: 'High' },
-    { value: 'xhigh', label: 'Extra high' },
+    { value: 'xhigh', label: 'Extra High' },
   ];
   return model?.reasoning ? all : all.filter((option) => option.value === '' || option.value === 'off');
 }
@@ -617,74 +615,45 @@ function MenuCheckbox({
   );
 }
 
-function ModelSelect({ context, variant }: { context: ComposerControlContext; variant: 'inline' | 'menu' }) {
-  const selectedModel = resolveModel(context.models, context.currentModel);
-  const selectedLabel = formatModelTriggerLabel({ models: context.models, currentModel: context.currentModel });
-  const disabled = context.savingPreference !== null || context.models.length === 0;
-  const triggerClass = variant === 'menu' ? MENU_TRIGGER_CLASS : cx(INLINE_TRIGGER_CLASS, 'max-w-[11.5rem] min-w-[8.25rem]');
-  return (
-    <>
-      {/* ui-pattern-ok raw-details-summary reason="details keeps model menu open state anchored to the composer trigger" */}
-      <details
-        data-model-picker-menu
-        className={variant === 'menu' ? 'relative min-w-0' : 'relative inline-flex min-w-0 items-center'}
-        onToggle={(event) => {
-          if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
-        }}
-      >
-        {/* ui-pattern-ok raw-details-summary reason="summary is the native trigger for this anchored model menu" */}
-        <summary
-          className={cx(
-            'flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden',
-            triggerClass,
-            disabled && 'pointer-events-none opacity-40',
-          )}
-          aria-label="Conversation model"
-          aria-disabled={disabled}
-        >
-          <span className="min-w-0 truncate">{selectedLabel}</span>
-          <Chevron className="static shrink-0" />
-        </summary>
-        <PositionedMenu
-          placement="absolute"
-          position={{ left: 0, bottom: '100%' }}
-          className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'left-0 w-full min-w-56' : 'left-0 w-64')}
-          style={MODEL_PICKER_MENU_STYLE}
-        >
-          {groupModels(context.models).map(([provider, providerModels], _index, groups) => (
-            <div key={provider} className="py-1">
-              <MenuGroupLabel className="pb-1">
-                {formatModelProviderGroupLabel(
-                  provider,
-                  groups.map(([groupProvider]) => groupProvider),
-                )}
-              </MenuGroupLabel>
-              {providerModels.map((model) => {
-                const value = modelSelectionValue(model, context.models);
-                const checked = selectedModel?.provider === model.provider && selectedModel.id === model.id;
-                return (
-                  <MenuButton key={value} onClick={() => context.selectModel(value)} checked={checked}>
-                    <span className="min-w-0 truncate">{model.name}</span>
-                  </MenuButton>
-                );
-              })}
-            </div>
-          ))}
-        </PositionedMenu>
-      </details>
-    </>
-  );
+type PreferencePane = 'model' | 'thinking' | 'speed';
+
+function formatThinkingTriggerLabel(context: ComposerControlContext, model: Model | null): string {
+  return thinkingOptions(model).find((option) => option.value === context.currentThinkingLevel)?.label ?? 'Default';
 }
 
-function ThinkingSelect({ context, variant }: { context: ComposerControlContext; variant: 'inline' | 'menu' }) {
+function serviceTierOptions(model: Model | null, currentServiceTier: string): string[] {
+  return Array.from(new Set([...(model?.supportedServiceTiers ?? []), ...(currentServiceTier.trim() ? [currentServiceTier.trim()] : [])]));
+}
+
+function formatSpeedTriggerLabel(currentServiceTier: string): string {
+  return currentServiceTier ? formatServiceTierLabel(currentServiceTier) : 'Standard';
+}
+
+function ModelPreferencePicker({ context, variant }: { context: ComposerControlContext; variant: 'inline' | 'menu' }) {
   const model = resolveModel(context.models, context.currentModel);
+  const selectedModelLabel = formatModelTriggerLabel({ models: context.models, currentModel: context.currentModel });
   const options = thinkingOptions(model);
-  const selected = options.find((option) => option.value === context.currentThinkingLevel) ?? options[0];
+  const selectedThinkingLabel = formatThinkingTriggerLabel(context, model);
+  const speedOptions = serviceTierOptions(model, context.currentServiceTier);
+  const selectedSpeedLabel = formatSpeedTriggerLabel(context.currentServiceTier);
   const disabled = context.savingPreference !== null;
-  const triggerClass = variant === 'menu' ? MENU_TRIGGER_CLASS : cx(INLINE_TRIGGER_CLASS, 'max-w-[6.5rem] min-w-[5.75rem]');
+  const speedAvailable = speedOptions.length > 0 || Boolean(context.currentServiceTier);
+  const [activePane, setActivePane] = useState<PreferencePane>('model');
+  const flyoutPosition =
+    activePane === 'thinking'
+      ? { left: 'calc(100% + 0.25rem)', top: '2.75rem' }
+      : activePane === 'model' && context.models.length === 0
+        ? { left: 'calc(100% + 0.25rem)', top: 0 }
+        : { left: 'calc(100% + 0.25rem)', bottom: 0 };
+  const triggerSummary = `${selectedModelLabel} · ${selectedThinkingLabel}${speedAvailable ? ` · ${selectedSpeedLabel}` : ''}`;
+  const triggerClass =
+    variant === 'menu'
+      ? 'ui-menu-trigger-block min-w-0 truncate disabled:cursor-default disabled:opacity-40'
+      : 'ui-menu-trigger-inline min-w-[9.5rem] max-w-[13.5rem] truncate disabled:cursor-default disabled:opacity-40';
+
   return (
     <>
-      {/* ui-pattern-ok raw-details-summary reason="details keeps thinking menu open state anchored to the composer trigger" */}
+      {/* ui-pattern-ok raw-details-summary reason="details keeps the combined model preference menu anchored to the composer trigger" */}
       <details
         data-model-picker-menu
         className={variant === 'menu' ? 'relative min-w-0' : 'relative inline-flex min-w-0 items-center'}
@@ -692,88 +661,146 @@ function ThinkingSelect({ context, variant }: { context: ComposerControlContext;
           if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
         }}
       >
-        {/* ui-pattern-ok raw-details-summary reason="summary is the native trigger for this anchored thinking menu" */}
+        {/* ui-pattern-ok raw-details-summary reason="summary is the native trigger for this anchored composer popover" */}
         <summary
           className={cx(
             'flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden',
             triggerClass,
             disabled && 'pointer-events-none opacity-40',
           )}
-          aria-label="Conversation thinking level"
+          aria-label="Conversation model preferences"
           aria-disabled={disabled}
         >
-          <span className="min-w-0 truncate">{selected?.label ?? 'Unset'}</span>
+          <span className="min-w-0 truncate">{triggerSummary}</span>
           <Chevron className="static shrink-0" />
         </summary>
-        <PositionedMenu
-          placement="absolute"
-          position={{ left: 0, bottom: '100%' }}
-          className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'w-full min-w-44' : 'w-40')}
+        <div
+          className={cx(
+            'absolute bottom-full left-0 z-50 mb-2 overflow-visible',
+            variant === 'menu' ? 'w-full min-w-[12.5rem]' : 'w-[12.5rem]',
+          )}
         >
-          {options.map((option) => (
-            <MenuButton
-              key={option.value || 'unset'}
-              onClick={() => context.selectThinkingLevel(option.value)}
-              checked={option.value === context.currentThinkingLevel}
-            >
-              {option.label}
-            </MenuButton>
-          ))}
-        </PositionedMenu>
+          <PositionedMenu placement="static" className="w-full bg-base p-1.5">
+            <div className="min-w-0">
+              <PaneRow active={activePane === 'model'} label={selectedModelLabel} title="Model" onActivate={() => setActivePane('model')} />
+              <PaneRow
+                active={activePane === 'thinking'}
+                label={selectedThinkingLabel}
+                title="Thinking"
+                onActivate={() => setActivePane('thinking')}
+              />
+              {speedAvailable ? (
+                <PaneRow
+                  active={activePane === 'speed'}
+                  label={selectedSpeedLabel}
+                  title="Speed"
+                  onActivate={() => setActivePane('speed')}
+                />
+              ) : null}
+            </div>
+          </PositionedMenu>
+          <PositionedMenu placement="absolute" position={flyoutPosition} className="w-[17rem] overflow-hidden bg-base p-1.5">
+            {activePane === 'model' ? (
+              <div style={MODEL_PICKER_MENU_STYLE}>
+                {context.models.length === 0 ? (
+                  <div className="px-2 py-2 text-[11px] text-dim">Model list loading</div>
+                ) : (
+                  groupModels(context.models).map(([provider, providerModels], _index, groups) => (
+                    <div key={provider} className="py-1">
+                      <MenuGroupLabel className="pb-1">
+                        {formatModelProviderGroupLabel(
+                          provider,
+                          groups.map(([groupProvider]) => groupProvider),
+                        )}
+                      </MenuGroupLabel>
+                      {providerModels.map((providerModel) => {
+                        const value = modelSelectionValue(providerModel, context.models);
+                        const checked = model?.provider === providerModel.provider && model.id === providerModel.id;
+                        return (
+                          <MenuButton key={value} onClick={() => context.selectModel(value)} checked={checked}>
+                            <span className="min-w-0 truncate">{providerModel.name}</span>
+                          </MenuButton>
+                        );
+                      })}
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : null}
+            {activePane === 'thinking' ? (
+              <div className="py-1">
+                <MenuGroupLabel className="pb-1">Thinking</MenuGroupLabel>
+                {options.map((option) => (
+                  <MenuButton
+                    key={option.value || 'default'}
+                    onClick={() => context.selectThinkingLevel(option.value)}
+                    checked={option.value === context.currentThinkingLevel}
+                  >
+                    {option.label}
+                  </MenuButton>
+                ))}
+              </div>
+            ) : null}
+            {activePane === 'speed' ? (
+              <div className="py-1">
+                <MenuGroupLabel className="pb-1">Speed</MenuGroupLabel>
+                <MenuButton onClick={() => context.selectServiceTier('')} checked={!context.currentServiceTier}>
+                  <span className="min-w-0">
+                    <span className="block truncate">Standard</span>
+                    <span className="block truncate text-[11px] text-dim">Default speed</span>
+                  </span>
+                </MenuButton>
+                {speedOptions.map((tier) => (
+                  <MenuButton key={tier} onClick={() => context.selectServiceTier(tier)} checked={tier === context.currentServiceTier}>
+                    <span className="min-w-0 truncate">{formatServiceTierLabel(tier)}</span>
+                  </MenuButton>
+                ))}
+              </div>
+            ) : null}
+          </PositionedMenu>
+        </div>
       </details>
     </>
   );
 }
 
-function ServiceTierSelect({ context, variant }: { context: ComposerControlContext; variant: 'inline' | 'menu' }) {
-  const model = resolveModel(context.models, context.currentModel);
-  const serviceTiers = model?.supportedServiceTiers ?? [];
-  if (serviceTiers.length === 0) {
-    return null;
-  }
-
-  const selectedLabel = context.currentServiceTier ? formatServiceTierLabel(context.currentServiceTier) : 'Standard queue';
-  const disabled = context.savingPreference !== null;
-  const triggerClass = variant === 'menu' ? MENU_TRIGGER_CLASS : cx(INLINE_TRIGGER_CLASS, 'max-w-[6.5rem] min-w-[5.75rem]');
+function PaneRow({ active, label, title, onActivate }: { active: boolean; label: string; title: string; onActivate: () => void }) {
   return (
-    <>
-      {/* ui-pattern-ok raw-details-summary reason="details keeps service tier menu open state anchored to the composer trigger" */}
-      <details
-        data-model-picker-menu
-        className={variant === 'menu' ? 'relative min-w-0' : 'relative inline-flex min-w-0 items-center'}
-        onToggle={(event) => {
-          if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
-        }}
-      >
-        {/* ui-pattern-ok raw-details-summary reason="summary is the native trigger for this anchored service tier menu" */}
-        <summary
-          className={cx(
-            'flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden',
-            triggerClass,
-            disabled && 'pointer-events-none opacity-40',
-          )}
-          aria-label="Conversation service tier"
-          aria-disabled={disabled}
-        >
-          <span className="min-w-0 truncate">{selectedLabel}</span>
-          <Chevron className="static shrink-0" />
-        </summary>
-        <PositionedMenu
-          placement="absolute"
-          position={{ left: 0, bottom: '100%' }}
-          className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'w-full min-w-44' : 'w-40')}
-        >
-          <MenuButton onClick={() => context.selectServiceTier('')} checked={!context.currentServiceTier}>
-            Standard queue
-          </MenuButton>
-          {serviceTiers.map((tier) => (
-            <MenuButton key={tier} onClick={() => context.selectServiceTier(tier)} checked={tier === context.currentServiceTier}>
-              {formatServiceTierLabel(tier)}
-            </MenuButton>
-          ))}
-        </PositionedMenu>
-      </details>
-    </>
+    <MenuItem
+      className={cx('justify-between gap-3 rounded-md px-2 py-1.5 text-[13px] text-primary', active && 'bg-elevated')}
+      closeOnPointerDown={false}
+      onClick={(event) => {
+        event.stopPropagation();
+        onActivate();
+      }}
+      onFocus={onActivate}
+      onPointerEnter={onActivate}
+    >
+      <span className="min-w-0">
+        <span className="block truncate">{title}</span>
+        <span className="block truncate text-[11px] text-dim">{label}</span>
+      </span>
+      <ChevronRight />
+    </MenuItem>
+  );
+}
+
+function ChevronRight() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0 text-dim/80"
+    >
+      <path d="m9 6 6 6-6 6" />
+    </svg>
   );
 }
 
@@ -814,33 +841,14 @@ export function ModelPreferencesComposerControl({
   if (variant === 'menu') {
     return (
       <div className="flex flex-col gap-2">
-        <div>
-          <SectionLabel tone="muted" className="mb-1 block">
-            Model
-          </SectionLabel>
-          <ModelSelect context={context} variant="menu" />
-        </div>
-        <div>
-          <SectionLabel tone="muted" className="mb-1 block">
-            Thinking
-          </SectionLabel>
-          <ThinkingSelect context={context} variant="menu" />
-        </div>
-        <div>
-          <SectionLabel tone="muted" className="mb-1 block">
-            Service tier
-          </SectionLabel>
-          <ServiceTierSelect context={context} variant="menu" />
-        </div>
+        <ModelPreferencePicker context={context} variant="menu" />
         <Ds4HealthIndicator health={ds4Health} variant="menu" active={ds4Health.isDs4 && context.streamIsStreaming} />
       </div>
     );
   }
   return (
     <>
-      <ModelSelect context={context} variant="inline" />
-      <ThinkingSelect context={context} variant="inline" />
-      <ServiceTierSelect context={context} variant="inline" />
+      <ModelPreferencePicker context={context} variant="inline" />
       <Ds4HealthIndicator health={ds4Health} variant="inline" active={ds4Health.isDs4 && context.streamIsStreaming} />
     </>
   );

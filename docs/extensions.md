@@ -780,7 +780,7 @@ Add component-backed controls in the composer bottom row. Core owns the row layo
 }
 ```
 
-Slots are `leading`, `preferences`, and `actions`. Controls sort by `priority` ascending, then extension id, then contribution id. The component receives `pa` and `controlContext`. `controlContext.renderMode` is `inline` or `menu`; `insertText(text)` inserts at the current composer selection; `appendText(text)` inserts at the end when available; `openFilePicker()` opens the core-owned attachment input; and model/goal fields expose the current composer preference state.
+Slots are `leading`, `preferences`, and `actions`. Controls sort by `priority` ascending, then extension id, then contribution id. The component receives `pa` and `controlContext`. `controlContext.composerId` identifies the host composer instance, `composerActive` marks the current target for composer-scoped commands, and `activateComposer()` lets a control claim that target before handling an interaction. `controlContext.renderMode` is `inline` or `menu`; `insertText(text)` inserts at the current composer selection; `appendText(text)` inserts at the end when available; `openFilePicker()` opens the core-owned attachment input; and model/goal fields expose the current composer preference state.
 
 ### Composer Input Tools (`composerInputTools`)
 

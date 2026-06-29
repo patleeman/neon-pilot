@@ -13,9 +13,11 @@ import {
   type RefObject,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from 'react';
 
 import type { ComposerDrawingAttachment } from '../../conversation/promptAttachments';
@@ -23,19 +25,10 @@ import { setExtensionCommandContext } from '../../extensions/commands';
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
-import {
-  formatModelProviderGroupLabel,
-  formatServiceTierLabel,
-  getModelSelectionValue,
-  groupModelsByProvider,
-  resolveSelectableModel,
-  THINKING_LEVEL_OPTIONS,
-} from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
-import { ContextMenu } from '../shared/ContextMenu';
-import { cx, IconButton, Select, Textarea } from '../ui';
+import { cx, IconButton, Textarea, ToolbarButton } from '../ui';
 import { COMPOSER_CREATE_DRAWING_COMMAND_EVENT } from './composerInputCommands';
-import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
+import { COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
 import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
 import { ConversationPreferencesRow } from './ConversationPreferencesRow';
 
@@ -52,19 +45,30 @@ function getComposerPreferenceInlineLimit(composerShellWidth: number | null): nu
 const MODEL_PREFERENCES_CONTROL_KEY = 'system-model-picker:model-preferences';
 const CORE_COMPOSER_CONTROL_KEYS = new Set(['system-composer-attachments:attach-files']);
 const CORE_COMPOSER_INPUT_TOOL_KEYS = new Set(['system-excalidraw-input:excalidraw']);
-const CORE_MODEL_PREFERENCE_MENU_WIDTH = 256;
-const CORE_MODEL_PREFERENCE_MENU_ESTIMATED_HEIGHT = 64;
+let activeComposerControlId: string | null = null;
+const activeComposerControlListeners = new Set<() => void>();
 
 function composerRegistrationKey(registration: { extensionId: string; id: string }): string {
   return `${registration.extensionId}:${registration.id}`;
 }
 
-export function setComposerFocusedCommandContext(focused: boolean | null): void {
-  setExtensionCommandContext('composer.focused', focused);
+function subscribeActiveComposerControl(listener: () => void): () => void {
+  activeComposerControlListeners.add(listener);
+  return () => activeComposerControlListeners.delete(listener);
 }
 
-function modelOptionLabel(model: ModelInfo): string {
-  return model.label ?? model.name ?? model.id;
+function readActiveComposerControlId(): string | null {
+  return activeComposerControlId;
+}
+
+function setActiveComposerControlId(id: string | null): void {
+  if (activeComposerControlId === id) return;
+  activeComposerControlId = id;
+  for (const listener of activeComposerControlListeners) listener();
+}
+
+export function setComposerFocusedCommandContext(focused: boolean | null): void {
+  setExtensionCommandContext('composer.focused', focused);
 }
 
 function CoreComposerIcon({ path }: { path: string }) {
@@ -81,16 +85,6 @@ function CoreComposerIcon({ path }: { path: string }) {
       aria-hidden="true"
     >
       <path d={path} />
-    </svg>
-  );
-}
-
-function CoreComposerDotsIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <circle cx="5" cy="12" r="1.7" />
-      <circle cx="12" cy="12" r="1.7" />
-      <circle cx="19" cy="12" r="1.7" />
     </svg>
   );
 }
@@ -181,228 +175,47 @@ function CoreDrawingControl({
   );
 }
 
-function CoreModelPreferenceControls({
-  disabled,
-  models,
-  currentModel,
-  currentThinkingLevel,
-  currentServiceTier,
-  compact,
-  onSelectModel,
-  onSelectThinkingLevel,
-  onSelectServiceTier,
-}: {
-  disabled: boolean;
-  models: ModelInfo[];
-  currentModel: string;
-  currentThinkingLevel: string;
-  currentServiceTier: string;
-  compact: boolean;
-  onSelectModel: (modelId: string) => void;
-  onSelectThinkingLevel: (thinkingLevel: string) => void;
-  onSelectServiceTier: (serviceTier: string) => void;
-}) {
-  const selectedModel = resolveSelectableModel(models, currentModel);
-  const modelGroups = groupModelsByProvider(models);
-  const modelProviderIds = modelGroups.map(([provider]) => provider);
-  const serviceTierOptions = Array.from(
-    new Set([...(selectedModel?.supportedServiceTiers ?? []), ...(currentServiceTier.trim() ? [currentServiceTier.trim()] : [])]),
-  );
-  const selectBaseClassName =
-    'h-8 min-w-0 truncate border-transparent bg-transparent px-2 text-xs font-medium text-secondary disabled:opacity-50';
-  const modelSelectClassName = cx(selectBaseClassName, compact ? 'max-w-[8.25rem]' : 'max-w-[10rem]');
-  const thinkingSelectClassName = cx(selectBaseClassName, compact ? 'max-w-[5.75rem]' : 'max-w-[7rem]');
-  const serviceTierSelectClassName = cx(selectBaseClassName, compact ? 'max-w-[5.75rem]' : 'max-w-[7rem]');
-  return (
-    <>
-      <Select
-        aria-label="Conversation model"
-        title="Conversation model"
-        className={modelSelectClassName}
-        disabled={disabled || models.length === 0}
-        value={selectedModel ? getModelSelectionValue(selectedModel, models) : currentModel}
-        onChange={(event) => onSelectModel(event.target.value)}
-      >
-        {models.length === 0 ? <option value="">Select model</option> : null}
-        {modelGroups.map(([provider, providerModels]) => (
-          <optgroup key={provider} label={formatModelProviderGroupLabel(provider, modelProviderIds)}>
-            {providerModels.map((model) => (
-              <option key={`${model.provider}:${model.id}`} value={getModelSelectionValue(model, models)}>
-                {modelOptionLabel(model)}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </Select>
-      <Select
-        aria-label="Thinking level"
-        title="Thinking level"
-        className={thinkingSelectClassName}
-        disabled={disabled}
-        value={currentThinkingLevel}
-        onChange={(event) => onSelectThinkingLevel(event.target.value)}
-      >
-        {THINKING_LEVEL_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </Select>
-      {serviceTierOptions.length > 0 ? (
-        <Select
-          aria-label="Service tier"
-          title="Service tier"
-          className={serviceTierSelectClassName}
-          disabled={disabled}
-          value={currentServiceTier}
-          onChange={(event) => onSelectServiceTier(event.target.value)}
-        >
-          <option value="">Standard queue</option>
-          {serviceTierOptions.map((tier) => (
-            <option key={tier} value={tier}>
-              {formatServiceTierLabel(tier)}
-            </option>
-          ))}
-        </Select>
-      ) : null}
-    </>
-  );
-}
-
-function CoreModelPreferenceOverflow({
-  disabled,
-  models,
-  currentModel,
-  currentThinkingLevel,
-  currentServiceTier,
-  onSelectModel,
-  onSelectThinkingLevel,
-  onSelectServiceTier,
-}: {
-  disabled: boolean;
-  models: ModelInfo[];
-  currentModel: string;
-  currentThinkingLevel: string;
-  currentServiceTier: string;
-  onSelectModel: (modelId: string) => void;
-  onSelectThinkingLevel: (thinkingLevel: string) => void;
-  onSelectServiceTier: (serviceTier: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const settingsAvailable = !(disabled && models.length === 0);
-
-  const openMenu = useCallback(() => {
-    const bounds = buttonRef.current?.getBoundingClientRect();
-    if (!bounds) {
-      setMenuPosition({ x: 12, y: 12 });
-      setOpen(true);
-      return;
-    }
-
-    setMenuPosition({
-      x: bounds.left + bounds.width / 2 - CORE_MODEL_PREFERENCE_MENU_WIDTH / 2,
-      y: bounds.top - CORE_MODEL_PREFERENCE_MENU_ESTIMATED_HEIGHT - 8,
-    });
-    setOpen(true);
-  }, []);
+function CoreModelPreferenceFallback({ disabled, onInsertCommand }: { disabled: boolean; onInsertCommand: (text: string) => void }) {
+  const insertModelCommand = useCallback(() => {
+    if (disabled) return;
+    onInsertCommand('/model ');
+  }, [disabled, onInsertCommand]);
 
   useEffect(() => {
+    const settingsAvailable = !disabled;
     setExtensionCommandContext('composer.settingsAvailable', settingsAvailable);
     return () => setExtensionCommandContext('composer.settingsAvailable', null);
-  }, [settingsAvailable]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    setExtensionCommandContext('composer.settingsOpen', true);
-    return () => setExtensionCommandContext('composer.settingsOpen', null);
-  }, [open]);
+  }, [disabled]);
 
   useEffect(() => {
     function handleOpenSettings() {
-      if (settingsAvailable) openMenu();
+      insertModelCommand();
     }
 
     window.addEventListener(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT, handleOpenSettings);
     return () => window.removeEventListener(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT, handleOpenSettings);
-  }, [settingsAvailable]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    function handleCloseSettings() {
-      setOpen(false);
-    }
-
-    window.addEventListener(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, handleCloseSettings);
-    return () => window.removeEventListener(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, handleCloseSettings);
-  }, [open]);
+  }, [insertModelCommand]);
 
   return (
-    <div className="relative shrink-0">
-      <IconButton
-        ref={buttonRef}
-        shape="circle"
-        type="button"
-        title="More composer settings"
-        aria-label="More composer settings"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        disabled={!settingsAvailable}
-        onPointerDown={(event) => {
+    <ToolbarButton
+      type="button"
+      className="h-8 min-w-0 px-2 font-mono text-xs text-secondary"
+      title="Use /model, /thinking_level, or /service_tier"
+      aria-label="Use model preference slash commands"
+      disabled={disabled}
+      onPointerDown={(event) => {
+        event.preventDefault();
+        if ((event.pointerType && event.pointerType !== 'mouse') || event.button === 0) insertModelCommand();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          if (!((event.pointerType && event.pointerType !== 'mouse') || event.button === 0)) return;
-          if (open) {
-            setOpen(false);
-            return;
-          }
-          openMenu();
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            if (open) {
-              setOpen(false);
-              return;
-            }
-            openMenu();
-          }
-        }}
-      >
-        <CoreComposerDotsIcon />
-      </IconButton>
-      {open && menuPosition ? (
-        <ContextMenu
-          aria-label="Composer settings"
-          className="z-50 grid gap-2 p-2.5"
-          estimatedHeight={CORE_MODEL_PREFERENCE_MENU_ESTIMATED_HEIGHT}
-          ignoreRefs={[buttonRef]}
-          minWidth={CORE_MODEL_PREFERENCE_MENU_WIDTH}
-          onClose={() => setOpen(false)}
-          position={menuPosition}
-          role="dialog"
-          style={{ width: `min(${CORE_MODEL_PREFERENCE_MENU_WIDTH / 16}rem, calc(100vw - 1rem))` }}
-        >
-          <CoreModelPreferenceControls
-            disabled={disabled}
-            models={models}
-            currentModel={currentModel}
-            currentThinkingLevel={currentThinkingLevel}
-            currentServiceTier={currentServiceTier}
-            compact={false}
-            onSelectModel={onSelectModel}
-            onSelectThinkingLevel={onSelectThinkingLevel}
-            onSelectServiceTier={onSelectServiceTier}
-          />
-        </ContextMenu>
-      ) : null}
-    </div>
+          insertModelCommand();
+        }
+      }}
+    >
+      /model
+    </ToolbarButton>
   );
 }
 
@@ -529,6 +342,12 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   conversationId,
 }: ConversationComposerInputControlsProps) {
   const { composerControls = [], composerInputTools = [] } = useExtensionRegistry();
+  const composerControlId = useId();
+  const activeComposerId = useSyncExternalStore(subscribeActiveComposerControl, readActiveComposerControlId, readActiveComposerControlId);
+  const composerActive = activeComposerId === composerControlId;
+  const activateComposer = useCallback(() => {
+    setActiveComposerControlId(composerControlId);
+  }, [composerControlId]);
   const extensionComposerControls = useMemo(
     () => composerControls.filter((control) => !CORE_COMPOSER_CONTROL_KEYS.has(composerRegistrationKey(control))),
     [composerControls],
@@ -545,6 +364,20 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
     setLocalInputState(nextInput);
   };
 
+  useEffect(() => {
+    return () => {
+      if (activeComposerControlId === composerControlId) {
+        setActiveComposerControlId(null);
+      }
+    };
+  }, [composerControlId]);
+
+  useEffect(() => {
+    if (activeComposerId === null) {
+      setActiveComposerControlId(composerControlId);
+    }
+  }, [activeComposerId, composerControlId]);
+
   const syncLocalInputFromHostInsertion = () => {
     const nextInput = textareaRef.current?.value;
     if (typeof nextInput === 'string' && nextInput !== localInputRef.current) {
@@ -553,11 +386,13 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   };
 
   const insertComposerTextFromExtension = (text: string) => {
+    activateComposer();
     onInsertComposerText(text);
     syncLocalInputFromHostInsertion();
   };
 
   const appendComposerTextFromExtension = (text: string) => {
+    activateComposer();
     onAppendComposerText(text);
     syncLocalInputFromHostInsertion();
   };
@@ -633,11 +468,14 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   );
 
   const composerControlContext = {
+    composerId: composerControlId,
+    composerActive,
     composerDisabled,
     streamIsStreaming,
     composerHasContent,
     openFilePicker: onOpenFilePicker,
     addFiles: onFilesSelected,
+    activateComposer,
     insertText: insertComposerTextFromExtension,
     appendText: appendComposerTextFromExtension,
     models,
@@ -685,20 +523,25 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
             onChange={(event) => {
               const nextValue = event.target.value;
               const target = event.target;
+              activateComposer();
               setLocalInput(nextValue);
               requestAnimationFrame(() => onRememberComposerSelection(target));
               onInputChange(nextValue, target);
             }}
             onSelect={(event) => {
+              activateComposer();
               onRememberComposerSelection(event.currentTarget);
             }}
             onClick={(event) => {
+              activateComposer();
               onRememberComposerSelection(event.currentTarget);
             }}
             onKeyUp={(event) => {
+              activateComposer();
               onRememberComposerSelection(event.currentTarget);
             }}
             onFocus={(event) => {
+              activateComposer();
               setComposerFocusedCommandContext(true);
               onRememberComposerSelection(event.currentTarget);
             }}
@@ -759,30 +602,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
               />
             ))}
             {shouldRenderCoreModelPreferences ? (
-              shouldCollapseCorePreferences ? (
-                <CoreModelPreferenceOverflow
-                  disabled={composerDisabled}
-                  models={models}
-                  currentModel={currentModel}
-                  currentThinkingLevel={currentThinkingLevel}
-                  currentServiceTier={currentServiceTier}
-                  onSelectModel={onSelectModel}
-                  onSelectThinkingLevel={onSelectThinkingLevel}
-                  onSelectServiceTier={onSelectServiceTier}
-                />
-              ) : (
-                <CoreModelPreferenceControls
-                  disabled={composerDisabled}
-                  models={models}
-                  currentModel={currentModel}
-                  currentThinkingLevel={currentThinkingLevel}
-                  currentServiceTier={currentServiceTier}
-                  compact={false}
-                  onSelectModel={onSelectModel}
-                  onSelectThinkingLevel={onSelectThinkingLevel}
-                  onSelectServiceTier={onSelectServiceTier}
-                />
-              )
+              <CoreModelPreferenceFallback disabled={composerDisabled} onInsertCommand={insertComposerTextFromExtension} />
             ) : null}
             <ConversationPreferencesRow
               composerControls={visiblePreferenceControls}
@@ -804,6 +624,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
               composerQuestionSubmitting={composerQuestionSubmitting}
               composerSubmitLabel={composerSubmitLabel}
               composerAltHeld={composerAltHeld}
+              currentServiceTier={currentServiceTier}
               onInsertComposerText={insertComposerTextFromExtension}
               onAppendComposerText={appendComposerTextFromExtension}
               onSubmitComposerQuestion={onSubmitComposerQuestion}
